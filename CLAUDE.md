@@ -4,7 +4,8 @@ Follow `AGENTS.md` for repository workflow and `CONTEXT.md` for product language
 
 ## Frontend Module Boundaries
 
-- `src/App.tsx` owns app shell routing, workspace composition, and startup/bootstrap effects. It currently still hosts the workspace surface components (terminal, SFTP, webview, remote-desktop, assistant panel, connection tree); see `docs/ARCHITECTURE.md` "Frontend Module Map" for the planned extraction targets. Keep new code in the cluster of components it logically belongs to so future extraction stays mechanical, instead of adding new helpers above the `App` component.
+- `src/App.tsx` owns app shell routing, global panel layout, Settings routing, the activity rail, and startup/bootstrap effects. It should not grow workspace surface, connection-tree, assistant, or Settings form code.
+- Workspace and feature surfaces are extracted: `src/connections/`, `src/workspace/`, `src/terminal/TerminalWorkspace.tsx`, `src/sftp/SftpWorkspace.tsx`, `src/webview/WebViewWorkspace.tsx`, `src/remote-desktop/RemoteDesktopWorkspace.tsx`, and `src/ai/AssistantPanel.tsx`. See `docs/ARCHITECTURE.md` "Frontend Module Map" before placing new UI or helper logic.
 - `src/settings/SettingsPage.tsx` owns Settings UI sections, settings draft state, save/reset handlers, and settings-specific helper controls.
 - `src/lib/settings.ts` owns the persisted-settings bootstrap into the workspace store (`useBootstrapSettings`) and the `AI_PROVIDER_SECRET_OWNER_ID` keychain owner constant. Add new persisted settings here rather than cloning a `useEffect` in `App.tsx`.
 - Keep typed Tauri calls behind `src/lib/tauri.ts`; do not call backend commands with ad hoc stringly wrappers from Settings or App code.

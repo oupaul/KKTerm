@@ -197,20 +197,26 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 
 ## Frontend Module Map
 
-The current `src/App.tsx` is a dense single file that hosts the app shell plus most workspace surfaces inline. The intended seams, which are already visible as named components inside `App.tsx`, are listed here so future extraction work has one canonical target shape:
+`src/App.tsx` is intentionally a small shell now. It owns page routing, global left/right panel layout, startup/bootstrap effects, Settings routing, and the activity rail. Workspace surfaces and connection UI live in feature modules so terminal, SFTP, URL, RDP/VNC, assistant, and connection-tree work can proceed independently without repeatedly touching the app shell.
 
-- `App` and `ActivityRail` — app shell, page routing, panel layout, chrome bootstrap.
-- `ConnectionSidebar` (and the connection dialog/folder/tile helpers it composes) — root tree, search, drag/drop, CRUD, quick connect. Future home: `src/connections/`.
-- `TabStrip` and `WorkspaceCanvas` — workspace tab strip and the active Tab surface dispatcher.
-- `TerminalWorkspace`, `TerminalLayoutView`, `TerminalPaneView`, `TerminalContextMenu`, `TmuxSessionTag` — terminal Pane host. Future home: `src/terminal/`.
-- `SftpWorkspace`, `FilePane`, `TransferConflictDialog`, `SftpContextMenu`, `SftpPropertiesPopup` — SFTP browser. Future home: `src/sftp/`.
-- `WebViewWorkspace` and the `acquireWebviewSession`/`releaseWebviewSession` lease pair — URL Connection host. Future home: `src/webview/`.
-- `RemoteDesktopWorkspace` — RDP/VNC host. Future home: `src/remote-desktop/`.
-- `AssistantPanel`, `AssistantMessageView`, `MarkdownContent` — AI Assistant chat surface. Future home: `src/ai/`.
-- `ScreenshotMenu` and the screenshot Region overlay helpers — workspace screenshot capture. Future home: `src/workspace/`.
-- `StatusBar` — performance/budget status. Future home: `src/workspace/`.
+- `src/App.tsx` — `App`, `ActivityRail`, panel resize handles, global chrome layout persistence, Settings routing, startup performance polling.
+- `src/connections/ConnectionSidebar.tsx` — connection tree, search, drag/drop, CRUD, quick connect, connection dialog, connection glyphs, folder rows, tree context menu.
+- `src/connections/treeUtils.ts` — pure connection tree transforms, filtering, flattening, folder counts, and live status projection.
+- `src/connections/utils.tsx` — connection labels/icons, default ports, Quick Connect runtime ids, local shell options, and SSH host-key confirmation helpers shared by terminal/SFTP.
+- `src/workspace/WorkspaceCanvas.tsx` — `TabStrip` and `WorkspaceCanvas`, including active Tab dispatch to terminal, SFTP, URL, and remote desktop surfaces.
+- `src/workspace/ScreenshotMenu.tsx` — screenshot menu, Region overlay, screenshot-to-clipboard, and screenshot-to-AI handoff.
+- `src/workspace/StatusBar.tsx` — performance/budget status presentation.
+- `src/workspace/nativeOverlay.ts` — shared overlay suppression detection for native HWND-backed surfaces.
+- `src/terminal/TerminalWorkspace.tsx` — terminal workspace, split layout view, pane host, tmux session tag/popover, terminal context menu, SSH tmux inspection helpers.
+- `src/terminal/renderer.ts` — renderer abstraction and xterm/WebGL renderer implementation.
+- `src/sftp/SftpWorkspace.tsx` — SFTP dual-pane browser, file panes, transfers, overwrite conflicts, context menu, properties popup.
+- `src/webview/WebViewWorkspace.tsx` — URL Connection WebView2 host, webview session lease management, toolbar navigation, credential fill.
+- `src/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host and RDP ActiveX visibility/bounds synchronization.
+- `src/ai/AssistantPanel.tsx` — AI Assistant chat surface, markdown rendering, chat history, extension draft intent UI, terminal send handoff.
+- `src/ai/providers.ts` — provider definitions and frontend provider validation.
+- `src/lib/clipboard.ts` — shared clipboard read/write fallback helpers.
 
-Until those moves happen, contributors should treat the listed component clusters as logical modules: a change to terminal Pane behavior should keep its edits inside the `Terminal*` cluster rather than scattering helpers above the `App` component, so a future extraction is mechanical. Workspace state, settings I/O, layout serialization, terminal rendering, and the Tauri command boundary are already separated under `src/store.ts`, `src/lib/`, `src/workspace/`, `src/terminal/`, and `src/lib/tauri.ts`; new shared logic should land there rather than at the top of `App.tsx`.
+New feature code should land in the owning module above. Keep `src/App.tsx` limited to app chrome and cross-cutting bootstrap. Workspace state, settings I/O, layout serialization, terminal rendering, pane input routing, and the Tauri command boundary remain separated under `src/store.ts`, `src/lib/`, `src/workspace/`, `src/terminal/`, and `src/lib/tauri.ts`.
 
 ## Performance Strategy
 

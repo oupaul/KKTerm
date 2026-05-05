@@ -21,6 +21,7 @@ Avoid using "profile" as the canonical name for stored openable resources. Use *
 - Keep backend data boundaries explicit: SQLite stores non-secret durable data, OS keychain stores secrets, and terminal contents are not logged by default.
 - Keep Tauri command calls behind typed frontend wrappers in `src/lib/tauri.ts`.
 - Keep the Settings surface in `src/settings/SettingsPage.tsx`; `src/App.tsx` should route to it and bootstrap settings, not own settings form/control code.
+- Keep `src/App.tsx` limited to app shell routing, global panel layout, and bootstrap. Put connection-tree work in `src/connections/`, workspace dispatch/status/screenshot work in `src/workspace/`, terminal work in `src/terminal/`, SFTP work in `src/sftp/`, URL WebView work in `src/webview/`, remote desktop work in `src/remote-desktop/`, and assistant UI work in `src/ai/`.
 - Do not put live session state into the durable connection model.
 - Keep UI state such as tabs and selected panes in the frontend workspace layer unless there is a clear persistence requirement.
 
