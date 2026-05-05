@@ -3030,15 +3030,19 @@ progress {
 }
 
 .remote-desktop-workspace {
+  position: relative;
   display: grid;
   min-height: 0;
   height: 100%;
   place-items: center;
   padding: 24px;
-  background: var(--surface-muted);
+  overflow: hidden;
+  background: #111318;
 }
 
 .remote-desktop-placeholder {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 8px;
   max-width: 360px;
@@ -3064,6 +3068,30 @@ progress {
 
 .remote-desktop-placeholder p {
   font-size: 13px;
+}
+
+.vnc-display {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  outline: none;
+  background: #05070a;
+  image-rendering: auto;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vnc-display.ready {
+  z-index: 2;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vnc-display.ready:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .status-bar {

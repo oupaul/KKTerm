@@ -72,7 +72,7 @@ SFTP is a related workspace surface opened from an SSH Connection, not a standal
 
 SSH Connections may store a non-secret `useTmuxSessions` preference. This value describes how future terminal Sessions should launch; it does not represent a live remote process.
 
-RDP Sessions are Windows-native child controls hosted through the Microsoft RDP ActiveX COM control in `mstscax.dll`. The Rust backend creates and drives the control from Tauri commands while the frontend owns Tab/workspace placement. VNC is durable Connection data only until its v0.2 transport is implemented.
+RDP Sessions are Windows-native child controls hosted through the Microsoft RDP ActiveX COM control in `mstscax.dll`. The Rust backend creates and drives the control from Tauri commands while the frontend owns Tab/workspace placement. VNC Sessions use the Rust `vnc-rs` client for RFB handshakes, password auth, framebuffer updates, CopyRect handling, and pointer/key input; the frontend renders RGBA framebuffer rectangles into a canvas in `src/remote-desktop/RemoteDesktopWorkspace.tsx`.
 
 RDP sizing has an important diagnostic trap: gray left/right gutters or a visible resize after switching Tabs can be caused by frontend workspace layout changes, not by the RDP transport itself. In particular, global chrome such as the right AI Assistant panel must keep one workspace-wide width/collapsed state; it must not load per-Connection panel layout on Tab activation. Per-Connection assistant panel state changes the workspace width during Tab switching, which then forces the native RDP ActiveX HWND to resize and can look like an RDP display-sync bug. When investigating RDP gutters, first verify that `remote-desktop-workspace` bounds and app chrome widths stay identical before and after Tab activation.
 
@@ -211,7 +211,7 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/terminal/renderer.ts` — renderer abstraction and xterm/WebGL renderer implementation.
 - `src/sftp/SftpWorkspace.tsx` — SFTP dual-pane browser, file panes, transfers, overwrite conflicts, context menu, properties popup.
 - `src/webview/WebViewWorkspace.tsx` — URL Connection WebView2 host, webview session lease management, toolbar navigation, credential fill.
-- `src/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host and RDP ActiveX visibility/bounds synchronization.
+- `src/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host, RDP ActiveX visibility/bounds synchronization, and VNC canvas framebuffer/input handling.
 - `src/ai/AssistantPanel.tsx` — AI Assistant chat surface, markdown rendering, chat history, extension draft intent UI, terminal send handoff.
 - `src/ai/providers.ts` — provider definitions and frontend provider validation.
 - `src/lib/clipboard.ts` — shared clipboard read/write fallback helpers.

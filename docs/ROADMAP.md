@@ -162,7 +162,7 @@ Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check
 - [x] Add durable VNC connection type.
 - [x] Implement Windows-native RDP session transport with Microsoft RDP ActiveX COM hosting.
 - [ ] Add configurable RDP session options (for example: display quality/performance tuning, clipboard mapping, and related redirect/security controls).
-- [ ] Implement VNC session transport.
+- [x] Implement VNC session transport with `vnc-rs` framebuffer rendering and pointer/key input.
 - [ ] Add MobaXterm/RDCMan import.
 - [ ] Add SFTP folder sync/diff/resume.
 

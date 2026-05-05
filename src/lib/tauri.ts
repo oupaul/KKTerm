@@ -355,6 +355,42 @@ export interface RdpSimpleRequest {
   sessionId: string;
 }
 
+export interface StartVncSessionRequest {
+  sessionId: string;
+  host: string;
+  port?: number;
+  secretOwnerId?: string;
+  password?: string;
+}
+
+export interface VncSessionStarted {
+  sessionId: string;
+  host: string;
+  port: number;
+}
+
+export interface VncSessionStatus {
+  sessionId: string;
+  connected: boolean;
+}
+
+export interface VncPointerEventRequest {
+  sessionId: string;
+  x: number;
+  y: number;
+  buttonMask: number;
+}
+
+export interface VncKeyEventRequest {
+  sessionId: string;
+  key: number;
+  down: boolean;
+}
+
+export interface VncSimpleRequest {
+  sessionId: string;
+}
+
 type CommandMap = {
   app_bootstrap: {
     args: undefined;
@@ -745,6 +781,30 @@ type CommandMap = {
   get_rdp_session_status: {
     args: { request: RdpSimpleRequest };
     result: RdpSessionStatus;
+  };
+  start_vnc_session: {
+    args: { request: StartVncSessionRequest };
+    result: VncSessionStarted;
+  };
+  send_vnc_pointer_event: {
+    args: { request: VncPointerEventRequest };
+    result: null;
+  };
+  send_vnc_key_event: {
+    args: { request: VncKeyEventRequest };
+    result: null;
+  };
+  refresh_vnc_session: {
+    args: { request: VncSimpleRequest };
+    result: null;
+  };
+  close_vnc_session: {
+    args: { request: VncSimpleRequest };
+    result: null;
+  };
+  get_vnc_session_status: {
+    args: { request: VncSimpleRequest };
+    result: VncSessionStatus;
   };
 };
 

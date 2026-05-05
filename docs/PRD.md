@@ -80,7 +80,8 @@ The product will be light chrome with dark terminal panes by default, optimized 
 - Primary acceptance platform: Windows.
 - Follow-on platforms: macOS and Linux using the same architecture.
 - v0.1 protocols: local terminal, SSH terminal, and SFTP launched from SSH connections only.
-- Deferred protocols: RDP, VNC, and lightweight webview tabs.
+- v0.2 protocols in progress: URL, RDP, and VNC Connections.
+- Deferred protocols beyond the current desktop set: additional remote desktop/import integrations and any team/cloud transport.
 - Desktop shell: Tauri v2.
 - Core/backend: Rust.
 - Frontend: React, TypeScript, and Vite.
@@ -141,7 +142,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 ## Out of Scope
 
 - Mobile apps for iOS or Android.
-- RDP and VNC protocols.
+- Additional remote desktop protocols beyond RDP and VNC.
 - Lightweight webview/browser tabs.
 - Team sharing, team vaults, RBAC, SSO, managed cloud services, or paid AI service.
 - Settings sync.

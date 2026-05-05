@@ -15,7 +15,7 @@ A Connection of kind `url`. It stores an http(s) URL plus an optional `dataParti
 _Avoid_: Web tab, browser bookmark, URL profile
 
 **RDP/VNC Connection**:
-A Connection of kind `rdp` or `vnc`. It stores host, optional port, and non-secret account metadata in SQLite; passwords stay in the OS keychain. RDP Connections start Windows-native remote desktop Sessions through the Microsoft RDP ActiveX control in `mstscax.dll`. VNC transport is not implemented yet and currently opens a durable Connection shell without backend live session state.
+A Connection of kind `rdp` or `vnc`. It stores host, optional port, and non-secret account metadata in SQLite; passwords stay in the OS keychain. RDP Connections start Windows-native remote desktop Sessions through the Microsoft RDP ActiveX control in `mstscax.dll`. VNC Connections start RFB/VNC Sessions through the Rust `vnc-rs` client and render the remote framebuffer in the workspace canvas.
 _Avoid_: Remote desktop session, screen profile, saved desktop
 
 **Quick Connect**:
@@ -42,7 +42,7 @@ Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly t
 - An SSH **Connection** may start terminal **Sessions** and related SFTP browser **Sessions**.
 - A **URL Connection** starts a webview **Session** that owns one child WebView2 surface positioned over its **Tab**.
 - An **RDP Connection** starts a Windows-native remote-desktop **Session** hosted as a native child control over its **Tab**.
-- A **VNC Connection** presents the durable Connection shell until the v0.2 VNC transport is implemented.
+- A **VNC Connection** starts a Rust-managed remote framebuffer **Session** rendered into its **Tab**.
 - A **Quick Connect** starts exactly one **Session** unless the user saves it as a **Connection**.
 - A **Session** may be presented by one **Tab**.
 - A terminal **Tab** may contain one or more **Panes**.

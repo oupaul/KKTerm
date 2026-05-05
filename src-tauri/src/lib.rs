@@ -10,6 +10,7 @@ mod sftp;
 mod ssh;
 mod ssh_config;
 mod storage;
+mod vnc;
 mod webview;
 mod window_state;
 
@@ -671,6 +672,65 @@ fn get_rdp_session_status(
     rdp_sessions.session_status(app, request)
 }
 
+#[tauri::command]
+fn start_vnc_session(
+    app: tauri::AppHandle,
+    vnc_sessions: tauri::State<'_, vnc::VncSessionManager>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    mut request: vnc::StartVncSessionRequest,
+) -> Result<vnc::VncSessionStarted, String> {
+    if request.password().is_none() {
+        if let Some(owner_id) = request.secret_owner_id().map(str::to_string) {
+            request.set_password(
+                secrets
+                    .read_connection_password(owner_id)
+                    .map_err(|error| format!("failed to read VNC password: {error}"))?,
+            );
+        }
+    }
+    vnc_sessions.start_session(app, request)
+}
+
+#[tauri::command]
+fn send_vnc_pointer_event(
+    vnc_sessions: tauri::State<'_, vnc::VncSessionManager>,
+    request: vnc::VncPointerEventRequest,
+) -> Result<(), String> {
+    vnc_sessions.pointer_event(request)
+}
+
+#[tauri::command]
+fn send_vnc_key_event(
+    vnc_sessions: tauri::State<'_, vnc::VncSessionManager>,
+    request: vnc::VncKeyEventRequest,
+) -> Result<(), String> {
+    vnc_sessions.key_event(request)
+}
+
+#[tauri::command]
+fn refresh_vnc_session(
+    vnc_sessions: tauri::State<'_, vnc::VncSessionManager>,
+    request: vnc::VncSimpleRequest,
+) -> Result<(), String> {
+    vnc_sessions.refresh(request)
+}
+
+#[tauri::command]
+fn close_vnc_session(
+    vnc_sessions: tauri::State<'_, vnc::VncSessionManager>,
+    request: vnc::VncSimpleRequest,
+) -> Result<(), String> {
+    vnc_sessions.close_session(request)
+}
+
+#[tauri::command]
+fn get_vnc_session_status(
+    vnc_sessions: tauri::State<'_, vnc::VncSessionManager>,
+    request: vnc::VncSimpleRequest,
+) -> Result<vnc::VncSessionStatus, String> {
+    vnc_sessions.session_status(request)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
@@ -701,6 +761,7 @@ pub fn run() {
             app.manage(sftp::SftpSessionManager::new());
             app.manage(webview::WebviewSessionManager::new());
             app.manage(rdp::RdpSessionManager::new());
+            app.manage(vnc::VncSessionManager::new());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -799,7 +860,13 @@ pub fn run() {
             set_rdp_visibility,
             sync_rdp_display_size,
             close_rdp_session,
-            get_rdp_session_status
+            get_rdp_session_status,
+            start_vnc_session,
+            send_vnc_pointer_event,
+            send_vnc_key_event,
+            refresh_vnc_session,
+            close_vnc_session,
+            get_vnc_session_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running AdminDeck");

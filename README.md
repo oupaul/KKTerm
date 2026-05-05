@@ -23,8 +23,9 @@ This repository currently contains the v0.1 foundation:
 - Windows-first CI skeleton
 - Local performance budget status for UI readiness, terminal readiness, and memory
 
-v0.2 work has started with durable RDP/VNC Connection kinds and a Windows-native
-RDP Session host built on the Microsoft RDP ActiveX COM control.
+v0.2 work has started with durable RDP/VNC Connection kinds, a Windows-native
+RDP Session host built on the Microsoft RDP ActiveX COM control, and a Rust
+`vnc-rs` VNC Session path rendered into the workspace canvas.
 
 ## Development
 

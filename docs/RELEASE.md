@@ -90,7 +90,7 @@ The script increments the `<major>.<minor>.<build>` version across npm, Tauri, a
 - SSH config import support exists behind the local command boundary, but the current simplified chrome does not expose a user-facing import action.
 - SFTP supports recursive file and folder transfer, multi-select drag/drop, overwrite prompts with overwrite-all handling, clearable finished transfer history, remote properties, chmod, and chown, but folder sync, diff/compare, transfer resume, archive/extract, and remote file editing remain deferred.
 - Screenshot capture is available from terminal Pane toolbars and non-terminal workspace top toolbars. Region and Entire Window/Panel captures are copied to the system clipboard; sending screenshots to the AI Assistant remains deferred until an explicit image-analysis flow exists.
-- RDP, VNC, webview tabs, sync, team sharing, and portable encrypted credential vaults are deferred.
+- RDP, VNC, and URL webview Connection work has started. VNC currently uses a canvas-rendered `vnc-rs` framebuffer path; advanced VNC options, richer clipboard handling, sync, team sharing, and portable encrypted credential vaults remain deferred.
 - AI command assistance stages proposals only; it does not autonomously execute commands.
 - Settings exposes editable Terminal behavior, AI provider, App UI font, and layout reset controls; SSH and SFTP defaults are currently read-only summaries; Language (i18n) and Color Scheme remain placeholders; diagnostics, update, SSH config import, editable SSH/SFTP defaults, and keybinding controls are not exposed there yet.
 - Diagnostics bundles are folders, not compressed archives.
