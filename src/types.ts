@@ -88,6 +88,7 @@ export interface MoveConnectionRequest {
 }
 
 export interface TerminalPane {
+  kind?: "terminal";
   id: string;
   title: string;
   cwd: string;
@@ -95,6 +96,24 @@ export interface TerminalPane {
   connection?: Connection;
   tmuxSessionId?: string;
 }
+
+export interface UrlPane {
+  kind: "webview";
+  id: string;
+  title: string;
+  connection: Connection;
+  url: string;
+  dataPartition?: string;
+}
+
+export interface RemoteDesktopPane {
+  kind: "remoteDesktop";
+  id: string;
+  title: string;
+  connection: Connection;
+}
+
+export type WorkspacePane = TerminalPane | UrlPane | RemoteDesktopPane;
 
 export type SplitDirection = "right" | "left" | "down" | "up";
 export type SplitOrientation = "horizontal" | "vertical";
@@ -176,7 +195,7 @@ export interface WorkspaceTab {
   title: string;
   subtitle: string;
   kind: "terminal" | "sftp" | "webview" | "remoteDesktop";
-  panes: TerminalPane[];
+  panes: WorkspacePane[];
   layout?: LayoutNode;
   focusedPaneId?: string;
   connection?: Connection;

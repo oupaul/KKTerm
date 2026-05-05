@@ -1,7 +1,7 @@
 import { connectionIconForType, connectionSubtitle, connectionTypeLabel } from "../connections/utils";
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
 import { documentHasWebviewOverlay } from "../workspace/nativeOverlay";
-import { Monitor } from "lucide-react";
+import { Monitor, RotateCcw } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
@@ -34,12 +34,11 @@ export function RemoteDesktopWorkspace({
     (state) => state.markConnectionSessionStarted,
   );
   const markConnectionSessionEnded = useWorkspaceStore((state) => state.markConnectionSessionEnded);
-  const closeTab = useWorkspaceStore((state) => state.closeTab);
   const [suppressed, setSuppressed] = useState(false);
   const [rdpError, setRdpError] = useState("");
   const [rdpStatus, setRdpStatus] = useState("");
+  const [rdpStartKey, setRdpStartKey] = useState(0);
   const canStartRdp = connection?.type === "rdp";
-  const closingAfterDisconnectRef = useRef(false);
 
   const computeBounds = () => {
     const node = hostRef.current;
@@ -172,7 +171,7 @@ export function RemoteDesktopWorkspace({
         if (result.displaySynced) {
           displayReadyRef.current = true;
           lastBoundsRef.current = bounds;
-          setRdpStatus(rdpControlRef.current ? `Connected with ${rdpControlRef.current}` : "Connected");
+          setRdpStatus("Connected");
           pushRdpVisibility();
         } else if (result.connected) {
           setRdpStatus("Preparing display");
@@ -184,6 +183,40 @@ export function RemoteDesktopWorkspace({
       .finally(() => {
         displaySyncInFlightRef.current = false;
       });
+  };
+
+  const resetRdpSessionRefs = () => {
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    sessionStartedRef.current = false;
+    sessionStartingRef.current = false;
+    sessionIdRef.current = null;
+    lastBoundsRef.current = null;
+    displayReadyRef.current = false;
+    displaySyncInFlightRef.current = false;
+    rdpVisibleRef.current = false;
+    rdpControlRef.current = "";
+  };
+
+  const handleReconnect = () => {
+    if (!canStartRdp || !connection || !isTauriRuntime()) {
+      return;
+    }
+    const sessionId = sessionIdRef.current;
+    const hadStartedSession = sessionStartedRef.current;
+    const ownedSession = sessionStartingRef.current || sessionStartedRef.current;
+    resetRdpSessionRefs();
+    setRdpError("");
+    setRdpStatus("Reconnecting");
+    if (ownedSession && sessionId) {
+      void invokeCommand("close_rdp_session", { request: { sessionId } });
+    }
+    if (hadStartedSession) {
+      markConnectionSessionEnded(connection.id);
+    }
+    setRdpStartKey((key) => key + 1);
   };
 
   const scheduleBoundsPush = () => {
@@ -264,7 +297,7 @@ export function RemoteDesktopWorkspace({
       rdpVisibleRef.current = false;
       lastBoundsRef.current = bounds;
       rdpControlRef.current = "";
-      setRdpStatus("Connecting");
+      setRdpStatus((current) => (current === "Reconnecting" ? current : "Connecting"));
       void invokeCommand("start_rdp_session", {
         request: {
           sessionId,
@@ -321,7 +354,7 @@ export function RemoteDesktopWorkspace({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rdpStartKey]);
 
   useEffect(() => {
     visibilityRef.current = { isActive, suppressed };
@@ -389,7 +422,7 @@ export function RemoteDesktopWorkspace({
 
     const intervalId = window.setInterval(() => {
       const sessionId = sessionIdRef.current;
-      if (!sessionStartedRef.current || !sessionId || closingAfterDisconnectRef.current) {
+      if (!sessionStartedRef.current || !sessionId) {
         return;
       }
 
@@ -400,14 +433,10 @@ export function RemoteDesktopWorkspace({
           if (!displayReadyRef.current) {
             attemptRdpDisplaySync();
           }
-          if (
-            !status.connected &&
-            sessionIdRef.current === status.sessionId &&
-            displayReadyRef.current &&
-            rdpVisibleRef.current
-          ) {
-            closingAfterDisconnectRef.current = true;
-            closeTab(tab.id);
+          if (!status.connected && sessionIdRef.current === status.sessionId) {
+            displayReadyRef.current = false;
+            rdpVisibleRef.current = false;
+            setRdpStatus("Disconnected");
           }
         })
         .catch((error) => {
@@ -418,7 +447,7 @@ export function RemoteDesktopWorkspace({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [canStartRdp, closeTab, tab.id]);
+  }, [canStartRdp]);
 
   return (
     <section
@@ -432,6 +461,18 @@ export function RemoteDesktopWorkspace({
         </div>
         <div className="toolbar-cluster">
           {rdpStatus ? <span className="webview-toolbar-status">{rdpStatus}</span> : null}
+          {canStartRdp ? (
+            <button
+              aria-label="Reconnect RDP session"
+              className="icon-button"
+              disabled={!isTauriRuntime()}
+              onClick={handleReconnect}
+              title="Reconnect"
+              type="button"
+            >
+              <RotateCcw size={13} />
+            </button>
+          ) : null}
           <ScreenshotMenu targetLabel={`${tab.title} ${typeLabel} view`} targetRef={workspaceRef} />
         </div>
       </div>

@@ -106,6 +106,15 @@ export function tabIconFor(tab: WorkspaceTab) {
   if (tab.kind === "sftp") {
     return Columns2;
   }
+  if (tab.kind === "terminal") {
+    const firstPane = tab.panes[0];
+    if (firstPane?.kind === "webview") {
+      return Globe2;
+    }
+    if (firstPane?.kind === "remoteDesktop") {
+      return connectionIconForType(firstPane.connection.type);
+    }
+  }
   if (tab.kind === "webview") {
     return Globe2;
   }
@@ -124,6 +133,15 @@ export function workspaceKindLabel(tab: WorkspaceTab) {
     case "remoteDesktop":
       return `${connectionTypeLabel(tab.connection?.type ?? "rdp")} connection`;
     case "terminal":
+      if (tab.panes.length > 1) {
+        return "Workspace";
+      }
+      if (tab.panes[0]?.kind === "webview") {
+        return "Webview";
+      }
+      if (tab.panes[0]?.kind === "remoteDesktop") {
+        return `${connectionTypeLabel(tab.panes[0].connection.type)} connection`;
+      }
       return "Terminal";
   }
 }

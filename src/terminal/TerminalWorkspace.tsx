@@ -1,6 +1,8 @@
 import { confirmTrustedSshHostKey, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../connections/utils";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
+import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
+import { WebViewWorkspace } from "../webview/WebViewWorkspace";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, LayoutDashboard, Menu, RefreshCw, Save, Search, SplitSquareHorizontal, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +13,7 @@ import { useWorkspaceStore } from "../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../workspace/layout";
 import { getPaneRenderer, registerPaneInputWriter, registerPaneRenderer, unregisterPaneInputWriter, unregisterPaneRenderer } from "../workspace/paneRegistry";
-import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspaceTab } from "../types";
+import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspacePane, WorkspaceTab } from "../types";
 
 type TerminalContextMenuState = {
   x: number;
@@ -58,6 +60,7 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
   const sshConnection = tab.connection?.type === "ssh" ? tab.connection : undefined;
   const focusedPaneId = tab.focusedPaneId ?? tab.panes[0]?.id;
   const layout = useMemo(() => ensureLayout(tab.layout, tab.panes), [tab.layout, tab.panes]);
+  const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
 
   const [splitMenuOpen, setSplitMenuOpen] = useState(false);
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
@@ -101,7 +104,7 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
 
     try {
       const text =
-        targetPane?.connection?.type === "ssh" && targetPane.tmuxSessionId
+        targetPane && isTerminalPane(targetPane) && targetPane.connection?.type === "ssh" && targetPane.tmuxSessionId
           ? await invokeCommand("capture_tmux_pane", {
               request: {
                 ...tmuxConnectionRequest(targetPane.connection),
@@ -158,93 +161,100 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
 
   return (
     <section
-      className={isActive ? "terminal-workspace active" : "terminal-workspace"}
+      className={[
+        "terminal-workspace",
+        isActive ? "active" : "",
+        isSingleEmbeddedPane ? "terminal-workspace-embedded-only" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div className="workspace-toolbar">
-        <div>
-          <strong>{tab.title}</strong>
-          <span>{tab.subtitle}</span>
-        </div>
-        <div className="toolbar-cluster">
-          <button
-            className="toolbar-button"
-            aria-label="Open SFTP browser"
-            disabled={!sshConnection}
-            onClick={() => sshConnection && openSftpBrowser(sshConnection)}
-            title="Open SFTP browser"
-            type="button"
-          >
-            <Columns2 size={15} />
-            SFTP
-          </button>
-          <div className="terminal-menu-wrapper" ref={splitMenuRef}>
-            <button
-              className="icon-button"
-              aria-label="Split layout"
-              aria-haspopup="menu"
-              aria-expanded={splitMenuOpen ? "true" : "false"}
-              disabled={!canSplit}
-              onClick={() => setSplitMenuOpen((open) => !open)}
-              title="Split layout"
-              type="button"
-            >
-              <SplitSquareHorizontal size={15} />
-            </button>
-            {splitMenuOpen ? (
-              <div className="terminal-menu" role="menu">
-                <button
-                  className="terminal-menu-item"
-                  onClick={() => handleSplit("right")}
-                  role="menuitem"
-                  type="button"
-                >
-                  <ArrowRight size={13} />
-                  Split Right
-                </button>
-                <button
-                  className="terminal-menu-item"
-                  onClick={() => handleSplit("left")}
-                  role="menuitem"
-                  type="button"
-                >
-                  <ArrowLeft size={13} />
-                  Split Left
-                </button>
-                <button
-                  className="terminal-menu-item"
-                  onClick={() => handleSplit("down")}
-                  role="menuitem"
-                  type="button"
-                >
-                  <ArrowDown size={13} />
-                  Split Down
-                </button>
-                <button
-                  className="terminal-menu-item"
-                  onClick={() => handleSplit("up")}
-                  role="menuitem"
-                  type="button"
-                >
-                  <ArrowUp size={13} />
-                  Split Up
-                </button>
-              </div>
-            ) : null}
+      {!isSingleEmbeddedPane ? (
+        <div className="workspace-toolbar">
+          <div>
+            <strong>{tab.title}</strong>
+            <span>{tab.subtitle}</span>
           </div>
-          <div className="terminal-menu-wrapper" ref={hamburgerMenuRef}>
+          <div className="toolbar-cluster">
             <button
-              className="icon-button"
-              aria-label="Terminal actions"
-              aria-haspopup="menu"
-              aria-expanded={hamburgerOpen ? "true" : "false"}
-              onClick={() => setHamburgerOpen((open) => !open)}
-              title="Terminal actions"
+              className="toolbar-button"
+              aria-label="Open SFTP browser"
+              disabled={!sshConnection}
+              onClick={() => sshConnection && openSftpBrowser(sshConnection)}
+              title="Open SFTP browser"
               type="button"
             >
-              <Menu size={15} />
+              <Columns2 size={15} />
+              SFTP
             </button>
-            {hamburgerOpen ? (
-              <div className="terminal-menu" role="menu">
+            <div className="terminal-menu-wrapper" ref={splitMenuRef}>
+              <button
+                className="icon-button"
+                aria-label="Split layout"
+                aria-haspopup="menu"
+                aria-expanded={splitMenuOpen ? "true" : "false"}
+                disabled={!canSplit}
+                onClick={() => setSplitMenuOpen((open) => !open)}
+                title="Split layout"
+                type="button"
+              >
+                <SplitSquareHorizontal size={15} />
+              </button>
+              {splitMenuOpen ? (
+                <div className="terminal-menu" role="menu">
+                  <button
+                    className="terminal-menu-item"
+                    onClick={() => handleSplit("right")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <ArrowRight size={13} />
+                    Split Right
+                  </button>
+                  <button
+                    className="terminal-menu-item"
+                    onClick={() => handleSplit("left")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <ArrowLeft size={13} />
+                    Split Left
+                  </button>
+                  <button
+                    className="terminal-menu-item"
+                    onClick={() => handleSplit("down")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <ArrowDown size={13} />
+                    Split Down
+                  </button>
+                  <button
+                    className="terminal-menu-item"
+                    onClick={() => handleSplit("up")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <ArrowUp size={13} />
+                    Split Up
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <div className="terminal-menu-wrapper" ref={hamburgerMenuRef}>
+              <button
+                className="icon-button"
+                aria-label="Terminal actions"
+                aria-haspopup="menu"
+                aria-expanded={hamburgerOpen ? "true" : "false"}
+                onClick={() => setHamburgerOpen((open) => !open)}
+                title="Terminal actions"
+                type="button"
+              >
+                <Menu size={15} />
+              </button>
+              {hamburgerOpen ? (
+                <div className="terminal-menu" role="menu">
                 <button
                   className="terminal-menu-item"
                   onClick={() => void handleSaveBuffer()}
@@ -320,11 +330,12 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
                     </button>
                   </div>
                 </div>
-              </div>
-            ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="terminal-grid">
         {layout ? (
@@ -353,7 +364,7 @@ function TerminalLayoutView({
   isActive: boolean;
   tabId: string;
   layout: LayoutNode;
-  panes: TerminalPane[];
+  panes: WorkspacePane[];
   focusedPaneId: string | undefined;
   onFocusPane: (paneId: string) => void;
 }) {
@@ -364,13 +375,22 @@ function TerminalLayoutView({
     }
     return (
       <div className="terminal-layout-leaf">
-        <TerminalPaneView
-          isActive={isActive}
-          tabId={tabId}
-          pane={pane}
-          isFocused={pane.id === focusedPaneId}
-          onFocus={() => onFocusPane(pane.id)}
-        />
+        {isTerminalPane(pane) ? (
+          <TerminalPaneView
+            isActive={isActive}
+            tabId={tabId}
+            pane={pane}
+            isFocused={pane.id === focusedPaneId}
+            onFocus={() => onFocusPane(pane.id)}
+          />
+        ) : (
+          <EmbeddedConnectionPane
+            isActive={isActive}
+            pane={pane}
+            tabId={tabId}
+            onFocus={() => onFocusPane(pane.id)}
+          />
+        )}
       </div>
     );
   }
@@ -395,6 +415,71 @@ function TerminalLayoutView({
       ))}
     </div>
   );
+}
+
+function isTerminalPane(pane: WorkspacePane): pane is TerminalPane {
+  return pane.kind === undefined || pane.kind === "terminal";
+}
+
+function EmbeddedConnectionPane({
+  isActive,
+  pane,
+  tabId,
+  onFocus,
+}: {
+  isActive: boolean;
+  pane: Exclude<WorkspacePane, TerminalPane>;
+  tabId: string;
+  onFocus: () => void;
+}) {
+  const closePane = useWorkspaceStore((state) => state.closePane);
+  const embeddedTab: WorkspaceTab = {
+    id: pane.id,
+    title: pane.title,
+    subtitle:
+      pane.kind === "webview"
+        ? formatUrlPaneSubtitle(pane.url)
+        : formatRemoteDesktopPaneSubtitle(pane.connection),
+    kind: pane.kind,
+    panes: [],
+    connection: pane.connection,
+    url: pane.kind === "webview" ? pane.url : undefined,
+    dataPartition: pane.kind === "webview" ? pane.dataPartition : undefined,
+  };
+
+  return (
+    <article
+      className="embedded-workspace-pane"
+      onMouseDown={onFocus}
+    >
+      <button
+        aria-label={`Close ${pane.title}`}
+        className="embedded-pane-close"
+        onClick={() => closePane(tabId, pane.id)}
+        title={`Close ${pane.title}`}
+        type="button"
+      >
+        <X size={13} />
+      </button>
+      {pane.kind === "webview" ? (
+        <WebViewWorkspace isActive={isActive} tab={embeddedTab} />
+      ) : (
+        <RemoteDesktopWorkspace isActive={isActive} tab={embeddedTab} />
+      )}
+    </article>
+  );
+}
+
+function formatUrlPaneSubtitle(url: string) {
+  try {
+    return new URL(url).host || url;
+  } catch {
+    return url;
+  }
+}
+
+function formatRemoteDesktopPaneSubtitle(connection: Connection) {
+  return connection.user?.trim() || connection.host;
 }
 
 function TmuxSessionTag({
@@ -441,7 +526,7 @@ function TmuxSessionTag({
     for (const tab of tabs) {
       if (tab.kind !== "terminal") continue;
       for (const pane of tab.panes) {
-        if (pane.tmuxSessionId === tmuxSessionId) {
+        if (isTerminalPane(pane) && pane.tmuxSessionId === tmuxSessionId) {
           return { tabId: tab.id, paneId: pane.id };
         }
       }

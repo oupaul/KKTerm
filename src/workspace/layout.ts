@@ -6,9 +6,10 @@ import type {
   StoredLayoutPane,
   StoredLayoutNode,
   TerminalPane,
+  WorkspacePane,
 } from "../types";
 
-export function defaultLayoutFor(panes: TerminalPane[]): LayoutNode | undefined {
+export function defaultLayoutFor(panes: WorkspacePane[]): LayoutNode | undefined {
   if (panes.length === 0) {
     return undefined;
   }
@@ -22,7 +23,7 @@ export function defaultLayoutFor(panes: TerminalPane[]): LayoutNode | undefined 
   };
 }
 
-export function ensureLayout(layout: LayoutNode | undefined, panes: TerminalPane[]): LayoutNode | undefined {
+export function ensureLayout(layout: LayoutNode | undefined, panes: WorkspacePane[]): LayoutNode | undefined {
   if (!layout) {
     return defaultLayoutFor(panes);
   }

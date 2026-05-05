@@ -223,11 +223,6 @@ export function ConnectionSidebar({
   }
 
   function handleAddConnectionToFocusedPane(connection: Connection, direction: SplitDirection) {
-    if (connection.type === "url" || isRemoteDesktopConnectionType(connection.type)) {
-      handleOpenConnection(connection);
-      return;
-    }
-
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
     if (!activeTab || activeTab.kind !== "terminal") {
       handleOpenConnection(connection);
