@@ -39,12 +39,140 @@
   --border-strong: #c3ccd9;
   --accent: #2563eb;
   --accent-soft: #dbe8ff;
+  --green-soft: #ecfdf5;
+  --amber-soft: #fff8e7;
   --green: #15915f;
   --amber: #b7791f;
   --red: #c2413b;
   --shadow: 0 18px 50px rgba(31, 42, 58, 0.12);
   --app-ui-font-family: "Satoshi", Inter, ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+[data-color-scheme="dark"] {
+  --app-bg: #1a1d24;
+  --chrome: #232730;
+  --chrome-strong: #2b303b;
+  --surface: #2b303b;
+  --surface-muted: #232730;
+  --text: #e4e7ee;
+  --text-muted: #8b92a5;
+  --text-faint: #5c6275;
+  --border: #363a47;
+  --border-strong: #454b5b;
+  --accent: #4b8bff;
+  --accent-soft: #1e3053;
+  --green-soft: #0d3326;
+  --amber-soft: #33270d;
+  --green: #3fb87b;
+  --amber: #d99a3d;
+  --red: #d9534f;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+[data-color-scheme="light"] {
+  --app-bg: #ffffff;
+  --chrome: #ffffff;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f5f7fa;
+  --text: #0a1628;
+  --text-muted: #3a4560;
+  --text-faint: #6b7796;
+  --border: #cdd5e3;
+  --border-strong: #a0abbf;
+  --accent: #1d4ed8;
+  --accent-soft: #dbeafe;
+  --green-soft: #ecfdf5;
+  --amber-soft: #fff8e7;
+  --green: #0d6b3d;
+  --amber: #a3620a;
+  --red: #b91c1c;
+  --shadow: 0 12px 40px rgba(0, 8, 32, 0.10);
+}
+
+[data-color-scheme="mac"] {
+  --app-bg: #ececec;
+  --chrome: #f5f5f7;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f5f5f7;
+  --text: #1d1d1f;
+  --text-muted: #6e6e73;
+  --text-faint: #aeaeb2;
+  --border: #d2d2d7;
+  --border-strong: #c7c7cc;
+  --accent: #0071e3;
+  --accent-soft: #e8f0fe;
+  --green-soft: #e8f8f0;
+  --amber-soft: #fff8e7;
+  --green: #34c759;
+  --amber: #ff9500;
+  --red: #ff3b30;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+[data-color-scheme="orange"] {
+  --app-bg: #fff5ec;
+  --chrome: #fff8f2;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #fff2e6;
+  --text: #1a1a1a;
+  --text-muted: #5c4533;
+  --text-faint: #8c7563;
+  --border: #e6d5c3;
+  --border-strong: #d4bfa5;
+  --accent: #e87a00;
+  --accent-soft: #fff0e0;
+  --green-soft: #e8f5ec;
+  --amber-soft: #fff5e6;
+  --green: #2d8a4e;
+  --amber: #cc6600;
+  --red: #cc3333;
+  --shadow: 0 12px 40px rgba(100, 50, 0, 0.10);
+}
+
+[data-color-scheme="purple"] {
+  --app-bg: #1e1836;
+  --chrome: #252042;
+  --chrome-strong: #2d2650;
+  --surface: #2d2650;
+  --surface-muted: #252042;
+  --text: #e8e4f4;
+  --text-muted: #9d93c9;
+  --text-faint: #6e65a3;
+  --border: #3d3566;
+  --border-strong: #50487a;
+  --accent: #a78bfa;
+  --accent-soft: #2e2852;
+  --green-soft: #1a2e24;
+  --amber-soft: #2e2618;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --shadow: 0 18px 50px rgba(10, 6, 30, 0.45);
+}
+
+[data-color-scheme="pink"] {
+  --app-bg: #fff0f5;
+  --chrome: #fff5f8;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #fff0f3;
+  --text: #2d1b3a;
+  --text-muted: #6e4b7c;
+  --text-faint: #9b85a8;
+  --border: #e8d0e0;
+  --border-strong: #d4b8cc;
+  --accent: #c026d3;
+  --accent-soft: #fae8ff;
+  --green-soft: #ecf8f0;
+  --amber-soft: #fff5ec;
+  --green: #15803d;
+  --amber: #b45309;
+  --red: #dc2626;
+  --shadow: 0 12px 40px rgba(80, 20, 60, 0.10);
 }
 
 * {
@@ -2116,8 +2244,8 @@ progress {
   min-width: 0;
   height: 100vh;
   padding: 12px 14px;
-  color: #5f6368;
-  background: #f7f7f7;
+  color: var(--text-muted);
+  background: var(--chrome);
   border-right: 0;
   border-left: 1px solid var(--border);
 }
@@ -2128,12 +2256,12 @@ progress {
   justify-content: flex-end;
   gap: 5px;
   min-height: 28px;
-  color: #6f7378;
+  color: var(--text-muted);
 }
 
 .assistant-topbar h2 {
   margin: 0 auto 0 0;
-  color: #202124;
+  color: var(--text);
   font-size: 16px;
   font-weight: 800;
   line-height: 1.2;
@@ -2145,19 +2273,19 @@ progress {
   justify-content: center;
   width: 27px;
   height: 27px;
-  color: #6f7378;
+  color: var(--text-muted);
   background: transparent;
   border-radius: 6px;
   cursor: pointer;
 }
 
 .assistant-toolbar-button:hover {
-  color: #202124;
-  background: #ececec;
+  color: var(--text);
+  background: var(--surface-muted);
 }
 
 .assistant-toolbar-button:disabled {
-  color: #bdc1c6;
+  color: var(--text-faint);
   cursor: not-allowed;
 }
 
@@ -2168,7 +2296,7 @@ progress {
 .assistant-tasks {
   display: grid;
   gap: 8px;
-  color: #5f6368;
+  color: var(--text-muted);
 }
 
 .assistant-tasks header {
@@ -2185,14 +2313,14 @@ progress {
 .assistant-tasks header small,
 .assistant-tasks p {
   margin: 0;
-  color: #8c8f94;
+  color: var(--text-faint);
   font-size: 12px;
 }
 
 .assistant-view-all-button {
   min-width: 0;
   padding: 0;
-  color: #6f7378;
+  color: var(--text-muted);
   background: transparent;
   cursor: pointer;
   font-size: 12px;
@@ -2200,12 +2328,12 @@ progress {
 }
 
 .assistant-view-all-button:not(:disabled):hover {
-  color: #202124;
+  color: var(--text);
   text-decoration: underline;
 }
 
 .assistant-view-all-button:disabled {
-  color: #bdc1c6;
+  color: var(--text-faint);
   cursor: not-allowed;
 }
 
@@ -2216,7 +2344,7 @@ progress {
   align-items: center;
   min-height: 26px;
   padding: 0 4px;
-  color: #5f6368;
+  color: var(--text-muted);
   text-align: left;
   background: transparent;
   border-radius: 5px;
@@ -2225,7 +2353,7 @@ progress {
 }
 
 .assistant-task-row:hover {
-  background: #ececec;
+  background: var(--surface-muted);
 }
 
 .assistant-task-row span,
@@ -2237,7 +2365,7 @@ progress {
 }
 
 .assistant-task-row small {
-  color: #8c8f94;
+  color: var(--text-faint);
 }
 
 .assistant-context {
@@ -2247,22 +2375,22 @@ progress {
   padding: 10px;
   color: var(--text-muted);
   background: var(--accent-soft);
-  border: 1px solid #c5d9ff;
+  border: 1px solid var(--accent-soft);
   border-radius: 8px;
   font-size: 12px;
   line-height: 1.45;
 }
 
 .active-session-hint {
-  background: #ffffff;
-  border-color: #dadce0;
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.06);
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow);
 }
 
 .assistant-extension-context {
-  color: #115e59;
-  background: #ecfdf5;
-  border-color: #99f6e4;
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: var(--green);
 }
 
 .assistant-setup-hint {
@@ -2271,8 +2399,8 @@ progress {
   align-items: flex-start;
   padding: 10px;
   color: var(--amber);
-  background: #fff8e7;
-  border: 1px solid #efd59a;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber);
   border-radius: 8px;
   font-size: 12px;
   line-height: 1.4;
@@ -2305,7 +2433,7 @@ progress {
   display: grid;
   gap: 6px;
   max-width: 100%;
-  color: #404246;
+  color: var(--text);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -2318,7 +2446,7 @@ progress {
   display: none;
   align-items: center;
   gap: 4px;
-  color: #8c8f94;
+  color: var(--text-faint);
   font-size: 9px;
   font-weight: 700;
 }
@@ -2335,8 +2463,8 @@ progress {
   width: 16px;
   height: 16px;
   padding: 0;
-  color: #5f6368;
-  background: #f1f3f4;
+  color: var(--text-muted);
+  background: var(--surface-muted);
   border-radius: 4px;
   cursor: pointer;
   font-size: 9px;
@@ -2344,8 +2472,8 @@ progress {
 }
 
 .assistant-message-actions button:hover {
-  color: #202124;
-  background: #e3e6ea;
+  color: var(--text);
+  background: var(--border);
 }
 
 .assistant-message.user {
@@ -2361,9 +2489,9 @@ progress {
 
 .assistant-message.user .assistant-message-bubble {
   padding: 8px 10px;
-  color: #202124;
-  background: #ffffff;
-  border: 1px solid #dadce0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -2379,7 +2507,7 @@ progress {
 .assistant-message-expand {
   justify-self: end;
   padding: 0;
-  color: #4b70f5;
+  color: var(--accent);
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -2399,9 +2527,9 @@ progress {
   width: fit-content;
   max-width: 92%;
   padding: 8px 10px;
-  color: #404246;
-  background: #f7f8fa;
-  border: 1px solid #dfe3ea;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-weight: 700;
 }
@@ -2410,8 +2538,8 @@ progress {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
-  border: 2px solid #c4c7ce;
-  border-top-color: #4b70f5;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: assistant-spinner-spin 0.78s linear infinite;
 }
@@ -2438,11 +2566,11 @@ progress {
   width: min(520px, calc(100vw - 48px));
   max-height: min(620px, calc(100vh - 48px));
   overflow: hidden;
-  color: #202124;
-  background: #ffffff;
-  border: 1px solid #dadce0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 18px 50px rgba(32, 33, 36, 0.24);
+  box-shadow: var(--shadow);
 }
 
 .assistant-chat-history-dialog header {
@@ -2451,7 +2579,7 @@ progress {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid #eceff3;
+  border-bottom: 1px solid var(--border);
 }
 
 .assistant-chat-history-dialog header > div {
@@ -2466,7 +2594,7 @@ progress {
 }
 
 .assistant-chat-history-dialog header small {
-  color: #7a7e84;
+  color: var(--text-faint);
   font-size: 12px;
   font-weight: 700;
 }
@@ -2485,7 +2613,7 @@ progress {
   gap: 3px;
   min-width: 0;
   padding: 8px;
-  color: #404246;
+  color: var(--text);
   text-align: left;
   background: transparent;
   border-radius: 6px;
@@ -2493,7 +2621,7 @@ progress {
 }
 
 .assistant-chat-history-row:hover {
-  background: #f1f3f4;
+  background: var(--surface-muted);
 }
 
 .assistant-chat-history-row strong,
@@ -2506,14 +2634,14 @@ progress {
 }
 
 .assistant-chat-history-row strong {
-  color: #202124;
+  color: var(--text);
   font-size: 13px;
   font-weight: 900;
 }
 
 .assistant-chat-history-row span,
 .assistant-chat-history-row small {
-  color: #7a7e84;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -2531,7 +2659,7 @@ progress {
 }
 
 .markdown-content h3 {
-  color: #202124;
+  color: var(--text);
   font-size: 14px;
   line-height: 1.35;
 }
@@ -2542,14 +2670,14 @@ progress {
 
 .markdown-content blockquote {
   padding-left: 10px;
-  color: #6f7378;
-  border-left: 3px solid #dadce0;
+  color: var(--text-muted);
+  border-left: 3px solid var(--border);
 }
 
 .markdown-content :not(pre) > code {
   padding: 1px 4px;
-  color: #202124;
-  background: #eeeeee;
+  color: var(--text);
+  background: var(--surface-muted);
   border-radius: 4px;
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
@@ -2622,7 +2750,7 @@ progress {
 
 .assistant-send-status {
   margin: 0;
-  color: #6f7378;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -2632,10 +2760,10 @@ progress {
   gap: 8px;
   min-width: 0;
   padding: 13px 14px 10px;
-  background: #ffffff;
-  border: 1px solid #d2d4d8;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 22px;
-  box-shadow: 0 1px 4px rgba(60, 64, 67, 0.14);
+  box-shadow: var(--shadow);
 }
 
 .assistant-chat-composer textarea {
@@ -2644,7 +2772,7 @@ progress {
   min-height: calc(3lh * 1.5);
   resize: none;
   padding: 0;
-  color: #202124;
+  color: var(--text);
   background: transparent;
   border: 0;
   outline: 0;
@@ -2653,7 +2781,7 @@ progress {
 }
 
 .assistant-chat-composer textarea::placeholder {
-  color: #a7a9ad;
+  color: var(--text-faint);
 }
 
 .assistant-chat-composer textarea:disabled {
@@ -2665,7 +2793,7 @@ progress {
   gap: 8px;
   align-items: center;
   min-height: 28px;
-  color: #6f7378;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -2689,12 +2817,12 @@ progress {
 }
 
 .assistant-plus-button {
-  color: #5f6368;
+  color: var(--text-muted);
   background: transparent;
 }
 
 .assistant-plus-button:hover {
-  background: #f1f3f4;
+  background: var(--surface-muted);
 }
 
 .assistant-plus-button:disabled {
@@ -2716,11 +2844,11 @@ progress {
   display: grid;
   min-width: 200px;
   padding: 5px;
-  color: #202124;
-  background: #ffffff;
-  border: 1px solid #d2d4d8;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(32, 33, 36, 0.18);
+  box-shadow: var(--shadow);
 }
 
 .assistant-add-menu-item {
@@ -2730,7 +2858,7 @@ progress {
   width: 100%;
   min-height: 32px;
   padding: 7px 9px;
-  color: #5f6368;
+  color: var(--text-muted);
   text-align: left;
   background: transparent;
   border: 0;
@@ -2741,13 +2869,13 @@ progress {
 }
 
 .assistant-add-menu-item:hover {
-  color: #202124;
-  background: #f1f3f4;
+  color: var(--text);
+  background: var(--surface-muted);
 }
 
 .assistant-add-menu-item[aria-checked="true"] {
-  color: #115e59;
-  background: #ccfbf1;
+  color: var(--green);
+  background: var(--green-soft);
 }
 
 .assistant-add-menu-chevron {
@@ -2781,8 +2909,8 @@ progress {
 }
 
 .assistant-send-button {
-  color: #ffffff;
-  background: #9aa0a6;
+  color: var(--surface);
+  background: var(--text-faint);
 }
 
 .assistant-send-button:not(:disabled) {
@@ -2790,15 +2918,15 @@ progress {
 }
 
 .assistant-send-button:not(:disabled):hover {
-  background: #1d4ed8;
+  filter: brightness(1.15);
 }
 
 .assistant-send-button[data-state="stopping"] {
-  background: #dc2626;
+  background: var(--red);
 }
 
 .assistant-send-button[data-state="stopping"]:hover {
-  background: #b91c1c;
+  filter: brightness(0.85);
 }
 
 .assistant-send-button:disabled {
@@ -2864,7 +2992,7 @@ progress {
 }
 
 .assistant-composer textarea:focus {
-  border-color: #8db5ff;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
@@ -2886,7 +3014,7 @@ progress {
 }
 
 .suggestion.active {
-  border-color: #8db5ff;
+  border-color: var(--accent);
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -3963,6 +4091,46 @@ progress {
 
 .form-grid.appearance-font-grid {
   grid-template-columns: minmax(220px, 420px);
+}
+
+.color-scheme-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.color-scheme-preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.color-scheme-preview-swatches {
+  display: flex;
+  gap: 6px;
+  min-height: 48px;
+}
+
+.color-scheme-preview-swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+.color-scheme-preview-swatch-label {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  mix-blend-mode: difference;
+  color: #ffffff;
+  padding: 2px;
 }
 
 .form-grid.ai-provider-selector-grid {

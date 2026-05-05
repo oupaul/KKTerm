@@ -152,8 +152,18 @@ export interface TerminalSettings {
   defaultShell: string;
 }
 
+export type ColorScheme =
+  | "default"
+  | "dark"
+  | "light"
+  | "mac"
+  | "orange"
+  | "purple"
+  | "pink";
+
 export interface AppearanceSettings {
   appFontFamily: string;
+  colorScheme: ColorScheme;
 }
 
 export interface SshSettings {

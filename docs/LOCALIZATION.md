@@ -138,6 +138,162 @@ When a key is translated into every supported locale, remove its entry from this
 - Domain notes: This hides a legacy raw CSS font-family stack while preserving the saved value until the user chooses another option.
 - Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
 
+### `settings.schemeDefault`
+
+- English: "Default"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the built-in Default color scheme.
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Naming convention follows OS display theme labels.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.schemeDark`
+
+- English: "Dark"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the Dark color scheme (dark background, light text).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard display appearance term. Translate as the standard adjective.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.schemeLight`
+
+- English: "Light"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the Light color scheme (pure white background, dark blue text, high contrast).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard display appearance term. Translate as the standard adjective.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.schemeMac`
+
+- English: "Mac"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the Mac-inspired color scheme (latest macOS-like grays and accent).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Keep `Mac` as the proper name.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.schemeOrange`
+
+- English: "Orange"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the Orange color scheme (light orange background, black text).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Color name. Translate as the standard color word.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.schemePurple`
+
+- English: "Purple"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the Purple color scheme (dark purple background, light text).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Color name. Translate as the standard color word.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.schemePink`
+
+- English: "Pink"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Select option label
+- Context: Appearance settings color scheme selector. Label for the Pink color scheme (light pink background, dark purple text).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Color name. Translate as the standard color word.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.colorSchemePreview`
+
+- English: "Preview"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Label for color swatch preview row
+- Context: Appearance settings color scheme selector. Small label above a row of 5 color swatches that preview the selected scheme's key colors (background, surface, text, accent, green).
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard UI term for a live preview of a selection.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.appBg`
+
+- English: "Background"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Color swatch label inside preview
+- Context: Appearance settings color scheme preview. Label inside a colored swatch indicating the app background color of the selected scheme.
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard UI color role label.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.surface`
+
+- English: "Surface"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Color swatch label inside preview
+- Context: Appearance settings color scheme preview. Label inside a colored swatch indicating the surface/panel background color of the selected scheme.
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard UI color role label.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.text`
+
+- English: "Text"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Color swatch label inside preview
+- Context: Appearance settings color scheme preview. Label inside a colored swatch indicating the primary text color of the selected scheme.
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard UI color role label.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.accent`
+
+- English: "Accent"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Color swatch label inside preview
+- Context: Appearance settings color scheme preview. Label inside a colored swatch indicating the accent/highlight color of the selected scheme.
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Standard UI color role label.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `settings.green`
+
+- English: "Green"
+- Namespace: `settings`
+- Appears in: `src/settings/AppearanceSettings.tsx`
+- UI role: Color swatch label inside preview
+- Context: Appearance settings color scheme preview. Label inside a colored swatch indicating the success/green color of the selected scheme.
+- Tone: Neutral, concise
+- Placeholders: None
+- Domain notes: Color name used as UI semantic role label.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
 ## Entry Template
 
 ```markdown

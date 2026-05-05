@@ -152,7 +152,7 @@
     "secureShell": "セキュアシェル",
     "localShell": "ローカルシェル",
     "embeddedWebApp": "埋め込みWebアプリ",
-    "windowsRdp": "Windows RDP",
+    "windowsRdp": "Windows リモートデスクトップ",
     "screenControl": "画面制御",
     "type": "タイプ",
     "connectionProperties": "接続プロパティ",

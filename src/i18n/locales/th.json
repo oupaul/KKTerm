@@ -152,7 +152,7 @@
     "secureShell": "เชลล์ปลอดภัย",
     "localShell": "เชลล์ภายใน",
     "embeddedWebApp": "เว็บแอปในตัว",
-    "windowsRdp": "Windows RDP",
+    "windowsRdp": "เดสก์ท็อประยะไกลของ Windows",
     "screenControl": "ควบคุมหน้าจอ",
     "type": "ประเภท",
     "connectionProperties": "คุณสมบัติการเชื่อมต่อ",

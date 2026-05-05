@@ -152,7 +152,7 @@
     "secureShell": "安全 Shell",
     "localShell": "本地 Shell",
     "embeddedWebApp": "嵌入式 Web 应用",
-    "windowsRdp": "Windows RDP",
+    "windowsRdp": "Windows 远程桌面",
     "screenControl": "屏幕控制",
     "type": "类型",
     "connectionProperties": "连接属性",

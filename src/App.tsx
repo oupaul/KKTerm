@@ -236,10 +236,12 @@ function App() {
     node.style.setProperty("--ai-panel-width", aiPanelLayout.collapsed ? "0px" : `${aiPanelLayout.width}px`);
     node.style.setProperty("--ai-resize-width", aiPanelLayout.collapsed ? "34px" : "1px");
     node.style.setProperty("--app-ui-font-family", appearanceSettings.appFontFamily);
+    node.setAttribute("data-color-scheme", appearanceSettings.colorScheme);
   }, [
     aiPanelLayout.collapsed,
     aiPanelLayout.width,
     appearanceSettings.appFontFamily,
+    appearanceSettings.colorScheme,
     connectionPanelLayout.collapsed,
     connectionPanelLayout.width,
   ]);

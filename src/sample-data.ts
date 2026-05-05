@@ -28,6 +28,7 @@ export const defaultTerminalSettings: TerminalSettings = {
 
 export const defaultAppearanceSettings: AppearanceSettings = {
   appFontFamily: '"Satoshi", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  colorScheme: "default",
 };
 
 export const defaultSshSettings: SshSettings = {

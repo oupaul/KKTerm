@@ -152,7 +152,7 @@
     "secureShell": "Secure shell",
     "localShell": "Shell lokal",
     "embeddedWebApp": "Aplikasi web tersemat",
-    "windowsRdp": "Windows RDP",
+    "windowsRdp": "Desktop Jauh Windows",
     "screenControl": "Kontrol layar",
     "type": "Tipe",
     "connectionProperties": "Properti koneksi",

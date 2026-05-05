@@ -887,6 +887,7 @@ export function ConnectionSidebar({
             aria-label={t("connections.addConnection")}
             title={t("connections.addConnection")}
             onClick={() => setFormMode("save")}
+            type="button"
           >
             <Plus size={16} />
           </button>
@@ -1612,7 +1613,7 @@ export function QuickConnectMenu({
       ) : (
         <button disabled type="button">
           <Server size={15} />
-          <span>No recent connections</span>
+          <span>{t("connections.noRecent")}</span>
         </button>
       )}
     </div>
@@ -1695,7 +1696,7 @@ function ConnectionDialog({
   onSubmit: (request: ConnectionDialogRequest) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
-  const [connectionType] = useState<ConnectionType | "">(
+  const [connectionType, setConnectionType] = useState<ConnectionType | "">(
     initialConnection?.type ?? "",
   );
   const [authMethod, setAuthMethod] = useState<"keyFile" | "password" | "agent">(
@@ -1712,6 +1713,37 @@ function ConnectionDialog({
   const localShellOptions = useMemo(() => localShellOptionsForPlatform(), []);
   const isEditMode = mode === "edit";
   const isUrlConnection = connectionType === "url";
+  const connectionTypeOptions: Array<{
+    type: ConnectionTileType;
+    title: string;
+    subtitle: string;
+  }> = [
+    {
+      type: "local",
+      title: t("connections.localTerminal"),
+      subtitle: t("connections.localShell"),
+    },
+    {
+      type: "ssh",
+      title: t("connections.ssh"),
+      subtitle: t("connections.secureShell"),
+    },
+    {
+      type: "url",
+      title: t("connections.url"),
+      subtitle: t("connections.embeddedWebApp"),
+    },
+    {
+      type: "rdp",
+      title: t("connections.windowsRdp"),
+      subtitle: t("connections.rdp"),
+    },
+    {
+      type: "vnc",
+      title: t("connections.vnc"),
+      subtitle: t("connections.screenControl"),
+    },
+  ];
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1727,7 +1759,7 @@ function ConnectionDialog({
     );
     const selectedLocalShellLabel =
       localShellOptions.find((option) => (option.value ?? "") === selectedLocalShell)?.label ??
-      "Local terminal";
+      t("connections.localTerminal");
     const rawUrl = String(form.get("url") ?? "").trim();
     const host =
       connectionType === "local"
@@ -1797,12 +1829,16 @@ function ConnectionDialog({
         >
           <div>
             <p className="panel-label">
-              {mode === "edit" ? "Connection properties" : mode === "save" ? "New connection" : "Quick connect"}
+              {mode === "edit"
+                ? t("connections.connectionProperties")
+                : mode === "save"
+                  ? t("connections.newConnectionTitle")
+                  : t("connections.quickConnect")}
             </p>
-            {mode === "quick" ? <h2>Open one-off session</h2> : null}
+            {mode === "quick" ? <h2>{t("connections.openOneOffSession")}</h2> : null}
           </div>
           {mode === "quick" ? (
-            <button className="icon-button" type="button" aria-label="Close" onClick={onCancel}>
+            <button className="icon-button" type="button" aria-label={t("connections.close")} onClick={onCancel}>
               <X size={15} />
             </button>
           ) : null}
@@ -1817,16 +1853,38 @@ function ConnectionDialog({
             </span>
           </div>
         ) : (
-          <span className="quick-connect-recent-empty">{t("connections.noRecent")}</span>
+          <fieldset className="connection-type-picker">
+            <legend>{t("connections.type")}</legend>
+            <div className="connection-type-grid">
+              {connectionTypeOptions.map((option) => (
+                <button
+                  aria-pressed={connectionType === option.type}
+                  className={`connection-type-tile ${connectionType === option.type ? "selected" : ""}`}
+                  data-connection-type={option.type}
+                  key={option.type}
+                  onClick={() => setConnectionType(option.type)}
+                  type="button"
+                >
+                  <span className="connection-type-icon">
+                    <ConnectionTypeGlyph size={22} type={option.type} />
+                  </span>
+                  <span className="connection-type-copy">
+                    <strong>{option.title}</strong>
+                    <small>{option.subtitle}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
         )}
 
         {connectionType ? (
           <div className="connection-dialog-fields">
             {mode === "save" || mode === "edit" ? (
               <label>
-                <span>Folder</span>
+                <span>{t("connections.folder")}</span>
                 <select name="folderId" defaultValue={initialFolderId ?? ""}>
-                  <option value="">Root</option>
+                  <option value="">{t("connections.root")}</option>
                   {folderOptions.map((option) => (
                     <option value={option.folder.id} key={option.folder.id}>
                       {"  ".repeat(option.level)}
@@ -1840,11 +1898,11 @@ function ConnectionDialog({
             {connectionType === "local" ? (
               <>
                 <label>
-                  <span>Name(Optional)</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder="Connection name" />
+                  <span>{t("connections.nameOptional")}</span>
+                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
                 <label>
-                  <span>Shell</span>
+                  <span>{t("connections.shell")}</span>
                   <select
                     name="localShell"
                     defaultValue={initialConnection?.localShell ?? localShellOptions[0]?.value ?? ""}
@@ -1860,37 +1918,37 @@ function ConnectionDialog({
             ) : isUrlConnection ? (
               <>
                 <label>
-                  <span>Name(Optional)</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder="Connection name" />
+                  <span>{t("connections.nameOptional")}</span>
+                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
                 <label>
-                  <span>URL*</span>
-                  <input name="url" defaultValue={initialConnection?.url ?? ""} placeholder="https://example.com" required />
+                  <span>{t("connections.url")}*</span>
+                  <input name="url" defaultValue={initialConnection?.url ?? ""} placeholder={t("connections.urlPlaceholder")} required />
                 </label>
                 <div className="form-grid">
                   <label>
-                    <span>Data partition</span>
+                    <span>{t("connections.dataPartition")}</span>
                     <input
                       name="dataPartition"
                       defaultValue={initialConnection?.dataPartition ?? ""}
-                      placeholder="Default"
+                      placeholder={t("connections.default")}
                     />
                   </label>
                   <label>
-                    <span>Credential user</span>
+                    <span>{t("connections.credentialUser")}</span>
                     <input
                       name="urlCredentialUsername"
                       defaultValue={initialConnection?.urlCredentialUsername ?? ""}
-                      placeholder="Optional username"
+                      placeholder={t("connections.optionalUsername")}
                     />
                   </label>
                 </div>
                 <label>
-                  <span>Password</span>
+                  <span>{t("connections.password")}</span>
                   <input
                     autoComplete="current-password"
                     name="urlPassword"
-                    placeholder={isEditMode ? "Leave blank to keep stored password" : "Stored in OS keychain"}
+                    placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
                     type="password"
                   />
                 </label>
@@ -1898,23 +1956,23 @@ function ConnectionDialog({
             ) : (
               <>
                 <label>
-                  <span>Name(Optional)</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder="Connection name" />
+                  <span>{t("connections.nameOptional")}</span>
+                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
 
                 <label>
-                  <span>Host*</span>
+                  <span>{t("connections.host")}*</span>
                   <input
                     name="host"
                     defaultValue={initialConnection?.host ?? ""}
-                    placeholder="example.internal"
+                    placeholder={t("connections.exampleHost")}
                     required
                   />
                 </label>
 
                 <div className="form-grid">
                   <label>
-                    <span>{connectionType === "vnc" ? "User" : "User*"}</span>
+                    <span>{connectionType === "vnc" ? t("connections.user") : `${t("connections.user")}*`}</span>
                     <input
                       key={`user-${connectionType}`}
                       name="user"
@@ -1924,16 +1982,16 @@ function ConnectionDialog({
                       }
                       placeholder={
                         connectionType === "rdp"
-                          ? "DOMAIN\\admin"
+                          ? t("connections.domainAdmin")
                           : connectionType === "vnc"
-                            ? "Optional username"
-                            : "admin"
+                            ? t("connections.optionalUsername")
+                            : t("connections.admin")
                       }
                       required={connectionType !== "vnc"}
                     />
                   </label>
                   <label>
-                    <span>Port</span>
+                    <span>{t("connections.port")}</span>
                     <input
                       key={`port-${connectionType}`}
                       name="port"
@@ -1953,11 +2011,11 @@ function ConnectionDialog({
 
             {usesRemoteDesktopFields ? (
               <label>
-                <span>Password</span>
+                <span>{t("connections.password")}</span>
                 <input
                   autoComplete="current-password"
                   name="password"
-                  placeholder={isEditMode ? "Leave blank to keep stored password" : "Stored in OS keychain"}
+                  placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
                   type="password"
                 />
               </label>
@@ -1967,7 +2025,7 @@ function ConnectionDialog({
               <>
                 <div className="form-grid">
                   <label>
-                    <span>Auth*</span>
+                    <span>{t("connections.auth")}*</span>
                     <select
                       name="authMethod"
                       value={authMethod}
@@ -1976,43 +2034,43 @@ function ConnectionDialog({
                         setAuthMethod(event.currentTarget.value as "keyFile" | "password" | "agent")
                       }
                     >
-                      <option value="keyFile">Key file</option>
-                      <option value="password">Password</option>
-                      <option value="agent">SSH agent</option>
+                      <option value="keyFile">{t("connections.keyFile")}</option>
+                      <option value="password">{t("connections.password")}</option>
+                      <option value="agent">{t("connections.sshAgent")}</option>
                     </select>
                   </label>
                   <label>
-                    <span>Proxy jump</span>
+                    <span>{t("connections.proxyJumpLabel")}</span>
                     <input
                       name="proxyJump"
                       defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
-                      placeholder="jump.internal"
+                      placeholder={t("connections.jumpInternal")}
                     />
                   </label>
                 </div>
 
                 {authMethod === "password" ? (
                   <label>
-                    <span>Password*</span>
+                    <span>{t("connections.passwordLabel")}*</span>
                     <input
                       name="password"
-                      placeholder={isEditMode ? "Leave blank to keep stored password" : "Stored in OS keychain"}
+                      placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
                       required={!isEditMode}
                       type="password"
                     />
                   </label>
                 ) : authMethod === "keyFile" ? (
                   <label>
-                    <span>Key path</span>
+                    <span>{t("connections.keyPath")}</span>
                     <div className="input-with-button">
                       <input
                         name="keyPath"
                         onChange={(event) => setKeyPath(event.currentTarget.value)}
-                        placeholder="C:\\Users\\ryan\\.ssh\\id_ed25519"
+                        placeholder={t("connections.keyPathExample")}
                         value={keyPath}
                       />
                       <button className="toolbar-button" onClick={handleBrowseKeyFile} type="button">
-                        Browse
+                        {t("connections.browse")}
                       </button>
                     </div>
                   </label>
@@ -2023,7 +2081,7 @@ function ConnectionDialog({
                     type="checkbox"
                     defaultChecked={initialConnection?.useTmuxSessions ?? true}
                   />
-                  <span>Use tmux sessions</span>
+                  <span>{t("connections.useTmux")}</span>
                 </label>
               </>
             ) : null}
@@ -2035,10 +2093,10 @@ function ConnectionDialog({
         <div className="dialog-actions">
           <button className="approve-button" disabled={!connectionType} type="submit">
             {mode === "quick" ? <Play size={15} /> : <Save size={15} />}
-            {mode === "quick" ? "Connect" : "Save"}
+            {mode === "quick" ? t("connections.connect") : t("common.save")}
           </button>
           <button className="toolbar-button" type="button" onClick={onCancel}>
-            Cancel
+            {t("connections.cancel")}
           </button>
         </div>
       </form>

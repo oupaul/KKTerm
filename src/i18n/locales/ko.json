@@ -152,7 +152,7 @@
     "secureShell": "보안 셸",
     "localShell": "로컬 셸",
     "embeddedWebApp": "내장 웹 앱",
-    "windowsRdp": "Windows RDP",
+    "windowsRdp": "Windows 원격 데스크톱",
     "screenControl": "화면 제어",
     "type": "유형",
     "connectionProperties": "연결 속성",

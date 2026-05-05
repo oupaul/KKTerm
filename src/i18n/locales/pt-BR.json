@@ -152,7 +152,7 @@
     "secureShell": "Shell seguro",
     "localShell": "Shell local",
     "embeddedWebApp": "App web incorporada",
-    "windowsRdp": "Windows RDP",
+    "windowsRdp": "Área de Trabalho Remota do Windows",
     "screenControl": "Controle de tela",
     "type": "Tipo",
     "connectionProperties": "Propriedades da conexão",

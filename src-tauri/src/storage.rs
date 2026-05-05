@@ -87,6 +87,7 @@ pub struct TerminalSettings {
 #[serde(rename_all = "camelCase")]
 pub struct AppearanceSettings {
     app_font_family: String,
+    color_scheme: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -1933,6 +1934,7 @@ fn default_terminal_settings() -> TerminalSettings {
 fn default_appearance_settings() -> AppearanceSettings {
     AppearanceSettings {
         app_font_family: "\"Satoshi\", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif".to_string(),
+        color_scheme: "default".to_string(),
     }
 }
 
@@ -2009,6 +2011,13 @@ fn validate_appearance_settings(
     mut settings: AppearanceSettings,
 ) -> Result<AppearanceSettings, String> {
     settings.app_font_family = required_field("app font family", settings.app_font_family)?;
+    settings.color_scheme = required_field("color scheme", settings.color_scheme)?;
+    settings.color_scheme = match settings.color_scheme.to_lowercase().as_str() {
+        "default" | "dark" | "light" | "mac" | "orange" | "purple" | "pink" => {
+            settings.color_scheme.to_lowercase()
+        }
+        _ => return Err("color scheme must be one of: default, dark, light, mac, orange, purple, pink".to_string()),
+    };
     Ok(settings)
 }
 
@@ -2945,6 +2954,7 @@ mod tests {
                 app_font_family:
                     "  \"JF Open Huninn\", \"Microsoft JhengHei UI\", \"Segoe UI\", sans-serif  "
                         .to_string(),
+                color_scheme: "dark".to_string(),
             })
             .expect("appearance settings update");
 

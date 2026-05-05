@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Palette, RotateCcw, Save } from "lucide-react";
+import { RotateCcw, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { defaultAppearanceSettings } from "../sample-data";
 import { useWorkspaceStore } from "../store";
-import type { AppearanceSettings as AppearanceSettingsType } from "../types";
+import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../types";
 
 const APP_UI_FONT_OPTIONS = [
   {
@@ -49,6 +49,28 @@ const APP_UI_FONT_OPTIONS = [
   },
 ] as const;
 
+const COLOR_SCHEME_OPTIONS: { value: ColorScheme; labelKey: string }[] = [
+  { value: "default", labelKey: "settings.schemeDefault" },
+  { value: "dark", labelKey: "settings.schemeDark" },
+  { value: "light", labelKey: "settings.schemeLight" },
+  { value: "mac", labelKey: "settings.schemeMac" },
+  { value: "orange", labelKey: "settings.schemeOrange" },
+  { value: "purple", labelKey: "settings.schemePurple" },
+  { value: "pink", labelKey: "settings.schemePink" },
+];
+
+const SCHEME_PREVIEW_LABELS = ["settings.appBg", "settings.surface", "settings.text", "settings.accent", "settings.green"] as const;
+
+const SCHEME_PREVIEW_COLORS: Record<ColorScheme, string[]> = {
+  default: ["#eef1f5", "#ffffff", "#17202b", "#2563eb", "#15915f"],
+  dark: ["#1a1d24", "#2b303b", "#e4e7ee", "#4b8bff", "#3fb87b"],
+  light: ["#ffffff", "#f5f7fa", "#0a1628", "#1d4ed8", "#0d6b3d"],
+  mac: ["#ececec", "#ffffff", "#1d1d1f", "#0071e3", "#34c759"],
+  orange: ["#fff5ec", "#ffffff", "#1a1a1a", "#e87a00", "#2d8a4e"],
+  purple: ["#1e1836", "#2d2650", "#e8e4f4", "#a78bfa", "#4ade80"],
+  pink: ["#fff0f5", "#ffffff", "#2d1b3a", "#c026d3", "#15803d"],
+};
+
 function normalizeAppearanceSettingsDraft(settings: AppearanceSettingsType): AppearanceSettingsType {
   if (!settings.appFontFamily.trim()) {
     throw new Error("App UI font family is required.");
@@ -88,6 +110,8 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
       setError(err instanceof Error ? err.message : String(err));
     }
   }
+
+  const previewColors = SCHEME_PREVIEW_COLORS[draft.colorScheme];
 
   return (
     <section className="settings-card settings-section">
@@ -131,6 +155,41 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
             ))}
           </select>
         </label>
+        <label>
+          <span>{t("settings.colorScheme")}</span>
+          <select
+            onChange={(event) => {
+              const colorScheme = event.currentTarget.value as ColorScheme;
+              setDraft((settings) => ({
+                ...settings,
+                colorScheme,
+              }));
+            }}
+            value={draft.colorScheme}
+          >
+            {COLOR_SCHEME_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="color-scheme-preview" aria-label={t("settings.colorSchemePreview")}>
+        <span className="color-scheme-preview-label">{t("settings.colorSchemePreview")}</span>
+        <div className="color-scheme-preview-swatches">
+          {previewColors.map((color, i) => (
+            <div
+              key={i}
+              className="color-scheme-preview-swatch"
+              style={{ background: color }}
+            >
+              <span className="color-scheme-preview-swatch-label">
+                {t(SCHEME_PREVIEW_LABELS[i])}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="settings-reset-layout">
         <div>
@@ -140,13 +199,6 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
         <button className="toolbar-button" onClick={onResetLayout} type="button">
           <RotateCcw size={15} />
           {t("settings.resetLayout")}
-        </button>
-      </div>
-      <div className="settings-placeholder-list">
-        <button className="settings-placeholder-item" type="button">
-          <Palette size={17} />
-          <span>{t("settings.colorScheme")}</span>
-          <strong>{t("settings.toBeImplemented")}</strong>
         </button>
       </div>
       {status ? (
