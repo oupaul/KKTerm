@@ -2,15 +2,17 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bot,
-  Download,
   ExternalLink,
   Info,
   Languages,
+  Monitor,
+  Network,
   PackageOpen,
   Palette,
   RotateCcw,
   Save,
   Server,
+  Settings as SettingsIcon,
   Terminal,
   Trash2,
 } from "lucide-react";
@@ -41,20 +43,96 @@ import type {
 export { AI_PROVIDER_SECRET_OWNER_ID };
 
 type SettingsSectionId =
-  | "terminal-settings"
-  | "ssh-settings"
-  | "sftp-settings"
-  | "assistant-settings"
+  | "general-settings"
   | "appearance-settings"
+  | "assistant-settings"
+  | "ssh-settings"
+  | "terminal-settings"
+  | "rdp-settings"
+  | "vnc-settings"
   | "about-settings";
 
 const SETTINGS_SECTION_IDS: SettingsSectionId[] = [
-  "terminal-settings",
-  "ssh-settings",
-  "sftp-settings",
-  "assistant-settings",
+  "general-settings",
   "appearance-settings",
+  "assistant-settings",
+  "ssh-settings",
+  "terminal-settings",
+  "rdp-settings",
+  "vnc-settings",
   "about-settings",
+];
+
+type PlannedSetting = {
+  label: string;
+  value: string;
+  hint?: string;
+};
+
+const RDP_QUALITY_SETTINGS: PlannedSetting[] = [
+  {
+    label: "Resolution",
+    value: "Fit workspace bounds",
+    hint: "Maps to DesktopWidth, DesktopHeight, SmartSizing, and display sync.",
+  },
+  {
+    label: "Color depth",
+    value: "32-bit",
+    hint: "Uses the ActiveX ColorDepth property.",
+  },
+  {
+    label: "Bandwidth profile",
+    value: "Auto detect",
+    hint: "Uses bandwidth detection or NetworkConnectionType classes instead of a raw bitrate cap.",
+  },
+  {
+    label: "Bitmap cache",
+    value: "Persistent cache planned",
+    hint: "Maps to BitmapPersistence and CachePersistenceActive.",
+  },
+  {
+    label: "Performance flags",
+    value: "Balanced",
+    hint: "Controls wallpaper, full-window drag, menu animations, themes, cursors, and font smoothing.",
+  },
+  {
+    label: "Enhanced graphics",
+    value: "Prefer when supported",
+    hint: "Uses RDP performance flags on capable servers.",
+  },
+];
+
+const VNC_QUALITY_SETTINGS: PlannedSetting[] = [
+  {
+    label: "Quality",
+    value: "Auto",
+    hint: "Let the client adapt encoding and pixel format to link speed.",
+  },
+  {
+    label: "Preferred encoding",
+    value: "Tight, then ZRLE",
+    hint: "Current client also advertises CopyRect, Raw, cursor, and desktop-size support.",
+  },
+  {
+    label: "JPEG quality",
+    value: "8 / 9",
+    hint: "Useful for Tight/JPEG-style encodings.",
+  },
+  {
+    label: "Compression",
+    value: "2 / 9",
+    hint: "Higher values reduce bandwidth at a CPU cost.",
+  },
+  {
+    label: "Color level",
+    value: "Full color",
+    hint: "Can degrade to 256, 64, or 8 colors for slower links.",
+  },
+  {
+    label: "Remote resize",
+    value: "Follow server support",
+    hint: "Depends on the VNC server supporting desktop-size updates.",
+  },
 ];
 
 export function SettingsPage({
@@ -85,7 +163,7 @@ export function SettingsPage({
   const [aiStatus, setAiStatus] = useState("");
   const [aiError, setAiError] = useState("");
   const [activeSectionId, setActiveSectionId] =
-    useState<SettingsSectionId>("terminal-settings");
+    useState<SettingsSectionId>("general-settings");
   const hasTerminalChanges = JSON.stringify(terminalDraft) !== JSON.stringify(terminalSettings);
   const hasAppearanceChanges =
     JSON.stringify(appearanceDraft) !== JSON.stringify(appearanceSettings);
@@ -262,28 +340,20 @@ export function SettingsPage({
       <div className="settings-layout">
         <aside className="settings-nav" aria-label="Settings sections">
           <a
-            href="#terminal-settings"
-            className={settingsNavItemClass("terminal-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("terminal-settings")}
+            href="#general-settings"
+            className={settingsNavItemClass("general-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("general-settings")}
           >
-            <Terminal size={16} />
-            <span>Terminal</span>
+            <SettingsIcon size={16} />
+            <span>General</span>
           </a>
           <a
-            href="#ssh-settings"
-            className={settingsNavItemClass("ssh-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("ssh-settings")}
+            href="#appearance-settings"
+            className={settingsNavItemClass("appearance-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("appearance-settings")}
           >
-            <Server size={16} />
-            <span>SSH</span>
-          </a>
-          <a
-            href="#sftp-settings"
-            className={settingsNavItemClass("sftp-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("sftp-settings")}
-          >
-            <Download size={16} />
-            <span>SFTP</span>
+            <Palette size={16} />
+            <span>Appearance</span>
           </a>
           <a
             href="#assistant-settings"
@@ -294,12 +364,36 @@ export function SettingsPage({
             <span>AI Assistant</span>
           </a>
           <a
-            href="#appearance-settings"
-            className={settingsNavItemClass("appearance-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("appearance-settings")}
+            href="#ssh-settings"
+            className={settingsNavItemClass("ssh-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("ssh-settings")}
           >
-            <Palette size={16} />
-            <span>Appearance</span>
+            <Server size={16} />
+            <span>SSH</span>
+          </a>
+          <a
+            href="#terminal-settings"
+            className={settingsNavItemClass("terminal-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("terminal-settings")}
+          >
+            <Terminal size={16} />
+            <span>Terminal</span>
+          </a>
+          <a
+            href="#rdp-settings"
+            className={settingsNavItemClass("rdp-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("rdp-settings")}
+          >
+            <Monitor size={16} />
+            <span>Remote Desktop(RDP)</span>
+          </a>
+          <a
+            href="#vnc-settings"
+            className={settingsNavItemClass("vnc-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("vnc-settings")}
+          >
+            <Network size={16} />
+            <span>VNC</span>
           </a>
           <a
             href="#about-settings"
@@ -312,6 +406,202 @@ export function SettingsPage({
         </aside>
 
         <section className="settings-content" aria-label="Settings">
+          <section className="settings-card settings-section" id="general-settings">
+            <div className="settings-section-header">
+              <div>
+                <p className="panel-label">General</p>
+                <h2>Workspace defaults</h2>
+              </div>
+            </div>
+
+            <div className="settings-placeholder-list">
+              <button className="settings-placeholder-item" type="button">
+                <Languages size={17} />
+                <span>Language (i18n)</span>
+                <strong>To be implemented</strong>
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-card settings-section" id="appearance-settings">
+            <div className="settings-section-header">
+              <div>
+                <p className="panel-label">Appearance</p>
+                <h2>Interface</h2>
+              </div>
+              <div className="settings-header-actions">
+                <button
+                  className="toolbar-button"
+                  disabled={!hasAppearanceChanges}
+                  onClick={() => void handleSaveAppearanceSettings()}
+                  type="button"
+                >
+                  <Save size={15} />
+                  Save
+                </button>
+                <button
+                  className="toolbar-button"
+                  onClick={() => void handleResetAppearanceSettings()}
+                  type="button"
+                >
+                  <RotateCcw size={15} />
+                  Reset Font
+                </button>
+              </div>
+            </div>
+            <div className="form-grid">
+              <label>
+                <span>App UI font family</span>
+                <input
+                  list="app-ui-font-options"
+                  onChange={(event) => {
+                    const appFontFamily = event.currentTarget.value;
+                    setAppearanceDraft((settings) => ({
+                      ...settings,
+                      appFontFamily,
+                    }));
+                  }}
+                  value={appearanceDraft.appFontFamily}
+                />
+                <datalist id="app-ui-font-options">
+                  <option value={defaultAppearanceSettings.appFontFamily}>Satoshi</option>
+                  <option value='Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'>
+                    System sans
+                  </option>
+                  <option value='"Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif'>
+                    Segoe UI Variable
+                  </option>
+                </datalist>
+                <small className="field-hint">
+                  Default uses src/assets/fonts/Satoshi-Variable.ttf.
+                </small>
+              </label>
+              <SettingsSummary label="Active UI font" value={appearanceDraft.appFontFamily} />
+            </div>
+            <div className="settings-reset-layout">
+              <div>
+                <strong>Layout</strong>
+                <span>Reset panel widths, collapsed panels, and saved terminal pane layouts.</span>
+              </div>
+              <button className="toolbar-button" onClick={onResetLayout} type="button">
+                <RotateCcw size={15} />
+                Reset Layout
+              </button>
+            </div>
+            <div className="settings-placeholder-list">
+              <button className="settings-placeholder-item" type="button">
+                <Palette size={17} />
+                <span>Color Scheme</span>
+                <strong>To be implemented</strong>
+              </button>
+            </div>
+            {appearanceStatus ? (
+              <p className="settings-status success">{appearanceStatus}</p>
+            ) : null}
+            {appearanceError ? <p className="settings-status error">{appearanceError}</p> : null}
+          </section>
+
+          <section className="settings-card settings-section" id="assistant-settings">
+            <div className="settings-section-header">
+              <div>
+                <p className="panel-label">AI Assistant</p>
+                <h2>AI provider</h2>
+              </div>
+              <div className="settings-header-actions">
+                <button
+                  className="toolbar-button"
+                  disabled={!hasAiChanges}
+                  onClick={() => void handleSaveAiProviderSettings()}
+                  type="button"
+                >
+                  <Save size={15} />
+                  Save
+                </button>
+                <button
+                  className="toolbar-button"
+                  onClick={() => void handleClearAiProviderSettings()}
+                  type="button"
+                >
+                  <Trash2 size={15} />
+                  Clear All Settings
+                </button>
+              </div>
+            </div>
+
+            <div className="form-grid ai-provider-selector-grid">
+              <label>
+                <span>Provider</span>
+                <select
+                  onChange={(event) =>
+                    handleAiProviderKindChange(event.currentTarget.value as AiProviderKind)
+                  }
+                  value={aiDraft.providerKind}
+                >
+                  {AI_PROVIDER_DEFINITIONS.map((definition) => (
+                    <option key={definition.kind} value={definition.kind}>
+                      {definition.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="ai-provider-fields">
+              {aiProviderDefinition.settingsFields.map((field) => (
+                <AiProviderSettingsFieldControl
+                  apiKeyDraft={apiKeyDraft}
+                  definition={aiProviderDefinition}
+                  draft={aiDraft}
+                  field={field}
+                  hasApiKey={aiProviderHasApiKey}
+                  key={field}
+                  onApiKeyDraftChange={setApiKeyDraft}
+                  onDraftChange={(patch) =>
+                    setAiDraft((settings) => ({
+                      ...settings,
+                      ...patch,
+                    }))
+                  }
+                />
+              ))}
+            </div>
+
+            <div className="settings-summary-grid compact">
+              <SettingsSummary label="Active endpoint" value={formatProviderHost(aiDraft.baseUrl)} />
+              <SettingsSummary
+                label="Capabilities"
+                value={aiProviderDefinition.capabilities
+                  .map(formatAiProviderCapability)
+                  .join(", ")}
+              />
+              <SettingsSummary
+                label="Reasoning"
+                value={formatReasoningEffort(aiDraft.reasoningEffort)}
+              />
+            </div>
+            {aiStatus ? <p className="settings-status success">{aiStatus}</p> : null}
+            {aiError ? <p className="settings-status error">{aiError}</p> : null}
+          </section>
+
+          <section className="settings-card settings-section" id="ssh-settings">
+            <div className="settings-section-header">
+              <div>
+                <p className="panel-label">SSH</p>
+                <h2>SSH and SFTP defaults</h2>
+              </div>
+            </div>
+            <div className="settings-summary-grid">
+              <SettingsSummary label="Default user" value={sshSettings.defaultUser} />
+              <SettingsSummary label="Default port" value={String(sshSettings.defaultPort)} />
+              <SettingsSummary label="Default key" value={sshSettings.defaultKeyPath || "Not set"} />
+              <SettingsSummary label="ProxyJump" value={sshSettings.defaultProxyJump || "Not set"} />
+              <SettingsSummary
+                label="SFTP overwrite"
+                value={sftpSettings.overwriteBehavior === "overwrite" ? "Overwrite" : "Fail"}
+              />
+            </div>
+          </section>
+
           <section className="settings-card settings-section" id="terminal-settings">
             <div className="settings-section-header">
               <div>
@@ -470,199 +760,24 @@ export function SettingsPage({
             {error ? <p className="settings-status error">{error}</p> : null}
           </section>
 
-          <section className="settings-card settings-section" id="ssh-settings">
+          <section className="settings-card settings-section" id="rdp-settings">
             <div className="settings-section-header">
               <div>
-                <p className="panel-label">SSH</p>
-                <h2>SSH defaults</h2>
+                <p className="panel-label">Remote Desktop(RDP)</p>
+                <h2>Quality defaults</h2>
               </div>
             </div>
-            <div className="settings-summary-grid">
-              <SettingsSummary label="Default user" value={sshSettings.defaultUser} />
-              <SettingsSummary label="Default port" value={String(sshSettings.defaultPort)} />
-              <SettingsSummary label="Default key" value={sshSettings.defaultKeyPath || "Not set"} />
-              <SettingsSummary label="ProxyJump" value={sshSettings.defaultProxyJump || "Not set"} />
-            </div>
+            <PlannedSettingsGrid settings={RDP_QUALITY_SETTINGS} />
           </section>
 
-          <section className="settings-card settings-section" id="sftp-settings">
+          <section className="settings-card settings-section" id="vnc-settings">
             <div className="settings-section-header">
               <div>
-                <p className="panel-label">SFTP</p>
-                <h2>Transfer defaults</h2>
+                <p className="panel-label">VNC</p>
+                <h2>Quality defaults</h2>
               </div>
             </div>
-            <div className="settings-summary-grid compact">
-              <SettingsSummary
-                label="Overwrite behavior"
-                value={sftpSettings.overwriteBehavior === "overwrite" ? "Overwrite" : "Fail"}
-              />
-            </div>
-          </section>
-
-          <section className="settings-card settings-section" id="assistant-settings">
-            <div className="settings-section-header">
-              <div>
-                <p className="panel-label">AI Assistant</p>
-                <h2>AI provider</h2>
-              </div>
-              <div className="settings-header-actions">
-                <button
-                  className="toolbar-button"
-                  disabled={!hasAiChanges}
-                  onClick={() => void handleSaveAiProviderSettings()}
-                  type="button"
-                >
-                  <Save size={15} />
-                  Save
-                </button>
-                <button
-                  className="toolbar-button"
-                  onClick={() => void handleClearAiProviderSettings()}
-                  type="button"
-                >
-                  <Trash2 size={15} />
-                  Clear All Settings
-                </button>
-              </div>
-            </div>
-
-            <div className="form-grid ai-provider-selector-grid">
-              <label>
-                <span>Provider</span>
-                <select
-                  onChange={(event) =>
-                    handleAiProviderKindChange(event.currentTarget.value as AiProviderKind)
-                  }
-                  value={aiDraft.providerKind}
-                >
-                  {AI_PROVIDER_DEFINITIONS.map((definition) => (
-                    <option key={definition.kind} value={definition.kind}>
-                      {definition.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="ai-provider-fields">
-              {aiProviderDefinition.settingsFields.map((field) => (
-                <AiProviderSettingsFieldControl
-                  apiKeyDraft={apiKeyDraft}
-                  definition={aiProviderDefinition}
-                  draft={aiDraft}
-                  field={field}
-                  hasApiKey={aiProviderHasApiKey}
-                  key={field}
-                  onApiKeyDraftChange={setApiKeyDraft}
-                  onDraftChange={(patch) =>
-                    setAiDraft((settings) => ({
-                      ...settings,
-                      ...patch,
-                    }))
-                  }
-                />
-              ))}
-            </div>
-
-            <div className="settings-summary-grid compact">
-              <SettingsSummary label="Active endpoint" value={formatProviderHost(aiDraft.baseUrl)} />
-              <SettingsSummary
-                label="Capabilities"
-                value={aiProviderDefinition.capabilities
-                  .map(formatAiProviderCapability)
-                  .join(", ")}
-              />
-              <SettingsSummary
-                label="Reasoning"
-                value={formatReasoningEffort(aiDraft.reasoningEffort)}
-              />
-            </div>
-            {aiStatus ? <p className="settings-status success">{aiStatus}</p> : null}
-            {aiError ? <p className="settings-status error">{aiError}</p> : null}
-          </section>
-
-          <section className="settings-card settings-section" id="appearance-settings">
-            <div className="settings-section-header">
-              <div>
-                <p className="panel-label">Appearance</p>
-                <h2>Interface</h2>
-              </div>
-              <div className="settings-header-actions">
-                <button
-                  className="toolbar-button"
-                  disabled={!hasAppearanceChanges}
-                  onClick={() => void handleSaveAppearanceSettings()}
-                  type="button"
-                >
-                  <Save size={15} />
-                  Save
-                </button>
-                <button
-                  className="toolbar-button"
-                  onClick={() => void handleResetAppearanceSettings()}
-                  type="button"
-                >
-                  <RotateCcw size={15} />
-                  Reset Font
-                </button>
-              </div>
-            </div>
-            <div className="form-grid">
-              <label>
-                <span>App UI font family</span>
-                <input
-                  list="app-ui-font-options"
-                  onChange={(event) => {
-                    const appFontFamily = event.currentTarget.value;
-                    setAppearanceDraft((settings) => ({
-                      ...settings,
-                      appFontFamily,
-                    }));
-                  }}
-                  value={appearanceDraft.appFontFamily}
-                />
-                <datalist id="app-ui-font-options">
-                  <option value={defaultAppearanceSettings.appFontFamily}>Satoshi</option>
-                  <option value='Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'>
-                    System sans
-                  </option>
-                  <option value='"Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif'>
-                    Segoe UI Variable
-                  </option>
-                </datalist>
-                <small className="field-hint">
-                  Default uses src/assets/fonts/Satoshi-Variable.ttf.
-                </small>
-              </label>
-              <SettingsSummary label="Active UI font" value={appearanceDraft.appFontFamily} />
-            </div>
-            <div className="settings-reset-layout">
-              <div>
-                <strong>Layout</strong>
-                <span>Reset panel widths, collapsed panels, and saved terminal pane layouts.</span>
-              </div>
-              <button className="toolbar-button" onClick={onResetLayout} type="button">
-                <RotateCcw size={15} />
-                Reset Layout
-              </button>
-            </div>
-            <div className="settings-placeholder-list">
-              <button className="settings-placeholder-item" type="button">
-                <Languages size={17} />
-                <span>Language (i18n)</span>
-                <strong>To be implemented</strong>
-              </button>
-              <button className="settings-placeholder-item" type="button">
-                <Palette size={17} />
-                <span>Color Scheme</span>
-                <strong>To be implemented</strong>
-              </button>
-            </div>
-            {appearanceStatus ? (
-              <p className="settings-status success">{appearanceStatus}</p>
-            ) : null}
-            {appearanceError ? <p className="settings-status error">{appearanceError}</p> : null}
+            <PlannedSettingsGrid settings={VNC_QUALITY_SETTINGS} />
           </section>
 
           <section className="settings-card settings-section" id="about-settings">
@@ -816,6 +931,20 @@ function SettingsSummary({ label, value }: { label: string; value: string }) {
     <div className="settings-summary-item">
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function PlannedSettingsGrid({ settings }: { settings: readonly PlannedSetting[] }) {
+  return (
+    <div className="settings-summary-grid">
+      {settings.map((setting) => (
+        <div className="settings-summary-item planned-setting" key={setting.label}>
+          <span>{setting.label}</span>
+          <strong>{setting.value}</strong>
+          {setting.hint ? <small>{setting.hint}</small> : null}
+        </div>
+      ))}
     </div>
   );
 }

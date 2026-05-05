@@ -187,7 +187,7 @@ The primary UI is a dense desktop workspace:
 
 Default visual direction: quiet productivity light chrome with dark terminal panes.
 
-The activity rail uses icons with delayed hover labels for top-level destinations. The top rail entry is Dashboard, and the second entry is Settings. The current Settings surface lives in `src/settings/SettingsPage.tsx`; it exposes editable Terminal behavior, AI provider, App UI font, and layout reset controls; read-only SSH and SFTP summaries; and Language (i18n) plus Color Scheme as explicit to-be-implemented placeholders.
+The activity rail uses icons with delayed hover labels for top-level destinations. The top rail entry is Dashboard, and the second entry is Settings. The current Settings surface lives in `src/settings/SettingsPage.tsx`; it is ordered as General, Appearance, AI Assistant, SSH, Terminal, Remote Desktop(RDP), VNC, and About. General exposes Language (i18n) as an explicit to-be-implemented placeholder, Appearance owns App UI font, layout reset, and Color Scheme as a placeholder, SSH folds in SFTP transfer defaults, Terminal owns editable terminal behavior, and RDP/VNC expose planned quality default summaries.
 
 AdminDeck does not include a global command palette in the current product scope; navigation and workflow entry points should stay visible in the Dashboard/connection tree, tab workspace, SFTP toolbar/context actions, assistant panel, and Settings.
 
