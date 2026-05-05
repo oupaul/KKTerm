@@ -19,6 +19,7 @@ import {
   type AiProviderDefinition,
   type AiProviderSettingsField,
 } from "../ai/providers";
+import { AI_PROVIDER_SECRET_OWNER_ID } from "../lib/settings";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { defaultAppearanceSettings } from "../sample-data";
 import { useWorkspaceStore } from "../store";
@@ -31,7 +32,9 @@ import type {
   TerminalSettings,
 } from "../types";
 
-export const AI_PROVIDER_SECRET_OWNER_ID = "openai-compatible-provider";
+// Re-exported for any external callers; new code should import from
+// `lib/settings` directly so the keychain owner id has one source of truth.
+export { AI_PROVIDER_SECRET_OWNER_ID };
 
 export function SettingsPage({
   onBack,

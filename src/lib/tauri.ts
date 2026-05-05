@@ -360,10 +360,6 @@ type CommandMap = {
     args: undefined;
     result: AppBootstrap;
   };
-  list_connection_groups: {
-    args: undefined;
-    result: ConnectionTree;
-  };
   list_connection_tree: {
     args: undefined;
     result: ConnectionTree;

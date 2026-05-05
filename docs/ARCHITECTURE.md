@@ -30,7 +30,7 @@ Provides a typed command wrapper between React and Rust. The frontend should not
 
 ### Frontend Settings
 
-`src/settings/SettingsPage.tsx` owns the Settings surface, including settings-specific draft state, save/reset handlers, summaries, placeholder entries, and small helper controls. `src/App.tsx` should only route to Settings and bootstrap persisted settings into the workspace store. New Settings sections should stay in the settings module unless they become large enough to justify a submodule under `src/settings/`.
+`src/settings/SettingsPage.tsx` owns the Settings surface, including settings-specific draft state, save/reset handlers, summaries, placeholder entries, and small helper controls. `src/App.tsx` only routes to Settings; the persisted-settings bootstrap into the workspace store lives in `src/lib/settings.ts` as a single `useBootstrapSettings()` hook so new persisted settings can be added in one place. The OS keychain owner id for the AI API key (`AI_PROVIDER_SECRET_OWNER_ID`) is also defined in `src/lib/settings.ts` so SettingsPage and bootstrap share one constant. New Settings sections should stay in the settings module unless they become large enough to justify a submodule under `src/settings/`.
 
 ### Storage
 
@@ -194,6 +194,23 @@ AdminDeck does not include a global command palette in the current product scope
 The main workspace treats Tabs as frontend containers over live Sessions. Selecting another Tab changes visibility and focus only; it must not run backend Session close commands. Closing a Tab via the tab-strip close control removes that container and tears down the live Session resources it owns.
 
 Workspace chrome layout is global state. Connection-specific live context may change assistant copy, selected terminal context, or prompt construction, but should not change the left/right panel widths or collapsed state when the active Tab changes. Native HWND-backed surfaces such as WebView2 and RDP depend on stable host bounds; changing chrome dimensions as a side effect of Tab activation creates visible native resize artifacts.
+
+## Frontend Module Map
+
+The current `src/App.tsx` is a dense single file that hosts the app shell plus most workspace surfaces inline. The intended seams, which are already visible as named components inside `App.tsx`, are listed here so future extraction work has one canonical target shape:
+
+- `App` and `ActivityRail` — app shell, page routing, panel layout, chrome bootstrap.
+- `ConnectionSidebar` (and the connection dialog/folder/tile helpers it composes) — root tree, search, drag/drop, CRUD, quick connect. Future home: `src/connections/`.
+- `TabStrip` and `WorkspaceCanvas` — workspace tab strip and the active Tab surface dispatcher.
+- `TerminalWorkspace`, `TerminalLayoutView`, `TerminalPaneView`, `TerminalContextMenu`, `TmuxSessionTag` — terminal Pane host. Future home: `src/terminal/`.
+- `SftpWorkspace`, `FilePane`, `TransferConflictDialog`, `SftpContextMenu`, `SftpPropertiesPopup` — SFTP browser. Future home: `src/sftp/`.
+- `WebViewWorkspace` and the `acquireWebviewSession`/`releaseWebviewSession` lease pair — URL Connection host. Future home: `src/webview/`.
+- `RemoteDesktopWorkspace` — RDP/VNC host. Future home: `src/remote-desktop/`.
+- `AssistantPanel`, `AssistantMessageView`, `MarkdownContent` — AI Assistant chat surface. Future home: `src/ai/`.
+- `ScreenshotMenu` and the screenshot Region overlay helpers — workspace screenshot capture. Future home: `src/workspace/`.
+- `StatusBar` — performance/budget status. Future home: `src/workspace/`.
+
+Until those moves happen, contributors should treat the listed component clusters as logical modules: a change to terminal Pane behavior should keep its edits inside the `Terminal*` cluster rather than scattering helpers above the `App` component, so a future extraction is mechanical. Workspace state, settings I/O, layout serialization, terminal rendering, and the Tauri command boundary are already separated under `src/store.ts`, `src/lib/`, `src/workspace/`, `src/terminal/`, and `src/lib/tauri.ts`; new shared logic should land there rather than at the top of `App.tsx`.
 
 ## Performance Strategy
 

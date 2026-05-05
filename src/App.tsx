@@ -126,12 +126,13 @@ import {
   type TerminalOutput,
   type TmuxSession,
 } from "./lib/tauri";
+import { useBootstrapSettings } from "./lib/settings";
 import {
   getAiProviderDefinition,
   validateAiProviderForChat,
 } from "./ai/providers";
 import { connectionTree, defaultTerminalSettings } from "./sample-data";
-import { AI_PROVIDER_SECRET_OWNER_ID, SettingsPage } from "./settings/SettingsPage";
+import { SettingsPage } from "./settings/SettingsPage";
 import { useWorkspaceStore } from "./store";
 import {
   createTerminalRenderer,
@@ -1161,16 +1162,11 @@ function removeLayoutStorageKeys() {
 
 function App() {
   const [activePage, setActivePage] = useState<"workspace" | "settings">("workspace");
-  const setTerminalSettings = useWorkspaceStore((state) => state.setTerminalSettings);
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
-  const setAppearanceSettings = useWorkspaceStore((state) => state.setAppearanceSettings);
-  const setSshSettings = useWorkspaceStore((state) => state.setSshSettings);
-  const setSftpSettings = useWorkspaceStore((state) => state.setSftpSettings);
-  const setAiProviderSettings = useWorkspaceStore((state) => state.setAiProviderSettings);
-  const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
   const setFrontendLaunchMs = useWorkspaceStore((state) => state.setFrontendLaunchMs);
   const setPerformanceSnapshot = useWorkspaceStore((state) => state.setPerformanceSnapshot);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
+  useBootstrapSettings();
   const [connectionPanelLayout, setConnectionPanelLayout] = useState(() =>
     loadPanelLayout(
       CONNECTION_PANEL_LAYOUT_KEY,
@@ -1270,47 +1266,6 @@ function App() {
       window.clearInterval(interval);
     };
   }, [setPerformanceSnapshot]);
-
-  useEffect(() => {
-    invokeCommand("get_terminal_settings")
-      .then(setTerminalSettings)
-      .catch(() => undefined);
-  }, [setTerminalSettings]);
-
-  useEffect(() => {
-    invokeCommand("get_appearance_settings")
-      .then(setAppearanceSettings)
-      .catch(() => undefined);
-  }, [setAppearanceSettings]);
-
-  useEffect(() => {
-    invokeCommand("get_ssh_settings")
-      .then(setSshSettings)
-      .catch(() => undefined);
-  }, [setSshSettings]);
-
-  useEffect(() => {
-    invokeCommand("get_sftp_settings")
-      .then(setSftpSettings)
-      .catch(() => undefined);
-  }, [setSftpSettings]);
-
-  useEffect(() => {
-    invokeCommand("get_ai_provider_settings")
-      .then(setAiProviderSettings)
-      .catch(() => undefined);
-  }, [setAiProviderSettings]);
-
-  useEffect(() => {
-    invokeCommand("secret_exists", {
-      request: {
-        kind: "aiApiKey",
-        ownerId: AI_PROVIDER_SECRET_OWNER_ID,
-      },
-    })
-      .then((presence) => setAiProviderHasApiKey(presence.exists))
-      .catch(() => undefined);
-  }, [setAiProviderHasApiKey]);
 
   useEffect(() => {
     const preventDefaultContextMenu = (event: globalThis.MouseEvent) => {
