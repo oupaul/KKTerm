@@ -313,10 +313,6 @@ impl Storage {
         })
     }
 
-    pub fn list_connection_groups(&self) -> Result<ConnectionTree, String> {
-        self.list_connection_tree()
-    }
-
     pub fn terminal_settings(&self) -> Result<TerminalSettings, String> {
         let connection = self.lock()?;
         let value = connection

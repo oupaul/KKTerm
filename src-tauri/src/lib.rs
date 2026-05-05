@@ -49,13 +49,6 @@ fn app_bootstrap(
 }
 
 #[tauri::command]
-fn list_connection_groups(
-    storage: tauri::State<'_, storage::Storage>,
-) -> Result<storage::ConnectionTree, String> {
-    storage.list_connection_groups()
-}
-
-#[tauri::command]
 fn list_connection_tree(
     storage: tauri::State<'_, storage::Storage>,
 ) -> Result<storage::ConnectionTree, String> {
@@ -734,7 +727,6 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_bootstrap,
-            list_connection_groups,
             list_connection_tree,
             create_connection,
             create_connection_folder,
