@@ -3,7 +3,10 @@ import {
   ArrowLeft,
   Bot,
   Download,
+  ExternalLink,
+  Info,
   Languages,
+  PackageOpen,
   Palette,
   RotateCcw,
   Save,
@@ -21,6 +24,7 @@ import {
 } from "../ai/providers";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { defaultAppearanceSettings } from "../sample-data";
+import { ABOUT_PRODUCT, OPEN_SOURCE_COMPONENT_GROUPS, type OpenSourceComponent } from "./aboutData";
 import { useWorkspaceStore } from "../store";
 import type {
   AiProviderKind,
@@ -32,6 +36,23 @@ import type {
 } from "../types";
 
 export const AI_PROVIDER_SECRET_OWNER_ID = "openai-compatible-provider";
+
+type SettingsSectionId =
+  | "terminal-settings"
+  | "ssh-settings"
+  | "sftp-settings"
+  | "assistant-settings"
+  | "appearance-settings"
+  | "about-settings";
+
+const SETTINGS_SECTION_IDS: SettingsSectionId[] = [
+  "terminal-settings",
+  "ssh-settings",
+  "sftp-settings",
+  "assistant-settings",
+  "appearance-settings",
+  "about-settings",
+];
 
 export function SettingsPage({
   onBack,
@@ -60,6 +81,8 @@ export function SettingsPage({
   const [appearanceError, setAppearanceError] = useState("");
   const [aiStatus, setAiStatus] = useState("");
   const [aiError, setAiError] = useState("");
+  const [activeSectionId, setActiveSectionId] =
+    useState<SettingsSectionId>("terminal-settings");
   const hasTerminalChanges = JSON.stringify(terminalDraft) !== JSON.stringify(terminalSettings);
   const hasAppearanceChanges =
     JSON.stringify(appearanceDraft) !== JSON.stringify(appearanceSettings);
@@ -78,6 +101,20 @@ export function SettingsPage({
   useEffect(() => {
     setAiDraft(aiProviderSettings);
   }, [aiProviderSettings]);
+
+  useEffect(() => {
+    function syncActiveSectionFromHash() {
+      const sectionId = window.location.hash.slice(1);
+      if (isSettingsSectionId(sectionId)) {
+        setActiveSectionId(sectionId);
+        document.getElementById(sectionId)?.scrollIntoView();
+      }
+    }
+
+    syncActiveSectionFromHash();
+    window.addEventListener("hashchange", syncActiveSectionFromHash);
+    return () => window.removeEventListener("hashchange", syncActiveSectionFromHash);
+  }, []);
 
   async function handleSaveTerminalSettings() {
     try {
@@ -221,25 +258,53 @@ export function SettingsPage({
 
       <div className="settings-layout">
         <aside className="settings-nav" aria-label="Settings sections">
-          <a href="#terminal-settings" className="settings-nav-item active">
+          <a
+            href="#terminal-settings"
+            className={settingsNavItemClass("terminal-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("terminal-settings")}
+          >
             <Terminal size={16} />
             <span>Terminal</span>
           </a>
-          <a href="#ssh-settings" className="settings-nav-item">
+          <a
+            href="#ssh-settings"
+            className={settingsNavItemClass("ssh-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("ssh-settings")}
+          >
             <Server size={16} />
             <span>SSH</span>
           </a>
-          <a href="#sftp-settings" className="settings-nav-item">
+          <a
+            href="#sftp-settings"
+            className={settingsNavItemClass("sftp-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("sftp-settings")}
+          >
             <Download size={16} />
             <span>SFTP</span>
           </a>
-          <a href="#assistant-settings" className="settings-nav-item">
+          <a
+            href="#assistant-settings"
+            className={settingsNavItemClass("assistant-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("assistant-settings")}
+          >
             <Bot size={16} />
             <span>AI Assistant</span>
           </a>
-          <a href="#appearance-settings" className="settings-nav-item">
+          <a
+            href="#appearance-settings"
+            className={settingsNavItemClass("appearance-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("appearance-settings")}
+          >
             <Palette size={16} />
             <span>Appearance</span>
+          </a>
+          <a
+            href="#about-settings"
+            className={settingsNavItemClass("about-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("about-settings")}
+          >
+            <Info size={16} />
+            <span>About</span>
           </a>
         </aside>
 
@@ -596,6 +661,61 @@ export function SettingsPage({
             ) : null}
             {appearanceError ? <p className="settings-status error">{appearanceError}</p> : null}
           </section>
+
+          <section className="settings-card settings-section" id="about-settings">
+            <div className="settings-section-header">
+              <div>
+                <p className="panel-label">About</p>
+                <h2>{ABOUT_PRODUCT.name}</h2>
+              </div>
+              <a
+                className="toolbar-button"
+                href={ABOUT_PRODUCT.repositoryUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <ExternalLink size={15} />
+                GitHub
+              </a>
+            </div>
+
+            <div className="about-hero">
+              <div>
+                <strong>{ABOUT_PRODUCT.name}</strong>
+                <span>{ABOUT_PRODUCT.slogan}</span>
+              </div>
+              <PackageOpen size={34} />
+            </div>
+
+            <div className="settings-summary-grid">
+              <SettingsSummary label="Developer" value={ABOUT_PRODUCT.developer} />
+              <SettingsSummary label="Version" value={ABOUT_PRODUCT.version} />
+              <SettingsSummary label="License" value={ABOUT_PRODUCT.license} />
+              <SettingsSummary label="Repository" value={ABOUT_PRODUCT.repositoryUrl} />
+            </div>
+
+            <div className="open-source-panel">
+              <div className="open-source-panel-header">
+                <div>
+                  <strong>Open-source components</strong>
+                  <span>
+                    Direct frontend, tooling, and Rust components referenced by the project
+                    manifests.
+                  </span>
+                </div>
+                <span>{openSourceComponentCount()} components</span>
+              </div>
+              <div className="open-source-groups">
+                {OPEN_SOURCE_COMPONENT_GROUPS.map((group) => (
+                  <OpenSourceComponentGroup
+                    components={group.components}
+                    key={group.label}
+                    label={group.label}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
         </section>
       </div>
     </main>
@@ -694,6 +814,51 @@ function SettingsSummary({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function isSettingsSectionId(value: string): value is SettingsSectionId {
+  return SETTINGS_SECTION_IDS.includes(value as SettingsSectionId);
+}
+
+function settingsNavItemClass(sectionId: SettingsSectionId, activeSectionId: SettingsSectionId) {
+  return `settings-nav-item${sectionId === activeSectionId ? " active" : ""}`;
+}
+
+function OpenSourceComponentGroup({
+  components,
+  label,
+}: {
+  components: readonly OpenSourceComponent[];
+  label: string;
+}) {
+  return (
+    <section className="open-source-group">
+      <h3>{label}</h3>
+      <div className="open-source-table" role="table" aria-label={`${label} components`}>
+        <div className="open-source-table-row header" role="row">
+          <span role="columnheader">Component</span>
+          <span role="columnheader">Version</span>
+          <span role="columnheader">License</span>
+          <span role="columnheader">Role</span>
+        </div>
+        {components.map((component) => (
+          <div className="open-source-table-row" key={component.name} role="row">
+            <strong role="cell">{component.name}</strong>
+            <span role="cell">{component.version}</span>
+            <span role="cell">{component.license}</span>
+            <span role="cell">{component.role}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function openSourceComponentCount() {
+  return OPEN_SOURCE_COMPONENT_GROUPS.reduce(
+    (count, group) => count + group.components.length,
+    0,
   );
 }
 
