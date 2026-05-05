@@ -603,14 +603,8 @@ export function RemoteDesktopWorkspace({
         return;
       }
       if (event.payload.sessionId !== sessionIdRef.current) {
-        console.debug("[vnc] dropped event (sessionId mismatch)", {
-          payloadSessionId: event.payload.sessionId,
-          currentSessionId: sessionIdRef.current,
-          kind: event.payload.kind,
-        });
         return;
       }
-      console.debug("[vnc] received event", event.payload.kind, event.payload);
       handleVncSessionEvent(event.payload);
     }).then((unlisten) => {
       if (disposed) {
@@ -758,11 +752,18 @@ export function RemoteDesktopWorkspace({
       return { x: 0, y: 0 };
     }
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / Math.max(1, rect.width);
-    const scaleY = canvas.height / Math.max(1, rect.height);
+    const content = vncRenderedContentRect(rect, canvas.width, canvas.height);
+    const scaleX = canvas.width / Math.max(1, content.width);
+    const scaleY = canvas.height / Math.max(1, content.height);
     return {
-      x: Math.max(0, Math.min(canvas.width - 1, Math.round((event.clientX - rect.left) * scaleX))),
-      y: Math.max(0, Math.min(canvas.height - 1, Math.round((event.clientY - rect.top) * scaleY))),
+      x: Math.max(
+        0,
+        Math.min(canvas.width - 1, Math.round((event.clientX - content.left) * scaleX)),
+      ),
+      y: Math.max(
+        0,
+        Math.min(canvas.height - 1, Math.round((event.clientY - content.top) * scaleY)),
+      ),
     };
   };
 
@@ -885,12 +886,12 @@ export function RemoteDesktopWorkspace({
       <div
         className="remote-desktop-workspace"
         ref={hostRef}
-        {...(connection?.type === "vnc" ? { "data-vnc-debug": "true" } : {})}
       >
         {connection?.type === "vnc" ? (
           <canvas
             aria-label={`${tab.title} VNC display`}
             className={vncHasDisplay ? "vnc-display ready" : "vnc-display"}
+            onContextMenu={(event) => event.preventDefault()}
             onKeyDown={(event) => handleVncKey(event, true)}
             onKeyUp={(event) => handleVncKey(event, false)}
             onPointerDown={handleVncPointerDown}
@@ -928,6 +929,29 @@ export function RemoteDesktopWorkspace({
       </div>
     </section>
   );
+}
+
+function vncRenderedContentRect(rect: DOMRect, intrinsicWidth: number, intrinsicHeight: number) {
+  const width = Math.max(1, intrinsicWidth);
+  const height = Math.max(1, intrinsicHeight);
+  const boxAspect = rect.width / Math.max(1, rect.height);
+  const contentAspect = width / height;
+  if (contentAspect > boxAspect) {
+    const contentHeight = rect.width / contentAspect;
+    return {
+      left: rect.left,
+      top: rect.top + (rect.height - contentHeight) / 2,
+      width: rect.width,
+      height: contentHeight,
+    };
+  }
+  const contentWidth = rect.height * contentAspect;
+  return {
+    left: rect.left + (rect.width - contentWidth) / 2,
+    top: rect.top,
+    width: contentWidth,
+    height: rect.height,
+  };
 }
 
 function decodeBase64Bytes(value: string) {

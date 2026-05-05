@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::{
     net::{lookup_host, TcpStream},
     runtime::Runtime,
-    sync::oneshot,
+    sync::{mpsc, oneshot},
     time,
 };
 use vnc::{
@@ -30,6 +30,7 @@ pub struct VncSessionManager {
 
 struct VncSession {
     client: vnc::VncClient,
+    input: mpsc::UnboundedSender<X11Event>,
     stop: Option<oneshot::Sender<()>>,
     connected: bool,
 }
@@ -83,7 +84,11 @@ pub struct VncSimpleRequest {
 }
 
 #[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "kind")]
+#[serde(
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    tag = "kind"
+)]
 enum VncSessionEvent {
     Connected {
         session_id: String,
@@ -166,11 +171,13 @@ impl VncSessionManager {
         let address = self.runtime.block_on(resolve_vnc_address(&host, port))?;
         let client = self.runtime.block_on(connect_vnc(address, password))?;
         let (stop_tx, stop_rx) = oneshot::channel();
+        let (input_tx, input_rx) = mpsc::unbounded_channel();
         spawn_vnc_event_loop(
             &self.runtime,
             app,
             session_id.clone(),
             client.clone(),
+            input_rx,
             stop_rx,
         );
 
@@ -179,6 +186,7 @@ impl VncSessionManager {
             session_id.clone(),
             VncSession {
                 client,
+                input: input_tx,
                 stop: Some(stop_tx),
                 connected: true,
             },
@@ -192,45 +200,38 @@ impl VncSessionManager {
     }
 
     pub fn pointer_event(&self, request: VncPointerEventRequest) -> Result<(), String> {
-        let client = self.client_for(&request.session_id)?;
-        self.runtime
-            .block_on(client.input(X11Event::PointerEvent(ClientMouseEvent {
+        self.queue_input(
+            &request.session_id,
+            X11Event::PointerEvent(ClientMouseEvent {
                 position_x: request.x,
                 position_y: request.y,
                 bottons: request.button_mask,
-            })))
-            .map_err(to_vnc_error)
+            }),
+        )
     }
 
     pub fn key_event(&self, request: VncKeyEventRequest) -> Result<(), String> {
-        let client = self.client_for(&request.session_id)?;
-        self.runtime
-            .block_on(client.input(X11Event::KeyEvent(ClientKeyEvent {
+        self.queue_input(
+            &request.session_id,
+            X11Event::KeyEvent(ClientKeyEvent {
                 keycode: request.key,
                 down: request.down,
-            })))
-            .map_err(to_vnc_error)
+            }),
+        )
     }
 
     pub fn send_ctrl_alt_delete(&self, request: VncSimpleRequest) -> Result<(), String> {
-        let client = self.client_for(&request.session_id)?;
-        self.runtime
-            .block_on(async {
-                send_vnc_key(&client, X11_CONTROL_LEFT, true).await?;
-                send_vnc_key(&client, X11_ALT_LEFT, true).await?;
-                send_vnc_key(&client, X11_DELETE, true).await?;
-                send_vnc_key(&client, X11_DELETE, false).await?;
-                send_vnc_key(&client, X11_ALT_LEFT, false).await?;
-                send_vnc_key(&client, X11_CONTROL_LEFT, false).await
-            })
-            .map_err(to_vnc_error)
+        let session_id = request.session_id;
+        self.queue_input(&session_id, key_input(X11_CONTROL_LEFT, true))?;
+        self.queue_input(&session_id, key_input(X11_ALT_LEFT, true))?;
+        self.queue_input(&session_id, key_input(X11_DELETE, true))?;
+        self.queue_input(&session_id, key_input(X11_DELETE, false))?;
+        self.queue_input(&session_id, key_input(X11_ALT_LEFT, false))?;
+        self.queue_input(&session_id, key_input(X11_CONTROL_LEFT, false))
     }
 
     pub fn refresh(&self, request: VncSimpleRequest) -> Result<(), String> {
-        let client = self.client_for(&request.session_id)?;
-        self.runtime
-            .block_on(client.input(X11Event::FullRefresh))
-            .map_err(to_vnc_error)
+        self.queue_input(&request.session_id, X11Event::FullRefresh)
     }
 
     pub fn close_session(&self, request: VncSimpleRequest) -> Result<(), String> {
@@ -256,12 +257,15 @@ impl VncSessionManager {
         })
     }
 
-    fn client_for(&self, session_id: &str) -> Result<vnc::VncClient, String> {
+    fn queue_input(&self, session_id: &str, event: X11Event) -> Result<(), String> {
         let sessions = self.lock_sessions()?;
-        sessions
+        let input = sessions
             .get(session_id)
-            .map(|session| session.client.clone())
-            .ok_or_else(|| format!("VNC session '{session_id}' was not found"))
+            .map(|session| session.input.clone())
+            .ok_or_else(|| format!("VNC session '{session_id}' was not found"))?;
+        input
+            .send(event)
+            .map_err(|_| format!("VNC session '{session_id}' input channel is closed"))
     }
 
     fn lock_sessions(&self) -> Result<MutexGuard<'_, HashMap<String, VncSession>>, String> {
@@ -325,14 +329,8 @@ async fn connect_vnc(
         .map_err(to_vnc_error)
 }
 
-async fn send_vnc_key(
-    client: &vnc::VncClient,
-    keycode: u32,
-    down: bool,
-) -> Result<(), vnc::VncError> {
-    client
-        .input(X11Event::KeyEvent(ClientKeyEvent { keycode, down }))
-        .await
+fn key_input(keycode: u32, down: bool) -> X11Event {
+    X11Event::KeyEvent(ClientKeyEvent { keycode, down })
 }
 
 fn spawn_vnc_event_loop(
@@ -340,6 +338,7 @@ fn spawn_vnc_event_loop(
     app: AppHandle,
     session_id: String,
     client: vnc::VncClient,
+    mut input_rx: mpsc::UnboundedReceiver<X11Event>,
     mut stop: oneshot::Receiver<()>,
 ) {
     runtime.spawn(async move {
@@ -384,6 +383,21 @@ fn spawn_vnc_event_loop(
                         break;
                     }
                 }
+                input = input_rx.recv() => {
+                    match input {
+                        Some(input) => {
+                            if let Err(error) = client.input(input).await {
+                                eprintln!("[vnc {session_id}] queued input failed: {error}");
+                                emit_vnc_event(&app, VncSessionEvent::Error {
+                                    session_id: session_id.clone(),
+                                    message: to_vnc_error(error),
+                                });
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+                }
                 event = client.recv_event() => {
                     match event {
                         Ok(event) => handle_vnc_event(&app, &session_id, event),
@@ -405,24 +419,6 @@ fn spawn_vnc_event_loop(
 }
 
 fn handle_vnc_event(app: &AppHandle, session_id: &str, event: VncEvent) {
-    eprintln!(
-        "[vnc {session_id}] server event: {}",
-        match &event {
-            VncEvent::SetResolution(s) => format!("SetResolution {}x{}", s.width, s.height),
-            VncEvent::RawImage(r, data) =>
-                format!("RawImage {}x{} @ ({},{}) {} bytes", r.width, r.height, r.x, r.y, data.len()),
-            VncEvent::Copy(d, s) =>
-                format!("Copy {}x{} ({},{})->({},{})", d.width, d.height, s.x, s.y, d.x, d.y),
-            VncEvent::Bell => "Bell".into(),
-            VncEvent::SetCursor(r, _) =>
-                format!("SetCursor {}x{} hot=({},{})", r.width, r.height, r.x, r.y),
-            VncEvent::Text(_) => "ClipboardText".into(),
-            VncEvent::Error(m) => format!("Error: {m}"),
-            VncEvent::SetPixelFormat(_) => "SetPixelFormat".into(),
-            VncEvent::JpegImage(_, _) => "JpegImage".into(),
-            _ => "Other".into(),
-        }
-    );
     match event {
         VncEvent::SetResolution(screen) => emit_vnc_event(
             app,

@@ -210,12 +210,6 @@ function App() {
 
   useEffect(() => {
     const preventDefaultContextMenu = (event: globalThis.MouseEvent) => {
-      // TEMP: allow native context menu inside the VNC workspace for DevTools access while debugging.
-      // Remove this escape hatch once the VNC display issue is resolved.
-      const target = event.target as Element | null;
-      if (target?.closest?.("[data-vnc-debug]")) {
-        return;
-      }
       event.preventDefault();
     };
 
