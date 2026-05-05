@@ -3,7 +3,8 @@ import { collectConnectionFolderIds, countConnections, countFolders, filterConne
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, Globe2, PanelRight, Play, Plus, Save, Search, Server, Terminal, X } from "lucide-react";
 import { AddComputer as IconParkAddComputer, CollapseTextInput as IconParkCollapseTextInput, DataScreen as IconParkDataScreen, Delete as IconParkDelete, Edit as IconParkEdit, ExpandTextInput as IconParkExpandTextInput, FolderPlus as IconParkFolderPlus, LaptopComputer as IconParkLaptopComputer, Server as IconParkServer, Setting as IconParkSetting, Terminal as IconParkTerminal } from "@icon-park/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import { ariaExpanded, ariaPressed, dialogButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
 import { connectionTree } from "../sample-data";
 import { useWorkspaceStore } from "../store";
@@ -105,7 +106,6 @@ function saveRecentConnectionIds(connectionIds: string[]) {
 }
 
 export function ConnectionSidebar({
-  collapsed,
   onToggleCollapsed,
 }: {
   collapsed: boolean;
@@ -874,7 +874,7 @@ export function ConnectionSidebar({
   }
 
   return (
-    <aside className="connection-sidebar" aria-hidden={collapsed}>
+    <aside className="connection-sidebar">
       <div className="sidebar-header">
         <div>
           <h1>Connections</h1>
@@ -911,8 +911,7 @@ export function ConnectionSidebar({
 
       <div className="quick-connect-anchor" ref={quickConnectRef}>
         <button
-          aria-expanded={quickConnectMenuOpen}
-          aria-haspopup="menu"
+          {...dialogButtonAria(quickConnectMenuOpen)}
           className="quick-connect"
           onClick={() => setQuickConnectMenuOpen((isOpen) => !isOpen)}
         >
@@ -1158,9 +1157,14 @@ function ConnectionFolderNode({
   const connectionCount = countConnections(folder);
   const folderCount = countFolders(folder.folders);
   const isCollapsed = collapsedFolderIds.has(folder.id);
+  const groupRef = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    groupRef.current?.style.setProperty("--tree-level-indent", `${level * 14}px`);
+  }, [level]);
 
   return (
-    <section className="tree-group" style={{ paddingLeft: level * 14 } as CSSProperties}>
+    <section className="tree-group" ref={groupRef}>
       <div
         className={`tree-folder-row ${dragDisabled ? "" : "can-drag"} ${
           dropTarget === `folder-${folder.id}` ? "drop-target" : ""
@@ -1185,7 +1189,7 @@ function ConnectionFolderNode({
       >
         <div className="tree-folder">
           <button
-            aria-expanded={!isCollapsed}
+            {...ariaExpanded(!isCollapsed)}
             aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${folder.name}`}
             className="tree-disclosure"
             onClick={(event) => {
@@ -1287,10 +1291,15 @@ function NewFolderDraftRow({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isSettledRef = useRef(false);
+  const groupRef = useRef<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useLayoutEffect(() => {
+    groupRef.current?.style.setProperty("--tree-level-indent", `${level * 14}px`);
+  }, [level]);
 
   const settle = (name: string) => {
     if (isSettledRef.current) {
@@ -1307,7 +1316,7 @@ function NewFolderDraftRow({
   };
 
   return (
-    <div className="tree-group pending-folder-group" style={{ paddingLeft: level * 14 } as CSSProperties}>
+    <div className="tree-group pending-folder-group" ref={groupRef}>
       <div className="tree-folder-row pending-folder-row">
         <div className="tree-folder pending-folder">
           <ChevronDown size={14} />
@@ -1511,7 +1520,7 @@ export function QuickConnectMenu({
   }
 
   return (
-    <div className="quick-connect-menu" role="menu" aria-label="Quick connect">
+    <div className="quick-connect-menu" role="dialog" aria-label="Quick connect">
       {sshDialogOpen ? (
         <form className="quick-connect-mini-dialog" onSubmit={handleSshSubmit}>
           <label>
@@ -1546,7 +1555,7 @@ export function QuickConnectMenu({
           </div>
         </form>
       ) : (
-        <button onClick={() => setSshDialogOpen(true)} role="menuitem" type="button">
+        <button onClick={() => setSshDialogOpen(true)} type="button">
           <Server size={15} />
           <span>SSH</span>
         </button>
@@ -1554,16 +1563,16 @@ export function QuickConnectMenu({
       {shellOptions.map((option) =>
         option.canElevate ? (
           <div className="quick-connect-submenu" key={option.value ?? option.label}>
-            <button aria-haspopup="menu" role="menuitem" type="button">
+            <button aria-haspopup="menu" type="button">
               <Terminal size={15} />
               <span>{option.label}</span>
               <ChevronDown size={13} />
             </button>
-            <div className="quick-connect-submenu-panel" role="menu">
-              <button onClick={() => onOpenLocalShell(option)} role="menuitem" type="button">
+            <div className="quick-connect-submenu-panel">
+              <button onClick={() => onOpenLocalShell(option)} type="button">
                 Normal
               </button>
-              <button onClick={() => onOpenElevatedShell(option)} role="menuitem" type="button">
+              <button onClick={() => onOpenElevatedShell(option)} type="button">
                 Admin
               </button>
             </div>
@@ -1572,7 +1581,6 @@ export function QuickConnectMenu({
           <button
             key={option.value ?? option.label}
             onClick={() => onOpenLocalShell(option)}
-            role="menuitem"
             type="button"
           >
             <Terminal size={15} />
@@ -1580,13 +1588,12 @@ export function QuickConnectMenu({
           </button>
         ),
       )}
-      <div className="quick-connect-menu-separator" role="separator" />
+      <div className="quick-connect-menu-separator" aria-hidden="true" />
       {recentConnections.length > 0 ? (
         recentConnections.map((connection) => (
           <button
             key={connection.id}
             onClick={() => onOpenConnection(connection)}
-            role="menuitem"
             type="button"
           >
             <ConnectionGlyph size={15} type={connection.type} />
@@ -1598,7 +1605,7 @@ export function QuickConnectMenu({
           </button>
         ))
       ) : (
-        <button disabled role="menuitem" type="button">
+        <button disabled type="button">
           <Server size={15} />
           <span>No recent connections</span>
         </button>
@@ -1611,37 +1618,31 @@ const CONNECTION_TYPE_TILES: Array<{
   type: ConnectionTileType;
   title: string;
   description: string;
-  accent: string;
 }> = [
   {
     type: "ssh",
     title: "SSH",
     description: "Secure shell",
-    accent: "#374151",
   },
   {
     type: "local",
     title: "Terminal",
     description: "Local shell",
-    accent: "#13a085",
   },
   {
     type: "url",
     title: "URL",
     description: "Embedded web app",
-    accent: "#0ea5e9",
   },
   {
     type: "rdp",
     title: "Remote Desktop",
     description: "Windows RDP",
-    accent: "#1d4ed8",
   },
   {
     type: "vnc",
     title: "VNC",
     description: "Screen control",
-    accent: "#c026d3",
   },
 ];
 
@@ -1846,11 +1847,11 @@ function ConnectionDialog({
             <div className="connection-type-grid">
               {CONNECTION_TYPE_TILES.map((tile) => (
                 <button
-                  aria-pressed={connectionType === tile.type}
+                  {...ariaPressed(connectionType === tile.type)}
                   className={`connection-type-tile ${connectionType === tile.type ? "selected" : ""}`}
+                  data-connection-type={tile.type}
                   key={tile.type}
                   onClick={() => setConnectionType(tile.type)}
-                  style={{ "--tile-accent": tile.accent } as CSSProperties}
                   type="button"
                 >
                   <span className="connection-type-icon">

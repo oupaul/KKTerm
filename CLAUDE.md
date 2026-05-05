@@ -9,6 +9,8 @@ Follow `AGENTS.md` for repository workflow and `CONTEXT.md` for product language
 - `src/settings/SettingsPage.tsx` owns Settings UI sections, settings draft state, save/reset handlers, and settings-specific helper controls.
 - `src/lib/settings.ts` owns the persisted-settings bootstrap into the workspace store (`useBootstrapSettings`) and the `AI_PROVIDER_SECRET_OWNER_ID` keychain owner constant. Add new persisted settings here rather than cloning a `useEffect` in `App.tsx`.
 - Keep typed Tauri calls behind `src/lib/tauri.ts`; do not call backend commands with ad hoc stringly wrappers from Settings or App code.
+- For dynamic ARIA in TSX, prefer the helpers in `src/lib/aria.ts` and spread their results onto elements. Do not put controls or forms inside `role="menu"` containers; use menu roles only for true menu/menuitem structures and dialog-style popovers for mixed content.
+- Avoid JSX `style=` for app UI when CSS/data attributes or ref-applied geometry can carry the state. Keep shared CSS compatible with the desktop WebView target and avoid unsupported features such as `color-mix()` unless there is an intentional fallback.
 
 ## Critical Domain Boundaries
 

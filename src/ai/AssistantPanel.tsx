@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
+import { ariaChecked, menuButtonAria } from "../lib/aria";
 import { invokeCommand } from "../lib/tauri";
 import { getAiProviderDefinition, validateAiProviderForChat } from "./providers";
 import { useWorkspaceStore } from "../store";
@@ -415,7 +416,6 @@ function normalizeDateString(value: unknown) {
 const ASSISTANT_CHAT_HISTORY_KEY = "admindeck.aiAssistant.chatHistory.v1";
 
 export function AssistantPanel({
-  collapsed,
   onOpenSettings,
   onToggleCollapsed,
 }: {
@@ -723,7 +723,7 @@ export function AssistantPanel({
   }
 
   return (
-    <aside className="assistant-panel" aria-hidden={collapsed}>
+    <aside className="assistant-panel">
       <div className="assistant-topbar">
         <h2>AI Assistant</h2>
         <button
@@ -911,8 +911,7 @@ export function AssistantPanel({
         <div className="assistant-composer-footer">
           <div className="assistant-add-menu-wrapper" ref={addContextMenuRef}>
             <button
-              aria-expanded={addContextMenuOpen ? "true" : "false"}
-              aria-haspopup="menu"
+              {...menuButtonAria(addContextMenuOpen)}
               className="assistant-plus-button"
               disabled={isSendingPrompt}
               onClick={() => setAddContextMenuOpen((open) => !open)}
@@ -964,10 +963,10 @@ export function AssistantPanel({
                   </button>
                   <div className="assistant-add-menu assistant-add-menu-submenu-panel" role="menu">
                     <button
-                      aria-pressed={assistantIntent === "extensionCreation"}
+                      {...ariaChecked(assistantIntent === "extensionCreation")}
                       className="assistant-add-menu-item"
                       onClick={handleStartExtensionDraft}
-                      role="menuitem"
+                      role="menuitemcheckbox"
                       type="button"
                     >
                       <Plus size={14} />

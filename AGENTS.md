@@ -24,6 +24,8 @@ Avoid using "profile" as the canonical name for stored openable resources. Use *
 - Keep `src/App.tsx` limited to app shell routing, global panel layout, and bootstrap. Put connection-tree work in `src/connections/`, workspace dispatch/status/screenshot work in `src/workspace/`, terminal work in `src/terminal/`, SFTP work in `src/sftp/`, URL WebView work in `src/webview/`, remote desktop work in `src/remote-desktop/`, and assistant UI work in `src/ai/`.
 - Do not put live session state into the durable connection model.
 - Keep UI state such as tabs and selected panes in the frontend workspace layer unless there is a clear persistence requirement.
+- For TSX accessibility attributes, use the typed helpers in `src/lib/aria.ts` for dynamic ARIA values so React emits valid values and source analyzers do not read JSX expressions as literal strings. Match ARIA roles to real children: `role="menu"` should contain menu items, while mixed popovers with forms/inputs should use a dialog-style surface instead.
+- Avoid JSX `style=` for UI layout and theming when classes, data attributes, CSS variables, or ref-applied geometry can carry the state. Keep CSS compatibility warnings in mind: add vendor fallbacks where needed and avoid `color-mix()` in shared app CSS unless the target support is intentional.
 
 ## Checks
 

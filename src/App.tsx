@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, LayoutDashboard, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { invokeCommand, isTauriRuntime } from "./lib/tauri";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
@@ -106,6 +106,7 @@ function App() {
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const setFrontendLaunchMs = useWorkspaceStore((state) => state.setFrontendLaunchMs);
   const setPerformanceSnapshot = useWorkspaceStore((state) => state.setPerformanceSnapshot);
+  const appShellRef = useRef<HTMLDivElement | null>(null);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
   useBootstrapSettings();
   const [connectionPanelLayout, setConnectionPanelLayout] = useState(() =>
@@ -219,22 +220,34 @@ function App() {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    const node = appShellRef.current;
+    if (!node) {
+      return;
+    }
+
+    node.style.setProperty(
+      "--connection-panel-width",
+      connectionPanelLayout.collapsed ? "0px" : `${connectionPanelLayout.width}px`,
+    );
+    node.style.setProperty("--connection-resize-width", "1px");
+    node.style.setProperty("--ai-panel-width", aiPanelLayout.collapsed ? "0px" : `${aiPanelLayout.width}px`);
+    node.style.setProperty("--ai-resize-width", aiPanelLayout.collapsed ? "34px" : "1px");
+    node.style.setProperty("--app-ui-font-family", appearanceSettings.appFontFamily);
+  }, [
+    aiPanelLayout.collapsed,
+    aiPanelLayout.width,
+    appearanceSettings.appFontFamily,
+    connectionPanelLayout.collapsed,
+    connectionPanelLayout.width,
+  ]);
+
   return (
     <div
+      ref={appShellRef}
       className={`app-shell ${activePage === "settings" ? "settings-mode" : ""} ${
         connectionPanelLayout.collapsed ? "connections-collapsed" : ""
       } ${aiPanelLayout.collapsed ? "ai-assist-collapsed" : ""}`}
-      style={
-        {
-          "--connection-panel-width": connectionPanelLayout.collapsed
-            ? "0px"
-            : `${connectionPanelLayout.width}px`,
-          "--connection-resize-width": "1px",
-          "--ai-panel-width": aiPanelLayout.collapsed ? "0px" : `${aiPanelLayout.width}px`,
-          "--ai-resize-width": aiPanelLayout.collapsed ? "34px" : "1px",
-          "--app-ui-font-family": appearanceSettings.appFontFamily,
-        } as CSSProperties
-      }
     >
       <ActivityRail
         activePage={activePage}

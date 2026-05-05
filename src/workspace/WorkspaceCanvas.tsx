@@ -6,6 +6,7 @@ import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
 import { Plus, Terminal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { dialogButtonAria } from "../lib/aria";
 import { invokeCommand } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { Connection } from "../types";
@@ -109,8 +110,7 @@ export function TabStrip() {
       ))}
       <div className="quick-connect-anchor tab-quick-connect-anchor" ref={quickConnectRef}>
         <button
-          aria-expanded={quickConnectMenuOpen}
-          aria-haspopup="menu"
+          {...dialogButtonAria(quickConnectMenuOpen)}
           className="new-tab"
           aria-label="New tab"
           onClick={() => setQuickConnectMenuOpen((isOpen) => !isOpen)}

@@ -250,6 +250,7 @@ button {
 .is-resizing-layout,
 .is-resizing-layout * {
   cursor: col-resize !important;
+  -webkit-user-select: none !important;
   user-select: none !important;
 }
 
@@ -575,6 +576,7 @@ h2 {
 }
 
 .tree-group {
+  padding-left: var(--tree-level-indent, 0);
   margin-bottom: 12px;
 }
 
@@ -637,7 +639,7 @@ h2 {
   max-width: min(320px, calc(100vw - 24px));
   padding: 7px 9px;
   color: var(--text);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid #8db5ff;
   border-radius: 6px;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
@@ -1508,10 +1510,6 @@ h2 {
 .xterm-host .xterm {
   height: 100%;
   padding: 8px;
-}
-
-.xterm-host .xterm .xterm-viewport {
-  scrollbar-width: none;
 }
 
 .xterm-host .xterm .xterm-viewport::-webkit-scrollbar {
@@ -2739,7 +2737,7 @@ progress {
   background: #f1f3f4;
 }
 
-.assistant-add-menu-item[aria-pressed="true"] {
+.assistant-add-menu-item[aria-checked="true"] {
   color: #115e59;
   background: #ccfbf1;
 }
@@ -3338,9 +3336,9 @@ progress {
   padding: 14px;
   color: var(--text);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, #ffffff), #ffffff 62%),
+    linear-gradient(135deg, #eaf2ff, #ffffff 62%),
     var(--surface-muted);
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  border: 1px solid #c9d8ef;
   border-radius: 8px;
 }
 
@@ -3594,6 +3592,14 @@ progress {
 }
 
 .connection-type-tile {
+  --tile-accent: #374151;
+  --tile-bg: #f7f8fa;
+  --tile-selected-bg: #f1f3f6;
+  --tile-border: #d6dbe3;
+  --tile-hover-border: #9aa3b2;
+  --tile-ring: rgba(55, 65, 81, 0.16);
+  --tile-icon-bg: #f3f4f6;
+  --tile-icon-border: #d1d5db;
   position: relative;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
@@ -3605,9 +3611,9 @@ progress {
   color: var(--text);
   text-align: left;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--tile-accent) 13%, #ffffff), #ffffff 58%),
+    linear-gradient(135deg, var(--tile-bg), #ffffff 58%),
     #ffffff;
-  border: 1px solid color-mix(in srgb, var(--tile-accent) 24%, var(--border));
+  border: 1px solid var(--tile-border);
   border-radius: 8px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
   cursor: pointer;
@@ -3618,19 +3624,63 @@ progress {
     background 150ms ease;
 }
 
+.connection-type-tile[data-connection-type="local"] {
+  --tile-accent: #13a085;
+  --tile-bg: #effcf8;
+  --tile-selected-bg: #e7fbf4;
+  --tile-border: #bfeade;
+  --tile-hover-border: #55c4ae;
+  --tile-ring: rgba(19, 160, 133, 0.16);
+  --tile-icon-bg: #ecfdf5;
+  --tile-icon-border: #a7f3d0;
+}
+
+.connection-type-tile[data-connection-type="url"] {
+  --tile-accent: #0ea5e9;
+  --tile-bg: #f0f9ff;
+  --tile-selected-bg: #e0f2fe;
+  --tile-border: #bae6fd;
+  --tile-hover-border: #38bdf8;
+  --tile-ring: rgba(14, 165, 233, 0.16);
+  --tile-icon-bg: #e0f2fe;
+  --tile-icon-border: #bae6fd;
+}
+
+.connection-type-tile[data-connection-type="rdp"] {
+  --tile-accent: #1d4ed8;
+  --tile-bg: #eff6ff;
+  --tile-selected-bg: #dbeafe;
+  --tile-border: #bfdbfe;
+  --tile-hover-border: #60a5fa;
+  --tile-ring: rgba(29, 78, 216, 0.16);
+  --tile-icon-bg: #dbeafe;
+  --tile-icon-border: #bfdbfe;
+}
+
+.connection-type-tile[data-connection-type="vnc"] {
+  --tile-accent: #c026d3;
+  --tile-bg: #fdf4ff;
+  --tile-selected-bg: #fae8ff;
+  --tile-border: #f5d0fe;
+  --tile-hover-border: #e879f9;
+  --tile-ring: rgba(192, 38, 211, 0.16);
+  --tile-icon-bg: #fae8ff;
+  --tile-icon-border: #f0abfc;
+}
+
 .connection-type-tile:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--tile-accent) 58%, var(--border));
+  border-color: var(--tile-hover-border);
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.11);
 }
 
 .connection-type-tile.selected {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--tile-accent) 20%, #ffffff), #ffffff 62%),
+    linear-gradient(135deg, var(--tile-selected-bg), #ffffff 62%),
     #ffffff;
   border-color: var(--tile-accent);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--tile-accent) 16%, transparent),
+    0 0 0 3px var(--tile-ring),
     0 15px 34px rgba(15, 23, 42, 0.12);
 }
 
@@ -3640,8 +3690,8 @@ progress {
   justify-content: center;
   width: 42px;
   height: 42px;
-  background: color-mix(in srgb, var(--tile-accent) 10%, #ffffff);
-  border: 1px solid color-mix(in srgb, var(--tile-accent) 20%, transparent);
+  background: var(--tile-icon-bg);
+  border: 1px solid var(--tile-icon-border);
   border-radius: 8px;
 }
 

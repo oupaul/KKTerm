@@ -1,6 +1,7 @@
 import { Camera } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent, RefObject } from "react";
+import { menuButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, type CaptureScreenshotRequest } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 
@@ -32,6 +33,8 @@ export function ScreenshotMenu({
   const [regionState, setRegionState] = useState<ScreenshotRegionState | null>(null);
   const [copiedStatus, setCopiedStatus] = useState("");
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const regionTargetRef = useRef<HTMLDivElement | null>(null);
+  const regionSelectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -169,13 +172,41 @@ export function ScreenshotMenu({
       ? rectFromPoints(regionState.start, regionState.current)
       : null;
 
+  useLayoutEffect(() => {
+    const node = regionTargetRef.current;
+    if (!node || !regionState) {
+      return;
+    }
+
+    node.style.height = `${regionState.bounds.height}px`;
+    node.style.left = `${regionState.bounds.left}px`;
+    node.style.top = `${regionState.bounds.top}px`;
+    node.style.width = `${regionState.bounds.width}px`;
+  }, [
+    regionState?.bounds.height,
+    regionState?.bounds.left,
+    regionState?.bounds.top,
+    regionState?.bounds.width,
+  ]);
+
+  useLayoutEffect(() => {
+    const node = regionSelectionRef.current;
+    if (!node || !selectionRect) {
+      return;
+    }
+
+    node.style.height = `${selectionRect.height}px`;
+    node.style.left = `${selectionRect.x}px`;
+    node.style.top = `${selectionRect.y}px`;
+    node.style.width = `${selectionRect.width}px`;
+  }, [selectionRect?.height, selectionRect?.width, selectionRect?.x, selectionRect?.y]);
+
   return (
     <>
       <div className="terminal-menu-wrapper screenshot-menu-wrapper" ref={menuRef}>
         <button
           aria-label="Take screenshot"
-          aria-haspopup={directClipboardCapture ? undefined : "menu"}
-          aria-expanded={directClipboardCapture ? undefined : menuOpen ? "true" : "false"}
+          {...(directClipboardCapture ? {} : menuButtonAria(menuOpen))}
           className={buttonClassName}
           onClick={handleButtonClick}
           title={copiedStatus || "Take screenshot"}
@@ -231,25 +262,9 @@ export function ScreenshotMenu({
           role="application"
           tabIndex={-1}
         >
-          <div
-            className="screenshot-region-target"
-            style={{
-              height: regionState.bounds.height,
-              left: regionState.bounds.left,
-              top: regionState.bounds.top,
-              width: regionState.bounds.width,
-            }}
-          />
+          <div className="screenshot-region-target" ref={regionTargetRef} />
           {selectionRect ? (
-            <div
-              className="screenshot-region-selection"
-              style={{
-                height: selectionRect.height,
-                left: selectionRect.x,
-                top: selectionRect.y,
-                width: selectionRect.width,
-              }}
-            />
+            <div className="screenshot-region-selection" ref={regionSelectionRef} />
           ) : null}
         </div>
       ) : null}

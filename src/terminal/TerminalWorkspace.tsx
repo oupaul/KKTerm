@@ -7,6 +7,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Mouse, ChevronRight, Ci
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
+import { dialogButtonAria, menuButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, saveTextFile, type TerminalOutput, type TmuxSession } from "../lib/tauri";
 import { defaultTerminalSettings } from "../sample-data";
 import { useWorkspaceStore } from "../store";
@@ -215,8 +216,7 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
               <button
                 className="icon-button"
                 aria-label="Split layout"
-                aria-haspopup="menu"
-                aria-expanded={splitMenuOpen ? "true" : "false"}
+                {...menuButtonAria(splitMenuOpen)}
                 disabled={!canSplit}
                 onClick={() => setSplitMenuOpen((open) => !open)}
                 title="Split layout"
@@ -269,8 +269,7 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
               <button
                 className="icon-button"
                 aria-label="Terminal actions"
-                aria-haspopup="menu"
-                aria-expanded={hamburgerOpen ? "true" : "false"}
+                {...menuButtonAria(hamburgerOpen)}
                 onClick={() => setHamburgerOpen((open) => !open)}
                 title="Terminal actions"
                 type="button"
@@ -659,8 +658,7 @@ function TmuxSessionTag({
     <div className="tmux-session-wrapper" ref={menuRef}>
       <button
         className="tmux-session-tag"
-        aria-expanded={open}
-        aria-haspopup="dialog"
+        {...dialogButtonAria(open)}
         onClick={() => void handleToggle()}
         title="Show tmux sessions"
         type="button"
