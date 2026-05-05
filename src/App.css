@@ -3071,52 +3071,6 @@ progress {
   font-weight: 800;
 }
 
-.ai-provider-picker {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.ai-provider-option {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  min-height: 54px;
-  padding: 9px;
-  color: var(--text);
-  text-align: left;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  cursor: pointer;
-}
-
-.ai-provider-option:hover,
-.ai-provider-option.selected {
-  background: var(--surface);
-  border-color: #8db5ff;
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.ai-provider-option strong,
-.ai-provider-option span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ai-provider-option strong {
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.ai-provider-option span {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
 .settings-placeholder-list {
   display: grid;
   gap: 8px;
@@ -3499,8 +3453,14 @@ progress {
   gap: 10px;
 }
 
-.form-grid.ai-provider-secret-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+.form-grid.ai-provider-selector-grid {
+  grid-template-columns: minmax(220px, 340px);
+}
+
+.ai-provider-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .form-grid.three-columns {

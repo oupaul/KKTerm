@@ -14,6 +14,8 @@ export type AiModelOption = {
   note?: string;
 };
 
+export type AiProviderSettingsField = "baseUrl" | "model" | "reasoningEffort" | "apiKey";
+
 export type AiProviderDefinition = {
   kind: AiProviderKind;
   label: string;
@@ -26,8 +28,22 @@ export type AiProviderDefinition = {
   allowsCustomModel: boolean;
   apiKeyLabel: string;
   modelOptions: AiModelOption[];
+  settingsFields: AiProviderSettingsField[];
   capabilities: AiProviderCapability[];
 };
+
+const HOSTED_PROVIDER_SETTINGS_FIELDS: AiProviderSettingsField[] = [
+  "model",
+  "reasoningEffort",
+  "apiKey",
+];
+
+const CONFIGURABLE_ENDPOINT_SETTINGS_FIELDS: AiProviderSettingsField[] = [
+  "baseUrl",
+  "model",
+  "reasoningEffort",
+  "apiKey",
+];
 
 export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
   {
@@ -48,6 +64,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "gpt-5.4-nano", label: "GPT-5.4 Nano", note: "Smallest" },
       { id: "gpt-5.2-codex", label: "GPT-5.2 Codex", note: "Agentic coding" },
     ],
+    settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
     capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],
   },
   {
@@ -67,6 +84,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", note: "Fast" },
       { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 snapshot" },
     ],
+    settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
     capabilities: ["chat", "streaming", "toolCalling", "mcpReady"],
   },
   {
@@ -86,6 +104,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
       { id: "deepseek/deepseek-chat", label: "DeepSeek Chat" },
     ],
+    settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
     capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],
   },
   {
@@ -103,6 +122,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", note: "Default" },
       { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", note: "Higher capability" },
     ],
+    settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
     capabilities: ["chat", "streaming", "toolCalling", "openAiCompatible"],
   },
   {
@@ -122,6 +142,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "deepseek-r1", label: "DeepSeek-R1", note: "Local reasoning" },
       { id: "gemma3", label: "Gemma 3" },
     ],
+    settingsFields: ["baseUrl", "model", "reasoningEffort"],
     capabilities: ["chat", "streaming", "toolCalling", "localRuntime", "openAiCompatible"],
   },
   {
@@ -140,6 +161,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "abacusai/dracarys-llama-3.1-70b-instruct", label: "Dracarys Llama 3.1 70B" },
       { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B Instruct" },
     ],
+    settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
     capabilities: ["chat", "streaming", "toolCalling", "openAiCompatible"],
   },
   {
@@ -158,6 +180,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
       { id: "llama-3.3-70b-instruct", label: "Llama 3.3 70B compatible" },
       { id: "qwen3", label: "Qwen3 compatible" },
     ],
+    settingsFields: CONFIGURABLE_ENDPOINT_SETTINGS_FIELDS,
     capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],
   },
 ];

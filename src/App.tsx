@@ -135,6 +135,8 @@ import {
   normalizeAiProviderDraft,
   providerDefaultsFor,
   validateAiProviderForChat,
+  type AiProviderDefinition,
+  type AiProviderSettingsField,
 } from "./ai/providers";
 import {
   connectionTree,
@@ -159,6 +161,7 @@ import {
 import type {
   AppearanceSettings,
   AiProviderKind,
+  AiProviderSettings,
   AiReasoningEffort,
   Connection,
   ConnectionFolder,
@@ -8632,25 +8635,7 @@ function SettingsPage({
               </div>
             </div>
 
-            <div className="ai-provider-picker" role="group" aria-label="AI providers">
-              {AI_PROVIDER_DEFINITIONS.map((definition) => (
-                <button
-                  className={
-                    definition.kind === aiDraft.providerKind
-                      ? "ai-provider-option selected"
-                      : "ai-provider-option"
-                  }
-                  key={definition.kind}
-                  onClick={() => handleAiProviderKindChange(definition.kind)}
-                  type="button"
-                >
-                  <strong>{definition.label}</strong>
-                  <span>{definition.defaultModel}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="form-grid three-columns">
+            <div className="form-grid ai-provider-selector-grid">
               <label>
                 <span>Provider</span>
                 <select
@@ -8666,80 +8651,26 @@ function SettingsPage({
                   ))}
                 </select>
               </label>
-              <label>
-                <span>Model</span>
-                <input
-                  list="ai-provider-model-options"
-                  onChange={(event) => {
-                    const model = event.currentTarget.value;
-                    setAiDraft((settings) => ({
-                      ...settings,
-                      model,
-                    }));
-                  }}
-                  value={aiDraft.model}
-                />
-                <datalist id="ai-provider-model-options">
-                  {aiProviderDefinition.modelOptions.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.label}
-                    </option>
-                  ))}
-                </datalist>
-              </label>
-              <label>
-                <span>Reasoning effort</span>
-                <select
-                  onChange={(event) => {
-                    const reasoningEffort = event.currentTarget.value as AiReasoningEffort;
-                    setAiDraft((settings) => ({
-                      ...settings,
-                      reasoningEffort,
-                    }));
-                  }}
-                  value={aiDraft.reasoningEffort}
-                >
-                  {aiProviderDefinition.reasoningEfforts.map((effort) => (
-                    <option key={effort} value={effort}>
-                      {formatReasoningEffort(effort)}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
 
-            <div className="form-grid ai-provider-secret-grid">
-              <label>
-                <span>Endpoint</span>
-                <input
-                  onChange={(event) => {
-                    const baseUrl = event.currentTarget.value;
+            <div className="ai-provider-fields">
+              {aiProviderDefinition.settingsFields.map((field) => (
+                <AiProviderSettingsFieldControl
+                  apiKeyDraft={apiKeyDraft}
+                  definition={aiProviderDefinition}
+                  draft={aiDraft}
+                  field={field}
+                  hasApiKey={aiProviderHasApiKey}
+                  key={field}
+                  onApiKeyDraftChange={setApiKeyDraft}
+                  onDraftChange={(patch) =>
                     setAiDraft((settings) => ({
                       ...settings,
-                      baseUrl,
-                    }));
-                  }}
-                  readOnly={!aiProviderDefinition.allowsCustomBaseUrl}
-                  value={aiDraft.baseUrl}
-                />
-              </label>
-              <label>
-                <span>{aiProviderDefinition.requiresApiKey ? "API key" : "API key"}</span>
-                <input
-                  autoComplete="off"
-                  disabled={!aiProviderDefinition.requiresApiKey}
-                  onChange={(event) => setApiKeyDraft(event.currentTarget.value)}
-                  placeholder={
-                    aiProviderDefinition.requiresApiKey
-                      ? aiProviderHasApiKey
-                        ? "Saved"
-                        : aiProviderDefinition.apiKeyLabel
-                      : "Not required"
+                      ...patch,
+                    }))
                   }
-                  type="password"
-                  value={apiKeyDraft}
                 />
-              </label>
+              ))}
             </div>
 
             <div className="settings-summary-grid compact">
@@ -8845,6 +8776,92 @@ function SettingsPage({
       </div>
     </main>
   );
+}
+
+function AiProviderSettingsFieldControl({
+  apiKeyDraft,
+  definition,
+  draft,
+  field,
+  hasApiKey,
+  onApiKeyDraftChange,
+  onDraftChange,
+}: {
+  apiKeyDraft: string;
+  definition: AiProviderDefinition;
+  draft: AiProviderSettings;
+  field: AiProviderSettingsField;
+  hasApiKey: boolean;
+  onApiKeyDraftChange: (value: string) => void;
+  onDraftChange: (patch: Partial<AiProviderSettings>) => void;
+}) {
+  switch (field) {
+    case "baseUrl":
+      return (
+        <label>
+          <span>Endpoint</span>
+          <input
+            onChange={(event) => onDraftChange({ baseUrl: event.currentTarget.value })}
+            readOnly={!definition.allowsCustomBaseUrl}
+            value={draft.baseUrl}
+          />
+        </label>
+      );
+    case "model": {
+      const datalistId = `ai-provider-model-options-${definition.kind}`;
+      return (
+        <label>
+          <span>Model</span>
+          <input
+            list={datalistId}
+            onChange={(event) => onDraftChange({ model: event.currentTarget.value })}
+            value={draft.model}
+          />
+          <datalist id={datalistId}>
+            {definition.modelOptions.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label}
+              </option>
+            ))}
+          </datalist>
+        </label>
+      );
+    }
+    case "reasoningEffort":
+      return (
+        <label>
+          <span>Reasoning effort</span>
+          <select
+            onChange={(event) =>
+              onDraftChange({ reasoningEffort: event.currentTarget.value as AiReasoningEffort })
+            }
+            value={draft.reasoningEffort}
+          >
+            {definition.reasoningEfforts.map((effort) => (
+              <option key={effort} value={effort}>
+                {formatReasoningEffort(effort)}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    case "apiKey":
+      return (
+        <label>
+          <span>{definition.apiKeyLabel}</span>
+          <input
+            autoComplete="off"
+            disabled={!definition.requiresApiKey}
+            onChange={(event) => onApiKeyDraftChange(event.currentTarget.value)}
+            placeholder={hasApiKey ? "Saved" : definition.apiKeyLabel}
+            type="password"
+            value={apiKeyDraft}
+          />
+        </label>
+      );
+    default:
+      return null;
+  }
 }
 
 function SettingsSummary({ label, value }: { label: string; value: string }) {
