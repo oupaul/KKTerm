@@ -223,6 +223,11 @@ export function ConnectionSidebar({
   }
 
   function handleAddConnectionToFocusedPane(connection: Connection, direction: SplitDirection) {
+    if (connection.type === "url" || isRemoteDesktopConnectionType(connection.type)) {
+      handleOpenConnection(connection);
+      return;
+    }
+
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
     if (!activeTab || activeTab.kind !== "terminal") {
       handleOpenConnection(connection);
@@ -882,14 +887,6 @@ export function ConnectionSidebar({
         <div className="sidebar-actions">
           <button
             className="icon-button"
-            aria-label="New folder"
-            title="New folder"
-            onClick={() => void handleCreateFolder()}
-          >
-            <FolderPlus size={16} />
-          </button>
-          <button
-            className="icon-button"
             aria-label="Add connection"
             title="Add connection"
             onClick={() => setFormMode("save")}
@@ -941,6 +938,35 @@ export function ConnectionSidebar({
             onOpenSsh={handleQuickSsh}
           />
         ) : null}
+      </div>
+      <div className="tree-folder-controls" aria-label="Folder tree controls">
+        <button
+          aria-label="New folder"
+          className="tree-folder-control"
+          onClick={() => void handleCreateFolder()}
+          title="New folder"
+          type="button"
+        >
+          <FolderPlus size={13} />
+        </button>
+        <button
+          aria-label="Collapse all folders"
+          className="tree-folder-control"
+          onClick={handleCollapseAllFolders}
+          title="Collapse All"
+          type="button"
+        >
+          <IconParkCollapseTextInput size={13} />
+        </button>
+        <button
+          aria-label="Expand all folders"
+          className="tree-folder-control"
+          onClick={handleExpandAllFolders}
+          title="Expand All"
+          type="button"
+        >
+          <IconParkExpandTextInput size={13} />
+        </button>
       </div>
       {treeError ? <p className="form-error tree-error">{treeError}</p> : null}
 
@@ -1013,7 +1039,6 @@ export function ConnectionSidebar({
           menu={treeContextMenu}
           canAddToPane={Boolean(tabs.find((tab) => tab.id === activeTabId && tab.kind === "terminal"))}
           onClose={() => setTreeContextMenu(null)}
-          onCollapseAll={handleCollapseAllFolders}
           onCreateConnection={() => {
             setTreeContextMenu(null);
             setFormMode("save");
@@ -1031,7 +1056,6 @@ export function ConnectionSidebar({
               void handleDeleteFolder(menu.folder);
             }
           }}
-          onExpandAll={handleExpandAllFolders}
           onProperties={() => {
             const menu = treeContextMenu;
             setTreeContextMenu(null);
@@ -1320,11 +1344,9 @@ function TreeContextMenu({
   menu,
   canAddToPane,
   onClose,
-  onCollapseAll,
   onCreateConnection,
   onCreateFolder,
   onDelete,
-  onExpandAll,
   onProperties,
   onRename,
   onAddToPane,
@@ -1332,11 +1354,9 @@ function TreeContextMenu({
   menu: TreeContextMenuState;
   canAddToPane: boolean;
   onClose: () => void;
-  onCollapseAll: () => void;
   onCreateConnection: () => void;
   onCreateFolder: () => void;
   onDelete: () => void;
-  onExpandAll: () => void;
   onProperties: () => void;
   onRename: () => void;
   onAddToPane: (direction: SplitDirection) => void;
@@ -1397,14 +1417,6 @@ function TreeContextMenu({
           </button>
         </>
       ) : null}
-      <button onClick={onExpandAll} role="menuitem" type="button">
-        <IconParkExpandTextInput className="menu-item-icon" size={15} />
-        <span>Expand All</span>
-      </button>
-      <button onClick={onCollapseAll} role="menuitem" type="button">
-        <IconParkCollapseTextInput className="menu-item-icon" size={15} />
-        <span>Collapse All</span>
-      </button>
       {menu.kind !== "tree" ? (
         <>
           <button onClick={onRename} role="menuitem" type="button">
@@ -1420,24 +1432,31 @@ function TreeContextMenu({
       {menu.kind === "connection" ? (
         <>
           {canAddToPane ? (
-            <>
-              <button onClick={() => onAddToPane("right")} role="menuitem" type="button">
-                <ArrowRight className="menu-item-icon" size={15} />
-                <span>Add to Right Pane</span>
+            <div className="tree-context-submenu" role="none">
+              <button aria-haspopup="menu" className="tree-submenu-trigger" role="menuitem" type="button">
+                <PanelRight className="menu-item-icon" size={15} />
+                <span>Add to...</span>
+                <ChevronRight className="menu-item-chevron" size={13} />
               </button>
-              <button onClick={() => onAddToPane("left")} role="menuitem" type="button">
-                <ArrowLeft className="menu-item-icon" size={15} />
-                <span>Add to Left Pane</span>
-              </button>
-              <button onClick={() => onAddToPane("down")} role="menuitem" type="button">
-                <ArrowDown className="menu-item-icon" size={15} />
-                <span>Add to Lower Pane</span>
-              </button>
-              <button onClick={() => onAddToPane("up")} role="menuitem" type="button">
-                <ArrowUp className="menu-item-icon" size={15} />
-                <span>Add to Upper Pane</span>
-              </button>
-            </>
+              <div className="tree-context-submenu-menu" role="menu" aria-label="Add to pane">
+                <button onClick={() => onAddToPane("left")} role="menuitem" type="button">
+                  <ArrowLeft className="menu-item-icon" size={15} />
+                  <span>Left</span>
+                </button>
+                <button onClick={() => onAddToPane("right")} role="menuitem" type="button">
+                  <ArrowRight className="menu-item-icon" size={15} />
+                  <span>Right</span>
+                </button>
+                <button onClick={() => onAddToPane("down")} role="menuitem" type="button">
+                  <ArrowDown className="menu-item-icon" size={15} />
+                  <span>Lower</span>
+                </button>
+                <button onClick={() => onAddToPane("up")} role="menuitem" type="button">
+                  <ArrowUp className="menu-item-icon" size={15} />
+                  <span>Upper</span>
+                </button>
+              </div>
+            </div>
           ) : null}
           <button onClick={onProperties} role="menuitem" type="button">
             <IconParkSetting className="menu-item-icon" size={15} />

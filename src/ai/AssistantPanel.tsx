@@ -1,7 +1,22 @@
 import { workspaceKindLabel } from "../connections/utils";
 import { inspectActiveSshSystemContext } from "../terminal/TerminalWorkspace";
 import { writeToClipboard } from "../lib/clipboard";
-import { Bot, Copy, PanelRight, Plus, RefreshCw, SendHorizontal, Settings, Terminal, X } from "lucide-react";
+import {
+  Bot,
+  Camera,
+  ChevronRight,
+  Copy,
+  FileImage,
+  PanelRight,
+  Plus,
+  Puzzle,
+  RefreshCw,
+  ScrollText,
+  SendHorizontal,
+  Settings,
+  Terminal,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { invokeCommand } from "../lib/tauri";
@@ -429,7 +444,9 @@ export function AssistantPanel({
   const [waitingDots, setWaitingDots] = useState(0);
   const [messageCopyStatus, setMessageCopyStatus] = useState("");
   const [terminalSendStatus, setTerminalSendStatus] = useState("");
+  const [addContextMenuOpen, setAddContextMenuOpen] = useState(false);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const addContextMenuRef = useRef<HTMLDivElement | null>(null);
   const contextLabel = activeTab
     ? `${activeTab.title} - ${workspaceKindLabel(activeTab)}`
     : "No active session";
@@ -474,6 +491,32 @@ export function AssistantPanel({
       window.clearInterval(interval);
     };
   }, [isSendingPrompt]);
+
+  useEffect(() => {
+    if (!addContextMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const node = addContextMenuRef.current;
+      if (node && !node.contains(event.target as Node)) {
+        setAddContextMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAddContextMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [addContextMenuOpen]);
 
   function handleSendCodeToTerminal(code: string) {
     if (!activeTerminalPaneId) {
@@ -558,6 +601,7 @@ export function AssistantPanel({
       return;
     }
 
+    setAddContextMenuOpen(false);
     setAssistantIntent("extensionCreation");
     setTerminalSendStatus("");
     setMessageCopyStatus("Extension drafts stay review-only until you explicitly approve future install or run steps.");
@@ -573,6 +617,12 @@ export function AssistantPanel({
     } else {
       composerTextareaRef.current?.focus();
     }
+  }
+
+  function handleStubContextOption(label: string) {
+    setAddContextMenuOpen(false);
+    setTerminalSendStatus("");
+    setMessageCopyStatus(`${label} is staged in the UI and will be implemented later.`);
   }
 
   async function submitAssistantPrompt() {
@@ -859,22 +909,75 @@ export function AssistantPanel({
           value={prompt}
         />
         <div className="assistant-composer-footer">
-          <button className="assistant-plus-button" type="button" aria-label="Add context">
-            <Plus size={18} />
-          </button>
-          <button
-            aria-pressed={assistantIntent === "extensionCreation"}
-            className={`assistant-intent-button${
-              assistantIntent === "extensionCreation" ? " active" : ""
-            }`}
-            disabled={isSendingPrompt}
-            onClick={handleStartExtensionDraft}
-            title="Draft an extension"
-            type="button"
-          >
-            <Plus size={13} />
-            Extension
-          </button>
+          <div className="assistant-add-menu-wrapper" ref={addContextMenuRef}>
+            <button
+              aria-expanded={addContextMenuOpen ? "true" : "false"}
+              aria-haspopup="menu"
+              className="assistant-plus-button"
+              disabled={isSendingPrompt}
+              onClick={() => setAddContextMenuOpen((open) => !open)}
+              type="button"
+              aria-label="Add context"
+              title="Add context"
+            >
+              <Plus size={18} />
+            </button>
+            {addContextMenuOpen ? (
+              <div className="assistant-add-menu" role="menu" aria-label="Add context">
+                <button
+                  className="assistant-add-menu-item"
+                  onClick={() => handleStubContextOption("Add Files/Photos")}
+                  role="menuitem"
+                  type="button"
+                >
+                  <FileImage size={15} />
+                  Add Files/Photos
+                </button>
+                <button
+                  className="assistant-add-menu-item"
+                  onClick={() => handleStubContextOption("Add Screenshot")}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Camera size={15} />
+                  Add Screenshot
+                </button>
+                <button
+                  className="assistant-add-menu-item"
+                  onClick={() => handleStubContextOption("Add Terminal Buffer")}
+                  role="menuitem"
+                  type="button"
+                >
+                  <ScrollText size={15} />
+                  Add Terminal Buffer
+                </button>
+                <div className="assistant-add-menu-submenu">
+                  <button
+                    aria-haspopup="menu"
+                    className="assistant-add-menu-item"
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Puzzle size={15} />
+                    Extensions
+                    <ChevronRight className="assistant-add-menu-chevron" size={13} />
+                  </button>
+                  <div className="assistant-add-menu assistant-add-menu-submenu-panel" role="menu">
+                    <button
+                      aria-pressed={assistantIntent === "extensionCreation"}
+                      className="assistant-add-menu-item"
+                      onClick={handleStartExtensionDraft}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <Plus size={14} />
+                      Draft Extension
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
           <span>{aiProviderSettings.model || providerDefinition.defaultModel}</span>
           <button
             aria-label="Send message"

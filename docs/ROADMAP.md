@@ -130,6 +130,7 @@ Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check
 - [x] Add partial-area screenshot capture from a terminal Pane, SFTP view, URL view, RDP view, VNC shell, or other workspace surface.
 - [x] Send captured screenshots to the AI Assistant for analysis with explicit user action.
 - [x] Add review-only AI Assistant extension draft mode.
+- [ ] Implement AI Assistant composer context attachments for files/photos, screenshots, and terminal buffer snippets from the `+` menu.
 - [ ] Support asking the AI Assistant to create installable extensions against the approved extension platform architecture.
 - [ ] Keep extension-generation flows approval-based before installing or running generated code.
 - [ ] Language output setting for UI assistant - follow UI language or specific language.
