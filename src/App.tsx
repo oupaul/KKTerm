@@ -680,6 +680,7 @@ type AssistantChatMessage = {
   id: string;
   role: "assistant" | "user";
   content: string;
+  intent?: AssistantPromptIntent;
   createdAt: string;
 };
 
@@ -691,6 +692,10 @@ type AssistantChatThread = {
   createdAt: string;
   updatedAt: string;
 };
+
+type AssistantPromptIntent = "chat" | "extensionCreation";
+
+const EXTENSION_DRAFT_PROMPT = "Create an AdminDeck extension draft for: ";
 
 const ASSISTANT_WAITING_PHRASES = [
   "Fixing phaser cannon",
@@ -904,11 +909,13 @@ function randomAssistantWaitingPhrase() {
 function createAssistantChatMessage(
   role: AssistantChatMessage["role"],
   content: string,
+  intent?: AssistantPromptIntent,
 ): AssistantChatMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role,
     content,
+    intent,
     createdAt: new Date().toISOString(),
   };
 }
@@ -953,6 +960,21 @@ function upsertAssistantChatThread(
 ) {
   const withoutThread = threads.filter((item) => item.id !== thread.id);
   return sortedAssistantThreads([thread, ...withoutThread]);
+}
+
+function assistantIntentForPrompt(
+  activeIntent: AssistantPromptIntent,
+  prompt: string,
+): AssistantPromptIntent {
+  if (activeIntent === "extensionCreation") {
+    return activeIntent;
+  }
+
+  const normalized = prompt.toLowerCase();
+  const asksForExtension =
+    /\b(extension|plugin|addon|add-on)\b/.test(normalized) &&
+    /\b(create|build|generate|write|draft|scaffold|make)\b/.test(normalized);
+  return asksForExtension ? "extensionCreation" : "chat";
 }
 
 function readAssistantChatHistory(): AssistantChatThread[] {
@@ -8972,6 +8994,7 @@ function AssistantPanel({
   const [showAllChats, setShowAllChats] = useState(false);
   const [chatError, setChatError] = useState("");
   const [isSendingPrompt, setIsSendingPrompt] = useState(false);
+  const [assistantIntent, setAssistantIntent] = useState<AssistantPromptIntent>("chat");
   const [waitingPhrase, setWaitingPhrase] = useState("");
   const [waitingDots, setWaitingDots] = useState(0);
   const [messageCopyStatus, setMessageCopyStatus] = useState("");
@@ -9054,6 +9077,7 @@ function AssistantPanel({
     setTerminalSendStatus("");
     setMessageCopyStatus("");
     setWaitingPhrase("");
+    setAssistantIntent("chat");
     setShowAllChats(false);
   }
 
@@ -9085,6 +9109,7 @@ function AssistantPanel({
     setTerminalSendStatus("");
     setMessageCopyStatus("");
     setWaitingPhrase("");
+    setAssistantIntent("chat");
     setShowAllChats(false);
   }
 
@@ -9098,18 +9123,43 @@ function AssistantPanel({
     setMessageCopyStatus("Code copied.");
   }
 
+  function handleStartExtensionDraft() {
+    if (isSendingPrompt) {
+      return;
+    }
+
+    setAssistantIntent("extensionCreation");
+    setTerminalSendStatus("");
+    setMessageCopyStatus("Extension drafts stay review-only until you explicitly approve future install or run steps.");
+    if (!prompt.trim()) {
+      setPrompt(EXTENSION_DRAFT_PROMPT);
+      window.requestAnimationFrame(() => {
+        composerTextareaRef.current?.focus();
+        composerTextareaRef.current?.setSelectionRange(
+          EXTENSION_DRAFT_PROMPT.length,
+          EXTENSION_DRAFT_PROMPT.length,
+        );
+      });
+    } else {
+      composerTextareaRef.current?.focus();
+    }
+  }
+
   async function submitAssistantPrompt() {
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt || isSendingPrompt) {
       return;
     }
-    const userMessage = createAssistantChatMessage("user", normalizedPrompt);
+    const requestIntent = assistantIntentForPrompt(assistantIntent, normalizedPrompt);
+    setAssistantIntent(requestIntent);
+    const userMessage = createAssistantChatMessage("user", normalizedPrompt, requestIntent);
     try {
       validateAiProviderForChat(aiProviderSettings, aiProviderHasApiKey);
     } catch (error) {
       const assistantMessage = createAssistantChatMessage(
         "assistant",
         `AI provider settings error: ${error instanceof Error ? error.message : String(error)}`,
+        requestIntent,
       );
       setMessages((current) => [...current, userMessage, assistantMessage]);
       setPrompt("");
@@ -9132,6 +9182,7 @@ function AssistantPanel({
         request: {
           prompt: normalizedPrompt,
           contextLabel,
+          intent: requestIntent,
           selectedOutput:
             assistantContextSnippet?.kind === "text" ? assistantContextSnippet.text : undefined,
           screenshot:
@@ -9145,14 +9196,18 @@ function AssistantPanel({
           messages: history,
         },
       });
-      const assistantMessage = createAssistantChatMessage("assistant", response.content);
+      const assistantMessage = createAssistantChatMessage(
+        "assistant",
+        response.content,
+        requestIntent,
+      );
       setMessages((current) => [...current, assistantMessage]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setChatError(message);
       setMessages((current) => [
         ...current,
-        createAssistantChatMessage("assistant", `AI Assistant error: ${message}`),
+        createAssistantChatMessage("assistant", `AI Assistant error: ${message}`, requestIntent),
       ]);
     } finally {
       setIsSendingPrompt(false);
@@ -9236,6 +9291,16 @@ function AssistantPanel({
           <small>{connectionLabel}</small>
         </span>
       </div>
+
+      {assistantIntent === "extensionCreation" ? (
+        <div className="assistant-context assistant-extension-context">
+          <Plus size={16} />
+          <span>
+            <strong>Extension draft</strong>
+            <small>Review-only; no install or run without explicit approval.</small>
+          </span>
+        </div>
+      ) : null}
 
       <section className="assistant-tasks">
         <header>
@@ -9367,6 +9432,19 @@ function AssistantPanel({
           <button className="assistant-plus-button" type="button" aria-label="Add context">
             <Plus size={18} />
           </button>
+          <button
+            aria-pressed={assistantIntent === "extensionCreation"}
+            className={`assistant-intent-button${
+              assistantIntent === "extensionCreation" ? " active" : ""
+            }`}
+            disabled={isSendingPrompt}
+            onClick={handleStartExtensionDraft}
+            title="Draft an extension"
+            type="button"
+          >
+            <Plus size={13} />
+            Extension
+          </button>
           <span>{aiProviderSettings.model || providerDefinition.defaultModel}</span>
           <button
             aria-label="Send message"
@@ -9395,6 +9473,7 @@ function AssistantMessageView({
 }) {
   const userMessageLineCount = message.role === "user" ? message.content.split(/\r?\n/).length : 0;
   const shouldTruncateUserMessage = message.role === "user" && userMessageLineCount > 10;
+  const canSendCode = message.intent !== "extensionCreation";
   const [isUserMessageExpanded, setIsUserMessageExpanded] = useState(false);
 
   return (
@@ -9402,7 +9481,12 @@ function AssistantMessageView({
       <div
         className={`assistant-message-bubble${shouldTruncateUserMessage && !isUserMessageExpanded ? " assistant-message-bubble-truncated" : ""}`}
       >
-        <MarkdownContent content={message.content} onCopyCode={onCopyCode} onSendCode={onSendCode} />
+        <MarkdownContent
+          canSendCode={canSendCode}
+          content={message.content}
+          onCopyCode={onCopyCode}
+          onSendCode={onSendCode}
+        />
       </div>
       {shouldTruncateUserMessage ? (
         <button
@@ -9433,10 +9517,12 @@ type MarkdownBlock =
   | { kind: "text"; text: string };
 
 function MarkdownContent({
+  canSendCode,
   content,
   onCopyCode,
   onSendCode,
 }: {
+  canSendCode: boolean;
   content: string;
   onCopyCode: (code: string) => void;
   onSendCode: (code: string) => void;
@@ -9459,7 +9545,13 @@ function MarkdownContent({
                 </button>
                 <button
                   className="assistant-code-send"
+                  disabled={!canSendCode}
                   onClick={() => onSendCode(block.code)}
+                  title={
+                    canSendCode
+                      ? "Send to focused terminal"
+                      : "Extension drafts are review-only"
+                  }
                   type="button"
                 >
                   <Terminal size={13} />

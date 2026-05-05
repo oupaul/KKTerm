@@ -208,6 +208,7 @@ export interface AgentChatMessage {
 export interface AgentRunRequest {
   prompt: string;
   contextLabel: string;
+  intent?: "chat" | "extensionCreation";
   selectedOutput?: string;
   screenshot?: {
     sourceLabel: string;

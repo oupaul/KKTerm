@@ -14,7 +14,9 @@ Milestone E has started with local-only performance instrumentation that surface
 
 Milestone F has started with a repeatable Windows portable ZIP packaging flow that builds the release executable, stages release/privacy documentation, writes a package manifest, and emits a SHA-256 checksum under `artifacts/`. It now also has a repeatable unsigned Windows NSIS setup executable packaging flow that copies the installer into `artifacts/` with a SHA-256 checksum, plus a repeatable installer smoke test that verifies the checksum, silently installs to a temporary directory, confirms the installed executable, and silently uninstalls.
 
-Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check --manifest-path src-tauri/Cargo.toml`, and `cargo test --manifest-path src-tauri/Cargo.toml` passed after adding explicit screenshot-to-AI Assistant context for terminal Panes and top-level workspace surfaces. `npm run build` still reports Vite's existing chunk-size warning. Previous May 2, 2026 packaging validation passed for `npm run package:portable`, `npm run package:installer`, and `npm run smoke:installer`.
+Milestone G has started with explicit screenshot capture into AI Assistant context, an Assistant extension draft mode, and an accepted extension platform architecture ADR. Extension drafting is review-only: generated extension designs, manifests, permission requests, and source snippets are not installed, enabled, run, or written by AdminDeck until the extension platform and explicit approval flow exist.
+
+Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check --manifest-path src-tauri/Cargo.toml`, and `cargo test --manifest-path src-tauri/Cargo.toml` passed after adding AI Assistant extension draft mode and defining the extension platform architecture. `npm run build` still reports Vite's existing chunk-size warning. Previous May 2, 2026 packaging validation passed for `npm run package:portable`, `npm run package:installer`, and `npm run smoke:installer`.
 
 ## Milestone 0: Project Foundation
 
@@ -127,7 +129,8 @@ Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check
 - [x] Add screenshot capture for the active connection window/workspace surface, copied to the system clipboard.
 - [x] Add partial-area screenshot capture from a terminal Pane, SFTP view, URL view, RDP view, VNC shell, or other workspace surface.
 - [x] Send captured screenshots to the AI Assistant for analysis with explicit user action.
-- [ ] Support asking the AI Assistant to create extensions.
+- [x] Add review-only AI Assistant extension draft mode.
+- [ ] Support asking the AI Assistant to create installable extensions against the approved extension platform architecture.
 - [ ] Keep extension-generation flows approval-based before installing or running generated code.
 - [ ] Language output setting for UI assistant - follow UI language or specific language.
 - [ ] Expand AI Assistant orchestration so it can (with explicit approval) automate more workflows: import Connection entries from multiple formats, monitor existing Connections, rename/reorganize layouts, help create plugins, assist with wiki workflows (once wiki ships), and optionally relay remote-assistant interactions through Telegram/WhatsApp/LINE integrations.
@@ -146,7 +149,7 @@ Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check
 ### Extension Platform
 
 - [ ] Add extension support for user-installed features.
-- [ ] Define extension permissions, install/update lifecycle, storage access, and trust boundaries before enabling general extension execution.
+- [x] Define extension permissions, install/update lifecycle, storage access, and trust boundaries before enabling general extension execution. See `docs/ADR/0005-extension-platform-architecture.md`.
 
 ### Connection and Workspace Expansion
 

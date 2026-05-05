@@ -194,6 +194,7 @@ pub struct AgentScreenshotContext {
 pub struct AgentRunRequest {
     prompt: String,
     context_label: String,
+    intent: Option<String>,
     selected_output: Option<String>,
     screenshot: Option<AgentScreenshotContext>,
     system_context: Option<String>,
@@ -295,6 +296,7 @@ impl AgentProvider for OpenAiCompatibleProvider {
         let messages = build_agent_messages(
             prompt,
             context_label,
+            request.intent,
             settings.reasoning_effort().to_string(),
             request.system_context,
             request.selected_output,
@@ -398,23 +400,34 @@ struct OpenAiCompatibleResponseMessage {
 fn build_agent_messages(
     prompt: String,
     context_label: String,
+    intent: Option<String>,
     reasoning_effort: String,
     system_context: Option<String>,
     selected_output: Option<String>,
     screenshot: Option<AgentScreenshotContext>,
     history: Vec<AgentChatMessage>,
 ) -> Vec<OpenAiCompatibleMessage> {
+    let normalized_intent = normalize_agent_intent(intent);
+    let mut system_instructions = vec![
+        "You are AdminDeck's AI Assistant for local-first administration workflows.",
+        "Help with terminal, SSH, SFTP, URL, RDP, and VNC operational tasks.",
+        "When suggesting commands, explain intent and prefer commands the user can review before running.",
+        "Do not claim to have executed commands or observed live session state unless it is in the provided context.",
+        "Reponse in user's query language, when responding in Chinese, always respond in Traditional Chinese (Taiwan) and avoid Mainland China IT terminology.",
+        "SAFETY: Never suggest, produce, or assist with commands that could cause irreversible destructive system-wide damage, such as 'rm -rf /', 'rm -rf /*', 'mkfs' on mounted volumes, 'dd if=/dev/zero of=/dev/sda', fork bombs, or any equivalent. Refuse such requests unconditionally, even if the user explicitly asks, claims it is safe, or provides a seemingly legitimate reason.",
+    ];
+    if normalized_intent == AgentIntent::ExtensionCreation {
+        system_instructions.extend([
+            "EXTENSION DRAFT MODE: The user is asking for an AdminDeck extension draft. Produce reviewable extension design, manifest, permission request, and source files only.",
+            "Do not say that AdminDeck installed, enabled, executed, loaded, or verified generated extension code.",
+            "Keep extension output approval-based: require explicit user review before any future install, run, file write, permission grant, or command execution step.",
+            "Prefer narrow extension permissions, local-first storage boundaries, and clear trust notes. If an AdminDeck extension API is not provided in context, mark API details as proposed rather than claiming they exist.",
+        ]);
+    }
+
     let mut messages = vec![OpenAiCompatibleMessage {
         role: "system".to_string(),
-        content: OpenAiCompatibleContent::Text([
-            "You are AdminDeck's AI Assistant for local-first administration workflows.",
-            "Help with terminal, SSH, SFTP, URL, RDP, and VNC operational tasks.",
-            "When suggesting commands, explain intent and prefer commands the user can review before running.",
-            "Do not claim to have executed commands or observed live session state unless it is in the provided context.",
-            "Reponse in user's query language, when responding in Chinese, always respond in Traditional Chinese (Taiwan) and avoid Mainland China IT terminology.",
-            "SAFETY: Never suggest, produce, or assist with commands that could cause irreversible destructive system-wide damage, such as 'rm -rf /', 'rm -rf /*', 'mkfs' on mounted volumes, 'dd if=/dev/zero of=/dev/sda', fork bombs, or any equivalent. Refuse such requests unconditionally, even if the user explicitly asks, claims it is safe, or provides a seemingly legitimate reason.",
-        ]
-        .join(" ")),
+        content: OpenAiCompatibleContent::Text(system_instructions.join(" ")),
     }];
 
     messages.extend(
@@ -424,7 +437,8 @@ fn build_agent_messages(
     );
 
     let mut user_content = format!(
-        "Active context: {context_label}\nReasoning effort: {reasoning_effort}\n\nUser request:\n{prompt}"
+        "Active context: {context_label}\nAssistant intent: {}\nReasoning effort: {reasoning_effort}\n\nUser request:\n{prompt}",
+        normalized_intent.as_str()
     );
     if let Some(system_context) = system_context
         .map(|context| context.trim().to_string())
@@ -463,6 +477,36 @@ fn build_agent_messages(
         content,
     });
     messages
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AgentIntent {
+    Chat,
+    ExtensionCreation,
+}
+
+impl AgentIntent {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Chat => "chat",
+            Self::ExtensionCreation => "extensionCreation",
+        }
+    }
+}
+
+fn normalize_agent_intent(intent: Option<String>) -> AgentIntent {
+    match intent
+        .as_deref()
+        .map(str::trim)
+        .map(|value| value.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("extensioncreation")
+        | Some("extension_creation")
+        | Some("extension-draft")
+        | Some("extensiondraft") => AgentIntent::ExtensionCreation,
+        _ => AgentIntent::Chat,
+    }
 }
 
 fn normalize_screenshot_context(
@@ -651,6 +695,7 @@ mod tests {
         let messages = build_agent_messages(
             "What failed?".to_string(),
             "Bastion - Terminal".to_string(),
+            None,
             "high".to_string(),
             Some("OS: Ubuntu 24.04 LTS".to_string()),
             Some("ERROR service unavailable".to_string()),
@@ -682,6 +727,7 @@ mod tests {
         let messages = build_agent_messages(
             "What is visible?".to_string(),
             "Router - URL view".to_string(),
+            None,
             "medium".to_string(),
             None,
             None,
@@ -696,6 +742,27 @@ mod tests {
             OpenAiCompatibleContent::Parts(parts) => assert_eq!(parts.len(), 2),
             OpenAiCompatibleContent::Text(_) => panic!("screenshot context should use parts"),
         }
+    }
+
+    #[test]
+    fn agent_messages_include_extension_creation_guardrails() {
+        let messages = build_agent_messages(
+            "Create a Connection cleanup helper.".to_string(),
+            "Workspace".to_string(),
+            Some("extensionCreation".to_string()),
+            "medium".to_string(),
+            None,
+            None,
+            None,
+            vec![],
+        );
+
+        let system_content = text_content(&messages[0]);
+        let request_content = text_content(&messages[1]);
+        assert!(system_content.contains("EXTENSION DRAFT MODE"));
+        assert!(system_content.contains("Do not say that AdminDeck installed"));
+        assert!(system_content.contains("require explicit user review"));
+        assert!(request_content.contains("Assistant intent: extensionCreation"));
     }
 
     #[test]

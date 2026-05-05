@@ -2122,6 +2122,12 @@ progress {
   box-shadow: 0 1px 2px rgba(60, 64, 67, 0.06);
 }
 
+.assistant-extension-context {
+  color: #115e59;
+  background: #ecfdf5;
+  border-color: #99f6e4;
+}
+
 .assistant-setup-hint {
   display: flex;
   gap: 9px;
@@ -2457,6 +2463,15 @@ progress {
   background: #4a4d55;
 }
 
+.assistant-code-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.assistant-code-send:disabled:hover {
+  background: #3a3c42;
+}
+
 .markdown-code-block pre {
   margin: 0;
   max-height: 220px;
@@ -2542,6 +2557,37 @@ progress {
 
 .assistant-plus-button:hover {
   background: #f1f3f4;
+}
+
+.assistant-intent-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 5px;
+  align-items: center;
+  height: 27px;
+  min-width: 0;
+  padding: 0 8px;
+  color: #5f6368;
+  background: #f1f3f4;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.assistant-intent-button:hover {
+  color: #202124;
+  background: #e8eaed;
+}
+
+.assistant-intent-button.active {
+  color: #115e59;
+  background: #ccfbf1;
+}
+
+.assistant-intent-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .assistant-send-button {
