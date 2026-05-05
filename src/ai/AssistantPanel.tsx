@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
-import { ariaChecked, menuButtonAria } from "../lib/aria";
+import { menuButtonAria } from "../lib/aria";
 import { invokeCommand } from "../lib/tauri";
 import { getAiProviderDefinition, validateAiProviderForChat } from "./providers";
 import { useWorkspaceStore } from "../store";
@@ -963,7 +963,7 @@ export function AssistantPanel({
                   </button>
                   <div className="assistant-add-menu assistant-add-menu-submenu-panel" role="menu">
                     <button
-                      {...ariaChecked(assistantIntent === "extensionCreation")}
+                      aria-checked={assistantIntent === "extensionCreation" ? "true" : "false"}
                       className="assistant-add-menu-item"
                       onClick={handleStartExtensionDraft}
                       role="menuitemcheckbox"

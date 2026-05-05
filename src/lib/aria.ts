@@ -6,10 +6,6 @@ export function ariaPressed(isPressed: boolean) {
   return { "aria-pressed": isPressed ? "true" : "false" } as const;
 }
 
-export function ariaChecked(isChecked: boolean) {
-  return { "aria-checked": isChecked ? "true" : "false" } as const;
-}
-
 export function menuButtonAria(isExpanded: boolean) {
   return { "aria-haspopup": "menu", ...ariaExpanded(isExpanded) } as const;
 }
