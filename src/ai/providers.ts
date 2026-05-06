@@ -1,6 +1,6 @@
 import { AI_PROVIDER_DEFINITIONS } from "./providerRegistry";
 import type { AiProviderKind, AiProviderSettings, AiReasoningEffort } from "../types";
-export { AI_PROVIDER_DEFINITIONS };
+export { AI_PROVIDER_DEFINITIONS, modelSupportsImageInput } from "./providerRegistry";
 export type {
   AiModelOption,
   AiProviderCapability,

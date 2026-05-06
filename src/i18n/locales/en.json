@@ -457,6 +457,8 @@
     "addTerminalBuffer": "Add Terminal Buffer",
     "extensions": "Extensions",
     "draftExtension": "Draft Extension",
+    "pastedImageSource": "Pasted image",
+    "imageInputNotSupported": "This model does not support image input, so pasted screenshots are not sent.",
     "composerPlaceholder": "Ask AI Assistant anything.",
     "sendMessage": "Send message",
     "stopMessage": "Stop response",

@@ -13,11 +13,11 @@ export const ollamaProvider: AiProviderDefinition = {
   allowsCustomModel: true,
   apiKeyLabel: "Ollama API key",
   modelOptions: [
-    { id: "qwen3", label: "Qwen3", note: "Local general use" },
-    { id: "gpt-oss", label: "gpt-oss", note: "Open-weight" },
-    { id: "deepseek-r1", label: "DeepSeek-R1", note: "Local reasoning" },
-    { id: "gemma3", label: "Gemma 3" },
+    { id: "qwen3", label: "Qwen3", note: "Local general use", supportsImageInput: false },
+    { id: "gpt-oss", label: "gpt-oss", note: "Open-weight", supportsImageInput: false },
+    { id: "deepseek-r1", label: "DeepSeek-R1", note: "Local reasoning", supportsImageInput: false },
+    { id: "gemma3", label: "Gemma 3", supportsImageInput: true },
   ],
   settingsFields: CONFIGURABLE_ENDPOINT_WITHOUT_KEY_FIELDS,
-  capabilities: ["chat", "streaming", "toolCalling", "localRuntime", "openAiCompatible"],
+  capabilities: ["chat", "imageInput", "streaming", "toolCalling", "localRuntime", "openAiCompatible"],
 };

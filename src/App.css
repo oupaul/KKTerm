@@ -2801,6 +2801,17 @@ progress {
   cursor: not-allowed;
 }
 
+.assistant-image-support-notice {
+  margin: 0;
+  padding: 7px 9px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .assistant-composer-footer {
   display: flex;
   gap: 8px;
@@ -2810,12 +2821,43 @@ progress {
   font-size: 12px;
 }
 
-.assistant-composer-footer span {
+.assistant-composer-footer span,
+.assistant-model-select {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.assistant-model-select {
+  flex: 0 0 30%;
+  width: 30%;
+  height: 29px;
+  padding: 0 2px;
+  color: var(--text-faint);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  outline: 0;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.assistant-model-select:hover {
+  color: var(--text-muted);
+}
+
+.assistant-model-select:focus {
+  color: var(--text-muted);
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+.assistant-model-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .assistant-plus-button,
@@ -2922,6 +2964,8 @@ progress {
 }
 
 .assistant-send-button {
+  flex: 0 0 auto;
+  margin-left: auto;
   color: var(--surface);
   background: var(--text-faint);
 }

@@ -19,11 +19,16 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, KeyboardEvent, ReactNode } from "react";
+import type { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { menuButtonAria } from "../lib/aria";
-import { invokeCommand } from "../lib/tauri";
-import { getAiProviderDefinition, validateAiProviderForChat } from "./providers";
+import { invokeCommand, isTauriRuntime } from "../lib/tauri";
+import {
+  getAiProviderDefinition,
+  modelSupportsImageInput,
+  normalizeAiProviderDraft,
+  validateAiProviderForChat,
+} from "./providers";
 import { useWorkspaceStore } from "../store";
 import { writeInputToPane } from "../workspace/paneRegistry";
 import i18next from "../i18n/config";
@@ -55,6 +60,14 @@ type AssistantChatThread = {
 };
 
 type AssistantPromptIntent = "chat" | "extensionCreation";
+
+type AssistantPastedImageContext = {
+  id: string;
+  sourceLabel: string;
+  imageDataUrl: string;
+  width: number;
+  height: number;
+};
 
 const EXTENSION_DRAFT_PROMPT = "Create an AdminDeck extension draft for: ";
 
@@ -119,6 +132,36 @@ function formatAssistantMessageTime(value: string) {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const period = hours >= 12 ? "PM" : "AM";
   return `${hour12}:${minutes}${period}`;
+}
+
+function readImageFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("image paste did not produce a data URL"));
+      }
+    });
+    reader.addEventListener("error", () => {
+      reject(reader.error ?? new Error("failed to read pasted image"));
+    });
+    reader.readAsDataURL(file);
+  });
+}
+
+function readImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.addEventListener("load", () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    });
+    image.addEventListener("error", () => {
+      resolve({ width: 0, height: 0 });
+    });
+    image.src = dataUrl;
+  });
 }
 
 function sortedAssistantThreads(threads: AssistantChatThread[]) {
@@ -256,6 +299,7 @@ export function AssistantPanel({
     (state) => state.clearAssistantContextSnippet,
   );
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
+  const setAiProviderSettings = useWorkspaceStore((state) => state.setAiProviderSettings);
   const aiProviderHasApiKey = useWorkspaceStore((state) => state.aiProviderHasApiKey);
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
@@ -269,6 +313,9 @@ export function AssistantPanel({
   const [waitingPhrase, setWaitingPhrase] = useState("");
   const [waitingDots, setWaitingDots] = useState(0);
   const [addContextMenuOpen, setAddContextMenuOpen] = useState(false);
+  const [pastedImageContext, setPastedImageContext] =
+    useState<AssistantPastedImageContext | null>(null);
+  const [imagePasteRejected, setImagePasteRejected] = useState(false);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const addContextMenuRef = useRef<HTMLDivElement | null>(null);
   const activeAssistantRequestIdRef = useRef(0);
@@ -279,6 +326,36 @@ export function AssistantPanel({
     ? `${activeTab.connection.user}@${activeTab.connection.host}`
     : t("ai.workspace");
   const providerDefinition = getAiProviderDefinition(aiProviderSettings.providerKind);
+  const currentModel = aiProviderSettings.model || providerDefinition.defaultModel;
+  const modelOptionIds = useMemo(
+    () => new Set(providerDefinition.modelOptions.map((model) => model.id)),
+    [providerDefinition],
+  );
+  const hasCustomModel = currentModel.trim().length > 0 && !modelOptionIds.has(currentModel);
+  const currentModelSupportsImageInput = modelSupportsImageInput(
+    providerDefinition,
+    currentModel,
+  );
+  const assistantScreenshotContext =
+    assistantContextSnippet?.kind === "screenshot"
+      ? {
+          sourceLabel: assistantContextSnippet.sourceLabel,
+          dataUrl: assistantContextSnippet.imageDataUrl,
+        }
+      : undefined;
+  const pastedScreenshotContext = pastedImageContext
+    ? {
+        sourceLabel: pastedImageContext.sourceLabel,
+        dataUrl: pastedImageContext.imageDataUrl,
+      }
+    : undefined;
+  const requestScreenshotContext =
+    currentModelSupportsImageInput
+      ? pastedScreenshotContext ?? assistantScreenshotContext
+      : undefined;
+  const hasPendingImageContext = Boolean(pastedScreenshotContext ?? assistantScreenshotContext);
+  const showImageNotSupportedNotice =
+    !currentModelSupportsImageInput && (hasPendingImageContext || imagePasteRejected);
   const activeTerminalPaneId =
     activeTab?.kind === "terminal" ? activeTab.focusedPaneId ?? activeTab.panes[0]?.id : undefined;
   const sortedChatHistory = useMemo(() => sortedAssistantThreads(chatHistory), [chatHistory]);
@@ -288,6 +365,12 @@ export function AssistantPanel({
   useEffect(() => {
     writeAssistantChatHistory(chatHistory);
   }, [chatHistory]);
+
+  useEffect(() => {
+    if (currentModelSupportsImageInput) {
+      setImagePasteRejected(false);
+    }
+  }, [currentModelSupportsImageInput]);
 
   useEffect(() => {
     if (!isSendingPrompt) {
@@ -384,6 +467,8 @@ export function AssistantPanel({
     setPrompt("");
     setChatError("");
     setWaitingPhrase("");
+    setPastedImageContext(null);
+    setImagePasteRejected(false);
     setAssistantIntent("chat");
     setShowAllChats(false);
   }
@@ -422,6 +507,8 @@ export function AssistantPanel({
     setPrompt("");
     setChatError("");
     setWaitingPhrase("");
+    setPastedImageContext(null);
+    setImagePasteRejected(false);
     setAssistantIntent("chat");
     setShowAllChats(false);
   }
@@ -435,6 +522,8 @@ export function AssistantPanel({
       setPrompt("");
       setChatError("");
       setWaitingPhrase("");
+      setPastedImageContext(null);
+      setImagePasteRejected(false);
       setAssistantIntent("chat");
     }
   }
@@ -445,6 +534,30 @@ export function AssistantPanel({
 
   async function handleCopyCode(code: string) {
     await writeToClipboard(code);
+  }
+
+  async function handleModelChange(model: string) {
+    const previousSettings = aiProviderSettings;
+    const nextSettings = normalizeAiProviderDraft({
+      ...previousSettings,
+      model,
+    });
+    setAiProviderSettings(nextSettings);
+    setChatError("");
+
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    try {
+      const saved = await invokeCommand("update_ai_provider_settings", {
+        request: nextSettings,
+      });
+      setAiProviderSettings(saved);
+    } catch (error) {
+      setAiProviderSettings(previousSettings);
+      setChatError(error instanceof Error ? error.message : String(error));
+    }
   }
 
   function handleStartExtensionDraft() {
@@ -560,13 +673,7 @@ export function AssistantPanel({
           intent: requestIntent,
           selectedOutput:
             assistantContextSnippet?.kind === "text" ? assistantContextSnippet.text : undefined,
-          screenshot:
-            assistantContextSnippet?.kind === "screenshot"
-              ? {
-                  sourceLabel: assistantContextSnippet.sourceLabel,
-                  dataUrl: assistantContextSnippet.imageDataUrl,
-                }
-              : undefined,
+          screenshot: requestScreenshotContext,
           systemContext,
           messages: history,
           outputLanguage: resolveAssistantOutputLanguage(aiProviderSettings.outputLanguage),
@@ -630,6 +737,43 @@ export function AssistantPanel({
 
     event.preventDefault();
     void submitAssistantPrompt();
+  }
+
+  async function handleComposerPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    const imageItem = Array.from(event.clipboardData.items).find((item) =>
+      item.type.startsWith("image/"),
+    );
+    if (!imageItem) {
+      return;
+    }
+
+    event.preventDefault();
+    if (!currentModelSupportsImageInput) {
+      setImagePasteRejected(true);
+      return;
+    }
+
+    const imageFile = imageItem.getAsFile();
+    if (!imageFile) {
+      setImagePasteRejected(true);
+      return;
+    }
+
+    try {
+      const dataUrl = await readImageFileAsDataUrl(imageFile);
+      const dimensions = await readImageDimensions(dataUrl);
+      setPastedImageContext({
+        id: `assistant-pasted-image-${Date.now()}`,
+        sourceLabel: t("ai.pastedImageSource"),
+        imageDataUrl: dataUrl,
+        width: dimensions.width,
+        height: dimensions.height,
+      });
+      setImagePasteRejected(false);
+    } catch (error) {
+      setImagePasteRejected(true);
+      setChatError(error instanceof Error ? error.message : String(error));
+    }
   }
 
   return (
@@ -809,9 +953,40 @@ export function AssistantPanel({
             )}
           </section>
         ) : null}
+        {pastedImageContext ? (
+          <section className="assistant-selection-context">
+            <header>
+              <span>{pastedImageContext.sourceLabel}</span>
+              <button
+                className="row-action"
+                aria-label={t("ai.clearContext")}
+                onClick={() => {
+                  setPastedImageContext(null);
+                  setImagePasteRejected(false);
+                }}
+                title={t("ai.clearContext")}
+                type="button"
+              >
+                <X size={13} />
+              </button>
+            </header>
+            <div className="assistant-screenshot-context">
+              <img alt={pastedImageContext.sourceLabel} src={pastedImageContext.imageDataUrl} />
+              <small>
+                {pastedImageContext.width} x {pastedImageContext.height}
+              </small>
+            </div>
+          </section>
+        ) : null}
+        {showImageNotSupportedNotice ? (
+          <p className="assistant-image-support-notice" role="status">
+            {t("ai.imageInputNotSupported")}
+          </p>
+        ) : null}
         <textarea
           ref={composerTextareaRef}
           onKeyDown={handleComposerKeyDown}
+          onPaste={(event) => void handleComposerPaste(event)}
           onChange={(event) => setPrompt(event.currentTarget.value)}
           disabled={isSendingPrompt}
           placeholder={t("ai.composerPlaceholder")}
@@ -887,7 +1062,21 @@ export function AssistantPanel({
               </div>
             ) : null}
           </div>
-          <span>{aiProviderSettings.model || providerDefinition.defaultModel}</span>
+          <select
+            aria-label={t("settings.model")}
+            className="assistant-model-select"
+            disabled={isSendingPrompt}
+            onChange={(event) => void handleModelChange(event.currentTarget.value)}
+            title={t("settings.model")}
+            value={currentModel}
+          >
+            {hasCustomModel ? <option value={currentModel}>{currentModel}</option> : null}
+            {providerDefinition.modelOptions.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label}
+              </option>
+            ))}
+          </select>
           <button
             aria-label={isSendingPrompt ? t("ai.stopMessage") : t("ai.sendMessage")}
             className="assistant-send-button"

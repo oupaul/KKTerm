@@ -2,6 +2,7 @@ import type { AiProviderKind, AiProviderSettings, AiReasoningEffort } from "../.
 
 export type AiProviderCapability =
   | "chat"
+  | "imageInput"
   | "streaming"
   | "toolCalling"
   | "mcpReady"
@@ -13,6 +14,7 @@ export type AiModelOption = {
   id: string;
   label: string;
   note?: string;
+  supportsImageInput?: boolean;
 };
 
 export type AiProviderSettingsField = "baseUrl" | "model" | "reasoningEffort" | "apiKey";

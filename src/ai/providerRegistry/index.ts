@@ -10,6 +10,7 @@ import { openAiCompatibleProvider } from "./openAiCompatible";
 import { openAiProvider } from "./openai";
 import { openRouterProvider } from "./openrouter";
 import type { AiProviderDefinition } from "./types";
+export { modelSupportsImageInput } from "./imageInput";
 
 export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
   openAiProvider,

@@ -353,6 +353,7 @@ impl AgentProvider for OpenAiCompatibleProvider {
             settings.reasoning_effort().to_string(),
             request.system_context,
             request.selected_output,
+            supports_image_input(self.provider_kind, settings.model()),
             request.screenshot,
             request.messages,
             request.output_language,
@@ -461,6 +462,7 @@ fn build_agent_messages(
     reasoning_effort: String,
     system_context: Option<String>,
     selected_output: Option<String>,
+    supports_image_input: bool,
     screenshot: Option<AgentScreenshotContext>,
     history: Vec<AgentChatMessage>,
     output_language: Option<String>,
@@ -516,7 +518,10 @@ fn build_agent_messages(
         user_content.push_str(&selected_output);
         user_content.push_str("\n```");
     }
-    let content = match screenshot.and_then(normalize_screenshot_context) {
+    let content = match screenshot
+        .filter(|_| supports_image_input)
+        .and_then(normalize_screenshot_context)
+    {
         Some(screenshot) => OpenAiCompatibleContent::Parts(vec![
             OpenAiCompatibleContentPart::Text {
                 text: format!(
@@ -588,6 +593,63 @@ fn normalize_screenshot_context(
         source_label,
         data_url,
     })
+}
+
+fn supports_image_input(provider_kind: &str, model: &str) -> bool {
+    let normalized_model = model.trim().to_ascii_lowercase();
+    let unprefixed_model = normalized_model
+        .rsplit('/')
+        .next()
+        .unwrap_or(normalized_model.as_str());
+
+    if provider_kind == "deepseek" || provider_kind == "nvidia" {
+        return false;
+    }
+
+    if text_only_model(&normalized_model) || text_only_model(unprefixed_model) {
+        return false;
+    }
+
+    match provider_kind {
+        "openai" | "azure-openai" => normalized_model.starts_with("gpt-5"),
+        "grok" => normalized_model.starts_with("grok-4") && !normalized_model.starts_with("grok-code"),
+        "anthropic" => true,
+        _ => image_input_model(&normalized_model) || image_input_model(unprefixed_model),
+    }
+}
+
+fn text_only_model(model: &str) -> bool {
+    model.starts_with("deepseek")
+        || model.contains("/deepseek")
+        || model.starts_with("grok-code")
+        || model.starts_with("qwen3")
+        || model.starts_with("gpt-oss")
+        || model.starts_with("meta/llama")
+        || model.starts_with("llama")
+        || model.starts_with("bytedance/seed-oss")
+        || model.starts_with("abacusai/dracarys")
+}
+
+fn image_input_model(model: &str) -> bool {
+    model.starts_with("gpt-5")
+        || model.starts_with("claude")
+        || model.starts_with("gemini")
+        || model.starts_with("grok-4")
+        || model.starts_with("gemma3")
+        || model.starts_with("llava")
+        || model.starts_with("bakllava")
+        || model.starts_with("minicpm-v")
+        || model.starts_with("qwen-vl")
+        || model.starts_with("qwen2-vl")
+        || model.starts_with("qwen2.5-vl")
+        || model.starts_with("kimi-vl")
+        || model.starts_with("kimi-k")
+        || model.contains("-vision")
+        || model.contains("_vision")
+        || model.contains("-vl")
+        || model.contains("_vl")
+        || model.contains("-multimodal")
+        || model.contains("_multimodal")
 }
 
 fn to_openai_compatible_history_message(
@@ -841,6 +903,7 @@ mod tests {
             "high".to_string(),
             Some("OS: Ubuntu 24.04 LTS".to_string()),
             Some("ERROR service unavailable".to_string()),
+            true,
             None,
             vec![
                 AgentChatMessage {
@@ -874,6 +937,7 @@ mod tests {
             "medium".to_string(),
             None,
             None,
+            true,
             Some(AgentScreenshotContext {
                 source_label: "Router screenshot".to_string(),
                 data_url: "data:image/png;base64,abcd".to_string(),
@@ -889,6 +953,33 @@ mod tests {
     }
 
     #[test]
+    fn agent_messages_omit_screenshot_context_when_model_is_text_only() {
+        let messages = build_agent_messages(
+            "What is visible?".to_string(),
+            "Router - URL view".to_string(),
+            None,
+            "medium".to_string(),
+            None,
+            None,
+            false,
+            Some(AgentScreenshotContext {
+                source_label: "Router screenshot".to_string(),
+                data_url: "data:image/png;base64,abcd".to_string(),
+            }),
+            vec![],
+            None,
+        );
+
+        match &messages[1].content {
+            OpenAiCompatibleContent::Text(content) => {
+                assert!(content.contains("User request"));
+                assert!(!content.contains("Attached screenshot source"));
+            }
+            OpenAiCompatibleContent::Parts(_) => panic!("text-only models must not receive image parts"),
+        }
+    }
+
+    #[test]
     fn agent_messages_include_extension_creation_guardrails() {
         let messages = build_agent_messages(
             "Create a Connection cleanup helper.".to_string(),
@@ -897,6 +988,7 @@ mod tests {
             "medium".to_string(),
             None,
             None,
+            true,
             None,
             vec![],
             None,
