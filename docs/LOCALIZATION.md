@@ -6,6 +6,39 @@ When a key is translated into every supported locale, remove its entry from this
 
 ## Pending Strings
 
+### workspace.workspace
+
+- English value: `Workspace`
+- Namespace: `workspace`
+- File/component: `src/connections/utils.tsx`, rendered in `src/ai/AssistantPanel.tsx`
+- UI role: fragment
+- Surrounding user flow: AI Assistant active-session hint shows the current tab title followed by the tab/workspace kind when a terminal tab contains multiple panes.
+- Tone: Short, neutral product label.
+- Placeholder details: None.
+- Domain notes: Refers to a frontend workspace/pane container, not a durable Connection or live backend Session.
+
+### workspace.terminal
+
+- English value: `Terminal`
+- Namespace: `workspace`
+- File/component: `src/connections/utils.tsx`, rendered in `src/ai/AssistantPanel.tsx`
+- UI role: fragment
+- Surrounding user flow: AI Assistant active-session hint shows the current tab title followed by the tab/workspace kind for a terminal tab.
+- Tone: Short, neutral product label.
+- Placeholder details: None.
+- Domain notes: Refers to the terminal workspace surface, not the saved Connection. Technical term may remain English where local convention prefers it.
+
+### workspace.connectionKind
+
+- English value: `{{type}} connection`
+- Namespace: `workspace`
+- File/component: `src/connections/utils.tsx`, rendered in `src/ai/AssistantPanel.tsx`
+- UI role: fragment
+- Surrounding user flow: AI Assistant active-session hint shows the current tab title followed by the selected remote desktop or embedded pane Connection kind, such as `RDP connection` or `VNC connection`.
+- Tone: Short, neutral descriptive fragment.
+- Placeholder details: `{{type}}` is a localized Connection type label from the `connections` namespace, such as `RDP`, `VNC`, or `URL`.
+- Domain notes: Connection means a durable openable resource; keep protocol abbreviations such as RDP, VNC, SSH, and URL unchanged unless the locale commonly translates them.
+
 ### ai.pastedImageSource
 
 - English value: `Pasted image`

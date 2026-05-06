@@ -816,6 +816,9 @@
     "terminalPane": "terminal Pane",
     "sftpBrowser": "SFTP browser",
     "webview": "Webview",
+    "workspace": "Workspace",
+    "terminal": "Terminal",
+    "connectionKind": "{{type}} connection",
     "localTerminalSession": "Local terminal session"
   },
   "common": {

@@ -1,5 +1,6 @@
 import { Cable, Mouse, Columns2, Globe2, Laptop, Monitor, Network, Server, Terminal } from "lucide-react";
 import { invokeCommand, type SshHostKeyPreview } from "../lib/tauri";
+import i18next from "../i18n/config";
 import type { Connection, ConnectionType, SshSettings, WorkspaceTab } from "../types";
 
 const WINDOWS_LOCAL_SHELL_OPTIONS = [
@@ -64,19 +65,19 @@ export function defaultPortForConnectionType(type: ConnectionType, sshSettings: 
 export function connectionTypeLabel(type: ConnectionType) {
   switch (type) {
     case "local":
-      return "Local terminal";
+      return i18next.t("connections.localTerminal");
     case "ssh":
-      return "SSH terminal";
+      return i18next.t("connections.sshTerminal");
     case "telnet":
-      return "Telnet";
+      return i18next.t("connections.telnet");
     case "serial":
-      return "Serial";
+      return i18next.t("connections.serial");
     case "url":
-      return "URL";
+      return i18next.t("connections.url");
     case "rdp":
-      return "RDP";
+      return i18next.t("connections.rdp");
     case "vnc":
-      return "VNC";
+      return i18next.t("connections.vnc");
   }
 }
 
@@ -141,22 +142,26 @@ export function tabIconFor(tab: WorkspaceTab) {
 export function workspaceKindLabel(tab: WorkspaceTab) {
   switch (tab.kind) {
     case "sftp":
-      return "SFTP browser";
+      return i18next.t("workspace.sftpBrowser");
     case "webview":
-      return "Webview";
+      return i18next.t("workspace.webview");
     case "remoteDesktop":
-      return `${connectionTypeLabel(tab.connection?.type ?? "rdp")} connection`;
+      return i18next.t("workspace.connectionKind", {
+        type: connectionTypeLabel(tab.connection?.type ?? "rdp"),
+      });
     case "terminal":
       if (tab.panes.length > 1) {
-        return "Workspace";
+        return i18next.t("workspace.workspace");
       }
       if (tab.panes[0]?.kind === "webview") {
-        return "Webview";
+        return i18next.t("workspace.webview");
       }
       if (tab.panes[0]?.kind === "remoteDesktop") {
-        return `${connectionTypeLabel(tab.panes[0].connection.type)} connection`;
+        return i18next.t("workspace.connectionKind", {
+          type: connectionTypeLabel(tab.panes[0].connection.type),
+        });
       }
-      return "Terminal";
+      return i18next.t("workspace.terminal");
   }
 }
 

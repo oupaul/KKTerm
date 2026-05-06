@@ -1,3 +1,4 @@
+import { ConnectionIcon } from "../connections/ConnectionIcon";
 import { workspaceKindLabel } from "../connections/utils";
 import { inspectActiveSshSystemContext } from "../terminal/TerminalWorkspace";
 import { writeToClipboard } from "../lib/clipboard";
@@ -933,7 +934,15 @@ export function AssistantPanel({
       </div>
 
       <div className="assistant-context active-session-hint">
-        <Bot size={16} />
+        {activeTab?.connection ? (
+          <ConnectionIcon
+            localShell={activeTab.connection.localShell}
+            size={32}
+            type={activeTab.connection.type}
+          />
+        ) : (
+          <Bot size={16} />
+        )}
         <span>
           <strong>{contextLabel}</strong>
           <small>{connectionLabel}</small>

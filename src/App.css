@@ -2420,9 +2420,14 @@ progress {
 }
 
 .active-session-hint {
+  align-items: center;
   background: var(--surface);
   border-color: var(--border);
   box-shadow: var(--shadow);
+}
+
+.active-session-hint > .connection-icon-image {
+  flex: 0 0 auto;
 }
 
 .assistant-extension-context {
