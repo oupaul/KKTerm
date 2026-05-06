@@ -221,6 +221,10 @@ export type AiProviderKind =
   | "anthropic"
   | "openrouter"
   | "deepseek"
+  | "grok"
+  | "azure-openai"
+  | "litellm"
+  | "github-copilot"
   | "ollama"
   | "nvidia"
   | "openai-compatible";

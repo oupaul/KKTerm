@@ -1,4 +1,4 @@
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 
 use crate::storage::AiProviderSettings;
@@ -232,46 +232,97 @@ struct OpenAiCompatibleProvider {
     provider_kind: &'static str,
     label: &'static str,
     requires_api_key: bool,
+    endpoint_style: OpenAiEndpointStyle,
+    auth_style: OpenAiAuthStyle,
 }
 
 fn provider_for(kind: &str) -> Result<OpenAiCompatibleProvider, String> {
     match kind {
+        "azure-openai" => Ok(OpenAiCompatibleProvider {
+            provider_kind: "azure-openai",
+            label: "Azure OpenAI",
+            requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::Azure,
+            auth_style: OpenAiAuthStyle::ApiKeyHeader,
+        }),
         "deepseek" => Ok(OpenAiCompatibleProvider {
             provider_kind: "deepseek",
             label: "DeepSeek",
             requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
+        }),
+        "grok" => Ok(OpenAiCompatibleProvider {
+            provider_kind: "grok",
+            label: "Grok",
+            requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
+        }),
+        "litellm" => Ok(OpenAiCompatibleProvider {
+            provider_kind: "litellm",
+            label: "LiteLLM",
+            requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
         }),
         "openai" => Ok(OpenAiCompatibleProvider {
             provider_kind: "openai",
             label: "OpenAI",
             requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
         }),
         "openrouter" => Ok(OpenAiCompatibleProvider {
             provider_kind: "openrouter",
             label: "OpenRouter",
             requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
         }),
         "ollama" => Ok(OpenAiCompatibleProvider {
             provider_kind: "ollama",
             label: "Ollama",
             requires_api_key: false,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
         }),
         "nvidia" => Ok(OpenAiCompatibleProvider {
             provider_kind: "nvidia",
             label: "NVIDIA",
             requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
         }),
         "openai-compatible" => Ok(OpenAiCompatibleProvider {
             provider_kind: "openai-compatible",
             label: "OpenAI compatible",
             requires_api_key: true,
+            endpoint_style: OpenAiEndpointStyle::ChatCompletions,
+            auth_style: OpenAiAuthStyle::Bearer,
         }),
         "anthropic" => Err(
             "Anthropic support needs a provider adapter; DeepSeek and OpenAI-compatible providers are wired first."
                 .to_string(),
         ),
+        "github-copilot" => Err(
+            "GitHub Copilot support needs the Copilot SDK OAuth bridge before AI Assistant can chat."
+                .to_string(),
+        ),
         _ => Err("AI provider is not supported by the agent runner".to_string()),
     }
+}
+
+#[derive(Clone, Copy)]
+enum OpenAiEndpointStyle {
+    ChatCompletions,
+    Azure,
+}
+
+#[derive(Clone, Copy)]
+enum OpenAiAuthStyle {
+    Bearer,
+    ApiKeyHeader,
 }
 
 impl AgentProvider for OpenAiCompatibleProvider {
@@ -293,7 +344,8 @@ impl AgentProvider for OpenAiCompatibleProvider {
             ));
         }
 
-        let endpoint = chat_completions_endpoint(settings.base_url())?;
+        let endpoint =
+            chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
             context_label,
@@ -308,7 +360,10 @@ impl AgentProvider for OpenAiCompatibleProvider {
         let client = reqwest::Client::new();
         let response = client
             .post(endpoint)
-            .headers(openai_compatible_headers(api_key.as_deref())?)
+            .headers(openai_compatible_headers(
+                api_key.as_deref(),
+                self.auth_style,
+            )?)
             .json(&OpenAiCompatibleChatRequest {
                 model: settings.model().to_string(),
                 messages,
@@ -553,24 +608,68 @@ fn to_openai_compatible_history_message(
     })
 }
 
-fn chat_completions_endpoint(base_url: &str) -> Result<String, String> {
+fn chat_completions_endpoint(
+    base_url: &str,
+    model: &str,
+    endpoint_style: OpenAiEndpointStyle,
+) -> Result<String, String> {
     let base_url = trim_required("AI provider endpoint", base_url.to_string())?;
     let base_url = base_url.trim_end_matches('/');
-    if base_url.ends_with("/chat/completions") {
-        Ok(base_url.to_string())
-    } else {
-        Ok(format!("{base_url}/chat/completions"))
+    match endpoint_style {
+        OpenAiEndpointStyle::ChatCompletions => {
+            if base_url.ends_with("/chat/completions") {
+                Ok(base_url.to_string())
+            } else {
+                Ok(format!("{base_url}/chat/completions"))
+            }
+        }
+        OpenAiEndpointStyle::Azure => azure_chat_completions_endpoint(base_url, model),
     }
 }
 
-fn openai_compatible_headers(api_key: Option<&str>) -> Result<HeaderMap, String> {
+fn azure_chat_completions_endpoint(base_url: &str, deployment: &str) -> Result<String, String> {
+    if base_url.ends_with("/chat/completions") {
+        return Ok(base_url.to_string());
+    }
+    if base_url.ends_with("/openai/v1") || base_url.ends_with("/openai/v1/") {
+        return Ok(format!(
+            "{}/chat/completions",
+            base_url.trim_end_matches('/')
+        ));
+    }
+
+    let deployment = trim_required("Azure OpenAI deployment", deployment.to_string())?;
+    let deployment: String = url::form_urlencoded::byte_serialize(deployment.as_bytes()).collect();
+    Ok(format!(
+        "{}/openai/deployments/{deployment}/chat/completions?api-version=2024-10-21",
+        base_url.trim_end_matches('/')
+    ))
+}
+
+fn openai_compatible_headers(
+    api_key: Option<&str>,
+    auth_style: OpenAiAuthStyle,
+) -> Result<HeaderMap, String> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     if let Some(api_key) = api_key {
-        let header_value = HeaderValue::from_str(&format!("Bearer {api_key}")).map_err(|_| {
-            "AI API key contains characters that cannot be sent in an HTTP header".to_string()
-        })?;
-        headers.insert(AUTHORIZATION, header_value);
+        match auth_style {
+            OpenAiAuthStyle::Bearer => {
+                let header_value =
+                    HeaderValue::from_str(&format!("Bearer {api_key}")).map_err(|_| {
+                        "AI API key contains characters that cannot be sent in an HTTP header"
+                            .to_string()
+                    })?;
+                headers.insert(AUTHORIZATION, header_value);
+            }
+            OpenAiAuthStyle::ApiKeyHeader => {
+                let header_value = HeaderValue::from_str(api_key).map_err(|_| {
+                    "AI API key contains characters that cannot be sent in an HTTP header"
+                        .to_string()
+                })?;
+                headers.insert(HeaderName::from_static("api-key"), header_value);
+            }
+        }
     }
     Ok(headers)
 }
@@ -692,13 +791,44 @@ mod tests {
     #[test]
     fn chat_endpoint_uses_openai_compatible_path_once() {
         assert_eq!(
-            chat_completions_endpoint("https://api.deepseek.com/v1").expect("endpoint builds"),
+            chat_completions_endpoint(
+                "https://api.deepseek.com/v1",
+                "deepseek-chat",
+                OpenAiEndpointStyle::ChatCompletions,
+            )
+            .expect("endpoint builds"),
             "https://api.deepseek.com/v1/chat/completions"
         );
         assert_eq!(
-            chat_completions_endpoint("https://api.deepseek.com/v1/chat/completions")
-                .expect("endpoint is kept"),
+            chat_completions_endpoint(
+                "https://api.deepseek.com/v1/chat/completions",
+                "deepseek-chat",
+                OpenAiEndpointStyle::ChatCompletions,
+            )
+            .expect("endpoint is kept"),
             "https://api.deepseek.com/v1/chat/completions"
+        );
+    }
+
+    #[test]
+    fn azure_chat_endpoint_accepts_v1_or_native_resource_url() {
+        assert_eq!(
+            chat_completions_endpoint(
+                "https://example.openai.azure.com/openai/v1",
+                "gpt-5.4",
+                OpenAiEndpointStyle::Azure,
+            )
+            .expect("v1 endpoint builds"),
+            "https://example.openai.azure.com/openai/v1/chat/completions"
+        );
+        assert_eq!(
+            chat_completions_endpoint(
+                "https://example.openai.azure.com",
+                "deployment name",
+                OpenAiEndpointStyle::Azure,
+            )
+            .expect("native endpoint builds"),
+            "https://example.openai.azure.com/openai/deployments/deployment+name/chat/completions?api-version=2024-10-21"
         );
     }
 
@@ -790,7 +920,8 @@ mod tests {
 
     #[test]
     fn openai_compatible_headers_include_bearer_key_when_present() {
-        let headers = openai_compatible_headers(Some("sk-test")).expect("headers build");
+        let headers = openai_compatible_headers(Some("sk-test"), OpenAiAuthStyle::Bearer)
+            .expect("headers build");
 
         assert_eq!(
             headers
@@ -799,6 +930,21 @@ mod tests {
                 .to_str()
                 .expect("header is valid"),
             "Bearer sk-test"
+        );
+    }
+
+    #[test]
+    fn azure_headers_use_api_key_header() {
+        let headers = openai_compatible_headers(Some("az-test"), OpenAiAuthStyle::ApiKeyHeader)
+            .expect("headers build");
+
+        assert_eq!(
+            headers
+                .get("api-key")
+                .expect("api-key header exists")
+                .to_str()
+                .expect("header is valid"),
+            "az-test"
         );
     }
 

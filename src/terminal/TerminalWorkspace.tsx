@@ -10,7 +10,7 @@ import type { KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { dialogButtonAria, menuButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, saveTextFile, type TerminalOutput, type TmuxSession } from "../lib/tauri";
 import { defaultTerminalSettings } from "../sample-data";
-import { useWorkspaceStore } from "../store";
+import { getTmuxSessionLabel, useWorkspaceStore } from "../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../workspace/layout";
 import { getPaneRenderer, registerPaneInputWriter, registerPaneRenderer, unregisterPaneInputWriter, unregisterPaneRenderer, writeInputToPane } from "../workspace/paneRegistry";
@@ -663,7 +663,7 @@ function TmuxSessionTag({
         title="Show tmux sessions"
         type="button"
       >
-        tmux {sessionId}
+        tmux {sessionId ? getTmuxSessionLabel(sessionId) : sessionId}
       </button>
       {open ? (
         <div className="tmux-session-menu" role="dialog" aria-label="tmux sessions">

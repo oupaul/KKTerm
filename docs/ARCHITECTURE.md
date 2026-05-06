@@ -252,7 +252,8 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/webview/WebViewWorkspace.tsx` — URL Connection WebView2 host, webview session lease management, toolbar navigation, credential fill.
 - `src/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host, RDP ActiveX visibility/bounds synchronization, RDP snapshot/parking for DOM overlays, and VNC canvas framebuffer/input handling.
 - `src/ai/AssistantPanel.tsx` — AI Assistant chat surface, markdown rendering, chat history, extension draft intent UI, terminal send handoff.
-- `src/ai/providers.ts` — provider definitions and frontend provider validation.
+- `src/ai/providers.ts` — frontend provider registry barrel and provider validation.
+- `src/ai/providerRegistry/` — one provider definition per file plus shared registry types.
 - `src/settings/SettingsPage.tsx` — Settings shell with sidebar nav and section routing.
 - `src/settings/shared.tsx` — Shared `SettingsSummary` and `PlannedSettingsGrid` for settings pages.
 - `src/settings/aboutData.ts` — Product metadata and open-source component groups.

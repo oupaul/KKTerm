@@ -38,6 +38,8 @@ function formatAiProviderCapability(capability: string) {
       return "local";
     case "openAiCompatible":
       return "OpenAI compatible";
+    case "sdkOAuth":
+      return "SDK OAuth";
     default:
       return capability;
   }

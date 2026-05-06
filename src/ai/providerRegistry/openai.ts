@@ -1,0 +1,24 @@
+import { HOSTED_PROVIDER_SETTINGS_FIELDS, STANDARD_REASONING_EFFORTS } from "./shared";
+import type { AiProviderDefinition } from "./types";
+
+export const openAiProvider: AiProviderDefinition = {
+  kind: "openai",
+  label: "OpenAI",
+  baseUrl: "https://api.openai.com/v1",
+  defaultModel: "gpt-5.5",
+  defaultReasoningEffort: "medium",
+  reasoningEfforts: [...STANDARD_REASONING_EFFORTS],
+  requiresApiKey: true,
+  allowsCustomBaseUrl: false,
+  allowsCustomModel: true,
+  apiKeyLabel: "OpenAI API key",
+  modelOptions: [
+    { id: "gpt-5.5", label: "GPT-5.5", note: "Flagship reasoning and coding" },
+    { id: "gpt-5.4", label: "GPT-5.4", note: "Coding and professional work" },
+    { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", note: "Fast, lower cost" },
+    { id: "gpt-5.4-nano", label: "GPT-5.4 Nano", note: "Smallest" },
+    { id: "gpt-5.3-codex", label: "GPT-5.3 Codex", note: "Agentic coding" },
+  ],
+  settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
+  capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],
+};

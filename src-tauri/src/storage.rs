@@ -2599,6 +2599,10 @@ fn validate_ai_provider_settings(
         "anthropic" => "anthropic".to_string(),
         "openrouter" => "openrouter".to_string(),
         "deepseek" => "deepseek".to_string(),
+        "grok" | "xai" => "grok".to_string(),
+        "azure-openai" | "azure_openai" | "azure openai" => "azure-openai".to_string(),
+        "litellm" | "lite-llm" | "lite_llm" => "litellm".to_string(),
+        "github-copilot" | "github_copilot" | "github copilot" => "github-copilot".to_string(),
         "ollama" => "ollama".to_string(),
         "nvidia" => "nvidia".to_string(),
         "openai-compatible" | "openai_compatible" | "openai compatible" => {
