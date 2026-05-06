@@ -15,6 +15,8 @@ export const openAiCompatibleProvider: AiProviderDefinition = {
   modelOptions: [
     { id: "gpt-5.5", label: "GPT-5.5 compatible" },
     { id: "claude-sonnet-4-6", label: "Claude Sonnet compatible" },
+    { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash compatible" },
+    { id: "grok-4-fast", label: "Grok 4 Fast compatible" },
     { id: "llama-3.3-70b-instruct", label: "Llama 3.3 70B compatible" },
     { id: "qwen3", label: "Qwen3 compatible" },
   ],

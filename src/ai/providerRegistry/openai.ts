@@ -14,10 +14,13 @@ export const openAiProvider: AiProviderDefinition = {
   apiKeyLabel: "OpenAI API key",
   modelOptions: [
     { id: "gpt-5.5", label: "GPT-5.5", note: "Flagship reasoning and coding" },
+    { id: "gpt-5.5-2026-04-23", label: "GPT-5.5 snapshot" },
     { id: "gpt-5.4", label: "GPT-5.4", note: "Coding and professional work" },
     { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", note: "Fast, lower cost" },
     { id: "gpt-5.4-nano", label: "GPT-5.4 Nano", note: "Smallest" },
+    { id: "gpt-5.2", label: "GPT-5.2", note: "Previous frontier" },
     { id: "gpt-5.3-codex", label: "GPT-5.3 Codex", note: "Agentic coding" },
+    { id: "gpt-5.2-codex", label: "GPT-5.2 Codex" },
   ],
   settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
   capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],

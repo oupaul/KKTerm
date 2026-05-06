@@ -20,6 +20,7 @@ export const githubCopilotProvider: AiProviderDefinition = {
     { id: "gpt-5.3-codex", label: "GPT-5.3 Codex" },
     { id: "gpt-5.2-codex", label: "GPT-5.2 Codex" },
     { id: "claude-opus-4.7", label: "Claude Opus 4.7" },
+    { id: "claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
     { id: "claude-haiku-4.5", label: "Claude Haiku 4.5" },
   ],
   settingsFields: HOSTED_PROVIDER_SETTINGS_FIELDS,
