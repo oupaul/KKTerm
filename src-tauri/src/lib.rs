@@ -191,13 +191,12 @@ fn backup_settings_database(
     storage.backup_database()
 }
 
-#[tauri::command]
-fn prepare_main_window_for_quit(
-    window: tauri::Window,
-    storage: tauri::State<'_, storage::Storage>,
-    window_tracker: tauri::State<'_, window_state::MainWindowState>,
+fn persist_main_window_for_close(
+    window: &tauri::Window,
+    storage: &storage::Storage,
+    window_tracker: &window_state::MainWindowState,
 ) -> Result<(), String> {
-    let settings = window_tracker.snapshot_for_window(&window);
+    let settings = window_tracker.snapshot_for_window(window);
     storage.update_main_window_settings(settings)?;
     storage.backup_if_enabled_for_quit()?;
     Ok(())
@@ -907,7 +906,17 @@ pub fn run() {
                             window_tracker.update_normal_size(*size);
                         }
                     }
-                    tauri::WindowEvent::CloseRequested { .. } => {}
+                    tauri::WindowEvent::CloseRequested { .. } => {
+                        if let Some(storage) = window.try_state::<storage::Storage>() {
+                            if let Err(error) =
+                                persist_main_window_for_close(window, &storage, &window_tracker)
+                            {
+                                eprintln!(
+                                    "failed to persist main window state before close: {error}"
+                                );
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -931,7 +940,6 @@ pub fn run() {
             export_settings_database,
             import_settings_database,
             backup_settings_database,
-            prepare_main_window_for_quit,
             get_terminal_settings,
             update_terminal_settings,
             get_appearance_settings,
