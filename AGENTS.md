@@ -20,6 +20,7 @@ Use **Connection** (not "profile") for stored openable resources.
 - Do not put live session state into the durable connection model. Keep UI state (tabs, selected panes) in the frontend workspace layer unless persistence is required.
 - Keep Tauri command calls behind typed wrappers in `src/lib/tauri.ts`.
 - Do not add Tauri app-window close listeners/hooks. In this app, `CloseRequested`, `onCloseRequested`, `tauri://close-requested`, `prevent_close`, and close-confirmation hooks have repeatedly broken the native Windows title-bar close button in Tauri v2. Keep the main window close path native and unhooked. Persist window/layout state during normal resize/move/settings flows instead of doing work during close.
+- Automatic database backups must not run from app-window close. The supported shape is startup/manual backup ZIP creation using the same importable AdminDeck settings export format.
 - `src/App.tsx`: app shell routing, global panel layout, activity rail, Settings routing, and bootstrap effects only — it does not own form/control code or feature surfaces. Place feature code in:
   - `src/connections/` — connection tree
   - `src/workspace/` — workspace dispatch, status, screenshots

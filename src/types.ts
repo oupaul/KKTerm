@@ -158,6 +158,13 @@ export type TerminalCursorStyle = "block" | "bar" | "underline";
 
 export interface GeneralSettings {
   autoBackupEnabled: boolean;
+  lastBackupAt?: string | null;
+}
+
+export interface DatabaseBackupInfo {
+  path: string;
+  filename: string;
+  createdAt: string;
 }
 
 export interface ImportedDatabaseSnapshot {
@@ -168,6 +175,7 @@ export interface ImportedDatabaseSnapshot {
   sftpSettings: SftpSettings;
   aiProviderSettings: AiProviderSettings;
   connectionTree: ConnectionTree;
+  backup: DatabaseBackupInfo;
 }
 
 export interface TerminalSettings {

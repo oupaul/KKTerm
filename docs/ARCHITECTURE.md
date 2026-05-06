@@ -26,6 +26,8 @@ Owns Tauri setup, window lifecycle, command registration, menus, native dialogs,
 
 The main app window close path must remain native and unhooked. Do not listen for or intercept Tauri close events such as `CloseRequested`, `onCloseRequested`, `tauri://close-requested`, or `prevent_close`, and do not add app-owned close confirmation flows on the title-bar close button. Those hooks have repeatedly broken the Windows native close button under Tauri v2. Window and layout state should be persisted during ordinary resize/move/settings flows, not during app close.
 
+Automatic database backups follow the same rule: they run during startup or explicit Settings actions, never during app-window close. Backup files are AdminDeck settings ZIPs with the same structure as manual exports, so Import Settings can restore them directly.
+
 ### Command Boundary
 
 Provides a typed command wrapper between React and Rust. The frontend should not manually string-build backend calls. Commands should return structured results and structured errors.
@@ -34,7 +36,7 @@ Provides a typed command wrapper between React and Rust. The frontend should not
 
 `src/settings/SettingsPage.tsx` owns the Settings shell — the header, sidebar nav, and section routing. Each settings section is a separate page component under `src/settings/`, owning its own draft state, save/reset handlers, and helper controls:
 
-- `src/settings/GeneralSettings.tsx` — Language (i18n) selector.
+- `src/settings/GeneralSettings.tsx` — Language (i18n) selector, Auto Backup toggle and last-backup status, settings backup/import actions, database folder opener.
 - `src/settings/AppearanceSettings.tsx` — App UI font family, layout reset, Color Scheme placeholder.
 - `src/settings/AiSettings.tsx` — AI provider kind, dynamic provider fields, API key, output language.
 - `src/settings/SshSettings.tsx` — Read-only SSH defaults and SFTP transfer defaults summary.

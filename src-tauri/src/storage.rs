@@ -3,11 +3,11 @@ use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
-    fs::File,
+    fs::{File, OpenOptions},
     io::{copy, Read, Write},
     path::{Path, PathBuf},
     sync::Mutex,
-    time::SystemTime,
+    time::{Duration, SystemTime},
 };
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
@@ -85,6 +85,16 @@ pub struct Storage {
 #[serde(rename_all = "camelCase")]
 pub struct GeneralSettings {
     auto_backup_enabled: bool,
+    #[serde(default)]
+    last_backup_at: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatabaseBackupInfo {
+    path: String,
+    filename: String,
+    created_at: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -97,6 +107,7 @@ pub struct ImportedDatabaseSnapshot {
     sftp_settings: SftpSettings,
     ai_provider_settings: AiProviderSettings,
     connection_tree: ConnectionTree,
+    backup: DatabaseBackupInfo,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -339,17 +350,63 @@ impl Storage {
         format!("SQLite: {}", self.db_path.display())
     }
 
-    pub fn export_database_zip(&self, export_path: PathBuf) -> Result<(), String> {
-        let export_parent = export_path
+    pub fn database_folder(&self) -> Result<String, String> {
+        let parent = self
+            .db_path
             .parent()
-            .ok_or_else(|| "export destination must include a parent directory".to_string())?;
-        fs::create_dir_all(export_parent).map_err(|error| {
+            .ok_or_else(|| "database path must include a parent directory".to_string())?;
+        fs::create_dir_all(parent).map_err(|error| {
             format!(
-                "failed to create export directory {}: {error}",
-                export_parent.display()
+                "failed to create database directory {}: {error}",
+                parent.display()
             )
         })?;
-        let temp_db_path = self.temp_database_path("export");
+        Ok(parent.display().to_string())
+    }
+
+    pub fn backup_if_enabled_for_startup(&self) -> Result<Option<DatabaseBackupInfo>, String> {
+        if self.general_settings()?.auto_backup_enabled {
+            let backup = self.backup_database()?;
+            self.delete_old_backups()?;
+            Ok(Some(backup))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn backup_database(&self) -> Result<DatabaseBackupInfo, String> {
+        let backup_dir = self.backup_dir()?;
+        fs::create_dir_all(&backup_dir).map_err(|error| {
+            format!(
+                "failed to create backup directory {}: {error}",
+                backup_dir.display()
+            )
+        })?;
+        let path = self.next_backup_path(&backup_dir)?;
+        self.write_database_zip(&path, "backup", true)?;
+        let created_at = OffsetDateTime::now_utc()
+            .format(&Rfc3339)
+            .unwrap_or_else(|_| "unknown".to_string());
+        let backup = DatabaseBackupInfo {
+            filename: path
+                .file_name()
+                .and_then(|filename| filename.to_str())
+                .ok_or_else(|| "backup filename is not valid UTF-8".to_string())?
+                .to_string(),
+            path: path.display().to_string(),
+            created_at,
+        };
+        self.record_last_backup_at(&backup.created_at)?;
+        Ok(backup)
+    }
+
+    fn write_database_zip(
+        &self,
+        export_path: &Path,
+        temp_prefix: &str,
+        create_new: bool,
+    ) -> Result<(), String> {
+        let temp_db_path = self.temp_database_path(temp_prefix);
         remove_file_if_exists(&temp_db_path)?;
         {
             let connection = self.lock()?;
@@ -362,7 +419,15 @@ impl Storage {
                 .map_err(|error| format!("failed to snapshot database for export: {error}"))?;
         }
 
-        let export_file = File::create(&export_path).map_err(|error| {
+        let export_file = if create_new {
+            OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(export_path)
+        } else {
+            File::create(export_path)
+        }
+        .map_err(|error| {
             format!(
                 "failed to create export file {}: {error}",
                 export_path.display()
@@ -406,6 +471,7 @@ impl Storage {
         extract_imported_database(&import_path, &temp_import_path)?;
         validate_import_database(&temp_import_path)?;
 
+        let backup = self.backup_database()?;
         {
             let mut connection = self.lock()?;
             let placeholder = SqliteConnection::open_in_memory()
@@ -423,6 +489,7 @@ impl Storage {
             *connection = new_connection;
         }
         remove_file_if_exists(&temp_import_path)?;
+        self.record_last_backup_at(&backup.created_at)?;
         Ok(ImportedDatabaseSnapshot {
             general_settings: self.general_settings()?,
             terminal_settings: self.terminal_settings()?,
@@ -431,6 +498,7 @@ impl Storage {
             sftp_settings: self.sftp_settings()?,
             ai_provider_settings: self.ai_provider_settings()?,
             connection_tree: self.list_connection_tree()?,
+            backup,
         })
     }
 
@@ -480,6 +548,12 @@ impl Storage {
             )
             .map_err(to_storage_error)?;
         Ok(settings)
+    }
+
+    fn record_last_backup_at(&self, created_at: &str) -> Result<GeneralSettings, String> {
+        let mut settings = self.general_settings()?;
+        settings.last_backup_at = Some(created_at.to_string());
+        self.update_general_settings(settings)
     }
 
     pub fn terminal_settings(&self) -> Result<TerminalSettings, String> {
@@ -1312,6 +1386,62 @@ impl Storage {
             "admin-deck-{prefix}-{}.sqlite3",
             timestamp_for_filename()
         ))
+    }
+
+    fn backup_dir(&self) -> Result<PathBuf, String> {
+        let parent = self
+            .db_path
+            .parent()
+            .ok_or_else(|| "database path must include a parent directory".to_string())?;
+        Ok(parent.join("backups"))
+    }
+
+    fn next_backup_path(&self, backup_dir: &Path) -> Result<PathBuf, String> {
+        let timestamp = timestamp_for_filename();
+        for serial in 1..=999 {
+            let filename = format!("admin-deck-{timestamp}-{serial:03}.zip");
+            let path = backup_dir.join(filename);
+            if !path.exists() {
+                return Ok(path);
+            }
+        }
+        Err(format!(
+            "failed to choose an unused backup filename in {}",
+            backup_dir.display()
+        ))
+    }
+
+    fn delete_old_backups(&self) -> Result<(), String> {
+        let backup_dir = self.backup_dir()?;
+        let cutoff = SystemTime::now()
+            .checked_sub(Duration::from_secs(7 * 24 * 60 * 60))
+            .unwrap_or(SystemTime::UNIX_EPOCH);
+        let entries = match fs::read_dir(&backup_dir) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => {
+                return Err(format!(
+                    "failed to read backup directory {}: {error}",
+                    backup_dir.display()
+                ))
+            }
+        };
+
+        for entry in entries {
+            let entry =
+                entry.map_err(|error| format!("failed to inspect backup entry: {error}"))?;
+            let path = entry.path();
+            if path.extension().and_then(|extension| extension.to_str()) != Some("zip") {
+                continue;
+            }
+            let metadata = entry
+                .metadata()
+                .map_err(|error| format!("failed to inspect backup {}: {error}", path.display()))?;
+            if metadata.modified().unwrap_or(SystemTime::now()) < cutoff {
+                remove_file_if_exists(&path)?;
+            }
+        }
+        Ok(())
     }
 
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, SqliteConnection>, String> {
@@ -2319,7 +2449,8 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
 
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
-        auto_backup_enabled: false,
+        auto_backup_enabled: true,
+        last_backup_at: None,
     }
 }
 
@@ -2392,8 +2523,7 @@ fn default_ai_cli_execution_policy() -> String {
     "suggestOnly".to_string()
 }
 
-fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSettings, String> {
-    settings.auto_backup_enabled = false;
+fn validate_general_settings(settings: GeneralSettings) -> Result<GeneralSettings, String> {
     Ok(settings)
 }
 
@@ -2683,6 +2813,13 @@ mod tests {
                 serial_speed: None,
             })
             .expect("local connection is created")
+    }
+
+    fn backup_filename_has_serial(filename: &str) -> bool {
+        let stem = filename.strip_suffix(".zip").unwrap_or(filename);
+        stem.rsplit_once('-')
+            .map(|(_, serial)| serial.len() == 3 && serial.chars().all(|ch| ch.is_ascii_digit()))
+            .unwrap_or(false)
     }
 
     #[test]
@@ -3417,37 +3554,39 @@ mod tests {
         let defaults = storage
             .general_settings()
             .expect("default general settings load");
-        assert!(!defaults.auto_backup_enabled);
+        assert!(defaults.auto_backup_enabled);
+        assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
             .update_general_settings(GeneralSettings {
-                auto_backup_enabled: true,
+                auto_backup_enabled: false,
+                last_backup_at: None,
             })
             .expect("general settings update");
         assert!(!updated.auto_backup_enabled);
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
+        assert!(reloaded.last_backup_at.is_none());
     }
 
     #[test]
-    fn database_export_import_restores_settings_and_connections() {
+    fn database_backup_import_restores_settings_and_connections() {
         let db_path = temp_db_path("database-export-import");
         let storage = Storage::open(db_path).expect("storage opens");
         storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
+                last_backup_at: None,
             })
             .expect("general settings update");
         let connection = create_test_ssh_connection(&storage, "Prod SSH", "prod.internal", None);
-        let export_path = temp_db_path("database-export-import").with_extension("zip");
 
-        storage
-            .export_database_zip(export_path.clone())
-            .expect("database exports");
+        let backup = storage.backup_database().expect("database backup succeeds");
         storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: true,
+                last_backup_at: None,
             })
             .expect("general settings changes after export");
         storage
@@ -3455,13 +3594,54 @@ mod tests {
             .expect("connection can be removed before import");
 
         let imported = storage
-            .import_database_zip(export_path.clone())
+            .import_database_zip(PathBuf::from(&backup.path))
             .expect("database imports");
 
         assert!(!imported.general_settings.auto_backup_enabled);
+        assert_eq!(
+            imported.general_settings.last_backup_at.as_deref(),
+            Some(imported.backup.created_at.as_str())
+        );
         assert_eq!(imported.connection_tree.connections.len(), 1);
         assert_eq!(imported.connection_tree.connections[0].id, connection.id);
-        remove_file_if_exists(&export_path).expect("export cleanup succeeds");
+        assert!(Path::new(&imported.backup.path).exists());
+        assert!(imported.backup.filename.ends_with(".zip"));
+    }
+
+    #[test]
+    fn database_backup_zip_is_serialized_and_importable() {
+        let db_path = temp_db_path("database-backup-importable");
+        let storage = Storage::open(db_path).expect("storage opens");
+        let connection = create_test_ssh_connection(&storage, "Prod SSH", "prod.internal", None);
+
+        let first_backup = storage.backup_database().expect("database backup succeeds");
+        let second_backup = storage
+            .backup_database()
+            .expect("second database backup succeeds");
+
+        assert_ne!(first_backup.filename, second_backup.filename);
+        assert!(backup_filename_has_serial(&first_backup.filename));
+        assert!(backup_filename_has_serial(&second_backup.filename));
+        assert!(Path::new(&first_backup.path).exists());
+        assert!(Path::new(&second_backup.path).exists());
+        let settings = storage
+            .general_settings()
+            .expect("general settings reloads after backup");
+        assert_eq!(
+            settings.last_backup_at.as_deref(),
+            Some(second_backup.created_at.as_str())
+        );
+
+        storage
+            .delete_connection(connection.id.clone())
+            .expect("connection can be removed before import");
+
+        let imported = storage
+            .import_database_zip(PathBuf::from(&first_backup.path))
+            .expect("backup imports");
+
+        assert_eq!(imported.connection_tree.connections.len(), 1);
+        assert_eq!(imported.connection_tree.connections[0].id, connection.id);
     }
 
     #[test]

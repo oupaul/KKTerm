@@ -169,19 +169,23 @@ fn update_general_settings(
 }
 
 #[tauri::command]
-fn export_settings_database(
-    storage: tauri::State<'_, storage::Storage>,
-    path: String,
-) -> Result<(), String> {
-    storage.export_database_zip(path.into())
-}
-
-#[tauri::command]
 fn import_settings_database(
     storage: tauri::State<'_, storage::Storage>,
     path: String,
 ) -> Result<storage::ImportedDatabaseSnapshot, String> {
     storage.import_database_zip(path.into())
+}
+
+#[tauri::command]
+fn backup_settings_database(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<storage::DatabaseBackupInfo, String> {
+    storage.backup_database()
+}
+
+#[tauri::command]
+fn get_database_folder(storage: tauri::State<'_, storage::Storage>) -> Result<String, String> {
+    storage.database_folder()
 }
 
 fn persist_main_window_state(
@@ -871,6 +875,9 @@ pub fn run() {
                 .join("admin-deck.sqlite3");
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
             let main_window_settings = storage.main_window_settings().map_err(setup_error)?;
+            if let Err(error) = storage.backup_if_enabled_for_startup() {
+                eprintln!("failed to create automatic database backup at startup: {error}");
+            }
             if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
                 let initial_window_settings =
                     window_state::restore_main_window(&main_window, main_window_settings);
@@ -925,8 +932,9 @@ pub fn run() {
             upsert_url_credential,
             get_general_settings,
             update_general_settings,
-            export_settings_database,
             import_settings_database,
+            backup_settings_database,
+            get_database_folder,
             get_terminal_settings,
             update_terminal_settings,
             get_appearance_settings,

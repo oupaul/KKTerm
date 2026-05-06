@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Languages, Upload } from "lucide-react";
+import { DatabaseBackup, FolderOpen, Languages, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   SUPPORTED_LANGUAGES,
@@ -9,15 +9,30 @@ import {
 } from "../i18n/config";
 import {
   invokeCommand,
-  selectSettingsExportFile,
+  isTauriRuntime,
+  openFilesystemPath,
   selectSettingsImportFile,
 } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
+
+function formatBackupDate(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
 
 export function GeneralSettings() {
   const { t } = useTranslation();
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>(detectLanguage);
+  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
@@ -36,25 +51,57 @@ export function GeneralSettings() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
-  async function handleExportSettings() {
+  async function updateAutoBackup(enabled: boolean) {
+    const nextSettings = { ...generalSettings, autoBackupEnabled: enabled };
+    setGeneralSettings(nextSettings);
+    setStatus("");
+    setError("");
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      const saved = await invokeCommand("update_general_settings", {
+        request: nextSettings,
+      });
+      setGeneralSettings(saved);
+      setStatus(t("settings.autoBackupSaved"));
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : String(saveError),
+      );
+    }
+  }
+
+  async function handleBackupSettings() {
     setStatus("");
     setError("");
     try {
-      const path = await selectSettingsExportFile({
-        title: t("settings.exportSettings"),
-        filterName: t("settings.settingsExportFilter"),
+      const backup = await invokeCommand("backup_settings_database");
+      setGeneralSettings({
+        ...generalSettings,
+        lastBackupAt: backup.createdAt,
       });
-      if (!path) {
-        return;
-      }
-      await invokeCommand("export_settings_database", { path });
-      setStatus(t("settings.exportSettingsComplete"));
-    } catch (exportError) {
-      setError(
-        exportError instanceof Error
-          ? exportError.message
-          : String(exportError),
+      setStatus(
+        t("settings.backupSettingsComplete", { filename: backup.filename }),
       );
+    } catch (backupError) {
+      setError(
+        backupError instanceof Error
+          ? backupError.message
+          : String(backupError),
+      );
+    }
+  }
+
+  async function handleOpenDatabaseFolder() {
+    setStatus("");
+    setError("");
+    try {
+      const path = await invokeCommand("get_database_folder");
+      await openFilesystemPath(path);
+      setStatus(t("settings.openDatabaseFolderComplete"));
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : String(openError));
     }
   }
 
@@ -87,7 +134,11 @@ export function GeneralSettings() {
       window.dispatchEvent(
         new CustomEvent("admindeck:connection-tree-invalidated"),
       );
-      setStatus(t("settings.importSettingsComplete"));
+      setStatus(
+        t("settings.importSettingsComplete", {
+          filename: snapshot.backup.filename,
+        }),
+      );
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -96,6 +147,8 @@ export function GeneralSettings() {
       );
     }
   }
+
+  const lastBackup = formatBackupDate(generalSettings.lastBackupAt);
 
   return (
     <section className="settings-card settings-section">
@@ -128,6 +181,25 @@ export function GeneralSettings() {
         </label>
       </div>
 
+      <div className="settings-toggles">
+        <label>
+          <input
+            type="checkbox"
+            checked={generalSettings.autoBackupEnabled}
+            onChange={(event) =>
+              void updateAutoBackup(event.currentTarget.checked)
+            }
+          />
+          {t("settings.autoBackup")}
+        </label>
+        <small className="field-hint">{t("settings.autoBackupHint")}</small>
+        <small className="field-hint">
+          {t("settings.lastBackup", {
+            value: lastBackup ?? t("settings.lastBackupNever"),
+          })}
+        </small>
+      </div>
+
       <div
         className="settings-data-actions"
         aria-label={t("settings.settingsDataActions")}
@@ -135,10 +207,10 @@ export function GeneralSettings() {
         <button
           className="secondary-button"
           type="button"
-          onClick={() => void handleExportSettings()}
+          onClick={() => void handleBackupSettings()}
         >
-          <Download size={16} />
-          {t("settings.exportSettings")}
+          <DatabaseBackup size={16} />
+          {t("settings.backupSettings")}
         </button>
         <button
           className="secondary-button"
@@ -147,6 +219,14 @@ export function GeneralSettings() {
         >
           <Upload size={16} />
           {t("settings.importSettings")}
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={() => void handleOpenDatabaseFolder()}
+        >
+          <FolderOpen size={16} />
+          {t("settings.openDatabaseFolder")}
         </button>
         <div className="settings-data-note">
           <span>{t("settings.settingsDataHint")}</span>
