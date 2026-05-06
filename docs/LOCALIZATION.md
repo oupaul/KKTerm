@@ -333,3 +333,51 @@ When a key is translated into every supported locale, remove its entry from this
 - Placeholders: None
 - Domain notes: AdminDeck is the product name; export refers to the zipped SQLite database file.
 - Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `app.quitConfirmTitle`
+
+- English: "Close AdminDeck?"
+- Namespace: `app`
+- Appears in: `src/App.tsx` (`QuitConfirmDialog`)
+- UI role: Dialog title / aria-label
+- Context: Title of the in-app confirmation dialog shown when the user requests to close the AdminDeck main window while one or more workspace Tabs (open Connections) are present. Cancel keeps the window open; confirming destroys the window and exits the app.
+- Tone: Direct, calm question
+- Placeholders: None
+- Domain notes: AdminDeck is the product name. The dialog is in-app (React modal), not OS-native, to avoid the close-requested race that previously broke the close button.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `app.quitConfirmBody_one` / `app.quitConfirmBody_other`
+
+- English: "1 open Connection will end." / "{{count}} open Connections will end."
+- Namespace: `app`
+- Appears in: `src/App.tsx` (`QuitConfirmDialog`)
+- UI role: Dialog body line
+- Context: Primary body line of the close-confirmation dialog. States how many open Connections (live Sessions presented in workspace Tabs) will be terminated if the user proceeds.
+- Tone: Plain factual warning
+- Placeholders: `{{count}}` is the number of open workspace Tabs.
+- Domain notes: Use **Connection** (capital C) for the openable resource term, consistent with `CONTEXT.md`. The dialog deliberately avoids the Connection-vs-Session distinction in copy.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `app.quitConfirmHint`
+
+- English: "Any unsaved work in those Sessions will be lost."
+- Namespace: `app`
+- Appears in: `src/App.tsx` (`QuitConfirmDialog`)
+- UI role: Secondary muted hint line
+- Context: Secondary line under the count, emphasizing that proceeding ends live work (terminal output, SFTP transfers, RDP/VNC sessions, AI chats).
+- Tone: Cautionary, brief
+- Placeholders: None
+- Domain notes: **Session** is the live runtime term from `CONTEXT.md`.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `app.quitConfirmAction`
+
+- English: "Close anyway"
+- Namespace: `app`
+- Appears in: `src/App.tsx` (`QuitConfirmDialog`)
+- UI role: Confirm button (destructive)
+- Context: The destructive button that, when clicked, destroys the AdminDeck main window and exits the app, ending all open Connections.
+- Tone: Direct, slightly informal "anyway" softens the destructive action.
+- Placeholders: None
+- Domain notes: Pairs with the standard `common.cancel` key for the cancel action.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id

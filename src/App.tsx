@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, LayoutDashboard, Settings } from "lucide-rea
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invokeCommand, isTauriRuntime } from "./lib/tauri";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
@@ -110,7 +111,14 @@ function App() {
   const setPerformanceSnapshot = useWorkspaceStore((state) => state.setPerformanceSnapshot);
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
+  const openConnectionCount = useWorkspaceStore((state) => state.tabs.length);
+  const openConnectionCountRef = useRef(openConnectionCount);
+  const [quitConfirm, setQuitConfirm] = useState<{ count: number } | null>(null);
   useBootstrapSettings();
+
+  useEffect(() => {
+    openConnectionCountRef.current = openConnectionCount;
+  }, [openConnectionCount]);
   const [connectionPanelLayout, setConnectionPanelLayout] = useState(() =>
     loadPanelLayout(
       CONNECTION_PANEL_LAYOUT_KEY,
@@ -210,6 +218,38 @@ function App() {
       window.clearInterval(interval);
     };
   }, [setPerformanceSnapshot]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const appWindow = getCurrentWindow();
+    void appWindow
+      .onCloseRequested((event) => {
+        const count = openConnectionCountRef.current;
+        if (count <= 0) {
+          return;
+        }
+        event.preventDefault();
+        setQuitConfirm({ count });
+      })
+      .then((dispose) => {
+        if (disposed) {
+          dispose();
+          return;
+        }
+        unlisten = dispose;
+      });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   useEffect(() => {
     const preventDefaultContextMenu = (event: globalThis.MouseEvent) => {
@@ -314,6 +354,46 @@ function App() {
           onResetLayout={handleResetLayout}
         />
       ) : null}
+      {quitConfirm ? (
+        <QuitConfirmDialog
+          count={quitConfirm.count}
+          onCancel={() => setQuitConfirm(null)}
+          onConfirm={() => {
+            setQuitConfirm(null);
+            void getCurrentWindow().destroy();
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function QuitConfirmDialog({
+  count,
+  onCancel,
+  onConfirm,
+}: {
+  count: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useTranslation();
+  const title = t("app.quitConfirmTitle");
+  return (
+    <div className="dialog-backdrop confirm-delete-backdrop" role="presentation">
+      <div className="confirm-delete-dialog" role="alertdialog" aria-label={title}>
+        <p className="panel-label">{title}</p>
+        <p className="confirm-delete-name">{t("app.quitConfirmBody", { count })}</p>
+        <p className="confirm-delete-warning">{t("app.quitConfirmHint")}</p>
+        <div className="dialog-actions">
+          <button className="approve-button danger" type="button" onClick={onConfirm}>
+            {t("app.quitConfirmAction")}
+          </button>
+          <button className="toolbar-button" type="button" onClick={onCancel}>
+            {t("common.cancel")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
