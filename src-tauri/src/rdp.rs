@@ -10,30 +10,33 @@ mod platform {
     use serde::{Deserialize, Serialize};
     use tauri::{AppHandle, Manager};
     use windows::{
-        core::{Interface, BSTR, PCSTR, PCWSTR},
+        core::{IUnknown_Vtbl, Interface, BSTR, GUID, PCSTR, PCWSTR},
         Win32::{
-            Foundation::{HANDLE, HGLOBAL, HWND, LPARAM, POINT, RECT, VARIANT_FALSE, VARIANT_TRUE, WPARAM},
+            Foundation::{
+                HANDLE, HGLOBAL, HWND, LPARAM, POINT, RECT, VARIANT_BOOL, VARIANT_FALSE,
+                VARIANT_TRUE, WPARAM,
+            },
             Graphics::Gdi::ClientToScreen,
             System::{
                 Com::{
                     IDispatch, DISPATCH_METHOD, DISPATCH_PROPERTYGET, DISPATCH_PROPERTYPUT,
                     DISPPARAMS,
                 },
-                DataExchange::{
-                    CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
-                },
+                DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
                 LibraryLoader::{GetProcAddress, LoadLibraryW},
                 Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
-                Ole::{CF_UNICODETEXT, OleInitialize, DISPID_PROPERTYPUT},
+                Ole::{OleInitialize, CF_UNICODETEXT, DISPID_PROPERTYPUT},
                 Variant::{VariantClear, VARIANT, VT_BOOL, VT_BSTR, VT_DISPATCH, VT_I2, VT_I4},
             },
             UI::{
-                Input::KeyboardAndMouse::{SetFocus, VkKeyScanW},
+                Input::KeyboardAndMouse::{
+                    MapVirtualKeyW, SetFocus, VkKeyScanW, MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX,
+                },
                 WindowsAndMessaging::{
-                    CreateWindowExW, DestroyWindow, GetWindowRect, SendMessageW, SetForegroundWindow,
+                    CreateWindowExW, DestroyWindow, GetWindowRect, SetForegroundWindow,
                     SetWindowPos, ShowWindow, HMENU, SWP_NOACTIVATE, SWP_NOZORDER,
-                    SW_SHOWNOACTIVATE, WM_KEYDOWN, WM_KEYUP, WS_CLIPCHILDREN, WS_CLIPSIBLINGS,
-                    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
+                    SW_SHOWNOACTIVATE, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE,
+                    WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
                 },
             },
         },
@@ -50,12 +53,14 @@ mod platform {
     const VK_ALT_KEY: usize = 0x12;
     const VK_END_KEY: usize = 0x23;
     const VK_RETURN_KEY: usize = 0x0D;
+    const VK_DELETE_KEY: usize = 0x2E;
     const VK_TAB_KEY: usize = 0x09;
     const VK_SHIFT_KEY: usize = 0x10;
     const VK_V_KEY: usize = 0x56;
     const RDP_TEXT_MODE_CLIPBOARD: &str = "clipboard";
     const RDP_TEXT_MODE_SEND_KEYS: &str = "sendKeys";
     const RDP_TEXT_LIMIT: usize = 64 * 1024;
+    const RDP_SEND_KEYS_LIMIT: usize = 20;
     const RDP_PROGIDS: &[&str] = &[
         "MsTscAx.MsTscAx.13",
         "MsTscAx.MsTscAx.12",
@@ -86,6 +91,44 @@ mod platform {
         "AdvancedSettings2",
         "AdvancedSettings",
     ];
+    const SECURED_SETTINGS_PROPERTIES: &[&str] = &["SecuredSettings", "SecuredSettings2"];
+
+    #[repr(transparent)]
+    struct IMsRdpClientNonScriptable(windows::core::IUnknown);
+
+    unsafe impl Interface for IMsRdpClientNonScriptable {
+        type Vtable = IMsRdpClientNonScriptableVtbl;
+        const IID: GUID = GUID::from_u128(0x2f079c4c_87b2_4afd_97ab_20cdb43038ae);
+    }
+
+    #[repr(C)]
+    struct IMsRdpClientNonScriptableVtbl {
+        base__: IUnknown_Vtbl,
+        put_clear_text_password:
+            unsafe extern "system" fn(*mut c_void, BSTR) -> windows::core::HRESULT,
+        put_portable_password:
+            unsafe extern "system" fn(*mut c_void, BSTR) -> windows::core::HRESULT,
+        get_portable_password:
+            unsafe extern "system" fn(*mut c_void, *mut BSTR) -> windows::core::HRESULT,
+        put_portable_salt: unsafe extern "system" fn(*mut c_void, BSTR) -> windows::core::HRESULT,
+        get_portable_salt:
+            unsafe extern "system" fn(*mut c_void, *mut BSTR) -> windows::core::HRESULT,
+        put_binary_password: unsafe extern "system" fn(*mut c_void, BSTR) -> windows::core::HRESULT,
+        get_binary_password:
+            unsafe extern "system" fn(*mut c_void, *mut BSTR) -> windows::core::HRESULT,
+        put_binary_salt: unsafe extern "system" fn(*mut c_void, BSTR) -> windows::core::HRESULT,
+        get_binary_salt:
+            unsafe extern "system" fn(*mut c_void, *mut BSTR) -> windows::core::HRESULT,
+        reset_password: unsafe extern "system" fn(*mut c_void) -> windows::core::HRESULT,
+        notify_redirect_device_change:
+            unsafe extern "system" fn(*mut c_void, WPARAM, LPARAM) -> windows::core::HRESULT,
+        send_keys: unsafe extern "system" fn(
+            *mut c_void,
+            i32,
+            *mut VARIANT_BOOL,
+            *mut i32,
+        ) -> windows::core::HRESULT,
+    }
 
     type AtlAxWinInit = unsafe extern "system" fn() -> i32;
     type AtlAxGetControl =
@@ -403,8 +446,17 @@ mod platform {
                 let session = sessions
                     .get(&request.session_id)
                     .ok_or_else(|| format!("RDP session '{}' was not found", request.session_id))?;
-                invoke_method(&session.dispatch, "SendCtrlAltDel")
-                    .or_else(|_| send_ctrl_alt_end_to_rdp(session.hwnd))
+                let connection_state =
+                    get_property_i32(&session.dispatch, "Connected").unwrap_or(0);
+                if !is_rdp_connected_state(connection_state) {
+                    return Err(
+                        "RDP session is not connected; cannot send Ctrl+Alt+Delete to remote desktop"
+                            .to_string(),
+                    );
+                }
+                focus_rdp_control(session.hwnd);
+                send_ctrl_alt_end_to_rdp(&session.dispatch)
+                    .or_else(|_| invoke_method(&session.dispatch, "SendCtrlAltDel"))
             })
         }
 
@@ -430,10 +482,11 @@ mod platform {
                     .unwrap_or(RDP_TEXT_MODE_CLIPBOARD)
                     .to_string();
                 let sessions = lock_sessions(&sessions)?;
-                let session = sessions.get(&request.session_id).ok_or_else(|| {
-                    format!("RDP session '{}' was not found", request.session_id)
-                })?;
-                let connection_state = get_property_i32(&session.dispatch, "Connected").unwrap_or(0);
+                let session = sessions
+                    .get(&request.session_id)
+                    .ok_or_else(|| format!("RDP session '{}' was not found", request.session_id))?;
+                let connection_state =
+                    get_property_i32(&session.dispatch, "Connected").unwrap_or(0);
                 if !is_rdp_connected_state(connection_state) {
                     return Err(
                         "RDP session is not connected; cannot send text to remote desktop"
@@ -452,7 +505,7 @@ mod platform {
                 focus_rdp_control(session.hwnd);
                 match requested_mode.as_str() {
                     RDP_TEXT_MODE_SEND_KEYS => {
-                        send_text_via_keys(session.hwnd, &request.text, press_enter)?;
+                        send_text_via_keys(&session.dispatch, &request.text, press_enter)?;
                         Ok(RdpTextSent {
                             session_id: request.session_id,
                             mode: RDP_TEXT_MODE_SEND_KEYS.to_string(),
@@ -460,7 +513,12 @@ mod platform {
                             char_count,
                         })
                     }
-                    _ => match send_text_via_clipboard(session.hwnd, &request.text, press_enter) {
+                    _ => match send_text_via_clipboard(
+                        &session.dispatch,
+                        session.hwnd,
+                        &request.text,
+                        press_enter,
+                    ) {
                         Ok(()) => Ok(RdpTextSent {
                             session_id: request.session_id,
                             mode: RDP_TEXT_MODE_CLIPBOARD.to_string(),
@@ -468,7 +526,7 @@ mod platform {
                             char_count,
                         }),
                         Err(_) => {
-                            send_text_via_keys(session.hwnd, &request.text, press_enter)?;
+                            send_text_via_keys(&session.dispatch, &request.text, press_enter)?;
                             Ok(RdpTextSent {
                                 session_id: request.session_id,
                                 mode: RDP_TEXT_MODE_SEND_KEYS.to_string(),
@@ -681,8 +739,20 @@ mod platform {
             let _ = set_property_bool(&advanced, "AllowPromptingForCredentials", true);
             let _ = set_property_i32(&advanced, "RDPPort", i32::from(port));
             let _ = set_property_bool(&advanced, "EnableCredSspSupport", true);
+            // Match mstsc's Local Resources defaults closely enough for embedded sessions:
+            // Windows shortcut replacements (including Ctrl+Alt+End for SAS) must be routed to
+            // the remote host, while higher-risk device redirects stay disabled until AdminDeck
+            // exposes durable Connection settings for them.
             let _ = set_property_bool(&advanced, "RedirectClipboard", true);
+            let _ = set_property_bool(&advanced, "RedirectDrives", false);
+            let _ = set_property_bool(&advanced, "RedirectPorts", false);
+            let _ = set_property_bool(&advanced, "RedirectPrinters", false);
+            let _ = set_property_bool(&advanced, "RedirectSmartCards", false);
+            let _ = set_property_i32(&advanced, "HotKeyCtrlAltDel", VK_END_KEY as i32);
             let _ = set_property_bool(&advanced, "SmartSizing", false);
+        }
+        if let Some(secured) = get_secured_settings(dispatch) {
+            let _ = set_property_i32(&secured, "KeyboardHookMode", 1);
         }
 
         Ok(())
@@ -763,6 +833,12 @@ mod platform {
 
     fn get_advanced_settings(dispatch: &IDispatch) -> Option<IDispatch> {
         ADVANCED_SETTINGS_PROPERTIES
+            .iter()
+            .find_map(|name| get_dispatch_property(dispatch, name).ok())
+    }
+
+    fn get_secured_settings(dispatch: &IDispatch) -> Option<IDispatch> {
+        SECURED_SETTINGS_PROPERTIES
             .iter()
             .find_map(|name| get_dispatch_property(dispatch, name).ok())
     }
@@ -874,45 +950,39 @@ mod platform {
         invoke_method_with_i32_args(dispatch, name, &[])
     }
 
-    fn send_text_via_clipboard(hwnd: HWND, text: &str, press_enter: bool) -> Result<(), String> {
+    fn send_text_via_clipboard(
+        dispatch: &IDispatch,
+        hwnd: HWND,
+        text: &str,
+        press_enter: bool,
+    ) -> Result<(), String> {
         if !text.is_empty() {
             write_unicode_clipboard(hwnd, text)?;
-            unsafe {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYDOWN,
-                    Some(WPARAM(VK_CONTROL_KEY)),
-                    Some(LPARAM(0)),
-                );
-                let _ = SendMessageW(hwnd, WM_KEYDOWN, Some(WPARAM(VK_V_KEY)), Some(LPARAM(0)));
-                let _ = SendMessageW(hwnd, WM_KEYUP, Some(WPARAM(VK_V_KEY)), Some(LPARAM(0)));
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYUP,
-                    Some(WPARAM(VK_CONTROL_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
+            send_key_chord(
+                dispatch,
+                &[
+                    KeyEvent::down(VK_CONTROL_KEY),
+                    KeyEvent::press(VK_V_KEY),
+                    KeyEvent::up(VK_CONTROL_KEY),
+                ],
+            )?;
         }
         if press_enter {
-            post_vk(hwnd, VK_RETURN_KEY);
+            send_key_chord(dispatch, &[KeyEvent::press(VK_RETURN_KEY)])?;
         }
         Ok(())
     }
 
-    fn write_unicode_clipboard(owner: HWND, text: &str) -> Result<(), String> {
+    fn write_unicode_clipboard(hwnd: HWND, text: &str) -> Result<(), String> {
         let mut wide: Vec<u16> = text.encode_utf16().collect();
         wide.push(0);
         let bytes = wide.len() * std::mem::size_of::<u16>();
-
         unsafe {
-            OpenClipboard(Some(owner))
+            OpenClipboard(Some(hwnd))
                 .map_err(|error| format!("failed to open clipboard for RDP paste: {error}"))?;
-
             let result = (|| -> Result<(), String> {
-                EmptyClipboard().map_err(|error| {
-                    format!("failed to empty clipboard for RDP paste: {error}")
-                })?;
+                EmptyClipboard()
+                    .map_err(|error| format!("failed to empty clipboard for RDP paste: {error}"))?;
                 let hmem: HGLOBAL = GlobalAlloc(GMEM_MOVEABLE, bytes).map_err(|error| {
                     format!("failed to allocate clipboard memory for RDP paste: {error}")
                 })?;
@@ -934,22 +1004,27 @@ mod platform {
         }
     }
 
-    fn send_text_via_keys(hwnd: HWND, text: &str, press_enter: bool) -> Result<(), String> {
+    fn send_text_via_keys(
+        dispatch: &IDispatch,
+        text: &str,
+        press_enter: bool,
+    ) -> Result<(), String> {
+        let mut events = Vec::new();
         for ch in text.chars() {
             match ch {
                 '\r' => {}
-                '\n' => post_vk(hwnd, VK_RETURN_KEY),
-                '\t' => post_vk(hwnd, VK_TAB_KEY),
-                _ => post_unicode_char_via_keys(hwnd, ch)?,
+                '\n' => push_key_press(&mut events, VK_RETURN_KEY),
+                '\t' => push_key_press(&mut events, VK_TAB_KEY),
+                _ => append_unicode_char_key_events(&mut events, ch)?,
             }
         }
         if press_enter {
-            post_vk(hwnd, VK_RETURN_KEY);
+            push_key_press(&mut events, VK_RETURN_KEY);
         }
-        Ok(())
+        send_key_events(dispatch, &events)
     }
 
-    fn post_unicode_char_via_keys(hwnd: HWND, ch: char) -> Result<(), String> {
+    fn append_unicode_char_key_events(events: &mut Vec<KeyEvent>, ch: char) -> Result<(), String> {
         let code = ch as u32;
         if code > u16::MAX as u32 {
             return Err(format!(
@@ -967,59 +1042,31 @@ mod platform {
         let need_shift = modifiers & 0x01 != 0;
         let need_ctrl = modifiers & 0x02 != 0;
         let need_alt = modifiers & 0x04 != 0;
-        unsafe {
-            if need_shift {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYDOWN,
-                    Some(WPARAM(VK_SHIFT_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
-            if need_ctrl {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYDOWN,
-                    Some(WPARAM(VK_CONTROL_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
-            if need_alt {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYDOWN,
-                    Some(WPARAM(VK_ALT_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
-            let _ = SendMessageW(hwnd, WM_KEYDOWN, Some(WPARAM(vk)), Some(LPARAM(0)));
-            let _ = SendMessageW(hwnd, WM_KEYUP, Some(WPARAM(vk)), Some(LPARAM(0)));
-            if need_alt {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYUP,
-                    Some(WPARAM(VK_ALT_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
-            if need_ctrl {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYUP,
-                    Some(WPARAM(VK_CONTROL_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
-            if need_shift {
-                let _ = SendMessageW(
-                    hwnd,
-                    WM_KEYUP,
-                    Some(WPARAM(VK_SHIFT_KEY)),
-                    Some(LPARAM(0)),
-                );
-            }
+        if need_shift {
+            events.push(KeyEvent::down(VK_SHIFT_KEY));
+        }
+        if need_ctrl {
+            events.push(KeyEvent::down(VK_CONTROL_KEY));
+        }
+        if need_alt {
+            events.push(KeyEvent::down(VK_ALT_KEY));
+        }
+        push_key_press(events, vk);
+        if need_alt {
+            events.push(KeyEvent::up(VK_ALT_KEY));
+        }
+        if need_ctrl {
+            events.push(KeyEvent::up(VK_CONTROL_KEY));
+        }
+        if need_shift {
+            events.push(KeyEvent::up(VK_SHIFT_KEY));
         }
         Ok(())
+    }
+
+    fn push_key_press(events: &mut Vec<KeyEvent>, vk: usize) {
+        events.push(KeyEvent::down(vk));
+        events.push(KeyEvent::up(vk));
     }
 
     fn focus_rdp_control(hwnd: HWND) {
@@ -1034,33 +1081,113 @@ mod platform {
         }
     }
 
-    fn post_vk(hwnd: HWND, vk: usize) {
-        unsafe {
-            let _ = SendMessageW(hwnd, WM_KEYDOWN, Some(WPARAM(vk)), Some(LPARAM(0)));
-            let _ = SendMessageW(hwnd, WM_KEYUP, Some(WPARAM(vk)), Some(LPARAM(0)));
+    #[derive(Clone, Copy)]
+    struct KeyEvent {
+        vk: usize,
+        up: bool,
+    }
+
+    impl KeyEvent {
+        fn down(vk: usize) -> Self {
+            Self { vk, up: false }
+        }
+
+        fn up(vk: usize) -> Self {
+            Self { vk, up: true }
+        }
+
+        fn press(vk: usize) -> Self {
+            Self::down(vk)
         }
     }
 
-    fn send_ctrl_alt_end_to_rdp(hwnd: HWND) -> Result<(), String> {
-        unsafe {
-            let _ = SendMessageW(
-                hwnd,
-                WM_KEYDOWN,
-                Some(WPARAM(VK_CONTROL_KEY)),
-                Some(LPARAM(0)),
-            );
-            let _ = SendMessageW(hwnd, WM_KEYDOWN, Some(WPARAM(VK_ALT_KEY)), Some(LPARAM(0)));
-            let _ = SendMessageW(hwnd, WM_KEYDOWN, Some(WPARAM(VK_END_KEY)), Some(LPARAM(0)));
-            let _ = SendMessageW(hwnd, WM_KEYUP, Some(WPARAM(VK_END_KEY)), Some(LPARAM(0)));
-            let _ = SendMessageW(hwnd, WM_KEYUP, Some(WPARAM(VK_ALT_KEY)), Some(LPARAM(0)));
-            let _ = SendMessageW(
-                hwnd,
-                WM_KEYUP,
-                Some(WPARAM(VK_CONTROL_KEY)),
-                Some(LPARAM(0)),
-            );
+    fn send_ctrl_alt_end_to_rdp(dispatch: &IDispatch) -> Result<(), String> {
+        send_key_chord(
+            dispatch,
+            &[
+                KeyEvent::down(VK_CONTROL_KEY),
+                KeyEvent::down(VK_ALT_KEY),
+                KeyEvent::press(VK_END_KEY),
+                KeyEvent::up(VK_ALT_KEY),
+                KeyEvent::up(VK_CONTROL_KEY),
+            ],
+        )
+    }
+
+    fn send_key_chord(dispatch: &IDispatch, key_events: &[KeyEvent]) -> Result<(), String> {
+        let mut expanded = Vec::with_capacity(key_events.len() * 2);
+        for event in key_events {
+            if event.up {
+                expanded.push(*event);
+            } else if matches!(event.vk, VK_CONTROL_KEY | VK_ALT_KEY | VK_SHIFT_KEY) {
+                expanded.push(*event);
+            } else {
+                expanded.push(KeyEvent::down(event.vk));
+                expanded.push(KeyEvent::up(event.vk));
+            }
+        }
+        send_key_events(dispatch, &expanded)
+    }
+
+    fn send_key_events(dispatch: &IDispatch, key_events: &[KeyEvent]) -> Result<(), String> {
+        if key_events.is_empty() {
+            return Ok(());
+        }
+        let nonscriptable = dispatch
+            .cast::<IMsRdpClientNonScriptable>()
+            .map_err(|error| format!("RDP ActiveX control does not expose SendKeys: {error}"))?;
+        for chunk in key_events.chunks(RDP_SEND_KEYS_LIMIT) {
+            let mut key_up: Vec<VARIANT_BOOL> = chunk
+                .iter()
+                .map(|event| {
+                    if event.up {
+                        VARIANT_TRUE
+                    } else {
+                        VARIANT_FALSE
+                    }
+                })
+                .collect();
+            let mut key_data: Vec<i32> = chunk
+                .iter()
+                .map(|event| rdp_key_lparam(event.vk, event.up))
+                .collect();
+            unsafe {
+                (nonscriptable.vtable().send_keys)(
+                    Interface::as_raw(&nonscriptable),
+                    chunk.len() as i32,
+                    key_up.as_mut_ptr(),
+                    key_data.as_mut_ptr(),
+                )
+                .ok()
+                .map_err(|error| {
+                    format!("failed to send keystrokes to RDP ActiveX control: {error}")
+                })?;
+            }
         }
         Ok(())
+    }
+
+    fn rdp_key_lparam(vk: usize, up: bool) -> i32 {
+        let map_type = if is_extended_key(vk) {
+            MAPVK_VK_TO_VSC_EX
+        } else {
+            MAPVK_VK_TO_VSC
+        };
+        let scan_code = unsafe { MapVirtualKeyW(vk as u32, map_type) };
+        let scan_code = if scan_code == 0 { 0 } else { scan_code & 0xff };
+        let mut value = 1 | ((scan_code as i32) << 16);
+        if is_extended_key(vk) {
+            value |= 1 << 24;
+        }
+        if up {
+            value |= 1 << 30;
+            value |= 1u32.wrapping_shl(31) as i32;
+        }
+        value
+    }
+
+    fn is_extended_key(vk: usize) -> bool {
+        matches!(vk, VK_END_KEY | VK_DELETE_KEY)
     }
 
     fn invoke_method_with_i32_args(
