@@ -333,3 +333,15 @@ When a key is translated into every supported locale, remove its entry from this
 - Placeholders: None
 - Domain notes: AdminDeck is the product name; export refers to the zipped SQLite database file.
 - Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
+### `app.quitOpenConnectionsConfirm_one` / `app.quitOpenConnectionsConfirm_other`
+
+- English: "Closing AdminDeck will end 1 open Connection. Continue?" / "Closing AdminDeck will end {{count}} open Connections. Continue?"
+- Namespace: `app`
+- Appears in: `src/App.tsx`
+- UI role: Confirmation prompt
+- Context: Shown when the user requests to close the main AdminDeck window while one or more workspace tabs are open. Confirming quits the app and ends the live Sessions represented by those open tabs; canceling keeps the app open.
+- Tone: Direct warning, concise
+- Placeholders: `{{count}}` is the number of open workspace tabs/Connections that will be ended.
+- Domain notes: Use **Connection** for the open resource wording. The prompt warns about ending live Sessions without introducing the stored Connection versus Session distinction in the dialog copy.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id

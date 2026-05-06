@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, LayoutDashboard, Settings } from "lucide-rea
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invokeCommand, isTauriRuntime } from "./lib/tauri";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
@@ -110,6 +111,8 @@ function App() {
   const setPerformanceSnapshot = useWorkspaceStore((state) => state.setPerformanceSnapshot);
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
+  const openConnectionCount = useWorkspaceStore((state) => state.tabs.length);
+  const openConnectionCountRef = useRef(openConnectionCount);
   useBootstrapSettings();
   const [connectionPanelLayout, setConnectionPanelLayout] = useState(() =>
     loadPanelLayout(
@@ -127,6 +130,10 @@ function App() {
       AI_PANEL_MAX_WIDTH,
     ),
   );
+
+  useEffect(() => {
+    openConnectionCountRef.current = openConnectionCount;
+  }, [openConnectionCount]);
 
   useEffect(() => {
     persistPanelLayout(CONNECTION_PANEL_LAYOUT_KEY, connectionPanelLayout);
@@ -185,6 +192,42 @@ function App() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [setFrontendLaunchMs]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    void getCurrentWindow()
+      .onCloseRequested((event) => {
+        const openConnections = openConnectionCountRef.current;
+        if (openConnections === 0) {
+          return;
+        }
+
+        const shouldQuit = window.confirm(
+          t("app.quitOpenConnectionsConfirm", { count: openConnections }),
+        );
+        if (!shouldQuit) {
+          event.preventDefault();
+        }
+      })
+      .then((dispose) => {
+        if (disposed) {
+          dispose();
+          return;
+        }
+        unlisten = dispose;
+      });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [t]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -261,57 +304,59 @@ function App() {
         }
         onNavigate={setActivePage}
       />
-      {activePage === "settings" ? (
-        <SettingsPage onBack={() => setActivePage("workspace")} onResetLayout={handleResetLayout} />
-      ) : (
-        <>
-          <ConnectionSidebar
-            collapsed={connectionPanelLayout.collapsed}
-            onToggleCollapsed={() =>
-              setConnectionPanelLayout((layout) => ({
-                ...layout,
-                collapsed: !layout.collapsed,
-              }))
-            }
-          />
-          {connectionPanelLayout.collapsed ? (
-            <div className="connection-collapsed-separator" aria-hidden="true" />
-          ) : (
-            <PanelResizeHandle
-              ariaLabel={t("app.resizeConnections")}
-              side="left"
-              onPointerDown={handleConnectionPanelResize}
-            />
-          )}
-          <main className="workspace">
-            <TabStrip />
-            <WorkspaceCanvas />
-            <StatusBar />
-          </main>
+      <div className="workspace-page" aria-hidden={activePage === "settings"}>
+        <ConnectionSidebar
+          collapsed={connectionPanelLayout.collapsed}
+          onToggleCollapsed={() =>
+            setConnectionPanelLayout((layout) => ({
+              ...layout,
+              collapsed: !layout.collapsed,
+            }))
+          }
+        />
+        {connectionPanelLayout.collapsed ? (
+          <div className="connection-collapsed-separator" aria-hidden="true" />
+        ) : (
           <PanelResizeHandle
-            ariaLabel={t("app.resizeAiAssistant")}
-            side="right"
-            collapsed={aiPanelLayout.collapsed}
-            collapsedLabel={t("app.aiAssistant")}
-            onClick={() =>
-              aiPanelLayout.collapsed
-                ? setAiPanelLayout((layout) => ({ ...layout, collapsed: false }))
-                : undefined
-            }
-            onPointerDown={handleAiPanelResize}
+            ariaLabel={t("app.resizeConnections")}
+            side="left"
+            onPointerDown={handleConnectionPanelResize}
           />
-          <AssistantPanel
-            collapsed={aiPanelLayout.collapsed}
-            onOpenSettings={() => setActivePage("settings")}
-            onToggleCollapsed={() =>
-              setAiPanelLayout((layout) => ({
-                ...layout,
-                collapsed: !layout.collapsed,
-              }))
-            }
-          />
-        </>
-      )}
+        )}
+        <main className="workspace">
+          <TabStrip />
+          <WorkspaceCanvas workspaceActive={activePage === "workspace"} />
+          <StatusBar />
+        </main>
+        <PanelResizeHandle
+          ariaLabel={t("app.resizeAiAssistant")}
+          side="right"
+          collapsed={aiPanelLayout.collapsed}
+          collapsedLabel={t("app.aiAssistant")}
+          onClick={() =>
+            aiPanelLayout.collapsed
+              ? setAiPanelLayout((layout) => ({ ...layout, collapsed: false }))
+              : undefined
+          }
+          onPointerDown={handleAiPanelResize}
+        />
+        <AssistantPanel
+          collapsed={aiPanelLayout.collapsed}
+          onOpenSettings={() => setActivePage("settings")}
+          onToggleCollapsed={() =>
+            setAiPanelLayout((layout) => ({
+              ...layout,
+              collapsed: !layout.collapsed,
+            }))
+          }
+        />
+      </div>
+      {activePage === "settings" ? (
+        <SettingsPage
+          onBack={() => setActivePage("workspace")}
+          onResetLayout={handleResetLayout}
+        />
+      ) : null}
     </div>
   );
 }
