@@ -20,6 +20,11 @@ import type {
 } from "../types";
 import { SettingsSummary } from "./shared";
 
+function createStoredApiKeyMask() {
+  const maskLength = 12 + Math.floor(Math.random() * 5);
+  return "*".repeat(maskLength);
+}
+
 function formatProviderHost(baseUrl: string) {
   try {
     return new URL(baseUrl).host || "OpenAI-compatible endpoint";
@@ -64,6 +69,7 @@ function formatReasoningEffort(effort: AiReasoningEffort) {
 
 function AiProviderSettingsFieldControl({
   apiKeyDraft,
+  apiKeyStoredMask,
   definition,
   draft,
   field,
@@ -72,6 +78,7 @@ function AiProviderSettingsFieldControl({
   onDraftChange,
 }: {
   apiKeyDraft: string;
+  apiKeyStoredMask: string;
   definition: AiProviderDefinition;
   draft: AiProviderSettingsType;
   field: AiProviderSettingsField;
@@ -80,6 +87,9 @@ function AiProviderSettingsFieldControl({
   onDraftChange: (patch: Partial<AiProviderSettingsType>) => void;
 }) {
   const { t } = useTranslation();
+  const [isApiKeyInputFocused, setIsApiKeyInputFocused] = useState(false);
+  const shouldShowStoredApiKeyMask =
+    field === "apiKey" && hasApiKey && !isApiKeyInputFocused && apiKeyDraft.length === 0;
 
   switch (field) {
     case "baseUrl":
@@ -149,10 +159,12 @@ function AiProviderSettingsFieldControl({
           <input
             autoComplete="off"
             disabled={!definition.requiresApiKey}
+            onBlur={() => setIsApiKeyInputFocused(false)}
             onChange={(event) => onApiKeyDraftChange(event.currentTarget.value)}
-            placeholder={hasApiKey ? t("settings.save") : definition.apiKeyLabel}
+            onFocus={() => setIsApiKeyInputFocused(true)}
+            placeholder={definition.apiKeyLabel}
             type="password"
-            value={apiKeyDraft}
+            value={shouldShowStoredApiKeyMask ? apiKeyStoredMask : apiKeyDraft}
           />
         </label>
       );
@@ -198,6 +210,7 @@ export function AiSettings() {
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
   const [draft, setDraft] = useState(aiProviderSettings);
   const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [apiKeyStoredMask, setApiKeyStoredMask] = useState(createStoredApiKeyMask);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const hasChanges =
@@ -226,6 +239,7 @@ export function AiSettings() {
         }
         setAiProviderHasApiKey(true);
         setApiKeyDraft("");
+        setApiKeyStoredMask(createStoredApiKeyMask());
       }
 
       const saved = isTauriRuntime()
@@ -334,6 +348,7 @@ export function AiSettings() {
         {aiProviderDefinition.settingsFields.map((field) => (
           <AiProviderSettingsFieldControl
             apiKeyDraft={apiKeyDraft}
+            apiKeyStoredMask={apiKeyStoredMask}
             definition={aiProviderDefinition}
             draft={draft}
             field={field}

@@ -81,6 +81,11 @@ const RECENT_CONNECTION_STORAGE_KEY = "admin-deck.recentConnectionIds";
 
 const RECENT_CONNECTION_LIMIT = 5;
 
+function createStoredSecretMask() {
+  const maskLength = 12 + Math.floor(Math.random() * 5);
+  return "*".repeat(maskLength);
+}
+
 function loadRecentConnectionIds() {
   if (typeof localStorage === "undefined") {
     return [];
@@ -1664,6 +1669,50 @@ function ConnectionGlyph({
   );
 }
 
+function PasswordField({
+  autoComplete = "current-password",
+  hasStoredSecret,
+  label,
+  name,
+  placeholder,
+  required,
+}: {
+  autoComplete?: string;
+  hasStoredSecret: boolean;
+  label: string;
+  name: string;
+  placeholder: string;
+  required?: boolean;
+}) {
+  const [value, setValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const [storedSecretMask, setStoredSecretMask] = useState(createStoredSecretMask);
+  const shouldShowStoredSecretMask = hasStoredSecret && !isFocused && value.length === 0;
+
+  useEffect(() => {
+    if (hasStoredSecret) {
+      setStoredSecretMask(createStoredSecretMask());
+    }
+  }, [hasStoredSecret]);
+
+  return (
+    <label>
+      <span>{label}</span>
+      <input
+        autoComplete={autoComplete}
+        name={shouldShowStoredSecretMask ? undefined : name}
+        onBlur={() => setIsFocused(false)}
+        onChange={(event) => setValue(event.currentTarget.value)}
+        onFocus={() => setIsFocused(true)}
+        placeholder={placeholder}
+        required={shouldShowStoredSecretMask ? false : required}
+        type="password"
+        value={shouldShowStoredSecretMask ? storedSecretMask : value}
+      />
+    </label>
+  );
+}
+
 function ConnectionDialog({
   error,
   initialConnection,
@@ -1692,6 +1741,12 @@ function ConnectionDialog({
   );
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
+  );
+  const [hasStoredConnectionPassword, setHasStoredConnectionPassword] = useState(
+    Boolean(initialConnection?.hasPassword),
+  );
+  const [hasStoredUrlPassword, setHasStoredUrlPassword] = useState(
+    Boolean(initialConnection?.hasUrlCredential),
   );
   const usesSshDefaults = connectionType === "ssh";
   const isTelnetConnection = connectionType === "telnet";
@@ -1744,6 +1799,37 @@ function ConnectionDialog({
       subtitle: t("connections.screenControl"),
     },
   ];
+
+  useEffect(() => {
+    if (!isEditMode || !initialConnection || !isTauriRuntime()) {
+      return;
+    }
+
+    let disposed = false;
+    const secretKind = initialConnection.type === "url" ? "urlPassword" : "connectionPassword";
+
+    void invokeCommand("secret_exists", {
+      request: {
+        kind: secretKind,
+        ownerId: initialConnection.id,
+      },
+    })
+      .then((presence) => {
+        if (disposed) {
+          return;
+        }
+        if (initialConnection.type === "url") {
+          setHasStoredUrlPassword(presence.exists);
+        } else {
+          setHasStoredConnectionPassword(presence.exists);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+    };
+  }, [initialConnection, isEditMode]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1987,15 +2073,12 @@ function ConnectionDialog({
                     />
                   </label>
                 </div>
-                <label>
-                  <span>{t("connections.password")}</span>
-                  <input
-                    autoComplete="current-password"
-                    name="urlPassword"
-                    placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                    type="password"
-                  />
-                </label>
+                <PasswordField
+                  hasStoredSecret={isEditMode && hasStoredUrlPassword}
+                  label={t("connections.password")}
+                  name="urlPassword"
+                  placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                />
               </>
             ) : (
               <>
@@ -2054,28 +2137,22 @@ function ConnectionDialog({
             )}
 
             {usesRemoteDesktopFields ? (
-              <label>
-                <span>{t("connections.password")}</span>
-                <input
-                  autoComplete="current-password"
-                  name="password"
-                  placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                  type="password"
-                />
-              </label>
+              <PasswordField
+                hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                label={t("connections.password")}
+                name="password"
+                placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+              />
             ) : null}
 
             {isTelnetConnection ? (
-              <label>
-                <span>{t("connections.passwordLabel")}*</span>
-                <input
-                  autoComplete="current-password"
-                  name="password"
-                  placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                  required={!isEditMode}
-                  type="password"
-                />
-              </label>
+              <PasswordField
+                hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                label={`${t("connections.passwordLabel")}*`}
+                name="password"
+                placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                required={!isEditMode}
+              />
             ) : null}
 
             {usesSshDefaults ? (
@@ -2107,15 +2184,13 @@ function ConnectionDialog({
                 </div>
 
                 {authMethod === "password" ? (
-                  <label>
-                    <span>{t("connections.passwordLabel")}*</span>
-                    <input
-                      name="password"
-                      placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                      required={!isEditMode}
-                      type="password"
-                    />
-                  </label>
+                  <PasswordField
+                    hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                    label={`${t("connections.passwordLabel")}*`}
+                    name="password"
+                    placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                    required={!isEditMode}
+                  />
                 ) : authMethod === "keyFile" ? (
                   <label>
                     <span>{t("connections.keyPath")}</span>
