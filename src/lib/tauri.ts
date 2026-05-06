@@ -473,10 +473,6 @@ type CommandMap = {
     args: undefined;
     result: DatabaseBackupInfo;
   };
-  prepare_main_window_for_quit: {
-    args: undefined;
-    result: null;
-  };
   get_terminal_settings: {
     args: undefined;
     result: TerminalSettings;

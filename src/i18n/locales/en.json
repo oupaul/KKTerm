@@ -5,9 +5,7 @@
     "primaryNav": "Primary",
     "resizeConnections": "Resize Connections column",
     "resizeAiAssistant": "Resize AI Assistant panel",
-    "aiAssistant": "AI Assistant",
-    "quitOpenConnectionsConfirm_one": "Closing AdminDeck will end 1 open Connection. Continue?",
-    "quitOpenConnectionsConfirm_other": "Closing AdminDeck will end {{count}} open Connections. Continue?"
+    "aiAssistant": "AI Assistant"
   },
   "settings": {
     "title": "Settings",

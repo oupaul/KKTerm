@@ -2,7 +2,6 @@ import { ChevronLeft, ChevronRight, LayoutDashboard, Settings } from "lucide-rea
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invokeCommand, isTauriRuntime } from "./lib/tauri";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
@@ -35,8 +34,6 @@ const AI_PANEL_MAX_WIDTH = 1860;
 const CONNECTION_PANEL_LAYOUT_KEY = "admindeck.layout.connectionsPanel.v1";
 
 const AI_PANEL_LAYOUT_KEY = "admindeck.layout.aiAssistPanel.v2";
-
-const QUIT_PREPARE_TIMEOUT_MS = 5000;
 
 const defaultConnectionPanelLayout: PanelLayoutState = {
   collapsed: false,
@@ -113,9 +110,6 @@ function App() {
   const setPerformanceSnapshot = useWorkspaceStore((state) => state.setPerformanceSnapshot);
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
-  const openConnectionCount = useWorkspaceStore((state) => state.tabs.length);
-  const openConnectionCountRef = useRef(openConnectionCount);
-  const quitInProgressRef = useRef(false);
   useBootstrapSettings();
   const [connectionPanelLayout, setConnectionPanelLayout] = useState(() =>
     loadPanelLayout(
@@ -133,10 +127,6 @@ function App() {
       AI_PANEL_MAX_WIDTH,
     ),
   );
-
-  useEffect(() => {
-    openConnectionCountRef.current = openConnectionCount;
-  }, [openConnectionCount]);
 
   useEffect(() => {
     persistPanelLayout(CONNECTION_PANEL_LAYOUT_KEY, connectionPanelLayout);
@@ -195,67 +185,6 @@ function App() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [setFrontendLaunchMs]);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-
-    const appWindow = getCurrentWindow();
-    void appWindow
-      .onCloseRequested((event) => {
-        event.preventDefault();
-        if (quitInProgressRef.current) {
-          return;
-        }
-
-        const openConnections = openConnectionCountRef.current;
-        if (
-          openConnections > 0 &&
-          !window.confirm(
-            t("app.quitOpenConnectionsConfirm", { count: openConnections }),
-          )
-        ) {
-          return;
-        }
-
-        quitInProgressRef.current = true;
-        let timeoutId: number | undefined;
-        const preparation = invokeCommand("prepare_main_window_for_quit").catch(
-          (error: unknown) => {
-            console.error("Failed to prepare AdminDeck for quit", error);
-          },
-        );
-        const timeout = new Promise<void>((resolve) => {
-          timeoutId = window.setTimeout(resolve, QUIT_PREPARE_TIMEOUT_MS);
-        });
-
-        void Promise.race([preparation, timeout])
-          .finally(() => {
-            if (timeoutId !== undefined) {
-              window.clearTimeout(timeoutId);
-            }
-          })
-          .finally(() => {
-            void appWindow.destroy();
-          });
-      })
-      .then((dispose) => {
-        if (disposed) {
-          dispose();
-          return;
-        }
-        unlisten = dispose;
-      });
-
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [t]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
