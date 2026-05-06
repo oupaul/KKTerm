@@ -186,6 +186,18 @@ When a key is translated into every supported locale, remove its entry from this
 - Domain notes: The chat is AI Assistant history stored locally in browser/Tauri local storage; it is not a backend Session, Tab, or durable Connection.
 - Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
 
+### `settings.customModelId`
+
+- English: "Custom model ID"
+- Namespace: `settings`
+- Appears in: `src/settings/AiSettings.tsx`
+- UI role: Form field label
+- Context: Text input under the AI provider model dropdown. The dropdown contains known provider model IDs, while this field lets the user type an exact custom model or deployment ID for OpenAI-compatible gateways and provider-specific deployments.
+- Tone: Technical, concise
+- Placeholders: None
+- Domain notes: `model ID` means the literal API model identifier, such as `claude-sonnet-4-6`, `deepseek-v4-pro`, or an Azure deployment name. Technical model IDs should remain untranslated.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
 ## Entry Template
 
 ```markdown

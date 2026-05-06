@@ -61,6 +61,7 @@
     "provider": "Provider",
     "endpoint": "Endpoint",
     "model": "Model",
+    "customModelId": "Custom model ID",
     "reasoningEffort": "Reasoning effort",
     "clearAllSettings": "Clear All Settings",
     "activeEndpoint": "Active endpoint",

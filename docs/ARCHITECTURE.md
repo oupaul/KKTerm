@@ -40,7 +40,7 @@ Debug-only observability should use local debug logs, console output, or the dia
 
 - `src/settings/GeneralSettings.tsx` — Language (i18n) selector, Auto Backup toggle and last-backup status, settings backup/import actions, database folder opener.
 - `src/settings/AppearanceSettings.tsx` — App UI font family, layout reset, Color Scheme placeholder.
-- `src/settings/AiSettings.tsx` — AI provider kind, dynamic provider fields, API key, output language.
+- `src/settings/AiSettings.tsx` — AI provider kind, dynamic provider fields, provider-specific model selector, custom model ID input, API key, output language.
 - `src/settings/SshSettings.tsx` — Read-only SSH defaults and SFTP transfer defaults summary.
 - `src/settings/TerminalSettings.tsx` — Terminal font, size, line height, scrollback, cursor, default shell, toggles.
 - `src/settings/RdpSettings.tsx` — Planned RDP quality defaults summary.
@@ -253,7 +253,7 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host, RDP ActiveX visibility/bounds synchronization, RDP snapshot/parking for DOM overlays, and VNC canvas framebuffer/input handling.
 - `src/ai/AssistantPanel.tsx` — AI Assistant chat surface, markdown rendering, chat history, extension draft intent UI, terminal send handoff.
 - `src/ai/providers.ts` — frontend provider registry barrel and provider validation.
-- `src/ai/providerRegistry/` — one provider definition per file plus shared registry types.
+- `src/ai/providerRegistry/` — one provider definition per file plus shared registry types. Provider model suggestions live here, not in Settings. The Settings model picker must render these suggestions as a real provider-specific select so users can see every known model; freeform model or deployment IDs belong in the separate custom model ID input.
 - `src/settings/SettingsPage.tsx` — Settings shell with sidebar nav and section routing.
 - `src/settings/shared.tsx` — Shared `SettingsSummary` and `PlannedSettingsGrid` for settings pages.
 - `src/settings/aboutData.ts` — Product metadata and open-source component groups.

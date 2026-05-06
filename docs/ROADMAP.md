@@ -85,7 +85,7 @@ Latest validation on May 5, 2026: `npm run check`, `npm run build`, `cargo check
 - [x] Add AI Assistant panel.
 - [x] Add OpenAI-compatible provider settings storage.
 - [x] Store API keys in OS keychain.
-- [x] Add model selector.
+- [x] Add provider-specific model selector with a separate custom model ID field.
 - [x] Add command proposal flow.
 - [x] Add explicit approval before execution.
 - [x] Capture selected command output back into AI context.

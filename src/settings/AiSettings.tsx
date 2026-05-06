@@ -94,23 +94,34 @@ function AiProviderSettingsFieldControl({
         </label>
       );
     case "model": {
-      const datalistId = `ai-provider-model-options-${definition.kind}`;
+      const modelOptionIds = new Set(definition.modelOptions.map((model) => model.id));
+      const hasCustomModel = draft.model.trim().length > 0 && !modelOptionIds.has(draft.model);
       return (
-        <label>
-          <span>{t("settings.model")}</span>
-          <input
-            list={datalistId}
-            onChange={(event) => onDraftChange({ model: event.currentTarget.value })}
-            value={draft.model}
-          />
-          <datalist id={datalistId}>
-            {definition.modelOptions.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.label}
-              </option>
-            ))}
-          </datalist>
-        </label>
+        <>
+          <label>
+            <span>{t("settings.model")}</span>
+            <select
+              onChange={(event) => onDraftChange({ model: event.currentTarget.value })}
+              value={draft.model}
+            >
+              {hasCustomModel ? <option value={draft.model}>{draft.model}</option> : null}
+              {definition.modelOptions.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {definition.allowsCustomModel ? (
+            <label>
+              <span>{t("settings.customModelId")}</span>
+              <input
+                onChange={(event) => onDraftChange({ model: event.currentTarget.value })}
+                value={draft.model}
+              />
+            </label>
+          ) : null}
+        </>
       );
     }
     case "reasoningEffort":
