@@ -6,6 +6,18 @@ When a key is translated into every supported locale, remove its entry from this
 
 ## Pending Strings
 
+### `terminal.copySelection`
+
+- English: "Copy terminal selection (Ctrl+Insert)"
+- Namespace: `terminal`
+- Appears in: `src/terminal/TerminalWorkspace.tsx`
+- UI role: Button aria-label and tooltip
+- Context: Terminal Pane toolbar copy button. The shortcut hint changed from `Ctrl+Shift+C` because WebView2 devtools can reserve that chord in development builds.
+- Tone: Short action label with shortcut hint
+- Placeholders: None
+- Domain notes: Keep `Ctrl+Insert` as the literal keyboard shortcut. The button copies the current xterm selection to the OS clipboard.
+- Translation status: Pending for fr, it, de, es, es-MX, pt-BR, zh-TW, zh-CN, ja, ko, th, id
+
 ### `connections.telnet`
 
 - English: "Telnet"

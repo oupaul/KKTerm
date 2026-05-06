@@ -72,7 +72,7 @@ If `tmux` is unavailable on the local shell, run this section in SSH or record `
 | Split panes | In tmux, create horizontal and vertical splits. | tmux panes render with correct borders and no stale text. | |
 | Switch panes | Move focus between tmux panes using the configured tmux prefix shortcuts. | Input goes to the selected tmux pane only. | |
 | Resize propagation | Resize the AdminDeck window while tmux is open. | tmux recalculates layout correctly. | |
-| Mouse mode, if enabled | Enable tmux mouse mode or use an existing config, then click panes or scroll. | Mouse focus/scroll behavior matches tmux expectations. | |
+| Mouse mode | Use an AdminDeck-launched tmux SSH Pane or enable tmux mouse mode, then click panes and scroll. | tmux mouse focus and internal scrollback behavior work; a native xterm scrollbar is not expected while tmux owns the alternate buffer. | |
 
 ## SSH tmux Resume
 

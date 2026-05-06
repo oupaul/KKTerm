@@ -136,7 +136,7 @@ pub struct TerminalOutput {
 #[serde(rename_all = "camelCase")]
 pub struct TerminalInputRequest {
     session_id: String,
-    data: String,
+    data: Vec<u8>,
 }
 
 #[derive(Deserialize)]
@@ -459,7 +459,7 @@ impl SessionManager {
         match &mut session.transport {
             TerminalTransport::Pty { writer, .. } => {
                 writer
-                    .write_all(request.data.as_bytes())
+                    .write_all(&request.data)
                     .map_err(|error| format!("failed to write terminal input: {error}"))?;
                 writer
                     .flush()

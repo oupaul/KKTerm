@@ -271,7 +271,7 @@
     "noResults": "No results",
     "findInScrollback": "Find in terminal scrollback",
     "closeSearch": "Close terminal search",
-    "copySelection": "Copy terminal selection (Ctrl+Shift+C)",
+    "copySelection": "Copy terminal selection (Ctrl+Insert)",
     "sendToAi": "Send selection to AI Assistant",
     "detachTmux": "Detach tmux session",
     "closePane": "Close pane",

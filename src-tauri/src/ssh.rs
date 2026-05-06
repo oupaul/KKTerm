@@ -455,9 +455,9 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
 }
 
 impl NativeSshTerminal {
-    pub fn write_input(&self, data: String) -> Result<(), String> {
+    pub fn write_input(&self, data: Vec<u8>) -> Result<(), String> {
         self.control
-            .send(SshTerminalControl::Input(data.into_bytes()))
+            .send(SshTerminalControl::Input(data))
             .map_err(|_| "native SSH session is closed".to_string())
     }
 
@@ -735,7 +735,7 @@ pub(crate) fn remote_tmux_resume_command(
         .map(|directory| format!("cd -- {} && ", shell_single_quote(directory)))
         .unwrap_or_default();
     format!(
-        "if command -v tmux >/dev/null 2>&1; then {cd_command}exec tmux new-session -A -s {} \\; set-option mouse off; else {cd_command}printf '\\r\\n[AdminDeck: tmux not found, using normal shell]\\r\\n'; exec \"${{SHELL:-sh}}\" -i; fi",
+        "if command -v tmux >/dev/null 2>&1; then {cd_command}exec tmux new-session -A -s {} \\; set-option mouse on; else {cd_command}printf '\\r\\n[AdminDeck: tmux not found, using normal shell]\\r\\n'; exec \"${{SHELL:-sh}}\" -i; fi",
         shell_single_quote(session_id)
     )
 }
@@ -1188,20 +1188,20 @@ mod tests {
     }
 
     #[test]
-    fn tmux_resume_command_disables_mouse_mode_for_selection() {
+    fn tmux_resume_command_enables_mouse_mode_for_internal_scrollback() {
         let cmd = remote_tmux_resume_command(None, "admindeck-test");
         assert!(
-            cmd.contains("\\; set-option mouse off"),
-            "command must disable tmux mouse mode so xterm can handle text selection: {cmd}"
+            cmd.contains("\\; set-option mouse on"),
+            "command must enable tmux mouse mode so tmux owns alternate-buffer scrolling: {cmd}"
         );
     }
 
     #[test]
-    fn tmux_resume_command_disables_mouse_mode_with_initial_directory() {
+    fn tmux_resume_command_enables_mouse_mode_with_initial_directory() {
         let cmd = remote_tmux_resume_command(Some("/home/user"), "admindeck-test");
         assert!(
-            cmd.contains("\\; set-option mouse off"),
-            "command must disable tmux mouse mode even with initial directory: {cmd}"
+            cmd.contains("\\; set-option mouse on"),
+            "command must enable tmux mouse mode even with initial directory: {cmd}"
         );
     }
 

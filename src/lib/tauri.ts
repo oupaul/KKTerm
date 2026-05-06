@@ -583,7 +583,7 @@ type CommandMap = {
     result: TerminalSessionStarted;
   };
   write_terminal_input: {
-    args: { request: { sessionId: string; data: string } };
+    args: { request: { sessionId: string; data: number[] } };
     result: null;
   };
   resize_terminal: {

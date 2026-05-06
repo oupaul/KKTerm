@@ -42,9 +42,9 @@ struct LoginPrompts {
 }
 
 impl NativeTelnetTerminal {
-    pub fn write_input(&mut self, data: String) -> Result<(), String> {
+    pub fn write_input(&mut self, data: Vec<u8>) -> Result<(), String> {
         self.writer
-            .write_all(data.as_bytes())
+            .write_all(&data)
             .map_err(|error| format!("failed to write Telnet input: {error}"))?;
         self.writer
             .flush()

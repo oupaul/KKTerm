@@ -24,6 +24,7 @@ type TerminalContextMenuState = {
 };
 
 const ASSISTANT_CONTEXT_MAX_CHARS = 4000;
+const terminalInputEncoder = new TextEncoder();
 
 function normalizeFilenamePart(value: string) {
   const normalized = value
@@ -520,7 +521,9 @@ function TmuxSessionTag({
   const [sessions, setSessions] = useState<TmuxSession[]>([]);
   const [error, setError] = useState("");
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
-  const [mouseEnabledIds, setMouseEnabledIds] = useState<Set<string>>(new Set());
+  const [mouseEnabledIds, setMouseEnabledIds] = useState<Set<string>>(
+    () => new Set(sessionId ? [sessionId] : []),
+  );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
 
@@ -530,6 +533,20 @@ function TmuxSessionTag({
   const openTmuxSessionInPane = useWorkspaceStore((state) => state.openTmuxSessionInPane);
 
   const enabled = connection.type === "ssh" && connection.useTmuxSessions !== false && sessionId;
+
+  useEffect(() => {
+    if (!sessionId) {
+      return;
+    }
+    setMouseEnabledIds((prev) => {
+      if (prev.has(sessionId)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(sessionId);
+      return next;
+    });
+  }, [sessionId]);
 
   useEffect(() => {
     if (!open) {
@@ -871,6 +888,7 @@ function TerminalPaneView({
     (state) => state.clearTerminalStartMetric,
   );
   const closePane = useWorkspaceStore((state) => state.closePane);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const element = terminalElementRef.current;
@@ -891,7 +909,7 @@ function TerminalPaneView({
       }
 
       const key = event.key.toLowerCase();
-      if (key === "c" && event.shiftKey) {
+      if ((key === "c" && event.shiftKey) || key === "insert") {
         const selection = terminal.getSelection();
         if (selection) {
           void writeToClipboard(selection);
@@ -935,7 +953,7 @@ function TerminalPaneView({
         return;
       }
       void invokeCommand("write_terminal_input", {
-        request: { sessionId, data },
+        request: { sessionId, data: encodeTerminalInput(data) },
       });
       terminal.focus();
     };
@@ -1248,7 +1266,7 @@ function TerminalPaneView({
     const sessionId = sessionIdRef.current;
     if (sessionId) {
       void invokeCommand("write_terminal_input", {
-        request: { sessionId, data: text },
+        request: { sessionId, data: encodeTerminalInput(text) },
       });
     }
     setContextMenu(null);
@@ -1373,11 +1391,11 @@ function TerminalPaneView({
           </button>
           <button
             className="terminal-pane-action"
-            aria-label="Copy terminal selection"
+            aria-label={t("terminal.copySelection")}
             disabled={!selectedTerminalText}
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleCopyTerminalSelection}
-            title="Copy terminal selection (Ctrl+Shift+C)"
+            title={t("terminal.copySelection")}
             type="button"
           >
             <Copy size={13} />
@@ -1538,6 +1556,10 @@ function TerminalContextMenu({
 
 function isMultilinePaste(data: string) {
   return data.split(/\r\n|\r|\n/).filter((line) => line.length > 0).length > 1;
+}
+
+function encodeTerminalInput(data: string) {
+  return Array.from(terminalInputEncoder.encode(data));
 }
 
 function terminalDimensionsEqual(left: TerminalDimensions, right: TerminalDimensions) {
