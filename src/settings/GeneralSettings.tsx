@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DatabaseBackup, Download, Languages, Upload } from "lucide-react";
+import { Download, Languages, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   SUPPORTED_LANGUAGES,
@@ -9,7 +9,6 @@ import {
 } from "../i18n/config";
 import {
   invokeCommand,
-  isTauriRuntime,
   selectSettingsExportFile,
   selectSettingsImportFile,
 } from "../lib/tauri";
@@ -19,7 +18,6 @@ export function GeneralSettings() {
   const { t } = useTranslation();
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>(detectLanguage);
-  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
@@ -37,27 +35,6 @@ export function GeneralSettings() {
   const closeAllTabs = useWorkspaceStore((state) => state.closeAllTabs);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-
-  async function updateAutoBackup(enabled: boolean) {
-    const nextSettings = { ...generalSettings, autoBackupEnabled: enabled };
-    setGeneralSettings(nextSettings);
-    setStatus("");
-    setError("");
-    if (!isTauriRuntime()) {
-      return;
-    }
-    try {
-      const saved = await invokeCommand("update_general_settings", {
-        request: nextSettings,
-      });
-      setGeneralSettings(saved);
-      setStatus(t("settings.autoBackupSaved"));
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error ? saveError.message : String(saveError),
-      );
-    }
-  }
 
   async function handleExportSettings() {
     setStatus("");
@@ -110,11 +87,7 @@ export function GeneralSettings() {
       window.dispatchEvent(
         new CustomEvent("admindeck:connection-tree-invalidated"),
       );
-      setStatus(
-        t("settings.importSettingsComplete", {
-          filename: snapshot.backup.filename,
-        }),
-      );
+      setStatus(t("settings.importSettingsComplete"));
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -155,20 +128,6 @@ export function GeneralSettings() {
         </label>
       </div>
 
-      <div className="settings-toggles">
-        <label>
-          <input
-            type="checkbox"
-            checked={generalSettings.autoBackupEnabled}
-            onChange={(event) =>
-              void updateAutoBackup(event.currentTarget.checked)
-            }
-          />
-          {t("settings.autoBackup")}
-        </label>
-        <small className="field-hint">{t("settings.autoBackupHint")}</small>
-      </div>
-
       <div
         className="settings-data-actions"
         aria-label={t("settings.settingsDataActions")}
@@ -190,7 +149,6 @@ export function GeneralSettings() {
           {t("settings.importSettings")}
         </button>
         <div className="settings-data-note">
-          <DatabaseBackup size={16} />
           <span>{t("settings.settingsDataHint")}</span>
         </div>
       </div>

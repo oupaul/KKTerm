@@ -160,11 +160,6 @@ export interface GeneralSettings {
   autoBackupEnabled: boolean;
 }
 
-export interface DatabaseBackupInfo {
-  path: string;
-  filename: string;
-}
-
 export interface ImportedDatabaseSnapshot {
   generalSettings: GeneralSettings;
   terminalSettings: TerminalSettings;
@@ -173,7 +168,6 @@ export interface ImportedDatabaseSnapshot {
   sftpSettings: SftpSettings;
   aiProviderSettings: AiProviderSettings;
   connectionTree: ConnectionTree;
-  backup: DatabaseBackupInfo;
 }
 
 export interface TerminalSettings {

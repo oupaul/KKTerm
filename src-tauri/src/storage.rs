@@ -7,7 +7,7 @@ use std::{
     io::{copy, Read, Write},
     path::{Path, PathBuf},
     sync::Mutex,
-    time::{Duration, SystemTime},
+    time::SystemTime,
 };
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
@@ -89,13 +89,6 @@ pub struct GeneralSettings {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DatabaseBackupInfo {
-    path: String,
-    filename: String,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ImportedDatabaseSnapshot {
     general_settings: GeneralSettings,
     terminal_settings: TerminalSettings,
@@ -104,7 +97,6 @@ pub struct ImportedDatabaseSnapshot {
     sftp_settings: SftpSettings,
     ai_provider_settings: AiProviderSettings,
     connection_tree: ConnectionTree,
-    backup: DatabaseBackupInfo,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -347,41 +339,6 @@ impl Storage {
         format!("SQLite: {}", self.db_path.display())
     }
 
-    pub fn backup_if_enabled_for_quit(&self) -> Result<Option<DatabaseBackupInfo>, String> {
-        if self.general_settings()?.auto_backup_enabled {
-            self.backup_database().map(Some).and_then(|backup| {
-                self.delete_old_backups()?;
-                Ok(backup)
-            })
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn backup_database(&self) -> Result<DatabaseBackupInfo, String> {
-        let backup_dir = self.backup_dir()?;
-        fs::create_dir_all(&backup_dir).map_err(|error| {
-            format!(
-                "failed to create backup directory {}: {error}",
-                backup_dir.display()
-            )
-        })?;
-        let filename = format!("admin-deck-{}.sqlite3", timestamp_for_filename());
-        let path = backup_dir.join(&filename);
-        let connection = self.lock()?;
-        let sql_path = path
-            .to_str()
-            .ok_or_else(|| "backup path is not valid UTF-8".to_string())?
-            .replace("'", "''");
-        connection
-            .execute_batch(&format!("VACUUM INTO '{}';", sql_path))
-            .map_err(|error| format!("failed to create database backup: {error}"))?;
-        Ok(DatabaseBackupInfo {
-            path: path.display().to_string(),
-            filename,
-        })
-    }
-
     pub fn export_database_zip(&self, export_path: PathBuf) -> Result<(), String> {
         let export_parent = export_path
             .parent()
@@ -449,7 +406,6 @@ impl Storage {
         extract_imported_database(&import_path, &temp_import_path)?;
         validate_import_database(&temp_import_path)?;
 
-        let backup = self.backup_database()?;
         {
             let mut connection = self.lock()?;
             let placeholder = SqliteConnection::open_in_memory()
@@ -475,7 +431,6 @@ impl Storage {
             sftp_settings: self.sftp_settings()?,
             ai_provider_settings: self.ai_provider_settings()?,
             connection_tree: self.list_connection_tree()?,
-            backup,
         })
     }
 
@@ -1351,53 +1306,12 @@ impl Storage {
         self.list_connection_tree()
     }
 
-    fn backup_dir(&self) -> Result<PathBuf, String> {
-        let parent = self
-            .db_path
-            .parent()
-            .ok_or_else(|| "database path must include a parent directory".to_string())?;
-        Ok(parent.join("backups"))
-    }
-
     fn temp_database_path(&self, prefix: &str) -> PathBuf {
         let parent = self.db_path.parent().unwrap_or_else(|| Path::new("."));
         parent.join(format!(
             "admin-deck-{prefix}-{}.sqlite3",
             timestamp_for_filename()
         ))
-    }
-
-    fn delete_old_backups(&self) -> Result<(), String> {
-        let backup_dir = self.backup_dir()?;
-        let cutoff = SystemTime::now()
-            .checked_sub(Duration::from_secs(7 * 24 * 60 * 60))
-            .unwrap_or(SystemTime::UNIX_EPOCH);
-        let entries = match fs::read_dir(&backup_dir) {
-            Ok(entries) => entries,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-            Err(error) => {
-                return Err(format!(
-                    "failed to read backup directory {}: {error}",
-                    backup_dir.display()
-                ))
-            }
-        };
-
-        for entry in entries {
-            let entry =
-                entry.map_err(|error| format!("failed to inspect backup entry: {error}"))?;
-            let path = entry.path();
-            if path.extension().and_then(|extension| extension.to_str()) != Some("sqlite3") {
-                continue;
-            }
-            let metadata = entry
-                .metadata()
-                .map_err(|error| format!("failed to inspect backup {}: {error}", path.display()))?;
-            if metadata.modified().unwrap_or(SystemTime::now()) < cutoff {
-                remove_file_if_exists(&path)?;
-            }
-        }
-        Ok(())
     }
 
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, SqliteConnection>, String> {
@@ -2405,7 +2319,7 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
 
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
-        auto_backup_enabled: true,
+        auto_backup_enabled: false,
     }
 }
 
@@ -2478,7 +2392,8 @@ fn default_ai_cli_execution_policy() -> String {
     "suggestOnly".to_string()
 }
 
-fn validate_general_settings(settings: GeneralSettings) -> Result<GeneralSettings, String> {
+fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSettings, String> {
+    settings.auto_backup_enabled = false;
     Ok(settings)
 }
 
@@ -3502,11 +3417,11 @@ mod tests {
         let defaults = storage
             .general_settings()
             .expect("default general settings load");
-        assert!(defaults.auto_backup_enabled);
+        assert!(!defaults.auto_backup_enabled);
 
         let updated = storage
             .update_general_settings(GeneralSettings {
-                auto_backup_enabled: false,
+                auto_backup_enabled: true,
             })
             .expect("general settings update");
         assert!(!updated.auto_backup_enabled);
@@ -3546,7 +3461,6 @@ mod tests {
         assert!(!imported.general_settings.auto_backup_enabled);
         assert_eq!(imported.connection_tree.connections.len(), 1);
         assert_eq!(imported.connection_tree.connections[0].id, connection.id);
-        assert!(Path::new(&imported.backup.path).exists());
         remove_file_if_exists(&export_path).expect("export cleanup succeeds");
     }
 

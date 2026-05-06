@@ -17,7 +17,7 @@ export const connectionTree: ConnectionTree = {
 export const initialTabs: WorkspaceTab[] = [];
 
 export const defaultGeneralSettings: GeneralSettings = {
-  autoBackupEnabled: true,
+  autoBackupEnabled: false,
 };
 
 export const defaultTerminalSettings: TerminalSettings = {

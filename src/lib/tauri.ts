@@ -11,7 +11,6 @@ import type {
   Connection,
   ConnectionFolder,
   ConnectionTree,
-  DatabaseBackupInfo,
   GeneralSettings,
   ImportedDatabaseSnapshot,
   CreateConnectionFolderRequest,
@@ -468,10 +467,6 @@ type CommandMap = {
   import_settings_database: {
     args: { path: string };
     result: ImportedDatabaseSnapshot;
-  };
-  backup_settings_database: {
-    args: undefined;
-    result: DatabaseBackupInfo;
   };
   get_terminal_settings: {
     args: undefined;

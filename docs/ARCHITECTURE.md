@@ -24,6 +24,8 @@ Windows is the first acceptance platform. macOS and Linux should remain first-cl
 
 Owns Tauri setup, window lifecycle, command registration, menus, native dialogs, logging setup, and platform-specific capabilities.
 
+The main app window close path must remain native and unhooked. Do not listen for or intercept Tauri close events such as `CloseRequested`, `onCloseRequested`, `tauri://close-requested`, or `prevent_close`, and do not add app-owned close confirmation flows on the title-bar close button. Those hooks have repeatedly broken the Windows native close button under Tauri v2. Window and layout state should be persisted during ordinary resize/move/settings flows, not during app close.
+
 ### Command Boundary
 
 Provides a typed command wrapper between React and Rust. The frontend should not manually string-build backend calls. Commands should return structured results and structured errors.
