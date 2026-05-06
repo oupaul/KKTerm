@@ -226,8 +226,13 @@ button {
   border-top: 1px solid var(--border);
 }
 
-.app-shell.settings-mode {
-  grid-template-columns: 48px minmax(0, 1fr);
+.workspace-page {
+  display: contents;
+}
+
+.workspace-page[aria-hidden="true"] > * {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .activity-rail {
@@ -3398,6 +3403,9 @@ progress {
 }
 
 .settings-page {
+  position: fixed;
+  inset: 0 0 0 48px;
+  z-index: 1000;
   min-width: 0;
   height: 100vh;
   overflow: auto;
