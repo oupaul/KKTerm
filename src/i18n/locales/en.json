@@ -5,7 +5,12 @@
     "primaryNav": "Primary",
     "resizeConnections": "Resize Connections column",
     "resizeAiAssistant": "Resize AI Assistant panel",
-    "aiAssistant": "AI Assistant"
+    "aiAssistant": "AI Assistant",
+    "quitConfirmTitle": "Close AdminDeck?",
+    "quitConfirmBody_one": "1 open Connection will end.",
+    "quitConfirmBody_other": "{{count}} open Connections will end.",
+    "quitConfirmHint": "Any unsaved work in those Sessions will be lost.",
+    "quitConfirmAction": "Close anyway"
   },
   "settings": {
     "title": "Settings",
