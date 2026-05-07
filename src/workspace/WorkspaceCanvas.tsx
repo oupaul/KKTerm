@@ -13,7 +13,7 @@ import { useWorkspaceStore } from "../store";
 import type { Connection } from "../types";
 
 export function TabStrip() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
@@ -22,7 +22,7 @@ export function TabStrip() {
   const openConnection = useWorkspaceStore((state) => state.openConnection);
   const [quickConnectMenuOpen, setQuickConnectMenuOpen] = useState(false);
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
-  const shellOptions = useMemo(() => localShellOptionsForPlatform(), []);
+  const shellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   useEffect(() => {
     if (!quickConnectMenuOpen) {
       return;

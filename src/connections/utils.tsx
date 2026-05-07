@@ -4,9 +4,9 @@ import i18next from "../i18n/config";
 import type { Connection, ConnectionType, SshSettings, WorkspaceTab } from "../types";
 
 const WINDOWS_LOCAL_SHELL_OPTIONS = [
-  { label: "PowerShell", value: "powershell.exe" },
-  { label: "Command Prompt", value: "cmd.exe" },
-  { label: "WSL", value: "wsl.exe" },
+  { labelKey: "settings.powerShell", value: "powershell.exe" },
+  { labelKey: "settings.commandPrompt", value: "cmd.exe" },
+  { labelKey: "settings.wsl", value: "wsl.exe" },
 ];
 
 export type LocalShellOption = {
@@ -25,13 +25,14 @@ function isWindowsPlatform() {
 
 export function localShellOptionsForPlatform(): LocalShellOption[] {
   if (!isWindowsPlatform()) {
-    return [{ label: "Terminal" }];
+    return [{ label: i18next.t("workspace.terminal") }];
   }
 
   return [
-    { canElevate: true, label: "Command Prompt", value: "cmd.exe" },
+    { canElevate: true, label: i18next.t("settings.commandPrompt"), value: "cmd.exe" },
     ...WINDOWS_LOCAL_SHELL_OPTIONS.filter((option) => option.value !== "cmd.exe").map((option) => ({
-      ...option,
+      label: i18next.t(option.labelKey),
+      value: option.value,
       canElevate: option.value === "powershell.exe",
     })),
   ];

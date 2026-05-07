@@ -519,7 +519,7 @@ h2 {
   right: auto;
   z-index: 80;
   display: grid;
-  width: 50%;
+  width: 80%;
   transform: translateX(-50%);
   color: var(--text);
   background: var(--surface);

@@ -124,7 +124,7 @@ export function ConnectionSidebar({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const query = useWorkspaceStore((state) => state.query);
   const setQuery = useWorkspaceStore((state) => state.setQuery);
   const openConnection = useWorkspaceStore((state) => state.openConnection);
@@ -630,7 +630,7 @@ export function ConnectionSidebar({
 
     return filterConnectionTree(treeWithLiveStatuses, normalizedQuery);
   }, [query, treeWithLiveStatuses]);
-  const quickConnectShellOptions = useMemo(() => localShellOptionsForPlatform(), []);
+  const quickConnectShellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   const recentConnections = useMemo(() => {
     const connectionsById = new Map(
       flattenConnections(treeWithLiveStatuses).map((connection) => [connection.id, connection]),
@@ -1832,7 +1832,7 @@ function ConnectionDialog({
   onImportRequested?: () => void;
   onSubmit: (request: ConnectionDialogRequest) => void | Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [connectionType, setConnectionType] = useState<ConnectionType | "">(
     initialConnection?.type ?? "",
   );
@@ -1855,7 +1855,7 @@ function ConnectionDialog({
     ? isRemoteDesktopConnectionType(connectionType)
     : false;
   const folderOptions = useMemo(() => flattenFolders(tree.folders), [tree.folders]);
-  const localShellOptions = useMemo(() => localShellOptionsForPlatform(), []);
+  const localShellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   const isEditMode = mode === "edit";
   const isUrlConnection = connectionType === "url";
   const connectionTypeOptions: Array<{
