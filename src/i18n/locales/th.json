@@ -340,7 +340,6 @@
   "terminal": {
     "openSftp": "เปิดเบราว์เซอร์ SFTP",
     "sftp": "SFTP",
-    "sendCtrlAltDel": "ส่ง Ctrl+Alt+Delete",
     "splitLayout": "แบ่งเค้าโครง",
     "splitRight": "แบ่งขวา",
     "splitLeft": "แบ่งซ้าย",

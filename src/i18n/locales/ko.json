@@ -340,7 +340,6 @@
   "terminal": {
     "openSftp": "SFTP 브라우저 열기",
     "sftp": "SFTP",
-    "sendCtrlAltDel": "Ctrl+Alt+Delete 보내기",
     "splitLayout": "레이아웃 분할",
     "splitRight": "오른쪽으로 분할",
     "splitLeft": "왼쪽으로 분할",

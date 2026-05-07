@@ -340,7 +340,6 @@
   "terminal": {
     "openSftp": "Buka browser SFTP",
     "sftp": "SFTP",
-    "sendCtrlAltDel": "Kirim Ctrl+Alt+Delete",
     "splitLayout": "Bagi tata letak",
     "splitRight": "Bagi Kanan",
     "splitLeft": "Bagi Kiri",

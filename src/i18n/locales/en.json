@@ -340,7 +340,6 @@
   "terminal": {
     "openSftp": "Open SFTP browser",
     "sftp": "SFTP",
-    "sendCtrlAltDel": "Send Ctrl+Alt+Delete",
     "splitLayout": "Split layout",
     "splitRight": "Split Right",
     "splitLeft": "Split Left",

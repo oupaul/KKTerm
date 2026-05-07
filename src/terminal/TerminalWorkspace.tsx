@@ -4,7 +4,7 @@ import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
 import { WikiPagesButton } from "../wiki/WikiPagesButton";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Keyboard, LayoutDashboard, Menu, RefreshCw, Save, Search, SplitSquareHorizontal, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, LayoutDashboard, Menu, RefreshCw, Save, Search, SplitSquareHorizontal, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
@@ -15,7 +15,7 @@ import { defaultTerminalSettings } from "../sample-data";
 import { forgetTmuxSessionId, getTmuxSessionLabel, useWorkspaceStore } from "../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../workspace/layout";
-import { getPaneRenderer, registerPaneInputWriter, registerPaneRenderer, unregisterPaneInputWriter, unregisterPaneRenderer, writeInputToPane } from "../workspace/paneRegistry";
+import { getPaneRenderer, registerPaneInputWriter, registerPaneRenderer, unregisterPaneInputWriter, unregisterPaneRenderer } from "../workspace/paneRegistry";
 import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspacePane, WorkspaceTab } from "../types";
 
 type TerminalContextMenuState = {
@@ -133,14 +133,6 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
     resetTabLayout(tab.id);
   }
 
-  function handleSendCtrlAltDelete(paneId: string) {
-    const pane = tab.panes.find((entry) => entry.id === paneId);
-    if (!pane || !isTerminalPane(pane) || pane.connection?.type !== "ssh") {
-      return;
-    }
-    writeInputToPane(pane.id, "\x1b[3;7~");
-  }
-
   return (
     <section
       className={[
@@ -166,7 +158,6 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
             onResetView={handleResetView}
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
             onSaveView={handleSaveView}
-            onSendCtrlAltDelete={handleSendCtrlAltDelete}
             onSplit={handleSplit}
           />
         ) : null}
@@ -188,7 +179,6 @@ function TerminalLayoutView({
   onResetView,
   onSaveBuffer,
   onSaveView,
-  onSendCtrlAltDelete,
   onSplit,
 }: {
   isActive: boolean;
@@ -203,7 +193,6 @@ function TerminalLayoutView({
   onResetView: () => void;
   onSaveBuffer: (paneId: string) => void;
   onSaveView: () => void;
-  onSendCtrlAltDelete: (paneId: string) => void;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
 }) {
   if (layout.type === "leaf") {
@@ -226,7 +215,6 @@ function TerminalLayoutView({
             onResetView={onResetView}
             onSaveBuffer={onSaveBuffer}
             onSaveView={onSaveView}
-            onSendCtrlAltDelete={onSendCtrlAltDelete}
             onSplit={onSplit}
           />
         ) : (
@@ -263,7 +251,6 @@ function TerminalLayoutView({
           onResetView={onResetView}
           onSaveBuffer={onSaveBuffer}
           onSaveView={onSaveView}
-          onSendCtrlAltDelete={onSendCtrlAltDelete}
           onSplit={onSplit}
         />
       ))}
@@ -676,7 +663,6 @@ function TerminalPaneView({
   onResetView,
   onSaveBuffer,
   onSaveView,
-  onSendCtrlAltDelete,
   onSplit,
 }: {
   isActive: boolean;
@@ -690,7 +676,6 @@ function TerminalPaneView({
   onResetView: () => void;
   onSaveBuffer: (paneId: string) => void;
   onSaveView: () => void;
-  onSendCtrlAltDelete: (paneId: string) => void;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
 }) {
   const paneRef = useRef<HTMLElement | null>(null);
@@ -974,7 +959,10 @@ function TerminalPaneView({
                 : undefined,
             serialLine: connection.type === "serial" ? connection.serialLine ?? connection.host : undefined,
             serialSpeed: connection.type === "serial" ? connection.serialSpeed ?? 9600 : undefined,
-            initialDirectory: connection.type === "ssh" ? pane.cwd.trim() || undefined : undefined,
+            initialDirectory:
+              connection.type === "ssh" && isRemoteInitialDirectory(pane.cwd)
+                ? pane.cwd.trim()
+                : undefined,
             cols: terminalDimensions.cols,
             pixelHeight: terminalDimensions.pixelHeight,
             pixelWidth: terminalDimensions.pixelWidth,
@@ -1294,35 +1282,18 @@ function TerminalPaneView({
           {pane.connection ? (
             <TmuxSessionTag connection={pane.connection} sessionId={pane.tmuxSessionId} tabId={tabId} />
           ) : null}
-          {pane.connection ? (
-            <WikiPagesButton
-              buttonClassName="terminal-pane-action"
-              connectionId={pane.connection.id}
-              iconSize={13}
-            />
+          {isSshPane ? (
+            <button
+              className="terminal-pane-action terminal-pane-action-text"
+              aria-label={t("terminal.openSftp")}
+              onClick={handleOpenSftp}
+              title={t("terminal.openSftp")}
+              type="button"
+            >
+              <Columns2 size={13} />
+              <span>{t("terminal.sftp")}</span>
+            </button>
           ) : null}
-          <small>{pane.cwd}</small>
-          <button
-            className="terminal-pane-action terminal-pane-action-text"
-            aria-label={t("terminal.openSftp")}
-            disabled={!isSshPane}
-            onClick={handleOpenSftp}
-            title={t("terminal.openSftp")}
-            type="button"
-          >
-            <Columns2 size={13} />
-            <span>{t("terminal.sftp")}</span>
-          </button>
-          <button
-            className="terminal-pane-action"
-            aria-label={t("terminal.sendCtrlAltDel")}
-            disabled={!isSshPane}
-            onClick={() => onSendCtrlAltDelete(pane.id)}
-            title={t("terminal.sendCtrlAltDel")}
-            type="button"
-          >
-            <Keyboard size={13} />
-          </button>
           <div className="terminal-menu-wrapper" ref={splitMenuRef}>
             <button
               className="terminal-pane-action"
@@ -1425,6 +1396,16 @@ function TerminalPaneView({
             </button>
             {actionsMenuOpen ? (
               <div className="terminal-menu" role="menu">
+                {pane.connection ? (
+                  <WikiPagesButton
+                    buttonClassName="terminal-menu-item"
+                    buttonRole="menuitem"
+                    connectionId={pane.connection.id}
+                    iconSize={13}
+                    onPageOpen={() => setActionsMenuOpen(false)}
+                    showLabel
+                  />
+                ) : null}
                 <button
                   className="terminal-menu-item"
                   onClick={handleSaveBuffer}
@@ -1666,6 +1647,15 @@ function terminalSessionTypeFor(connection: Connection): "local" | "ssh" | "teln
     connection.type === "serial"
     ? connection.type
     : "ssh";
+}
+
+function isRemoteInitialDirectory(cwd: string) {
+  const trimmed = cwd.trim();
+  if (!trimmed || trimmed === "~") {
+    return false;
+  }
+
+  return !/^[A-Za-z]:[\\/]/.test(trimmed);
 }
 
 function focusTerminalUnlessExternalInputIsActive(

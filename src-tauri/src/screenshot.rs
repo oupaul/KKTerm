@@ -8,8 +8,6 @@ pub struct CaptureScreenshotRequest {
     y: f64,
     width: f64,
     height: f64,
-    #[serde(default)]
-    max_dimension: Option<u32>,
 }
 
 #[derive(Serialize)]
@@ -43,12 +41,7 @@ pub fn capture_rect_for_assistant(
     let target = capture_target(app, request)?;
     let dib =
         platform::capture_screen_rect_to_dib(target.x, target.y, target.width, target.height)?;
-    let result = platform::dib_to_jpeg_data_url(
-        &dib,
-        target.width as u32,
-        target.height as u32,
-        request.max_dimension,
-    )?;
+    let result = platform::dib_to_jpeg_data_url(&dib, target.width as u32, target.height as u32)?;
     Ok(AssistantScreenshot {
         data_url: result.data_url,
         width: result.width,
@@ -118,7 +111,7 @@ mod platform {
     use std::{ffi::c_void, mem, ptr};
 
     use base64::{engine::general_purpose::STANDARD, Engine as _};
-    use image::{codecs::jpeg::JpegEncoder, imageops, ColorType, ImageEncoder};
+    use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
     use windows_sys::Win32::{
         Foundation::{GlobalFree, HANDLE, HWND},
         Graphics::Gdi::{
@@ -193,7 +186,6 @@ mod platform {
         dib: &[u8],
         width: u32,
         height: u32,
-        max_dimension: Option<u32>,
     ) -> Result<JpegResult, String> {
         let header_size = mem::size_of::<BITMAPINFOHEADER>();
         let expected_len = header_size + width as usize * height as usize * 4;
@@ -209,34 +201,8 @@ mod platform {
             rgb.push(bgra[0]);
         }
 
-        if let Some(max_dim) = max_dimension {
-            let longer = width.max(height);
-            if longer > max_dim {
-                let scale = max_dim as f64 / longer as f64;
-                let new_w = ((width as f64) * scale).round() as u32;
-                let new_h = ((height as f64) * scale).round() as u32;
-                let img = image::RgbImage::from_raw(width, height, rgb)
-                    .ok_or("failed to construct image buffer for downscale")?;
-                let resized = imageops::resize(
-                    &img,
-                    new_w,
-                    new_h,
-                    imageops::FilterType::Triangle,
-                );
-                let mut jpeg = Vec::new();
-                JpegEncoder::new_with_quality(&mut jpeg, 75)
-                    .write_image(resized.as_raw(), new_w, new_h, ColorType::Rgb8.into())
-                    .map_err(|error| format!("failed to encode JPEG: {error}"))?;
-                return Ok(JpegResult {
-                    data_url: format!("data:image/jpeg;base64,{}", STANDARD.encode(jpeg)),
-                    width: new_w,
-                    height: new_h,
-                });
-            }
-        }
-
         let mut jpeg = Vec::new();
-        JpegEncoder::new_with_quality(&mut jpeg, 80)
+        JpegEncoder::new_with_quality(&mut jpeg, 90)
             .write_image(&rgb, width, height, ColorType::Rgb8.into())
             .map_err(|error| format!("failed to encode JPEG: {error}"))?;
         Ok(JpegResult {

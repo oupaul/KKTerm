@@ -306,7 +306,6 @@ export interface CaptureScreenshotRequest {
   y: number;
   width: number;
   height: number;
-  maxDimension?: number;
 }
 
 export interface AssistantScreenshot {

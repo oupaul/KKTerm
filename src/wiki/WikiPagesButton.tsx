@@ -1,4 +1,5 @@
 import { BookOpen } from "lucide-react";
+import type { AriaRole } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { menuButtonAria } from "../lib/aria";
@@ -30,14 +31,20 @@ export function useOpenWikiListener(handler: (pageId: string) => void) {
 
 interface WikiPagesButtonProps {
   buttonClassName?: string;
+  buttonRole?: AriaRole;
   connectionId: string;
   iconSize?: number;
+  onPageOpen?: () => void;
+  showLabel?: boolean;
 }
 
 export function WikiPagesButton({
   buttonClassName = "connection-wiki-button rail-button-style inline-flex h-7 w-7 items-center justify-center rounded hover:bg-black/10",
+  buttonRole,
   connectionId,
   iconSize = 14,
+  onPageOpen,
+  showLabel = false,
 }: WikiPagesButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -83,16 +90,18 @@ export function WikiPagesButton({
   }, [open]);
 
   return (
-    <div className="connection-wiki-anchor relative" ref={containerRef}>
+    <div className="connection-wiki-anchor relative" ref={containerRef} role={buttonRole ? "none" : undefined}>
       <button
         type="button"
         className={buttonClassName}
+        role={buttonRole}
         {...menuButtonAria(open)}
         aria-label={t("wiki.wikiPagesForConnection")}
         title={t("wiki.wikiPagesForConnection")}
         onClick={() => setOpen((current) => !current)}
       >
         <BookOpen size={iconSize} />
+        {showLabel ? <span>{t("wiki.wikiPagesForConnection")}</span> : null}
       </button>
       {open ? (
         <div className="connection-wiki-popover" role="menu">
@@ -114,6 +123,7 @@ export function WikiPagesButton({
                     onClick={() => {
                       setOpen(false);
                       dispatchOpenWiki(page.id);
+                      onPageOpen?.();
                     }}
                   >
                     {page.title}

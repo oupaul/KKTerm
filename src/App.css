@@ -1637,6 +1637,16 @@ h2 {
   flex: 0 0 auto;
 }
 
+.terminal-menu .connection-wiki-anchor {
+  display: flex;
+  width: 100%;
+}
+
+.terminal-menu .connection-wiki-popover {
+  top: -5px;
+  right: calc(100% + 4px);
+}
+
 .terminal-pane-close:hover {
   color: #ff7070;
   background: rgba(255, 100, 100, 0.12);

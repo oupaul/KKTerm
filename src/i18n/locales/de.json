@@ -340,7 +340,6 @@
   "terminal": {
     "openSftp": "SFTP-Browser öffnen",
     "sftp": "SFTP",
-    "sendCtrlAltDel": "Strg+Alt+Entf senden",
     "splitLayout": "Layout teilen",
     "splitRight": "Rechts teilen",
     "splitLeft": "Links teilen",

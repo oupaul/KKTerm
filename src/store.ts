@@ -343,7 +343,7 @@ function buildPanesForConnection(
 ): TerminalPane[] {
   const baseId = connection.id;
   const baseTitle = terminalPaneTitleForConnection(connection);
-  const baseCwd = connection.type === "local" ? "C:\\Users\\ryan" : "~";
+  const baseCwd = defaultTerminalCwdForConnection(connection);
   const tmuxSessionIds = tmuxSessionIdsForConnection(connection, count);
   const panes: TerminalPane[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -441,11 +441,30 @@ function buildPaneForConnection(
     kind: "terminal",
     id: `pane-${connection.id}-${Date.now()}`,
     title: titleForConnectionPane(connection),
-    cwd: focusedPane && "cwd" in focusedPane ? focusedPane.cwd : "~",
+    cwd: inheritedTerminalCwdForConnection(connection, focusedPane),
     buffer: "",
     connection,
     tmuxSessionId: appendTmuxSessionId(connection),
   };
+}
+
+function defaultTerminalCwdForConnection(connection: Connection) {
+  return connection.type === "local" ? "C:\\Users\\ryan" : "~";
+}
+
+function inheritedTerminalCwdForConnection(
+  connection: Connection,
+  focusedPane?: WorkspacePane,
+) {
+  if (
+    focusedPane &&
+    "cwd" in focusedPane &&
+    focusedPane.connection?.id === connection.id
+  ) {
+    return focusedPane.cwd;
+  }
+
+  return defaultTerminalCwdForConnection(connection);
 }
 
 function isTerminalPane(pane: WorkspacePane): pane is TerminalPane {

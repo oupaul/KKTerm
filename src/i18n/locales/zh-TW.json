@@ -340,7 +340,6 @@
   "terminal": {
     "openSftp": "開啟 SFTP 瀏覽器",
     "sftp": "SFTP",
-    "sendCtrlAltDel": "傳送 Ctrl+Alt+Delete",
     "splitLayout": "分割版面配置",
     "splitRight": "向右分割",
     "splitLeft": "向左分割",

@@ -165,7 +165,7 @@ export function RemoteDesktopWorkspace({
       return null;
     }
     return invokeCommand("capture_screenshot_for_assistant", {
-      request: { ...bounds, maxDimension: 1024 },
+      request: bounds,
     });
   };
 
