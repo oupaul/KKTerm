@@ -60,9 +60,8 @@ Latest validation on May 7, 2026: `npm run check`, `npm run build`, `cargo check
 - [x] Persist SSH defaults for new SSH Connections.
 - [x] Add optional tmux session resume for SSH terminal Panes with remote session list and close actions.
 - [x] Add bounded silent reattach for tmux-backed native SSH terminal channels after unexpected transport closure.
-- [ ] Reintroduce SSH defaults controls after the Settings UX is redesigned.
+- [x] Reintroduce SSH defaults controls after the Settings UX is redesigned.
 - [x] Add SSH config import command with unsupported directive reporting.
-- [ ] Reintroduce SSH config import through the connection tree or Settings after the simplified chrome UX settles.
 
 ## Milestone C: SFTP Core
 
