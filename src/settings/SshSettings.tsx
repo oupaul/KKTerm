@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { FolderOpen, KeyRound, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -33,6 +33,9 @@ export function SshSettings() {
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const setSshSettings = useWorkspaceStore((state) => state.setSshSettings);
   const [sshDraft, setSshDraft] = useState(sshSettings);
+  const [keyEmailDialogOpen, setKeyEmailDialogOpen] = useState(false);
+  const [keyEmailDraft, setKeyEmailDraft] = useState("");
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const hasChanges = JSON.stringify(sshDraft) !== JSON.stringify(sshSettings);
@@ -58,12 +61,20 @@ export function SshSettings() {
     }
   }
 
-  async function handleGenerateKeyPair() {
-    const email = window.prompt(t("settings.sshKeyEmailPrompt"))?.trim();
+  function handleOpenKeyEmailDialog() {
+    setError("");
+    setStatus("");
+    setKeyEmailDraft("");
+    setKeyEmailDialogOpen(true);
+  }
+
+  async function handleGenerateKeyPair(emailInput: string) {
+    const email = emailInput.trim();
     if (!email) {
       return;
     }
     try {
+      setIsGeneratingKey(true);
       setError("");
       setStatus("");
       const generated = await invokeCommand("generate_ssh_key_pair", {
@@ -85,8 +96,12 @@ export function SshSettings() {
           publicKeyPath: generated.publicKeyPath,
         }),
       );
+      setKeyEmailDialogOpen(false);
+      setKeyEmailDraft("");
     } catch (generateError) {
       setError(generateError instanceof Error ? generateError.message : String(generateError));
+    } finally {
+      setIsGeneratingKey(false);
     }
   }
 
@@ -188,7 +203,7 @@ export function SshSettings() {
             </button>
             <button
               className="toolbar-button"
-              onClick={() => void handleGenerateKeyPair()}
+              onClick={handleOpenKeyEmailDialog}
               type="button"
             >
               <KeyRound size={15} />
@@ -216,6 +231,96 @@ export function SshSettings() {
 
       {status ? <p className="settings-status success">{status}</p> : null}
       {error ? <p className="settings-status error">{error}</p> : null}
+      {keyEmailDialogOpen ? (
+        <SshKeyEmailDialog
+          email={keyEmailDraft}
+          error={error}
+          isGenerating={isGeneratingKey}
+          onCancel={() => {
+            if (isGeneratingKey) {
+              return;
+            }
+            setKeyEmailDialogOpen(false);
+            setKeyEmailDraft("");
+          }}
+          onChange={setKeyEmailDraft}
+          onSubmit={(email) => void handleGenerateKeyPair(email)}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function SshKeyEmailDialog({
+  email,
+  error,
+  isGenerating,
+  onCancel,
+  onChange,
+  onSubmit,
+}: {
+  email: string;
+  error: string;
+  isGenerating: boolean;
+  onCancel: () => void;
+  onChange: (email: string) => void;
+  onSubmit: (email: string) => void;
+}) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const canSubmit = Boolean(email.trim()) && !isGenerating;
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+    onSubmit(email);
+  }
+
+  return (
+    <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
+      <form
+        aria-label={t("settings.sshKeyEmailDialogTitle")}
+        aria-modal="true"
+        className="connection-dialog ssh-key-email-dialog"
+        onSubmit={handleSubmit}
+        role="dialog"
+      >
+        <header className="connection-dialog-header compact">
+          <div>
+            <p className="panel-label">{t("settings.sectionSsh")}</p>
+            <h2>{t("settings.sshKeyEmailDialogTitle")}</h2>
+          </div>
+        </header>
+        <p className="field-hint">{t("settings.sshKeyEmailDialogHint")}</p>
+        {error ? <p className="form-error">{error}</p> : null}
+        <label>
+          <span>{t("settings.sshKeyEmailPrompt")}</span>
+          <input
+            autoComplete="email"
+            onChange={(event) => onChange(event.currentTarget.value)}
+            placeholder={t("settings.sshKeyEmailPlaceholder")}
+            ref={inputRef}
+            required
+            type="email"
+            value={email}
+          />
+        </label>
+        <div className="dialog-actions">
+          <button className="approve-button" disabled={!canSubmit} type="submit">
+            <KeyRound size={15} />
+            {isGenerating ? t("settings.sshKeyGenerating") : t("settings.generateSshKey")}
+          </button>
+          <button className="toolbar-button" disabled={isGenerating} onClick={onCancel} type="button">
+            {t("common.cancel")}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

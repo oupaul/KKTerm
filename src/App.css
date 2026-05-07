@@ -4573,6 +4573,14 @@ progress {
   min-width: 104px;
 }
 
+.ssh-key-email-dialog {
+  width: min(420px, calc(100vw - 40px));
+}
+
+.ssh-key-email-dialog .dialog-actions {
+  justify-content: flex-end;
+}
+
 .settings-section {
   display: grid;
   gap: 11px;
