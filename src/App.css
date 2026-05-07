@@ -4727,7 +4727,7 @@ progress {
 }
 
 .import-dialog {
-  width: min(820px, calc(100vw - 40px));
+  width: min(1100px, calc(100vw - 40px));
 }
 
 .import-dialog-header-text {
@@ -4930,6 +4930,32 @@ progress {
   gap: 6px;
 }
 
+.import-bulk-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto auto minmax(150px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.import-bulk-field {
+  min-width: 0;
+}
+
+.import-bulk-field input {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .import-bulk-actions {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
 .import-preview-table-wrapper {
   max-height: 280px;
   overflow: auto;
@@ -4965,6 +4991,7 @@ progress {
 }
 
 .import-preview-table input[type="text"],
+.import-preview-table input[type="password"],
 .import-preview-table input[type="number"],
 .import-preview-table select {
   width: 100%;

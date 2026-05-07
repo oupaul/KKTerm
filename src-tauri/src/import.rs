@@ -518,6 +518,10 @@ fn parse_mobaxterm(text: &str) -> ImportFilePreview {
             continue;
         }
         let lowered_name = name.to_ascii_lowercase();
+        if lowered_name == "subrep" {
+            folder_path = split_folder_path(value);
+            continue;
+        }
         if matches!(
             lowered_name.as_str(),
             "subrep" | "imgnum" | "options" | "version"
@@ -588,7 +592,7 @@ fn parse_mobaxterm_session(
         .and_then(|value| value.trim().parse::<u16>().ok());
     let user = params
         .get(3)
-        .map(|value| value.trim().to_string())
+        .map(|value| strip_enclosing_square_brackets(value.trim()).to_string())
         .unwrap_or_default();
 
     if host.is_empty() {
@@ -603,6 +607,13 @@ fn parse_mobaxterm_session(
         connection_type,
         folder_path: folder_path.to_vec(),
     }))
+}
+
+fn strip_enclosing_square_brackets(value: &str) -> &str {
+    value
+        .strip_prefix('[')
+        .and_then(|without_prefix| without_prefix.strip_suffix(']'))
+        .unwrap_or(value)
 }
 
 // ===== PuTTY .reg parser ====================================================
@@ -1144,7 +1155,7 @@ mod tests {
 
     #[test]
     fn parses_mobaxterm_ssh_session_with_folder() {
-        let text = "[Bookmarks]\nSubRep=Servers\nImgNum=42\n\n[Bookmarks_1]\nSubRep=Servers\\Linux\nImgNum=42\nMy Linux Box=#109#0%linux.example.com%2200%ubuntu%%-1%-1%%%22\n";
+        let text = "[Bookmarks]\nSubRep=Servers\nImgNum=42\n\n[Bookmarks_1]\nSubRep=Servers\\Linux\nImgNum=42\nMy Linux Box=#109#0%linux.example.com%2200%[ubuntu]%%-1%-1%%%22\n";
         let preview = parse_mobaxterm(text);
         assert_eq!(preview.format, "mobaxterm");
         assert_eq!(preview.drafts.len(), 1);
@@ -1154,6 +1165,10 @@ mod tests {
         assert_eq!(draft.port, Some(2200));
         assert_eq!(draft.user, "ubuntu");
         assert_eq!(draft.connection_type, "ssh");
+        assert_eq!(
+            draft.folder_path,
+            vec!["Servers".to_string(), "Linux".to_string()]
+        );
     }
 
     #[test]

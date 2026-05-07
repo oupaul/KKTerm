@@ -622,3 +622,102 @@ When a key is translated into every supported locale, remove its entry from this
 - Tone: Short action label with count.
 - Placeholder details: `{{count}}` is the number of selected candidate rows.
 - Domain notes: Each created row is a durable Connection.
+
+### connections.import.colPassword
+
+- English value: `Password`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (import preview table column header).
+- UI role: table column header.
+- Surrounding user flow: User reviews parsed or scanned Connection candidates before importing them and may optionally provide a password per row.
+- Tone: Short label.
+- Placeholder details: None.
+- Domain notes: Passwords are stored in the OS keychain as Connection secrets, not in SQLite.
+
+### connections.import.bulkUserLabel
+
+- English value: `Username`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk username input label).
+- UI role: input label.
+- Surrounding user flow: User enters one username to apply to selected import preview rows before creating Connections.
+- Tone: Short label.
+- Placeholder details: None.
+- Domain notes: Applies to Connection `user` fields; especially useful for RDCMan and MobaXterm imports with missing or placeholder usernames.
+
+### connections.import.bulkUserPlaceholder
+
+- English value: `Username for selected rows`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk username input placeholder).
+- UI role: placeholder.
+- Surrounding user flow: Hint inside the bulk username field above the import preview table.
+- Tone: Concise instructional fragment.
+- Placeholder details: None.
+- Domain notes: Selected rows are checked candidate Connections in the import preview.
+
+### connections.import.bulkUserRequired
+
+- English value: `Enter a username to apply.`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk username validation error).
+- UI role: error message.
+- Surrounding user flow: User clicks a bulk username apply button without entering a username.
+- Tone: Direct validation message.
+- Placeholder details: None.
+- Domain notes: None.
+
+### connections.import.fillEmptyUsers
+
+- English value: `Fill empty usernames`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk username action button).
+- UI role: button label.
+- Surrounding user flow: User applies the entered username only to selected import preview rows that do not already have a username.
+- Tone: Short action label.
+- Placeholder details: None.
+- Domain notes: Does not overwrite existing Connection user values.
+
+### connections.import.setSelectedUsers
+
+- English value: `Set selected usernames`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk username action button).
+- UI role: button label.
+- Surrounding user flow: User applies the entered username to all selected import preview rows, overwriting their current usernames.
+- Tone: Short action label.
+- Placeholder details: None.
+- Domain notes: Selected rows are checked candidate Connections in the import preview.
+
+### connections.import.bulkPasswordLabel
+
+- English value: `Password (optional)`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk password input label).
+- UI role: input label.
+- Surrounding user flow: User can enter one password to apply to selected import preview rows before creating Connections.
+- Tone: Short label with optionality.
+- Placeholder details: None.
+- Domain notes: Passwords are stored in the OS keychain as Connection secrets, not in SQLite.
+
+### connections.import.bulkPasswordPlaceholder
+
+- English value: `Password for selected rows`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk password input placeholder).
+- UI role: placeholder.
+- Surrounding user flow: Hint inside the bulk password field above the import preview table.
+- Tone: Concise instructional fragment.
+- Placeholder details: None.
+- Domain notes: Selected rows are checked candidate Connections in the import preview.
+
+### connections.import.setSelectedPasswords
+
+- English value: `Set selected passwords`
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` (bulk password action button).
+- UI role: button label.
+- Surrounding user flow: User applies the optional password to all selected import preview rows before creating Connections.
+- Tone: Short action label.
+- Placeholder details: None.
+- Domain notes: Empty password clears the preview row password and no secret is stored for that imported Connection.

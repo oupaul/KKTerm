@@ -33,6 +33,7 @@ type Candidate = {
   name: string;
   host: string;
   user: string;
+  password: string;
   port?: number;
   type: ConnectionType;
   folderPath: string[];
@@ -192,6 +193,7 @@ function FileImportPanel({
           name: draft.name,
           host: draft.host,
           user: draft.user,
+          password: "",
           port: draft.port,
           type: draft.type,
           folderPath: draft.folderPath,
@@ -343,6 +345,7 @@ function ScanPanel({
           name: entry.host,
           host: entry.host,
           user: "",
+          password: "",
           port: entry.port,
           type: entry.type,
           folderPath: [],
@@ -468,6 +471,8 @@ function ImportPreviewSection({
   const [newFolderName, setNewFolderName] = useState(
     suggestFolderName(format),
   );
+  const [bulkUser, setBulkUser] = useState("");
+  const [bulkPassword, setBulkPassword] = useState("");
   const [importing, setImporting] = useState(false);
 
   const folderOptions = useMemo(() => flattenFolders(tree.folders), [tree]);
@@ -483,6 +488,71 @@ function ImportPreviewSection({
         rowIndex === index ? { ...row, ...patch } : row,
       ),
     );
+  }
+
+  function setSelectedUsers(mode: "empty" | "all") {
+    const user = bulkUser.trim();
+    if (!user) {
+      onError(t("connections.import.bulkUserRequired"));
+      return;
+    }
+    onCandidatesChange(
+      candidates.map((row) => {
+        if (!row.selected || (mode === "empty" && row.user.trim())) {
+          return row;
+        }
+        return { ...row, user };
+      }),
+    );
+  }
+
+  function setSelectedPasswords() {
+    onCandidatesChange(
+      candidates.map((row) =>
+        row.selected ? { ...row, password: bulkPassword } : row,
+      ),
+    );
+  }
+
+  async function resolveFolderPath(
+    baseFolderId: string | undefined,
+    folderPath: string[],
+    folderCache: Map<string, string>,
+  ) {
+    let parentFolderId = baseFolderId;
+    const pathSegments: string[] = [];
+    for (const rawSegment of folderPath) {
+      const segment = rawSegment.trim();
+      if (!segment) {
+        continue;
+      }
+      pathSegments.push(segment);
+      const cacheKey = `${parentFolderId ?? "__root__"}/${pathSegments.join("/")}`;
+      const cached = folderCache.get(cacheKey);
+      if (cached) {
+        parentFolderId = cached;
+        continue;
+      }
+      const folder = await invokeCommand("create_connection_folder", {
+        request: { name: segment, parentFolderId },
+      });
+      folderCache.set(cacheKey, folder.id);
+      parentFolderId = folder.id;
+    }
+    return parentFolderId;
+  }
+
+  async function storeImportedPassword(connectionId: string, password: string) {
+    if (!password) {
+      return;
+    }
+    await invokeCommand("store_secret", {
+      request: {
+        kind: "connectionPassword",
+        ownerId: connectionId,
+        secret: password,
+      },
+    });
   }
 
   async function handleImport() {
@@ -509,21 +579,33 @@ function ImportPreviewSection({
         targetFolderId = folderTarget;
       }
 
+      const folderCache = new Map<string, string>();
+
       for (const row of candidates) {
         if (!row.selected) {
           continue;
         }
         const port =
           row.port ?? defaultPortForConnectionType(row.type, sshSettings);
+        const rowFolderId = await resolveFolderPath(
+          targetFolderId,
+          row.folderPath,
+          folderCache,
+        );
+        const password = ["ssh", "telnet", "rdp", "vnc"].includes(row.type)
+          ? row.password
+          : "";
         const request: CreateConnectionRequest = {
           name: row.name.trim() || row.host,
           type: row.type,
           host: row.host,
           user: row.user,
-          folderId: targetFolderId,
+          folderId: rowFolderId,
           port,
+          authMethod: password && row.type === "ssh" ? "password" : undefined,
         };
-        await invokeCommand("create_connection", { request });
+        const connection = await invokeCommand("create_connection", { request });
+        await storeImportedPassword(connection.id, password);
       }
 
       onImported();
@@ -565,6 +647,51 @@ function ImportPreviewSection({
         </div>
       </div>
 
+      <div className="import-bulk-actions">
+        <label className="import-field import-bulk-field">
+          <span>{t("connections.import.bulkUserLabel")}</span>
+          <input
+            onChange={(event) => setBulkUser(event.currentTarget.value)}
+            placeholder={t("connections.import.bulkUserPlaceholder")}
+            type="text"
+            value={bulkUser}
+          />
+        </label>
+        <button
+          className="toolbar-button"
+          disabled={selectedCount === 0}
+          onClick={() => setSelectedUsers("empty")}
+          type="button"
+        >
+          {t("connections.import.fillEmptyUsers")}
+        </button>
+        <button
+          className="toolbar-button"
+          disabled={selectedCount === 0}
+          onClick={() => setSelectedUsers("all")}
+          type="button"
+        >
+          {t("connections.import.setSelectedUsers")}
+        </button>
+        <label className="import-field import-bulk-field">
+          <span>{t("connections.import.bulkPasswordLabel")}</span>
+          <input
+            onChange={(event) => setBulkPassword(event.currentTarget.value)}
+            placeholder={t("connections.import.bulkPasswordPlaceholder")}
+            type="password"
+            value={bulkPassword}
+          />
+        </label>
+        <button
+          className="toolbar-button"
+          disabled={selectedCount === 0}
+          onClick={setSelectedPasswords}
+          type="button"
+        >
+          {t("connections.import.setSelectedPasswords")}
+        </button>
+      </div>
+
       <div className="import-preview-table-wrapper">
         <table className="import-preview-table">
           <thead>
@@ -575,6 +702,7 @@ function ImportPreviewSection({
               <th>{t("connections.import.colHost")}</th>
               <th>{t("connections.import.colPort")}</th>
               <th>{t("connections.import.colUser")}</th>
+              <th>{t("connections.import.colPassword")}</th>
             </tr>
           </thead>
           <tbody>
@@ -647,6 +775,15 @@ function ImportPreviewSection({
                     }
                     type="text"
                     value={row.user}
+                  />
+                </td>
+                <td>
+                  <input
+                    onChange={(event) =>
+                      updateRow(index, { password: event.currentTarget.value })
+                    }
+                    type="password"
+                    value={row.password}
                   />
                 </td>
               </tr>
