@@ -595,6 +595,10 @@ type CommandMap = {
     args: undefined;
     result: string;
   };
+  open_custom_fonts_folder: {
+    args: undefined;
+    result: void;
+  };
   list_custom_fonts: {
     args: undefined;
     result: CustomFont[];

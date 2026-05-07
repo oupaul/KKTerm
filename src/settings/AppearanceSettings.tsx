@@ -6,7 +6,7 @@ import {
   normalizeAvailableAppearance,
   type CustomFontOption,
 } from "../lib/customFonts";
-import { invokeCommand, isTauriRuntime, openFilesystemPath } from "../lib/tauri";
+import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { defaultAppearanceSettings } from "../sample-data";
 import { useWorkspaceStore } from "../store";
 import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../types";
@@ -113,8 +113,7 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
     if (!isTauriRuntime()) {
       return;
     }
-    const folder = await invokeCommand("get_custom_fonts_folder");
-    await openFilesystemPath(folder);
+    await invokeCommand("open_custom_fonts_folder");
   }
 
   const previewColors = SCHEME_PREVIEW_COLORS[appearanceSettings.colorScheme];

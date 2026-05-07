@@ -515,10 +515,12 @@ h2 {
 .quick-connect-menu {
   position: absolute;
   top: calc(100% + 5px);
-  left: 0;
-  right: 0;
+  left: 50%;
+  right: auto;
   z-index: 80;
   display: grid;
+  width: 50%;
+  transform: translateX(-50%);
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -528,8 +530,10 @@ h2 {
 
 .tab-quick-connect-anchor .quick-connect-menu {
   top: calc(100% + 1px);
+  left: 0;
   right: auto;
   width: 260px;
+  transform: none;
 }
 
 .quick-connect-menu button {
@@ -634,7 +638,7 @@ h2 {
   position: absolute;
   top: -1px;
   left: calc(100% + 4px);
-  z-index: 46;
+  z-index: 81;
   display: none;
   min-width: 104px;
   overflow: hidden;
@@ -1620,6 +1624,17 @@ h2 {
   color: #536174;
   cursor: default;
   opacity: 0.55;
+}
+
+.toolbar-icon-button {
+  width: 32px;
+  padding: 0;
+}
+
+.connection-wiki-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 .terminal-pane-close:hover {
@@ -5388,6 +5403,8 @@ progress {
 
 .connection-wiki-popover {
   position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
   z-index: 1100;
   min-width: 220px;
   max-width: 320px;

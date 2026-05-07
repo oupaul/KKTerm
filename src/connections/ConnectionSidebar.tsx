@@ -1682,7 +1682,7 @@ export function QuickConnectMenu({
       {shellOptions.map((option) =>
         option.canElevate ? (
           <div className="quick-connect-submenu" key={option.value ?? option.label}>
-            <button aria-haspopup="menu" type="button">
+            <button aria-haspopup="menu" onClick={() => onOpenLocalShell(option)} type="button">
               <Terminal size={15} />
               <span>{option.label}</span>
               <ChevronDown size={13} />

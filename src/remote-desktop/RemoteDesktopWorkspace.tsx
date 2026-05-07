@@ -1,5 +1,6 @@
 import { connectionIconForType, connectionSubtitle, connectionTypeLabel } from "../connections/utils";
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
+import { WikiPagesButton } from "../wiki/WikiPagesButton";
 import { documentHasWebviewOverlay } from "../workspace/nativeOverlay";
 import { Keyboard, Monitor, RotateCcw } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
@@ -965,6 +966,13 @@ export function RemoteDesktopWorkspace({
             targetLabel={`${tab.title} ${typeLabel} view`}
             targetRef={connection?.type === "rdp" || connection?.type === "vnc" ? hostRef : workspaceRef}
           />
+          {connection ? (
+            <WikiPagesButton
+              buttonClassName="terminal-pane-action"
+              connectionId={connection.id}
+              iconSize={13}
+            />
+          ) : null}
         </div>
         </header>
       <div

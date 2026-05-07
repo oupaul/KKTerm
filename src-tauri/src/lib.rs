@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
+use tauri_plugin_opener::OpenerExt;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,6 +75,25 @@ fn get_custom_fonts_folder() -> Result<String, String> {
         )
     })?;
     Ok(folder.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn open_custom_fonts_folder(app: tauri::AppHandle) -> Result<(), String> {
+    let folder = custom_fonts_folder()?;
+    fs::create_dir_all(&folder).map_err(|error| {
+        format!(
+            "failed to create custom fonts folder {}: {error}",
+            folder.display()
+        )
+    })?;
+    app.opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            format!(
+                "failed to open custom fonts folder {}: {error}",
+                folder.display()
+            )
+        })
 }
 
 #[tauri::command]
@@ -1219,6 +1239,7 @@ pub fn run() {
             get_appearance_settings,
             update_appearance_settings,
             get_custom_fonts_folder,
+            open_custom_fonts_folder,
             list_custom_fonts,
             get_ssh_settings,
             update_ssh_settings,

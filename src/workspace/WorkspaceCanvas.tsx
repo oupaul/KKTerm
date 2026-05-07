@@ -1,6 +1,5 @@
 import { QuickConnectMenu } from "../connections/ConnectionSidebar";
 import { localShellOptionsForPlatform, tabIconFor, uniqueRuntimeId, type LocalShellOption } from "../connections/utils";
-import { WikiPagesButton } from "../wiki/WikiPagesButton";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
@@ -24,18 +23,6 @@ export function TabStrip() {
   const [quickConnectMenuOpen, setQuickConnectMenuOpen] = useState(false);
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
   const shellOptions = useMemo(() => localShellOptionsForPlatform(), []);
-  const activeConnectionId = useMemo(() => {
-    const tab = tabs.find((candidate) => candidate.id === activeTabId);
-    if (!tab) {
-      return null;
-    }
-    if (tab.connection?.id) {
-      return tab.connection.id;
-    }
-    const focusedPane = tab.panes.find((pane) => pane.id === tab.focusedPaneId);
-    return focusedPane?.connection?.id ?? tab.panes[0]?.connection?.id ?? null;
-  }, [tabs, activeTabId]);
-
   useEffect(() => {
     if (!quickConnectMenuOpen) {
       return;
@@ -122,9 +109,6 @@ export function TabStrip() {
           </button>
         </div>
       ))}
-      {activeConnectionId ? (
-        <WikiPagesButton connectionId={activeConnectionId} />
-      ) : null}
       <div className="quick-connect-anchor tab-quick-connect-anchor" ref={quickConnectRef}>
         <button
           {...dialogButtonAria(quickConnectMenuOpen)}

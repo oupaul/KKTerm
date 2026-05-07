@@ -1,5 +1,6 @@
 import { confirmTrustedSshHostKey, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../connections/utils";
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
+import { WikiPagesButton } from "../wiki/WikiPagesButton";
 import { ArrowDown, ChevronDown, Download, FolderPlus, Pencil, RefreshCw, Terminal, Trash2, Upload, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -915,6 +916,13 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
             Terminal
           </button>
           <ScreenshotMenu targetLabel={`${tab.title} SFTP view`} targetRef={workspaceRef} />
+          {connection ? (
+            <WikiPagesButton
+              buttonClassName="toolbar-button toolbar-icon-button"
+              connectionId={connection.id}
+              iconSize={15}
+            />
+          ) : null}
         </div>
       </div>
 
