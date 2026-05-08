@@ -89,6 +89,13 @@ export function GeneralSettings() {
     );
   }
 
+  function updateClipboardRead(enabled: boolean) {
+    return updateGeneralSettings(
+      { ...generalSettings, allowClipboardRead: enabled },
+      t("settings.clipboardReadSaved"),
+    );
+  }
+
   async function handleBackupSettings() {
     setStatus("");
     setError("");
@@ -227,6 +234,19 @@ export function GeneralSettings() {
         </label>
         <small className="field-hint">
           {t("settings.connectedConnectionsRailHint")}
+        </small>
+        <label>
+          <input
+            type="checkbox"
+            checked={generalSettings.allowClipboardRead}
+            onChange={(event) =>
+              void updateClipboardRead(event.currentTarget.checked)
+            }
+          />
+          {t("settings.allowClipboardRead")}
+        </label>
+        <small className="field-hint">
+          {t("settings.allowClipboardReadHint")}
         </small>
       </div>
 

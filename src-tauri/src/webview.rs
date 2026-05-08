@@ -1,6 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Mutex, MutexGuard},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex, MutexGuard,
+    },
 };
 
 use serde::{Deserialize, Serialize};
@@ -226,6 +229,7 @@ const AUTOFILL_AGENT: &str = r#"
 pub struct WebviewSessionManager {
     sessions: Mutex<HashMap<String, Webview>>,
     starting_sessions: Mutex<HashSet<String>>,
+    clipboard_read_allowed: Arc<AtomicBool>,
 }
 
 #[derive(Deserialize)]
@@ -333,11 +337,21 @@ struct WebviewDownloadPayload {
 }
 
 impl WebviewSessionManager {
-    pub fn new() -> Self {
+    pub fn new(allow_clipboard_read: bool) -> Self {
         Self {
             sessions: Mutex::new(HashMap::new()),
             starting_sessions: Mutex::new(HashSet::new()),
+            clipboard_read_allowed: Arc::new(AtomicBool::new(allow_clipboard_read)),
         }
+    }
+
+    pub fn set_clipboard_read_allowed(&self, allowed: bool) {
+        self.clipboard_read_allowed
+            .store(allowed, Ordering::Relaxed);
+    }
+
+    pub fn clipboard_read_allowed_state(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.clipboard_read_allowed)
     }
 
     pub fn start_session(
@@ -480,6 +494,7 @@ impl WebviewSessionManager {
                 format!("failed to attach child webview: {error}")
             })?;
 
+        configure_clipboard_read_permission(&webview, Arc::clone(&self.clipboard_read_allowed))?;
         configure_certificate_error_bypass(&webview, ignore_certificate_errors)?;
         if ignore_certificate_errors && cfg!(windows) {
             webview
@@ -685,6 +700,151 @@ fn configure_certificate_error_bypass(webview: &Webview, enabled: bool) -> Resul
         return Ok(());
     }
     configure_platform_certificate_error_bypass(webview)
+}
+
+pub(crate) fn configure_shell_clipboard_read_permission(
+    webview: &tauri::WebviewWindow,
+    allowed: Arc<AtomicBool>,
+) -> Result<(), String> {
+    configure_platform_shell_clipboard_read_permission(webview, allowed)
+}
+
+fn configure_clipboard_read_permission(
+    webview: &Webview,
+    allowed: Arc<AtomicBool>,
+) -> Result<(), String> {
+    configure_platform_clipboard_read_permission(webview, allowed)
+}
+
+#[cfg(windows)]
+fn configure_platform_shell_clipboard_read_permission(
+    webview: &tauri::WebviewWindow,
+    allowed: Arc<AtomicBool>,
+) -> Result<(), String> {
+    configure_webview2_clipboard_permission(webview, allowed)
+}
+
+#[cfg(not(windows))]
+fn configure_platform_shell_clipboard_read_permission(
+    _webview: &tauri::WebviewWindow,
+    _allowed: Arc<AtomicBool>,
+) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(windows)]
+fn configure_platform_clipboard_read_permission(
+    webview: &Webview,
+    allowed: Arc<AtomicBool>,
+) -> Result<(), String> {
+    configure_webview2_clipboard_permission(webview, allowed)
+}
+
+#[cfg(windows)]
+fn configure_webview2_clipboard_permission<T>(
+    webview: &T,
+    allowed: Arc<AtomicBool>,
+) -> Result<(), String>
+where
+    T: Webview2PermissionTarget,
+{
+    use webview2_com::{
+        Microsoft::Web::WebView2::Win32::{
+            ICoreWebView2PermissionRequestedEventArgs2,
+            COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ, COREWEBVIEW2_PERMISSION_STATE_ALLOW,
+        },
+        PermissionRequestedEventHandler,
+    };
+    use windows::core::Interface;
+
+    let setup_error = Arc::new(Mutex::new(None::<String>));
+    let setup_error_for_callback = Arc::clone(&setup_error);
+
+    webview
+        .with_webview_for_permission(move |platform_webview| {
+            let result = (|| -> Result<(), String> {
+                unsafe {
+                    let webview2 = platform_webview
+                        .controller()
+                        .CoreWebView2()
+                        .map_err(|error| error.to_string())?;
+                    let handler =
+                        PermissionRequestedEventHandler::create(Box::new(move |_sender, args| {
+                            if let Some(args) = args {
+                                let mut permission_kind =
+                                    COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ;
+                                args.PermissionKind(&mut permission_kind)?;
+                                if permission_kind == COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ {
+                                    if allowed.load(Ordering::Relaxed) {
+                                        args.SetState(COREWEBVIEW2_PERMISSION_STATE_ALLOW)?;
+                                    }
+                                    if let Ok(args2) =
+                                        args.cast::<ICoreWebView2PermissionRequestedEventArgs2>()
+                                    {
+                                        args2.SetHandled(true)?;
+                                    }
+                                }
+                            }
+                            Ok(())
+                        }));
+                    let mut token = 0;
+                    webview2
+                        .add_PermissionRequested(&handler, &mut token)
+                        .map_err(|error| error.to_string())?;
+                }
+                Ok::<(), String>(())
+            })();
+            if let Err(error) = result {
+                if let Ok(mut setup_error) = setup_error_for_callback.lock() {
+                    *setup_error = Some(error);
+                }
+            }
+        })
+        .map_err(|error| format!("failed to access WebView2 for clipboard settings: {error}"))?;
+
+    if let Ok(mut setup_error) = setup_error.lock() {
+        if let Some(error) = setup_error.take() {
+            return Err(format!(
+                "failed to configure clipboard paste permission for WebView2: {error}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn configure_platform_clipboard_read_permission(
+    _webview: &Webview,
+    _allowed: Arc<AtomicBool>,
+) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(windows)]
+trait Webview2PermissionTarget {
+    fn with_webview_for_permission<F>(&self, f: F) -> Result<(), tauri::Error>
+    where
+        F: FnOnce(tauri::webview::PlatformWebview) + Send + 'static;
+}
+
+#[cfg(windows)]
+impl Webview2PermissionTarget for Webview {
+    fn with_webview_for_permission<F>(&self, f: F) -> Result<(), tauri::Error>
+    where
+        F: FnOnce(tauri::webview::PlatformWebview) + Send + 'static,
+    {
+        self.with_webview(f)
+    }
+}
+
+#[cfg(windows)]
+impl Webview2PermissionTarget for tauri::WebviewWindow {
+    fn with_webview_for_permission<F>(&self, f: F) -> Result<(), tauri::Error>
+    where
+        F: FnOnce(tauri::webview::PlatformWebview) + Send + 'static,
+    {
+        self.with_webview(f)
+    }
 }
 
 #[cfg(windows)]

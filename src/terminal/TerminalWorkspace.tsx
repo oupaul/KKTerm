@@ -911,7 +911,11 @@ function TerminalPaneView({
     startedRef.current = true;
     const rendererSettings =
       connection.type === "ssh"
-        ? { ...terminalSettings, scrollbackLines: sshSettings.bufferLines }
+        ? {
+            ...terminalSettings,
+            scrollbackLines: sshSettings.bufferLines,
+            allowOsc52Clipboard: sshSettings.allowOsc52Clipboard,
+          }
         : terminalSettings;
     const terminal = createTerminalRenderer(rendererSettings);
     terminalRendererRef.current = terminal;

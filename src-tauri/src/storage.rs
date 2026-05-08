@@ -159,8 +159,16 @@ pub struct GeneralSettings {
     auto_backup_enabled: bool,
     #[serde(default = "default_show_connected_connections_in_rail")]
     show_connected_connections_in_rail: bool,
+    #[serde(default = "default_allow_clipboard_read")]
+    allow_clipboard_read: bool,
     #[serde(default)]
     last_backup_at: Option<String>,
+}
+
+impl GeneralSettings {
+    pub(crate) fn allow_clipboard_read(&self) -> bool {
+        self.allow_clipboard_read
+    }
 }
 
 #[derive(Clone, Serialize)]
@@ -194,6 +202,8 @@ pub struct TerminalSettings {
     cursor_style: String,
     scrollback_lines: u32,
     copy_on_select: bool,
+    #[serde(default = "default_allow_osc52_clipboard")]
+    allow_osc52_clipboard: bool,
     confirm_multiline_paste: bool,
     default_shell: String,
 }
@@ -218,6 +228,8 @@ pub struct SshSettings {
     buffer_lines: u32,
     #[serde(default = "default_hide_common_port_redirects")]
     hide_common_port_redirects: bool,
+    #[serde(default = "default_allow_osc52_clipboard")]
+    allow_osc52_clipboard: bool,
 }
 
 impl SshSettings {
@@ -2895,11 +2907,16 @@ fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
         show_connected_connections_in_rail: true,
+        allow_clipboard_read: default_allow_clipboard_read(),
         last_backup_at: None,
     }
 }
 
 fn default_show_connected_connections_in_rail() -> bool {
+    true
+}
+
+fn default_allow_clipboard_read() -> bool {
     true
 }
 
@@ -2911,6 +2928,7 @@ fn default_terminal_settings() -> TerminalSettings {
         cursor_style: "block".to_string(),
         scrollback_lines: 5_000,
         copy_on_select: false,
+        allow_osc52_clipboard: default_allow_osc52_clipboard(),
         confirm_multiline_paste: true,
         default_shell: if cfg!(target_os = "windows") {
             "powershell.exe".to_string()
@@ -2918,6 +2936,10 @@ fn default_terminal_settings() -> TerminalSettings {
             std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
         },
     }
+}
+
+fn default_allow_osc52_clipboard() -> bool {
+    true
 }
 
 fn default_appearance_settings() -> AppearanceSettings {
@@ -2936,6 +2958,7 @@ fn default_ssh_settings() -> SshSettings {
         default_proxy_jump: None,
         buffer_lines: default_ssh_buffer_lines(),
         hide_common_port_redirects: default_hide_common_port_redirects(),
+        allow_osc52_clipboard: default_allow_osc52_clipboard(),
     }
 }
 
@@ -4056,21 +4079,25 @@ mod tests {
             .expect("default general settings load");
         assert!(defaults.auto_backup_enabled);
         assert!(defaults.show_connected_connections_in_rail);
+        assert!(defaults.allow_clipboard_read);
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
                 show_connected_connections_in_rail: true,
+                allow_clipboard_read: false,
                 last_backup_at: None,
             })
             .expect("general settings update");
         assert!(!updated.auto_backup_enabled);
         assert!(updated.show_connected_connections_in_rail);
+        assert!(!updated.allow_clipboard_read);
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
         assert!(reloaded.show_connected_connections_in_rail);
+        assert!(!reloaded.allow_clipboard_read);
         assert!(reloaded.last_backup_at.is_none());
     }
 
@@ -4082,6 +4109,7 @@ mod tests {
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
                 show_connected_connections_in_rail: true,
+                allow_clipboard_read: true,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -4092,6 +4120,7 @@ mod tests {
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: true,
                 show_connected_connections_in_rail: false,
+                allow_clipboard_read: false,
                 last_backup_at: None,
             })
             .expect("general settings changes after export");
@@ -4170,6 +4199,7 @@ mod tests {
                 cursor_style: "bar".to_string(),
                 scrollback_lines: 5_000,
                 copy_on_select: true,
+                allow_osc52_clipboard: true,
                 confirm_multiline_paste: false,
                 default_shell: "pwsh.exe".to_string(),
             })
@@ -4229,6 +4259,7 @@ mod tests {
         assert_eq!(defaults.default_port, 22);
         assert_eq!(defaults.buffer_lines, 5_000);
         assert!(defaults.hide_common_port_redirects);
+        assert!(defaults.allow_osc52_clipboard);
         assert!(defaults.default_key_path.is_some());
 
         let updated = storage
@@ -4239,6 +4270,7 @@ mod tests {
                 default_proxy_jump: Some("  bastion.internal  ".to_string()),
                 buffer_lines: 12_000,
                 hide_common_port_redirects: false,
+                allow_osc52_clipboard: false,
             })
             .expect("SSH settings update");
 
@@ -4252,6 +4284,7 @@ mod tests {
         assert_eq!(reloaded.default_port, 2200);
         assert_eq!(reloaded.buffer_lines, 12_000);
         assert!(!reloaded.hide_common_port_redirects);
+        assert!(!reloaded.allow_osc52_clipboard);
         assert_eq!(
             reloaded.default_proxy_jump.as_deref(),
             Some("bastion.internal")

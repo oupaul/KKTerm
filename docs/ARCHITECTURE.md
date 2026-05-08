@@ -41,8 +41,8 @@ Debug-only observability should use local debug logs, console output, or the dia
 - `src/settings/GeneralSettings.tsx` — Language (i18n) selector, Auto Backup toggle and last-backup status, connected Connection rail shortcut toggle, settings backup/import actions, database folder opener.
 - `src/settings/AppearanceSettings.tsx` — App UI font family, layout reset, Color Scheme placeholder.
 - `src/settings/AiSettings.tsx` — AI provider kind, dynamic provider fields, provider-specific model selector, custom model ID input, API key, output language.
-- `src/settings/SshSettings.tsx` — Read-only SSH defaults and SFTP transfer defaults summary.
-- `src/settings/TerminalSettings.tsx` — Terminal font, size, line height, scrollback, cursor, default shell, toggles.
+- `src/settings/SshSettings.tsx` — SSH defaults, SSH terminal buffer behavior, SSH port redirect visibility, SSH OSC 52 clipboard policy, and SFTP transfer defaults summary.
+- `src/settings/TerminalSettings.tsx` — Local terminal font, size, line height, scrollback, cursor, default shell, and local terminal toggles. Do not put SSH-only terminal behavior here; SSH terminal behavior belongs in `SshSettings.tsx`.
 - `src/settings/UrlSettings.tsx` — URL Connection security defaults, saved website password metadata, and URL data shard management.
 - `src/settings/RdpSettings.tsx` — Planned RDP quality defaults summary.
 - `src/settings/VncSettings.tsx` — Planned VNC quality defaults summary.

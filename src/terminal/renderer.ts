@@ -11,6 +11,7 @@ import {
   type IDisposable,
   type ITerminalOptions,
 } from "@xterm/xterm";
+import { writeToClipboard } from "../lib/clipboard";
 import type { TerminalSettings } from "../types";
 
 export type TerminalRendererBackend = "xterm";
@@ -21,6 +22,7 @@ export type TerminalRendererCapability =
   | "copySelection"
   | "hyperlinks"
   | "mouseTracking"
+  | "osc52Clipboard"
   | "resize"
   | "search"
   | "scrollback";
@@ -63,10 +65,14 @@ const XTERM_CAPABILITIES = [
   "copySelection",
   "hyperlinks",
   "mouseTracking",
+  "osc52Clipboard",
   "resize",
   "search",
   "scrollback",
 ] satisfies TerminalRendererCapability[];
+
+const MAX_OSC52_CLIPBOARD_BYTES = 1_000_000;
+const MAX_OSC52_BASE64_LENGTH = Math.ceil(MAX_OSC52_CLIPBOARD_BYTES / 3) * 4;
 
 const SEARCH_OPTIONS: ISearchOptions = {
   decorations: {
@@ -89,6 +95,7 @@ class XtermTerminalRenderer implements TerminalRenderer {
   private readonly fitAddon = new FitAddon();
   private hostElement: HTMLElement | null = null;
   private readonly searchAddon = new SearchAddon({ highlightLimit: 500 });
+  private readonly osc52Disposable: IDisposable | null = null;
   private readonly terminal: XtermTerminal;
   private webglAddon: WebglAddon | null = null;
   private webglContextLossDisposable: IDisposable | null = null;
@@ -98,6 +105,11 @@ class XtermTerminalRenderer implements TerminalRenderer {
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.searchAddon);
     this.terminal.loadAddon(new WebLinksAddon());
+    if (settings.allowOsc52Clipboard) {
+      this.osc52Disposable = this.terminal.parser.registerOscHandler(52, (data) =>
+        handleOsc52ClipboardSequence(data),
+      );
+    }
   }
 
   get dimensions() {
@@ -114,6 +126,7 @@ class XtermTerminalRenderer implements TerminalRenderer {
 
   dispose() {
     this.hostElement = null;
+    this.osc52Disposable?.dispose();
     this.disposeWebglAddon();
     this.terminal.dispose();
   }
@@ -367,6 +380,47 @@ function terminalOptionsFor(settings: TerminalSettings): ITerminalOptions {
       scrollbarSliderActiveBackground: "rgba(217, 226, 239, 0.86)",
     },
   };
+}
+
+async function handleOsc52ClipboardSequence(data: string) {
+  const text = decodeOsc52ClipboardText(data);
+  if (text === null) {
+    return true;
+  }
+
+  try {
+    await writeToClipboard(text);
+  } catch (error) {
+    console.warn("OSC 52 clipboard write failed.", error);
+  }
+  return true;
+}
+
+export function decodeOsc52ClipboardText(data: string) {
+  const separatorIndex = data.indexOf(";");
+  if (separatorIndex < 0) {
+    return null;
+  }
+
+  const target = data.slice(0, separatorIndex);
+  const encoded = data.slice(separatorIndex + 1);
+  if (!target || target.includes("?") || encoded === "?") {
+    return null;
+  }
+  if (encoded.length > MAX_OSC52_BASE64_LENGTH) {
+    return null;
+  }
+
+  try {
+    const binary = atob(encoded);
+    if (binary.length > MAX_OSC52_CLIPBOARD_BYTES) {
+      return null;
+    }
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
 }
 
 function clampScrollback(lines: number) {

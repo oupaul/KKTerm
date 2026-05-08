@@ -20,6 +20,7 @@ export const initialTabs: WorkspaceTab[] = [];
 export const defaultGeneralSettings: GeneralSettings = {
   autoBackupEnabled: true,
   showConnectedConnectionsInRail: true,
+  allowClipboardRead: true,
   lastBackupAt: null,
 };
 
@@ -30,6 +31,7 @@ export const defaultTerminalSettings: TerminalSettings = {
   cursorStyle: "block",
   scrollbackLines: 5000,
   copyOnSelect: false,
+  allowOsc52Clipboard: true,
   confirmMultilinePaste: true,
   defaultShell: "powershell.exe",
 };
@@ -47,6 +49,7 @@ export const defaultSshSettings: SshSettings = {
   defaultProxyJump: "",
   bufferLines: 5000,
   hideCommonPortRedirects: true,
+  allowOsc52Clipboard: true,
 };
 
 export const defaultSftpSettings: SftpSettings = {

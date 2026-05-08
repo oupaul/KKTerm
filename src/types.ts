@@ -164,6 +164,7 @@ export type TerminalCursorStyle = "block" | "bar" | "underline";
 export interface GeneralSettings {
   autoBackupEnabled: boolean;
   showConnectedConnectionsInRail: boolean;
+  allowClipboardRead: boolean;
   lastBackupAt?: string | null;
 }
 
@@ -192,6 +193,7 @@ export interface TerminalSettings {
   cursorStyle: TerminalCursorStyle;
   scrollbackLines: number;
   copyOnSelect: boolean;
+  allowOsc52Clipboard: boolean;
   confirmMultilinePaste: boolean;
   defaultShell: string;
 }
@@ -224,6 +226,7 @@ export interface SshSettings {
   defaultProxyJump?: string;
   bufferLines: number;
   hideCommonPortRedirects: boolean;
+  allowOsc52Clipboard: boolean;
 }
 
 export type SftpOverwriteBehavior = "fail" | "overwrite";

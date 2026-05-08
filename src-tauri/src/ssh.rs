@@ -742,7 +742,7 @@ pub(crate) fn remote_tmux_resume_command(
         .map(|directory| format!("cd -- {} && ", shell_single_quote(directory)))
         .unwrap_or_default();
     format!(
-        "if command -v tmux >/dev/null 2>&1; then {cd_command}exec tmux new-session -A -s {} \\; set-option mouse on \\; set-option history-limit {}; else {cd_command}printf '\\r\\n[AdminDeck: tmux not found, using normal shell]\\r\\n'; exec \"${{SHELL:-sh}}\" -i; fi",
+        "if command -v tmux >/dev/null 2>&1; then {cd_command}exec tmux new-session -A -s {} \\; set-option mouse on \\; set-option set-clipboard on \\; set-option history-limit {}; else {cd_command}printf '\\r\\n[AdminDeck: tmux not found, using normal shell]\\r\\n'; exec \"${{SHELL:-sh}}\" -i; fi",
         shell_single_quote(session_id),
         clamp_tmux_history_limit(history_limit),
     )
@@ -1223,6 +1223,15 @@ mod tests {
         assert!(
             cmd.contains("\\; set-option history-limit 5000"),
             "command must keep tmux pane history aligned with AdminDeck's default terminal buffer: {cmd}"
+        );
+    }
+
+    #[test]
+    fn tmux_resume_command_enables_osc52_clipboard_sync() {
+        let cmd = remote_tmux_resume_command(None, "admindeck-test", 5_000);
+        assert!(
+            cmd.contains("\\; set-option set-clipboard on"),
+            "command must enable tmux OSC 52 clipboard sync for new sessions: {cmd}"
         );
     }
 

@@ -210,6 +210,20 @@ export function TerminalSettings() {
         </label>
         <label>
           <input
+            checked={draft.allowOsc52Clipboard}
+            onChange={(event) => {
+              const allowOsc52Clipboard = event.currentTarget.checked;
+              setDraft((settings) => ({
+                ...settings,
+                allowOsc52Clipboard,
+              }));
+            }}
+            type="checkbox"
+          />
+          {t("settings.allowLocalOsc52Clipboard")}
+        </label>
+        <label>
+          <input
             checked={draft.confirmMultilinePaste}
             onChange={(event) => {
               const confirmMultilinePaste = event.currentTarget.checked;

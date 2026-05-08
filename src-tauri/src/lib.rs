@@ -307,17 +307,23 @@ fn get_general_settings(
 #[tauri::command]
 fn update_general_settings(
     storage: tauri::State<'_, storage::Storage>,
+    webviews: tauri::State<'_, webview::WebviewSessionManager>,
     request: storage::GeneralSettings,
 ) -> Result<storage::GeneralSettings, String> {
-    storage.update_general_settings(request)
+    let saved = storage.update_general_settings(request)?;
+    webviews.set_clipboard_read_allowed(saved.allow_clipboard_read());
+    Ok(saved)
 }
 
 #[tauri::command]
 fn import_settings_database(
     storage: tauri::State<'_, storage::Storage>,
+    webviews: tauri::State<'_, webview::WebviewSessionManager>,
     path: String,
 ) -> Result<storage::ImportedDatabaseSnapshot, String> {
-    storage.import_database_zip(path.into())
+    let snapshot = storage.import_database_zip(path.into())?;
+    webviews.set_clipboard_read_allowed(storage.general_settings()?.allow_clipboard_read());
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -1283,9 +1289,19 @@ pub fn run() {
             let db_path = app_data_dir.join("admin-deck.sqlite3");
             let wiki_paths = wiki::WikiPaths::new(app_data_dir);
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
+            let general_settings = storage.general_settings().map_err(setup_error)?;
             let main_window_settings = storage.main_window_settings().map_err(setup_error)?;
             if let Err(error) = storage.backup_if_enabled_for_startup() {
                 eprintln!("failed to create automatic database backup at startup: {error}");
+            }
+            let webview_sessions =
+                webview::WebviewSessionManager::new(general_settings.allow_clipboard_read());
+            if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+                webview::configure_shell_clipboard_read_permission(
+                    &main_webview,
+                    webview_sessions.clipboard_read_allowed_state(),
+                )
+                .map_err(setup_error)?;
             }
             if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
                 let initial_window_settings =
@@ -1298,7 +1314,7 @@ pub fn run() {
             app.manage(secrets::Secrets::new());
             app.manage(sessions::SessionManager::new());
             app.manage(sftp::SftpSessionManager::new());
-            app.manage(webview::WebviewSessionManager::new());
+            app.manage(webview_sessions);
             app.manage(rdp::RdpSessionManager::new());
             app.manage(vnc::VncSessionManager::new());
             app.manage(wiki_paths);

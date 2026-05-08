@@ -23,6 +23,9 @@ All keys are structurally present in every locale file (flushed via `scripts/flu
 | settings.urlSecurityHint | settings | Controls certificate handling for URL Connections. Keep bypass off unless you trust the internal site and network. |
 | settings.ignoreCertificateErrors | settings | Ignore invalid HTTPS certificates |
 | settings.ignoreCertificateErrorsHint | settings | Loads URL Connections with self-signed or untrusted certificates without the browser warning. Applies to newly opened URL tabs. |
+| settings.allowClipboardRead | settings | Allow clipboard read for paste |
+| settings.allowClipboardReadHint | settings | Lets AdminDeck's WebView2 surfaces use clipboard-read permission without the native paste prompt. |
+| settings.clipboardReadSaved | settings | Clipboard read setting saved. |
 | settings.urlSettingsSaved | settings | URL settings saved. |
 | settings.sshBufferLines | settings | SSH buffer lines |
 | settings.sshBufferHint | settings | Default is 5,000. Used for SSH terminal scrollback and tmux pane history. |
@@ -31,6 +34,8 @@ All keys are structurally present in every locale file (flushed via `scripts/flu
 | settings.portRedirectHint | settings | Controls which remote loopback ports appear in the SSH terminal port redirect menu. |
 | settings.hideCommonPortRedirects | settings | Hide common ports except 80/443 |
 | settings.hideCommonPortRedirectsHint | settings | When enabled, remote ports below 1024 are hidden unless they are 80 or 443. |
+| settings.allowLocalOsc52Clipboard | settings | Allow local terminal OSC 52 clipboard writes |
+| settings.allowSshOsc52Clipboard | settings | Allow SSH OSC 52 clipboard writes |
 | settings.sshKeyEmailDialogTitle | settings | Generate SSH key |
 | settings.sshKeyEmailDialogHint | settings | Add an email address as the public key comment so the key is easy to recognize later. |
 | settings.sshKeyEmailPlaceholder | settings | admin@example.com |

@@ -31,6 +31,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultProxyJump,
     bufferLines,
     hideCommonPortRedirects: settings.hideCommonPortRedirects ?? true,
+    allowOsc52Clipboard: settings.allowOsc52Clipboard ?? true,
   };
 }
 
@@ -250,6 +251,25 @@ export function SshSettings() {
             value={sshDraft.defaultProxyJump ?? ""}
           />
           <small className="field-hint">{t("settings.proxyJumpHint")}</small>
+        </label>
+      </div>
+
+      <div className="settings-toggle-list">
+        <label className="settings-toggle-row">
+          <input
+            checked={sshDraft.allowOsc52Clipboard ?? true}
+            onChange={(event) => {
+              const allowOsc52Clipboard = event.currentTarget.checked;
+              setSshDraft((settings) => ({
+                ...settings,
+                allowOsc52Clipboard,
+              }));
+            }}
+            type="checkbox"
+          />
+          <span>
+            <strong>{t("settings.allowSshOsc52Clipboard")}</strong>
+          </span>
         </label>
       </div>
 
