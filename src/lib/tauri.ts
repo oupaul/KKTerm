@@ -365,10 +365,15 @@ export interface WebviewSimpleRequest {
   sessionId: string;
 }
 
+export interface WebviewCaptureCredentialRequest extends WebviewSimpleRequest {
+  nonce: string;
+}
+
 export interface FillWebviewCredentialRequest {
   sessionId: string;
   secretOwnerId: string;
   username: string;
+  automatic?: boolean;
 }
 
 export interface StartRdpSessionRequest {
@@ -951,7 +956,7 @@ type CommandMap = {
     result: null;
   };
   capture_webview_credential: {
-    args: { request: WebviewSimpleRequest };
+    args: { request: WebviewCaptureCredentialRequest };
     result: null;
   };
   close_webview_session: {

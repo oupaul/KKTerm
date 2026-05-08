@@ -50,6 +50,7 @@ struct FillWebviewCredentialRequest {
     session_id: String,
     secret_owner_id: String,
     username: String,
+    automatic: Option<bool>,
 }
 
 #[tauri::command]
@@ -909,13 +910,14 @@ fn fill_webview_credential(
         password,
         username_selector: credential.username_selector,
         password_selector: credential.password_selector,
+        automatic: request.automatic.unwrap_or(false),
     })
 }
 
 #[tauri::command]
 fn capture_webview_credential(
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
-    request: webview::WebviewSimpleRequest,
+    request: webview::WebviewCaptureCredentialRequest,
 ) -> Result<(), String> {
     webviews.capture_credential(request)
 }
