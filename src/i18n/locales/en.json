@@ -49,6 +49,8 @@
     "text": "Text",
     "accent": "Accent",
     "green": "Green",
+    "navToolbar": "Nav toolbar",
+    "toolbarText": "Toolbar text",
     "language": "Language",
     "autoBackup": "Auto Backup",
     "autoBackupHint": "Automatic backups older than 1 week are deleted after each startup backup.",
