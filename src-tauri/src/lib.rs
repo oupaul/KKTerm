@@ -1172,11 +1172,35 @@ fn get_wiki_attachments_folder(paths: tauri::State<'_, wiki::WikiPaths>) -> Resu
     Ok(paths.root().display().to_string())
 }
 
+#[cfg(target_os = "windows")]
+fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        focus_main_window(app);
+    }))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder
+}
+
+#[cfg(target_os = "windows")]
+fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+        if main_window.is_minimized().unwrap_or(false) {
+            let _ = main_window.unminimize();
+        }
+
+        let _ = main_window.show();
+        let _ = main_window.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
 
-    tauri::Builder::default()
+    configure_single_instance(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
