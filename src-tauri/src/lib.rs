@@ -436,6 +436,7 @@ fn plan_command_proposal(
 
 #[tauri::command]
 async fn run_ai_agent(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
     secrets: tauri::State<'_, secrets::Secrets>,
     request: ai::AgentRunRequest,
@@ -444,7 +445,7 @@ async fn run_ai_agent(
     let api_key = secrets
         .read_ai_api_key("openai-compatible-provider".to_string())
         .map_err(|error| format!("failed to read AI API key: {error}"))?;
-    ai::run_agent(settings, api_key, request).await
+    ai::run_agent(app, settings, api_key, request).await
 }
 
 #[tauri::command]

@@ -50,6 +50,15 @@ export const defaultSftpSettings: SftpSettings = {
   overwriteBehavior: "fail",
 };
 
+export const defaultAiAssistantToolSettings = {
+  webSearch: false,
+  webFetch: false,
+  shellCommand: false,
+  appDataFileSearch: false,
+  appDataFileRead: false,
+  currentTime: false,
+};
+
 export const defaultAiProviderSettings: AiProviderSettings = {
   providerKind: "openai",
   baseUrl: "https://api.openai.com/v1",
@@ -59,6 +68,7 @@ export const defaultAiProviderSettings: AiProviderSettings = {
   cliExecutionPolicy: "suggestOnly",
   claudeCliPath: "",
   codexCliPath: "",
+  tools: defaultAiAssistantToolSettings,
 };
 
 export type AiSuggestion = {

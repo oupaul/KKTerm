@@ -1,7 +1,12 @@
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use tauri::Manager;
 
-use crate::storage::AiProviderSettings;
+use crate::storage::{AiAssistantToolSettings, AiProviderSettings};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -213,17 +218,19 @@ pub struct AgentRunResponse {
 }
 
 pub async fn run_agent(
+    app: tauri::AppHandle,
     settings: AiProviderSettings,
     api_key: Option<String>,
     request: AgentRunRequest,
 ) -> Result<AgentRunResponse, String> {
     let provider = provider_for(settings.provider_kind())?;
-    provider.run(settings, api_key, request).await
+    provider.run(app, settings, api_key, request).await
 }
 
 trait AgentProvider {
     async fn run(
         &self,
+        app: tauri::AppHandle,
         settings: AiProviderSettings,
         api_key: Option<String>,
         request: AgentRunRequest,
@@ -330,6 +337,7 @@ enum OpenAiAuthStyle {
 impl AgentProvider for OpenAiCompatibleProvider {
     async fn run(
         &self,
+        app: tauri::AppHandle,
         settings: AiProviderSettings,
         api_key: Option<String>,
         request: AgentRunRequest,
@@ -348,7 +356,7 @@ impl AgentProvider for OpenAiCompatibleProvider {
 
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
-        let messages = build_agent_messages(
+        let mut messages = build_agent_messages(
             prompt,
             context_label,
             request.intent,
@@ -362,46 +370,92 @@ impl AgentProvider for OpenAiCompatibleProvider {
             request.output_language,
         );
         let client = reqwest::Client::new();
-        let response = client
-            .post(endpoint)
-            .headers(openai_compatible_headers(
-                api_key.as_deref(),
-                self.auth_style,
-            )?)
-            .json(&OpenAiCompatibleChatRequest {
-                model: settings.model().to_string(),
-                messages,
-                stream: false,
-            })
-            .send()
-            .await
-            .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
+        let tool_definitions = ai_tool_definitions(settings.tools());
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|error| format!("failed to locate AdminDeck app data: {error}"))?;
+        let mut content = String::new();
 
-        let status = response.status();
-        let response_text = response
-            .text()
-            .await
-            .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
+        for _ in 0..4 {
+            let response = client
+                .post(endpoint.clone())
+                .headers(openai_compatible_headers(
+                    api_key.as_deref(),
+                    self.auth_style,
+                )?)
+                .json(&OpenAiCompatibleChatRequest {
+                    model: settings.model().to_string(),
+                    messages: messages.clone(),
+                    stream: false,
+                    tools: tool_definitions.clone(),
+                    tool_choice: (!tool_definitions.is_empty()).then(|| "auto".to_string()),
+                })
+                .send()
+                .await
+                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
 
-        if !status.is_success() {
-            return Err(format!(
-                "{} returned HTTP {}: {}",
-                self.label,
-                status.as_u16(),
-                truncate_error_body(&response_text)
-            ));
+            let status = response.status();
+            let response_text = response
+                .text()
+                .await
+                .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
+
+            if !status.is_success() {
+                return Err(format!(
+                    "{} returned HTTP {}: {}",
+                    self.label,
+                    status.as_u16(),
+                    truncate_error_body(&response_text)
+                ));
+            }
+
+            let completion: OpenAiCompatibleChatResponse = serde_json::from_str(&response_text)
+                .map_err(|error| format!("failed to parse {} response: {error}", self.label))?;
+            let Some(choice) = completion.choices.into_iter().next() else {
+                return Err(format!("{} response did not include a choice", self.label));
+            };
+            content = choice.message.content.trim().to_string();
+            if choice.message.tool_calls.is_empty() {
+                break;
+            }
+
+            let tool_calls = choice.message.tool_calls;
+            messages.push(OpenAiCompatibleMessage {
+                role: "assistant".to_string(),
+                content: OpenAiCompatibleContent::Text(content.clone()),
+                tool_call_id: None,
+                tool_calls: Some(
+                    tool_calls
+                        .iter()
+                        .map(|tool_call| OpenAiAssistantToolCall {
+                            id: tool_call.id.clone(),
+                            tool_type: "function".to_string(),
+                            function: OpenAiAssistantToolCallFunction {
+                                name: tool_call.function.name.clone(),
+                                arguments: tool_call.function.arguments.clone(),
+                            },
+                        })
+                        .collect(),
+                ),
+            });
+            for tool_call in tool_calls {
+                let result = run_ai_tool(settings.tools(), &app_data_dir, &tool_call).await;
+                messages.push(OpenAiCompatibleMessage {
+                    role: "tool".to_string(),
+                    content: OpenAiCompatibleContent::Text(result),
+                    tool_call_id: Some(tool_call.id),
+                    tool_calls: None,
+                });
+            }
         }
 
-        let completion: OpenAiCompatibleChatResponse = serde_json::from_str(&response_text)
-            .map_err(|error| format!("failed to parse {} response: {error}", self.label))?;
-        let content = completion
-            .choices
-            .into_iter()
-            .find_map(|choice| {
-                let content = choice.message.content.trim().to_string();
-                (!content.is_empty()).then_some(content)
-            })
-            .ok_or_else(|| format!("{} response did not include assistant content", self.label))?;
+        if content.is_empty() {
+            return Err(format!(
+                "{} response did not include assistant content",
+                self.label
+            ));
+        }
 
         Ok(AgentRunResponse {
             provider_kind: self.provider_kind.to_string(),
@@ -416,31 +470,357 @@ struct OpenAiCompatibleChatRequest {
     model: String,
     messages: Vec<OpenAiCompatibleMessage>,
     stream: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tools: Vec<OpenAiToolDefinition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct OpenAiCompatibleMessage {
     role: String,
     content: OpenAiCompatibleContent,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_calls: Option<Vec<OpenAiAssistantToolCall>>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
+struct OpenAiAssistantToolCall {
+    id: String,
+    #[serde(rename = "type")]
+    tool_type: String,
+    function: OpenAiAssistantToolCallFunction,
+}
+
+#[derive(Clone, Serialize)]
+struct OpenAiAssistantToolCallFunction {
+    name: String,
+    arguments: String,
+}
+
+#[derive(Clone, Serialize)]
 #[serde(untagged)]
 enum OpenAiCompatibleContent {
     Text(String),
     Parts(Vec<OpenAiCompatibleContentPart>),
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum OpenAiCompatibleContentPart {
     Text { text: String },
     ImageUrl { image_url: OpenAiCompatibleImageUrl },
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct OpenAiCompatibleImageUrl {
     url: String,
+}
+
+#[derive(Clone, Serialize)]
+struct OpenAiToolDefinition {
+    #[serde(rename = "type")]
+    tool_type: &'static str,
+    function: OpenAiToolFunctionDefinition,
+}
+
+#[derive(Clone, Serialize)]
+struct OpenAiToolFunctionDefinition {
+    name: &'static str,
+    description: &'static str,
+    parameters: Value,
+}
+
+fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefinition> {
+    if !settings.any_enabled() {
+        return Vec::new();
+    }
+    let mut tools = Vec::new();
+    if settings.current_time() {
+        tools.push(tool_definition(
+            "current_time",
+            "Get current local and UTC time.",
+            json!({"type":"object","properties":{}}),
+        ));
+    }
+    if settings.web_search() {
+        tools.push(tool_definition(
+            "web_search",
+            "Search the public web and return compact results.",
+            json!({"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}),
+        ));
+    }
+    if settings.web_fetch() {
+        tools.push(tool_definition(
+            "web_fetch",
+            "Fetch one http or https URL and return compact text content.",
+            json!({"type":"object","properties":{"url":{"type":"string"}},"required":["url"]}),
+        ));
+    }
+    if settings.app_data_file_search() {
+        tools.push(tool_definition(
+            "app_data_file_search",
+            "Search for file names under AdminDeck app data only.",
+            json!({"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}),
+        ));
+    }
+    if settings.app_data_file_read() {
+        tools.push(tool_definition(
+            "app_data_file_read",
+            "Read a small UTF-8 text file under AdminDeck app data only.",
+            json!({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}),
+        ));
+    }
+    if settings.shell_command() {
+        tools.push(tool_definition("shell_command", "Run a non-destructive PowerShell or batch command from AdminDeck app data only. Destructive commands are blocked.", json!({"type":"object","properties":{"command":{"type":"string"},"shell":{"type":"string","enum":["powershell","batch"]}},"required":["command"]})));
+    }
+    tools
+}
+
+fn tool_definition(
+    name: &'static str,
+    description: &'static str,
+    parameters: Value,
+) -> OpenAiToolDefinition {
+    OpenAiToolDefinition {
+        tool_type: "function",
+        function: OpenAiToolFunctionDefinition {
+            name,
+            description,
+            parameters,
+        },
+    }
+}
+
+async fn run_ai_tool(
+    settings: &AiAssistantToolSettings,
+    app_data_dir: &Path,
+    call: &OpenAiToolCall,
+) -> String {
+    let args: Value = serde_json::from_str(&call.function.arguments).unwrap_or_else(|_| json!({}));
+    match call.function.name.as_str() {
+        "current_time" if settings.current_time() => current_time_tool(),
+        "web_search" if settings.web_search() => web_search_tool(args).await,
+        "web_fetch" if settings.web_fetch() => web_fetch_tool(args).await,
+        "app_data_file_search" if settings.app_data_file_search() => {
+            app_data_file_search_tool(app_data_dir, args)
+        }
+        "app_data_file_read" if settings.app_data_file_read() => {
+            app_data_file_read_tool(app_data_dir, args)
+        }
+        "shell_command" if settings.shell_command() => shell_command_tool(app_data_dir, args),
+        _ => "Tool is disabled in AI Assistant settings.".to_string(),
+    }
+}
+
+fn current_time_tool() -> String {
+    let utc = time::OffsetDateTime::now_utc();
+    format!(
+        "UTC time: {}",
+        utc.format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_else(|_| utc.unix_timestamp().to_string())
+    )
+}
+
+async fn web_search_tool(args: Value) -> String {
+    let query = arg_string(&args, "query");
+    if query.is_empty() {
+        return "web_search requires query.".to_string();
+    }
+    let url = format!("https://duckduckgo.com/html/?q={}", url_encode(&query));
+    match reqwest::get(url).await {
+        Ok(response) => match response.text().await {
+            Ok(text) => strip_html(&text).chars().take(4000).collect(),
+            Err(error) => format!("Failed to read search response: {error}"),
+        },
+        Err(error) => format!("Web search failed: {error}"),
+    }
+}
+
+async fn web_fetch_tool(args: Value) -> String {
+    let url = arg_string(&args, "url");
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return "web_fetch only accepts http:// or https:// URLs.".to_string();
+    }
+    match reqwest::get(url).await {
+        Ok(response) => match response.text().await {
+            Ok(text) => strip_html(&text).chars().take(8000).collect(),
+            Err(error) => format!("Failed to read page: {error}"),
+        },
+        Err(error) => format!("Fetch failed: {error}"),
+    }
+}
+
+fn app_data_file_search_tool(root: &Path, args: Value) -> String {
+    let query = arg_string(&args, "query").to_ascii_lowercase();
+    if query.is_empty() {
+        return "app_data_file_search requires query.".to_string();
+    }
+    let mut matches = Vec::new();
+    collect_file_matches(root, root, &query, &mut matches);
+    if matches.is_empty() {
+        "No matching app data files found.".to_string()
+    } else {
+        matches.join("\n")
+    }
+}
+
+fn app_data_file_read_tool(root: &Path, args: Value) -> String {
+    let requested = arg_string(&args, "path");
+    let Some(path) = safe_app_data_path(root, &requested) else {
+        return "Path is outside AdminDeck app data or is invalid.".to_string();
+    };
+    match fs::metadata(&path) {
+        Ok(metadata) if metadata.len() > 128 * 1024 => {
+            "File is too large for Assistant reading.".to_string()
+        }
+        Ok(metadata) if !metadata.is_file() => "Path is not a regular file.".to_string(),
+        Ok(_) => match fs::read_to_string(&path) {
+            Ok(text) => text.chars().take(12000).collect(),
+            Err(error) => format!("Failed to read app data file: {error}"),
+        },
+        Err(error) => format!("Failed to inspect app data file: {error}"),
+    }
+}
+
+fn shell_command_tool(root: &Path, args: Value) -> String {
+    let command = arg_string(&args, "command");
+    let shell = arg_string(&args, "shell");
+    if command.is_empty() {
+        return "shell_command requires command.".to_string();
+    }
+    if is_destructive_command(&command) {
+        return "Blocked: deletion or destructive commands require an explicit AdminDeck approval prompt and were not executed.".to_string();
+    }
+    let output = if shell.eq_ignore_ascii_case("batch") {
+        Command::new("cmd")
+            .args(["/C", &command])
+            .current_dir(root)
+            .output()
+    } else {
+        Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &command])
+            .current_dir(root)
+            .output()
+    };
+    match output {
+        Ok(output) => {
+            let mut text = String::new();
+            text.push_str(&format!("exit code: {:?}\n", output.status.code()));
+            text.push_str(&String::from_utf8_lossy(&output.stdout));
+            text.push_str(&String::from_utf8_lossy(&output.stderr));
+            text.chars().take(12000).collect()
+        }
+        Err(error) => format!("Command failed to start: {error}"),
+    }
+}
+
+fn collect_file_matches(root: &Path, dir: &Path, query: &str, matches: &mut Vec<String>) {
+    if matches.len() >= 50 {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.to_ascii_lowercase().contains(query))
+        {
+            matches.push(
+                path.strip_prefix(root)
+                    .unwrap_or(&path)
+                    .display()
+                    .to_string(),
+            );
+            if matches.len() >= 50 {
+                return;
+            }
+        }
+        if path.is_dir() {
+            collect_file_matches(root, &path, query, matches);
+        }
+    }
+}
+
+fn safe_app_data_path(root: &Path, requested: &str) -> Option<PathBuf> {
+    let root = root.canonicalize().ok()?;
+    let candidate = root.join(requested.trim().trim_start_matches(['/', '\\']));
+    let canonical = candidate.canonicalize().ok()?;
+    canonical.starts_with(&root).then_some(canonical)
+}
+
+fn arg_string(args: &Value, key: &str) -> String {
+    args.get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_string()
+}
+
+fn is_destructive_command(command: &str) -> bool {
+    contains_any(
+        &command.to_ascii_lowercase(),
+        &[
+            "remove-item",
+            "rm ",
+            "rm-",
+            "del ",
+            "erase ",
+            "rmdir",
+            "rd /",
+            "format",
+            "diskpart",
+            "mkfs",
+            "dd if=",
+            "shutdown",
+            "restart-computer",
+            "stop-computer",
+            "set-content",
+            "out-file",
+            ">",
+            "move-item",
+            "copy-item",
+            "new-item",
+        ],
+    )
+}
+
+fn strip_html(value: &str) -> String {
+    let mut out = String::with_capacity(value.len().min(8192));
+    let mut in_tag = false;
+    for ch in value.chars() {
+        match ch {
+            '<' => in_tag = true,
+            '>' => {
+                in_tag = false;
+                out.push(' ');
+            }
+            _ if !in_tag => out.push(ch),
+            _ => {}
+        }
+    }
+    out.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+}
+
+fn url_encode(value: &str) -> String {
+    value
+        .bytes()
+        .map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (byte as char).to_string()
+            }
+            b' ' => "+".to_string(),
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
 }
 
 #[derive(Deserialize)]
@@ -455,7 +835,22 @@ struct OpenAiCompatibleChoice {
 
 #[derive(Deserialize)]
 struct OpenAiCompatibleResponseMessage {
+    #[serde(default)]
     content: String,
+    #[serde(default)]
+    tool_calls: Vec<OpenAiToolCall>,
+}
+
+#[derive(Deserialize)]
+struct OpenAiToolCall {
+    id: String,
+    function: OpenAiToolCallFunction,
+}
+
+#[derive(Deserialize)]
+struct OpenAiToolCallFunction {
+    name: String,
+    arguments: String,
 }
 
 fn build_agent_messages(
@@ -494,6 +889,8 @@ fn build_agent_messages(
     let mut messages = vec![OpenAiCompatibleMessage {
         role: "system".to_string(),
         content: OpenAiCompatibleContent::Text(system_instructions.join(" ")),
+        tool_call_id: None,
+        tool_calls: None,
     }];
 
     messages.extend(
@@ -554,6 +951,8 @@ fn build_agent_messages(
     messages.push(OpenAiCompatibleMessage {
         role: "user".to_string(),
         content,
+        tool_call_id: None,
+        tool_calls: None,
     });
     messages
 }
@@ -683,6 +1082,8 @@ fn to_openai_compatible_history_message(
     Some(OpenAiCompatibleMessage {
         role: role.to_string(),
         content: OpenAiCompatibleContent::Text(content),
+        tool_call_id: None,
+        tool_calls: None,
     })
 }
 
@@ -1053,6 +1454,32 @@ mod tests {
         assert!(system_content.contains("Do not say that AdminDeck installed"));
         assert!(system_content.contains("require explicit user review"));
         assert!(request_content.contains("Assistant intent: extensionCreation"));
+    }
+
+    #[test]
+    fn assistant_tool_safety_blocks_destructive_shell_commands() {
+        assert!(is_destructive_command(r"Remove-Item -Recurse .\logs"));
+        assert!(is_destructive_command("del important.txt"));
+        assert!(!is_destructive_command("Get-ChildItem ."));
+    }
+
+    #[test]
+    fn assistant_file_tool_paths_stay_inside_app_data() {
+        let root =
+            std::env::temp_dir().join(format!("admindeck-ai-tool-test-{}", std::process::id()));
+        let nested = root.join("nested");
+        std::fs::create_dir_all(&nested).expect("test app data directory is created");
+        let inside = nested.join("log.txt");
+        std::fs::write(&inside, "hello").expect("test file is written");
+
+        let safe = safe_app_data_path(&root, "nested/log.txt").expect("inside path is allowed");
+        assert_eq!(
+            safe,
+            inside.canonicalize().expect("inside path canonicalizes")
+        );
+        assert!(safe_app_data_path(&root, "../outside.txt").is_none());
+
+        std::fs::remove_dir_all(&root).expect("test directory is removed");
     }
 
     #[test]

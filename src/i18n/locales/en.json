@@ -187,7 +187,36 @@
     "urlDataShardConnectionCount": "{{count}} URL Connection",
     "clearShard": "Clear shard",
     "urlDataShardCleared": "Cleared URL data shard {{name}}.",
-    "urlDataShardConnectionCountPlural": "{{count}} URL Connections"
+    "urlDataShardConnectionCountPlural": "{{count}} URL Connections",
+    "aiToolsTitle": "Assistant tools",
+    "aiToolsDescription": "Choose which built-in tools the AI Assistant may call while answering. Keep risky tools off unless you need them.",
+    "aiToolsSafety": "Safeguards: file tools are confined to AdminDeck app data, shell commands run from app data only, and deletion/destructive requests are blocked until a future explicit approval prompt can review them.",
+    "aiTools": {
+      "currentTime": {
+        "label": "Current time",
+        "description": "Get the current local and UTC time for scheduling and log correlation."
+      },
+      "webSearch": {
+        "label": "Web search",
+        "description": "Search the web and return compact result titles, links, and snippets."
+      },
+      "webFetch": {
+        "label": "Fetch web page",
+        "description": "Read a single http/https page and summarize text-sized content."
+      },
+      "appDataFileSearch": {
+        "label": "Search app data files",
+        "description": "Find files by name inside AdminDeck-owned app data only."
+      },
+      "appDataFileRead": {
+        "label": "Read app data file",
+        "description": "Read small text files inside AdminDeck-owned app data only."
+      },
+      "shellCommand": {
+        "label": "PowerShell / batch commands",
+        "description": "Run non-destructive PowerShell or batch commands from AdminDeck app data only."
+      }
+    }
   },
   "connections": {
     "title": "Connections",

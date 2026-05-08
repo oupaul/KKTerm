@@ -302,3 +302,168 @@ When a key is translated into every supported locale, remove its entry from this
 - Tone: concise descriptive tooltip.
 - Placeholder details: none.
 - Domain notes: The displayed value is aggregate local network throughput formatted as decimal MB/s, not a percentage.
+
+### settings.aiToolsTitle
+
+- English value: "Assistant tools"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: settings group heading
+- Surrounding user flow: Labels the AI Assistant tool-calling permissions section in Settings → AI Assistant.
+- Tone: concise product setting label.
+- Placeholder details: none.
+- Domain notes: Refers to built-in Assistant tool calls, not extensions.
+
+### settings.aiToolsDescription
+
+- English value: "Choose which built-in tools the AI Assistant may call while answering. Keep risky tools off unless you need them."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: explanatory helper text
+- Surrounding user flow: Appears above the AI Assistant tool toggles in Settings → AI Assistant.
+- Tone: cautious but user-friendly.
+- Placeholder details: none.
+- Domain notes: Tool calls happen inside AdminDeck and are controlled per setting.
+
+### settings.aiToolsSafety
+
+- English value: "Safeguards: file tools are confined to AdminDeck app data, shell commands run from app data only, and deletion/destructive requests are blocked until a future explicit approval prompt can review them."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: safety note
+- Surrounding user flow: Appears below the AI Assistant tool toggles to describe security boundaries.
+- Tone: explicit safety warning.
+- Placeholder details: none.
+- Domain notes: "AdminDeck app data" means the Tauri application data directory, not arbitrary user folders.
+
+### settings.aiTools.currentTime.label
+
+- English value: "Current time"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to retrieve current local and UTC time.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: Tool is read-only.
+
+### settings.aiTools.currentTime.description
+
+- English value: "Get the current local and UTC time for scheduling and log correlation."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the current-time Assistant tool toggle.
+- Tone: concise explanatory text.
+- Placeholder details: none.
+- Domain notes: Tool is read-only.
+
+### settings.aiTools.webSearch.label
+
+- English value: "Web search"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to search the web.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: Web access leaves the local-first boundary when enabled.
+
+### settings.aiTools.webSearch.description
+
+- English value: "Search the web and return compact result titles, links, and snippets."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the web-search Assistant tool toggle.
+- Tone: concise explanatory text.
+- Placeholder details: none.
+- Domain notes: Results are compact, not full page archives.
+
+### settings.aiTools.webFetch.label
+
+- English value: "Fetch web page"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to fetch one web page.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: Web access leaves the local-first boundary when enabled.
+
+### settings.aiTools.webFetch.description
+
+- English value: "Read a single http/https page and summarize text-sized content."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the web-fetch Assistant tool toggle.
+- Tone: concise explanatory text.
+- Placeholder details: none.
+- Domain notes: `http/https` can remain technical.
+
+### settings.aiTools.appDataFileSearch.label
+
+- English value: "Search app data files"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to search filenames in AdminDeck app data.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: File system access is restricted to app-owned data.
+
+### settings.aiTools.appDataFileSearch.description
+
+- English value: "Find files by name inside AdminDeck-owned app data only."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the app-data file-search Assistant tool toggle.
+- Tone: concise safety-focused explanation.
+- Placeholder details: none.
+- Domain notes: Does not grant arbitrary filesystem search.
+
+### settings.aiTools.appDataFileRead.label
+
+- English value: "Read app data file"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to read small text files in AdminDeck app data.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: File system access is restricted to app-owned data.
+
+### settings.aiTools.appDataFileRead.description
+
+- English value: "Read small text files inside AdminDeck-owned app data only."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the app-data file-read Assistant tool toggle.
+- Tone: concise safety-focused explanation.
+- Placeholder details: none.
+- Domain notes: Does not grant arbitrary filesystem reads.
+
+### settings.aiTools.shellCommand.label
+
+- English value: "PowerShell / batch commands"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to run constrained local commands.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: PowerShell and batch can remain English technical terms.
+
+### settings.aiTools.shellCommand.description
+
+- English value: "Run non-destructive PowerShell or batch commands from AdminDeck app data only."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the constrained shell command Assistant tool toggle.
+- Tone: concise safety-focused explanation.
+- Placeholder details: none.
+- Domain notes: Commands are local and constrained; destructive actions require explicit approval before any future execution path.

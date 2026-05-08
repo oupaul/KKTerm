@@ -14,6 +14,7 @@ import { AI_PROVIDER_SECRET_OWNER_ID } from "../lib/settings";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type {
+  AiAssistantToolId,
   AiProviderKind,
   AiProviderSettings as AiProviderSettingsType,
   AiReasoningEffort,
@@ -202,6 +203,55 @@ function AiOutputLanguageControl({
   );
 }
 
+const AI_ASSISTANT_TOOL_IDS: AiAssistantToolId[] = [
+  "currentTime",
+  "webSearch",
+  "webFetch",
+  "appDataFileSearch",
+  "appDataFileRead",
+  "shellCommand",
+];
+
+function AiAssistantToolsControl({
+  draft,
+  onDraftChange,
+}: {
+  draft: AiProviderSettingsType;
+  onDraftChange: (patch: Partial<AiProviderSettingsType>) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <fieldset className="settings-fieldset ai-tool-settings">
+      <legend>{t("settings.aiToolsTitle")}</legend>
+      <p className="settings-help-text">{t("settings.aiToolsDescription")}</p>
+      <div className="settings-toggle-list">
+        {AI_ASSISTANT_TOOL_IDS.map((toolId) => (
+          <label className="settings-toggle-row" key={toolId}>
+            <input
+              checked={Boolean(draft.tools?.[toolId])}
+              onChange={(event) =>
+                onDraftChange({
+                  tools: {
+                    ...draft.tools,
+                    [toolId]: event.currentTarget.checked,
+                  },
+                })
+              }
+              type="checkbox"
+            />
+            <span>
+              <strong>{t(`settings.aiTools.${toolId}.label`)}</strong>
+              <small>{t(`settings.aiTools.${toolId}.description`)}</small>
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="settings-help-text">{t("settings.aiToolsSafety")}</p>
+    </fieldset>
+  );
+}
+
 export function AiSettings() {
   const { t } = useTranslation();
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
@@ -373,6 +423,16 @@ export function AiSettings() {
           }
         />
       </div>
+
+      <AiAssistantToolsControl
+        draft={draft}
+        onDraftChange={(patch) =>
+          setDraft((settings) => ({
+            ...settings,
+            ...patch,
+          }))
+        }
+      />
 
       <div className="settings-summary-grid compact">
         <SettingsSummary label={t("settings.activeEndpoint")} value={formatProviderHost(draft.baseUrl)} />

@@ -223,6 +223,52 @@ pub struct SftpSettings {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AiAssistantToolSettings {
+    #[serde(default)]
+    web_search: bool,
+    #[serde(default)]
+    web_fetch: bool,
+    #[serde(default)]
+    shell_command: bool,
+    #[serde(default)]
+    app_data_file_search: bool,
+    #[serde(default)]
+    app_data_file_read: bool,
+    #[serde(default = "default_ai_current_time_tool_enabled")]
+    current_time: bool,
+}
+
+impl AiAssistantToolSettings {
+    pub(crate) fn web_search(&self) -> bool {
+        self.web_search
+    }
+    pub(crate) fn web_fetch(&self) -> bool {
+        self.web_fetch
+    }
+    pub(crate) fn shell_command(&self) -> bool {
+        self.shell_command
+    }
+    pub(crate) fn app_data_file_search(&self) -> bool {
+        self.app_data_file_search
+    }
+    pub(crate) fn app_data_file_read(&self) -> bool {
+        self.app_data_file_read
+    }
+    pub(crate) fn current_time(&self) -> bool {
+        self.current_time
+    }
+    pub(crate) fn any_enabled(&self) -> bool {
+        self.web_search
+            || self.web_fetch
+            || self.shell_command
+            || self.app_data_file_search
+            || self.app_data_file_read
+            || self.current_time
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AiProviderSettings {
     #[serde(default)]
     enabled: bool,
@@ -241,6 +287,8 @@ pub struct AiProviderSettings {
     claude_cli_path: Option<String>,
     #[serde(default)]
     codex_cli_path: Option<String>,
+    #[serde(default = "default_ai_assistant_tool_settings")]
+    tools: AiAssistantToolSettings,
 }
 
 impl AiProviderSettings {
@@ -258,6 +306,10 @@ impl AiProviderSettings {
 
     pub(crate) fn reasoning_effort(&self) -> &str {
         &self.reasoning_effort
+    }
+
+    pub(crate) fn tools(&self) -> &AiAssistantToolSettings {
+        &self.tools
     }
 }
 
@@ -2848,7 +2900,23 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         cli_execution_policy: default_ai_cli_execution_policy(),
         claude_cli_path: None,
         codex_cli_path: None,
+        tools: default_ai_assistant_tool_settings(),
     }
+}
+
+fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
+    AiAssistantToolSettings {
+        web_search: false,
+        web_fetch: false,
+        shell_command: false,
+        app_data_file_search: false,
+        app_data_file_read: false,
+        current_time: default_ai_current_time_tool_enabled(),
+    }
+}
+
+fn default_ai_current_time_tool_enabled() -> bool {
+    false
 }
 
 fn default_ai_provider_kind() -> String {
@@ -4150,6 +4218,7 @@ mod tests {
                 cli_execution_policy: "suggest-only".to_string(),
                 claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
                 codex_cli_path: Some("  codex  ".to_string()),
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect("AI provider settings update");
 
@@ -4188,6 +4257,7 @@ mod tests {
                 cli_execution_policy: "suggestOnly".to_string(),
                 claude_cli_path: None,
                 codex_cli_path: None,
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect_err("scheme-less endpoint is rejected");
 
@@ -4213,6 +4283,7 @@ mod tests {
                 cli_execution_policy: "suggestOnly".to_string(),
                 claude_cli_path: None,
                 codex_cli_path: None,
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect_err("blank model is rejected");
 
@@ -4234,6 +4305,7 @@ mod tests {
                 cli_execution_policy: "executeAutomatically".to_string(),
                 claude_cli_path: Some("claude".to_string()),
                 codex_cli_path: Some("codex".to_string()),
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect_err("auto-execution policy is rejected");
 
