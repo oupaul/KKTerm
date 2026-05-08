@@ -4081,7 +4081,7 @@ progress {
 .settings-page {
   position: fixed;
   inset: 0 0 0 48px;
-  z-index: 1000;
+  z-index: 80;
   min-width: 0;
   height: 100vh;
   overflow: auto;
@@ -5644,7 +5644,7 @@ progress {
 .wiki-page {
   position: fixed;
   inset: 0 0 0 48px;
-  z-index: 900;
+  z-index: 80;
   min-width: 0;
   height: 100vh;
   overflow: hidden;

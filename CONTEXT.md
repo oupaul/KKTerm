@@ -49,6 +49,42 @@ _Avoid_: Session, split
 
 Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly tmux session id, such as `admindeck-cockpit001`, used to resume that Pane's remote tmux session when the Pane is recreated. Current Pane tmux ids use the `admindeck-<sci-fi-name><number>` shape and are remembered in frontend workspace storage. That id belongs to the frontend workspace/Pane layer, not the backend Connection model.
 
+## UI Layout
+
+**Activity Rail (Left Rail)**:
+The vertical icon bar on the far left of the app. Shows top-level destinations (Workspace, Dashboard, Wiki), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips.
+_Avoid_: sidebar, left sidebar, nav bar
+
+**Connection Tree (Connections Panel)**:
+The left-side tree view of saved Connections, folders, and subfolders. Supports search, filtering, drag/drop ordering, rename, delete, duplicate, Quick Connect, and open-Session status badges. Collapsed/expanded state is persisted.
+_Avoid_: connection sidebar, host list
+
+**AI Assistant Panel**:
+The right-side resizable panel for AI chat interactions. Collapsed/expanded state is workspace-wide.
+_Avoid_: AI sidebar, chat panel
+
+**Dashboard**:
+Top-level destination on the Activity Rail. The default landing view when no Sessions are open, showing recent Connections and workspace overview.
+
+**Workspace Canvas**:
+The central area containing the Tab Strip, active Tab content (terminals, RDP/VNC surfaces, WebView2 surfaces, SFTP browsers), and optional pane splits.
+_Avoid_: main area, content area
+
+**Tab Strip**:
+The horizontal row of workspace tabs above the Canvas. Each Tab represents a workspace container presenting a Session or set of related Panes.
+_Avoid_: tab bar, tab row
+
+**Pane**:
+A subdivision within a Tab that presents one terminal surface or view. Pane toolbars carry terminal/connection controls.
+
+**Status Bar**:
+The bottom workspace bar showing left-aligned host usage metrics and transient workspace notifications.
+_Avoid_: footer bar, bottom bar
+
+**Settings Sidebar**:
+The left-side navigation within the Settings page, routing between General, AI, Connections, Terminal, and other settings sections.
+_Avoid_: settings nav, settings menu
+
 ## Relationships
 
 - A **Connection** may start zero or more **Sessions** over time.

@@ -545,8 +545,11 @@ function ActivityRail({
   }, []);
 
   function handleConnectionsClick() {
-    onNavigate("workspace");
-    onConnectionsToggle();
+    if (activePage === "workspace") {
+      onConnectionsToggle();
+    } else {
+      onNavigate("workspace");
+    }
   }
 
   function handleConnectedConnectionClick(tabId: string) {

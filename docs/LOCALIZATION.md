@@ -10,7 +10,6 @@ All keys are structurally present in every locale file (flushed via `scripts/flu
 
 | Key | Namespace | English |
 |-----|-----------|---------|
-| app.dontSleep | app | Don't Sleep |
 | app.dontSleepEnable | app | Enable Don't Sleep mode |
 | app.dontSleepDisable | app | Disable Don't Sleep mode |
 | app.dontSleepEnabled | app | Don't Sleep mode enabled. |
@@ -37,9 +36,9 @@ All keys are structurally present in every locale file (flushed via `scripts/flu
 | settings.aiToolsDescription | settings | Choose which built-in tools the AI Assistant may call while answering. Keep risky tools off unless you need them. |
 | settings.aiToolsSafety | settings | Safeguards: file tools are confined to AdminDeck app data, shell commands run from app data only, and deletion/destructive requests are blocked until a future explicit approval prompt can review them. |
 | settings.aiTools.*.label/description | settings | 6 tool toggles (currentTime, webSearch, webFetch, appDataFileSearch, appDataFileRead, shellCommand) |
-| settings.connectedConnectionsRail | settings | Show connected Connection icons in the left rail |
-| settings.connectedConnectionsRailHint | settings | Adds an icon for each connected Connection to the left rail so you can switch back to it quickly. |
-| settings.connectedConnectionsRailSaved | settings | Connected Connection icons setting saved. |
+| settings.connectedConnectionsRail | settings | Show Connection in Left Rail |
+| settings.connectedConnectionsRailHint | settings | Adds an icon for each connected Connection to the Left Rail so you can switch back to it quickly. |
+| settings.connectedConnectionsRailSaved | settings | Show Connection in Left Rail setting saved. |
 | connections.createConnectionComplete | connections | Connection "{{name}}" added. |
 | connections.deleteConnectionComplete | connections | Connection "{{name}}" deleted. |
 | connections.import.importFileComplete | connections | Imported {{count}} Connections from file. |
