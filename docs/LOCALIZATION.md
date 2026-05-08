@@ -490,211 +490,57 @@ When a key is translated into every supported locale, remove its entry from this
 - Placeholder details: none.
 - Domain notes: Refers to foreground text and icon color for the themed navigation toolbar, not terminal text or workspace content text.
 
-### settings.connectedConnectionsRail
+### settings.urlSecurity
 
-- English value: "Show connected Connection icons in the left rail"
+- English value: "URL security"
 - Namespace: `settings`
-- File/component: `src/settings/GeneralSettings.tsx`
+- File/component: `src/settings/UrlSettings.tsx`
+- UI role: settings subsection heading
+- Surrounding user flow: Settings -> URL shows security-related controls above saved website passwords and URL data shards.
+- Tone: concise category label.
+- Placeholder details: none.
+- Domain notes: URL refers to AdminDeck URL Connections backed by embedded WebView2.
+
+### settings.urlSecurityHint
+
+- English value: "Controls certificate handling for URL Connections. Keep bypass off unless you trust the internal site and network."
+- Namespace: `settings`
+- File/component: `src/settings/UrlSettings.tsx`
+- UI role: helper text
+- Surrounding user flow: Settings -> URL explains the security controls before the user enables certificate bypass for internal self-signed HTTPS sites.
+- Tone: cautious, practical security guidance.
+- Placeholder details: none.
+- Domain notes: Certificate bypass affects HTTPS validation for URL Connections; URL Connection is the stored connection type.
+
+### settings.ignoreCertificateErrors
+
+- English value: "Ignore invalid HTTPS certificates"
+- Namespace: `settings`
+- File/component: `src/settings/UrlSettings.tsx`
 - UI role: checkbox label
-- Surrounding user flow: Settings -> General lets the user enable or disable adding currently connected Connections to the left activity rail.
-- Tone: concise settings label.
+- Surrounding user flow: Settings -> URL lets the user opt in to loading internal URL Connections with self-signed or untrusted certificates.
+- Tone: explicit security-affecting setting label.
 - Placeholder details: none.
-- Domain notes: Connection is the stored openable resource; the rail item appears only while a live Session exists for that Connection. Defaults to off.
+- Domain notes: HTTPS and URL stay English technical terms. The setting defaults off.
 
-### settings.connectedConnectionsRailHint
+### settings.ignoreCertificateErrorsHint
 
-- English value: "Adds an icon for each connected Connection to the left rail so you can switch back to it quickly."
+- English value: "Loads URL Connections with self-signed or untrusted certificates without the browser warning. Applies to newly opened URL tabs."
 - Namespace: `settings`
-- File/component: `src/settings/GeneralSettings.tsx`
-- UI role: helper text
-- Surrounding user flow: Shown below the Settings -> General checkbox that controls connected Connection icons in the activity rail.
-- Tone: brief explanatory helper.
+- File/component: `src/settings/UrlSettings.tsx`
+- UI role: checkbox helper text
+- Surrounding user flow: Displayed under the certificate-bypass checkbox so the user understands why existing URL tabs may need to be reopened after changing the setting.
+- Tone: explanatory and safety-conscious.
 - Placeholder details: none.
-- Domain notes: Connection is the durable resource and the icon opens the existing workspace Tab for quick switching; this does not create a new Connection or persist live Session state.
+- Domain notes: URL Connection is the domain term for saved URL resources; tab refers to the frontend workspace container.
 
-### settings.connectedConnectionsRailSaved
+### settings.urlSettingsSaved
 
-- English value: "Connected Connection icons setting saved."
+- English value: "URL settings saved."
 - Namespace: `settings`
-- File/component: `src/settings/GeneralSettings.tsx`
-- UI role: save confirmation status
-- Surrounding user flow: Appears after the Settings -> General connected Connection icons checkbox is persisted successfully.
-- Tone: short confirmation.
+- File/component: `src/settings/UrlSettings.tsx`
+- UI role: success status
+- Surrounding user flow: Shown after the user saves URL settings such as invalid HTTPS certificate bypass.
+- Tone: brief confirmation.
 - Placeholder details: none.
-- Domain notes: Refers to the persisted General setting only, not to a new Connection lifecycle event.
-
-### app.connectedConnectionsRail
-
-- English value: "Connected Connections"
-- Namespace: `app`
-- File/component: `src/App.tsx` / `ActivityRail`
-- UI role: rail group aria-label
-- Surrounding user flow: Labels the optional group of connected Connection shortcut icons in the left activity rail for assistive technologies.
-- Tone: compact navigation label.
-- Placeholder details: none.
-- Domain notes: The group is visible only when the General setting is enabled and at least one Connection has an active Session.
-
-### app.openConnectedConnection
-
-- English value: "Open {{name}}"
-- Namespace: `app`
-- File/component: `src/App.tsx` / `ActivityRail`
-- UI role: button aria-label
-- Surrounding user flow: Used on each connected Connection shortcut in the left activity rail; activating it switches to the existing workspace Tab for that Connection.
-- Tone: direct action label.
-- Placeholder details: `{{name}}` is the user-defined Connection name.
-- Domain notes: This action opens/switches to an existing Tab for a connected Connection; it does not start a duplicate Session.
-
-### connections.import.tileSubtitle
-
-- English value: "From file, bookmarks, or network scan"
-- Namespace: `connections`
-- File/component: `src/connections/ConnectionSidebar.tsx`, `src/connections/ImportDialog.tsx`
-- UI role: import entry tile helper text
-- Surrounding user flow: Appears on the New Connection wizard Import tile before the user opens the import source chooser.
-- Tone: compact feature summary.
-- Placeholder details: none.
-- Domain notes: "bookmarks" means browser URL bookmarks from Edge, Chrome, and Firefox; imported items become URL Connections.
-
-### connections.import.bookmarksTitle
-
-- English value: "Import browser bookmarks"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx`
-- UI role: import source title/dialog heading
-- Surrounding user flow: Appears in the import source chooser and as the dialog heading after choosing the browser bookmarks source.
-- Tone: direct action label.
-- Placeholder details: none.
-- Domain notes: Browser bookmarks are imported as URL Connections, not browser tabs.
-
-### connections.import.bookmarksSubtitle
-
-- English value: "Edge, Chrome, Firefox URL bookmarks"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx`
-- UI role: import source helper text
-- Surrounding user flow: Appears below the browser bookmarks import tile in the source chooser.
-- Tone: concise capability summary.
-- Placeholder details: none.
-- Domain notes: Browser product names should remain recognizable; URL can remain English as a technical term.
-
-### connections.import.bookmarksLoading
-
-- English value: "Looking for browser bookmark sources..."
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: loading status
-- Surrounding user flow: Displayed while AdminDeck searches local browser profile folders for supported bookmark stores.
-- Tone: brief progress update.
-- Placeholder details: none.
-- Domain notes: Sources are local Edge/Chrome JSON bookmark files and Firefox `places.sqlite` databases.
-
-### connections.import.bookmarksNoSources
-
-- English value: "No Edge, Chrome, or Firefox bookmark sources were found on this device."
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: empty-state message
-- Surrounding user flow: Shown when no supported browser bookmark stores are discovered on the local machine.
-- Tone: clear neutral status.
-- Placeholder details: none.
-- Domain notes: This does not indicate a failed import; users may not have those browsers/profiles.
-
-### connections.import.bookmarksSourceLabel
-
-- English value: "Browser profile"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: select label
-- Surrounding user flow: Labels the dropdown of discovered browser profiles before the user selects folders/bookmarks.
-- Tone: concise field label.
-- Placeholder details: none.
-- Domain notes: Profile refers to a browser profile here, not an AdminDeck Connection.
-
-### connections.import.bookmarksSourcePath
-
-- English value: "Source file: {{path}}"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: helper text
-- Surrounding user flow: Shows the local bookmark file or database path for the selected browser profile.
-- Tone: factual diagnostic helper.
-- Placeholder details: `{{path}}` is an absolute local filesystem path.
-- Domain notes: Path may point to a Chromium `Bookmarks` JSON file or a Firefox `places.sqlite` database.
-
-### connections.import.bookmarksTreeLabel
-
-- English value: "Bookmark folders and links"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarkTreeRow`
-- UI role: ARIA label
-- Surrounding user flow: Labels the tree of bookmark folders and individual bookmark links for assistive technologies.
-- Tone: descriptive accessibility label.
-- Placeholder details: none.
-- Domain notes: Links imported from the tree become URL Connections.
-
-### connections.import.bookmarksPreview
-
-- English value: "Preview {{count}} selected"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: button label
-- Surrounding user flow: The user clicks this after selecting bookmark folders/links to generate the editable import preview.
-- Tone: direct action label.
-- Placeholder details: `{{count}}` is the number of selected tree nodes, including folders and bookmarks.
-- Domain notes: Preview rows may be fewer than selected nodes because folders expand to importable http/https bookmarks only.
-
-### connections.import.bookmarksSourceRequired
-
-- English value: "Choose a browser bookmark source."
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: validation error
-- Surrounding user flow: Shown if the user attempts to preview bookmarks without a selected browser profile.
-- Tone: direct corrective instruction.
-- Placeholder details: none.
-- Domain notes: Source means the discovered browser profile/bookmark store.
-
-### connections.import.bookmarksSelectionRequired
-
-- English value: "Select at least one folder or bookmark to import."
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: validation error
-- Surrounding user flow: Shown if the user attempts to preview without checking any bookmark tree item.
-- Tone: direct corrective instruction.
-- Placeholder details: none.
-- Domain notes: Selected folders include their descendant bookmarks.
-
-### connections.import.bookmarksNoImportable
-
-- English value: "The selected bookmarks did not include any http or https URLs."
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
-- UI role: validation/status error
-- Surrounding user flow: Shown when selected browser bookmark nodes contain no URLs that AdminDeck can store as URL Connections.
-- Tone: explanatory, not alarming.
-- Placeholder details: none.
-- Domain notes: Non-web schemes such as `chrome://`, `about:`, `file:`, and `javascript:` are intentionally skipped.
-
-### connections.import.bookmarkFallbackName
-
-- English value: "Imported bookmark"
-- Namespace: `connections`
-- File/component: `src/connections/ImportDialog.tsx` / `ImportPreviewSection`
-- UI role: fallback Connection name fragment
-- Surrounding user flow: Used only if an imported URL bookmark row has no usable bookmark title, host, or URL text.
-- Tone: neutral default name.
-- Placeholder details: none.
-- Domain notes: The saved durable resource is a URL Connection.
-
-### connections.import.importBookmarksComplete
-
-- English value: "Imported {{count}} Connections from bookmarks."
-- Namespace: `connections`
-- File/component: `src/connections/ConnectionSidebar.tsx`, `src/connections/ImportDialog.tsx`
-- UI role: transient status
-- Surrounding user flow: Appears in the bottom workspace status bar after selected browser bookmark preview rows are saved as Connections.
-- Tone: brief success confirmation.
-- Placeholder details: `{{count}}` is the number of imported URL Connection rows.
-- Domain notes: Connection is capitalized for the durable stored resource; imported bookmarks become URL Connections.
+- Domain notes: URL refers to the Settings -> URL section and URL Connection behavior.

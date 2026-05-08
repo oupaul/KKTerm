@@ -44,6 +44,7 @@ export function GeneralSettings() {
   );
   const setSshSettings = useWorkspaceStore((state) => state.setSshSettings);
   const setSftpSettings = useWorkspaceStore((state) => state.setSftpSettings);
+  const setUrlSettings = useWorkspaceStore((state) => state.setUrlSettings);
   const setAiProviderSettings = useWorkspaceStore(
     (state) => state.setAiProviderSettings,
   );
@@ -145,6 +146,7 @@ export function GeneralSettings() {
       setAppearanceSettings(snapshot.appearanceSettings);
       setSshSettings(snapshot.sshSettings);
       setSftpSettings(snapshot.sftpSettings);
+      setUrlSettings(snapshot.urlSettings);
       setAiProviderSettings(snapshot.aiProviderSettings);
       window.dispatchEvent(
         new CustomEvent("admindeck:connection-tree-invalidated"),

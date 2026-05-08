@@ -35,6 +35,7 @@ import type {
   UpdateConnectionRequest,
   UrlCredentialSummary,
   UrlDataPartitionSummary,
+  UrlSettings,
   CreateWikiPageRequest,
   DeleteWikiAttachmentRequest,
   MoveWikiPageRequest,
@@ -351,6 +352,7 @@ export interface StartWebviewSessionRequest {
   sessionId: string;
   url: string;
   dataPartition?: string;
+  ignoreCertificateErrors?: boolean;
   x: number;
   y: number;
   width: number;
@@ -674,6 +676,14 @@ type CommandMap = {
   update_sftp_settings: {
     args: { request: SftpSettings };
     result: SftpSettings;
+  };
+  get_url_settings: {
+    args: undefined;
+    result: UrlSettings;
+  };
+  update_url_settings: {
+    args: { request: UrlSettings };
+    result: UrlSettings;
   };
   get_ai_provider_settings: {
     args: undefined;

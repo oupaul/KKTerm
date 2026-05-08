@@ -5,6 +5,7 @@ import type {
   GeneralSettings,
   SftpSettings,
   SshSettings,
+  UrlSettings,
   TerminalSettings,
   WorkspaceTab,
 } from "./types";
@@ -49,6 +50,10 @@ export const defaultSshSettings: SshSettings = {
 
 export const defaultSftpSettings: SftpSettings = {
   overwriteBehavior: "fail",
+};
+
+export const defaultUrlSettings: UrlSettings = {
+  ignoreCertificateErrors: false,
 };
 
 export const defaultAiAssistantToolSettings = {
