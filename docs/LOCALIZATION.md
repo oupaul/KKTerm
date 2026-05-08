@@ -467,3 +467,25 @@ When a key is translated into every supported locale, remove its entry from this
 - Tone: concise safety-focused explanation.
 - Placeholder details: none.
 - Domain notes: Commands are local and constrained; destructive actions require explicit approval before any future execution path.
+
+### settings.navToolbar
+
+- English value: "Nav toolbar"
+- Namespace: `settings`
+- File/component: `src/settings/AppearanceSettings.tsx` / color scheme preview
+- UI role: preview swatch label
+- Surrounding user flow: Settings -> Appearance -> Color Scheme shows the left Activity Rail/navigation toolbar color included in each selectable color scheme.
+- Tone: compact UI-part label.
+- Placeholder details: none.
+- Domain notes: Refers to the narrow left column navigation rail that contains Connections, Wiki, Don't Sleep, and Settings controls.
+
+### settings.toolbarText
+
+- English value: "Toolbar text"
+- Namespace: `settings`
+- File/component: `src/settings/AppearanceSettings.tsx` / color scheme preview
+- UI role: preview swatch label
+- Surrounding user flow: Settings -> Appearance -> Color Scheme shows the icon/text color used on the left Activity Rail/navigation toolbar as part of each selectable color scheme.
+- Tone: compact UI-part label.
+- Placeholder details: none.
+- Domain notes: Refers to foreground text and icon color for the themed navigation toolbar, not terminal text or workspace content text.
