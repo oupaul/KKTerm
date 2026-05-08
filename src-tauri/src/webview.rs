@@ -704,32 +704,32 @@ fn configure_platform_certificate_error_bypass(webview: &Webview) -> Result<(), 
 
     webview
         .with_webview(move |platform_webview| {
-            let result = unsafe {
-                let webview2 = platform_webview
-                    .controller()
-                    .CoreWebView2()
-                    .map_err(|error| error.to_string())?;
-                let webview2 = webview2
-                    .cast::<ICoreWebView2_14>()
-                    .map_err(|error| error.to_string())?;
-                let handler = ServerCertificateErrorDetectedEventHandler::create(Box::new(
-                    move |_sender, args| {
-                        if let Some(args) = args {
-                            unsafe {
+            let result = (|| -> Result<(), String> {
+                unsafe {
+                    let webview2 = platform_webview
+                        .controller()
+                        .CoreWebView2()
+                        .map_err(|error| error.to_string())?;
+                    let webview2 = webview2
+                        .cast::<ICoreWebView2_14>()
+                        .map_err(|error| error.to_string())?;
+                    let handler = ServerCertificateErrorDetectedEventHandler::create(Box::new(
+                        move |_sender, args| {
+                            if let Some(args) = args {
                                 args.SetAction(
                                     COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW,
                                 )?;
                             }
-                        }
-                        Ok(())
-                    },
-                ));
-                let mut token = 0;
-                webview2
-                    .add_ServerCertificateErrorDetected(handler, &mut token)
-                    .map_err(|error| error.to_string())?;
+                            Ok(())
+                        },
+                    ));
+                    let mut token = 0;
+                    webview2
+                        .add_ServerCertificateErrorDetected(&handler, &mut token)
+                        .map_err(|error| error.to_string())?;
+                }
                 Ok::<(), String>(())
-            };
+            })();
             if let Err(error) = result {
                 if let Ok(mut setup_error) = setup_error_for_callback.lock() {
                     *setup_error = Some(error);
