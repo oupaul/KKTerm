@@ -46,6 +46,7 @@ export const defaultSshSettings: SshSettings = {
   defaultKeyPath: "C:\\Users\\ryan\\.ssh\\id_ed25519",
   defaultProxyJump: "",
   bufferLines: 5000,
+  hideCommonPortRedirects: true,
 };
 
 export const defaultSftpSettings: SftpSettings = {

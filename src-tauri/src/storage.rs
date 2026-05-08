@@ -216,6 +216,14 @@ pub struct SshSettings {
     default_proxy_jump: Option<String>,
     #[serde(default = "default_ssh_buffer_lines")]
     buffer_lines: u32,
+    #[serde(default = "default_hide_common_port_redirects")]
+    hide_common_port_redirects: bool,
+}
+
+impl SshSettings {
+    pub(crate) fn hide_common_port_redirects(&self) -> bool {
+        self.hide_common_port_redirects
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -2927,11 +2935,16 @@ fn default_ssh_settings() -> SshSettings {
         default_key_path: default_ssh_key_path(),
         default_proxy_jump: None,
         buffer_lines: default_ssh_buffer_lines(),
+        hide_common_port_redirects: default_hide_common_port_redirects(),
     }
 }
 
 fn default_ssh_buffer_lines() -> u32 {
     5_000
+}
+
+fn default_hide_common_port_redirects() -> bool {
+    true
 }
 
 fn default_sftp_settings() -> SftpSettings {
@@ -4215,6 +4228,7 @@ mod tests {
         let defaults = storage.ssh_settings().expect("default SSH settings load");
         assert_eq!(defaults.default_port, 22);
         assert_eq!(defaults.buffer_lines, 5_000);
+        assert!(defaults.hide_common_port_redirects);
         assert!(defaults.default_key_path.is_some());
 
         let updated = storage
@@ -4224,6 +4238,7 @@ mod tests {
                 default_key_path: Some("  C:\\Users\\ryan\\.ssh\\deploy_ed25519  ".to_string()),
                 default_proxy_jump: Some("  bastion.internal  ".to_string()),
                 buffer_lines: 12_000,
+                hide_common_port_redirects: false,
             })
             .expect("SSH settings update");
 
@@ -4236,6 +4251,7 @@ mod tests {
         let reloaded = storage.ssh_settings().expect("SSH settings reload");
         assert_eq!(reloaded.default_port, 2200);
         assert_eq!(reloaded.buffer_lines, 12_000);
+        assert!(!reloaded.hide_common_port_redirects);
         assert_eq!(
             reloaded.default_proxy_jump.as_deref(),
             Some("bastion.internal")

@@ -27,6 +27,10 @@ All keys are structurally present in every locale file (flushed via `scripts/flu
 | settings.sshBufferLines | settings | SSH buffer lines |
 | settings.sshBufferHint | settings | Default is 5,000. Used for SSH terminal scrollback and tmux pane history. |
 | settings.sshBufferRange | settings | SSH buffer must be between 100 and 100000 lines. |
+| settings.portRedirect | settings | Port Redirect |
+| settings.portRedirectHint | settings | Controls which remote loopback ports appear in the SSH terminal port redirect menu. |
+| settings.hideCommonPortRedirects | settings | Hide common ports except 80/443 |
+| settings.hideCommonPortRedirectsHint | settings | When enabled, remote ports below 1024 are hidden unless they are 80 or 443. |
 | settings.sshKeyEmailDialogTitle | settings | Generate SSH key |
 | settings.sshKeyEmailDialogHint | settings | Add an email address as the public key comment so the key is easy to recognize later. |
 | settings.sshKeyEmailPlaceholder | settings | admin@example.com |

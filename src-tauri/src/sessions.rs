@@ -510,6 +510,7 @@ impl SessionManager {
         app: AppHandle,
         secrets: &secrets::Secrets,
         request: TmuxConnectionRequest,
+        hide_common_ports: bool,
     ) -> Result<Vec<RemoteLoopbackPort>, String> {
         let output = run_ssh_command(
             app,
@@ -518,7 +519,10 @@ impl SessionManager {
             remote_loopback_port_command(),
             Some(Duration::from_secs(5)),
         )?;
-        Ok(parse_remote_loopback_ports(&output))
+        Ok(filter_remote_loopback_ports(
+            parse_remote_loopback_ports(&output),
+            hide_common_ports,
+        ))
     }
 
     pub fn start_ssh_port_forward(
@@ -1064,6 +1068,20 @@ fn parse_remote_loopback_ports(output: &str) -> Vec<RemoteLoopbackPort> {
         }
     }
     ports.into_values().collect()
+}
+
+fn filter_remote_loopback_ports(
+    ports: Vec<RemoteLoopbackPort>,
+    hide_common_ports: bool,
+) -> Vec<RemoteLoopbackPort> {
+    if !hide_common_ports {
+        return ports;
+    }
+
+    ports
+        .into_iter()
+        .filter(|entry| entry.port >= 1024 || entry.port == 80 || entry.port == 443)
+        .collect()
 }
 
 fn parse_loopback_endpoint(token: &str) -> Option<(String, u16)> {
@@ -1675,5 +1693,42 @@ python 124 user 22u IPv4 0x0 0t0 TCP TCP@localhost:8000 (LISTEN)
         assert_eq!(ports.len(), 2);
         assert_eq!(ports[0].port, 5173);
         assert_eq!(ports[1].port, 8000);
+    }
+
+    #[test]
+    fn filters_common_loopback_ports_except_web_ports() {
+        let ports = vec![
+            RemoteLoopbackPort {
+                port: 22,
+                address: "127.0.0.1".to_string(),
+            },
+            RemoteLoopbackPort {
+                port: 53,
+                address: "127.0.0.1".to_string(),
+            },
+            RemoteLoopbackPort {
+                port: 80,
+                address: "127.0.0.1".to_string(),
+            },
+            RemoteLoopbackPort {
+                port: 443,
+                address: "127.0.0.1".to_string(),
+            },
+            RemoteLoopbackPort {
+                port: 1023,
+                address: "127.0.0.1".to_string(),
+            },
+            RemoteLoopbackPort {
+                port: 3000,
+                address: "127.0.0.1".to_string(),
+            },
+        ];
+
+        let filtered = filter_remote_loopback_ports(ports, true);
+
+        assert_eq!(
+            filtered.iter().map(|entry| entry.port).collect::<Vec<_>>(),
+            vec![80, 443, 3000]
+        );
     }
 }

@@ -223,6 +223,7 @@ export interface SshSettings {
   defaultKeyPath?: string;
   defaultProxyJump?: string;
   bufferLines: number;
+  hideCommonPortRedirects: boolean;
 }
 
 export type SftpOverwriteBehavior = "fail" | "overwrite";

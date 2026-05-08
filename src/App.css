@@ -1668,6 +1668,9 @@ h2 {
 }
 
 .tmux-session-row {
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  justify-items: stretch;
   min-width: 0;
   padding: 6px 7px;
   color: #d9e5f4;
@@ -1679,15 +1682,19 @@ h2 {
 }
 
 .tmux-session-row-main {
-  display: flex;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(2, auto);
+  gap: 6px;
   align-items: center;
+  justify-self: stretch;
+  min-width: 0;
+  inline-size: 100%;
 }
 
 .tmux-session-row-info {
   display: grid;
-  flex: 1;
   min-width: 0;
+  inline-size: 100%;
   gap: 1px;
   padding: 0;
   text-align: left;
@@ -1731,6 +1738,10 @@ h2 {
 
 .ssh-port-row .tmux-session-row-info {
   cursor: default;
+}
+
+.ssh-port-row .tmux-session-row-main {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .tmux-mouse-toggle {

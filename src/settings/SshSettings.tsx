@@ -30,6 +30,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultKeyPath,
     defaultProxyJump,
     bufferLines,
+    hideCommonPortRedirects: settings.hideCommonPortRedirects ?? true,
   };
 }
 
@@ -250,6 +251,34 @@ export function SshSettings() {
           />
           <small className="field-hint">{t("settings.proxyJumpHint")}</small>
         </label>
+      </div>
+
+      <div className="settings-subsection">
+        <div className="settings-section-title">
+          <div>
+            <h3 className="settings-section-heading">{t("settings.portRedirect")}</h3>
+            <p className="field-hint">{t("settings.portRedirectHint")}</p>
+          </div>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <input
+              checked={sshDraft.hideCommonPortRedirects ?? true}
+              onChange={(event) => {
+                const hideCommonPortRedirects = event.currentTarget.checked;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  hideCommonPortRedirects,
+                }));
+              }}
+              type="checkbox"
+            />
+            <span>
+              <strong>{t("settings.hideCommonPortRedirects")}</strong>
+              <small>{t("settings.hideCommonPortRedirectsHint")}</small>
+            </span>
+          </label>
+        </div>
       </div>
 
       {status ? <p className="settings-status success">{status}</p> : null}

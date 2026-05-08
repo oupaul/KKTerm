@@ -711,7 +711,9 @@ async fn list_remote_loopback_ports(
     run_blocking_command("SSH loopback port discovery", move || {
         let sessions = app.state::<sessions::SessionManager>();
         let secrets = app.state::<secrets::Secrets>();
-        sessions.list_remote_loopback_ports(app.clone(), &secrets, request)
+        let storage = app.state::<storage::Storage>();
+        let hide_common_ports = storage.ssh_settings()?.hide_common_port_redirects();
+        sessions.list_remote_loopback_ports(app.clone(), &secrets, request, hide_common_ports)
     })
     .await
 }
