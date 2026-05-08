@@ -1752,31 +1752,34 @@ function TerminalContextMenu({
       ref={menuRef}
       role="menu"
     >
-      {menu.hasSelection ? (
-        <button
-          onClick={() => {
-            onCopy();
-            onClose();
-          }}
-          role="menuitem"
-          type="button"
-        >
+      <button
+        disabled={!menu.hasSelection}
+        onClick={() => {
+          onCopy();
+          onClose();
+        }}
+        role="menuitem"
+        type="button"
+      >
+        <span className="menu-item-label">
           <Copy size={14} />
           <span>{t("terminal.copy")}</span>
-        </button>
-      ) : (
-        <button
-          onClick={() => {
-            onPaste();
-            onClose();
-          }}
-          role="menuitem"
-          type="button"
-        >
+        </span>
+        <kbd>{t("terminal.copyShortcut")}</kbd>
+      </button>
+      <button
+        onClick={() => {
+          onPaste();
+          onClose();
+        }}
+        role="menuitem"
+        type="button"
+      >
+        <span className="menu-item-label">
           <ClipboardPaste size={14} />
           <span>{t("terminal.paste")}</span>
-        </button>
-      )}
+        </span>
+      </button>
     </div>
   );
 }

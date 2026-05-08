@@ -67,6 +67,8 @@ All keys are structurally present in every locale file (flushed via `scripts/flu
 | connections.import.importBookmarksComplete | connections | Imported {{count}} Connections from bookmarks. |
 | terminal.terminalBuffer | terminal | terminal buffer |
 | terminal.sendToAi | terminal | Send terminal buffer to AI Assistant |
+| terminal.copySelection | terminal | Copy terminal selection (Ctrl+Shift+C) |
+| terminal.copyShortcut | terminal | Ctrl+Shift+C |
 | terminal.sshPortRedirect | terminal | SSH port redirect |
 | terminal.remoteLoopbackPorts | terminal | Remote 127.0.0.1 ports |
 | terminal.refreshPorts | terminal | Refresh ports |
