@@ -13,7 +13,7 @@ export const AI_PROVIDER_SECRET_OWNER_ID = "openai-compatible-provider";
 // Combines the previously separate per-key effects into one parallel load so
 // new settings can be added in one place instead of cloning a useEffect each
 // time. Bootstrap is best-effort: any single load failure is ignored so the
-// app still renders with the in-memory defaults from `sample-data`.
+// app still renders with the in-memory defaults from `app-defaults`.
 export function useBootstrapSettings() {
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,

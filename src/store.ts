@@ -8,7 +8,7 @@ import {
   defaultGeneralSettings,
   defaultTerminalSettings,
   initialTabs,
-} from "./sample-data";
+} from "./app-defaults";
 import {
   defaultLayoutFor,
   ensureLayout,

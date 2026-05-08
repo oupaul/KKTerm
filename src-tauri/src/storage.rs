@@ -157,7 +157,7 @@ pub struct Storage {
 #[serde(rename_all = "camelCase")]
 pub struct GeneralSettings {
     auto_backup_enabled: bool,
-    #[serde(default)]
+    #[serde(default = "default_show_connected_connections_in_rail")]
     show_connected_connections_in_rail: bool,
     #[serde(default)]
     last_backup_at: Option<String>,
@@ -2886,9 +2886,13 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
-        show_connected_connections_in_rail: false,
+        show_connected_connections_in_rail: true,
         last_backup_at: None,
     }
+}
+
+fn default_show_connected_connections_in_rail() -> bool {
+    true
 }
 
 fn default_terminal_settings() -> TerminalSettings {
@@ -4038,7 +4042,7 @@ mod tests {
             .general_settings()
             .expect("default general settings load");
         assert!(defaults.auto_backup_enabled);
-        assert!(!defaults.show_connected_connections_in_rail);
+        assert!(defaults.show_connected_connections_in_rail);
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage

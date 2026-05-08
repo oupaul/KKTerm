@@ -8,7 +8,10 @@ import {
   Settings,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  DragEvent as ReactDragEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "./lib/tauri";
 import { useBootstrapSettings } from "./lib/settings";
@@ -24,6 +27,7 @@ import { StatusBar } from "./workspace/StatusBar";
 import { TabStrip, WorkspaceCanvas } from "./workspace/WorkspaceCanvas";
 import { WikiWorkspace } from "./wiki/WikiWorkspace";
 import { useOpenWikiListener } from "./wiki/WikiPagesButton";
+import type { Connection } from "./types";
 
 type PanelLayoutState = {
   collapsed: boolean;
@@ -45,6 +49,13 @@ const AI_PANEL_MAX_WIDTH = 1860;
 const CONNECTION_PANEL_LAYOUT_KEY = "admindeck.layout.connectionsPanel.v1";
 
 const AI_PANEL_LAYOUT_KEY = "admindeck.layout.aiAssistPanel.v2";
+
+const CONNECTION_RAIL_ORDER_KEY = "admindeck.connectionRail.order.v1";
+
+type ConnectedRailItem = {
+  connection: Connection;
+  tabId: string;
+};
 
 const defaultConnectionPanelLayout: PanelLayoutState = {
   collapsed: false,
@@ -83,6 +94,33 @@ function loadPanelLayout(
     };
   } catch {
     return fallback;
+  }
+}
+
+function loadConnectionRailOrder() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(CONNECTION_RAIL_ORDER_KEY) ?? "[]",
+    );
+    return Array.isArray(parsed)
+      ? parsed.filter((entry): entry is string => typeof entry === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistConnectionRailOrder(order: string[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(CONNECTION_RAIL_ORDER_KEY, JSON.stringify(order));
+  } catch {
+    // Ordering is a convenience preference; fail silently if storage is unavailable.
   }
 }
 
@@ -283,8 +321,11 @@ function App() {
       <ActivityRail
         activePage={activePage}
         connectionsCollapsed={connectionPanelLayout.collapsed}
-        onConnectionsRestore={() =>
-          setConnectionPanelLayout((layout) => ({ ...layout, collapsed: false }))
+        onConnectionsToggle={() =>
+          setConnectionPanelLayout((layout) => ({
+            ...layout,
+            collapsed: !layout.collapsed,
+          }))
         }
         onNavigate={(page) => {
           if (page !== "wiki") {
@@ -418,12 +459,12 @@ function PanelResizeHandle({
 function ActivityRail({
   activePage,
   connectionsCollapsed,
-  onConnectionsRestore,
+  onConnectionsToggle,
   onNavigate,
 }: {
   activePage: ActivePage;
   connectionsCollapsed: boolean;
-  onConnectionsRestore: () => void;
+  onConnectionsToggle: () => void;
   onNavigate: (page: ActivePage) => void;
 }) {
   const { t } = useTranslation();
@@ -435,6 +476,12 @@ function ActivityRail({
   const activateTab = useWorkspaceStore((state) => state.activateTab);
   const [dontSleepEnabled, setDontSleepEnabled] = useState(false);
   const [dontSleepUpdating, setDontSleepUpdating] = useState(false);
+  const [connectionRailOrder, setConnectionRailOrder] = useState(
+    loadConnectionRailOrder,
+  );
+  const [draggedConnectionId, setDraggedConnectionId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -459,9 +506,7 @@ function ActivityRail({
 
   function handleConnectionsClick() {
     onNavigate("workspace");
-    if (connectionsCollapsed) {
-      onConnectionsRestore();
-    }
+    onConnectionsToggle();
   }
 
   function handleConnectedConnectionClick(tabId: string) {
@@ -474,13 +519,13 @@ function ActivityRail({
     [activeTabId, tabs],
   );
 
-  const connectedRailItems = useMemo(() => {
+  const connectedRailItems = useMemo<ConnectedRailItem[]>(() => {
     if (!generalSettings.showConnectedConnectionsInRail) {
       return [];
     }
 
     const seenConnectionIds = new Set<string>();
-    return tabs.flatMap((tab) => {
+    const items = tabs.flatMap((tab) => {
       const connection = tab.connection;
       if (
         !connection ||
@@ -492,7 +537,94 @@ function ActivityRail({
       seenConnectionIds.add(connection.id);
       return [{ connection, tabId: tab.id }];
     });
-  }, [activeSessionCounts, generalSettings.showConnectedConnectionsInRail, tabs]);
+
+    const itemByConnectionId = new Map(
+      items.map((item) => [item.connection.id, item]),
+    );
+    const orderedItems = connectionRailOrder.flatMap((connectionId) => {
+      const item = itemByConnectionId.get(connectionId);
+      if (!item) {
+        return [];
+      }
+      itemByConnectionId.delete(connectionId);
+      return [item];
+    });
+
+    return [...orderedItems, ...itemByConnectionId.values()];
+  }, [
+    activeSessionCounts,
+    connectionRailOrder,
+    generalSettings.showConnectedConnectionsInRail,
+    tabs,
+  ]);
+
+  function reorderConnectedRailItem(
+    sourceConnectionId: string,
+    targetConnectionId: string | null,
+  ) {
+    const visibleConnectionIds = connectedRailItems.map(
+      (item) => item.connection.id,
+    );
+    if (
+      !visibleConnectionIds.includes(sourceConnectionId) ||
+      sourceConnectionId === targetConnectionId
+    ) {
+      return;
+    }
+
+    setConnectionRailOrder((currentOrder) => {
+      const nextOrder = [
+        ...currentOrder.filter((connectionId) =>
+          visibleConnectionIds.includes(connectionId),
+        ),
+        ...visibleConnectionIds.filter(
+          (connectionId) => !currentOrder.includes(connectionId),
+        ),
+      ].filter((connectionId) => connectionId !== sourceConnectionId);
+
+      const targetIndex = targetConnectionId
+        ? nextOrder.indexOf(targetConnectionId)
+        : -1;
+      if (targetIndex === -1) {
+        nextOrder.push(sourceConnectionId);
+      } else {
+        nextOrder.splice(targetIndex, 0, sourceConnectionId);
+      }
+      persistConnectionRailOrder(nextOrder);
+      return nextOrder;
+    });
+  }
+
+  function handleConnectedRailDragStart(
+    event: ReactDragEvent<HTMLButtonElement>,
+    connectionId: string,
+  ) {
+    setDraggedConnectionId(connectionId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", connectionId);
+  }
+
+  function handleConnectedRailDragOver(event: ReactDragEvent<HTMLElement>) {
+    if (!draggedConnectionId) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }
+
+  function handleConnectedRailDrop(
+    event: ReactDragEvent<HTMLElement>,
+    targetConnectionId: string | null,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sourceConnectionId =
+      draggedConnectionId || event.dataTransfer.getData("text/plain");
+    if (sourceConnectionId) {
+      reorderConnectedRailItem(sourceConnectionId, targetConnectionId);
+    }
+    setDraggedConnectionId(null);
+  }
 
   async function handleDontSleepClick() {
     if (dontSleepUpdating) {
@@ -530,18 +662,30 @@ function ActivityRail({
         className={`rail-button ${activePage === "workspace" ? "active" : ""} ${
           connectionsCollapsed ? "connections-collapsed-indicator" : ""
         }`}
-        aria-label={t("app.connections")}
+        aria-label={t("workspace.workspace")}
         onClick={handleConnectionsClick}
       >
         <LayoutDashboard size={18} />
         <span className="rail-tooltip" role="tooltip">
-          {t("app.connections")}
+          {t("workspace.workspace")}
+        </span>
+      </button>
+      <button
+        className={`rail-button ${activePage === "wiki" ? "active" : ""}`}
+        aria-label={t("app.wiki")}
+        onClick={() => onNavigate("wiki")}
+      >
+        <BookOpen size={18} />
+        <span className="rail-tooltip" role="tooltip">
+          {t("app.wiki")}
         </span>
       </button>
       {connectedRailItems.length > 0 ? (
         <div
           className="rail-connected-connections"
           aria-label={t("app.connectedConnectionsRail")}
+          onDragOver={handleConnectedRailDragOver}
+          onDrop={(event) => handleConnectedRailDrop(event, null)}
         >
           {connectedRailItems.map(({ connection, tabId }) => (
             <button
@@ -550,10 +694,19 @@ function ActivityRail({
                 activePage === "workspace" && activeTabConnectionId === connection.id
                   ? "active"
                   : ""
-              }`}
+              } ${draggedConnectionId === connection.id ? "dragging" : ""}`}
               aria-label={t("app.openConnectedConnection", {
                 name: connection.name,
               })}
+              draggable
+              onDragEnd={() => setDraggedConnectionId(null)}
+              onDragOver={handleConnectedRailDragOver}
+              onDragStart={(event) =>
+                handleConnectedRailDragStart(event, connection.id)
+              }
+              onDrop={(event) =>
+                handleConnectedRailDrop(event, connection.id)
+              }
               onClick={() => handleConnectedConnectionClick(tabId)}
             >
               <ConnectionIcon
@@ -568,16 +721,6 @@ function ActivityRail({
           ))}
         </div>
       ) : null}
-      <button
-        className={`rail-button ${activePage === "wiki" ? "active" : ""}`}
-        aria-label={t("app.wiki")}
-        onClick={() => onNavigate("wiki")}
-      >
-        <BookOpen size={18} />
-        <span className="rail-tooltip" role="tooltip">
-          {t("app.wiki")}
-        </span>
-      </button>
       <button
         className={`rail-button rail-button-dont-sleep ${
           dontSleepEnabled ? "active dont-sleep-enabled" : ""

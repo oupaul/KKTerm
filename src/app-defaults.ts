@@ -19,7 +19,7 @@ export const initialTabs: WorkspaceTab[] = [];
 
 export const defaultGeneralSettings: GeneralSettings = {
   autoBackupEnabled: true,
-  showConnectedConnectionsInRail: false,
+  showConnectedConnectionsInRail: true,
   lastBackupAt: null,
 };
 

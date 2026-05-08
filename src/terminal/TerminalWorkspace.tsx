@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import i18next from "../i18n/config";
 import { dialogButtonAria, menuButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, saveTextFile, type TerminalOutput, type TmuxSession } from "../lib/tauri";
-import { defaultTerminalSettings } from "../sample-data";
+import { defaultTerminalSettings } from "../app-defaults";
 import { forgetTmuxSessionId, getTmuxSessionLabel, useWorkspaceStore } from "../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../workspace/layout";

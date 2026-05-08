@@ -1,5 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { defaultAppearanceSettings } from "../sample-data";
+import { defaultAppearanceSettings } from "../app-defaults";
 import type { AppearanceSettings, CustomFont } from "../types";
 import { invokeCommand, isTauriRuntime } from "./tauri";
 

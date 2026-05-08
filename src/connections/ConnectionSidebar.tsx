@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import i18next from "../i18n/config";
 import { ariaExpanded, dialogButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
-import { connectionTree } from "../sample-data";
+import { connectionTree } from "../app-defaults";
 import { useWorkspaceStore } from "../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, SplitDirection, SshSettings, UpdateConnectionRequest } from "../types";
 

@@ -328,6 +328,10 @@ button {
   border-radius: 4px;
 }
 
+.rail-button-connection.dragging {
+  opacity: 0.48;
+}
+
 .rail-button-dont-sleep {
   margin-top: auto;
 }
@@ -370,8 +374,8 @@ button {
   opacity: 0;
   transform: translateY(-50%) translateX(-2px);
   transition:
-    opacity 140ms ease 2s,
-    transform 140ms ease 2s;
+    opacity 140ms ease,
+    transform 140ms ease;
   font-size: 12px;
   font-weight: 700;
 }
@@ -380,6 +384,7 @@ button {
 .rail-button:focus-visible .rail-tooltip {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
+  transition-delay: 650ms;
 }
 
 .connection-sidebar,

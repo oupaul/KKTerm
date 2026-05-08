@@ -7,7 +7,7 @@ import {
   type CustomFontOption,
 } from "../lib/customFonts";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
-import { defaultAppearanceSettings } from "../sample-data";
+import { defaultAppearanceSettings } from "../app-defaults";
 import { useWorkspaceStore } from "../store";
 import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../types";
 
