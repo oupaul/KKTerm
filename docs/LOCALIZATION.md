@@ -379,3 +379,14 @@ When a key is translated into every supported locale, remove its entry from this
 - Tone: concise confirmation question.
 - Placeholder details: none.
 - Domain notes: Wiki page deletion is separate from deleting a stored Connection.
+
+### wiki.viewMode
+
+- English value: "View"
+- Namespace: `wiki`
+- File/component: `src/wiki/WikiWorkspace.tsx` / `ViewModeToggle`
+- UI role: editor mode switch button label
+- Surrounding user flow: The user toggles the active wiki page between Markdown editing and a rendered reading view in the same editor surface.
+- Tone: compact Obsidian-style mode label.
+- Placeholder details: none.
+- Domain notes: View means rendered Markdown reading mode, not a separate preview pane or browser view.

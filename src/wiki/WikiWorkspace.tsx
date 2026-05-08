@@ -1,15 +1,11 @@
 import {
   Download,
-  Eye,
   FileText,
   Loader2,
   Paperclip,
-  Pencil,
   Search,
-  Split,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Connection, WikiPage, WikiPageNode, WikiSearchHit, WikiTree } from "../types";
@@ -34,7 +30,7 @@ import {
   updateWikiPage,
 } from "./wikiCommands";
 
-type ViewMode = "edit" | "preview" | "split";
+type ViewMode = "edit" | "view";
 
 interface WikiWorkspaceProps {
   active: boolean;
@@ -53,7 +49,7 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
   const [pageDraft, setPageDraft] = useState<{ title: string; body: string } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [viewMode, setViewMode] = useState<ViewMode>("edit");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHits, setSearchHits] = useState<WikiSearchHit[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -420,7 +416,7 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
               />
             </div>
             <div className="wiki-edit-area flex min-h-0 flex-1">
-              {viewMode !== "preview" ? (
+              {viewMode === "edit" ? (
                 <div className="wiki-edit-pane flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2">
                   <WikiEditor
                     value={pageDraft.body}
@@ -429,9 +425,8 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
                     placeholderText={t("wiki.bodyPlaceholder")}
                   />
                 </div>
-              ) : null}
-              {viewMode !== "edit" ? (
-                <div className="wiki-preview-pane flex min-h-0 flex-1 flex-col overflow-y-auto border-l border-black/10 px-4 py-3">
+              ) : (
+                <div className="wiki-view-pane flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
                   <WikiPreview
                     body={pageDraft.body}
                     context={previewContext}
@@ -439,7 +434,7 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
                     onOpenConnection={onOpenConnection}
                   />
                 </div>
-              ) : null}
+              )}
             </div>
             <PageSidebar
               page={page}
@@ -506,10 +501,9 @@ function ViewModeToggle({
   onChange: (next: ViewMode) => void;
 }) {
   const { t } = useTranslation();
-  const options: Array<{ key: ViewMode; icon: ReactNode; label: string }> = [
-    { key: "edit", icon: <Pencil size={12} />, label: t("wiki.editorMode") },
-    { key: "split", icon: <Split size={12} />, label: t("wiki.splitMode") },
-    { key: "preview", icon: <Eye size={12} />, label: t("wiki.previewMode") },
+  const options: Array<{ key: ViewMode; label: string }> = [
+    { key: "edit", label: t("wiki.editorMode") },
+    { key: "view", label: t("wiki.viewMode") },
   ];
   return (
     <div className="wiki-viewmode inline-flex rounded border border-black/10 text-xs">
@@ -523,7 +517,6 @@ function ViewModeToggle({
           onClick={() => onChange(option.key)}
           aria-pressed={current === option.key}
         >
-          {option.icon}
           <span>{option.label}</span>
         </button>
       ))}

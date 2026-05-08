@@ -1041,6 +1041,7 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "editorMode": "Edit",
+    "viewMode": "View",
     "previewMode": "Preview",
     "splitMode": "Split",
     "noSelection": "Select a page from the tree to start editing.",
