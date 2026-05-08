@@ -302,3 +302,399 @@ When a key is translated into every supported locale, remove its entry from this
 - Tone: concise descriptive tooltip.
 - Placeholder details: none.
 - Domain notes: The displayed value is aggregate local network throughput formatted as decimal MB/s, not a percentage.
+
+### settings.aiToolsTitle
+
+- English value: "Assistant tools"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: settings group heading
+- Surrounding user flow: Labels the AI Assistant tool-calling permissions section in Settings → AI Assistant.
+- Tone: concise product setting label.
+- Placeholder details: none.
+- Domain notes: Refers to built-in Assistant tool calls, not extensions.
+
+### settings.aiToolsDescription
+
+- English value: "Choose which built-in tools the AI Assistant may call while answering. Keep risky tools off unless you need them."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: explanatory helper text
+- Surrounding user flow: Appears above the AI Assistant tool toggles in Settings → AI Assistant.
+- Tone: cautious but user-friendly.
+- Placeholder details: none.
+- Domain notes: Tool calls happen inside AdminDeck and are controlled per setting.
+
+### settings.aiToolsSafety
+
+- English value: "Safeguards: file tools are confined to AdminDeck app data, shell commands run from app data only, and deletion/destructive requests are blocked until a future explicit approval prompt can review them."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: safety note
+- Surrounding user flow: Appears below the AI Assistant tool toggles to describe security boundaries.
+- Tone: explicit safety warning.
+- Placeholder details: none.
+- Domain notes: "AdminDeck app data" means the Tauri application data directory, not arbitrary user folders.
+
+### settings.aiTools.currentTime.label
+
+- English value: "Current time"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to retrieve current local and UTC time.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: Tool is read-only.
+
+### settings.aiTools.currentTime.description
+
+- English value: "Get the current local and UTC time for scheduling and log correlation."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the current-time Assistant tool toggle.
+- Tone: concise explanatory text.
+- Placeholder details: none.
+- Domain notes: Tool is read-only.
+
+### settings.aiTools.webSearch.label
+
+- English value: "Web search"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to search the web.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: Web access leaves the local-first boundary when enabled.
+
+### settings.aiTools.webSearch.description
+
+- English value: "Search the web and return compact result titles, links, and snippets."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the web-search Assistant tool toggle.
+- Tone: concise explanatory text.
+- Placeholder details: none.
+- Domain notes: Results are compact, not full page archives.
+
+### settings.aiTools.webFetch.label
+
+- English value: "Fetch web page"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to fetch one web page.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: Web access leaves the local-first boundary when enabled.
+
+### settings.aiTools.webFetch.description
+
+- English value: "Read a single http/https page and summarize text-sized content."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the web-fetch Assistant tool toggle.
+- Tone: concise explanatory text.
+- Placeholder details: none.
+- Domain notes: `http/https` can remain technical.
+
+### settings.aiTools.appDataFileSearch.label
+
+- English value: "Search app data files"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to search filenames in AdminDeck app data.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: File system access is restricted to app-owned data.
+
+### settings.aiTools.appDataFileSearch.description
+
+- English value: "Find files by name inside AdminDeck-owned app data only."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the app-data file-search Assistant tool toggle.
+- Tone: concise safety-focused explanation.
+- Placeholder details: none.
+- Domain notes: Does not grant arbitrary filesystem search.
+
+### settings.aiTools.appDataFileRead.label
+
+- English value: "Read app data file"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to read small text files in AdminDeck app data.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: File system access is restricted to app-owned data.
+
+### settings.aiTools.appDataFileRead.description
+
+- English value: "Read small text files inside AdminDeck-owned app data only."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the app-data file-read Assistant tool toggle.
+- Tone: concise safety-focused explanation.
+- Placeholder details: none.
+- Domain notes: Does not grant arbitrary filesystem reads.
+
+### settings.aiTools.shellCommand.label
+
+- English value: "PowerShell / batch commands"
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Toggle for allowing the Assistant to run constrained local commands.
+- Tone: concise setting label.
+- Placeholder details: none.
+- Domain notes: PowerShell and batch can remain English technical terms.
+
+### settings.aiTools.shellCommand.description
+
+- English value: "Run non-destructive PowerShell or batch commands from AdminDeck app data only."
+- Namespace: `settings`
+- File/component: `src/settings/AiSettings.tsx`
+- UI role: checkbox description
+- Surrounding user flow: Describes the constrained shell command Assistant tool toggle.
+- Tone: concise safety-focused explanation.
+- Placeholder details: none.
+- Domain notes: Commands are local and constrained; destructive actions require explicit approval before any future execution path.
+
+### settings.navToolbar
+
+- English value: "Nav toolbar"
+- Namespace: `settings`
+- File/component: `src/settings/AppearanceSettings.tsx` / color scheme preview
+- UI role: preview swatch label
+- Surrounding user flow: Settings -> Appearance -> Color Scheme shows the left Activity Rail/navigation toolbar color included in each selectable color scheme.
+- Tone: compact UI-part label.
+- Placeholder details: none.
+- Domain notes: Refers to the narrow left column navigation rail that contains Connections, Wiki, Don't Sleep, and Settings controls.
+
+### settings.toolbarText
+
+- English value: "Toolbar text"
+- Namespace: `settings`
+- File/component: `src/settings/AppearanceSettings.tsx` / color scheme preview
+- UI role: preview swatch label
+- Surrounding user flow: Settings -> Appearance -> Color Scheme shows the icon/text color used on the left Activity Rail/navigation toolbar as part of each selectable color scheme.
+- Tone: compact UI-part label.
+- Placeholder details: none.
+- Domain notes: Refers to foreground text and icon color for the themed navigation toolbar, not terminal text or workspace content text.
+
+### settings.connectedConnectionsRail
+
+- English value: "Show connected Connection icons in the left rail"
+- Namespace: `settings`
+- File/component: `src/settings/GeneralSettings.tsx`
+- UI role: checkbox label
+- Surrounding user flow: Settings -> General lets the user enable or disable adding currently connected Connections to the left activity rail.
+- Tone: concise settings label.
+- Placeholder details: none.
+- Domain notes: Connection is the stored openable resource; the rail item appears only while a live Session exists for that Connection. Defaults to off.
+
+### settings.connectedConnectionsRailHint
+
+- English value: "Adds an icon for each connected Connection to the left rail so you can switch back to it quickly."
+- Namespace: `settings`
+- File/component: `src/settings/GeneralSettings.tsx`
+- UI role: helper text
+- Surrounding user flow: Shown below the Settings -> General checkbox that controls connected Connection icons in the activity rail.
+- Tone: brief explanatory helper.
+- Placeholder details: none.
+- Domain notes: Connection is the durable resource and the icon opens the existing workspace Tab for quick switching; this does not create a new Connection or persist live Session state.
+
+### settings.connectedConnectionsRailSaved
+
+- English value: "Connected Connection icons setting saved."
+- Namespace: `settings`
+- File/component: `src/settings/GeneralSettings.tsx`
+- UI role: save confirmation status
+- Surrounding user flow: Appears after the Settings -> General connected Connection icons checkbox is persisted successfully.
+- Tone: short confirmation.
+- Placeholder details: none.
+- Domain notes: Refers to the persisted General setting only, not to a new Connection lifecycle event.
+
+### app.connectedConnectionsRail
+
+- English value: "Connected Connections"
+- Namespace: `app`
+- File/component: `src/App.tsx` / `ActivityRail`
+- UI role: rail group aria-label
+- Surrounding user flow: Labels the optional group of connected Connection shortcut icons in the left activity rail for assistive technologies.
+- Tone: compact navigation label.
+- Placeholder details: none.
+- Domain notes: The group is visible only when the General setting is enabled and at least one Connection has an active Session.
+
+### app.openConnectedConnection
+
+- English value: "Open {{name}}"
+- Namespace: `app`
+- File/component: `src/App.tsx` / `ActivityRail`
+- UI role: button aria-label
+- Surrounding user flow: Used on each connected Connection shortcut in the left activity rail; activating it switches to the existing workspace Tab for that Connection.
+- Tone: direct action label.
+- Placeholder details: `{{name}}` is the user-defined Connection name.
+- Domain notes: This action opens/switches to an existing Tab for a connected Connection; it does not start a duplicate Session.
+
+### connections.import.tileSubtitle
+
+- English value: "From file, bookmarks, or network scan"
+- Namespace: `connections`
+- File/component: `src/connections/ConnectionSidebar.tsx`, `src/connections/ImportDialog.tsx`
+- UI role: import entry tile helper text
+- Surrounding user flow: Appears on the New Connection wizard Import tile before the user opens the import source chooser.
+- Tone: compact feature summary.
+- Placeholder details: none.
+- Domain notes: "bookmarks" means browser URL bookmarks from Edge, Chrome, and Firefox; imported items become URL Connections.
+
+### connections.import.bookmarksTitle
+
+- English value: "Import browser bookmarks"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx`
+- UI role: import source title/dialog heading
+- Surrounding user flow: Appears in the import source chooser and as the dialog heading after choosing the browser bookmarks source.
+- Tone: direct action label.
+- Placeholder details: none.
+- Domain notes: Browser bookmarks are imported as URL Connections, not browser tabs.
+
+### connections.import.bookmarksSubtitle
+
+- English value: "Edge, Chrome, Firefox URL bookmarks"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx`
+- UI role: import source helper text
+- Surrounding user flow: Appears below the browser bookmarks import tile in the source chooser.
+- Tone: concise capability summary.
+- Placeholder details: none.
+- Domain notes: Browser product names should remain recognizable; URL can remain English as a technical term.
+
+### connections.import.bookmarksLoading
+
+- English value: "Looking for browser bookmark sources..."
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: loading status
+- Surrounding user flow: Displayed while AdminDeck searches local browser profile folders for supported bookmark stores.
+- Tone: brief progress update.
+- Placeholder details: none.
+- Domain notes: Sources are local Edge/Chrome JSON bookmark files and Firefox `places.sqlite` databases.
+
+### connections.import.bookmarksNoSources
+
+- English value: "No Edge, Chrome, or Firefox bookmark sources were found on this device."
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: empty-state message
+- Surrounding user flow: Shown when no supported browser bookmark stores are discovered on the local machine.
+- Tone: clear neutral status.
+- Placeholder details: none.
+- Domain notes: This does not indicate a failed import; users may not have those browsers/profiles.
+
+### connections.import.bookmarksSourceLabel
+
+- English value: "Browser profile"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: select label
+- Surrounding user flow: Labels the dropdown of discovered browser profiles before the user selects folders/bookmarks.
+- Tone: concise field label.
+- Placeholder details: none.
+- Domain notes: Profile refers to a browser profile here, not an AdminDeck Connection.
+
+### connections.import.bookmarksSourcePath
+
+- English value: "Source file: {{path}}"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: helper text
+- Surrounding user flow: Shows the local bookmark file or database path for the selected browser profile.
+- Tone: factual diagnostic helper.
+- Placeholder details: `{{path}}` is an absolute local filesystem path.
+- Domain notes: Path may point to a Chromium `Bookmarks` JSON file or a Firefox `places.sqlite` database.
+
+### connections.import.bookmarksTreeLabel
+
+- English value: "Bookmark folders and links"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarkTreeRow`
+- UI role: ARIA label
+- Surrounding user flow: Labels the tree of bookmark folders and individual bookmark links for assistive technologies.
+- Tone: descriptive accessibility label.
+- Placeholder details: none.
+- Domain notes: Links imported from the tree become URL Connections.
+
+### connections.import.bookmarksPreview
+
+- English value: "Preview {{count}} selected"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: button label
+- Surrounding user flow: The user clicks this after selecting bookmark folders/links to generate the editable import preview.
+- Tone: direct action label.
+- Placeholder details: `{{count}}` is the number of selected tree nodes, including folders and bookmarks.
+- Domain notes: Preview rows may be fewer than selected nodes because folders expand to importable http/https bookmarks only.
+
+### connections.import.bookmarksSourceRequired
+
+- English value: "Choose a browser bookmark source."
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: validation error
+- Surrounding user flow: Shown if the user attempts to preview bookmarks without a selected browser profile.
+- Tone: direct corrective instruction.
+- Placeholder details: none.
+- Domain notes: Source means the discovered browser profile/bookmark store.
+
+### connections.import.bookmarksSelectionRequired
+
+- English value: "Select at least one folder or bookmark to import."
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: validation error
+- Surrounding user flow: Shown if the user attempts to preview without checking any bookmark tree item.
+- Tone: direct corrective instruction.
+- Placeholder details: none.
+- Domain notes: Selected folders include their descendant bookmarks.
+
+### connections.import.bookmarksNoImportable
+
+- English value: "The selected bookmarks did not include any http or https URLs."
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `BookmarksPanel`
+- UI role: validation/status error
+- Surrounding user flow: Shown when selected browser bookmark nodes contain no URLs that AdminDeck can store as URL Connections.
+- Tone: explanatory, not alarming.
+- Placeholder details: none.
+- Domain notes: Non-web schemes such as `chrome://`, `about:`, `file:`, and `javascript:` are intentionally skipped.
+
+### connections.import.bookmarkFallbackName
+
+- English value: "Imported bookmark"
+- Namespace: `connections`
+- File/component: `src/connections/ImportDialog.tsx` / `ImportPreviewSection`
+- UI role: fallback Connection name fragment
+- Surrounding user flow: Used only if an imported URL bookmark row has no usable bookmark title, host, or URL text.
+- Tone: neutral default name.
+- Placeholder details: none.
+- Domain notes: The saved durable resource is a URL Connection.
+
+### connections.import.importBookmarksComplete
+
+- English value: "Imported {{count}} Connections from bookmarks."
+- Namespace: `connections`
+- File/component: `src/connections/ConnectionSidebar.tsx`, `src/connections/ImportDialog.tsx`
+- UI role: transient status
+- Surrounding user flow: Appears in the bottom workspace status bar after selected browser bookmark preview rows are saved as Connections.
+- Tone: brief success confirmation.
+- Placeholder details: `{{count}}` is the number of imported URL Connection rows.
+- Domain notes: Connection is capitalized for the durable stored resource; imported bookmarks become URL Connections.

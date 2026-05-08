@@ -17,38 +17,33 @@ const AUTOFILL_AGENT: &str = r#"
   const TITLE_CHANNEL = "__ADMINDECK_URL_CREDENTIAL__";
   const agent = {
     fill(credential) {
-      const passwordInput = inputFromSelector(credential.passwordSelector) || findPasswordInput(false);
-      if (!passwordInput) {
-        return { filled: false, reason: "no-password-field" };
+      const result = fillCredential(credential);
+      if (result.filled) {
+        return result;
       }
-
-      const usernameInput = inputFromSelector(credential.usernameSelector) || findUsernameInput(passwordInput);
-      if (usernameInput && credential.username) {
-        setInputValue(usernameInput, credential.username);
-      }
-      setInputValue(passwordInput, credential.password);
-      passwordInput.focus({ preventScroll: true });
-      return { filled: true, usernameFilled: Boolean(usernameInput && credential.username) };
+      observeForCredentialFields(credential);
+      return result;
     },
-    capture() {
+    capture(nonce) {
       const passwordInput = findPasswordInput(true);
       if (!passwordInput) {
-        publish({ ok: false, reason: "no-password-field", url: window.location.href });
+        publish({ ok: false, nonce, reason: "no-password-field", url: window.location.href });
         return;
       }
       const password = passwordInput.value || "";
       if (!password) {
-        publish({ ok: false, reason: "empty-password", url: window.location.href });
+        publish({ ok: false, nonce, reason: "empty-password", url: window.location.href });
         return;
       }
       const usernameInput = findUsernameInput(passwordInput);
       const username = usernameInput?.value || "";
       if (!username) {
-        publish({ ok: false, reason: "empty-username", url: window.location.href });
+        publish({ ok: false, nonce, reason: "empty-username", url: window.location.href });
         return;
       }
       publish({
         ok: true,
+        nonce,
         url: window.location.href,
         username,
         password,
@@ -66,6 +61,58 @@ const AUTOFILL_AGENT: &str = r#"
         document.title = previousTitle;
       }
     }, 150);
+  }
+
+  let pendingFillObserver;
+  let pendingFillTimer;
+
+  function fillCredential(credential) {
+    const passwordInput = inputFromSelector(credential.passwordSelector) || findPasswordInput(false);
+    if (!passwordInput) {
+      return { filled: false, reason: "no-password-field" };
+    }
+    if (credential.automatic && passwordInput.value) {
+      return { filled: false, reason: "password-already-entered" };
+    }
+
+    const usernameInput = inputFromSelector(credential.usernameSelector) || findUsernameInput(passwordInput);
+    if (usernameInput && credential.username && (!credential.automatic || !usernameInput.value)) {
+      setInputValue(usernameInput, credential.username);
+    }
+    setInputValue(passwordInput, credential.password);
+    if (!credential.automatic) {
+      passwordInput.focus({ preventScroll: true });
+    }
+    return { filled: true, usernameFilled: Boolean(usernameInput && credential.username) };
+  }
+
+  function observeForCredentialFields(credential) {
+    if (pendingFillObserver) {
+      pendingFillObserver.disconnect();
+    }
+    if (pendingFillTimer) {
+      window.clearTimeout(pendingFillTimer);
+    }
+    pendingFillObserver = new MutationObserver(() => {
+      if (fillCredential(credential).filled) {
+        pendingFillObserver?.disconnect();
+        pendingFillObserver = undefined;
+        if (pendingFillTimer) {
+          window.clearTimeout(pendingFillTimer);
+          pendingFillTimer = undefined;
+        }
+      }
+    });
+    pendingFillObserver.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    pendingFillTimer = window.setTimeout(() => {
+      pendingFillObserver?.disconnect();
+      pendingFillObserver = undefined;
+      pendingFillTimer = undefined;
+    }, 10000);
   }
 
   function inputFromSelector(selector) {
@@ -235,12 +282,20 @@ pub struct WebviewSimpleRequest {
     session_id: String,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebviewCaptureCredentialRequest {
+    session_id: String,
+    nonce: String,
+}
+
 pub(crate) struct WebviewFillCredentialRequest {
     pub(crate) session_id: String,
     pub(crate) username: String,
     pub(crate) password: String,
     pub(crate) username_selector: Option<String>,
     pub(crate) password_selector: Option<String>,
+    pub(crate) automatic: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -524,6 +579,7 @@ impl WebviewSessionManager {
             "password": request.password,
             "usernameSelector": request.username_selector,
             "passwordSelector": request.password_selector,
+            "automatic": request.automatic,
         });
         let payload = serde_json::to_string(&payload)
             .map_err(|error| format!("failed to prepare URL credential payload: {error}"))?;
@@ -538,13 +594,20 @@ impl WebviewSessionManager {
             .map_err(|error| format!("failed to fill webview credential: {error}"))
     }
 
-    pub fn capture_credential(&self, request: WebviewSimpleRequest) -> Result<(), String> {
+    pub fn capture_credential(
+        &self,
+        request: WebviewCaptureCredentialRequest,
+    ) -> Result<(), String> {
+        let nonce = serde_json::to_string(&request.nonce)
+            .map_err(|error| format!("failed to prepare URL credential capture nonce: {error}"))?;
         let sessions = self.lock()?;
         let webview = sessions
             .get(&request.session_id)
             .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
         webview
-            .eval("window.__ADMINDECK_URL_AUTOFILL__?.capture();")
+            .eval(format!(
+                "window.__ADMINDECK_URL_AUTOFILL__?.capture({nonce});"
+            ))
             .map_err(|error| format!("failed to capture webview credential: {error}"))
     }
 

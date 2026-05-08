@@ -50,6 +50,7 @@ struct FillWebviewCredentialRequest {
     session_id: String,
     secret_owner_id: String,
     username: String,
+    automatic: Option<bool>,
 }
 
 #[tauri::command]
@@ -436,6 +437,7 @@ fn plan_command_proposal(
 
 #[tauri::command]
 async fn run_ai_agent(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
     secrets: tauri::State<'_, secrets::Secrets>,
     request: ai::AgentRunRequest,
@@ -444,7 +446,7 @@ async fn run_ai_agent(
     let api_key = secrets
         .read_ai_api_key("openai-compatible-provider".to_string())
         .map_err(|error| format!("failed to read AI API key: {error}"))?;
-    ai::run_agent(settings, api_key, request).await
+    ai::run_agent(app, settings, api_key, request).await
 }
 
 #[tauri::command]
@@ -520,6 +522,18 @@ fn parse_import_file(
     request: import::ParseImportFileRequest,
 ) -> Result<import::ImportFilePreview, String> {
     import::parse_import_file(request)
+}
+
+#[tauri::command]
+fn list_browser_bookmark_sources() -> import::BrowserBookmarkSourcesResponse {
+    import::list_browser_bookmark_sources()
+}
+
+#[tauri::command]
+fn preview_browser_bookmark_import(
+    request: import::PreviewBrowserBookmarkImportRequest,
+) -> Result<import::ImportFilePreview, String> {
+    import::preview_browser_bookmark_import(request)
 }
 
 #[tauri::command]
@@ -908,13 +922,14 @@ fn fill_webview_credential(
         password,
         username_selector: credential.username_selector,
         password_selector: credential.password_selector,
+        automatic: request.automatic.unwrap_or(false),
     })
 }
 
 #[tauri::command]
 fn capture_webview_credential(
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
-    request: webview::WebviewSimpleRequest,
+    request: webview::WebviewCaptureCredentialRequest,
 ) -> Result<(), String> {
     webviews.capture_credential(request)
 }
@@ -1171,11 +1186,35 @@ fn get_wiki_attachments_folder(paths: tauri::State<'_, wiki::WikiPaths>) -> Resu
     Ok(paths.root().display().to_string())
 }
 
+#[cfg(target_os = "windows")]
+fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        focus_main_window(app);
+    }))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder
+}
+
+#[cfg(target_os = "windows")]
+fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+        if main_window.is_minimized().unwrap_or(false) {
+            let _ = main_window.unminimize();
+        }
+
+        let _ = main_window.show();
+        let _ = main_window.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
 
-    tauri::Builder::default()
+    configure_single_instance(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -1277,6 +1316,8 @@ pub fn run() {
             ssh_transport_plan,
             import_ssh_config,
             parse_import_file,
+            list_browser_bookmark_sources,
+            preview_browser_bookmark_import,
             scan_network_for_connections,
             inspect_ssh_host_key,
             trust_ssh_host_key,

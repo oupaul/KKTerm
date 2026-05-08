@@ -36,6 +36,14 @@
   --green: #15915f;
   --amber: #b7791f;
   --red: #c2413b;
+  --nav-toolbar-bg: #202936;
+  --nav-toolbar-text: #d8e1ef;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-toolbar-accent: #60a5fa;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #111827;
+  --nav-toolbar-tooltip-text: #f8fafc;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
   --shadow: 0 18px 50px rgba(31, 42, 58, 0.12);
   --app-ui-font-family:
     "Satoshi", Inter, ui-sans-serif, system-ui, -apple-system,
@@ -60,6 +68,14 @@
   --green: #3fb87b;
   --amber: #d99a3d;
   --red: #d9534f;
+  --nav-toolbar-bg: #202936;
+  --nav-toolbar-text: #d8e1ef;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-toolbar-accent: #60a5fa;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #111827;
+  --nav-toolbar-tooltip-text: #f8fafc;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
 }
 
@@ -81,6 +97,14 @@
   --green: #0d6b3d;
   --amber: #a3620a;
   --red: #b91c1c;
+  --nav-toolbar-bg: #202936;
+  --nav-toolbar-text: #d8e1ef;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-toolbar-accent: #60a5fa;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #111827;
+  --nav-toolbar-tooltip-text: #f8fafc;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
   --shadow: 0 12px 40px rgba(0, 8, 32, 0.1);
 }
 
@@ -102,6 +126,14 @@
   --green: #34c759;
   --amber: #ff9500;
   --red: #ff3b30;
+  --nav-toolbar-bg: #e4e4e8;
+  --nav-toolbar-text: #1d1d1f;
+  --nav-toolbar-hover-bg: rgba(0, 0, 0, 0.08);
+  --nav-toolbar-accent: #0071e3;
+  --nav-toolbar-warning: #b36b00;
+  --nav-toolbar-tooltip-bg: #1d1d1f;
+  --nav-toolbar-tooltip-text: #f5f5f7;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.18);
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
@@ -123,6 +155,14 @@
   --green: #2d8a4e;
   --amber: #cc6600;
   --red: #cc3333;
+  --nav-toolbar-bg: #4a2b12;
+  --nav-toolbar-text: #ffe6cc;
+  --nav-toolbar-hover-bg: rgba(255, 180, 90, 0.18);
+  --nav-toolbar-accent: #ffb86c;
+  --nav-toolbar-warning: #ffd166;
+  --nav-toolbar-tooltip-bg: #2a1708;
+  --nav-toolbar-tooltip-text: #fff4e8;
+  --nav-toolbar-tooltip-border: rgba(255, 200, 140, 0.22);
   --shadow: 0 12px 40px rgba(100, 50, 0, 0.1);
 }
 
@@ -144,6 +184,14 @@
   --green: #4ade80;
   --amber: #fbbf24;
   --red: #f87171;
+  --nav-toolbar-bg: #1b1536;
+  --nav-toolbar-text: #ece6ff;
+  --nav-toolbar-hover-bg: rgba(167, 139, 250, 0.18);
+  --nav-toolbar-accent: #c4b5fd;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #120d27;
+  --nav-toolbar-tooltip-text: #f5f1ff;
+  --nav-toolbar-tooltip-border: rgba(196, 181, 253, 0.25);
   --shadow: 0 18px 50px rgba(10, 6, 30, 0.45);
 }
 
@@ -165,6 +213,14 @@
   --green: #15803d;
   --amber: #b45309;
   --red: #dc2626;
+  --nav-toolbar-bg: #5a2148;
+  --nav-toolbar-text: #ffe3f1;
+  --nav-toolbar-hover-bg: rgba(255, 190, 220, 0.18);
+  --nav-toolbar-accent: #f9a8d4;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #3b1430;
+  --nav-toolbar-tooltip-text: #fff0f7;
+  --nav-toolbar-tooltip-border: rgba(255, 190, 220, 0.25);
   --shadow: 0 12px 40px rgba(80, 20, 60, 0.1);
 }
 
@@ -236,8 +292,8 @@ button {
   align-items: center;
   padding: 10px 7px;
   overflow: visible;
-  background: #202936;
-  color: #d8e1ef;
+  background: var(--nav-toolbar-bg);
+  color: var(--nav-toolbar-text);
 }
 
 .rail-button,
@@ -258,6 +314,20 @@ button {
   position: relative;
 }
 
+.rail-connected-connections {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  width: 100%;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid var(--nav-toolbar-tooltip-border);
+}
+
+.rail-button-connection .connection-icon-image {
+  border-radius: 4px;
+}
+
 .rail-button-dont-sleep {
   margin-top: auto;
 }
@@ -267,7 +337,7 @@ button {
 }
 
 .rail-button-dont-sleep.dont-sleep-enabled {
-  color: #fbbf24;
+  color: var(--nav-toolbar-warning);
 }
 
 .rail-button:disabled {
@@ -277,11 +347,11 @@ button {
 
 .rail-button:hover,
 .rail-button.active {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--nav-toolbar-hover-bg);
 }
 
 .rail-button.connections-collapsed-indicator {
-  color: #60a5fa;
+  color: var(--nav-toolbar-accent);
 }
 
 .rail-tooltip {
@@ -290,11 +360,11 @@ button {
   top: 50%;
   z-index: 30;
   padding: 5px 8px;
-  color: #f8fafc;
+  color: var(--nav-toolbar-tooltip-text);
   white-space: nowrap;
   pointer-events: none;
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--nav-toolbar-tooltip-bg);
+  border: 1px solid var(--nav-toolbar-tooltip-border);
   border-radius: 5px;
   box-shadow: var(--shadow);
   opacity: 0;
@@ -5693,4 +5763,126 @@ progress {
 
 .connection-wiki-popover-item:hover {
   background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.settings-fieldset.ai-tool-settings {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.settings-fieldset.ai-tool-settings legend {
+  padding: 0 4px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.settings-help-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-toggle-row {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.settings-toggle-row input {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.settings-toggle-row span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-toggle-row strong {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.settings-toggle-row small {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.import-bookmark-tree {
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  padding: 10px;
+  overflow: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.import-bookmark-node {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.import-bookmark-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 3px 4px;
+  color: var(--text);
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+.import-bookmark-label:hover {
+  background: var(--surface);
+}
+
+.import-bookmark-label span {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-bookmark-label small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-bookmark-children {
+  display: grid;
+  gap: 4px;
+  margin-left: 20px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
 }

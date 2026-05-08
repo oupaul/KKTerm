@@ -161,6 +161,7 @@ export type TerminalCursorStyle = "block" | "bar" | "underline";
 
 export interface GeneralSettings {
   autoBackupEnabled: boolean;
+  showConnectedConnectionsInRail: boolean;
   lastBackupAt?: string | null;
 }
 
@@ -242,6 +243,16 @@ export type AiProviderKind =
 
 export type AiReasoningEffort = "default" | "low" | "medium" | "high" | "max";
 
+export type AiAssistantToolId =
+  | "webSearch"
+  | "webFetch"
+  | "shellCommand"
+  | "appDataFileSearch"
+  | "appDataFileRead"
+  | "currentTime";
+
+export type AiAssistantToolSettings = Record<AiAssistantToolId, boolean>;
+
 export interface AiProviderSettings {
   providerKind: AiProviderKind;
   baseUrl: string;
@@ -251,6 +262,7 @@ export interface AiProviderSettings {
   cliExecutionPolicy: "suggestOnly";
   claudeCliPath?: string;
   codexCliPath?: string;
+  tools: AiAssistantToolSettings;
 }
 
 export interface WorkspaceTab {
