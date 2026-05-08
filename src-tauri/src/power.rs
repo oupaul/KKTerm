@@ -85,7 +85,8 @@ mod platform {
         System::{
             LibraryLoader::GetModuleHandleW,
             Power::{
-                SetThreadExecutionState, ES_AWAYMODE_REQUIRED, ES_CONTINUOUS, ES_SYSTEM_REQUIRED,
+                SetThreadExecutionState, ES_AWAYMODE_REQUIRED, ES_CONTINUOUS, ES_DISPLAY_REQUIRED,
+                ES_SYSTEM_REQUIRED,
             },
             Shutdown::{ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy},
         },
@@ -195,8 +196,9 @@ mod platform {
                     ));
                 }
 
-                let full_flags = ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED;
-                let base_flags = ES_CONTINUOUS | ES_SYSTEM_REQUIRED;
+                let full_flags =
+                    ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED | ES_AWAYMODE_REQUIRED;
+                let base_flags = ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED;
                 if SetThreadExecutionState(full_flags) == 0
                     && SetThreadExecutionState(base_flags) == 0
                 {
