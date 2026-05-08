@@ -1,4 +1,3 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { defaultAppearanceSettings } from "../app-defaults";
 import type { AppearanceSettings, CustomFont } from "../types";
 import { invokeCommand, isTauriRuntime } from "./tauri";
@@ -49,9 +48,11 @@ export async function loadCustomFontOptions(fonts: CustomFontOption[]) {
       if (loadedFontFamilies.has(font.cssFamily)) {
         return;
       }
+      const { dataBase64 } = await invokeCommand("load_custom_font_data", { path: font.path });
       const face = new FontFace(
         font.cssFamily,
-        `url("${convertFileSrc(font.path)}") format("${fontFormat(font.extension)}")`,
+        base64ToArrayBuffer(dataBase64),
+        { display: "swap" },
       );
       await face.load();
       document.fonts.add(face);
@@ -87,20 +88,6 @@ export function normalizeAvailableAppearance(
   return settings;
 }
 
-function fontFormat(extension: string) {
-  switch (extension.toLowerCase()) {
-    case "otf":
-      return "opentype";
-    case "woff":
-      return "woff";
-    case "woff2":
-      return "woff2";
-    case "ttf":
-    default:
-      return "truetype";
-  }
-}
-
 function hashPath(path: string) {
   let hash = 2166136261;
   for (let index = 0; index < path.length; index += 1) {
@@ -108,4 +95,13 @@ function hashPath(path: string) {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(36);
+}
+
+function base64ToArrayBuffer(value: string) {
+  const binary = window.atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
 }

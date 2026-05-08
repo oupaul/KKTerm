@@ -44,6 +44,12 @@ struct CustomFontEntry {
     extension: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CustomFontData {
+    data_base64: String,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FillWebviewCredentialRequest {
@@ -105,6 +111,13 @@ async fn list_custom_fonts() -> Result<Vec<CustomFontEntry>, String> {
         .map_err(|error| format!("failed to list custom fonts: {error}"))?
 }
 
+#[tauri::command]
+async fn load_custom_font_data(path: String) -> Result<CustomFontData, String> {
+    tauri::async_runtime::spawn_blocking(move || load_custom_font_data_sync(path))
+        .await
+        .map_err(|error| format!("failed to load custom font: {error}"))?
+}
+
 fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
     let folder = custom_fonts_folder()?;
     fs::create_dir_all(&folder).map_err(|error| {
@@ -127,6 +140,45 @@ fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
 
     fonts.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     Ok(fonts)
+}
+
+fn load_custom_font_data_sync(path: String) -> Result<CustomFontData, String> {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+    let folder = custom_fonts_folder()?;
+    fs::create_dir_all(&folder).map_err(|error| {
+        format!(
+            "failed to create custom fonts folder {}: {error}",
+            folder.display()
+        )
+    })?;
+
+    let folder = folder
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve custom fonts folder: {error}"))?;
+    let path = PathBuf::from(path);
+    let canonical_path = path
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve custom font path: {error}"))?;
+
+    if !canonical_path.starts_with(&folder) {
+        return Err("custom font path must stay inside the fonts folder".to_string());
+    }
+
+    if custom_font_entry(canonical_path.clone()).is_none() {
+        return Err("custom font file must be .ttf, .otf, .woff, or .woff2".to_string());
+    }
+
+    let bytes = fs::read(&canonical_path).map_err(|error| {
+        format!(
+            "failed to read custom font {}: {error}",
+            canonical_path.display()
+        )
+    })?;
+
+    Ok(CustomFontData {
+        data_base64: STANDARD.encode(bytes),
+    })
 }
 
 fn custom_fonts_folder() -> Result<PathBuf, String> {
@@ -1375,6 +1427,7 @@ pub fn run() {
             get_custom_fonts_folder,
             open_custom_fonts_folder,
             list_custom_fonts,
+            load_custom_font_data,
             get_ssh_settings,
             update_ssh_settings,
             generate_ssh_key_pair,

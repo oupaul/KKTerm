@@ -3,6 +3,7 @@ import { FolderOpen, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   listCustomFontOptions,
+  loadCustomFontOptions,
   normalizeAvailableAppearance,
   type CustomFontOption,
 } from "../lib/customFonts";
@@ -232,11 +233,16 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
               onChange={(event) => {
                 const selectedValue = event.currentTarget.value;
                 const selectedCustomFont = customFonts.find((font) => font.cssValue === selectedValue);
-                void applyAppearance({
-                  ...appearanceSettings,
-                  appFontFamily: selectedValue,
-                  customFontPath: selectedCustomFont?.path,
-                });
+                void (async () => {
+                  if (selectedCustomFont) {
+                    await loadCustomFontOptions([selectedCustomFont]);
+                  }
+                  await applyAppearance({
+                    ...appearanceSettings,
+                    appFontFamily: selectedValue,
+                    customFontPath: selectedCustomFont?.path,
+                  });
+                })();
               }}
               value={appearanceSettings.appFontFamily}
             >

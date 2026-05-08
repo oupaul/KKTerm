@@ -656,6 +656,10 @@ type CommandMap = {
     args: undefined;
     result: CustomFont[];
   };
+  load_custom_font_data: {
+    args: { path: string };
+    result: { dataBase64: string };
+  };
   get_ssh_settings: {
     args: undefined;
     result: SshSettings;
