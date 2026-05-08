@@ -12,6 +12,11 @@ use tauri::{
 const HOST_WINDOW_LABEL: &str = "main";
 const DEFAULT_PARTITION: &str = "shared";
 const HIDDEN_WEBVIEW_POSITION: f64 = -32_000.0;
+// Keep child URL WebView2 instances on the same browser-process arguments as
+// the host window. WebView2 applies these process-wide on Windows, so the host
+// window config in tauri.conf.json must carry the same value.
+const URL_WEBVIEW_BROWSER_ARGS: &str =
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --ignore-certificate-errors";
 const AUTOFILL_AGENT: &str = r#"
 (() => {
   const TITLE_CHANNEL = "__ADMINDECK_URL_CREDENTIAL__";
@@ -399,6 +404,7 @@ impl WebviewSessionManager {
         let download_app = app.clone();
         let download_session_id = session_id.clone();
         let builder = WebviewBuilder::new(&label, WebviewUrl::External(parsed_url))
+            .additional_browser_args(URL_WEBVIEW_BROWSER_ARGS)
             .initialization_script(AUTOFILL_AGENT)
             .on_navigation(move |url| {
                 let _ = navigation_app.emit(
