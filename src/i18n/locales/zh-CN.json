@@ -1014,8 +1014,6 @@
     "collapse": "折叠",
     "expand": "展开",
     "editorMode": "编辑",
-    "previewMode": "预览",
-    "splitMode": "分屏",
     "noSelection": "从树中选择页面以开始编辑。",
     "createFirstPage": "创建第一页",
     "movePage": "移动",

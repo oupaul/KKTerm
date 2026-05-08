@@ -1,15 +1,11 @@
 import {
   Download,
-  Eye,
   FileText,
   Loader2,
   Paperclip,
-  Pencil,
   Search,
-  Split,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Connection, WikiPage, WikiPageNode, WikiSearchHit, WikiTree } from "../types";
@@ -34,7 +30,7 @@ import {
   updateWikiPage,
 } from "./wikiCommands";
 
-type ViewMode = "edit" | "preview" | "split";
+type ViewMode = "edit" | "view";
 
 interface WikiWorkspaceProps {
   active: boolean;
@@ -53,11 +49,12 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
   const [pageDraft, setPageDraft] = useState<{ title: string; body: string } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [viewMode, setViewMode] = useState<ViewMode>("edit");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHits, setSearchHits] = useState<WikiSearchHit[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const allConnections = useGlobalConnections();
@@ -189,24 +186,26 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
     [refreshTree, t],
   );
 
-  const handleDelete = useCallback(
-    async (pageId: string) => {
-      const confirmed = window.confirm(t("wiki.deleteConfirm"));
-      if (!confirmed) {
-        return;
+  const handleDelete = useCallback((pageId: string) => {
+    setPendingDeleteId(pageId);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDeleteId) {
+      return;
+    }
+    const pageId = pendingDeleteId;
+    setPendingDeleteId(null);
+    try {
+      await deleteWikiPage(pageId);
+      if (selectedId === pageId) {
+        setSelectedId(null);
       }
-      try {
-        await deleteWikiPage(pageId);
-        if (selectedId === pageId) {
-          setSelectedId(null);
-        }
-        await refreshTree();
-      } catch (cause) {
-        setError(t("wiki.deleteFailed", { error: formatError(cause) }));
-      }
-    },
-    [refreshTree, selectedId, t],
-  );
+      await refreshTree();
+    } catch (cause) {
+      setError(t("wiki.deleteFailed", { error: formatError(cause) }));
+    }
+  }, [pendingDeleteId, refreshTree, selectedId, t]);
 
   const handleExport = useCallback(async () => {
     try {
@@ -336,7 +335,7 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
 
   return (
     <div
-      className="wiki-workspace flex h-full min-h-0 flex-1"
+      className="wiki-workspace relative flex h-full min-h-0 flex-1"
       role="region"
       aria-label={t("wiki.title")}
     >
@@ -369,6 +368,12 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
           </div>
         )}
       </aside>
+      {pendingDeleteId ? (
+        <DeletePageDialog
+          onCancel={() => setPendingDeleteId(null)}
+          onConfirm={() => void confirmDelete()}
+        />
+      ) : null}
       <section className="wiki-detail flex min-w-0 flex-1 flex-col">
         <div className="wiki-toolbar flex items-center gap-2 border-b border-black/10 px-3 py-2 text-sm">
           <span className="wiki-status flex items-center gap-1 text-xs opacity-70">
@@ -411,17 +416,17 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
               />
             </div>
             <div className="wiki-edit-area flex min-h-0 flex-1">
-              {viewMode !== "preview" ? (
+              {viewMode === "edit" ? (
                 <div className="wiki-edit-pane flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2">
                   <WikiEditor
                     value={pageDraft.body}
                     onChange={handleEditorChange}
                     ariaLabel={t("wiki.editor")}
+                    placeholderText={t("wiki.bodyPlaceholder")}
                   />
                 </div>
-              ) : null}
-              {viewMode !== "edit" ? (
-                <div className="wiki-preview-pane flex min-h-0 flex-1 flex-col overflow-y-auto border-l border-black/10 px-4 py-3">
+              ) : (
+                <div className="wiki-view-pane flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
                   <WikiPreview
                     body={pageDraft.body}
                     context={previewContext}
@@ -429,7 +434,7 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
                     onOpenConnection={onOpenConnection}
                   />
                 </div>
-              ) : null}
+              )}
             </div>
             <PageSidebar
               page={page}
@@ -437,10 +442,53 @@ export function WikiWorkspace({ active, initialPageId, onOpenConnection }: WikiW
               onAttach={handleAttach}
               onAttachmentRemove={handleAttachmentRemove}
               onConnectionsChange={handleConnectionsChange}
+              onOpenBacklink={handleOpenWikiLink}
+              onSelectTag={(tag) => setSearchQuery(`#${tag}`)}
             />
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function DeletePageDialog({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="wiki-delete-dialog absolute inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wiki-delete-dialog-title"
+        className="w-full max-w-sm rounded-lg border border-black/10 bg-[var(--chrome)] p-4 shadow-xl"
+      >
+        <h3 id="wiki-delete-dialog-title" className="text-sm font-semibold">
+          {t("wiki.deletePageTitle")}
+        </h3>
+        <p className="mt-2 text-sm opacity-80">{t("wiki.deleteConfirm")}</p>
+        <div className="mt-4 flex justify-end gap-2 text-sm">
+          <button
+            type="button"
+            className="rounded border border-black/10 px-3 py-1 hover:bg-black/5"
+            onClick={onCancel}
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+            onClick={onConfirm}
+          >
+            {t("common.delete")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -453,10 +501,9 @@ function ViewModeToggle({
   onChange: (next: ViewMode) => void;
 }) {
   const { t } = useTranslation();
-  const options: Array<{ key: ViewMode; icon: ReactNode; label: string }> = [
-    { key: "edit", icon: <Pencil size={12} />, label: t("wiki.editorMode") },
-    { key: "split", icon: <Split size={12} />, label: t("wiki.splitMode") },
-    { key: "preview", icon: <Eye size={12} />, label: t("wiki.previewMode") },
+  const options: Array<{ key: ViewMode; label: string }> = [
+    { key: "edit", label: t("wiki.editorMode") },
+    { key: "view", label: t("wiki.viewMode") },
   ];
   return (
     <div className="wiki-viewmode inline-flex rounded border border-black/10 text-xs">
@@ -470,7 +517,6 @@ function ViewModeToggle({
           onClick={() => onChange(option.key)}
           aria-pressed={current === option.key}
         >
-          {option.icon}
           <span>{option.label}</span>
         </button>
       ))}
@@ -528,18 +574,22 @@ function PageSidebar({
   onAttach,
   onAttachmentRemove,
   onConnectionsChange,
+  onOpenBacklink,
+  onSelectTag,
 }: {
   page: WikiPage;
   allConnections: Connection[];
   onAttach: (files: FileList | null) => void;
   onAttachmentRemove: (attachmentId: string) => void;
   onConnectionsChange: (nextIds: string[]) => void;
+  onOpenBacklink: (pageId: string) => void;
+  onSelectTag: (tag: string) => void;
 }) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <div className="wiki-page-sidebar grid grid-cols-2 gap-3 border-t border-black/10 p-3 text-xs">
+    <div className="wiki-page-sidebar grid grid-cols-4 gap-3 border-t border-black/10 p-3 text-xs">
       <section className="wiki-attachments">
         <div className="flex items-center justify-between">
           <h4 className="font-medium">{t("wiki.attachments")}</h4>
@@ -584,6 +634,48 @@ function PageSidebar({
             ))
           )}
         </ul>
+      </section>
+      <section className="wiki-page-backlinks">
+        <h4 className="font-medium">{t("wiki.backlinks")}</h4>
+        {page.backlinks.length === 0 ? (
+          <p className="mt-2 opacity-60">{t("wiki.noBacklinks")}</p>
+        ) : (
+          <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+            {page.backlinks.map((backlink) => (
+              <li key={backlink.id}>
+                <button
+                  type="button"
+                  className="w-full truncate rounded border border-black/5 px-2 py-1 text-left hover:bg-black/5"
+                  onClick={() => onOpenBacklink(backlink.id)}
+                  title={backlink.title}
+                >
+                  {backlink.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="wiki-page-tags">
+        <h4 className="font-medium">{t("wiki.tags")}</h4>
+        {page.tags.length === 0 ? (
+          <p className="mt-2 opacity-60">{t("wiki.noTags")}</p>
+        ) : (
+          <div className="mt-2 flex max-h-32 flex-wrap gap-1 overflow-y-auto">
+            {page.tags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className="rounded-full border border-black/10 px-2 py-0.5 hover:bg-black/5"
+                onClick={() => onSelectTag(tag)}
+                title={t("wiki.filterByTag", { tag })}
+                aria-label={t("wiki.filterByTag", { tag })}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
       <section className="wiki-page-connections">
         <h4 className="font-medium">{t("wiki.connectionsLabel")}</h4>
@@ -632,6 +724,7 @@ function Banner({
   message: string;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       role="status"
@@ -646,7 +739,7 @@ function Banner({
         type="button"
         className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-black/10"
         onClick={onDismiss}
-        aria-label="Dismiss"
+        aria-label={t("common.close")}
       >
         <X size={11} />
       </button>
