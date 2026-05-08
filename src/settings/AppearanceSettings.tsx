@@ -60,16 +60,72 @@ const COLOR_SCHEME_OPTIONS: { value: ColorScheme; labelKey: string }[] = [
   { value: "pink", labelKey: "settings.schemePink" },
 ];
 
-const SCHEME_PREVIEW_LABELS = ["settings.appBg", "settings.surface", "settings.text", "settings.accent", "settings.green"] as const;
+type SchemePreviewColor = { color: string; labelKey: string };
 
-const SCHEME_PREVIEW_COLORS: Record<ColorScheme, string[]> = {
-  default: ["#eef1f5", "#ffffff", "#17202b", "#2563eb", "#15915f"],
-  dark: ["#1a1d24", "#2b303b", "#e4e7ee", "#4b8bff", "#3fb87b"],
-  light: ["#ffffff", "#f5f7fa", "#0a1628", "#1d4ed8", "#0d6b3d"],
-  mac: ["#ececec", "#ffffff", "#1d1d1f", "#0071e3", "#34c759"],
-  orange: ["#fff5ec", "#ffffff", "#1a1a1a", "#e87a00", "#2d8a4e"],
-  purple: ["#1e1836", "#2d2650", "#e8e4f4", "#a78bfa", "#4ade80"],
-  pink: ["#fff0f5", "#ffffff", "#2d1b3a", "#c026d3", "#15803d"],
+const SCHEME_PREVIEW_COLORS: Record<ColorScheme, SchemePreviewColor[]> = {
+  default: [
+    { color: "#eef1f5", labelKey: "settings.appBg" },
+    { color: "#ffffff", labelKey: "settings.surface" },
+    { color: "#17202b", labelKey: "settings.text" },
+    { color: "#2563eb", labelKey: "settings.accent" },
+    { color: "#15915f", labelKey: "settings.green" },
+    { color: "#202936", labelKey: "settings.navToolbar" },
+    { color: "#d8e1ef", labelKey: "settings.toolbarText" },
+  ],
+  dark: [
+    { color: "#1a1d24", labelKey: "settings.appBg" },
+    { color: "#2b303b", labelKey: "settings.surface" },
+    { color: "#e4e7ee", labelKey: "settings.text" },
+    { color: "#4b8bff", labelKey: "settings.accent" },
+    { color: "#3fb87b", labelKey: "settings.green" },
+    { color: "#202936", labelKey: "settings.navToolbar" },
+    { color: "#d8e1ef", labelKey: "settings.toolbarText" },
+  ],
+  light: [
+    { color: "#ffffff", labelKey: "settings.appBg" },
+    { color: "#f5f7fa", labelKey: "settings.surface" },
+    { color: "#0a1628", labelKey: "settings.text" },
+    { color: "#1d4ed8", labelKey: "settings.accent" },
+    { color: "#0d6b3d", labelKey: "settings.green" },
+    { color: "#202936", labelKey: "settings.navToolbar" },
+    { color: "#d8e1ef", labelKey: "settings.toolbarText" },
+  ],
+  mac: [
+    { color: "#ececec", labelKey: "settings.appBg" },
+    { color: "#ffffff", labelKey: "settings.surface" },
+    { color: "#1d1d1f", labelKey: "settings.text" },
+    { color: "#0071e3", labelKey: "settings.accent" },
+    { color: "#34c759", labelKey: "settings.green" },
+    { color: "#e4e4e8", labelKey: "settings.navToolbar" },
+    { color: "#1d1d1f", labelKey: "settings.toolbarText" },
+  ],
+  orange: [
+    { color: "#fff5ec", labelKey: "settings.appBg" },
+    { color: "#ffffff", labelKey: "settings.surface" },
+    { color: "#1a1a1a", labelKey: "settings.text" },
+    { color: "#e87a00", labelKey: "settings.accent" },
+    { color: "#2d8a4e", labelKey: "settings.green" },
+    { color: "#4a2b12", labelKey: "settings.navToolbar" },
+    { color: "#ffe6cc", labelKey: "settings.toolbarText" },
+  ],
+  purple: [
+    { color: "#1e1836", labelKey: "settings.appBg" },
+    { color: "#2d2650", labelKey: "settings.surface" },
+    { color: "#e8e4f4", labelKey: "settings.text" },
+    { color: "#a78bfa", labelKey: "settings.accent" },
+    { color: "#4ade80", labelKey: "settings.green" },
+    { color: "#1b1536", labelKey: "settings.navToolbar" },
+    { color: "#ece6ff", labelKey: "settings.toolbarText" },
+  ],
+  pink: [
+    { color: "#fff0f5", labelKey: "settings.appBg" },
+    { color: "#ffffff", labelKey: "settings.surface" },
+    { color: "#2d1b3a", labelKey: "settings.text" },
+    { color: "#c026d3", labelKey: "settings.accent" },
+    { color: "#15803d", labelKey: "settings.green" },
+    { color: "#5a2148", labelKey: "settings.navToolbar" },
+    { color: "#ffe3f1", labelKey: "settings.toolbarText" },
+  ],
 };
 
 export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => void }) {
@@ -196,14 +252,14 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
       <div className="color-scheme-preview" aria-label={t("settings.colorSchemePreview")}>
         <span className="color-scheme-preview-label">{t("settings.colorSchemePreview")}</span>
         <div className="color-scheme-preview-swatches">
-          {previewColors.map((color, i) => (
+          {previewColors.map((previewColor) => (
             <div
-              key={i}
+              key={previewColor.labelKey}
               className="color-scheme-preview-swatch"
-              style={{ background: color }}
+              style={{ background: previewColor.color }}
             >
               <span className="color-scheme-preview-swatch-label">
-                {t(SCHEME_PREVIEW_LABELS[i])}
+                {t(previewColor.labelKey)}
               </span>
             </div>
           ))}

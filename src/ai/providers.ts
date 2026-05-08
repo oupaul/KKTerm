@@ -1,5 +1,5 @@
 import { AI_PROVIDER_DEFINITIONS } from "./providerRegistry";
-import type { AiProviderKind, AiProviderSettings, AiReasoningEffort } from "../types";
+import type { AiAssistantToolSettings, AiProviderKind, AiProviderSettings, AiReasoningEffort } from "../types";
 export { AI_PROVIDER_DEFINITIONS, modelSupportsImageInput } from "./providerRegistry";
 export type {
   AiModelOption,
@@ -15,6 +15,15 @@ export function getAiProviderDefinition(kind: AiProviderKind) {
   );
 }
 
+export const DEFAULT_AI_ASSISTANT_TOOLS: AiAssistantToolSettings = {
+  webSearch: false,
+  webFetch: false,
+  shellCommand: false,
+  appDataFileSearch: false,
+  appDataFileRead: false,
+  currentTime: false,
+};
+
 export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
   const definition = getAiProviderDefinition(kind);
   return {
@@ -26,6 +35,7 @@ export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
     cliExecutionPolicy: "suggestOnly",
     claudeCliPath: "",
     codexCliPath: "",
+    tools: DEFAULT_AI_ASSISTANT_TOOLS,
   };
 }
 
@@ -55,6 +65,7 @@ export function normalizeAiProviderDraft(draft: AiProviderSettings): AiProviderS
     cliExecutionPolicy: "suggestOnly",
     claudeCliPath: draft.claudeCliPath?.trim() ?? "",
     codexCliPath: draft.codexCliPath?.trim() ?? "",
+    tools: { ...DEFAULT_AI_ASSISTANT_TOOLS, ...(draft.tools ?? {}) },
   };
 }
 

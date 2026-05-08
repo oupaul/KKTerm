@@ -158,6 +158,8 @@ pub struct Storage {
 pub struct GeneralSettings {
     auto_backup_enabled: bool,
     #[serde(default)]
+    show_connected_connections_in_rail: bool,
+    #[serde(default)]
     last_backup_at: Option<String>,
 }
 
@@ -177,6 +179,7 @@ pub struct ImportedDatabaseSnapshot {
     appearance_settings: AppearanceSettings,
     ssh_settings: SshSettings,
     sftp_settings: SftpSettings,
+    url_settings: UrlSettings,
     ai_provider_settings: AiProviderSettings,
     connection_tree: ConnectionTree,
     backup: DatabaseBackupInfo,
@@ -221,6 +224,59 @@ pub struct SftpSettings {
     overwrite_behavior: String,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UrlSettings {
+    #[serde(default)]
+    ignore_certificate_errors: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiAssistantToolSettings {
+    #[serde(default)]
+    web_search: bool,
+    #[serde(default)]
+    web_fetch: bool,
+    #[serde(default)]
+    shell_command: bool,
+    #[serde(default)]
+    app_data_file_search: bool,
+    #[serde(default)]
+    app_data_file_read: bool,
+    #[serde(default = "default_ai_current_time_tool_enabled")]
+    current_time: bool,
+}
+
+impl AiAssistantToolSettings {
+    pub(crate) fn web_search(&self) -> bool {
+        self.web_search
+    }
+    pub(crate) fn web_fetch(&self) -> bool {
+        self.web_fetch
+    }
+    pub(crate) fn shell_command(&self) -> bool {
+        self.shell_command
+    }
+    pub(crate) fn app_data_file_search(&self) -> bool {
+        self.app_data_file_search
+    }
+    pub(crate) fn app_data_file_read(&self) -> bool {
+        self.app_data_file_read
+    }
+    pub(crate) fn current_time(&self) -> bool {
+        self.current_time
+    }
+    pub(crate) fn any_enabled(&self) -> bool {
+        self.web_search
+            || self.web_fetch
+            || self.shell_command
+            || self.app_data_file_search
+            || self.app_data_file_read
+            || self.current_time
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AiProviderSettings {
@@ -241,6 +297,8 @@ pub struct AiProviderSettings {
     claude_cli_path: Option<String>,
     #[serde(default)]
     codex_cli_path: Option<String>,
+    #[serde(default = "default_ai_assistant_tool_settings")]
+    tools: AiAssistantToolSettings,
 }
 
 impl AiProviderSettings {
@@ -258,6 +316,10 @@ impl AiProviderSettings {
 
     pub(crate) fn reasoning_effort(&self) -> &str {
         &self.reasoning_effort
+    }
+
+    pub(crate) fn tools(&self) -> &AiAssistantToolSettings {
+        &self.tools
     }
 }
 
@@ -604,6 +666,7 @@ impl Storage {
             appearance_settings: self.appearance_settings()?,
             ssh_settings: self.ssh_settings()?,
             sftp_settings: self.sftp_settings()?,
+            url_settings: self.url_settings()?,
             ai_provider_settings: self.ai_provider_settings()?,
             connection_tree: self.list_connection_tree()?,
             backup,
@@ -805,6 +868,41 @@ impl Storage {
             .execute(
                 "INSERT INTO settings (key, value, updated_at)
                  VALUES ('sftp', ?1, CURRENT_TIMESTAMP)
+                 ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP",
+                params![value],
+            )
+            .map_err(to_storage_error)?;
+        Ok(settings)
+    }
+
+    pub fn url_settings(&self) -> Result<UrlSettings, String> {
+        let connection = self.lock()?;
+        let value = connection
+            .query_row("SELECT value FROM settings WHERE key = 'url'", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()
+            .map_err(to_storage_error)?;
+
+        match value {
+            Some(value) => serde_json::from_str(&value)
+                .map(validate_url_settings)
+                .map_err(|error| format!("URL settings are invalid: {error}"))?,
+            None => Ok(default_url_settings()),
+        }
+    }
+
+    pub fn update_url_settings(&self, request: UrlSettings) -> Result<UrlSettings, String> {
+        let settings = validate_url_settings(request)?;
+        let value = serde_json::to_string(&settings)
+            .map_err(|error| format!("failed to serialize URL settings: {error}"))?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "INSERT INTO settings (key, value, updated_at)
+                 VALUES ('url', ?1, CURRENT_TIMESTAMP)
                  ON CONFLICT(key) DO UPDATE SET
                     value = excluded.value,
                     updated_at = CURRENT_TIMESTAMP",
@@ -2788,6 +2886,7 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
+        show_connected_connections_in_rail: false,
         last_backup_at: None,
     }
 }
@@ -2837,6 +2936,12 @@ fn default_sftp_settings() -> SftpSettings {
     }
 }
 
+fn default_url_settings() -> UrlSettings {
+    UrlSettings {
+        ignore_certificate_errors: false,
+    }
+}
+
 fn default_ai_provider_settings() -> AiProviderSettings {
     AiProviderSettings {
         enabled: false,
@@ -2848,7 +2953,23 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         cli_execution_policy: default_ai_cli_execution_policy(),
         claude_cli_path: None,
         codex_cli_path: None,
+        tools: default_ai_assistant_tool_settings(),
     }
+}
+
+fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
+    AiAssistantToolSettings {
+        web_search: false,
+        web_fetch: false,
+        shell_command: false,
+        app_data_file_search: false,
+        app_data_file_read: false,
+        current_time: default_ai_current_time_tool_enabled(),
+    }
+}
+
+fn default_ai_current_time_tool_enabled() -> bool {
+    false
 }
 
 fn default_ai_provider_kind() -> String {
@@ -2936,6 +3057,10 @@ fn validate_sftp_settings(mut settings: SftpSettings) -> Result<SftpSettings, St
         "overwrite" | "replace" => "overwrite".to_string(),
         _ => return Err("SFTP overwrite behavior must be fail or overwrite".to_string()),
     };
+    Ok(settings)
+}
+
+fn validate_url_settings(settings: UrlSettings) -> Result<UrlSettings, String> {
     Ok(settings)
 }
 
@@ -3913,18 +4038,22 @@ mod tests {
             .general_settings()
             .expect("default general settings load");
         assert!(defaults.auto_backup_enabled);
+        assert!(!defaults.show_connected_connections_in_rail);
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
+                show_connected_connections_in_rail: true,
                 last_backup_at: None,
             })
             .expect("general settings update");
         assert!(!updated.auto_backup_enabled);
+        assert!(updated.show_connected_connections_in_rail);
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
+        assert!(reloaded.show_connected_connections_in_rail);
         assert!(reloaded.last_backup_at.is_none());
     }
 
@@ -3935,6 +4064,7 @@ mod tests {
         storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
+                show_connected_connections_in_rail: true,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -3944,6 +4074,7 @@ mod tests {
         storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: true,
+                show_connected_connections_in_rail: false,
                 last_backup_at: None,
             })
             .expect("general settings changes after export");
@@ -3956,6 +4087,7 @@ mod tests {
             .expect("database imports");
 
         assert!(!imported.general_settings.auto_backup_enabled);
+        assert!(imported.general_settings.show_connected_connections_in_rail);
         assert_eq!(
             imported.general_settings.last_backup_at.as_deref(),
             Some(imported.backup.created_at.as_str())
@@ -4126,6 +4258,25 @@ mod tests {
     }
 
     #[test]
+    fn url_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("url-settings")).expect("storage opens");
+
+        let defaults = storage.url_settings().expect("default URL settings load");
+        assert!(!defaults.ignore_certificate_errors);
+
+        let updated = storage
+            .update_url_settings(UrlSettings {
+                ignore_certificate_errors: true,
+            })
+            .expect("URL settings update");
+
+        assert!(updated.ignore_certificate_errors);
+
+        let reloaded = storage.url_settings().expect("URL settings reload");
+        assert!(reloaded.ignore_certificate_errors);
+    }
+
+    #[test]
     fn ai_provider_settings_round_trip_through_settings_table() {
         let storage = Storage::open(temp_db_path("ai-provider-settings")).expect("storage opens");
 
@@ -4150,6 +4301,7 @@ mod tests {
                 cli_execution_policy: "suggest-only".to_string(),
                 claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
                 codex_cli_path: Some("  codex  ".to_string()),
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect("AI provider settings update");
 
@@ -4188,6 +4340,7 @@ mod tests {
                 cli_execution_policy: "suggestOnly".to_string(),
                 claude_cli_path: None,
                 codex_cli_path: None,
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect_err("scheme-less endpoint is rejected");
 
@@ -4213,6 +4366,7 @@ mod tests {
                 cli_execution_policy: "suggestOnly".to_string(),
                 claude_cli_path: None,
                 codex_cli_path: None,
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect_err("blank model is rejected");
 
@@ -4234,6 +4388,7 @@ mod tests {
                 cli_execution_policy: "executeAutomatically".to_string(),
                 claude_cli_path: Some("claude".to_string()),
                 codex_cli_path: Some("codex".to_string()),
+                tools: default_ai_assistant_tool_settings(),
             })
             .expect_err("auto-execution policy is rejected");
 

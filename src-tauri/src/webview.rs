@@ -17,38 +17,33 @@ const AUTOFILL_AGENT: &str = r#"
   const TITLE_CHANNEL = "__ADMINDECK_URL_CREDENTIAL__";
   const agent = {
     fill(credential) {
-      const passwordInput = inputFromSelector(credential.passwordSelector) || findPasswordInput(false);
-      if (!passwordInput) {
-        return { filled: false, reason: "no-password-field" };
+      const result = fillCredential(credential);
+      if (result.filled) {
+        return result;
       }
-
-      const usernameInput = inputFromSelector(credential.usernameSelector) || findUsernameInput(passwordInput);
-      if (usernameInput && credential.username) {
-        setInputValue(usernameInput, credential.username);
-      }
-      setInputValue(passwordInput, credential.password);
-      passwordInput.focus({ preventScroll: true });
-      return { filled: true, usernameFilled: Boolean(usernameInput && credential.username) };
+      observeForCredentialFields(credential);
+      return result;
     },
-    capture() {
+    capture(nonce) {
       const passwordInput = findPasswordInput(true);
       if (!passwordInput) {
-        publish({ ok: false, reason: "no-password-field", url: window.location.href });
+        publish({ ok: false, nonce, reason: "no-password-field", url: window.location.href });
         return;
       }
       const password = passwordInput.value || "";
       if (!password) {
-        publish({ ok: false, reason: "empty-password", url: window.location.href });
+        publish({ ok: false, nonce, reason: "empty-password", url: window.location.href });
         return;
       }
       const usernameInput = findUsernameInput(passwordInput);
       const username = usernameInput?.value || "";
       if (!username) {
-        publish({ ok: false, reason: "empty-username", url: window.location.href });
+        publish({ ok: false, nonce, reason: "empty-username", url: window.location.href });
         return;
       }
       publish({
         ok: true,
+        nonce,
         url: window.location.href,
         username,
         password,
@@ -66,6 +61,58 @@ const AUTOFILL_AGENT: &str = r#"
         document.title = previousTitle;
       }
     }, 150);
+  }
+
+  let pendingFillObserver;
+  let pendingFillTimer;
+
+  function fillCredential(credential) {
+    const passwordInput = inputFromSelector(credential.passwordSelector) || findPasswordInput(false);
+    if (!passwordInput) {
+      return { filled: false, reason: "no-password-field" };
+    }
+    if (credential.automatic && passwordInput.value) {
+      return { filled: false, reason: "password-already-entered" };
+    }
+
+    const usernameInput = inputFromSelector(credential.usernameSelector) || findUsernameInput(passwordInput);
+    if (usernameInput && credential.username && (!credential.automatic || !usernameInput.value)) {
+      setInputValue(usernameInput, credential.username);
+    }
+    setInputValue(passwordInput, credential.password);
+    if (!credential.automatic) {
+      passwordInput.focus({ preventScroll: true });
+    }
+    return { filled: true, usernameFilled: Boolean(usernameInput && credential.username) };
+  }
+
+  function observeForCredentialFields(credential) {
+    if (pendingFillObserver) {
+      pendingFillObserver.disconnect();
+    }
+    if (pendingFillTimer) {
+      window.clearTimeout(pendingFillTimer);
+    }
+    pendingFillObserver = new MutationObserver(() => {
+      if (fillCredential(credential).filled) {
+        pendingFillObserver?.disconnect();
+        pendingFillObserver = undefined;
+        if (pendingFillTimer) {
+          window.clearTimeout(pendingFillTimer);
+          pendingFillTimer = undefined;
+        }
+      }
+    });
+    pendingFillObserver.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    pendingFillTimer = window.setTimeout(() => {
+      pendingFillObserver?.disconnect();
+      pendingFillObserver = undefined;
+      pendingFillTimer = undefined;
+    }, 10000);
   }
 
   function inputFromSelector(selector) {
@@ -187,6 +234,8 @@ pub struct StartWebviewSessionRequest {
     session_id: String,
     url: String,
     data_partition: Option<String>,
+    #[serde(default)]
+    ignore_certificate_errors: bool,
     x: f64,
     y: f64,
     width: f64,
@@ -235,12 +284,20 @@ pub struct WebviewSimpleRequest {
     session_id: String,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebviewCaptureCredentialRequest {
+    session_id: String,
+    nonce: String,
+}
+
 pub(crate) struct WebviewFillCredentialRequest {
     pub(crate) session_id: String,
     pub(crate) username: String,
     pub(crate) password: String,
     pub(crate) username_selector: Option<String>,
     pub(crate) password_selector: Option<String>,
+    pub(crate) automatic: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -292,6 +349,7 @@ impl WebviewSessionManager {
             session_id,
             url,
             data_partition,
+            ignore_certificate_errors,
             x,
             y,
             width,
@@ -343,7 +401,12 @@ impl WebviewSessionManager {
         let title_session_id = session_id.clone();
         let download_app = app.clone();
         let download_session_id = session_id.clone();
-        let builder = WebviewBuilder::new(&label, WebviewUrl::External(parsed_url))
+        let initial_webview_url = if ignore_certificate_errors && cfg!(windows) {
+            parse_webview_blank_url()?
+        } else {
+            parsed_url.clone()
+        };
+        let builder = WebviewBuilder::new(&label, WebviewUrl::External(initial_webview_url))
             .initialization_script(AUTOFILL_AGENT)
             .on_navigation(move |url| {
                 let _ = navigation_app.emit(
@@ -416,6 +479,13 @@ impl WebviewSessionManager {
                 self.clear_starting(&session_id);
                 format!("failed to attach child webview: {error}")
             })?;
+
+        configure_certificate_error_bypass(&webview, ignore_certificate_errors)?;
+        if ignore_certificate_errors && cfg!(windows) {
+            webview
+                .navigate(parsed_url)
+                .map_err(|error| format!("failed to navigate webview: {error}"))?;
+        }
 
         let mut sessions = self.lock()?;
         sessions.insert(session_id.clone(), webview);
@@ -524,6 +594,7 @@ impl WebviewSessionManager {
             "password": request.password,
             "usernameSelector": request.username_selector,
             "passwordSelector": request.password_selector,
+            "automatic": request.automatic,
         });
         let payload = serde_json::to_string(&payload)
             .map_err(|error| format!("failed to prepare URL credential payload: {error}"))?;
@@ -538,13 +609,20 @@ impl WebviewSessionManager {
             .map_err(|error| format!("failed to fill webview credential: {error}"))
     }
 
-    pub fn capture_credential(&self, request: WebviewSimpleRequest) -> Result<(), String> {
+    pub fn capture_credential(
+        &self,
+        request: WebviewCaptureCredentialRequest,
+    ) -> Result<(), String> {
+        let nonce = serde_json::to_string(&request.nonce)
+            .map_err(|error| format!("failed to prepare URL credential capture nonce: {error}"))?;
         let sessions = self.lock()?;
         let webview = sessions
             .get(&request.session_id)
             .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
         webview
-            .eval("window.__ADMINDECK_URL_AUTOFILL__?.capture();")
+            .eval(format!(
+                "window.__ADMINDECK_URL_AUTOFILL__?.capture({nonce});"
+            ))
             .map_err(|error| format!("failed to capture webview credential: {error}"))
     }
 
@@ -602,6 +680,79 @@ fn hide_webview(webview: &Webview) -> Result<(), String> {
         .map_err(|error| format!("failed to hide webview: {error}"))
 }
 
+fn configure_certificate_error_bypass(webview: &Webview, enabled: bool) -> Result<(), String> {
+    if !enabled {
+        return Ok(());
+    }
+    configure_platform_certificate_error_bypass(webview)
+}
+
+#[cfg(windows)]
+fn configure_platform_certificate_error_bypass(webview: &Webview) -> Result<(), String> {
+    use std::sync::{Arc, Mutex};
+
+    use webview2_com::{
+        Microsoft::Web::WebView2::Win32::{
+            ICoreWebView2_14, COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW,
+        },
+        ServerCertificateErrorDetectedEventHandler,
+    };
+    use windows::core::Interface;
+
+    let setup_error = Arc::new(Mutex::new(None::<String>));
+    let setup_error_for_callback = Arc::clone(&setup_error);
+
+    webview
+        .with_webview(move |platform_webview| {
+            let result = unsafe {
+                let webview2 = platform_webview
+                    .controller()
+                    .CoreWebView2()
+                    .map_err(|error| error.to_string())?;
+                let webview2 = webview2
+                    .cast::<ICoreWebView2_14>()
+                    .map_err(|error| error.to_string())?;
+                let handler = ServerCertificateErrorDetectedEventHandler::create(Box::new(
+                    move |_sender, args| {
+                        if let Some(args) = args {
+                            unsafe {
+                                args.SetAction(
+                                    COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW,
+                                )?;
+                            }
+                        }
+                        Ok(())
+                    },
+                ));
+                let mut token = 0;
+                webview2
+                    .add_ServerCertificateErrorDetected(handler, &mut token)
+                    .map_err(|error| error.to_string())?;
+                Ok::<(), String>(())
+            };
+            if let Err(error) = result {
+                if let Ok(mut setup_error) = setup_error_for_callback.lock() {
+                    *setup_error = Some(error);
+                }
+            }
+        })
+        .map_err(|error| format!("failed to access WebView2 for certificate settings: {error}"))?;
+
+    if let Ok(mut setup_error) = setup_error.lock() {
+        if let Some(error) = setup_error.take() {
+            return Err(format!(
+                "failed to enable URL certificate bypass for WebView2: {error}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn configure_platform_certificate_error_bypass(_webview: &Webview) -> Result<(), String> {
+    Ok(())
+}
+
 fn required_id(value: String) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -617,6 +768,10 @@ fn required_id(value: String) -> Result<String, String> {
         return Err("webview session id may only contain letters, digits, '-' or '_'".to_string());
     }
     Ok(trimmed.to_string())
+}
+
+fn parse_webview_blank_url() -> Result<url::Url, String> {
+    url::Url::parse("about:blank").map_err(|error| format!("blank URL is not valid: {error}"))
 }
 
 fn parse_external_url(value: &str) -> Result<url::Url, String> {

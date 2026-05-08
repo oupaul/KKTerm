@@ -35,6 +35,7 @@ import type {
   UpdateConnectionRequest,
   UrlCredentialSummary,
   UrlDataPartitionSummary,
+  UrlSettings,
   CreateWikiPageRequest,
   DeleteWikiAttachmentRequest,
   MoveWikiPageRequest,
@@ -73,6 +74,7 @@ export interface StartTerminalSessionRequest {
   type: "local" | "ssh" | "telnet" | "serial";
   host: string;
   user: string;
+  url?: string;
   port?: number;
   keyPath?: string;
   proxyJump?: string;
@@ -114,6 +116,7 @@ export interface StartSftpSessionRequest {
   title: string;
   host: string;
   user: string;
+  url?: string;
   port?: number;
   keyPath?: string;
   proxyJump?: string;
@@ -205,12 +208,13 @@ export interface SshConfigImportPreview {
   unsupportedDirectives: UnsupportedSshDirective[];
 }
 
-export type ImportFileFormat = "csv" | "tsv" | "rdcman" | "mobaxterm" | "putty";
+export type ImportFileFormat = "csv" | "tsv" | "rdcman" | "mobaxterm" | "putty" | "bookmarks";
 
 export interface ImportedConnectionDraft {
   name: string;
   host: string;
   user: string;
+  url?: string;
   port?: number;
   type: "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc";
   folderPath: string[];
@@ -220,6 +224,27 @@ export interface ImportFilePreview {
   format: ImportFileFormat;
   drafts: ImportedConnectionDraft[];
   warnings: string[];
+}
+
+export interface BookmarkTreeNode {
+  id: string;
+  name: string;
+  type: "folder" | "bookmark";
+  url?: string;
+  children: BookmarkTreeNode[];
+}
+
+export interface BookmarkImportSource {
+  id: string;
+  label: string;
+  browser: string;
+  path: string;
+  root: BookmarkTreeNode;
+  warnings: string[];
+}
+
+export interface BrowserBookmarkSourcesResponse {
+  sources: BookmarkImportSource[];
 }
 
 export interface ScanResultEntry {
@@ -286,6 +311,13 @@ export interface AgentRunRequest {
     sourceLabel: string;
     dataUrl: string;
   }>;
+  files?: Array<{
+    sourceLabel: string;
+    fileData?: string;
+    dataUrl?: string;
+    mimeType?: string;
+    text?: string;
+  }>;
   systemContext?: string;
   messages: AgentChatMessage[];
   outputLanguage?: string;
@@ -320,6 +352,7 @@ export interface StartWebviewSessionRequest {
   sessionId: string;
   url: string;
   dataPartition?: string;
+  ignoreCertificateErrors?: boolean;
   x: number;
   y: number;
   width: number;
@@ -358,16 +391,22 @@ export interface WebviewSimpleRequest {
   sessionId: string;
 }
 
+export interface WebviewCaptureCredentialRequest extends WebviewSimpleRequest {
+  nonce: string;
+}
+
 export interface FillWebviewCredentialRequest {
   sessionId: string;
   secretOwnerId: string;
   username: string;
+  automatic?: boolean;
 }
 
 export interface StartRdpSessionRequest {
   sessionId: string;
   host: string;
   user: string;
+  url?: string;
   port?: number;
   secretOwnerId?: string;
   password?: string;
@@ -638,6 +677,14 @@ type CommandMap = {
     args: { request: SftpSettings };
     result: SftpSettings;
   };
+  get_url_settings: {
+    args: undefined;
+    result: UrlSettings;
+  };
+  update_url_settings: {
+    args: { request: UrlSettings };
+    result: UrlSettings;
+  };
   get_ai_provider_settings: {
     args: undefined;
     result: AiProviderSettings;
@@ -704,6 +751,14 @@ type CommandMap = {
   };
   parse_import_file: {
     args: { request: { path: string } };
+    result: ImportFilePreview;
+  };
+  list_browser_bookmark_sources: {
+    args: undefined;
+    result: BrowserBookmarkSourcesResponse;
+  };
+  preview_browser_bookmark_import: {
+    args: { request: { sourceId: string; selectedNodeIds: string[] } };
     result: ImportFilePreview;
   };
   scan_network_for_connections: {
@@ -944,7 +999,7 @@ type CommandMap = {
     result: null;
   };
   capture_webview_credential: {
-    args: { request: WebviewSimpleRequest };
+    args: { request: WebviewCaptureCredentialRequest };
     result: null;
   };
   close_webview_session: {

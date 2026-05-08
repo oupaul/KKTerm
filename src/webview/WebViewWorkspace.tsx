@@ -112,6 +112,7 @@ function releaseWebviewSession(sessionId: string) {
 
 type CapturedCredentialPayload = {
   ok: boolean;
+  nonce?: string;
   reason?: string;
   url?: string;
   username?: string;
@@ -122,9 +123,14 @@ type CapturedCredentialPayload = {
 
 const CREDENTIAL_TITLE_PREFIX = "__ADMINDECK_URL_CREDENTIAL__";
 
+function createCredentialCaptureNonce() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: WorkspaceTab }) {
   const { t } = useTranslation();
   const updateWebviewTabMetadata = useWorkspaceStore((state) => state.updateWebviewTabMetadata);
+  const ignoreCertificateErrors = useWorkspaceStore((state) => state.urlSettings.ignoreCertificateErrors);
   const workspaceRef = useRef<HTMLElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const sessionStartedRef = useRef(false);
@@ -133,6 +139,8 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   const lastBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const rafRef = useRef<number | null>(null);
   const visibilityRef = useRef({ isActive, webviewSuppressed: false });
+  const pendingCaptureNonceRef = useRef<string | null>(null);
+  const credentialRef = useRef({ canFillCredential: false, username: "" });
   const [navError, setNavError] = useState("");
   const [fillStatus, setFillStatus] = useState("");
   const [webviewSuppressed, setWebviewSuppressed] = useState(false);
@@ -143,6 +151,13 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   const [hasSavedCredential, setHasSavedCredential] = useState(Boolean(tab.connection?.hasUrlCredential));
   const urlCredentialUsername = savedCredentialUsername || tab.connection?.urlCredentialUsername;
   const canFillCredential = Boolean(hasSavedCredential && urlCredentialUsername);
+
+  useEffect(() => {
+    credentialRef.current = {
+      canFillCredential,
+      username: urlCredentialUsername ?? "",
+    };
+  }, [canFillCredential, urlCredentialUsername]);
 
   const computeBounds = () => {
     const node = placeholderRef.current;
@@ -235,6 +250,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
           sessionId,
           url: initialUrl,
           dataPartition: tab.dataPartition,
+          ignoreCertificateErrors,
           ...bounds,
         },
       }),
@@ -349,6 +365,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
         setAddressInput(event.payload.url);
         if (event.payload.status === "finished") {
           setFillStatus("");
+          void fillCredential({ automatic: true, showStatus: false });
         }
       }),
       listen<WebviewTitleChangedEvent>("webview-title-changed", (event) => {
@@ -415,17 +432,22 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   }
 
   function handleCapturedCredential(rawPayload: string) {
-    if (!tab.connection) {
+    if (!tab.connection || !pendingCaptureNonceRef.current) {
       return;
     }
     let payload: CapturedCredentialPayload;
     try {
       payload = JSON.parse(rawPayload) as CapturedCredentialPayload;
     } catch {
+      pendingCaptureNonceRef.current = null;
       setFillStatus("");
       setNavError(t("webview.savePasswordInvalidCapture"));
       return;
     }
+    if (payload.nonce !== pendingCaptureNonceRef.current) {
+      return;
+    }
+    pendingCaptureNonceRef.current = null;
     if (!payload.ok || !payload.username || !payload.password) {
       setFillStatus("");
       const reason = payload.reason === "no-password-field"
@@ -474,32 +496,49 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
     }
     setNavError("");
     setFillStatus(t("webview.capturingPassword"));
+    const nonce = createCredentialCaptureNonce();
+    pendingCaptureNonceRef.current = nonce;
     void invokeCommand("capture_webview_credential", {
-      request: { sessionId: sessionIdRef.current },
+      request: { sessionId: sessionIdRef.current, nonce },
     }).catch((error) => {
+      pendingCaptureNonceRef.current = null;
       setFillStatus("");
       setNavError(error instanceof Error ? error.message : String(error));
     });
   }
 
-  function handleFillCredential() {
-    if (!isTauriRuntime() || !sessionStartedRef.current || !tab.connection || !urlCredentialUsername) {
-      return;
+  function fillCredential({ automatic, showStatus }: { automatic: boolean; showStatus: boolean }) {
+    const credential = credentialRef.current;
+    if (!isTauriRuntime() || !sessionStartedRef.current || !tab.connection || !credential.canFillCredential) {
+      return Promise.resolve();
     }
-    setNavError("");
-    setFillStatus(t("webview.fillingCredential"));
-    void invokeCommand("fill_webview_credential", {
+    if (showStatus) {
+      setNavError("");
+      setFillStatus(t("webview.fillingCredential"));
+    }
+    return invokeCommand("fill_webview_credential", {
       request: {
         sessionId: sessionIdRef.current,
         secretOwnerId: tab.connection.id,
-        username: urlCredentialUsername,
+        username: credential.username,
+        automatic,
       },
     })
-      .then(() => setFillStatus(t("webview.credentialFilled")))
+      .then(() => {
+        if (showStatus) {
+          setFillStatus(t("webview.credentialFilled"));
+        }
+      })
       .catch((error) => {
-        setFillStatus("");
-        setNavError(error instanceof Error ? error.message : String(error));
+        if (showStatus) {
+          setFillStatus("");
+          setNavError(error instanceof Error ? error.message : String(error));
+        }
       });
+  }
+
+  function handleFillCredential() {
+    void fillCredential({ automatic: false, showStatus: true });
   }
 
   return (
