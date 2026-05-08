@@ -1014,8 +1014,6 @@
     "collapse": "Réduire",
     "expand": "Développer",
     "editorMode": "Modifier",
-    "previewMode": "Aperçu",
-    "splitMode": "Partagé",
     "noSelection": "Sélectionnez une page dans l'arborescence pour commencer à modifier.",
     "createFirstPage": "Créez votre première page",
     "movePage": "Déplacer",

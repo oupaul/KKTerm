@@ -1014,8 +1014,6 @@
     "collapse": "折りたたむ",
     "expand": "展開",
     "editorMode": "編集",
-    "previewMode": "プレビュー",
-    "splitMode": "分割",
     "noSelection": "ツリーからページを選択して編集を開始してください。",
     "createFirstPage": "最初のページを作成",
     "movePage": "移動",

@@ -1014,8 +1014,6 @@
     "collapse": "摺疊",
     "expand": "展開",
     "editorMode": "編輯",
-    "previewMode": "預覽",
-    "splitMode": "分割",
     "noSelection": "從樹狀結構中選擇頁面以開始編輯。",
     "createFirstPage": "建立第一頁",
     "movePage": "移動",

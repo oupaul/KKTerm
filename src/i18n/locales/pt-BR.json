@@ -1014,8 +1014,6 @@
     "collapse": "Recolher",
     "expand": "Expandir",
     "editorMode": "Editar",
-    "previewMode": "Visualizar",
-    "splitMode": "Dividir",
     "noSelection": "Selecione uma página da árvore para começar a editar.",
     "createFirstPage": "Criar sua primeira página",
     "movePage": "Mover",

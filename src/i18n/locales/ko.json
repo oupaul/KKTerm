@@ -1014,8 +1014,6 @@
     "collapse": "접기",
     "expand": "펼치기",
     "editorMode": "편집",
-    "previewMode": "미리보기",
-    "splitMode": "분할",
     "noSelection": "트리에서 페이지를 선택하여 편집을 시작하세요.",
     "createFirstPage": "첫 페이지 만들기",
     "movePage": "이동",
