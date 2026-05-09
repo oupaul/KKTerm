@@ -3066,12 +3066,12 @@ fn validate_appearance_settings(
     settings.custom_font_path = trim_optional(settings.custom_font_path);
     settings.color_scheme = match settings.color_scheme.to_lowercase().as_str() {
         "default" | "dark" | "light" | "mac" | "orange" | "purple" | "pink"
-        | "green-kuai-kuai" | "blue-see" | "confetti" | "wood" => {
+        | "green-kuai-kuai" | "blue-see" | "confetti" | "bubble-tea" => {
             settings.color_scheme.to_lowercase()
         }
         _ => {
             return Err(
-                "color scheme must be one of: default, dark, light, mac, orange, purple, pink, green-kuai-kuai, blue-see, confetti, wood"
+                "color scheme must be one of: default, dark, light, mac, orange, purple, pink, green-kuai-kuai, blue-see, confetti, bubble-tea"
                     .to_string(),
             )
         }

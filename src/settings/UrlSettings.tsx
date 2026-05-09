@@ -5,6 +5,7 @@ import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { UrlCredentialSummary, UrlDataPartitionSummary } from "../types";
 import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -187,16 +188,11 @@ export function UrlSettings() {
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
-            <input
+            <ToggleSwitch
               checked={draft.ignoreCertificateErrors}
-              onChange={(event) => {
-                const ignoreCertificateErrors = event.currentTarget.checked;
-                setDraft((settings) => ({
-                  ...settings,
-                  ignoreCertificateErrors,
-                }));
-              }}
-              type="checkbox"
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, ignoreCertificateErrors: checked }))
+              }
             />
             <span>
               <strong>{t("settings.ignoreCertificateErrors")}</strong>

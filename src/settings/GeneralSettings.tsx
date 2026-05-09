@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DatabaseBackup,
   FolderOpen,
   Languages,
   RotateCcw,
+  Save,
   Settings as SettingsIcon,
   Upload,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import {
 import { useWorkspaceStore } from "../store";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../lib/settings";
 import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 function formatBackupDate(value?: string | null) {
   if (!value) {
@@ -71,53 +73,32 @@ export function GeneralSettings() {
   const setAiProviderHasApiKey = useWorkspaceStore(
     (state) => state.setAiProviderHasApiKey,
   );
+  const [draft, setDraft] = useState(generalSettings);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(generalSettings);
 
-  async function updateGeneralSettings(
-    nextSettings: typeof generalSettings,
-    successMessage: string,
-  ) {
-    setGeneralSettings(nextSettings);
-    setStatus("");
-    setError("");
-    if (!isTauriRuntime()) {
-      return;
-    }
+  useEffect(() => {
+    setDraft(generalSettings);
+  }, [generalSettings]);
+
+  async function handleSave() {
     try {
-      const saved = await invokeCommand("update_general_settings", {
-        request: nextSettings,
-      });
+      setError("");
+      setStatus("");
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_general_settings", { request: draft })
+        : draft;
       setGeneralSettings(saved);
-      setStatus(successMessage);
+      setDraft(saved);
+      setStatus(t("settings.generalDefaultsSaved"));
     } catch (saveError) {
       setError(
         saveError instanceof Error ? saveError.message : String(saveError),
       );
     }
-  }
-
-  function updateAutoBackup(enabled: boolean) {
-    return updateGeneralSettings(
-      { ...generalSettings, autoBackupEnabled: enabled },
-      t("settings.autoBackupSaved"),
-    );
-  }
-
-  function updateConnectedConnectionsInRail(enabled: boolean) {
-    return updateGeneralSettings(
-      { ...generalSettings, showConnectedConnectionsInRail: enabled },
-      t("settings.connectedConnectionsRailSaved"),
-    );
-  }
-
-  function updateClipboardRead(enabled: boolean) {
-    return updateGeneralSettings(
-      { ...generalSettings, allowClipboardRead: enabled },
-      t("settings.clipboardReadSaved"),
-    );
   }
 
   async function handleBackupSettings() {
@@ -266,6 +247,17 @@ export function GeneralSettings() {
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
+        actions={
+          <button
+            className="toolbar-button"
+            disabled={!hasChanges}
+            onClick={() => void handleSave()}
+            type="button"
+          >
+            <Save size={15} />
+            {t("settings.save")}
+          </button>
+        }
         icon={<SettingsIcon size={18} />}
         label={t("settings.sectionGeneral")}
         title={t("settings.generalDefaults")}
@@ -300,11 +292,10 @@ export function GeneralSettings() {
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
-            <input
-              type="checkbox"
-              checked={generalSettings.showConnectedConnectionsInRail}
-              onChange={(event) =>
-                void updateConnectedConnectionsInRail(event.currentTarget.checked)
+            <ToggleSwitch
+              checked={draft.showConnectedConnectionsInRail}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, showConnectedConnectionsInRail: checked }))
               }
             />
             <span>
@@ -313,11 +304,10 @@ export function GeneralSettings() {
             </span>
           </label>
           <label className="settings-toggle-row">
-            <input
-              type="checkbox"
-              checked={generalSettings.allowClipboardRead}
-              onChange={(event) =>
-                void updateClipboardRead(event.currentTarget.checked)
+            <ToggleSwitch
+              checked={draft.allowClipboardRead}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, allowClipboardRead: checked }))
               }
             />
             <span>
@@ -339,11 +329,10 @@ export function GeneralSettings() {
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
-            <input
-              type="checkbox"
-              checked={generalSettings.autoBackupEnabled}
-              onChange={(event) =>
-                void updateAutoBackup(event.currentTarget.checked)
+            <ToggleSwitch
+              checked={draft.autoBackupEnabled}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, autoBackupEnabled: checked }))
               }
             />
             <span>

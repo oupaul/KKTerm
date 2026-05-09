@@ -6,6 +6,7 @@ import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../types";
 import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 function normalizeTerminalSettingsDraft(settings: TerminalSettingsType, t: TFunction): TerminalSettingsType {
   if (!settings.fontFamily.trim()) {
@@ -213,48 +214,33 @@ export function TerminalSettings() {
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
-            <input
+            <ToggleSwitch
               checked={draft.copyOnSelect}
-              onChange={(event) => {
-                const copyOnSelect = event.currentTarget.checked;
-                setDraft((settings) => ({
-                  ...settings,
-                  copyOnSelect,
-                }));
-              }}
-              type="checkbox"
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, copyOnSelect: checked }))
+              }
             />
             <span>
               <strong>{t("settings.copyOnSelect")}</strong>
             </span>
           </label>
           <label className="settings-toggle-row">
-            <input
+            <ToggleSwitch
               checked={draft.allowOsc52Clipboard}
-              onChange={(event) => {
-                const allowOsc52Clipboard = event.currentTarget.checked;
-                setDraft((settings) => ({
-                  ...settings,
-                  allowOsc52Clipboard,
-                }));
-              }}
-              type="checkbox"
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, allowOsc52Clipboard: checked }))
+              }
             />
             <span>
               <strong>{t("settings.allowLocalOsc52Clipboard")}</strong>
             </span>
           </label>
           <label className="settings-toggle-row">
-            <input
+            <ToggleSwitch
               checked={draft.confirmMultilinePaste}
-              onChange={(event) => {
-                const confirmMultilinePaste = event.currentTarget.checked;
-                setDraft((settings) => ({
-                  ...settings,
-                  confirmMultilinePaste,
-                }));
-              }}
-              type="checkbox"
+              onChange={(checked) =>
+                setDraft((settings) => ({ ...settings, confirmMultilinePaste: checked }))
+              }
             />
             <span>
               <strong>{t("settings.confirmMultilinePaste")}</strong>

@@ -209,7 +209,7 @@ export type ColorScheme =
   | "green-kuai-kuai"
   | "blue-see"
   | "confetti"
-  | "wood";
+  | "bubble-tea";
 
 export interface AppearanceSettings {
   appFontFamily: string;

@@ -6,6 +6,7 @@ import { invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { SshSettings as SshSettingsType } from "../types";
 import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): SshSettingsType {
   const defaultUser = settings.defaultUser.trim();
@@ -273,16 +274,11 @@ export function SshSettings() {
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
-            <input
+            <ToggleSwitch
               checked={sshDraft.allowOsc52Clipboard ?? true}
-              onChange={(event) => {
-                const allowOsc52Clipboard = event.currentTarget.checked;
-                setSshDraft((settings) => ({
-                  ...settings,
-                  allowOsc52Clipboard,
-                }));
-              }}
-              type="checkbox"
+              onChange={(checked) =>
+                setSshDraft((settings) => ({ ...settings, allowOsc52Clipboard: checked }))
+              }
             />
             <span>
               <strong>{t("settings.allowSshOsc52Clipboard")}</strong>
@@ -300,16 +296,11 @@ export function SshSettings() {
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
-            <input
+            <ToggleSwitch
               checked={sshDraft.hideCommonPortRedirects ?? true}
-              onChange={(event) => {
-                const hideCommonPortRedirects = event.currentTarget.checked;
-                setSshDraft((settings) => ({
-                  ...settings,
-                  hideCommonPortRedirects,
-                }));
-              }}
-              type="checkbox"
+              onChange={(checked) =>
+                setSshDraft((settings) => ({ ...settings, hideCommonPortRedirects: checked }))
+              }
             />
             <span>
               <strong>{t("settings.hideCommonPortRedirects")}</strong>

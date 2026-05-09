@@ -63,7 +63,7 @@ const COLOR_SCHEME_OPTIONS: { value: ColorScheme; labelKey: string }[] = [
   { value: "green-kuai-kuai", labelKey: "settings.schemeGreenKuaiKuai" },
   { value: "blue-see", labelKey: "settings.schemeBlueSee" },
   { value: "confetti", labelKey: "settings.schemeConfetti" },
-  { value: "wood", labelKey: "settings.schemeWood" },
+  { value: "bubble-tea", labelKey: "settings.schemeBubbleTea" },
 ];
 
 type SchemePreviewColor = { color: string; labelKey: string };
@@ -159,14 +159,14 @@ const SCHEME_PREVIEW_COLORS: Record<ColorScheme, SchemePreviewColor[]> = {
     { color: "#3a2550", labelKey: "settings.navToolbar" },
     { color: "#f0e0f8", labelKey: "settings.toolbarText" },
   ],
-  wood: [
-    { color: "#f5ede1", labelKey: "settings.appBg" },
+  "bubble-tea": [
+    { color: "#faf3e6", labelKey: "settings.appBg" },
     { color: "#ffffff", labelKey: "settings.surface" },
-    { color: "#2d1f14", labelKey: "settings.text" },
-    { color: "#c07830", labelKey: "settings.accent" },
-    { color: "#4a8a3a", labelKey: "settings.green" },
-    { color: "#3a2818", labelKey: "settings.navToolbar" },
-    { color: "#f0e0c8", labelKey: "settings.toolbarText" },
+    { color: "#3b2216", labelKey: "settings.text" },
+    { color: "#c47a38", labelKey: "settings.accent" },
+    { color: "#6b8e4e", labelKey: "settings.green" },
+    { color: "#3b2216", labelKey: "settings.navToolbar" },
+    { color: "#f5e6d0", labelKey: "settings.toolbarText" },
   ],
 };
 

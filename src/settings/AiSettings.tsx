@@ -20,6 +20,7 @@ import type {
   AiReasoningEffort,
 } from "../types";
 import { SettingsSectionHeader, SettingsSummary } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 import i18next from "../i18n/config";
 
 function createStoredApiKeyMask() {
@@ -229,17 +230,16 @@ function AiAssistantToolsControl({
       <div className="settings-toggle-list">
         {AI_ASSISTANT_TOOL_IDS.map((toolId) => (
           <label className="settings-toggle-row" key={toolId}>
-            <input
+            <ToggleSwitch
               checked={Boolean(draft.tools?.[toolId])}
-              onChange={(event) =>
+              onChange={(checked) =>
                 onDraftChange({
                   tools: {
                     ...draft.tools,
-                    [toolId]: event.currentTarget.checked,
+                    [toolId]: checked,
                   },
                 })
               }
-              type="checkbox"
             />
             <span>
               <strong>{t(`settings.aiTools.${toolId}.label`)}</strong>

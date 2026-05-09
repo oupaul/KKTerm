@@ -311,33 +311,33 @@
   --shadow: 0 12px 40px rgba(60, 20, 70, 0.08);
 }
 
-[data-color-scheme="wood"] {
-  --app-bg: #f5ede1;
-  --chrome: #faf6ef;
+[data-color-scheme="bubble-tea"] {
+  --app-bg: #faf3e6;
+  --chrome: #fefbf6;
   --chrome-strong: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #f6efe4;
-  --text: #2d1f14;
-  --text-muted: #7a5e45;
-  --text-faint: #a89078;
-  --border: #e0d3c0;
-  --border-strong: #d0c0a8;
-  --accent: #c07830;
-  --accent-soft: #fdf0e0;
-  --green-soft: #ecf5e8;
+  --surface-muted: #f8f0e2;
+  --text: #3b2216;
+  --text-muted: #8c6a4a;
+  --text-faint: #b89a7a;
+  --border: #e8d5b8;
+  --border-strong: #d4bfa0;
+  --accent: #c47a38;
+  --accent-soft: #fdf0e2;
+  --green-soft: #eef5e8;
   --amber-soft: #fdf5e8;
-  --green: #4a8a3a;
-  --amber: #c07830;
+  --green: #6b8e4e;
+  --amber: #c47a38;
   --red: #c04030;
-  --nav-toolbar-bg: #3a2818;
-  --nav-toolbar-text: #f0e0c8;
-  --nav-toolbar-hover-bg: rgba(192, 120, 48, 0.18);
-  --nav-toolbar-accent: #e0a870;
+  --nav-toolbar-bg: #3b2216;
+  --nav-toolbar-text: #f5e6d0;
+  --nav-toolbar-hover-bg: rgba(196, 122, 56, 0.18);
+  --nav-toolbar-accent: #e0b080;
   --nav-toolbar-warning: #ffd166;
-  --nav-toolbar-tooltip-bg: #251808;
+  --nav-toolbar-tooltip-bg: #2a1710;
   --nav-toolbar-tooltip-text: #fff4e8;
-  --nav-toolbar-tooltip-border: rgba(224, 168, 112, 0.25);
-  --shadow: 0 12px 40px rgba(50, 30, 10, 0.1);
+  --nav-toolbar-tooltip-border: rgba(224, 176, 128, 0.25);
+  --shadow: 0 12px 40px rgba(60, 30, 10, 0.1);
 }
 
 * {
@@ -6764,12 +6764,57 @@ progress {
   border-radius: 7px;
 }
 
-.settings-toggle-row input {
+.settings-toggle-row input[type="checkbox"] {
   flex: 0 0 auto;
   width: 15px;
   height: 15px;
   margin-top: 2px;
   accent-color: var(--accent);
+}
+
+.toggle-switch {
+  flex: 0 0 auto;
+  cursor: pointer;
+  outline: none;
+  margin-top: 1px;
+  margin-left: auto;
+  order: 1;
+}
+
+.toggle-switch:focus-visible {
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--accent-ring, var(--accent));
+}
+
+.toggle-switch-track {
+  display: block;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 20px;
+  background: var(--border);
+  transition: background 0.2s ease;
+}
+
+.toggle-switch-on .toggle-switch-track {
+  background: var(--accent);
+}
+
+.toggle-switch-knob {
+  display: block;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch-on .toggle-switch-knob {
+  transform: translateX(16px);
 }
 
 .settings-toggle-row span {
