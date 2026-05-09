@@ -315,6 +315,18 @@ export function GeneralSettings() {
               <small>{t("settings.allowClipboardReadHint")}</small>
             </span>
           </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.minimizeToTray}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, minimizeToTray: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.minimizeToTray")}</strong>
+              <small>{t("settings.minimizeToTrayHint")}</small>
+            </span>
+          </label>
         </div>
       </fieldset>
 

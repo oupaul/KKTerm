@@ -68,6 +68,8 @@
     "allowClipboardRead": "Allow clipboard read",
     "allowClipboardReadHint": "Lets URL tabs read the clipboard for paste without the native prompt.",
     "clipboardReadSaved": "Clipboard read setting saved.",
+    "minimizeToTray": "Minimize to tray",
+    "minimizeToTrayHint": "Hides AdminDeck in the system tray when the window is minimized.",
     "backupSettings": "Back Up Now",
     "backupSettingsComplete": "Backup saved: {{filename}}.",
     "lastBackup": "Last Backup: {{value}}",

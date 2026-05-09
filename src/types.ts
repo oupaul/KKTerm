@@ -165,6 +165,7 @@ export interface GeneralSettings {
   autoBackupEnabled: boolean;
   showConnectedConnectionsInRail: boolean;
   allowClipboardRead: boolean;
+  minimizeToTray: boolean;
   lastBackupAt?: string | null;
 }
 

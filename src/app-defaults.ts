@@ -21,6 +21,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   autoBackupEnabled: true,
   showConnectedConnectionsInRail: true,
   allowClipboardRead: true,
+  minimizeToTray: false,
   lastBackupAt: null,
 };
 

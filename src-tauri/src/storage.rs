@@ -162,12 +162,18 @@ pub struct GeneralSettings {
     #[serde(default = "default_allow_clipboard_read")]
     allow_clipboard_read: bool,
     #[serde(default)]
+    minimize_to_tray: bool,
+    #[serde(default)]
     last_backup_at: Option<String>,
 }
 
 impl GeneralSettings {
     pub(crate) fn allow_clipboard_read(&self) -> bool {
         self.allow_clipboard_read
+    }
+
+    pub(crate) fn minimize_to_tray(&self) -> bool {
+        self.minimize_to_tray
     }
 }
 
@@ -2910,6 +2916,7 @@ fn default_general_settings() -> GeneralSettings {
         auto_backup_enabled: true,
         show_connected_connections_in_rail: true,
         allow_clipboard_read: default_allow_clipboard_read(),
+        minimize_to_tray: false,
         last_backup_at: None,
     }
 }
@@ -4083,6 +4090,7 @@ mod tests {
         assert!(defaults.auto_backup_enabled);
         assert!(defaults.show_connected_connections_in_rail);
         assert!(defaults.allow_clipboard_read);
+        assert!(!defaults.minimize_to_tray);
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
@@ -4090,17 +4098,20 @@ mod tests {
                 auto_backup_enabled: false,
                 show_connected_connections_in_rail: true,
                 allow_clipboard_read: false,
+                minimize_to_tray: true,
                 last_backup_at: None,
             })
             .expect("general settings update");
         assert!(!updated.auto_backup_enabled);
         assert!(updated.show_connected_connections_in_rail);
         assert!(!updated.allow_clipboard_read);
+        assert!(updated.minimize_to_tray);
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
         assert!(reloaded.show_connected_connections_in_rail);
         assert!(!reloaded.allow_clipboard_read);
+        assert!(reloaded.minimize_to_tray);
         assert!(reloaded.last_backup_at.is_none());
     }
 
@@ -4113,6 +4124,7 @@ mod tests {
                 auto_backup_enabled: false,
                 show_connected_connections_in_rail: true,
                 allow_clipboard_read: true,
+                minimize_to_tray: true,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -4124,6 +4136,7 @@ mod tests {
                 auto_backup_enabled: true,
                 show_connected_connections_in_rail: false,
                 allow_clipboard_read: false,
+                minimize_to_tray: false,
                 last_backup_at: None,
             })
             .expect("general settings changes after export");
@@ -4137,6 +4150,7 @@ mod tests {
 
         assert!(!imported.general_settings.auto_backup_enabled);
         assert!(imported.general_settings.show_connected_connections_in_rail);
+        assert!(imported.general_settings.minimize_to_tray);
         assert_eq!(
             imported.general_settings.last_backup_at.as_deref(),
             Some(imported.backup.created_at.as_str())

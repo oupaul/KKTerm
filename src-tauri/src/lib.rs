@@ -1,4 +1,5 @@
 mod ai;
+mod app_tray;
 mod diagnostics;
 mod import;
 mod logging;
@@ -364,10 +365,12 @@ fn get_general_settings(
 #[tauri::command]
 fn update_general_settings(
     storage: tauri::State<'_, storage::Storage>,
+    tray_state: tauri::State<'_, app_tray::TrayState>,
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
     request: storage::GeneralSettings,
 ) -> Result<storage::GeneralSettings, String> {
     let saved = storage.update_general_settings(request)?;
+    tray_state.set_minimize_to_tray(saved.minimize_to_tray());
     webviews.set_clipboard_read_allowed(saved.allow_clipboard_read());
     Ok(saved)
 }
@@ -375,11 +378,14 @@ fn update_general_settings(
 #[tauri::command]
 fn import_settings_database(
     storage: tauri::State<'_, storage::Storage>,
+    tray_state: tauri::State<'_, app_tray::TrayState>,
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
     path: String,
 ) -> Result<storage::ImportedDatabaseSnapshot, String> {
     let snapshot = storage.import_database_zip(path.into())?;
-    webviews.set_clipboard_read_allowed(storage.general_settings()?.allow_clipboard_read());
+    let general_settings = storage.general_settings()?;
+    tray_state.set_minimize_to_tray(general_settings.minimize_to_tray());
+    webviews.set_clipboard_read_allowed(general_settings.allow_clipboard_read());
     Ok(snapshot)
 }
 
@@ -1365,6 +1371,12 @@ pub fn run() {
                     window_state::restore_main_window(&main_window, main_window_settings);
                 app.manage(window_state::MainWindowState::new(initial_window_settings));
             }
+            if let Err(error) = app_tray::install(app, "AdminDeck") {
+                eprintln!("{error}");
+            }
+            app.manage(app_tray::TrayState::new(
+                general_settings.minimize_to_tray(),
+            ));
             app.manage(storage);
             app.manage(performance::PerformanceMonitor::new());
             app.manage(power::DontSleepManager::new());
@@ -1395,6 +1407,10 @@ pub fn run() {
                                 eprintln!("failed to persist main window state: {error}");
                             }
                         }
+                        app_tray::hide_minimized_window_if_enabled(window);
+                    }
+                    tauri::WindowEvent::Focused(false) => {
+                        app_tray::hide_minimized_window_if_enabled(window);
                     }
                     _ => {}
                 }
