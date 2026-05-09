@@ -1,11 +1,19 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Satoshi";
-  src: url("./assets/fonts/Satoshi-Variable.ttf") format("truetype");
+  font-family: "Inter";
+  src: url("./assets/fonts/inter/web/InterVariable.woff2") format("woff2");
   font-display: swap;
-  font-weight: 300 900;
+  font-weight: 100 900;
   font-style: normal;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("./assets/fonts/inter/web/InterVariable-Italic.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+  font-style: italic;
 }
 
 :root {
@@ -46,7 +54,7 @@
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
   --shadow: 0 18px 50px rgba(31, 42, 58, 0.12);
   --app-ui-font-family:
-    "Satoshi", Inter, ui-sans-serif, system-ui, -apple-system,
+    "Inter", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -7059,6 +7067,463 @@ progress {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.settings-page {
+  padding: 24px 26px 34px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.settings-page-header {
+  max-width: 1370px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-page h1 {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.settings-page .panel-label {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.settings-layout {
+  grid-template-columns: 240px minmax(0, 1020px);
+  gap: 30px;
+  max-width: 1370px;
+  align-items: start;
+}
+
+.settings-nav {
+  top: 22px;
+  gap: 4px;
+  padding: 12px;
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: 14px;
+}
+
+.settings-nav-item {
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 12px;
+  color: var(--text-muted);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.settings-nav-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-nav-item:hover {
+  color: var(--text);
+  background: var(--chrome-strong);
+}
+
+.settings-nav-item.active {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.settings-content {
+  gap: 26px;
+  align-content: start;
+}
+
+.settings-card {
+  display: grid;
+  gap: 28px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.settings-section {
+  gap: 28px;
+}
+
+.settings-section-header {
+  min-height: 28px;
+}
+
+.settings-section-title {
+  display: block;
+}
+
+.settings-page h2,
+.settings-dialog h2,
+.settings-section-title h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.settings-header-actions .toolbar-button,
+.settings-page-header .toolbar-button,
+.settings-header-actions .toolbar-button,
+.settings-header-actions a.toolbar-button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.settings-subsection {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.settings-fieldset,
+.settings-fieldset.ai-tool-settings {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.settings-fieldset legend,
+.settings-fieldset.ai-tool-settings legend,
+.settings-section-heading {
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.settings-fieldset > div:has(> .field-hint:only-child),
+.settings-fieldset > .settings-section-title:has(.field-hint) {
+  display: none;
+}
+
+.settings-help-text {
+  display: none;
+}
+
+.form-grid,
+.form-grid.general-settings-grid,
+.form-grid.appearance-font-grid,
+.form-grid.ai-provider-selector-grid,
+.form-grid.ssh-default-path-grid,
+.form-grid.ssh-default-basic-grid,
+.form-grid.three-columns,
+.form-grid.two-columns,
+.ai-provider-fields,
+.settings-toggle-list,
+.settings-list,
+.settings-summary-grid,
+.settings-summary-grid.compact,
+.settings-data-actions,
+.settings-reset-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  min-width: 0;
+  padding: 12px 18px;
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: 14px;
+}
+
+.ai-provider-fields {
+  margin-top: 0;
+}
+
+.settings-data-actions {
+  grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
+  gap: 10px;
+  align-items: center;
+}
+
+.settings-section label:not(.settings-toggle-row),
+.settings-list-row,
+.settings-summary-item,
+.settings-reset-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 360px);
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  min-height: 54px;
+  padding: 11px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.settings-section label:not(.settings-toggle-row):last-child,
+.settings-list-row:last-child,
+.settings-summary-item:last-child,
+.settings-reset-layout {
+  border-bottom: 0;
+}
+
+.settings-section label:not(.settings-toggle-row) > span,
+.settings-list-row strong,
+.settings-summary-item span,
+.settings-reset-layout strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+  line-height: 1.25;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.settings-section label:not(.settings-toggle-row) > span svg {
+  display: none;
+}
+
+.settings-section label:not(.settings-toggle-row) > input,
+.settings-section label:not(.settings-toggle-row) > select,
+.settings-section label:not(.settings-toggle-row) > .input-with-button,
+.settings-section label:not(.settings-toggle-row) > datalist {
+  grid-column: 2;
+}
+
+.settings-section label:not(.settings-toggle-row) > .field-hint,
+.settings-section label:not(.settings-toggle-row) > small,
+.settings-list-row span,
+.settings-list-row small,
+.settings-summary-item.planned-setting small,
+.settings-reset-layout span {
+  grid-column: 1;
+  max-width: 640px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.settings-list-row > div,
+.settings-list-row-heading {
+  gap: 4px;
+}
+
+.settings-list-row > .settings-list-actions,
+.settings-list-row > button,
+.settings-summary-item strong,
+.settings-reset-layout > button {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.settings-summary-item strong {
+  max-width: 100%;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.settings-placeholder-list,
+.settings-placeholder-item {
+  background: var(--surface-muted);
+}
+
+.settings-section input,
+.settings-section select,
+.settings-dialog input,
+.settings-dialog select {
+  height: 36px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 450;
+}
+
+.settings-section input:focus,
+.settings-section select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.input-with-button,
+.input-with-button.ssh-key-input-actions {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.input-with-button.ssh-key-input-actions {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.input-with-button .toolbar-button,
+.settings-data-actions .secondary-button,
+.settings-list-actions .secondary-button,
+.settings-reset-layout .toolbar-button {
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.settings-toggle-list {
+  padding: 0 18px;
+}
+
+.settings-toggle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  min-height: 54px;
+  padding: 10px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.settings-toggle-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-toggle-row span {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  gap: 4px;
+}
+
+.settings-toggle-row strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+  line-height: 1.3;
+}
+
+.settings-toggle-row small {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.35;
+}
+
+.toggle-switch {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  margin: 0;
+  order: initial;
+}
+
+.toggle-switch-track {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: #c7c8cc;
+}
+
+.toggle-switch-on .toggle-switch-track {
+  background: var(--accent);
+}
+
+.toggle-switch-knob {
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24);
+}
+
+.toggle-switch-on .toggle-switch-knob {
+  transform: translateX(20px);
+}
+
+.color-scheme-preview {
+  margin-top: -2px;
+  padding: 12px 18px;
+  background: var(--surface-muted);
+  border-radius: 14px;
+}
+
+.color-scheme-preview-label {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.color-scheme-preview-swatches {
+  min-height: 46px;
+}
+
+.settings-status {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 550;
+}
+
+.about-hero {
+  padding: 18px;
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.about-hero strong {
+  font-size: 24px;
+  font-weight: 750;
+}
+
+.about-hero span {
+  font-size: 16px;
+  font-weight: 450;
+}
+
+.settings-reset-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 58px;
+  padding: 14px 18px;
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: 14px;
+}
+
+.settings-reset-layout > div {
+  display: grid;
+  gap: 4px;
 }
 
 .import-bookmark-tree {

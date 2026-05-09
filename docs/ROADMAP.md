@@ -32,7 +32,7 @@ Latest validation on May 7, 2026: `npm run check`, `npm run build`, `cargo check
 ## Milestone A: Usable Session Spine
 
 - [x] Implement typed Tauri command wrapper.
-- [x] Add SQLite migrations and repository layer.
+- [x] Add SQLite schema initialization and repository layer.
 - [x] Add OS keychain abstraction.
 - [x] Add connection model for local terminal and SSH terminal.
 - [x] Add connection tree with root Connections, optional nested folders, search/filter, drag/drop reorder, rename/delete/duplicate, quick connect, and live status badges.

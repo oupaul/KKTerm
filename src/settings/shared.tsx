@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 export function SettingsSectionHeader({
   actions,
-  icon,
   label,
   title,
 }: {
@@ -14,13 +13,7 @@ export function SettingsSectionHeader({
   return (
     <div className="settings-section-header">
       <div className="settings-section-title">
-        <span className="settings-section-icon" aria-hidden="true">
-          {icon}
-        </span>
-        <div>
-          <p className="panel-label">{label}</p>
-          <h2>{title}</h2>
-        </div>
+        <h2>{label || title}</h2>
       </div>
       {actions ? <div className="settings-header-actions">{actions}</div> : null}
     </div>

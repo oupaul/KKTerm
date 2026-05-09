@@ -1599,7 +1599,7 @@ mod platform {
         }
 
         #[test]
-        fn tries_newest_advanced_settings_dispatch_before_legacy_names() {
+        fn tries_newest_advanced_settings_dispatch_before_fallback_names() {
             let names = ADVANCED_SETTINGS_PROPERTIES;
             assert_eq!(names.first().copied(), Some("AdvancedSettings12"));
             assert!(names.contains(&"AdvancedSettings2"));

@@ -15,7 +15,7 @@ import { SettingsSectionHeader } from "./shared";
 
 const APP_UI_FONT_OPTIONS = [
   {
-    labelKey: "settings.satoshiDefault",
+    labelKey: "settings.interDefault",
     value: defaultAppearanceSettings.appFontFamily,
   },
   {

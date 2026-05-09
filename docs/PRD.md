@@ -25,7 +25,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 9. As an SSH user, I want to import entries from my SSH config, so that AdminDeck can bootstrap my existing workflow.
 10. As an SSH user, I want imported SSH config entries to preserve host, user, port, identity file, and proxy jump when possible, so that imported connections behave as expected.
 11. As an SSH user, I want unsupported SSH config directives to be visible, so that I understand what may need manual adjustment.
-11a. As an operator migrating from another tool, I want to import Connections in bulk from CSV/TSV, RDCMan `.rdg`, MobaXterm `.mxtsessions`, or PuTTY `.reg` exports, so that I can populate AdminDeck without retyping every host. Imported nested folders should round-trip as ConnectionFolders.
+11a. As an operator coming from another tool, I want to import Connections in bulk from CSV/TSV, RDCMan `.rdg`, MobaXterm `.mxtsessions`, or PuTTY `.reg` exports, so that I can populate AdminDeck without retyping every host. Imported nested folders should round-trip as ConnectionFolders.
 11b. As an operator on a new network, I want a light TCP port scan over a single host, hyphen range, or CIDR (capped per scan) with SSH/Telnet/RDP probes, so that I can seed Connection drafts from what is actually reachable.
 11c. As an operator, I want an editable preview before imported Connections are persisted, with bulk username and optional bulk password actions across the current selection, so that I can fix placeholder values once instead of per row.
 12. As a terminal user, I want local terminal tabs, so that AdminDeck can replace my daily terminal for common work.
@@ -136,7 +136,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 
 - Test external behavior rather than implementation details.
 - Rust unit tests cover config, storage, SSH config import, and AI command planning safety.
-- SQLite migrations get integration tests.
+- SQLite schema initialization gets integration tests.
 - Frontend component tests cover connection tree, search/filter, tabs, and split pane behavior where useful.
 - Playwright smoke tests cover core UI flows.
 - Manual terminal compatibility checklist includes vim, tmux, htop/btop, git, npm, and cargo.

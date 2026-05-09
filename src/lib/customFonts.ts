@@ -3,7 +3,6 @@ import type { AppearanceSettings, CustomFont } from "../types";
 import { invokeCommand, isTauriRuntime } from "./tauri";
 
 const CUSTOM_FONT_FALLBACK = '"Segoe UI", ui-sans-serif, system-ui, sans-serif';
-const REMOVED_BUNDLED_FONT = '"JF Open Huninn", "Microsoft JhengHei UI", "Microsoft YaHei UI", "Segoe UI", sans-serif';
 
 const loadedFontFamilies = new Set<string>();
 
@@ -65,10 +64,6 @@ export function normalizeAvailableAppearance(
   settings: AppearanceSettings,
   customFonts: CustomFontOption[],
 ): AppearanceSettings {
-  if (settings.appFontFamily === REMOVED_BUNDLED_FONT) {
-    return defaultAppearanceSettings;
-  }
-
   if (!settings.customFontPath) {
     return settings;
   }
