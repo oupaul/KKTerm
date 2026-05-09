@@ -50,6 +50,19 @@ pub fn capture_rect_for_assistant(
 }
 
 #[cfg(target_os = "windows")]
+pub fn capture_fullscreen_for_assistant() -> Result<AssistantScreenshot, String> {
+    let target = platform::virtual_screen_rect();
+    let dib =
+        platform::capture_screen_rect_to_dib(target.x, target.y, target.width, target.height)?;
+    let result = platform::dib_to_jpeg_data_url(&dib, target.width as u32, target.height as u32)?;
+    Ok(AssistantScreenshot {
+        data_url: result.data_url,
+        width: result.width,
+        height: result.height,
+    })
+}
+
+#[cfg(target_os = "windows")]
 struct CaptureTarget {
     owner_hwnd: windows_sys::Win32::Foundation::HWND,
     x: i32,
@@ -106,6 +119,11 @@ pub fn capture_rect_for_assistant(
     Err("screenshot capture is currently available on Windows".to_string())
 }
 
+#[cfg(not(target_os = "windows"))]
+pub fn capture_fullscreen_for_assistant() -> Result<AssistantScreenshot, String> {
+    Err("screenshot capture is currently available on Windows".to_string())
+}
+
 #[cfg(target_os = "windows")]
 mod platform {
     use std::{ffi::c_void, mem, ptr};
@@ -124,7 +142,29 @@ mod platform {
             Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
             Ole::CF_DIB,
         },
+        UI::WindowsAndMessaging::{
+            GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+            SM_YVIRTUALSCREEN,
+        },
     };
+
+    pub struct ScreenRect {
+        pub x: i32,
+        pub y: i32,
+        pub width: i32,
+        pub height: i32,
+    }
+
+    pub fn virtual_screen_rect() -> ScreenRect {
+        let width = unsafe { GetSystemMetrics(SM_CXVIRTUALSCREEN) }.max(1);
+        let height = unsafe { GetSystemMetrics(SM_CYVIRTUALSCREEN) }.max(1);
+        ScreenRect {
+            x: unsafe { GetSystemMetrics(SM_XVIRTUALSCREEN) },
+            y: unsafe { GetSystemMetrics(SM_YVIRTUALSCREEN) },
+            width,
+            height,
+        }
+    }
 
     pub fn capture_screen_rect_to_clipboard(
         owner_hwnd: HWND,

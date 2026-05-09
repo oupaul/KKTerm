@@ -590,6 +590,12 @@ fn capture_screenshot_for_assistant(
 }
 
 #[tauri::command]
+fn capture_fullscreen_screenshot_for_assistant() -> Result<screenshot::AssistantScreenshot, String>
+{
+    screenshot::capture_fullscreen_for_assistant()
+}
+
+#[tauri::command]
 fn ssh_transport_plan() -> ssh::SshTransportPlan {
     ssh::transport_plan()
 }
@@ -1467,6 +1473,7 @@ pub fn run() {
             set_dont_sleep_enabled,
             capture_screenshot_to_clipboard,
             capture_screenshot_for_assistant,
+            capture_fullscreen_screenshot_for_assistant,
             ssh_transport_plan,
             import_ssh_config,
             parse_import_file,

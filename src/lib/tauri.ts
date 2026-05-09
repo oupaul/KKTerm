@@ -756,6 +756,10 @@ type CommandMap = {
     args: { request: CaptureScreenshotRequest };
     result: AssistantScreenshot;
   };
+  capture_fullscreen_screenshot_for_assistant: {
+    args: undefined;
+    result: AssistantScreenshot;
+  };
   ssh_transport_plan: {
     args: undefined;
     result: SshTransportPlan;
