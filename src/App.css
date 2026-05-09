@@ -1219,7 +1219,7 @@ h2 {
 .status-bar,
 .settings-stack strong {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .status-dot {
@@ -3875,7 +3875,7 @@ progress {
   min-height: 36px;
   padding: 0 10px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .settings-stack div:last-child {
@@ -4234,12 +4234,12 @@ progress {
 
 .confirm-delete-detail {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .confirm-delete-warning {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-style: italic;
 }
 
@@ -4311,7 +4311,7 @@ progress {
   border: none;
   cursor: pointer;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   font-family: inherit;
 }
@@ -4333,6 +4333,15 @@ progress {
   display: grid;
   gap: 14px;
   min-width: 0;
+}
+
+.settings-page h1 {
+  font-size: 24px;
+}
+
+.settings-page h2,
+.settings-dialog h2 {
+  font-size: 18px;
 }
 
 .settings-card {
@@ -4377,8 +4386,8 @@ progress {
 
 .settings-section-icon svg,
 .settings-section-icon .connection-icon-image {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .settings-header-actions {
@@ -4393,7 +4402,7 @@ progress {
   margin: 0;
   padding: 8px 10px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -4431,7 +4440,7 @@ progress {
 
 .settings-summary-item span {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -4442,7 +4451,7 @@ progress {
   color: var(--text);
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -4453,7 +4462,7 @@ progress {
 .settings-summary-item.planned-setting small {
   min-width: 0;
   color: var(--text-faint);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -4480,14 +4489,14 @@ progress {
 }
 
 .about-hero strong {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
   line-height: 1.1;
 }
 
 .about-hero span {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -4521,12 +4530,12 @@ progress {
 
 .settings-reset-layout strong {
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .settings-reset-layout span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .settings-placeholder-item {
@@ -4550,14 +4559,14 @@ progress {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 
 .settings-placeholder-item strong {
   color: var(--text-faint);
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -4914,13 +4923,13 @@ progress {
 .connection-dialog label span,
 .settings-section label span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .field-hint {
   color: var(--text-faint);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
@@ -4939,7 +4948,7 @@ progress {
   border: 1px solid var(--border);
   border-radius: 6px;
   outline: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .connection-dialog input:focus,
@@ -5024,13 +5033,13 @@ progress {
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
 .settings-section-heading {
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -5048,7 +5057,7 @@ progress {
   gap: 8px;
   align-items: center;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -5086,7 +5095,7 @@ progress {
   align-items: center;
   gap: 6px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -5102,7 +5111,7 @@ progress {
 }
 
 .color-scheme-preview-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-faint);
   text-transform: uppercase;
@@ -5125,7 +5134,7 @@ progress {
 }
 
 .color-scheme-preview-swatch-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.1;
   text-align: center;
@@ -5166,7 +5175,7 @@ progress {
   gap: 8px !important;
   align-items: center;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -5179,7 +5188,7 @@ progress {
 .form-error {
   margin: 0;
   color: var(--red);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -5672,7 +5681,7 @@ progress {
 .settings-fieldset legend {
   padding: 0 5px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -5711,14 +5720,14 @@ progress {
 
 .settings-list-row strong {
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 
 .settings-list-row span,
 .settings-list-row small {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -5758,7 +5767,7 @@ progress {
 .settings-empty-state {
   margin: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -6727,14 +6736,14 @@ progress {
 .settings-fieldset.ai-tool-settings legend {
   padding: 0 5px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .settings-help-text {
   margin: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -6771,13 +6780,13 @@ progress {
 
 .settings-toggle-row strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.25;
 }
 
 .settings-toggle-row small {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
