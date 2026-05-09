@@ -1,6 +1,22 @@
 import { useState } from "react";
-import { DatabaseBackup, FolderOpen, Languages, Upload } from "lucide-react";
+import {
+  DatabaseBackup,
+  FolderOpen,
+  Languages,
+  RotateCcw,
+  Settings as SettingsIcon,
+  Upload,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
+import {
+  defaultAppearanceSettings,
+  defaultAiProviderSettings,
+  defaultGeneralSettings,
+  defaultSftpSettings,
+  defaultSshSettings,
+  defaultTerminalSettings,
+  defaultUrlSettings,
+} from "../app-defaults";
 import {
   SUPPORTED_LANGUAGES,
   switchLanguage,
@@ -14,6 +30,8 @@ import {
   selectSettingsImportFile,
 } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
+import { AI_PROVIDER_SECRET_OWNER_ID } from "../lib/settings";
+import { SettingsSectionHeader } from "./shared";
 
 function formatBackupDate(value?: string | null) {
   if (!value) {
@@ -49,8 +67,14 @@ export function GeneralSettings() {
     (state) => state.setAiProviderSettings,
   );
   const closeAllTabs = useWorkspaceStore((state) => state.closeAllTabs);
+  const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
+  const setAiProviderHasApiKey = useWorkspaceStore(
+    (state) => state.setAiProviderHasApiKey,
+  );
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   async function updateGeneralSettings(
     nextSettings: typeof generalSettings,
@@ -131,17 +155,13 @@ export function GeneralSettings() {
   async function handleImportSettings() {
     setStatus("");
     setError("");
-    const confirmed = window.confirm(t("settings.importSettingsConfirm"));
-    if (!confirmed) {
-      return;
-    }
-
     try {
       const path = await selectSettingsImportFile({
         title: t("settings.importSettings"),
         filterName: t("settings.settingsExportFilter"),
       });
       if (!path) {
+        setImportDialogOpen(false);
         return;
       }
       closeAllTabs();
@@ -163,6 +183,7 @@ export function GeneralSettings() {
           filename: snapshot.backup.filename,
         }),
       );
+      setImportDialogOpen(false);
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -172,16 +193,83 @@ export function GeneralSettings() {
     }
   }
 
+  async function handleResetAllSettings() {
+    setStatus("");
+    setError("");
+    try {
+      closeAllTabs();
+      resetAllLayouts();
+
+      if (isTauriRuntime()) {
+        const [
+          general,
+          terminal,
+          appearance,
+          ssh,
+          sftp,
+          url,
+          aiProvider,
+        ] = await Promise.all([
+          invokeCommand("update_general_settings", {
+            request: defaultGeneralSettings,
+          }),
+          invokeCommand("update_terminal_settings", {
+            request: defaultTerminalSettings,
+          }),
+          invokeCommand("update_appearance_settings", {
+            request: defaultAppearanceSettings,
+          }),
+          invokeCommand("update_ssh_settings", { request: defaultSshSettings }),
+          invokeCommand("update_sftp_settings", { request: defaultSftpSettings }),
+          invokeCommand("update_url_settings", { request: defaultUrlSettings }),
+          invokeCommand("update_ai_provider_settings", {
+            request: defaultAiProviderSettings,
+          }),
+        ]);
+        await invokeCommand("delete_secret", {
+          request: {
+            kind: "aiApiKey",
+            ownerId: AI_PROVIDER_SECRET_OWNER_ID,
+          },
+        });
+        setGeneralSettings(general);
+        setTerminalSettings(terminal);
+        setAppearanceSettings(appearance);
+        setSshSettings(ssh);
+        setSftpSettings(sftp);
+        setUrlSettings(url);
+        setAiProviderSettings(aiProvider);
+      } else {
+        setGeneralSettings(defaultGeneralSettings);
+        setTerminalSettings(defaultTerminalSettings);
+        setAppearanceSettings(defaultAppearanceSettings);
+        setSshSettings(defaultSshSettings);
+        setSftpSettings(defaultSftpSettings);
+        setUrlSettings(defaultUrlSettings);
+        setAiProviderSettings(defaultAiProviderSettings);
+      }
+
+      setCurrentLanguage(detectLanguage());
+      setAiProviderHasApiKey(false);
+      window.dispatchEvent(
+        new CustomEvent("admindeck:connection-tree-invalidated"),
+      );
+      setStatus(t("settings.resetAllSettingsComplete"));
+      setResetDialogOpen(false);
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : String(resetError));
+    }
+  }
+
   const lastBackup = formatBackupDate(generalSettings.lastBackupAt);
 
   return (
     <section className="settings-card settings-section">
-      <div className="settings-section-header">
-        <div>
-          <p className="panel-label">{t("settings.sectionGeneral")}</p>
-          <h2>{t("settings.generalDefaults")}</h2>
-        </div>
-      </div>
+      <SettingsSectionHeader
+        icon={<SettingsIcon size={18} />}
+        label={t("settings.sectionGeneral")}
+        title={t("settings.generalDefaults")}
+      />
 
       <div className="form-grid general-settings-grid">
         <label>
@@ -205,83 +293,176 @@ export function GeneralSettings() {
         </label>
       </div>
 
-      <div className="settings-toggles">
-        <label>
-          <input
-            type="checkbox"
-            checked={generalSettings.autoBackupEnabled}
-            onChange={(event) =>
-              void updateAutoBackup(event.currentTarget.checked)
-            }
-          />
-          {t("settings.autoBackup")}
-        </label>
-        <small className="field-hint">{t("settings.autoBackupHint")}</small>
-        <small className="field-hint">
-          {t("settings.lastBackup", {
-            value: lastBackup ?? t("settings.lastBackupNever"),
-          })}
-        </small>
-        <label>
-          <input
-            type="checkbox"
-            checked={generalSettings.showConnectedConnectionsInRail}
-            onChange={(event) =>
-              void updateConnectedConnectionsInRail(event.currentTarget.checked)
-            }
-          />
-          {t("settings.connectedConnectionsRail")}
-        </label>
-        <small className="field-hint">
-          {t("settings.connectedConnectionsRailHint")}
-        </small>
-        <label>
-          <input
-            type="checkbox"
-            checked={generalSettings.allowClipboardRead}
-            onChange={(event) =>
-              void updateClipboardRead(event.currentTarget.checked)
-            }
-          />
-          {t("settings.allowClipboardRead")}
-        </label>
-        <small className="field-hint">
-          {t("settings.allowClipboardReadHint")}
-        </small>
-      </div>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.workspaceAccess")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.workspaceAccessHint")}</p>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <input
+              type="checkbox"
+              checked={generalSettings.showConnectedConnectionsInRail}
+              onChange={(event) =>
+                void updateConnectedConnectionsInRail(event.currentTarget.checked)
+              }
+            />
+            <span>
+              <strong>{t("settings.connectedConnectionsRail")}</strong>
+              <small>{t("settings.connectedConnectionsRailHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <input
+              type="checkbox"
+              checked={generalSettings.allowClipboardRead}
+              onChange={(event) =>
+                void updateClipboardRead(event.currentTarget.checked)
+              }
+            />
+            <span>
+              <strong>{t("settings.allowClipboardRead")}</strong>
+              <small>{t("settings.allowClipboardReadHint")}</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
-      <div
-        className="settings-data-actions"
-        aria-label={t("settings.settingsDataActions")}
-      >
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => void handleBackupSettings()}
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.settingsData")}</legend>
+        <div>
+          <p className="field-hint">
+            {t("settings.lastBackup", {
+              value: lastBackup ?? t("settings.lastBackupNever"),
+            })}
+          </p>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <input
+              type="checkbox"
+              checked={generalSettings.autoBackupEnabled}
+              onChange={(event) =>
+                void updateAutoBackup(event.currentTarget.checked)
+              }
+            />
+            <span>
+              <strong>{t("settings.autoBackup")}</strong>
+              <small>{t("settings.autoBackupHint")}</small>
+            </span>
+          </label>
+        </div>
+        <div
+          className="settings-data-actions"
+          aria-label={t("settings.settingsDataActions")}
         >
-          <DatabaseBackup size={16} />
-          {t("settings.backupSettings")}
-        </button>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => void handleImportSettings()}
-        >
-          <Upload size={16} />
-          {t("settings.importSettings")}
-        </button>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => void handleOpenDatabaseFolder()}
-        >
-          <FolderOpen size={16} />
-          {t("settings.openDatabaseFolder")}
-        </button>
-      </div>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => void handleBackupSettings()}
+          >
+            <DatabaseBackup size={16} />
+            {t("settings.backupSettings")}
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <Upload size={16} />
+            {t("settings.importSettings")}
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => void handleOpenDatabaseFolder()}
+          >
+            <FolderOpen size={16} />
+            {t("settings.openDatabaseFolder")}
+          </button>
+          <button
+            className="secondary-button danger"
+            type="button"
+            onClick={() => setResetDialogOpen(true)}
+          >
+            <RotateCcw size={16} />
+            {t("settings.resetAllSettings")}
+          </button>
+        </div>
+      </fieldset>
 
       {status ? <p className="settings-status success">{status}</p> : null}
       {error ? <p className="settings-status error">{error}</p> : null}
+      {importDialogOpen ? (
+        <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
+          <div
+            aria-label={t("settings.importSettings")}
+            aria-modal="true"
+            className="connection-dialog settings-reset-dialog"
+            role="dialog"
+          >
+            <header className="connection-dialog-header compact">
+              <div>
+                <p className="panel-label">{t("settings.sectionGeneral")}</p>
+                <h2>{t("settings.importSettings")}</h2>
+              </div>
+            </header>
+            <p className="field-hint">{t("settings.importSettingsConfirm")}</p>
+            <div className="dialog-actions">
+              <button
+                className="approve-button"
+                onClick={() => void handleImportSettings()}
+                type="button"
+              >
+                <Upload size={15} />
+                {t("settings.importSettings")}
+              </button>
+              <button
+                className="toolbar-button"
+                onClick={() => setImportDialogOpen(false)}
+                type="button"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {resetDialogOpen ? (
+        <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
+          <div
+            aria-label={t("settings.resetAllSettings")}
+            aria-modal="true"
+            className="connection-dialog settings-reset-dialog"
+            role="dialog"
+          >
+            <header className="connection-dialog-header compact">
+              <div>
+                <p className="panel-label">{t("settings.sectionGeneral")}</p>
+                <h2>{t("settings.resetAllSettings")}</h2>
+              </div>
+            </header>
+            <p className="field-hint">{t("settings.resetAllSettingsConfirm")}</p>
+            <div className="dialog-actions">
+              <button
+                className="secondary-button danger"
+                onClick={() => void handleResetAllSettings()}
+                type="button"
+              >
+                <RotateCcw size={15} />
+                {t("settings.resetAllSettings")}
+              </button>
+              <button
+                className="toolbar-button"
+                onClick={() => setResetDialogOpen(false)}
+                type="button"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

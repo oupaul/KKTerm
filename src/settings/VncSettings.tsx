@@ -1,56 +1,65 @@
+import { Network } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ConnectionIcon } from "../connections/ConnectionIcon";
-import { PlannedSettingsGrid, type PlannedSetting } from "./shared";
-import i18next from "../i18n/config";
-
-const VNC_QUALITY_SETTINGS: PlannedSetting[] = [
-  {
-    label: i18next.t("settings.quality"),
-    value: i18next.t("settings.vncQualityValue"),
-    hint: i18next.t("settings.vncQualityHint"),
-  },
-  {
-    label: i18next.t("settings.preferredEncoding"),
-    value: i18next.t("settings.vncPreferredEncodingValue"),
-    hint: i18next.t("settings.vncPreferredEncodingHint"),
-  },
-  {
-    label: i18next.t("settings.jpegQuality"),
-    value: i18next.t("settings.vncJpegQualityValue"),
-    hint: i18next.t("settings.vncJpegQualityHint"),
-  },
-  {
-    label: i18next.t("settings.compression"),
-    value: i18next.t("settings.vncCompressionValue"),
-    hint: i18next.t("settings.vncCompressionHint"),
-  },
-  {
-    label: i18next.t("settings.colorLevel"),
-    value: i18next.t("settings.vncColorLevelValue"),
-    hint: i18next.t("settings.vncColorLevelHint"),
-  },
-  {
-    label: i18next.t("settings.remoteResize"),
-    value: i18next.t("settings.vncRemoteResizeValue"),
-    hint: i18next.t("settings.vncRemoteResizeHint"),
-  },
-];
+import { PlannedSettingsGrid, SettingsSectionHeader, type PlannedSetting } from "./shared";
 
 export function VncSettings() {
   const { t } = useTranslation();
+  const encodingSettings: PlannedSetting[] = [
+    {
+      label: t("settings.quality"),
+      value: t("settings.vncQualityValue"),
+      hint: t("settings.vncQualityHint"),
+    },
+    {
+      label: t("settings.preferredEncoding"),
+      value: t("settings.vncPreferredEncodingValue"),
+      hint: t("settings.vncPreferredEncodingHint"),
+    },
+    {
+      label: t("settings.jpegQuality"),
+      value: t("settings.vncJpegQualityValue"),
+      hint: t("settings.vncJpegQualityHint"),
+    },
+    {
+      label: t("settings.compression"),
+      value: t("settings.vncCompressionValue"),
+      hint: t("settings.vncCompressionHint"),
+    },
+  ];
+  const displaySettings: PlannedSetting[] = [
+    {
+      label: t("settings.colorLevel"),
+      value: t("settings.vncColorLevelValue"),
+      hint: t("settings.vncColorLevelHint"),
+    },
+    {
+      label: t("settings.remoteResize"),
+      value: t("settings.vncRemoteResizeValue"),
+      hint: t("settings.vncRemoteResizeHint"),
+    },
+  ];
 
   return (
     <section className="settings-card settings-section">
-      <div className="settings-section-header">
-        <div className="settings-section-title">
-          <ConnectionIcon className="settings-section-icon" size={34} type="vnc" />
-          <div>
-            <p className="panel-label">{t("settings.sectionVnc")}</p>
-            <h2>{t("settings.qualityDefaults")}</h2>
-          </div>
+      <SettingsSectionHeader
+        icon={<Network size={18} />}
+        label={t("settings.sectionVnc")}
+        title={t("settings.qualityDefaults")}
+      />
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.encoding")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.vncEncodingHint")}</p>
         </div>
-      </div>
-      <PlannedSettingsGrid settings={VNC_QUALITY_SETTINGS} />
+        <PlannedSettingsGrid settings={encodingSettings} />
+      </fieldset>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.display")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.vncDisplayHint")}</p>
+        </div>
+        <PlannedSettingsGrid settings={displaySettings} />
+      </fieldset>
     </section>
   );
 }

@@ -1,9 +1,10 @@
-import { Database, KeyRound, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { Globe, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { UrlCredentialSummary, UrlDataPartitionSummary } from "../types";
+import { SettingsSectionHeader } from "./shared";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -87,27 +88,25 @@ export function UrlSettings() {
 
   return (
     <section className="settings-card settings-section">
-      <div className="settings-section-header">
-        <div>
-          <p className="panel-label">{t("settings.sectionUrl")}</p>
-          <h2>{t("settings.urlDefaults")}</h2>
-        </div>
-        <button className="toolbar-button" disabled={!hasChanges} onClick={() => void handleSave()} type="button">
-          <Save size={15} />
-          {t("settings.save")}
-        </button>
-      </div>
+      <SettingsSectionHeader
+        actions={
+          <button className="toolbar-button" disabled={!hasChanges} onClick={() => void handleSave()} type="button">
+            <Save size={15} />
+            {t("settings.save")}
+          </button>
+        }
+        icon={<Globe size={18} />}
+        label={t("settings.sectionUrl")}
+        title={t("settings.urlDefaults")}
+      />
 
       {status ? <p className="settings-status success">{status}</p> : null}
       {error ? <p className="settings-status error">{error}</p> : null}
 
-      <div className="settings-subsection">
-        <div className="settings-section-title">
-          <ShieldAlert className="settings-section-icon" size={18} />
-          <div>
-            <h3 className="settings-section-heading">{t("settings.urlSecurity")}</h3>
-            <p className="field-hint">{t("settings.urlSecurityHint")}</p>
-          </div>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.urlSecurity")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.urlSecurityHint")}</p>
         </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
@@ -128,15 +127,12 @@ export function UrlSettings() {
             </span>
           </label>
         </div>
-      </div>
+      </fieldset>
 
-      <div className="settings-subsection">
-        <div className="settings-section-title">
-          <KeyRound className="settings-section-icon" size={18} />
-          <div>
-            <h3 className="settings-section-heading">{t("settings.savedWebsitePasswords")}</h3>
-            <p className="field-hint">{t("settings.savedWebsitePasswordsHint")}</p>
-          </div>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.savedWebsitePasswords")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.savedWebsitePasswordsHint")}</p>
         </div>
         {credentials.length === 0 ? (
           <p className="settings-empty-state">{t("settings.noSavedWebsitePasswords")}</p>
@@ -166,15 +162,12 @@ export function UrlSettings() {
             ))}
           </div>
         )}
-      </div>
+      </fieldset>
 
-      <div className="settings-subsection">
-        <div className="settings-section-title">
-          <Database className="settings-section-icon" size={18} />
-          <div>
-            <h3 className="settings-section-heading">{t("settings.urlDataShards")}</h3>
-            <p className="field-hint">{t("settings.urlDataShardsHint")}</p>
-          </div>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.urlDataShards")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.urlDataShardsHint")}</p>
         </div>
         {partitions.length === 0 ? (
           <p className="settings-empty-state">{t("settings.noUrlDataShards")}</p>
@@ -205,7 +198,7 @@ export function UrlSettings() {
             ))}
           </div>
         )}
-      </div>
+      </fieldset>
     </section>
   );
 }

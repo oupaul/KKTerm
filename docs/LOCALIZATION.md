@@ -6,4 +6,80 @@ When a key is translated into every supported locale, remove its entry from this
 
 ## Pending Strings
 
-None. All keys are translated across all 13 supported locales.
+The Settings reorganization updated English source copy first. Translate these keys in the non-English locale files, then remove the matching rows.
+
+| Key | English value | Namespace | File/component | UI role | Flow/context | Tone | Placeholders | Domain notes |
+|---|---|---|---|---|---|---|---|---|
+| settings.generalDefaults | General defaults | settings | src/settings/GeneralSettings.tsx | heading | General settings page header | concise, neutral | None | Broad page title |
+| settings.workspaceAccess | Workspace access | settings | src/settings/GeneralSettings.tsx | subsection heading | Groups Activity Rail and clipboard permission controls | concise, neutral | None | Workspace is AdminDeck term |
+| settings.workspaceAccessHint | Controls quick access and local runtime permissions. | settings | src/settings/GeneralSettings.tsx | hint | Describes General workspace access group | brief, practical | None | Local runtime means desktop app permissions |
+| settings.settingsData | Settings data | settings | src/settings/GeneralSettings.tsx | subsection heading | Groups backup, import, database folder actions | concise, neutral | None | Settings database/export flow |
+| settings.autoBackup | Auto backup | settings | src/settings/GeneralSettings.tsx | toggle label | Enables startup settings backups | short label | None | Backup is AdminDeck settings ZIP |
+| settings.autoBackupHint | Runs at startup; backups older than 1 week are removed. | settings | src/settings/GeneralSettings.tsx | hint | Explains auto backup retention | concise, reassuring | None | Startup/manual backup only, not app close |
+| settings.allowClipboardRead | Allow clipboard read | settings | src/settings/GeneralSettings.tsx | toggle label | Grants URL tab clipboard read permission | short label | None | Applies to WebView2 URL tabs |
+| settings.allowClipboardReadHint | Lets URL tabs read the clipboard for paste without the native prompt. | settings | src/settings/GeneralSettings.tsx | hint | Clipboard permission explanation | concise, privacy-aware | None | URL tabs are embedded webview Sessions |
+| settings.importSettingsConfirm | Importing settings closes open Sessions and replaces the settings database. Continue? | settings | src/settings/GeneralSettings.tsx | confirmation | Import settings flow before file picker | direct, cautionary | None | Session is live runtime state |
+| settings.connectedConnectionsRail | Show connected Connections | settings | src/settings/GeneralSettings.tsx | toggle label | Activity Rail shortcut setting | short label | None | Connection is durable resource term |
+| settings.connectedConnectionsRailHint | Adds connected Connection icons to the Activity Rail. | settings | src/settings/GeneralSettings.tsx | hint | Activity Rail shortcut explanation | concise | None | Activity Rail is canonical term |
+| settings.typography | Typography | settings | src/settings/AppearanceSettings.tsx | subsection heading | Groups app UI font controls | concise, neutral | None | App-wide UI font |
+| settings.typographyHint | App-wide UI font selection. | settings | src/settings/AppearanceSettings.tsx | hint | Describes typography group | concise | None | Desktop UI font |
+| settings.theme | Theme | settings | src/settings/AppearanceSettings.tsx | subsection heading | Groups color scheme controls | concise, neutral | None | App color scheme |
+| settings.themeHint | App color scheme and preview. | settings | src/settings/AppearanceSettings.tsx | hint | Describes theme group | concise | None | Preview swatches follow selected scheme |
+| settings.customFontsHint | Loaded from the app fonts folder: .ttf, .otf, .woff, .woff2. | settings | src/settings/AppearanceSettings.tsx | hint | Custom fonts available state | concise | None | Keep file extensions literal |
+| settings.noCustomFonts | No custom fonts found. Add .ttf, .otf, .woff, or .woff2 files to the app fonts folder. | settings | src/settings/AppearanceSettings.tsx | empty hint | Custom fonts empty state | concise, instructional | None | Keep file extensions literal |
+| settings.aiProviderConnection | Provider connection | settings | src/settings/AiSettings.tsx | subsection heading | Groups provider endpoint/model/key fields | concise, neutral | None | AI provider settings |
+| settings.aiProviderConnectionHint | Endpoint, model, reasoning, and API key. | settings | src/settings/AiSettings.tsx | hint | Explains provider connection group | concise | None | API key stays in keychain |
+| settings.aiResponseDefaults | Response defaults | settings | src/settings/AiSettings.tsx | subsection heading | Groups Assistant reply preferences | concise, neutral | None | Assistant response settings |
+| settings.aiResponseDefaultsHint | Language preferences for Assistant replies. | settings | src/settings/AiSettings.tsx | hint | Explains output language setting | concise | None | UI language fallback remains available |
+| settings.resetAllSettings | Reset All Settings | settings | src/settings/GeneralSettings.tsx | destructive button/dialog title | Settings data section, global reset action | direct, cautionary | None | Resets Settings pages, not saved Connections |
+| settings.resetAllSettingsConfirm | Reset all Settings pages to defaults, close open Sessions, reset saved layouts, and remove the saved AI API key? | settings | src/settings/GeneralSettings.tsx | confirmation text | Reset All Settings dialog | direct, cautionary | None | Session is live runtime state; API key is keychain secret |
+| settings.resetAllSettingsComplete | All settings reset to defaults. | settings | src/settings/GeneralSettings.tsx | status | Success message after reset | concise, reassuring | None | Bottom/inline settings status |
+| settings.aiToolsDescription | Choose the built-in tools the AI Assistant may call. | settings | src/settings/AiSettings.tsx | helper text | Assistant tools fieldset intro | concise | None | Tools are optional Assistant capabilities |
+| settings.aiToolsSafety | Safeguards: file tools stay in app data, shell commands run from app data, and destructive requests are blocked. | settings | src/settings/AiSettings.tsx | helper text | Assistant tools safety note | concise, safety-focused | None | App data confinement is security boundary |
+| settings.aiTools.currentTime.description | Get local and UTC time. | settings | src/settings/AiSettings.tsx | option description | Assistant tool toggle | short, plain | None | Time helper for scheduling/log correlation |
+| settings.aiTools.webSearch.description | Return compact titles, links, and snippets. | settings | src/settings/AiSettings.tsx | option description | Assistant tool toggle | short, plain | None | Web search tool |
+| settings.aiTools.webFetch.description | Read and summarize one http/https page. | settings | src/settings/AiSettings.tsx | option description | Assistant tool toggle | short, plain | None | Keep http/https literal |
+| settings.aiTools.appDataFileSearch.description | Find files inside app data only. | settings | src/settings/AiSettings.tsx | option description | Assistant tool toggle | short, safety-focused | None | App data scope is important |
+| settings.aiTools.appDataFileRead.description | Read small text files in app data only. | settings | src/settings/AiSettings.tsx | option description | Assistant tool toggle | short, safety-focused | None | App data scope is important |
+| settings.aiTools.shellCommand.description | Run non-destructive commands from app data only. | settings | src/settings/AiSettings.tsx | option description | Assistant tool toggle | short, safety-focused | None | Shell commands are constrained |
+| settings.sshConnectionDefaults | Connection defaults | settings | src/settings/SshSettings.tsx | subsection heading | Groups default user/port/ProxyJump | concise, neutral | None | Connection is canonical term |
+| settings.sshConnectionDefaultsHint | Pre-fills new SSH Connections. | settings | src/settings/SshSettings.tsx | hint | Explains SSH connection defaults | concise | None | SSH Connections are durable |
+| settings.sshAuthentication | Authentication | settings | src/settings/SshSettings.tsx | subsection heading | Groups key file/generation controls | concise, neutral | None | SSH auth settings |
+| settings.sshAuthenticationHint | Default key material for new SSH Connections. | settings | src/settings/SshSettings.tsx | hint | Explains SSH auth group | concise | None | Key is not a password |
+| settings.sshTerminal | SSH terminal | settings | src/settings/SshSettings.tsx | subsection heading | Groups SSH scrollback and OSC 52 | concise, neutral | None | SSH-only terminal behavior |
+| settings.sshTerminalHint | Scrollback and remote clipboard behavior for SSH Sessions. | settings | src/settings/SshSettings.tsx | hint | Explains SSH terminal group | concise | None | Session is live runtime state |
+| settings.defaultKeyHint | Used by new key-based SSH Connections. | settings | src/settings/SshSettings.tsx | hint | Default key input | concise | None | Connection terminology |
+| settings.defaultSshPortHint | Used when a Connection omits a port. | settings | src/settings/SshSettings.tsx | hint | Default port input | concise | None | Applies to SSH default port |
+| settings.sshBufferHint | Default 5,000; used for SSH scrollback and tmux pane history. | settings | src/settings/SshSettings.tsx | hint | SSH buffer lines input | concise | None | Keep tmux English |
+| settings.portRedirectHint | Choose which remote loopback ports appear in the SSH terminal menu. | settings | src/settings/SshSettings.tsx | hint | Port redirect subsection | concise | None | Remote loopback ports |
+| settings.hideCommonPortRedirectsHint | Hides ports below 1024 except 80 and 443. | settings | src/settings/SshSettings.tsx | hint | Port redirect toggle | concise | None | Keep port numbers literal |
+| settings.sshKeyEmailDialogHint | Use an email comment so the key is easy to recognize. | settings | src/settings/SshSettings.tsx | hint | Generate SSH key dialog | concise, helpful | None | Public key comment |
+| settings.proxyJumpHint | Optional ProxyJump host for new SSH Connections. | settings | src/settings/SshSettings.tsx | hint | ProxyJump input | concise | None | Keep ProxyJump English |
+| settings.terminalBehavior | Local terminal | settings | src/settings/TerminalSettings.tsx | page heading | Terminal settings page header | concise | None | Local terminal, not SSH |
+| settings.terminalText | Text and cursor | settings | src/settings/TerminalSettings.tsx | subsection heading | Groups font/size/line/cursor | concise | None | Local terminal rendering |
+| settings.terminalTextHint | Local terminal font, size, line height, and cursor. | settings | src/settings/TerminalSettings.tsx | hint | Explains text group | concise | None | Local terminal only |
+| settings.terminalSession | Session defaults | settings | src/settings/TerminalSettings.tsx | subsection heading | Groups default shell and scrollback | concise | None | Session is live runtime state |
+| settings.terminalSessionHint | Default shell and scrollback for local terminal Sessions. | settings | src/settings/TerminalSettings.tsx | hint | Explains session group | concise | None | Local Windows shells |
+| settings.terminalClipboard | Clipboard and paste | settings | src/settings/TerminalSettings.tsx | subsection heading | Groups copy/OSC52/multiline paste | concise | None | Terminal clipboard behavior |
+| settings.terminalClipboardHint | Local terminal copy, OSC 52, and paste safety. | settings | src/settings/TerminalSettings.tsx | hint | Explains clipboard group | concise, safety-aware | None | Keep OSC 52 literal |
+| settings.copyOnSelect | Copy on select | settings | src/settings/TerminalSettings.tsx | toggle label | Local terminal selection behavior | short label | None | Terminal text selection |
+| settings.allowLocalOsc52Clipboard | Allow local OSC 52 clipboard writes | settings | src/settings/TerminalSettings.tsx | toggle label | Local terminal OSC 52 behavior | short label | None | Keep OSC 52 literal |
+| settings.scrollbackHint | Default 5,000. Range: 100 to 100,000. | settings | src/settings/TerminalSettings.tsx | hint | Local terminal scrollback input | concise | None | Numeric range |
+| settings.display | Display | settings | src/settings/RdpSettings.tsx, src/settings/VncSettings.tsx | subsection heading | RDP/VNC display planned defaults | concise | None | Shared display heading |
+| settings.networkPerformance | Network and performance | settings | src/settings/RdpSettings.tsx | subsection heading | RDP planned network/perf defaults | concise | None | RDP performance tuning |
+| settings.rdpDisplayHint | Planned display defaults for new RDP Connections. | settings | src/settings/RdpSettings.tsx | hint | RDP display group | concise | None | RDP Connections are durable |
+| settings.rdpNetworkHint | Planned network tuning for new RDP Connections. | settings | src/settings/RdpSettings.tsx | hint | RDP network group | concise | None | Planned settings summary |
+| settings.rdpResolutionHint | Maps to DesktopWidth, DesktopHeight, SmartSizing, and sync. | settings | src/settings/RdpSettings.tsx | planned setting hint | RDP resolution summary | technical, concise | None | Keep property names English |
+| settings.rdpBandwidthProfileHint | Uses bandwidth detection instead of a raw bitrate cap. | settings | src/settings/RdpSettings.tsx | planned setting hint | RDP bandwidth summary | concise | None | Network behavior |
+| settings.rdpPerformanceFlagsHint | Controls wallpaper, drag, animations, themes, cursors, and font smoothing. | settings | src/settings/RdpSettings.tsx | planned setting hint | RDP performance flags summary | concise | None | RDP visual features |
+| settings.encoding | Encoding | settings | src/settings/VncSettings.tsx | subsection heading | VNC encoding/compression group | concise | None | VNC encoding |
+| settings.vncEncodingHint | Planned encoding and compression defaults for VNC Connections. | settings | src/settings/VncSettings.tsx | hint | VNC encoding group | concise | None | Planned settings summary |
+| settings.vncDisplayHint | Planned display behavior for VNC Connections. | settings | src/settings/VncSettings.tsx | hint | VNC display group | concise | None | Planned settings summary |
+| settings.vncQualityHint | Adapts encoding and pixel format to link speed. | settings | src/settings/VncSettings.tsx | planned setting hint | VNC quality summary | concise | None | Network adaptation |
+| settings.vncPreferredEncodingHint | Also advertises CopyRect, Raw, cursor, and desktop-size support. | settings | src/settings/VncSettings.tsx | planned setting hint | VNC encoding summary | technical, concise | None | Keep protocol terms English |
+| settings.vncColorLevelHint | Can drop to 256, 64, or 8 colors on slower links. | settings | src/settings/VncSettings.tsx | planned setting hint | VNC color summary | concise | None | Color counts literal |
+| settings.urlDefaults | URL settings | settings | src/settings/UrlSettings.tsx | page heading | URL settings page header | concise | None | URL Connection settings |
+| settings.urlSecurityHint | Certificate handling for URL Connections. | settings | src/settings/UrlSettings.tsx | hint | URL security group | concise | None | Connection terminology |
+| settings.ignoreCertificateErrorsHint | Allows self-signed or untrusted certificates in new URL tabs. | settings | src/settings/UrlSettings.tsx | toggle description | URL certificate toggle | concise, cautionary | None | Applies to new URL tabs |
+| settings.savedWebsitePasswordsHint | Passwords stay in the OS keychain; metadata stays in SQLite for Autofill. | settings | src/settings/UrlSettings.tsx | hint | Saved website passwords group | concise, privacy-aware | None | Keychain and SQLite terms |
+| settings.urlDataShardsHint | Clearing a shard removes its partition label from matching URL Connections. | settings | src/settings/UrlSettings.tsx | hint | URL data shards group | concise | None | Data shard is URL partition label |

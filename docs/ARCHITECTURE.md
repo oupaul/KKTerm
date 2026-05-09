@@ -52,6 +52,12 @@ Debug-only observability should use local debug logs, console output, or the dia
 
 `src/App.tsx` only routes to Settings; the persisted-settings bootstrap into the workspace store lives in `src/lib/settings.ts` as a single `useBootstrapSettings()` hook so new persisted settings can be added in one place. The OS keychain owner id for the AI API key (`AI_PROVIDER_SECRET_OWNER_ID`) is also defined in `src/lib/settings.ts` so SettingsPage and bootstrap share one constant. New Settings sections should stay in the settings module unless they become large enough to justify a submodule under `src/settings/`.
 
+Settings sections use one shared visual grammar. A top-level page is a single `settings-card settings-section`; related controls inside that page are grouped with `fieldset` elements using `settings-subsection settings-fieldset`, with a translated `legend` that sits in the border. This fieldset treatment is the canonical group-box style for General, Appearance, AI Assistant, SSH, Terminal, URL, RDP, VNC, and future Settings sections. Avoid one-off nested cards, heading-only group boxes, or custom bordered panels inside Settings.
+
+Controls should communicate state consistently. Editable Settings text boxes and selects should use the editable surface styling in the default color scheme; disabled and readonly controls stay muted so they read as unavailable. Keep provider model choice as a real `<select>` and custom model/deployment IDs in a separate input. Toggle rows inside Settings groups should use the existing `settings-toggle-list` and `settings-toggle-row` structure.
+
+Global Settings data actions live in General → Settings data. Backup, Import, database folder opening, and Reset All Settings belong there; feature pages should not grow their own global reset buttons. Destructive Settings actions must use app-owned translated dialogs, never browser-native `window.alert`, `window.confirm`, or `window.prompt`. Reset All Settings resets persisted Settings pages to defaults, closes open Sessions, resets saved layouts, and removes the saved AI API key, but it must not delete saved Connections.
+
 ### Internationalization
 
 The i18n layer lives in `src/i18n/` and uses **i18next** with **react-i18next**.
@@ -299,7 +305,7 @@ Color schemes are defined in `src/App.css` as CSS custom property blocks keyed b
 | `--chrome` | `background` of `.connection-sidebar`, `.assistant-panel` | Connections tree sidebar, AI Assistant panel |
 | `--chrome-strong` | `background` of `.workspace` | Main workspace / session pane |
 | `--surface` | `background` of `.tree-folder-row:hover`, `.search-box`, various cards/dialogs | Hover highlights, search inputs, surface-level containers |
-| `--surface-muted` | `background` of sub-surfaces | Muted surface variant (settings sections, inactive panels) |
+| `--surface-muted` | `background` of sub-surfaces | Muted surface variant (Settings fieldsets, inactive panels, readonly/disabled controls) |
 | `--terminal` | Terminal pane background (xterm theme) | Terminal viewport background |
 | `--terminal-2` | Secondary terminal background | Split pane alternate, terminal chrome |
 | `--terminal-border` | `border-color` of terminal panes | Terminal pane borders |

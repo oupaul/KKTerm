@@ -1,11 +1,11 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { FolderOpen, KeyRound, Save } from "lucide-react";
+import { FolderOpen, KeyRound, Save, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { ConnectionIcon } from "../connections/ConnectionIcon";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { SshSettings as SshSettingsType } from "../types";
+import { SettingsSectionHeader } from "./shared";
 
 function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): SshSettingsType {
   const defaultUser = settings.defaultUser.trim();
@@ -130,153 +130,171 @@ export function SshSettings() {
 
   return (
     <section className="settings-card settings-section">
-      <div className="settings-section-header">
-        <div className="settings-section-title">
-          <ConnectionIcon className="settings-section-icon" size={34} type="ssh" />
-          <div>
-            <p className="panel-label">{t("settings.sectionSsh")}</p>
-            <h2>{t("settings.sshDefaults")}</h2>
-          </div>
+      <SettingsSectionHeader
+        actions={
+          <button
+            className="toolbar-button"
+            disabled={!hasChanges}
+            onClick={() => void handleSave()}
+            type="button"
+          >
+            <Save size={15} />
+            {t("settings.save")}
+          </button>
+        }
+        icon={<Server size={18} />}
+        label={t("settings.sectionSsh")}
+        title={t("settings.sshDefaults")}
+      />
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.sshConnectionDefaults")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.sshConnectionDefaultsHint")}</p>
         </div>
-        <button
-          className="toolbar-button"
-          disabled={!hasChanges}
-          onClick={() => void handleSave()}
-          type="button"
-        >
-          <Save size={15} />
-          {t("settings.save")}
-        </button>
-      </div>
-
-      <div className="form-grid ssh-default-basic-grid">
-        <label>
-          <span>{t("settings.defaultUser")}</span>
-          <input
-            autoComplete="username"
-            onChange={(event) => {
-              const defaultUser = event.currentTarget.value;
-              setSshDraft((settings) => ({
-                ...settings,
-                defaultUser,
-              }));
-            }}
-            value={sshDraft.defaultUser}
-          />
-          <small className="field-hint">{t("settings.defaultSshUserHint")}</small>
-        </label>
-        <label>
-          <span>{t("settings.defaultPort")}</span>
-          <input
-            inputMode="numeric"
-            max={65535}
-            min={1}
-            onChange={(event) => {
-              const defaultPort = Number(event.currentTarget.value);
-              setSshDraft((settings) => ({
-                ...settings,
-                defaultPort,
-              }));
-            }}
-            type="number"
-            value={sshDraft.defaultPort}
-          />
-          <small className="field-hint">{t("settings.defaultSshPortHint")}</small>
-        </label>
-        <label>
-          <span>{t("settings.sshBufferLines")}</span>
-          <input
-            inputMode="numeric"
-            max={100000}
-            min={100}
-            onChange={(event) => {
-              const bufferLines = Number(event.currentTarget.value);
-              setSshDraft((settings) => ({
-                ...settings,
-                bufferLines,
-              }));
-            }}
-            type="number"
-            value={sshDraft.bufferLines}
-          />
-          <small className="field-hint">{t("settings.sshBufferHint")}</small>
-        </label>
-      </div>
-
-      <div className="form-grid ssh-default-path-grid">
-        <label>
-          <span>{t("settings.defaultKey")}</span>
-          <div className="input-with-button ssh-key-input-actions">
+        <div className="form-grid ssh-default-basic-grid">
+          <label>
+            <span>{t("settings.defaultUser")}</span>
             <input
+              autoComplete="username"
               onChange={(event) => {
-                const defaultKeyPath = event.currentTarget.value;
+                const defaultUser = event.currentTarget.value;
                 setSshDraft((settings) => ({
                   ...settings,
-                  defaultKeyPath,
+                  defaultUser,
                 }));
               }}
-              placeholder={t("settings.defaultKeyPlaceholder")}
-              value={sshDraft.defaultKeyPath ?? ""}
+              value={sshDraft.defaultUser}
             />
-            <button
-              className="toolbar-button"
-              onClick={() => void handleBrowseKeyFile()}
-              type="button"
-            >
-              <FolderOpen size={15} />
-              {t("connections.browse")}
-            </button>
-            <button
-              className="toolbar-button"
-              onClick={handleOpenKeyEmailDialog}
-              type="button"
-            >
-              <KeyRound size={15} />
-              {t("settings.generateSshKey")}
-            </button>
-          </div>
-          <small className="field-hint">{t("settings.defaultKeyHint")}</small>
-        </label>
-        <label>
-          <span>{t("settings.proxyJump")}</span>
-          <input
-            onChange={(event) => {
-              const defaultProxyJump = event.currentTarget.value;
-              setSshDraft((settings) => ({
-                ...settings,
-                defaultProxyJump,
-              }));
-            }}
-            placeholder={t("settings.proxyJumpPlaceholder")}
-            value={sshDraft.defaultProxyJump ?? ""}
-          />
-          <small className="field-hint">{t("settings.proxyJumpHint")}</small>
-        </label>
-      </div>
+            <small className="field-hint">{t("settings.defaultSshUserHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.defaultPort")}</span>
+            <input
+              inputMode="numeric"
+              max={65535}
+              min={1}
+              onChange={(event) => {
+                const defaultPort = Number(event.currentTarget.value);
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultPort,
+                }));
+              }}
+              type="number"
+              value={sshDraft.defaultPort}
+            />
+            <small className="field-hint">{t("settings.defaultSshPortHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.proxyJump")}</span>
+            <input
+              onChange={(event) => {
+                const defaultProxyJump = event.currentTarget.value;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultProxyJump,
+                }));
+              }}
+              placeholder={t("settings.proxyJumpPlaceholder")}
+              value={sshDraft.defaultProxyJump ?? ""}
+            />
+            <small className="field-hint">{t("settings.proxyJumpHint")}</small>
+          </label>
+        </div>
+      </fieldset>
 
-      <div className="settings-toggle-list">
-        <label className="settings-toggle-row">
-          <input
-            checked={sshDraft.allowOsc52Clipboard ?? true}
-            onChange={(event) => {
-              const allowOsc52Clipboard = event.currentTarget.checked;
-              setSshDraft((settings) => ({
-                ...settings,
-                allowOsc52Clipboard,
-              }));
-            }}
-            type="checkbox"
-          />
-          <span>
-            <strong>{t("settings.allowSshOsc52Clipboard")}</strong>
-          </span>
-        </label>
-      </div>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.sshAuthentication")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.sshAuthenticationHint")}</p>
+        </div>
+        <div className="form-grid ssh-default-path-grid">
+          <label>
+            <span>{t("settings.defaultKey")}</span>
+            <div className="input-with-button ssh-key-input-actions">
+              <input
+                onChange={(event) => {
+                  const defaultKeyPath = event.currentTarget.value;
+                  setSshDraft((settings) => ({
+                    ...settings,
+                    defaultKeyPath,
+                  }));
+                }}
+                placeholder={t("settings.defaultKeyPlaceholder")}
+                value={sshDraft.defaultKeyPath ?? ""}
+              />
+              <button
+                className="toolbar-button"
+                onClick={() => void handleBrowseKeyFile()}
+                type="button"
+              >
+                <FolderOpen size={15} />
+                {t("connections.browse")}
+              </button>
+              <button
+                className="toolbar-button"
+                onClick={handleOpenKeyEmailDialog}
+                type="button"
+              >
+                <KeyRound size={15} />
+                {t("settings.generateSshKey")}
+              </button>
+            </div>
+            <small className="field-hint">{t("settings.defaultKeyHint")}</small>
+          </label>
+        </div>
+      </fieldset>
 
-      <div className="settings-subsection">
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.sshTerminal")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.sshTerminalHint")}</p>
+        </div>
+        <div className="form-grid ssh-default-basic-grid">
+          <label>
+            <span>{t("settings.sshBufferLines")}</span>
+            <input
+              inputMode="numeric"
+              max={100000}
+              min={100}
+              onChange={(event) => {
+                const bufferLines = Number(event.currentTarget.value);
+                setSshDraft((settings) => ({
+                  ...settings,
+                  bufferLines,
+                }));
+              }}
+              type="number"
+              value={sshDraft.bufferLines}
+            />
+            <small className="field-hint">{t("settings.sshBufferHint")}</small>
+          </label>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <input
+              checked={sshDraft.allowOsc52Clipboard ?? true}
+              onChange={(event) => {
+                const allowOsc52Clipboard = event.currentTarget.checked;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  allowOsc52Clipboard,
+                }));
+              }}
+              type="checkbox"
+            />
+            <span>
+              <strong>{t("settings.allowSshOsc52Clipboard")}</strong>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.portRedirect")}</legend>
         <div className="settings-section-title">
           <div>
-            <h3 className="settings-section-heading">{t("settings.portRedirect")}</h3>
             <p className="field-hint">{t("settings.portRedirectHint")}</p>
           </div>
         </div>
@@ -299,7 +317,7 @@ export function SshSettings() {
             </span>
           </label>
         </div>
-      </div>
+      </fieldset>
 
       {status ? <p className="settings-status success">{status}</p> : null}
       {error ? <p className="settings-status error">{error}</p> : null}

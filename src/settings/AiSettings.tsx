@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Trash2 } from "lucide-react";
+import { Bot, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   AI_PROVIDER_DEFINITIONS,
@@ -19,7 +19,7 @@ import type {
   AiProviderSettings as AiProviderSettingsType,
   AiReasoningEffort,
 } from "../types";
-import { SettingsSummary } from "./shared";
+import { SettingsSectionHeader, SettingsSummary } from "./shared";
 import i18next from "../i18n/config";
 
 function createStoredApiKeyMask() {
@@ -304,37 +304,6 @@ export function AiSettings() {
     }
   }
 
-  async function handleClear() {
-    const shouldClear = window.confirm(t("settings.clearAiConfirm"));
-    if (!shouldClear) {
-      return;
-    }
-
-    try {
-      setError("");
-      setStatus("");
-      const defaults = providerDefaultsFor("openai");
-      if (isTauriRuntime()) {
-        await invokeCommand("delete_secret", {
-          request: {
-            kind: "aiApiKey",
-            ownerId: AI_PROVIDER_SECRET_OWNER_ID,
-          },
-        });
-      }
-      const saved = isTauriRuntime()
-        ? await invokeCommand("update_ai_provider_settings", { request: defaults })
-        : defaults;
-      setAiProviderSettings(saved);
-      setDraft(saved);
-      setApiKeyDraft("");
-      setAiProviderHasApiKey(false);
-      setStatus(t("settings.aiProviderCleared"));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
   function handleAiProviderKindChange(providerKind: AiProviderKind) {
     const defaults = providerDefaultsFor(providerKind);
     setDraft((settings) => ({
@@ -351,12 +320,8 @@ export function AiSettings() {
 
   return (
     <section className="settings-card settings-section">
-      <div className="settings-section-header">
-        <div>
-          <p className="panel-label">{t("settings.sectionAiAssistant")}</p>
-          <h2>{t("settings.aiProvider")}</h2>
-        </div>
-        <div className="settings-header-actions">
+      <SettingsSectionHeader
+        actions={
           <button
             className="toolbar-button"
             disabled={!hasChanges}
@@ -366,46 +331,65 @@ export function AiSettings() {
             <Save size={15} />
             {t("settings.save")}
           </button>
-          <button
-            className="toolbar-button"
-            onClick={() => void handleClear()}
-            type="button"
-          >
-            <Trash2 size={15} />
-            {t("settings.clearAllSettings")}
-          </button>
+        }
+        icon={<Bot size={18} />}
+        label={t("settings.sectionAiAssistant")}
+        title={t("settings.aiProvider")}
+      />
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.aiProviderConnection")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.aiProviderConnectionHint")}</p>
         </div>
-      </div>
+        <div className="form-grid ai-provider-selector-grid">
+          <label>
+            <span>{t("settings.provider")}</span>
+            <select
+              onChange={(event) =>
+                handleAiProviderKindChange(event.currentTarget.value as AiProviderKind)
+              }
+              value={draft.providerKind}
+            >
+              {AI_PROVIDER_DEFINITIONS.map((definition) => (
+                <option key={definition.kind} value={definition.kind}>
+                  {definition.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
-      <div className="form-grid ai-provider-selector-grid">
-        <label>
-          <span>{t("settings.provider")}</span>
-          <select
-            onChange={(event) =>
-              handleAiProviderKindChange(event.currentTarget.value as AiProviderKind)
-            }
-            value={draft.providerKind}
-          >
-            {AI_PROVIDER_DEFINITIONS.map((definition) => (
-              <option key={definition.kind} value={definition.kind}>
-                {definition.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        <div className="ai-provider-fields">
+          {aiProviderDefinition.settingsFields.map((field) => (
+            <AiProviderSettingsFieldControl
+              apiKeyDraft={apiKeyDraft}
+              apiKeyStoredMask={apiKeyStoredMask}
+              definition={aiProviderDefinition}
+              draft={draft}
+              field={field}
+              hasApiKey={aiProviderHasApiKey}
+              key={field}
+              onApiKeyDraftChange={setApiKeyDraft}
+              onDraftChange={(patch) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  ...patch,
+                }))
+              }
+            />
+          ))}
+        </div>
+      </fieldset>
 
-      <div className="ai-provider-fields">
-        {aiProviderDefinition.settingsFields.map((field) => (
-          <AiProviderSettingsFieldControl
-            apiKeyDraft={apiKeyDraft}
-            apiKeyStoredMask={apiKeyStoredMask}
-            definition={aiProviderDefinition}
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.aiResponseDefaults")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.aiResponseDefaultsHint")}</p>
+        </div>
+        <div className="ai-provider-fields">
+          <AiOutputLanguageControl
             draft={draft}
-            field={field}
-            hasApiKey={aiProviderHasApiKey}
-            key={field}
-            onApiKeyDraftChange={setApiKeyDraft}
             onDraftChange={(patch) =>
               setDraft((settings) => ({
                 ...settings,
@@ -413,17 +397,8 @@ export function AiSettings() {
               }))
             }
           />
-        ))}
-        <AiOutputLanguageControl
-          draft={draft}
-          onDraftChange={(patch) =>
-            setDraft((settings) => ({
-              ...settings,
-              ...patch,
-            }))
-          }
-        />
-      </div>
+        </div>
+      </fieldset>
 
       <AiAssistantToolsControl
         draft={draft}

@@ -4363,12 +4363,22 @@ progress {
 }
 
 .settings-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
-  padding: 5px;
-  background: var(--surface);
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
+  border-radius: 6px;
+}
+
+.settings-section-icon svg,
+.settings-section-icon .connection-icon-image {
+  width: 18px;
+  height: 18px;
 }
 
 .settings-header-actions {
@@ -4940,6 +4950,13 @@ progress {
 .settings-section select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+:root:not([data-color-scheme]) .settings-section input:not([readonly]):not(:disabled),
+:root:not([data-color-scheme]) .settings-section select:not(:disabled),
+[data-color-scheme="default"] .settings-section input:not([readonly]):not(:disabled),
+[data-color-scheme="default"] .settings-section select:not(:disabled) {
+  background: var(--surface);
 }
 
 .settings-section input[readonly],
@@ -5640,6 +5657,19 @@ progress {
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: 7px;
+}
+
+.settings-fieldset {
+  margin: 0;
+  min-inline-size: 0;
+  padding: 14px 10px 10px;
+}
+
+.settings-fieldset legend {
+  padding: 0 5px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .settings-list {
@@ -6658,7 +6688,7 @@ progress {
 }
 
 .settings-fieldset.ai-tool-settings legend {
-  padding: 0 4px;
+  padding: 0 5px;
   color: var(--text);
   font-size: 12px;
   font-weight: 800;

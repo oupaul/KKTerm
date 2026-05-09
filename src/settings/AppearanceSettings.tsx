@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FolderOpen, RotateCcw } from "lucide-react";
+import { FolderOpen, Palette, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   listCustomFontOptions,
@@ -11,6 +11,7 @@ import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { defaultAppearanceSettings } from "../app-defaults";
 import { useWorkspaceStore } from "../store";
 import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../types";
+import { SettingsSectionHeader } from "./shared";
 
 const APP_UI_FONT_OPTIONS = [
   {
@@ -219,98 +220,111 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
 
   return (
     <section className="settings-card settings-section">
-      <div className="settings-section-header">
+      <SettingsSectionHeader
+        icon={<Palette size={18} />}
+        label={t("settings.sectionAppearance")}
+        title={t("settings.appearanceInterface")}
+      />
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.typography")}</legend>
         <div>
-          <p className="panel-label">{t("settings.sectionAppearance")}</p>
-          <h2>{t("settings.appearanceInterface")}</h2>
+          <p className="field-hint">{t("settings.typographyHint")}</p>
         </div>
-      </div>
-      <div className="form-grid appearance-font-grid">
-        <label>
-          <span>{t("settings.appUiFontFamily")}</span>
-          <div className="input-with-button">
+        <div className="form-grid appearance-font-grid">
+          <label>
+            <span>{t("settings.appUiFontFamily")}</span>
+            <div className="input-with-button">
+              <select
+                onChange={(event) => {
+                  const selectedValue = event.currentTarget.value;
+                  const selectedCustomFont = customFonts.find((font) => font.cssValue === selectedValue);
+                  void (async () => {
+                    if (selectedCustomFont) {
+                      await loadCustomFontOptions([selectedCustomFont]);
+                    }
+                    await applyAppearance({
+                      ...appearanceSettings,
+                      appFontFamily: selectedValue,
+                      customFontPath: selectedCustomFont?.path,
+                    });
+                  })();
+                }}
+                value={appearanceSettings.appFontFamily}
+              >
+                {knownFontSelected || customFontSelected ? null : (
+                  <option value={appearanceSettings.appFontFamily}>{t("settings.customFont")}</option>
+                )}
+                {APP_UI_FONT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+                {customFonts.length > 0 ? <optgroup label={t("settings.customFonts")}>{customFonts.map((font) => (
+                  <option key={font.path} value={font.cssValue}>
+                    {font.name}
+                  </option>
+                ))}</optgroup> : null}
+              </select>
+              <button
+                aria-label={t("settings.openCustomFontsFolder")}
+                className="toolbar-button"
+                onClick={() => void handleOpenCustomFontsFolder()}
+                title={t("settings.openCustomFontsFolder")}
+                type="button"
+              >
+                <FolderOpen size={15} />
+                {t("settings.openCustomFontsFolder")}
+              </button>
+            </div>
+            <small className="field-hint">
+              {customFonts.length > 0 ? t("settings.customFontsHint") : t("settings.noCustomFonts")}
+            </small>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.theme")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.themeHint")}</p>
+        </div>
+        <div className="form-grid appearance-font-grid">
+          <label>
+            <span>{t("settings.colorScheme")}</span>
             <select
               onChange={(event) => {
-                const selectedValue = event.currentTarget.value;
-                const selectedCustomFont = customFonts.find((font) => font.cssValue === selectedValue);
-                void (async () => {
-                  if (selectedCustomFont) {
-                    await loadCustomFontOptions([selectedCustomFont]);
-                  }
-                  await applyAppearance({
-                    ...appearanceSettings,
-                    appFontFamily: selectedValue,
-                    customFontPath: selectedCustomFont?.path,
-                  });
-                })();
+                const colorScheme = event.currentTarget.value as ColorScheme;
+                void applyAppearance({
+                  ...appearanceSettings,
+                  colorScheme,
+                });
               }}
-              value={appearanceSettings.appFontFamily}
+              value={appearanceSettings.colorScheme}
             >
-              {knownFontSelected || customFontSelected ? null : (
-                <option value={appearanceSettings.appFontFamily}>{t("settings.customFont")}</option>
-              )}
-              {APP_UI_FONT_OPTIONS.map((option) => (
+              {COLOR_SCHEME_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {t(option.labelKey)}
                 </option>
               ))}
-              {customFonts.length > 0 ? <optgroup label={t("settings.customFonts")}>{customFonts.map((font) => (
-                <option key={font.path} value={font.cssValue}>
-                  {font.name}
-                </option>
-              ))}</optgroup> : null}
             </select>
-            <button
-              aria-label={t("settings.openCustomFontsFolder")}
-              className="toolbar-button"
-              onClick={() => void handleOpenCustomFontsFolder()}
-              title={t("settings.openCustomFontsFolder")}
-              type="button"
-            >
-              <FolderOpen size={15} />
-              {t("settings.openCustomFontsFolder")}
-            </button>
-          </div>
-          <small className="field-hint">
-            {customFonts.length > 0 ? t("settings.customFontsHint") : t("settings.noCustomFonts")}
-          </small>
-        </label>
-        <label>
-          <span>{t("settings.colorScheme")}</span>
-          <select
-            onChange={(event) => {
-              const colorScheme = event.currentTarget.value as ColorScheme;
-              void applyAppearance({
-                ...appearanceSettings,
-                colorScheme,
-              });
-            }}
-            value={appearanceSettings.colorScheme}
-          >
-            {COLOR_SCHEME_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {t(option.labelKey)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="color-scheme-preview" aria-label={t("settings.colorSchemePreview")}>
-        <span className="color-scheme-preview-label">{t("settings.colorSchemePreview")}</span>
-        <div className="color-scheme-preview-swatches">
-          {previewColors.map((previewColor) => (
-            <div
-              key={previewColor.labelKey}
-              className="color-scheme-preview-swatch"
-              style={{ background: previewColor.color }}
-            >
-              <span className="color-scheme-preview-swatch-label">
-                {t(previewColor.labelKey)}
-              </span>
-            </div>
-          ))}
+          </label>
         </div>
-      </div>
+        <div className="color-scheme-preview" aria-label={t("settings.colorSchemePreview")}>
+          <span className="color-scheme-preview-label">{t("settings.colorSchemePreview")}</span>
+          <div className="color-scheme-preview-swatches">
+            {previewColors.map((previewColor) => (
+              <div
+                key={previewColor.labelKey}
+                className="color-scheme-preview-swatch"
+                style={{ background: previewColor.color }}
+              >
+                <span className="color-scheme-preview-swatch-label">
+                  {t(previewColor.labelKey)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </fieldset>
       <div className="settings-reset-layout">
         <div>
           <strong>{t("settings.layout")}</strong>
