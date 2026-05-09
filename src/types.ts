@@ -377,6 +377,7 @@ export interface UrlCredentialSummary {
   connectionId: string;
   connectionName: string;
   url?: string;
+  pageUrl?: string;
   username: string;
   usernameSelector?: string;
   passwordSelector?: string;

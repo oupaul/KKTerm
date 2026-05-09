@@ -5156,6 +5156,10 @@ progress {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 128px;
 }
 
+.form-grid.two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .checkbox-row {
   display: flex !important;
   flex-direction: row !important;
@@ -5716,6 +5720,39 @@ progress {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.settings-list-row-heading {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-list-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.settings-list-actions .secondary-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.settings-list-actions .secondary-button.danger {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.settings-credential-edit {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
 }
 
 .settings-empty-state {

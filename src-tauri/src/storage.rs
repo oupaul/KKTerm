@@ -495,6 +495,7 @@ pub struct UrlCredentialSummary {
     connection_id: String,
     connection_name: String,
     url: Option<String>,
+    page_url: Option<String>,
     username: String,
     username_selector: Option<String>,
     password_selector: Option<String>,
@@ -1319,7 +1320,7 @@ impl Storage {
         let connection = self.lock()?;
         let mut statement = connection
             .prepare(
-                "SELECT connections.id, connections.name, connections.url, url_credentials.username,
+                "SELECT connections.id, connections.name, connections.url, url_credentials.page_url, url_credentials.username,
                         url_credentials.username_selector, url_credentials.password_selector, url_credentials.updated_at
                  FROM url_credentials
                  INNER JOIN connections ON connections.id = url_credentials.connection_id
@@ -1332,10 +1333,11 @@ impl Storage {
                     connection_id: row.get(0)?,
                     connection_name: row.get(1)?,
                     url: row.get(2)?,
-                    username: row.get(3)?,
-                    username_selector: row.get(4)?,
-                    password_selector: row.get(5)?,
-                    updated_at: row.get(6)?,
+                    page_url: row.get(3)?,
+                    username: row.get(4)?,
+                    username_selector: row.get(5)?,
+                    password_selector: row.get(6)?,
+                    updated_at: row.get(7)?,
                 })
             })
             .map_err(to_storage_error)?;

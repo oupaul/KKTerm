@@ -410,7 +410,6 @@ export interface WebviewCaptureCredentialRequest extends WebviewSimpleRequest {
 export interface FillWebviewCredentialRequest {
   sessionId: string;
   secretOwnerId: string;
-  username: string;
   automatic?: boolean;
 }
 

@@ -55,7 +55,6 @@ struct CustomFontData {
 struct FillWebviewCredentialRequest {
     session_id: String,
     secret_owner_id: String,
-    username: String,
     automatic: Option<bool>,
 }
 
@@ -1415,6 +1414,10 @@ pub fn run() {
             move_connection_folder,
             move_connection,
             upsert_url_credential,
+            list_url_credentials,
+            delete_url_credential,
+            list_url_data_partitions,
+            clear_url_data_partition,
             get_general_settings,
             update_general_settings,
             import_settings_database,

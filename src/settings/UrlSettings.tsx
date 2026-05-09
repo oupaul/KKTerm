@@ -1,4 +1,4 @@
-import { Globe, Save, Trash2 } from "lucide-react";
+import { Globe, Pencil, Save, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
@@ -11,6 +11,22 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+interface UrlCredentialEditDraft {
+  username: string;
+  password: string;
+  usernameSelector: string;
+  passwordSelector: string;
+}
+
+function draftFromCredential(credential: UrlCredentialSummary): UrlCredentialEditDraft {
+  return {
+    username: credential.username,
+    password: "",
+    usernameSelector: credential.usernameSelector ?? "",
+    passwordSelector: credential.passwordSelector ?? "",
+  };
+}
+
 export function UrlSettings() {
   const { t } = useTranslation();
   const urlSettings = useWorkspaceStore((state) => state.urlSettings);
@@ -18,6 +34,8 @@ export function UrlSettings() {
   const [draft, setDraft] = useState(urlSettings);
   const [credentials, setCredentials] = useState<UrlCredentialSummary[]>([]);
   const [partitions, setPartitions] = useState<UrlDataPartitionSummary[]>([]);
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
+  const [credentialDraft, setCredentialDraft] = useState<UrlCredentialEditDraft | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(urlSettings);
@@ -38,6 +56,10 @@ export function UrlSettings() {
       ]);
       setCredentials(credentialRows);
       setPartitions(partitionRows);
+      if (editingCredentialId && !credentialRows.some((credential) => credential.connectionId === editingCredentialId)) {
+        setEditingCredentialId(null);
+        setCredentialDraft(null);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     }
@@ -66,10 +88,65 @@ export function UrlSettings() {
     try {
       await invokeCommand("delete_url_credential", { connectionId });
       setStatus(t("settings.urlPasswordDeleted"));
+      if (editingCredentialId === connectionId) {
+        setEditingCredentialId(null);
+        setCredentialDraft(null);
+      }
       window.dispatchEvent(new CustomEvent("admindeck:connection-tree-invalidated"));
       await load();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : String(deleteError));
+    }
+  }
+
+  function beginCredentialEdit(credential: UrlCredentialSummary) {
+    setStatus("");
+    setError("");
+    setEditingCredentialId(credential.connectionId);
+    setCredentialDraft(draftFromCredential(credential));
+  }
+
+  function cancelCredentialEdit() {
+    setEditingCredentialId(null);
+    setCredentialDraft(null);
+  }
+
+  function updateCredentialDraft(field: keyof UrlCredentialEditDraft, value: string) {
+    setCredentialDraft((currentDraft) => (currentDraft ? { ...currentDraft, [field]: value } : currentDraft));
+  }
+
+  async function saveCredentialEdit(connectionId: string) {
+    if (!credentialDraft) {
+      return;
+    }
+    setStatus("");
+    setError("");
+    try {
+      if (credentialDraft.password) {
+        await invokeCommand("store_secret", {
+          request: {
+            kind: "urlPassword",
+            ownerId: connectionId,
+            secret: credentialDraft.password,
+          },
+        });
+      }
+      await invokeCommand("upsert_url_credential", {
+        request: {
+          connectionId,
+          username: credentialDraft.username,
+          pageUrl: credentials.find((credential) => credential.connectionId === connectionId)?.pageUrl,
+          usernameSelector: credentialDraft.usernameSelector || undefined,
+          passwordSelector: credentialDraft.passwordSelector || undefined,
+        },
+      });
+      setStatus(t("settings.urlPasswordUpdated"));
+      setEditingCredentialId(null);
+      setCredentialDraft(null);
+      window.dispatchEvent(new CustomEvent("admindeck:connection-tree-invalidated"));
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : String(saveError));
     }
   }
 
@@ -140,24 +217,96 @@ export function UrlSettings() {
           <div className="settings-list" aria-label={t("settings.savedWebsitePasswords")}>
             {credentials.map((credential) => (
               <div className="settings-list-row" key={credential.connectionId}>
-                <div>
-                  <strong>{credential.connectionName}</strong>
-                  <span>{credential.url ?? t("settings.notSet")}</span>
-                  <small>
-                    {t("settings.urlPasswordDetails", {
-                      username: credential.username,
-                      updatedAt: formatDate(credential.updatedAt),
-                    })}
-                  </small>
-                </div>
-                <button
-                  className="secondary-button danger"
-                  type="button"
-                  onClick={() => void deleteCredential(credential.connectionId)}
-                >
-                  <Trash2 size={15} />
-                  {t("common.delete")}
-                </button>
+                {editingCredentialId === credential.connectionId && credentialDraft ? (
+                  <>
+                    <div className="settings-credential-edit">
+                      <div className="settings-list-row-heading">
+                        <strong>{credential.connectionName}</strong>
+                        <span>{credential.url ?? t("settings.notSet")}</span>
+                      </div>
+                      <div className="form-grid two-columns">
+                        <label>
+                          <span>{t("settings.urlCredentialUsername")}</span>
+                          <input
+                            autoComplete="username"
+                            value={credentialDraft.username}
+                            onChange={(event) => updateCredentialDraft("username", event.currentTarget.value)}
+                          />
+                        </label>
+                        <label>
+                          <span>{t("settings.urlCredentialPassword")}</span>
+                          <input
+                            autoComplete="new-password"
+                            placeholder={t("settings.urlCredentialPasswordPlaceholder")}
+                            type="password"
+                            value={credentialDraft.password}
+                            onChange={(event) => updateCredentialDraft("password", event.currentTarget.value)}
+                          />
+                        </label>
+                        <label>
+                          <span>{t("settings.urlCredentialUsernameSelector")}</span>
+                          <input
+                            value={credentialDraft.usernameSelector}
+                            onChange={(event) => updateCredentialDraft("usernameSelector", event.currentTarget.value)}
+                          />
+                        </label>
+                        <label>
+                          <span>{t("settings.urlCredentialPasswordSelector")}</span>
+                          <input
+                            value={credentialDraft.passwordSelector}
+                            onChange={(event) => updateCredentialDraft("passwordSelector", event.currentTarget.value)}
+                          />
+                        </label>
+                      </div>
+                      <small>{t("settings.urlPasswordDetails", {
+                        username: credential.username,
+                        updatedAt: formatDate(credential.updatedAt),
+                      })}</small>
+                    </div>
+                    <div className="settings-list-actions">
+                      <button
+                        className="secondary-button"
+                        disabled={credentialDraft.username.trim().length === 0}
+                        type="button"
+                        onClick={() => void saveCredentialEdit(credential.connectionId)}
+                      >
+                        <Save size={15} />
+                        {t("common.save")}
+                      </button>
+                      <button className="secondary-button" type="button" onClick={cancelCredentialEdit}>
+                        <X size={15} />
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <strong>{credential.connectionName}</strong>
+                      <span>{credential.url ?? t("settings.notSet")}</span>
+                      <small>
+                        {t("settings.urlPasswordDetails", {
+                          username: credential.username,
+                          updatedAt: formatDate(credential.updatedAt),
+                        })}
+                      </small>
+                    </div>
+                    <div className="settings-list-actions">
+                      <button className="secondary-button" type="button" onClick={() => beginCredentialEdit(credential)}>
+                        <Pencil size={15} />
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        className="secondary-button danger"
+                        type="button"
+                        onClick={() => void deleteCredential(credential.connectionId)}
+                      >
+                        <Trash2 size={15} />
+                        {t("common.delete")}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

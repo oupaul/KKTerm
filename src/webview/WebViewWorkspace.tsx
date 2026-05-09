@@ -140,7 +140,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   const rafRef = useRef<number | null>(null);
   const visibilityRef = useRef({ isActive, webviewSuppressed: false });
   const pendingCaptureNonceRef = useRef<string | null>(null);
-  const credentialRef = useRef({ canFillCredential: false, username: "" });
+  const credentialRef = useRef({ canFillCredential: false });
   const [navError, setNavError] = useState("");
   const [fillStatus, setFillStatus] = useState("");
   const [webviewSuppressed, setWebviewSuppressed] = useState(false);
@@ -155,9 +155,8 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   useEffect(() => {
     credentialRef.current = {
       canFillCredential,
-      username: urlCredentialUsername ?? "",
     };
-  }, [canFillCredential, urlCredentialUsername]);
+  }, [canFillCredential]);
 
   const computeBounds = () => {
     const node = placeholderRef.current;
@@ -525,7 +524,6 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
       request: {
         sessionId: sessionIdRef.current,
         secretOwnerId: tab.connection.id,
-        username: credential.username,
         automatic,
       },
     })
