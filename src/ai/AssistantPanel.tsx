@@ -5,12 +5,10 @@ import { writeToClipboard } from "../lib/clipboard";
 import {
   Bot,
   Camera,
-  ChevronRight,
   Copy,
   FileImage,
   PanelRight,
   Plus,
-  Puzzle,
   RefreshCw,
   ScrollText,
   SendHorizontal,
@@ -19,8 +17,15 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type {
+  ChangeEvent,
+  ClipboardEvent,
+  FormEvent,
+  KeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { dialogButtonAria, menuButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
@@ -31,9 +36,10 @@ import {
   validateAiProviderForChat,
 } from "./providers";
 import { useWorkspaceStore } from "../store";
-import { sendTextToRdpPane, writeInputToPane } from "../workspace/paneRegistry";
+import { getPaneRenderer, sendTextToRdpPane, writeInputToPane } from "../workspace/paneRegistry";
 import i18next from "../i18n/config";
 import { prepareAssistantTerminalInput } from "./terminalCommandSend";
+import type { CaptureScreenshotRequest } from "../lib/tauri";
 
 function resolveAssistantOutputLanguage(outputLanguage: string): string | undefined {
   if (!outputLanguage) {
@@ -50,6 +56,7 @@ type AssistantChatMessage = {
   content: string;
   textAttachments?: AssistantTextAttachment[];
   imageAttachments?: AssistantImageAttachment[];
+  fileAttachments?: AssistantFileAttachment[];
   intent?: AssistantPromptIntent;
   createdAt: string;
 };
@@ -80,9 +87,24 @@ type AssistantImageAttachment = {
   height: number;
 };
 
-const EXTENSION_DRAFT_PROMPT = i18next.t("ai.extensionDraftPrompt");
+type AssistantFileAttachment = {
+  id: string;
+  sourceLabel: string;
+  dataUrl: string;
+  mimeType: string;
+  size: number;
+};
+
+type ScreenshotRegionState = {
+  bounds: DOMRect;
+  pointerId?: number;
+  start?: { x: number; y: number };
+  current?: { x: number; y: number };
+};
+
 const ASSISTANT_IMAGE_MAX_EDGE = 1280;
 const ASSISTANT_IMAGE_JPEG_QUALITY = 0.72;
+const ASSISTANT_FILE_MAX_BYTES = 10 * 1024 * 1024;
 
 function randomAssistantWaitingPhrase() {
   const phrases = i18next.t("ai.waitingPhrases", { returnObjects: true }) as readonly string[];
@@ -98,6 +120,7 @@ function createAssistantChatMessage(
   intent?: AssistantPromptIntent,
   textAttachments?: AssistantTextAttachment[],
   imageAttachments?: AssistantImageAttachment[],
+  fileAttachments?: AssistantFileAttachment[],
 ): AssistantChatMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -105,6 +128,7 @@ function createAssistantChatMessage(
     content,
     textAttachments,
     imageAttachments,
+    fileAttachments,
     intent,
     createdAt: new Date().toISOString(),
   };
@@ -152,6 +176,10 @@ function formatAssistantMessageTime(value: string) {
 }
 
 function readImageFileAsDataUrl(file: File): Promise<string> {
+  return readFileAsDataUrl(file);
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => {
@@ -247,6 +275,41 @@ function normalizeImageAttachments(value: unknown): AssistantImageAttachment[] {
         imageDataUrl: candidate.imageDataUrl,
         width: typeof candidate.width === "number" ? candidate.width : 0,
         height: typeof candidate.height === "number" ? candidate.height : 0,
+      },
+    ];
+  });
+}
+
+function normalizeFileAttachments(value: unknown): AssistantFileAttachment[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+    const candidate = item as Partial<AssistantFileAttachment>;
+    if (
+      typeof candidate.sourceLabel !== "string" ||
+      !candidate.sourceLabel.trim() ||
+      typeof candidate.dataUrl !== "string" ||
+      !candidate.dataUrl.startsWith("data:")
+    ) {
+      return [];
+    }
+    return [
+      {
+        id:
+          typeof candidate.id === "string" && candidate.id
+            ? candidate.id
+            : `assistant-file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        sourceLabel: candidate.sourceLabel.trim(),
+        dataUrl: candidate.dataUrl,
+        mimeType:
+          typeof candidate.mimeType === "string" && candidate.mimeType.trim()
+            ? candidate.mimeType.trim()
+            : "application/octet-stream",
+        size: typeof candidate.size === "number" ? candidate.size : 0,
       },
     ];
   });
@@ -388,6 +451,7 @@ function normalizeAssistantChatMessage(value: unknown): AssistantChatMessage[] {
       content: candidate.content,
       textAttachments: normalizeTextAttachments(candidate.textAttachments),
       imageAttachments: normalizeImageAttachments(candidate.imageAttachments),
+      fileAttachments: normalizeFileAttachments(candidate.fileAttachments),
       intent:
         candidate.intent === "chat" || candidate.intent === "extensionCreation"
           ? candidate.intent
@@ -422,9 +486,13 @@ export function AssistantPanel({
   );
   const requestRdpPreCapture = useWorkspaceStore((state) => state.requestRdpPreCapture);
   const assistantContextSnippet = useWorkspaceStore((state) => state.assistantContextSnippet);
+  const setAssistantContextSnippet = useWorkspaceStore(
+    (state) => state.setAssistantContextSnippet,
+  );
   const clearAssistantContextSnippet = useWorkspaceStore(
     (state) => state.clearAssistantContextSnippet,
   );
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
   const setAiProviderSettings = useWorkspaceStore((state) => state.setAiProviderSettings);
   const aiProviderHasApiKey = useWorkspaceStore((state) => state.aiProviderHasApiKey);
@@ -441,9 +509,15 @@ export function AssistantPanel({
   const [waitingDots, setWaitingDots] = useState(0);
   const [addContextMenuOpen, setAddContextMenuOpen] = useState(false);
   const [pastedImageContexts, setPastedImageContexts] = useState<AssistantImageAttachment[]>([]);
+  const [fileContexts, setFileContexts] = useState<AssistantFileAttachment[]>([]);
   const [imagePasteRejected, setImagePasteRejected] = useState(false);
+  const [screenshotRegionState, setScreenshotRegionState] =
+    useState<ScreenshotRegionState | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const addContextMenuRef = useRef<HTMLDivElement | null>(null);
+  const regionTargetRef = useRef<HTMLDivElement | null>(null);
+  const regionSelectionRef = useRef<HTMLDivElement | null>(null);
   const activeAssistantRequestIdRef = useRef(0);
   const wasCollapsedRef = useRef(collapsed);
   const contextLabel = activeTab
@@ -475,6 +549,19 @@ export function AssistantPanel({
     !currentModelSupportsImageInput && (hasPendingImageContext || imagePasteRejected);
   const activeTerminalPaneId =
     activeTab?.kind === "terminal" ? activeTab.focusedPaneId ?? activeTab.panes[0]?.id : undefined;
+  const activeFocusedPane =
+    activeTab?.kind === "terminal"
+      ? activeTab.panes.find((pane) => pane.id === activeTerminalPaneId) ?? activeTab.panes[0]
+      : undefined;
+  const activeFocusedTerminalPane =
+    activeFocusedPane?.kind === undefined || activeFocusedPane?.kind === "terminal"
+      ? activeFocusedPane
+      : undefined;
+  const canAttachTerminalBuffer =
+    Boolean(activeFocusedTerminalPane) &&
+    (!activeFocusedTerminalPane?.connection ||
+      activeFocusedTerminalPane.connection.type === "local" ||
+      activeFocusedTerminalPane.connection.type === "ssh");
   const activeRdpPaneId =
     activeTab?.kind === "remoteDesktop" && activeTab.connection?.type === "rdp"
       ? activeTab.focusedPaneId ?? activeTab.panes[0]?.id
@@ -612,6 +699,7 @@ export function AssistantPanel({
     setChatError("");
     setWaitingPhrase("");
     setPastedImageContexts([]);
+    setFileContexts([]);
     setImagePasteRejected(false);
     setAssistantIntent("chat");
     setShowAllChats(false);
@@ -652,6 +740,7 @@ export function AssistantPanel({
     setChatError("");
     setWaitingPhrase("");
     setPastedImageContexts([]);
+    setFileContexts([]);
     setImagePasteRejected(false);
     setAssistantIntent("chat");
     setShowAllChats(false);
@@ -667,6 +756,7 @@ export function AssistantPanel({
       setChatError("");
       setWaitingPhrase("");
       setPastedImageContexts([]);
+      setFileContexts([]);
       setImagePasteRejected(false);
       setAssistantIntent("chat");
     }
@@ -710,30 +800,106 @@ export function AssistantPanel({
     }
   }
 
-  function handleStartExtensionDraft() {
-    if (isSendingPrompt) {
+  function handleAddFiles() {
+    setAddContextMenuOpen(false);
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = "";
+    if (files.length === 0) {
       return;
     }
 
-    setAddContextMenuOpen(false);
-    setAssistantIntent("extensionCreation");
-    if (!prompt.trim()) {
-      setPrompt(EXTENSION_DRAFT_PROMPT);
-      window.requestAnimationFrame(() => {
-        composerTextareaRef.current?.focus();
-        composerTextareaRef.current?.setSelectionRange(
-          EXTENSION_DRAFT_PROMPT.length,
-          EXTENSION_DRAFT_PROMPT.length,
-        );
-      });
-    } else {
+    try {
+      const imageAttachments: AssistantImageAttachment[] = [];
+      const fileAttachments: AssistantFileAttachment[] = [];
+      for (const file of files) {
+        if (file.size > ASSISTANT_FILE_MAX_BYTES) {
+          showStatusBarNotice(t("ai.fileTooLarge", { name: file.name }), { tone: "warning" });
+          continue;
+        }
+        const dataUrl = await readFileAsDataUrl(file);
+        if (file.type.startsWith("image/")) {
+          imageAttachments.push(await createImageAttachment(file.name, dataUrl));
+          continue;
+        }
+        fileAttachments.push({
+          id: `assistant-file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          sourceLabel: file.name,
+          dataUrl,
+          mimeType: file.type || "application/octet-stream",
+          size: file.size,
+        });
+      }
+      if (imageAttachments.length > 0) {
+        setPastedImageContexts((current) => [...current, ...imageAttachments]);
+      }
+      if (fileAttachments.length > 0) {
+        setFileContexts((current) => [...current, ...fileAttachments]);
+      }
+      setImagePasteRejected(false);
+    } catch (error) {
+      setChatError(error instanceof Error ? error.message : String(error));
+    } finally {
       composerTextareaRef.current?.focus();
     }
   }
 
-  function handleStubContextOption(label: string) {
+  function handleAddScreenshot() {
     setAddContextMenuOpen(false);
-    void label;
+    if (activeTab?.kind === "remoteDesktop" && activeTab.connection?.type === "rdp") {
+      requestRdpPreCapture();
+    }
+    setScreenshotRegionState({ bounds: appViewportBounds() });
+  }
+
+  async function handleAddTerminalBuffer() {
+    setAddContextMenuOpen(false);
+    const pane = activeFocusedTerminalPane;
+    if (!pane) {
+      return;
+    }
+
+    let text = "";
+    if (pane.connection?.type === "ssh" && pane.tmuxSessionId) {
+      try {
+        text = await invokeCommand("capture_tmux_pane", {
+          request: {
+            host: pane.connection.host,
+            user: pane.connection.user,
+            port: pane.connection.port,
+            keyPath: pane.connection.keyPath,
+            proxyJump: pane.connection.proxyJump,
+            authMethod: pane.connection.authMethod,
+            secretOwnerId: pane.connection.id,
+            tmuxSessionId: pane.tmuxSessionId,
+            bufferLines: useWorkspaceStore.getState().sshSettings.bufferLines,
+          },
+        });
+      } catch {
+        text = getPaneRenderer(pane.id)?.getBufferText() ?? "";
+      }
+    } else {
+      text = getPaneRenderer(pane.id)?.getBufferText() ?? "";
+    }
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      composerTextareaRef.current?.focus();
+      return;
+    }
+    const sourceLabel = pane.connection
+      ? `${pane.connection.name} ${t("terminal.terminalBuffer")}`
+      : `${pane.title} ${t("terminal.terminalBuffer")}`;
+    setAssistantContextSnippet({
+      id: `terminal-buffer-${Date.now()}`,
+      kind: "text",
+      sourceLabel,
+      text: trimmed,
+      capturedAt: new Date().toISOString(),
+    });
     composerTextareaRef.current?.focus();
   }
 
@@ -797,6 +963,7 @@ export function AssistantPanel({
       requestIntent,
       textAttachments.length > 0 ? textAttachments : undefined,
       imageAttachments.length > 0 ? imageAttachments : undefined,
+      fileContexts.length > 0 ? fileContexts : undefined,
     );
     const previousMessages = messages;
     const nextMessages = [...previousMessages, userMessage];
@@ -816,6 +983,7 @@ export function AssistantPanel({
       saveChatMessages(failedMessages, fallbackTitle);
       setPrompt("");
       setPastedImageContexts([]);
+      setFileContexts([]);
       setImagePasteRejected(false);
       if (assistantContextSnippet) {
         clearAssistantContextSnippet();
@@ -833,6 +1001,7 @@ export function AssistantPanel({
     saveChatMessages(nextMessages, fallbackTitle);
     setPrompt("");
     setPastedImageContexts([]);
+    setFileContexts([]);
     setImagePasteRejected(false);
     if (assistantContextSnippet) {
       clearAssistantContextSnippet();
@@ -870,6 +1039,11 @@ export function AssistantPanel({
           screenshots: imageAttachments.map((attachment) => ({
             sourceLabel: attachment.sourceLabel,
             dataUrl: attachment.imageDataUrl,
+          })),
+          files: fileContexts.map((attachment) => ({
+            sourceLabel: attachment.sourceLabel,
+            dataUrl: attachment.dataUrl,
+            mimeType: attachment.mimeType,
           })),
           systemContext,
           messages: history,
@@ -980,6 +1154,154 @@ export function AssistantPanel({
       setChatError(error instanceof Error ? error.message : String(error));
     }
   }
+
+  async function captureAssistantScreenshot(rect: CaptureScreenshotRequest) {
+    if (!isTauriRuntime()) {
+      showStatusBarNotice(t("workspace.screenshotsRequireRuntime"), { tone: "warning" });
+      return;
+    }
+
+    try {
+      await waitForScreenshotSurface();
+      const screenshot = await invokeCommand("capture_screenshot_for_assistant", {
+        request: rect,
+      });
+      setAssistantContextSnippet({
+        id: `assistant-screenshot-${Date.now()}`,
+        kind: "screenshot",
+        sourceLabel: t("workspace.screenshot"),
+        imageDataUrl: screenshot.dataUrl,
+        width: screenshot.width,
+        height: screenshot.height,
+        capturedAt: new Date().toISOString(),
+      });
+      showStatusBarNotice(t("workspace.sentToAi"), { tone: "success" });
+    } catch (error) {
+      showStatusBarNotice(
+        t("workspace.screenshotCaptureError", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+        { tone: "error" },
+      );
+    } finally {
+      composerTextareaRef.current?.focus();
+    }
+  }
+
+  function handleScreenshotRegionPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      !screenshotRegionState ||
+      !pointInBounds(event.clientX, event.clientY, screenshotRegionState.bounds)
+    ) {
+      return;
+    }
+    const point = clampPointToBounds(
+      event.clientX,
+      event.clientY,
+      screenshotRegionState.bounds,
+    );
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setScreenshotRegionState({
+      ...screenshotRegionState,
+      pointerId: event.pointerId,
+      start: point,
+      current: point,
+    });
+  }
+
+  function handleScreenshotRegionPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      !screenshotRegionState?.start ||
+      screenshotRegionState.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+    setScreenshotRegionState({
+      ...screenshotRegionState,
+      current: clampPointToBounds(
+        event.clientX,
+        event.clientY,
+        screenshotRegionState.bounds,
+      ),
+    });
+  }
+
+  function handleScreenshotRegionPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      !screenshotRegionState?.start ||
+      screenshotRegionState.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+    const current = clampPointToBounds(
+      event.clientX,
+      event.clientY,
+      screenshotRegionState.bounds,
+    );
+    const rect = rectFromPoints(screenshotRegionState.start, current);
+    setScreenshotRegionState(null);
+    if (rect.width < 4 || rect.height < 4) {
+      return;
+    }
+    void captureAssistantScreenshot(rect);
+  }
+
+  function handleScreenshotRegionKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setScreenshotRegionState(null);
+      composerTextareaRef.current?.focus();
+    }
+  }
+
+  const screenshotSelectionRect =
+    screenshotRegionState?.start && screenshotRegionState.current
+      ? rectFromPoints(screenshotRegionState.start, screenshotRegionState.current)
+      : null;
+
+  useLayoutEffect(() => {
+    const node = regionTargetRef.current;
+    if (!node || !screenshotRegionState) {
+      return;
+    }
+
+    node.style.height = `${screenshotRegionState.bounds.height}px`;
+    node.style.left = `${screenshotRegionState.bounds.left}px`;
+    node.style.top = `${screenshotRegionState.bounds.top}px`;
+    node.style.width = `${screenshotRegionState.bounds.width}px`;
+  }, [
+    screenshotRegionState?.bounds.height,
+    screenshotRegionState?.bounds.left,
+    screenshotRegionState?.bounds.top,
+    screenshotRegionState?.bounds.width,
+  ]);
+
+  useLayoutEffect(() => {
+    const node = regionSelectionRef.current;
+    if (!node || !screenshotSelectionRect) {
+      return;
+    }
+
+    node.style.height = `${screenshotSelectionRect.height}px`;
+    node.style.left = `${screenshotSelectionRect.x}px`;
+    node.style.top = `${screenshotSelectionRect.y}px`;
+    node.style.width = `${screenshotSelectionRect.width}px`;
+  }, [
+    screenshotSelectionRect?.height,
+    screenshotSelectionRect?.width,
+    screenshotSelectionRect?.x,
+    screenshotSelectionRect?.y,
+  ]);
+
+  useEffect(() => {
+    if (!screenshotRegionState) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      regionTargetRef.current?.parentElement?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [screenshotRegionState]);
 
   return (
     <aside className="assistant-panel">
@@ -1211,6 +1533,44 @@ export function AssistantPanel({
             </div>
           </section>
         ) : null}
+        {fileContexts.length > 0 ? (
+          <section className="assistant-selection-context">
+            <header>
+              <span>{t("ai.attachedFiles", { count: fileContexts.length })}</span>
+              <button
+                className="row-action"
+                aria-label={t("ai.clearContext")}
+                onClick={() => setFileContexts([])}
+                title={t("ai.clearContext")}
+                type="button"
+              >
+                <X size={13} />
+              </button>
+            </header>
+            <div className="assistant-file-attachment-list">
+              {fileContexts.map((file) => (
+                <div className="assistant-file-attachment" key={file.id}>
+                  <FileImage size={14} />
+                  <span>{file.sourceLabel}</span>
+                  <small>{formatBytes(file.size)}</small>
+                  <button
+                    aria-label={t("ai.removeFileAttachment", { label: file.sourceLabel })}
+                    className="assistant-attachment-remove"
+                    onClick={() =>
+                      setFileContexts((current) =>
+                        current.filter((attachment) => attachment.id !== file.id),
+                      )
+                    }
+                    title={t("ai.removeFileAttachment", { label: file.sourceLabel })}
+                    type="button"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
         {showImageNotSupportedNotice ? (
           <p className="assistant-image-support-notice" role="status">
             {t("ai.imageInputNotSupported")}
@@ -1228,6 +1588,15 @@ export function AssistantPanel({
         />
         <div className="assistant-composer-footer">
           <div className="assistant-add-menu-wrapper" ref={addContextMenuRef}>
+            <input
+              ref={fileInputRef}
+              accept="image/*,.pdf,.txt,.log,.md,.json,.jsonl,.csv,.tsv,.yaml,.yml,.xml,.toml,.ini,.conf"
+              className="sr-only"
+              multiple
+              onChange={(event) => void handleFileInputChange(event)}
+              tabIndex={-1}
+              type="file"
+            />
             <button
               {...menuButtonAria(addContextMenuOpen)}
               className="assistant-plus-button"
@@ -1251,7 +1620,7 @@ export function AssistantPanel({
               <div className="assistant-add-menu" role="menu" aria-label={t("ai.addContext")}>
                 <button
                   className="assistant-add-menu-item"
-                  onClick={() => handleStubContextOption(t("ai.addFiles"))}
+                  onClick={handleAddFiles}
                   role="menuitem"
                   type="button"
                 >
@@ -1260,46 +1629,24 @@ export function AssistantPanel({
                 </button>
                 <button
                   className="assistant-add-menu-item"
-                  onClick={() => handleStubContextOption(t("ai.addScreenshot"))}
+                  onClick={handleAddScreenshot}
                   role="menuitem"
                   type="button"
                 >
                   <Camera size={15} />
                   {t("ai.addScreenshot")}
                 </button>
-                <button
-                  className="assistant-add-menu-item"
-                  onClick={() => handleStubContextOption(t("ai.addTerminalBuffer"))}
-                  role="menuitem"
-                  type="button"
-                >
-                  <ScrollText size={15} />
-                  {t("ai.addTerminalBuffer")}
-                </button>
-                <div className="assistant-add-menu-submenu">
+                {canAttachTerminalBuffer ? (
                   <button
-                    aria-haspopup="menu"
                     className="assistant-add-menu-item"
+                    onClick={() => void handleAddTerminalBuffer()}
                     role="menuitem"
                     type="button"
                   >
-                    <Puzzle size={15} />
-                    {t("ai.extensions")}
-                    <ChevronRight className="assistant-add-menu-chevron" size={13} />
+                    <ScrollText size={15} />
+                    {t("ai.addTerminalBuffer")}
                   </button>
-                  <div className="assistant-add-menu assistant-add-menu-submenu-panel" role="menu">
-                    <button
-                      aria-checked={assistantIntent === "extensionCreation" ? "true" : "false"}
-                      className="assistant-add-menu-item"
-                      onClick={handleStartExtensionDraft}
-                      role="menuitemcheckbox"
-                      type="button"
-                    >
-                      <Plus size={14} />
-                      {t("ai.draftExtension")}
-                    </button>
-                  </div>
-                </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -1331,6 +1678,23 @@ export function AssistantPanel({
           </button>
         </div>
       </form>
+      {screenshotRegionState ? (
+        <div
+          aria-label={t("workspace.selectRegion")}
+          className="screenshot-region-overlay"
+          onKeyDown={handleScreenshotRegionKeyDown}
+          onPointerDown={handleScreenshotRegionPointerDown}
+          onPointerMove={handleScreenshotRegionPointerMove}
+          onPointerUp={handleScreenshotRegionPointerUp}
+          role="application"
+          tabIndex={-1}
+        >
+          <div className="screenshot-region-target" ref={regionTargetRef} />
+          {screenshotSelectionRect ? (
+            <div className="screenshot-region-selection" ref={regionSelectionRef} />
+          ) : null}
+        </div>
+      ) : null}
     </aside>
   );
 }
@@ -1407,6 +1771,17 @@ function AssistantMessageView({
               ))}
             </div>
           ) : null}
+          {message.fileAttachments?.length ? (
+            <div className="assistant-message-file-attachments">
+              {message.fileAttachments.map((file) => (
+                <div className="assistant-message-file-attachment" key={file.id}>
+                  <FileImage size={13} />
+                  <span>{file.sourceLabel}</span>
+                  <small>{formatBytes(file.size)}</small>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <MarkdownContent
             canSendCode={canSendCode}
             content={message.content}
@@ -1470,6 +1845,51 @@ function AssistantMessageView({
       ) : null}
     </article>
   );
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 KB";
+  }
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function appViewportBounds() {
+  return new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+}
+
+function rectFromPoints(
+  start: { x: number; y: number },
+  current: { x: number; y: number },
+): CaptureScreenshotRequest {
+  const x = Math.min(start.x, current.x);
+  const y = Math.min(start.y, current.y);
+  return {
+    x: Math.max(0, Math.round(x)),
+    y: Math.max(0, Math.round(y)),
+    width: Math.max(1, Math.round(Math.abs(current.x - start.x))),
+    height: Math.max(1, Math.round(Math.abs(current.y - start.y))),
+  };
+}
+
+function pointInBounds(x: number, y: number, bounds: DOMRect) {
+  return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+}
+
+function clampPointToBounds(x: number, y: number, bounds: DOMRect) {
+  return {
+    x: Math.min(Math.max(x, bounds.left), bounds.right),
+    y: Math.min(Math.max(y, bounds.top), bounds.bottom),
+  };
+}
+
+async function waitForScreenshotSurface() {
+  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 90));
 }
 
 type MarkdownBlock =

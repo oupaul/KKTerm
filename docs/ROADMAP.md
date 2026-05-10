@@ -138,14 +138,12 @@ Latest validation on May 7, 2026: `npm run check`, `npm run build`, `cargo check
 
 ### UI Customization
 
-- [ ] Optimize the overall UI/UX for cleaner, more straightforward daily use.
+- [x] Optimize the overall UI/UX for cleaner, more straightforward daily use.
 - [ ] Simplify common workflows and reduce unnecessary visual or interaction complexity.
 - [x] Review navigation, workspace layout, settings, connection management, terminal panes, SFTP flows, and AI Assistant entry points for clarity.
 - [x] Add a more colorful default UI while preserving dense, professional workspace ergonomics.
 - [x] Implement Color Scheme settings for app chrome and workspace surfaces.
 - [x] Implement Language (i18n) settings.
-- [ ] Reintroduce diagnostics, editable SSH/SFTP defaults, SSH config import, update, and keybinding controls in Settings where they still fit.
-- [ ] Add editable keybindings.
 
 ### Extension Platform
 
@@ -157,7 +155,6 @@ Latest validation on May 7, 2026: `npm run check`, `npm run build`, `cargo check
 - [ ] Add macOS packaging with .dmg.
 - [ ] Add Linux packaging with AppImage/deb/rpm where reasonable.
 - [ ] Add WGPU terminal renderer replacement if not already complete.
-- [ ] Add lightweight webview tab.
 - [x] Add durable RDP connection type.
 - [x] Add durable VNC connection type.
 - [x] Implement Windows-native RDP session transport with Microsoft RDP ActiveX COM hosting.
@@ -228,4 +225,8 @@ Latest validation on May 7, 2026: `npm run check`, `npm run build`, `cargo check
 
 ### System Utilities
 
-- [ ] Add a "Don't Sleep" tool that, when enabled, prevents Windows from sleeping, suspending, hibernating, or shutting down.
+- [x] Add a "Don't Sleep" tool that, when enabled, prevents Windows from sleeping, suspending, hibernating, or shutting down.
+
+### UI/UX optimizations
+
+- [ ] Add editable keybindings.
