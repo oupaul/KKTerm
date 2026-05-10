@@ -2263,19 +2263,21 @@ function ConnectionDialog({
                   <span>{t("connections.nameOptional")}</span>
                   <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
-                <label>
-                  <span>{t("connections.shell")}</span>
-                  <select
-                    name="localShell"
-                    defaultValue={initialConnection?.localShell ?? localShellOptions[0]?.value ?? ""}
-                  >
-                    {localShellOptions.map((option) => (
-                      <option value={option.value ?? ""} key={option.value ?? option.label}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="connection-option-fields">
+                  <label className="option-mode-row">
+                    <span>{t("connections.shell")}</span>
+                    <select
+                      name="localShell"
+                      defaultValue={initialConnection?.localShell ?? localShellOptions[0]?.value ?? ""}
+                    >
+                      {localShellOptions.map((option) => (
+                        <option value={option.value ?? ""} key={option.value ?? option.label}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </>
             ) : isSerialConnection ? (
               <>
@@ -2283,8 +2285,8 @@ function ConnectionDialog({
                   <span>{t("connections.nameOptional")}</span>
                   <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
-                <div className="form-grid">
-                  <label>
+                <div className="connection-endpoint-fields">
+                  <label className="endpoint-host-input">
                     <span>{t("connections.line")}*</span>
                     <input
                       name="serialLine"
@@ -2293,7 +2295,7 @@ function ConnectionDialog({
                       required
                     />
                   </label>
-                  <label>
+                  <label className="endpoint-port-input">
                     <span>{t("connections.speed")}*</span>
                     <input
                       name="serialSpeed"
@@ -2313,19 +2315,13 @@ function ConnectionDialog({
                   <span>{t("connections.nameOptional")}</span>
                   <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
-                <label>
-                  <span>{t("connections.url")}*</span>
-                  <input name="url" defaultValue={initialConnection?.url ?? ""} placeholder={t("connections.urlPlaceholder")} required />
-                </label>
-                <div className="form-grid">
-                  <label>
-                    <span>{t("connections.dataPartition")}</span>
-                    <input
-                      name="dataPartition"
-                      defaultValue={initialConnection?.dataPartition ?? ""}
-                      placeholder={t("connections.default")}
-                    />
+                <div className="connection-endpoint-fields">
+                  <label className="endpoint-wide-input">
+                    <span>{t("connections.url")}*</span>
+                    <input name="url" defaultValue={initialConnection?.url ?? ""} placeholder={t("connections.urlPlaceholder")} required />
                   </label>
+                </div>
+                <div className="connection-auth-fields">
                   <label>
                     <span>{t("connections.credentialUser")}</span>
                     <input
@@ -2334,13 +2330,23 @@ function ConnectionDialog({
                       placeholder={t("connections.optionalUsername")}
                     />
                   </label>
+                  <PasswordField
+                    hasStoredSecret={isEditMode && hasStoredUrlPassword}
+                    label={t("connections.password")}
+                    name="urlPassword"
+                    placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                  />
                 </div>
-                <PasswordField
-                  hasStoredSecret={isEditMode && hasStoredUrlPassword}
-                  label={t("connections.password")}
-                  name="urlPassword"
-                  placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                />
+                <div className="connection-option-fields">
+                  <label>
+                    <span>{t("connections.dataPartition")}</span>
+                    <input
+                      name="dataPartition"
+                      defaultValue={initialConnection?.dataPartition ?? ""}
+                      placeholder={t("connections.default")}
+                    />
+                  </label>
+                </div>
               </>
             ) : (
               <>
@@ -2349,37 +2355,17 @@ function ConnectionDialog({
                   <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
                 </label>
 
-                <label>
-                  <span>{t("connections.host")}*</span>
-                  <input
-                    name="host"
-                    defaultValue={initialConnection?.host ?? ""}
-                    placeholder={t("connections.exampleHost")}
-                    required
-                  />
-                </label>
-
-                <div className="form-grid">
-                  <label>
-                    <span>{connectionType === "vnc" ? t("connections.user") : `${t("connections.user")}*`}</span>
+                <div className="connection-endpoint-fields">
+                  <label className="endpoint-host-input">
+                    <span>{t("connections.host")}*</span>
                     <input
-                      key={`user-${connectionType}`}
-                      name="user"
-                      defaultValue={
-                        initialConnection?.user ??
-                        (connectionType === "ssh" || connectionType === "telnet" ? sshSettings.defaultUser : "")
-                      }
-                      placeholder={
-                        connectionType === "rdp"
-                          ? t("connections.domainAdmin")
-                          : connectionType === "vnc"
-                            ? t("connections.optionalUsername")
-                            : t("connections.admin")
-                      }
-                      required={connectionType !== "vnc"}
+                      name="host"
+                      defaultValue={initialConnection?.host ?? ""}
+                      placeholder={t("connections.exampleHost")}
+                      required
                     />
                   </label>
-                  <label>
+                  <label className="endpoint-port-input">
                     <span>{t("connections.port")}</span>
                     <input
                       key={`port-${connectionType}`}
@@ -2394,89 +2380,122 @@ function ConnectionDialog({
                       placeholder={String(defaultPortForConnectionType(connectionType, sshSettings))}
                     />
                   </label>
+                  {usesSshDefaults ? (
+                    <label className="proxy-jump-input">
+                      <span>{t("connections.proxyJumpOptional")}</span>
+                      <input
+                        name="proxyJump"
+                        defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
+                        placeholder={t("connections.jumpInternal")}
+                      />
+                    </label>
+                  ) : null}
                 </div>
+
+                {usesSshDefaults ? (
+                  <div className="connection-auth-fields">
+                    <label className="auth-user-input">
+                      <span>{`${t("connections.user")}*`}</span>
+                      <input
+                        key={`user-${connectionType}`}
+                        name="user"
+                        defaultValue={initialConnection?.user ?? sshSettings.defaultUser}
+                        placeholder={t("connections.admin")}
+                        required
+                      />
+                    </label>
+                    <label className="auth-mode-row">
+                      <span>{t("connections.auth")}*</span>
+                      <select
+                        name="authMethod"
+                        value={authMethod}
+                        required
+                        onChange={(event) =>
+                          setAuthMethod(event.currentTarget.value as "keyFile" | "password" | "agent")
+                        }
+                      >
+                        <option value="keyFile">{t("connections.keyFile")}</option>
+                        <option value="password">{t("connections.password")}</option>
+                        <option value="agent">{t("connections.sshAgent")}</option>
+                      </select>
+                    </label>
+                    {authMethod === "password" ? (
+                      <PasswordField
+                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                        label={`${t("connections.passwordLabel")}*`}
+                        name="password"
+                        placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                        required={!isEditMode}
+                      />
+                    ) : authMethod === "keyFile" ? (
+                      <label>
+                        <span>{t("connections.keyPath")}</span>
+                        <div className="input-with-button">
+                          <input
+                            name="keyPath"
+                            onChange={(event) => setKeyPath(event.currentTarget.value)}
+                            placeholder={t("connections.keyPathExample")}
+                            value={keyPath}
+                          />
+                          <button className="toolbar-button" onClick={handleBrowseKeyFile} type="button">
+                            {t("connections.browse")}
+                          </button>
+                        </div>
+                      </label>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="connection-auth-fields">
+                    <label>
+                    <span>{connectionType === "vnc" ? t("connections.user") : `${t("connections.user")}*`}</span>
+                    <input
+                      key={`user-${connectionType}`}
+                      name="user"
+                      defaultValue={initialConnection?.user ?? (connectionType === "telnet" ? sshSettings.defaultUser : "")}
+                      placeholder={
+                        connectionType === "rdp"
+                          ? t("connections.domainAdmin")
+                          : connectionType === "vnc"
+                            ? t("connections.optionalUsername")
+                            : t("connections.admin")
+                      }
+                      required={connectionType !== "vnc"}
+                    />
+                    </label>
+                    {usesRemoteDesktopFields ? (
+                      <PasswordField
+                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                        label={t("connections.password")}
+                        name="password"
+                        placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                      />
+                    ) : null}
+                    {isTelnetConnection ? (
+                      <PasswordField
+                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                        label={`${t("connections.passwordLabel")}*`}
+                        name="password"
+                        placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                        required={!isEditMode}
+                      />
+                    ) : null}
+                  </div>
+                )}
               </>
             )}
 
-            {usesRemoteDesktopFields ? (
-              <PasswordField
-                hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                label={t("connections.password")}
-                name="password"
-                placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-              />
-            ) : null}
-
-            {isTelnetConnection ? (
-              <PasswordField
-                hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                label={`${t("connections.passwordLabel")}*`}
-                name="password"
-                placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                required={!isEditMode}
-              />
-            ) : null}
-
             {usesSshDefaults ? (
               <>
-                <div className="form-grid">
-                  <label>
-                    <span>{t("connections.auth")}*</span>
-                    <select
-                      name="authMethod"
-                      value={authMethod}
-                      required
-                      onChange={(event) =>
-                        setAuthMethod(event.currentTarget.value as "keyFile" | "password" | "agent")
-                      }
-                    >
-                      <option value="keyFile">{t("connections.keyFile")}</option>
-                      <option value="password">{t("connections.password")}</option>
-                      <option value="agent">{t("connections.sshAgent")}</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>{t("connections.proxyJumpLabel")}</span>
+                <div className="connection-session-fields">
+                  <label className="connection-session-toggle">
+                    <span>{t("connections.useTmux")}</span>
                     <input
-                      name="proxyJump"
-                      defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
-                      placeholder={t("connections.jumpInternal")}
+                      name="useTmuxSessions"
+                      type="checkbox"
+                      defaultChecked={initialConnection?.useTmuxSessions ?? true}
                     />
                   </label>
                 </div>
-
-                {authMethod === "password" ? (
-                  <PasswordField
-                    hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                    label={`${t("connections.passwordLabel")}*`}
-                    name="password"
-                    placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                    required={!isEditMode}
-                  />
-                ) : authMethod === "keyFile" ? (
-                  <label>
-                    <span>{t("connections.keyPath")}</span>
-                    <div className="input-with-button">
-                      <input
-                        name="keyPath"
-                        onChange={(event) => setKeyPath(event.currentTarget.value)}
-                        placeholder={t("connections.keyPathExample")}
-                        value={keyPath}
-                      />
-                      <button className="toolbar-button" onClick={handleBrowseKeyFile} type="button">
-                        {t("connections.browse")}
-                      </button>
-                    </div>
-                  </label>
-                ) : null}
-                <label className="checkbox-row">
-                  <input
-                    name="useTmuxSessions"
-                    type="checkbox"
-                    defaultChecked={initialConnection?.useTmuxSessions ?? true}
-                  />
-                  <span>{t("connections.useTmux")}</span>
-                </label>
               </>
             ) : null}
           </div>
