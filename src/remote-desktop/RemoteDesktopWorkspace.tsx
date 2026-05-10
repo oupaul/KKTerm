@@ -53,6 +53,7 @@ type VncSessionEvent =
   | { kind: "disconnected"; sessionId: string };
 
 const RDP_ESTABLISHING_STATE = 2;
+const RDP_PRE_CAPTURE_INTERVAL_MS = 800;
 
 export function RemoteDesktopWorkspace({
   isActive,
@@ -80,6 +81,7 @@ export function RemoteDesktopWorkspace({
   const rdpVisibleRef = useRef(false);
   const rdpControlRef = useRef("");
   const rdpSuppressionCaptureInFlightRef = useRef(false);
+  const rdpPreCaptureInFlightRef = useRef(false);
   const preCachedSnapshotRef = useRef<AssistantScreenshot | null>(null);
   const preCaptureLastRef = useRef(0);
   const vncButtonMaskRef = useRef(0);
@@ -252,15 +254,26 @@ export function RemoteDesktopWorkspace({
       return;
     }
     const now = Date.now();
-    if (now - preCaptureLastRef.current < 800) {
+    if (
+      rdpPreCaptureInFlightRef.current ||
+      now - preCaptureLastRef.current < RDP_PRE_CAPTURE_INTERVAL_MS
+    ) {
       return;
     }
     preCaptureLastRef.current = now;
-    void captureVisibleRdpSnapshot().then((snapshot) => {
-      if (snapshot) {
-        preCachedSnapshotRef.current = snapshot;
-      }
-    });
+    rdpPreCaptureInFlightRef.current = true;
+    void captureVisibleRdpSnapshot()
+      .then((snapshot) => {
+        if (snapshot) {
+          preCachedSnapshotRef.current = snapshot;
+        }
+      })
+      .catch(() => {
+        // Speculative pre-capture can miss; the overlay path still falls back to capture-on-open.
+      })
+      .finally(() => {
+        rdpPreCaptureInFlightRef.current = false;
+      });
   };
 
   const pushRdpVisibility = () => {
@@ -380,6 +393,7 @@ export function RemoteDesktopWorkspace({
     rdpVisibleRef.current = false;
     rdpControlRef.current = "";
     rdpSuppressionCaptureInFlightRef.current = false;
+    rdpPreCaptureInFlightRef.current = false;
     setRdpSnapshot(null);
   };
 
@@ -758,6 +772,16 @@ export function RemoteDesktopWorkspace({
     triggerPreCapture();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rdpPreCaptureSignal]);
+
+  useEffect(() => {
+    if (!canStartRdp || !isActive || !isTauriRuntime()) {
+      return;
+    }
+    triggerPreCapture();
+    const intervalId = window.setInterval(triggerPreCapture, RDP_PRE_CAPTURE_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canStartRdp, isActive]);
 
   useEffect(() => {
     if (!canStartRdp || !isTauriRuntime() || !sessionStartedRef.current) {

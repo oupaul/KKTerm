@@ -1903,42 +1903,34 @@ function AddConnectionMenu({
   const connectionTypeOptions: Array<{
     type: ConnectionMenuType;
     title: string;
-    subtitle: string;
   }> = [
     {
       type: "local",
       title: t("connections.localTerminal"),
-      subtitle: t("connections.localShell"),
     },
     {
       type: "ssh",
       title: t("connections.ssh"),
-      subtitle: t("connections.secureShell"),
     },
     {
       type: "telnet",
       title: t("connections.telnet"),
-      subtitle: t("connections.telnetShell"),
     },
     {
       type: "serial",
       title: t("connections.serial"),
-      subtitle: t("connections.serialLine"),
     },
     {
       type: "url",
       title: t("connections.url"),
-      subtitle: t("connections.embeddedWebApp"),
     },
     {
       type: "rdp",
       title: t("connections.rdp"),
-      subtitle: t("connections.windowsRdp"),
     },
     {
       type: "vnc",
       title: t("connections.vnc"),
-      subtitle: t("connections.screenControl"),
     },
   ];
 
@@ -1949,7 +1941,6 @@ function AddConnectionMenu({
           <ConnectionTypeGlyph className="menu-item-icon" size={15} type={option.type} />
           <span className="connection-main">
             <strong>{option.title}</strong>
-            <small>{option.subtitle}</small>
           </span>
         </button>
       ))}
@@ -1958,7 +1949,6 @@ function AddConnectionMenu({
         <Download className="menu-item-icon" size={15} />
         <span className="connection-main">
           <strong>{t("connections.import.tileTitle")}</strong>
-          <small>{t("connections.import.tileSubtitle")}</small>
         </span>
       </button>
     </div>
