@@ -158,7 +158,6 @@ The product will be light chrome with dark terminal panes by default, optimized 
 - Folder sync, diff/compare, transfer resume, archive/extract, and remote file editing in SFTP.
 - Fully autonomous AI agent execution.
 - Editable keybinding UI.
-- Built-in SSH key generation/import/export.
 - Optional encrypted SQLite credential vault for portable mode.
 
 ## Further Notes

@@ -140,8 +140,8 @@ Latest validation on May 7, 2026: `npm run check`, `npm run build`, `cargo check
 
 - [ ] Optimize the overall UI/UX for cleaner, more straightforward daily use.
 - [ ] Simplify common workflows and reduce unnecessary visual or interaction complexity.
-- [ ] Review navigation, workspace layout, settings, connection management, terminal panes, SFTP flows, and AI Assistant entry points for clarity.
-- [ ] Add a more colorful default UI while preserving dense, professional workspace ergonomics.
+- [x] Review navigation, workspace layout, settings, connection management, terminal panes, SFTP flows, and AI Assistant entry points for clarity.
+- [x] Add a more colorful default UI while preserving dense, professional workspace ergonomics.
 - [x] Implement Color Scheme settings for app chrome and workspace surfaces.
 - [x] Implement Language (i18n) settings.
 - [ ] Reintroduce diagnostics, editable SSH/SFTP defaults, SSH config import, update, and keybinding controls in Settings where they still fit.

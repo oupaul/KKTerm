@@ -5176,7 +5176,7 @@ progress {
 }
 
 .form-grid.ssh-default-path-grid {
-  grid-template-columns: minmax(280px, 1.35fr) minmax(220px, 0.65fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .form-grid.ssh-default-basic-grid {
@@ -7326,6 +7326,10 @@ progress {
 .settings-section label:not(.settings-toggle-row) > .input-with-button,
 .settings-section label:not(.settings-toggle-row) > datalist {
   grid-column: 2;
+}
+
+.settings-section label.ssh-key-path-setting {
+  grid-template-columns: minmax(140px, 200px) minmax(360px, 1fr);
 }
 
 .settings-section label:not(.settings-toggle-row):has(> .field-hint) > input,

@@ -211,7 +211,7 @@ export function SshSettings() {
           <p className="field-hint">{t("settings.sshAuthenticationHint")}</p>
         </div>
         <div className="form-grid ssh-default-path-grid">
-          <label>
+          <label className="ssh-key-path-setting">
             <span>{t("settings.defaultKey")}</span>
             <div className="input-with-button ssh-key-input-actions">
               <input

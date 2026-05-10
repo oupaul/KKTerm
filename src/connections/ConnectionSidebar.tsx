@@ -1271,6 +1271,14 @@ export function ConnectionSidebar({
           tree={tree}
           mode={formMode}
           sshSettings={sshSettings}
+          onGeneratedSshKey={(generated) =>
+            showConnectionSuccessStatus(
+              t("settings.sshKeyGenerated", {
+                privateKeyPath: generated.privateKeyPath,
+                publicKeyPath: generated.publicKeyPath,
+              }),
+            )
+          }
           onCancel={() => {
             setFormMode(null);
             setNewConnectionType(null);
@@ -1308,6 +1316,14 @@ export function ConnectionSidebar({
           tree={tree}
           mode="edit"
           sshSettings={sshSettings}
+          onGeneratedSshKey={(generated) =>
+            showConnectionSuccessStatus(
+              t("settings.sshKeyGenerated", {
+                privateKeyPath: generated.privateKeyPath,
+                publicKeyPath: generated.publicKeyPath,
+              }),
+            )
+          }
           onCancel={() => {
             setEditConnection(null);
             setFormError("");
@@ -2040,6 +2056,7 @@ function ConnectionDialog({
   tree,
   mode,
   sshSettings,
+  onGeneratedSshKey,
   onCancel,
   onSubmit,
 }: {
@@ -2050,6 +2067,7 @@ function ConnectionDialog({
   tree: ConnectionTree;
   mode: "save" | "quick" | "edit";
   sshSettings: SshSettings;
+  onGeneratedSshKey?: (generated: { privateKeyPath: string; publicKeyPath: string }) => void;
   onCancel: () => void;
   onSubmit: (request: ConnectionDialogRequest) => void | Promise<void>;
 }) {
@@ -2061,6 +2079,10 @@ function ConnectionDialog({
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
   );
+  const [keyEmailDialogOpen, setKeyEmailDialogOpen] = useState(false);
+  const [keyEmailDraft, setKeyEmailDraft] = useState("");
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  const [keyGenerationError, setKeyGenerationError] = useState("");
   const [hasStoredConnectionPassword, setHasStoredConnectionPassword] = useState(
     Boolean(initialConnection?.hasPassword),
   );
@@ -2196,6 +2218,34 @@ function ConnectionDialog({
     const selectedPath = await selectKeyFile(keyPath || sshSettings.defaultKeyPath);
     if (selectedPath) {
       setKeyPath(selectedPath);
+    }
+  }
+
+  function handleOpenKeyEmailDialog() {
+    setKeyGenerationError("");
+    setKeyEmailDraft("");
+    setKeyEmailDialogOpen(true);
+  }
+
+  async function handleGenerateKeyPair(emailInput: string) {
+    const email = emailInput.trim();
+    if (!email) {
+      return;
+    }
+    try {
+      setIsGeneratingKey(true);
+      setKeyGenerationError("");
+      const generated = await invokeCommand("generate_ssh_key_pair", {
+        request: { email },
+      });
+      setKeyPath(generated.privateKeyPath);
+      onGeneratedSshKey?.(generated);
+      setKeyEmailDialogOpen(false);
+      setKeyEmailDraft("");
+    } catch (generateError) {
+      setKeyGenerationError(generateError instanceof Error ? generateError.message : String(generateError));
+    } finally {
+      setIsGeneratingKey(false);
     }
   }
 
@@ -2430,7 +2480,7 @@ function ConnectionDialog({
                     ) : authMethod === "keyFile" ? (
                       <label>
                         <span>{t("connections.keyPath")}</span>
-                        <div className="input-with-button">
+                        <div className="input-with-button ssh-key-input-actions">
                           <input
                             name="keyPath"
                             onChange={(event) => setKeyPath(event.currentTarget.value)}
@@ -2439,6 +2489,14 @@ function ConnectionDialog({
                           />
                           <button className="toolbar-button" onClick={handleBrowseKeyFile} type="button">
                             {t("connections.browse")}
+                          </button>
+                          <button
+                            className="toolbar-button"
+                            onClick={handleOpenKeyEmailDialog}
+                            type="button"
+                          >
+                            <KeyRound size={15} />
+                            {t("settings.generateSshKey")}
                           </button>
                         </div>
                       </label>
@@ -2510,6 +2568,96 @@ function ConnectionDialog({
           </button>
           <button className="toolbar-button" type="button" onClick={onCancel}>
             {t("connections.cancel")}
+          </button>
+        </div>
+      </form>
+      {keyEmailDialogOpen ? (
+        <ConnectionSshKeyEmailDialog
+          email={keyEmailDraft}
+          error={keyGenerationError}
+          isGenerating={isGeneratingKey}
+          onCancel={() => {
+            if (isGeneratingKey) {
+              return;
+            }
+            setKeyEmailDialogOpen(false);
+            setKeyEmailDraft("");
+          }}
+          onChange={setKeyEmailDraft}
+          onSubmit={(email) => void handleGenerateKeyPair(email)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ConnectionSshKeyEmailDialog({
+  email,
+  error,
+  isGenerating,
+  onCancel,
+  onChange,
+  onSubmit,
+}: {
+  email: string;
+  error: string;
+  isGenerating: boolean;
+  onCancel: () => void;
+  onChange: (email: string) => void;
+  onSubmit: (email: string) => void;
+}) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const canSubmit = Boolean(email.trim()) && !isGenerating;
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+    onSubmit(email);
+  }
+
+  return (
+    <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
+      <form
+        aria-label={t("settings.sshKeyEmailDialogTitle")}
+        aria-modal="true"
+        className="connection-dialog ssh-key-email-dialog"
+        onSubmit={handleSubmit}
+        role="dialog"
+      >
+        <header className="connection-dialog-header compact">
+          <div>
+            <p className="panel-label">{t("settings.sectionSsh")}</p>
+            <h2>{t("settings.sshKeyEmailDialogTitle")}</h2>
+          </div>
+        </header>
+        <p className="field-hint">{t("settings.sshKeyEmailDialogHint")}</p>
+        {error ? <p className="form-error">{error}</p> : null}
+        <label>
+          <span>{t("settings.sshKeyEmailPrompt")}</span>
+          <input
+            autoComplete="email"
+            onChange={(event) => onChange(event.currentTarget.value)}
+            placeholder={t("settings.sshKeyEmailPlaceholder")}
+            ref={inputRef}
+            required
+            type="email"
+            value={email}
+          />
+        </label>
+        <div className="dialog-actions">
+          <button className="approve-button" disabled={!canSubmit} type="submit">
+            <KeyRound size={15} />
+            {isGenerating ? t("settings.sshKeyGenerating") : t("settings.generateSshKey")}
+          </button>
+          <button className="toolbar-button" disabled={isGenerating} onClick={onCancel} type="button">
+            {t("common.cancel")}
           </button>
         </div>
       </form>
