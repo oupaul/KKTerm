@@ -38,7 +38,7 @@ url = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 vnc = { package = "vnc-rs", version = "0.5.3" }
-time = { version = "0.3", features = ["formatting", "macros"] }
+time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
 zip = "2"
 
 [target.'cfg(target_os = "windows")'.dependencies]

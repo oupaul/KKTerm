@@ -328,7 +328,7 @@
     "aiTools": {
       "currentTime": {
         "label": "Current time",
-        "description": "Get local and UTC time."
+        "description": "Get local time in RFC 3339 format."
       },
       "webSearch": {
         "label": "Web search",

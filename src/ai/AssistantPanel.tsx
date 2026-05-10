@@ -24,7 +24,6 @@ import type {
   FormEvent,
   KeyboardEvent,
   PointerEvent as ReactPointerEvent,
-  ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { dialogButtonAria, menuButtonAria } from "../lib/aria";
@@ -39,6 +38,7 @@ import { useWorkspaceStore } from "../store";
 import { getPaneRenderer, sendTextToRdpPane, writeInputToPane } from "../workspace/paneRegistry";
 import i18next from "../i18n/config";
 import { prepareAssistantTerminalInput } from "./terminalCommandSend";
+import { marked, type Tokens } from "marked";
 import type { CaptureScreenshotRequest } from "../lib/tauri";
 
 function resolveAssistantOutputLanguage(outputLanguage: string): string | undefined {
@@ -1901,10 +1901,6 @@ async function waitForScreenshotSurface() {
   await new Promise<void>((resolve) => window.setTimeout(resolve, 90));
 }
 
-type MarkdownBlock =
-  | { kind: "code"; code: string; language: string }
-  | { kind: "text"; text: string };
-
 function MarkdownContent({
   canSendCode,
   content,
@@ -1917,159 +1913,61 @@ function MarkdownContent({
   onSendCode: (code: string) => void;
 }) {
   const { t } = useTranslation();
+  const tokens = useMemo(() => {
+    const lexed = marked.lexer(content);
+    return lexed.filter((tok) => tok.type !== "space");
+  }, [content]);
 
   return (
     <div className="markdown-content">
-      {parseMarkdownBlocks(content).map((block, index) =>
-        block.kind === "code" ? (
-          <div className="markdown-code-block" key={`code-${index}`}>
-            <div className="markdown-code-toolbar">
-              <span>{block.language || t("ai.code")}</span>
-              <div className="markdown-code-actions">
-                <button
-                  className="assistant-code-send"
-                  onClick={() => onCopyCode(block.code)}
-                  type="button"
-                >
-                  <Copy size={13} />
-                  {t("ai.copy")}
-                </button>
-                <button
-                  className="assistant-code-send"
-                  disabled={!canSendCode}
-                  onClick={() => onSendCode(block.code)}
-                  title={
-                    canSendCode
-                      ? t("ai.sendToTerminal")
-                      : t("ai.extensionReviewTooltip")
-                  }
-                  type="button"
-                >
-                  <Terminal size={13} />
-                  {t("ai.send")}
-                </button>
+      {tokens.map((token, index) => {
+        if (token.type === "code") {
+          const codeToken = token as Tokens.Code;
+          const lang = codeToken.lang || "";
+          const code = codeToken.text;
+          return (
+            <div className="markdown-code-block" key={`code-${index}`}>
+              <div className="markdown-code-toolbar">
+                <span>{lang || t("ai.code")}</span>
+                <div className="markdown-code-actions">
+                  <button
+                    className="assistant-code-send"
+                    onClick={() => onCopyCode(code)}
+                    type="button"
+                  >
+                    <Copy size={13} />
+                    {t("ai.copy")}
+                  </button>
+                  <button
+                    className="assistant-code-send"
+                    disabled={!canSendCode}
+                    onClick={() => onSendCode(code)}
+                    title={
+                      canSendCode
+                        ? t("ai.sendToTerminal")
+                        : t("ai.extensionReviewTooltip")
+                    }
+                    type="button"
+                  >
+                    <Terminal size={13} />
+                    {t("ai.send")}
+                  </button>
+                </div>
               </div>
+              <pre>
+                <code>{code}</code>
+              </pre>
             </div>
-            <pre>
-              <code>{block.code}</code>
-            </pre>
-          </div>
-        ) : (
-          <MarkdownTextBlock block={block.text} key={`text-${index}`} />
-        ),
-      )}
+          );
+        }
+        const html = marked.parse(token.raw, { async: false }) as string;
+        return (
+          <div
+            key={`md-${index}`}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      })}
     </div>
   );
-}
-
-function MarkdownTextBlock({ block }: { block: string }) {
-  const trimmed = block.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  if (/^#{1,3}\s+/.test(trimmed)) {
-    return <h3>{renderInlineMarkdown(trimmed.replace(/^#{1,3}\s+/, ""), "heading")}</h3>;
-  }
-
-  const lines = trimmed.split(/\r?\n/);
-  if (lines.every((line) => /^[-*]\s+/.test(line.trim()))) {
-    return (
-      <ul>
-        {lines.map((line, index) => (
-          <li key={`${line}-${index}`}>
-            {renderInlineMarkdown(line.trim().replace(/^[-*]\s+/, ""), `li-${index}`)}
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  if (lines.every((line) => /^>\s?/.test(line.trim()))) {
-    return (
-      <blockquote>
-        {renderInlineMarkdown(
-          lines.map((line) => line.trim().replace(/^>\s?/, "")).join(" "),
-          "blockquote",
-        )}
-      </blockquote>
-    );
-  }
-
-  return <p>{renderInlineMarkdown(trimmed.replace(/\n+/g, " "), "paragraph")}</p>;
-}
-
-function parseMarkdownBlocks(content: string): MarkdownBlock[] {
-  const blocks: MarkdownBlock[] = [];
-  const textBuffer: string[] = [];
-  const codeBuffer: string[] = [];
-  let codeLanguage = "";
-  let inCodeBlock = false;
-
-  function flushText() {
-    if (textBuffer.length === 0) {
-      return;
-    }
-    blocks.push({ kind: "text", text: textBuffer.join("\n") });
-    textBuffer.length = 0;
-  }
-
-  function flushCode() {
-    blocks.push({ kind: "code", code: codeBuffer.join("\n"), language: codeLanguage });
-    codeBuffer.length = 0;
-    codeLanguage = "";
-  }
-
-  for (const line of content.split(/\r?\n/)) {
-    const fence = line.match(/^```\s*([A-Za-z0-9_+.-]*)\s*$/);
-    if (fence) {
-      if (inCodeBlock) {
-        flushCode();
-        inCodeBlock = false;
-      } else {
-        flushText();
-        codeLanguage = fence[1] ?? "";
-        inCodeBlock = true;
-      }
-      continue;
-    }
-
-    if (inCodeBlock) {
-      codeBuffer.push(line);
-    } else if (line.trim() === "") {
-      flushText();
-    } else {
-      textBuffer.push(line);
-    }
-  }
-
-  if (inCodeBlock) {
-    flushCode();
-  }
-  flushText();
-  return blocks;
-}
-
-function renderInlineMarkdown(text: string, keyPrefix: string): ReactNode[] {
-  const nodes: ReactNode[] = [];
-  const pattern = /(`[^`]+`|\*\*[^*]+\*\*)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      nodes.push(text.slice(lastIndex, match.index));
-    }
-    const token = match[0];
-    const key = `${keyPrefix}-${match.index}`;
-    if (token.startsWith("`")) {
-      nodes.push(<code key={key}>{token.slice(1, -1)}</code>);
-    } else {
-      nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
-    }
-    lastIndex = match.index + token.length;
-  }
-  if (lastIndex < text.length) {
-    nodes.push(text.slice(lastIndex));
-  }
-  return nodes;
 }

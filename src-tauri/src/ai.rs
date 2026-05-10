@@ -880,7 +880,7 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
     if settings.current_time() {
         tools.push(tool_definition(
             "current_time",
-            "Get current local and UTC time.",
+            "Get current local time in RFC 3339 format.",
             json!({"type":"object","properties":{}}),
         ));
     }
@@ -955,12 +955,14 @@ async fn run_ai_tool(
 }
 
 fn current_time_tool() -> String {
-    let utc = time::OffsetDateTime::now_utc();
-    format!(
-        "UTC time: {}",
-        utc.format(&time::format_description::well_known::Rfc3339)
-            .unwrap_or_else(|_| utc.unix_timestamp().to_string())
-    )
+    time::OffsetDateTime::now_local()
+        .ok()
+        .and_then(|t| t.format(&time::format_description::well_known::Rfc3339).ok())
+        .unwrap_or_else(|| {
+            let utc = time::OffsetDateTime::now_utc();
+            utc.format(&time::format_description::well_known::Rfc3339)
+                .unwrap_or_else(|_| utc.unix_timestamp().to_string())
+        })
 }
 
 async fn web_search_tool(args: Value) -> String {
