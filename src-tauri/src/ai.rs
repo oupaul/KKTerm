@@ -185,6 +185,8 @@ fn trim_required(label: &str, value: String) -> Result<String, String> {
 pub struct AgentChatMessage {
     role: String,
     content: String,
+    #[serde(default)]
+    reasoning_content: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -227,6 +229,8 @@ pub struct AgentRunResponse {
     provider_kind: String,
     model: String,
     content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_content: Option<String>,
 }
 
 pub async fn run_agent(
@@ -419,6 +423,7 @@ impl OpenAiCompatibleProvider {
             .app_data_dir()
             .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
         let mut content = String::new();
+        let mut reasoning_content: Option<String> = None;
 
         for _ in 0..4 {
             let response = client
@@ -459,6 +464,7 @@ impl OpenAiCompatibleProvider {
                 return Err(format!("{} response did not include a choice", self.label));
             };
             content = choice.message.content.trim().to_string();
+            reasoning_content = choice.message.reasoning_content.clone();
             if choice.message.tool_calls.is_empty() {
                 break;
             }
@@ -467,6 +473,7 @@ impl OpenAiCompatibleProvider {
             messages.push(OpenAiCompatibleMessage {
                 role: "assistant".to_string(),
                 content: OpenAiCompatibleContent::Text(content.clone()),
+                reasoning_content: reasoning_content.clone().filter(|r| !r.trim().is_empty()),
                 tool_call_id: None,
                 tool_calls: Some(
                     tool_calls
@@ -487,13 +494,14 @@ impl OpenAiCompatibleProvider {
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
+                    reasoning_content: None,
                     tool_call_id: Some(tool_call.id),
                     tool_calls: None,
                 });
             }
         }
 
-        finish_agent_response(self, settings.model(), content)
+        finish_agent_response(self, settings.model(), content, reasoning_content)
     }
 
     async fn run_responses(
@@ -527,6 +535,7 @@ impl OpenAiCompatibleProvider {
             .app_data_dir()
             .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
         let mut content = String::new();
+        let mut reasoning_content: Option<String> = None;
 
         for _ in 0..4 {
             let response = client
@@ -574,6 +583,11 @@ impl OpenAiCompatibleProvider {
             } else if let Some(text) = extract_responses_output_text(&response_value) {
                 content = text;
             }
+            reasoning_content = response_value
+                .get("reasoning_content")
+                .and_then(Value::as_str)
+                .filter(|r| !r.trim().is_empty())
+                .map(String::from);
 
             let tool_calls = extract_responses_tool_calls(&response_value);
             if tool_calls.is_empty() {
@@ -593,7 +607,7 @@ impl OpenAiCompatibleProvider {
             }
         }
 
-        finish_agent_response(self, settings.model(), content)
+        finish_agent_response(self, settings.model(), content, reasoning_content)
     }
 }
 
@@ -624,6 +638,8 @@ struct OpenAiResponsesRequest {
 struct OpenAiCompatibleMessage {
     role: String,
     content: OpenAiCompatibleContent,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_call_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -681,6 +697,7 @@ fn finish_agent_response(
     provider: &OpenAiCompatibleProvider,
     model: &str,
     content: String,
+    reasoning_content: Option<String>,
 ) -> Result<AgentRunResponse, String> {
     let content = content.trim().to_string();
     if content.is_empty() {
@@ -694,6 +711,7 @@ fn finish_agent_response(
         provider_kind: provider.provider_kind.to_string(),
         model: model.to_string(),
         content,
+        reasoning_content: reasoning_content.filter(|r| !r.trim().is_empty()),
     })
 }
 
@@ -1160,6 +1178,8 @@ struct OpenAiCompatibleResponseMessage {
     content: String,
     #[serde(default)]
     tool_calls: Vec<OpenAiToolCall>,
+    #[serde(default)]
+    reasoning_content: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -1210,6 +1230,7 @@ fn build_agent_messages(
     let mut messages = vec![OpenAiCompatibleMessage {
         role: "system".to_string(),
         content: OpenAiCompatibleContent::Text(system_instructions.join(" ")),
+        reasoning_content: None,
         tool_call_id: None,
         tool_calls: None,
     }];
@@ -1272,6 +1293,7 @@ fn build_agent_messages(
     messages.push(OpenAiCompatibleMessage {
         role: "user".to_string(),
         content,
+        reasoning_content: None,
         tool_call_id: None,
         tool_calls: None,
     });
@@ -1403,6 +1425,7 @@ fn to_openai_compatible_history_message(
     Some(OpenAiCompatibleMessage {
         role: role.to_string(),
         content: OpenAiCompatibleContent::Text(content),
+        reasoning_content: message.reasoning_content.filter(|r| !r.trim().is_empty()),
         tool_call_id: None,
         tool_calls: None,
     })
@@ -1732,10 +1755,12 @@ mod tests {
                 AgentChatMessage {
                     role: "user".to_string(),
                     content: "Earlier question".to_string(),
+                    reasoning_content: None,
                 },
                 AgentChatMessage {
                     role: "ignored".to_string(),
                     content: "skip me".to_string(),
+                    reasoning_content: None,
                 },
             ],
             None,

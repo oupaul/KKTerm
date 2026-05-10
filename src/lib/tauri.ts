@@ -309,6 +309,7 @@ export interface CommandProposalPlan {
 export interface AgentChatMessage {
   role: "assistant" | "user";
   content: string;
+  reasoningContent?: string;
 }
 
 export interface AgentRunRequest {
@@ -340,6 +341,7 @@ export interface AgentRunResponse {
   providerKind: string;
   model: string;
   content: string;
+  reasoningContent?: string;
 }
 
 export interface DiagnosticsBundle {

@@ -54,6 +54,7 @@ type AssistantChatMessage = {
   id: string;
   role: "assistant" | "user";
   content: string;
+  reasoningContent?: string;
   textAttachments?: AssistantTextAttachment[];
   imageAttachments?: AssistantImageAttachment[];
   fileAttachments?: AssistantFileAttachment[];
@@ -121,11 +122,13 @@ function createAssistantChatMessage(
   textAttachments?: AssistantTextAttachment[],
   imageAttachments?: AssistantImageAttachment[],
   fileAttachments?: AssistantFileAttachment[],
+  reasoningContent?: string,
 ): AssistantChatMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role,
     content,
+    reasoningContent,
     textAttachments,
     imageAttachments,
     fileAttachments,
@@ -449,6 +452,7 @@ function normalizeAssistantChatMessage(value: unknown): AssistantChatMessage[] {
       id: typeof candidate.id === "string" && candidate.id ? candidate.id : `${candidate.role}-${Date.now()}`,
       role: candidate.role,
       content: candidate.content,
+      reasoningContent: typeof candidate.reasoningContent === "string" && candidate.reasoningContent ? candidate.reasoningContent : undefined,
       textAttachments: normalizeTextAttachments(candidate.textAttachments),
       imageAttachments: normalizeImageAttachments(candidate.imageAttachments),
       fileAttachments: normalizeFileAttachments(candidate.fileAttachments),
@@ -995,6 +999,7 @@ export function AssistantPanel({
     const history = previousMessages.map((message) => ({
       role: message.role,
       content: message.content,
+      reasoningContent: message.reasoningContent,
     }));
     setMessages(nextMessages);
     setCurrentThreadTitle(fallbackTitle);
@@ -1058,6 +1063,10 @@ export function AssistantPanel({
         "assistant",
         response.content,
         requestIntent,
+        undefined,
+        undefined,
+        undefined,
+        response.reasoningContent,
       );
       const completedMessages = [...nextMessages, assistantMessage];
       setMessages(completedMessages);
