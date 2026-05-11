@@ -33,6 +33,7 @@ import {
   selectSettingsImportFile,
 } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
+import { useDashboardStore } from "../dashboard/state/dashboardStore";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../lib/settings";
 import { SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
@@ -82,6 +83,7 @@ export function GeneralSettings() {
   const [error, setError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [dashboardResetDialogOpen, setDashboardResetDialogOpen] = useState(false);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(generalSettings);
 
   useEffect(() => {
@@ -256,6 +258,18 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
     }
   }
 
+  async function handleResetDashboard() {
+    setStatus("");
+    setError("");
+    try {
+      await useDashboardStore.getState().resetDashboard();
+      setStatus(t("settings.dashboardResetDone"));
+      setDashboardResetDialogOpen(false);
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : String(resetError));
+    }
+  }
+
   const lastBackup = formatBackupDate(generalSettings.lastBackupAt);
 
   return (
@@ -403,6 +417,14 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
             <RotateCcw size={16} />
             {t("settings.resetAllSettings")}
           </button>
+          <button
+            className="secondary-button danger"
+            type="button"
+            onClick={() => setDashboardResetDialogOpen(true)}
+          >
+            <RotateCcw size={16} />
+            {t("settings.dashboardReset")}
+          </button>
         </div>
       </fieldset>
 
@@ -470,6 +492,41 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
               <button
                 className="toolbar-button"
                 onClick={() => setResetDialogOpen(false)}
+                type="button"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {dashboardResetDialogOpen ? (
+        <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
+          <div
+            aria-label={t("settings.dashboardResetTitle")}
+            aria-modal="true"
+            className="connection-dialog settings-reset-dialog"
+            role="dialog"
+          >
+            <header className="connection-dialog-header compact">
+              <div>
+                <p className="panel-label">{t("settings.sectionGeneral")}</p>
+                <h2>{t("settings.dashboardResetTitle")}</h2>
+              </div>
+            </header>
+            <p className="field-hint">{t("settings.dashboardResetBody")}</p>
+            <div className="dialog-actions">
+              <button
+                className="secondary-button danger"
+                onClick={() => void handleResetDashboard()}
+                type="button"
+              >
+                <RotateCcw size={15} />
+                {t("settings.dashboardResetConfirm")}
+              </button>
+              <button
+                className="toolbar-button"
+                onClick={() => setDashboardResetDialogOpen(false)}
                 type="button"
               >
                 {t("common.cancel")}
