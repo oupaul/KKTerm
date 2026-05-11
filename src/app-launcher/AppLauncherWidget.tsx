@@ -1,5 +1,7 @@
 import {
   AppWindow,
+  FilePlus,
+  FolderPlus,
   Pencil,
   Play,
   Plus,
@@ -11,7 +13,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { selectAppLauncherFile, isTauriRuntime } from "../lib/tauri";
+import { selectAppLauncherFile, selectAppLauncherFolder, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type {
   AppLauncherEntry,
@@ -44,6 +46,11 @@ type MenuState = {
   y: number;
 };
 
+type AddMenuState = {
+  x: number;
+  y: number;
+};
+
 export function AppLauncherWidget() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
@@ -51,8 +58,10 @@ export function AppLauncherWidget() {
   const [preparedById, setPreparedById] = useState<Record<string, PreparedAppLauncherEntry>>({});
   const [dialogDraft, setDialogDraft] = useState<EntryDraft | null>(null);
   const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const [addMenuState, setAddMenuState] = useState<AddMenuState | null>(null);
   const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const addMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -135,6 +144,30 @@ export function AppLauncherWidget() {
     };
   }, [menuState]);
 
+  useEffect(() => {
+    if (!addMenuState) {
+      return;
+    }
+    function closeMenu(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (target && addMenuRef.current?.contains(target)) {
+        return;
+      }
+      setAddMenuState(null);
+    }
+    function closeMenuOnKey(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setAddMenuState(null);
+      }
+    }
+    window.addEventListener("pointerdown", closeMenu);
+    window.addEventListener("keydown", closeMenuOnKey);
+    return () => {
+      window.removeEventListener("pointerdown", closeMenu);
+      window.removeEventListener("keydown", closeMenuOnKey);
+    };
+  }, [addMenuState]);
+
   useLayoutEffect(() => {
     const node = menuRef.current;
     if (!node || !menuState) {
@@ -145,13 +178,55 @@ export function AppLauncherWidget() {
     node.style.top = `${Math.max(8, Math.min(menuState.y, window.innerHeight - bounds.height - 8))}px`;
   }, [menuState]);
 
-  async function addEntry() {
+  useLayoutEffect(() => {
+    const node = addMenuRef.current;
+    if (!node || !addMenuState) {
+      return;
+    }
+    const bounds = node.getBoundingClientRect();
+    node.style.left = `${Math.max(8, Math.min(addMenuState.x, window.innerWidth - bounds.width - 8))}px`;
+    node.style.top = `${Math.max(8, Math.min(addMenuState.y, window.innerHeight - bounds.height - 8))}px`;
+  }, [addMenuState]);
+
+  function openAddMenuFromElement(element: HTMLElement) {
+    const bounds = element.getBoundingClientRect();
+    setAddMenuState({ x: bounds.left, y: bounds.bottom + 4 });
+  }
+
+  async function addAppEntry() {
     let selectedPath: string | null = null;
     if (isTauriRuntime()) {
       try {
         selectedPath = await selectAppLauncherFile({
           allFilesFilterName: t("appLauncher.allFilesFilter"),
           filterName: t("appLauncher.fileFilter"),
+          kind: "app",
+          title: t("appLauncher.selectAppTitle"),
+        });
+      } catch (error) {
+        showStatusBarNotice(
+          t("appLauncher.selectError", { message: errorMessage(error) }),
+          { tone: "error" },
+        );
+        openDraftDialog();
+        return;
+      }
+      if (!selectedPath) {
+        return;
+      }
+    }
+
+    await saveSelectedPath(selectedPath);
+  }
+
+  async function addFileEntry() {
+    let selectedPath: string | null = null;
+    if (isTauriRuntime()) {
+      try {
+        selectedPath = await selectAppLauncherFile({
+          allFilesFilterName: t("appLauncher.allFilesFilter"),
+          filterName: t("appLauncher.fileFilter"),
+          kind: "file",
           title: t("appLauncher.selectFileTitle"),
         });
       } catch (error) {
@@ -167,6 +242,10 @@ export function AppLauncherWidget() {
       }
     }
 
+    await saveSelectedPath(selectedPath);
+  }
+
+  async function saveSelectedPath(selectedPath: string | null) {
     try {
       const prepared = selectedPath ? await prepareAppLauncherEntry(selectedPath) : undefined;
       if (selectedPath) {
@@ -181,6 +260,29 @@ export function AppLauncherWidget() {
       );
       openDraftDialog(selectedPath ?? "");
     }
+  }
+
+  async function addFolderEntry() {
+    let selectedPath: string | null = null;
+    if (isTauriRuntime()) {
+      try {
+        selectedPath = await selectAppLauncherFolder({
+          title: t("appLauncher.selectFolderTitle"),
+        });
+      } catch (error) {
+        showStatusBarNotice(
+          t("appLauncher.selectError", { message: errorMessage(error) }),
+          { tone: "error" },
+        );
+        openDraftDialog();
+        return;
+      }
+      if (!selectedPath) {
+        return;
+      }
+    }
+
+    await saveSelectedPath(selectedPath);
   }
 
   function openDraftDialog(path = "", prepared?: PreparedAppLauncherEntry) {
@@ -283,11 +385,11 @@ export function AppLauncherWidget() {
         <span>{t("appLauncher.entriesLabel")}</span>
         <button
           className="secondary-button app-launcher-add"
-          onClick={() => void addEntry()}
+          onClick={(event) => openAddMenuFromElement(event.currentTarget)}
           type="button"
         >
           <Plus size={14} />
-          {t("appLauncher.addApp")}
+          {t("common.add")}
         </button>
       </div>
       {settings.entries.length > 0 ? (
@@ -328,6 +430,17 @@ export function AppLauncherWidget() {
               onLaunch={launch}
               onRemove={removeEntry}
               state={menuState}
+            />,
+          )
+        : null}
+      {addMenuState
+        ? createAppLauncherPortal(
+            <AppLauncherAddMenu
+              menuRef={addMenuRef}
+              onAddApp={addAppEntry}
+              onAddFile={addFileEntry}
+              onAddFolder={addFolderEntry}
+              onClose={() => setAddMenuState(null)}
             />,
           )
         : null}
@@ -531,6 +644,55 @@ function AppLauncherMenu({
         onClick={() => {
           onClose();
           void onRemove(state.entry);
+        }}
+      />
+    </div>
+  );
+}
+
+function AppLauncherAddMenu({
+  menuRef,
+  onAddApp,
+  onAddFile,
+  onAddFolder,
+  onClose,
+}: {
+  menuRef: RefObject<HTMLDivElement | null>;
+  onAddApp: () => Promise<void>;
+  onAddFile: () => Promise<void>;
+  onAddFolder: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      ref={menuRef}
+      className="terminal-menu app-launcher-menu app-launcher-add-menu"
+      onContextMenu={(event) => event.preventDefault()}
+      role="menu"
+    >
+      <MenuButton
+        icon={<AppWindow size={14} />}
+        label={t("appLauncher.addMenuApp")}
+        onClick={() => {
+          onClose();
+          void onAddApp();
+        }}
+      />
+      <MenuButton
+        icon={<FilePlus size={14} />}
+        label={t("appLauncher.addMenuFile")}
+        onClick={() => {
+          onClose();
+          void onAddFile();
+        }}
+      />
+      <MenuButton
+        icon={<FolderPlus size={14} />}
+        label={t("appLauncher.addMenuFolder")}
+        onClick={() => {
+          onClose();
+          void onAddFolder();
         }}
       />
     </div>

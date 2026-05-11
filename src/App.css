@@ -1038,6 +1038,10 @@ button {
   height: 28px;
 }
 
+.app-launcher-add-menu {
+  min-width: 150px;
+}
+
 .app-launcher-tile-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));

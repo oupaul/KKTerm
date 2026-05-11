@@ -106,6 +106,15 @@ fn plan_launch_with_options(
         });
     }
 
+    if mode == AppLauncherLaunchMode::Normal && !runnable {
+        return Ok(AppLauncherLaunchPlan {
+            target: "explorer.exe".to_string(),
+            parameters: Some(path.to_string()),
+            working_directory,
+            operation,
+        });
+    }
+
     Ok(AppLauncherLaunchPlan {
         target: path.to_string(),
         parameters: arguments.map(ToOwned::to_owned),
@@ -150,6 +159,20 @@ fn launch_plan(app: tauri::AppHandle, plan: AppLauncherLaunchPlan) -> Result<(),
 fn launch_plan_windows(plan: AppLauncherLaunchPlan) -> Result<(), String> {
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};
+
+    if plan.operation.is_none() && plan.target.eq_ignore_ascii_case("explorer.exe") {
+        let mut command = std::process::Command::new(&plan.target);
+        if let Some(parameters) = plan.parameters.as_deref() {
+            command.arg(parameters);
+        }
+        if let Some(working_directory) = plan.working_directory.as_deref() {
+            command.current_dir(working_directory);
+        }
+        return command
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| format!("failed to launch {}: {error}", plan.target));
+    }
 
     let operation = plan.operation.map(wide_string);
     let target = wide_string(&plan.target);
@@ -245,6 +268,7 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     if bitmap.is_null() {
         unsafe {
             DeleteDC(hdc);
+            ReleaseDC(null_mut(), screen_hdc);
             DestroyIcon(shell_info.hIcon);
         }
         return None;
@@ -268,6 +292,7 @@ fn native_icon_data_url(path: &str) -> Option<String> {
             SelectObject(hdc, previous);
             DeleteObject(bitmap);
             DeleteDC(hdc);
+            ReleaseDC(null_mut(), screen_hdc);
             DestroyIcon(shell_info.hIcon);
         }
         return None;
@@ -306,6 +331,7 @@ fn native_icon_data_url(path: &str) -> Option<String> {
         SelectObject(hdc, previous);
         DeleteObject(bitmap);
         DeleteDC(hdc);
+        ReleaseDC(null_mut(), screen_hdc);
         DestroyIcon(shell_info.hIcon);
     }
 
@@ -377,7 +403,28 @@ mod tests {
         let plan = plan_launch("C:\\Docs\\notes.txt", AppLauncherLaunchMode::Normal)
             .expect("normal launches can open associated files");
 
-        assert_eq!(plan.target, "C:\\Docs\\notes.txt");
+        assert_eq!(plan.target, "explorer.exe");
+        assert_eq!(plan.parameters.as_deref(), Some("C:\\Docs\\notes.txt"));
+        assert_eq!(plan.operation, None);
+    }
+
+    #[test]
+    fn launch_plan_opens_office_documents_through_explorer() {
+        let plan = plan_launch("C:\\Docs\\budget.xlsx", AppLauncherLaunchMode::Normal)
+            .expect("office documents open through their shell association");
+
+        assert_eq!(plan.target, "explorer.exe");
+        assert_eq!(plan.parameters.as_deref(), Some("C:\\Docs\\budget.xlsx"));
+        assert_eq!(plan.operation, None);
+    }
+
+    #[test]
+    fn launch_plan_opens_folders_through_explorer() {
+        let plan = plan_launch("C:\\Users\\Ryan\\Documents", AppLauncherLaunchMode::Normal)
+            .expect("folders open in File Explorer");
+
+        assert_eq!(plan.target, "explorer.exe");
+        assert_eq!(plan.parameters.as_deref(), Some("C:\\Users\\Ryan\\Documents"));
         assert_eq!(plan.operation, None);
     }
 

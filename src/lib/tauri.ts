@@ -1341,20 +1341,41 @@ export async function selectAppLauncherFile(options: {
   title: string;
   filterName: string;
   allFilesFilterName: string;
+  kind: "app" | "file";
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const filters =
+    options.kind === "app"
+      ? [
+          {
+            name: options.filterName,
+            extensions: ["exe", "lnk", "bat", "cmd", "ps1"],
+          },
+        ]
+      : [{ name: options.allFilesFilterName, extensions: ["*"] }];
+
+  const selectedPath = await openDialog({
+    directory: false,
+    filters,
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectAppLauncherFolder(options: {
+  title: string;
 }) {
   if (!isTauriRuntime()) {
     return null;
   }
 
   const selectedPath = await openDialog({
-    directory: false,
-    filters: [
-      {
-        name: options.filterName,
-        extensions: ["exe", "lnk", "bat", "cmd", "ps1"],
-      },
-      { name: options.allFilesFilterName, extensions: ["*"] },
-    ],
+    directory: true,
     multiple: false,
     title: options.title,
   });
