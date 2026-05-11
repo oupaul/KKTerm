@@ -31,6 +31,7 @@ export function DashboardPage({
 
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [customize, setCustomize] = useState<{ instance: DashboardWidgetInstance; rect: DOMRect } | null>(null);
+  const [editingViewId, setEditingViewId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) void load();
@@ -83,11 +84,34 @@ export function DashboardPage({
               className={`dashboard-pill${v.id === activeView.id ? " active" : ""}`}
               onClick={() => setActiveView(v.id)}
               onDoubleClick={() => {
-                const next = window.prompt(t("dashboard.renameView"), v.title);
-                if (next && next.trim()) void renameView(v.id, next.trim());
+                setActiveView(v.id);
+                setEditingViewId(v.id);
               }}
             >
-              {v.title}
+              {editingViewId === v.id ? (
+                <input
+                  className="dashboard-pill-rename"
+                  defaultValue={v.title}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => {
+                    const next = e.currentTarget.value.trim();
+                    if (next) void renameView(v.id, next);
+                    setEditingViewId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const next = e.currentTarget.value.trim();
+                      if (next) void renameView(v.id, next);
+                      setEditingViewId(null);
+                    } else if (e.key === "Escape") {
+                      setEditingViewId(null);
+                    }
+                  }}
+                />
+              ) : (
+                v.title
+              )}
               {views.length > 1 && (
                 <span
                   className="dashboard-pill-close"
@@ -101,8 +125,8 @@ export function DashboardPage({
           <button
             className="dashboard-pill-add"
             onClick={async () => {
-              const title = window.prompt(t("dashboard.newViewPrompt"), `View ${views.length + 1}`);
-              if (title && title.trim()) await createView(title.trim());
+              const newView = await createView(`View ${views.length + 1}`);
+              if (newView) setEditingViewId(newView.id);
             }}
           >
             <Plus size={12} /> {t("dashboard.addView")}
