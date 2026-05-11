@@ -27,6 +27,8 @@ export function useBootstrapSettings() {
   const setSshSettings = useWorkspaceStore((state) => state.setSshSettings);
   const setSftpSettings = useWorkspaceStore((state) => state.setSftpSettings);
   const setUrlSettings = useWorkspaceStore((state) => state.setUrlSettings);
+  const setRdpSettings = useWorkspaceStore((state) => state.setRdpSettings);
+  const setVncSettings = useWorkspaceStore((state) => state.setVncSettings);
   const setAiProviderSettings = useWorkspaceStore(
     (state) => state.setAiProviderSettings,
   );
@@ -83,6 +85,18 @@ export function useBootstrapSettings() {
       })
       .catch(swallow);
 
+    void invokeCommand("get_rdp_settings")
+      .then((settings) => {
+        if (!disposed) setRdpSettings(settings);
+      })
+      .catch(swallow);
+
+    void invokeCommand("get_vnc_settings")
+      .then((settings) => {
+        if (!disposed) setVncSettings(settings);
+      })
+      .catch(swallow);
+
     void invokeCommand("get_ai_provider_settings")
       .then((settings) => {
         if (!disposed) setAiProviderSettings(settings);
@@ -111,6 +125,8 @@ export function useBootstrapSettings() {
     setSftpSettings,
     setSshSettings,
     setUrlSettings,
+    setRdpSettings,
+    setVncSettings,
     setTerminalSettings,
   ]);
 }

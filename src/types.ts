@@ -28,6 +28,8 @@ export interface Connection {
   tmuxConnectionId?: string;
   urlCredentialUsername?: string;
   hasUrlCredential?: boolean;
+  rdpOptions?: RdpConnectionOptions;
+  vncOptions?: VncConnectionOptions;
   type: ConnectionType;
   status: ConnectionStatus;
 }
@@ -60,6 +62,8 @@ export interface CreateConnectionRequest {
   url?: string;
   dataPartition?: string;
   useTmuxSessions?: boolean;
+  rdpOptions?: RdpConnectionOptions;
+  vncOptions?: VncConnectionOptions;
 }
 
 export interface CreateConnectionFolderRequest {
@@ -210,6 +214,8 @@ export interface ImportedDatabaseSnapshot {
   sshSettings: SshSettings;
   sftpSettings: SftpSettings;
   urlSettings: UrlSettings;
+  rdpSettings: RdpSettings;
+  vncSettings: VncSettings;
   screenshotSettings: ScreenshotSettings;
   aiProviderSettings: AiProviderSettings;
   connectionTree: ConnectionTree;
@@ -271,6 +277,44 @@ export interface SftpSettings {
 
 export interface UrlSettings {
   ignoreCertificateErrors: boolean;
+}
+
+export type RdpPerformanceProfile = "balanced" | "quality" | "speed";
+export type RdpColorDepth = 15 | 16 | 24 | 32;
+
+export interface RdpSettings {
+  colorDepth: RdpColorDepth;
+  redirectClipboard: boolean;
+  redirectDrives: boolean;
+  bitmapCache: boolean;
+  performanceProfile: RdpPerformanceProfile;
+}
+
+export interface RdpConnectionOptions {
+  inheritDefaults: boolean;
+  colorDepth?: RdpColorDepth;
+  redirectClipboard?: boolean;
+  redirectDrives?: boolean;
+  bitmapCache?: boolean;
+  performanceProfile?: RdpPerformanceProfile;
+}
+
+export type VncColorLevel = "full" | "256" | "64" | "8";
+export type VncPreferredEncoding = "tight" | "zrle" | "raw";
+
+export interface VncSettings {
+  sharedSession: boolean;
+  viewOnly: boolean;
+  colorLevel: VncColorLevel;
+  preferredEncoding: VncPreferredEncoding;
+}
+
+export interface VncConnectionOptions {
+  inheritDefaults: boolean;
+  sharedSession?: boolean;
+  viewOnly?: boolean;
+  colorLevel?: VncColorLevel;
+  preferredEncoding?: VncPreferredEncoding;
 }
 
 export interface ScreenshotSettings {

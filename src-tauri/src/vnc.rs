@@ -35,6 +35,7 @@ struct VncSession {
     input: mpsc::UnboundedSender<X11Event>,
     stop: Option<oneshot::Sender<()>>,
     connected: bool,
+    view_only: bool,
 }
 
 #[derive(Deserialize)]
@@ -45,6 +46,20 @@ pub struct StartVncSessionRequest {
     port: Option<u16>,
     secret_owner_id: Option<String>,
     password: Option<String>,
+    options: Option<VncSessionOptions>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VncSessionOptions {
+    #[serde(default = "default_true")]
+    shared_session: bool,
+    #[serde(default)]
+    view_only: bool,
+    #[serde(default = "default_vnc_color_level")]
+    color_level: String,
+    #[serde(default = "default_vnc_preferred_encoding")]
+    preferred_encoding: String,
 }
 
 #[derive(Serialize)]
@@ -170,8 +185,11 @@ impl VncSessionManager {
         }
 
         let password = request.password.clone();
+        let options = request.options.unwrap_or_default();
         let address = self.runtime.block_on(resolve_vnc_address(&host, port))?;
-        let client = self.runtime.block_on(connect_vnc(address, password))?;
+        let client = self
+            .runtime
+            .block_on(connect_vnc(address, password, &options))?;
         let (stop_tx, stop_rx) = oneshot::channel();
         let (input_tx, input_rx) = mpsc::unbounded_channel();
         spawn_vnc_event_loop(
@@ -191,6 +209,7 @@ impl VncSessionManager {
                 input: input_tx,
                 stop: Some(stop_tx),
                 connected: true,
+                view_only: options.view_only,
             },
         );
 
@@ -263,7 +282,13 @@ impl VncSessionManager {
         let sessions = self.lock_sessions()?;
         let input = sessions
             .get(session_id)
-            .map(|session| session.input.clone())
+            .and_then(|session| {
+                if session.view_only {
+                    None
+                } else {
+                    Some(session.input.clone())
+                }
+            })
             .ok_or_else(|| format!("VNC session '{session_id}' was not found"))?;
         input
             .send(event)
@@ -307,16 +332,18 @@ async fn resolve_vnc_address(host: &str, port: u16) -> Result<SocketAddr, String
 async fn connect_vnc(
     address: SocketAddr,
     password: Option<String>,
+    options: &VncSessionOptions,
 ) -> Result<vnc::VncClient, String> {
-    connect_vnc_with_timeout(address, password, VNC_CONNECT_TIMEOUT).await
+    connect_vnc_with_timeout(address, password, options, VNC_CONNECT_TIMEOUT).await
 }
 
 async fn connect_vnc_with_timeout(
     address: SocketAddr,
     password: Option<String>,
+    options: &VncSessionOptions,
     timeout: Duration,
 ) -> Result<vnc::VncClient, String> {
-    time::timeout(timeout, connect_vnc_unbounded(address, password))
+    time::timeout(timeout, connect_vnc_unbounded(address, password, options))
         .await
         .map_err(|_| format!("timed out connecting to VNC server {address}"))?
 }
@@ -324,22 +351,38 @@ async fn connect_vnc_with_timeout(
 async fn connect_vnc_unbounded(
     address: SocketAddr,
     password: Option<String>,
+    options: &VncSessionOptions,
 ) -> Result<vnc::VncClient, String> {
     let stream = TcpStream::connect(address)
         .await
         .map_err(|error| format!("failed to connect to VNC server {address}: {error}"))?;
     let password = Arc::new(password.unwrap_or_default());
     let password_for_auth = Arc::clone(&password);
-    VncConnector::new(stream)
+    let pixel_format = pixel_format_for(&options.color_level);
+    let mut connector = VncConnector::new(stream)
         .set_auth_method(async move { Ok((*password_for_auth).clone()) })
-        .add_encoding(VncEncoding::Tight)
-        .add_encoding(VncEncoding::Zrle)
-        .add_encoding(VncEncoding::CopyRect)
-        .add_encoding(VncEncoding::Raw)
-        .add_encoding(VncEncoding::CursorPseudo)
+        .allow_shared(options.shared_session)
+        .set_pixel_format(pixel_format);
+    connector = match options.preferred_encoding.as_str() {
+        "raw" => connector
+            .add_encoding(VncEncoding::Raw)
+            .add_encoding(VncEncoding::Tight)
+            .add_encoding(VncEncoding::Zrle),
+        "zrle" => connector
+            .add_encoding(VncEncoding::Zrle)
+            .add_encoding(VncEncoding::Tight)
+            .add_encoding(VncEncoding::Raw),
+        _ => connector
+            .add_encoding(VncEncoding::Tight)
+            .add_encoding(VncEncoding::Zrle)
+            .add_encoding(VncEncoding::Raw),
+    };
+    connector = connector.add_encoding(VncEncoding::CopyRect);
+    if pixel_format.bits_per_pixel == 32 {
+        connector = connector.add_encoding(VncEncoding::CursorPseudo);
+    }
+    connector
         .add_encoding(VncEncoding::DesktopSizePseudo)
-        .allow_shared(true)
-        .set_pixel_format(PixelFormat::rgba())
         .build()
         .map_err(to_vnc_error)?
         .try_start()
@@ -351,6 +394,61 @@ async fn connect_vnc_unbounded(
 
 fn key_input(keycode: u32, down: bool) -> X11Event {
     X11Event::KeyEvent(ClientKeyEvent { keycode, down })
+}
+
+impl Default for VncSessionOptions {
+    fn default() -> Self {
+        Self {
+            shared_session: true,
+            view_only: false,
+            color_level: default_vnc_color_level(),
+            preferred_encoding: default_vnc_preferred_encoding(),
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_vnc_color_level() -> String {
+    "full".to_string()
+}
+
+fn default_vnc_preferred_encoding() -> String {
+    "tight".to_string()
+}
+
+fn pixel_format_for(color_level: &str) -> PixelFormat {
+    match color_level {
+        "256" => reduced_pixel_format(8, 7, 7, 3, 5, 2, 0),
+        "64" => reduced_pixel_format(6, 3, 3, 3, 4, 2, 0),
+        "8" => reduced_pixel_format(3, 1, 1, 1, 2, 1, 0),
+        _ => PixelFormat::rgba(),
+    }
+}
+
+fn reduced_pixel_format(
+    depth: u8,
+    red_max: u16,
+    green_max: u16,
+    blue_max: u16,
+    red_shift: u8,
+    green_shift: u8,
+    blue_shift: u8,
+) -> PixelFormat {
+    let mut format = PixelFormat::rgba();
+    format.bits_per_pixel = 8;
+    format.depth = depth;
+    format.big_endian_flag = 0;
+    format.true_color_flag = 1;
+    format.red_max = red_max;
+    format.green_max = green_max;
+    format.blue_max = blue_max;
+    format.red_shift = red_shift;
+    format.green_shift = green_shift;
+    format.blue_shift = blue_shift;
+    format
 }
 
 fn spawn_vnc_event_loop(
@@ -386,6 +484,7 @@ fn spawn_vnc_event_loop(
         refresh_interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
         // Skip the immediate first tick so we don't race the FullRefresh above with an incremental Refresh.
         refresh_interval.tick().await;
+        let mut pixel_format = PixelFormat::rgba();
         loop {
             tokio::select! {
                 _ = &mut stop => {
@@ -420,7 +519,10 @@ fn spawn_vnc_event_loop(
                 }
                 event = client.recv_event() => {
                     match event {
-                        Ok(event) => handle_vnc_event(&app, &session_id, event),
+                        Ok(VncEvent::SetPixelFormat(format)) => {
+                            pixel_format = format;
+                        }
+                        Ok(event) => handle_vnc_event(&app, &session_id, event, pixel_format),
                         Err(error) => {
                             eprintln!("[vnc {session_id}] recv_event failed: {error}");
                             emit_vnc_event(&app, VncSessionEvent::Error {
@@ -438,7 +540,12 @@ fn spawn_vnc_event_loop(
     });
 }
 
-fn handle_vnc_event(app: &AppHandle, session_id: &str, event: VncEvent) {
+fn handle_vnc_event(
+    app: &AppHandle,
+    session_id: &str,
+    event: VncEvent,
+    pixel_format: PixelFormat,
+) {
     match event {
         VncEvent::SetResolution(screen) => emit_vnc_event(
             app,
@@ -448,17 +555,20 @@ fn handle_vnc_event(app: &AppHandle, session_id: &str, event: VncEvent) {
                 height: screen.height,
             },
         ),
-        VncEvent::RawImage(rect, data) => emit_vnc_event(
-            app,
-            VncSessionEvent::RawImage {
-                session_id: session_id.to_string(),
-                x: rect.x,
-                y: rect.y,
-                width: rect.width,
-                height: rect.height,
-                rgba: BASE64.encode(data),
-            },
-        ),
+        VncEvent::RawImage(rect, data) => {
+            let rgba = raw_pixels_to_rgba(&data, pixel_format);
+            emit_vnc_event(
+                app,
+                VncSessionEvent::RawImage {
+                    session_id: session_id.to_string(),
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height,
+                    rgba: BASE64.encode(rgba),
+                },
+            )
+        }
         VncEvent::Copy(dst, src) => emit_vnc_event(
             app,
             VncSessionEvent::Copy {
@@ -509,6 +619,52 @@ fn handle_vnc_event(app: &AppHandle, session_id: &str, event: VncEvent) {
 
 fn emit_vnc_event(app: &AppHandle, event: VncSessionEvent) {
     let _ = app.emit("vnc-session-event", event);
+}
+
+fn raw_pixels_to_rgba(data: &[u8], format: PixelFormat) -> Vec<u8> {
+    let bytes_per_pixel = usize::from(format.bits_per_pixel / 8);
+    if bytes_per_pixel == 0 {
+        return Vec::new();
+    }
+    let mut rgba = Vec::with_capacity((data.len() / bytes_per_pixel) * 4);
+    for pixel in data.chunks_exact(bytes_per_pixel) {
+        let value = pixel_value(pixel, format.big_endian_flag != 0);
+        rgba.push(scale_color_component(
+            (value >> format.red_shift) & u32::from(format.red_max),
+            format.red_max,
+        ));
+        rgba.push(scale_color_component(
+            (value >> format.green_shift) & u32::from(format.green_max),
+            format.green_max,
+        ));
+        rgba.push(scale_color_component(
+            (value >> format.blue_shift) & u32::from(format.blue_max),
+            format.blue_max,
+        ));
+        rgba.push(255);
+    }
+    rgba
+}
+
+fn pixel_value(pixel: &[u8], big_endian: bool) -> u32 {
+    let mut value = 0_u32;
+    if big_endian {
+        for byte in pixel {
+            value = (value << 8) | u32::from(*byte);
+        }
+    } else {
+        for (index, byte) in pixel.iter().enumerate() {
+            value |= u32::from(*byte) << (index * 8);
+        }
+    }
+    value
+}
+
+fn scale_color_component(value: u32, max: u16) -> u8 {
+    if max == 0 {
+        return 0;
+    }
+    ((value * 255) / u32::from(max)) as u8
 }
 
 fn to_vnc_error(error: impl std::fmt::Display) -> String {
@@ -571,7 +727,13 @@ mod tests {
                 time::sleep(Duration::from_millis(250)).await;
             });
 
-            let result = connect_vnc_with_timeout(address, None, Duration::from_millis(25)).await;
+            let result = connect_vnc_with_timeout(
+                address,
+                None,
+                &VncSessionOptions::default(),
+                Duration::from_millis(25),
+            )
+            .await;
             server.abort();
 
             assert_eq!(
@@ -594,5 +756,22 @@ mod tests {
         let value = serde_json::to_value(event).expect("event serializes");
         assert_eq!(value["kind"], "rawImage");
         assert_eq!(value["rgba"], "/wAA/w==");
+    }
+
+    #[test]
+    fn vnc_color_level_selects_matching_pixel_format() {
+        assert_eq!(pixel_format_for("full").bits_per_pixel, 32);
+        assert_eq!(pixel_format_for("256").depth, 8);
+        assert_eq!(pixel_format_for("64").depth, 6);
+        assert_eq!(pixel_format_for("8").depth, 3);
+    }
+
+    #[test]
+    fn converts_reduced_vnc_pixels_to_rgba() {
+        let rgb332 = pixel_format_for("256");
+        assert_eq!(
+            raw_pixels_to_rgba(&[0b1110_0011, 0], rgb332),
+            vec![255, 0, 255, 255, 0, 0, 0, 255]
+        );
     }
 }

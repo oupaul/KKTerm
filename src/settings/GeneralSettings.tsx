@@ -12,11 +12,13 @@ import { useTranslation } from "react-i18next";
 import {
   defaultAppearanceSettings,
   defaultAiProviderSettings,
+  defaultRdpSettings,
   defaultGeneralSettings,
   defaultSftpSettings,
   defaultSshSettings,
   defaultTerminalSettings,
   defaultUrlSettings,
+  defaultVncSettings,
 } from "../app-defaults";
 import {
   SUPPORTED_LANGUAGES,
@@ -65,6 +67,8 @@ export function GeneralSettings() {
   const setSshSettings = useWorkspaceStore((state) => state.setSshSettings);
   const setSftpSettings = useWorkspaceStore((state) => state.setSftpSettings);
   const setUrlSettings = useWorkspaceStore((state) => state.setUrlSettings);
+  const setRdpSettings = useWorkspaceStore((state) => state.setRdpSettings);
+  const setVncSettings = useWorkspaceStore((state) => state.setVncSettings);
   const setAiProviderSettings = useWorkspaceStore(
     (state) => state.setAiProviderSettings,
   );
@@ -155,6 +159,8 @@ export function GeneralSettings() {
       setSshSettings(snapshot.sshSettings);
       setSftpSettings(snapshot.sftpSettings);
       setUrlSettings(snapshot.urlSettings);
+      setRdpSettings(snapshot.rdpSettings);
+      setVncSettings(snapshot.vncSettings);
       setAiProviderSettings(snapshot.aiProviderSettings);
       window.dispatchEvent(
         new CustomEvent("kkterm:connection-tree-invalidated"),
@@ -189,6 +195,8 @@ export function GeneralSettings() {
           ssh,
           sftp,
           url,
+          rdp,
+          vnc,
           aiProvider,
         ] = await Promise.all([
           invokeCommand("update_general_settings", {
@@ -203,6 +211,8 @@ export function GeneralSettings() {
           invokeCommand("update_ssh_settings", { request: defaultSshSettings }),
           invokeCommand("update_sftp_settings", { request: defaultSftpSettings }),
           invokeCommand("update_url_settings", { request: defaultUrlSettings }),
+          invokeCommand("update_rdp_settings", { request: defaultRdpSettings }),
+          invokeCommand("update_vnc_settings", { request: defaultVncSettings }),
           invokeCommand("update_ai_provider_settings", {
             request: defaultAiProviderSettings,
           }),
@@ -219,6 +229,8 @@ export function GeneralSettings() {
         setSshSettings(ssh);
         setSftpSettings(sftp);
         setUrlSettings(url);
+        setRdpSettings(rdp);
+        setVncSettings(vnc);
         setAiProviderSettings(aiProvider);
       } else {
         setGeneralSettings(defaultGeneralSettings);
@@ -227,6 +239,8 @@ export function GeneralSettings() {
         setSshSettings(defaultSshSettings);
         setSftpSettings(defaultSftpSettings);
         setUrlSettings(defaultUrlSettings);
+        setRdpSettings(defaultRdpSettings);
+        setVncSettings(defaultVncSettings);
         setAiProviderSettings(defaultAiProviderSettings);
       }
 

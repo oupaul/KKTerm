@@ -13,7 +13,13 @@ import type {
 } from "react";
 import { invokeCommand, isTauriRuntime, type AssistantScreenshot } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
-import type { WorkspaceTab } from "../types";
+import type {
+  RdpConnectionOptions,
+  RdpSettings,
+  VncConnectionOptions,
+  VncSettings,
+  WorkspaceTab,
+} from "../types";
 import { registerRdpTextSender, unregisterRdpTextSender } from "../workspace/paneRegistry";
 
 type VncSessionEvent =
@@ -97,6 +103,8 @@ export function RemoteDesktopWorkspace({
   );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const rdpPreCaptureSignal = useWorkspaceStore((state) => state.rdpPreCaptureSignal);
+  const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
+  const vncSettings = useWorkspaceStore((state) => state.vncSettings);
   const [suppressed, setSuppressed] = useState(false);
   const [rdpError, setRdpError] = useState("");
   const [rdpSnapshot, setRdpSnapshot] = useState<AssistantScreenshot | null>(null);
@@ -543,6 +551,7 @@ export function RemoteDesktopWorkspace({
           user: connection.user,
           port: connection.port,
           secretOwnerId: connection.id,
+          options: resolveRdpOptions(rdpSettings, connection.rdpOptions),
           ...bounds,
         },
       })
@@ -630,6 +639,7 @@ export function RemoteDesktopWorkspace({
           host: connection.host,
           port: connection.port,
           secretOwnerId: connection.id,
+          options: resolveVncOptions(vncSettings, connection.vncOptions),
         },
       })
         .then((started) => {
@@ -1234,6 +1244,37 @@ function pointerButtonMask(button: number) {
     return 4;
   }
   return 1;
+}
+
+function resolveRdpOptions(
+  defaults: RdpSettings,
+  overrides?: RdpConnectionOptions,
+): RdpSettings {
+  if (!overrides || overrides.inheritDefaults) {
+    return defaults;
+  }
+  return {
+    colorDepth: overrides.colorDepth ?? defaults.colorDepth,
+    redirectClipboard: overrides.redirectClipboard ?? defaults.redirectClipboard,
+    redirectDrives: overrides.redirectDrives ?? defaults.redirectDrives,
+    bitmapCache: overrides.bitmapCache ?? defaults.bitmapCache,
+    performanceProfile: overrides.performanceProfile ?? defaults.performanceProfile,
+  };
+}
+
+function resolveVncOptions(
+  defaults: VncSettings,
+  overrides?: VncConnectionOptions,
+): VncSettings {
+  if (!overrides || overrides.inheritDefaults) {
+    return defaults;
+  }
+  return {
+    sharedSession: overrides.sharedSession ?? defaults.sharedSession,
+    viewOnly: overrides.viewOnly ?? defaults.viewOnly,
+    colorLevel: overrides.colorLevel ?? defaults.colorLevel,
+    preferredEncoding: overrides.preferredEncoding ?? defaults.preferredEncoding,
+  };
 }
 
 function vncKeysymForEvent(event: ReactKeyboardEvent<HTMLCanvasElement>) {

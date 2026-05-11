@@ -2,9 +2,11 @@ import { create } from "zustand";
 import {
   defaultAppearanceSettings,
   defaultAiProviderSettings,
+  defaultRdpSettings,
   defaultSftpSettings,
   defaultSshSettings,
   defaultUrlSettings,
+  defaultVncSettings,
   defaultGeneralSettings,
   defaultTerminalSettings,
   initialTabs,
@@ -25,9 +27,11 @@ import type {
   PerformanceMetrics,
   PerformanceSnapshot,
   HostUsageSnapshot,
+  RdpSettings,
   SftpSettings,
   SplitDirection,
   UrlSettings,
+  VncSettings,
   SshSettings,
   StoredConnectionLayout,
   TerminalPane,
@@ -564,6 +568,8 @@ interface WorkspaceState {
   sshSettings: SshSettings;
   sftpSettings: SftpSettings;
   urlSettings: UrlSettings;
+  rdpSettings: RdpSettings;
+  vncSettings: VncSettings;
   aiProviderSettings: AiProviderSettings;
   aiProviderHasApiKey: boolean;
   assistantContextSnippet?: AssistantContextSnippet;
@@ -578,6 +584,8 @@ interface WorkspaceState {
   setSshSettings: (settings: SshSettings) => void;
   setSftpSettings: (settings: SftpSettings) => void;
   setUrlSettings: (settings: UrlSettings) => void;
+  setRdpSettings: (settings: RdpSettings) => void;
+  setVncSettings: (settings: VncSettings) => void;
   setAiProviderSettings: (settings: AiProviderSettings) => void;
   setAiProviderHasApiKey: (hasApiKey: boolean) => void;
   setAssistantContextSnippet: (snippet: AssistantContextSnippet) => void;
@@ -643,6 +651,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   sshSettings: defaultSshSettings,
   sftpSettings: defaultSftpSettings,
   urlSettings: defaultUrlSettings,
+  rdpSettings: defaultRdpSettings,
+  vncSettings: defaultVncSettings,
   aiProviderSettings: defaultAiProviderSettings,
   aiProviderHasApiKey: false,
   assistantContextSnippet: undefined,
@@ -657,6 +667,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setSshSettings: (sshSettings) => set({ sshSettings }),
   setSftpSettings: (sftpSettings) => set({ sftpSettings }),
   setUrlSettings: (urlSettings) => set({ urlSettings }),
+  setRdpSettings: (rdpSettings) => set({ rdpSettings }),
+  setVncSettings: (vncSettings) => set({ vncSettings }),
   setAiProviderSettings: (aiProviderSettings) => set({ aiProviderSettings }),
   setAiProviderHasApiKey: (aiProviderHasApiKey) => set({ aiProviderHasApiKey }),
   setAssistantContextSnippet: (assistantContextSnippet) =>

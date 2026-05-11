@@ -1,64 +1,117 @@
-import { Network } from "lucide-react";
+import { Network, Save } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlannedSettingsGrid, SettingsSectionHeader, type PlannedSetting } from "./shared";
+import { invokeCommand, isTauriRuntime } from "../lib/tauri";
+import { useWorkspaceStore } from "../store";
+import type { VncColorLevel, VncPreferredEncoding } from "../types";
+import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 export function VncSettings() {
   const { t } = useTranslation();
-  const encodingSettings: PlannedSetting[] = [
-    {
-      label: t("settings.quality"),
-      value: t("settings.vncQualityValue"),
-      hint: t("settings.vncQualityHint"),
-    },
-    {
-      label: t("settings.preferredEncoding"),
-      value: t("settings.vncPreferredEncodingValue"),
-      hint: t("settings.vncPreferredEncodingHint"),
-    },
-    {
-      label: t("settings.jpegQuality"),
-      value: t("settings.vncJpegQualityValue"),
-      hint: t("settings.vncJpegQualityHint"),
-    },
-    {
-      label: t("settings.compression"),
-      value: t("settings.vncCompressionValue"),
-      hint: t("settings.vncCompressionHint"),
-    },
-  ];
-  const displaySettings: PlannedSetting[] = [
-    {
-      label: t("settings.colorLevel"),
-      value: t("settings.vncColorLevelValue"),
-      hint: t("settings.vncColorLevelHint"),
-    },
-    {
-      label: t("settings.remoteResize"),
-      value: t("settings.vncRemoteResizeValue"),
-      hint: t("settings.vncRemoteResizeHint"),
-    },
-  ];
+  const vncSettings = useWorkspaceStore((state) => state.vncSettings);
+  const setVncSettings = useWorkspaceStore((state) => state.setVncSettings);
+  const [draft, setDraft] = useState(vncSettings);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(vncSettings);
+
+  useEffect(() => {
+    setDraft(vncSettings);
+  }, [vncSettings]);
+
+  async function handleSave() {
+    setStatus("");
+    setError("");
+    try {
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_vnc_settings", { request: draft })
+        : draft;
+      setVncSettings(saved);
+      setDraft(saved);
+      setStatus(t("settings.vncSettingsSaved"));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  }
 
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
+        actions={
+          <button className="toolbar-button" disabled={!hasChanges} onClick={() => void handleSave()} type="button">
+            <Save size={15} />
+            {t("settings.save")}
+          </button>
+        }
         icon={<Network size={18} />}
         label={t("settings.sectionVnc")}
         title={t("settings.qualityDefaults")}
       />
+      {status ? <p className="settings-status success">{status}</p> : null}
+      {error ? <p className="settings-status error">{error}</p> : null}
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.encoding")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.vncEncodingHint")}</p>
+        <div className="form-grid two-columns">
+          <label>
+            <span>{t("settings.preferredEncoding")}</span>
+            <select
+              value={draft.preferredEncoding}
+              onChange={(event) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  preferredEncoding: event.currentTarget.value as VncPreferredEncoding,
+                }))
+              }
+            >
+              <option value="tight">{t("settings.vncEncodingTight")}</option>
+              <option value="zrle">{t("settings.vncEncodingZrle")}</option>
+              <option value="raw">{t("settings.vncEncodingRaw")}</option>
+            </select>
+          </label>
+          <label>
+            <span>{t("settings.colorLevel")}</span>
+            <select
+              value={draft.colorLevel}
+              onChange={(event) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  colorLevel: event.currentTarget.value as VncColorLevel,
+                }))
+              }
+            >
+              <option value="full">{t("settings.vncColorFull")}</option>
+              <option value="256">{t("settings.vncColor256")}</option>
+              <option value="64">{t("settings.vncColor64")}</option>
+              <option value="8">{t("settings.vncColor8")}</option>
+            </select>
+          </label>
         </div>
-        <PlannedSettingsGrid settings={encodingSettings} />
       </fieldset>
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.display")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.vncDisplayHint")}</p>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.sharedSession}
+              onChange={(checked) => setDraft((settings) => ({ ...settings, sharedSession: checked }))}
+            />
+            <span>
+              <strong>{t("settings.vncSharedSession")}</strong>
+              <small>{t("settings.vncSharedSessionHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.viewOnly}
+              onChange={(checked) => setDraft((settings) => ({ ...settings, viewOnly: checked }))}
+            />
+            <span>
+              <strong>{t("settings.vncViewOnly")}</strong>
+              <small>{t("settings.vncViewOnlyHint")}</small>
+            </span>
+          </label>
         </div>
-        <PlannedSettingsGrid settings={displaySettings} />
       </fieldset>
     </section>
   );

@@ -529,6 +529,36 @@ fn update_url_settings(
 }
 
 #[tauri::command]
+fn get_rdp_settings(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<storage::RdpSettings, String> {
+    storage.rdp_settings()
+}
+
+#[tauri::command]
+fn update_rdp_settings(
+    storage: tauri::State<'_, storage::Storage>,
+    request: storage::RdpSettings,
+) -> Result<storage::RdpSettings, String> {
+    storage.update_rdp_settings(request)
+}
+
+#[tauri::command]
+fn get_vnc_settings(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<storage::VncSettings, String> {
+    storage.vnc_settings()
+}
+
+#[tauri::command]
+fn update_vnc_settings(
+    storage: tauri::State<'_, storage::Storage>,
+    request: storage::VncSettings,
+) -> Result<storage::VncSettings, String> {
+    storage.update_vnc_settings(request)
+}
+
+#[tauri::command]
 fn get_screenshot_settings(
     storage: tauri::State<'_, storage::Storage>,
 ) -> Result<storage::ScreenshotSettings, String> {
@@ -1595,6 +1625,10 @@ pub fn run() {
             update_sftp_settings,
             get_url_settings,
             update_url_settings,
+            get_rdp_settings,
+            update_rdp_settings,
+            get_vnc_settings,
+            update_vnc_settings,
             get_screenshot_settings,
             update_screenshot_settings,
             get_ai_provider_settings,

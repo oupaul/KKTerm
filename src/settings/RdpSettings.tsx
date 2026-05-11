@@ -1,64 +1,127 @@
-import { Monitor } from "lucide-react";
+import { Monitor, Save } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlannedSettingsGrid, SettingsSectionHeader, type PlannedSetting } from "./shared";
+import { invokeCommand, isTauriRuntime } from "../lib/tauri";
+import { useWorkspaceStore } from "../store";
+import type { RdpColorDepth, RdpPerformanceProfile } from "../types";
+import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 export function RdpSettings() {
   const { t } = useTranslation();
-  const displaySettings: PlannedSetting[] = [
-    {
-      label: t("settings.resolution"),
-      value: t("settings.rdpResolutionValue"),
-      hint: t("settings.rdpResolutionHint"),
-    },
-    {
-      label: t("settings.colorDepth"),
-      value: t("settings.rdpColorDepthValue"),
-      hint: t("settings.rdpColorDepthHint"),
-    },
-    {
-      label: t("settings.enhancedGraphics"),
-      value: t("settings.rdpEnhancedGraphicsValue"),
-      hint: t("settings.rdpEnhancedGraphicsHint"),
-    },
-  ];
-  const networkSettings: PlannedSetting[] = [
-    {
-      label: t("settings.bandwidthProfile"),
-      value: t("settings.rdpBandwidthProfileValue"),
-      hint: t("settings.rdpBandwidthProfileHint"),
-    },
-    {
-      label: t("settings.bitmapCache"),
-      value: t("settings.rdpBitmapCacheValue"),
-      hint: t("settings.rdpBitmapCacheHint"),
-    },
-    {
-      label: t("settings.performanceFlags"),
-      value: t("settings.rdpPerformanceFlagsValue"),
-      hint: t("settings.rdpPerformanceFlagsHint"),
-    },
-  ];
+  const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
+  const setRdpSettings = useWorkspaceStore((state) => state.setRdpSettings);
+  const [draft, setDraft] = useState(rdpSettings);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(rdpSettings);
+
+  useEffect(() => {
+    setDraft(rdpSettings);
+  }, [rdpSettings]);
+
+  async function handleSave() {
+    setStatus("");
+    setError("");
+    try {
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_rdp_settings", { request: draft })
+        : draft;
+      setRdpSettings(saved);
+      setDraft(saved);
+      setStatus(t("settings.rdpSettingsSaved"));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  }
 
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
+        actions={
+          <button className="toolbar-button" disabled={!hasChanges} onClick={() => void handleSave()} type="button">
+            <Save size={15} />
+            {t("settings.save")}
+          </button>
+        }
         icon={<Monitor size={18} />}
         label={t("settings.sectionRdp")}
         title={t("settings.qualityDefaults")}
       />
+      {status ? <p className="settings-status success">{status}</p> : null}
+      {error ? <p className="settings-status error">{error}</p> : null}
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.display")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.rdpDisplayHint")}</p>
+        <div className="form-grid two-columns">
+          <label>
+            <span>{t("settings.colorDepth")}</span>
+            <select
+              value={draft.colorDepth}
+              onChange={(event) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  colorDepth: Number(event.currentTarget.value) as RdpColorDepth,
+                }))
+              }
+            >
+              <option value={32}>{t("settings.rdpColorDepth32")}</option>
+              <option value={24}>{t("settings.rdpColorDepth24")}</option>
+              <option value={16}>{t("settings.rdpColorDepth16")}</option>
+              <option value={15}>{t("settings.rdpColorDepth15")}</option>
+            </select>
+          </label>
+          <label>
+            <span>{t("settings.performanceFlags")}</span>
+            <select
+              value={draft.performanceProfile}
+              onChange={(event) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  performanceProfile: event.currentTarget.value as RdpPerformanceProfile,
+                }))
+              }
+            >
+              <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
+              <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
+              <option value="speed">{t("settings.rdpPerformanceSpeed")}</option>
+            </select>
+          </label>
         </div>
-        <PlannedSettingsGrid settings={displaySettings} />
       </fieldset>
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.networkPerformance")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.rdpNetworkHint")}</p>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.redirectClipboard}
+              onChange={(checked) => setDraft((settings) => ({ ...settings, redirectClipboard: checked }))}
+            />
+            <span>
+              <strong>{t("settings.rdpRedirectClipboard")}</strong>
+              <small>{t("settings.rdpRedirectClipboardHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.redirectDrives}
+              onChange={(checked) => setDraft((settings) => ({ ...settings, redirectDrives: checked }))}
+            />
+            <span>
+              <strong>{t("settings.rdpRedirectDrives")}</strong>
+              <small>{t("settings.rdpRedirectDrivesHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.bitmapCache}
+              onChange={(checked) => setDraft((settings) => ({ ...settings, bitmapCache: checked }))}
+            />
+            <span>
+              <strong>{t("settings.bitmapCache")}</strong>
+              <small>{t("settings.rdpBitmapCacheHint")}</small>
+            </span>
+          </label>
         </div>
-        <PlannedSettingsGrid settings={networkSettings} />
       </fieldset>
     </section>
   );

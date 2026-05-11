@@ -12,7 +12,7 @@ use std::{
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
-const SCHEMA_USER_VERSION: i32 = 7;
+const SCHEMA_USER_VERSION: i32 = 8;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS connections (
     tmux_connection_id TEXT,
     serial_line TEXT,
     serial_speed INTEGER,
+    rdp_options TEXT,
+    vnc_options TEXT,
     connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc')),
     status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
     sort_order INTEGER NOT NULL
@@ -197,6 +199,8 @@ pub struct ImportedDatabaseSnapshot {
     ssh_settings: SshSettings,
     sftp_settings: SftpSettings,
     url_settings: UrlSettings,
+    rdp_settings: RdpSettings,
+    vnc_settings: VncSettings,
     screenshot_settings: ScreenshotSettings,
     ai_provider_settings: AiProviderSettings,
     connection_tree: ConnectionTree,
@@ -279,6 +283,34 @@ pub struct SftpSettings {
 pub struct UrlSettings {
     #[serde(default)]
     ignore_certificate_errors: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RdpSettings {
+    #[serde(default = "default_rdp_color_depth")]
+    color_depth: u16,
+    #[serde(default = "default_remote_desktop_true")]
+    redirect_clipboard: bool,
+    #[serde(default)]
+    redirect_drives: bool,
+    #[serde(default = "default_remote_desktop_true")]
+    bitmap_cache: bool,
+    #[serde(default = "default_remote_desktop_performance_profile")]
+    performance_profile: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VncSettings {
+    #[serde(default = "default_remote_desktop_true")]
+    shared_session: bool,
+    #[serde(default)]
+    view_only: bool,
+    #[serde(default = "default_vnc_color_level")]
+    color_level: String,
+    #[serde(default = "default_vnc_preferred_encoding")]
+    preferred_encoding: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -421,6 +453,8 @@ pub struct SavedConnection {
     serial_speed: Option<u32>,
     url_credential_username: Option<String>,
     has_url_credential: bool,
+    rdp_options: Option<RdpConnectionOptions>,
+    vnc_options: Option<VncConnectionOptions>,
     #[serde(rename = "type")]
     connection_type: String,
     tags: Vec<String>,
@@ -448,6 +482,8 @@ pub struct CreateConnectionRequest {
     use_tmux_sessions: Option<bool>,
     serial_line: Option<String>,
     serial_speed: Option<u32>,
+    rdp_options: Option<RdpConnectionOptions>,
+    vnc_options: Option<VncConnectionOptions>,
 }
 
 #[derive(Deserialize)]
@@ -472,6 +508,40 @@ pub struct UpdateConnectionRequest {
     use_tmux_sessions: Option<bool>,
     serial_line: Option<String>,
     serial_speed: Option<u32>,
+    rdp_options: Option<RdpConnectionOptions>,
+    vnc_options: Option<VncConnectionOptions>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RdpConnectionOptions {
+    #[serde(default = "default_remote_desktop_true")]
+    inherit_defaults: bool,
+    #[serde(default)]
+    color_depth: Option<u16>,
+    #[serde(default)]
+    redirect_clipboard: Option<bool>,
+    #[serde(default)]
+    redirect_drives: Option<bool>,
+    #[serde(default)]
+    bitmap_cache: Option<bool>,
+    #[serde(default)]
+    performance_profile: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VncConnectionOptions {
+    #[serde(default = "default_remote_desktop_true")]
+    inherit_defaults: bool,
+    #[serde(default)]
+    shared_session: Option<bool>,
+    #[serde(default)]
+    view_only: Option<bool>,
+    #[serde(default)]
+    color_level: Option<String>,
+    #[serde(default)]
+    preferred_encoding: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -731,6 +801,8 @@ impl Storage {
             ssh_settings: self.ssh_settings()?,
             sftp_settings: self.sftp_settings()?,
             url_settings: self.url_settings()?,
+            rdp_settings: self.rdp_settings()?,
+            vnc_settings: self.vnc_settings()?,
             screenshot_settings: self.screenshot_settings()?,
             ai_provider_settings: self.ai_provider_settings()?,
             connection_tree: self.list_connection_tree()?,
@@ -1017,6 +1089,76 @@ impl Storage {
         Ok(settings)
     }
 
+    pub fn rdp_settings(&self) -> Result<RdpSettings, String> {
+        let connection = self.lock()?;
+        let value = connection
+            .query_row("SELECT value FROM settings WHERE key = 'rdp'", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()
+            .map_err(to_storage_error)?;
+
+        match value {
+            Some(value) => serde_json::from_str(&value)
+                .map(validate_rdp_settings)
+                .map_err(|error| format!("RDP settings are invalid: {error}"))?,
+            None => Ok(default_rdp_settings()),
+        }
+    }
+
+    pub fn update_rdp_settings(&self, request: RdpSettings) -> Result<RdpSettings, String> {
+        let settings = validate_rdp_settings(request)?;
+        let value = serde_json::to_string(&settings)
+            .map_err(|error| format!("failed to serialize RDP settings: {error}"))?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "INSERT INTO settings (key, value, updated_at)
+                 VALUES ('rdp', ?1, CURRENT_TIMESTAMP)
+                 ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP",
+                params![value],
+            )
+            .map_err(to_storage_error)?;
+        Ok(settings)
+    }
+
+    pub fn vnc_settings(&self) -> Result<VncSettings, String> {
+        let connection = self.lock()?;
+        let value = connection
+            .query_row("SELECT value FROM settings WHERE key = 'vnc'", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()
+            .map_err(to_storage_error)?;
+
+        match value {
+            Some(value) => serde_json::from_str(&value)
+                .map(validate_vnc_settings)
+                .map_err(|error| format!("VNC settings are invalid: {error}"))?,
+            None => Ok(default_vnc_settings()),
+        }
+    }
+
+    pub fn update_vnc_settings(&self, request: VncSettings) -> Result<VncSettings, String> {
+        let settings = validate_vnc_settings(request)?;
+        let value = serde_json::to_string(&settings)
+            .map_err(|error| format!("failed to serialize VNC settings: {error}"))?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "INSERT INTO settings (key, value, updated_at)
+                 VALUES ('vnc', ?1, CURRENT_TIMESTAMP)
+                 ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP",
+                params![value],
+            )
+            .map_err(to_storage_error)?;
+        Ok(settings)
+    }
+
     pub fn screenshot_settings(&self) -> Result<ScreenshotSettings, String> {
         let connection = self.lock()?;
         let value = connection
@@ -1144,6 +1286,8 @@ impl Storage {
         connection
             .execute_batch(CURRENT_SCHEMA)
             .map_err(to_storage_error)?;
+        ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
+        ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;
@@ -1176,6 +1320,10 @@ impl Storage {
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
         let local_shell = normalize_local_shell(request.local_shell, &connection_type)?;
         let data_partition = normalize_data_partition(request.data_partition, &connection_type)?;
+        let rdp_options = normalize_rdp_connection_options(request.rdp_options, &connection_type)?;
+        let vnc_options = normalize_vnc_connection_options(request.vnc_options, &connection_type)?;
+        let rdp_options_json = serialize_connection_options(&rdp_options, "RDP")?;
+        let vnc_options_json = serialize_connection_options(&vnc_options, "VNC")?;
         let id = make_connection_id(&name);
         let use_tmux_sessions =
             normalize_use_tmux_sessions(request.use_tmux_sessions, &connection_type);
@@ -1196,8 +1344,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, status, sort_order
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 'idle', ?18)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, connection_type, status, sort_order
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, 'idle', ?20)",
                 params![
                     id,
                     folder_id,
@@ -1215,6 +1363,8 @@ impl Storage {
                     tmux_connection_id,
                     serial_line,
                     serial_speed,
+                    rdp_options_json,
+                    vnc_options_json,
                     connection_type,
                     next_sort_order
                 ],
@@ -1251,6 +1401,8 @@ impl Storage {
             serial_speed,
             url_credential_username: None,
             has_url_credential: false,
+            rdp_options,
+            vnc_options,
             connection_type,
             tags,
             status: "idle".to_string(),
@@ -1284,6 +1436,10 @@ impl Storage {
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
         let local_shell = normalize_local_shell(request.local_shell, &connection_type)?;
         let data_partition = normalize_data_partition(request.data_partition, &connection_type)?;
+        let rdp_options = normalize_rdp_connection_options(request.rdp_options, &connection_type)?;
+        let vnc_options = normalize_vnc_connection_options(request.vnc_options, &connection_type)?;
+        let rdp_options_json = serialize_connection_options(&rdp_options, "RDP")?;
+        let vnc_options_json = serialize_connection_options(&vnc_options, "VNC")?;
         let use_tmux_sessions =
             normalize_use_tmux_sessions(request.use_tmux_sessions, &connection_type);
 
@@ -1348,8 +1504,10 @@ impl Storage {
                      tmux_connection_id = ?13,
                      serial_line = ?14,
                      serial_speed = ?15,
-                     sort_order = ?16
-                 WHERE id = ?17",
+                     rdp_options = ?16,
+                     vnc_options = ?17,
+                     sort_order = ?18
+                 WHERE id = ?19",
                 params![
                     target_folder_id,
                     name,
@@ -1366,6 +1524,8 @@ impl Storage {
                     tmux_connection_id,
                     serial_line,
                     serial_speed,
+                    rdp_options_json,
+                    vnc_options_json,
                     sort_order,
                     &id
                 ],
@@ -1932,6 +2092,32 @@ fn open_initialized_connection(db_path: &Path) -> Result<SqliteConnection, Strin
     Ok(connection)
 }
 
+fn ensure_column(
+    connection: &SqliteConnection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<(), String> {
+    let mut statement = connection
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(to_storage_error)?;
+    let columns = statement
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)?;
+    if columns.iter().any(|existing| existing == column) {
+        return Ok(());
+    }
+    connection
+        .execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+            [],
+        )
+        .map_err(to_storage_error)?;
+    Ok(())
+}
+
 fn timestamp_for_filename() -> String {
     let format = time::macros::format_description!("[year][month][day]-[hour][minute][second]");
     OffsetDateTime::now_utc()
@@ -1994,6 +2180,8 @@ fn validate_import_database(path: &Path) -> Result<(), String> {
     storage.appearance_settings()?;
     storage.ssh_settings()?;
     storage.sftp_settings()?;
+    storage.rdp_settings()?;
+    storage.vnc_settings()?;
     storage.screenshot_settings()?;
     storage.ai_provider_settings()?;
     storage.list_connection_tree()?;
@@ -2011,7 +2199,7 @@ fn list_connections_for_folder(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed,
+            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
@@ -2273,14 +2461,14 @@ fn get_connection_by_id(
 ) -> Result<SavedConnection, String> {
     let saved_connection = connection
         .query_row(
-            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed,
+            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
             params![connection_id],
             |row| {
-                let url_credential_username: Option<String> = row.get(16)?;
+                let url_credential_username: Option<String> = row.get(18)?;
                 Ok(SavedConnection {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -2298,6 +2486,8 @@ fn get_connection_by_id(
                     connection_type: row.get(13)?,
                     serial_line: row.get(14)?,
                     serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(15)?)?,
+                    rdp_options: parse_rdp_connection_options(row.get(16)?)?,
+                    vnc_options: parse_vnc_connection_options(row.get(17)?)?,
                     url_credential_username: url_credential_username.clone(),
                     has_url_credential: url_credential_username.is_some(),
                     status: "idle".to_string(),
@@ -2316,7 +2506,7 @@ fn get_connection_by_id(
 }
 
 fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedConnection> {
-    let url_credential_username: Option<String> = row.get(16)?;
+    let url_credential_username: Option<String> = row.get(18)?;
     Ok(SavedConnection {
         id: row.get(0)?,
         name: row.get(1)?,
@@ -2334,6 +2524,8 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         connection_type: row.get(13)?,
         serial_line: row.get(14)?,
         serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(15)?)?,
+        rdp_options: parse_rdp_connection_options(row.get(16)?)?,
+        vnc_options: parse_vnc_connection_options(row.get(17)?)?,
         url_credential_username: url_credential_username.clone(),
         has_url_credential: url_credential_username.is_some(),
         status: "idle".to_string(),
@@ -2603,6 +2795,105 @@ fn normalize_optional_id(value: Option<String>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
+fn normalize_rdp_connection_options(
+    options: Option<RdpConnectionOptions>,
+    connection_type: &str,
+) -> Result<Option<RdpConnectionOptions>, String> {
+    if connection_type != "rdp" {
+        return Ok(None);
+    }
+    let Some(mut options) = options else {
+        return Ok(None);
+    };
+    if options.inherit_defaults {
+        return Ok(Some(RdpConnectionOptions {
+            inherit_defaults: true,
+            color_depth: None,
+            redirect_clipboard: None,
+            redirect_drives: None,
+            bitmap_cache: None,
+            performance_profile: None,
+        }));
+    }
+    if let Some(color_depth) = options.color_depth {
+        options.color_depth = Some(validate_rdp_color_depth(color_depth)?);
+    }
+    if let Some(profile) = options.performance_profile {
+        options.performance_profile = Some(validate_remote_desktop_performance_profile(profile)?);
+    }
+    Ok(Some(options))
+}
+
+fn normalize_vnc_connection_options(
+    options: Option<VncConnectionOptions>,
+    connection_type: &str,
+) -> Result<Option<VncConnectionOptions>, String> {
+    if connection_type != "vnc" {
+        return Ok(None);
+    }
+    let Some(mut options) = options else {
+        return Ok(None);
+    };
+    if options.inherit_defaults {
+        return Ok(Some(VncConnectionOptions {
+            inherit_defaults: true,
+            shared_session: None,
+            view_only: None,
+            color_level: None,
+            preferred_encoding: None,
+        }));
+    }
+    if let Some(color_level) = options.color_level {
+        options.color_level = Some(validate_vnc_color_level(color_level)?);
+    }
+    if let Some(encoding) = options.preferred_encoding {
+        options.preferred_encoding = Some(validate_vnc_preferred_encoding(encoding)?);
+    }
+    Ok(Some(options))
+}
+
+fn serialize_connection_options<T: Serialize>(
+    options: &Option<T>,
+    label: &str,
+) -> Result<Option<String>, String> {
+    options
+        .as_ref()
+        .map(|options| {
+            serde_json::to_string(options)
+                .map_err(|error| format!("failed to serialize {label} connection options: {error}"))
+        })
+        .transpose()
+}
+
+fn parse_rdp_connection_options(
+    value: Option<String>,
+) -> rusqlite::Result<Option<RdpConnectionOptions>> {
+    parse_connection_options(value)
+}
+
+fn parse_vnc_connection_options(
+    value: Option<String>,
+) -> rusqlite::Result<Option<VncConnectionOptions>> {
+    parse_connection_options(value)
+}
+
+fn parse_connection_options<T>(value: Option<String>) -> rusqlite::Result<Option<T>>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    value
+        .map(|value| {
+            serde_json::from_str(&value).map_err(|error| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Text,
+                    Box::new(error),
+                )
+            })
+        })
+        .transpose()
+}
+
 fn required_field(field: &str, value: String) -> Result<String, String> {
     let trimmed = value.trim().to_string();
     if trimmed.is_empty() {
@@ -2697,6 +2988,45 @@ fn default_url_settings() -> UrlSettings {
     UrlSettings {
         ignore_certificate_errors: false,
     }
+}
+
+fn default_rdp_settings() -> RdpSettings {
+    RdpSettings {
+        color_depth: default_rdp_color_depth(),
+        redirect_clipboard: true,
+        redirect_drives: false,
+        bitmap_cache: true,
+        performance_profile: default_remote_desktop_performance_profile(),
+    }
+}
+
+fn default_rdp_color_depth() -> u16 {
+    32
+}
+
+fn default_remote_desktop_true() -> bool {
+    true
+}
+
+fn default_remote_desktop_performance_profile() -> String {
+    "balanced".to_string()
+}
+
+fn default_vnc_settings() -> VncSettings {
+    VncSettings {
+        shared_session: true,
+        view_only: false,
+        color_level: default_vnc_color_level(),
+        preferred_encoding: default_vnc_preferred_encoding(),
+    }
+}
+
+fn default_vnc_color_level() -> String {
+    "full".to_string()
+}
+
+fn default_vnc_preferred_encoding() -> String {
+    "tight".to_string()
 }
 
 fn default_screenshot_settings() -> ScreenshotSettings {
@@ -2935,6 +3265,47 @@ fn validate_url_settings(settings: UrlSettings) -> Result<UrlSettings, String> {
     Ok(settings)
 }
 
+fn validate_rdp_settings(mut settings: RdpSettings) -> Result<RdpSettings, String> {
+    settings.color_depth = validate_rdp_color_depth(settings.color_depth)?;
+    settings.performance_profile =
+        validate_remote_desktop_performance_profile(settings.performance_profile)?;
+    Ok(settings)
+}
+
+fn validate_vnc_settings(mut settings: VncSettings) -> Result<VncSettings, String> {
+    settings.color_level = validate_vnc_color_level(settings.color_level)?;
+    settings.preferred_encoding = validate_vnc_preferred_encoding(settings.preferred_encoding)?;
+    Ok(settings)
+}
+
+fn validate_rdp_color_depth(value: u16) -> Result<u16, String> {
+    match value {
+        15 | 16 | 24 | 32 => Ok(value),
+        _ => Err("RDP color depth must be 15, 16, 24, or 32".to_string()),
+    }
+}
+
+fn validate_remote_desktop_performance_profile(value: String) -> Result<String, String> {
+    match value.trim().to_lowercase().as_str() {
+        "balanced" | "quality" | "speed" => Ok(value.trim().to_lowercase()),
+        _ => Err("RDP performance profile must be balanced, quality, or speed".to_string()),
+    }
+}
+
+fn validate_vnc_color_level(value: String) -> Result<String, String> {
+    match value.trim().to_lowercase().as_str() {
+        "full" | "256" | "64" | "8" => Ok(value.trim().to_lowercase()),
+        _ => Err("VNC color level must be full, 256, 64, or 8".to_string()),
+    }
+}
+
+fn validate_vnc_preferred_encoding(value: String) -> Result<String, String> {
+    match value.trim().to_lowercase().as_str() {
+        "tight" | "zrle" | "raw" => Ok(value.trim().to_lowercase()),
+        _ => Err("VNC preferred encoding must be tight, zrle, or raw".to_string()),
+    }
+}
+
 fn validate_screenshot_settings(
     mut settings: ScreenshotSettings,
 ) -> Result<ScreenshotSettings, String> {
@@ -3168,6 +3539,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("SSH connection is created")
     }
@@ -3190,6 +3563,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("local connection is created")
     }
@@ -3250,6 +3625,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("connection is created");
 
@@ -3291,6 +3668,8 @@ mod tests {
                 use_tmux_sessions: Some(true),
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("RDP connection is created");
 
@@ -3319,6 +3698,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("VNC connection is created");
 
@@ -3348,6 +3729,8 @@ mod tests {
                 use_tmux_sessions: Some(true),
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("Telnet connection is created");
 
@@ -3374,6 +3757,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: Some("COM7".to_string()),
                 serial_speed: Some(115200),
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("Serial connection is created");
 
@@ -3405,6 +3790,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("URL connection is created");
 
@@ -3530,6 +3917,8 @@ mod tests {
                 use_tmux_sessions: Some(false),
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("connection is updated");
 
@@ -3711,6 +4100,8 @@ mod tests {
                 use_tmux_sessions: None,
                 serial_line: None,
                 serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
             })
             .expect("connection is created in folder");
 
@@ -4229,6 +4620,150 @@ mod tests {
 
         let reloaded = storage.url_settings().expect("URL settings reload");
         assert!(reloaded.ignore_certificate_errors);
+    }
+
+    #[test]
+    fn rdp_and_vnc_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("remote-desktop-settings"))
+            .expect("storage opens");
+
+        let rdp_defaults = storage.rdp_settings().expect("default RDP settings load");
+        assert_eq!(rdp_defaults.color_depth, 32);
+        assert!(rdp_defaults.redirect_clipboard);
+        assert!(!rdp_defaults.redirect_drives);
+
+        storage
+            .update_rdp_settings(RdpSettings {
+                color_depth: 24,
+                redirect_clipboard: false,
+                redirect_drives: true,
+                bitmap_cache: true,
+                performance_profile: "quality".to_string(),
+            })
+            .expect("RDP settings update");
+
+        let rdp_reloaded = storage.rdp_settings().expect("RDP settings reload");
+        assert_eq!(rdp_reloaded.color_depth, 24);
+        assert!(!rdp_reloaded.redirect_clipboard);
+        assert!(rdp_reloaded.redirect_drives);
+        assert_eq!(rdp_reloaded.performance_profile, "quality");
+
+        let vnc_defaults = storage.vnc_settings().expect("default VNC settings load");
+        assert!(vnc_defaults.shared_session);
+        assert_eq!(vnc_defaults.color_level, "full");
+
+        storage
+            .update_vnc_settings(VncSettings {
+                shared_session: false,
+                view_only: true,
+                color_level: "256".to_string(),
+                preferred_encoding: "raw".to_string(),
+            })
+            .expect("VNC settings update");
+
+        let vnc_reloaded = storage.vnc_settings().expect("VNC settings reload");
+        assert!(!vnc_reloaded.shared_session);
+        assert!(vnc_reloaded.view_only);
+        assert_eq!(vnc_reloaded.color_level, "256");
+        assert_eq!(vnc_reloaded.preferred_encoding, "raw");
+    }
+
+    #[test]
+    fn remote_desktop_connection_options_are_optional_protocol_overrides() {
+        let storage = Storage::open(temp_db_path("remote-desktop-connection-options"))
+            .expect("storage opens");
+
+        let rdp = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Jumpbox".to_string(),
+                host: "jumpbox.internal".to_string(),
+                user: "DOMAIN\\admin".to_string(),
+                connection_type: "rdp".to_string(),
+                folder_id: None,
+                port: Some(3389),
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: Some(RdpConnectionOptions {
+                    inherit_defaults: false,
+                    color_depth: Some(24),
+                    redirect_clipboard: Some(false),
+                    redirect_drives: Some(true),
+                    bitmap_cache: Some(true),
+                    performance_profile: Some("quality".to_string()),
+                }),
+                vnc_options: Some(VncConnectionOptions {
+                    inherit_defaults: false,
+                    shared_session: Some(false),
+                    view_only: Some(true),
+                    color_level: Some("256".to_string()),
+                    preferred_encoding: Some("raw".to_string()),
+                }),
+            })
+            .expect("RDP connection with options is created");
+
+        assert_eq!(rdp.connection_type, "rdp");
+        assert!(rdp.rdp_options.is_some());
+        assert!(rdp.vnc_options.is_none());
+
+        let vnc = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Console".to_string(),
+                host: "console.internal".to_string(),
+                user: "".to_string(),
+                connection_type: "vnc".to_string(),
+                folder_id: None,
+                port: Some(5900),
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: Some(RdpConnectionOptions {
+                    inherit_defaults: false,
+                    color_depth: Some(24),
+                    redirect_clipboard: Some(false),
+                    redirect_drives: Some(true),
+                    bitmap_cache: Some(true),
+                    performance_profile: Some("quality".to_string()),
+                }),
+                vnc_options: Some(VncConnectionOptions {
+                    inherit_defaults: false,
+                    shared_session: Some(false),
+                    view_only: Some(true),
+                    color_level: Some("256".to_string()),
+                    preferred_encoding: Some("raw".to_string()),
+                }),
+            })
+            .expect("VNC connection with options is created");
+
+        assert_eq!(vnc.connection_type, "vnc");
+        assert!(vnc.rdp_options.is_none());
+        assert!(vnc.vnc_options.is_some());
+
+        let tree = storage.list_connection_tree().expect("tree reloads");
+        let saved_rdp = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == rdp.id)
+            .expect("RDP connection is listed");
+        assert_eq!(
+            saved_rdp
+                .rdp_options
+                .as_ref()
+                .and_then(|options| options.color_depth),
+            Some(24)
+        );
     }
 
     #[test]

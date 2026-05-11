@@ -160,6 +160,22 @@ mod platform {
         y: f64,
         width: f64,
         height: f64,
+        options: Option<RdpSessionOptions>,
+    }
+
+    #[derive(Clone, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct RdpSessionOptions {
+        #[serde(default = "default_color_depth")]
+        color_depth: u16,
+        #[serde(default = "default_true")]
+        redirect_clipboard: bool,
+        #[serde(default)]
+        redirect_drives: bool,
+        #[serde(default = "default_true")]
+        bitmap_cache: bool,
+        #[serde(default = "default_performance_profile")]
+        performance_profile: String,
     }
 
     #[derive(Serialize)]
@@ -618,6 +634,7 @@ mod platform {
             request.password.as_deref(),
             desktop_width_for(size.2),
             desktop_height_for(size.3),
+            &request.options.unwrap_or_default(),
         )?;
         invoke_method(&dispatch, "Connect")?;
 
@@ -719,6 +736,7 @@ mod platform {
         password: Option<&str>,
         desktop_width: i32,
         desktop_height: i32,
+        options: &RdpSessionOptions,
     ) -> Result<(), String> {
         let (domain, username) = split_windows_user(user);
         set_property_string(dispatch, "Server", host)?;
@@ -728,7 +746,7 @@ mod platform {
         if let Some(domain) = domain.as_deref() {
             set_property_string(dispatch, "Domain", domain)?;
         }
-        set_property_i32(dispatch, "ColorDepth", 32)?;
+        set_property_i32(dispatch, "ColorDepth", i32::from(options.color_depth))?;
         set_property_i32(dispatch, "DesktopWidth", desktop_width)?;
         set_property_i32(dispatch, "DesktopHeight", desktop_height)?;
         set_optional_property_bool(dispatch, "PromptForCredentials", password.is_none())?;
@@ -746,19 +764,58 @@ mod platform {
             // Windows shortcut replacements (including Ctrl+Alt+End for SAS) must be routed to
             // the remote host, while higher-risk device redirects stay disabled until KKTerm
             // exposes durable Connection settings for them.
-            let _ = set_property_bool(&advanced, "RedirectClipboard", true);
-            let _ = set_property_bool(&advanced, "RedirectDrives", false);
+            let _ = set_property_bool(&advanced, "RedirectClipboard", options.redirect_clipboard);
+            let _ = set_property_bool(&advanced, "RedirectDrives", options.redirect_drives);
             let _ = set_property_bool(&advanced, "RedirectPorts", false);
             let _ = set_property_bool(&advanced, "RedirectPrinters", false);
             let _ = set_property_bool(&advanced, "RedirectSmartCards", false);
             let _ = set_property_i32(&advanced, "HotKeyCtrlAltDel", VK_END_KEY as i32);
             let _ = set_property_bool(&advanced, "SmartSizing", false);
+            let _ = set_property_bool(&advanced, "BitmapPersistence", options.bitmap_cache);
+            let _ = set_property_bool(&advanced, "CachePersistenceActive", options.bitmap_cache);
+            let _ = set_property_i32(
+                &advanced,
+                "PerformanceFlags",
+                performance_flags_for(&options.performance_profile),
+            );
         }
         if let Some(secured) = get_secured_settings(dispatch) {
             let _ = set_property_i32(&secured, "KeyboardHookMode", 1);
         }
 
         Ok(())
+    }
+
+    impl Default for RdpSessionOptions {
+        fn default() -> Self {
+            Self {
+                color_depth: default_color_depth(),
+                redirect_clipboard: true,
+                redirect_drives: false,
+                bitmap_cache: true,
+                performance_profile: default_performance_profile(),
+            }
+        }
+    }
+
+    fn default_color_depth() -> u16 {
+        32
+    }
+
+    fn default_true() -> bool {
+        true
+    }
+
+    fn default_performance_profile() -> String {
+        "balanced".to_string()
+    }
+
+    fn performance_flags_for(profile: &str) -> i32 {
+        match profile {
+            "quality" => 0,
+            "speed" => 0x0000_0001 | 0x0000_0002 | 0x0000_0004 | 0x0000_0008 | 0x0000_0020,
+            _ => 0x0000_0001 | 0x0000_0004 | 0x0000_0008,
+        }
     }
 
     fn split_windows_user(user: &str) -> (Option<String>, String) {
@@ -1692,6 +1749,17 @@ mod platform {
         pub y: f64,
         pub width: f64,
         pub height: f64,
+        pub options: Option<RdpSessionOptions>,
+    }
+
+    #[derive(Clone, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct RdpSessionOptions {
+        pub color_depth: u16,
+        pub redirect_clipboard: bool,
+        pub redirect_drives: bool,
+        pub bitmap_cache: bool,
+        pub performance_profile: String,
     }
 
     #[derive(Serialize)]

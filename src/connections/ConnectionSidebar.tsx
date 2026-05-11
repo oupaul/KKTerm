@@ -12,7 +12,7 @@ import { ariaExpanded, dialogButtonAria } from "../lib/aria";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
 import { connectionTree } from "../app-defaults";
 import { useWorkspaceStore } from "../store";
-import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, SplitDirection, SshSettings, UpdateConnectionRequest } from "../types";
+import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, UpdateConnectionRequest, VncSettings } from "../types";
 
 type DraggedTreeItem =
   | { kind: "folder"; folderId: string }
@@ -141,6 +141,8 @@ export function ConnectionSidebar({
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
+  const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
+  const vncSettings = useWorkspaceStore((state) => state.vncSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [tree, setTree] = useState<ConnectionTree>(connectionTree);
   const [formMode, setFormMode] = useState<"save" | "quick" | null>(null);
@@ -1271,6 +1273,8 @@ export function ConnectionSidebar({
           tree={tree}
           mode={formMode}
           sshSettings={sshSettings}
+          rdpSettings={rdpSettings}
+          vncSettings={vncSettings}
           onGeneratedSshKey={(generated) =>
             showConnectionSuccessStatus(
               t("settings.sshKeyGenerated", {
@@ -1316,6 +1320,8 @@ export function ConnectionSidebar({
           tree={tree}
           mode="edit"
           sshSettings={sshSettings}
+          rdpSettings={rdpSettings}
+          vncSettings={vncSettings}
           onGeneratedSshKey={(generated) =>
             showConnectionSuccessStatus(
               t("settings.sshKeyGenerated", {
@@ -2055,7 +2061,9 @@ function ConnectionDialog({
   initialFolderId,
   tree,
   mode,
+  rdpSettings,
   sshSettings,
+  vncSettings,
   onGeneratedSshKey,
   onCancel,
   onSubmit,
@@ -2066,7 +2074,9 @@ function ConnectionDialog({
   initialFolderId?: string;
   tree: ConnectionTree;
   mode: "save" | "quick" | "edit";
+  rdpSettings: RdpSettings;
   sshSettings: SshSettings;
+  vncSettings: VncSettings;
   onGeneratedSshKey?: (generated: { privateKeyPath: string; publicKeyPath: string }) => void;
   onCancel: () => void;
   onSubmit: (request: ConnectionDialogRequest) => void | Promise<void>;
@@ -2168,6 +2178,8 @@ function ConnectionDialog({
     const keyPath = String(form.get("keyPath") ?? "").trim();
     const proxyJump = String(form.get("proxyJump") ?? "").trim();
     const useTmuxSessions = form.get("useTmuxSessions") === "on";
+    const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
+    const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
 
     void onSubmit({
       name,
@@ -2197,6 +2209,31 @@ function ConnectionDialog({
       dataPartition:
         connectionType === "url"
           ? String(form.get("dataPartition") ?? "").trim() || undefined
+          : undefined,
+      rdpOptions:
+        connectionType === "rdp"
+          ? {
+              inheritDefaults: inheritRdpDefaults,
+              colorDepth: Number(String(form.get("rdpColorDepth") ?? rdpSettings.colorDepth)) as RdpSettings["colorDepth"],
+              redirectClipboard: form.get("rdpRedirectClipboard") === "on",
+              redirectDrives: form.get("rdpRedirectDrives") === "on",
+              bitmapCache: form.get("rdpBitmapCache") === "on",
+              performanceProfile: String(
+                form.get("rdpPerformanceProfile") ?? rdpSettings.performanceProfile,
+              ) as RdpSettings["performanceProfile"],
+            }
+          : undefined,
+      vncOptions:
+        connectionType === "vnc"
+          ? {
+              inheritDefaults: inheritVncDefaults,
+              sharedSession: form.get("vncSharedSession") === "on",
+              viewOnly: form.get("vncViewOnly") === "on",
+              colorLevel: String(form.get("vncColorLevel") ?? vncSettings.colorLevel) as VncSettings["colorLevel"],
+              preferredEncoding: String(
+                form.get("vncPreferredEncoding") ?? vncSettings.preferredEncoding,
+              ) as VncSettings["preferredEncoding"],
+            }
           : undefined,
       password:
         isTelnetConnection
@@ -2555,6 +2592,94 @@ function ConnectionDialog({
                   </label>
                 </div>
               </>
+            ) : null}
+            {connectionType === "rdp" ? (
+              <fieldset className="connection-session-fields">
+                <legend>{t("connections.rdpOptions")}</legend>
+                <label className="connection-session-toggle">
+                  <span>{t("connections.inheritSettingsDefaults")}</span>
+                  <input
+                    name="rdpInheritDefaults"
+                    type="checkbox"
+                    defaultChecked={initialConnection?.rdpOptions?.inheritDefaults ?? true}
+                  />
+                </label>
+                <div className="connection-option-fields">
+                  <label>
+                    <span>{t("settings.colorDepth")}</span>
+                    <select name="rdpColorDepth" defaultValue={initialConnection?.rdpOptions?.colorDepth ?? rdpSettings.colorDepth}>
+                      <option value={32}>{t("settings.rdpColorDepth32")}</option>
+                      <option value={24}>{t("settings.rdpColorDepth24")}</option>
+                      <option value={16}>{t("settings.rdpColorDepth16")}</option>
+                      <option value={15}>{t("settings.rdpColorDepth15")}</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>{t("settings.performanceFlags")}</span>
+                    <select name="rdpPerformanceProfile" defaultValue={initialConnection?.rdpOptions?.performanceProfile ?? rdpSettings.performanceProfile}>
+                      <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
+                      <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
+                      <option value="speed">{t("settings.rdpPerformanceSpeed")}</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="connection-session-fields">
+                  <label className="connection-session-toggle">
+                    <span>{t("settings.rdpRedirectClipboard")}</span>
+                    <input name="rdpRedirectClipboard" type="checkbox" defaultChecked={initialConnection?.rdpOptions?.redirectClipboard ?? rdpSettings.redirectClipboard} />
+                  </label>
+                  <label className="connection-session-toggle">
+                    <span>{t("settings.rdpRedirectDrives")}</span>
+                    <input name="rdpRedirectDrives" type="checkbox" defaultChecked={initialConnection?.rdpOptions?.redirectDrives ?? rdpSettings.redirectDrives} />
+                  </label>
+                  <label className="connection-session-toggle">
+                    <span>{t("settings.bitmapCache")}</span>
+                    <input name="rdpBitmapCache" type="checkbox" defaultChecked={initialConnection?.rdpOptions?.bitmapCache ?? rdpSettings.bitmapCache} />
+                  </label>
+                </div>
+              </fieldset>
+            ) : null}
+            {connectionType === "vnc" ? (
+              <fieldset className="connection-session-fields">
+                <legend>{t("connections.vncOptions")}</legend>
+                <label className="connection-session-toggle">
+                  <span>{t("connections.inheritSettingsDefaults")}</span>
+                  <input
+                    name="vncInheritDefaults"
+                    type="checkbox"
+                    defaultChecked={initialConnection?.vncOptions?.inheritDefaults ?? true}
+                  />
+                </label>
+                <div className="connection-option-fields">
+                  <label>
+                    <span>{t("settings.preferredEncoding")}</span>
+                    <select name="vncPreferredEncoding" defaultValue={initialConnection?.vncOptions?.preferredEncoding ?? vncSettings.preferredEncoding}>
+                      <option value="tight">{t("settings.vncEncodingTight")}</option>
+                      <option value="zrle">{t("settings.vncEncodingZrle")}</option>
+                      <option value="raw">{t("settings.vncEncodingRaw")}</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>{t("settings.colorLevel")}</span>
+                    <select name="vncColorLevel" defaultValue={initialConnection?.vncOptions?.colorLevel ?? vncSettings.colorLevel}>
+                      <option value="full">{t("settings.vncColorFull")}</option>
+                      <option value="256">{t("settings.vncColor256")}</option>
+                      <option value="64">{t("settings.vncColor64")}</option>
+                      <option value="8">{t("settings.vncColor8")}</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="connection-session-fields">
+                  <label className="connection-session-toggle">
+                    <span>{t("settings.vncSharedSession")}</span>
+                    <input name="vncSharedSession" type="checkbox" defaultChecked={initialConnection?.vncOptions?.sharedSession ?? vncSettings.sharedSession} />
+                  </label>
+                  <label className="connection-session-toggle">
+                    <span>{t("settings.vncViewOnly")}</span>
+                    <input name="vncViewOnly" type="checkbox" defaultChecked={initialConnection?.vncOptions?.viewOnly ?? vncSettings.viewOnly} />
+                  </label>
+                </div>
+              </fieldset>
             ) : null}
           </div>
         ) : null}

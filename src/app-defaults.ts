@@ -3,9 +3,11 @@ import type {
   AiProviderSettings,
   ConnectionTree,
   GeneralSettings,
+  RdpSettings,
   SftpSettings,
   SshSettings,
   UrlSettings,
+  VncSettings,
   TerminalSettings,
   WorkspaceTab,
 } from "./types";
@@ -60,6 +62,21 @@ export const defaultSftpSettings: SftpSettings = {
 
 export const defaultUrlSettings: UrlSettings = {
   ignoreCertificateErrors: false,
+};
+
+export const defaultRdpSettings: RdpSettings = {
+  colorDepth: 32,
+  redirectClipboard: true,
+  redirectDrives: false,
+  bitmapCache: true,
+  performanceProfile: "balanced",
+};
+
+export const defaultVncSettings: VncSettings = {
+  sharedSession: true,
+  viewOnly: false,
+  colorLevel: "full",
+  preferredEncoding: "tight",
 };
 
 export const defaultAiAssistantToolSettings = {
