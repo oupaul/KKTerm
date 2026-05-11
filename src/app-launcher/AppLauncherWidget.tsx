@@ -148,26 +148,56 @@ export function AppLauncherWidget() {
   async function addEntry() {
     let selectedPath: string | null = null;
     if (isTauriRuntime()) {
-      selectedPath = await selectAppLauncherFile({
-        filterName: t("appLauncher.fileFilter"),
-        title: t("appLauncher.selectFileTitle"),
-      });
+      try {
+        selectedPath = await selectAppLauncherFile({
+          allFilesFilterName: t("appLauncher.allFilesFilter"),
+          filterName: t("appLauncher.fileFilter"),
+          title: t("appLauncher.selectFileTitle"),
+        });
+      } catch (error) {
+        showStatusBarNotice(
+          t("appLauncher.selectError", { message: errorMessage(error) }),
+          { tone: "error" },
+        );
+        openDraftDialog();
+        return;
+      }
       if (!selectedPath) {
         return;
       }
     }
 
-    const prepared = selectedPath ? await prepareAppLauncherEntry(selectedPath) : undefined;
+    try {
+      const prepared = selectedPath ? await prepareAppLauncherEntry(selectedPath) : undefined;
+      if (selectedPath) {
+        await saveDraft(createDraft(prepared?.path ?? selectedPath, prepared));
+        return;
+      }
+      openDraftDialog();
+    } catch (error) {
+      showStatusBarNotice(
+        t("appLauncher.selectError", { message: errorMessage(error) }),
+        { tone: "error" },
+      );
+      openDraftDialog(selectedPath ?? "");
+    }
+  }
+
+  function openDraftDialog(path = "", prepared?: PreparedAppLauncherEntry) {
+    setDialogDraft(createDraft(path, prepared));
+  }
+
+  function createDraft(path: string, prepared?: PreparedAppLauncherEntry): EntryDraft {
     const now = new Date().toISOString();
-    setDialogDraft({
+    return {
       id: `app-launcher-${Date.now()}`,
       name: prepared?.name ?? "",
-      path: prepared?.path ?? "",
+      path,
       arguments: "",
       workingDirectory: "",
       iconDataUrl: prepared?.iconDataUrl ?? "",
       createdAt: now,
-    });
+    };
   }
 
   function editEntry(entry: AppLauncherEntry) {
@@ -318,6 +348,7 @@ function AppLauncherTile({
 }) {
   const { t } = useTranslation();
   const missing = prepared?.exists === false;
+  const iconDataUrl = prepared?.iconDataUrl ?? entry.iconDataUrl;
 
   function openMenuFromElement(element: HTMLElement) {
     const bounds = element.getBoundingClientRect();
@@ -344,8 +375,8 @@ function AppLauncherTile({
       type="button"
     >
       <span className="app-launcher-tile-icon" aria-hidden="true">
-        {entry.iconDataUrl || prepared?.iconDataUrl ? (
-          <img alt="" src={entry.iconDataUrl ?? prepared?.iconDataUrl ?? undefined} />
+        {iconDataUrl ? (
+          <img alt="" src={iconDataUrl} />
         ) : (
           <AppWindow size={20} />
         )}

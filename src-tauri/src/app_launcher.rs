@@ -204,8 +204,8 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     use std::mem::{size_of, zeroed};
     use std::ptr::{null_mut};
     use windows_sys::Win32::Graphics::Gdi::{
-        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits,
-        SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits,
+        ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
     };
     use windows_sys::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
     use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, DrawIconEx, DI_NORMAL};
@@ -226,14 +226,22 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     }
 
     const ICON_SIZE: i32 = 32;
-    let hdc = unsafe { CreateCompatibleDC(null_mut()) };
-    if hdc.is_null() {
+    let screen_hdc = unsafe { GetDC(null_mut()) };
+    if screen_hdc.is_null() {
         unsafe {
             DestroyIcon(shell_info.hIcon);
         }
         return None;
     }
-    let bitmap = unsafe { CreateCompatibleBitmap(hdc, ICON_SIZE, ICON_SIZE) };
+    let hdc = unsafe { CreateCompatibleDC(screen_hdc) };
+    if hdc.is_null() {
+        unsafe {
+            ReleaseDC(null_mut(), screen_hdc);
+            DestroyIcon(shell_info.hIcon);
+        }
+        return None;
+    }
+    let bitmap = unsafe { CreateCompatibleBitmap(screen_hdc, ICON_SIZE, ICON_SIZE) };
     if bitmap.is_null() {
         unsafe {
             DeleteDC(hdc);
@@ -312,6 +320,9 @@ fn native_icon_data_url(path: &str) -> Option<String> {
             pixel[3] = 255;
         }
     }
+    if !rgba_has_visible_pixels(&rgba) {
+        return None;
+    }
     let mut png = Vec::new();
     PngEncoder::new(&mut png)
         .write_image(
@@ -345,6 +356,11 @@ fn path_extension(path: &str) -> Option<String> {
         .extension()
         .and_then(|extension| extension.to_str())
         .map(|extension| extension.to_lowercase())
+}
+
+fn rgba_has_visible_pixels(rgba: &[u8]) -> bool {
+    rgba.chunks_exact(4)
+        .any(|pixel| pixel[3] > 0 && (pixel[0] != 0 || pixel[1] != 0 || pixel[2] != 0))
 }
 
 #[cfg(target_os = "windows")]
@@ -385,5 +401,29 @@ mod tests {
 
         assert_eq!(plan.target, "C:\\Tools\\tool.exe");
         assert_eq!(plan.operation, Some("runasuser"));
+    }
+
+    #[test]
+    fn visible_icon_pixels_reject_all_transparent_images() {
+        assert!(!rgba_has_visible_pixels(&[0, 0, 0, 0, 0, 0, 0, 0]));
+        assert!(rgba_has_visible_pixels(&[0, 0, 0, 0, 12, 34, 56, 255]));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn native_icon_data_url_extracts_visible_windows_app_icon() {
+        let system_root =
+            std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+        let notepad = std::path::Path::new(&system_root)
+            .join("System32")
+            .join("notepad.exe");
+        if !notepad.exists() {
+            return;
+        }
+
+        let icon_data_url = native_icon_data_url(&notepad.to_string_lossy())
+            .expect("notepad icon should be extractable");
+
+        assert!(icon_data_url.starts_with("data:image/png;base64,"));
     }
 }

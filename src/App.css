@@ -1122,7 +1122,7 @@ button {
   line-height: 1.35;
 }
 
-.app-launcher-dialog-backdrop {
+.dialog-backdrop.app-launcher-dialog-backdrop {
   z-index: 100;
 }
 
@@ -2346,6 +2346,7 @@ h2 {
 .terminal-menu.app-launcher-menu {
   position: fixed;
   right: auto;
+  z-index: 160;
   width: max-content;
 }
 

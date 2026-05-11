@@ -1340,6 +1340,7 @@ export async function selectConnectionImportFile() {
 export async function selectAppLauncherFile(options: {
   title: string;
   filterName: string;
+  allFilesFilterName: string;
 }) {
   if (!isTauriRuntime()) {
     return null;
@@ -1350,8 +1351,9 @@ export async function selectAppLauncherFile(options: {
     filters: [
       {
         name: options.filterName,
-        extensions: ["exe", "lnk", "bat", "cmd", "ps1", "*"],
+        extensions: ["exe", "lnk", "bat", "cmd", "ps1"],
       },
+      { name: options.allFilesFilterName, extensions: ["*"] },
     ],
     multiple: false,
     title: options.title,
