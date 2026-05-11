@@ -1,0 +1,155 @@
+.dw-instance {
+  --w-accent: var(--accent);
+  --w-accent-soft: var(--accent-soft);
+  height: 100%;
+  position: relative;
+}
+
+.dw-preset {
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dw-preset-panel .dw-head,
+.dw-preset-stack .dw-head,
+.dw-preset-stack .dw-stack-head,
+.dw-preset-panel .dw-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+.dw-preset .dw-body { padding: 12px; flex: 1; min-height: 0; overflow: auto; }
+.dw-preset-stack .dw-stack-body { padding: 0; flex: 1; overflow: auto; }
+
+.dw-icon {
+  display: inline-flex;
+  width: 24px; height: 24px;
+  align-items: center; justify-content: center;
+  background: var(--w-accent-soft);
+  color: var(--w-accent);
+  border-radius: 5px;
+}
+.dw-title { font-size: 13px; font-weight: 600; margin: 0; color: var(--text); flex: 1; }
+
+.dw-preset-ambient,
+.dw-preset-glass {
+  background: transparent;
+  border: none;
+  padding: 12px 14px;
+}
+.dw-preset-glass {
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 12px;
+}
+.dw-ambient-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.dw-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--w-accent); }
+
+.dw-preset-tile { padding: 12px; }
+.dw-tile-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+  margin-bottom: 6px;
+}
+.dw-tile-icon {
+  width: 24px; height: 24px;
+  background: var(--w-accent-soft); color: var(--w-accent);
+  border-radius: 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dw-tile-body { font-size: 14px; color: var(--text); }
+
+.dw-preset-hero {
+  background: linear-gradient(135deg, var(--w-accent), color-mix(in srgb, var(--w-accent) 70%, black));
+  color: #fff;
+  border: none;
+}
+.dw-hero-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+.dw-hero-icon { display: inline-flex; align-items: center; }
+.dw-hero-title { font-size: 14px; font-weight: 600; margin: 0; color: #fff; }
+.dw-hero-body { padding: 12px; flex: 1; color: rgba(255,255,255,0.92); font-size: 12.5px; }
+
+.dw-preset-mono {
+  background: #0f1419;
+  color: #d8e1ef;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  border: 1px solid #1a2230;
+}
+.dw-mono-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  background: #131a23;
+  border-bottom: 1px solid #1a2230;
+  color: #8fa0bf;
+  font-size: 11px;
+}
+.dw-mono-lights { display: inline-flex; gap: 4px; }
+.dw-mono-lights > span {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #2b3344;
+}
+.dw-mono-body { padding: 10px 12px; flex: 1; overflow: auto; }
+
+.dw-preset-action {
+  padding: 12px;
+  display: flex; align-items: center; gap: 12px;
+  border: 1px dashed var(--border-strong);
+}
+.dw-action-icon {
+  width: 36px; height: 36px;
+  background: var(--w-accent-soft); color: var(--w-accent);
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dw-action-body { flex: 1; }
+.dw-action-title { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: var(--text); }
+
+.dw-preset-band {
+  padding: 8px 12px;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--w-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--w-accent) 30%, transparent);
+}
+.dw-band-icon { color: var(--w-accent); display: inline-flex; }
+.dw-band-body { flex: 1; }
+.dw-band-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; color: var(--text); }
+
+.dw-controls {
+  display: none;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  gap: 4px;
+  z-index: 2;
+}
+.dw-instance:hover .dw-controls,
+.dw-instance.dw-edit .dw-controls { display: inline-flex; }
+.dw-ctrl {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.dw-ctrl.danger { color: var(--red); }
