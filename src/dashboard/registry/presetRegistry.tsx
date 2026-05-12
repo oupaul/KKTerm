@@ -3,18 +3,22 @@ import type { WidgetPreset } from "../types";
 
 export interface PresetChromeProps {
   title: string;
+  summary?: string;
   icon: ReactNode;
   body: ReactNode;
   controls?: ReactNode;
   editMode: boolean;
 }
 
-function PanelChrome({ title, icon, body, controls, editMode }: PresetChromeProps) {
+function PanelChrome({ title, summary, icon, body, controls, editMode }: PresetChromeProps) {
   return (
     <div className="dw-preset dw-preset-panel">
       <div className={`dw-head${editMode ? " drag-handle" : ""}`}>
         <span className="dw-icon">{icon}</span>
-        <h3 className="dw-title">{title}</h3>
+        <div className="dw-title-group">
+          <h3 className="dw-title">{title}</h3>
+          {summary ? <span className="dw-subtitle">{summary}</span> : null}
+        </div>
         {controls}
       </div>
       <div className="dw-body">{body}</div>

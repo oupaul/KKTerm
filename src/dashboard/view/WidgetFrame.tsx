@@ -37,6 +37,8 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
     ?? (builtIn ? t(builtIn.titleKey) : undefined)
     ?? customSource?.title
     ?? t("dashboard.untitledWidget");
+  const fallbackSummary =
+    builtIn ? t(builtIn.summaryKey) : customSource?.summary;
 
   const IconCmp = (Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>)[instance.iconName] ?? Icons.Hash;
 
@@ -93,6 +95,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
     <div className={`dw-instance${editMode ? " dw-edit" : ""}`} style={style}>
       <Render
         title={fallbackTitle}
+        summary={fallbackSummary}
         icon={<IconCmp width={14} height={14} />}
         body={<WidgetBody instance={instance} />}
         controls={controls}

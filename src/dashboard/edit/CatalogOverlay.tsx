@@ -1,8 +1,10 @@
 import { X } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDashboardStore } from "../state/dashboardStore";
 import { BUILT_IN_WIDGETS } from "../registry/builtInRegistry";
+import { resolveAccent } from "../registry/palette";
 import type { AccentName, IconName, WidgetKind, WidgetPreset } from "../types";
 
 export interface CatalogOverlayProps { viewId: string; onClose: () => void; }
@@ -111,11 +113,20 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
         </nav>
         <div className="dw-catalog-grid">
           {visible.map((entry) => {
+            const accent = resolveAccent(entry.defaultAccent);
             const alreadyOnView = instances.some(
               (i) => i.viewId === viewId && i.sourceId === entry.id && i.kind === entry.kind,
             );
             return (
-              <button key={entry.id} className="dw-catalog-card" onClick={() => onAdd(entry)}>
+              <button
+                key={entry.id}
+                className="dw-catalog-card"
+                onClick={() => onAdd(entry)}
+                style={{
+                  "--w-accent": accent.color,
+                  "--w-accent-soft": accent.soft,
+                } as CSSProperties}
+              >
                 <span className="dw-catalog-thumb" data-preset={entry.defaultPreset} />
                 <h4>{entry.title}</h4>
                 <p>{entry.summary}</p>
