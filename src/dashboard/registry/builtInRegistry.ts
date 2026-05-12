@@ -1,6 +1,13 @@
 import type { ComponentType } from "react";
 import type { AccentName, IconName, WidgetPreset } from "../types";
 import { AppLauncherBody } from "../widgets/AppLauncherBody";
+import { ConnectionWidgetBody } from "../widgets/ConnectionWidgetBody";
+import { UrlViewerBody } from "../widgets/UrlViewerBody";
+import type { DashboardWidgetInstance } from "../types";
+
+export interface BuiltInWidgetBodyProps {
+  instance: DashboardWidgetInstance;
+}
 
 export interface BuiltInWidgetEntry {
   id: string;
@@ -11,7 +18,7 @@ export interface BuiltInWidgetEntry {
   defaultAccent: AccentName;
   defaultIcon: IconName;
   defaultSize: { w: number; h: number };
-  Body: ComponentType;
+  Body: ComponentType<BuiltInWidgetBodyProps>;
 }
 
 export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
@@ -25,6 +32,28 @@ export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
     defaultIcon: "Wrench",
     defaultSize: { w: 4, h: 3 },
     Body: AppLauncherBody,
+  },
+  {
+    id: "connectionPane",
+    titleKey: "dashboard.connectionPaneTitle",
+    summaryKey: "dashboard.connectionPaneSummary",
+    category: "connection",
+    defaultPreset: "panel",
+    defaultAccent: "teal",
+    defaultIcon: "Server",
+    defaultSize: { w: 8, h: 5 },
+    Body: ConnectionWidgetBody,
+  },
+  {
+    id: "urlViewer",
+    titleKey: "dashboard.urlViewerTitle",
+    summaryKey: "dashboard.urlViewerSummary",
+    category: "url",
+    defaultPreset: "panel",
+    defaultAccent: "sky",
+    defaultIcon: "Globe",
+    defaultSize: { w: 6, h: 5 },
+    Body: UrlViewerBody,
   },
 ];
 

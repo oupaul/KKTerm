@@ -51,7 +51,15 @@ function formatBufferLogFilename(panelTitle: string, date = new Date()) {
   return `${normalizeFilenamePart(panelTitle)}_${year}${month}${day}_${hour}${minute}${second}.log`;
 }
 
-export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: WorkspaceTab }) {
+export function TerminalWorkspace({
+  allowPaneLayoutControls = true,
+  isActive,
+  tab,
+}: {
+  allowPaneLayoutControls?: boolean;
+  isActive: boolean;
+  tab: WorkspaceTab;
+}) {
   const splitTerminalPaneDirected = useWorkspaceStore(
     (state) => state.splitTerminalPaneDirected,
   );
@@ -61,7 +69,7 @@ export function TerminalWorkspace({ isActive, tab }: { isActive: boolean; tab: W
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const { t } = useTranslation();
   const defaultFontSize = defaultTerminalSettings.fontSize;
-  const canSplit = tab.panes.some((pane) => pane.connection);
+  const canSplit = allowPaneLayoutControls && tab.panes.some((pane) => pane.connection);
   const focusedPaneId = tab.focusedPaneId ?? tab.panes[0]?.id;
   const layout = useMemo(() => ensureLayout(tab.layout, tab.panes), [tab.layout, tab.panes]);
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);

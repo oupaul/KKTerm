@@ -19,7 +19,7 @@ export function WidgetBody({ instance }: { instance: DashboardWidgetInstance }) 
       );
     }
     const { Body } = entry;
-    return <Body />;
+    return <Body instance={instance} />;
   }
   const cw = customWidgets.find((c) => c.id === instance.sourceId);
   if (!cw) {
