@@ -278,7 +278,7 @@ pub async fn run_agent_streaming(
     api_key: Option<String>,
     request: AgentRunRequest,
     channel: Channel<Value>,
-) -> Result<(), String> {
+) -> Result<AgentRunResponse, String> {
     let provider = provider_for(settings.provider_kind())?;
     provider.run_streaming(app, settings, api_key, request, channel).await
 }
@@ -299,7 +299,7 @@ trait AgentProvider {
         api_key: Option<String>,
         request: AgentRunRequest,
         channel: Channel<Value>,
-    ) -> Result<(), String>;
+    ) -> Result<AgentRunResponse, String>;
 }
 
 struct OpenAiCompatibleProvider {
@@ -446,7 +446,7 @@ impl AgentProvider for OpenAiCompatibleProvider {
         api_key: Option<String>,
         request: AgentRunRequest,
         channel: Channel<Value>,
-    ) -> Result<(), String> {
+    ) -> Result<AgentRunResponse, String> {
         let api_key = api_key
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty());
@@ -516,8 +516,12 @@ struct ToolCallAccumulator {
     arguments: String,
 }
 
-fn ai_debug(message: impl AsRef<str>) {
-    eprintln!("[kkterm-ai] {}", message.as_ref());
+macro_rules! ai_debug {
+    ($($arg:tt)*) => {
+        if cfg!(debug_assertions) {
+            eprintln!("[kkterm-ai] {}", format!($($arg)*));
+        }
+    };
 }
 
 #[derive(Default)]
@@ -751,7 +755,7 @@ async fn stream_chat_completions(
                 serde_json::from_str(data).map_err(|e| format!("SSE parse error: {e}"))?;
             for choice in chunk.choices {
                 if let Some(finish_reason) = choice.finish_reason.as_deref() {
-                    ai_debug(format!("chat stream finish_reason={finish_reason}"));
+                    ai_debug!("chat stream finish_reason={finish_reason}");
                 }
                 if let Some(c) = choice.delta.content.as_deref() {
                     if !c.is_empty() {
@@ -1212,7 +1216,7 @@ impl OpenAiCompatibleProvider {
         api_key: Option<String>,
         request: AgentRunRequest,
         channel: Channel<Value>,
-    ) -> Result<(), String> {
+    ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let context_label = trim_required("assistant context", request.context_label)?;
         let endpoint =
@@ -1245,14 +1249,14 @@ impl OpenAiCompatibleProvider {
         let exhausted = true;
 
         for turn_index in 0..10 {
-            ai_debug(format!(
+            ai_debug!(
                 "chat stream request provider={} model={} subturn={} messages={} tools={}",
                 self.provider_kind,
                 model,
                 turn_index + 1,
                 messages.len(),
                 tool_definitions.len()
-            ));
+            );
             let response = client
                 .post(endpoint.clone())
                 .headers(openai_compatible_headers(
@@ -1276,14 +1280,14 @@ impl OpenAiCompatibleProvider {
                     .text()
                     .await
                     .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-                ai_debug(format!(
+                ai_debug!(
                     "chat stream HTTP error provider={} model={} subturn={} status={} body={}",
                     self.provider_kind,
                     model,
                     turn_index + 1,
                     status.as_u16(),
                     truncate_error_body(&response_text)
-                ));
+                );
                 return Err(format!(
                     "{} returned HTTP {}: {}",
                     self.label,
@@ -1294,7 +1298,7 @@ impl OpenAiCompatibleProvider {
 
             let (content, tool_calls, streamed_reasoning) =
                 stream_chat_completions(response, &channel).await?;
-            ai_debug(format!(
+            ai_debug!(
                 "chat stream response provider={} model={} subturn={} content_len={} reasoning_len={} tool_calls={}",
                 self.provider_kind,
                 model,
@@ -1302,7 +1306,7 @@ impl OpenAiCompatibleProvider {
                 content.len(),
                 streamed_reasoning.as_deref().map(str::len).unwrap_or(0),
                 tool_calls.len()
-            ));
+            );
 
             if tool_calls.is_empty() {
                 require_streamed_assistant_content(self, &content)?;
@@ -1313,7 +1317,7 @@ impl OpenAiCompatibleProvider {
                         provider_kind: self.provider_kind.to_string(),
                     },
                 )?;
-                return Ok(());
+                return finish_agent_response(self, &model, content, streamed_reasoning);
             }
 
             messages.push(OpenAiCompatibleMessage {
@@ -1337,7 +1341,7 @@ impl OpenAiCompatibleProvider {
                 ),
             });
             for tool_call in &tool_calls {
-                ai_debug(format!(
+                ai_debug!(
                     "tool start provider={} model={} subturn={} id={} name={} args_len={}",
                     self.provider_kind,
                     model,
@@ -1345,7 +1349,7 @@ impl OpenAiCompatibleProvider {
                     tool_call.id,
                     tool_call.function.name,
                     tool_call.function.arguments.len()
-                ));
+                );
                 emit_stream(
                     &channel,
                     &AiStreamEvent::ToolCallStart {
@@ -1354,7 +1358,15 @@ impl OpenAiCompatibleProvider {
                     },
                 )?;
                 let result = run_ai_tool(settings.tools(), &app_data_dir, &app, tool_call).await;
-                let result_len = result.len();
+                ai_debug!(
+                    "tool end provider={} model={} subturn={} id={} name={} result_len={}",
+                    self.provider_kind,
+                    model,
+                    turn_index + 1,
+                    tool_call.id,
+                    tool_call.function.name,
+                    result.len()
+                );
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1362,15 +1374,6 @@ impl OpenAiCompatibleProvider {
                     tool_call_id: Some(tool_call.id.clone()),
                     tool_calls: None,
                 });
-                ai_debug(format!(
-                    "tool end provider={} model={} subturn={} id={} name={} result_len={}",
-                    self.provider_kind,
-                    model,
-                    turn_index + 1,
-                    tool_call.id,
-                    tool_call.function.name,
-                    result_len
-                ));
                 emit_stream(
                     &channel,
                     &AiStreamEvent::ToolCallEnd {
@@ -1382,12 +1385,12 @@ impl OpenAiCompatibleProvider {
         }
 
         if exhausted {
-            ai_debug(format!(
+            ai_debug!(
                 "chat stream exhausted tool loop provider={} model={} messages={}",
                 self.provider_kind,
                 model,
                 messages.len()
-            ));
+            );
             let response = client
                 .post(endpoint.clone())
                 .headers(openai_compatible_headers(
@@ -1422,15 +1425,17 @@ impl OpenAiCompatibleProvider {
             let (content, _tool_calls, _streamed_reasoning) =
                 stream_chat_completions(response, &channel).await?;
             require_streamed_assistant_content(self, &content)?;
+            emit_stream(
+                &channel,
+                &AiStreamEvent::Done {
+                    model: model.clone(),
+                    provider_kind: self.provider_kind.to_string(),
+                },
+            )?;
+            return finish_agent_response(self, &model, content, _streamed_reasoning);
         }
 
-        emit_stream(
-            &channel,
-            &AiStreamEvent::Done {
-                model,
-                provider_kind: self.provider_kind.to_string(),
-            },
-        )
+        Err(format!("{} exhausted the assistant tool loop", self.label))
     }
 
     async fn run_responses_streaming(
@@ -1440,7 +1445,7 @@ impl OpenAiCompatibleProvider {
         api_key: Option<String>,
         request: AgentRunRequest,
         channel: Channel<Value>,
-    ) -> Result<(), String> {
+    ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let context_label = trim_required("assistant context", request.context_label)?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
@@ -1523,7 +1528,12 @@ impl OpenAiCompatibleProvider {
                         provider_kind: self.provider_kind.to_string(),
                     },
                 )?;
-                return Ok(());
+                return finish_agent_response(
+                    self,
+                    settings.model(),
+                    content.unwrap_or_default(),
+                    _streamed_reasoning,
+                );
             }
 
             for tc in &tool_calls {
@@ -1594,15 +1604,22 @@ impl OpenAiCompatibleProvider {
             let (content, _tool_calls, _streamed_reasoning) =
                 stream_responses_completions(response, &channel).await?;
             require_streamed_assistant_content(self, content.as_deref().unwrap_or(""))?;
+            emit_stream(
+                &channel,
+                &AiStreamEvent::Done {
+                    model: model.clone(),
+                    provider_kind: self.provider_kind.to_string(),
+                },
+            )?;
+            return finish_agent_response(
+                self,
+                &model,
+                content.unwrap_or_default(),
+                _streamed_reasoning,
+            );
         }
 
-        emit_stream(
-            &channel,
-            &AiStreamEvent::Done {
-                model,
-                provider_kind: self.provider_kind.to_string(),
-            },
-        )
+        Err(format!("{} exhausted the assistant tool loop", self.label))
     }
 }
 
@@ -1715,10 +1732,10 @@ fn require_streamed_assistant_content(
     content: &str,
 ) -> Result<(), String> {
     if content.trim().is_empty() {
-        ai_debug(format!(
+        ai_debug!(
             "stream response missing visible assistant content provider={}",
             provider.provider_kind
-        ));
+        );
         Err(format!(
             "{} response did not include assistant content",
             provider.label
@@ -3252,7 +3269,7 @@ mod tests {
                 "arguments": "{}"
             }),
         );
-        apply_responses_stream_event(
+        let done_deltas = apply_responses_stream_event(
             &mut state,
             &json!({
                 "type": "response.output_item.done",
@@ -3263,6 +3280,10 @@ mod tests {
             }),
         );
 
+        assert_eq!(
+            done_deltas.content_delta.as_deref(),
+            Some("It is 11:34 PM.")
+        );
         assert_eq!(state.content.as_deref(), Some("It is 11:34 PM."));
         let tool_calls = state.into_tool_calls();
         assert_eq!(tool_calls.len(), 1);

@@ -17,7 +17,10 @@ async function importTypeScriptModule(path) {
 }
 
 test("assistant stream events preserve tool status and final content synchronously", async () => {
-  const { applyAssistantStreamEventToMessage } = await importTypeScriptModule(
+  const {
+    applyAssistantStreamEventToMessage,
+    completeAssistantStreamMessageFromResponse,
+  } = await importTypeScriptModule(
     new URL("../src/ai/streamMessage.ts", import.meta.url),
   );
   const times = [
@@ -67,4 +70,22 @@ test("assistant stream events preserve tool status and final content synchronous
       endedAt: "2026-05-12T15:00:01.000Z",
     },
   ]);
+
+  const recovered = completeAssistantStreamMessageFromResponse(
+    {
+      content: "",
+      reasoningContent: message.reasoningContent,
+      toolCalls: message.toolCalls,
+      isStreaming: false,
+    },
+    {
+      providerKind: "deepseek",
+      model: "deepseek-v4-flash",
+      content: "It is 11:00 PM.",
+      reasoningContent: "I checked the time.",
+    },
+  );
+
+  assert.equal(recovered.content, "It is 11:00 PM.");
+  assert.equal(recovered.reasoningContent, "I checked the time.");
 });

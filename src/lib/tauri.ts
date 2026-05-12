@@ -831,7 +831,7 @@ type CommandMap = {
   };
   run_ai_agent_streaming: {
     args: { channel: Channel<AiStreamEvent>; request: AgentRunRequest };
-    result: void;
+    result: AgentRunResponse;
   };
   keychain_status: {
     args: undefined;

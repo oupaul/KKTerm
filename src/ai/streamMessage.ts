@@ -1,4 +1,5 @@
 import type { AiStreamEvent } from "../lib/tauri";
+import type { AgentRunResponse } from "../lib/tauri";
 
 export type AssistantToolCallStatus = {
   toolId: string;
@@ -76,4 +77,17 @@ export function applyAssistantStreamEventToMessage(
       break;
   }
   return msg;
+}
+
+export function completeAssistantStreamMessageFromResponse<T extends AssistantStreamMessage>(
+  message: T,
+  response: AgentRunResponse,
+): T {
+  return {
+    ...message,
+    content: response.content,
+    reasoningContent: message.reasoningContent?.trim()
+      ? message.reasoningContent
+      : response.reasoningContent,
+  };
 }

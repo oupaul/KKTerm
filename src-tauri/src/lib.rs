@@ -635,7 +635,7 @@ async fn run_ai_agent_streaming(
     secrets: tauri::State<'_, secrets::Secrets>,
     channel: tauri::ipc::Channel<serde_json::Value>,
     request: ai::AgentRunRequest,
-) -> Result<(), String> {
+) -> Result<ai::AgentRunResponse, String> {
     let settings = storage.ai_provider_settings()?;
     let api_key = secrets
         .read_ai_api_key("openai-compatible-provider".to_string())

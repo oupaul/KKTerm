@@ -151,7 +151,7 @@ For the operational measurement records (machine specs, numbers vs. budgets) see
 - [x] Add durable VNC connection type.
 - [x] Implement Windows-native RDP session transport with Microsoft RDP ActiveX COM hosting.
 - [x] Add RDP ActiveX snapshot/parking for app-owned DOM overlays so dialogs, screenshot menus, and Region selection are not covered by the native child HWND.
-- [ ] Add configurable RDP session options (for example: display quality/performance tuning, clipboard mapping, and related redirect/security controls).
+- [x] Add configurable RDP session options (for example: display quality/performance tuning, clipboard mapping, and related redirect/security controls).
 - [x] Implement VNC session transport with `vnc-rs` framebuffer rendering and pointer/key input.
 - [x] Add MobaXterm/RDCMan import.
 - [ ] Add SFTP folder sync/diff/resume.
@@ -160,10 +160,11 @@ For the operational measurement records (machine specs, numbers vs. budgets) see
 
 - [x] Implement the Dashboard module v1: localStorage-backed widget playground with prebuilt widgets (hash, subnet, quick tools, maintenance report, App Launcher) and an AI-Assistant `agent` widget path.
 - [x] Replace the standalone App Launcher module direction with a Dashboard App Launcher widget: users add the widget to a Dashboard view, add local app/shortcut/script/file entries inside it, and see each entry as an icon with text while edit/remove/alternate launch actions stay in a right-click context menu.
-- [ ] Redesign the Dashboard module per `docs/DASHBOARD.md`: SQLite-backed views/instances/custom widgets, nine visual presets, per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, AI Assistant atomic Tauri-command tool surface, and a three-kind widget model (`builtIn`, `content`, `script`) with `iframe srcdoc` script hosting. Ship with one Default view containing one App Launcher widget. Legacy bodies (hash/subnet/quick tools/report) keep their internals and are slated for follow-up redesign.
+- [x] Redesign the Dashboard module per `docs/DASHBOARD.md`: SQLite-backed views/instances/custom widgets, nine visual presets, per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, AI Assistant atomic Tauri-command tool surface, and a three-kind widget model (`builtIn`, `content`, `script`) with `iframe srcdoc` script hosting. Ship with one Default view containing one App Launcher widget. Legacy bodies (hash/subnet/quick tools/report) keep their internals and are slated for follow-up redesign.
 - [ ] Follow-up: redesign legacy widget bodies (hash, subnet, quick tools, maintenance report) to take full advantage of the new preset chrome.
 - [ ] Follow-up: add native data widgets (Clock, Weather, CPU, Memory, Recent Hosts, Session Activity, Today's Brief) once the underlying Tauri data sources land.
 - [ ] Follow-up: add a user-facing "Create custom widget" dialog so authoring is not AI-only.
+- [ ] Follow-up: Builtin widgets - Add Connections, add URLs with regular auto-reload intervals
 - [ ] Implement the File Explorer module: a lightning-fast alternative local file explorer optimized for speed and dense professional workflows.
 - [ ] Wire the built-in modules (Workspace, Dashboard, File Explorer) into the activity rail as peer top-level entries, each with its own content area and active-page routing.
 

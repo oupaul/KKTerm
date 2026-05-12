@@ -41,6 +41,7 @@ import {
 } from "./providers";
 import {
   applyAssistantStreamEventToMessage,
+  completeAssistantStreamMessageFromResponse,
   type AssistantToolCallStatus,
 } from "./streamMessage";
 import { useWorkspaceStore } from "../store";
@@ -1145,7 +1146,7 @@ export function AssistantPanel({
         );
       };
 
-      await invokeCommand("run_ai_agent_streaming", {
+      const response = await invokeCommand("run_ai_agent_streaming", {
         channel,
         request: {
           prompt: normalizedPrompt,
@@ -1173,6 +1174,10 @@ export function AssistantPanel({
       }
 
       const completedAt = new Date().toISOString();
+      streamingMessageSnapshot = completeAssistantStreamMessageFromResponse(
+        streamingMessageSnapshot,
+        response,
+      );
       streamingMessageSnapshot = {
         ...streamingMessageSnapshot,
         isStreaming: false,
