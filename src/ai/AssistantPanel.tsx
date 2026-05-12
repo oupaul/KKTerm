@@ -1938,7 +1938,6 @@ function AssistantMessageView({
               ))}
             </div>
           ) : null}
-          {message.role === "assistant" ? <AssistantWorkPanel message={message} /> : null}
           <MarkdownContent
             canSendCode={canSendCode}
             content={message.content}
@@ -1946,6 +1945,7 @@ function AssistantMessageView({
             onOpenLink={onOpenLink}
             onSendCode={onSendCode}
           />
+          {message.role === "assistant" ? <AssistantWorkPanel message={message} /> : null}
         </div>
         <div className="assistant-message-actions">
           <time dateTime={message.createdAt}>{formatAssistantMessageTime(message.createdAt)}</time>
