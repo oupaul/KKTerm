@@ -12,7 +12,7 @@ use std::{
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
-const SCHEMA_USER_VERSION: i32 = 9;
+const SCHEMA_USER_VERSION: i32 = 10;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS connections (
     serial_speed INTEGER,
     rdp_options TEXT,
     vnc_options TEXT,
-    connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc')),
+    ftp_options TEXT,
+    connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp')),
     status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
     sort_order INTEGER NOT NULL
 );
@@ -508,6 +509,8 @@ pub struct SavedConnection {
     has_url_credential: bool,
     rdp_options: Option<RdpConnectionOptions>,
     vnc_options: Option<VncConnectionOptions>,
+    #[serde(default)]
+    ftp_options: Option<crate::ftp::FtpOptions>,
     #[serde(rename = "type")]
     connection_type: String,
     tags: Vec<String>,
@@ -537,6 +540,8 @@ pub struct CreateConnectionRequest {
     serial_speed: Option<u32>,
     rdp_options: Option<RdpConnectionOptions>,
     vnc_options: Option<VncConnectionOptions>,
+    #[serde(default)]
+    ftp_options: Option<crate::ftp::FtpOptions>,
 }
 
 #[derive(Deserialize)]
@@ -563,6 +568,8 @@ pub struct UpdateConnectionRequest {
     serial_speed: Option<u32>,
     rdp_options: Option<RdpConnectionOptions>,
     vnc_options: Option<VncConnectionOptions>,
+    #[serde(default)]
+    ftp_options: Option<crate::ftp::FtpOptions>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -1391,11 +1398,64 @@ impl Storage {
                 )
                 .map_err(to_storage_error)?;
         }
+        if stored_version < 10 && table_exists(&connection, "connections")? {
+            // SQLite can't alter a CHECK constraint in place; rebuild the table
+            // so the connection_type CHECK accepts the new 'ftp' kind and the
+            // new ftp_options column is present.
+            ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
+            connection
+                .execute_batch(
+                    r#"
+                    BEGIN;
+                    ALTER TABLE connections RENAME TO connections_pre_v10;
+                    CREATE TABLE connections (
+                        id TEXT PRIMARY KEY,
+                        folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        host TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        port INTEGER,
+                        key_path TEXT,
+                        proxy_jump TEXT,
+                        auth_method TEXT NOT NULL DEFAULT 'keyFile',
+                        local_shell TEXT,
+                        url TEXT,
+                        data_partition TEXT,
+                        use_tmux_sessions INTEGER NOT NULL DEFAULT 1,
+                        tmux_connection_id TEXT,
+                        serial_line TEXT,
+                        serial_speed INTEGER,
+                        rdp_options TEXT,
+                        vnc_options TEXT,
+                        ftp_options TEXT,
+                        connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp')),
+                        status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
+                        sort_order INTEGER NOT NULL
+                    );
+                    INSERT INTO connections (
+                        id, folder_id, name, host, username, port, key_path, proxy_jump,
+                        auth_method, local_shell, url, data_partition, use_tmux_sessions,
+                        tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                        ftp_options, connection_type, status, sort_order
+                    )
+                    SELECT
+                        id, folder_id, name, host, username, port, key_path, proxy_jump,
+                        auth_method, local_shell, url, data_partition, use_tmux_sessions,
+                        tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                        ftp_options, connection_type, status, sort_order
+                    FROM connections_pre_v10;
+                    DROP TABLE connections_pre_v10;
+                    COMMIT;
+                    "#,
+                )
+                .map_err(to_storage_error)?;
+        }
         connection
             .execute_batch(CURRENT_SCHEMA)
             .map_err(to_storage_error)?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
+        ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;
@@ -1432,8 +1492,10 @@ impl Storage {
         let data_partition = normalize_data_partition(request.data_partition, &connection_type)?;
         let rdp_options = normalize_rdp_connection_options(request.rdp_options, &connection_type)?;
         let vnc_options = normalize_vnc_connection_options(request.vnc_options, &connection_type)?;
+        let ftp_options = normalize_ftp_connection_options(request.ftp_options, &connection_type)?;
         let rdp_options_json = serialize_connection_options(&rdp_options, "RDP")?;
         let vnc_options_json = serialize_connection_options(&vnc_options, "VNC")?;
+        let ftp_options_json = serialize_connection_options(&ftp_options, "FTP")?;
         let id = make_connection_id(&name);
         let use_tmux_sessions =
             normalize_use_tmux_sessions(request.use_tmux_sessions, &connection_type);
@@ -1454,8 +1516,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, connection_type, status, sort_order
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, 'idle', ?20)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, 'idle', ?21)",
                 params![
                     id,
                     folder_id,
@@ -1475,6 +1537,7 @@ impl Storage {
                     serial_speed,
                     rdp_options_json,
                     vnc_options_json,
+                    ftp_options_json,
                     connection_type,
                     next_sort_order
                 ],
@@ -1513,6 +1576,7 @@ impl Storage {
             has_url_credential: false,
             rdp_options,
             vnc_options,
+            ftp_options,
             connection_type,
             tags,
             status: "idle".to_string(),
@@ -1548,8 +1612,10 @@ impl Storage {
         let data_partition = normalize_data_partition(request.data_partition, &connection_type)?;
         let rdp_options = normalize_rdp_connection_options(request.rdp_options, &connection_type)?;
         let vnc_options = normalize_vnc_connection_options(request.vnc_options, &connection_type)?;
+        let ftp_options = normalize_ftp_connection_options(request.ftp_options, &connection_type)?;
         let rdp_options_json = serialize_connection_options(&rdp_options, "RDP")?;
         let vnc_options_json = serialize_connection_options(&vnc_options, "VNC")?;
+        let ftp_options_json = serialize_connection_options(&ftp_options, "FTP")?;
         let use_tmux_sessions =
             normalize_use_tmux_sessions(request.use_tmux_sessions, &connection_type);
 
@@ -1616,8 +1682,9 @@ impl Storage {
                      serial_speed = ?15,
                      rdp_options = ?16,
                      vnc_options = ?17,
-                     sort_order = ?18
-                 WHERE id = ?19",
+                     ftp_options = ?18,
+                     sort_order = ?19
+                 WHERE id = ?20",
                 params![
                     target_folder_id,
                     name,
@@ -1636,6 +1703,7 @@ impl Storage {
                     serial_speed,
                     rdp_options_json,
                     vnc_options_json,
+                    ftp_options_json,
                     sort_order,
                     &id
                 ],
@@ -2210,6 +2278,17 @@ fn open_initialized_connection(db_path: &Path) -> Result<SqliteConnection, Strin
     Ok(connection)
 }
 
+fn table_exists(connection: &SqliteConnection, table: &str) -> Result<bool, String> {
+    let count: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            params![table],
+            |row| row.get(0),
+        )
+        .map_err(to_storage_error)?;
+    Ok(count > 0)
+}
+
 fn ensure_column(
     connection: &SqliteConnection,
     table: &str,
@@ -2318,7 +2397,7 @@ fn list_connections_for_folder(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options,
+            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
@@ -2580,14 +2659,14 @@ fn get_connection_by_id(
 ) -> Result<SavedConnection, String> {
     let saved_connection = connection
         .query_row(
-            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options,
+            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
             params![connection_id],
             |row| {
-                let url_credential_username: Option<String> = row.get(18)?;
+                let url_credential_username: Option<String> = row.get(19)?;
                 Ok(SavedConnection {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -2607,6 +2686,7 @@ fn get_connection_by_id(
                     serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(15)?)?,
                     rdp_options: parse_rdp_connection_options(row.get(16)?)?,
                     vnc_options: parse_vnc_connection_options(row.get(17)?)?,
+                    ftp_options: parse_ftp_connection_options(row.get(18)?)?,
                     url_credential_username: url_credential_username.clone(),
                     has_url_credential: url_credential_username.is_some(),
                     status: "idle".to_string(),
@@ -2625,7 +2705,7 @@ fn get_connection_by_id(
 }
 
 fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedConnection> {
-    let url_credential_username: Option<String> = row.get(18)?;
+    let url_credential_username: Option<String> = row.get(19)?;
     Ok(SavedConnection {
         id: row.get(0)?,
         name: row.get(1)?,
@@ -2645,6 +2725,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(15)?)?,
         rdp_options: parse_rdp_connection_options(row.get(16)?)?,
         vnc_options: parse_vnc_connection_options(row.get(17)?)?,
+        ftp_options: parse_ftp_connection_options(row.get(18)?)?,
         url_credential_username: url_credential_username.clone(),
         has_url_credential: url_credential_username.is_some(),
         status: "idle".to_string(),
@@ -2713,12 +2794,13 @@ fn ensure_folder_exists(
 
 fn normalize_connection_type(value: &str) -> Result<String, String> {
     match value.trim().to_lowercase().as_str() {
-        "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" => {
+        "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" => {
             Ok(value.trim().to_lowercase())
         }
-        _ => {
-            Err("connection type must be local, ssh, telnet, serial, url, rdp, or vnc".to_string())
-        }
+        _ => Err(
+            "connection type must be local, ssh, telnet, serial, url, rdp, vnc, or ftp"
+                .to_string(),
+        ),
     }
 }
 
@@ -2994,6 +3076,22 @@ fn parse_vnc_connection_options(
     value: Option<String>,
 ) -> rusqlite::Result<Option<VncConnectionOptions>> {
     parse_connection_options(value)
+}
+
+fn parse_ftp_connection_options(
+    value: Option<String>,
+) -> rusqlite::Result<Option<crate::ftp::FtpOptions>> {
+    parse_connection_options(value)
+}
+
+fn normalize_ftp_connection_options(
+    options: Option<crate::ftp::FtpOptions>,
+    connection_type: &str,
+) -> Result<Option<crate::ftp::FtpOptions>, String> {
+    if connection_type != "ftp" {
+        return Ok(None);
+    }
+    Ok(Some(options.unwrap_or_default()))
 }
 
 fn parse_connection_options<T>(value: Option<String>) -> rusqlite::Result<Option<T>>
@@ -3676,6 +3774,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("SSH connection is created")
     }
@@ -3700,6 +3799,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("local connection is created")
     }
@@ -3762,6 +3862,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("connection is created");
 
@@ -3805,6 +3906,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("RDP connection is created");
 
@@ -3835,6 +3937,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("VNC connection is created");
 
@@ -3866,6 +3969,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("Telnet connection is created");
 
@@ -3894,6 +3998,7 @@ mod tests {
                 serial_speed: Some(115200),
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("Serial connection is created");
 
@@ -3927,6 +4032,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("URL connection is created");
 
@@ -4054,6 +4160,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("connection is updated");
 
@@ -4237,6 +4344,7 @@ mod tests {
                 serial_speed: None,
                 rdp_options: None,
                 vnc_options: None,
+                ftp_options: None,
             })
             .expect("connection is created in folder");
 
@@ -4866,6 +4974,7 @@ mod tests {
                     color_level: Some("256".to_string()),
                     preferred_encoding: Some("raw".to_string()),
                 }),
+                ftp_options: None,
             })
             .expect("RDP connection with options is created");
 
@@ -4905,6 +5014,7 @@ mod tests {
                     color_level: Some("256".to_string()),
                     preferred_encoding: Some("raw".to_string()),
                 }),
+                ftp_options: None,
             })
             .expect("VNC connection with options is created");
 

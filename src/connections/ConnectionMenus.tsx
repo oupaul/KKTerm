@@ -189,6 +189,10 @@ export function AddConnectionMenu({
       type: "vnc",
       title: t("connections.vnc"),
     },
+    {
+      type: "ftp",
+      title: t("connections.ftp"),
+    },
   ];
 
   return (

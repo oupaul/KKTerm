@@ -6,6 +6,7 @@ mod dashboard_ids;
 mod dashboard_storage;
 mod dashboard_validation;
 mod diagnostics;
+mod ftp;
 mod import;
 mod logging;
 mod performance;
@@ -1160,6 +1161,123 @@ async fn close_sftp_session(app: tauri::AppHandle, session_id: String) -> Result
 }
 
 #[tauri::command]
+async fn start_ftp_session(
+    app: tauri::AppHandle,
+    request: ftp::StartFtpSessionRequest,
+) -> Result<ftp::FtpSessionStarted, String> {
+    let worker_app = app.clone();
+    run_blocking_command("FTP startup", move || {
+        let ftp_sessions = worker_app.state::<ftp::FtpSessionManager>();
+        let secrets = worker_app.state::<secrets::Secrets>();
+        ftp_sessions.start_ftp_session(worker_app.clone(), &secrets, request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn list_ftp_directory(
+    app: tauri::AppHandle,
+    request: ftp::ListFtpDirectoryRequest,
+) -> Result<ftp::FtpDirectoryListing, String> {
+    run_blocking_command("FTP list directory", move || {
+        let ftp_sessions = app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.list_ftp_directory(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn upload_ftp_path(
+    app: tauri::AppHandle,
+    request: ftp::UploadFtpPathRequest,
+) -> Result<ftp::FtpTransferResult, String> {
+    let worker_app = app.clone();
+    run_blocking_command("FTP upload", move || {
+        let ftp_sessions = worker_app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.upload_ftp_path(worker_app.clone(), request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn download_ftp_path(
+    app: tauri::AppHandle,
+    request: ftp::DownloadFtpPathRequest,
+) -> Result<ftp::FtpTransferResult, String> {
+    let worker_app = app.clone();
+    run_blocking_command("FTP download", move || {
+        let ftp_sessions = worker_app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.download_ftp_path(worker_app.clone(), request)
+    })
+    .await
+}
+
+#[tauri::command]
+fn cancel_ftp_transfer(
+    ftp_sessions: tauri::State<'_, ftp::FtpSessionManager>,
+    request: ftp::CancelFtpTransferRequest,
+) -> Result<(), String> {
+    ftp_sessions.cancel_ftp_transfer(request)
+}
+
+#[tauri::command]
+async fn create_ftp_folder(
+    app: tauri::AppHandle,
+    request: ftp::CreateFtpFolderRequest,
+) -> Result<(), String> {
+    run_blocking_command("FTP create folder", move || {
+        let ftp_sessions = app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.create_ftp_folder(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn rename_ftp_path(
+    app: tauri::AppHandle,
+    request: ftp::RenameFtpPathRequest,
+) -> Result<(), String> {
+    run_blocking_command("FTP rename", move || {
+        let ftp_sessions = app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.rename_ftp_path(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn delete_ftp_path(
+    app: tauri::AppHandle,
+    request: ftp::DeleteFtpPathRequest,
+) -> Result<(), String> {
+    run_blocking_command("FTP delete", move || {
+        let ftp_sessions = app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.delete_ftp_path(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn ftp_path_properties(
+    app: tauri::AppHandle,
+    request: ftp::FtpPathPropertiesRequest,
+) -> Result<ftp::FtpPathProperties, String> {
+    run_blocking_command("FTP properties", move || {
+        let ftp_sessions = app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.ftp_path_properties(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn close_ftp_session(app: tauri::AppHandle, session_id: String) -> Result<(), String> {
+    run_blocking_command("FTP close", move || {
+        let ftp_sessions = app.state::<ftp::FtpSessionManager>();
+        ftp_sessions.close_ftp_session(&session_id)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn start_webview_session(
     app: tauri::AppHandle,
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
@@ -1583,6 +1701,7 @@ pub fn run() {
             app.manage(secrets::Secrets::new());
             app.manage(sessions::SessionManager::new());
             app.manage(sftp::SftpSessionManager::new());
+            app.manage(ftp::FtpSessionManager::new());
             app.manage(webview_sessions);
             app.manage(rdp::RdpSessionManager::new());
             app.manage(vnc::VncSessionManager::new());
@@ -1725,6 +1844,16 @@ pub fn run() {
             sftp_path_properties,
             update_sftp_path_properties,
             close_sftp_session,
+            start_ftp_session,
+            list_ftp_directory,
+            upload_ftp_path,
+            download_ftp_path,
+            cancel_ftp_transfer,
+            create_ftp_folder,
+            rename_ftp_path,
+            delete_ftp_path,
+            ftp_path_properties,
+            close_ftp_session,
             start_webview_session,
             update_webview_bounds,
             set_webview_visibility,

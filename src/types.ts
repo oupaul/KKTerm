@@ -5,7 +5,8 @@ export type ConnectionType =
   | "serial"
   | "url"
   | "rdp"
-  | "vnc";
+  | "vnc"
+  | "ftp";
 export type ConnectionStatus = "connected" | "idle" | "offline";
 export type SshAuthMethod = "keyFile" | "password" | "agent";
 
@@ -30,6 +31,7 @@ export interface Connection {
   hasUrlCredential?: boolean;
   rdpOptions?: RdpConnectionOptions;
   vncOptions?: VncConnectionOptions;
+  ftpOptions?: FtpConnectionOptions;
   type: ConnectionType;
   status: ConnectionStatus;
 }
@@ -64,6 +66,7 @@ export interface CreateConnectionRequest {
   useTmuxSessions?: boolean;
   rdpOptions?: RdpConnectionOptions;
   vncOptions?: VncConnectionOptions;
+  ftpOptions?: FtpConnectionOptions;
 }
 
 export interface CreateConnectionFolderRequest {
@@ -323,6 +326,23 @@ export interface VncConnectionOptions {
   preferredEncoding?: VncPreferredEncoding;
 }
 
+export type FtpProtocol = "sftp" | "ftp" | "ftps";
+export type FtpTlsMode = "explicit" | "implicit";
+export type FtpConnectionMode = "passive" | "active";
+export type FtpTransferType = "binary" | "ascii";
+
+export interface FtpConnectionOptions {
+  protocol: FtpProtocol;
+  mode: FtpConnectionMode;
+  tlsMode?: FtpTlsMode;
+  transferType: FtpTransferType;
+  utf8: boolean;
+  showHidden: boolean;
+  connectTimeoutSecs?: number;
+  ignoreCertErrors: boolean;
+  keepaliveSecs?: number;
+}
+
 export interface ScreenshotSettings {
   folderPath: string;
 }
@@ -370,7 +390,7 @@ export interface WorkspaceTab {
   title: string;
   toolbarTitle?: string;
   subtitle: string;
-  kind: "terminal" | "sftp" | "webview" | "remoteDesktop";
+  kind: "terminal" | "sftp" | "webview" | "remoteDesktop" | "ftp";
   panes: WorkspacePane[];
   layout?: LayoutNode;
   focusedPaneId?: string;

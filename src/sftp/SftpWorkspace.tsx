@@ -51,6 +51,10 @@ import xmlIcon from "../assets/file-icons/xml.svg";
 import yamlIcon from "../assets/file-icons/yaml.svg";
 import zipIcon from "../assets/file-icons/zip.svg";
 import { invokeCommand, isTauriRuntime, type LocalDirectoryEntry, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress, type SftpTransferResult } from "../lib/tauri";
+import {
+  fileBrowserCommandsFor,
+  type FileBrowserCommands,
+} from "../lib/fileBrowserCommands";
 import { useWorkspaceStore } from "../store";
 import type { FileEntry, SftpSettings, WorkspaceTab } from "../types";
 
@@ -100,10 +104,22 @@ type FilePropertiesState = {
   remoteProperties?: SftpPathProperties;
 };
 
-export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: WorkspaceTab }) {
+export function SftpWorkspace({
+  isActive,
+  tab,
+  commands: commandsProp,
+}: {
+  isActive: boolean;
+  tab: WorkspaceTab;
+  commands?: FileBrowserCommands;
+}) {
   const { t } = useTranslation();
   const openTerminalHere = useWorkspaceStore((state) => state.openTerminalHere);
   const connection = tab.connection;
+  const commands = useMemo<FileBrowserCommands | null>(
+    () => (commandsProp ?? (connection ? fileBrowserCommandsFor(connection) : null)),
+    [commandsProp, connection],
+  );
   const workspaceRef = useRef<HTMLElement | null>(null);
   const [localPath, setLocalPath] = useState("");
   const [localFiles, setLocalFiles] = useState<FileEntry[]>([]);
@@ -151,7 +167,8 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
 
     let dispose: (() => void) | undefined;
     let disposed = false;
-    void listen<SftpTransferProgress>("sftp-transfer-progress", (event) => {
+    const progressEvent = commands?.transferProgressEvent ?? "sftp-transfer-progress";
+    void listen<SftpTransferProgress>(progressEvent, (event) => {
       const progress = event.payload;
       setTransfers((current) =>
         current.map((transfer) =>
@@ -181,7 +198,7 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
       disposed = true;
       dispose?.();
     };
-  }, []);
+  }, [commands]);
 
   const loadLocalDirectory = async (path?: string) => {
     if (!isTauriRuntime()) {
@@ -228,7 +245,10 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
 
     (async () => {
       try {
-        if (usesNativeSshHostKeyVerification(connection)) {
+        if (!commands) {
+          throw new Error("file-browser commands adapter not initialized");
+        }
+        if (commands.capabilities.verifySshHostKey && usesNativeSshHostKeyVerification(connection)) {
           const preview = await invokeCommand("inspect_ssh_host_key", {
             request: {
               host: connection.host,
@@ -239,23 +259,13 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
         }
 
         setStatus(t("sftp.openingSftp"));
-        const result = await invokeCommand("start_sftp_session", {
-          request: {
-            sessionId: requestedSessionId,
-            title: connection.name,
-            host: connection.host,
-            user: connection.user,
-            port: connection.port,
-            keyPath: connection.keyPath,
-            proxyJump: connection.proxyJump,
-            authMethod: connection.authMethod,
-            secretOwnerId: connection.id,
-            path: ".",
-          },
+        const result = await commands.startSession({
+          sessionId: requestedSessionId,
+          path: ".",
         });
 
         if (disposed) {
-          void invokeCommand("close_sftp_session", { sessionId: result.sessionId });
+          void commands.closeSession(result.sessionId);
           return;
         }
 
@@ -282,8 +292,8 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
       disposed = true;
       const sessionId =
         sessionIdRef.current === requestedSessionId ? sessionIdRef.current : requestedSessionId;
-      if (sessionId) {
-        void invokeCommand("close_sftp_session", { sessionId });
+      if (sessionId && commands) {
+        void commands.closeSession(sessionId);
       }
       if (sessionStarted) {
         markConnectionSessionEnded(connection.id);
@@ -292,7 +302,7 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
         sessionIdRef.current = null;
       }
     };
-  }, [connection, markConnectionSessionEnded, markConnectionSessionStarted]);
+  }, [commands, connection, markConnectionSessionEnded, markConnectionSessionStarted]);
 
   const refreshRemoteDirectory = async () => {
     await loadRemoteDirectory(remotePath, t("sftp.refreshing"));
@@ -300,16 +310,14 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
 
   const loadRemoteDirectory = async (path: string, loadingStatus = t("sftp.openingFolder")) => {
     const sessionId = sessionIdRef.current;
-    if (!sessionId || !isTauriRuntime()) {
+    if (!sessionId || !isTauriRuntime() || !commands) {
       return;
     }
 
     setIsRemoteLoading(true);
     setStatus(loadingStatus);
     try {
-      const result = await invokeCommand("list_sftp_directory", {
-        request: { sessionId, path },
-      });
+      const result = await commands.listDirectory({ sessionId, path });
       setRemotePath(result.path);
       setRemoteFiles(result.entries.map(remoteEntryToFileEntry));
       setSelectedRemoteNames([]);
@@ -397,25 +405,22 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
     });
 
     try {
+      if (!commands) throw new Error("commands adapter not initialized");
       const result =
         transfer.direction === "upload"
-          ? await invokeCommand("upload_sftp_path", {
-              request: {
-                sessionId,
-                transferId: transfer.id,
-                localPath: transfer.localPath ?? "",
-                remoteDirectory: transfer.remoteDirectory ?? remotePath,
-                overwriteBehavior: transfer.overwriteBehavior,
-              },
+          ? await commands.uploadPath({
+              sessionId,
+              transferId: transfer.id,
+              localPath: transfer.localPath ?? "",
+              remoteDirectory: transfer.remoteDirectory ?? remotePath,
+              overwriteBehavior: transfer.overwriteBehavior,
             })
-          : await invokeCommand("download_sftp_path", {
-              request: {
-                sessionId,
-                transferId: transfer.id,
-                remotePath: transfer.remotePath ?? "",
-                localDirectory: transfer.localDirectory ?? localPath,
-                overwriteBehavior: transfer.overwriteBehavior,
-              },
+          : await commands.downloadPath({
+              sessionId,
+              transferId: transfer.id,
+              remotePath: transfer.remotePath ?? "",
+              localDirectory: transfer.localDirectory ?? localPath,
+              overwriteBehavior: transfer.overwriteBehavior,
             });
 
       setTransferState(transfer.id, {
@@ -619,9 +624,8 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
 
     setTransferState(transfer.id, { detail: t("sftp.canceling") });
     try {
-      await invokeCommand("cancel_sftp_transfer", {
-        request: { transferId: transfer.id },
-      });
+      if (!commands) throw new Error("commands adapter not initialized");
+      await commands.cancelTransfer({ transferId: transfer.id });
     } catch (error) {
       setTransferState(transfer.id, {
         state: "failed",
@@ -633,7 +637,7 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
 
   const handleCreateRemoteFolder = async () => {
     const sessionId = sessionIdRef.current;
-    if (!sessionId || !isTauriRuntime()) {
+    if (!sessionId || !isTauriRuntime() || !commands) {
       return;
     }
 
@@ -650,12 +654,10 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
     setIsRemoteLoading(true);
     setStatus(t("sftp.creatingFolder"));
     try {
-      await invokeCommand("create_sftp_folder", {
-        request: {
-          sessionId,
-          parentPath: remotePath,
-          name: trimmedName,
-        },
+      await commands.createFolder({
+        sessionId,
+        parentPath: remotePath,
+        name: trimmedName,
       });
       await refreshRemoteDirectory();
     } catch (error) {
@@ -668,7 +670,7 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
   const handleRenameRemotePath = async (currentName: string, newName: string) => {
     const sessionId = sessionIdRef.current;
     const selected = remoteFiles.find((file) => file.name === currentName);
-    if (!sessionId || !selected || !isTauriRuntime()) {
+    if (!sessionId || !selected || !isTauriRuntime() || !commands) {
       return;
     }
 
@@ -684,12 +686,10 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
     setIsRemoteLoading(true);
     setStatus(t("sftp.renaming"));
     try {
-      await invokeCommand("rename_sftp_path", {
-        request: {
-          sessionId,
-          path: joinRemotePath(remotePath, selected.name),
-          newName: trimmedName,
-        },
+      await commands.renamePath({
+        sessionId,
+        path: joinRemotePath(remotePath, selected.name),
+        newName: trimmedName,
       });
       await refreshRemoteDirectory();
     } catch (error) {
@@ -702,7 +702,7 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
   const handleDeleteRemotePath = async (names = selectedRemoteNames) => {
     const sessionId = sessionIdRef.current;
     const selected = remoteFiles.filter((file) => names.includes(file.name));
-    if (!sessionId || selected.length === 0 || !isTauriRuntime()) {
+    if (!sessionId || selected.length === 0 || !isTauriRuntime() || !commands) {
       return;
     }
 
@@ -719,11 +719,9 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
     setStatus(t("sftp.deleting"));
     try {
       for (const item of selected) {
-        await invokeCommand("delete_sftp_path", {
-          request: {
-            sessionId,
-            path: joinRemotePath(remotePath, item.name),
-          },
+        await commands.deletePath({
+          sessionId,
+          path: joinRemotePath(remotePath, item.name),
         });
       }
       await refreshRemoteDirectory();
@@ -735,7 +733,7 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
   };
 
   const handleOpenTerminalHere = () => {
-    if (!connection || !isConnected) {
+    if (!connection || !isConnected || !commands?.capabilities.openTerminalHere) {
       return;
     }
 
@@ -824,15 +822,13 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
     let remoteProperties: SftpPathProperties | undefined;
     if (side === "remote") {
       const sessionId = sessionIdRef.current;
-      if (!sessionId || !isTauriRuntime()) {
+      if (!sessionId || !isTauriRuntime() || !commands) {
         setStatus(t("sftp.sessionUnavailable"));
         return;
       }
 
       try {
-        remoteProperties = await invokeCommand("sftp_path_properties", {
-          request: { sessionId, path },
-        });
+        remoteProperties = await commands.pathProperties({ sessionId, path });
       } catch (error) {
         setStatus(error instanceof Error ? error.message : String(error));
       }
@@ -852,17 +848,22 @@ export function SftpWorkspace({ isActive, tab }: { isActive: boolean; tab: Works
     gid?: number;
   }) => {
     const sessionId = sessionIdRef.current;
-    if (!sessionId || !propertiesState || propertiesState.side !== "remote" || !isTauriRuntime()) {
+    if (
+      !sessionId ||
+      !propertiesState ||
+      propertiesState.side !== "remote" ||
+      !isTauriRuntime() ||
+      !commands ||
+      !commands.capabilities.editPermissions
+    ) {
       return;
     }
 
     try {
-      const remoteProperties = await invokeCommand("update_sftp_path_properties", {
-        request: {
-          sessionId,
-          path: propertiesState.path,
-          ...request,
-        },
+      const remoteProperties = await commands.updatePathProperties({
+        sessionId,
+        path: propertiesState.path,
+        ...request,
       });
       setPropertiesState((current) =>
         current ? { ...current, remoteProperties } : current,
