@@ -260,7 +260,6 @@ enum AiStreamEvent {
     ToolCallStart { tool_id: String, tool_name: String },
     ToolCallEnd { tool_id: String, tool_name: String },
     Done { model: String, provider_kind: String },
-    Error { message: String },
 }
 
 pub async fn run_agent(
@@ -479,8 +478,6 @@ struct ChatSseChunk {
 #[derive(Deserialize, Default)]
 struct ChatSseChoice {
     delta: ChatSseDelta,
-    #[serde(default)]
-    finish_reason: Option<String>,
 }
 
 #[derive(Deserialize, Default)]

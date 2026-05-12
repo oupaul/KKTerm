@@ -57,12 +57,13 @@ export function RdpSettings() {
             <span>{t("settings.colorDepth")}</span>
             <select
               value={draft.colorDepth}
-              onChange={(event) =>
+              onChange={(event) => {
+                const colorDepth = Number(event.currentTarget.value) as RdpColorDepth;
                 setDraft((settings) => ({
                   ...settings,
-                  colorDepth: Number(event.currentTarget.value) as RdpColorDepth,
-                }))
-              }
+                  colorDepth,
+                }));
+              }}
             >
               <option value={32}>{t("settings.rdpColorDepth32")}</option>
               <option value={24}>{t("settings.rdpColorDepth24")}</option>
@@ -74,12 +75,13 @@ export function RdpSettings() {
             <span>{t("settings.performanceFlags")}</span>
             <select
               value={draft.performanceProfile}
-              onChange={(event) =>
+              onChange={(event) => {
+                const performanceProfile = event.currentTarget.value as RdpPerformanceProfile;
                 setDraft((settings) => ({
                   ...settings,
-                  performanceProfile: event.currentTarget.value as RdpPerformanceProfile,
-                }))
-              }
+                  performanceProfile,
+                }));
+              }}
             >
               <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
               <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
