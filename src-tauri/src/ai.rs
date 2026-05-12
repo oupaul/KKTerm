@@ -478,6 +478,8 @@ struct ChatSseChunk {
 #[derive(Deserialize, Default)]
 struct ChatSseChoice {
     delta: ChatSseDelta,
+    #[serde(default)]
+    finish_reason: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -512,6 +514,10 @@ struct ToolCallAccumulator {
     id: String,
     name: String,
     arguments: String,
+}
+
+fn ai_debug(message: impl AsRef<str>) {
+    eprintln!("[kkterm-ai] {}", message.as_ref());
 }
 
 #[derive(Default)]
@@ -744,6 +750,9 @@ async fn stream_chat_completions(
             let chunk: ChatSseChunk =
                 serde_json::from_str(data).map_err(|e| format!("SSE parse error: {e}"))?;
             for choice in chunk.choices {
+                if let Some(finish_reason) = choice.finish_reason.as_deref() {
+                    ai_debug(format!("chat stream finish_reason={finish_reason}"));
+                }
                 if let Some(c) = choice.delta.content.as_deref() {
                     if !c.is_empty() {
                         content.push_str(c);
@@ -1235,7 +1244,15 @@ impl OpenAiCompatibleProvider {
         let model = settings.model().to_string();
         let exhausted = true;
 
-        for _ in 0..10 {
+        for turn_index in 0..10 {
+            ai_debug(format!(
+                "chat stream request provider={} model={} subturn={} messages={} tools={}",
+                self.provider_kind,
+                model,
+                turn_index + 1,
+                messages.len(),
+                tool_definitions.len()
+            ));
             let response = client
                 .post(endpoint.clone())
                 .headers(openai_compatible_headers(
@@ -1259,6 +1276,14 @@ impl OpenAiCompatibleProvider {
                     .text()
                     .await
                     .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
+                ai_debug(format!(
+                    "chat stream HTTP error provider={} model={} subturn={} status={} body={}",
+                    self.provider_kind,
+                    model,
+                    turn_index + 1,
+                    status.as_u16(),
+                    truncate_error_body(&response_text)
+                ));
                 return Err(format!(
                     "{} returned HTTP {}: {}",
                     self.label,
@@ -1269,6 +1294,15 @@ impl OpenAiCompatibleProvider {
 
             let (content, tool_calls, streamed_reasoning) =
                 stream_chat_completions(response, &channel).await?;
+            ai_debug(format!(
+                "chat stream response provider={} model={} subturn={} content_len={} reasoning_len={} tool_calls={}",
+                self.provider_kind,
+                model,
+                turn_index + 1,
+                content.len(),
+                streamed_reasoning.as_deref().map(str::len).unwrap_or(0),
+                tool_calls.len()
+            ));
 
             if tool_calls.is_empty() {
                 require_streamed_assistant_content(self, &content)?;
@@ -1303,6 +1337,15 @@ impl OpenAiCompatibleProvider {
                 ),
             });
             for tool_call in &tool_calls {
+                ai_debug(format!(
+                    "tool start provider={} model={} subturn={} id={} name={} args_len={}",
+                    self.provider_kind,
+                    model,
+                    turn_index + 1,
+                    tool_call.id,
+                    tool_call.function.name,
+                    tool_call.function.arguments.len()
+                ));
                 emit_stream(
                     &channel,
                     &AiStreamEvent::ToolCallStart {
@@ -1311,6 +1354,7 @@ impl OpenAiCompatibleProvider {
                     },
                 )?;
                 let result = run_ai_tool(settings.tools(), &app_data_dir, &app, tool_call).await;
+                let result_len = result.len();
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1318,6 +1362,15 @@ impl OpenAiCompatibleProvider {
                     tool_call_id: Some(tool_call.id.clone()),
                     tool_calls: None,
                 });
+                ai_debug(format!(
+                    "tool end provider={} model={} subturn={} id={} name={} result_len={}",
+                    self.provider_kind,
+                    model,
+                    turn_index + 1,
+                    tool_call.id,
+                    tool_call.function.name,
+                    result_len
+                ));
                 emit_stream(
                     &channel,
                     &AiStreamEvent::ToolCallEnd {
@@ -1329,6 +1382,12 @@ impl OpenAiCompatibleProvider {
         }
 
         if exhausted {
+            ai_debug(format!(
+                "chat stream exhausted tool loop provider={} model={} messages={}",
+                self.provider_kind,
+                model,
+                messages.len()
+            ));
             let response = client
                 .post(endpoint.clone())
                 .headers(openai_compatible_headers(
@@ -1656,6 +1715,10 @@ fn require_streamed_assistant_content(
     content: &str,
 ) -> Result<(), String> {
     if content.trim().is_empty() {
+        ai_debug(format!(
+            "stream response missing visible assistant content provider={}",
+            provider.provider_kind
+        ));
         Err(format!(
             "{} response did not include assistant content",
             provider.label
@@ -3219,6 +3282,50 @@ mod tests {
             "DeepSeek response did not include assistant content"
         );
         assert!(require_streamed_assistant_content(&provider, "It is 11:34 PM.").is_ok());
+    }
+
+    #[test]
+    fn deepseek_tool_turn_serializes_reasoning_content_and_tool_result() {
+        let assistant_message = OpenAiCompatibleMessage {
+            role: "assistant".to_string(),
+            content: OpenAiCompatibleContent::Text("Let me check the current time.".to_string()),
+            reasoning_content: Some(
+                "The user asked for current time, so I need the current_time tool.".to_string(),
+            ),
+            tool_call_id: None,
+            tool_calls: Some(vec![OpenAiAssistantToolCall {
+                id: "call_time".to_string(),
+                tool_type: "function".to_string(),
+                function: OpenAiAssistantToolCallFunction {
+                    name: "current_time".to_string(),
+                    arguments: "{}".to_string(),
+                },
+            }]),
+        };
+        let tool_message = OpenAiCompatibleMessage {
+            role: "tool".to_string(),
+            content: OpenAiCompatibleContent::Text("2026-05-12T23:00:00+08:00".to_string()),
+            reasoning_content: None,
+            tool_call_id: Some("call_time".to_string()),
+            tool_calls: None,
+        };
+
+        let assistant_json = serde_json::to_value(&assistant_message)
+            .expect("assistant tool-call turn serializes");
+        let tool_json = serde_json::to_value(&tool_message).expect("tool result serializes");
+
+        assert_eq!(assistant_json["role"], "assistant");
+        assert_eq!(
+            assistant_json["reasoning_content"],
+            "The user asked for current time, so I need the current_time tool."
+        );
+        assert_eq!(assistant_json["tool_calls"][0]["id"], "call_time");
+        assert_eq!(assistant_json["tool_calls"][0]["type"], "function");
+        assert_eq!(assistant_json["tool_calls"][0]["function"]["name"], "current_time");
+        assert_eq!(tool_json["role"], "tool");
+        assert_eq!(tool_json["tool_call_id"], "call_time");
+        assert_eq!(tool_json["content"], "2026-05-12T23:00:00+08:00");
+        assert!(tool_json.get("reasoning_content").is_none());
     }
 
     #[test]

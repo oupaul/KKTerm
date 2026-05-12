@@ -520,6 +520,39 @@ function normalizeAssistantToolCalls(value: unknown): AssistantToolCallStatus[] 
   return calls.length > 0 ? calls : undefined;
 }
 
+function logAssistantStreamEvent(event: AiStreamEvent) {
+  switch (event.type) {
+    case "reasoningDelta":
+    case "contentDelta":
+      console.debug("[kkterm-ai] stream event", {
+        type: event.type,
+        deltaLength: event.delta.length,
+      });
+      return;
+    case "toolCallStart":
+    case "toolCallEnd":
+      console.debug("[kkterm-ai] stream event", {
+        type: event.type,
+        toolId: event.toolId,
+        toolName: event.toolName,
+      });
+      return;
+    case "done":
+      console.debug("[kkterm-ai] stream event", {
+        type: event.type,
+        providerKind: event.providerKind,
+        model: event.model,
+      });
+      return;
+    case "error":
+      console.debug("[kkterm-ai] stream event", {
+        type: event.type,
+        messageLength: event.message.length,
+      });
+      return;
+  }
+}
+
 function normalizeDateString(value: unknown) {
   if (typeof value !== "string") {
     return undefined;
@@ -1093,6 +1126,7 @@ export function AssistantPanel({
         if (activeAssistantRequestIdRef.current !== requestId) {
           return;
         }
+        logAssistantStreamEvent(event);
         if (event.type === "toolCallEnd" && isDashboardMutatingTool(event.toolName)) {
           void useDashboardStore.getState().load();
         }
