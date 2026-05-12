@@ -339,6 +339,10 @@ function TmuxSessionTag({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
 
   const enabled = connection.type === "ssh" && connection.useTmuxSessions !== false && sessionId;
+  const renameInputId = useMemo(
+    () => `tmux-session-name-${tabId}-${sessionId ?? "active"}`.replace(/[^A-Za-z0-9_-]/g, "-"),
+    [sessionId, tabId],
+  );
 
   useEffect(() => {
     if (!sessionId) {
@@ -563,12 +567,12 @@ function TmuxSessionTag({
     <div className="tmux-session-wrapper" ref={menuRef}>
       {editingSessionName ? (
         <form className="tmux-session-rename" onSubmit={(event) => void handleRenameSubmit(event)}>
-          <label className="sr-only" htmlFor={`tmux-session-name-${tabId}`}>
+          <label className="sr-only" htmlFor={renameInputId}>
             {t("terminal.tmuxSessionName")}
           </label>
           <input
             autoFocus
-            id={`tmux-session-name-${tabId}`}
+            id={renameInputId}
             value={renameDraft}
             onChange={(event) => {
               setRenameDraft(event.target.value);
