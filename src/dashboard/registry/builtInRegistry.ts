@@ -1,10 +1,6 @@
 import type { ComponentType } from "react";
 import type { AccentName, IconName, WidgetPreset } from "../types";
 import { AppLauncherBody } from "../widgets/AppLauncherBody";
-import { HashBody } from "../widgets/HashBody";
-import { SubnetBody } from "../widgets/SubnetBody";
-import { QuickToolsBody } from "../widgets/QuickToolsBody";
-import { ReportBody } from "../widgets/ReportBody";
 
 export interface BuiltInWidgetEntry {
   id: string;
@@ -29,50 +25,6 @@ export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
     defaultIcon: "Wrench",
     defaultSize: { w: 4, h: 3 },
     Body: AppLauncherBody,
-  },
-  {
-    id: "hashCalculator",
-    titleKey: "dashboard.hashTitle",
-    summaryKey: "dashboard.hashSummary",
-    category: "hash",
-    defaultPreset: "panel",
-    defaultAccent: "indigo",
-    defaultIcon: "Hash",
-    defaultSize: { w: 3, h: 3 },
-    Body: HashBody,
-  },
-  {
-    id: "subnetCalculator",
-    titleKey: "dashboard.subnetTitle",
-    summaryKey: "dashboard.subnetSummary",
-    category: "network",
-    defaultPreset: "panel",
-    defaultAccent: "teal",
-    defaultIcon: "Network",
-    defaultSize: { w: 3, h: 3 },
-    Body: SubnetBody,
-  },
-  {
-    id: "quickTools",
-    titleKey: "dashboard.quickToolsTitle",
-    summaryKey: "dashboard.quickToolsSummary",
-    category: "quick",
-    defaultPreset: "panel",
-    defaultAccent: "amber",
-    defaultIcon: "Wrench",
-    defaultSize: { w: 3, h: 3 },
-    Body: QuickToolsBody,
-  },
-  {
-    id: "maintenanceReport",
-    titleKey: "dashboard.reportTitle",
-    summaryKey: "dashboard.reportSummary",
-    category: "report",
-    defaultPreset: "panel",
-    defaultAccent: "slate",
-    defaultIcon: "Doc",
-    defaultSize: { w: 3, h: 3 },
-    Body: ReportBody,
   },
 ];
 

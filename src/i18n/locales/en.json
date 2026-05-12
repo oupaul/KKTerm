@@ -41,6 +41,8 @@
     "catalogTitle": "Widget Catalog",
     "catalogSearch": "Search widgets…",
     "catalogAll": "All",
+    "catalogGroupBuiltIn": "Built-in",
+    "catalogGroupCustom": "Custom",
     "catalogNoMatches": "No widgets match.",
     "presetLabel": "Style preset",
     "preset": {

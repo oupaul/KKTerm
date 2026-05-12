@@ -220,7 +220,7 @@ The full architecture lives in `docs/DASHBOARD.md`. Summary of the durable shape
 
 App Launcher is rendered as a `builtIn` widget hosted by Dashboard; its data model and management UI remain in `src/app-launcher/`. App Launcher is intentionally not a peer Activity Rail entry.
 
-The legacy widget bodies (hash, subnet, quick tools, maintenance report) render through the new preset chrome but keep their existing internals; they are slated for a follow-up redesign.
+App Launcher is the only current built-in widget. AI-authored Dashboard Custom Widgets remain the extension point for user-specific content and script widgets.
 
 When `docs/ARCHITECTURE.md` and `docs/DASHBOARD.md` conflict on Dashboard-internal concerns, `docs/DASHBOARD.md` wins.
 
@@ -316,11 +316,11 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/dashboard/view/DashboardCanvas.tsx` — `react-grid-layout` host. Owns drag/resize wiring and the debounced batched layout-save pipeline.
 - `src/dashboard/view/WidgetFrame.tsx` — preset chrome wrapper plus edit-mode controls (remove, customize). Sets inline accent CSS variables.
 - `src/dashboard/view/WidgetBody.tsx` — dispatcher: `builtIn` → registry lookup; `content` → `ContentWidgetRenderer`; `script` → `ScriptWidgetHost`.
-- `src/dashboard/widgets/` — one file per built-in widget body (`AppLauncherBody.tsx`, `HashBody.tsx`, `SubnetBody.tsx`, `QuickToolsBody.tsx`, `ReportBody.tsx`). `AppLauncherBody.tsx` delegates to `src/app-launcher/`.
+- `src/dashboard/widgets/` — one file per built-in widget body. `AppLauncherBody.tsx` delegates to `src/app-launcher/`.
 - `src/dashboard/content/ContentWidgetRenderer.tsx` — declarative `content`-kind renderer; switches over `shape: 'markdown' | 'kvList' | 'checklist' | 'stat'`.
 - `src/dashboard/script/ScriptWidgetHost.tsx` — `iframe srcdoc` host for `script`-kind widgets. Wires the postMessage bridge and applies declared permissions through CSP.
 - `src/dashboard/script/permissions.ts` — script-kind capability validation shared with the Rust validator surface.
-- `src/dashboard/edit/CatalogOverlay.tsx` — "Add widget" modal with search, category tabs, and thumbnail cards.
+- `src/dashboard/edit/CatalogOverlay.tsx` — "Add widget" modal with search, Built-in/Custom source tabs, and thumbnail cards.
 - `src/dashboard/edit/CustomizePopover.tsx` — per-instance editor: preset row, accent palette, icon picker, title input, collapsible Advanced section per kind.
 - `src/dashboard/motion.tsx` — centralized motion wrappers for Dashboard surfaces; per the motion rule above.
 - `src/terminal/TerminalWorkspace.tsx` — terminal workspace, split layout view, pane host, tmux session tag/popover, terminal context menu, SSH tmux inspection helpers.

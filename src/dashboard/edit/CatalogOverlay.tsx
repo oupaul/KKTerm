@@ -6,6 +6,7 @@ import { useDashboardStore } from "../state/dashboardStore";
 import { BUILT_IN_WIDGETS } from "../registry/builtInRegistry";
 import { resolveAccent } from "../registry/palette";
 import type { AccentName, IconName, WidgetKind, WidgetPreset } from "../types";
+import { CATALOG_GROUPS, getCatalogGroup } from "./catalogModel";
 
 export interface CatalogOverlayProps { viewId: string; onClose: () => void; }
 
@@ -29,7 +30,7 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
   const instances = useDashboardStore((s) => s.instances);
   const addInstance = useDashboardStore((s) => s.addInstance);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<string>("all");
+  const [group, setGroup] = useState<(typeof CATALOG_GROUPS)[number]>("builtIn");
 
   const entries: CatalogEntry[] = useMemo(() => {
     const builtIns: CatalogEntry[] = BUILT_IN_WIDGETS.map((w) => ({
@@ -60,18 +61,17 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
     return [...builtIns, ...customs];
   }, [customWidgets, t]);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>(["all"]);
-    entries.forEach((e) => set.add(e.category));
-    return [...set];
-  }, [entries]);
-
   const visible = useMemo(() => entries.filter((e) => {
-    if (category !== "all" && e.category !== category) return false;
+    if (getCatalogGroup(e) !== group) return false;
     if (!query) return true;
     const hay = `${e.title} ${e.summary}`.toLowerCase();
     return hay.includes(query.toLowerCase());
-  }), [entries, category, query]);
+  }), [entries, group, query]);
+
+  const groupLabel = (catalogGroup: (typeof CATALOG_GROUPS)[number]) =>
+    catalogGroup === "builtIn"
+      ? t("dashboard.catalogGroupBuiltIn")
+      : t("dashboard.catalogGroupCustom");
 
   async function onAdd(entry: CatalogEntry) {
     await addInstance({
@@ -105,9 +105,13 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
           </button>
         </header>
         <nav className="dw-catalog-tabs">
-          {categories.map((c) => (
-            <button key={c} className={category === c ? "active" : ""} onClick={() => setCategory(c)}>
-              {c === "all" ? t("dashboard.catalogAll") : c}
+          {CATALOG_GROUPS.map((catalogGroup) => (
+            <button
+              key={catalogGroup}
+              className={group === catalogGroup ? "active" : ""}
+              onClick={() => setGroup(catalogGroup)}
+            >
+              {groupLabel(catalogGroup)}
             </button>
           ))}
         </nav>
@@ -131,7 +135,7 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
                 <h4>{entry.title}</h4>
                 <p>{entry.summary}</p>
                 <div className="dw-catalog-meta">
-                  <span>{entry.category}</span>
+                  <span>{groupLabel(getCatalogGroup(entry))}</span>
                   {entry.createdBy === "agent" && <span className="dw-badge">AI</span>}
                   {alreadyOnView && <span className="dw-badge">✓</span>}
                 </div>

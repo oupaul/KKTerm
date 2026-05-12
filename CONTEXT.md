@@ -44,7 +44,7 @@ A frontend workspace container that presents one session or a set of related pan
 _Avoid_: Session, connection, backend tab
 
 **Dashboard Module**:
-A built-in activity-rail module that provides a dynamic widget playground. Users select from prebuilt widgets (hash calculators, IP subnet calculators, quick tools, maintenance report, App Launcher) or AI-authored custom widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
+A built-in activity-rail module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI-authored custom widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
 _Avoid_: landing page, overview
 
 **Dashboard View**:

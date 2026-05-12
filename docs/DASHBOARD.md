@@ -33,7 +33,7 @@ It does not own:
 
 | Kind | Body source | Execution model |
 |---|---|---|
-| `builtIn` | TypeScript component in `src/dashboard/widgets/` registered in `builtInRegistry.ts` | Normal React render. The five v1 built-ins are App Launcher, Hash Calculator, IPv4 Subnet, Quick Tools, Maintenance Report. |
+| `builtIn` | TypeScript component in `src/dashboard/widgets/` registered in `builtInRegistry.ts` | Normal React render. App Launcher is the only current built-in. |
 | `content` | Validated JSON in `dashboard_custom_widgets.body_json` | Declarative renderer in `ContentWidgetRenderer.tsx` — switches over `shape: 'markdown' \| 'kvList' \| 'checklist' \| 'stat'`. No code execution. |
 | `script` | JavaScript source string in `dashboard_custom_widgets.body_json` | Hosted inside an isolated `iframe srcdoc` via `ScriptWidgetHost.tsx`. Has `document`, `fetch`, `setInterval`, and a minimal `KK` postMessage bridge. Permissions (`network`, `pollSeconds`) declared per widget. Fault-isolation boundary — a bad script breaks one widget, not the dashboard. |
 
@@ -109,10 +109,6 @@ src/dashboard/
     WidgetBody.tsx               ── dispatch by kind (builtIn / content / script)
   widgets/                       ── built-in body components, one file each
     AppLauncherBody.tsx          ── delegates to src/app-launcher
-    HashBody.tsx
-    SubnetBody.tsx
-    QuickToolsBody.tsx
-    ReportBody.tsx
   content/
     ContentWidgetRenderer.tsx
   script/
@@ -156,7 +152,7 @@ The customize popover is anchored to a widget's settings (⚙) button and contai
 
 The four shared sections render identically regardless of widget kind.
 
-The catalog overlay is a separate modal with search + category tabs + thumbnail cards. There is no user-facing "+ Create custom widget" entry in v1 — custom widget authorship is AI-only.
+The catalog overlay is a separate modal with search + two source-group tabs: Built-in and Custom. Widget definitions still carry a `category` field for future category UI, but current browsing is grouped only by shipped built-ins versus AI-authored custom widgets. There is no user-facing "+ Create custom widget" entry in v1 — custom widget authorship is AI-only.
 
 ## Script Widget Host
 
