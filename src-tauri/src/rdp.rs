@@ -760,6 +760,15 @@ mod platform {
             let _ = set_property_bool(&advanced, "AllowPromptingForCredentials", true);
             let _ = set_property_i32(&advanced, "RDPPort", i32::from(port));
             let _ = set_property_bool(&advanced, "EnableCredSspSupport", true);
+            // The embedded MsRdpClient ActiveX has no UI to show the server-auth
+            // certificate-trust warning that mstsc.exe displays on first contact.
+            // With the default AuthenticationLevel of 2 ("Warn"), the control stalls
+            // silently at a blank pre-login screen until mstsc has been used once to
+            // persist the cert hash under HKCU\...\Terminal Server Client\Servers.
+            // 0 = connect even if server authentication fails, matching the posture
+            // used by embedded RDP hosts (RDWeb, FreeRDP).
+            let _ = set_property_i32(&advanced, "AuthenticationLevel", 0);
+            let _ = set_property_bool(&advanced, "NegotiateSecurityLayer", true);
             // Match mstsc's Local Resources defaults closely enough for embedded sessions:
             // Windows shortcut replacements (including Ctrl+Alt+End for SAS) must be routed to
             // the remote host, while higher-risk device redirects stay disabled until KKTerm
