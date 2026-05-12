@@ -212,6 +212,7 @@ const AI_ASSISTANT_TOOL_IDS: AiAssistantToolId[] = [
   "appDataFileSearch",
   "appDataFileRead",
   "shellCommand",
+  "dashboard",
 ];
 
 function AiAssistantToolsControl({

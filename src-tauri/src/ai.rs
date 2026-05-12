@@ -9,7 +9,8 @@ use futures::StreamExt;
 use tauri::ipc::Channel;
 use tauri::Manager;
 
-use crate::storage::{AiAssistantToolSettings, AiProviderSettings};
+use crate::dashboard_storage as ds;
+use crate::storage::{AiAssistantToolSettings, AiProviderSettings, Storage};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -868,7 +869,7 @@ impl OpenAiCompatibleProvider {
                 ),
             });
             for tool_call in tool_calls {
-                let result = run_ai_tool(settings.tools(), &app_data_dir, &tool_call).await;
+                let result = run_ai_tool(settings.tools(), &app_data_dir, &app, &tool_call).await;
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1021,7 +1022,7 @@ impl OpenAiCompatibleProvider {
                 input.extend(output.iter().cloned());
             }
             for tool_call in tool_calls {
-                let result = run_ai_tool(settings.tools(), &app_data_dir, &tool_call).await;
+                let result = run_ai_tool(settings.tools(), &app_data_dir, &app, &tool_call).await;
                 input.push(json!({
                     "type": "function_call_output",
                     "call_id": tool_call.id,
@@ -1195,7 +1196,7 @@ impl OpenAiCompatibleProvider {
                         tool_name: tool_call.function.name.clone(),
                     },
                 )?;
-                let result = run_ai_tool(settings.tools(), &app_data_dir, tool_call).await;
+                let result = run_ai_tool(settings.tools(), &app_data_dir, &app, tool_call).await;
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1361,7 +1362,7 @@ impl OpenAiCompatibleProvider {
                         tool_name: tool_call.function.name.clone(),
                     },
                 )?;
-                let result = run_ai_tool(settings.tools(), &app_data_dir, tool_call).await;
+                let result = run_ai_tool(settings.tools(), &app_data_dir, &app, tool_call).await;
                 input.push(json!({
                     "type": "function_call_output",
                     "call_id": tool_call.id,
@@ -1727,6 +1728,73 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
     if settings.shell_command() {
         tools.push(tool_definition("shell_command", "Run a non-destructive PowerShell or batch command from KKTerm app data only. Destructive commands are blocked.", json!({"type":"object","properties":{"command":{"type":"string"},"shell":{"type":"string","enum":["powershell","batch"]}},"required":["command"]})));
     }
+    if settings.dashboard() {
+        tools.push(tool_definition(
+            "dashboard_load_state",
+            "Load the full Dashboard state: all views, widget instances, and custom widgets.",
+            json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_create_view",
+            "Create a new Dashboard view (tab) with an optional grid density.",
+            json!({"type":"object","properties":{"title":{"type":"string"},"gridDensity":{"type":"string","enum":["compact","default","roomy"]}},"required":["title"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_update_view",
+            "Update a Dashboard view's title, grid density, or sort order.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"patch":{"type":"object","properties":{"title":{"type":"string"},"gridDensity":{"type":"string","enum":["compact","default","roomy"]},"sortOrder":{"type":"integer"}}}},"required":["id","patch"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_remove_view",
+            "Remove a Dashboard view and all its widget instances.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_reorder_views",
+            "Reorder Dashboard views by providing a full ordered list of view IDs.",
+            json!({"type":"object","properties":{"orderedIds":{"type":"array","items":{"type":"string"}}},"required":["orderedIds"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_add_instance",
+            "Add a widget instance to a Dashboard view at a specific grid position.",
+            json!({"type":"object","properties":{"viewId":{"type":"string"},"kind":{"type":"string","enum":["builtIn","content","script"]},"sourceId":{"type":"string"},"preset":{"type":"string","enum":["panel","ambient","glass","tile","hero","mono","stack","action","band"]},"accentName":{"type":"string"},"iconName":{"type":"string"},"gridX":{"type":"integer","minimum":0,"maximum":11},"gridY":{"type":"integer","minimum":0},"gridW":{"type":"integer","minimum":1,"maximum":12},"gridH":{"type":"integer","minimum":1}},"required":["viewId","kind","sourceId","preset","accentName","iconName","gridX","gridY","gridW","gridH"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_update_instance",
+            "Update a widget instance's preset, accent, icon, custom title, or grid position.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"patch":{"type":"object","properties":{"preset":{"type":"string"},"accentName":{"type":"string"},"iconName":{"type":"string"},"customTitle":{"type":["string","null"]},"gridX":{"type":"integer"},"gridY":{"type":"integer"},"gridW":{"type":"integer"},"gridH":{"type":"integer"}}}},"required":["id","patch"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_remove_instance",
+            "Remove a single widget instance from the Dashboard.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_apply_layout",
+            "Batch-update grid positions for all instances in a Dashboard view.",
+            json!({"type":"object","properties":{"viewId":{"type":"string"},"layout":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"gridX":{"type":"integer"},"gridY":{"type":"integer"},"gridW":{"type":"integer"},"gridH":{"type":"integer"}},"required":["id","gridX","gridY","gridW","gridH"]}}},"required":["viewId","layout"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_create_custom_widget",
+            "Create a new AI-authored custom widget (content or script kind).",
+            json!({"type":"object","properties":{"kind":{"type":"string","enum":["content","script"]},"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"},"createdBy":{"type":"string","enum":["user","agent"]}},"required":["kind","title","summary","category","bodyJson","createdBy"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_update_custom_widget",
+            "Update an existing custom widget's title, summary, category, or body JSON.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"patch":{"type":"object","properties":{"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"}}}},"required":["id","patch"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_remove_custom_widget",
+            "Remove a custom widget definition. Set forceDeleteInstances to also remove all its placed instances.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"forceDeleteInstances":{"type":"boolean"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_reset",
+            "Reset the entire Dashboard to defaults, removing all views, instances, and AI-authored custom widgets.",
+            json!({"type":"object","properties":{}}),
+        ));
+    }
     tools
 }
 
@@ -1748,6 +1816,7 @@ fn tool_definition(
 async fn run_ai_tool(
     settings: &AiAssistantToolSettings,
     app_data_dir: &Path,
+    app: &tauri::AppHandle,
     call: &OpenAiToolCall,
 ) -> String {
     let args: Value = serde_json::from_str(&call.function.arguments).unwrap_or_else(|_| json!({}));
@@ -1762,8 +1831,167 @@ async fn run_ai_tool(
             app_data_file_read_tool(app_data_dir, args)
         }
         "shell_command" if settings.shell_command() => shell_command_tool(app_data_dir, args),
+        name if settings.dashboard() && name.starts_with("dashboard_") => {
+            dashboard_tool(app, name, args)
+        }
         _ => "Tool is disabled in AI Assistant settings.".to_string(),
     }
+}
+
+fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+    let storage = app.state::<Storage>();
+    let result: Result<Value, String> = storage.with_connection_infallible(|conn| {
+        match name {
+            "dashboard_load_state" => {
+                ds::load_state(conn)
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_create_view" => {
+                let title = arg_string(&args, "title");
+                if title.is_empty() {
+                    return Err("dashboard_create_view requires title".to_string());
+                }
+                let grid_density = args.get("gridDensity").and_then(Value::as_str).map(str::to_owned);
+                let id = new_dashboard_id("view");
+                ds::create_view(conn, &id, &title, grid_density.as_deref())
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_update_view" => {
+                let id = arg_string(&args, "id");
+                if id.is_empty() {
+                    return Err("dashboard_update_view requires id".to_string());
+                }
+                let patch: ds::ViewPatch = serde_json::from_value(
+                    args.get("patch").cloned().unwrap_or(Value::Null)
+                ).map_err(|e| format!("invalid patch: {e}"))?;
+                ds::update_view(conn, &id, &patch)
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_remove_view" => {
+                let id = arg_string(&args, "id");
+                if id.is_empty() {
+                    return Err("dashboard_remove_view requires id".to_string());
+                }
+                ds::remove_view(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_reorder_views" => {
+                let ordered_ids: Vec<String> = args.get("orderedIds")
+                    .and_then(Value::as_array)
+                    .map(|arr| arr.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+                    .unwrap_or_default();
+                ds::reorder_views(conn, &ordered_ids)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_add_instance" => {
+                let view_id = arg_string(&args, "viewId");
+                let kind = arg_string(&args, "kind");
+                let source_id = arg_string(&args, "sourceId");
+                let preset = arg_string(&args, "preset");
+                let accent_name = arg_string(&args, "accentName");
+                let icon_name = arg_string(&args, "iconName");
+                let grid_x = args.get("gridX").and_then(Value::as_i64).unwrap_or(0);
+                let grid_y = args.get("gridY").and_then(Value::as_i64).unwrap_or(0);
+                let grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
+                let grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
+                let id = new_dashboard_id("inst");
+                ds::add_instance(conn, &id, &view_id, &kind, &source_id, &preset, &accent_name, &icon_name, grid_x, grid_y, grid_w, grid_h)
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_update_instance" => {
+                let id = arg_string(&args, "id");
+                if id.is_empty() {
+                    return Err("dashboard_update_instance requires id".to_string());
+                }
+                let patch: ds::InstancePatch = serde_json::from_value(
+                    args.get("patch").cloned().unwrap_or(Value::Null)
+                ).map_err(|e| format!("invalid patch: {e}"))?;
+                ds::update_instance(conn, &id, &patch)
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_remove_instance" => {
+                let id = arg_string(&args, "id");
+                if id.is_empty() {
+                    return Err("dashboard_remove_instance requires id".to_string());
+                }
+                ds::remove_instance(conn, &id)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_apply_layout" => {
+                let view_id = arg_string(&args, "viewId");
+                if view_id.is_empty() {
+                    return Err("dashboard_apply_layout requires viewId".to_string());
+                }
+                let layout: Vec<ds::LayoutEntry> = args.get("layout")
+                    .and_then(|v| serde_json::from_value(v.clone()).ok())
+                    .unwrap_or_default();
+                ds::apply_layout(conn, &view_id, &layout)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_create_custom_widget" => {
+                let kind = arg_string(&args, "kind");
+                let title = arg_string(&args, "title");
+                let summary = arg_string(&args, "summary");
+                let category = arg_string(&args, "category");
+                let body_json = arg_string(&args, "bodyJson");
+                let created_by = arg_string(&args, "createdBy");
+                let id = new_dashboard_id("cw");
+                ds::create_custom_widget(conn, &id, &kind, &title, &summary, &category, &body_json, &created_by)
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_update_custom_widget" => {
+                let id = arg_string(&args, "id");
+                if id.is_empty() {
+                    return Err("dashboard_update_custom_widget requires id".to_string());
+                }
+                let patch: ds::CustomWidgetPatch = serde_json::from_value(
+                    args.get("patch").cloned().unwrap_or(Value::Null)
+                ).map_err(|e| format!("invalid patch: {e}"))?;
+                ds::update_custom_widget(conn, &id, &patch)
+                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_remove_custom_widget" => {
+                let id = arg_string(&args, "id");
+                if id.is_empty() {
+                    return Err("dashboard_remove_custom_widget requires id".to_string());
+                }
+                let force = args.get("forceDeleteInstances").and_then(Value::as_bool).unwrap_or(false);
+                ds::remove_custom_widget(conn, &id, force)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            "dashboard_reset" => {
+                ds::reset_dashboard(conn)
+                    .map(|_| json!({"ok": true}))
+                    .map_err(|e| format!("{e:?}"))
+            }
+            _ => Err(format!("unknown dashboard tool: {name}")),
+        }
+    });
+    match result {
+        Ok(v) => serde_json::to_string(&v).unwrap_or_else(|_| "{}".to_string()),
+        Err(e) => format!("{{\"error\":\"{}\"}}", e.replace('"', "\\\"")),
+    }
+}
+
+fn new_dashboard_id(prefix: &str) -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    format!("{}-{}", prefix, ts)
 }
 
 fn current_time_tool() -> String {

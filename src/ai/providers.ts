@@ -23,6 +23,7 @@ export const DEFAULT_AI_ASSISTANT_TOOLS: AiAssistantToolSettings = {
   appDataFileSearch: false,
   appDataFileRead: false,
   currentTime: false,
+  dashboard: false,
 };
 
 export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {

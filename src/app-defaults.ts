@@ -86,6 +86,7 @@ export const defaultAiAssistantToolSettings = {
   appDataFileSearch: false,
   appDataFileRead: false,
   currentTime: false,
+  dashboard: false,
 };
 
 export const defaultAiProviderSettings: AiProviderSettings = {

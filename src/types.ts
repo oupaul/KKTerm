@@ -342,7 +342,8 @@ export type AiAssistantToolId =
   | "shellCommand"
   | "appDataFileSearch"
   | "appDataFileRead"
-  | "currentTime";
+  | "currentTime"
+  | "dashboard";
 
 export type AiAssistantToolSettings = Record<AiAssistantToolId, boolean>;
 

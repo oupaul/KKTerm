@@ -568,6 +568,10 @@
       "shellCommand": {
         "label": "PowerShell / batch commands",
         "description": "Run non-destructive commands from app data only."
+      },
+      "dashboard": {
+        "label": "Dashboard",
+        "description": "Read and modify Dashboard views, widget instances, and custom widgets."
       }
     },
     "connectedConnectionsRail": "Show connected Connections",
