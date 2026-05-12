@@ -236,7 +236,7 @@ export interface StartFtpSessionRequest {
 
 export interface FtpDirectoryEntry {
   name: string;
-  kind: "file" | "directory" | "symlink" | "other";
+  kind: "file" | "folder" | "symlink" | "other";
   size?: number;
   modified?: number;
   permissions?: number;
@@ -272,7 +272,7 @@ export interface FtpTransferProgress {
 export interface FtpPathProperties {
   path: string;
   name: string;
-  kind: "file" | "directory" | "symlink" | "other";
+  kind: "file" | "folder" | "symlink" | "other";
   size?: number;
   modified?: number;
   permissions?: number;

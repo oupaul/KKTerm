@@ -1013,6 +1013,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
+    // SFTP sub-protocol shares the existing SSH-launched SFTP code path:
+    // derive an SSH-shaped Connection from the FTP Connection's host/user/
+    // port and hand it to openSftpBrowser. Same SftpWorkspace component,
+    // same sftp_* Tauri commands, same SftpSessionManager.
+    if (connection.ftpOptions?.protocol === "sftp") {
+      const sshConnection: Connection = {
+        ...connection,
+        type: "ssh",
+        authMethod: "password",
+        port: connection.port ?? 22,
+        keyPath: undefined,
+        proxyJump: undefined,
+        ftpOptions: undefined,
+      };
+      get().openSftpBrowser(sshConnection);
+      return;
+    }
+
     const tabId = `tab-${connection.id}-ftp`;
     const existingTab = get().tabs.find((tab) => tab.id === tabId);
     if (existingTab) {

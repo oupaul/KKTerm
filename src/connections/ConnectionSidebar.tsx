@@ -1920,7 +1920,17 @@ function ConnectionDialog({
         : connectionType === "serial"
           ? requestedName || serialLine
         : requestedName || host;
-    const portValue = String(form.get("port") ?? "").trim();
+    const ftpProtocolSelection = String(form.get("ftpProtocol") ?? "ftp");
+    const ftpTlsModeSelection = String(form.get("ftpTlsMode") ?? "explicit");
+    const rawPortValue = String(form.get("port") ?? "").trim();
+    const portValue =
+      connectionType === "ftp" && (!rawPortValue || rawPortValue === "21")
+        ? ftpProtocolSelection === "sftp"
+          ? "22"
+          : ftpProtocolSelection === "ftps" && ftpTlsModeSelection === "implicit"
+            ? "990"
+            : rawPortValue
+        : rawPortValue;
     const password = String(form.get("password") ?? "");
     const keyPath = String(form.get("keyPath") ?? "").trim();
     const proxyJump = String(form.get("proxyJump") ?? "").trim();
@@ -1997,7 +2007,10 @@ function ConnectionDialog({
               utf8: form.get("ftpUtf8") === "on",
               showHidden: form.get("ftpShowHidden") === "on",
               ignoreCertErrors: form.get("ftpIgnoreCertErrors") === "on",
-              connectTimeoutSecs: 30,
+              connectTimeoutSecs:
+                Number(String(form.get("ftpConnectTimeoutSecs") ?? "30")) || 30,
+              keepaliveSecs:
+                Number(String(form.get("ftpKeepaliveSecs") ?? "0")) || undefined,
             }
           : undefined,
       password:
@@ -2504,6 +2517,29 @@ function ConnectionDialog({
                       <option value="binary">{t("connections.ftpTransferBinary")}</option>
                       <option value="ascii">{t("connections.ftpTransferAscii")}</option>
                     </select>
+                  </label>
+                  <label>
+                    <span>{t("connections.ftpConnectTimeoutSecs")}</span>
+                    <input
+                      name="ftpConnectTimeoutSecs"
+                      defaultValue={initialConnection?.ftpOptions?.connectTimeoutSecs ?? 30}
+                      inputMode="numeric"
+                      min="1"
+                      max="600"
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    <span>{t("connections.ftpKeepaliveSecs")}</span>
+                    <input
+                      name="ftpKeepaliveSecs"
+                      defaultValue={initialConnection?.ftpOptions?.keepaliveSecs ?? 0}
+                      inputMode="numeric"
+                      min="0"
+                      max="3600"
+                      type="number"
+                      placeholder="0"
+                    />
                   </label>
                 </div>
                 <div className="connection-session-fields">

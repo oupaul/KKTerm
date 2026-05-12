@@ -715,6 +715,8 @@
     "ftpUtf8": "Negotiate UTF-8 paths",
     "ftpShowHidden": "Show hidden files",
     "ftpIgnoreCertErrors": "Allow invalid TLS certificates",
+    "ftpConnectTimeoutSecs": "Connect timeout (s)",
+    "ftpKeepaliveSecs": "Keepalive (s, 0 = off)",
     "addToPane": "Add to pane",
     "transferSshPublicKey": "TransferSSH pub key",
     "transferSshPublicKeyAction": "Transfer key",

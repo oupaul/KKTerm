@@ -336,8 +336,20 @@ impl FtpSessionManager {
             .build()
             .map_err(|e| format!("failed to create FTP runtime: {e}"))?;
 
+        let connect_timeout =
+            Duration::from_secs(options.connect_timeout_secs.unwrap_or(30).clamp(1, 600));
         let (transport, welcome, features, entries, resolved_path) = runtime.block_on(async {
-            connect_and_login(&host, port, &user_name, &password, &options, &initial_path).await
+            tokio::time::timeout(
+                connect_timeout,
+                connect_and_login(&host, port, &user_name, &password, &options, &initial_path),
+            )
+            .await
+            .map_err(|_| {
+                format!(
+                    "FTP connect timed out after {} seconds",
+                    connect_timeout.as_secs()
+                )
+            })?
         })?;
 
         self.sessions
@@ -766,7 +778,7 @@ async fn read_directory(
                     continue;
                 }
                 let kind = if file.is_directory() {
-                    "directory"
+                    "folder"
                 } else if file.is_symlink() {
                     "symlink"
                 } else {
@@ -816,7 +828,7 @@ async fn read_directory(
 
 fn kind_rank(kind: &str) -> u8 {
     match kind {
-        "directory" => 0,
+        "folder" => 0,
         "symlink" => 1,
         _ => 2,
     }
@@ -903,7 +915,7 @@ fn delete_remote_recursive<'a>(
             None => return Ok(()),
         };
 
-        if entry.kind == "directory" {
+        if entry.kind == "folder" {
             let children = read_directory(transport, path, true).await?;
             for child in children {
                 let child_path = join_remote_path(path, &child.name);
@@ -1127,7 +1139,7 @@ async fn download_entry(
 ) -> Result<FtpTransferResult, String> {
     let name = remote_path_name(remote_path)?;
     let props = path_properties(transport, remote_path, show_hidden).await?;
-    let is_dir = props.kind == "directory";
+    let is_dir = props.kind == "folder";
     let total_bytes = if is_dir {
         directory_remote_size(transport, remote_path, show_hidden).await?
     } else {
@@ -1193,7 +1205,7 @@ fn download_recursive<'a>(
             .find(|e| e.name == name)
             .ok_or_else(|| format!("remote path not found: {remote_path}"))?;
 
-        if entry.kind == "directory" {
+        if entry.kind == "folder" {
             if !local_target.exists() {
                 fs::create_dir_all(&local_target)
                     .map_err(|e| format!("cannot create local directory: {e}"))?;
@@ -1328,7 +1340,7 @@ async fn directory_remote_size(
     let entries = read_directory(transport, path, show_hidden).await?;
     for entry in entries {
         let entry_path = join_remote_path(path, &entry.name);
-        if entry.kind == "directory" {
+        if entry.kind == "folder" {
             // Use a boxed recursive call to compute children.
             let nested = Box::pin(directory_remote_size(transport, &entry_path, show_hidden));
             total = total.saturating_add(nested.await?);
@@ -1489,7 +1501,7 @@ fn emit_progress(app: &AppHandle, transfer_id: &str, transferred: u64, total: u6
         ((transferred as u128 * 100) / total as u128).min(100) as u8
     };
     let _ = app.emit(
-        "ftp://transfer-progress",
+        "ftp-transfer-progress",
         FtpTransferProgress {
             transfer_id: transfer_id.to_string(),
             transferred_bytes: transferred,
