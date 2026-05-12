@@ -1,4 +1,4 @@
-import { Cable, Globe2, Laptop, Monitor, Mouse, Network, Server } from "lucide-react";
+import { Cable, FolderInput, Globe2, Laptop, Monitor, Mouse, Network, Server } from "lucide-react";
 import { invokeCommand, type SshHostKeyPreview } from "../lib/tauri";
 import i18next from "../i18n/config";
 import type { Connection, ConnectionType, SshSettings, WorkspaceTab } from "../types";
@@ -148,6 +148,8 @@ export function connectionIconForType(type: ConnectionType) {
       return Cable;
     case "ssh":
       return Server;
+    case "ftp":
+      return FolderInput;
   }
 }
 

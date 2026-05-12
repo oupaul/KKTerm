@@ -1,4 +1,5 @@
 import { connectionTypeForTab } from "../connections/utils";
+import { FtpWorkspace } from "../ftp/FtpWorkspace";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
@@ -142,6 +143,15 @@ export function WorkspaceCanvas({
         if (tab.kind === "sftp") {
           return (
             <SftpWorkspace
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        if (tab.kind === "ftp") {
+          return (
+            <FtpWorkspace
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
               tab={tab}

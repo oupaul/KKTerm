@@ -16,6 +16,9 @@ const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   url: urlIcon,
   rdp: rdpIcon,
   vnc: vncIcon,
+  // Placeholder reusing the SSH icon for FTP/SFTP/FTPS file-transfer
+  // Connections; swap in a dedicated FTP asset when available.
+  ftp: sshIcon,
 };
 
 export function ConnectionIcon({

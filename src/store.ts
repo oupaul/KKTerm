@@ -624,6 +624,7 @@ interface WorkspaceState {
   ) => void;
   openRemoteDesktopConnection: (connection: Connection) => void;
   openSftpBrowser: (connection: Connection) => void;
+  openFtpBrowser: (connection: Connection) => void;
   openTerminalHere: (connection: Connection, remotePath: string) => void;
   openLocalTerminal: () => void;
   splitTerminalPane: (tabId: string) => void;
@@ -810,6 +811,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       get().openRemoteDesktopConnection(connection);
       return;
     }
+    if (connection.type === "ftp") {
+      get().openFtpBrowser(connection);
+      return;
+    }
 
     const existingTab = get().tabs.find(
       (tab) => tab.id === `tab-${connection.id}`,
@@ -994,6 +999,35 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       toolbarTitle: toolbarTitleForConnection(connection),
       subtitle: `${connection.user}@${connection.host}`,
       kind: "sftp",
+      panes: [],
+      connection,
+    };
+
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+    }));
+  },
+  openFtpBrowser: (connection) => {
+    if (connection.type !== "ftp") {
+      return;
+    }
+
+    const tabId = `tab-${connection.id}-ftp`;
+    const existingTab = get().tabs.find((tab) => tab.id === tabId);
+    if (existingTab) {
+      set({ activeTabId: existingTab.id });
+      return;
+    }
+
+    const protocolLabel =
+      connection.ftpOptions?.protocol?.toUpperCase() ?? "FTP";
+    const tab: WorkspaceTab = {
+      id: tabId,
+      title: `${connection.name} ${protocolLabel}`,
+      toolbarTitle: toolbarTitleForConnection(connection),
+      subtitle: `${connection.user || "anonymous"}@${connection.host}`,
+      kind: "ftp",
       panes: [],
       connection,
     };

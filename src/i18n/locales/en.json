@@ -697,6 +697,7 @@
     "sshTerminal": "SSH terminal",
     "rdp": "RDP",
     "vnc": "VNC",
+    "ftp": "FTP",
     "addToPane": "Add to pane",
     "transferSshPublicKey": "TransferSSH pub key",
     "transferSshPublicKeyAction": "Transfer key",
