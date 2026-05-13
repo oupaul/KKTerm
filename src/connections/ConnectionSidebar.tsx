@@ -1,4 +1,5 @@
 import { ConnectionGlyph, connectionSubtitle, connectionTypeSubtitle } from "./ConnectionGlyph";
+import { connectionIconSrcForConnection } from "./ConnectionIcon";
 import { AddConnectionMenu, QuickConnectMenu } from "./ConnectionMenus";
 import { ImportDialog } from "./ImportDialog";
 import {
@@ -773,7 +774,7 @@ export function ConnectionSidebar({
       ...connectionTypes.map((connectionType) => ({
         kind: "item" as const,
         label: connectionType === "ssh" ? t("connections.ssh") : connectionTypeLabel(connectionType),
-        iconSvg: nativeMenuIconForConnectionType(connectionType),
+        iconSrc: connectionIconSrcForConnection({ type: connectionType }),
         action: () => handleNewConnectionTypeSelected(connectionType),
       })),
       { kind: "separator" as const },
@@ -791,7 +792,7 @@ export function ConnectionSidebar({
       {
         kind: "item",
         label: t("connections.ssh"),
-        iconSvg: nativeMenuIcons.server,
+        iconSrc: connectionIconSrcForConnection({ type: "ssh" }),
         action: handleQuickSshRequested,
       },
       ...quickConnectShellOptions.map((option) =>
@@ -803,13 +804,19 @@ export function ConnectionSidebar({
                 {
                   kind: "item" as const,
                   label: t("connections.normal"),
-                  iconSvg: nativeMenuIcons.terminal,
+                  iconSrc: connectionIconSrcForConnection({
+                    localShell: option.value,
+                    type: "local",
+                  }),
                   action: () => handleQuickLocalShell(option),
                 },
                 {
                   kind: "item" as const,
                   label: t("connections.admin"),
-                  iconSvg: nativeMenuIcons.terminal,
+                  iconSrc: connectionIconSrcForConnection({
+                    localShell: option.value,
+                    type: "local",
+                  }),
                   action: () => void handleQuickAdminShell(option),
                 },
               ],
@@ -817,7 +824,10 @@ export function ConnectionSidebar({
           : {
               kind: "item" as const,
               label: option.label,
-              iconSvg: nativeMenuIcons.terminal,
+              iconSrc: connectionIconSrcForConnection({
+                localShell: option.value,
+                type: "local",
+              }),
               action: () => handleQuickLocalShell(option),
             },
       ),
@@ -826,7 +836,7 @@ export function ConnectionSidebar({
         ? recentConnections.map((connection) => ({
             kind: "item" as const,
             label: `${connection.name} - ${connectionSubtitle(connection)}`,
-            iconSvg: nativeMenuIconForConnectionType(connection.type),
+            iconSrc: connectionIconSrcForConnection(connection),
             action: () => {
               setQuickConnectMenuOpen(false);
               handleOpenConnection(connection);
@@ -1883,23 +1893,6 @@ function NewFolderDraftRow({
 
 function isTerminalConnectionType(type: ConnectionType) {
   return type === "local" || type === "ssh" || type === "telnet" || type === "serial";
-}
-
-function nativeMenuIconForConnectionType(type: ConnectionType) {
-  switch (type) {
-    case "local":
-    case "telnet":
-    case "serial":
-      return nativeMenuIcons.terminal;
-    case "ssh":
-    case "ftp":
-      return nativeMenuIcons.server;
-    case "url":
-      return nativeMenuIcons.panelRight;
-    case "rdp":
-    case "vnc":
-      return nativeMenuIcons.layoutDashboard;
-  }
 }
 
 function TreeContextMenu({

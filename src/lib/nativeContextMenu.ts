@@ -4,23 +4,33 @@ import {
   type NativeContextMenuItem,
   type NativeContextMenuPosition,
 } from "./nativeContextMenuModel";
+import type {
+  CheckMenuItem,
+  CheckMenuItemOptions,
+  IconMenuItem,
+  IconMenuItemOptions,
+  MenuItem,
+  MenuItemOptions,
+  PredefinedMenuItem,
+  PredefinedMenuItemOptions,
+  Submenu,
+  SubmenuOptions,
+} from "@tauri-apps/api/menu";
+import type { MenuIcon } from "@tauri-apps/api/image";
 
-type TauriMenuItem =
-  | {
-      item: "Separator";
-    }
-  | {
-      text: string;
-      icon?: unknown;
-      enabled?: boolean;
-      action?: () => void;
-    }
-  | {
-      text: string;
-      icon?: unknown;
-      enabled?: boolean;
-      items: TauriMenuItem[];
-    };
+type TauriMenuApi = typeof import("@tauri-apps/api/menu");
+type TauriImageFactory = typeof import("@tauri-apps/api/image").Image;
+type TauriMenuEntry =
+  | Submenu
+  | MenuItem
+  | PredefinedMenuItem
+  | CheckMenuItem
+  | IconMenuItem
+  | MenuItemOptions
+  | SubmenuOptions
+  | IconMenuItemOptions
+  | PredefinedMenuItemOptions
+  | CheckMenuItemOptions;
 
 export type { NativeContextMenuItem, NativeContextMenuPosition };
 
@@ -38,13 +48,15 @@ export async function showNativeContextMenu(
   }
 
   try {
-    const [{ Menu }, { LogicalPosition }] = await Promise.all([
+    const [menuApi, { LogicalPosition }] = await Promise.all([
       import("@tauri-apps/api/menu"),
       import("@tauri-apps/api/dpi"),
     ]);
     const { Image } = await import("@tauri-apps/api/image");
-    const menu = await Menu.new({
-      items: await Promise.all(normalizedItems.map((item) => toTauriMenuItem(item, Image))),
+    const menu = await menuApi.Menu.new({
+      items: await Promise.all(
+        normalizedItems.map((item) => toTauriMenuItem(item, menuApi, Image)),
+      ),
     });
     await menu.popup(new LogicalPosition(Math.round(position.x), Math.round(position.y)));
     return true;
@@ -56,46 +68,80 @@ export async function showNativeContextMenu(
 
 async function toTauriMenuItem(
   item: NativeContextMenuItem,
-  imageFactory: typeof import("@tauri-apps/api/image").Image,
-): Promise<TauriMenuItem> {
+  menuApi: TauriMenuApi,
+  imageFactory: TauriImageFactory,
+): Promise<TauriMenuEntry> {
   if (item.kind === "separator") {
-    return { item: "Separator" };
+    return menuApi.PredefinedMenuItem.new({ item: "Separator" });
   }
 
   if (item.kind === "submenu") {
-    return {
+    const icon = await optionalMenuIconToImage(item, imageFactory);
+    return menuApi.Submenu.new({
       text: item.label,
-      icon: item.iconSvg ? await optionalSvgMenuIconToImage(item.iconSvg, imageFactory) : undefined,
+      icon,
       enabled: !item.disabled,
-      items: await Promise.all(item.items.map((submenuItem) => toTauriMenuItem(submenuItem, imageFactory))),
-    };
+      items: await Promise.all(
+        item.items.map((submenuItem) => toTauriMenuItem(submenuItem, menuApi, imageFactory)),
+      ),
+    });
   }
 
-  return {
+  const icon = await optionalMenuIconToImage(item, imageFactory);
+  const options = {
     text: item.label,
-    icon: item.iconSvg ? await optionalSvgMenuIconToImage(item.iconSvg, imageFactory) : undefined,
     enabled: !item.disabled,
     action: item.action,
   };
+  return icon
+    ? menuApi.IconMenuItem.new({
+        ...options,
+        icon,
+      })
+    : menuApi.MenuItem.new(options);
 }
 
-const rasterizedIconCache = new Map<string, Promise<unknown>>();
+const rasterizedIconCache = new Map<string, Promise<MenuIcon>>();
 
-async function optionalSvgMenuIconToImage(
-  svg: string,
-  imageFactory: typeof import("@tauri-apps/api/image").Image,
-) {
+async function optionalMenuIconToImage(
+  item: Extract<NativeContextMenuItem, { kind: "item" | "submenu" }>,
+  imageFactory: TauriImageFactory,
+): Promise<MenuIcon | undefined> {
+  const iconSource = item.iconSrc ?? item.iconSvg;
+  if (!iconSource) {
+    return undefined;
+  }
+
   try {
-    return await svgMenuIconToImage(svg, imageFactory);
+    return item.iconSrc
+      ? await imageSourceMenuIconToImage(iconSource, imageFactory)
+      : await svgMenuIconToImage(iconSource, imageFactory);
   } catch (error) {
     console.warn("Failed to rasterize native menu icon", error);
     return undefined;
   }
 }
 
+async function imageSourceMenuIconToImage(
+  src: string,
+  imageFactory: TauriImageFactory,
+) {
+  const cacheKey = `${MENU_ICON_SIZE}:${src}`;
+  const cachedIcon = rasterizedIconCache.get(cacheKey);
+  if (cachedIcon) {
+    return cachedIcon;
+  }
+
+  const icon = rasterizeImageSourceToPngBytes(src, MENU_ICON_SIZE).then((pngBytes) =>
+    imageFactory.fromBytes(pngBytes),
+  );
+  rasterizedIconCache.set(cacheKey, icon);
+  return icon;
+}
+
 async function svgMenuIconToImage(
   svg: string,
-  imageFactory: typeof import("@tauri-apps/api/image").Image,
+  imageFactory: TauriImageFactory,
 ) {
   const cacheKey = `${MENU_ICON_SIZE}:${svg}`;
   const cachedIcon = rasterizedIconCache.get(cacheKey);
@@ -103,8 +149,8 @@ async function svgMenuIconToImage(
     return cachedIcon;
   }
 
-  const icon = rasterizeSvgToRgba(svg, MENU_ICON_SIZE).then(({ rgba, width, height }) =>
-    imageFactory.new(rgba, width, height),
+  const icon = rasterizeSvgToPngBytes(svg, MENU_ICON_SIZE).then((pngBytes) =>
+    imageFactory.fromBytes(pngBytes),
   );
   rasterizedIconCache.set(cacheKey, icon);
   return icon;
@@ -116,15 +162,19 @@ export function svgToDataUrl(svg: string) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-async function rasterizeSvgToRgba(svg: string, size: number) {
+async function rasterizeSvgToPngBytes(svg: string, size: number) {
+  return rasterizeImageSourceToPngBytes(svgToDataUrl(svg.replace(/currentColor/g, "#1f2937")), size);
+}
+
+async function rasterizeImageSourceToPngBytes(src: string, size: number) {
   if (typeof document === "undefined" || typeof window === "undefined") {
-    throw new Error("SVG menu icons require a browser runtime");
+    throw new Error("Native menu icons require a browser runtime");
   }
 
   const image = new window.Image();
   image.width = size;
   image.height = size;
-  image.src = svgToDataUrl(svg.replace(/currentColor/g, "#1f2937"));
+  image.src = src;
   await decodeImage(image);
 
   const canvas = document.createElement("canvas");
@@ -137,11 +187,20 @@ async function rasterizeSvgToRgba(svg: string, size: number) {
 
   context.clearRect(0, 0, size, size);
   context.drawImage(image, 0, 0, size, size);
-  return {
-    rgba: context.getImageData(0, 0, size, size).data,
-    width: size,
-    height: size,
-  };
+  return canvasToPngBytes(canvas);
+}
+
+async function canvasToPngBytes(canvas: HTMLCanvasElement) {
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (result) {
+        resolve(result);
+      } else {
+        reject(new Error("Failed to encode native menu icon PNG"));
+      }
+    }, "image/png");
+  });
+  return new Uint8Array(await blob.arrayBuffer());
 }
 
 async function decodeImage(image: HTMLImageElement) {

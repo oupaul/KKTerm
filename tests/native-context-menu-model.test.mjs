@@ -66,3 +66,21 @@ test("native context menu normalization removes empty submenus recursively", asy
     ["Left"],
   );
 });
+
+test("native context menu normalization preserves raster icon sources", async () => {
+  const { normalizeNativeContextMenuItems } = await importTypeScriptModule(
+    new URL("../src/lib/nativeContextMenuModel.ts", import.meta.url),
+  );
+
+  const normalized = normalizeNativeContextMenuItems([
+    {
+      kind: "item",
+      label: "SSH",
+      iconSrc: "/assets/ssh.png",
+      action: () => undefined,
+    },
+  ]);
+
+  assert.equal(normalized[0].kind, "item");
+  assert.equal(normalized[0].iconSrc, "/assets/ssh.png");
+});

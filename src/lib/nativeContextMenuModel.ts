@@ -2,6 +2,7 @@ export type NativeContextMenuItem =
   | {
       kind: "item";
       label: string;
+      iconSrc?: string;
       iconSvg?: string;
       disabled?: boolean;
       action: () => void;
@@ -9,6 +10,7 @@ export type NativeContextMenuItem =
   | {
       kind: "submenu";
       label: string;
+      iconSrc?: string;
       iconSvg?: string;
       disabled?: boolean;
       items: NativeContextMenuItem[];

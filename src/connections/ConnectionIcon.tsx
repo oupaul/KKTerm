@@ -21,6 +21,22 @@ const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   ftp: sshIcon,
 };
 
+export function connectionIconSrcForConnection({
+  iconDataUrl,
+  localShell,
+  type,
+}: {
+  iconDataUrl?: string | null;
+  localShell?: string;
+  type: ConnectionType;
+}) {
+  return type === "url" && iconDataUrl
+    ? iconDataUrl
+    : type === "local" && localShell === "wsl.exe"
+      ? wslIcon
+      : CONNECTION_ICON_SRC[type];
+}
+
 export function ConnectionIcon({
   className,
   iconDataUrl,
@@ -34,12 +50,7 @@ export function ConnectionIcon({
   size?: number;
   type: ConnectionType;
 }) {
-  const src =
-    type === "url" && iconDataUrl
-      ? iconDataUrl
-      : type === "local" && localShell === "wsl.exe"
-        ? wslIcon
-        : CONNECTION_ICON_SRC[type];
+  const src = connectionIconSrcForConnection({ iconDataUrl, localShell, type });
   return (
     <img
       alt=""
