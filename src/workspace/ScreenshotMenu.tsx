@@ -27,6 +27,7 @@ export function ScreenshotMenu({
   onPreCapture?: () => void;
 }) {
   const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [menuOpen, setMenuOpen] = useState(false);
   const [regionState, setRegionState] = useState<ScreenshotRegionState | null>(null);
   const [copiedStatus, setCopiedStatus] = useState("");
@@ -50,7 +51,7 @@ export function ScreenshotMenu({
 
   async function captureRect(rect: ScreenshotRect) {
     if (!isTauriRuntime()) {
-      window.alert(t("workspace.screenshotsRequireRuntime"));
+      showStatusBarNotice(t("workspace.screenshotsRequireRuntime"), { tone: "warning" });
       return;
     }
 
@@ -58,12 +59,14 @@ export function ScreenshotMenu({
       await waitForScreenshotSurface();
       await invokeCommand("capture_screenshot_to_clipboard", { request: rect });
       setCopiedStatus(t("workspace.copied"));
+      showStatusBarNotice(t("workspace.copied"), { tone: "success" });
       window.setTimeout(() => setCopiedStatus(""), 1600);
     } catch (error) {
-      window.alert(
+      showStatusBarNotice(
         t("workspace.screenshotCaptureError", {
           message: error instanceof Error ? error.message : String(error),
         }),
+        { tone: "error" },
       );
     }
   }

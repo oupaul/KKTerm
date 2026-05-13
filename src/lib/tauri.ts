@@ -5,6 +5,7 @@ import {
 } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import i18next from "../i18n/config";
 import type {
   AppearanceSettings,
   AiProviderSettings,
@@ -1540,13 +1541,13 @@ export async function selectConnectionImportFile() {
   const selectedPath = await openDialog({
     directory: false,
     multiple: false,
-    title: "Import connections from file",
+    title: i18next.t("connections.import.title"),
     filters: [
       {
-        name: "Connection lists",
+        name: i18next.t("connections.import.fromFileTitle"),
         extensions: ["csv", "tsv", "txt", "rdg", "mxtsessions", "reg"],
       },
-      { name: "All files", extensions: ["*"] },
+      { name: i18next.t("common.allFilesFilter"), extensions: ["*"] },
     ],
   });
 
@@ -1608,7 +1609,7 @@ export async function selectKeyFile(defaultPath?: string) {
     defaultPath,
     directory: false,
     multiple: false,
-    title: "Select SSH key file",
+    title: i18next.t("terminal.selectKeyFile"),
   });
 
   return typeof selectedPath === "string" ? selectedPath : null;
@@ -1620,10 +1621,10 @@ export async function saveTextFile(defaultFilename: string, contents: string) {
       const path = await saveDialog({
         defaultPath: defaultFilename,
         filters: [
-          { name: "Log files", extensions: ["log"] },
-          { name: "Text files", extensions: ["txt"] },
+          { name: i18next.t("terminal.logFiles"), extensions: ["log"] },
+          { name: i18next.t("terminal.textFiles"), extensions: ["txt"] },
         ],
-        title: "Save Buffer",
+        title: i18next.t("terminal.saveDialog"),
       });
 
       if (!path) {
@@ -1648,7 +1649,7 @@ async function saveTextFileWithBrowserPicker(
 ) {
   const picker = (window as WindowWithSavePicker).showSaveFilePicker;
   if (!picker) {
-    throw new Error("No save dialog is available in this runtime");
+    throw new Error(i18next.t("terminal.noSaveDialog"));
   }
 
   try {
@@ -1657,7 +1658,7 @@ async function saveTextFileWithBrowserPicker(
       types: [
         {
           accept: { "text/plain": [".log", ".txt"] },
-          description: "Log files",
+          description: i18next.t("terminal.logFiles"),
         },
       ],
     });
@@ -1698,7 +1699,7 @@ export async function selectWikiExportPath(defaultFilename: string) {
   const path = await saveDialog({
     defaultPath: defaultFilename,
     filters: [{ name: "KKTerm wiki export", extensions: ["zip"] }],
-    title: "Export wiki",
+    title: i18next.t("wiki.export"),
   });
   return typeof path === "string" ? path : null;
 }
@@ -1710,7 +1711,7 @@ export async function selectWikiAttachmentFiles() {
   const selection = await openDialog({
     directory: false,
     multiple: true,
-    title: "Attach files to wiki page",
+    title: i18next.t("wiki.attach"),
   });
   if (Array.isArray(selection)) {
     return selection;

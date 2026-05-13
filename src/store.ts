@@ -49,6 +49,7 @@ import i18next from "./i18n/config";
 const LAYOUT_STORAGE_PREFIX = "kkterm.layout.";
 const TMUX_SESSION_STORAGE_PREFIX = "kkterm.tmuxSessions.";
 const TMUX_SESSION_ID_PATTERN = /^[^\s:;]+$/u;
+let statusBarNoticeSequence = 0;
 // Stable fallback slugs. New tmux session ids use ai.tmuxSessionLabels
 // for the active locale when those labels are safe for tmux.
 // ja, zh-CN, zh-TW: anime sci-fi themed labels
@@ -506,7 +507,7 @@ function buildPaneForConnection(
 }
 
 function defaultTerminalCwdForConnection(connection: Connection) {
-  return connection.type === "local" ? "C:\\Users\\ryan" : "~";
+  return connection.type === "local" ? "." : "~";
 }
 
 function inheritedTerminalCwdForConnection(
@@ -760,12 +761,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     })),
   showStatusBarNotice: (message, options) => {
     const durationMs = options?.durationMs ?? 5_000;
+    const now = Date.now();
     set({
       statusBarNotice: {
-        id: Date.now(),
+        id: (statusBarNoticeSequence += 1),
         message,
         tone: options?.tone ?? "info",
-        expiresAt: Date.now() + durationMs,
+        expiresAt: now + durationMs,
       },
     });
   },
@@ -1533,7 +1535,7 @@ function remoteDesktopSubtitle(connection: Connection) {
 
 function terminalConnectionSubtitle(connection: Connection) {
   if (connection.type === "local") {
-    return "Local terminal session";
+    return i18next.t("workspace.localTerminalSession");
   }
   if (connection.type === "serial") {
     return `${connection.serialLine ?? connection.host} @ ${connection.serialSpeed ?? 9600}`;
