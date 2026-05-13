@@ -1,6 +1,5 @@
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
 
-import { documentHasWebviewBlockingOverlay } from "../workspace/nativeOverlay";
 import { ArrowLeft, ArrowRight, Globe2, KeyRound, RefreshCw, Save } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
@@ -142,13 +141,12 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   const sessionIdRef = useRef<string>(`webview-${tab.id}`);
   const lastBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const rafRef = useRef<number | null>(null);
-  const visibilityRef = useRef({ isActive, webviewSuppressed: false });
+  const visibilityRef = useRef({ isActive });
   const pendingCaptureNonceRef = useRef<string | null>(null);
   const faviconUpdatedRef = useRef(false);
   const credentialRef = useRef({ canFillCredential: false });
   const [navError, setNavError] = useState("");
   const [fillStatus, setFillStatus] = useState("");
-  const [webviewSuppressed, setWebviewSuppressed] = useState(false);
   const [addressInput, setAddressInput] = useState(tab.url ?? "");
   const [webviewReady, setWebviewReady] = useState(false);
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<AutoRefreshIntervalSeconds>(0);
@@ -185,7 +183,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
     if (!bounds) {
       return;
     }
-    const visible = visibilityRef.current.isActive && !visibilityRef.current.webviewSuppressed;
+    const visible = visibilityRef.current.isActive;
     void invokeCommand("set_webview_visibility", {
       request: { sessionId: sessionIdRef.current, visible, ...bounds },
     }).catch((error) => {
@@ -209,7 +207,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
       if (!bounds) {
         return;
       }
-      if (!visibilityRef.current.isActive || visibilityRef.current.webviewSuppressed) {
+      if (!visibilityRef.current.isActive) {
         void invokeCommand("set_webview_visibility", {
           request: { sessionId: sessionIdRef.current, visible: false, ...bounds },
         }).catch((error) => {
@@ -319,8 +317,8 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   }, [autoRefreshSeconds, webviewReady]);
 
   useEffect(() => {
-    visibilityRef.current = { isActive, webviewSuppressed };
-  }, [isActive, webviewSuppressed]);
+    visibilityRef.current = { isActive };
+  }, [isActive]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -343,32 +341,12 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   }, []);
 
   useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    const updateSuppression = () => {
-      setWebviewSuppressed(documentHasWebviewBlockingOverlay(placeholderRef.current));
-    };
-    updateSuppression();
-    const observer = new MutationObserver(updateSuppression);
-    observer.observe(document.body, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-    });
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!isTauriRuntime() || !sessionStartedRef.current) {
       return;
     }
     pushWebviewVisibility();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, webviewSuppressed]);
+  }, [isActive]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {

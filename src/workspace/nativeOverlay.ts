@@ -21,10 +21,6 @@ export function documentHasRdpBlockingOverlay(surface: Element | null) {
   return documentHasNativeBlockingOverlay(surface);
 }
 
-export function documentHasWebviewBlockingOverlay(surface: Element | null) {
-  return documentHasNativeBlockingOverlay(surface);
-}
-
 function documentHasNativeBlockingOverlay(surface: Element | null) {
   const surfaceRect = visibleRect(surface);
   if (!surfaceRect) {
