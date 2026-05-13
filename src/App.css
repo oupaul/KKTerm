@@ -1871,7 +1871,8 @@ h2 {
   cursor: text;
 }
 
-.pending-folder-input {
+.pending-folder-input,
+.tree-rename-input {
   flex: 1 1 auto;
   min-width: 0;
   height: 22px;
@@ -1885,8 +1886,13 @@ h2 {
   outline: none;
 }
 
-.pending-folder-input::placeholder {
+.pending-folder-input::placeholder,
+.tree-rename-input::placeholder {
   color: var(--text-faint);
+}
+
+.tree-rename-input {
+  width: 100%;
 }
 
 .tree-folder-connections {

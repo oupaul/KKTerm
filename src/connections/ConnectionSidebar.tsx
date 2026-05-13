@@ -13,12 +13,13 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, F
 import { AddComputer as IconParkAddComputer, CollapseTextInput as IconParkCollapseTextInput, Delete as IconParkDelete, Edit as IconParkEdit, ExpandTextInput as IconParkExpandTextInput, FolderPlus as IconParkFolderPlus, Setting as IconParkSetting } from "@icon-park/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18next from "../i18n/config";
 import { ariaExpanded, dialogButtonAria } from "../lib/aria";
 import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";
-import { invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
+import { confirmNativeDialog, invokeCommand, isTauriRuntime, selectKeyFile } from "../lib/tauri";
 import { connectionTree } from "../app-defaults";
 import { useWorkspaceStore } from "../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, UpdateConnectionRequest, VncSettings } from "../types";
@@ -80,6 +81,14 @@ type EditConnectionState = {
   folderId?: string;
 };
 
+type InlineRenameTarget =
+  | { kind: "connection"; id: string }
+  | { kind: "folder"; id: string };
+
+type DeleteTarget =
+  | { kind: "connection"; connection: Connection }
+  | { kind: "folder"; folder: ConnectionFolder };
+
 type TransferSshPublicKeyDialogState = {
   connection: Connection;
   keyPath?: string;
@@ -127,17 +136,14 @@ export function ConnectionSidebar({
   const [draggedSourceId, setDraggedSourceId] = useState("");
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(loadCollapsedFolderIds);
   const [pendingFolderDraft, setPendingFolderDraft] = useState<PendingFolderDraft | null>(null);
+  const [inlineRenameTarget, setInlineRenameTarget] = useState<InlineRenameTarget | null>(null);
   const [treeContextMenu, setTreeContextMenu] = useState<TreeContextMenuState | null>(null);
   const [editConnection, setEditConnection] = useState<EditConnectionState | null>(null);
   const [transferSshPublicKeyDialog, setTransferSshPublicKeyDialog] =
     useState<TransferSshPublicKeyDialogState | null>(null);
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<
-    | { kind: "connection"; connection: Connection }
-    | { kind: "folder"; folder: ConnectionFolder }
-    | null
-  >(null);
+  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
   const addConnectionRef = useRef<HTMLDivElement | null>(null);
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
   const draggedItemRef = useRef<DraggedTreeItem | null>(null);
@@ -626,21 +632,25 @@ export function ConnectionSidebar({
     }
   }
 
-  async function handleRenameFolder(folder: ConnectionFolder) {
-    const name = window.prompt(i18next.t("connections.renameFolder"), folder.name)?.trim();
-    if (!name || name === folder.name) {
-      return;
+  async function commitFolderRename(folder: ConnectionFolder, name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName === folder.name) {
+      setInlineRenameTarget(null);
+      return true;
     }
 
     try {
       setTreeError("");
       await invokeCommand("rename_connection_folder", {
-        request: { id: folder.id, name },
+        request: { id: folder.id, name: trimmedName },
       });
+      setInlineRenameTarget(null);
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
+      return true;
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
+      return false;
     }
   }
 
@@ -657,22 +667,26 @@ export function ConnectionSidebar({
     }
   }
 
-  async function handleRenameConnection(connection: Connection) {
-    const name = window.prompt(i18next.t("connections.renameConnection"), connection.name)?.trim();
-    if (!name || name === connection.name) {
-      return;
+  async function commitConnectionRename(connection: Connection, name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName === connection.name) {
+      setInlineRenameTarget(null);
+      return true;
     }
 
     try {
       setTreeError("");
       const renamedConnection = await invokeCommand("rename_connection", {
-        request: { id: connection.id, name },
+        request: { id: connection.id, name: trimmedName },
       });
       refreshOpenConnectionMetadata(renamedConnection);
+      setInlineRenameTarget(null);
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
+      return true;
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
+      return false;
     }
   }
 
@@ -973,7 +987,7 @@ export function ConnectionSidebar({
         kind: "item",
         label: t("connections.delete"),
         iconSvg: nativeMenuIcons.trash,
-        action: () => handleTreeMenuDelete(menu),
+        action: () => void handleTreeMenuDelete(menu),
       },
     ];
 
@@ -1077,12 +1091,39 @@ export function ConnectionSidebar({
     handleCreateFolder();
   }
 
-  function handleTreeMenuDelete(menu: TreeContextMenuState) {
+  async function handleTreeMenuDelete(menu: TreeContextMenuState) {
     setTreeContextMenu(null);
+    let target: DeleteTarget | null = null;
     if (menu.kind === "connection") {
-      setConfirmDeleteTarget({ kind: "connection", connection: menu.connection });
+      target = { kind: "connection", connection: menu.connection };
     } else if (menu.kind === "folder") {
-      setConfirmDeleteTarget({ kind: "folder", folder: menu.folder });
+      target = { kind: "folder", folder: menu.folder };
+    }
+
+    if (!target) {
+      return;
+    }
+
+    let confirmed: boolean | null = null;
+    try {
+      confirmed = await confirmNativeDialog(deleteConfirmationMessage(t, target), {
+        kind: "warning",
+        title: deleteConfirmationTitle(t, target),
+      });
+    } catch {
+      confirmed = null;
+    }
+    if (confirmed === true) {
+      if (target.kind === "connection") {
+        await handleDeleteConnection(target.connection);
+      } else {
+        await handleDeleteFolder(target.folder);
+      }
+      return;
+    }
+
+    if (confirmed === null) {
+      setConfirmDeleteTarget(target);
     }
   }
 
@@ -1094,12 +1135,14 @@ export function ConnectionSidebar({
     }
   }
 
-  async function handleTreeMenuRename(menu: TreeContextMenuState) {
+  function handleTreeMenuRename(menu: TreeContextMenuState) {
     setTreeContextMenu(null);
+    setPendingFolderDraft(null);
+    setTreeError("");
     if (menu.kind === "connection") {
-      await handleRenameConnection(menu.connection);
+      setInlineRenameTarget({ kind: "connection", id: menu.connection.id });
     } else if (menu.kind === "folder") {
-      await handleRenameFolder(menu.folder);
+      setInlineRenameTarget({ kind: "folder", id: menu.folder.id });
     }
   }
 
@@ -1270,7 +1313,7 @@ export function ConnectionSidebar({
     item: DraggedTreeItem,
     preview: Omit<TreeDragPreview, "x" | "y" | "offsetX" | "offsetY" | "width">,
   ) {
-    if (isTreeFiltered || event.button !== 0) {
+    if (isTreeFiltered || inlineRenameTarget || event.button !== 0) {
       return;
     }
 
@@ -1479,10 +1522,13 @@ export function ConnectionSidebar({
             connection={connection}
             key={connection.id}
             connectionIndex={connectionIndex}
-            dragDisabled={isTreeFiltered}
+            dragDisabled={isTreeFiltered || Boolean(inlineRenameTarget)}
+            isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
             isDraggingSource={draggedSourceId === `connection-${connection.id}`}
             isDropTarget={dropTarget === `connection-${connection.id}`}
             onClickCapture={handleTreeClickCapture}
+            onCancelRename={() => setInlineRenameTarget(null)}
+            onCommitRename={(name) => commitConnectionRename(connection, name)}
             onOpen={() => handleOpenConnection(connection)}
             onContextMenu={(event) => handleConnectionContextMenu(connection, undefined, event)}
             onPointerDragStart={(event) =>
@@ -1509,7 +1555,7 @@ export function ConnectionSidebar({
         ) : null}
         {filteredTree.folders.map((folder) => (
           <ConnectionFolderNode
-            dragDisabled={isTreeFiltered}
+            dragDisabled={isTreeFiltered || Boolean(inlineRenameTarget)}
             draggedSourceId={draggedSourceId}
             dropTarget={dropTarget}
             folder={folder}
@@ -1518,8 +1564,12 @@ export function ConnectionSidebar({
             level={0}
             onClickCapture={handleTreeClickCapture}
             pendingFolderDraft={pendingFolderDraft}
+            inlineRenameTarget={inlineRenameTarget}
             onCancelPendingFolder={handleCancelPendingFolder}
             onCommitPendingFolder={handleCommitPendingFolder}
+            onCancelRename={() => setInlineRenameTarget(null)}
+            onCommitConnectionRename={commitConnectionRename}
+            onCommitFolderRename={commitFolderRename}
             onContextMenu={handleFolderContextMenu}
             onConnectionContextMenu={handleConnectionContextMenu}
             onCreateFolder={handleCreateFolder}
@@ -1541,7 +1591,7 @@ export function ConnectionSidebar({
           onClose={() => setTreeContextMenu(null)}
           onCreateConnection={handleTreeMenuCreateConnection}
           onCreateFolder={handleTreeMenuCreateFolder}
-          onDelete={() => handleTreeMenuDelete(treeContextMenu)}
+          onDelete={() => void handleTreeMenuDelete(treeContextMenu)}
           onProperties={() => handleTreeMenuProperties(treeContextMenu)}
           onRename={() => void handleTreeMenuRename(treeContextMenu)}
           onAddToPane={(direction) => handleTreeMenuAddToPane(treeContextMenu, direction)}
@@ -1668,7 +1718,11 @@ function ConnectionFolderNode({
   onCommitPendingFolder,
   onConnectionContextMenu,
   onContextMenu,
+  inlineRenameTarget,
   pendingFolderDraft,
+  onCancelRename,
+  onCommitConnectionRename,
+  onCommitFolderRename,
 }: {
   collapsedFolderIds: Set<string>;
   dragDisabled: boolean;
@@ -1687,6 +1741,10 @@ function ConnectionFolderNode({
   onToggleFolder: (folderId: string) => void;
   onCancelPendingFolder: () => void;
   onCommitPendingFolder: (name: string, parentFolderId?: string) => void | Promise<void>;
+  inlineRenameTarget: InlineRenameTarget | null;
+  onCancelRename: () => void;
+  onCommitConnectionRename: (connection: Connection, name: string) => Promise<boolean>;
+  onCommitFolderRename: (folder: ConnectionFolder, name: string) => Promise<boolean>;
   onConnectionContextMenu: (
     connection: Connection,
     folderId: string | undefined,
@@ -1699,6 +1757,7 @@ function ConnectionFolderNode({
   const connectionCount = countConnections(folder);
   const folderCount = countFolders(folder.folders);
   const isCollapsed = collapsedFolderIds.has(folder.id);
+  const isRenamingFolder = inlineRenameTarget?.kind === "folder" && inlineRenameTarget.id === folder.id;
   const groupRef = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
@@ -1746,7 +1805,16 @@ function ConnectionFolderNode({
             {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
           </button>
           <Folder size={13} />
-          <span>{folder.name}</span>
+          {isRenamingFolder ? (
+            <InlineTreeRenameInput
+              ariaLabel={t("connections.renameFolder")}
+              initialName={folder.name}
+              onCancel={onCancelRename}
+              onCommit={(name) => onCommitFolderRename(folder, name)}
+            />
+          ) : (
+            <span>{folder.name}</span>
+          )}
           <small>{connectionCount + folderCount}</small>
         </div>
         <span className="folder-actions">
@@ -1769,10 +1837,13 @@ function ConnectionFolderNode({
                   connectionIndex={connectionIndex}
                   dragDisabled={dragDisabled}
                   folderId={folder.id}
+                  isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
                   isDraggingSource={draggedSourceId === `connection-${connection.id}`}
                   isDropTarget={dropTarget === `connection-${connection.id}`}
                   key={connection.id}
                   onClickCapture={onClickCapture}
+                  onCancelRename={onCancelRename}
+                  onCommitRename={(name) => onCommitConnectionRename(connection, name)}
                   onOpen={() => onOpenConnection(connection)}
                   onContextMenu={(event) => onConnectionContextMenu(connection, folder.id, event)}
                   onPointerDragStart={(event) =>
@@ -1810,8 +1881,12 @@ function ConnectionFolderNode({
               level={level + 1}
               onClickCapture={onClickCapture}
               pendingFolderDraft={pendingFolderDraft}
+              inlineRenameTarget={inlineRenameTarget}
               onCancelPendingFolder={onCancelPendingFolder}
               onCommitPendingFolder={onCommitPendingFolder}
+              onCancelRename={onCancelRename}
+              onCommitConnectionRename={onCommitConnectionRename}
+              onCommitFolderRename={onCommitFolderRename}
               onConnectionContextMenu={onConnectionContextMenu}
               onContextMenu={onContextMenu}
               onCreateFolder={onCreateFolder}
@@ -1893,6 +1968,72 @@ function NewFolderDraftRow({
 
 function isTerminalConnectionType(type: ConnectionType) {
   return type === "local" || type === "ssh" || type === "telnet" || type === "serial";
+}
+
+function InlineTreeRenameInput({
+  ariaLabel,
+  initialName,
+  onCancel,
+  onCommit,
+}: {
+  ariaLabel: string;
+  initialName: string;
+  onCancel: () => void;
+  onCommit: (name: string) => Promise<boolean>;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const isSettlingRef = useRef(false);
+  const [draft, setDraft] = useState(initialName);
+
+  useLayoutEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  async function settle(name: string) {
+    if (isSettlingRef.current) {
+      return;
+    }
+
+    isSettlingRef.current = true;
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName === initialName) {
+      onCancel();
+      return;
+    }
+
+    const committed = await onCommit(trimmedName);
+    if (!committed) {
+      isSettlingRef.current = false;
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }
+
+  return (
+    <input
+      aria-label={ariaLabel}
+      className="tree-rename-input"
+      onBlur={(event) => void settle(event.currentTarget.value)}
+      onChange={(event) => setDraft(event.currentTarget.value)}
+      onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          void settle(event.currentTarget.value);
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          isSettlingRef.current = true;
+          onCancel();
+        }
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+      ref={inputRef}
+      value={draft}
+    />
+  );
 }
 
 function TreeContextMenu({
@@ -3014,6 +3155,17 @@ function ConnectionSshKeyEmailDialog({
   );
 }
 
+function deleteConfirmationTitle(t: TFunction, target: DeleteTarget) {
+  return target.kind === "connection"
+    ? t("connections.deleteConnectionConfirm")
+    : t("connections.deleteFolderConfirm");
+}
+
+function deleteConfirmationMessage(t: TFunction, target: DeleteTarget) {
+  const name = target.kind === "connection" ? target.connection.name : target.folder.name;
+  return `${deleteConfirmationTitle(t, target)}: ${name}\n\n${t("connections.cannotBeUndone")}`;
+}
+
 function ConfirmDeleteDialog({
   onCancel,
   onConfirm,
@@ -3021,48 +3173,17 @@ function ConfirmDeleteDialog({
 }: {
   onCancel: () => void;
   onConfirm: () => void;
-  target:
-    | { kind: "connection"; connection: Connection }
-    | { kind: "folder"; folder: ConnectionFolder };
+  target: DeleteTarget;
 }) {
   const { t } = useTranslation();
-  const name =
-    target.kind === "connection" ? target.connection.name : target.folder.name;
-  const title =
-    target.kind === "connection"
-      ? t("connections.deleteConnectionConfirm")
-      : t("connections.deleteFolderConfirm");
-
-  let detail = "";
-  if (target.kind === "folder") {
-    const childFolderCount = countFolders(target.folder.folders);
-    const connectionCount = countConnections(target.folder);
-    if (connectionCount > 0 || childFolderCount > 0) {
-      const parts: string[] = [];
-      if (connectionCount > 0) {
-        parts.push(
-          connectionCount === 1
-            ? `${connectionCount} connection`
-            : `${connectionCount} connections`,
-        );
-      }
-      if (childFolderCount > 0) {
-        parts.push(
-          childFolderCount === 1
-            ? `${childFolderCount} subfolder`
-            : `${childFolderCount} subfolders`,
-        );
-      }
-      detail = `Delete folder "${name}", ${parts.join(" and ")}?`;
-    }
-  }
+  const name = target.kind === "connection" ? target.connection.name : target.folder.name;
+  const title = deleteConfirmationTitle(t, target);
 
   return (
     <div className="dialog-backdrop confirm-delete-backdrop" role="presentation">
       <div className="confirm-delete-dialog" role="alertdialog" aria-label={title}>
         <p className="panel-label">{title}</p>
         <p className="confirm-delete-name">{name}</p>
-        {detail ? <p className="confirm-delete-detail">{detail}</p> : null}
         <p className="confirm-delete-warning">{t("connections.cannotBeUndone")}</p>
         <div className="dialog-actions">
           <button className="approve-button danger" type="button" onClick={onConfirm}>
@@ -3189,10 +3310,13 @@ function ConnectionRow({
   connectionIndex,
   dragDisabled,
   folderId,
+  isRenaming,
   isDraggingSource,
   isDropTarget,
+  onCancelRename,
   onClickCapture,
   onContextMenu,
+  onCommitRename,
   onOpen,
   onPointerDragStart,
 }: {
@@ -3200,10 +3324,13 @@ function ConnectionRow({
   connectionIndex: number;
   dragDisabled: boolean;
   folderId?: string;
+  isRenaming: boolean;
   isDraggingSource: boolean;
   isDropTarget: boolean;
+  onCancelRename: () => void;
   onClickCapture: (event: ReactMouseEvent) => void;
   onContextMenu: (event: ReactMouseEvent<HTMLElement>) => void;
+  onCommitRename: (name: string) => Promise<boolean>;
   onOpen: () => void;
   onPointerDragStart: (event: ReactPointerEvent<HTMLElement>) => void;
 }) {
@@ -3221,12 +3348,26 @@ function ConnectionRow({
       onContextMenu={onContextMenu}
       onPointerDown={onPointerDragStart}
     >
-      <button className="connection-open" onClick={onOpen}>
-        <ConnectionGlyph iconDataUrl={connection.iconDataUrl} localShell={connection.localShell} size={18} type={connection.type} />
-        <span className="connection-main">
-          <strong>{connection.name}</strong>
-        </span>
-      </button>
+      {isRenaming ? (
+        <div className="connection-open connection-open-editing">
+          <ConnectionGlyph iconDataUrl={connection.iconDataUrl} localShell={connection.localShell} size={18} type={connection.type} />
+          <span className="connection-main">
+            <InlineTreeRenameInput
+              ariaLabel={i18next.t("connections.renameConnection")}
+              initialName={connection.name}
+              onCancel={onCancelRename}
+              onCommit={onCommitRename}
+            />
+          </span>
+        </div>
+      ) : (
+        <button className="connection-open" onClick={onOpen}>
+          <ConnectionGlyph iconDataUrl={connection.iconDataUrl} localShell={connection.localShell} size={18} type={connection.type} />
+          <span className="connection-main">
+            <strong>{connection.name}</strong>
+          </span>
+        </button>
+      )}
       <span className={`status-dot ${connection.status}`} />
     </div>
   );

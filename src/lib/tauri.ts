@@ -1,8 +1,10 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 import {
+  confirm as confirmDialog,
   open as openDialog,
   save as saveDialog,
 } from "@tauri-apps/plugin-dialog";
+import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import i18next from "../i18n/config";
@@ -1646,6 +1648,17 @@ export async function saveTextFile(defaultFilename: string, contents: string) {
   }
 
   return saveTextFileWithBrowserPicker(defaultFilename, contents);
+}
+
+export async function confirmNativeDialog(
+  message: string,
+  options?: ConfirmDialogOptions,
+) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  return confirmDialog(message, options);
 }
 
 async function saveTextFileWithBrowserPicker(

@@ -15,6 +15,7 @@ const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
   ".add-connection-menu",
   ".quick-connect-menu",
   ".connection-dialog-backdrop",
+  ".confirm-delete-backdrop",
 ].join(", ");
 
 export function documentHasRdpBlockingOverlay(surface: Element | null) {
