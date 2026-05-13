@@ -6748,12 +6748,16 @@ fieldset.connection-specific-options > legend {
   background: rgba(255, 255, 255, 0.09);
 }
 
-.webview-title-center {
-  flex: 1 1 0;
+.webview-pane > header > .webview-title-center {
+  display: block;
+  flex: 0 1 360px;
   min-width: 0;
-  justify-content: center;
+  max-width: 34%;
+  padding: 0 10px;
+  box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
   white-space: nowrap;
 }
 

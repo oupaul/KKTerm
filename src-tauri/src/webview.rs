@@ -508,8 +508,6 @@ impl WebviewSessionManager {
         } else {
             parsed_url.clone()
         };
-        // React owns the exact placeholder rectangle. Tauri auto-resize tracks
-        // host-window ratios, which can let child WebView2 cross app chrome.
         let builder = WebviewBuilder::new(&label, WebviewUrl::External(initial_webview_url))
             .initialization_script(AUTOFILL_AGENT)
             .on_navigation(move |url| {
@@ -571,7 +569,8 @@ impl WebviewSessionManager {
                 };
                 let _ = download_app.emit("webview-download", payload);
                 true
-            });
+            })
+            .auto_resize();
 
         let position = LogicalPosition::new(x.max(0.0), y.max(0.0));
         let size = LogicalSize::new(width.max(1.0), height.max(1.0));
