@@ -5,6 +5,7 @@ mod platform {
         ffi::c_void,
         mem::ManuallyDrop,
         sync::{mpsc, Arc, Mutex, MutexGuard, OnceLock},
+        time::{Duration, Instant},
     };
 
     use serde::{Deserialize, Serialize};
@@ -63,6 +64,8 @@ mod platform {
     const RDP_TEXT_MODE_SEND_KEYS: &str = "sendKeys";
     const RDP_TEXT_LIMIT: usize = 64 * 1024;
     const RDP_SEND_KEYS_LIMIT: usize = 20;
+    const RDP_MAIN_THREAD_WARN_AFTER: Duration = Duration::from_secs(2);
+    const RDP_MAIN_THREAD_TIMEOUT: Duration = Duration::from_secs(15);
     const RDP_PROGIDS: &[&str] = &[
         "MsTscAx.MsTscAx.13",
         "MsTscAx.MsTscAx.12",
@@ -289,7 +292,7 @@ mod platform {
             request: StartRdpSessionRequest,
         ) -> Result<RdpSessionStarted, String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |app| {
+            run_on_main_thread("start_rdp_session", app, move |app| {
                 start_session_on_main_thread(sessions, &app, request)
             })
         }
@@ -300,7 +303,7 @@ mod platform {
             request: UpdateRdpBoundsRequest,
         ) -> Result<(), String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |app| {
+            run_on_main_thread("update_rdp_bounds", app, move |app| {
                 let host_window = app
                     .get_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
@@ -328,7 +331,7 @@ mod platform {
             request: SetRdpVisibilityRequest,
         ) -> Result<(), String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |app| {
+            run_on_main_thread("set_rdp_visibility", app, move |app| {
                 let host_window = app
                     .get_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
@@ -378,7 +381,7 @@ mod platform {
             request: SyncRdpDisplaySizeRequest,
         ) -> Result<RdpDisplaySizeSync, String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |app| {
+            run_on_main_thread("sync_rdp_display_size", app, move |app| {
                 let host_window = app
                     .get_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
@@ -420,7 +423,7 @@ mod platform {
             request: RdpSimpleRequest,
         ) -> Result<(), String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |_app| {
+            run_on_main_thread("close_rdp_session", app, move |_app| {
                 let mut sessions = lock_sessions(&sessions)?;
                 if let Some(session) = sessions.remove(&request.session_id) {
                     let _ = invoke_method(&session.dispatch, "Disconnect");
@@ -440,7 +443,7 @@ mod platform {
             request: RdpSimpleRequest,
         ) -> Result<RdpSessionStatus, String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |_app| {
+            run_on_main_thread("get_rdp_session_status", app, move |_app| {
                 let sessions = lock_sessions(&sessions)?;
                 let session = sessions
                     .get(&request.session_id)
@@ -460,7 +463,7 @@ mod platform {
             request: RdpSimpleRequest,
         ) -> Result<(), String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |_app| {
+            run_on_main_thread("send_rdp_ctrl_alt_delete", app, move |_app| {
                 let sessions = lock_sessions(&sessions)?;
                 let session = sessions
                     .get(&request.session_id)
@@ -485,7 +488,7 @@ mod platform {
             request: SendRdpTextRequest,
         ) -> Result<RdpTextSent, String> {
             let sessions = Arc::clone(&self.sessions);
-            run_on_main_thread(app, move |_app| {
+            run_on_main_thread("send_rdp_text", app, move |_app| {
                 if request.text.len() > RDP_TEXT_LIMIT {
                     return Err(format!(
                         "RDP text payload is {} bytes which exceeds the {RDP_TEXT_LIMIT}-byte limit",
@@ -1519,7 +1522,7 @@ mod platform {
         connection_state == RDP_CONNECTED_STATE || connection_state == RDP_ESTABLISHING_STATE
     }
 
-    fn run_on_main_thread<F, T>(app: AppHandle, f: F) -> Result<T, String>
+    fn run_on_main_thread<F, T>(operation: &'static str, app: AppHandle, f: F) -> Result<T, String>
     where
         F: FnOnce(AppHandle) -> Result<T, String> + Send + 'static,
         T: Send + 'static,
@@ -1527,13 +1530,29 @@ mod platform {
         let app_for_closure = app.clone();
         let (sender, receiver) = mpsc::channel();
         app.run_on_main_thread(move || {
+            let started = Instant::now();
             let result = f(app_for_closure);
+            let elapsed = started.elapsed();
+            if elapsed >= RDP_MAIN_THREAD_WARN_AFTER {
+                eprintln!(
+                    "RDP main-thread operation '{operation}' took {} ms; nested RDP, WebView2, or ActiveX stalls may be blocking the UI thread",
+                    elapsed.as_millis()
+                );
+            }
             let _ = sender.send(result);
         })
         .map_err(|error| format!("failed to dispatch RDP work to main thread: {error}"))?;
         receiver
-            .recv()
-            .map_err(|_| "RDP main-thread task did not return".to_string())?
+            .recv_timeout(RDP_MAIN_THREAD_TIMEOUT)
+            .map_err(|error| match error {
+                mpsc::RecvTimeoutError::Timeout => format!(
+                    "RDP main-thread operation '{operation}' did not complete within {} seconds; the Microsoft RDP ActiveX control may be stalled",
+                    RDP_MAIN_THREAD_TIMEOUT.as_secs()
+                ),
+                mpsc::RecvTimeoutError::Disconnected => {
+                    "RDP main-thread task did not return".to_string()
+                }
+            })?
     }
 
     fn atl_functions() -> Result<&'static AtlFunctions, String> {

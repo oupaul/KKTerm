@@ -88,6 +88,7 @@ export function RemoteDesktopWorkspace({
   const rdpControlRef = useRef("");
   const rdpSuppressionCaptureInFlightRef = useRef(false);
   const rdpPreCaptureInFlightRef = useRef(false);
+  const rdpStatusPollInFlightRef = useRef(false);
   const preCachedSnapshotRef = useRef<AssistantScreenshot | null>(null);
   const preCaptureLastRef = useRef(0);
   const vncButtonMaskRef = useRef(0);
@@ -402,6 +403,7 @@ export function RemoteDesktopWorkspace({
     rdpControlRef.current = "";
     rdpSuppressionCaptureInFlightRef.current = false;
     rdpPreCaptureInFlightRef.current = false;
+    rdpStatusPollInFlightRef.current = false;
     setRdpSnapshot(null);
   };
 
@@ -808,10 +810,11 @@ export function RemoteDesktopWorkspace({
 
     const intervalId = window.setInterval(() => {
       const sessionId = sessionIdRef.current;
-      if (!sessionStartedRef.current || !sessionId) {
+      if (!sessionStartedRef.current || !sessionId || rdpStatusPollInFlightRef.current) {
         return;
       }
 
+      rdpStatusPollInFlightRef.current = true;
       void invokeCommand("get_rdp_session_status", {
         request: { sessionId },
       })
@@ -833,8 +836,11 @@ export function RemoteDesktopWorkspace({
         })
         .catch((error) => {
           setRdpError(error instanceof Error ? error.message : String(error));
+        })
+        .finally(() => {
+          rdpStatusPollInFlightRef.current = false;
         });
-    }, displayReadyRef.current ? 1000 : 250);
+    }, displayReadyRef.current ? 2000 : 1000);
 
     return () => {
       window.clearInterval(intervalId);
