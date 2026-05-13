@@ -23,19 +23,23 @@ const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
 
 export function ConnectionIcon({
   className,
+  iconDataUrl,
   localShell,
   size = 16,
   type,
 }: {
   className?: string;
+  iconDataUrl?: string | null;
   localShell?: string;
   size?: number;
   type: ConnectionType;
 }) {
   const src =
-    type === "local" && localShell === "wsl.exe"
-      ? wslIcon
-      : CONNECTION_ICON_SRC[type];
+    type === "url" && iconDataUrl
+      ? iconDataUrl
+      : type === "local" && localShell === "wsl.exe"
+        ? wslIcon
+        : CONNECTION_ICON_SRC[type];
   return (
     <img
       alt=""

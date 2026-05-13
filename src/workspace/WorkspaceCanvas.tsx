@@ -81,6 +81,7 @@ export function TabStrip() {
           <div className={tab.id === activeTabId ? "tab active" : "tab"} key={tab.id}>
             <button className="tab-button" onClick={() => activateTab(tab.id)} type="button">
               <ConnectionIcon
+                iconDataUrl={connectionTypeForTab(tab).iconDataUrl}
                 localShell={connectionTypeForTab(tab).localShell}
                 size={14}
                 type={connectionTypeForTab(tab).type}

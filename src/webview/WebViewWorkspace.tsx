@@ -133,6 +133,7 @@ function createCredentialCaptureNonce() {
 export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: WorkspaceTab }) {
   const { t } = useTranslation();
   const updateWebviewTabMetadata = useWorkspaceStore((state) => state.updateWebviewTabMetadata);
+  const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const ignoreCertificateErrors = useWorkspaceStore((state) => state.urlSettings.ignoreCertificateErrors);
   const workspaceRef = useRef<HTMLElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
@@ -143,6 +144,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
   const rafRef = useRef<number | null>(null);
   const visibilityRef = useRef({ isActive, webviewSuppressed: false });
   const pendingCaptureNonceRef = useRef<string | null>(null);
+  const faviconUpdatedRef = useRef(false);
   const credentialRef = useRef({ canFillCredential: false });
   const [navError, setNavError] = useState("");
   const [fillStatus, setFillStatus] = useState("");
@@ -393,6 +395,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
         setAddressInput(event.payload.url);
         if (event.payload.status === "finished") {
           setFillStatus("");
+          void maybeUpdateConnectionIcon(event.payload.url);
           void fillCredential({ automatic: true, showStatus: false });
         }
       }),
@@ -433,7 +436,7 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
       disposed = true;
       disposers.forEach((dispose) => dispose());
     };
-  }, [tab.id, t, updateWebviewTabMetadata]);
+  }, [refreshOpenConnectionMetadata, tab.id, t, updateWebviewTabMetadata]);
 
   function handleNavigate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -457,6 +460,24 @@ export function WebViewWorkspace({ isActive, tab }: { isActive: boolean; tab: Wo
     }).catch((error) => {
       setNavError(error instanceof Error ? error.message : String(error));
     });
+  }
+
+  function maybeUpdateConnectionIcon(pageUrl: string) {
+    if (!tab.connection || tab.connection.type !== "url" || faviconUpdatedRef.current) {
+      return;
+    }
+    faviconUpdatedRef.current = true;
+    void invokeCommand("update_url_connection_icon_from_page", {
+      connectionId: tab.connection.id,
+      pageUrl,
+    })
+      .then((connection) => {
+        if (connection) {
+          refreshOpenConnectionMetadata(connection);
+          window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+        }
+      })
+      .catch(() => undefined);
   }
 
   function handleCapturedCredential(rawPayload: string) {

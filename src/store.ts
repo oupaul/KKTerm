@@ -1466,6 +1466,7 @@ function refreshTabConnectionMetadata(tab: WorkspaceTab, connection: Connection)
     }
     return {
       ...pane,
+      connection,
       title: refreshedPaneTitle(pane, connection),
       toolbarTitle,
     };
@@ -1481,6 +1482,7 @@ function refreshTabConnectionMetadata(tab: WorkspaceTab, connection: Connection)
 
   return {
     ...tab,
+    connection,
     title: refreshedTabTitle(tab, connection),
     toolbarTitle,
     subtitle: refreshedTabSubtitle(tab, connection),

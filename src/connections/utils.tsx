@@ -160,11 +160,13 @@ export function connectionIconForType(type: ConnectionType) {
 
 export function connectionTypeForTab(tab: WorkspaceTab): {
   type: ConnectionType;
+  iconDataUrl?: string | null;
   localShell?: string;
 } {
   if (tab.connection) {
     return {
       type: tab.connection.type,
+      iconDataUrl: tab.connection.iconDataUrl,
       localShell: tab.connection.localShell,
     };
   }

@@ -44,11 +44,13 @@ export function ConnectionTypeGlyph({
 
 export function ConnectionGlyph({
   className,
+  iconDataUrl,
   localShell,
   size = 16,
   type,
 }: {
   className?: string;
+  iconDataUrl?: string | null;
   localShell?: string;
   size?: number;
   type: ConnectionType;
@@ -56,6 +58,7 @@ export function ConnectionGlyph({
   return (
     <ConnectionIcon
       className={className}
+      iconDataUrl={iconDataUrl}
       localShell={localShell}
       size={size}
       type={type}

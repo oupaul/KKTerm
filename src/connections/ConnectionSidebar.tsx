@@ -2096,6 +2096,7 @@ function ConnectionDialog({
         {connectionType ? (
           <div className="connection-type-summary">
             <ConnectionGlyph
+              iconDataUrl={initialConnection?.iconDataUrl}
               localShell={initialConnection?.localShell}
               size={20}
               type={connectionType}
@@ -2891,7 +2892,7 @@ function ConnectionRow({
       onPointerDown={onPointerDragStart}
     >
       <button className="connection-open" onClick={onOpen}>
-        <ConnectionGlyph localShell={connection.localShell} size={18} type={connection.type} />
+        <ConnectionGlyph iconDataUrl={connection.iconDataUrl} localShell={connection.localShell} size={18} type={connection.type} />
         <span className="connection-main">
           <strong>{connection.name}</strong>
         </span>

@@ -520,6 +520,7 @@ export function ActivityRail({
               onPointerUp={item.pinned ? undefined : handleConnectedRailPointerEnd}
             >
               <ConnectionIcon
+                iconDataUrl={item.connection.iconDataUrl}
                 localShell={item.connection.localShell}
                 size={18}
                 type={item.connection.type}

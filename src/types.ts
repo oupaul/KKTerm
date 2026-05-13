@@ -29,6 +29,7 @@ export interface Connection {
   tmuxConnectionId?: string;
   urlCredentialUsername?: string;
   hasUrlCredential?: boolean;
+  iconDataUrl?: string | null;
   rdpOptions?: RdpConnectionOptions;
   vncOptions?: VncConnectionOptions;
   ftpOptions?: FtpConnectionOptions;

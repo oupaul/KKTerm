@@ -6,6 +6,7 @@ mod dashboard_ids;
 mod dashboard_storage;
 mod dashboard_validation;
 mod diagnostics;
+mod favicon;
 mod ftp;
 mod import;
 mod logging;
@@ -312,6 +313,16 @@ fn move_connection(
     request: storage::MoveConnectionRequest,
 ) -> Result<storage::ConnectionTree, String> {
     storage.move_connection(request)
+}
+
+#[tauri::command]
+async fn update_url_connection_icon_from_page(
+    storage: tauri::State<'_, storage::Storage>,
+    connection_id: String,
+    page_url: String,
+) -> Result<Option<storage::SavedConnection>, String> {
+    let icon_data_url = favicon::fetch_favicon_data_url(&page_url).await;
+    storage.update_url_connection_icon_data_url(connection_id, icon_data_url)
 }
 
 #[tauri::command]
@@ -1749,6 +1760,7 @@ pub fn run() {
             duplicate_connection,
             move_connection_folder,
             move_connection,
+            update_url_connection_icon_from_page,
             upsert_url_credential,
             list_url_credentials,
             delete_url_credential,

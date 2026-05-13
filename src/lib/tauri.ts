@@ -697,6 +697,10 @@ type CommandMap = {
     args: { request: MoveConnectionRequest };
     result: ConnectionTree;
   };
+  update_url_connection_icon_from_page: {
+    args: { connectionId: string; pageUrl: string };
+    result: Connection | null;
+  };
   upsert_url_credential: {
     args: {
       request: {

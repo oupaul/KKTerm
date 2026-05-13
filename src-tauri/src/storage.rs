@@ -12,7 +12,7 @@ use std::{
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
-const SCHEMA_USER_VERSION: i32 = 11;
+const SCHEMA_USER_VERSION: i32 = 12;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS connections (
     rdp_options TEXT,
     vnc_options TEXT,
     ftp_options TEXT,
+    icon_data_url TEXT,
     connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp')),
     status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
     sort_order INTEGER NOT NULL
@@ -512,6 +513,7 @@ pub struct SavedConnection {
     vnc_options: Option<VncConnectionOptions>,
     #[serde(default)]
     ftp_options: Option<crate::ftp::FtpOptions>,
+    icon_data_url: Option<String>,
     #[serde(rename = "type")]
     connection_type: String,
     tags: Vec<String>,
@@ -1461,6 +1463,7 @@ impl Storage {
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
+        ensure_column(&connection, "connections", "icon_data_url", "TEXT")?;
         ensure_column(&connection, "url_credentials", "field_values", "TEXT")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
@@ -1583,6 +1586,7 @@ impl Storage {
             rdp_options,
             vnc_options,
             ftp_options,
+            icon_data_url: None,
             connection_type,
             tags,
             status: "idle".to_string(),
@@ -1723,6 +1727,39 @@ impl Storage {
 
         transaction.commit().map_err(to_storage_error)?;
         get_connection_by_id(&connection, &id)
+    }
+
+    pub fn update_url_connection_icon_data_url(
+        &self,
+        connection_id: String,
+        icon_data_url: Option<String>,
+    ) -> Result<Option<SavedConnection>, String> {
+        let connection_id = required_field("connection id", connection_id)?;
+        let icon_data_url = normalize_connection_icon_data_url(icon_data_url)?;
+        let connection = self.lock()?;
+        let existing = connection
+            .query_row(
+                "SELECT connection_type, icon_data_url FROM connections WHERE id = ?1",
+                params![&connection_id],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?)),
+            )
+            .optional()
+            .map_err(to_storage_error)?
+            .ok_or_else(|| "connection was not found".to_string())?;
+        let (connection_type, current_icon_data_url) = existing;
+        if connection_type != "url" {
+            return Err("connection icon updates only apply to URL connections".to_string());
+        }
+        if current_icon_data_url == icon_data_url {
+            return Ok(None);
+        }
+        connection
+            .execute(
+                "UPDATE connections SET icon_data_url = ?1 WHERE id = ?2",
+                params![icon_data_url, &connection_id],
+            )
+            .map_err(to_storage_error)?;
+        get_connection_by_id(&connection, &connection_id).map(Some)
     }
 
     pub fn upsert_url_credential(
@@ -1984,7 +2021,7 @@ impl Storage {
 
         let source = transaction
             .query_row(
-                "SELECT folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type
+                "SELECT folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url
                  FROM connections
                  WHERE id = ?1",
                 params![source_id],
@@ -2005,6 +2042,7 @@ impl Storage {
                         row.get::<_, Option<String>>(12)?,
                         optional_serial_speed(row.get::<_, Option<i64>>(13)?)?,
                         row.get::<_, String>(14)?,
+                        row.get::<_, Option<String>>(15)?,
                     ))
                 },
             )
@@ -2027,6 +2065,7 @@ impl Storage {
             serial_line,
             serial_speed,
             connection_type,
+            icon_data_url,
         ) = source;
         let duplicate_name = request
             .name
@@ -2044,8 +2083,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, status, sort_order
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 'idle', ?18)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, status, sort_order
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, 'idle', ?19)",
                 params![
                     duplicate_id,
                     folder_id,
@@ -2064,6 +2103,7 @@ impl Storage {
                     serial_line,
                     serial_speed,
                     connection_type,
+                    icon_data_url,
                     next_sort_order
                 ],
             )
@@ -2407,7 +2447,7 @@ fn list_connections_for_folder(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options,
+            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
@@ -2669,14 +2709,14 @@ fn get_connection_by_id(
 ) -> Result<SavedConnection, String> {
     let saved_connection = connection
         .query_row(
-            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options,
+            "SELECT connections.id, name, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
             params![connection_id],
             |row| {
-                let url_credential_username: Option<String> = row.get(19)?;
+                let url_credential_username: Option<String> = row.get(20)?;
                 Ok(SavedConnection {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -2697,6 +2737,7 @@ fn get_connection_by_id(
                     rdp_options: parse_rdp_connection_options(row.get(16)?)?,
                     vnc_options: parse_vnc_connection_options(row.get(17)?)?,
                     ftp_options: parse_ftp_connection_options(row.get(18)?)?,
+                    icon_data_url: row.get(19)?,
                     url_credential_username: url_credential_username.clone(),
                     has_url_credential: url_credential_username.is_some(),
                     status: "idle".to_string(),
@@ -2715,7 +2756,7 @@ fn get_connection_by_id(
 }
 
 fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedConnection> {
-    let url_credential_username: Option<String> = row.get(19)?;
+    let url_credential_username: Option<String> = row.get(20)?;
     Ok(SavedConnection {
         id: row.get(0)?,
         name: row.get(1)?,
@@ -2736,6 +2777,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         rdp_options: parse_rdp_connection_options(row.get(16)?)?,
         vnc_options: parse_vnc_connection_options(row.get(17)?)?,
         ftp_options: parse_ftp_connection_options(row.get(18)?)?,
+        icon_data_url: row.get(19)?,
         url_credential_username: url_credential_username.clone(),
         has_url_credential: url_credential_username.is_some(),
         status: "idle".to_string(),
@@ -3119,6 +3161,19 @@ where
             })
         })
         .transpose()
+}
+
+fn normalize_connection_icon_data_url(value: Option<String>) -> Result<Option<String>, String> {
+    let value = trim_optional(value);
+    if let Some(value) = value.as_deref() {
+        if value.len() > 512 * 1024 {
+            return Err("connection icon data URL is too large".to_string());
+        }
+        if !value.starts_with("data:image/") {
+            return Err("connection icon must be an image data URL".to_string());
+        }
+    }
+    Ok(value)
 }
 
 fn required_field(field: &str, value: String) -> Result<String, String> {
