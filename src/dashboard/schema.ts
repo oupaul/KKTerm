@@ -108,10 +108,10 @@ export function validateScriptWidgetBody(value: unknown): ValidationResult<Scrip
     return { ok: false, reason: "scriptTooLarge" };
   }
   const rawPollSeconds = value.permissions.pollSeconds;
-  if (rawPollSeconds !== undefined && typeof rawPollSeconds !== "number") {
+  if (rawPollSeconds !== undefined && rawPollSeconds !== null && typeof rawPollSeconds !== "number") {
     return { ok: false, reason: "invalidPollSeconds" };
   }
-  const pollSeconds = rawPollSeconds;
+  const pollSeconds = rawPollSeconds === null ? undefined : rawPollSeconds;
   if (pollSeconds !== undefined && (!Number.isInteger(pollSeconds) || pollSeconds < MIN_POLL_SECONDS)) {
     return { ok: false, reason: "invalidPollSeconds" };
   }

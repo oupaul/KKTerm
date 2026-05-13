@@ -16,6 +16,7 @@ import {
 } from "./app/workspaceChromeLayout";
 import { ConnectionSidebar } from "./connections/ConnectionSidebar";
 import { DashboardPage } from "./dashboard/DashboardPage";
+import { useDashboardBackendInvalidation } from "./dashboard/state/invalidation";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
 import { useWorkspaceStore } from "./store";
@@ -55,6 +56,7 @@ function App() {
   } = useWorkspaceChromeLayout(resetAllLayouts);
 
   useBootstrapSettings();
+  useDashboardBackendInvalidation();
   useFrontendLaunchTimestamp();
   useHostUsagePolling();
   useGlobalContextMenuSuppression();

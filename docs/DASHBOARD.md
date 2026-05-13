@@ -163,7 +163,7 @@ The catalog overlay is a separate modal with search + two source-group tabs: Bui
 
 - A `<style>` block carrying KKTerm's accent and text tokens.
 - An optional `htmlShim` body markup (default: a single `<div id="root">`).
-- A `<script>` block running the source string.
+- A small host `<script>` that loads the stored source as data. The generated source is never pasted directly into the host script text, because generated snippets commonly contain HTML/script literals such as `</script>` that would prematurely close the host script and render broken JavaScript as widget body text.
 
 The iframe is a **fault-isolation** boundary, not a security boundary. KKTerm is MIT and single-user; the iframe exists so a typo in one script widget cannot crash the dashboard, and so future Tauri-command exposure (a postMessage bridge) is a deliberate per-handler decision rather than an accidental global.
 
@@ -174,6 +174,16 @@ Declared permissions:
 - `permissions.pollSeconds` → informational; the script self-schedules. The host may enforce a minimum floor in a follow-up.
 
 The bridge exposes `KK.requestPermission(name)` and `KK.postMessage(payload)` at the iframe globals. Future Tauri command access is added by extending this bridge with explicit handlers — not by widening the iframe surface.
+
+## AI Widget Reliability Direction
+
+Arbitrary AI-authored HTML is not a reliable default for dashboard creation. The reliable path is schema-first:
+
+- The assistant should choose `content` widgets whenever the request fits the existing declarative shapes (`markdown`, `kvList`, `checklist`, `stat`).
+- Interactive widgets should move toward predefined building blocks such as form fields, buttons, expressions, fetch blocks, and layout containers rendered by KKTerm-owned React components.
+- The assistant should produce only schema for those blocks. KKTerm validates and renders the schema; the model does not author random HTML.
+- `script` widgets remain an advanced escape hatch for genuinely custom live behavior, isolated in an iframe and validated for storage size/permissions, but they are not the product-default authoring surface for common widgets.
+- Assistant-facing widget creation schemas should stay strict-compatible where possible: root object, required fields, `additionalProperties: false`, bounded enums, and Rust validation as the final authority.
 
 ## AI Assistant Integration
 

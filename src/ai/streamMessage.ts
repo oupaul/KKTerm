@@ -55,7 +55,7 @@ export function applyAssistantStreamEventToMessage(
               ...tc,
               toolName: event.toolName,
               status: "completed",
-              error: event.error,
+              ...(event.error ? { error: event.error } : {}),
               endedAt: options.now(),
             }
           : tc,

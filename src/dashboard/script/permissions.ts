@@ -5,17 +5,24 @@ export function buildCsp(perm: ScriptBody["permissions"]): string {
   return [
     "default-src 'none'",
     "style-src 'unsafe-inline'",
-    "script-src 'unsafe-inline'",
+    "script-src 'unsafe-inline' blob:",
     `connect-src ${connect}`,
     "img-src data: blob:",
     "font-src data:",
   ].join("; ");
 }
 
+function scriptStringLiteral(value: string): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 export function buildSrcdoc(body: ScriptBody): string {
   const csp = buildCsp(body.permissions);
   const shim = body.htmlShim?.trim().length ? body.htmlShim : '<div id="root"></div>';
-  const safeSource = body.source;
+  const source = scriptStringLiteral(body.source);
   return `<!DOCTYPE html>
 <html><head>
   <meta charset="utf-8" />
@@ -23,6 +30,7 @@ export function buildSrcdoc(body: ScriptBody): string {
   <style>
     html, body { margin: 0; padding: 8px; font-family: ui-sans-serif, system-ui, sans-serif; color: #222; font-size: 13px; }
     body { background: transparent; }
+    .kk-widget-error { color: #b00; white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; }
   </style>
 </head><body>
   ${shim}
@@ -33,11 +41,28 @@ export function buildSrcdoc(body: ScriptBody): string {
         requestPermission: function () { return Promise.resolve(false); },
       };
       window.KK = KK;
+      function showError(err) {
+        const pre = document.createElement('pre');
+        pre.className = 'kk-widget-error';
+        pre.textContent = String(err && (err.stack || err.message) || err);
+        document.body.replaceChildren(pre);
+      }
+      window.addEventListener('error', function (event) {
+        showError(event.error || event.message);
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        showError(event.reason);
+      });
       try {
-        ${safeSource}
+        const source = ${source};
+        const blob = new Blob([source + '\\n//# sourceURL=kkterm-dashboard-widget.js'], { type: 'text/javascript' });
+        const script = document.createElement('script');
+        script.src = URL.createObjectURL(blob);
+        script.onload = function () { URL.revokeObjectURL(script.src); };
+        script.onerror = function () { showError(new Error('Widget script failed to load.')); };
+        document.head.appendChild(script);
       } catch (err) {
-        document.body.innerHTML = '<pre style="color:#b00;font:12px/1.4 ui-monospace,monospace">'
-          + String(err && err.stack || err) + '</pre>';
+        showError(err);
       }
     })();
   </script>

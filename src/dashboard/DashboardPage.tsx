@@ -110,7 +110,8 @@ export function DashboardPage({
       text: [
         t("dashboard.assistantContextIntro"),
         "For a user request to create a visible Dashboard widget, use dashboard_create_widget with activeView.id so the widget is validated and placed on the selected view in one step.",
-        "Prefer content widgets for static notes, checklists, stats, and key/value summaries. Use script widgets only when live JavaScript behavior is needed.",
+        "Prefer content widgets for static notes, checklists, stats, and key/value summaries. Use script widgets only when live JavaScript behavior is required.",
+        "When using a script widget, provide JavaScript source only. Do not generate a full HTML document or include <script> tags; create DOM nodes inside #root instead.",
         "",
         JSON.stringify(dashboardSnapshot, null, 2),
       ].join("\n"),

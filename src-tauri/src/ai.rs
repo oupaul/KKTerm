@@ -10,7 +10,7 @@ use futures::StreamExt;
 mod providers;
 use providers::provider_for;
 use tauri::ipc::Channel;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
@@ -1632,6 +1632,12 @@ struct OpenAiToolFunctionDefinition {
     name: &'static str,
     description: &'static str,
     parameters: Value,
+    #[serde(skip_serializing_if = "is_false")]
+    strict: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 fn finish_agent_response(
@@ -1678,12 +1684,16 @@ fn responses_tool_definitions(tools: &[OpenAiToolDefinition]) -> Vec<Value> {
     tools
         .iter()
         .map(|tool| {
-            json!({
+            let mut value = json!({
                 "type": tool.tool_type,
                 "name": tool.function.name,
                 "description": tool.function.description,
                 "parameters": tool.function.parameters.clone(),
-            })
+            });
+            if tool.function.strict {
+                value["strict"] = Value::Bool(true);
+            }
+            value
         })
         .collect()
 }
@@ -1922,9 +1932,9 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
         ));
         tools.push(tool_definition(
             "dashboard_create_widget",
-            "Create a validated AI-authored custom widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. For script kind: body must be an object with source (JS string), permissions (object with network boolean), and optional htmlShim. For content kind: body must be an object with shape (markdown|kvList|checklist|stat) and data. Example script body: {\"source\":\"html`<div>Hi</div>`\",\"permissions\":{\"network\":false}}",
+            "Create a validated AI-authored custom widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Prefer content widgets for static markdown, key/value summaries, checklists, and stats. Use script widgets only when the user explicitly needs live JavaScript behavior. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root.",
             dashboard_create_widget_schema(),
-        ));
+        ).strict());
         tools.push(tool_definition(
             "dashboard_create_custom_widget",
             "Create a reusable AI-authored custom widget definition only; this does not place it on a view. bodyJson must be a JSON string matching the selected kind. Prefer dashboard_create_widget when the user expects a visible widget.",
@@ -1960,12 +1970,12 @@ fn dashboard_create_widget_schema() -> Value {
             "summary":{"type":"string","maxLength":240},
             "category":{"type":"string","minLength":1,"maxLength":80},
             "body":{
-                "oneOf":[
-                    {"type":"object","properties":{"shape":{"const":"markdown"},"data":{"type":"object","properties":{"source":{"type":"string","minLength":1}},"required":["source"]}},"required":["shape","data"]},
-                    {"type":"object","properties":{"shape":{"const":"kvList"},"data":{"type":"object","properties":{"rows":{"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"value":{"type":"string"}},"required":["label","value"]}}},"required":["rows"]}},"required":["shape","data"]},
-                    {"type":"object","properties":{"shape":{"const":"checklist"},"data":{"type":"object","properties":{"items":{"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"done":{"type":"boolean"}},"required":["label"]}}},"required":["items"]}},"required":["shape","data"]},
-                    {"type":"object","properties":{"shape":{"const":"stat"},"data":{"type":"object","properties":{"value":{"type":"string","minLength":1},"unit":{"type":"string"},"delta":{"type":"string"},"caption":{"type":"string"}},"required":["value"]}},"required":["shape","data"]},
-                    {"type":"object","properties":{"source":{"type":"string","minLength":1},"permissions":{"type":"object","properties":{"network":{"type":"boolean"},"pollSeconds":{"type":"integer","minimum":1}},"required":["network"]},"htmlShim":{"type":"string"}},"required":["source","permissions"]}
+                "anyOf":[
+                    {"type":"object","properties":{"shape":{"type":"string","enum":["markdown"]},"data":{"type":"object","properties":{"source":{"type":"string","minLength":1}},"required":["source"],"additionalProperties":false}},"required":["shape","data"],"additionalProperties":false},
+                    {"type":"object","properties":{"shape":{"type":"string","enum":["kvList"]},"data":{"type":"object","properties":{"rows":{"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"value":{"type":"string"}},"required":["label","value"],"additionalProperties":false}}},"required":["rows"],"additionalProperties":false}},"required":["shape","data"],"additionalProperties":false},
+                    {"type":"object","properties":{"shape":{"type":"string","enum":["checklist"]},"data":{"type":"object","properties":{"items":{"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"done":{"type":"boolean"}},"required":["label","done"],"additionalProperties":false}}},"required":["items"],"additionalProperties":false}},"required":["shape","data"],"additionalProperties":false},
+                    {"type":"object","properties":{"shape":{"type":"string","enum":["stat"]},"data":{"type":"object","properties":{"value":{"type":"string","minLength":1},"unit":{"type":["string","null"]},"delta":{"type":["string","null"]},"caption":{"type":["string","null"]}},"required":["value","unit","delta","caption"],"additionalProperties":false}},"required":["shape","data"],"additionalProperties":false},
+                    {"type":"object","properties":{"source":{"type":"string","minLength":1},"permissions":{"type":"object","properties":{"network":{"type":"boolean"},"pollSeconds":{"type":["integer","null"],"minimum":1}},"required":["network","pollSeconds"],"additionalProperties":false},"htmlShim":{"type":["string","null"]}},"required":["source","permissions","htmlShim"],"additionalProperties":false}
                 ]
             },
             "preset":{"type":"string","enum":["panel","ambient","tile","hero","mono","action"]},
@@ -1976,7 +1986,8 @@ fn dashboard_create_widget_schema() -> Value {
             "gridW":{"type":"integer","minimum":1,"maximum":12},
             "gridH":{"type":"integer","minimum":1}
         },
-        "required":["viewId","kind","title","summary","category","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"]
+        "required":["viewId","kind","title","summary","category","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
+        "additionalProperties":false
     })
 }
 
@@ -1991,7 +2002,15 @@ fn tool_definition(
             name,
             description,
             parameters,
+            strict: false,
         },
+    }
+}
+
+impl OpenAiToolDefinition {
+    fn strict(mut self) -> Self {
+        self.function.strict = true;
+        self
     }
 }
 
@@ -2202,10 +2221,17 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             _ => Err(format!("unknown dashboard tool: {name}")),
         }
     });
+    if result.is_ok() && is_dashboard_mutating_tool(name) {
+        let _ = app.emit("dashboard-changed", json!({ "source": "aiTool", "tool": name }));
+    }
     match result {
         Ok(v) => serde_json::to_string(&v).unwrap_or_else(|_| "{}".to_string()),
         Err(e) => format!("{{\"error\":\"{}\"}}", e.replace('"', "\\\"")),
     }
+}
+
+fn is_dashboard_mutating_tool(name: &str) -> bool {
+    name.starts_with("dashboard_") && name != "dashboard_load_state"
 }
 
 fn current_time_tool() -> String {
