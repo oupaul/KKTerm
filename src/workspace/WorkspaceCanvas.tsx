@@ -1,4 +1,5 @@
 import { connectionTypeForTab } from "../connections/utils";
+import { ftpBrowserCommands } from "../lib/fileBrowserCommands";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
@@ -142,6 +143,32 @@ export function WorkspaceCanvas({
         if (tab.kind === "sftp") {
           return (
             <SftpWorkspace
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        if (tab.kind === "ftp") {
+          const connection = tab.connection;
+          const ftpOptions = connection?.ftpOptions ?? {
+            protocol: "ftp" as const,
+            mode: "passive" as const,
+            transferType: "binary" as const,
+            utf8: true,
+            showHidden: false,
+            ignoreCertErrors: false,
+          };
+          // Route plain FTP / FTPS through the same SftpWorkspace, parameterized
+          // with the FTP transport adapter so the UI is identical to the
+          // SSH-launched SFTP browser. The adapter disables features the FTP
+          // protocol can't support (e.g. POSIX permissions editor).
+          const commands = connection
+            ? ftpBrowserCommands(connection, ftpOptions)
+            : undefined;
+          return (
+            <SftpWorkspace
+              commands={commands}
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
               tab={tab}

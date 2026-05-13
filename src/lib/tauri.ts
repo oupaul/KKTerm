@@ -17,6 +17,7 @@ import type {
   CustomFont,
   DashboardSettings,
   DatabaseBackupInfo,
+  FtpConnectionOptions,
   GeneralSettings,
   HostUsageSnapshot,
   ImportedDatabaseSnapshot,
@@ -219,6 +220,64 @@ export interface SftpPathProperties {
   uid?: number;
   user?: string;
   gid?: number;
+  group?: string;
+}
+
+export interface StartFtpSessionRequest {
+  sessionId?: string;
+  title: string;
+  host: string;
+  user: string;
+  port?: number;
+  secretOwnerId?: string;
+  path?: string;
+  options: FtpConnectionOptions;
+}
+
+export interface FtpDirectoryEntry {
+  name: string;
+  kind: "file" | "folder" | "symlink" | "other";
+  size?: number;
+  modified?: number;
+  permissions?: number;
+  user?: string;
+  group?: string;
+}
+
+export interface FtpDirectoryListing {
+  sessionId: string;
+  path: string;
+  entries: FtpDirectoryEntry[];
+}
+
+export interface FtpSessionStarted extends FtpDirectoryListing {
+  welcome?: string;
+  features: string[];
+}
+
+export interface FtpTransferResult {
+  name: string;
+  files: number;
+  folders: number;
+  bytes: number;
+}
+
+export interface FtpTransferProgress {
+  transferId: string;
+  transferredBytes: number;
+  totalBytes: number;
+  progress: number;
+}
+
+export interface FtpPathProperties {
+  path: string;
+  name: string;
+  kind: "file" | "folder" | "symlink" | "other";
+  size?: number;
+  modified?: number;
+  permissions?: number;
+  mode?: string;
+  user?: string;
   group?: string;
 }
 
@@ -1176,6 +1235,62 @@ type CommandMap = {
     result: SftpPathProperties;
   };
   close_sftp_session: {
+    args: { sessionId: string };
+    result: null;
+  };
+  start_ftp_session: {
+    args: { request: StartFtpSessionRequest };
+    result: FtpSessionStarted;
+  };
+  list_ftp_directory: {
+    args: { request: { sessionId: string; path: string } };
+    result: FtpDirectoryListing;
+  };
+  upload_ftp_path: {
+    args: {
+      request: {
+        sessionId: string;
+        transferId: string;
+        localPath: string;
+        remoteDirectory: string;
+        overwriteBehavior: SftpSettings["overwriteBehavior"];
+      };
+    };
+    result: FtpTransferResult;
+  };
+  download_ftp_path: {
+    args: {
+      request: {
+        sessionId: string;
+        transferId: string;
+        remotePath: string;
+        localDirectory: string;
+        overwriteBehavior: SftpSettings["overwriteBehavior"];
+      };
+    };
+    result: FtpTransferResult;
+  };
+  cancel_ftp_transfer: {
+    args: { request: { transferId: string } };
+    result: null;
+  };
+  create_ftp_folder: {
+    args: { request: { sessionId: string; parentPath: string; name: string } };
+    result: null;
+  };
+  rename_ftp_path: {
+    args: { request: { sessionId: string; path: string; newName: string } };
+    result: null;
+  };
+  delete_ftp_path: {
+    args: { request: { sessionId: string; path: string } };
+    result: null;
+  };
+  ftp_path_properties: {
+    args: { request: { sessionId: string; path: string } };
+    result: FtpPathProperties;
+  };
+  close_ftp_session: {
     args: { sessionId: string };
     result: null;
   };
