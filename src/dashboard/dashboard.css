@@ -1846,3 +1846,80 @@ main.dashboard-page {
     border-color: rgb(255 255 255 / 18%);
   }
 }
+
+.dw-bg-popover {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  width: 320px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--dashboard-radius-lg);
+  box-shadow: var(--dashboard-shadow-ambient);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dw-bg-popover-head {
+  font-weight: 650;
+}
+
+.dw-bg-seg {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-muted);
+  border-radius: 8px;
+}
+
+.dw-bg-seg button {
+  flex: 1;
+  padding: 5px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted, var(--text));
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dw-bg-seg button.active {
+  background: var(--surface);
+  box-shadow: var(--dashboard-shadow-card);
+  font-weight: 600;
+}
+
+.dw-bg-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.dw-bg-preset-grid button {
+  aspect-ratio: 1.4;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dw-bg-preset-grid button.active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dw-bg-image {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dw-bg-image-actions {
+  display: flex;
+  gap: 8px;
+}
