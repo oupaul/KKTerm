@@ -171,6 +171,7 @@ export type TerminalCursorStyle = "block" | "bar" | "underline";
 
 export interface GeneralSettings {
   autoBackupEnabled: boolean;
+  autoUpdateChecksEnabled: boolean;
   showConnectedConnectionsInRail: boolean;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;

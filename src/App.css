@@ -5329,6 +5329,23 @@ progress {
   width: min(900px, calc(100vw - 40px));
 }
 
+.connection-dialog-backdrop .app-update-dialog {
+  width: min(520px, calc(100vw - 40px));
+}
+
+.app-update-notes {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .settings-dialog {
   width: min(460px, calc(100vw - 40px));
 }

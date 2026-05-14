@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useState } from "react";
 
 import { useWorkspaceStore } from "../store";
 import { listCustomFontOptions, normalizeAvailableAppearance } from "./customFonts";
@@ -15,6 +16,7 @@ export const AI_PROVIDER_SECRET_OWNER_ID = "openai-compatible-provider";
 // time. Bootstrap is best-effort: any single load failure is ignored so the
 // app still renders with the in-memory defaults from `app-defaults`.
 export function useBootstrapSettings() {
+  const [generalSettingsReady, setGeneralSettingsReady] = useState(!isTauriRuntime());
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
@@ -51,6 +53,9 @@ export function useBootstrapSettings() {
     void invokeCommand("get_general_settings")
       .then((settings) => {
         if (!disposed) setGeneralSettings(settings);
+      })
+      .finally(() => {
+        if (!disposed) setGeneralSettingsReady(true);
       })
       .catch(swallow);
 
@@ -139,4 +144,6 @@ export function useBootstrapSettings() {
     setVncSettings,
     setTerminalSettings,
   ]);
+
+  return { generalSettingsReady };
 }

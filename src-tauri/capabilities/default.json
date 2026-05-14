@@ -9,6 +9,8 @@
     "dialog:allow-save",
     "fs:allow-write-text-file",
     "opener:default",
+    "process:default",
+    "updater:default",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }]

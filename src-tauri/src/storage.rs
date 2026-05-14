@@ -205,6 +205,8 @@ pub struct Storage {
 #[serde(rename_all = "camelCase")]
 pub struct GeneralSettings {
     auto_backup_enabled: bool,
+    #[serde(default = "default_auto_update_checks_enabled")]
+    auto_update_checks_enabled: bool,
     #[serde(default = "default_show_connected_connections_in_rail")]
     show_connected_connections_in_rail: bool,
     #[serde(default)]
@@ -3423,6 +3425,7 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
+        auto_update_checks_enabled: true,
         show_connected_connections_in_rail: true,
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
@@ -3445,6 +3448,10 @@ fn default_dashboard_settings() -> DashboardSettings {
 }
 
 fn default_show_connected_connections_in_rail() -> bool {
+    true
+}
+
+fn default_auto_update_checks_enabled() -> bool {
     true
 }
 
@@ -4884,6 +4891,7 @@ mod tests {
         let updated = storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
+                auto_update_checks_enabled: true,
                 show_connected_connections_in_rail: true,
                 pinned_connection_ids: vec![
                     " connection-a ".to_string(),
@@ -5073,6 +5081,7 @@ mod tests {
         storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: false,
+                auto_update_checks_enabled: true,
                 show_connected_connections_in_rail: true,
                 pinned_connection_ids: vec!["connection-pinned".to_string()],
                 allow_clipboard_read: true,
@@ -5086,6 +5095,7 @@ mod tests {
         storage
             .update_general_settings(GeneralSettings {
                 auto_backup_enabled: true,
+                auto_update_checks_enabled: true,
                 show_connected_connections_in_rail: false,
                 pinned_connection_ids: Vec::new(),
                 allow_clipboard_read: false,

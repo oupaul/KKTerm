@@ -43,6 +43,7 @@ vnc = { package = "vnc-rs", version = "0.5.3" }
 time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
 zip = "2"
 futures = "0.3"
+tauri-plugin-process = "2.3.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_DataExchange", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Ole", "Win32_System_Variant", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
@@ -50,6 +51,9 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphic
 windows-native-keyring-store = "1.0.0"
 webview2-com = "0.38.2"
 tauri-plugin-single-instance = "2"
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-updater = "2.10.1"
 
 
 
