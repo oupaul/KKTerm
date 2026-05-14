@@ -16,7 +16,9 @@
     "connectionRail": "Connection Rail",
     "connectedConnectionsRail": "Connected Connections",
     "openConnectedConnection": "Open {{name}}",
-    "openPinnedConnection": "Open pinned Connection {{name}}"
+    "openPinnedConnection": "Open pinned Connection {{name}}",
+    "trayDontSleep": "Don't Sleep",
+    "trayExit": "Exit"
   },
   "dashboard": {
     "title": "Dashboard",

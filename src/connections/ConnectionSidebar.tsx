@@ -12,6 +12,7 @@ import { RECENT_CONNECTION_LIMIT, createStoredSecretMask, loadCollapsedFolderIds
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, flattenConnections, flattenFolders, upsertRootConnection, withLiveConnectionStatuses } from "./treeUtils";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, PanelRight, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, X } from "lucide-react";
 import { AddComputer as IconParkAddComputer, CollapseTextInput as IconParkCollapseTextInput, Delete as IconParkDelete, Edit as IconParkEdit, ExpandTextInput as IconParkExpandTextInput, FolderPlus as IconParkFolderPlus, Setting as IconParkSetting } from "@icon-park/react";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { TFunction } from "i18next";
@@ -22,6 +23,7 @@ import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";
 import { confirmNativeDialog, invokeCommand, isTauriRuntime, selectAppLauncherFolder, selectKeyFile } from "../lib/tauri";
 import { connectionTree } from "../app-defaults";
+import { pushTrayMenu } from "../app/trayMenu";
 import { useWorkspaceStore } from "../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, UpdateConnectionRequest, VncSettings } from "../types";
 
@@ -772,6 +774,31 @@ export function ConnectionSidebar({
       .filter((connection): connection is Connection => Boolean(connection))
       .slice(0, RECENT_CONNECTION_LIMIT);
   }, [recentConnectionIds, treeWithLiveStatuses]);
+
+  useEffect(() => {
+    void pushTrayMenu(recentConnections, {
+      dontSleep: t("app.trayDontSleep"),
+      exit: t("app.trayExit"),
+    });
+  }, [recentConnections, t]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    const unlistenPromise = listen<string>("kkterm://tray-open-connection", (event) => {
+      const connection = flattenConnections(treeWithLiveStatuses).find(
+        (candidate) => candidate.id === event.payload,
+      );
+      if (connection) {
+        handleOpenConnection(connection);
+      }
+    });
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [treeWithLiveStatuses]);
+
   const isTreeFiltered = query.trim().length > 0;
 
   function menuPositionFromElement(element: HTMLElement) {

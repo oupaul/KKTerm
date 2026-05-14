@@ -722,10 +722,26 @@ fn get_dont_sleep_enabled(power: tauri::State<'_, power::DontSleepManager>) -> b
 
 #[tauri::command]
 fn set_dont_sleep_enabled(
+    app: tauri::AppHandle,
     power: tauri::State<'_, power::DontSleepManager>,
+    tray_state: tauri::State<'_, app_tray::TrayState>,
     enabled: bool,
 ) -> Result<bool, String> {
-    power.set_enabled(enabled)
+    let saved = power.set_enabled(enabled)?;
+    if let Err(error) = app_tray::rebuild_menu(&app, &tray_state) {
+        eprintln!("failed to refresh tray menu after Don't Sleep change: {error}");
+    }
+    Ok(saved)
+}
+
+#[tauri::command]
+fn update_tray_menu(
+    app: tauri::AppHandle,
+    tray_state: tauri::State<'_, app_tray::TrayState>,
+    snapshot: app_tray::TrayMenuSnapshot,
+) -> Result<(), String> {
+    tray_state.set_snapshot(snapshot);
+    app_tray::rebuild_menu(&app, &tray_state)
 }
 
 #[tauri::command]
@@ -1935,6 +1951,7 @@ pub fn run() {
             create_diagnostics_bundle,
             get_dont_sleep_enabled,
             set_dont_sleep_enabled,
+            update_tray_menu,
             capture_screenshot_to_clipboard,
             capture_screenshot_for_assistant,
             capture_fullscreen_screenshot_for_assistant,
