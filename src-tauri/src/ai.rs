@@ -1932,13 +1932,13 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
         ));
         tools.push(tool_definition(
             "dashboard_create_widget",
-            "Create a validated AI-authored custom widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Prefer content widgets for static markdown, key/value summaries, checklists, and stats. Use script widgets only when the user explicitly needs live JavaScript behavior. For script widgets that display remote images or fetch remote data, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose: panel for standard tools, tile/stat for compact metrics, mono for terminal/code/system data, action for launch/action surfaces, hero only for rare high-priority summaries. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets. Keep copy concise, desktop-dense, and consistent with KKTerm's quiet productivity UI. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root and use compact app-style controls.",
+            "Create a validated AI-authored custom widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Prefer content widgets for static markdown, key/value summaries, checklists, and stats. Use script widgets only when the user explicitly needs live JavaScript behavior. For script widgets that display remote images or fetch remote data, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose: panel for standard tools, tile/stat for compact metrics, mono for terminal/code/system data, action for launch/action surfaces, hero only for rare high-priority summaries. Size widgets generously enough to avoid inner scrollbars: simple timers/counters need at least 4x3, forms or images need 5x4 or larger, lists need height for expected rows. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets. Never set text and background to the same or low-contrast colors; use host CSS variables and compact app-style controls. If the widget needs user-configurable/persistent per-instance options, provide settingsSchema.fields with text, number, boolean, select, or secret fields. Use secret fields for passwords, API keys, tokens, and similar values; SQLite stores only secret references and scripts must call await KK.getSecret('fieldKey') to read the OS-keychain value at runtime. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root.",
             dashboard_create_widget_schema(),
         ).strict());
         tools.push(tool_definition(
             "dashboard_create_custom_widget",
-            "Create a reusable AI-authored custom widget definition only; this does not place it on a view. bodyJson must be a JSON string matching the selected kind. Prefer dashboard_create_widget when the user expects a visible widget.",
-            json!({"type":"object","properties":{"kind":{"type":"string","enum":["content","script"]},"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"},"createdBy":{"type":"string","enum":["user","agent"]}},"required":["kind","title","summary","category","bodyJson","createdBy"]}),
+            "Create a reusable AI-authored custom widget definition only; this does not place it on a view. bodyJson must be a JSON string matching the selected kind. Optional settingsSchemaJson defines app-rendered per-instance settings fields; use type secret for passwords, API keys, and tokens so only secret references are stored in SQLite. Prefer dashboard_create_widget when the user expects a visible widget.",
+            json!({"type":"object","properties":{"kind":{"type":"string","enum":["content","script"]},"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"},"settingsSchemaJson":{"type":"string"},"createdBy":{"type":"string","enum":["user","agent"]}},"required":["kind","title","summary","category","bodyJson","createdBy"]}),
         ));
         tools.push(tool_definition(
             "dashboard_update_custom_widget",
@@ -1969,6 +1969,7 @@ fn dashboard_create_widget_schema() -> Value {
             "title":{"type":"string","minLength":1,"maxLength":120},
             "summary":{"type":"string","maxLength":240},
             "category":{"type":"string","minLength":1,"maxLength":80},
+            "settingsSchema":{"type":["object","null"],"properties":{"fields":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["text","number","boolean","select","secret"]},"key":{"type":"string"},"label":{"type":"string"},"placeholder":{"type":["string","null"]},"defaultValue":{"type":["string","number","boolean","null"]},"min":{"type":["number","null"]},"max":{"type":["number","null"]},"step":{"type":["number","null"]},"options":{"type":["array","null"],"items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":"string"}},"required":["label","value"],"additionalProperties":false}}},"required":["type","key","label","placeholder","defaultValue","min","max","step","options"],"additionalProperties":false}}},"required":["fields"],"additionalProperties":false},
             "body":{
                 "anyOf":[
                     {"type":"object","properties":{"shape":{"type":"string","enum":["markdown"]},"data":{"type":"object","properties":{"source":{"type":"string","minLength":1}},"required":["source"],"additionalProperties":false}},"required":["shape","data"],"additionalProperties":false},
@@ -1986,7 +1987,7 @@ fn dashboard_create_widget_schema() -> Value {
             "gridW":{"type":"integer","minimum":1,"maximum":12},
             "gridH":{"type":"integer","minimum":1}
         },
-        "required":["viewId","kind","title","summary","category","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
+        "required":["viewId","kind","title","summary","category","settingsSchema","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
         "additionalProperties":false
     })
 }
@@ -2156,6 +2157,12 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 }
                 let body_json = serde_json::to_string(&body)
                     .map_err(|e| format!("invalid body: {e}"))?;
+                let settings_schema_json = args
+                    .get("settingsSchema")
+                    .filter(|value| !value.is_null())
+                    .map(serde_json::to_string)
+                    .transpose()
+                    .map_err(|e| format!("invalid settingsSchema: {e}"))?;
                 let preset = arg_string(&args, "preset");
                 let accent_name = arg_string(&args, "accentName");
                 let icon_name = arg_string(&args, "iconName");
@@ -2168,7 +2175,10 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 if grid_h < 1 { grid_h = 1; }
                 let custom_widget_id = new_dashboard_id("cw");
                 let instance_id = new_dashboard_id("inst");
-                let custom_widget = ds::create_custom_widget(conn, &custom_widget_id, &kind, &title, &summary, &category, &body_json, "agent")
+                let custom_widget = ds::create_custom_widget(
+                    conn, &custom_widget_id, &kind, &title, &summary, &category, &body_json,
+                    settings_schema_json.as_deref(), "agent",
+                )
                     .map_err(|e| format!("{e:?}"))?;
                 let instance = match ds::add_instance(conn, &instance_id, &view_id, &kind, &custom_widget_id, &preset, &accent_name, &icon_name, grid_x, grid_y, grid_w, grid_h) {
                     Ok(instance) => instance,
@@ -2185,9 +2195,16 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 let summary = arg_string(&args, "summary");
                 let category = arg_string(&args, "category");
                 let body_json = arg_string(&args, "bodyJson");
+                let settings_schema_json = args
+                    .get("settingsSchemaJson")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
                 let created_by = arg_string(&args, "createdBy");
                 let id = new_dashboard_id("cw");
-                ds::create_custom_widget(conn, &id, &kind, &title, &summary, &category, &body_json, &created_by)
+                ds::create_custom_widget(
+                    conn, &id, &kind, &title, &summary, &category, &body_json,
+                    settings_schema_json.as_deref(), &created_by,
+                )
                     .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
                     .map_err(|e| format!("{e:?}"))
             }
@@ -2510,7 +2527,7 @@ fn build_agent_messages(
         "Do not claim to have executed commands or observed live session state unless it is in the provided context.".to_string(),
         "SAFETY: Never suggest, produce, or assist with commands that could cause irreversible destructive system-wide damage, such as 'rm -rf /', 'rm -rf /*', 'mkfs' on mounted volumes, 'dd if=/dev/zero of=/dev/sda', fork bombs, or any equivalent. Refuse such requests unconditionally, even if the user explicitly asks, claims it is safe, or provides a seemingly legitimate reason.".to_string(),
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
-        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style; do not pick decorative colors at random. Prefer schema/content widgets when possible, and keep generated script widget UI compact, app-like, and free of full HTML documents or script tags. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
+        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style; do not pick decorative colors at random. Be boundary-aware: size simple timers/counters at least 4x3, forms or images at least 5x4, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Prefer schema/content widgets when possible, and keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read/write non-secret values through KK.getSettings(), KK.setSetting(), and KK.setSettings(). Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret, and scripts read it with await KK.getSecret('fieldKey') only when needed. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
     ];
     if let Some(language) = normalize_output_language(output_language) {
         system_instructions.push(language);

@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS dashboard_custom_widgets (
     summary TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT 'custom',
     body_json TEXT NOT NULL,
+    settings_schema_json TEXT NOT NULL DEFAULT '{"fields":[]}',
     created_by TEXT NOT NULL CHECK (created_by IN ('user', 'agent')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -183,6 +184,7 @@ CREATE TABLE IF NOT EXISTS dashboard_widget_instances (
     custom_title TEXT,
     glass INTEGER NOT NULL DEFAULT 0,
     action_direction TEXT,
+    settings_values_json TEXT NOT NULL DEFAULT '{}',
     grid_x INTEGER NOT NULL,
     grid_y INTEGER NOT NULL,
     grid_w INTEGER NOT NULL,
@@ -693,6 +695,20 @@ pub struct UrlCredentialSummary {
 pub struct UrlDataPartitionSummary {
     name: String,
     connection_count: u32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredCredentialCandidate {
+    pub(crate) id: String,
+    pub(crate) kind: String,
+    pub(crate) secret_kind: String,
+    pub(crate) owner_id: String,
+    pub(crate) label: String,
+    pub(crate) detail: Option<String>,
+    pub(crate) username: Option<String>,
+    pub(crate) updated_at: Option<String>,
+    pub(crate) metadata_source: String,
 }
 
 #[derive(Clone)]
@@ -1473,6 +1489,8 @@ impl Storage {
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
         ensure_column(&connection, "connections", "icon_data_url", "TEXT")?;
         ensure_column(&connection, "url_credentials", "field_values", "TEXT")?;
+        ensure_column(&connection, "dashboard_custom_widgets", "settings_schema_json", "TEXT NOT NULL DEFAULT '{\"fields\":[]}'")?;
+        ensure_column(&connection, "dashboard_widget_instances", "settings_values_json", "TEXT NOT NULL DEFAULT '{}'")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;
@@ -1897,6 +1915,40 @@ impl Storage {
             .map_err(to_storage_error)?;
         rows.collect::<Result<Vec<_>, _>>()
             .map_err(to_storage_error)
+    }
+
+    pub fn list_stored_credential_candidates(&self) -> Result<Vec<StoredCredentialCandidate>, String> {
+        self.with_connection(list_stored_credential_candidates)
+    }
+
+    pub fn clear_widget_secret_reference(&self, instance_id: String, key: String) -> Result<(), String> {
+        let instance_id = required_field("widget instance id", instance_id)?;
+        let key = required_field("widget secret key", key)?;
+        self.with_connection(|connection| {
+            let values_json: String = connection
+                .query_row(
+                    "SELECT settings_values_json FROM dashboard_widget_instances WHERE id = ?1",
+                    params![&instance_id],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(to_storage_error)?
+                .ok_or_else(|| "Dashboard widget instance was not found".to_string())?;
+            let mut values: serde_json::Value = serde_json::from_str(&values_json)
+                .map_err(|error| format!("failed to parse widget settings values: {error}"))?;
+            if let Some(object) = values.as_object_mut() {
+                object.insert(key, serde_json::Value::Null);
+            }
+            let next = serde_json::to_string(&values)
+                .map_err(|error| format!("failed to serialize widget settings values: {error}"))?;
+            connection
+                .execute(
+                    "UPDATE dashboard_widget_instances SET settings_values_json = ?1 WHERE id = ?2",
+                    params![next, instance_id],
+                )
+                .map_err(to_storage_error)?;
+            Ok(())
+        })
     }
 
     pub fn clear_url_data_partition(&self, name: String) -> Result<(), String> {
@@ -2442,6 +2494,181 @@ fn validate_import_database(path: &Path) -> Result<(), String> {
     storage.ai_provider_settings()?;
     storage.list_connection_tree()?;
     Ok(())
+}
+
+fn list_stored_credential_candidates(
+    connection: &SqliteConnection,
+) -> Result<Vec<StoredCredentialCandidate>, String> {
+    let mut credentials = Vec::new();
+
+    let mut connection_stmt = connection
+        .prepare(
+            "SELECT id, name, connection_type, host, username
+             FROM connections
+             WHERE connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')
+             ORDER BY lower(name)",
+        )
+        .map_err(to_storage_error)?;
+    let connection_rows = connection_stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })
+        .map_err(to_storage_error)?;
+    for row in connection_rows {
+        let (id, name, connection_type, host, username) = row.map_err(to_storage_error)?;
+        credentials.push(StoredCredentialCandidate {
+            id: format!("connection-password:{id}"),
+            kind: "connectionPassword".to_string(),
+            secret_kind: "connectionPassword".to_string(),
+            owner_id: id,
+            label: name,
+            detail: Some(format!("{connection_type} - {host}")),
+            username: (!username.trim().is_empty()).then_some(username),
+            updated_at: None,
+            metadata_source: "connections".to_string(),
+        });
+    }
+
+    for credential in list_url_credential_candidates(connection)? {
+        credentials.push(credential);
+    }
+    for credential in list_widget_secret_candidates(connection)? {
+        credentials.push(credential);
+    }
+
+    credentials.push(StoredCredentialCandidate {
+        id: "ai-api-key:openai-compatible-provider".to_string(),
+        kind: "aiApiKey".to_string(),
+        secret_kind: "aiApiKey".to_string(),
+        owner_id: "openai-compatible-provider".to_string(),
+        label: "AI Assistant API key".to_string(),
+        detail: Some("OpenAI-compatible provider".to_string()),
+        username: None,
+        updated_at: None,
+        metadata_source: "settings".to_string(),
+    });
+
+    Ok(credentials)
+}
+
+fn list_url_credential_candidates(
+    connection: &SqliteConnection,
+) -> Result<Vec<StoredCredentialCandidate>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT connections.id, connections.name, connections.url, url_credentials.page_url,
+                    url_credentials.username, url_credentials.updated_at
+             FROM url_credentials
+             INNER JOIN connections ON connections.id = url_credentials.connection_id
+             ORDER BY lower(connections.name), lower(url_credentials.username)",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            let connection_id: String = row.get(0)?;
+            let connection_name: String = row.get(1)?;
+            let url: Option<String> = row.get(2)?;
+            let page_url: Option<String> = row.get(3)?;
+            let username: String = row.get(4)?;
+            let updated_at: String = row.get(5)?;
+            Ok(StoredCredentialCandidate {
+                id: format!("url-password:{connection_id}"),
+                kind: "urlPassword".to_string(),
+                secret_kind: "urlPassword".to_string(),
+                owner_id: connection_id,
+                label: connection_name,
+                detail: page_url.or(url),
+                username: Some(username),
+                updated_at: Some(updated_at),
+                metadata_source: "urlCredentials".to_string(),
+            })
+        })
+        .map_err(to_storage_error)?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
+}
+
+fn list_widget_secret_candidates(
+    connection: &SqliteConnection,
+) -> Result<Vec<StoredCredentialCandidate>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT dashboard_widget_instances.id, dashboard_widget_instances.settings_values_json,
+                    dashboard_custom_widgets.title, dashboard_custom_widgets.settings_schema_json,
+                    dashboard_views.title
+             FROM dashboard_widget_instances
+             INNER JOIN dashboard_custom_widgets
+                ON dashboard_custom_widgets.id = dashboard_widget_instances.source_id
+             INNER JOIN dashboard_views
+                ON dashboard_views.id = dashboard_widget_instances.view_id
+             WHERE dashboard_widget_instances.kind IN ('content', 'script')
+             ORDER BY lower(dashboard_views.title), lower(dashboard_custom_widgets.title)",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })
+        .map_err(to_storage_error)?;
+
+    let mut credentials = Vec::new();
+    for row in rows {
+        let (instance_id, settings_values_json, widget_title, settings_schema_json, view_title) =
+            row.map_err(to_storage_error)?;
+        let schema: serde_json::Value = serde_json::from_str(&settings_schema_json)
+            .unwrap_or_else(|_| serde_json::json!({ "fields": [] }));
+        let values: serde_json::Value = serde_json::from_str(&settings_values_json)
+            .unwrap_or_else(|_| serde_json::json!({}));
+        let fields = schema
+            .get("fields")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for field in fields {
+            if field.get("type").and_then(serde_json::Value::as_str) != Some("secret") {
+                continue;
+            }
+            let Some(key) = field.get("key").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let value = values.get(key).and_then(serde_json::Value::as_object);
+            let has_ref = value.is_some_and(|object| {
+                object.get("type").and_then(serde_json::Value::as_str) == Some("secretRef") &&
+                object.get("hasSecret").and_then(serde_json::Value::as_bool) == Some(true)
+            });
+            if !has_ref {
+                continue;
+            }
+            let owner_id = format!("dashboard-widget-secret:{instance_id}:{key}");
+            credentials.push(StoredCredentialCandidate {
+                id: format!("widget-secret:{instance_id}:{key}"),
+                kind: "widgetSecret".to_string(),
+                secret_kind: "widgetSecret".to_string(),
+                owner_id,
+                label: widget_title.clone(),
+                detail: Some(format!("{view_title} - {key}")),
+                username: None,
+                updated_at: value
+                    .and_then(|object| object.get("updatedAt"))
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
+                metadata_source: "dashboardWidgetInstance".to_string(),
+            });
+        }
+    }
+    Ok(credentials)
 }
 
 fn list_connections_for_folder(
@@ -4140,6 +4367,111 @@ mod tests {
             .expect("URL connection exists");
         assert!(reloaded.has_url_credential);
         assert_eq!(reloaded.url_credential_username.as_deref(), Some("admin"));
+    }
+
+    #[test]
+    fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
+        let storage = Storage::open(temp_db_path("stored-credential-candidates")).expect("storage opens");
+
+        let ssh = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Password Host".to_string(),
+                host: "password.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: Some("password".to_string()),
+                local_shell: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("SSH connection is created");
+        let url = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Portal".to_string(),
+                host: String::new(),
+                user: String::new(),
+                connection_type: "url".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                url: Some("https://portal.example".to_string()),
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("URL connection is created");
+        storage
+            .upsert_url_credential(UpsertUrlCredentialRequest {
+                connection_id: url.id.clone(),
+                username: "web-user".to_string(),
+                page_url: None,
+                username_selector: None,
+                password_selector: None,
+                field_values: None,
+            })
+            .expect("URL credential metadata is stored");
+
+        storage.with_connection(|connection| {
+            connection.execute(
+                "INSERT INTO dashboard_views (id, title, sort_order, grid_density)
+                 VALUES ('view-1', 'Default', 0, 'default')",
+                [],
+            ).map_err(to_storage_error)?;
+            connection.execute(
+                "INSERT INTO dashboard_custom_widgets
+                    (id, kind, title, summary, category, body_json, settings_schema_json, created_by)
+                 VALUES
+                    ('cw-1', 'script', 'API Widget', '', 'custom',
+                     '{\"source\":\"console.log(1)\",\"permissions\":{\"network\":false}}',
+                     '{\"fields\":[{\"type\":\"secret\",\"key\":\"apiKey\",\"label\":\"API key\"}]}',
+                     'agent')",
+                [],
+            ).map_err(to_storage_error)?;
+            connection.execute(
+                "INSERT INTO dashboard_widget_instances
+                    (id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
+                     glass, action_direction, settings_values_json, grid_x, grid_y, grid_w, grid_h, sort_order)
+                 VALUES
+                    ('inst-1', 'view-1', 'script', 'cw-1', 'panel', 'blue', 'Key', NULL,
+                     0, NULL,
+                     '{\"apiKey\":{\"type\":\"secretRef\",\"ownerId\":\"dashboard-widget-secret:inst-1:apiKey\",\"hasSecret\":true}}',
+                     0, 0, 4, 3, 0)",
+                [],
+            ).map_err(to_storage_error)?;
+            Ok(())
+        }).expect("dashboard widget metadata is inserted");
+
+        let candidates = storage
+            .list_stored_credential_candidates()
+            .expect("credential candidates load");
+
+        assert!(candidates.iter().any(|candidate| {
+            candidate.kind == "connectionPassword" && candidate.owner_id == ssh.id
+        }));
+        assert!(candidates.iter().any(|candidate| {
+            candidate.kind == "urlPassword" && candidate.owner_id == url.id
+        }));
+        assert!(candidates.iter().any(|candidate| {
+            candidate.kind == "widgetSecret" &&
+                candidate.owner_id == "dashboard-widget-secret:inst-1:apiKey"
+        }));
     }
 
     #[test]

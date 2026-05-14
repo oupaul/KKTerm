@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub const PRESETS: &[&str] = &[
     "panel", "ambient", "tile", "hero",
@@ -24,6 +25,10 @@ pub const ICONS: &[&str] = &[
 pub const GRID_COLUMNS: i64 = 12;
 pub const MAX_SCRIPT_SOURCE_BYTES: usize = 64 * 1024;
 pub const MAX_CONTENT_BODY_BYTES: usize = 32 * 1024;
+pub const MAX_SETTINGS_SCHEMA_BYTES: usize = 16 * 1024;
+pub const MAX_SETTINGS_VALUES_BYTES: usize = 32 * 1024;
+pub const MAX_SETTINGS_FIELDS: usize = 20;
+pub const MAX_SELECT_OPTIONS: usize = 40;
 pub const MIN_POLL_SECONDS: u64 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -44,6 +49,8 @@ pub enum ValidationError {
     InvalidPollSeconds,
     InvalidTitle,
     InvalidGridDensity,
+    InvalidSettingsSchema,
+    InvalidSettingsValues,
 }
 
 pub fn validate_preset(value: &str) -> Result<(), ValidationError> {
@@ -224,6 +231,178 @@ pub fn validate_custom_body_for_kind(kind: &str, body_json: &str) -> Result<(), 
     }
 }
 
+fn valid_settings_key(value: &str) -> bool {
+    let mut chars = value.chars();
+    match chars.next() {
+        Some(first) if first.is_ascii_alphabetic() => {}
+        _ => return false,
+    }
+    value.len() <= 64 && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> {
+    if json.len() > MAX_SETTINGS_SCHEMA_BYTES {
+        return Err(ValidationError::InvalidSettingsSchema);
+    }
+    let parsed: Value = serde_json::from_str(json)
+        .map_err(|_| ValidationError::InvalidSettingsSchema)?;
+    let fields = parsed
+        .get("fields")
+        .and_then(Value::as_array)
+        .ok_or(ValidationError::InvalidSettingsSchema)?;
+    if fields.len() > MAX_SETTINGS_FIELDS {
+        return Err(ValidationError::InvalidSettingsSchema);
+    }
+    let mut keys = std::collections::HashSet::new();
+    for field in fields {
+        let object = field.as_object().ok_or(ValidationError::InvalidSettingsSchema)?;
+        let field_type = object
+            .get("type")
+            .and_then(Value::as_str)
+            .ok_or(ValidationError::InvalidSettingsSchema)?;
+        let key = object
+            .get("key")
+            .and_then(Value::as_str)
+            .ok_or(ValidationError::InvalidSettingsSchema)?;
+        let label = object
+            .get("label")
+            .and_then(Value::as_str)
+            .ok_or(ValidationError::InvalidSettingsSchema)?;
+        if !valid_settings_key(key) || label.trim().is_empty() || !keys.insert(key.to_string()) {
+            return Err(ValidationError::InvalidSettingsSchema);
+        }
+        match field_type {
+            "text" => {
+                if object.get("placeholder").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+                if object.get("defaultValue").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+            }
+            "number" => {
+                for key in ["min", "max", "defaultValue"] {
+                    if object.get(key).is_some_and(|value| !value.is_number() && !value.is_null()) {
+                        return Err(ValidationError::InvalidSettingsSchema);
+                    }
+                }
+                if object.get("step").is_some_and(|value| {
+                    value.is_null() || value.as_f64().is_some_and(|number| number > 0.0)
+                }) {
+                    // Valid optional step.
+                } else if object.contains_key("step") {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+            }
+            "boolean" => {
+                if object.get("defaultValue").is_some_and(|value| !value.is_boolean() && !value.is_null()) {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+            }
+            "secret" => {
+                if object.get("placeholder").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+                if object.contains_key("defaultValue") {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+            }
+            "select" => {
+                if object.get("defaultValue").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+                let options = object
+                    .get("options")
+                    .and_then(Value::as_array)
+                    .ok_or(ValidationError::InvalidSettingsSchema)?;
+                if options.is_empty() || options.len() > MAX_SELECT_OPTIONS {
+                    return Err(ValidationError::InvalidSettingsSchema);
+                }
+                for option in options {
+                    let option = option.as_object().ok_or(ValidationError::InvalidSettingsSchema)?;
+                    let label = option
+                        .get("label")
+                        .and_then(Value::as_str)
+                        .ok_or(ValidationError::InvalidSettingsSchema)?;
+                    if label.trim().is_empty() || !option.get("value").is_some_and(Value::is_string) {
+                        return Err(ValidationError::InvalidSettingsSchema);
+                    }
+                }
+            }
+            _ => return Err(ValidationError::InvalidSettingsSchema),
+        }
+    }
+    Ok(())
+}
+
+pub fn dashboard_widget_secret_owner_id(instance_id: &str, key: &str) -> String {
+    format!("dashboard-widget-secret:{instance_id}:{key}")
+}
+
+pub fn validate_settings_values_for_schema_json(
+    schema_json: &str,
+    values_json: &str,
+    instance_id: &str,
+) -> Result<(), ValidationError> {
+    validate_settings_schema_json(schema_json)?;
+    validate_settings_values_json(values_json)?;
+
+    let schema: Value = serde_json::from_str(schema_json)
+        .map_err(|_| ValidationError::InvalidSettingsSchema)?;
+    let values: Value = serde_json::from_str(values_json)
+        .map_err(|_| ValidationError::InvalidSettingsValues)?;
+    let Some(value_object) = values.as_object() else {
+        return Err(ValidationError::InvalidSettingsValues);
+    };
+
+    let fields = schema
+        .get("fields")
+        .and_then(Value::as_array)
+        .ok_or(ValidationError::InvalidSettingsSchema)?;
+    for field in fields {
+        let object = field.as_object().ok_or(ValidationError::InvalidSettingsSchema)?;
+        if object.get("type").and_then(Value::as_str) != Some("secret") {
+            continue;
+        }
+        let key = object
+            .get("key")
+            .and_then(Value::as_str)
+            .ok_or(ValidationError::InvalidSettingsSchema)?;
+        let Some(value) = value_object.get(key) else {
+            continue;
+        };
+        if value.is_null() {
+            continue;
+        }
+        let Some(secret_ref) = value.as_object() else {
+            return Err(ValidationError::InvalidSettingsValues);
+        };
+        let expected_owner_id = dashboard_widget_secret_owner_id(instance_id, key);
+        let valid_ref =
+            secret_ref.get("type").and_then(Value::as_str) == Some("secretRef") &&
+            secret_ref.get("ownerId").and_then(Value::as_str) == Some(expected_owner_id.as_str()) &&
+            secret_ref.get("hasSecret").and_then(Value::as_bool) == Some(true) &&
+            secret_ref.get("updatedAt").is_none_or(|value| value.is_string());
+        if !valid_ref {
+            return Err(ValidationError::InvalidSettingsValues);
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_settings_values_json(json: &str) -> Result<(), ValidationError> {
+    if json.len() > MAX_SETTINGS_VALUES_BYTES {
+        return Err(ValidationError::InvalidSettingsValues);
+    }
+    let parsed: Value = serde_json::from_str(json)
+        .map_err(|_| ValidationError::InvalidSettingsValues)?;
+    if parsed.is_object() {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidSettingsValues)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,5 +531,42 @@ mod tests {
             validate_script_body_json(&json),
             Err(ValidationError::ScriptTooLarge),
         );
+    }
+
+    #[test]
+    fn settings_schema_ok() {
+        let json = r#"{"fields":[{"type":"text","key":"username","label":"Name"},{"type":"select","key":"mode","label":"Mode","options":[{"label":"A","value":"a"}]},{"type":"secret","key":"apiKey","label":"API key"}]}"#;
+        assert!(validate_settings_schema_json(json).is_ok());
+    }
+
+    #[test]
+    fn settings_schema_rejects_duplicate_keys() {
+        let json = r#"{"fields":[{"type":"text","key":"name","label":"Name"},{"type":"boolean","key":"name","label":"Enabled"}]}"#;
+        assert_eq!(
+            validate_settings_schema_json(json),
+            Err(ValidationError::InvalidSettingsSchema),
+        );
+    }
+
+    #[test]
+    fn settings_values_must_be_object() {
+        assert_eq!(
+            validate_settings_values_json("[]"),
+            Err(ValidationError::InvalidSettingsValues),
+        );
+    }
+
+    #[test]
+    fn secret_settings_values_must_be_references() {
+        let schema = r#"{"fields":[{"type":"secret","key":"apiKey","label":"API key"}]}"#;
+        assert_eq!(
+            validate_settings_values_for_schema_json(schema, r#"{"apiKey":"plain-text"}"#, "inst-1"),
+            Err(ValidationError::InvalidSettingsValues),
+        );
+        assert!(validate_settings_values_for_schema_json(
+            schema,
+            r#"{"apiKey":{"type":"secretRef","ownerId":"dashboard-widget-secret:inst-1:apiKey","hasSecret":true}}"#,
+            "inst-1",
+        ).is_ok());
     }
 }

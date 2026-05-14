@@ -44,6 +44,7 @@ export interface DashboardWidgetInstance {
   customTitle: string | null;
   glass?: boolean;
   actionDirection?: "vertical" | "horizontal";
+  settingsValuesJson: string;
   gridX: number;
   gridY: number;
   gridW: number;
@@ -58,6 +59,7 @@ export interface DashboardCustomWidget {
   summary: string;
   category: string;
   bodyJson: string;
+  settingsSchemaJson: string;
   createdBy: "user" | "agent";
 }
 
@@ -74,6 +76,7 @@ export interface InstancePatch {
   customTitle?: string | null;
   glass?: boolean;
   actionDirection?: "vertical" | "horizontal";
+  settingsValuesJson?: string;
   gridX?: number;
   gridY?: number;
   gridW?: number;
@@ -91,6 +94,7 @@ export interface CustomWidgetPatch {
   summary?: string;
   category?: string;
   bodyJson?: string;
+  settingsSchemaJson?: string;
 }
 
 export interface LayoutEntry {
@@ -113,4 +117,52 @@ export interface ScriptBody {
   source: string;
   permissions: { network: boolean; pollSeconds?: number };
   htmlShim?: string;
+}
+
+export type WidgetSettingsField =
+  | {
+      type: "text";
+      key: string;
+      label: string;
+      placeholder?: string;
+      defaultValue?: string;
+    }
+  | {
+      type: "number";
+      key: string;
+      label: string;
+      min?: number;
+      max?: number;
+      step?: number;
+      defaultValue?: number;
+    }
+  | {
+      type: "boolean";
+      key: string;
+      label: string;
+      defaultValue?: boolean;
+    }
+  | {
+      type: "select";
+      key: string;
+      label: string;
+      options: { label: string; value: string }[];
+      defaultValue?: string;
+    }
+  | {
+      type: "secret";
+      key: string;
+      label: string;
+      placeholder?: string;
+    };
+
+export interface WidgetSettingsSchema {
+  fields: WidgetSettingsField[];
+}
+
+export interface WidgetSecretRef {
+  type: "secretRef";
+  ownerId: string;
+  hasSecret: boolean;
+  updatedAt?: string;
 }

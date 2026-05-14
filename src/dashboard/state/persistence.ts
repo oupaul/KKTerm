@@ -1,5 +1,10 @@
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
-import { validateCustomWidgetBodyJson } from "../schema";
+import {
+  parseWidgetSettingsValuesJson,
+  validateCustomWidgetBodyJson,
+  validateWidgetSettingsSchemaJson,
+  validateWidgetSettingsValuesForSchema,
+} from "../schema";
 import type {
   DashboardCustomWidget, DashboardLoadState, DashboardView, DashboardWidgetInstance,
   CustomWidgetPatch, InstancePatch, LayoutEntry, ViewPatch,
@@ -39,6 +44,7 @@ function browserPreviewState() {
           customTitle: null,
           glass: false,
           actionDirection: undefined,
+          settingsValuesJson: "{}",
           gridX: 0,
           gridY: 0,
           gridW: 4,
@@ -124,6 +130,7 @@ export async function addInstance(input: {
     const instance: DashboardWidgetInstance = {
       id: createPreviewId("inst"),
       customTitle: null,
+      settingsValuesJson: "{}",
       sortOrder: state.instances.filter((item) => item.viewId === input.viewId).length,
       ...input,
     };
@@ -139,6 +146,18 @@ export async function updateInstance(id: string, patch: InstancePatch): Promise<
     const instance = state.instances.find((item) => item.id === id);
     if (!instance) {
       throw new Error("Dashboard widget instance not found.");
+    }
+    if (patch.settingsValuesJson !== undefined && instance.kind !== "builtIn") {
+      const customWidget = state.customWidgets.find((item) => item.id === instance.sourceId);
+      const schema = customWidget ? validateWidgetSettingsSchemaJson(customWidget.settingsSchemaJson) : null;
+      const values = parseWidgetSettingsValuesJson(patch.settingsValuesJson);
+      if (!schema?.ok || !values.ok) {
+        throw new Error("Invalid Dashboard widget settings values.");
+      }
+      const validation = validateWidgetSettingsValuesForSchema(schema.value, values.value, instance.id);
+      if (!validation.ok) {
+        throw new Error(`Invalid Dashboard widget settings values: ${validation.reason}`);
+      }
     }
     Object.assign(instance, patch);
     return { ...instance };
@@ -172,17 +191,27 @@ export async function applyLayout(viewId: string, layout: LayoutEntry[]): Promis
 
 export async function createCustomWidget(input: {
   kind: WidgetCustomKind; title: string; summary: string;
-  category: string; bodyJson: string; createdBy: "user" | "agent";
+  category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
 }): Promise<DashboardCustomWidget> {
   if (!isTauriRuntime()) {
     const validation = validateCustomWidgetBodyJson(input.kind, input.bodyJson);
     if (!validation.ok) {
       throw new Error(`Invalid Dashboard custom widget body: ${validation.reason}`);
     }
+    if (input.settingsSchemaJson !== undefined) {
+      const schemaValidation = validateWidgetSettingsSchemaJson(input.settingsSchemaJson);
+      if (!schemaValidation.ok) {
+        throw new Error(`Invalid Dashboard custom widget settings schema: ${schemaValidation.reason}`);
+      }
+    }
     const state = browserPreviewState();
     const widget = { id: createPreviewId("cw"), ...input };
-    state.customWidgets.push(widget);
-    return { ...widget };
+    const widgetWithSettings = {
+      ...widget,
+      settingsSchemaJson: input.settingsSchemaJson ?? "{\"fields\":[]}",
+    };
+    state.customWidgets.push(widgetWithSettings);
+    return { ...widgetWithSettings };
   }
   return invokeCommand("dashboard_create_custom_widget", input);
 }
@@ -198,6 +227,12 @@ export async function updateCustomWidget(id: string, patch: CustomWidgetPatch): 
       const validation = validateCustomWidgetBodyJson(widget.kind, patch.bodyJson);
       if (!validation.ok) {
         throw new Error(`Invalid Dashboard custom widget body: ${validation.reason}`);
+      }
+    }
+    if (patch.settingsSchemaJson !== undefined) {
+      const schemaValidation = validateWidgetSettingsSchemaJson(patch.settingsSchemaJson);
+      if (!schemaValidation.ok) {
+        throw new Error(`Invalid Dashboard custom widget settings schema: ${schemaValidation.reason}`);
       }
     }
     Object.assign(widget, patch);

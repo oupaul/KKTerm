@@ -2,9 +2,10 @@ use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
 use crate::dashboard_validation::{
+    dashboard_widget_secret_owner_id,
     validate_accent, validate_custom_body_for_kind, validate_custom_widget_kind,
     validate_grid_bounds, validate_grid_density, validate_icon, validate_kind, validate_preset,
-    validate_title, ValidationError,
+    validate_settings_schema_json, validate_settings_values_for_schema_json, validate_title, ValidationError,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +30,7 @@ pub struct DashboardWidgetInstance {
     pub custom_title: Option<String>,
     pub glass: bool,
     pub action_direction: Option<String>,
+    pub settings_values_json: String,
     pub grid_x: i64,
     pub grid_y: i64,
     pub grid_w: i64,
@@ -45,6 +47,7 @@ pub struct DashboardCustomWidget {
     pub summary: String,
     pub category: String,
     pub body_json: String,
+    pub settings_schema_json: String,
     pub created_by: String,
 }
 
@@ -65,6 +68,7 @@ pub struct InstancePatch {
     #[serde(default)] pub custom_title: Option<Option<String>>,
     #[serde(default)] pub glass: Option<bool>,
     #[serde(default)] pub action_direction: Option<Option<String>>,
+    #[serde(default)] pub settings_values_json: Option<String>,
     #[serde(default)] pub grid_x: Option<i64>,
     #[serde(default)] pub grid_y: Option<i64>,
     #[serde(default)] pub grid_w: Option<i64>,
@@ -86,6 +90,7 @@ pub struct CustomWidgetPatch {
     #[serde(default)] pub summary: Option<String>,
     #[serde(default)] pub category: Option<String>,
     #[serde(default)] pub body_json: Option<String>,
+    #[serde(default)] pub settings_schema_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,7 +136,7 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
 
     let mut inst_stmt = conn.prepare(
         "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
-                glass, action_direction, grid_x, grid_y, grid_w, grid_h, sort_order
+                glass, action_direction, settings_values_json, grid_x, grid_y, grid_w, grid_h, sort_order
          FROM dashboard_widget_instances
          ORDER BY view_id, sort_order"
     )?;
@@ -148,17 +153,18 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
                 custom_title: row.get(7)?,
                 glass: row.get::<_, i64>(8)? != 0,
                 action_direction: row.get(9)?,
-                grid_x: row.get(10)?,
-                grid_y: row.get(11)?,
-                grid_w: row.get(12)?,
-                grid_h: row.get(13)?,
-                sort_order: row.get(14)?,
+                settings_values_json: row.get(10)?,
+                grid_x: row.get(11)?,
+                grid_y: row.get(12)?,
+                grid_w: row.get(13)?,
+                grid_h: row.get(14)?,
+                sort_order: row.get(15)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut custom_stmt = conn.prepare(
-        "SELECT id, kind, title, summary, category, body_json, created_by FROM dashboard_custom_widgets"
+        "SELECT id, kind, title, summary, category, body_json, settings_schema_json, created_by FROM dashboard_custom_widgets"
     )?;
     let custom_widgets = custom_stmt
         .query_map([], |row| {
@@ -169,7 +175,8 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
                 summary: row.get(3)?,
                 category: row.get(4)?,
                 body_json: row.get(5)?,
-                created_by: row.get(6)?,
+                settings_schema_json: row.get(6)?,
+                created_by: row.get(7)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -282,8 +289,8 @@ pub fn add_instance(
     conn.execute(
         "INSERT INTO dashboard_widget_instances
             (id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
-             glass, action_direction, grid_x, grid_y, grid_w, grid_h, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL, ?, ?, ?, ?, ?)",
+             glass, action_direction, settings_values_json, grid_x, grid_y, grid_w, grid_h, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL, '{}', ?, ?, ?, ?, ?)",
         params![id, view_id, kind, source_id, preset, accent_name, icon_name, x, y, w, h, next_sort],
     )?;
     Ok(DashboardWidgetInstance {
@@ -297,6 +304,7 @@ pub fn add_instance(
         custom_title: None,
         glass: false,
         action_direction: None,
+        settings_values_json: "{}".to_string(),
         grid_x: x,
         grid_y: y,
         grid_w: w,
@@ -313,10 +321,9 @@ pub fn update_instance(
     if let Some(ref p) = patch.preset      { validate_preset(p)?; }
     if let Some(ref a) = patch.accent_name { validate_accent(a)?; }
     if let Some(ref i) = patch.icon_name   { validate_icon(i)?; }
-
     let mut current: DashboardWidgetInstance = conn.query_row(
         "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
-                glass, action_direction, grid_x, grid_y, grid_w, grid_h, sort_order
+                glass, action_direction, settings_values_json, grid_x, grid_y, grid_w, grid_h, sort_order
          FROM dashboard_widget_instances WHERE id = ?",
         params![id],
         |row| Ok(DashboardWidgetInstance {
@@ -330,11 +337,12 @@ pub fn update_instance(
             custom_title: row.get(7)?,
             glass: row.get::<_, i64>(8)? != 0,
             action_direction: row.get(9)?,
-            grid_x: row.get(10)?,
-            grid_y: row.get(11)?,
-            grid_w: row.get(12)?,
-            grid_h: row.get(13)?,
-            sort_order: row.get(14)?,
+            settings_values_json: row.get(10)?,
+            grid_x: row.get(11)?,
+            grid_y: row.get(12)?,
+            grid_w: row.get(13)?,
+            grid_h: row.get(14)?,
+            sort_order: row.get(15)?,
         }),
     ).map_err(|e| match e {
         rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
@@ -347,27 +355,53 @@ pub fn update_instance(
     if let Some(ct) = patch.custom_title.clone()  { current.custom_title = ct; }
     if let Some(g) = patch.glass                  { current.glass = g; }
     if let Some(ad) = patch.action_direction.clone() { current.action_direction = ad; }
+    if let Some(values) = patch.settings_values_json.clone() { current.settings_values_json = values; }
     if let Some(x) = patch.grid_x                 { current.grid_x = x; }
     if let Some(y) = patch.grid_y                 { current.grid_y = y; }
     if let Some(w) = patch.grid_w                 { current.grid_w = w; }
     if let Some(h) = patch.grid_h                 { current.grid_h = h; }
 
     validate_grid_bounds(current.grid_x, current.grid_y, current.grid_w, current.grid_h)?;
+    validate_instance_settings_values(conn, &current)?;
 
     conn.execute(
         "UPDATE dashboard_widget_instances
             SET preset = ?, accent_name = ?, icon_name = ?, custom_title = ?,
-                glass = ?, action_direction = ?,
+                glass = ?, action_direction = ?, settings_values_json = ?,
                 grid_x = ?, grid_y = ?, grid_w = ?, grid_h = ?
             WHERE id = ?",
         params![
             current.preset, current.accent_name, current.icon_name, current.custom_title,
-            current.glass as i64, current.action_direction,
+            current.glass as i64, current.action_direction, current.settings_values_json,
             current.grid_x, current.grid_y, current.grid_w, current.grid_h,
             current.id,
         ],
     )?;
     Ok(current)
+}
+
+fn validate_instance_settings_values(
+    conn: &SqliteConnection,
+    instance: &DashboardWidgetInstance,
+) -> Result<(), DashboardStorageError> {
+    if !matches!(instance.kind.as_str(), "content" | "script") {
+        return Ok(());
+    }
+    let schema_json: Option<String> = conn
+        .query_row(
+            "SELECT settings_schema_json FROM dashboard_custom_widgets WHERE id = ?",
+            params![instance.source_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(schema_json) = schema_json {
+        validate_settings_values_for_schema_json(
+            &schema_json,
+            &instance.settings_values_json,
+            &instance.id,
+        )?;
+    }
+    Ok(())
 }
 
 pub fn remove_instance(conn: &SqliteConnection, id: &str) -> Result<(), DashboardStorageError> {
@@ -407,19 +441,22 @@ pub fn create_custom_widget(
     summary: &str,
     category: &str,
     body_json: &str,
+    settings_schema_json: Option<&str>,
     created_by: &str,
 ) -> Result<DashboardCustomWidget, DashboardStorageError> {
     validate_custom_widget_kind(kind)?;
     validate_title(title)?;
     validate_custom_body_for_kind(kind, body_json)?;
+    let settings_schema_json = settings_schema_json.unwrap_or(r#"{"fields":[]}"#);
+    validate_settings_schema_json(settings_schema_json)?;
     if !matches!(created_by, "user" | "agent") {
         return Err(DashboardStorageError::Validation(ValidationError::InvalidContentData));
     }
     conn.execute(
         "INSERT INTO dashboard_custom_widgets
-            (id, kind, title, summary, category, body_json, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
-        params![id, kind, title, summary, category, body_json, created_by],
+            (id, kind, title, summary, category, body_json, settings_schema_json, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        params![id, kind, title, summary, category, body_json, settings_schema_json, created_by],
     )?;
     Ok(DashboardCustomWidget {
         id: id.to_string(),
@@ -428,6 +465,7 @@ pub fn create_custom_widget(
         summary: summary.to_string(),
         category: category.to_string(),
         body_json: body_json.to_string(),
+        settings_schema_json: settings_schema_json.to_string(),
         created_by: created_by.to_string(),
     })
 }
@@ -438,7 +476,7 @@ pub fn update_custom_widget(
     patch: &CustomWidgetPatch,
 ) -> Result<DashboardCustomWidget, DashboardStorageError> {
     let mut current: DashboardCustomWidget = conn.query_row(
-        "SELECT id, kind, title, summary, category, body_json, created_by
+        "SELECT id, kind, title, summary, category, body_json, settings_schema_json, created_by
          FROM dashboard_custom_widgets WHERE id = ?",
         params![id],
         |row| Ok(DashboardCustomWidget {
@@ -448,7 +486,8 @@ pub fn update_custom_widget(
             summary: row.get(3)?,
             category: row.get(4)?,
             body_json: row.get(5)?,
-            created_by: row.get(6)?,
+            settings_schema_json: row.get(6)?,
+            created_by: row.get(7)?,
         }),
     ).map_err(|e| match e {
         rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
@@ -462,12 +501,16 @@ pub fn update_custom_widget(
         validate_custom_body_for_kind(&current.kind, &b)?;
         current.body_json = b;
     }
+    if let Some(schema) = patch.settings_schema_json.clone() {
+        validate_settings_schema_json(&schema)?;
+        current.settings_schema_json = schema;
+    }
 
     conn.execute(
         "UPDATE dashboard_custom_widgets
-            SET title = ?, summary = ?, category = ?, body_json = ?, updated_at = CURRENT_TIMESTAMP
+            SET title = ?, summary = ?, category = ?, body_json = ?, settings_schema_json = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?",
-        params![current.title, current.summary, current.category, current.body_json, current.id],
+        params![current.title, current.summary, current.category, current.body_json, current.settings_schema_json, current.id],
     )?;
     Ok(current)
 }
@@ -509,6 +552,74 @@ pub fn reset_dashboard(conn: &SqliteConnection) -> Result<(), DashboardStorageEr
     Ok(())
 }
 
+pub fn widget_secret_owner_id_for_instance(
+    conn: &SqliteConnection,
+    instance_id: &str,
+    key: &str,
+) -> Result<Option<String>, DashboardStorageError> {
+    let instance: DashboardWidgetInstance = conn.query_row(
+        "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
+                glass, action_direction, settings_values_json, grid_x, grid_y, grid_w, grid_h, sort_order
+         FROM dashboard_widget_instances WHERE id = ?",
+        params![instance_id],
+        |row| Ok(DashboardWidgetInstance {
+            id: row.get(0)?,
+            view_id: row.get(1)?,
+            kind: row.get(2)?,
+            source_id: row.get(3)?,
+            preset: row.get(4)?,
+            accent_name: row.get(5)?,
+            icon_name: row.get(6)?,
+            custom_title: row.get(7)?,
+            glass: row.get::<_, i64>(8)? != 0,
+            action_direction: row.get(9)?,
+            settings_values_json: row.get(10)?,
+            grid_x: row.get(11)?,
+            grid_y: row.get(12)?,
+            grid_w: row.get(13)?,
+            grid_h: row.get(14)?,
+            sort_order: row.get(15)?,
+        }),
+    ).map_err(|e| match e {
+        rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
+        other => DashboardStorageError::Sqlite(other),
+    })?;
+
+    if !matches!(instance.kind.as_str(), "content" | "script") {
+        return Ok(None);
+    }
+    let schema_json: String = conn.query_row(
+        "SELECT settings_schema_json FROM dashboard_custom_widgets WHERE id = ?",
+        params![instance.source_id],
+        |row| row.get(0),
+    )?;
+    validate_settings_values_for_schema_json(&schema_json, &instance.settings_values_json, &instance.id)?;
+    let schema: serde_json::Value = serde_json::from_str(&schema_json)
+        .map_err(|_| DashboardStorageError::Validation(ValidationError::InvalidSettingsSchema))?;
+    let secret_field_exists = schema
+        .get("fields")
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|fields| fields.iter().any(|field| {
+            field.get("type").and_then(serde_json::Value::as_str) == Some("secret") &&
+            field.get("key").and_then(serde_json::Value::as_str) == Some(key)
+        }));
+    if !secret_field_exists {
+        return Ok(None);
+    }
+    let values: serde_json::Value = serde_json::from_str(&instance.settings_values_json)
+        .map_err(|_| DashboardStorageError::Validation(ValidationError::InvalidSettingsValues))?;
+    let expected_owner_id = dashboard_widget_secret_owner_id(&instance.id, key);
+    let has_ref = values
+        .get(key)
+        .and_then(serde_json::Value::as_object)
+        .is_some_and(|secret_ref| {
+            secret_ref.get("type").and_then(serde_json::Value::as_str) == Some("secretRef") &&
+            secret_ref.get("ownerId").and_then(serde_json::Value::as_str) == Some(expected_owner_id.as_str()) &&
+            secret_ref.get("hasSecret").and_then(serde_json::Value::as_bool) == Some(true)
+        });
+    Ok(has_ref.then_some(expected_owner_id))
+}
+
 pub fn seed_default(conn: &SqliteConnection) -> Result<(), DashboardStorageError> {
     let view_exists: i64 = conn.query_row(
         "SELECT COUNT(*) FROM dashboard_views", [], |row| row.get(0)
@@ -543,6 +654,7 @@ mod tests {
                 title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '',
                 category TEXT NOT NULL DEFAULT 'custom',
                 body_json TEXT NOT NULL,
+                settings_schema_json TEXT NOT NULL DEFAULT '{"fields":[]}',
                 created_by TEXT NOT NULL CHECK (created_by IN ('user','agent')),
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -555,6 +667,7 @@ mod tests {
                 icon_name TEXT NOT NULL, custom_title TEXT,
                 glass INTEGER NOT NULL DEFAULT 0,
                 action_direction TEXT,
+                settings_values_json TEXT NOT NULL DEFAULT '{}',
                 grid_x INTEGER NOT NULL, grid_y INTEGER NOT NULL,
                 grid_w INTEGER NOT NULL, grid_h INTEGER NOT NULL,
                 sort_order INTEGER NOT NULL
@@ -597,6 +710,7 @@ mod tests {
             preset: Some("ambient".into()),
             accent_name: None, icon_name: None, custom_title: None,
             glass: None, action_direction: None,
+            settings_values_json: None,
             grid_x: None, grid_y: None, grid_w: None, grid_h: None,
         }).unwrap();
         assert_eq!(updated.preset, "ambient");
@@ -634,7 +748,7 @@ mod tests {
         create_view(&conn, "v1", "First", None).unwrap();
         create_custom_widget(
             &conn, "cw1", "content", "My Markdown", "", "custom",
-            r#"{"shape":"markdown","data":{"source":"hi"}}"#, "agent",
+            r#"{"shape":"markdown","data":{"source":"hi"}}"#, None, "agent",
         ).unwrap();
         add_instance(
             &conn, "inst", "v1", "content", "cw1",
@@ -646,6 +760,43 @@ mod tests {
         let state = load_state(&conn).unwrap();
         assert_eq!(state.instances.len(), 0);
         assert_eq!(state.custom_widgets.len(), 0);
+    }
+
+    #[test]
+    fn secret_instance_settings_store_references_only() {
+        let conn = open_test_db();
+        create_view(&conn, "v1", "First", None).unwrap();
+        create_custom_widget(
+            &conn, "cw1", "script", "API Widget", "", "custom",
+            r#"{"source":"console.log(1)","permissions":{"network":false}}"#,
+            Some(r#"{"fields":[{"type":"secret","key":"apiKey","label":"API key"}]}"#),
+            "agent",
+        ).unwrap();
+        add_instance(
+            &conn, "inst", "v1", "script", "cw1",
+            "panel", "blue", "Key", 0, 0, 3, 2
+        ).unwrap();
+        let err = update_instance(&conn, "inst", &InstancePatch {
+            preset: None, accent_name: None, icon_name: None, custom_title: None,
+            glass: None, action_direction: None,
+            settings_values_json: Some(r#"{"apiKey":"plain-text"}"#.into()),
+            grid_x: None, grid_y: None, grid_w: None, grid_h: None,
+        });
+        assert!(matches!(err, Err(DashboardStorageError::Validation(
+            ValidationError::InvalidSettingsValues
+        ))));
+
+        let updated = update_instance(&conn, "inst", &InstancePatch {
+            preset: None, accent_name: None, icon_name: None, custom_title: None,
+            glass: None, action_direction: None,
+            settings_values_json: Some(r#"{"apiKey":{"type":"secretRef","ownerId":"dashboard-widget-secret:inst:apiKey","hasSecret":true}}"#.into()),
+            grid_x: None, grid_y: None, grid_w: None, grid_h: None,
+        }).unwrap();
+        assert!(updated.settings_values_json.contains("secretRef"));
+        assert_eq!(
+            widget_secret_owner_id_for_instance(&conn, "inst", "apiKey").unwrap().as_deref(),
+            Some("dashboard-widget-secret:inst:apiKey"),
+        );
     }
 
     #[test]

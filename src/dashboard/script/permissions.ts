@@ -20,10 +20,11 @@ function scriptStringLiteral(value: string): string {
     .replace(/\u2029/g, "\\u2029");
 }
 
-export function buildSrcdoc(body: ScriptBody): string {
+export function buildSrcdoc(body: ScriptBody, settingsValuesJson = "{}"): string {
   const csp = buildCsp(body.permissions);
   const shim = body.htmlShim?.trim().length ? body.htmlShim : '<div id="root"></div>';
   const source = scriptStringLiteral(body.source);
+  const settings = scriptStringLiteral(settingsValuesJson);
   return `<!DOCTYPE html>
 <html><head>
   <meta charset="utf-8" />
@@ -42,12 +43,22 @@ export function buildSrcdoc(body: ScriptBody): string {
     html, body {
       margin: 0;
       padding: 8px;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--kk-text);
       font-size: 13px;
       line-height: 1.4;
     }
     body { background: transparent; }
+    #root {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: auto;
+      scrollbar-width: thin;
+    }
     *, *::before, *::after { box-sizing: border-box; }
     h1, h2, h3, p { margin: 0; }
     h1, h2, h3 { font-size: 13px; font-weight: 700; letter-spacing: 0; }
@@ -94,7 +105,47 @@ export function buildSrcdoc(body: ScriptBody): string {
   ${shim}
   <script>
     (function () {
+      let settings = {};
+      try {
+        const parsedSettings = JSON.parse(${settings});
+        if (parsedSettings && typeof parsedSettings === 'object' && !Array.isArray(parsedSettings)) {
+          settings = parsedSettings;
+        }
+      } catch (_err) {}
       const KK = {
+        getSettings: function () { return JSON.parse(JSON.stringify(settings)); },
+        getSecret: function (key) {
+          return new Promise(function (resolve, reject) {
+            if (typeof key !== 'string' || !key) {
+              reject(new Error('Secret key is required.'));
+              return;
+            }
+            const requestId = 'secret-' + Math.random().toString(36).slice(2);
+            function onMessage(event) {
+              const data = event.data;
+              if (!data || data.kk !== true || data.type !== 'secretValue' || data.requestId !== requestId) return;
+              window.removeEventListener('message', onMessage);
+              if (data.ok) {
+                resolve(data.value || null);
+              } else {
+                reject(new Error(data.error || 'Could not read widget secret.'));
+              }
+            }
+            window.addEventListener('message', onMessage);
+            window.parent.postMessage({ kk: true, type: 'getSecret', requestId: requestId, key: key }, "*");
+          });
+        },
+        setSettings: function (nextSettings) {
+          if (!nextSettings || typeof nextSettings !== 'object' || Array.isArray(nextSettings)) return;
+          settings = JSON.parse(JSON.stringify(nextSettings));
+          window.parent.postMessage({ kk: true, type: 'setSettings', settings: settings }, "*");
+        },
+        setSetting: function (key, value) {
+          if (typeof key !== 'string' || !key) return;
+          const nextSettings = Object.assign({}, settings);
+          nextSettings[key] = value;
+          KK.setSettings(nextSettings);
+        },
         openExternal: function (url) { window.parent.postMessage({ kk: true, type: 'openExternalUrl', url }, "*"); },
         postMessage: function (payload) { window.parent.postMessage({ kk: true, payload }, "*"); },
         requestPermission: function () { return Promise.resolve(false); },

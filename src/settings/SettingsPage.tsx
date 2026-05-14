@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Bot,
   Info,
+  KeyRound,
   LayoutDashboard,
   Monitor,
   Globe,
@@ -18,6 +19,7 @@ import { AboutSettings } from "./AboutSettings";
 import { AiSettings } from "./AiSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
 import { DashboardSettings } from "./DashboardSettings";
+import { CredentialsSettings } from "./CredentialsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { RdpSettings } from "./RdpSettings";
 import { SshSettings } from "./SshSettings";
@@ -31,6 +33,7 @@ type SettingsSectionId =
   | "general-settings"
   | "appearance-settings"
   | "dashboard-settings"
+  | "credentials-settings"
   | "assistant-settings"
   | "ssh-settings"
   | "terminal-settings"
@@ -88,6 +91,14 @@ export function SettingsPage({
           >
             <LayoutDashboard size={16} />
             <span>{t("settings.sectionDashboard")}</span>
+          </button>
+          <button
+            className={settingsNavItemClass("credentials-settings", activeSectionId)}
+            onClick={() => setActiveSectionId("credentials-settings")}
+            type="button"
+          >
+            <KeyRound size={16} />
+            <span>{t("settings.sectionCredentials")}</span>
           </button>
           <button
             className={settingsNavItemClass("assistant-settings", activeSectionId)}
@@ -153,6 +164,7 @@ export function SettingsPage({
             <AppearanceSettings onResetLayout={onResetLayout} />
           )}
           {activeSectionId === "dashboard-settings" && <DashboardSettings />}
+          {activeSectionId === "credentials-settings" && <CredentialsSettings />}
           {activeSectionId === "assistant-settings" && <AiSettings />}
           {activeSectionId === "ssh-settings" && <SshSettings />}
           {activeSectionId === "terminal-settings" && <TerminalSettingsPage />}

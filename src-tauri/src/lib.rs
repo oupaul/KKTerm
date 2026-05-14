@@ -58,6 +58,28 @@ struct CustomFontData {
     data_base64: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredCredentialSummary {
+    id: String,
+    kind: String,
+    secret_kind: String,
+    owner_id: String,
+    label: String,
+    detail: Option<String>,
+    username: Option<String>,
+    updated_at: Option<String>,
+    metadata_source: String,
+    exists: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DeleteStoredCredentialRequest {
+    kind: String,
+    owner_id: String,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FillWebviewCredentialRequest {
@@ -863,6 +885,88 @@ fn delete_secret(
     request: secrets::SecretReferenceRequest,
 ) -> Result<(), String> {
     secrets.delete_secret(request)
+}
+
+#[tauri::command]
+fn list_stored_credentials(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+) -> Result<Vec<StoredCredentialSummary>, String> {
+    let candidates = storage.list_stored_credential_candidates()?;
+    let mut summaries = Vec::new();
+    for candidate in candidates {
+        let reference = credential_reference(&candidate.secret_kind, candidate.owner_id.clone())?;
+        let exists = secrets.secret_exists(reference)?.exists();
+        if exists || matches!(candidate.kind.as_str(), "urlPassword" | "widgetSecret") {
+            summaries.push(StoredCredentialSummary {
+                id: candidate.id,
+                kind: candidate.kind,
+                secret_kind: candidate.secret_kind,
+                owner_id: candidate.owner_id,
+                label: candidate.label,
+                detail: candidate.detail,
+                username: candidate.username,
+                updated_at: candidate.updated_at,
+                metadata_source: candidate.metadata_source,
+                exists,
+            });
+        }
+    }
+    Ok(summaries)
+}
+
+#[tauri::command]
+fn delete_stored_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: DeleteStoredCredentialRequest,
+) -> Result<(), String> {
+    let owner_id = request.owner_id.trim().to_string();
+    if owner_id.is_empty() {
+        return Err("credential owner id is required".to_string());
+    }
+    match request.kind.as_str() {
+        "urlPassword" => {
+            storage.delete_url_credential(owner_id.clone())?;
+            secrets.delete_secret(secrets::SecretReferenceRequest::url_password(owner_id))
+        }
+        "widgetSecret" => {
+            secrets.delete_secret(secrets::SecretReferenceRequest::widget_secret(owner_id.clone()))?;
+            if let Some((instance_id, key)) = parse_widget_secret_owner_id(&owner_id) {
+                storage.clear_widget_secret_reference(instance_id, key)?;
+            }
+            Ok(())
+        }
+        "aiApiKey" => {
+            secrets.delete_secret(secrets::SecretReferenceRequest::ai_api_key(owner_id))
+        }
+        "connectionPassword" => {
+            secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(owner_id))
+        }
+        _ => Err("unsupported credential kind".to_string()),
+    }
+}
+
+fn credential_reference(
+    secret_kind: &str,
+    owner_id: String,
+) -> Result<secrets::SecretReferenceRequest, String> {
+    match secret_kind {
+        "connectionPassword" => Ok(secrets::SecretReferenceRequest::connection_password(owner_id)),
+        "urlPassword" => Ok(secrets::SecretReferenceRequest::url_password(owner_id)),
+        "aiApiKey" => Ok(secrets::SecretReferenceRequest::ai_api_key(owner_id)),
+        "widgetSecret" => Ok(secrets::SecretReferenceRequest::widget_secret(owner_id)),
+        _ => Err("unsupported credential kind".to_string()),
+    }
+}
+
+fn parse_widget_secret_owner_id(owner_id: &str) -> Option<(String, String)> {
+    let rest = owner_id.strip_prefix("dashboard-widget-secret:")?;
+    let (instance_id, key) = rest.rsplit_once(':')?;
+    if instance_id.trim().is_empty() || key.trim().is_empty() {
+        return None;
+    }
+    Some((instance_id.to_string(), key.to_string()))
 }
 
 #[tauri::command]
@@ -1831,6 +1935,8 @@ pub fn run() {
             store_secret,
             secret_exists,
             delete_secret,
+            list_stored_credentials,
+            delete_stored_credential,
             start_terminal_session,
             write_terminal_input,
             resize_terminal,
@@ -1911,6 +2017,7 @@ pub fn run() {
             dashboard_commands::dashboard_reorder_views,
             dashboard_commands::dashboard_add_instance,
             dashboard_commands::dashboard_update_instance,
+            dashboard_commands::dashboard_read_widget_secret,
             dashboard_commands::dashboard_remove_instance,
             dashboard_commands::dashboard_apply_layout,
             dashboard_commands::dashboard_create_widget,

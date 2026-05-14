@@ -473,7 +473,8 @@ export type SecretKind =
   | "connectionPassword"
   | "connectionPassphrase"
   | "urlPassword"
-  | "aiApiKey";
+  | "aiApiKey"
+  | "widgetSecret";
 
 export interface KeychainStatus {
   available: boolean;
@@ -509,6 +510,30 @@ export interface StoreSecretRequest extends SecretReferenceRequest {
 
 export interface SecretPresence {
   exists: boolean;
+}
+
+export type StoredCredentialKind =
+  | "connectionPassword"
+  | "urlPassword"
+  | "aiApiKey"
+  | "widgetSecret";
+
+export interface StoredCredentialSummary {
+  id: string;
+  kind: StoredCredentialKind;
+  secretKind: SecretKind;
+  ownerId: string;
+  label: string;
+  detail?: string;
+  username?: string;
+  updatedAt?: string;
+  metadataSource: string;
+  exists: boolean;
+}
+
+export interface DeleteStoredCredentialRequest {
+  kind: StoredCredentialKind;
+  ownerId: string;
 }
 
 export type AssistantContextSnippet =

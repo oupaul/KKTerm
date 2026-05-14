@@ -841,6 +841,17 @@ main.dashboard-page {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--w-accent, var(--accent)) 18%, transparent);
 }
 
+.dw-secondary-button {
+  min-height: 28px;
+  padding: 5px 9px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .dw-kv {
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);

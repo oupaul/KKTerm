@@ -1,9 +1,20 @@
 import * as Icons from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useDashboardStore } from "../state/dashboardStore";
 import { ACCENT_PALETTE } from "../registry/palette";
-import type { AccentName, DashboardWidgetInstance, IconName, WidgetPreset } from "../types";
+import {
+  dashboardWidgetSecretOwnerId,
+  isWidgetSecretRef,
+  parseWidgetSettingsValuesJson,
+  settingsValuesWithDefaults,
+  validateWidgetSettingsSchemaJson,
+} from "../schema";
+import type {
+  AccentName, DashboardWidgetInstance, IconName,
+  WidgetPreset, WidgetSettingsField, WidgetSettingsSchema,
+} from "../types";
 import { ICON_NAMES, WIDGET_PRESETS } from "../types";
 
 export interface CustomizePopoverProps {
@@ -35,6 +46,12 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
   const left = Math.min(anchorRect.left, window.innerWidth - 320);
   const customSource =
     instance.kind !== "builtIn" ? customWidgets.find((c) => c.id === instance.sourceId) : undefined;
+  const settingsSchema = customSource
+    ? parseSettingsSchema(customSource.settingsSchemaJson)
+    : null;
+  const settingsValues = settingsSchema
+    ? parseSettingsValues(settingsSchema, instance.settingsValuesJson)
+    : {};
 
   return (
     <div ref={ref} className="dw-customize" style={{ top, left }}>
@@ -132,6 +149,29 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
         />
       </section>
 
+      {customSource ? (
+        <section>
+          <h4>{t("dashboard.widgetSettings")}</h4>
+          {settingsSchema ? (
+            settingsSchema.fields.length > 0 ? (
+              <WidgetSettingsFields
+                schema={settingsSchema}
+                values={settingsValues}
+                instanceId={instance.id}
+                onChange={(key, value) => {
+                  const next = { ...settingsValues, [key]: value };
+                  void updateInstance(instance.id, { settingsValuesJson: JSON.stringify(next) });
+                }}
+              />
+            ) : (
+              <p className="dw-muted">{t("dashboard.widgetSettingsEmpty")}</p>
+            )
+          ) : (
+            <p className="dw-muted">{t("dashboard.widgetSettingsInvalid")}</p>
+          )}
+        </section>
+      ) : null}
+
       <section>
         <button className="dw-advanced-toggle" onClick={() => setShowAdvanced((v) => !v)}>
           {showAdvanced ? "▾ " : "▸ "}{t("dashboard.advanced")}
@@ -154,6 +194,183 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
         )}
       </section>
     </div>
+  );
+}
+
+function parseSettingsSchema(settingsSchemaJson: string): WidgetSettingsSchema | null {
+  const parsed = validateWidgetSettingsSchemaJson(settingsSchemaJson);
+  return parsed.ok ? parsed.value : null;
+}
+
+function parseSettingsValues(
+  schema: WidgetSettingsSchema,
+  settingsValuesJson: string,
+): Record<string, unknown> {
+  const parsed = parseWidgetSettingsValuesJson(settingsValuesJson);
+  return settingsValuesWithDefaults(schema, parsed.ok ? parsed.value : {});
+}
+
+function WidgetSettingsFields({
+  schema,
+  values,
+  instanceId,
+  onChange,
+}: {
+  schema: WidgetSettingsSchema;
+  values: Record<string, unknown>;
+  instanceId: string;
+  onChange: (key: string, value: unknown) => void;
+}) {
+  return (
+    <div className="dw-stack-fields">
+      {schema.fields.map((field) => (
+        <WidgetSettingsFieldControl
+          field={field}
+          key={field.key}
+          value={values[field.key]}
+          instanceId={instanceId}
+          onChange={(value) => onChange(field.key, value)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WidgetSettingsFieldControl({
+  field,
+  value,
+  instanceId,
+  onChange,
+}: {
+  field: WidgetSettingsField;
+  value: unknown;
+  instanceId: string;
+  onChange: (value: unknown) => void;
+}) {
+  const { t } = useTranslation();
+  const [secretDraft, setSecretDraft] = useState("");
+  const [secretError, setSecretError] = useState("");
+
+  if (field.type === "boolean") {
+    return (
+      <label className="dw-field">
+        <input
+          type="checkbox"
+          checked={value === true}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        <span>{field.label}</span>
+      </label>
+    );
+  }
+
+  if (field.type === "select") {
+    return (
+      <label className="dw-field">
+        <span>{field.label}</span>
+        <select value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)}>
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  if (field.type === "number") {
+    return (
+      <label className="dw-field">
+        <span>{field.label}</span>
+        <input
+          type="number"
+          min={field.min}
+          max={field.max}
+          step={field.step ?? 1}
+          value={typeof value === "number" || value === "" ? value : ""}
+          onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
+        />
+      </label>
+    );
+  }
+
+  if (field.type === "secret") {
+    const secretRef = isWidgetSecretRef(value) ? value : null;
+    const ownerId = dashboardWidgetSecretOwnerId(instanceId, field.key);
+
+    async function saveSecret() {
+      const secret = secretDraft.trim();
+      if (!secret) return;
+      setSecretError("");
+      try {
+        if (isTauriRuntime()) {
+          await invokeCommand("store_secret", {
+            request: { kind: "widgetSecret", ownerId, secret },
+          });
+        }
+        onChange({
+          type: "secretRef",
+          ownerId,
+          hasSecret: true,
+          updatedAt: new Date().toISOString(),
+        });
+        setSecretDraft("");
+      } catch (error) {
+        setSecretError(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    async function clearSecret() {
+      setSecretError("");
+      try {
+        if (isTauriRuntime()) {
+          await invokeCommand("delete_secret", {
+            request: { kind: "widgetSecret", ownerId },
+          });
+        }
+        onChange(null);
+        setSecretDraft("");
+      } catch (error) {
+        setSecretError(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    return (
+      <label className="dw-field">
+        <span>{field.label}</span>
+        {secretRef ? <small className="dw-muted">{t("dashboard.secretStored")}</small> : null}
+        <input
+          type="password"
+          placeholder={field.placeholder ?? t("dashboard.secretPlaceholder")}
+          value={secretDraft}
+          onChange={(event) => setSecretDraft(event.target.value)}
+          onBlur={() => { void saveSecret(); }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void saveSecret();
+            }
+          }}
+        />
+        {secretRef ? (
+          <button type="button" className="dw-secondary-button" onClick={() => { void clearSecret(); }}>
+            {t("dashboard.secretClear")}
+          </button>
+        ) : null}
+        {secretError ? <small className="dw-muted">{secretError}</small> : null}
+      </label>
+    );
+  }
+
+  return (
+    <label className="dw-field">
+      <span>{field.label}</span>
+      <input
+        type="text"
+        placeholder={field.placeholder}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   );
 }
 

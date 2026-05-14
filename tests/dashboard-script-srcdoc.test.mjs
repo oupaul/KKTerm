@@ -58,3 +58,18 @@ test("script widget host intercepts external links for parent opener bridge", as
   assert.match(srcdoc, /url\.protocol === 'http:'/);
   assert.match(srcdoc, /url\.protocol === 'https:'/);
 });
+
+test("script widget host exposes keyed secret bridge", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const srcdoc = buildSrcdoc({
+    source: "KK.getSecret('apiKey');",
+    permissions: { network: false },
+  });
+
+  assert.match(srcdoc, /getSecret: function \(key\)/);
+  assert.match(srcdoc, /type: 'getSecret'/);
+  assert.match(srcdoc, /type !== 'secretValue'/);
+  assert.doesNotMatch(srcdoc, /widget-api-key/);
+});

@@ -13,6 +13,7 @@ const instance: DashboardWidgetInstance = {
   accentName: "teal",
   iconName: "Server",
   customTitle: null,
+  settingsValuesJson: "{}",
   gridX: 0,
   gridY: 0,
   gridW: 8,

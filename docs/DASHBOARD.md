@@ -25,9 +25,9 @@ It does not own:
 
 **Dashboard View** — a tab in the Dashboard topbar. A user may have many views; the first one is named "Default" and is created on first run. Each view carries its own `grid_density` (`compact` / `default` / `roomy`), edited from the topbar's edit-mode controls.
 
-**Dashboard Widget Instance** — one placed widget on a view. Carries display state (preset, accent, icon, custom title), layout state (`x`, `y`, `w`, `h` on the 12-column grid), a `kind` of `builtIn` / `content` / `script`, and a `source_id` that resolves either to a built-in registry entry or a `DashboardCustomWidget` row.
+**Dashboard Widget Instance** — one placed widget on a view. Carries display state (preset, accent, icon, custom title), layout state (`x`, `y`, `w`, `h` on the 12-column grid), per-instance custom settings values, a `kind` of `builtIn` / `content` / `script`, and a `source_id` that resolves either to a built-in registry entry or a `DashboardCustomWidget` row.
 
-**Dashboard Custom Widget** — a durable definition for `content` and `script` widgets authored by the AI Assistant. Stored once; multiple instances can reference the same definition. Deleting a custom widget cascades to its instances (enforced in Rust because SQLite cannot express conditional foreign keys).
+**Dashboard Custom Widget** — a durable definition for `content` and `script` widgets authored by the AI Assistant. Stored once; multiple instances can reference the same definition. A custom widget may define a small app-rendered settings schema; each placed instance stores its own values. Secret settings are the exception: the instance stores only a reference and the actual password/API key/token lives in the OS keychain. Deleting a custom widget cascades to its instances (enforced in Rust because SQLite cannot express conditional foreign keys).
 
 **Widget Kind** — three values, layered by capability:
 
@@ -65,17 +65,21 @@ Accent guidance:
 
 Script widget UI should use the provided root and compact app-style controls. Do not generate a full HTML document, global reset CSS, external fonts, large decorative headers, marketing copy, gradients, or random color systems. Prefer short labels, stable sizing, aligned inputs/buttons, and the same system font feel as the host app.
 
+Generated widgets must be boundary-aware. The assistant should choose `grid_w` and `grid_h` from the expected content, not from a fixed default: simple timers and counters normally start at 4x3; forms, remote image widgets, and multi-row lists usually need 5x4 or larger. A successful generated widget should not show an inner vertical scrollbar for its intended initial state.
+
+Generated widgets must preserve readable contrast. Script widgets should prefer host CSS variables (`--kk-text`, `--kk-muted`, `--kk-surface`, `--kk-accent`) and only override backgrounds when text and control colors remain explicit and legible.
+
 If a script widget displays remote images, the assistant must set `permissions.network: true`; otherwise KKTerm's CSP blocks those image requests. Plain `<img src="https://...">` loads do not normally require CORS unless widget code tries to read the image data through canvas/fetch or the remote site blocks hotlinking. Fetching images with `fetch()` is subject to normal browser CORS and may fail even when CSP allows network access.
 
 ## Persistence
 
-SQLite holds three Dashboard tables, defined in `src-tauri/src/storage.rs` under `CURRENT_SCHEMA`. The schema version is bumped when these tables change; no in-place migrations are run because there are no v1 users.
+SQLite holds three Dashboard tables, defined in `src-tauri/src/storage.rs` under `CURRENT_SCHEMA`. Dashboard schema additions that are safe defaults use `ensure_column` during startup so existing local databases keep their saved views/widgets.
 
 | Table | Purpose |
 |---|---|
 | `dashboard_views` | One row per view. Holds `title`, `sort_order`, and `grid_density`. |
-| `dashboard_widget_instances` | One row per placed widget. Holds `kind`, `source_id`, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), and layout (`grid_x`, `grid_y`, `grid_w`, `grid_h`). |
-| `dashboard_custom_widgets` | One row per AI-authored `content` or `script` widget definition. Holds `body_json`, validated against the kind. |
+| `dashboard_widget_instances` | One row per placed widget. Holds `kind`, `source_id`, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), per-instance `settings_values_json`, and layout (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Secret fields store only `secretRef` metadata here. |
+| `dashboard_custom_widgets` | One row per AI-authored `content` or `script` widget definition. Holds `body_json`, validated against the kind, plus optional app-rendered `settings_schema_json`. |
 
 Indexes: `(view_id, sort_order)` on instances for fast per-view loads.
 
@@ -96,12 +100,13 @@ Each command is a thin handler over the storage layer with up-front validation:
 | `dashboard_remove_view` | Cascade to instances. |
 | `dashboard_reorder_views` | Single `Vec<String>` of ids. |
 | `dashboard_add_instance` | Validates preset/accent/icon/grid bounds. |
-| `dashboard_update_instance` | Patch over presentation + layout fields. |
+| `dashboard_update_instance` | Patch over presentation, per-instance settings values, and layout fields. Secret fields are validated against the custom widget schema so plaintext secrets cannot be persisted in SQLite. |
+| `dashboard_read_widget_secret` | Script-widget bridge command. Validates that the requested key is a `secret` field on that exact widget instance and that the instance stores the expected `secretRef`, then reads the OS-keychain `widgetSecret` value. |
 | `dashboard_remove_instance` | Hard delete. |
 | `dashboard_apply_layout` | Batched layout commit used by the debounced drag/resize pipeline. |
-| `dashboard_create_widget` | AI-facing atomic helper: validates a structured `body`, creates the custom widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. |
-| `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` per kind but does not place an instance. |
-| `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind. |
+| `dashboard_create_widget` | AI-facing atomic helper: validates a structured `body` and optional `settingsSchema`, creates the custom widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. |
+| `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` per kind and optional `settingsSchemaJson` but does not place an instance. |
+| `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind and patched `settingsSchemaJson`. |
 | `dashboard_remove_custom_widget` | Requires `forceDeleteInstances` if instances reference the widget. |
 
 Rust validation invariants:
@@ -112,6 +117,9 @@ Rust validation invariants:
 - Grid bounds: `w ≥ 1`, `h ≥ 1`, `x ≥ 0`, `y ≥ 0`, `x + w ≤ 12`.
 - Content shape byte caps and shape-specific schema: non-empty markdown source, non-empty key/value rows with labels, non-empty checklist items with labels, or a non-empty stat value.
 - Script source is required and ≤ 64 KB; `pollSeconds ≥ 1`; only declared `permissions` values are accepted.
+- Settings schemas are bounded JSON objects with up to 20 fields. Supported field types are `text`, `number`, `boolean`, `select`, and `secret`; keys must be stable ASCII identifiers and select fields must declare bounded label/value options.
+- Settings schemas use `secret` fields for passwords, API keys, tokens, and similar values. A secret field never has a default value.
+- Settings values are per-instance JSON objects capped at 32 KB. For `secret` fields, Rust rejects plaintext values; the only valid stored shape is a `secretRef` whose owner id matches `dashboard-widget-secret:<instanceId>:<fieldKey>`.
 - Frontend renderers use the matching TypeScript validator in `src/dashboard/schema.ts` before rendering content or script widgets, so malformed stored JSON falls back to the existing invalid-body state instead of partially rendering.
 
 Validation failures return structured error text to the AI Assistant so it can self-correct. The Assistant page context tells the model to call `dashboard_create_widget` with the active view id for creation requests; after any dashboard mutating tool completes, the frontend reloads Dashboard state and the newly mounted widget frame runs the canvas fade-in animation.
@@ -126,7 +134,7 @@ The `dashboard_create_widget` assistant tool schema is strict-compatible where p
 src/dashboard/
   DashboardPage.tsx              ── shell, topbar, view pills, edit-mode toggle
   motion.tsx                     ── existing centralized motion wrappers
-  schema.ts                     ── TypeScript validator for content/script custom widget bodies
+  schema.ts                     ── TypeScript validator for custom widget bodies and settings schemas
   state/
     dashboardStore.ts            ── Zustand store: views, instances, customWidgets, activeViewId, editMode
     persistence.ts               ── typed Tauri command wrappers
@@ -170,18 +178,19 @@ Drag and resize commit via a debounced pipeline: local state updates immediately
 
 ## Customization Surface
 
-The customize popover is anchored to a widget's settings (⚙) button and contains four shared sections plus a collapsible Advanced section:
+The customize popover is anchored to a widget's settings (⚙) button and contains shared display sections plus a collapsible Advanced section:
 
 1. **Preset** — nine chips, click to apply.
 2. **Accent** — palette swatches.
 3. **Icon** — scrollable grid of the curated lucide set.
 4. **Title** — text input; empty clears the override.
-5. **Advanced** — kind-specific:
+5. **Widget settings** — for custom widgets with `settings_schema_json`, KKTerm renders text, number, boolean, select, and secret fields. Non-secret values are stored on the instance. Secret values are written to the OS keychain under the `widgetSecret` kind and the instance stores only a reference.
+6. **Advanced** — kind-specific:
    - `script`: network permission, poll seconds, view source (read-only), reload.
    - `content`: view body JSON (read-only).
    - `builtIn`: nothing.
 
-The four shared sections render identically regardless of widget kind.
+The shared display sections render identically regardless of widget kind.
 
 The catalog overlay is a separate modal with search + two source-group tabs: Built-in and Custom. Widget definitions still carry a `category` field for future category UI, but current browsing is grouped only by shipped built-ins versus AI-authored custom widgets. There is no user-facing "+ Create custom widget" entry in v1 — custom widget authorship is AI-only.
 
@@ -192,6 +201,8 @@ The catalog overlay is a separate modal with search + two source-group tabs: Bui
 - A `<style>` block carrying compact KKTerm-like text, form-control, button, stack, row, and result defaults so simple generated DOM starts from the app's desktop UI grammar.
 - An optional `htmlShim` body markup (default: a single `<div id="root">`).
 - A small host `<script>` that loads the stored source as data. The generated source is never pasted directly into the host script text, because generated snippets commonly contain HTML/script literals such as `</script>` that would prematurely close the host script and render broken JavaScript as widget body text.
+- A per-instance settings snapshot loaded through `KK.getSettings()`. Scripts can persist small non-secret user options with `KK.setSetting(key, value)` or replace the object with `KK.setSettings(nextSettings)`.
+- A secret bridge exposed as `await KK.getSecret(fieldKey)`. The parent frame validates the field against the custom widget schema and instance `secretRef` before asking Rust to read the OS keychain.
 
 The iframe is a **fault-isolation** boundary, not a security boundary. KKTerm is MIT and single-user; the iframe exists so a typo in one script widget cannot crash the dashboard, and so future Tauri-command exposure (a postMessage bridge) is a deliberate per-handler decision rather than an accidental global.
 
@@ -204,7 +215,7 @@ Declared permissions:
 
 External website links must leave the widget iframe. The host script intercepts absolute `http:` / `https:` anchor clicks and sends an `openExternalUrl` bridge message to the parent, where `ScriptWidgetHost.tsx` validates the URL and calls Tauri's opener plugin. Script widgets may also call `KK.openExternal(url)` directly. This avoids navigating third-party sites inside a sandboxed `srcdoc` iframe with an opaque origin, which can produce site errors such as unknown/null origin headers.
 
-The bridge exposes `KK.openExternal(url)`, `KK.requestPermission(name)`, and `KK.postMessage(payload)` at the iframe globals. Future Tauri command access is added by extending this bridge with explicit handlers — not by widening the iframe surface.
+The bridge exposes `KK.openExternal(url)`, `KK.getSettings()`, `KK.setSetting(key, value)`, `KK.setSettings(nextSettings)`, `KK.getSecret(key)`, `KK.requestPermission(name)`, and `KK.postMessage(payload)` at the iframe globals. Future Tauri command access is added by extending this bridge with explicit handlers — not by widening the iframe surface.
 
 ### Finding: Broken Script HTML
 
@@ -217,6 +228,8 @@ Arbitrary AI-authored HTML is not a reliable default for dashboard creation. The
 - The assistant should choose `content` widgets whenever the request fits the existing declarative shapes (`markdown`, `kvList`, `checklist`, `stat`).
 - Interactive widgets should move toward predefined building blocks such as form fields, buttons, expressions, fetch blocks, and layout containers rendered by KKTerm-owned React components.
 - The assistant should produce only schema for those blocks. KKTerm validates and renders the schema; the model does not author random HTML.
+- Per-instance custom options should use `settingsSchema.fields` rather than model-authored settings UI. KKTerm owns the settings form and stores values in `dashboard_widget_instances.settings_values_json`.
+- Sensitive per-instance options must use `settingsSchema.fields[].type = "secret"`. The model must not place passwords, API keys, tokens, or similar values in `defaultValue`, script source, content body, or `settings_values_json`.
 - `script` widgets remain an advanced escape hatch for genuinely custom live behavior, isolated in an iframe and validated for storage size/permissions, but they are not the product-default authoring surface for common widgets.
 - Assistant-facing widget creation schemas should stay strict-compatible where possible: root object, required fields, `additionalProperties: false`, bounded enums, and Rust validation as the final authority.
 
@@ -244,6 +257,8 @@ AI Assistant UX polish around widget authorship (prompt tuning, suggestion affor
 Dashboard chrome reads existing app CSS variables only (`var(--app-bg)`, `var(--surface)`, `var(--text)`, `var(--border)`, etc.) — no hardcoded colors. The topbar's bottom-fade tint comes from a `--scheme-tint-soft` style variable derived from the active scheme; widgets accent independently via inline `--w-accent` / `--w-accent-soft` set on the widget root.
 
 A purple widget stays purple regardless of the active color scheme. A change of color scheme only repaints chrome, not widget bodies.
+
+Secret widget settings are also visible from Settings → Credentials. That unified credentials page lists widget secret references alongside Connection passwords, website credentials, and AI provider keys. Deleting a widget secret there removes the OS-keychain value and clears the widget instance `secretRef`.
 
 ## Settings → Dashboard
 

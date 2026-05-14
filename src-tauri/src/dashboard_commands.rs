@@ -2,6 +2,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
+use crate::secrets;
 use crate::dashboard_storage::{
     self as ds, CustomWidgetPatch, DashboardCustomWidget, DashboardLoadState, DashboardView,
     DashboardWidgetInstance, InstancePatch, LayoutEntry, ViewPatch,
@@ -121,6 +122,25 @@ pub fn dashboard_update_instance(
 }
 
 #[tauri::command]
+pub fn dashboard_read_widget_secret(
+    app: AppHandle,
+    secrets: State<'_, secrets::Secrets>,
+    instance_id: String,
+    key: String,
+) -> Result<Option<String>, DashboardCommandError> {
+    let owner_id = storage(&app).with_connection_infallible(|conn| {
+        ds::widget_secret_owner_id_for_instance(conn, &instance_id, &key)
+            .map_err(DashboardCommandError::from)
+    })?;
+    match owner_id {
+        Some(owner_id) => secrets
+            .read_widget_secret(owner_id)
+            .map_err(|message| DashboardCommandError::Internal { message }),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
 pub fn dashboard_remove_instance(
     app: AppHandle,
     id: String,
@@ -147,6 +167,7 @@ pub fn dashboard_create_widget(
     summary: String,
     category: String,
     body: Value,
+    settings_schema: Option<Value>,
     preset: String,
     accent_name: String,
     icon_name: String,
@@ -157,11 +178,16 @@ pub fn dashboard_create_widget(
 ) -> Result<DashboardCreatedWidget, DashboardCommandError> {
     let body_json = serde_json::to_string(&body)
         .map_err(|error| DashboardCommandError::Internal { message: error.to_string() })?;
+    let settings_schema_json = settings_schema
+        .map(|schema| serde_json::to_string(&schema)
+            .map_err(|error| DashboardCommandError::Internal { message: error.to_string() }))
+        .transpose()?;
     let custom_widget_id = new_dashboard_id("cw");
     let instance_id = new_dashboard_id("inst");
     storage(&app).with_connection_infallible(|conn| {
         let custom_widget = ds::create_custom_widget(
-            conn, &custom_widget_id, &kind, &title, &summary, &category, &body_json, "agent",
+            conn, &custom_widget_id, &kind, &title, &summary, &category, &body_json,
+            settings_schema_json.as_deref(), "agent",
         )?;
         let instance = match ds::add_instance(
             conn, &instance_id, &view_id, &kind, &custom_widget_id,
@@ -186,12 +212,14 @@ pub fn dashboard_create_custom_widget(
     summary: String,
     category: String,
     body_json: String,
+    settings_schema_json: Option<String>,
     created_by: String,
 ) -> Result<DashboardCustomWidget, DashboardCommandError> {
     let id = new_dashboard_id("cw");
     storage(&app).with_connection_infallible(|conn| {
         ds::create_custom_widget(
-            conn, &id, &kind, &title, &summary, &category, &body_json, &created_by,
+            conn, &id, &kind, &title, &summary, &category, &body_json,
+            settings_schema_json.as_deref(), &created_by,
         ).map_err(Into::into)
     })
 }

@@ -34,9 +34,30 @@ pub struct SecretReferenceRequest {
 }
 
 impl SecretReferenceRequest {
+    pub(crate) fn connection_password(owner_id: String) -> Self {
+        Self {
+            kind: SecretKind::ConnectionPassword,
+            owner_id,
+        }
+    }
+
     pub(crate) fn url_password(owner_id: String) -> Self {
         Self {
             kind: SecretKind::UrlPassword,
+            owner_id,
+        }
+    }
+
+    pub(crate) fn ai_api_key(owner_id: String) -> Self {
+        Self {
+            kind: SecretKind::AiApiKey,
+            owner_id,
+        }
+    }
+
+    pub(crate) fn widget_secret(owner_id: String) -> Self {
+        Self {
+            kind: SecretKind::WidgetSecret,
             owner_id,
         }
     }
@@ -48,6 +69,12 @@ pub struct SecretPresence {
     exists: bool,
 }
 
+impl SecretPresence {
+    pub(crate) fn exists(&self) -> bool {
+        self.exists
+    }
+}
+
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
 enum SecretKind {
@@ -55,6 +82,7 @@ enum SecretKind {
     ConnectionPassphrase,
     UrlPassword,
     AiApiKey,
+    WidgetSecret,
 }
 
 impl Secrets {
@@ -159,6 +187,10 @@ impl Secrets {
         })
     }
 
+    pub(crate) fn read_widget_secret(&self, owner_id: String) -> Result<Option<String>, String> {
+        self.read_secret(SecretReferenceRequest::widget_secret(owner_id))
+    }
+
     fn entry(&self, reference: &SecretReference) -> Result<Entry, String> {
         if self.backend.is_none() {
             return Err(self
@@ -220,6 +252,7 @@ impl SecretKind {
             Self::ConnectionPassphrase => "connection-passphrase",
             Self::UrlPassword => "url-password",
             Self::AiApiKey => "ai-api-key",
+            Self::WidgetSecret => "widget-secret",
         }
     }
 }
@@ -343,5 +376,25 @@ mod tests {
             .read_url_password(owner_id)
             .expect("URL password can be read by backend");
         assert_eq!(secret.as_deref(), Some("browser-login-password"));
+    }
+
+    #[test]
+    fn stores_widget_secrets_under_their_own_secret_kind() {
+        let _guard = test_keychain_lock().lock().expect("test keychain lock");
+        let secrets = Secrets::new_for_test();
+        let owner_id = "dashboard-widget-secret:inst-test:apiKey".to_string();
+
+        secrets
+            .store_secret(StoreSecretRequest {
+                kind: SecretKind::WidgetSecret,
+                owner_id: owner_id.clone(),
+                secret: "widget-api-key".to_string(),
+            })
+            .expect("widget secret is stored");
+
+        let secret = secrets
+            .read_widget_secret(owner_id)
+            .expect("widget secret can be read by backend");
+        assert_eq!(secret.as_deref(), Some("widget-api-key"));
     }
 }

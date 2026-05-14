@@ -31,6 +31,14 @@ export function WidgetBody({ instance }: { instance: DashboardWidgetInstance }) 
   }
 
   if (cw.kind === "content") return <ContentWidgetRenderer bodyJson={cw.bodyJson} />;
-  if (cw.kind === "script") return <ScriptWidgetHost bodyJson={cw.bodyJson} />;
+  if (cw.kind === "script") {
+    return (
+      <ScriptWidgetHost
+        bodyJson={cw.bodyJson}
+        instance={instance}
+        settingsSchemaJson={cw.settingsSchemaJson}
+      />
+    );
+  }
   return null;
 }

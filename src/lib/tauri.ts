@@ -37,10 +37,12 @@ import type {
   RdpSettings,
   SecretPresence,
   SecretReferenceRequest,
+  StoredCredentialSummary,
   SftpSettings,
   ScreenshotSettings,
   SshSettings,
   StoreSecretRequest,
+  DeleteStoredCredentialRequest,
   TerminalSettings,
   UpdateConnectionRequest,
   UrlCredentialSummary,
@@ -1022,6 +1024,14 @@ type CommandMap = {
     args: { request: SecretReferenceRequest };
     result: null;
   };
+  list_stored_credentials: {
+    args: undefined;
+    result: StoredCredentialSummary[];
+  };
+  delete_stored_credential: {
+    args: { request: DeleteStoredCredentialRequest };
+    result: null;
+  };
   start_terminal_session: {
     args: { request: StartTerminalSessionRequest };
     result: TerminalSessionStarted;
@@ -1482,6 +1492,10 @@ type CommandMap = {
     args: { id: string; patch: InstancePatch };
     result: DashboardWidgetInstance;
   };
+  dashboard_read_widget_secret: {
+    args: { instanceId: string; key: string };
+    result: string | null;
+  };
   dashboard_remove_instance: {
     args: { id: string };
     result: null;
@@ -1490,10 +1504,19 @@ type CommandMap = {
     args: { viewId: string; layout: LayoutEntry[] };
     result: null;
   };
+  dashboard_create_widget: {
+    args: {
+      viewId: string; kind: WidgetCustomKind; title: string; summary: string;
+      category: string; body: unknown; settingsSchema?: unknown;
+      preset: WidgetPreset; accentName: AccentName; iconName: IconName;
+      gridX: number; gridY: number; gridW: number; gridH: number;
+    };
+    result: { customWidget: DashboardCustomWidget; instance: DashboardWidgetInstance };
+  };
   dashboard_create_custom_widget: {
     args: {
       kind: WidgetCustomKind; title: string; summary: string;
-      category: string; bodyJson: string; createdBy: "user" | "agent";
+      category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
     };
     result: DashboardCustomWidget;
   };
