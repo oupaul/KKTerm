@@ -381,6 +381,17 @@ export interface TransferSshPublicKeyResult {
   publicKeyPath: string;
 }
 
+export interface TrayRecentConnection {
+  id: string;
+  label: string;
+}
+
+export interface TrayMenuSnapshot {
+  recentConnections: TrayRecentConnection[];
+  dontSleepLabel: string;
+  exitLabel: string;
+}
+
 export interface CommandProposalPlan {
   prompt: string;
   command: string;
@@ -929,6 +940,10 @@ type CommandMap = {
   set_dont_sleep_enabled: {
     args: { enabled: boolean };
     result: boolean;
+  };
+  update_tray_menu: {
+    args: { snapshot: TrayMenuSnapshot };
+    result: null;
   };
   capture_screenshot_to_clipboard: {
     args: { request: CaptureScreenshotRequest };

@@ -26,7 +26,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   showConnectedConnectionsInRail: true,
   pinnedConnectionIds: [],
   allowClipboardRead: true,
-  minimizeToTray: false,
+  minimizeToTray: true,
   lastBackupAt: null,
 };
 

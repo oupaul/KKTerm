@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { ArrowDownToLine, ArrowUpFromLine, BedSingle, Coffee, Cpu, MemoryStick } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -92,6 +93,18 @@ function DontSleepStatusButton() {
 
     return () => {
       disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    const unlistenPromise = listen<boolean>("kkterm://dont-sleep-changed", (event) => {
+      setEnabled(event.payload);
+    });
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
 
