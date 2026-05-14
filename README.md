@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <em>Your terminals called. They want their own operating system.</em>
+  <strong>A local-first Windows administration workspace for terminals, remote connections, file transfer, dashboards, and approval-based AI help.</strong>
 </p>
 
 <p align="center">
@@ -21,95 +21,123 @@
 
 ---
 
-**KKTerm** is a <kbd>local-first</kbd>, <kbd>Windows-first</kbd> desktop workspace that unifies your terminal sessions, SSH hosts, SFTP transfers, remote desktops, and approval-based AI command assistance — all inside one fast, native Tauri v2 app. No cloud. No telemetry. No Electron.
+KKTerm is a desktop app for people who live in terminals, remote hosts, file browsers, and small admin tools all day. It combines saved Connections, live Sessions, split terminal panes, SFTP/FTP file transfer, URL webviews, RDP/VNC workspaces, a widget Dashboard, and an AI Assistant in one native Tauri v2 app.
 
-Think of it as what happens when a terminal emulator, a connection manager, a file browser, and an AI sidekick walk into a bar and decide to stop being four separate apps.
+The important part: KKTerm is local-first. Durable data lives in SQLite on your machine, secrets live in the OS keychain, terminal contents are not logged by default, and there is no analytics or cloud account requirement.
 
-## Design Philosophy
+## What Makes It Different
 
-We have opinions. Here they are, in ascending order of stubbornness:
+- **One workspace for many connection types**: local shells, SSH, Telnet, Serial, URL/WebView2, RDP, VNC, FTP, FTPS, and SFTP launched from SSH.
+- **Session-aware terminal panes**: split a terminal Tab, keep live Sessions mounted while switching Tabs, and use tmux-backed SSH panes that can attach to stable per-pane tmux sessions.
+- **Real file transfer tools**: dual-pane local/remote browser, recursive upload/download, transfer queue, overwrite prompts, remote properties, chmod, and chown for SFTP.
+- **Native Windows integrations**: ConPTY/local PTY, WebView2, Microsoft RDP ActiveX hosting, tray menu, current-user NSIS installer, and Windows host CPU/RAM/network status.
+- **Dashboard widgets**: multiple durable Dashboard views with a 12-column drag/resize grid, an App Launcher widget, and AI-authored custom widgets rendered as validated content or isolated script iframes.
+- **AI with approval boundaries**: chat, selected terminal context, screenshots, command proposals, dashboard tools, and provider choices without autonomous command execution.
+- **Local backups and import**: settings and Connection data can be exported/imported through KKTerm settings ZIPs; startup/manual backups use the same importable format.
+- **No telemetry posture**: no analytics, no automatic crash upload, and diagnostics are local files the user reviews before sharing.
 
-### 1. Local-first, for real
+## Current Feature Map
 
-Your connections, settings, and secrets live on your machine. SQLite stores the durable stuff. The OS keychain owns your passwords and API keys. There is no cloud backend, no account, no sync service that "anonymously" collects your `~/.ssh/config` for product improvement. The app works fully offline. The only thing that ever leaves your machine is the command you explicitly paste into a remote shell.
+| Area | Implemented today |
+| --- | --- |
+| **Connections** | SQLite-backed tree with folders/subfolders, search, drag/drop order, rename, duplicate, delete, Quick Connect, custom icons, pinned/active rail shortcuts |
+| **Terminal** | Local shells, SSH, Telnet, Serial, split panes, xterm.js renderer, opportunistic WebGL glyph rendering, scrollback search, local startup directory/script |
+| **SSH** | Native `russh` path, agent/key/password auth, host-key trust flow, optional system SSH fallback, ProxyJump field, SSH port forwarding, tmux session attach/list/rename/close/mouse controls |
+| **SFTP / FTP** | SSH-launched SFTP plus FTP/FTPS Connections, dual-pane browser, recursive transfers, queue/cancel/clear history, conflicts, properties, chmod/chown where supported |
+| **URL WebView** | Embedded WebView2 URL Sessions, navigation toolbar, favicon capture, stored website credential metadata/fill, data partition metadata |
+| **Remote Desktop** | RDP through Windows ActiveX with geometry-scoped overlay parking; VNC through `vnc-rs` framebuffer rendered in the workspace canvas |
+| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, AI-created content/script widgets, per-widget presets/accent/icon/title/settings |
+| **AI Assistant** | Streaming chat, OpenAI-compatible runtime, provider registry, command proposal safety classification, screenshot/context attachments, dashboard tool calls with validation |
+| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, and About sections; custom UI fonts; minimize-to-tray; Don't Sleep; backup/import |
+| **Localization** | i18next UI with English source and dynamic locale bundles including zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, and vi |
 
-### 2. Fast is a feature
+## AI Providers
 
-If your terminal app takes longer to cold-launch than it takes you to regret opening it, the terminal app is wrong. KKTerm starts in under a second on modern Windows hardware. The Rust backend handles the heavy lifting. Tauri v2 keeps the runtime lean. We benchmark this. We will not apologise for caring about startup time.
+The frontend registry currently includes:
 
-### 3. Windows gets real love
+OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, and generic OpenAI-compatible endpoints.
 
-KKTerm is Windows-first by design, not by accident. That means native ConPTY for local shells, Microsoft RDP ActiveX for remote desktop, and WebView2 for embedded browser surfaces. macOS and Linux are first-class architectural targets — they just aren't the ones we yell at during 2 AM debugging sessions. (Yet.)
+Provider metadata and model choices live in `src/ai/providerRegistry/`; Rust-side provider adapters live in `src-tauri/src/ai/providers/`. API keys are stored through the OS keychain, not SQLite.
 
-### 4. AI drafts. You decide. Always.
+## Local-First Data Model
 
-The AI assistant can suggest commands, write scripts, and draft configuration. It cannot execute anything without your explicit approval. No auto-apply. No silent copilot. If the AI wants to `rm -rf /`, it has to convince you first — and we designed the UI so that conversation is visible, not hidden behind a three-dot menu.
+KKTerm uses precise domain boundaries:
 
-### 5. Dense, not distracting
+- **Connection**: a durable saved resource in SQLite, such as an SSH host or URL.
+- **Quick Connect**: an unsaved one-off draft that starts a Session.
+- **Session**: live runtime state, such as a PTY, SSH channel, SFTP browser, WebView2 host, RDP control, or VNC framebuffer.
+- **Tab**: frontend workspace container for one Session or related panes.
 
-Light chrome. Dark terminals. No onboarding wizards, no "what's new" popups, no tooltips that follow your mouse like a lost puppy. The interface gets out of your way. Split panes, tabbed workspaces, and a collapsible connection tree give you density when you need it and whitespace when you don't.
-
-### 6. One tool, not a toolbox catalogue
-
-Local terminals, SSH, SFTP, RDP, VNC, URL webviews, an AI panel — these live in the same window, not scattered across six different app icons on your taskbar. If you have to Alt+Tab three times to get from your SSH session to your SFTP transfer, you're using the wrong tool.
-
-### 7. MIT, because copyleft at 3 AM is not the kind of drama we enjoy
-
-Every runtime dependency is MIT, Apache 2.0, BSD, or MPL-compatible. No GPL in the core. Fork it, ship it, embed it — the license won't be the reason you can't.
-
----
-
-## What's Inside
-
-| Module | Status | What it does |
-|--------|--------|--------------|
-| **Terminal** | Stable | Local shells (PowerShell, CMD, WSL), SSH with tmux resume, xterm-compatible rendering, split panes |
-| **SFTP** | Stable | Dual-pane file browser, drag-drop transfer, chmod/chown, overwrite prompts, transfer queue |
-| **RDP** | Beta | Windows-native remote desktop via ActiveX, parked/screenshotted under DOM overlays |
-| **VNC** | Beta | Rust-native VNC client rendering to workspace canvas |
-| **AI Assistant** | Active | Approval-based command drafting, OpenAI-compatible providers, session-scoped context |
-| **Connections** | Stable | SQLite-backed tree with folders, search, drag-drop reorder, Quick Connect, SSH config import |
-| **Dashboard** | Growing | Widget playground, App Launcher, hash calculators, IP subnet tools |
-| **File Explorer** | Early | Native-speed alternative local file browser |
-| **URL WebView** | Stable | Embedded http(s) surfaces per-connection |
-
----
+This keeps saved data separate from live process/channel state. Closing a Tab ends the live Session; switching Tabs does not.
 
 ## Quick Start
 
-```bash
-npm install          # Install frontend dependencies
-npm run tauri dev    # Launch the desktop app
-npm run check        # Type-check everything
-```
+Requirements:
+
+- Windows is the primary supported platform.
+- Node.js and npm.
+- Rust toolchain.
+- Tauri v2 prerequisites for Windows, including WebView2.
 
 ```bash
-npm run package:installer  # Build the NSIS installer
+npm install
+npm run tauri dev
 ```
 
-The installer lands in `artifacts/` with a SHA-256 checksum.
+Common checks:
+
+```bash
+npm run check
+npm run build
+cargo check --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+Build the Windows installer:
+
+```bash
+npm run package:installer
+```
+
+The installer script writes `artifacts/kkterm-<version>-windows-x64-setup.exe` and a matching `.sha256` file.
 
 ## Native Debugging
 
-Use the real Tauri desktop runtime for testing and verification:
+Use the real Tauri runtime for validation:
 
 ```bash
 npm run tauri dev
 ```
 
-For Rust breakpoints and native debugging on Windows, use VS Code's `Run KKTerm exe` launch configuration. It builds and starts `src-tauri/target/debug/kkterm.exe` with backtraces enabled. Attach `Attach KKTerm WebView2` when frontend debugging needs to inspect the app inside the native WebView2 host.
+Browser/Vite preview is useful for some frontend inspection, but it is not valid for native behavior such as local ConPTY focus, WebView2 hosting, RDP/VNC, keychain access, native menus, tray behavior, dialogs, or OS integration.
 
-Standalone Vite/browser preview is not a substitute for validating native behavior such as local ConPTY input, WebView2, RDP/VNC, keychain, dialogs, native menus, or OS integration.
+For Windows debugging, use the VS Code `Run KKTerm exe` configuration to start `src-tauri/target/debug/kkterm.exe` with Rust backtraces. Use `Attach KKTerm WebView2` when you need DevTools inside the native WebView2 host.
 
----
+## Current Limits
+
+KKTerm is moving quickly, so this README describes the codebase as it exists now rather than treating the roadmap as truth.
+
+- Windows is the v0.1 acceptance platform.
+- The installer is currently unsigned.
+- Update checks are disabled while release signing is deferred.
+- SFTP over ProxyJump is not supported in the native SFTP path.
+- File transfer resume, folder sync/diff, archive/extract, and remote editing are deferred.
+- RDP and VNC are active work areas; richer clipboard/device sync and advanced quality controls are still evolving.
+- AI assists, proposes, and can operate approved tools, but it should not be treated as an autonomous operator.
+
+## Project Docs
+
+- [Product context](CONTEXT.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Dashboard architecture](docs/DASHBOARD.md)
+- [AI provider guide](docs/AI_PROVIDERS.md)
+- [Performance notes](docs/PERFORMANCE.md)
+- [Release notes and gates](docs/RELEASE.md)
 
 ## Stack
 
-Rust (Tauri v2) · React 19 · TypeScript · Vite · Tailwind · Zustand · xterm.js · SQLite · OS keychain
+Rust, Tauri v2, React 19, TypeScript, Vite, Tailwind CSS, Zustand, xterm.js, SQLite, WebView2, `russh`, `russh-sftp`, `vnc-rs`, `suppaftp`, and OS keychain storage.
 
----
+## License
 
-<p align="center">
-  <strong>If KKTerm saves you from one more PuTTY window, consider dropping a ⭐</strong><br />
-  <sub>Stars are free. The dopamine hit from seeing the counter tick up is also free, but much harder to explain.</sub>
-</p>
+MIT. See [LICENSE](LICENSE).
