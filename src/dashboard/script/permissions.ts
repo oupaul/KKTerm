@@ -43,7 +43,7 @@ export function buildSrcdoc(body: ScriptBody, settingsValuesJson = "{}"): string
     }
     html, body {
       margin: 0;
-      padding: 8px;
+      padding: 4px;
       width: 100%;
       height: 100%;
       overflow: hidden;

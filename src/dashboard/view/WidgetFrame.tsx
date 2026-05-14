@@ -95,8 +95,14 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
     ["--w-accent-soft" as unknown as string]: accent.soft,
   } as CSSProperties;
 
+  const className = [
+    "dw-instance",
+    instance.kind !== "builtIn" ? "dw-custom-widget" : "",
+    editMode ? "dw-edit" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className={`dw-instance${editMode ? " dw-edit" : ""}`} style={style}>
+    <div className={className} style={style}>
       <Render
         title={fallbackTitle}
         summary={fallbackSummary}

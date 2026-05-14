@@ -28,6 +28,7 @@ test("script widget source is encoded as data before iframe execution", async ()
 
   assert.match(srcdoc, /script-src 'unsafe-inline' blob:/);
   assert.match(srcdoc, /const source = /);
+  assert.match(srcdoc, /padding:\s*4px;/);
   assert.doesNotMatch(srcdoc, /<script>alert\(1\)<\/script><\/div>`;/);
   assert.match(srcdoc, /\\u003cscript>alert\(1\)\\u003c\/script>\\u003c\/div>`;/);
 });

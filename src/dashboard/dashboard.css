@@ -462,6 +462,52 @@ main.dashboard-page {
   line-height: 1.55;
 }
 
+.dw-custom-widget .dw-head {
+  min-height: 38px;
+  padding: 5px 6px;
+}
+
+.dw-custom-widget .dw-body,
+.dw-custom-widget .dw-mono-body {
+  padding: 6px;
+}
+
+.dw-custom-widget.dw-instance .dw-preset-ambient {
+  gap: 5px;
+  padding: 8px 9px;
+}
+
+.dw-custom-widget.dw-instance .dw-preset-ambient--glass {
+  padding: 9px;
+}
+
+.dw-custom-widget.dw-instance .dw-preset-tile {
+  padding: 7px 8px;
+}
+
+.dw-custom-widget .dw-hero-head {
+  padding: 9px 9px 0;
+}
+
+.dw-custom-widget .dw-hero-body {
+  padding: 6px 9px 9px;
+}
+
+.dw-custom-widget .dw-mono-head {
+  min-height: 26px;
+  padding: 4px 6px;
+}
+
+.dw-custom-widget.dw-instance .dw-preset-action {
+  gap: 5px;
+  padding: 8px;
+}
+
+.dw-custom-widget.dw-instance .dw-preset-action--horizontal {
+  gap: 6px;
+  padding: 6px 8px;
+}
+
 .dw-controls {
   position: absolute;
   top: 6px;

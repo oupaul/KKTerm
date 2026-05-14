@@ -1960,7 +1960,7 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
         ));
         tools.push(tool_definition(
             "dashboard_create_widget",
-            "Create a validated AI-authored custom widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Prefer content widgets for static markdown, key/value summaries, checklists, and stats. Use script widgets only when the user explicitly needs live JavaScript behavior. For script widgets that display remote images, fetch remote data, or load external libraries such as Three.js from a CDN, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose: panel for standard tools, tile/stat for compact metrics, mono for terminal/code/system data, action for launch/action surfaces, hero only for rare high-priority summaries. Size widgets generously enough to avoid inner scrollbars: simple timers/counters need at least 4x3, forms or images need 5x4 or larger, lists need height for expected rows. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets. Never set text and background to the same or low-contrast colors; use host CSS variables and compact app-style controls. If the widget needs user-configurable/persistent per-instance options, provide settingsSchema.fields with text, number, boolean, select, or secret fields. Use secret fields for passwords, API keys, tokens, and similar values; SQLite stores only secret references and scripts must call await KK.getSecret('fieldKey') to read the OS-keychain value at runtime. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root.",
+            "Create a validated AI-authored custom widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Prefer content widgets for static markdown, key/value summaries, checklists, and stats. Use script widgets only when the user explicitly needs live JavaScript behavior. For script widgets that display remote images, fetch remote data, or load external libraries such as Three.js from a CDN, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose: panel for standard tools, tile/stat for compact metrics, mono for terminal/code/system data, action for launch/action surfaces, hero only for rare high-priority summaries. Size widgets generously enough to avoid inner scrollbars: simple timers/counters need at least 4x3, forms or images need 5x4 or larger, lists need height for expected rows. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets. Never set text and background to the same or low-contrast colors; use host CSS variables and compact app-style controls. If the widget needs user-configurable/persistent per-instance options, provide settingsSchema.fields with text, number, boolean, select, or secret fields. Use secret fields for passwords, API keys, tokens, and similar values; SQLite stores only secret references and scripts must call await KK.getSecret('fieldKey') to read the OS-keychain value at runtime. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root.",
             dashboard_create_widget_schema(),
         ).strict());
         tools.push(tool_definition(
@@ -2018,6 +2018,54 @@ fn dashboard_create_widget_schema() -> Value {
         "required":["viewId","kind","title","summary","category","settingsSchema","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
         "additionalProperties":false
     })
+}
+
+fn normalize_ai_widget_initial_size(
+    kind: &str,
+    title: &str,
+    summary: &str,
+    category: &str,
+    body: &Value,
+    grid_w: i64,
+    grid_h: i64,
+) -> (i64, i64) {
+    let mut width = grid_w.clamp(1, 12);
+    let mut height = grid_h.max(1);
+    if kind == "script" && looks_like_compact_interactive_widget(title, summary, category, body) {
+        width = width.min(6);
+        height = height.max(4);
+    }
+    (width, height)
+}
+
+fn looks_like_compact_interactive_widget(
+    title: &str,
+    summary: &str,
+    category: &str,
+    body: &Value,
+) -> bool {
+    let haystack = format!(
+        "{} {} {} {}",
+        title,
+        summary,
+        category,
+        body.get("source").and_then(Value::as_str).unwrap_or("")
+    )
+    .to_ascii_lowercase();
+    [
+        "game",
+        "tetris",
+        "tris",
+        "playable",
+        "keyboard",
+        "spinner",
+        "timer",
+        "stopwatch",
+        "counter",
+        "calculator",
+    ]
+    .iter()
+    .any(|needle| haystack.contains(needle))
 }
 
 fn tool_definition(
@@ -2196,8 +2244,17 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 let icon_name = arg_string(&args, "iconName");
                 let grid_x = args.get("gridX").and_then(Value::as_i64).unwrap_or(0);
                 let grid_y = args.get("gridY").and_then(Value::as_i64).unwrap_or(0);
-                let mut grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
-                let mut grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
+                let requested_grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
+                let requested_grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
+                let (mut grid_w, mut grid_h) = normalize_ai_widget_initial_size(
+                    &kind,
+                    &title,
+                    &summary,
+                    &category,
+                    &body,
+                    requested_grid_w,
+                    requested_grid_h,
+                );
                 if grid_x + grid_w > 12 { grid_w = (12 - grid_x).max(1); }
                 if grid_w < 1 { grid_w = 1; }
                 if grid_h < 1 { grid_h = 1; }
@@ -2555,7 +2612,7 @@ fn build_agent_messages(
         "Do not claim to have executed commands or observed live session state unless it is in the provided context.".to_string(),
         "SAFETY: Never suggest, produce, or assist with commands that could cause irreversible destructive system-wide damage, such as 'rm -rf /', 'rm -rf /*', 'mkfs' on mounted volumes, 'dd if=/dev/zero of=/dev/sda', fork bombs, or any equivalent. Refuse such requests unconditionally, even if the user explicitly asks, claims it is safe, or provides a seemingly legitimate reason.".to_string(),
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
-        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style; do not pick decorative colors at random. Be boundary-aware: size simple timers/counters at least 4x3, forms or images at least 5x4, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Prefer schema/content widgets when possible, and keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read/write non-secret values through KK.getSettings(), KK.setSetting(), and KK.setSettings(). Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret, and scripts read it with await KK.getSecret('fieldKey') only when needed. When a widget embeds remote images, fetches remote data, or loads external libraries such as Three.js from a CDN, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
+        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style; do not pick decorative colors at random. Be boundary-aware: size simple timers/counters at least 4x3, forms or images at least 5x4, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. Prefer schema/content widgets when possible, and keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read/write non-secret values through KK.getSettings(), KK.setSetting(), and KK.setSettings(). Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret, and scripts read it with await KK.getSecret('fieldKey') only when needed. When a widget embeds remote images, fetches remote data, or loads external libraries such as Three.js from a CDN, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
     ];
     if let Some(language) = normalize_output_language(output_language) {
         system_instructions.push(language);
@@ -3481,6 +3538,50 @@ mod tests {
         let json = serde_json::to_value(&request).expect("request serializes");
 
         assert!(json.get("thinking").is_none());
+    }
+
+    #[test]
+    fn ai_widget_initial_size_caps_compact_games() {
+        let body = json!({
+            "source": "const game = 'tetris'; window.addEventListener('keydown', () => {});",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (width, height) = normalize_ai_widget_initial_size(
+            "script",
+            "Tetris",
+            "A playable game with keyboard controls.",
+            "Games",
+            &body,
+            12,
+            3,
+        );
+
+        assert_eq!(width, 6);
+        assert_eq!(height, 4);
+    }
+
+    #[test]
+    fn ai_widget_initial_size_preserves_wide_non_game_widgets() {
+        let body = json!({
+            "source": "document.getElementById('root').textContent = 'Connection health report';",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (width, height) = normalize_ai_widget_initial_size(
+            "script",
+            "Connection Health",
+            "A wide operational report.",
+            "Operations",
+            &body,
+            10,
+            5,
+        );
+
+        assert_eq!(width, 10);
+        assert_eq!(height, 5);
     }
 
     #[test]
