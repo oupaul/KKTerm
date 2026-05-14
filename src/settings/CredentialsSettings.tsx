@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { StoredCredentialKind, StoredCredentialSummary } from "../types";
+import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
 import { SettingsSectionHeader } from "./shared";
 
 function formatDate(value?: string) {
@@ -34,15 +35,14 @@ export function CredentialsSettings() {
   const [credentials, setCredentials] = useState<StoredCredentialSummary[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const grouped = useMemo(() => {
-    const groups = new Map<StoredCredentialKind, StoredCredentialSummary[]>();
-    for (const credential of credentials) {
-      const values = groups.get(credential.kind) ?? [];
-      values.push(credential);
-      groups.set(credential.kind, values);
-    }
-    return groups;
-  }, [credentials]);
+  const { storedCredentials, widgetCredentials } = useMemo(
+    () => groupCredentialsForSettings(credentials),
+    [credentials],
+  );
+  const storedCredentialGroups = useMemo(
+    () => groupCredentialsByKind(storedCredentials),
+    [storedCredentials],
+  );
 
   async function load() {
     if (!isTauriRuntime()) {
@@ -101,49 +101,87 @@ export function CredentialsSettings() {
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.credentialsStored")}</legend>
         <p className="field-hint">{t("settings.credentialsHint")}</p>
-        {credentials.length === 0 ? (
+        {storedCredentials.length === 0 ? (
           <p className="settings-empty-state">
             {loading ? t("common.loading") : t("settings.credentialsEmpty")}
           </p>
         ) : (
           <div className="settings-list" aria-label={t("settings.credentialsStored")}>
-            {Array.from(grouped.entries()).map(([kind, rows]) => (
+            {storedCredentialGroups.map(({ kind, rows }) => (
               <div className="settings-credential-group" key={kind}>
                 <h3>{t(credentialKindKey(kind))}</h3>
                 {rows.map((credential) => (
-                  <div className="settings-list-row" key={credential.id}>
-                    <div>
-                      <strong>{credential.label}</strong>
-                      {credential.detail ? <span>{credential.detail}</span> : null}
-                      <small>
-                        {[
-                          credential.username
-                            ? t("settings.credentialUsername", { username: credential.username })
-                            : null,
-                          credential.updatedAt
-                            ? t("settings.credentialUpdated", { updatedAt: formatDate(credential.updatedAt) })
-                            : null,
-                          credential.exists
-                            ? t("settings.credentialStored")
-                            : t("settings.credentialMissingSecret"),
-                        ].filter(Boolean).join(" · ")}
-                      </small>
-                    </div>
-                    <button
-                      className="secondary-button danger"
-                      type="button"
-                      onClick={() => void deleteCredential(credential)}
-                    >
-                      <Trash2 size={15} />
-                      {t("common.delete")}
-                    </button>
-                  </div>
+                  <CredentialRow
+                    credential={credential}
+                    key={credential.id}
+                    onDelete={deleteCredential}
+                  />
                 ))}
               </div>
             ))}
           </div>
         )}
       </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.widgetCredentialsStored")}</legend>
+        <p className="field-hint">{t("settings.widgetCredentialsHint")}</p>
+        {widgetCredentials.length === 0 ? (
+          <p className="settings-empty-state">
+            {loading ? t("common.loading") : t("settings.widgetCredentialsEmpty")}
+          </p>
+        ) : (
+          <div className="settings-list" aria-label={t("settings.widgetCredentialsStored")}>
+            {widgetCredentials.map((credential) => (
+              <CredentialRow
+                credential={credential}
+                key={credential.id}
+                onDelete={deleteCredential}
+              />
+            ))}
+          </div>
+        )}
+      </fieldset>
     </section>
+  );
+}
+
+function CredentialRow({
+  credential,
+  onDelete,
+}: {
+  credential: StoredCredentialSummary;
+  onDelete: (credential: StoredCredentialSummary) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="settings-list-row">
+      <div>
+        <strong>{credential.label}</strong>
+        {credential.detail ? <span>{credential.detail}</span> : null}
+        <small>
+          {[
+            credential.username
+              ? t("settings.credentialUsername", { username: credential.username })
+              : null,
+            credential.updatedAt
+              ? t("settings.credentialUpdated", { updatedAt: formatDate(credential.updatedAt) })
+              : null,
+            credential.exists
+              ? t("settings.credentialStored")
+              : t("settings.credentialMissingSecret"),
+          ].filter(Boolean).join(" · ")}
+        </small>
+      </div>
+      <button
+        className="secondary-button danger"
+        type="button"
+        onClick={() => void onDelete(credential)}
+      >
+        <Trash2 size={15} />
+        {t("common.delete")}
+      </button>
+    </div>
   );
 }

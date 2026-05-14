@@ -4213,6 +4213,124 @@ progress {
   border-radius: 6px;
 }
 
+.assistant-secret-card-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.assistant-secret-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.assistant-secret-card header {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.assistant-secret-card header svg {
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.assistant-secret-card header div,
+.assistant-secret-card label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.assistant-secret-card strong,
+.assistant-secret-card small,
+.assistant-secret-card p,
+.assistant-secret-card label span,
+.assistant-secret-card footer span {
+  overflow-wrap: anywhere;
+}
+
+.assistant-secret-card strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.assistant-secret-card small,
+.assistant-secret-card p,
+.assistant-secret-card label span,
+.assistant-secret-card footer span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.assistant-secret-card p {
+  margin: 0;
+}
+
+.assistant-secret-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.assistant-secret-input-row input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.assistant-secret-input-row input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.assistant-secret-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.assistant-secret-icon-button:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.assistant-secret-card footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.assistant-secret-card footer .toolbar-button {
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px;
+  white-space: nowrap;
+}
+
 .assistant-work-panel {
   display: grid;
   gap: 0;
