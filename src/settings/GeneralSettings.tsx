@@ -362,18 +362,6 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
               <small>{t("settings.autoBackupHint")}</small>
             </span>
           </label>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.autoUpdateChecksEnabled}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, autoUpdateChecksEnabled: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.autoUpdateChecks")}</strong>
-              <small>{t("settings.autoUpdateChecksHint")}</small>
-            </span>
-          </label>
         </div>
         <div
           className="settings-data-actions"

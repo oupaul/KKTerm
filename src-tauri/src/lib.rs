@@ -1787,7 +1787,9 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        // TODO(updates): Re-enable after update signing and release metadata
+        // are restored.
+        // .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().map_err(|error| {
                 setup_error(format!("failed to resolve app data directory: {error}"))

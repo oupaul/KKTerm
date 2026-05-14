@@ -73,9 +73,9 @@ The product will be light chrome with dark terminal panes by default, optimized 
 52. As a maintainer, I want dependencies compatible with MIT/Apache-2.0/BSD/MPL-style use, so that runtime licensing stays clean.
 53. As a maintainer, I want GPL dependencies avoided in the core runtime, so that copyleft obligations are not introduced unintentionally.
 54. As a maintainer, I want performance budgets documented, so that architectural decisions can be judged against measurable targets.
-55. As a Windows user of the installed app, I want update checks to be enabled by default, so that I learn about stable signed releases without manually monitoring GitHub.
+55. As a Windows user of the installed app, I want update checks to be available after release signing is configured, so that I can learn about stable signed releases without manually monitoring GitHub.
 56. As a Windows user of the installed app, I want update installation to require my confirmation, so that KKTerm does not silently replace itself while I am using administrative tools.
-57. As a privacy-conscious user, I want update checks to be clearly described as contacting GitHub Releases/update metadata only, so that the local-first trust model remains understandable.
+57. As a privacy-conscious user, I want update checks to be clearly described as contacting GitHub Releases/update metadata only when the update mechanism is enabled, so that the local-first trust model remains understandable.
 58. As a power user, I want the AI Assistant to draft KKTerm extensions with manifests, permissions, and source files, so that I can explore workflow automation without generated code being installed or run automatically.
 
 ## Implementation Decisions

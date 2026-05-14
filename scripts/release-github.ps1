@@ -109,9 +109,11 @@ try {
     $TargetTriple = "windows-x64"
     $InstallerExe = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-$TargetTriple-setup.exe"
     $InstallerSha = "$InstallerExe.sha256"
-    $InstallerSig = "$InstallerExe.sig"
-    $LatestJson = Join-Path $ResolvedOutputDir "latest.json"
-    $ReleaseAssets = @($InstallerExe, $InstallerSha, $InstallerSig, $LatestJson)
+    # TODO(updates): Restore updater signature and latest.json release assets
+    # when the update mechanism is re-enabled.
+    # $InstallerSig = "$InstallerExe.sig"
+    # $LatestJson = Join-Path $ResolvedOutputDir "latest.json"
+    $ReleaseAssets = @($InstallerExe, $InstallerSha)
 
     Write-Host "Current version: $CurrentVersion"
     Write-Host "Next version:    $NextVersion"
@@ -150,26 +152,28 @@ try {
         Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer") -Action "Build installer package"
     }
 
-    if (-not (Test-Path $InstallerSig)) {
-        throw "Updater signature not found: $InstallerSig"
-    }
-
-    $Signature = (Get-Content -Raw $InstallerSig).Trim()
-    $DownloadUrl = "https://github.com/ryantsai/KKTerm/releases/download/$TagName/$([System.IO.Path]::GetFileName($InstallerExe))"
-    $LatestMetadata = [ordered]@{
-        version = $NextVersion
-        notes = "KKTerm $TagName Windows release."
-        pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        platforms = [ordered]@{
-            "windows-x86_64" = [ordered]@{
-                signature = $Signature
-                url = $DownloadUrl
-            }
-        }
-    }
-    $LatestMetadata |
-        ConvertTo-Json -Depth 5 |
-        Set-Content -Path $LatestJson -Encoding UTF8
+    # TODO(updates): Restore latest.json generation when the Tauri updater is
+    # re-enabled.
+    # if (-not (Test-Path $InstallerSig)) {
+    #     throw "Updater signature not found: $InstallerSig"
+    # }
+    #
+    # $Signature = (Get-Content -Raw $InstallerSig).Trim()
+    # $DownloadUrl = "https://github.com/ryantsai/KKTerm/releases/download/$TagName/$([System.IO.Path]::GetFileName($InstallerExe))"
+    # $LatestMetadata = [ordered]@{
+    #     version = $NextVersion
+    #     notes = "KKTerm $TagName Windows release."
+    #     pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    #     platforms = [ordered]@{
+    #         "windows-x86_64" = [ordered]@{
+    #             signature = $Signature
+    #             url = $DownloadUrl
+    #         }
+    #     }
+    # }
+    # $LatestMetadata |
+    #     ConvertTo-Json -Depth 5 |
+    #     Set-Content -Path $LatestJson -Encoding UTF8
 
     foreach ($Asset in $ReleaseAssets) {
         if (-not (Test-Path $Asset)) {
@@ -214,8 +218,6 @@ try {
         $TagName,
         $InstallerExe,
         $InstallerSha,
-        $InstallerSig,
-        $LatestJson,
         "--title",
         "KKTerm $TagName",
         "--notes",

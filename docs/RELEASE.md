@@ -11,7 +11,7 @@ KKTerm is local-first by default.
 - Terminal contents are not logged by default.
 - Durable Connection metadata is stored in local SQLite.
 - Secrets such as passwords, passphrases, and AI API keys are stored in the OS keychain.
-- Update checks contact GitHub Releases updater metadata when enabled. This is separate from telemetry: KKTerm does not send analytics, crash reports, terminal contents, Connection data, or secrets as part of update checking.
+- Update checks are currently disabled while release signing is deferred. When re-enabled, update checks contact GitHub Releases updater metadata only. This is separate from telemetry: KKTerm does not send analytics, crash reports, terminal contents, Connection data, or secrets as part of update checking.
 
 ## Diagnostics Bundle Flow
 
@@ -41,19 +41,14 @@ Create the Windows installer with:
 npm run package:installer
 ```
 
-The installer build requires a Tauri updater signing key. Keep the private key out of the repository and provide it through one of Tauri's supported environment variables before packaging:
-
-```powershell
-$env:TAURI_SIGNING_PRIVATE_KEY_PATH="$env:USERPROFILE\.tauri\kkterm-updater.key"
-```
-
-The script runs the Tauri NSIS bundle target, creates updater artifacts, copies the generated setup executable to a stable release filename, and writes:
+The script runs the Tauri NSIS bundle target, copies the generated setup executable to a stable release filename, and writes:
 
 - `artifacts/kkterm-<version>-windows-x64-setup.exe`
 - `artifacts/kkterm-<version>-windows-x64-setup.exe.sha256`
-- `artifacts/kkterm-<version>-windows-x64-setup.exe.sig`
 
-The installer uses a current-user install mode by default, creates KKTerm Start Menu entries, and downloads the WebView2 bootstrapper only if the target machine needs WebView2 during install. The updater signature is required for application self-update validation and is distinct from Windows Authenticode signing.
+The installer uses a current-user install mode by default, creates KKTerm Start Menu entries, and downloads the WebView2 bootstrapper only if the target machine needs WebView2 during install.
+
+TODO: Restore Windows Authenticode signing and the Tauri updater signing flow before enabling public update checks. The Tauri updater signature validates self-update artifacts and is distinct from Windows Authenticode signing, which validates publisher identity to Windows.
 
 Smoke test the installer artifact with:
 
@@ -71,12 +66,12 @@ Publish the next build release with:
 npm run release:github
 ```
 
-The script increments the `<major>.<minor>.<build>` version across npm, Tauri, and Cargo metadata, builds the signed NSIS updater artifact, generates `latest.json` for the stable updater channel, smoke tests the installer, runs frontend and Rust checks, commits the version bump, tags it as `v<version>`, pushes to `origin/main`, and creates a GitHub release with the installer, checksum, signature, and updater metadata artifacts. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1 -DryRun` to preview the next version, add `-Draft` for a draft release, or add `-SkipBuild` to publish from existing artifacts.
+The script increments the `<major>.<minor>.<build>` version across npm, Tauri, and Cargo metadata, builds the NSIS installer artifact, smoke tests the installer, runs frontend and Rust checks, commits the version bump, tags it as `v<version>`, pushes to `origin/main`, and creates a GitHub release with the installer and checksum. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1 -DryRun` to preview the next version, add `-Draft` for a draft release, or add `-SkipBuild` to publish from existing artifacts.
 
 ## Known Limitations
 
 - Windows is the only v0.1 acceptance platform.
-- The Windows installer build and smoke test are repeatable, but the v0.1 installer is unsigned until release signing is configured.
+- The Windows installer build and smoke test are repeatable, but the installer is unsigned until release signing is configured.
 - SSH readiness performance is instrumented for native post-auth terminal setup and retained in local performance snapshots after a native SSH Session starts. The repeatable `npm run measure:ssh-readiness` helper can validate the `<= 150 ms` budget against a trusted non-`ProxyJump` SSH Connection, but the latest documented run still lacks a measured value because valid SSH auth was not available in the measurement environment.
 - Native SSH-launched SFTP does not support `ProxyJump`; SSH terminal sessions with `ProxyJump` use the system `ssh` fallback/debug path where available.
 - SSH config import support exists behind the local command boundary, but the current simplified chrome does not expose a user-facing import action.
@@ -84,5 +79,5 @@ The script increments the `<major>.<minor>.<build>` version across npm, Tauri, a
 - Screenshot capture is available from terminal Pane toolbars and non-terminal workspace top toolbars. Region and Entire Window/Panel captures are copied to the system clipboard; sending screenshots to the AI Assistant remains deferred until an explicit image-analysis flow exists.
 - RDP, VNC, and URL webview Connection work has started. VNC currently uses a canvas-rendered `vnc-rs` framebuffer path; advanced VNC options, richer clipboard handling, sync, and team sharing remain deferred.
 - AI command assistance stages proposals only; it does not autonomously execute commands.
-- Settings exposes editable Terminal behavior, AI provider, App UI font, update checks, and layout reset controls; SSH and SFTP defaults are currently read-only summaries; Language (i18n) and Color Scheme remain placeholders; diagnostics, SSH config import, editable SSH/SFTP defaults, and keybinding controls are not exposed there yet.
+- Settings exposes editable Terminal behavior, AI provider, App UI font, and layout reset controls; SSH and SFTP defaults are currently read-only summaries; Language (i18n) and Color Scheme remain placeholders; update checks, diagnostics, SSH config import, editable SSH/SFTP defaults, and keybinding controls are not exposed there yet.
 - Diagnostics bundles are folders, not compressed archives.

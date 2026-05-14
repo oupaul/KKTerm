@@ -254,9 +254,9 @@ Owns structured local logs, diagnostics bundle creation, and redaction rules. No
 
 ### Updates
 
-Owns update discovery and installation for packaged desktop builds. v0.2 targets the installed Windows app only, using the Tauri updater with signed update artifacts and GitHub Releases static updater metadata for a single stable channel.
+Owns update discovery and installation for packaged desktop builds. The update mechanism is currently disabled while release signing is deferred. When restored, it should target the installed Windows app only, use signed Tauri updater artifacts and GitHub Releases static updater metadata for a single stable channel, and remain user-mediated.
 
-Update checks are enabled by default and may contact the configured GitHub Releases/update metadata endpoint. This network request is part of the updater flow and must be described clearly in Settings as distinct from telemetry. KKTerm must not add analytics or crash upload as part of update checking.
+Update checks are disabled for now. When restored, update checks may contact the configured GitHub Releases/update metadata endpoint. This network request is part of the updater flow and must be described clearly in Settings as distinct from telemetry. KKTerm must not add analytics or crash upload as part of update checking.
 
 Installation is user-mediated. Settings owns manual update checks and update preferences, while app chrome may show a lightweight update-available notification after a successful check. The first v0.2 updater supports normal forward updates only. Rollback, downgrade, preview channels, managed update servers, silent installs, and cross-platform updater support are deferred.
 

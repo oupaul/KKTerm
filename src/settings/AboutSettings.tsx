@@ -1,6 +1,5 @@
-import { ExternalLink, PackageOpen, RefreshCw } from "lucide-react";
+import { ExternalLink, PackageOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CHECK_FOR_APP_UPDATES_EVENT } from "../app/AppUpdatePrompt";
 import { ABOUT_PRODUCT } from "./aboutData";
 import { SettingsSectionHeader, SettingsSummary } from "./shared";
 
@@ -11,27 +10,15 @@ export function AboutSettings() {
     <section className="settings-card settings-section">
       <SettingsSectionHeader
         actions={
-          <>
-            <button
-              className="toolbar-button"
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent(CHECK_FOR_APP_UPDATES_EVENT))
-              }
-              type="button"
-            >
-              <RefreshCw size={15} />
-              {t("settings.checkForUpdates")}
-            </button>
-            <a
-              className="toolbar-button"
-              href={ABOUT_PRODUCT.repositoryUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <ExternalLink size={15} />
-              {t("settings.github")}
-            </a>
-          </>
+          <a
+            className="toolbar-button"
+            href={ABOUT_PRODUCT.repositoryUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <ExternalLink size={15} />
+            {t("settings.github")}
+          </a>
         }
         icon={<PackageOpen size={18} />}
         label={t("settings.sectionAbout")}

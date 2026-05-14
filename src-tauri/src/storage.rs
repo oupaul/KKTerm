@@ -3454,7 +3454,7 @@ fn required_field(field: &str, value: String) -> Result<String, String> {
 fn default_general_settings() -> GeneralSettings {
     GeneralSettings {
         auto_backup_enabled: true,
-        auto_update_checks_enabled: true,
+        auto_update_checks_enabled: false,
         show_connected_connections_in_rail: true,
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
@@ -3481,7 +3481,7 @@ fn default_show_connected_connections_in_rail() -> bool {
 }
 
 fn default_auto_update_checks_enabled() -> bool {
-    true
+    false
 }
 
 fn default_allow_clipboard_read() -> bool {
@@ -4945,6 +4945,7 @@ mod tests {
             .general_settings()
             .expect("default general settings load");
         assert!(defaults.auto_backup_enabled);
+        assert!(!defaults.auto_update_checks_enabled);
         assert!(defaults.show_connected_connections_in_rail);
         assert!(defaults.pinned_connection_ids.is_empty());
         assert!(defaults.allow_clipboard_read);

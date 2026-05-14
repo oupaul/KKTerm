@@ -14,7 +14,9 @@ $OutputName = "kkterm-$Version-$TargetTriple-setup.exe"
 $ResolvedOutputDir = Join-Path $RepoRoot $OutputDir
 $InstallerOutputPath = Join-Path $ResolvedOutputDir $OutputName
 $ChecksumPath = "$InstallerOutputPath.sha256"
-$SignaturePath = "$InstallerOutputPath.sig"
+# TODO(updates): Re-enable updater signature artifact output when the update
+# mechanism is turned back on.
+# $SignaturePath = "$InstallerOutputPath.sig"
 $BundleDir = Join-Path $RepoRoot "src-tauri\target\release\bundle\nsis"
 
 function Assert-ChildPath {
@@ -32,9 +34,11 @@ function Assert-ChildPath {
 
 Push-Location $RepoRoot
 try {
-    if (-not $env:TAURI_SIGNING_PRIVATE_KEY -and -not $env:TAURI_SIGNING_PRIVATE_KEY_PATH) {
-        throw "TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PATH is required to build updater artifacts."
-    }
+    # TODO(updates): Re-enable this signing-key requirement when Tauri updater
+    # artifacts are restored.
+    # if (-not $env:TAURI_SIGNING_PRIVATE_KEY -and -not $env:TAURI_SIGNING_PRIVATE_KEY_PATH) {
+    #     throw "TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PATH is required to build updater artifacts."
+    # }
 
     npm exec tauri -- build --bundles=nsis
 }
@@ -63,17 +67,19 @@ if (Test-Path $InstallerOutputPath) {
 if (Test-Path $ChecksumPath) {
     Remove-Item -LiteralPath $ChecksumPath -Force
 }
-if (Test-Path $SignaturePath) {
-    Remove-Item -LiteralPath $SignaturePath -Force
-}
+# TODO(updates): Restore signature cleanup when updater artifacts are restored.
+# if (Test-Path $SignaturePath) {
+#     Remove-Item -LiteralPath $SignaturePath -Force
+# }
 
 Copy-Item -LiteralPath $BuiltInstaller.FullName -Destination $InstallerOutputPath
 
-$BuiltSignature = "$($BuiltInstaller.FullName).sig"
-if (-not (Test-Path $BuiltSignature)) {
-    throw "No updater signature found for $($BuiltInstaller.FullName)."
-}
-Copy-Item -LiteralPath $BuiltSignature -Destination $SignaturePath
+# TODO(updates): Restore signature copying when updater artifacts are restored.
+# $BuiltSignature = "$($BuiltInstaller.FullName).sig"
+# if (-not (Test-Path $BuiltSignature)) {
+#     throw "No updater signature found for $($BuiltInstaller.FullName)."
+# }
+# Copy-Item -LiteralPath $BuiltSignature -Destination $SignaturePath
 
 $HashBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash(
     [System.IO.File]::ReadAllBytes($InstallerOutputPath)
@@ -85,6 +91,6 @@ $Hash = -join ($HashBytes | ForEach-Object { $_.ToString("x2") })
 [PSCustomObject]@{
     Installer = $InstallerOutputPath
     Sha256 = $ChecksumPath
-    Signature = $SignaturePath
+    Signature = $null
     SourceInstaller = $BuiltInstaller.FullName
 }
