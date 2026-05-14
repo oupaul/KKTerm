@@ -310,6 +310,46 @@ pub(crate) fn backgrounds_folder() -> Result<PathBuf, String> {
     Ok(exe_folder.join("backgrounds"))
 }
 
+/// Best-effort: delete background image files no view references anymore.
+/// Never returns an error — cleanup failures must not break view mutations.
+pub(crate) fn prune_unreferenced_backgrounds(app: &tauri::AppHandle) {
+    let storage = app.state::<storage::Storage>();
+    let referenced = storage.with_connection_infallible(|conn| {
+        dashboard_storage::referenced_background_image_files(conn)
+            .map_err(|error| format!("{error:?}"))
+    });
+    let referenced = match referenced {
+        Ok(set) => set,
+        Err(error) => {
+            eprintln!("background prune skipped: {error}");
+            return;
+        }
+    };
+    let folder = match backgrounds_folder() {
+        Ok(folder) => folder,
+        Err(error) => {
+            eprintln!("background prune skipped: {error}");
+            return;
+        }
+    };
+    let entries = match fs::read_dir(&folder) {
+        Ok(entries) => entries,
+        Err(_) => return, // folder may not exist yet — nothing to prune.
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name.to_string(),
+            None => continue,
+        };
+        if !referenced.contains(&name) {
+            if let Err(error) = fs::remove_file(&path) {
+                eprintln!("failed to prune background image {}: {error}", path.display());
+            }
+        }
+    }
+}
+
 fn custom_font_entry(path: PathBuf) -> Option<CustomFontEntry> {
     if !path.is_file() {
         return None;
