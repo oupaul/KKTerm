@@ -384,7 +384,25 @@
     "toolShellCommand": "Exécution de la commande…",
     "toolFileSearch": "Recherche de fichiers…",
     "toolFileRead": "Lecture du fichier…",
-    "toolCurrentTime": "Vérification de l'heure…"
+    "toolCurrentTime": "Vérification de l'heure…",
+    "secretCardAiProviderDescription": "Enregistrée comme clé du fournisseur d'IA pour {{provider}}.",
+    "secretCardAiProviderMessage": "{{provider}} a besoin d'une clé API avant que l'Assistant IA puisse discuter.",
+    "secretCardDefaultDescription": "Enregistré directement dans le trousseau du système d'exploitation.",
+    "secretCardHide": "Masquer le secret",
+    "secretCardInputLabel": "Secret",
+    "secretCardInvalidWidgetRequest": "La demande de secret du widget n'est pas valide.",
+    "secretCardMissingWidget": "L'instance du widget est introuvable.",
+    "secretCardPlaceholder": "Coller le secret",
+    "secretCardPrivacy": "Saisissez-le ici ; il sera enregistré localement et ne sera pas envoyé au modèle d'IA.",
+    "secretCardRuntimeRequired": "Le stockage des secrets nécessite l'environnement de bureau KKTerm.",
+    "secretCardSave": "Enregistrer dans le coffre",
+    "secretCardSaved": "Enregistré",
+    "secretCardShow": "Afficher le secret",
+    "secretCardStoredInline": "Stocké dans le trousseau du système d'exploitation",
+    "secretCardStoredMessage": "{{label}} est enregistré. Vous pouvez continuer.",
+    "secretCardStoredStatus": "{{label}} enregistré dans le trousseau du système d'exploitation.",
+    "toolSecretRequest": "Demande d’entrée secrète…",
+    "toolSecretRequestDone": "Entrée secrète demandée"
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "Redimensionner le panneau Assistant IA",
     "resizeConnections": "Redimensionner la colonne Connexions",
     "settings": "Paramètres",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "Ne pas mettre en veille",
+    "trayExit": "Quitter"
   },
   "appLauncher": {
     "addApp": "Ajouter une application",
@@ -713,7 +733,12 @@
     "selectPredefinedIcon": "Utiliser l'icône {{icon}}",
     "selectSavedIcon": "Utiliser l'image enregistrée {{index}}",
     "useDefaultIcon": "Utiliser l’icône par défaut",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "Chemin de démarrage",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "Choisir le chemin de démarrage",
+    "localStartupScript": "Script de démarrage",
+    "localStartupScriptPlaceholder": "Commandes optionnelles à exécuter après le lancement"
   },
   "dashboard": {
     "accent": "Accent",
@@ -1340,7 +1365,10 @@
     "updateLater": "Plus tard",
     "updateNoUpdates": "KKTerm est à jour.",
     "updateNotes": "Notes de version",
-    "updatePromptLabel": "Invite de mise à jour KKTerm"
+    "updatePromptLabel": "Invite de mise à jour KKTerm",
+    "widgetCredentialsEmpty": "Aucune information d'identification de widget trouvée.",
+    "widgetCredentialsHint": "Informations d'identification enregistrées pour les paramètres des widgets du Dashboard. Les valeurs restent dans le trousseau du système d'exploitation ; les widgets ne conservent que des références.",
+    "widgetCredentialsStored": "Identifiants des widgets"
   },
   "sftp": {
     "accessed": "Accédé",

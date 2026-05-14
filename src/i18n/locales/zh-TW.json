@@ -384,7 +384,25 @@
     "toolShellCommand": "正在執行指令…",
     "toolFileSearch": "正在搜尋檔案…",
     "toolFileRead": "正在讀取檔案…",
-    "toolCurrentTime": "正在檢查目前時間…"
+    "toolCurrentTime": "正在檢查目前時間…",
+    "secretCardAiProviderDescription": "已儲存為 {{provider}} 的 AI 提供者金鑰。",
+    "secretCardAiProviderMessage": "{{provider}} 需要 API 金鑰，AI 助理才能開始聊天。",
+    "secretCardDefaultDescription": "已直接儲存至作業系統鑰匙圈。",
+    "secretCardHide": "隱藏金鑰",
+    "secretCardInputLabel": "金鑰",
+    "secretCardInvalidWidgetRequest": "小工具金鑰請求無效。",
+    "secretCardMissingWidget": "找不到小工具實例。",
+    "secretCardPlaceholder": "貼上金鑰",
+    "secretCardPrivacy": "在此輸入；金鑰將保存在本地，不會傳送給 AI 模型。",
+    "secretCardRuntimeRequired": "金鑰儲存需要 KKTerm 桌面執行環境。",
+    "secretCardSave": "儲存到保險庫",
+    "secretCardSaved": "已儲存",
+    "secretCardShow": "顯示金鑰",
+    "secretCardStoredInline": "已儲存在作業系統鑰匙圈中",
+    "secretCardStoredMessage": "{{label}} 已儲存。您可以繼續。",
+    "secretCardStoredStatus": "{{label}} 已儲存在作業系統鑰匙圈中。",
+    "toolSecretRequest": "正在請求金鑰項目…",
+    "toolSecretRequestDone": "已請求金鑰項目"
   },
   "app": {
     "aiAssistant": "AI 助理",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "調整 AI 助理面板",
     "resizeConnections": "調整連線欄寬度",
     "settings": "設定",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "禁止休眠",
+    "trayExit": "結束"
   },
   "appLauncher": {
     "addApp": "新增應用程式",
@@ -713,7 +733,12 @@
     "selectPredefinedIcon": "使用 {{icon}} 圖示",
     "selectSavedIcon": "使用已儲存圖片 {{index}}",
     "useDefaultIcon": "使用預設圖示",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "啟動路徑",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "選擇啟動路徑",
+    "localStartupScript": "啟動指令碼",
+    "localStartupScriptPlaceholder": "啟動後執行的可選命令"
   },
   "dashboard": {
     "accent": "強調色",
@@ -1340,7 +1365,10 @@
     "updateLater": "以後再說",
     "updateNoUpdates": "KKTerm 已是最新版本。",
     "updateNotes": "發行說明",
-    "updatePromptLabel": "KKTerm 更新提示"
+    "updatePromptLabel": "KKTerm 更新提示",
+    "widgetCredentialsEmpty": "找不到小工具憑據。",
+    "widgetCredentialsHint": "為儀表板小工具設定儲存的憑據。憑據值保存在作業系統鑰匙圈中；小工具僅保留參照。",
+    "widgetCredentialsStored": "小工具憑據"
   },
   "sftp": {
     "accessed": "存取日期",

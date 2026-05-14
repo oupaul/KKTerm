@@ -384,7 +384,25 @@
     "toolShellCommand": "コマンドを実行中…",
     "toolFileSearch": "ファイルを検索中…",
     "toolFileRead": "ファイルを読み取り中…",
-    "toolCurrentTime": "現在時刻を確認中…"
+    "toolCurrentTime": "現在時刻を確認中…",
+    "secretCardAiProviderDescription": "{{provider}}のAIプロバイダーキーとして保存されました。",
+    "secretCardAiProviderMessage": "{{provider}}がチャットを開始するにはAPIキーが必要です。",
+    "secretCardDefaultDescription": "OSキーチェーンに直接保存されました。",
+    "secretCardHide": "シークレットを隠す",
+    "secretCardInputLabel": "シークレット",
+    "secretCardInvalidWidgetRequest": "ウィジェットシークレットリクエストが無効です。",
+    "secretCardMissingWidget": "ウィジェットインスタンスが見つかりませんでした。",
+    "secretCardPlaceholder": "シークレットを貼り付け",
+    "secretCardPrivacy": "ここに入力してください。ローカルに保存され、AIモデルには送信されません。",
+    "secretCardRuntimeRequired": "シークレットストレージにはKKTermデスクトップランタイムが必要です。",
+    "secretCardSave": "保管庫に保存",
+    "secretCardSaved": "保存済み",
+    "secretCardShow": "シークレットを表示",
+    "secretCardStoredInline": "OSキーチェーンに保存済み",
+    "secretCardStoredMessage": "{{label}}は保存されました。続行できます。",
+    "secretCardStoredStatus": "{{label}}はOSキーチェーンに保存されました。",
+    "toolSecretRequest": "シークレットエントリをリクエスト中…",
+    "toolSecretRequestDone": "シークレットエントリをリクエストしました"
   },
   "app": {
     "aiAssistant": "AIアシスタント",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "AIアシスタントパネルのサイズを変更",
     "resizeConnections": "接続列のサイズを変更",
     "settings": "設定",
-    "wiki": "ウィキ"
+    "wiki": "ウィキ",
+    "trayDontSleep": "スリープしない",
+    "trayExit": "終了"
   },
   "appLauncher": {
     "addApp": "アプリを追加",
@@ -713,7 +733,12 @@
     "selectPredefinedIcon": "{{icon}}アイコンを使用",
     "selectSavedIcon": "保存済み画像 {{index}} を使用",
     "useDefaultIcon": "デフォルトアイコンを使用",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "起動パス",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "起動パスを選択",
+    "localStartupScript": "起動スクリプト",
+    "localStartupScriptPlaceholder": "起動後に実行するオプションコマンド"
   },
   "dashboard": {
     "accent": "アクセント",
@@ -1340,7 +1365,10 @@
     "updateLater": "後で",
     "updateNoUpdates": "KKTermは最新です。",
     "updateNotes": "リリースノート",
-    "updatePromptLabel": "KKTermアップデートプロンプト"
+    "updatePromptLabel": "KKTermアップデートプロンプト",
+    "widgetCredentialsEmpty": "ウィジェット認証情報が見つかりません。",
+    "widgetCredentialsHint": "ダッシュボードウィジェット設定用に保存された認証情報。値はOSキーチェーンに保存され、ウィジェットは参照のみ保持します。",
+    "widgetCredentialsStored": "ウィジェット認証情報"
   },
   "sftp": {
     "accessed": "アクセス日時",

@@ -384,7 +384,25 @@
     "toolShellCommand": "กำลังรันคำสั่ง…",
     "toolFileSearch": "กำลังค้นหาไฟล์…",
     "toolFileRead": "กำลังอ่านไฟล์…",
-    "toolCurrentTime": "กำลังตรวจสอบเวลาปัจจุบัน…"
+    "toolCurrentTime": "กำลังตรวจสอบเวลาปัจจุบัน…",
+    "secretCardAiProviderDescription": "บันทึกเป็นคีย์ผู้ให้บริการ AI สำหรับ {{provider}} แล้ว",
+    "secretCardAiProviderMessage": "{{provider}} ต้องการคีย์ API ก่อนที่ผู้ช่วย AI จะสามารถแชทได้",
+    "secretCardDefaultDescription": "บันทึกลงในพวงกุญแจของระบบปฏิบัติการโดยตรง",
+    "secretCardHide": "ซ่อนความลับ",
+    "secretCardInputLabel": "ความลับ",
+    "secretCardInvalidWidgetRequest": "คำขอความลับของวิดเจ็ตไม่ถูกต้อง",
+    "secretCardMissingWidget": "ไม่พบอินสแตนซ์ของวิดเจ็ต",
+    "secretCardPlaceholder": "วางความลับ",
+    "secretCardPrivacy": "ป้อนที่นี่ จะถูกบันทึกในเครื่องและจะไม่ถูกส่งไปยังโมเดล AI",
+    "secretCardRuntimeRequired": "การจัดเก็บความลับต้องใช้รันไทม์เดสก์ท็อปของ KKTerm",
+    "secretCardSave": "บันทึกลงตู้นิรภัย",
+    "secretCardSaved": "บันทึกแล้ว",
+    "secretCardShow": "แสดงความลับ",
+    "secretCardStoredInline": "เก็บไว้ในพวงกุญแจของระบบปฏิบัติการ",
+    "secretCardStoredMessage": "{{label}} ถูกจัดเก็บแล้ว คุณสามารถดำเนินการต่อได้",
+    "secretCardStoredStatus": "{{label}} ถูกจัดเก็บในพวงกุญแจของระบบปฏิบัติการแล้ว",
+    "toolSecretRequest": "กำลังขอรายการลับ…",
+    "toolSecretRequestDone": "ขอรายการลับแล้ว"
   },
   "app": {
     "aiAssistant": "ผู้ช่วย AI",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "ปรับขนาดแผงผู้ช่วย AI",
     "resizeConnections": "ปรับขนาดคอลัมน์การเชื่อมต่อ",
     "settings": "การตั้งค่า",
-    "wiki": "วิกิ"
+    "wiki": "วิกิ",
+    "trayDontSleep": "ไม่พักเครื่อง",
+    "trayExit": "ออก"
   },
   "appLauncher": {
     "addApp": "เพิ่มแอป",
@@ -712,7 +732,12 @@
     "selectPredefinedIcon": "ใช้ไอคอน {{icon}}",
     "selectSavedIcon": "ใช้รูปภาพที่บันทึกไว้ {{index}}",
     "useDefaultIcon": "ใช้ไอคอนเริ่มต้น",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "เส้นทางเริ่มต้น",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "เลือกเส้นทางเริ่มต้น",
+    "localStartupScript": "สคริปต์เริ่มต้น",
+    "localStartupScriptPlaceholder": "คำสั่งเสริมที่จะรันหลังจากเริ่มต้น"
   },
   "dashboard": {
     "accent": "สีเน้น",
@@ -1339,7 +1364,10 @@
     "updateLater": "ทีหลัง",
     "updateNoUpdates": "KKTerm เป็นเวอร์ชันล่าสุดแล้ว",
     "updateNotes": "บันทึกรุ่น",
-    "updatePromptLabel": "พร้อมท์การอัปเดต KKTerm"
+    "updatePromptLabel": "พร้อมท์การอัปเดต KKTerm",
+    "widgetCredentialsEmpty": "ไม่พบข้อมูลรับรองของวิดเจ็ต",
+    "widgetCredentialsHint": "ข้อมูลรับรองที่บันทึกไว้สำหรับการตั้งค่าวิดเจ็ตแดชบอร์ด ค่าจะเก็บอยู่ในพวงกุญแจของระบบปฏิบัติการ วิดเจ็ตเก็บเฉพาะข้อมูลอ้างอิง",
+    "widgetCredentialsStored": "ข้อมูลรับรองวิดเจ็ต"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",

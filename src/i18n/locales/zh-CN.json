@@ -384,7 +384,25 @@
     "toolShellCommand": "正在执行命令…",
     "toolFileSearch": "正在搜索文件…",
     "toolFileRead": "正在读取文件…",
-    "toolCurrentTime": "正在检查当前时间…"
+    "toolCurrentTime": "正在检查当前时间…",
+    "secretCardAiProviderDescription": "已保存为 {{provider}} 的 AI 提供商密钥。",
+    "secretCardAiProviderMessage": "{{provider}} 需要 API 密钥，AI 助手才能开始聊天。",
+    "secretCardDefaultDescription": "已直接保存至操作系统密钥链。",
+    "secretCardHide": "隐藏密钥",
+    "secretCardInputLabel": "密钥",
+    "secretCardInvalidWidgetRequest": "小组件密钥请求无效。",
+    "secretCardMissingWidget": "未找到小组件实例。",
+    "secretCardPlaceholder": "粘贴密钥",
+    "secretCardPrivacy": "在此输入；密钥将保存在本地，不会发送给 AI 模型。",
+    "secretCardRuntimeRequired": "密钥存储需要 KKTerm 桌面运行时。",
+    "secretCardSave": "保存到保险库",
+    "secretCardSaved": "已保存",
+    "secretCardShow": "显示密钥",
+    "secretCardStoredInline": "已存储在操作系统密钥链中",
+    "secretCardStoredMessage": "{{label}} 已存储。您可以继续。",
+    "secretCardStoredStatus": "{{label}} 已存储在操作系统密钥链中。",
+    "toolSecretRequest": "正在请求密钥条目…",
+    "toolSecretRequestDone": "已请求密钥条目"
   },
   "app": {
     "aiAssistant": "AI 助手",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "调整 AI 助手面板",
     "resizeConnections": "调整连接列宽度",
     "settings": "设置",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "禁止休眠",
+    "trayExit": "退出"
   },
   "appLauncher": {
     "addApp": "添加应用",
@@ -713,7 +733,12 @@
     "selectPredefinedIcon": "使用 {{icon}} 图标",
     "selectSavedIcon": "使用已保存图片 {{index}}",
     "useDefaultIcon": "使用默认图标",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "启动路径",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "选择启动路径",
+    "localStartupScript": "启动脚本",
+    "localStartupScriptPlaceholder": "启动后执行的可选命令"
   },
   "dashboard": {
     "accent": "强调色",
@@ -1340,7 +1365,10 @@
     "updateLater": "以后再说",
     "updateNoUpdates": "KKTerm 已是最新版本。",
     "updateNotes": "发行说明",
-    "updatePromptLabel": "KKTerm 更新提示"
+    "updatePromptLabel": "KKTerm 更新提示",
+    "widgetCredentialsEmpty": "未找到小组件凭据。",
+    "widgetCredentialsHint": "为仪表板小组件设置保存的凭据。凭据值保存在操作系统密钥链中；小组件仅保留引用。",
+    "widgetCredentialsStored": "小组件凭据"
   },
   "sftp": {
     "accessed": "访问日期",

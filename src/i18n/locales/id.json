@@ -384,7 +384,25 @@
     "toolShellCommand": "Menjalankan perintah…",
     "toolFileSearch": "Mencari file…",
     "toolFileRead": "Membaca file…",
-    "toolCurrentTime": "Memeriksa waktu saat ini…"
+    "toolCurrentTime": "Memeriksa waktu saat ini…",
+    "secretCardAiProviderDescription": "Disimpan sebagai kunci penyedia AI untuk {{provider}}.",
+    "secretCardAiProviderMessage": "{{provider}} memerlukan kunci API sebelum Asisten AI dapat mengobrol.",
+    "secretCardDefaultDescription": "Disimpan langsung ke rantai kunci OS.",
+    "secretCardHide": "Sembunyikan rahasia",
+    "secretCardInputLabel": "Rahasia",
+    "secretCardInvalidWidgetRequest": "Permintaan rahasia widget tidak valid.",
+    "secretCardMissingWidget": "Instansi widget tidak dapat ditemukan.",
+    "secretCardPlaceholder": "Tempel rahasia",
+    "secretCardPrivacy": "Masukkan di sini; akan disimpan secara lokal dan tidak akan dikirim ke model AI.",
+    "secretCardRuntimeRequired": "Penyimpanan rahasia memerlukan runtime desktop KKTerm.",
+    "secretCardSave": "Simpan ke brankas",
+    "secretCardSaved": "Tersimpan",
+    "secretCardShow": "Tampilkan rahasia",
+    "secretCardStoredInline": "Tersimpan di rantai kunci OS",
+    "secretCardStoredMessage": "{{label}} telah tersimpan. Anda dapat melanjutkan.",
+    "secretCardStoredStatus": "{{label}} tersimpan di rantai kunci OS.",
+    "toolSecretRequest": "Meminta entri rahasia…",
+    "toolSecretRequestDone": "Entri rahasia diminta"
   },
   "app": {
     "aiAssistant": "AI Assistant",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "Ubah ukuran panel AI Assistant",
     "resizeConnections": "Ubah ukuran kolom Koneksi",
     "settings": "Pengaturan",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "Jangan Tidur",
+    "trayExit": "Keluar"
   },
   "appLauncher": {
     "addApp": "Tambah Aplikasi",
@@ -712,7 +732,12 @@
     "selectPredefinedIcon": "Gunakan ikon {{icon}}",
     "selectSavedIcon": "Gunakan gambar tersimpan {{index}}",
     "useDefaultIcon": "Gunakan ikon default",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "Jalur mulai",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "Pilih jalur mulai",
+    "localStartupScript": "Skrip mulai",
+    "localStartupScriptPlaceholder": "Perintah opsional untuk dijalankan setelah peluncuran"
   },
   "dashboard": {
     "accent": "Aksen",
@@ -1339,7 +1364,10 @@
     "updateLater": "Nanti",
     "updateNoUpdates": "KKTerm sudah yang terbaru.",
     "updateNotes": "Catatan rilis",
-    "updatePromptLabel": "Prompt pembaruan KKTerm"
+    "updatePromptLabel": "Prompt pembaruan KKTerm",
+    "widgetCredentialsEmpty": "Tidak ada kredensial widget ditemukan.",
+    "widgetCredentialsHint": "Kredensial yang disimpan untuk pengaturan widget Dashboard. Nilai tetap di rantai kunci OS; widget hanya menyimpan referensi.",
+    "widgetCredentialsStored": "Kredensial widget"
   },
   "sftp": {
     "accessed": "Diakses",

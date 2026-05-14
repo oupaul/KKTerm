@@ -384,7 +384,25 @@
     "toolShellCommand": "Executando comando…",
     "toolFileSearch": "Pesquisando arquivos…",
     "toolFileRead": "Lendo arquivo…",
-    "toolCurrentTime": "Verificando hora atual…"
+    "toolCurrentTime": "Verificando hora atual…",
+    "secretCardAiProviderDescription": "Salva como chave do provedor de IA para {{provider}}.",
+    "secretCardAiProviderMessage": "{{provider}} precisa de uma chave de API antes que o Assistente de IA possa conversar.",
+    "secretCardDefaultDescription": "Salvo diretamente no chaveiro do SO.",
+    "secretCardHide": "Ocultar segredo",
+    "secretCardInputLabel": "Segredo",
+    "secretCardInvalidWidgetRequest": "A solicitação de segredo do widget é inválida.",
+    "secretCardMissingWidget": "A instância do widget não pôde ser encontrada.",
+    "secretCardPlaceholder": "Colar segredo",
+    "secretCardPrivacy": "Digite aqui; será salvo localmente e não será enviado ao modelo de IA.",
+    "secretCardRuntimeRequired": "O armazenamento de segredos requer o ambiente de desktop KKTerm.",
+    "secretCardSave": "Salvar no cofre",
+    "secretCardSaved": "Salvo",
+    "secretCardShow": "Mostrar segredo",
+    "secretCardStoredInline": "Armazenado no chaveiro do SO",
+    "secretCardStoredMessage": "{{label}} está armazenado. Você pode continuar.",
+    "secretCardStoredStatus": "{{label}} armazenado no chaveiro do SO.",
+    "toolSecretRequest": "Solicitando entrada secreta…",
+    "toolSecretRequestDone": "Entrada secreta solicitada"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "Redimensionar painel do Assistente IA",
     "resizeConnections": "Redimensionar coluna de Conexões",
     "settings": "Configurações",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "Não suspender",
+    "trayExit": "Sair"
   },
   "appLauncher": {
     "addApp": "Adicionar app",
@@ -712,7 +732,12 @@
     "selectPredefinedIcon": "Usar ícone {{icon}}",
     "selectSavedIcon": "Usar imagem salva {{index}}",
     "useDefaultIcon": "Usar ícone padrão",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "Caminho de inicialização",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "Escolher caminho de inicialização",
+    "localStartupScript": "Script de inicialização",
+    "localStartupScriptPlaceholder": "Comandos opcionais para executar após a inicialização"
   },
   "dashboard": {
     "accent": "Destaque",
@@ -1339,7 +1364,10 @@
     "updateLater": "Depois",
     "updateNoUpdates": "KKTerm está atualizado.",
     "updateNotes": "Notas de versão",
-    "updatePromptLabel": "Aviso de atualização do KKTerm"
+    "updatePromptLabel": "Aviso de atualização do KKTerm",
+    "widgetCredentialsEmpty": "Nenhuma credencial de widget encontrada.",
+    "widgetCredentialsHint": "Credenciais salvas para configurações de widgets do Dashboard. Os valores permanecem no chaveiro do SO; os widgets mantêm apenas referências.",
+    "widgetCredentialsStored": "Credenciais de widgets"
   },
   "sftp": {
     "accessed": "Acessado",

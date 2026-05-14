@@ -384,7 +384,25 @@
     "toolShellCommand": "Đang chạy lệnh…",
     "toolFileSearch": "Đang tìm kiếm tệp…",
     "toolFileRead": "Đang đọc tệp…",
-    "toolCurrentTime": "Đang kiểm tra thời gian hiện tại…"
+    "toolCurrentTime": "Đang kiểm tra thời gian hiện tại…",
+    "secretCardAiProviderDescription": "Đã lưu làm khóa nhà cung cấp AI cho {{provider}}.",
+    "secretCardAiProviderMessage": "{{provider}} cần khóa API trước khi Trợ lý AI có thể trò chuyện.",
+    "secretCardDefaultDescription": "Đã lưu trực tiếp vào chuỗi khóa của hệ điều hành.",
+    "secretCardHide": "Ẩn bí mật",
+    "secretCardInputLabel": "Bí mật",
+    "secretCardInvalidWidgetRequest": "Yêu cầu bí mật widget không hợp lệ.",
+    "secretCardMissingWidget": "Không thể tìm thấy phiên bản widget.",
+    "secretCardPlaceholder": "Dán bí mật",
+    "secretCardPrivacy": "Nhập vào đây; nó sẽ được lưu cục bộ và sẽ không được gửi đến mô hình AI.",
+    "secretCardRuntimeRequired": "Lưu trữ bí mật yêu cầu môi trường máy tính để bàn KKTerm.",
+    "secretCardSave": "Lưu vào kho",
+    "secretCardSaved": "Đã lưu",
+    "secretCardShow": "Hiển thị bí mật",
+    "secretCardStoredInline": "Đã lưu trong chuỗi khóa hệ điều hành",
+    "secretCardStoredMessage": "{{label}} đã được lưu. Bạn có thể tiếp tục.",
+    "secretCardStoredStatus": "{{label}} đã được lưu trong chuỗi khóa hệ điều hành.",
+    "toolSecretRequest": "Đang yêu cầu mục bí mật…",
+    "toolSecretRequestDone": "Đã yêu cầu mục bí mật"
   },
   "app": {
     "aiAssistant": "Trợ lý AI",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "Đổi kích thước bảng Trợ lý AI",
     "resizeConnections": "Đổi kích thước cột Kết nối",
     "settings": "Settings",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "Không ngủ",
+    "trayExit": "Thoát"
   },
   "appLauncher": {
     "addApp": "Thêm Ứng dụng",
@@ -712,7 +732,12 @@
     "selectPredefinedIcon": "Sử dụng biểu tượng {{icon}}",
     "selectSavedIcon": "Sử dụng ảnh đã lưu {{index}}",
     "useDefaultIcon": "Sử dụng biểu tượng mặc định",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "Đường dẫn khởi động",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "Chọn đường dẫn khởi động",
+    "localStartupScript": "Tập lệnh khởi động",
+    "localStartupScriptPlaceholder": "Lệnh tùy chọn để chạy sau khi khởi động"
   },
   "dashboard": {
     "accent": "Nhấn",
@@ -1339,7 +1364,10 @@
     "updateLater": "Để sau",
     "updateNoUpdates": "KKTerm đã là phiên bản mới nhất.",
     "updateNotes": "Ghi chú phát hành",
-    "updatePromptLabel": "Lời nhắc cập nhật KKTerm"
+    "updatePromptLabel": "Lời nhắc cập nhật KKTerm",
+    "widgetCredentialsEmpty": "Không tìm thấy thông tin xác thực widget.",
+    "widgetCredentialsHint": "Thông tin xác thực được lưu cho cài đặt widget Dashboard. Giá trị nằm trong chuỗi khóa của hệ điều hành; widget chỉ giữ tham chiếu.",
+    "widgetCredentialsStored": "Thông tin xác thực widget"
   },
   "sftp": {
     "accessed": "Accessed",

@@ -384,7 +384,25 @@
     "toolShellCommand": "Führt Befehl aus…",
     "toolFileSearch": "Durchsucht Dateien…",
     "toolFileRead": "Liest Datei…",
-    "toolCurrentTime": "Prüft aktuelle Uhrzeit…"
+    "toolCurrentTime": "Prüft aktuelle Uhrzeit…",
+    "secretCardAiProviderDescription": "Als KI-Provider-Schlüssel für {{provider}} gespeichert.",
+    "secretCardAiProviderMessage": "{{provider}} benötigt einen API-Schlüssel, bevor der KI-Assistent chatten kann.",
+    "secretCardDefaultDescription": "Direkt im OS-Schlüsselbund gespeichert.",
+    "secretCardHide": "Geheimnis verbergen",
+    "secretCardInputLabel": "Geheimnis",
+    "secretCardInvalidWidgetRequest": "Die Widget-Geheimnis-Anfrage ist ungültig.",
+    "secretCardMissingWidget": "Die Widget-Instanz konnte nicht gefunden werden.",
+    "secretCardPlaceholder": "Geheimnis einfügen",
+    "secretCardPrivacy": "Hier eingeben; es wird lokal gespeichert und nicht an das KI-Modell gesendet.",
+    "secretCardRuntimeRequired": "Die Geheimnis-Speicherung erfordert die KKTerm-Desktop-Laufzeitumgebung.",
+    "secretCardSave": "In Tresor speichern",
+    "secretCardSaved": "Gespeichert",
+    "secretCardShow": "Geheimnis anzeigen",
+    "secretCardStoredInline": "Im OS-Schlüsselbund gespeichert",
+    "secretCardStoredMessage": "{{label}} ist gespeichert. Sie können fortfahren.",
+    "secretCardStoredStatus": "{{label}} im OS-Schlüsselbund gespeichert.",
+    "toolSecretRequest": "Fordere geheimen Eintrag an…",
+    "toolSecretRequestDone": "Geheimen Eintrag angefordert"
   },
   "app": {
     "aiAssistant": "KI-Assistent",
@@ -403,7 +421,9 @@
     "resizeAiAssistant": "KI-Assistent-Panel skalieren",
     "resizeConnections": "Verbindungen-Spalte skalieren",
     "settings": "Einstellungen",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "trayDontSleep": "Nicht schlafen",
+    "trayExit": "Beenden"
   },
   "appLauncher": {
     "addApp": "App hinzufügen",
@@ -713,7 +733,12 @@
     "selectPredefinedIcon": "{{icon}}-Symbol verwenden",
     "selectSavedIcon": "Gespeichertes Bild {{index}} verwenden",
     "useDefaultIcon": "Standardsymbol verwenden",
-    "wsl": "WSL"
+    "wsl": "WSL",
+    "localStartupDirectory": "Startpfad",
+    "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
+    "localStartupDirectoryPickerTitle": "Startpfad auswählen",
+    "localStartupScript": "Startskript",
+    "localStartupScriptPlaceholder": "Optionale Befehle für die Ausführung nach dem Start"
   },
   "dashboard": {
     "accent": "Akzent",
@@ -1340,7 +1365,10 @@
     "updateLater": "Später",
     "updateNoUpdates": "KKTerm ist auf dem neuesten Stand.",
     "updateNotes": "Versionshinweise",
-    "updatePromptLabel": "KKTerm Update-Aufforderung"
+    "updatePromptLabel": "KKTerm Update-Aufforderung",
+    "widgetCredentialsEmpty": "Keine Widget-Anmeldedaten gefunden.",
+    "widgetCredentialsHint": "Für Dashboard-Widget-Einstellungen gespeicherte Anmeldedaten. Werte verbleiben im OS-Schlüsselbund; Widgets behalten nur Referenzen.",
+    "widgetCredentialsStored": "Widget-Anmeldedaten"
   },
   "sftp": {
     "accessed": "Zugegriffen",
