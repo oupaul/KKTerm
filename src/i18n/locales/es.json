@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "Trabajó durante {{duration}}",
-    "workspace": "Espacio de trabajo"
+    "workspace": "Espacio de trabajo",
+    "thinking": "Pensando…",
+    "thoughtFor": "Pensó durante",
+    "toolWebSearch": "Buscando en la web…",
+    "toolWebFetch": "Obteniendo página web…",
+    "toolShellCommand": "Ejecutando comando…",
+    "toolFileSearch": "Buscando archivos…",
+    "toolFileRead": "Leyendo archivo…",
+    "toolCurrentTime": "Verificando hora actual…"
   },
   "app": {
     "aiAssistant": "Asistente IA",
@@ -440,7 +448,12 @@
     "summaryLabel": "Resumen del lanzador",
     "title": "Lanzador de aplicaciones",
     "workingDirectory": "Directorio de trabajo",
-    "workingDirectoryPlaceholder": "Ruta de carpeta opcional"
+    "workingDirectoryPlaceholder": "Ruta de carpeta opcional",
+    "addMenuApp": "Aplicación",
+    "addMenuFile": "Documento",
+    "addMenuFolder": "Carpeta",
+    "selectAppTitle": "Añadir una app o script",
+    "selectFolderTitle": "Añadir una carpeta"
   },
   "common": {
     "about": "Acerca de",
@@ -865,7 +878,10 @@
     "widgetSettings": "Ajustes del widget",
     "widgetSettingsEmpty": "Sin ajustes personalizados para este widget.",
     "widgetSettingsInvalid": "El esquema de ajustes del widget no es válido.",
-    "wildcardMask": "Máscara comodín"
+    "wildcardMask": "Máscara comodín",
+    "deleteCustomWidgetTitle": "Eliminar widget personalizado",
+    "deleteCustomWidgetBody": "Esto elimina \"{{name}}\" y todas sus instancias de cada vista del Panel. Esto no se puede deshacer.",
+    "deleteCustomWidgetConfirm": "Eliminar widget"
   },
   "languages": {
     "de": "Deutsch",
@@ -1435,7 +1451,7 @@
     "noResults": "Sin resultados",
     "noSaveDialog": "No hay diálogo de guardado disponible en este entorno",
     "noTmuxSessions": "Sin sesiones tmux.",
-    "open": "abrir",
+    "open": "Activo",
     "openAbove": "Abrir arriba",
     "openBelow": "Abrir abajo",
     "openInPane": "Abrir en panel",

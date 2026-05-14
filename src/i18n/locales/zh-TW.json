@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "耗時 {{duration}}",
-    "workspace": "工作區"
+    "workspace": "工作區",
+    "thinking": "思考中…",
+    "thoughtFor": "思考用時",
+    "toolWebSearch": "正在搜尋網頁…",
+    "toolWebFetch": "正在取得網頁…",
+    "toolShellCommand": "正在執行指令…",
+    "toolFileSearch": "正在搜尋檔案…",
+    "toolFileRead": "正在讀取檔案…",
+    "toolCurrentTime": "正在檢查目前時間…"
   },
   "app": {
     "aiAssistant": "AI 助理",
@@ -871,7 +879,10 @@
     "widgetSettings": "小工具設定",
     "widgetSettingsEmpty": "此小工具沒有自訂設定。",
     "widgetSettingsInvalid": "小工具設定架構無效。",
-    "wildcardMask": "萬用遮罩"
+    "wildcardMask": "萬用遮罩",
+    "deleteCustomWidgetTitle": "刪除自訂小工具",
+    "deleteCustomWidgetBody": "這將從每個儀表板視圖中刪除「{{name}}」及其所有執行個體。此操作無法復原。",
+    "deleteCustomWidgetConfirm": "刪除小工具"
   },
   "languages": {
     "de": "Deutsch",
@@ -1441,7 +1452,7 @@
     "noResults": "無結果",
     "noSaveDialog": "此執行環境中無可用儲存對話框",
     "noTmuxSessions": "無 tmux 工作階段。",
-    "open": "開啟",
+    "open": "已啟用",
     "openAbove": "在上方開啟",
     "openBelow": "在下方開啟",
     "openInPane": "在窗格中開啟",

@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "Đã làm việc trong {{duration}}",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "thinking": "Đang suy nghĩ…",
+    "thoughtFor": "Đã suy nghĩ trong",
+    "toolWebSearch": "Đang tìm kiếm trên web…",
+    "toolWebFetch": "Đang tải trang web…",
+    "toolShellCommand": "Đang chạy lệnh…",
+    "toolFileSearch": "Đang tìm kiếm tệp…",
+    "toolFileRead": "Đang đọc tệp…",
+    "toolCurrentTime": "Đang kiểm tra thời gian hiện tại…"
   },
   "app": {
     "aiAssistant": "Trợ lý AI",
@@ -440,7 +448,12 @@
     "summaryLabel": "Tóm tắt Trình Khởi chạy Ứng dụng",
     "title": "Trình Khởi chạy Ứng dụng",
     "workingDirectory": "Thư mục làm việc",
-    "workingDirectoryPlaceholder": "Đường dẫn thư mục tùy chọn"
+    "workingDirectoryPlaceholder": "Đường dẫn thư mục tùy chọn",
+    "addMenuApp": "Ứng dụng",
+    "addMenuFile": "Tài liệu",
+    "addMenuFolder": "Thư mục",
+    "selectAppTitle": "Thêm ứng dụng hoặc tập lệnh",
+    "selectFolderTitle": "Thêm thư mục"
   },
   "common": {
     "about": "About",
@@ -865,7 +878,10 @@
     "widgetSettings": "Cài đặt widget",
     "widgetSettingsEmpty": "Không có cài đặt tùy chỉnh cho widget này.",
     "widgetSettingsInvalid": "Lược đồ cài đặt widget không hợp lệ.",
-    "wildcardMask": "Mặt nạ ký tự đại diện"
+    "wildcardMask": "Mặt nạ ký tự đại diện",
+    "deleteCustomWidgetTitle": "Xóa tiện ích tùy chỉnh",
+    "deleteCustomWidgetBody": "Thao tác này xóa \"{{name}}\" và tất cả phiên bản của nó khỏi mọi chế độ xem Bảng điều khiển. Không thể hoàn tác.",
+    "deleteCustomWidgetConfirm": "Xóa tiện ích"
   },
   "languages": {
     "de": "Deutsch",
@@ -1435,7 +1451,7 @@
     "noResults": "No results",
     "noSaveDialog": "No save dialog is available in this runtime",
     "noTmuxSessions": "No tmux sessions.",
-    "open": "open",
+    "open": "Đang hoạt động",
     "openAbove": "Open above",
     "openBelow": "Open below",
     "openInPane": "Open in pane",

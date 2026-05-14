@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "A travaillé pendant {{duration}}",
-    "workspace": "Espace de travail"
+    "workspace": "Espace de travail",
+    "thinking": "Réflexion…",
+    "thoughtFor": "A réfléchi pendant",
+    "toolWebSearch": "Recherche sur le web…",
+    "toolWebFetch": "Récupération de la page web…",
+    "toolShellCommand": "Exécution de la commande…",
+    "toolFileSearch": "Recherche de fichiers…",
+    "toolFileRead": "Lecture du fichier…",
+    "toolCurrentTime": "Vérification de l'heure…"
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -442,7 +450,11 @@
     "summaryLabel": "Résumé du lanceur d'applications",
     "title": "Lanceur d'applications",
     "workingDirectory": "Répertoire de travail",
-    "workingDirectoryPlaceholder": "Chemin de dossier facultatif"
+    "workingDirectoryPlaceholder": "Chemin de dossier facultatif",
+    "addMenuApp": "Application",
+    "addMenuFile": "Document",
+    "addMenuFolder": "Dossier",
+    "selectAppTitle": "Ajouter une app ou un script"
   },
   "common": {
     "about": "À propos",
@@ -867,7 +879,10 @@
     "widgetSettings": "Paramètres du widget",
     "widgetSettingsEmpty": "Aucun paramètre personnalisé pour ce widget.",
     "widgetSettingsInvalid": "Le schéma de paramètres du widget n'est pas valide.",
-    "wildcardMask": "Masque générique"
+    "wildcardMask": "Masque générique",
+    "deleteCustomWidgetTitle": "Supprimer le widget personnalisé",
+    "deleteCustomWidgetBody": "Cela supprime « {{name}} » et toutes ses instances de chaque vue du tableau de bord. Cette action est irréversible.",
+    "deleteCustomWidgetConfirm": "Supprimer le widget"
   },
   "languages": {
     "de": "Deutsch",
@@ -1437,7 +1452,7 @@
     "noResults": "Aucun résultat",
     "noSaveDialog": "Aucune boîte de dialogue d'enregistrement disponible dans cet environnement",
     "noTmuxSessions": "Aucune session tmux.",
-    "open": "ouvrir",
+    "open": "Actif",
     "openAbove": "Ouvrir au-dessus",
     "openBelow": "Ouvrir en dessous",
     "openInPane": "Ouvrir dans le volet",

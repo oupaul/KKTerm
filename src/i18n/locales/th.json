@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "ทำงานเป็นเวลา {{duration}}",
-    "workspace": "พื้นที่ทำงาน"
+    "workspace": "พื้นที่ทำงาน",
+    "thinking": "กำลังคิด…",
+    "thoughtFor": "ใช้เวลาคิด",
+    "toolWebSearch": "กำลังค้นหาเว็บ…",
+    "toolWebFetch": "กำลังดึงหน้าเว็บ…",
+    "toolShellCommand": "กำลังรันคำสั่ง…",
+    "toolFileSearch": "กำลังค้นหาไฟล์…",
+    "toolFileRead": "กำลังอ่านไฟล์…",
+    "toolCurrentTime": "กำลังตรวจสอบเวลาปัจจุบัน…"
   },
   "app": {
     "aiAssistant": "ผู้ช่วย AI",
@@ -440,7 +448,12 @@
     "summaryLabel": "สรุปตัวเรียกใช้แอป",
     "title": "ตัวเรียกใช้แอป",
     "workingDirectory": "ไดเรกทอรีทำงาน",
-    "workingDirectoryPlaceholder": "พาธโฟลเดอร์ (ไม่บังคับ)"
+    "workingDirectoryPlaceholder": "พาธโฟลเดอร์ (ไม่บังคับ)",
+    "addMenuApp": "แอป",
+    "addMenuFile": "เอกสาร",
+    "addMenuFolder": "โฟลเดอร์",
+    "selectAppTitle": "เพิ่มแอปหรือสคริปต์",
+    "selectFolderTitle": "เพิ่มโฟลเดอร์"
   },
   "common": {
     "about": "เกี่ยวกับ",
@@ -865,7 +878,10 @@
     "widgetSettings": "การตั้งค่าวิดเจ็ต",
     "widgetSettingsEmpty": "ไม่มีการตั้งค่าแบบกำหนดเองสำหรับวิดเจ็ตนี้",
     "widgetSettingsInvalid": "Schema การตั้งค่าวิดเจ็ตไม่ถูกต้อง",
-    "wildcardMask": "ไวลด์การ์ดมาสก์"
+    "wildcardMask": "ไวลด์การ์ดมาสก์",
+    "deleteCustomWidgetTitle": "ลบวิดเจ็ตที่กำหนดเอง",
+    "deleteCustomWidgetBody": "การดำเนินการนี้จะลบ \"{{name}}\" และอินสแตนซ์ทั้งหมดออกจากทุกมุมมองแดชบอร์ด ไม่สามารถยกเลิกได้",
+    "deleteCustomWidgetConfirm": "ลบวิดเจ็ต"
   },
   "languages": {
     "de": "Deutsch",
@@ -1435,7 +1451,7 @@
     "noResults": "ไม่พบผลลัพธ์",
     "noSaveDialog": "ไม่มีไดอะล็อกบันทึกในรันไทม์นี้",
     "noTmuxSessions": "ไม่มีเซสชัน tmux",
-    "open": "เปิด",
+    "open": "ใช้งานอยู่",
     "openAbove": "เปิดบน",
     "openBelow": "เปิดล่าง",
     "openInPane": "เปิดในบานหน้าต่าง",

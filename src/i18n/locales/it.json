@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "Ha lavorato per {{duration}}",
-    "workspace": "Spazio di lavoro"
+    "workspace": "Spazio di lavoro",
+    "thinking": "Riflettendo…",
+    "thoughtFor": "Ha riflettuto per",
+    "toolWebSearch": "Cercando sul web…",
+    "toolWebFetch": "Recuperando pagina web…",
+    "toolShellCommand": "Eseguendo comando…",
+    "toolFileSearch": "Cercando file…",
+    "toolFileRead": "Leggendo file…",
+    "toolCurrentTime": "Verificando ora corrente…"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -442,7 +450,11 @@
     "summaryLabel": "Riepilogo Avvio applicazioni",
     "title": "Avvio applicazioni",
     "workingDirectory": "Directory di lavoro",
-    "workingDirectoryPlaceholder": "Percorso cartella opzionale"
+    "workingDirectoryPlaceholder": "Percorso cartella opzionale",
+    "addMenuApp": "App",
+    "addMenuFile": "Documento",
+    "addMenuFolder": "Cartella",
+    "selectAppTitle": "Aggiungi un'app o uno script"
   },
   "common": {
     "about": "Informazioni",
@@ -867,7 +879,10 @@
     "widgetSettings": "Impostazioni widget",
     "widgetSettingsEmpty": "Nessuna impostazione personalizzata per questo widget.",
     "widgetSettingsInvalid": "Lo schema delle impostazioni del widget non è valido.",
-    "wildcardMask": "Maschera wildcard"
+    "wildcardMask": "Maschera wildcard",
+    "deleteCustomWidgetTitle": "Elimina widget personalizzato",
+    "deleteCustomWidgetBody": "Questo elimina \"{{name}}\" e tutte le sue istanze da ogni vista del dashboard. Non può essere annullato.",
+    "deleteCustomWidgetConfirm": "Elimina widget"
   },
   "languages": {
     "de": "Deutsch",
@@ -1437,7 +1452,7 @@
     "noResults": "Nessun risultato",
     "noSaveDialog": "Nessuna finestra di salvataggio disponibile in questo runtime",
     "noTmuxSessions": "Nessuna sessione tmux.",
-    "open": "apri",
+    "open": "Attivo",
     "openAbove": "Apri sopra",
     "openBelow": "Apri sotto",
     "openInPane": "Apri nel pannello",

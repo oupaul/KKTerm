@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "{{duration}} 동안 작업함",
-    "workspace": "워크스페이스"
+    "workspace": "워크스페이스",
+    "thinking": "생각 중…",
+    "thoughtFor": "생각 시간",
+    "toolWebSearch": "웹 검색 중…",
+    "toolWebFetch": "웹 페이지 가져오는 중…",
+    "toolShellCommand": "명령 실행 중…",
+    "toolFileSearch": "파일 검색 중…",
+    "toolFileRead": "파일 읽는 중…",
+    "toolCurrentTime": "현재 시간 확인 중…"
   },
   "app": {
     "aiAssistant": "AI 어시스턴트",
@@ -440,7 +448,12 @@
     "summaryLabel": "앱 런처 요약",
     "title": "앱 런처",
     "workingDirectory": "작업 디렉터리",
-    "workingDirectoryPlaceholder": "선택적 폴더 경로"
+    "workingDirectoryPlaceholder": "선택적 폴더 경로",
+    "addMenuApp": "앱",
+    "addMenuFile": "문서",
+    "addMenuFolder": "폴더",
+    "selectAppTitle": "앱 또는 스크립트 추가",
+    "selectFolderTitle": "폴더 추가"
   },
   "common": {
     "about": "정보",
@@ -865,7 +878,10 @@
     "widgetSettings": "위젯 설정",
     "widgetSettingsEmpty": "이 위젯에 대한 사용자 정의 설정이 없습니다.",
     "widgetSettingsInvalid": "위젯 설정 스키마가 유효하지 않습니다.",
-    "wildcardMask": "와일드카드 마스크"
+    "wildcardMask": "와일드카드 마스크",
+    "deleteCustomWidgetTitle": "사용자 정의 위젯 삭제",
+    "deleteCustomWidgetBody": "모든 대시보드 보기에서 \"{{name}}\"과(와) 모든 인스턴스를 삭제합니다. 이 작업은 취소할 수 없습니다.",
+    "deleteCustomWidgetConfirm": "위젯 삭제"
   },
   "languages": {
     "de": "Deutsch",
@@ -1435,7 +1451,7 @@
     "noResults": "결과 없음",
     "noSaveDialog": "이 런타임에서는 저장 대화상자를 사용할 수 없습니다",
     "noTmuxSessions": "tmux 세션이 없습니다.",
-    "open": "열기",
+    "open": "활성",
     "openAbove": "위에 열기",
     "openBelow": "아래에 열기",
     "openInPane": "페인에서 열기",

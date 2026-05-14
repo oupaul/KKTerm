@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "Trabalhou por {{duration}}",
-    "workspace": "Área de trabalho"
+    "workspace": "Área de trabalho",
+    "thinking": "Pensando…",
+    "thoughtFor": "Pensou por",
+    "toolWebSearch": "Pesquisando na web…",
+    "toolWebFetch": "Buscando página web…",
+    "toolShellCommand": "Executando comando…",
+    "toolFileSearch": "Pesquisando arquivos…",
+    "toolFileRead": "Lendo arquivo…",
+    "toolCurrentTime": "Verificando hora atual…"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -440,7 +448,12 @@
     "summaryLabel": "Resumo do lançador",
     "title": "Lançador de apps",
     "workingDirectory": "Diretório de trabalho",
-    "workingDirectoryPlaceholder": "Caminho da pasta opcional"
+    "workingDirectoryPlaceholder": "Caminho da pasta opcional",
+    "addMenuApp": "Aplicativo",
+    "addMenuFile": "Documento",
+    "addMenuFolder": "Pasta",
+    "selectAppTitle": "Adicionar um app ou script",
+    "selectFolderTitle": "Adicionar uma pasta"
   },
   "common": {
     "about": "Sobre",
@@ -865,7 +878,10 @@
     "widgetSettings": "Configurações do widget",
     "widgetSettingsEmpty": "Nenhuma configuração personalizada para este widget.",
     "widgetSettingsInvalid": "O esquema de configurações do widget não é válido.",
-    "wildcardMask": "Máscara curinga"
+    "wildcardMask": "Máscara curinga",
+    "deleteCustomWidgetTitle": "Excluir widget personalizado",
+    "deleteCustomWidgetBody": "Isso exclui \"{{name}}\" e todas as suas instâncias de cada visualização do Painel. Isso não pode ser desfeito.",
+    "deleteCustomWidgetConfirm": "Excluir widget"
   },
   "languages": {
     "de": "Deutsch",
@@ -1435,7 +1451,7 @@
     "noResults": "Nenhum resultado",
     "noSaveDialog": "Nenhum diálogo de salvamento disponível neste ambiente",
     "noTmuxSessions": "Nenhuma sessão tmux.",
-    "open": "abrir",
+    "open": "Ativo",
     "openAbove": "Abrir acima",
     "openBelow": "Abrir abaixo",
     "openInPane": "Abrir no painel",

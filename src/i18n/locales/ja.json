@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "作業時間 {{duration}}",
-    "workspace": "ワークスペース"
+    "workspace": "ワークスペース",
+    "thinking": "思考中…",
+    "thoughtFor": "思考時間",
+    "toolWebSearch": "ウェブを検索中…",
+    "toolWebFetch": "ウェブページを取得中…",
+    "toolShellCommand": "コマンドを実行中…",
+    "toolFileSearch": "ファイルを検索中…",
+    "toolFileRead": "ファイルを読み取り中…",
+    "toolCurrentTime": "現在時刻を確認中…"
   },
   "app": {
     "aiAssistant": "AIアシスタント",
@@ -871,7 +879,10 @@
     "widgetSettings": "ウィジェット設定",
     "widgetSettingsEmpty": "このウィジェットにはカスタム設定がありません。",
     "widgetSettingsInvalid": "ウィジェット設定スキーマが無効です。",
-    "wildcardMask": "ワイルドカードマスク"
+    "wildcardMask": "ワイルドカードマスク",
+    "deleteCustomWidgetTitle": "カスタムウィジェットを削除",
+    "deleteCustomWidgetBody": "「{{name}}」とそのすべてのインスタンスをすべてのダッシュボードビューから削除します。この操作は元に戻せません。",
+    "deleteCustomWidgetConfirm": "ウィジェットを削除"
   },
   "languages": {
     "de": "Deutsch",
@@ -1441,7 +1452,7 @@
     "noResults": "結果なし",
     "noSaveDialog": "このランタイムでは保存ダイアログが利用できません",
     "noTmuxSessions": "tmuxセッションはありません。",
-    "open": "開く",
+    "open": "アクティブ",
     "openAbove": "上に開く",
     "openBelow": "下に開く",
     "openInPane": "ペインで開く",

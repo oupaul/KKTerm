@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "Gearbeitet für {{duration}}",
-    "workspace": "Arbeitsbereich"
+    "workspace": "Arbeitsbereich",
+    "thinking": "Denkt nach…",
+    "thoughtFor": "Nachgedacht für",
+    "toolWebSearch": "Durchsucht das Web…",
+    "toolWebFetch": "Ruft Webseite ab…",
+    "toolShellCommand": "Führt Befehl aus…",
+    "toolFileSearch": "Durchsucht Dateien…",
+    "toolFileRead": "Liest Datei…",
+    "toolCurrentTime": "Prüft aktuelle Uhrzeit…"
   },
   "app": {
     "aiAssistant": "KI-Assistent",
@@ -442,7 +450,11 @@
     "summaryLabel": "App-Starter-Zusammenfassung",
     "title": "App-Starter",
     "workingDirectory": "Arbeitsverzeichnis",
-    "workingDirectoryPlaceholder": "Optionaler Ordnerpfad"
+    "workingDirectoryPlaceholder": "Optionaler Ordnerpfad",
+    "addMenuApp": "App",
+    "addMenuFile": "Dokument",
+    "addMenuFolder": "Ordner",
+    "selectAppTitle": "App oder Skript hinzufügen"
   },
   "common": {
     "about": "Über",
@@ -867,7 +879,10 @@
     "widgetSettings": "Widget-Einstellungen",
     "widgetSettingsEmpty": "Keine benutzerdefinierten Einstellungen für dieses Widget.",
     "widgetSettingsInvalid": "Das Widget-Einstellungsschema ist nicht gültig.",
-    "wildcardMask": "Wildcard-Maske"
+    "wildcardMask": "Wildcard-Maske",
+    "deleteCustomWidgetTitle": "Benutzerdefiniertes Widget löschen",
+    "deleteCustomWidgetBody": "Dies löscht „{{name}}\" und alle Instanzen aus jeder Dashboard-Ansicht. Dies kann nicht rückgängig gemacht werden.",
+    "deleteCustomWidgetConfirm": "Widget löschen"
   },
   "languages": {
     "de": "Deutsch",
@@ -1437,7 +1452,7 @@
     "noResults": "Keine Ergebnisse",
     "noSaveDialog": "Kein Speicherdialog in dieser Laufzeit verfügbar",
     "noTmuxSessions": "Keine tmux-Sitzungen.",
-    "open": "öffnen",
+    "open": "Aktiv",
     "openAbove": "Oben öffnen",
     "openBelow": "Unten öffnen",
     "openInPane": "In Panel öffnen",

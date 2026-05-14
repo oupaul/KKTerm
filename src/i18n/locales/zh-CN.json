@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "耗时 {{duration}}",
-    "workspace": "工作区"
+    "workspace": "工作区",
+    "thinking": "思考中…",
+    "thoughtFor": "思考用时",
+    "toolWebSearch": "正在搜索网页…",
+    "toolWebFetch": "正在获取网页…",
+    "toolShellCommand": "正在执行命令…",
+    "toolFileSearch": "正在搜索文件…",
+    "toolFileRead": "正在读取文件…",
+    "toolCurrentTime": "正在检查当前时间…"
   },
   "app": {
     "aiAssistant": "AI 助手",
@@ -871,7 +879,10 @@
     "widgetSettings": "小部件设置",
     "widgetSettingsEmpty": "此小部件没有自定义设置。",
     "widgetSettingsInvalid": "小部件设置架构无效。",
-    "wildcardMask": "通配符掩码"
+    "wildcardMask": "通配符掩码",
+    "deleteCustomWidgetTitle": "删除自定义小部件",
+    "deleteCustomWidgetBody": "这将从每个仪表板视图中删除\"{{name}}\"及其所有实例。此操作无法撤消。",
+    "deleteCustomWidgetConfirm": "删除小部件"
   },
   "languages": {
     "de": "Deutsch",
@@ -1441,7 +1452,7 @@
     "noResults": "无结果",
     "noSaveDialog": "此运行环境中无可用保存对话框",
     "noTmuxSessions": "无 tmux 会话。",
-    "open": "打开",
+    "open": "已激活",
     "openAbove": "在上方打开",
     "openBelow": "在下方打开",
     "openInPane": "在窗格中打开",

@@ -376,7 +376,15 @@
     "workDurationSeconds": "{{count}}s",
     "workDurationUnderSecond": "<1s",
     "workedFor": "Bekerja selama {{duration}}",
-    "workspace": "Ruang kerja"
+    "workspace": "Ruang kerja",
+    "thinking": "Berpikir…",
+    "thoughtFor": "Berpikir selama",
+    "toolWebSearch": "Mencari di web…",
+    "toolWebFetch": "Mengambil halaman web…",
+    "toolShellCommand": "Menjalankan perintah…",
+    "toolFileSearch": "Mencari file…",
+    "toolFileRead": "Membaca file…",
+    "toolCurrentTime": "Memeriksa waktu saat ini…"
   },
   "app": {
     "aiAssistant": "AI Assistant",
@@ -440,7 +448,12 @@
     "summaryLabel": "Ringkasan Peluncur Aplikasi",
     "title": "Peluncur Aplikasi",
     "workingDirectory": "Direktori kerja",
-    "workingDirectoryPlaceholder": "Path folder opsional"
+    "workingDirectoryPlaceholder": "Path folder opsional",
+    "addMenuApp": "Aplikasi",
+    "addMenuFile": "Dokumen",
+    "addMenuFolder": "Folder",
+    "selectAppTitle": "Tambah aplikasi atau skrip",
+    "selectFolderTitle": "Tambah folder"
   },
   "common": {
     "about": "Tentang",
@@ -865,7 +878,10 @@
     "widgetSettings": "Pengaturan widget",
     "widgetSettingsEmpty": "Tidak ada pengaturan kustom untuk widget ini.",
     "widgetSettingsInvalid": "Skema pengaturan widget tidak valid.",
-    "wildcardMask": "Wildcard mask"
+    "wildcardMask": "Wildcard mask",
+    "deleteCustomWidgetTitle": "Hapus Widget Kustom",
+    "deleteCustomWidgetBody": "Ini menghapus \"{{name}}\" dan semua instansnya dari setiap tampilan Dasbor. Ini tidak dapat dibatalkan.",
+    "deleteCustomWidgetConfirm": "Hapus Widget"
   },
   "languages": {
     "de": "Deutsch",
@@ -1435,7 +1451,7 @@
     "noResults": "Tidak ada hasil",
     "noSaveDialog": "Tidak ada dialog simpan di runtime ini",
     "noTmuxSessions": "Tidak ada sesi tmux.",
-    "open": "buka",
+    "open": "Aktif",
     "openAbove": "Buka atas",
     "openBelow": "Buka bawah",
     "openInPane": "Buka di panel",
