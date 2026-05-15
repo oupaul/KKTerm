@@ -15,6 +15,8 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { selectAppLauncherFile, selectAppLauncherFolder, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
+import { useDashboardStore } from "../dashboard/state/dashboardStore";
+import type { DashboardWidgetInstance } from "../dashboard/types";
 import type {
   AppLauncherEntry,
   AppLauncherLaunchMode,
@@ -24,9 +26,9 @@ import type {
 import {
   isRunnablePath,
   launchAppLauncherEntry,
-  loadAppLauncherSettings,
+  parseAppLauncherSettingsJson,
   prepareAppLauncherEntry,
-  saveAppLauncherSettings,
+  serializeAppLauncherSettings,
 } from "./storage";
 
 type EntryDraft = {
@@ -51,43 +53,23 @@ type AddMenuState = {
   y: number;
 };
 
-export function AppLauncherWidget() {
+export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInstance }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const [settings, setSettings] = useState<AppLauncherSettings>({ entries: [] });
+  const updateInstance = useDashboardStore((state) => state.updateInstance);
+  const [settings, setSettings] = useState<AppLauncherSettings>(() =>
+    parseAppLauncherSettingsJson(instance.settingsValuesJson),
+  );
   const [preparedById, setPreparedById] = useState<Record<string, PreparedAppLauncherEntry>>({});
   const [dialogDraft, setDialogDraft] = useState<EntryDraft | null>(null);
   const [menuState, setMenuState] = useState<MenuState | null>(null);
   const [addMenuState, setAddMenuState] = useState<AddMenuState | null>(null);
-  const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const addMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let disposed = false;
-    void loadAppLauncherSettings()
-      .then((nextSettings) => {
-        if (!disposed) {
-          setSettings(nextSettings);
-        }
-      })
-      .catch((error) => {
-        if (!disposed) {
-          showStatusBarNotice(
-            t("appLauncher.loadError", { message: errorMessage(error) }),
-            { tone: "error" },
-          );
-        }
-      })
-      .finally(() => {
-        if (!disposed) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      disposed = true;
-    };
-  }, [showStatusBarNotice, t]);
+    setSettings(parseAppLauncherSettingsJson(instance.settingsValuesJson));
+  }, [instance.settingsValuesJson]);
 
   useEffect(() => {
     let disposed = false;
@@ -334,8 +316,7 @@ export function AppLauncherWidget() {
         : [...settings.entries, nextEntry],
     };
     try {
-      const saved = await saveAppLauncherSettings(nextSettings);
-      setSettings(saved);
+      await saveSettings(nextSettings);
       setDialogDraft(null);
       showStatusBarNotice(t("appLauncher.savedStatus", { name: nextEntry.name }), {
         tone: "success",
@@ -350,10 +331,9 @@ export function AppLauncherWidget() {
 
   async function removeEntry(entry: AppLauncherEntry) {
     try {
-      const saved = await saveAppLauncherSettings({
+      await saveSettings({
         entries: settings.entries.filter((candidate) => candidate.id !== entry.id),
       });
-      setSettings(saved);
       showStatusBarNotice(t("appLauncher.removedStatus", { name: entry.name }), {
         tone: "info",
       });
@@ -363,6 +343,14 @@ export function AppLauncherWidget() {
         { tone: "error" },
       );
     }
+  }
+
+  async function saveSettings(nextSettings: AppLauncherSettings) {
+    const normalized = parseAppLauncherSettingsJson(serializeAppLauncherSettings(nextSettings));
+    setSettings(normalized);
+    await updateInstance(instance.id, {
+      settingsValuesJson: serializeAppLauncherSettings(normalized),
+    });
   }
 
   async function launch(entry: AppLauncherEntry, mode: AppLauncherLaunchMode) {
@@ -406,7 +394,7 @@ export function AppLauncherWidget() {
       ) : (
         <div className="app-launcher-widget-empty">
           <AppWindow size={24} />
-          <h4>{loading ? t("appLauncher.loading") : t("appLauncher.emptyTitle")}</h4>
+          <h4>{t("appLauncher.emptyTitle")}</h4>
           <p>{t("appLauncher.emptyHint")}</p>
         </div>
       )}

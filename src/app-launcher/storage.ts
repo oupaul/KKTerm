@@ -31,6 +31,19 @@ export async function saveAppLauncherSettings(
   return saved;
 }
 
+export function parseAppLauncherSettingsJson(settingsValuesJson: string): AppLauncherSettings {
+  try {
+    const parsed = JSON.parse(settingsValuesJson) as Partial<AppLauncherSettings>;
+    return normalizeAppLauncherSettings(parsed);
+  } catch {
+    return { entries: [] };
+  }
+}
+
+export function serializeAppLauncherSettings(settings: AppLauncherSettings): string {
+  return JSON.stringify(normalizeAppLauncherSettings(settings));
+}
+
 export async function prepareAppLauncherEntry(
   path: string,
 ): Promise<PreparedAppLauncherEntry> {
@@ -75,14 +88,18 @@ function readPreviewSettings(): AppLauncherSettings {
     const parsed = JSON.parse(
       window.localStorage.getItem(APP_LAUNCHER_STORAGE_KEY) ?? '{"entries":[]}',
     ) as Partial<AppLauncherSettings>;
-    return {
-      entries: Array.isArray(parsed.entries)
-        ? parsed.entries.filter(isStoredEntry)
-        : [],
-    };
+    return normalizeAppLauncherSettings(parsed);
   } catch {
     return { entries: [] };
   }
+}
+
+function normalizeAppLauncherSettings(settings: Partial<AppLauncherSettings>): AppLauncherSettings {
+  return {
+    entries: Array.isArray(settings.entries)
+      ? settings.entries.filter(isStoredEntry)
+      : [],
+  };
 }
 
 function writePreviewSettings(settings: AppLauncherSettings) {
