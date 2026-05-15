@@ -45,7 +45,6 @@ vnc = { package = "vnc-rs", version = "0.5.3" }
 time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
 zip = "2"
 futures = "0.3"
-tauri-plugin-process = "2.3.1"
 filedescriptor = "0.8.3"
 lazy_static = "1.5.0"
 shared_library = "0.1.9"
@@ -57,10 +56,6 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphic
 windows-native-keyring-store = "1.0.0"
 webview2-com = "0.38.2"
 tauri-plugin-single-instance = "2"
-
-[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-updater = "2.10.1"
-
 
 
 
