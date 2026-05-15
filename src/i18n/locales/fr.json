@@ -161,12 +161,17 @@
     ],
     "toolCallComplete": "Terminé",
     "toolCallRunning": "En cours",
+    "toolConnectionsDone": "Connexions gérées",
     "toolCurrentTimeDone": "A vérifié l'heure",
     "toolDashboard": "Mise à jour du tableau de bord…",
     "toolDashboardDone": "Tableau de bord mis à jour",
     "toolFileReadDone": "A lu le fichier",
     "toolFileSearchDone": "A cherché des fichiers",
+    "toolPermissionAllowAll": "Tout autoriser",
+    "toolPermissionMode": "Permissions des outils",
+    "toolPermissionPrompt": "Demander",
     "toolShellCommandDone": "A exécuté la commande",
+    "toolSessionsDone": "A travaillé avec les sessions",
     "toolWebFetchDone": "A récupéré la page web",
     "toolWebSearchDone": "A cherché sur le web",
     "viewAll": "Tout voir",
@@ -379,6 +384,7 @@
     "workspace": "Espace de travail",
     "thinking": "Réflexion…",
     "thoughtFor": "A réfléchi pendant",
+    "toolConnections": "Gestion des connexions…",
     "toolWebSearch": "Recherche sur le web…",
     "toolWebFetch": "Récupération de la page web…",
     "toolShellCommand": "Exécution de la commande…",
@@ -402,7 +408,8 @@
     "secretCardStoredMessage": "{{label}} est enregistré. Vous pouvez continuer.",
     "secretCardStoredStatus": "{{label}} enregistré dans le trousseau du système d'exploitation.",
     "toolSecretRequest": "Demande d’entrée secrète…",
-    "toolSecretRequestDone": "Entrée secrète demandée"
+    "toolSecretRequestDone": "Entrée secrète demandée",
+    "toolSessions": "Travail avec les sessions…"
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -899,6 +906,7 @@
     "subnetTitle": "Calculateur de sous-réseau IPv4",
     "subtitle": "Sélectionnez des widgets utilitaires locaux, des rapports et des fiches créées par agent pour les outils que vous voulez à portée de main.",
     "title": "Tableau de bord",
+    "titleLabel": "Titre",
     "titlePlaceholder": "Titre personnalisé…",
     "tool": "Outil",
     "totalAddresses": "Adresses totales",
@@ -1032,6 +1040,14 @@
       "dashboard": {
         "label": "Tableau de bord",
         "description": "Lire et modifier les vues du tableau de bord, les instances de widgets et les widgets personnalisés."
+      },
+      "connections": {
+        "label": "Connexions",
+        "description": "Lister, créer, modifier et supprimer les connexions enregistrées."
+      },
+      "sessions": {
+        "label": "Sessions actives",
+        "description": "Lire le contexte visible des sessions et interagir avec les sessions actives de terminal, bureau à distance et explorateur de fichiers."
       }
     },
     "aiToolsDescription": "Choisissez quels outils intégrés l'assistant IA peut utiliser pour répondre. Gardez les outils risqués désactivés sauf si nécessaire.",

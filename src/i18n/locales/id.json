@@ -161,11 +161,13 @@
     ],
     "toolCallComplete": "Selesai",
     "toolCallRunning": "Berjalan",
+    "toolConnectionsDone": "Koneksi dikelola",
     "toolCurrentTimeDone": "Memeriksa waktu saat ini",
     "toolDashboard": "Memperbarui Dasbor…",
     "toolDashboardDone": "Dasbor Diperbarui",
     "toolFileReadDone": "Membaca file",
     "toolFileSearchDone": "Mencari file",
+    "toolSessionsDone": "Bekerja dengan sesi",
     "toolShellCommandDone": "Menjalankan perintah",
     "toolWebFetchDone": "Mengambil halaman web",
     "toolWebSearchDone": "Mencari di web",
@@ -381,10 +383,12 @@
     "thoughtFor": "Berpikir selama",
     "toolWebSearch": "Mencari di web…",
     "toolWebFetch": "Mengambil halaman web…",
+    "toolSessions": "Bekerja dengan sesi…",
     "toolShellCommand": "Menjalankan perintah…",
     "toolFileSearch": "Mencari file…",
     "toolFileRead": "Membaca file…",
     "toolCurrentTime": "Memeriksa waktu saat ini…",
+    "toolConnections": "Mengelola koneksi…",
     "secretCardAiProviderDescription": "Disimpan sebagai kunci penyedia AI untuk {{provider}}.",
     "secretCardAiProviderMessage": "{{provider}} memerlukan kunci API sebelum Asisten AI dapat mengobrol.",
     "secretCardDefaultDescription": "Disimpan langsung ke rantai kunci OS.",
@@ -401,7 +405,10 @@
     "secretCardStoredInline": "Tersimpan di rantai kunci OS",
     "secretCardStoredMessage": "{{label}} telah tersimpan. Anda dapat melanjutkan.",
     "secretCardStoredStatus": "{{label}} tersimpan di rantai kunci OS.",
-    "toolSecretRequest": "Meminta entri rahasia…",
+    "toolPermissionAllowAll": "Izinkan semua",
+    "toolPermissionMode": "Izin alat",
+    "toolPermissionPrompt": "Minta",
+    "toolSecretRequest": "Meminta entri rahasia\u2026",
     "toolSecretRequestDone": "Entri rahasia diminta"
   },
   "app": {
@@ -898,6 +905,7 @@
     "subnetTitle": "Kalkulator Subnet IPv4",
     "subtitle": "Pilih widget utilitas lokal, laporan, dan kartu buatan agen untuk alat yang ingin Anda jangkau dengan mudah.",
     "title": "Dasbor",
+    "titleLabel": "Judul",
     "titlePlaceholder": "Judul kustom…",
     "tool": "Alat",
     "totalAddresses": "Total alamat",
@@ -1004,6 +1012,10 @@
     "aiResponseDefaults": "Default respons",
     "aiResponseDefaultsHint": "Preferensi bahasa untuk balasan Asisten.",
     "aiTools": {
+      "connections": {
+        "label": "Koneksi",
+        "description": "Daftar, buat, edit, dan hapus koneksi tersimpan."
+      },
       "currentTime": {
         "label": "Waktu saat ini",
         "description": "Dapatkan waktu lokal dan UTC saat ini untuk penjadwalan dan korelasi log."
@@ -1023,6 +1035,10 @@
       "appDataFileRead": {
         "label": "Baca file data aplikasi",
         "description": "Baca file teks kecil di dalam data aplikasi milik KKTerm saja."
+      },
+      "sessions": {
+        "label": "Sesi langsung",
+        "description": "Baca konteks sesi yang terlihat dan berinteraksi dengan sesi terminal aktif, desktop jarak jauh, dan penjelajah file."
       },
       "shellCommand": {
         "label": "Perintah PowerShell / batch",

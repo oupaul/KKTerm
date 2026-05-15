@@ -161,12 +161,17 @@
     ],
     "toolCallComplete": "Abgeschlossen",
     "toolCallRunning": "Wird ausgeführt",
+    "toolConnectionsDone": "Verbindungen verwaltet",
     "toolCurrentTimeDone": "Aktuelle Uhrzeit geprüft",
     "toolDashboard": "Dashboard wird aktualisiert…",
     "toolDashboardDone": "Dashboard aktualisiert",
     "toolFileReadDone": "Datei gelesen",
     "toolFileSearchDone": "Dateien durchsucht",
+    "toolPermissionAllowAll": "Alle erlauben",
+    "toolPermissionMode": "Werkzeugberechtigungen",
+    "toolPermissionPrompt": "Nachfragen",
     "toolShellCommandDone": "Befehl ausgeführt",
+    "toolSessionsDone": "Mit Sitzungen gearbeitet",
     "toolWebFetchDone": "Webseite abgerufen",
     "toolWebSearchDone": "Das Web durchsucht",
     "viewAll": "Alle anzeigen",
@@ -379,6 +384,7 @@
     "workspace": "Arbeitsbereich",
     "thinking": "Denkt nach…",
     "thoughtFor": "Nachgedacht für",
+    "toolConnections": "Verbindungen verwalten…",
     "toolWebSearch": "Durchsucht das Web…",
     "toolWebFetch": "Ruft Webseite ab…",
     "toolShellCommand": "Führt Befehl aus…",
@@ -402,7 +408,8 @@
     "secretCardStoredMessage": "{{label}} ist gespeichert. Sie können fortfahren.",
     "secretCardStoredStatus": "{{label}} im OS-Schlüsselbund gespeichert.",
     "toolSecretRequest": "Fordere geheimen Eintrag an…",
-    "toolSecretRequestDone": "Geheimen Eintrag angefordert"
+    "toolSecretRequestDone": "Geheimen Eintrag angefordert",
+    "toolSessions": "Arbeite mit Sitzungen…"
   },
   "app": {
     "aiAssistant": "KI-Assistent",
@@ -899,6 +906,7 @@
     "subnetTitle": "IPv4-Subnetz-Rechner",
     "subtitle": "Wählen Sie lokale Dienstprogramm-Widgets, Berichte und agentenerstellte Karten für die Werkzeuge, die Sie griffbereit haben möchten.",
     "title": "Dashboard",
+    "titleLabel": "Titel",
     "titlePlaceholder": "Eigener Titel…",
     "tool": "Werkzeug",
     "totalAddresses": "Adressen gesamt",
@@ -1032,6 +1040,14 @@
       "dashboard": {
         "label": "Dashboard",
         "description": "Dashboard-Ansichten, Widget-Instanzen und benutzerdefinierte Widgets lesen und ändern."
+      },
+      "connections": {
+        "label": "Verbindungen",
+        "description": "Gespeicherte Verbindungen auflisten, erstellen, bearbeiten und löschen."
+      },
+      "sessions": {
+        "label": "Live-Sitzungen",
+        "description": "Sichtbaren Sitzungskontext lesen und mit aktiven Terminal-, Remote-Desktop- und Dateibrowser-Sitzungen interagieren."
       }
     },
     "aiToolsDescription": "Wählen Sie, welche integrierten Werkzeuge der KI-Assistent beim Antworten verwenden darf. Lassen Sie riskante Werkzeuge deaktiviert, es sei denn, Sie benötigen sie.",

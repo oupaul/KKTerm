@@ -161,11 +161,16 @@
     ],
     "toolCallComplete": "Concluído",
     "toolCallRunning": "Executando",
+    "toolConnectionsDone": "Conexões gerenciadas",
     "toolCurrentTimeDone": "Verificou a hora",
     "toolDashboard": "Atualizando painel…",
     "toolDashboardDone": "Painel atualizado",
     "toolFileReadDone": "Leu arquivo",
     "toolFileSearchDone": "Pesquisou arquivos",
+    "toolPermissionAllowAll": "Permitir tudo",
+    "toolPermissionMode": "Permissões de ferramentas",
+    "toolPermissionPrompt": "Perguntar",
+    "toolSessionsDone": "Trabalhou com sessões",
     "toolShellCommandDone": "Executou comando",
     "toolWebFetchDone": "Buscou página web",
     "toolWebSearchDone": "Pesquisou na web",
@@ -384,6 +389,7 @@
     "toolShellCommand": "Executando comando…",
     "toolFileSearch": "Pesquisando arquivos…",
     "toolFileRead": "Lendo arquivo…",
+    "toolConnections": "Gerenciando conexões…",
     "toolCurrentTime": "Verificando hora atual…",
     "secretCardAiProviderDescription": "Salva como chave do provedor de IA para {{provider}}.",
     "secretCardAiProviderMessage": "{{provider}} precisa de uma chave de API antes que o Assistente de IA possa conversar.",
@@ -402,7 +408,8 @@
     "secretCardStoredMessage": "{{label}} está armazenado. Você pode continuar.",
     "secretCardStoredStatus": "{{label}} armazenado no chaveiro do SO.",
     "toolSecretRequest": "Solicitando entrada secreta…",
-    "toolSecretRequestDone": "Entrada secreta solicitada"
+    "toolSecretRequestDone": "Entrada secreta solicitada",
+    "toolSessions": "Trabalhando com sessões…"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -898,6 +905,7 @@
     "subnetTitle": "Calculadora de sub-rede IPv4",
     "subtitle": "Selecione widgets de utilidade local, relatórios e cartões gerados por agentes para as ferramentas que quiser ter à mão.",
     "title": "Painel",
+    "titleLabel": "Título",
     "titlePlaceholder": "Título personalizado…",
     "tool": "Ferramenta",
     "totalAddresses": "Endereços totais",
@@ -1031,6 +1039,14 @@
       "dashboard": {
         "label": "Painel",
         "description": "Ler e modificar visões do painel, instâncias de widgets e widgets personalizados."
+      },
+      "connections": {
+        "label": "Conexões",
+        "description": "Listar, criar, editar e excluir conexões salvas."
+      },
+      "sessions": {
+        "label": "Sessões ativas",
+        "description": "Ler o contexto visível das sessões e interagir com sessões ativas de terminal, área de trabalho remota e navegador de arquivos."
       }
     },
     "aiToolsDescription": "Escolha quais ferramentas integradas o Assistente IA pode usar ao responder. Mantenha as ferramentas arriscadas desativadas a menos que precise delas.",

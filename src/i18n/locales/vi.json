@@ -161,11 +161,16 @@
     ],
     "toolCallComplete": "Hoàn tất",
     "toolCallRunning": "Đang chạy",
+    "toolConnectionsDone": "Đã quản lý kết nối",
     "toolCurrentTimeDone": "Đã kiểm tra thời gian hiện tại",
     "toolDashboard": "Đang cập nhật Bảng điều khiển…",
     "toolDashboardDone": "Đã cập nhật Bảng điều khiển",
     "toolFileReadDone": "Đã đọc tệp",
     "toolFileSearchDone": "Đã tìm kiếm tệp",
+    "toolPermissionAllowAll": "Cho phép tất cả",
+    "toolPermissionMode": "Quyền công cụ",
+    "toolPermissionPrompt": "Hỏi",
+    "toolSessionsDone": "Đã làm việc với phiên",
     "toolShellCommandDone": "Đã chạy lệnh",
     "toolWebFetchDone": "Đã tải trang web",
     "toolWebSearchDone": "Đã tìm kiếm trên web",
@@ -384,6 +389,7 @@
     "toolShellCommand": "Đang chạy lệnh…",
     "toolFileSearch": "Đang tìm kiếm tệp…",
     "toolFileRead": "Đang đọc tệp…",
+    "toolConnections": "Đang quản lý kết nối…",
     "toolCurrentTime": "Đang kiểm tra thời gian hiện tại…",
     "secretCardAiProviderDescription": "Đã lưu làm khóa nhà cung cấp AI cho {{provider}}.",
     "secretCardAiProviderMessage": "{{provider}} cần khóa API trước khi Trợ lý AI có thể trò chuyện.",
@@ -402,7 +408,8 @@
     "secretCardStoredMessage": "{{label}} đã được lưu. Bạn có thể tiếp tục.",
     "secretCardStoredStatus": "{{label}} đã được lưu trong chuỗi khóa hệ điều hành.",
     "toolSecretRequest": "Đang yêu cầu mục bí mật…",
-    "toolSecretRequestDone": "Đã yêu cầu mục bí mật"
+    "toolSecretRequestDone": "Đã yêu cầu mục bí mật",
+    "toolSessions": "Đang làm việc với phiên…"
   },
   "app": {
     "aiAssistant": "Trợ lý AI",
@@ -898,6 +905,7 @@
     "subnetTitle": "Máy tính Mạng con IPv4",
     "subtitle": "Chọn tiện ích cục bộ, báo cáo và thẻ do tác nhân soạn cho các công cụ bạn muốn có trong tầm tay.",
     "title": "Bảng điều khiển",
+    "titleLabel": "Tiêu đề",
     "titlePlaceholder": "Tiêu đề tùy chỉnh…",
     "tool": "Công cụ",
     "totalAddresses": "Tổng địa chỉ",
@@ -1031,6 +1039,14 @@
       "dashboard": {
         "label": "Bảng điều khiển",
         "description": "Đọc và sửa đổi góc nhìn Bảng điều khiển, phiên bản tiện ích và tiện ích tùy chỉnh."
+      },
+      "connections": {
+        "label": "Kết nối",
+        "description": "Liệt kê, tạo, chỉnh sửa và xóa các kết nối đã lưu."
+      },
+      "sessions": {
+        "label": "Phiên trực tiếp",
+        "description": "Đọc ngữ cảnh phiên hiển thị và tương tác với phiên terminal, máy tính từ xa và trình duyệt tệp đang hoạt động."
       }
     },
     "aiToolsDescription": "Chọn công cụ tích hợp nào Trợ lý AI có thể gọi khi trả lời. Tắt các công cụ rủi ro trừ khi bạn cần chúng.",

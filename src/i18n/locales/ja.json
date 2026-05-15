@@ -161,11 +161,13 @@
     ],
     "toolCallComplete": "完了",
     "toolCallRunning": "実行中",
+    "toolConnectionsDone": "接続を管理しました",
     "toolCurrentTimeDone": "現在時刻を確認しました",
     "toolDashboard": "ダッシュボードを更新中…",
     "toolDashboardDone": "ダッシュボードを更新しました",
     "toolFileReadDone": "ファイルを読み取りました",
     "toolFileSearchDone": "ファイルを検索しました",
+    "toolSessionsDone": "セッションを処理しました",
     "toolShellCommandDone": "コマンドを実行しました",
     "toolWebFetchDone": "ウェブページを取得しました",
     "toolWebSearchDone": "ウェブを検索しました",
@@ -381,10 +383,12 @@
     "thoughtFor": "思考時間",
     "toolWebSearch": "ウェブを検索中…",
     "toolWebFetch": "ウェブページを取得中…",
+    "toolSessions": "セッションを処理中…",
     "toolShellCommand": "コマンドを実行中…",
     "toolFileSearch": "ファイルを検索中…",
     "toolFileRead": "ファイルを読み取り中…",
     "toolCurrentTime": "現在時刻を確認中…",
+    "toolConnections": "接続を管理中…",
     "secretCardAiProviderDescription": "{{provider}}のAIプロバイダーキーとして保存されました。",
     "secretCardAiProviderMessage": "{{provider}}がチャットを開始するにはAPIキーが必要です。",
     "secretCardDefaultDescription": "OSキーチェーンに直接保存されました。",
@@ -401,6 +405,9 @@
     "secretCardStoredInline": "OSキーチェーンに保存済み",
     "secretCardStoredMessage": "{{label}}は保存されました。続行できます。",
     "secretCardStoredStatus": "{{label}}はOSキーチェーンに保存されました。",
+    "toolPermissionAllowAll": "すべて許可",
+    "toolPermissionMode": "ツール権限",
+    "toolPermissionPrompt": "確認",
     "toolSecretRequest": "シークレットエントリをリクエスト中…",
     "toolSecretRequestDone": "シークレットエントリをリクエストしました"
   },
@@ -899,6 +906,7 @@
     "subnetTitle": "IPv4 サブネット計算機",
     "subtitle": "手元に置きたいツールのウィジェット、レポート、エージェント作成カードを選択します。",
     "title": "ダッシュボード",
+    "titleLabel": "タイトル",
     "titlePlaceholder": "カスタムタイトル…",
     "tool": "ツール",
     "totalAddresses": "総アドレス数",
@@ -1005,6 +1013,10 @@
     "aiResponseDefaults": "応答のデフォルト",
     "aiResponseDefaultsHint": "アシスタントの返信の言語設定。",
     "aiTools": {
+      "connections": {
+        "label": "接続",
+        "description": "保存された接続の一覧表示、作成、編集、削除。"
+      },
       "currentTime": {
         "label": "現在時刻",
         "description": "スケジューリングとログの相関のために、現在のローカル時刻と UTC 時刻を取得します。"
@@ -1024,6 +1036,10 @@
       "appDataFileRead": {
         "label": "アプリデータファイルを読み取り",
         "description": "KKTerm が所有するアプリデータ内の小さなテキストファイルのみを読み取ります。"
+      },
+      "sessions": {
+        "label": "ライブセッション",
+        "description": "表示中のセッションコンテキストを読み取り、アクティブな端末、リモートデスクトップ、ファイルブラウザのセッションと対話します。"
       },
       "shellCommand": {
         "label": "PowerShell / バッチコマンド",

@@ -161,12 +161,17 @@
     ],
     "toolCallComplete": "Completado",
     "toolCallRunning": "Ejecutando",
+    "toolConnectionsDone": "Conexiones gestionadas",
     "toolCurrentTimeDone": "Verificó la hora",
     "toolDashboard": "Actualizando panel…",
     "toolDashboardDone": "Panel actualizado",
     "toolFileReadDone": "Leyó archivo",
     "toolFileSearchDone": "Buscó archivos",
+    "toolPermissionAllowAll": "Permitir todo",
+    "toolPermissionMode": "Permisos de herramientas",
+    "toolPermissionPrompt": "Preguntar",
     "toolShellCommandDone": "Ejecutó comando",
+    "toolSessionsDone": "Trabajó con sesiones",
     "toolWebFetchDone": "Obtuvo página web",
     "toolWebSearchDone": "Buscó en la web",
     "viewAll": "Ver todo",
@@ -379,6 +384,7 @@
     "workspace": "Espacio de trabajo",
     "thinking": "Pensando…",
     "thoughtFor": "Pensó durante",
+    "toolConnections": "Gestionando conexiones…",
     "toolWebSearch": "Buscando en la web…",
     "toolWebFetch": "Obteniendo página web…",
     "toolShellCommand": "Ejecutando comando…",
@@ -402,7 +408,8 @@
     "secretCardStoredMessage": "{{label}} está almacenado. Puede continuar.",
     "secretCardStoredStatus": "{{label}} almacenado en el llavero del SO.",
     "toolSecretRequest": "Solicitando entrada secreta…",
-    "toolSecretRequestDone": "Entrada secreta solicitada"
+    "toolSecretRequestDone": "Entrada secreta solicitada",
+    "toolSessions": "Trabajando con sesiones…"
   },
   "app": {
     "aiAssistant": "Asistente IA",
@@ -898,6 +905,7 @@
     "subnetTitle": "Calculadora de subred IPv4",
     "subtitle": "Seleccione widgets de utilidad local, informes y tarjetas generadas por agentes para las herramientas que desee tener a mano.",
     "title": "Panel de control",
+    "titleLabel": "Título",
     "titlePlaceholder": "Título personalizado…",
     "tool": "Herramienta",
     "totalAddresses": "Direcciones totales",
@@ -1031,6 +1039,14 @@
       "dashboard": {
         "label": "Panel",
         "description": "Leer y modificar vistas del panel, instancias de widgets y widgets personalizados."
+      },
+      "connections": {
+        "label": "Conexiones",
+        "description": "Listar, crear, editar y eliminar conexiones guardadas."
+      },
+      "sessions": {
+        "label": "Sesiones activas",
+        "description": "Leer el contexto visible de sesiones e interactuar con sesiones activas de terminal, escritorio remoto y explorador de archivos."
       }
     },
     "aiToolsDescription": "Elija qué herramientas integradas puede usar el Asistente IA al responder. Mantenga las herramientas riesgosas desactivadas a menos que las necesite.",

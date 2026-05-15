@@ -161,11 +161,13 @@
     ],
     "toolCallComplete": "Completato",
     "toolCallRunning": "In esecuzione",
+    "toolConnectionsDone": "Connessioni gestite",
     "toolCurrentTimeDone": "Ha controllato l'ora",
     "toolDashboard": "Aggiornamento dashboard…",
     "toolDashboardDone": "Dashboard aggiornato",
     "toolFileReadDone": "Ha letto il file",
     "toolFileSearchDone": "Ha cercato file",
+    "toolSessionsDone": "Ha lavorato con le sessioni",
     "toolShellCommandDone": "Ha eseguito il comando",
     "toolWebFetchDone": "Ha recuperato la pagina web",
     "toolWebSearchDone": "Ha cercato sul web",
@@ -381,10 +383,12 @@
     "thoughtFor": "Ha riflettuto per",
     "toolWebSearch": "Cercando sul web…",
     "toolWebFetch": "Recuperando pagina web…",
+    "toolSessions": "Lavorando con le sessioni…",
     "toolShellCommand": "Eseguendo comando…",
     "toolFileSearch": "Cercando file…",
     "toolFileRead": "Leggendo file…",
     "toolCurrentTime": "Verificando ora corrente…",
+    "toolConnections": "Gestione connessioni…",
     "secretCardAiProviderDescription": "Salvata come chiave del provider AI per {{provider}}.",
     "secretCardAiProviderMessage": "{{provider}} richiede una chiave API prima che l'Assistente AI possa chattare.",
     "secretCardDefaultDescription": "Salvato direttamente nel portachiavi del sistema operativo.",
@@ -401,6 +405,9 @@
     "secretCardStoredInline": "Archiviato nel portachiavi del SO",
     "secretCardStoredMessage": "{{label}} è archiviato. Puoi continuare.",
     "secretCardStoredStatus": "{{label}} archiviato nel portachiavi del SO.",
+    "toolPermissionAllowAll": "Consenti tutto",
+    "toolPermissionMode": "Permessi strumenti",
+    "toolPermissionPrompt": "Chiedi",
     "toolSecretRequest": "Richiesta voce segreta…",
     "toolSecretRequestDone": "Voce segreta richiesta"
   },
@@ -899,6 +906,7 @@
     "subnetTitle": "Calcolatore di sottorete IPv4",
     "subtitle": "Seleziona widget di utilità locali, report e schede create da agenti per gli strumenti che vuoi a portata di mano.",
     "title": "Dashboard",
+    "titleLabel": "Titolo",
     "titlePlaceholder": "Titolo personalizzato…",
     "tool": "Strumento",
     "totalAddresses": "Indirizzi totali",
@@ -1005,6 +1013,10 @@
     "aiResponseDefaults": "Predefiniti risposte",
     "aiResponseDefaultsHint": "Preferenze lingua per le risposte dell'Assistente.",
     "aiTools": {
+      "connections": {
+        "label": "Connessioni",
+        "description": "Elenca, crea, modifica ed elimina le connessioni salvate."
+      },
       "currentTime": {
         "label": "Ora corrente",
         "description": "Ottieni l'ora locale e UTC corrente per pianificazione e correlazione dei log."
@@ -1024,6 +1036,10 @@
       "appDataFileRead": {
         "label": "Leggi file dati app",
         "description": "Leggi piccoli file di testo solo all'interno dei dati dell'app KKTerm."
+      },
+      "sessions": {
+        "label": "Sessioni attive",
+        "description": "Leggi il contesto visibile delle sessioni e interagisci con sessioni attive di terminale, desktop remoto ed esplora file."
       },
       "shellCommand": {
         "label": "Comandi PowerShell / batch",

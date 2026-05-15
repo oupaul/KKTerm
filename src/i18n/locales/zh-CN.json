@@ -161,11 +161,18 @@
     ],
     "toolCallComplete": "完成",
     "toolCallRunning": "执行中",
+    "toolConnections": "正在管理连接…",
+    "toolConnectionsDone": "已管理连接",
     "toolCurrentTimeDone": "已检查当前时间",
     "toolDashboard": "正在更新仪表板…",
     "toolDashboardDone": "已更新仪表板",
     "toolFileReadDone": "已读取文件",
     "toolFileSearchDone": "已搜索文件",
+    "toolPermissionAllowAll": "全部允许",
+    "toolPermissionMode": "工具权限",
+    "toolPermissionPrompt": "询问",
+    "toolSessions": "正在处理会话…",
+    "toolSessionsDone": "已处理会话",
     "toolShellCommandDone": "已执行命令",
     "toolWebFetchDone": "已获取网页",
     "toolWebSearchDone": "已搜索网页",
@@ -899,6 +906,7 @@
     "subnetTitle": "IPv4 子网计算器",
     "subtitle": "选择本地工具小部件、报告和代理编写的卡片，将常用工具放在手边。",
     "title": "仪表板",
+    "titleLabel": "标题",
     "titlePlaceholder": "自定义标题…",
     "tool": "工具",
     "totalAddresses": "总地址数",
@@ -1025,6 +1033,10 @@
         "label": "读取应用数据文件",
         "description": "仅在 KKTerm 拥有的应用数据中读取小型文本文件。"
       },
+      "connections": {
+        "label": "连接",
+        "description": "列出、创建、编辑和删除已保存的连接。"
+      },
       "shellCommand": {
         "label": "PowerShell / 批处理命令",
         "description": "仅从 KKTerm 应用数据运行非破坏性的 PowerShell 或批处理命令。"
@@ -1032,6 +1044,10 @@
       "dashboard": {
         "label": "仪表板",
         "description": "读取和修改仪表板视图、小部件实例和自定义小部件。"
+      },
+      "sessions": {
+        "label": "实时会话",
+        "description": "读取可见的会话上下文，并与活动的终端、远程桌面和文件浏览器会话交互。"
       }
     },
     "aiToolsDescription": "选择 AI 助手在回答时可以调用的内置工具。除非需要，否则请保持有风险的工具关闭。",

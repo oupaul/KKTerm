@@ -161,11 +161,18 @@
     ],
     "toolCallComplete": "完成",
     "toolCallRunning": "執行中",
+    "toolConnections": "正在管理連線…",
+    "toolConnectionsDone": "已管理連線",
     "toolCurrentTimeDone": "已檢查目前時間",
     "toolDashboard": "正在更新儀表板…",
     "toolDashboardDone": "已更新儀表板",
     "toolFileReadDone": "已讀取檔案",
     "toolFileSearchDone": "已搜尋檔案",
+    "toolPermissionAllowAll": "全部允許",
+    "toolPermissionMode": "工具權限",
+    "toolPermissionPrompt": "詢問",
+    "toolSessions": "正在處理工作階段…",
+    "toolSessionsDone": "已處理工作階段",
     "toolShellCommandDone": "已執行指令",
     "toolWebFetchDone": "已取得網頁",
     "toolWebSearchDone": "已搜尋網頁",
@@ -899,6 +906,7 @@
     "subnetTitle": "IPv4 子網路計算機",
     "subtitle": "選擇本機工具小工具、報告和代理撰寫的卡片，將常用工具放在手邊。",
     "title": "儀表板",
+    "titleLabel": "標題",
     "titlePlaceholder": "自訂標題…",
     "tool": "工具",
     "totalAddresses": "總位址數",
@@ -1025,6 +1033,10 @@
         "label": "讀取應用程式資料檔案",
         "description": "僅在 KKTerm 擁有的應用程式資料中讀取小型文字檔案。"
       },
+      "connections": {
+        "label": "連線",
+        "description": "列出、建立、編輯和刪除已儲存的連線。"
+      },
       "shellCommand": {
         "label": "PowerShell / 批次命令",
         "description": "僅從 KKTerm 應用程式資料執行非破壞性的 PowerShell 或批次命令。"
@@ -1032,6 +1044,10 @@
       "dashboard": {
         "label": "儀表板",
         "description": "讀取和修改儀表板檢視、小工具實例和自訂小工具。"
+      },
+      "sessions": {
+        "label": "即時工作階段",
+        "description": "讀取可見的工作階段上下文，並與活動的終端機、遠端桌面和檔案瀏覽器工作階段互動。"
       }
     },
     "aiToolsDescription": "選擇 AI 助理在回答時可呼叫的內建工具。除非需要，否則請勿開啟高風險工具。",
