@@ -485,14 +485,6 @@ main.dashboard-page {
   border-bottom-color: color-mix(in srgb, var(--w-accent) 60%, transparent);
 }
 
-.dw-title-group {
-  display: grid;
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  gap: 2px;
-}
-
 .dw-title,
 .dw-action-title,
 .dw-hero-title {
@@ -509,23 +501,6 @@ main.dashboard-page {
 .dw-preset-panel .dw-title {
   color: var(--w-title-text);
   text-shadow: 0 1px 1px rgb(0 0 0 / 22%);
-}
-
-.dw-subtitle-tip {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 20;
-  margin-top: 4px;
-  max-width: 240px;
-  padding: 6px 8px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
-  font-size: 11px;
-  line-height: 1.3;
 }
 
 .dw-icon {
