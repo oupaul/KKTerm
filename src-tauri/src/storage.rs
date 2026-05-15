@@ -12,7 +12,7 @@ use std::{
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
-const SCHEMA_USER_VERSION: i32 = 14;
+const SCHEMA_USER_VERSION: i32 = 15;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -186,6 +186,7 @@ CREATE TABLE IF NOT EXISTS dashboard_widget_instances (
     icon_name TEXT NOT NULL,
     custom_title TEXT,
     glass INTEGER NOT NULL DEFAULT 0,
+    hide_title INTEGER NOT NULL DEFAULT 0,
     action_direction TEXT,
     settings_values_json TEXT NOT NULL DEFAULT '{}',
     grid_x INTEGER NOT NULL,
@@ -1538,6 +1539,7 @@ impl Storage {
         ensure_column(&connection, "url_credentials", "field_values", "TEXT")?;
         ensure_column(&connection, "dashboard_custom_widgets", "settings_schema_json", "TEXT NOT NULL DEFAULT '{\"fields\":[]}'")?;
         ensure_column(&connection, "dashboard_widget_instances", "settings_values_json", "TEXT NOT NULL DEFAULT '{}'")?;
+        ensure_column(&connection, "dashboard_widget_instances", "hide_title", "INTEGER NOT NULL DEFAULT 0")?;
         ensure_column(&connection, "dashboard_views", "background_json", "TEXT")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))

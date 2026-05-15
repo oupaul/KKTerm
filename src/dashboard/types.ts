@@ -53,6 +53,7 @@ export interface DashboardWidgetInstance {
   iconName: IconName;
   customTitle: string | null;
   glass?: boolean;
+  hideTitle?: boolean;
   actionDirection?: "vertical" | "horizontal";
   settingsValuesJson: string;
   gridX: number;
@@ -85,6 +86,7 @@ export interface InstancePatch {
   iconName?: IconName;
   customTitle?: string | null;
   glass?: boolean;
+  hideTitle?: boolean;
   actionDirection?: "vertical" | "horizontal";
   settingsValuesJson?: string;
   gridX?: number;

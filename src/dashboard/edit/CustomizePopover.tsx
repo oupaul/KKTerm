@@ -176,6 +176,13 @@ function CommonSection({ instance }: { instance: DashboardWidgetInstance }) {
               onChange={(checked) => updateInstance(instance.id, { glass: checked })}
             />
           </label>
+          <label className="dw-field dw-field-row">
+            <span>{t("dashboard.hideTitle")}</span>
+            <ToggleSwitch
+              checked={instance.hideTitle === true}
+              onChange={(checked) => updateInstance(instance.id, { hideTitle: checked })}
+            />
+          </label>
         </section>
       ) : null}
 

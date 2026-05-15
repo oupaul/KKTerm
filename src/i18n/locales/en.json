@@ -55,6 +55,7 @@
       "action": "Action"
     },
     "glassBackground": "Frosted glass background",
+    "hideTitle": "Hide title bar",
     "actionDirection": "Layout direction",
     "actionDirectionOptions": {
       "vertical": "Vertical",

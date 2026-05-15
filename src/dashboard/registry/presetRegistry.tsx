@@ -8,6 +8,7 @@ export interface PresetChromeProps {
   controls?: ReactNode;
   editMode: boolean;
   glass?: boolean;
+  hideTitle?: boolean;
   actionDirection?: "vertical" | "horizontal";
 }
 
@@ -24,14 +25,16 @@ function PanelChrome({ title, icon, body, controls, editMode }: PresetChromeProp
   );
 }
 
-function AmbientChrome({ title, body, controls, editMode, glass }: PresetChromeProps) {
+function AmbientChrome({ title, body, controls, editMode, glass, hideTitle }: PresetChromeProps) {
   return (
     <div className={`dw-preset dw-preset-ambient${glass ? " dw-preset-ambient--glass" : ""}${editMode ? " drag-handle" : ""}`}>
-      <div className="dw-ambient-label">
-        <span className="dw-dot" />
-        {title}
-        {controls}
-      </div>
+      {hideTitle ? controls : (
+        <div className="dw-ambient-label">
+          <span className="dw-dot" />
+          {title}
+          {controls}
+        </div>
+      )}
       {body}
     </div>
   );

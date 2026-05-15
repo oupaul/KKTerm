@@ -44,6 +44,7 @@ function browserPreviewState() {
           iconName: "Wrench",
           customTitle: null,
           glass: false,
+          hideTitle: false,
           actionDirection: undefined,
           settingsValuesJson: "{}",
           gridX: 0,

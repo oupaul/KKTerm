@@ -111,6 +111,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
         controls={controls}
         editMode={editMode}
         glass={instance.glass}
+        hideTitle={instance.hideTitle}
         actionDirection={instance.actionDirection}
       />
     </div>
