@@ -809,6 +809,8 @@
         "connectionWidgetSelectPlaceholder": "เลือกการเชื่อมต่อที่บันทึกไว้…",
         "copyValue": "คัดลอก {{label}}",
         "customize": "ปรับแต่งวิดเจ็ต",
+        "customizeSectionCommon": "ทั่วไป",
+        "customizeSectionWidget": "วิดเจ็ต",
         "defaultView": "มุมมองเริ่มต้น",
         "deleteCustomWidget": "ลบ {{name}}",
         "density": {

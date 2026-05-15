@@ -810,6 +810,8 @@
         "connectionWidgetSelectPlaceholder": "Seleziona una connessione salvata…",
         "copyValue": "Copia {{label}}",
         "customize": "Personalizza widget",
+        "customizeSectionCommon": "Comune",
+        "customizeSectionWidget": "Widget",
         "defaultView": "Vista predefinita",
         "deleteCustomWidget": "Elimina {{name}}",
         "density": {

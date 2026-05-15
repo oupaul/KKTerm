@@ -810,6 +810,8 @@
         "connectionWidgetSelectPlaceholder": "Gespeicherte Verbindung auswählen…",
         "copyValue": "{{label}} kopieren",
         "customize": "Widget anpassen",
+        "customizeSectionCommon": "Allgemein",
+        "customizeSectionWidget": "Widget",
         "defaultView": "Standardansicht",
         "deleteCustomWidget": "{{name}} löschen",
         "density": {

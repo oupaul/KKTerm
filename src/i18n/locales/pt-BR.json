@@ -809,6 +809,8 @@
         "connectionWidgetSelectPlaceholder": "Selecionar uma conexão salva…",
         "copyValue": "Copiar {{label}}",
         "customize": "Personalizar widget",
+        "customizeSectionCommon": "Comum",
+        "customizeSectionWidget": "Widget",
         "defaultView": "Visão padrão",
         "deleteCustomWidget": "Excluir {{name}}",
         "density": {

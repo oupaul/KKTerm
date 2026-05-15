@@ -809,6 +809,8 @@
         "connectionWidgetSelectPlaceholder": "Chọn kết nối đã lưu…",
         "copyValue": "Sao chép {{label}}",
         "customize": "Tùy chỉnh tiện ích",
+        "customizeSectionCommon": "Chung",
+        "customizeSectionWidget": "Widget",
         "defaultView": "Góc nhìn mặc định",
         "deleteCustomWidget": "Xóa {{name}}",
         "density": {

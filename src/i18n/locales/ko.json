@@ -809,6 +809,8 @@
         "connectionWidgetSelectPlaceholder": "저장된 연결 선택…",
         "copyValue": "{{label}} 복사",
         "customize": "위젯 사용자 정의",
+        "customizeSectionCommon": "공통",
+        "customizeSectionWidget": "위젯",
         "defaultView": "기본 보기",
         "deleteCustomWidget": "{{name}} 삭제",
         "density": {

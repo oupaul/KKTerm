@@ -66,10 +66,6 @@
     "titleLabel": "Title",
     "titlePlaceholder": "Custom title…",
     "advanced": "Advanced",
-    "customize": {
-      "sectionCommon": "Common",
-      "sectionWidget": "Widget"
-    },
     "changeBackground": "Change Background…",
     "backgroundModeDefault": "Theme Default",
     "backgroundModePreset": "Color & Gradient",
@@ -135,6 +131,8 @@
     "missingCustomWidget": "Missing custom widget: {{sourceId}}",
     "untitledWidget": "Widget",
     "customize": "Customize widget",
+    "customizeSectionCommon": "Common",
+    "customizeSectionWidget": "Widget",
     "widgetSettings": "Widget settings",
     "widgetSettingsEmpty": "No custom settings for this widget.",
     "widgetSettingsInvalid": "Widget settings schema is not valid.",

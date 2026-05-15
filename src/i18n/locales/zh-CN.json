@@ -810,6 +810,8 @@
         "connectionWidgetSelectPlaceholder": "选择已保存的连接…",
         "copyValue": "复制 {{label}}",
         "customize": "自定义小部件",
+        "customizeSectionCommon": "通用",
+        "customizeSectionWidget": "小部件",
         "defaultView": "默认视图",
         "deleteCustomWidget": "删除 {{name}}",
         "density": {

@@ -810,6 +810,8 @@
         "connectionWidgetSelectPlaceholder": "保存された接続を選択…",
         "copyValue": "{{label}} をコピー",
         "customize": "ウィジェットをカスタマイズ",
+        "customizeSectionCommon": "共通",
+        "customizeSectionWidget": "ウィジェット",
         "defaultView": "デフォルトビュー",
         "deleteCustomWidget": "{{name}} を削除",
         "density": {

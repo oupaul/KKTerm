@@ -51,10 +51,10 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
 
   const sections = useMemo(() => {
     const list: { key: SectionKey; label: string }[] = [
-      { key: "common", label: t("dashboard.customize.sectionCommon") },
+      { key: "common", label: t("dashboard.customizeSectionCommon") },
     ];
     if (hasWidgetSettings) {
-      list.push({ key: "widget", label: t("dashboard.customize.sectionWidget") });
+      list.push({ key: "widget", label: t("dashboard.customizeSectionWidget") });
     }
     if (hasAdvanced) {
       list.push({ key: "advanced", label: t("dashboard.advanced") });
@@ -109,19 +109,21 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
         visibility: position.visible ? "visible" : "hidden",
       }}
     >
-      <nav className="dw-customize-nav">
+      <nav className="dw-customize-tabs" role="tablist" aria-label={t("dashboard.customize")}>
         {sections.map((s) => (
           <button
             key={s.key}
             type="button"
-            className={`dw-customize-nav-item${section === s.key ? " active" : ""}`}
+            role="tab"
+            aria-selected={section === s.key}
+            className={section === s.key ? "active" : ""}
             onClick={() => setSection(s.key)}
           >
             {s.label}
           </button>
         ))}
       </nav>
-      <div className="dw-customize-pane">
+      <div className="dw-customize-pane" role="tabpanel">
         {section === "common" ? <CommonSection instance={instance} /> : null}
         {section === "widget" ? (
           <WidgetSection schema={settingsSchema} instance={instance} />

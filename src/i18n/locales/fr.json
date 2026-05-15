@@ -810,6 +810,8 @@
         "connectionWidgetSelectPlaceholder": "Sélectionner une connexion enregistrée…",
         "copyValue": "Copier {{label}}",
         "customize": "Personnaliser le widget",
+        "customizeSectionCommon": "Commun",
+        "customizeSectionWidget": "Widget",
         "defaultView": "Vue par défaut",
         "deleteCustomWidget": "Supprimer {{name}}",
         "density": {

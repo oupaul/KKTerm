@@ -810,6 +810,8 @@
         "connectionWidgetSelectPlaceholder": "選擇已儲存的連接…",
         "copyValue": "複製 {{label}}",
         "customize": "自訂小工具",
+        "customizeSectionCommon": "一般",
+        "customizeSectionWidget": "小工具",
         "defaultView": "預設檢視",
         "deleteCustomWidget": "刪除 {{name}}",
         "density": {

@@ -809,6 +809,8 @@
         "connectionWidgetSelectPlaceholder": "Pilih Koneksi tersimpan…",
         "copyValue": "Salin {{label}}",
         "customize": "Sesuaikan widget",
+        "customizeSectionCommon": "Umum",
+        "customizeSectionWidget": "Widget",
         "defaultView": "Tampilan default",
         "deleteCustomWidget": "Hapus {{name}}",
         "density": {

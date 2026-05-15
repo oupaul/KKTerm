@@ -1178,8 +1178,10 @@ main.dashboard-page.dashboard-page-hidden,
 .dw-customize {
   position: fixed;
   z-index: 160;
-  display: grid;
-  grid-template-columns: 124px 1fr;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1191,38 +1193,36 @@ main.dashboard-page.dashboard-page-hidden,
   overflow: hidden;
 }
 
-.dw-customize-nav {
+.dw-customize-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 6px;
+  gap: 3px;
+  padding: 3px;
   background: var(--surface-muted);
-  border-right: 1px solid var(--border);
+  border-radius: 8px;
 }
 
-.dw-customize-nav-item {
-  display: block;
-  padding: 7px 10px;
+.dw-customize-tabs button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 8px;
   color: var(--text-muted);
   background: transparent;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-align: left;
-  text-transform: uppercase;
+  font-size: 12px;
+  text-align: center;
 }
 
-.dw-customize-nav-item:hover {
+.dw-customize-tabs button:hover {
   color: var(--text);
 }
 
-.dw-customize-nav-item.active {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: var(--accent);
+.dw-customize-tabs button.active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--dashboard-shadow-card);
+  font-weight: 600;
 }
 
 .dw-customize-pane {
