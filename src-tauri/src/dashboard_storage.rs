@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dashboard_validation::{
     dashboard_widget_secret_owner_id,
@@ -126,7 +126,16 @@ pub struct ViewPatch {
     #[serde(default)] pub title: Option<String>,
     #[serde(default)] pub grid_density: Option<String>,
     #[serde(default)] pub sort_order: Option<i64>,
-    #[serde(default)] pub background: Option<Option<DashboardBackground>>,
+    #[serde(default, deserialize_with = "deserialize_nullable_patch")]
+    pub background: Option<Option<DashboardBackground>>,
+}
+
+fn deserialize_nullable_patch<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -913,6 +922,17 @@ mod tests {
             background: Some(None),
         }).unwrap();
         assert_eq!(cleared.background, None);
+    }
+
+    #[test]
+    fn view_patch_deserializes_null_background_as_clear() {
+        let patch: ViewPatch = serde_json::from_value(serde_json::json!({
+            "background": null
+        })).unwrap();
+        assert_eq!(patch.background, Some(None));
+
+        let patch: ViewPatch = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(patch.background, None);
     }
 
     #[test]
