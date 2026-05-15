@@ -72,7 +72,9 @@
     "backgroundModePreset": "Color & Gradient",
     "backgroundModeImage": "Image",
     "backgroundModeMedia": "Image / Video",
+    "backgroundModeDynamic": "Dynamic",
     "backgroundDefaultHint": "Uses the active color scheme background.",
+    "backgroundDynamicHint": "Runs a local HTML5 animation behind the widget grid.",
     "backgroundChooseImage": "Choose Image…",
     "backgroundChooseMedia": "Choose File…",
     "backgroundRemoveImage": "Remove",
@@ -108,6 +110,17 @@
       "gHorizon": "Horizon",
       "gPetal": "Petal",
       "gTwilight": "Twilight"
+    },
+    "dynamicBackgrounds": {
+      "aurora": "Aurora",
+      "raindrops": "Raindrops",
+      "starfield": "Night Sky",
+      "nebula": "Nebula",
+      "embers": "Embers",
+      "lava": "Lava Lamp",
+      "matrix": "Matrix",
+      "synthwave": "Synthwave",
+      "confetti": "Confetti"
     },
     "scriptNetwork": "Allow network",
     "scriptPollSeconds": "Poll interval (seconds)",

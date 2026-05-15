@@ -27,6 +27,7 @@ pub enum DashboardBackground {
     Preset { preset: String },
     Image { file: String, fit: String, dim: i64 },
     Video { file: String, fit: String, dim: i64 },
+    Dynamic { dynamic: String },
 }
 
 impl DashboardBackground {
@@ -40,6 +41,9 @@ impl DashboardBackground {
             }
             DashboardBackground::Video { file, fit, dim } => {
                 crate::dashboard_validation::validate_background_video(file, fit, *dim)
+            }
+            DashboardBackground::Dynamic { dynamic } => {
+                crate::dashboard_validation::validate_dynamic_background(dynamic)
             }
         }
     }
@@ -986,6 +990,7 @@ mod tests {
         create_view(&conn, "v2", "Second", None).unwrap();
         create_view(&conn, "v3", "Third", None).unwrap();
         create_view(&conn, "v4", "Fourth", None).unwrap();
+        create_view(&conn, "v5", "Fifth", None).unwrap();
         update_view(&conn, "v1", &ViewPatch {
             title: None, grid_density: None, sort_order: None,
             background: Some(Some(DashboardBackground::Image {
@@ -1002,11 +1007,30 @@ mod tests {
                 file: "bg-bbb.mp4".into(), fit: "fill".into(), dim: 0,
             })),
         }).unwrap();
+        update_view(&conn, "v5", &ViewPatch {
+            title: None, grid_density: None, sort_order: None,
+            background: Some(Some(DashboardBackground::Dynamic { dynamic: "aurora".into() })),
+        }).unwrap();
         // v3 left as theme default (NULL).
         let files = referenced_background_image_files(&conn).unwrap();
         assert_eq!(files.len(), 2);
         assert!(files.contains("bg-aaa.jpg"));
         assert!(files.contains("bg-bbb.mp4"));
+    }
+
+    #[test]
+    fn update_view_sets_dynamic_background() {
+        let conn = open_test_db();
+        create_view(&conn, "v1", "First", None).unwrap();
+
+        let dynamic = DashboardBackground::Dynamic { dynamic: "matrix".into() };
+        let updated = update_view(&conn, "v1", &ViewPatch {
+            title: None, grid_density: None, sort_order: None,
+            background: Some(Some(dynamic.clone())),
+        }).unwrap();
+
+        assert_eq!(updated.background, Some(dynamic.clone()));
+        assert_eq!(load_state(&conn).unwrap().views[0].background, Some(dynamic));
     }
 
     #[test]

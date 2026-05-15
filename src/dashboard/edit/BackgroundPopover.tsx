@@ -3,15 +3,18 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isTauriRuntime, openExternalUrl } from "../../lib/tauri";
 import { BACKGROUND_PRESETS } from "../registry/backgroundPresets";
+import { DYNAMIC_BACKGROUNDS } from "../registry/dynamicBackgrounds";
 import { importBackgroundImage } from "../state/persistence";
 import { useDashboardStore } from "../state/dashboardStore";
 import { BACKGROUND_FITS, type BackgroundFit, type DashboardBackground, type DashboardView } from "../types";
 
-type Mode = "default" | "preset" | "media";
+type Mode = "default" | "preset" | "media" | "dynamic";
 
 function modeOf(background: DashboardBackground | null): Mode {
   if (!background) return "default";
-  return background.kind === "preset" ? "preset" : "media";
+  if (background.kind === "preset") return "preset";
+  if (background.kind === "dynamic") return "dynamic";
+  return "media";
 }
 
 function isMediaBackground(
@@ -59,6 +62,11 @@ export function BackgroundPopover({ view, onClose }: BackgroundPopoverProps) {
   function applyPreset(presetId: string) {
     setMode("preset");
     void setViewBackground(view.id, { kind: "preset", preset: presetId });
+  }
+
+  function applyDynamic(dynamicId: string) {
+    setMode("dynamic");
+    void setViewBackground(view.id, { kind: "dynamic", dynamic: dynamicId });
   }
 
   type MediaBackground = Extract<DashboardBackground, { kind: "image" | "video" }>;
@@ -115,6 +123,9 @@ export function BackgroundPopover({ view, onClose }: BackgroundPopoverProps) {
         <button className={mode === "media" ? "active" : ""} onClick={() => setMode("media")}>
           {t("dashboard.backgroundModeMedia")}
         </button>
+        <button className={mode === "dynamic" ? "active" : ""} onClick={() => setMode("dynamic")}>
+          {t("dashboard.backgroundModeDynamic")}
+        </button>
       </div>
 
       {mode === "default" && (
@@ -133,6 +144,23 @@ export function BackgroundPopover({ view, onClose }: BackgroundPopoverProps) {
               onClick={() => applyPreset(preset.id)}
             />
           ))}
+        </div>
+      )}
+
+      {mode === "dynamic" && (
+        <div className="dw-bg-dynamic">
+          <div className="dw-bg-dynamic-grid">
+            {DYNAMIC_BACKGROUNDS.map((backgroundOption) => (
+              <button
+                key={backgroundOption.id}
+                className={background?.kind === "dynamic" && background.dynamic === backgroundOption.id ? "active" : ""}
+                onClick={() => applyDynamic(backgroundOption.id)}
+              >
+                {t(backgroundOption.labelKey)}
+              </button>
+            ))}
+          </div>
+          <p className="dw-muted">{t("dashboard.backgroundDynamicHint")}</p>
         </div>
       )}
 

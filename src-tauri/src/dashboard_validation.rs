@@ -26,6 +26,10 @@ pub const BACKGROUND_PRESET_IDS: &[&str] = &[
     "g-dawn", "g-fog", "g-meadow", "g-dusk", "g-linen", "g-horizon", "g-petal", "g-twilight",
 ];
 
+pub const DYNAMIC_BACKGROUND_IDS: &[&str] = &[
+    "aurora", "raindrops", "starfield", "nebula", "embers", "lava", "matrix", "synthwave", "confetti",
+];
+
 pub const BACKGROUND_FITS: &[&str] = &["fill", "fit", "stretch", "tile", "center"];
 
 pub const GRID_COLUMNS: i64 = 12;
@@ -115,6 +119,14 @@ pub fn validate_title(value: &str) -> Result<(), ValidationError> {
 
 pub fn validate_background_preset(preset: &str) -> Result<(), ValidationError> {
     if BACKGROUND_PRESET_IDS.contains(&preset) {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidBackground)
+    }
+}
+
+pub fn validate_dynamic_background(dynamic: &str) -> Result<(), ValidationError> {
+    if DYNAMIC_BACKGROUND_IDS.contains(&dynamic) {
         Ok(())
     } else {
         Err(ValidationError::InvalidBackground)

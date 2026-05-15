@@ -5,6 +5,7 @@ import { useEffect, useMemo, type CSSProperties, type JSX, type MouseEvent } fro
 import { useTranslation } from "react-i18next";
 import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { resolveBackgroundPreset } from "../registry/backgroundPresets";
+import { DashboardDynamicBackground } from "../registry/dynamicBackgrounds";
 import { useDashboardStore } from "../state/dashboardStore";
 import type { BackgroundFit, DashboardView, DashboardWidgetInstance, GridDensity } from "../types";
 import { WidgetFrame } from "./WidgetFrame";
@@ -106,6 +107,8 @@ export function DashboardCanvas({
       }
       backgroundLayer = <div className="dw-canvas-bg" style={style} />;
     }
+  } else if (background?.kind === "dynamic") {
+    backgroundLayer = <DashboardDynamicBackground id={background.dynamic} />;
   }
 
   return (
