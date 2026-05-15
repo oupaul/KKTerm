@@ -28,11 +28,14 @@ function normalizeTag(tag: string) {
 }
 
 // Compare two dot-separated version strings. Returns >0 if a>b, <0 if a<b, 0 equal.
+// Build metadata (+suffix) is stripped per semver — it does not affect precedence.
 // Pre-release suffixes (e.g. "1.2.3-beta.1") are treated as lower than the same
 // version without a suffix, which is enough for "is there a newer release" checks.
 export function compareVersions(a: string, b: string): number {
-  const [coreA, preA = ""] = a.split("-");
-  const [coreB, preB = ""] = b.split("-");
+  const cleanA = a.split("+")[0].trim();
+  const cleanB = b.split("+")[0].trim();
+  const [coreA, preA = ""] = cleanA.split("-");
+  const [coreB, preB = ""] = cleanB.split("-");
 
   const partsA = coreA.split(".").map((part) => Number.parseInt(part, 10) || 0);
   const partsB = coreB.split(".").map((part) => Number.parseInt(part, 10) || 0);
