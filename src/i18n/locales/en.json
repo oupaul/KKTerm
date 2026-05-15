@@ -62,6 +62,7 @@
       "horizontal": "Horizontal"
     },
     "accent": "Accent",
+    "accentDefault": "Default",
     "icon": "Icon",
     "titleLabel": "Title",
     "titlePlaceholder": "Custom title…",

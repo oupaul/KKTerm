@@ -103,16 +103,19 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
       <section>
         <h4>{t("dashboard.accent")}</h4>
         <div className="dw-accent-picker">
-          {ACCENT_PALETTE.map((p) => (
-            <button
-              key={p.name}
-              className={instance.accentName === p.name ? "active" : ""}
-              style={{ background: p.color }}
-              title={p.name}
-              aria-label={p.name}
-              onClick={() => updateInstance(instance.id, { accentName: p.name as AccentName })}
-            />
-          ))}
+          {ACCENT_PALETTE.map((p) => {
+            const label = p.name === "default" ? t("dashboard.accentDefault") : p.name;
+            return (
+              <button
+                key={p.name}
+                className={instance.accentName === p.name ? "active" : ""}
+                style={{ background: p.color }}
+                title={label}
+                aria-label={label}
+                onClick={() => updateInstance(instance.id, { accentName: p.name as AccentName })}
+              />
+            );
+          })}
         </div>
       </section>
 

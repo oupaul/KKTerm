@@ -7,7 +7,7 @@ export const WIDGET_PRESETS = [
 export type WidgetPreset = (typeof WIDGET_PRESETS)[number];
 
 export const ACCENT_NAMES = [
-  "blue", "indigo", "teal", "green", "amber", "red", "purple", "pink",
+  "default", "blue", "indigo", "teal", "green", "amber", "red", "purple", "pink",
   "slate", "cyan", "orange", "rose", "emerald", "sky",
 ] as const;
 export type AccentName = (typeof ACCENT_NAMES)[number];

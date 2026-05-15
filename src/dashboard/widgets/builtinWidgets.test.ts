@@ -39,6 +39,8 @@ const urlConfig = normalizeUrlWidgetConfig({
 const urlTab = createUrlWidgetTab(instance.id, urlConfig, 1);
 const builtInIds = BUILT_IN_WIDGETS.map((entry) => entry.id);
 
+const defaultAccent: DashboardWidgetInstance["accentName"] = "default";
+
 if (!builtInIds.includes("connectionPane") || !builtInIds.includes("urlViewer")) {
   throw new Error("Dashboard built-in registry is missing the Connection Pane or URL Viewer widgets.");
 }
@@ -46,3 +48,4 @@ if (!builtInIds.includes("connectionPane") || !builtInIds.includes("urlViewer"))
 void bodyProps;
 void connectionTab;
 void urlTab;
+void defaultAccent;

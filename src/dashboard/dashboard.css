@@ -303,6 +303,7 @@ main.dashboard-page {
 .dw-instance {
   --w-accent: var(--accent);
   --w-accent-soft: var(--accent-soft);
+  --w-title-text: var(--text);
   position: relative;
   display: flex;
   height: 100%;
@@ -409,6 +410,17 @@ main.dashboard-page {
   border-bottom: 1px solid var(--border);
 }
 
+.dw-preset-panel .dw-head {
+  color: var(--w-title-text);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--w-accent) 82%, var(--surface) 18%) 0%,
+      color-mix(in srgb, var(--w-accent) 64%, black) 100%
+    );
+  border-bottom-color: color-mix(in srgb, var(--w-accent) 60%, transparent);
+}
+
 .dw-title-group {
   display: grid;
   position: relative;
@@ -428,6 +440,11 @@ main.dashboard-page {
   font-size: 13px;
   font-weight: 650;
   letter-spacing: 0;
+}
+
+.dw-preset-panel .dw-title {
+  color: var(--w-title-text);
+  text-shadow: 0 1px 1px rgb(0 0 0 / 22%);
 }
 
 .dw-subtitle-tip {
@@ -457,6 +474,11 @@ main.dashboard-page {
   color: var(--w-accent);
   background: var(--w-accent-soft);
   border-radius: 8px;
+}
+
+.dw-preset-panel .dw-icon {
+  color: var(--w-title-text);
+  background: rgb(255 255 255 / 18%);
 }
 
 .dw-body,

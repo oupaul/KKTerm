@@ -93,6 +93,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
     // expose CSS variables consumed by preset chrome
     ["--w-accent" as unknown as string]: accent.color,
     ["--w-accent-soft" as unknown as string]: accent.soft,
+    ["--w-title-text" as unknown as string]: accent.titleText,
   } as CSSProperties;
 
   const className = [

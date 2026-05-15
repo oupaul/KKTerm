@@ -7,7 +7,7 @@ pub const PRESETS: &[&str] = &[
 ];
 
 pub const ACCENTS: &[&str] = &[
-    "blue", "indigo", "teal", "green", "amber",
+    "default", "blue", "indigo", "teal", "green", "amber",
     "red", "purple", "pink", "slate", "cyan",
     "orange", "rose", "emerald", "sky",
 ];
@@ -418,6 +418,11 @@ mod tests {
     #[test]
     fn accent_unknown() {
         assert_eq!(validate_accent("neon"), Err(ValidationError::InvalidAccent));
+    }
+
+    #[test]
+    fn accent_default_uses_theme_accent() {
+        assert!(validate_accent("default").is_ok());
     }
 
     #[test]
