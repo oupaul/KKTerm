@@ -10,7 +10,7 @@ import {
   type AiProviderSettingsField,
 } from "../ai/providers";
 import { SUPPORTED_LANGUAGES } from "../i18n/config";
-import { AI_PROVIDER_SECRET_OWNER_ID } from "../lib/settings";
+import { aiProviderSecretOwnerId } from "../lib/settings";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type {
@@ -22,6 +22,7 @@ import type {
 } from "../types";
 import { SettingsSectionHeader, SettingsSummary } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../i18n/config";
 
 function createStoredApiKeyMask() {
@@ -93,7 +94,12 @@ function AiProviderSettingsFieldControl({
   const { t } = useTranslation();
   const [isApiKeyInputFocused, setIsApiKeyInputFocused] = useState(false);
   const shouldShowStoredApiKeyMask =
-    field === "apiKey" && hasApiKey && !isApiKeyInputFocused && apiKeyDraft.length === 0;
+    field === "apiKey" &&
+    shouldShowStoredAiProviderKeyMask({
+      apiKeyDraft,
+      hasProviderApiKey: hasApiKey,
+      isInputFocused: isApiKeyInputFocused,
+    });
 
   switch (field) {
     case "baseUrl":
@@ -371,13 +377,13 @@ function AiAssistantToolsControl({
 export function AiSettings() {
   const { t } = useTranslation();
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
-  const aiProviderHasApiKey = useWorkspaceStore((state) => state.aiProviderHasApiKey);
   const setAiProviderSettings = useWorkspaceStore((state) => state.setAiProviderSettings);
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState(aiProviderSettings);
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [apiKeyStoredMask, setApiKeyStoredMask] = useState(createStoredApiKeyMask);
+  const [selectedProviderHasApiKey, setSelectedProviderHasApiKey] = useState(false);
   const [searchApiKeyDraft, setSearchApiKeyDraft] = useState("");
   const [searchApiKeyStoredMask, setSearchApiKeyStoredMask] = useState(createStoredApiKeyMask);
   const [hasSearchApiKey, setHasSearchApiKey] = useState(false);
@@ -390,6 +396,27 @@ export function AiSettings() {
   useEffect(() => {
     setDraft(aiProviderSettings);
   }, [aiProviderSettings]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let disposed = false;
+    setApiKeyDraft("");
+    void invokeCommand("secret_exists", {
+      request: {
+        kind: "aiApiKey",
+        ownerId: aiProviderSecretOwnerId(draft.providerKind),
+      },
+    })
+      .then((presence) => {
+        if (!disposed) setSelectedProviderHasApiKey(presence.exists);
+      })
+      .catch(() => {
+        if (!disposed) setSelectedProviderHasApiKey(false);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [draft.providerKind]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -429,12 +456,13 @@ export function AiSettings() {
           await invokeCommand("store_secret", {
             request: {
               kind: "aiApiKey",
-              ownerId: AI_PROVIDER_SECRET_OWNER_ID,
+              ownerId: aiProviderSecretOwnerId(nextSettings.providerKind),
               secret: apiKeyDraft.trim(),
             },
           });
         }
         setAiProviderHasApiKey(true);
+        setSelectedProviderHasApiKey(true);
         setApiKeyDraft("");
         setApiKeyStoredMask(createStoredApiKeyMask());
       }
@@ -477,6 +505,7 @@ export function AiSettings() {
       reasoningEffort: defaults.reasoningEffort,
     }));
     setApiKeyDraft("");
+    setSelectedProviderHasApiKey(false);
   }
 
   return (
@@ -529,7 +558,7 @@ export function AiSettings() {
               definition={aiProviderDefinition}
               draft={draft}
               field={field}
-              hasApiKey={aiProviderHasApiKey}
+              hasApiKey={selectedProviderHasApiKey}
               key={field}
               onApiKeyDraftChange={setApiKeyDraft}
               onDraftChange={(patch) =>
