@@ -9,6 +9,7 @@ import { CustomizePopover } from "./edit/CustomizePopover";
 import "./dashboard.css";
 import { useDashboardStore } from "./state/dashboardStore";
 import type { DashboardWidgetInstance, GridDensity } from "./types";
+import { DashboardBackgroundHost } from "./view/DashboardBackgroundHost";
 import { DashboardCanvas, DENSITY_SETTINGS } from "./view/DashboardCanvas";
 
 export function DashboardPage({
@@ -229,7 +230,13 @@ export function DashboardPage({
 
       <div className={`dw-canvas-scroll${editMode ? " is-editing" : ""}`} style={canvasGridStyle}>
         <DashboardCanvas
-          dashboardActive={dashboardActive}
+          backgroundHost={(
+            <DashboardBackgroundHost
+              activeView={activeView}
+              dashboardActive={dashboardActive}
+              views={views}
+            />
+          )}
           view={activeView}
           instances={viewInstances}
           onCustomize={(instance, anchor) => setCustomize({ instance, rect: anchor.getBoundingClientRect() })}

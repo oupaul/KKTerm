@@ -296,6 +296,25 @@ main.dashboard-page.dashboard-page-hidden,
   overflow: hidden;
 }
 
+.dw-canvas-bg-video-layer {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.dw-canvas-bg-video-layer.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.dw-canvas-bg-video-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--dw-bg-dim-color, transparent);
+}
+
 .dw-canvas-bg-video video {
   display: block;
   width: 100%;
