@@ -1,4 +1,5 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../connections/utils";
+import { ConfirmDialog } from "../app/ConfirmDialog";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
 
@@ -969,6 +970,7 @@ function TerminalPaneView({
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
   const startedRef = useRef(false);
+  const multilinePasteConfirmationResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
   const onFocusRef = useRef(onFocus);
   useEffect(() => {
     onFocusRef.current = onFocus;
@@ -983,6 +985,7 @@ function TerminalPaneView({
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [selectedTerminalText, setSelectedTerminalText] = useState("");
   const [contextMenu, setContextMenu] = useState<TerminalContextMenuState | null>(null);
+  const [multilinePasteConfirmationOpen, setMultilinePasteConfirmationOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
@@ -1003,6 +1006,38 @@ function TerminalPaneView({
   );
   const closePane = useWorkspaceStore((state) => state.closePane);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    return () => {
+      multilinePasteConfirmationResolverRef.current?.(false);
+      multilinePasteConfirmationResolverRef.current = null;
+    };
+  }, []);
+
+  function requestMultilinePasteConfirmation() {
+    multilinePasteConfirmationResolverRef.current?.(false);
+    setMultilinePasteConfirmationOpen(true);
+    return new Promise<boolean>((resolve) => {
+      multilinePasteConfirmationResolverRef.current = resolve;
+    });
+  }
+
+  function resolveMultilinePasteConfirmation(confirmed: boolean) {
+    multilinePasteConfirmationResolverRef.current?.(confirmed);
+    multilinePasteConfirmationResolverRef.current = null;
+    setMultilinePasteConfirmationOpen(false);
+  }
+
+  async function writeWithPasteConfirmation(data: string, writeInput: (input: string) => void) {
+    if (terminalSettings.confirmMultilinePaste && isMultilinePaste(data)) {
+      const shouldPaste = await requestMultilinePasteConfirmation();
+      if (!shouldPaste) {
+        return;
+      }
+    }
+
+    writeInput(data);
+  }
 
   useEffect(() => {
     if (!actionsMenuOpen) {
@@ -1112,14 +1147,7 @@ function TerminalPaneView({
     };
     registerPaneInputWriter(pane.id, writeInputToSession);
     const dataDisposable = terminal.onData((data) => {
-      if (terminalSettings.confirmMultilinePaste && isMultilinePaste(data)) {
-        const shouldPaste = window.confirm(t("terminal.pasteMultilineConfirm"));
-        if (!shouldPaste) {
-          return;
-        }
-      }
-
-      writeInputToSession(data);
+      void writeWithPasteConfirmation(data, writeInputToSession);
     });
     const selectionDisposable = terminal.onSelectionChange(() => {
       const selection = terminal.getSelection();
@@ -1413,19 +1441,12 @@ function TerminalPaneView({
       return;
     }
 
-    if (terminalSettings.confirmMultilinePaste && isMultilinePaste(text)) {
-      const shouldPaste = window.confirm(t("terminal.pasteMultilineConfirm"));
-      if (!shouldPaste) {
-        setContextMenu(null);
-        terminalRendererRef.current?.focus();
-        return;
-      }
-    }
-
     const sessionId = sessionIdRef.current;
     if (sessionId) {
-      void invokeCommand("write_terminal_input", {
-        request: { sessionId, data: encodeTerminalInput(text) },
+      await writeWithPasteConfirmation(text, (input) => {
+        void invokeCommand("write_terminal_input", {
+          request: { sessionId, data: encodeTerminalInput(input) },
+        });
       });
     }
     setContextMenu(null);
@@ -1812,6 +1833,15 @@ function TerminalPaneView({
           onClose={() => setContextMenu(null)}
           onCopy={handleCopyTerminalSelection}
           onPaste={() => void handlePasteIntoTerminal()}
+        />
+      ) : null}
+      {multilinePasteConfirmationOpen ? (
+        <ConfirmDialog
+          confirmLabel={t("common.paste")}
+          message={t("terminal.pasteMultilineConfirm")}
+          onCancel={() => resolveMultilinePasteConfirmation(false)}
+          onConfirm={() => resolveMultilinePasteConfirmation(true)}
+          title={t("settings.confirmMultilinePaste")}
         />
       ) : null}
     </article>

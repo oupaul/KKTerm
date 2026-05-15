@@ -3359,6 +3359,12 @@ h2 {
   border: 1px solid var(--border);
 }
 
+.secondary-button.danger {
+  color: #ffffff;
+  background: var(--red);
+  border-color: var(--red);
+}
+
 .primary-button:disabled,
 .secondary-button:disabled {
   cursor: default;
@@ -3425,6 +3431,21 @@ h2 {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.sftp-folder-dialog {
+  width: min(420px, calc(100vw - 40px));
+}
+
+.sftp-folder-dialog label {
+  display: grid;
+  gap: 6px;
+}
+
+.sftp-folder-dialog label > span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .transfer-queue {
@@ -5581,6 +5602,14 @@ progress {
 
 .connection-dialog-backdrop .app-update-dialog {
   width: min(520px, calc(100vw - 40px));
+}
+
+.connection-dialog-backdrop .app-confirm-dialog {
+  width: min(420px, calc(100vw - 40px));
+}
+
+.app-confirm-message {
+  margin: 0;
 }
 
 .app-update-notes {

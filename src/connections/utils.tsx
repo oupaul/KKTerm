@@ -1,5 +1,5 @@
 import { Cable, FolderInput, Globe2, Laptop, Monitor, Mouse, Network, Server } from "lucide-react";
-import { invokeCommand, type SshHostKeyPreview } from "../lib/tauri";
+import { confirmNativeDialog, invokeCommand, type SshHostKeyPreview } from "../lib/tauri";
 import i18next from "../i18n/config";
 import type { Connection, ConnectionType, SshSettings, WorkspaceTab } from "../types";
 
@@ -244,10 +244,14 @@ export async function confirmTrustedSshHostKey(preview: SshHostKeyPreview) {
     );
   }
 
-  const shouldTrust = window.confirm(
-    `${i18next.t("terminal.trustHostKey")} ${preview.host}:${preview.port}\n\n${preview.algorithm} ${preview.fingerprint}`,
+  const shouldTrust = await confirmNativeDialog(
+    `${preview.host}:${preview.port}\n\n${preview.algorithm} ${preview.fingerprint}`,
+    {
+      kind: "warning",
+      title: i18next.t("terminal.trustHostKey"),
+    },
   );
-  if (!shouldTrust) {
+  if (shouldTrust !== true) {
     throw new Error(i18next.t("terminal.hostKeyNotTrusted"));
   }
 

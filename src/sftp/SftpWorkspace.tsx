@@ -1,56 +1,12 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../connections/utils";
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
 
-import { ArrowDown, ChevronDown, Download, FolderPlus, Pencil, RefreshCw, Terminal, Trash2, Upload, X } from "lucide-react";
+import { Download, Terminal, Trash2, Upload, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import i18next from "../i18n/config";
-import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
-import audioIcon from "../assets/file-icons/audio.svg";
-import cIcon from "../assets/file-icons/c.svg";
-import certificateIcon from "../assets/file-icons/certificate.svg";
-import consoleIcon from "../assets/file-icons/console.svg";
-import cppIcon from "../assets/file-icons/cpp.svg";
-import csharpIcon from "../assets/file-icons/csharp.svg";
-import cssIcon from "../assets/file-icons/css.svg";
-import databaseIcon from "../assets/file-icons/database.svg";
-import dockerIcon from "../assets/file-icons/docker.svg";
-import documentIcon from "../assets/file-icons/document.svg";
-import exeIcon from "../assets/file-icons/exe.svg";
-import fileIcon from "../assets/file-icons/file.svg";
-import folderIcon from "../assets/file-icons/folder.svg";
-import fontIcon from "../assets/file-icons/font.svg";
-import gitIcon from "../assets/file-icons/git.svg";
-import goIcon from "../assets/file-icons/go.svg";
-import htmlIcon from "../assets/file-icons/html.svg";
-import imageIcon from "../assets/file-icons/image.svg";
-import javaIcon from "../assets/file-icons/java.svg";
-import javascriptIcon from "../assets/file-icons/javascript.svg";
-import jsonIcon from "../assets/file-icons/json.svg";
-import keyIcon from "../assets/file-icons/key.svg";
-import lockIcon from "../assets/file-icons/lock.svg";
-import logIcon from "../assets/file-icons/log.svg";
-import markdownIcon from "../assets/file-icons/markdown.svg";
-import pdfIcon from "../assets/file-icons/pdf.svg";
-import phpIcon from "../assets/file-icons/php.svg";
-import powerpointIcon from "../assets/file-icons/powerpoint.svg";
-import powershellIcon from "../assets/file-icons/powershell.svg";
-import pythonIcon from "../assets/file-icons/python.svg";
-import reactIcon from "../assets/file-icons/react.svg";
-import rubyIcon from "../assets/file-icons/ruby.svg";
-import rustIcon from "../assets/file-icons/rust.svg";
-import settingsIcon from "../assets/file-icons/settings.svg";
-import svgIcon from "../assets/file-icons/svg.svg";
-import tableIcon from "../assets/file-icons/table.svg";
-import tomlIcon from "../assets/file-icons/toml.svg";
-import typescriptIcon from "../assets/file-icons/typescript.svg";
-import videoIcon from "../assets/file-icons/video.svg";
-import wordIcon from "../assets/file-icons/word.svg";
-import xmlIcon from "../assets/file-icons/xml.svg";
-import yamlIcon from "../assets/file-icons/yaml.svg";
-import zipIcon from "../assets/file-icons/zip.svg";
-import { invokeCommand, isTauriRuntime, type LocalDirectoryEntry, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress, type SftpTransferResult } from "../lib/tauri";
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { invokeCommand, isTauriRuntime, type LocalDirectoryEntry, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../lib/tauri";
 import {
   fileBrowserCommandsFor,
   type FileBrowserCommands,
@@ -62,52 +18,27 @@ import {
 } from "../workspace/paneRegistry";
 import { useWorkspaceStore } from "../store";
 import type { FileEntry, SftpSettings, WorkspaceTab } from "../types";
-
-type TransferRecord = {
-  id: string;
-  direction: "upload" | "download";
-  name: string;
-  state: "queued" | "active" | "done" | "failed" | "canceled";
-  progress: number;
-  detail: string;
-  overwriteBehavior: SftpSettings["overwriteBehavior"];
-  localPath?: string;
-  remoteDirectory?: string;
-  remotePath?: string;
-  localDirectory?: string;
-};
+import { FilePane } from "./SftpFilePane";
+import {
+  ConfirmRemoteDeleteDialog,
+  NewRemoteFolderDialog,
+  SftpContextMenu,
+  SftpPropertiesPopup,
+  TransferConflictDialog,
+} from "./SftpOverlays";
+import { formatFileSize, formatMode, formatRemoteTime, formatTransferResult, joinLocalPath, joinRemotePath } from "./format";
+import type {
+  FilePaneSide,
+  FilePropertiesState,
+  RemoteDeleteRequest,
+  SftpContextMenuState,
+  TransferConflictDecision,
+  TransferConflictState,
+  TransferDirection,
+  TransferRecord,
+} from "./types";
 
 const TRANSFER_HISTORY_STATES: TransferRecord["state"][] = ["canceled", "done", "failed"];
-
-type TransferDirection = TransferRecord["direction"];
-
-type TransferConflictDecision = "overwrite" | "overwriteAll" | "skip" | "cancel";
-
-type TransferConflictState = {
-  direction: TransferDirection;
-  name: string;
-  targetPath: string;
-  isFolder: boolean;
-  remainingConflicts: number;
-};
-
-type FileSortKey = "name" | "date";
-
-type FilePaneSide = "local" | "remote";
-
-type SftpContextMenuState = {
-  side: FilePaneSide;
-  x: number;
-  y: number;
-  names: string[];
-};
-
-type FilePropertiesState = {
-  side: FilePaneSide;
-  entry: FileEntry;
-  path: string;
-  remoteProperties?: SftpPathProperties;
-};
 
 export function SftpWorkspace({
   isActive,
@@ -140,6 +71,8 @@ export function SftpWorkspace({
   const [contextMenu, setContextMenu] = useState<SftpContextMenuState | null>(null);
   const [propertiesState, setPropertiesState] = useState<FilePropertiesState | null>(null);
   const [transferConflict, setTransferConflict] = useState<TransferConflictState | null>(null);
+  const [newRemoteFolderOpen, setNewRemoteFolderOpen] = useState(false);
+  const [remoteDeleteRequest, setRemoteDeleteRequest] = useState<RemoteDeleteRequest | null>(null);
   const [renameRequest, setRenameRequest] = useState<{
     side: FilePaneSide;
     name: string;
@@ -640,22 +573,27 @@ export function SftpWorkspace({
     }
   };
 
-  const handleCreateRemoteFolder = async () => {
+  const handleCreateRemoteFolder = () => {
+    if (!sessionIdRef.current || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    setNewRemoteFolderOpen(true);
+  };
+
+  const handleConfirmCreateRemoteFolder = async (name: string) => {
     const sessionId = sessionIdRef.current;
     if (!sessionId || !isTauriRuntime() || !commands) {
       return;
     }
 
-    const name = window.prompt(t("sftp.newRemoteFolder"));
-    if (name === null) {
-      return;
-    }
     const trimmedName = name.trim();
     if (!trimmedName) {
       setStatus(t("sftp.folderNameBlank"));
       return;
     }
 
+    setNewRemoteFolderOpen(false);
     setIsRemoteLoading(true);
     setStatus(t("sftp.creatingFolder"));
     try {
@@ -705,25 +643,28 @@ export function SftpWorkspace({
   };
 
   const handleDeleteRemotePath = async (names = selectedRemoteNames) => {
-    const sessionId = sessionIdRef.current;
     const selected = remoteFiles.filter((file) => names.includes(file.name));
-    if (!sessionId || selected.length === 0 || !isTauriRuntime() || !commands) {
+    if (!sessionIdRef.current || selected.length === 0 || !isTauriRuntime() || !commands) {
       return;
     }
 
-    const shouldDelete = window.confirm(
-      selected.length === 1
-        ? t("sftp.deleteRemoteItemConfirm", { kind: selected[0].kind, name: selected[0].name })
-        : t("sftp.deleteRemoteItemsMultiple", { count: selected.length }),
-    );
-    if (!shouldDelete) {
+    setRemoteDeleteRequest({
+      items: selected.map((item) => ({ kind: item.kind, name: item.name })),
+    });
+  };
+
+  const handleConfirmDeleteRemotePath = async () => {
+    const sessionId = sessionIdRef.current;
+    const request = remoteDeleteRequest;
+    if (!sessionId || !request || !isTauriRuntime() || !commands) {
       return;
     }
 
+    setRemoteDeleteRequest(null);
     setIsRemoteLoading(true);
     setStatus(t("sftp.deleting"));
     try {
-      for (const item of selected) {
+      for (const item of request.items) {
         await commands.deletePath({
           sessionId,
           path: joinRemotePath(remotePath, item.name),
@@ -1085,6 +1026,19 @@ export function SftpWorkspace({
           onSave={(request) => void handleUpdateRemoteProperties(request)}
         />
       ) : null}
+      {newRemoteFolderOpen ? (
+        <NewRemoteFolderDialog
+          onCancel={() => setNewRemoteFolderOpen(false)}
+          onCreate={(name) => void handleConfirmCreateRemoteFolder(name)}
+        />
+      ) : null}
+      {remoteDeleteRequest ? (
+        <ConfirmRemoteDeleteDialog
+          request={remoteDeleteRequest}
+          onCancel={() => setRemoteDeleteRequest(null)}
+          onConfirm={() => void handleConfirmDeleteRemotePath()}
+        />
+      ) : null}
       {transferConflict ? (
         <TransferConflictDialog
           conflict={transferConflict}
@@ -1122,917 +1076,4 @@ function remoteEntryToFileEntry(entry: SftpDirectoryEntry): FileEntry {
     gid: entry.gid,
     group: entry.group,
   };
-}
-
-function formatTransferResult(result: SftpTransferResult) {
-  const parts = [`${result.files} files`];
-  if (result.folders > 0) {
-    parts.push(`${result.folders} folders`);
-  }
-  parts.push(formatFileSize(result.bytes));
-  return parts.join(" | ");
-}
-
-function joinRemotePath(basePath: string, childName: string) {
-  if (!basePath || basePath === ".") {
-    return childName;
-  }
-  if (basePath.endsWith("/")) {
-    return `${basePath}${childName}`;
-  }
-  return `${basePath}/${childName}`;
-}
-
-function joinLocalPath(basePath: string, childName: string) {
-  if (!basePath) {
-    return childName;
-  }
-  if (basePath.endsWith("\\") || basePath.endsWith("/")) {
-    return `${basePath}${childName}`;
-  }
-  return `${basePath}\\${childName}`;
-}
-
-function formatFileSize(size?: number) {
-  if (size === undefined) {
-    return "-";
-  }
-
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = size / 1024;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
-}
-
-function formatRemoteTime(timestamp?: number) {
-  if (!timestamp) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(timestamp * 1000));
-}
-
-function formatMode(mode?: number) {
-  if (mode === undefined) {
-    return "";
-  }
-
-  return (mode & 0o7777).toString(8).padStart(3, "0");
-}
-
-function sortFileEntries(files: FileEntry[], sortKey: FileSortKey) {
-  return [...files].sort((left, right) => {
-    if (left.kind === "folder" && right.kind !== "folder") {
-      return -1;
-    }
-    if (left.kind !== "folder" && right.kind === "folder") {
-      return 1;
-    }
-
-    if (sortKey === "date") {
-      const leftTime = left.modifiedTimestamp ?? 0;
-      const rightTime = right.modifiedTimestamp ?? 0;
-      if (leftTime !== rightTime) {
-        return rightTime - leftTime;
-      }
-    }
-
-    return left.name.localeCompare(right.name, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    });
-  });
-}
-
-function fileSortLabel(sortKey: FileSortKey) {
-  return sortKey === "name" ? i18next.t("sftp.name") : i18next.t("sftp.date");
-}
-
-const FILE_ICON_BY_NAME: Record<string, string> = {
-  ".dockerignore": dockerIcon,
-  ".env": settingsIcon,
-  ".gitattributes": gitIcon,
-  ".gitignore": gitIcon,
-  ".npmrc": settingsIcon,
-  ".prettierrc": settingsIcon,
-  ".yarnrc": settingsIcon,
-  "cargo.lock": lockIcon,
-  "docker-compose.yml": dockerIcon,
-  "docker-compose.yaml": dockerIcon,
-  "dockerfile": dockerIcon,
-  "go.mod": goIcon,
-  "go.sum": goIcon,
-  "makefile": consoleIcon,
-  "package-lock.json": lockIcon,
-  "package.json": jsonIcon,
-  "pnpm-lock.yaml": lockIcon,
-  "readme": markdownIcon,
-  "tsconfig.json": typescriptIcon,
-  "vite.config.js": javascriptIcon,
-  "vite.config.mjs": javascriptIcon,
-  "vite.config.ts": typescriptIcon,
-  "yarn.lock": lockIcon,
-};
-
-const FILE_ICON_BY_EXTENSION: Record<string, string> = {
-  "7z": zipIcon,
-  aac: audioIcon,
-  avi: videoIcon,
-  bmp: imageIcon,
-  c: cIcon,
-  cer: certificateIcon,
-  cert: certificateIcon,
-  conf: settingsIcon,
-  cpp: cppIcon,
-  crt: certificateIcon,
-  cs: csharpIcon,
-  css: cssIcon,
-  csv: tableIcon,
-  db: databaseIcon,
-  doc: wordIcon,
-  docx: wordIcon,
-  env: settingsIcon,
-  exe: exeIcon,
-  gif: imageIcon,
-  go: goIcon,
-  gz: zipIcon,
-  h: cIcon,
-  hpp: cppIcon,
-  htm: htmlIcon,
-  html: htmlIcon,
-  ico: imageIcon,
-  jar: javaIcon,
-  java: javaIcon,
-  jpeg: imageIcon,
-  jpg: imageIcon,
-  js: javascriptIcon,
-  json: jsonIcon,
-  jsx: reactIcon,
-  key: keyIcon,
-  lock: lockIcon,
-  log: logIcon,
-  m4a: audioIcon,
-  md: markdownIcon,
-  mkv: videoIcon,
-  mov: videoIcon,
-  mp3: audioIcon,
-  mp4: videoIcon,
-  mpeg: videoIcon,
-  mpg: videoIcon,
-  pem: keyIcon,
-  pdf: pdfIcon,
-  php: phpIcon,
-  png: imageIcon,
-  potx: powerpointIcon,
-  ppsx: powerpointIcon,
-  ppt: powerpointIcon,
-  pptx: powerpointIcon,
-  ps1: powershellIcon,
-  py: pythonIcon,
-  rar: zipIcon,
-  rb: rubyIcon,
-  rs: rustIcon,
-  scss: cssIcon,
-  sh: consoleIcon,
-  sqlite: databaseIcon,
-  sqlite3: databaseIcon,
-  svg: svgIcon,
-  tar: zipIcon,
-  toml: tomlIcon,
-  ts: typescriptIcon,
-  tsx: reactIcon,
-  txt: documentIcon,
-  wav: audioIcon,
-  webm: videoIcon,
-  webp: imageIcon,
-  woff: fontIcon,
-  woff2: fontIcon,
-  xls: tableIcon,
-  xlsx: tableIcon,
-  xml: xmlIcon,
-  yaml: yamlIcon,
-  yml: yamlIcon,
-  zip: zipIcon,
-};
-
-function fileExtension(fileName: string) {
-  const lastDotIndex = fileName.lastIndexOf(".");
-  if (lastDotIndex <= 0 || lastDotIndex === fileName.length - 1) {
-    return "";
-  }
-  return fileName.slice(lastDotIndex + 1).toLowerCase();
-}
-
-function fileIconFor(file: FileEntry) {
-  if (file.kind === "folder") {
-    return folderIcon;
-  }
-
-  const normalizedName = file.name.toLowerCase();
-  return (
-    FILE_ICON_BY_NAME[normalizedName] ??
-    FILE_ICON_BY_EXTENSION[fileExtension(normalizedName)] ??
-    (file.kind === "other" ? documentIcon : fileIcon)
-  );
-}
-
-function fileIconLabel(file: FileEntry) {
-  if (file.kind === "folder") {
-    return i18next.t("sftp.folder");
-  }
-  if (file.kind === "symlink") {
-    return i18next.t("sftp.symlink");
-  }
-  const extension = fileExtension(file.name);
-  return extension ? i18next.t("sftp.fileTypeLabel", { ext: extension.toUpperCase() }) : i18next.t("sftp.file");
-}
-
-function FileTypeIcon({ file }: { file: FileEntry }) {
-  return (
-    <span
-      aria-label={fileIconLabel(file)}
-      className={`file-type-icon file-type-icon-${file.kind}`}
-      role="img"
-    >
-      <img alt="" draggable={false} src={fileIconFor(file)} />
-    </span>
-  );
-}
-
-function FilePane({
-  side,
-  title,
-  path,
-  files,
-  isLoading = false,
-  status = "",
-  selectedNames,
-  onRefresh,
-  onGoUp,
-  onCreateFolder,
-  onRenameSelected,
-  onDeleteSelected,
-  onOpenFolder,
-  onSelectionChange,
-  onContextMenuRequest,
-  onDropTransfer,
-  renameRequest,
-}: {
-  side: FilePaneSide;
-  title: string;
-  path: string;
-  files: FileEntry[];
-  isLoading?: boolean;
-  status?: string;
-  selectedNames: string[];
-  onRefresh?: () => void;
-  onGoUp?: () => void;
-  onCreateFolder?: () => void;
-  onRenameSelected?: (currentName: string, newName: string) => void | Promise<void>;
-  onDeleteSelected?: () => void;
-  onOpenFolder?: (folderName: string) => void;
-  onSelectionChange?: (fileNames: string[]) => void;
-  onContextMenuRequest?: (
-    side: FilePaneSide,
-    fileNames: string[],
-    event: ReactMouseEvent,
-  ) => void;
-  onDropTransfer?: (targetSide: FilePaneSide, fileNames: string[]) => void;
-  renameRequest?: { side: FilePaneSide; name: string; requestId: number };
-}) {
-  const { t } = useTranslation();
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const renameCanceledRef = useRef(false);
-  const lastSelectedNameRef = useRef<string | null>(null);
-  const [editingName, setEditingName] = useState<string | null>(null);
-  const [renameDraft, setRenameDraft] = useState("");
-  const [sortKey, setSortKey] = useState<FileSortKey>("name");
-  const [isDropTarget, setIsDropTarget] = useState(false);
-  const hasMutationActions = Boolean(onCreateFolder || onRenameSelected || onDeleteSelected);
-  const selectedFile = files.find((file) => file.name === selectedNames[0]);
-  const canRenameSelected = Boolean(
-    onRenameSelected && selectedFile && selectedNames.length === 1 && !isLoading,
-  );
-  const sortedFiles = useMemo(() => sortFileEntries(files, sortKey), [files, sortKey]);
-  const nextSortKey: FileSortKey = sortKey === "name" ? "date" : "name";
-
-  useEffect(() => {
-    if (!editingName) {
-      return;
-    }
-
-    window.requestAnimationFrame(() => {
-      renameInputRef.current?.focus();
-      renameInputRef.current?.select();
-    });
-  }, [editingName]);
-
-  useEffect(() => {
-    if (editingName && !files.some((file) => file.name === editingName)) {
-      setEditingName(null);
-      setRenameDraft("");
-    }
-  }, [editingName, files]);
-
-  useEffect(() => {
-    if (!renameRequest || renameRequest.side !== side || isLoading) {
-      return;
-    }
-
-    const requestedFile = files.find((file) => file.name === renameRequest.name);
-    if (!requestedFile || !onRenameSelected) {
-      return;
-    }
-
-    onSelectionChange?.([requestedFile.name]);
-    renameCanceledRef.current = false;
-    setEditingName(requestedFile.name);
-    setRenameDraft(requestedFile.name);
-  }, [files, isLoading, onRenameSelected, onSelectionChange, renameRequest, side]);
-
-  function beginRename(targetName = selectedFile?.name) {
-    if (!targetName) {
-      return;
-    }
-
-    renameCanceledRef.current = false;
-    setEditingName(targetName);
-    setRenameDraft(targetName);
-  }
-
-  function selectFile(fileName: string, event?: ReactMouseEvent | KeyboardEvent<HTMLDivElement>) {
-    if (isLoading) {
-      return;
-    }
-
-    if (event?.shiftKey && lastSelectedNameRef.current) {
-      const currentIndex = sortedFiles.findIndex((file) => file.name === fileName);
-      const lastIndex = sortedFiles.findIndex((file) => file.name === lastSelectedNameRef.current);
-      if (currentIndex >= 0 && lastIndex >= 0) {
-        const [start, end] =
-          currentIndex < lastIndex ? [currentIndex, lastIndex] : [lastIndex, currentIndex];
-        onSelectionChange?.(sortedFiles.slice(start, end + 1).map((file) => file.name));
-        return;
-      }
-    }
-
-    if (event?.ctrlKey || event?.metaKey) {
-      const nextNames = selectedNames.includes(fileName)
-        ? selectedNames.filter((name) => name !== fileName)
-        : [...selectedNames, fileName];
-      lastSelectedNameRef.current = fileName;
-      onSelectionChange?.(nextNames);
-      return;
-    }
-
-    lastSelectedNameRef.current = fileName;
-    onSelectionChange?.([fileName]);
-  }
-
-  async function commitRename() {
-    if (!editingName) {
-      return;
-    }
-
-    if (renameCanceledRef.current) {
-      renameCanceledRef.current = false;
-      return;
-    }
-
-    const nextName = renameDraft.trim();
-    const currentName = editingName;
-    if (!nextName || nextName === currentName) {
-      setEditingName(null);
-      setRenameDraft("");
-      return;
-    }
-
-    await onRenameSelected?.(currentName, nextName);
-    setEditingName(null);
-    setRenameDraft("");
-  }
-
-  function cancelRename() {
-    renameCanceledRef.current = true;
-    setEditingName(null);
-    setRenameDraft("");
-  }
-
-  function dragPayloadFor(fileName: string) {
-    return selectedNames.includes(fileName) ? selectedNames : [fileName];
-  }
-
-  function handleDragStart(fileName: string, event: ReactDragEvent<HTMLDivElement>) {
-    if (isLoading || editingName === fileName) {
-      event.preventDefault();
-      return;
-    }
-
-    const names = dragPayloadFor(fileName);
-    onSelectionChange?.(names);
-    event.dataTransfer.effectAllowed = "copy";
-    event.dataTransfer.setData(
-      "application/x-kkterm-sftp-items",
-      JSON.stringify({ side, names }),
-    );
-  }
-
-  function handleDragOver(event: ReactDragEvent<HTMLDivElement>) {
-    if (!Array.from(event.dataTransfer.types).includes("application/x-kkterm-sftp-items")) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-    setIsDropTarget(true);
-  }
-
-  function handleDrop(event: ReactDragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setIsDropTarget(false);
-
-    try {
-      const payload = JSON.parse(
-        event.dataTransfer.getData("application/x-kkterm-sftp-items"),
-      ) as { side?: FilePaneSide; names?: string[] };
-      if (payload.side && payload.side !== side && payload.names?.length) {
-        onDropTransfer?.(side, payload.names);
-      }
-    } catch {
-      return;
-    }
-  }
-
-  return (
-    <article className="file-pane">
-      <header>
-        <div>
-          <strong>{title}</strong>
-          <span>{path}</span>
-        </div>
-        <div className="file-pane-actions">
-          <button
-            className="icon-button"
-              aria-label={t("sftp.openParentFolderAria", { pane: title.toLowerCase() })}
-            disabled={!onGoUp || isLoading}
-            onClick={onGoUp}
-            title={t("sftp.openParentFolderAria", { pane: title.toLowerCase() })}
-            type="button"
-          >
-            <ChevronDown className="up-icon" size={15} />
-          </button>
-          {hasMutationActions && (
-            <>
-              <button
-                className="icon-button"
-                aria-label={t("sftp.createFolderAria", { pane: title.toLowerCase() })}
-                disabled={!onCreateFolder || isLoading}
-                onClick={onCreateFolder}
-                title={t("sftp.createFolderAria", { pane: title.toLowerCase() })}
-                type="button"
-              >
-                <FolderPlus size={15} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label={t("sftp.renameSelectedAria", { pane: title.toLowerCase() })}
-                disabled={!canRenameSelected}
-                onClick={() => beginRename()}
-                title={t("sftp.renameSelectedAria", { pane: title.toLowerCase() })}
-                type="button"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label={t("sftp.deleteSelectedAria", { pane: title.toLowerCase() })}
-                disabled={!onDeleteSelected || selectedNames.length === 0 || isLoading}
-                onClick={onDeleteSelected}
-                title={t("sftp.deleteSelectedAria", { pane: title.toLowerCase() })}
-                type="button"
-              >
-                <Trash2 size={15} />
-              </button>
-            </>
-          )}
-          <button
-            className="icon-button file-sort-button"
-            aria-label={t("sftp.sortByAria", { pane: title.toLowerCase(), key: nextSortKey })}
-            onClick={() => setSortKey(nextSortKey)}
-            title={t("sftp.sortByTitle", { key: nextSortKey })}
-            type="button"
-          >
-            <ArrowDown size={15} />
-            <span>{fileSortLabel(sortKey)}</span>
-          </button>
-          <button
-            className="icon-button"
-            aria-label={t("sftp.refreshFilesAria", { pane: title.toLowerCase() })}
-            disabled={!onRefresh || isLoading}
-            onClick={onRefresh}
-            title={t("sftp.refreshFilesAria", { pane: title.toLowerCase() })}
-            type="button"
-          >
-            <RefreshCw size={15} />
-          </button>
-        </div>
-      </header>
-      <div
-        className={`file-table${isDropTarget ? " drop-target" : ""}`}
-        onContextMenu={(event) => onContextMenuRequest?.(side, selectedNames, event)}
-        onDragLeave={() => setIsDropTarget(false)}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {isLoading && <div className="file-row file-row-muted">{t("sftp.loading")}</div>}
-        {!isLoading && status && <div className="file-row file-row-muted">{status}</div>}
-        {!isLoading && !status && sortedFiles.length === 0 && (
-          <div className="file-row file-row-muted">{t("sftp.noFiles")}</div>
-        )}
-        {sortedFiles.map((file) => {
-          const isEditing = editingName === file.name;
-          const isSelected = selectedNames.includes(file.name);
-          const fileTitle = file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name;
-          const fileContents = (
-            <>
-              <FileTypeIcon file={file} />
-              {isEditing ? (
-                <input
-                  aria-label={t("sftp.renameFileAria", { name: file.name })}
-                  className="file-rename-input"
-                  onBlur={() => void commitRename()}
-                  onChange={(event) => setRenameDraft(event.currentTarget.value)}
-                  onClick={(event) => event.stopPropagation()}
-                  onDoubleClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      event.currentTarget.blur();
-                    }
-                    if (event.key === "Escape") {
-                      event.preventDefault();
-                      cancelRename();
-                    }
-                  }}
-                  ref={renameInputRef}
-                  value={renameDraft}
-                />
-              ) : (
-                <span>{file.name}</span>
-              )}
-              <small>{file.size}</small>
-              <small>{file.modified}</small>
-            </>
-          );
-
-          if (isEditing) {
-            return (
-              <div
-                className={`file-row file-row-interactive${isSelected ? " selected" : ""}`}
-                draggable={false}
-                key={file.name}
-                title={fileTitle}
-              >
-                {fileContents}
-              </div>
-            );
-          }
-
-          return (
-            <div
-              className={`file-row file-row-interactive${isSelected ? " selected" : ""}`}
-              draggable={!isLoading}
-              key={file.name}
-              onClick={(event) => {
-                if (!isLoading) {
-                  selectFile(file.name, event);
-                }
-              }}
-              onDoubleClick={() => {
-                if (!isLoading && file.kind === "folder") {
-                  onOpenFolder?.(file.name);
-                }
-              }}
-              onContextMenu={(event) => {
-                if (isLoading) {
-                  return;
-                }
-
-                event.stopPropagation();
-                const names = isSelected ? selectedNames : [file.name];
-                onContextMenuRequest?.(side, names, event);
-              }}
-              onDragStart={(event) => handleDragStart(file.name, event)}
-              onKeyDown={(event) => {
-                if ((event.key === "Enter" || event.key === " ") && !isLoading) {
-                  event.preventDefault();
-                  selectFile(file.name, event);
-                  if (event.key === "Enter" && file.kind === "folder") {
-                    onOpenFolder?.(file.name);
-                  }
-                }
-              }}
-              role="button"
-              tabIndex={isLoading ? -1 : 0}
-              title={fileTitle}
-            >
-              {fileContents}
-            </div>
-          );
-        })}
-      </div>
-    </article>
-  );
-}
-
-function TransferConflictDialog({
-  conflict,
-  onDecision,
-}: {
-  conflict: TransferConflictState;
-  onDecision: (decision: TransferConflictDecision) => void;
-}) {
-  const { t } = useTranslation();
-  const isFolder = conflict.isFolder;
-
-  return (
-    <div className="dialog-backdrop transfer-conflict-backdrop" role="presentation">
-      <div className="transfer-conflict-dialog" role="dialog" aria-label={t("sftp.transferConflict")}>
-        <header>
-          <div>
-            <strong>{isFolder ? t("sftp.folderExists") : t("sftp.fileExists")}</strong>
-            <span>{conflict.direction === "upload" ? t("sftp.uploadConflict") : t("sftp.downloadConflict")}</span>
-          </div>
-          <button
-            className="icon-button"
-            aria-label={t("sftp.cancelTransferConflict")}
-            onClick={() => onDecision("cancel")}
-            type="button"
-          >
-            <X size={15} />
-          </button>
-        </header>
-        <p>
-          {t("sftp.targetExistsDetail", { kind: isFolder ? t("sftp.folder").toLowerCase() : t("sftp.file").toLowerCase(), name: conflict.name })}
-        </p>
-        <code>{conflict.targetPath}</code>
-        {conflict.remainingConflicts > 0 ? (
-          <small>
-            {t("sftp.moreConflictsDetail", { count: conflict.remainingConflicts })}
-          </small>
-        ) : null}
-        <div className="transfer-conflict-actions">
-          <button className="secondary-button" onClick={() => onDecision("skip")} type="button">
-            {t("sftp.skip")}
-          </button>
-          <button className="secondary-button" onClick={() => onDecision("cancel")} type="button">
-            {t("sftp.cancelTransfer")}
-          </button>
-          <button className="primary-button" onClick={() => onDecision("overwrite")} type="button">
-            {t("sftp.overwrite")}
-          </button>
-          <button
-            className="primary-button"
-            onClick={() => onDecision("overwriteAll")}
-            type="button"
-          >
-            {t("sftp.overwriteAll")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SftpContextMenu({
-  menu,
-  onTransfer,
-  onRename,
-  onDelete,
-  onProperties,
-  onClose,
-}: {
-  menu: SftpContextMenuState;
-  onTransfer: (menu: SftpContextMenuState) => void;
-  onRename: (menu: SftpContextMenuState) => void;
-  onDelete: (menu: SftpContextMenuState) => void;
-  onProperties: (menu: SftpContextMenuState) => void;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handlePointerDown = () => onClose();
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
-
-  useLayoutEffect(() => {
-    const node = menuRef.current;
-    if (!node) {
-      return;
-    }
-
-    node.style.left = `${menu.x}px`;
-    node.style.top = `${menu.y}px`;
-  }, [menu.x, menu.y]);
-
-  const transferLabel = menu.side === "local" ? t("sftp.transferUpload") : t("sftp.transferDownload");
-  const canRename = menu.side === "remote" && menu.names.length === 1;
-  const canDelete = menu.side === "remote" && menu.names.length > 0;
-
-  return (
-    <div
-      className="sftp-context-menu"
-      onContextMenu={(event) => event.preventDefault()}
-      onPointerDown={(event) => event.stopPropagation()}
-      ref={menuRef}
-      role="menu"
-    >
-      <button onClick={() => onTransfer(menu)} role="menuitem" type="button">
-        {t("sftp.transfer")}
-        <small>{transferLabel}</small>
-      </button>
-      <button disabled={!canRename} onClick={() => onRename(menu)} role="menuitem" type="button">
-        {t("sftp.renameItem")}
-      </button>
-      <button disabled={!canDelete} onClick={() => onDelete(menu)} role="menuitem" type="button">
-        {t("sftp.deleteLabel")}
-      </button>
-      <button onClick={() => onProperties(menu)} role="menuitem" type="button">
-        {t("sftp.properties")}
-      </button>
-    </div>
-  );
-}
-
-function SftpPropertiesPopup({
-  properties,
-  onClose,
-  onSave,
-}: {
-  properties: FilePropertiesState;
-  onClose: () => void;
-  onSave: (request: { permissions?: string; uid?: number; gid?: number }) => void | Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const remoteProperties = properties.remoteProperties;
-  const isRemote = properties.side === "remote";
-  const modeValue = remoteProperties?.mode ?? properties.entry.mode ?? "";
-  const uidValue = remoteProperties?.uid ?? properties.entry.uid;
-  const gidValue = remoteProperties?.gid ?? properties.entry.gid;
-  const [mode, setMode] = useState(modeValue);
-  const [uid, setUid] = useState(uidValue === undefined ? "" : String(uidValue));
-  const [gid, setGid] = useState(gidValue === undefined ? "" : String(gidValue));
-  const [error, setError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setMode(modeValue);
-    setUid(uidValue === undefined ? "" : String(uidValue));
-    setGid(gidValue === undefined ? "" : String(gidValue));
-    setError("");
-  }, [gidValue, modeValue, uidValue]);
-
-  const size = remoteProperties?.size ?? properties.entry.sizeBytes;
-  const modified = remoteProperties?.modified ?? properties.entry.modifiedTimestamp;
-  const accessed = remoteProperties?.accessed ?? properties.entry.accessedTimestamp;
-  const owner =
-    remoteProperties?.user ??
-    properties.entry.user ??
-    (uidValue === undefined ? "-" : String(uidValue));
-  const group =
-    remoteProperties?.group ??
-    properties.entry.group ??
-    (gidValue === undefined ? "-" : String(gidValue));
-
-  function parseOptionalOwner(value: string, label: "Owner" | "Group") {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-
-    const parsed = Number(trimmed);
-    if (!Number.isInteger(parsed) || parsed < 0) {
-      throw new Error(label === "Owner" ? t("sftp.ownerMustBeNumber") : t("sftp.groupMustBeNumber"));
-    }
-    return parsed;
-  }
-
-  async function handleSave() {
-    setError("");
-
-    if (mode.trim() && !/^[0-7]{3,4}$/.test(mode.trim())) {
-      setError(t("sftp.modeHint"));
-      return;
-    }
-
-    try {
-      const request = {
-        permissions: mode.trim() || undefined,
-        uid: parseOptionalOwner(uid, "Owner"),
-        gid: parseOptionalOwner(gid, "Group"),
-      };
-      setIsSaving(true);
-      await onSave(request);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : String(saveError));
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <div className="sftp-properties-popover" role="dialog" aria-label={t("sftp.sftpProperties")}>
-      <header>
-        <div>
-          <strong>{properties.entry.name}</strong>
-          <span>{properties.path}</span>
-        </div>
-        <button className="icon-button" aria-label={t("sftp.closeProperties")} onClick={onClose} type="button">
-          <X size={15} />
-        </button>
-      </header>
-      <div className="properties-grid">
-        <span>{t("sftp.type")}</span>
-        <strong>{remoteProperties?.kind ?? properties.entry.kind}</strong>
-        <span>{t("sftp.size")}</span>
-        <strong>{formatFileSize(size)}</strong>
-        <span>{t("sftp.modified")}</span>
-        <strong>{formatRemoteTime(modified)}</strong>
-        <span>{t("sftp.accessed")}</span>
-        <strong>{formatRemoteTime(accessed)}</strong>
-        <span>{t("sftp.owner")}</span>
-        <strong>{owner}</strong>
-        <span>{t("sftp.group")}</span>
-        <strong>{group}</strong>
-        <span>{t("sftp.mode")}</span>
-        <strong>{modeValue || "-"}</strong>
-      </div>
-      {isRemote ? (
-        <div className="properties-edit-grid">
-          <label>
-            <span>{t("sftp.chmod")}</span>
-            <input
-              inputMode="numeric"
-              maxLength={4}
-              onChange={(event) => setMode(event.currentTarget.value)}
-              value={mode}
-            />
-          </label>
-          <label>
-            <span>{t("sftp.chownUid")}</span>
-            <input
-              inputMode="numeric"
-              onChange={(event) => setUid(event.currentTarget.value)}
-              value={uid}
-            />
-          </label>
-          <label>
-            <span>{t("sftp.chownGid")}</span>
-            <input
-              inputMode="numeric"
-              onChange={(event) => setGid(event.currentTarget.value)}
-              value={gid}
-            />
-          </label>
-        </div>
-      ) : null}
-      {error ? <p className="properties-error">{error}</p> : null}
-      <div className="properties-actions">
-        <button className="secondary-button" onClick={onClose} type="button">
-          {t("common.close")}
-        </button>
-        {isRemote ? (
-          <button className="primary-button" disabled={isSaving} onClick={() => void handleSave()} type="button">
-            {t("sftp.save")}
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
 }
