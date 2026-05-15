@@ -680,6 +680,10 @@ type CommandMap = {
     args: undefined;
     result: AppBootstrap;
   };
+  is_debug_build: {
+    args: undefined;
+    result: boolean;
+  };
   list_connection_tree: {
     args: undefined;
     result: ConnectionTree;

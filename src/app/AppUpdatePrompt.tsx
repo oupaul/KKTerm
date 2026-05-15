@@ -1,29 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, RefreshCw, X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   checkForAppUpdate,
-  installAppUpdate,
+  isDebugBuild,
+  openReleaseDownloadPage,
   type AppUpdate,
-  type AppUpdateInstallProgress,
 } from "../lib/appUpdates";
 import { shouldRunStartupUpdateCheck } from "../lib/appUpdatesModel";
 import { isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 
 export const CHECK_FOR_APP_UPDATES_EVENT = "kkterm:check-for-updates";
-
-function formatProgress(progress?: AppUpdateInstallProgress) {
-  if (!progress || progress.phase === "installing") {
-    return null;
-  }
-
-  if (!progress.contentLength) {
-    return null;
-  }
-
-  return Math.round((progress.downloadedBytes / progress.contentLength) * 100);
-}
 
 export function AppUpdatePrompt({
   settingsReady,
@@ -37,8 +25,6 @@ export function AppUpdatePrompt({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [update, setUpdate] = useState<AppUpdate | null>(null);
   const [checking, setChecking] = useState(false);
-  const [installing, setInstalling] = useState(false);
-  const [installProgress, setInstallProgress] = useState<AppUpdateInstallProgress>();
   const startupCheckedRef = useRef(false);
 
   async function runUpdateCheck(source: "startup" | "manual") {
@@ -51,7 +37,7 @@ export function AppUpdatePrompt({
       return;
     }
 
-    if (checking || installing) {
+    if (checking) {
       return;
     }
 
@@ -72,9 +58,13 @@ export function AppUpdatePrompt({
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("settings.updateCheckFailed", { message }), {
-        tone: "error",
-      });
+      // Startup checks fail silently to avoid alarming users with transient
+      // network errors; the manual check shows the error in the status bar.
+      if (source === "manual") {
+        showStatusBarNotice(t("settings.updateCheckFailed", { message }), {
+          tone: "error",
+        });
+      }
     } finally {
       setChecking(false);
     }
@@ -96,7 +86,14 @@ export function AppUpdatePrompt({
     }
 
     startupCheckedRef.current = true;
-    void runUpdateCheck("startup");
+    void (async () => {
+      // Skip startup checks in debug builds so dev launches don't surface the
+      // update prompt. Manual checks from Settings → About still run.
+      if (await isDebugBuild()) {
+        return;
+      }
+      await runUpdateCheck("startup");
+    })();
   }, [autoUpdateChecksEnabled, settingsReady]);
 
   useEffect(() => {
@@ -107,29 +104,9 @@ export function AppUpdatePrompt({
     };
   });
 
-  async function handleInstall() {
-    if (!update || installing) {
-      return;
-    }
-
-    setInstalling(true);
-    setInstallProgress(undefined);
-    try {
-      await installAppUpdate(update, setInstallProgress);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("settings.updateInstallFailed", { message }), {
-        tone: "error",
-      });
-      setInstalling(false);
-    }
-  }
-
   if (!update) {
     return null;
   }
-
-  const progressPercent = formatProgress(installProgress);
 
   return (
     <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
@@ -144,16 +121,14 @@ export function AppUpdatePrompt({
             <p className="panel-label">{t("settings.softwareUpdates")}</p>
             <h2>{t("settings.updateAvailableTitle")}</h2>
           </div>
-          {!installing ? (
-            <button
-              aria-label={t("settings.updateLater")}
-              className="icon-button"
-              onClick={() => setUpdate(null)}
-              type="button"
-            >
-              <X size={15} />
-            </button>
-          ) : null}
+          <button
+            aria-label={t("settings.updateLater")}
+            className="icon-button"
+            onClick={() => setUpdate(null)}
+            type="button"
+          >
+            <X size={15} />
+          </button>
         </header>
         <p className="field-hint">
           {t("settings.updateAvailableBody", {
@@ -166,28 +141,20 @@ export function AppUpdatePrompt({
             {update.body}
           </div>
         ) : null}
-        {installing ? (
-          <p className="field-hint">
-            {progressPercent === null
-              ? t("settings.updateInstalling")
-              : t("settings.updateInstallingWithProgress", {
-                  progress: progressPercent,
-                })}
-          </p>
-        ) : null}
         <div className="dialog-actions">
           <button
             className="approve-button"
-            disabled={installing}
-            onClick={() => void handleInstall()}
+            onClick={() => {
+              void openReleaseDownloadPage(update);
+              setUpdate(null);
+            }}
             type="button"
           >
-            {installing ? <RefreshCw size={15} /> : <Download size={15} />}
-            {t("settings.updateInstall")}
+            <ExternalLink size={15} />
+            {t("settings.updateOpenDownloadPage")}
           </button>
           <button
             className="toolbar-button"
-            disabled={installing}
             onClick={() => setUpdate(null)}
             type="button"
           >
@@ -198,4 +165,3 @@ export function AppUpdatePrompt({
     </div>
   );
 }
-

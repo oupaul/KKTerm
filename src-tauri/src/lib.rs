@@ -112,6 +112,11 @@ fn app_bootstrap(
 }
 
 #[tauri::command]
+fn is_debug_build() -> bool {
+    cfg!(debug_assertions)
+}
+
+#[tauri::command]
 fn get_custom_fonts_folder() -> Result<String, String> {
     let folder = custom_fonts_folder()?;
     fs::create_dir_all(&folder).map_err(|error| {
@@ -2011,10 +2016,6 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_process::init())
-        // TODO(updates): Re-enable after update signing and release metadata
-        // are restored.
-        // .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().map_err(|error| {
                 setup_error(format!("failed to resolve app data directory: {error}"))
@@ -2102,6 +2103,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_bootstrap,
+            is_debug_build,
             list_connection_tree,
             create_connection,
             create_connection_folder,
