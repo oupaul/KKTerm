@@ -164,6 +164,16 @@ function randomAssistantWaitingPhrase() {
   return phrases[Math.floor(Math.random() * phrases.length)] ?? i18next.t("ai.chargingBeacon");
 }
 
+function maxMeasuredTextWidth(node: HTMLDivElement | null) {
+  if (!node) {
+    return 0;
+  }
+
+  return Array.from(node.children).reduce((max, child) => {
+    return Math.max(max, child.getBoundingClientRect().width);
+  }, 0);
+}
+
 function createAssistantChatMessage(
   role: AssistantChatMessage["role"],
   content: string,
@@ -652,6 +662,9 @@ export function AssistantPanel({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const addContextMenuRef = useRef<HTMLDivElement | null>(null);
   const permissionMenuRef = useRef<HTMLDivElement | null>(null);
+  const permissionWidthMeasureRef = useRef<HTMLDivElement | null>(null);
+  const modelSelectRef = useRef<HTMLSelectElement | null>(null);
+  const modelWidthMeasureRef = useRef<HTMLDivElement | null>(null);
   const regionTargetRef = useRef<HTMLDivElement | null>(null);
   const regionSelectionRef = useRef<HTMLDivElement | null>(null);
   const activeAssistantRequestIdRef = useRef(0);
@@ -681,6 +694,17 @@ export function AssistantPanel({
     [providerDefinition],
   );
   const hasCustomModel = currentModel.trim().length > 0 && !modelOptionIds.has(currentModel);
+  const toolPermissionLabels = useMemo(
+    () => [t("ai.toolPermissionPrompt"), t("ai.toolPermissionAllowAll")],
+    [t],
+  );
+  const modelSelectLabels = useMemo(
+    () => [
+      ...(hasCustomModel ? [currentModel] : []),
+      ...providerDefinition.modelOptions.map((model) => model.label),
+    ],
+    [currentModel, hasCustomModel, providerDefinition],
+  );
   const currentModelSupportsImageInput = modelSupportsImageInput(
     providerDefinition,
     currentModel,
@@ -1777,6 +1801,21 @@ export function AssistantPanel({
       : null;
 
   useLayoutEffect(() => {
+    const labelWidth = maxMeasuredTextWidth(permissionWidthMeasureRef.current);
+    const wrapper = permissionMenuRef.current;
+    if (wrapper && labelWidth > 0) {
+      wrapper.style.setProperty("--assistant-permission-control-width", `${Math.ceil(labelWidth + 59)}px`);
+      wrapper.style.setProperty("--assistant-permission-menu-width", `${Math.ceil(labelWidth + 72)}px`);
+    }
+
+    const modelWidth = maxMeasuredTextWidth(modelWidthMeasureRef.current);
+    const select = modelSelectRef.current;
+    if (select && modelWidth > 0) {
+      select.style.setProperty("--assistant-model-select-width", `${Math.ceil(modelWidth + 38)}px`);
+    }
+  }, [modelSelectLabels, toolPermissionLabels]);
+
+  useLayoutEffect(() => {
     const node = regionTargetRef.current;
     if (!node || !screenshotRegionState) {
       return;
@@ -2205,8 +2244,8 @@ export function AssistantPanel({
               )}
               <span>
                 {currentToolPermissionMode === "allowAll"
-                  ? t("ai.toolPermissionAllowAll")
-                  : t("ai.toolPermissionPrompt")}
+                  ? toolPermissionLabels[1]
+                  : toolPermissionLabels[0]}
               </span>
               <ChevronDown size={14} />
             </button>
@@ -2220,7 +2259,7 @@ export function AssistantPanel({
                   type="button"
                 >
                   <Hand size={16} />
-                  <span>{t("ai.toolPermissionPrompt")}</span>
+                  <span>{toolPermissionLabels[0]}</span>
                   {currentToolPermissionMode === "prompt" ? <Check size={16} /> : null}
                 </button>
                 <button
@@ -2232,7 +2271,7 @@ export function AssistantPanel({
                   type="button"
                 >
                   <ShieldAlert size={16} />
-                  <span>{t("ai.toolPermissionAllowAll")}</span>
+                  <span>{toolPermissionLabels[1]}</span>
                   {currentToolPermissionMode === "allowAll" ? <Check size={16} /> : null}
                 </button>
               </div>
@@ -2243,6 +2282,7 @@ export function AssistantPanel({
             className="assistant-model-select"
             disabled={isSendingPrompt}
             onChange={(event) => void handleModelChange(event.currentTarget.value)}
+            ref={modelSelectRef}
             title={t("settings.model")}
             value={currentModel}
           >
@@ -2253,6 +2293,24 @@ export function AssistantPanel({
               </option>
             ))}
           </select>
+          <div
+            aria-hidden="true"
+            className="assistant-control-measurer assistant-permission-measurer"
+            ref={permissionWidthMeasureRef}
+          >
+            {toolPermissionLabels.map((label, index) => (
+              <span key={`${label}-${index}`}>{label}</span>
+            ))}
+          </div>
+          <div
+            aria-hidden="true"
+            className="assistant-control-measurer assistant-model-measurer"
+            ref={modelWidthMeasureRef}
+          >
+            {modelSelectLabels.map((label, index) => (
+              <span key={`${label}-${index}`}>{label}</span>
+            ))}
+          </div>
           <button
             aria-label={isSendingPrompt ? t("ai.stopMessage") : t("ai.sendMessage")}
             className="assistant-send-button"

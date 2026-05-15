@@ -4570,16 +4570,17 @@ progress {
 }
 
 .assistant-model-select {
-  flex: 0 1 28%;
-  width: 28%;
+  flex: 0 1 var(--assistant-model-select-width, max-content);
+  width: var(--assistant-model-select-width, auto);
+  max-width: 100%;
 }
 
 .assistant-permission-menu-wrapper {
   position: relative;
   display: inline-flex;
-  flex: 0 1 162px;
-  width: 162px;
-  min-width: 118px;
+  flex: 0 1 var(--assistant-permission-control-width, max-content);
+  width: var(--assistant-permission-control-width, auto);
+  min-width: 0;
 }
 
 .assistant-permission-button {
@@ -4629,7 +4630,8 @@ progress {
   left: 0;
   z-index: 60;
   display: grid;
-  width: 228px;
+  width: var(--assistant-permission-menu-width, max-content);
+  min-width: 100%;
   padding: 8px;
   color: var(--text);
   background: var(--surface);
@@ -4668,6 +4670,31 @@ progress {
 
 .assistant-permission-menu-item[data-mode="allowAll"] {
   color: #9b4d00;
+}
+
+.assistant-control-measurer {
+  position: absolute;
+  width: max-content;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.assistant-control-measurer span {
+  display: block;
+  width: max-content;
+}
+
+.assistant-permission-measurer {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.assistant-model-measurer {
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .assistant-plus-button,
@@ -8915,6 +8942,50 @@ fieldset.connection-specific-options > legend {
 .settings-list-row > div,
 .settings-list-row-heading {
   gap: 4px;
+}
+
+.settings-list-row > .settings-credential-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.settings-credential-summary strong,
+.settings-credential-summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-credential-summary span {
+  flex: 0 0 auto;
+}
+
+.settings-icon-danger-button {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  padding: 0;
+  color: var(--red);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings-icon-danger-button:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.settings-icon-danger-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .settings-credential-group {

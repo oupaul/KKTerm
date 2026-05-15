@@ -4,14 +4,9 @@ import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { StoredCredentialKind, StoredCredentialSummary } from "../types";
+import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
 import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
 import { SettingsSectionHeader } from "./shared";
-
-function formatDate(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
 
 function credentialKindKey(kind: StoredCredentialKind) {
   switch (kind) {
@@ -28,11 +23,29 @@ function credentialKindKey(kind: StoredCredentialKind) {
   }
 }
 
+function credentialDescriptionKey(credential: StoredCredentialSummary) {
+  if (!credential.exists) {
+    return "settings.credentialMissingSecret";
+  }
+  switch (credential.kind) {
+    case "aiApiKey":
+      return "settings.credentialSavedApiKey";
+    case "widgetSecret":
+      return "settings.credentialSavedSecret";
+    case "connectionPassword":
+    case "urlPassword":
+      return "settings.credentialSavedPassword";
+    default:
+      return "settings.credentialSavedPassword";
+  }
+}
+
 export function CredentialsSettings() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
   const [credentials, setCredentials] = useState<StoredCredentialSummary[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<StoredCredentialSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { storedCredentials, widgetCredentials } = useMemo(
@@ -114,7 +127,7 @@ export function CredentialsSettings() {
                   <CredentialRow
                     credential={credential}
                     key={credential.id}
-                    onDelete={deleteCredential}
+                    onDelete={setDeleteTarget}
                   />
                 ))}
               </div>
@@ -136,12 +149,23 @@ export function CredentialsSettings() {
               <CredentialRow
                 credential={credential}
                 key={credential.id}
-                onDelete={deleteCredential}
+                onDelete={setDeleteTarget}
               />
             ))}
           </div>
         )}
       </fieldset>
+
+      {deleteTarget ? (
+        <CredentialDeleteConfirmDialog
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            const credential = deleteTarget;
+            setDeleteTarget(null);
+            void deleteCredential(credential);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -151,36 +175,23 @@ function CredentialRow({
   onDelete,
 }: {
   credential: StoredCredentialSummary;
-  onDelete: (credential: StoredCredentialSummary) => Promise<void>;
+  onDelete: (credential: StoredCredentialSummary) => void;
 }) {
   const { t } = useTranslation();
 
   return (
     <div className="settings-list-row">
-      <div>
+      <div className="settings-credential-summary">
         <strong>{credential.label}</strong>
-        {credential.detail ? <span>{credential.detail}</span> : null}
-        <small>
-          {[
-            credential.username
-              ? t("settings.credentialUsername", { username: credential.username })
-              : null,
-            credential.updatedAt
-              ? t("settings.credentialUpdated", { updatedAt: formatDate(credential.updatedAt) })
-              : null,
-            credential.exists
-              ? t("settings.credentialStored")
-              : t("settings.credentialMissingSecret"),
-          ].filter(Boolean).join(" · ")}
-        </small>
+        <span>{t(credentialDescriptionKey(credential))}</span>
       </div>
       <button
-        className="secondary-button danger"
+        aria-label={t("settings.deleteCredential")}
+        className="settings-icon-danger-button"
         type="button"
         onClick={() => void onDelete(credential)}
       >
-        <Trash2 size={15} />
-        {t("common.delete")}
+        <Trash2 size={16} />
       </button>
     </div>
   );

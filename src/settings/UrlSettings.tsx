@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { UrlCredentialSummary, UrlDataPartitionSummary } from "../types";
+import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
 import { SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -40,6 +41,7 @@ export function UrlSettings() {
   const [partitions, setPartitions] = useState<UrlDataPartitionSummary[]>([]);
   const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
   const [credentialDraft, setCredentialDraft] = useState<UrlCredentialEditDraft | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UrlCredentialSummary | null>(null);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(urlSettings);
 
   useEffect(() => {
@@ -265,15 +267,9 @@ export function UrlSettings() {
                   </>
                 ) : (
                   <>
-                    <div>
+                    <div className="settings-credential-summary">
                       <strong>{credential.connectionName}</strong>
-                      <span>{credential.url ?? t("settings.notSet")}</span>
-                      <small>
-                        {t("settings.urlPasswordDetails", {
-                          username: credential.username,
-                          updatedAt: formatDate(credential.updatedAt),
-                        })}
-                      </small>
+                      <span>{t("settings.credentialSavedPassword")}</span>
                     </div>
                     <div className="settings-list-actions">
                       <button className="secondary-button" type="button" onClick={() => beginCredentialEdit(credential)}>
@@ -281,12 +277,12 @@ export function UrlSettings() {
                         {t("common.edit")}
                       </button>
                       <button
-                        className="secondary-button danger"
+                        aria-label={t("settings.deleteCredential")}
+                        className="settings-icon-danger-button"
                         type="button"
-                        onClick={() => void deleteCredential(credential.connectionId)}
+                        onClick={() => setDeleteTarget(credential)}
                       >
-                        <Trash2 size={15} />
-                        {t("common.delete")}
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </>
@@ -296,6 +292,17 @@ export function UrlSettings() {
           </div>
         )}
       </fieldset>
+
+      {deleteTarget ? (
+        <CredentialDeleteConfirmDialog
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            const credential = deleteTarget;
+            setDeleteTarget(null);
+            void deleteCredential(credential.connectionId);
+          }}
+        />
+      ) : null}
 
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.urlDataShards")}</legend>
