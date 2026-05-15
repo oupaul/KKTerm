@@ -117,19 +117,20 @@ For Windows debugging, use the VS Code `Run KKTerm exe` configuration to start `
 
 ## Current Limits
 
-KKTerm is moving quickly, so this README describes the codebase as it exists now rather than treating the roadmap as truth.
+KKTerm is releasing continuously. This README describes the codebase as it exists now.
 
-- Windows is the v0.1 acceptance platform.
-- The installer is currently unsigned.
-- Update checks are disabled while release signing is deferred.
+- Windows is the primary supported platform; macOS and Linux packaging are planned.
+- The installer is currently unsigned. Update checks are disabled until release signing is configured.
 - SFTP over ProxyJump is not supported in the native SFTP path.
 - File transfer resume, folder sync/diff, archive/extract, and remote editing are deferred.
-- RDP and VNC are active work areas; richer clipboard/device sync and advanced quality controls are still evolving.
+- SSH config import is implemented but the user-facing entry point in Settings is not yet exposed.
+- RDP and VNC are shipping; richer clipboard/device sync and advanced quality controls are still evolving.
 - AI assists, proposes, and can operate enabled tools within the configured Prompt/Allow All permission boundary, but it should not be treated as an unattended autonomous operator.
 
 ## Project Docs
 
 - [Product context](CONTEXT.md)
+- [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Dashboard architecture](docs/DASHBOARD.md)
 - [AI provider guide](docs/AI_PROVIDERS.md)

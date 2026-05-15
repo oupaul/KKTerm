@@ -1,6 +1,6 @@
 # KKTerm Release Notes and Gates
 
-This document captures v0.1 release-facing posture that is not tied to a single feature milestone.
+This document captures KKTerm release posture, packaging procedures, and current known limitations.
 
 ## No-Telemetry Posture
 
@@ -70,14 +70,14 @@ The script increments the `<major>.<minor>.<build>` version across npm, Tauri, a
 
 ## Known Limitations
 
-- Windows is the only v0.1 acceptance platform.
+- Windows is the primary supported platform. macOS and Linux packaging are planned.
 - The Windows installer build and smoke test are repeatable, but the installer is unsigned until release signing is configured.
 - SSH readiness performance is instrumented for native post-auth terminal setup and retained in local performance snapshots after a native SSH Session starts. The repeatable `npm run measure:ssh-readiness` helper can validate the `<= 150 ms` budget against a trusted non-`ProxyJump` SSH Connection, but the latest documented run still lacks a measured value because valid SSH auth was not available in the measurement environment.
 - Native SSH-launched SFTP does not support `ProxyJump`; SSH terminal sessions with `ProxyJump` use the system `ssh` fallback/debug path where available.
-- SSH config import support exists behind the local command boundary, but the current simplified chrome does not expose a user-facing import action.
+- SSH config import support exists behind the local command boundary, but the current Settings surface does not expose a user-facing import action. The same applies to the diagnostics bundle action.
 - SFTP supports recursive file and folder transfer, multi-select drag/drop, overwrite prompts with overwrite-all handling, clearable finished transfer history, remote properties, chmod, and chown, but folder sync, diff/compare, transfer resume, archive/extract, and remote file editing remain deferred.
 - Screenshot capture is available from terminal Pane toolbars and non-terminal workspace top toolbars. Region and Entire Window/Panel captures can be copied to the system clipboard or attached transiently to the AI Assistant through explicit user action.
-- RDP, VNC, and URL webview Connection work has started. RDP uses the Windows ActiveX host and VNC uses a canvas-rendered `vnc-rs` framebuffer path; advanced VNC options, richer clipboard handling, sync, and team sharing remain deferred.
+- RDP uses the Windows ActiveX host and VNC uses a canvas-rendered `vnc-rs` framebuffer path; advanced VNC options, richer clipboard handling, sync, and team sharing remain deferred.
 - AI command assistance and app tool use are bounded by assistant tool settings. Prompt mode is the default and blocks mutating tools with a permission-required result; Allow All is an explicit setting that lets enabled tools execute automatically. The Assistant can use typed tools for Dashboard changes, saved Connection management, and active Session interaction, but it should not be treated as an unattended autonomous operator.
-- Settings exposes editable Terminal behavior, AI provider, App UI font, and layout reset controls; SSH and SFTP defaults are currently read-only summaries; Language (i18n) and Color Scheme remain placeholders; update checks, diagnostics, SSH config import, editable SSH/SFTP defaults, and keybinding controls are not exposed there yet.
+- Settings exposes Color Scheme, Language (i18n), editable Terminal behavior, AI provider, App UI font, and layout reset controls. Update checks, editable SSH/SFTP defaults, SSH config import, and keybinding controls are not yet exposed.
 - Diagnostics bundles are folders, not compressed archives.
