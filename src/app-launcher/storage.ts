@@ -84,6 +84,30 @@ export function appLauncherNameFromPath(path: string) {
   return launcherNameFromPath(path);
 }
 
+export function reorderAppLauncherEntries(
+  entries: AppLauncherEntry[],
+  draggedId: string,
+  targetId: string,
+  placement: "before" | "after" = "before",
+) {
+  if (draggedId === targetId) {
+    return entries;
+  }
+
+  const draggedIndex = entries.findIndex((entry) => entry.id === draggedId);
+  const targetIndex = entries.findIndex((entry) => entry.id === targetId);
+  if (draggedIndex < 0 || targetIndex < 0) {
+    return entries;
+  }
+
+  const nextEntries = [...entries];
+  const [draggedEntry] = nextEntries.splice(draggedIndex, 1);
+  const nextTargetIndex = nextEntries.findIndex((entry) => entry.id === targetId);
+  const insertIndex = placement === "after" ? nextTargetIndex + 1 : nextTargetIndex;
+  nextEntries.splice(insertIndex, 0, draggedEntry);
+  return nextEntries;
+}
+
 function readPreviewSettings(): AppLauncherSettings {
   if (typeof window === "undefined") {
     return { entries: [] };

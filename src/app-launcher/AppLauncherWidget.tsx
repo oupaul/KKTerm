@@ -30,8 +30,13 @@ import {
   launchAppLauncherEntry,
   parseAppLauncherSettingsJson,
   prepareAppLauncherEntry,
+  reorderAppLauncherEntries,
   serializeAppLauncherSettings,
 } from "./storage";
+
+const APP_LAUNCHER_REORDER_MIME = "application/x-kkterm-app-launcher-entry";
+
+type ReorderPlacement = "before" | "after";
 
 type EntryDraft = {
   id: string;
@@ -55,6 +60,11 @@ type AddMenuState = {
   y: number;
 };
 
+type ReorderTarget = {
+  id: string;
+  placement: ReorderPlacement;
+};
+
 export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInstance }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
@@ -67,6 +77,10 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   const [menuState, setMenuState] = useState<MenuState | null>(null);
   const [addMenuState, setAddMenuState] = useState<AddMenuState | null>(null);
   const [isDropTarget, setIsDropTarget] = useState(false);
+  const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
+  const [reorderTarget, setReorderTarget] = useState<ReorderTarget | null>(null);
+  const draggedEntryIdRef = useRef<string | null>(null);
+  const suppressNextLaunchRef = useRef(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const addMenuRef = useRef<HTMLDivElement | null>(null);
@@ -442,8 +456,71 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
     }
   }
 
+  async function saveReorderedEntry(
+    draggedId: string,
+    targetId: string,
+    placement: ReorderPlacement,
+  ) {
+    const nextEntries = reorderAppLauncherEntries(settings.entries, draggedId, targetId, placement);
+    if (nextEntries === settings.entries) {
+      return;
+    }
+    try {
+      await saveSettings({ entries: nextEntries });
+    } catch (error) {
+      showStatusBarNotice(
+        t("appLauncher.saveError", { message: errorMessage(error) }),
+        { tone: "error" },
+      );
+    }
+  }
+
+  function handleEntryDragStart(event: DragEvent<HTMLButtonElement>, entryId: string) {
+    suppressNextLaunchRef.current = true;
+    draggedEntryIdRef.current = entryId;
+    setDraggedEntryId(entryId);
+    setReorderTarget({ id: entryId, placement: "before" });
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(APP_LAUNCHER_REORDER_MIME, entryId);
+  }
+
+  function handleEntryDragOver(event: DragEvent<HTMLButtonElement>, targetId: string) {
+    const activeDraggedId = draggedEntryIdRef.current;
+    if (!activeDraggedId || activeDraggedId === targetId) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "move";
+    setReorderTarget({ id: targetId, placement: reorderPlacementFromEvent(event) });
+  }
+
+  function handleEntryDrop(event: DragEvent<HTMLButtonElement>, targetId: string) {
+    const draggedId = event.dataTransfer.getData(APP_LAUNCHER_REORDER_MIME) || draggedEntryIdRef.current;
+    if (!draggedId) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    draggedEntryIdRef.current = null;
+    setDraggedEntryId(null);
+    const placement =
+      reorderTarget?.id === targetId ? reorderTarget.placement : reorderPlacementFromEvent(event);
+    setReorderTarget(null);
+    void saveReorderedEntry(draggedId, targetId, placement);
+  }
+
+  function handleEntryDragEnd() {
+    draggedEntryIdRef.current = null;
+    setDraggedEntryId(null);
+    setReorderTarget(null);
+    window.setTimeout(() => {
+      suppressNextLaunchRef.current = false;
+    }, 0);
+  }
+
   function handleBrowserDragOver(event: DragEvent<HTMLDivElement>) {
-    if (isTauriRuntime() || !hasBrowserDropPayload(event)) {
+    if (draggedEntryId || isTauriRuntime() || !hasBrowserDropPayload(event)) {
       return;
     }
     event.preventDefault();
@@ -452,7 +529,7 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   }
 
   function handleBrowserDrop(event: DragEvent<HTMLDivElement>) {
-    if (isTauriRuntime()) {
+    if (draggedEntryId || isTauriRuntime()) {
       return;
     }
     event.preventDefault();
@@ -470,6 +547,9 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   }
 
   async function launch(entry: AppLauncherEntry, mode: AppLauncherLaunchMode) {
+    if (suppressNextLaunchRef.current) {
+      return;
+    }
     try {
       await launchAppLauncherEntry(entry, mode);
       showStatusBarNotice(t("appLauncher.launchStatus", { name: entry.name }), {
@@ -507,6 +587,16 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
             <AppLauncherTile
               entry={entry}
               key={entry.id}
+              isDragging={draggedEntryId === entry.id}
+              reorderPlacement={
+                reorderTarget?.id === entry.id && draggedEntryId !== entry.id
+                  ? reorderTarget.placement
+                  : null
+              }
+              onDragEnd={handleEntryDragEnd}
+              onDragOverEntry={handleEntryDragOver}
+              onDragStart={handleEntryDragStart}
+              onDropEntry={handleEntryDrop}
               onLaunch={launch}
               onMenu={(nextMenu) => setMenuState(nextMenu)}
               prepared={preparedById[entry.id]}
@@ -557,14 +647,31 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   );
 }
 
+function reorderPlacementFromEvent(event: DragEvent<HTMLElement>): ReorderPlacement {
+  const bounds = event.currentTarget.getBoundingClientRect();
+  return event.clientX >= bounds.left + bounds.width / 2 ? "after" : "before";
+}
+
 function AppLauncherTile({
   entry,
+  isDragging,
+  reorderPlacement,
+  onDragEnd,
+  onDragOverEntry,
+  onDragStart,
+  onDropEntry,
   onLaunch,
   onMenu,
   prepared,
 }: {
   entry: AppLauncherEntry;
+  isDragging: boolean;
+  reorderPlacement: ReorderPlacement | null;
   prepared?: PreparedAppLauncherEntry;
+  onDragEnd: () => void;
+  onDragOverEntry: (event: DragEvent<HTMLButtonElement>, entryId: string) => void;
+  onDragStart: (event: DragEvent<HTMLButtonElement>, entryId: string) => void;
+  onDropEntry: (event: DragEvent<HTMLButtonElement>, entryId: string) => void;
   onLaunch: (entry: AppLauncherEntry, mode: AppLauncherLaunchMode) => Promise<void>;
   onMenu: (state: MenuState) => void;
 }) {
@@ -586,13 +693,18 @@ function AppLauncherTile({
 
   return (
     <button
-      className={`app-launcher-tile ${missing ? "missing" : ""}`}
+      className={`app-launcher-tile ${missing ? "missing" : ""}${isDragging ? " is-reordering" : ""}${reorderPlacement ? ` is-reorder-${reorderPlacement}` : ""}`}
       aria-label={t("appLauncher.launchApp", { name: entry.name })}
+      draggable
       onClick={() => void onLaunch(entry, "normal")}
       onContextMenu={(event) => {
         event.preventDefault();
         onMenu({ entry, prepared, x: event.clientX, y: event.clientY });
       }}
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => onDragOverEntry(event, entry.id)}
+      onDragStart={(event) => onDragStart(event, entry.id)}
+      onDrop={(event) => onDropEntry(event, entry.id)}
       onKeyDown={handleKeyDown}
       type="button"
     >
