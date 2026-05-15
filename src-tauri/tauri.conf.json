@@ -50,7 +50,18 @@
       "nsis": {
         "installMode": "currentUser",
         "languages": [
-          "English"
+          "English",
+          "French",
+          "German",
+          "Italian",
+          "Japanese",
+          "Korean",
+          "PortugueseBR",
+          "SimpChinese",
+          "Spanish",
+          "SpanishInternational",
+          "TradChinese",
+          "Vietnamese"
         ],
         "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico",

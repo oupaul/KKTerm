@@ -1365,17 +1365,18 @@ main.dashboard-page {
 
 .app-launcher-tile {
   position: relative;
+  --app-launcher-tile-scale: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding: 10px 6px;
+  padding: 0;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  cursor: grab;
+  cursor: default;
   transition:
     border-color 120ms ease,
     box-shadow 120ms ease,
@@ -1384,18 +1385,72 @@ main.dashboard-page {
 }
 
 .app-launcher-tile:hover,
-.app-launcher-tile:focus-visible {
+.app-launcher-tile:focus-within {
   border-color: var(--border-strong);
   box-shadow: var(--dashboard-shadow-card);
 }
 
-.app-launcher-tile:active {
+.app-launcher-widget.is-managing .app-launcher-tile {
+  cursor: grab;
+  animation: app-launcher-tile-wiggle 180ms ease-in-out infinite alternate;
+}
+
+.app-launcher-widget.is-managing .app-launcher-tile:nth-child(2n) {
+  animation-direction: alternate-reverse;
+}
+
+.app-launcher-widget.is-managing .app-launcher-tile:active {
   cursor: grabbing;
+}
+
+.app-launcher-tile-launch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 6px;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.app-launcher-widget.is-managing .app-launcher-tile-launch {
+  cursor: grab;
+}
+
+.app-launcher-tile-remove {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: #fff;
+  background: var(--red);
+  border: 1px solid rgb(255 255 255 / 85%);
+  border-radius: 999px;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 20%);
+  cursor: pointer;
+}
+
+.app-launcher-tile-remove:hover,
+.app-launcher-tile-remove:focus-visible {
+  filter: brightness(1.04);
 }
 
 .app-launcher-tile.is-reordering {
   opacity: 0.55;
-  transform: scale(0.98);
+  --app-launcher-tile-scale: 0.98;
 }
 
 .app-launcher-tile.is-reorder-before,
@@ -1423,6 +1478,22 @@ main.dashboard-page {
 
 .app-launcher-tile.is-reorder-after::after {
   right: -6px;
+}
+
+@keyframes app-launcher-tile-wiggle {
+  from {
+    transform: rotate(-1deg) scale(var(--app-launcher-tile-scale));
+  }
+
+  to {
+    transform: rotate(1deg) scale(var(--app-launcher-tile-scale));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-launcher-widget.is-managing .app-launcher-tile {
+    animation: none;
+  }
 }
 
 .app-launcher-tile-icon {
