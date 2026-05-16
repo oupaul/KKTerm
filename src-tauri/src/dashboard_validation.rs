@@ -102,6 +102,7 @@ pub const MAX_SETTINGS_VALUES_BYTES: usize = 32 * 1024;
 pub const MAX_SETTINGS_FIELDS: usize = 20;
 pub const MAX_SELECT_OPTIONS: usize = 40;
 pub const MIN_POLL_SECONDS: u64 = 1;
+pub const MAX_WIDGET_LIBRARIES: usize = 8;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -119,6 +120,7 @@ pub enum ValidationError {
     ScriptTooLarge,
     InvalidPermission,
     InvalidPollSeconds,
+    InvalidLibraries,
     InvalidTitle,
     InvalidGridDensity,
     InvalidSettingsSchema,
@@ -302,6 +304,8 @@ pub struct ScriptBody {
     pub permissions: ScriptPermissions,
     #[serde(default)]
     pub html_shim: Option<String>,
+    #[serde(default)]
+    pub libraries: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -361,7 +365,29 @@ pub fn validate_script_body_json(json: &str) -> Result<ScriptBody, ValidationErr
             return Err(ValidationError::InvalidPollSeconds);
         }
     }
+    if let Some(libs) = &parsed.libraries {
+        if libs.len() > MAX_WIDGET_LIBRARIES {
+            return Err(ValidationError::InvalidLibraries);
+        }
+        for entry in libs {
+            if !is_valid_library_key(entry) {
+                return Err(ValidationError::InvalidLibraries);
+            }
+        }
+    }
     Ok(parsed)
+}
+
+fn is_valid_library_key(value: &str) -> bool {
+    if value.is_empty() || value.len() > 32 {
+        return false;
+    }
+    let mut chars = value.chars();
+    let first = chars.next();
+    if !matches!(first, Some(c) if c.is_ascii_lowercase()) {
+        return false;
+    }
+    chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
 }
 
 pub fn validate_custom_body_for_kind(kind: &str, body_json: &str) -> Result<(), ValidationError> {

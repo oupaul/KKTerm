@@ -7,6 +7,7 @@ import { BackgroundPopover } from "./edit/BackgroundPopover";
 import { CatalogOverlay } from "./edit/CatalogOverlay";
 import { CustomizePopover } from "./edit/CustomizePopover";
 import "./dashboard.css";
+import { libraryCatalogForAi } from "./script/widgetLibraries";
 import { useDashboardStore } from "./state/dashboardStore";
 import type { DashboardWidgetInstance, GridDensity } from "./types";
 import { DashboardBackgroundHost } from "./view/DashboardBackgroundHost";
@@ -131,6 +132,9 @@ export function DashboardPage({
         "If the widget needs per-instance persistent options, include settingsSchema.fields in dashboard_create_widget. KKTerm renders that schema in the widget settings UI and stores instance values; script widgets can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value).",
         "Passwords, API keys, tokens, and similar sensitive options must use settingsSchema field type secret. KKTerm stores those values in the OS keychain as widgetSecret entries; Dashboard instance JSON stores only secretRef objects. Scripts read a secret only when needed with await KK.getSecret('fieldKey').",
         "For script widgets that display remote images or fetch remote data, set permissions.network to true. Use normal http/https anchors or KK.openExternal(url) for external website links; links open in the user's external browser, not inside the widget iframe.",
+        "Script widgets can request curated npm libraries via a body.libraries string array. The libraries load before the widget source and expose documented globals (see catalog below). Only list libraries you actually use; do not declare more than 8. The 64KB source budget applies to your code, not to library bytes.",
+        "Available widget libraries:",
+        libraryCatalogForAi(),
         "",
         JSON.stringify(dashboardSnapshot, null, 2),
       ].join("\n"),

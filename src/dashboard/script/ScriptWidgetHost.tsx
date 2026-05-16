@@ -10,7 +10,8 @@ import {
   validateScriptWidgetBody,
   validateWidgetSettingsSchemaJson,
 } from "../schema";
-import { buildSrcdoc } from "./permissions";
+import { buildSrcdoc, type ResolvedWidgetLibrary } from "./permissions";
+import { loadWidgetLibraries } from "./widgetLibraries";
 
 export function ScriptWidgetHost({
   bodyJson,
@@ -35,9 +36,39 @@ export function ScriptWidgetHost({
     () => resolveSettingsValuesJson(settingsSchemaJson, instance.settingsValuesJson),
     [settingsSchemaJson, instance.settingsValuesJson],
   );
+  const [libraries, setLibraries] = useState<ResolvedWidgetLibrary[] | null>(null);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const requestedLibKey = useMemo(() => (parsed?.libraries ?? []).join("|"), [parsed]);
+  useEffect(() => {
+    if (!parsed) {
+      setLibraries(null);
+      setLibraryError(null);
+      return;
+    }
+    if (!parsed.libraries || parsed.libraries.length === 0) {
+      setLibraries([]);
+      setLibraryError(null);
+      return;
+    }
+    let cancelled = false;
+    setLibraries(null);
+    setLibraryError(null);
+    loadWidgetLibraries(parsed.libraries)
+      .then((resolved) => {
+        if (cancelled) return;
+        setLibraries(resolved);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setLibraryError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [parsed, requestedLibKey]);
   const srcdoc = useMemo(
-    () => (parsed ? buildSrcdoc(parsed, settingsValuesJson) : ""),
-    [parsed, settingsValuesJson],
+    () => (parsed && libraries ? buildSrcdoc(parsed, settingsValuesJson, libraries) : ""),
+    [parsed, settingsValuesJson, libraries],
   );
 
   useEffect(() => {
@@ -88,12 +119,24 @@ export function ScriptWidgetHost({
     return <div className="dw-script-error">{t("dashboard.invalidScriptWidgetBody")}</div>;
   }
 
+  if (libraryError) {
+    return (
+      <div className="dw-script-error">
+        {t("dashboard.widgetLibraryLoadFailed", { error: libraryError })}
+      </div>
+    );
+  }
+
+  if (!libraries) {
+    return <div className="dw-script-loading">{t("common.loading")}</div>;
+  }
+
   return (
     <iframe
       ref={iframeRef}
       key={reloadKey}
       title="dashboard-script"
-      sandbox="allow-scripts"
+      sandbox="allow-scripts allow-downloads"
       srcDoc={srcdoc}
       style={{ width: "100%", height: "100%", border: "none", background: "transparent" }}
     />

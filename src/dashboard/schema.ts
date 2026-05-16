@@ -10,7 +10,9 @@ const MAX_SETTINGS_VALUES_BYTES = 32 * 1024;
 const MIN_POLL_SECONDS = 1;
 const MAX_SETTINGS_FIELDS = 20;
 const MAX_SELECT_OPTIONS = 40;
+const MAX_WIDGET_LIBRARIES = 8;
 const SETTINGS_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+const LIBRARY_KEY_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
 
 type ValidationResult<T> =
   | { ok: true; value: T }
@@ -123,6 +125,23 @@ export function validateScriptWidgetBody(value: unknown): ValidationResult<Scrip
   if (pollSeconds !== undefined && (!Number.isInteger(pollSeconds) || pollSeconds < MIN_POLL_SECONDS)) {
     return { ok: false, reason: "invalidPollSeconds" };
   }
+  let libraries: string[] | undefined;
+  if (value.libraries !== undefined && value.libraries !== null) {
+    if (!Array.isArray(value.libraries) || value.libraries.length > MAX_WIDGET_LIBRARIES) {
+      return { ok: false, reason: "invalidLibraries" };
+    }
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const entry of value.libraries) {
+      if (typeof entry !== "string" || !LIBRARY_KEY_PATTERN.test(entry)) {
+        return { ok: false, reason: "invalidLibraries" };
+      }
+      if (seen.has(entry)) continue;
+      seen.add(entry);
+      list.push(entry);
+    }
+    libraries = list.length > 0 ? list : undefined;
+  }
   return {
     ok: true,
     value: {
@@ -132,6 +151,7 @@ export function validateScriptWidgetBody(value: unknown): ValidationResult<Scrip
         pollSeconds,
       },
       htmlShim: typeof value.htmlShim === "string" ? value.htmlShim : undefined,
+      libraries,
     },
   };
 }

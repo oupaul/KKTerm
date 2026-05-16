@@ -130,6 +130,7 @@ export interface ScriptBody {
   source: string;
   permissions: { network: boolean; pollSeconds?: number };
   htmlShim?: string;
+  libraries?: string[];
 }
 
 export type WidgetSettingsField =
