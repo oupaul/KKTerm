@@ -651,6 +651,7 @@ export function AssistantPanel({
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
   const setAiProviderSettings = useWorkspaceStore((state) => state.setAiProviderSettings);
   const aiProviderHasApiKey = useWorkspaceStore((state) => state.aiProviderHasApiKey);
+  const setAssistantWorking = useWorkspaceStore((state) => state.setAssistantWorking);
   const [prompt, setPrompt] = useState(() => sessionStorage.getItem("ai-chat-draft") ?? "");
   const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
   const [currentThreadId, setCurrentThreadId] = useState(createAssistantChatThreadId);
@@ -807,6 +808,11 @@ export function AssistantPanel({
   useEffect(() => {
     writeAssistantChatHistory(chatHistory);
   }, [chatHistory]);
+
+  useEffect(() => {
+    setAssistantWorking(isSendingPrompt);
+    return () => setAssistantWorking(false);
+  }, [isSendingPrompt, setAssistantWorking]);
 
   useEffect(() => {
     const wasCollapsed = wasCollapsedRef.current;

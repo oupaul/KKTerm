@@ -1,5 +1,13 @@
 import { listen } from "@tauri-apps/api/event";
-import { ArrowDownToLine, ArrowUpFromLine, BedSingle, Coffee, Cpu, MemoryStick } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  BedSingle,
+  Coffee,
+  Cpu,
+  LoaderCircle,
+  MemoryStick,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +18,13 @@ import { useWorkspaceStore } from "../store";
 
 const NOTIFICATION_FADE_MS = 220;
 
-export function StatusBar({ activePage }: { activePage: ActivePage }) {
+export function StatusBar({
+  activePage,
+  onOpenAssistant,
+}: {
+  activePage: ActivePage;
+  onOpenAssistant: () => void;
+}) {
   const { t } = useTranslation();
   const notice = useWorkspaceStore((state) => state.statusBarNotice);
   const clearStatusBarNotice = useWorkspaceStore((state) => state.clearStatusBarNotice);
@@ -64,9 +78,38 @@ export function StatusBar({ activePage }: { activePage: ActivePage }) {
         ) : null}
       </div>
       <div className="status-bar-actions">
+        <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />
         <DontSleepStatusButton />
       </div>
     </footer>
+  );
+}
+
+function AssistantWorkingStatusButton({
+  onOpenAssistant,
+}: {
+  onOpenAssistant: () => void;
+}) {
+  const { t } = useTranslation();
+  const assistantWorking = useWorkspaceStore((state) => state.assistantWorking);
+
+  if (!assistantWorking) {
+    return null;
+  }
+
+  return (
+    <button
+      className="status-bar-action status-bar-assistant-working"
+      aria-label={t("app.aiAssistant")}
+      aria-describedby="assistant-working-status-tooltip"
+      onClick={onOpenAssistant}
+      type="button"
+    >
+      <LoaderCircle size={14} />
+      <span className="status-bar-tooltip" id="assistant-working-status-tooltip" role="tooltip">
+        {t("app.aiAssistant")}
+      </span>
+    </button>
   );
 }
 

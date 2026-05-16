@@ -5397,6 +5397,20 @@ progress {
   stroke: currentColor;
 }
 
+.status-bar-assistant-working {
+  color: var(--accent);
+}
+
+.status-bar-assistant-working svg {
+  animation: status-bar-spin 900ms linear infinite;
+}
+
+@keyframes status-bar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .status-bar-tooltip {
   position: absolute;
   right: 0;

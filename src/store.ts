@@ -588,6 +588,7 @@ interface WorkspaceState {
   vncSettings: VncSettings;
   aiProviderSettings: AiProviderSettings;
   aiProviderHasApiKey: boolean;
+  assistantWorking: boolean;
   assistantContextSnippet?: AssistantContextSnippet;
   rdpPreCaptureSignal: number;
   activeSessionCounts: Record<string, number>;
@@ -605,6 +606,7 @@ interface WorkspaceState {
   setVncSettings: (settings: VncSettings) => void;
   setAiProviderSettings: (settings: AiProviderSettings) => void;
   setAiProviderHasApiKey: (hasApiKey: boolean) => void;
+  setAssistantWorking: (assistantWorking: boolean) => void;
   setAssistantContextSnippet: (snippet: AssistantContextSnippet) => void;
   clearAssistantContextSnippet: () => void;
   requestRdpPreCapture: () => void;
@@ -681,6 +683,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   vncSettings: defaultVncSettings,
   aiProviderSettings: defaultAiProviderSettings,
   aiProviderHasApiKey: false,
+  assistantWorking: false,
   assistantContextSnippet: undefined,
   rdpPreCaptureSignal: 0,
   activeSessionCounts: {},
@@ -698,6 +701,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setVncSettings: (vncSettings) => set({ vncSettings }),
   setAiProviderSettings: (aiProviderSettings) => set({ aiProviderSettings }),
   setAiProviderHasApiKey: (aiProviderHasApiKey) => set({ aiProviderHasApiKey }),
+  setAssistantWorking: (assistantWorking) => set({ assistantWorking }),
   setAssistantContextSnippet: (assistantContextSnippet) =>
     set({ assistantContextSnippet }),
   clearAssistantContextSnippet: () =>

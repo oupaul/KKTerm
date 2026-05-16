@@ -42,6 +42,13 @@ function App() {
     setActivePage(page);
   }
 
+  function openAssistantPanel() {
+    if (activePage === "settings") {
+      setActivePage(previousNonSettingsPageRef.current);
+    }
+    expandAiPanel();
+  }
+
   const [dashboardAssistantContext, setDashboardAssistantContext] =
     useState<AssistantPageContext>();
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
@@ -133,7 +140,7 @@ function App() {
           onAssistantContextChange={setDashboardAssistantContext}
         />
       ) : null}
-      <StatusBar activePage={activePage} />
+      <StatusBar activePage={activePage} onOpenAssistant={openAssistantPanel} />
     </div>
   );
 }
