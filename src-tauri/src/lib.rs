@@ -884,6 +884,20 @@ async fn poll_github_copilot_device_flow(
 }
 
 #[tauri::command]
+async fn list_github_copilot_models(
+    app: tauri::AppHandle,
+    secrets: tauri::State<'_, secrets::Secrets>,
+) -> Result<Vec<ai::CopilotModelOption>, String> {
+    let token = read_ai_provider_api_key(&secrets, "github-copilot")?
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            "Connect GitHub Copilot in Settings before listing Copilot models.".to_string()
+        })?;
+    ai::list_copilot_models(&app, &token).await
+}
+
+#[tauri::command]
 fn plan_command_proposal(
     request: ai::CommandProposalRequest,
 ) -> Result<ai::CommandProposalPlan, String> {
@@ -2246,6 +2260,7 @@ pub fn run() {
             update_ai_provider_settings,
             start_github_copilot_device_flow,
             poll_github_copilot_device_flow,
+            list_github_copilot_models,
             plan_command_proposal,
             complete_assistant_live_tool_request,
             run_ai_agent,

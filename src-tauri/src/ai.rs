@@ -2,6 +2,7 @@ use futures::StreamExt;
 use github_copilot_sdk::{
     Client as CopilotSdkClient, ClientOptions as CopilotSdkClientOptions, Error as CopilotSdkError,
     LogLevel as CopilotSdkLogLevel, MessageOptions as CopilotSdkMessageOptions,
+    Model as CopilotSdkModel,
     SessionConfig as CopilotSdkSessionConfig, SessionEvent as CopilotSdkSessionEvent,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
@@ -34,6 +35,14 @@ const COPILOT_SDK_RESPONSE_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub struct AssistantLiveToolBridge {
     pending: Mutex<HashMap<String, oneshot::Sender<String>>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CopilotModelOption {
+    pub id: String,
+    pub label: String,
+    pub supports_image_input: Option<bool>,
 }
 
 impl AssistantLiveToolBridge {
@@ -1992,6 +2001,61 @@ async fn run_copilot_sdk(
     }
 
     result
+}
+
+pub async fn list_copilot_models(
+    app: &tauri::AppHandle,
+    token: &str,
+) -> Result<Vec<CopilotModelOption>, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    fs::create_dir_all(&app_data_dir)
+        .map_err(|error| format!("failed to create app data directory: {error}"))?;
+
+    let client_options = build_copilot_sdk_client_options(app_data_dir, token);
+    let client = CopilotSdkClient::start(client_options)
+        .await
+        .map_err(|error| format_copilot_sdk_error("start", error))?;
+
+    let result = client
+        .list_models()
+        .await
+        .map(|models| {
+            models
+                .iter()
+                .filter_map(copilot_model_option_from_sdk_model)
+                .collect()
+        })
+        .map_err(|error| format_copilot_sdk_error("list models", error));
+
+    if let Err(error) = client.stop().await {
+        ai_debug!("copilot sdk client stop failed after model listing: {error}");
+    }
+
+    result
+}
+
+fn copilot_model_option_from_sdk_model(model: &CopilotSdkModel) -> Option<CopilotModelOption> {
+    let id = model.id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    let label = model.name.trim();
+    Some(CopilotModelOption {
+        id: id.to_string(),
+        label: if label.is_empty() {
+            id.to_string()
+        } else {
+            label.to_string()
+        },
+        supports_image_input: model
+            .capabilities
+            .supports
+            .as_ref()
+            .and_then(|supports| supports.vision),
+    })
 }
 
 fn build_copilot_sdk_client_options(app_data_dir: PathBuf, token: &str) -> CopilotSdkClientOptions {
@@ -5215,6 +5279,38 @@ mod tests {
         assert_eq!(options.copilot_home, Some(app_data_dir.join("copilot")));
         assert_eq!(options.github_token.as_deref(), Some("ghu_test-token"));
         assert_eq!(options.use_logged_in_user, Some(false));
+    }
+
+    #[test]
+    fn github_copilot_model_options_preserve_account_catalog_metadata() {
+        let model = CopilotSdkModel {
+            billing: None,
+            capabilities: github_copilot_sdk::ModelCapabilities {
+                limits: None,
+                supports: Some(github_copilot_sdk::ModelCapabilitiesSupports {
+                    reasoning_effort: Some(true),
+                    vision: Some(false),
+                }),
+            },
+            default_reasoning_effort: Some("medium".to_string()),
+            id: "gpt-4.1".to_string(),
+            model_picker_category: None,
+            model_picker_price_category: None,
+            name: "GPT-4.1".to_string(),
+            policy: None,
+            supported_reasoning_efforts: vec!["low".to_string(), "medium".to_string()],
+        };
+
+        let option = copilot_model_option_from_sdk_model(&model).expect("valid model option");
+
+        assert_eq!(
+            option,
+            CopilotModelOption {
+                id: "gpt-4.1".to_string(),
+                label: "GPT-4.1".to_string(),
+                supports_image_input: Some(false),
+            }
+        );
     }
 
     #[test]

@@ -690,6 +690,12 @@ export interface GitHubCopilotDevicePollResponse {
   interval?: number | null;
 }
 
+export interface GitHubCopilotModelOption {
+  id: string;
+  label: string;
+  supportsImageInput?: boolean | null;
+}
+
 type CommandMap = {
   app_bootstrap: {
     args: undefined;
@@ -935,6 +941,10 @@ type CommandMap = {
   poll_github_copilot_device_flow: {
     args: { request: { deviceCode: string } };
     result: GitHubCopilotDevicePollResponse;
+  };
+  list_github_copilot_models: {
+    args: undefined;
+    result: GitHubCopilotModelOption[];
   };
   plan_command_proposal: {
     args: {

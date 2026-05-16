@@ -16,6 +16,7 @@ import {
   isTauriRuntime,
   openExternalUrl,
   type GitHubCopilotDeviceFlow,
+  type GitHubCopilotModelOption,
 } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type {
@@ -60,6 +61,7 @@ function AiProviderSettingsFieldControl({
   draft,
   field,
   hasApiKey,
+  modelOptions,
   onApiKeyDraftChange,
   onDraftChange,
 }: {
@@ -69,6 +71,7 @@ function AiProviderSettingsFieldControl({
   draft: AiProviderSettingsType;
   field: AiProviderSettingsField;
   hasApiKey: boolean;
+  modelOptions?: GitHubCopilotModelOption[];
   onApiKeyDraftChange: (value: string) => void;
   onDraftChange: (patch: Partial<AiProviderSettingsType>) => void;
 }) {
@@ -95,7 +98,8 @@ function AiProviderSettingsFieldControl({
         </label>
       );
     case "model": {
-      const modelOptionIds = new Set(definition.modelOptions.map((model) => model.id));
+      const options = modelOptions ?? definition.modelOptions;
+      const modelOptionIds = new Set(options.map((model) => model.id));
       const hasCustomModel = draft.model.trim().length > 0 && !modelOptionIds.has(draft.model);
       return (
         <>
@@ -106,7 +110,7 @@ function AiProviderSettingsFieldControl({
               value={draft.model}
             >
               {hasCustomModel ? <option value={draft.model}>{draft.model}</option> : null}
-              {definition.modelOptions.map((model) => (
+              {options.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.label}
                 </option>
@@ -435,7 +439,9 @@ export function AiSettings() {
   const [copilotDeviceFlow, setCopilotDeviceFlow] =
     useState<GitHubCopilotDeviceFlow | null>(null);
   const [copilotPollIntervalSeconds, setCopilotPollIntervalSeconds] = useState(0);
+  const [copilotPollTick, setCopilotPollTick] = useState(0);
   const [isCopilotPolling, setIsCopilotPolling] = useState(false);
+  const [copilotModelOptions, setCopilotModelOptions] = useState<GitHubCopilotModelOption[]>([]);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(aiProviderSettings) ||
     apiKeyDraft.trim().length > 0 ||
@@ -522,6 +528,7 @@ export function AiSettings() {
               ? Math.max(1, copilotPollIntervalSeconds + (response.interval ?? 5))
               : Math.max(1, response.interval ?? copilotPollIntervalSeconds);
           setCopilotPollIntervalSeconds(nextInterval);
+          setCopilotPollTick((tick) => tick + 1);
           setIsCopilotPolling(false);
         })
         .catch((error) => {
@@ -540,11 +547,47 @@ export function AiSettings() {
   }, [
     copilotDeviceFlow,
     copilotPollIntervalSeconds,
+    copilotPollTick,
     draft.providerKind,
     setAiProviderHasApiKey,
     showStatusBarNotice,
     t,
   ]);
+
+  useEffect(() => {
+    if (
+      !isTauriRuntime() ||
+      draft.providerKind !== "github-copilot" ||
+      !selectedProviderHasApiKey
+    ) {
+      setCopilotModelOptions([]);
+      return;
+    }
+
+    let disposed = false;
+    void invokeCommand("list_github_copilot_models", undefined)
+      .then((models) => {
+        if (disposed) return;
+        setCopilotModelOptions(models);
+        setDraft((settings) => {
+          if (
+            settings.providerKind !== "github-copilot" ||
+            models.length === 0 ||
+            models.some((model) => model.id === settings.model)
+          ) {
+            return settings;
+          }
+          return { ...settings, model: models[0].id };
+        });
+      })
+      .catch(() => {
+        if (!disposed) setCopilotModelOptions([]);
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [draft.providerKind, selectedProviderHasApiKey]);
 
   async function handleSave() {
     try {
@@ -607,6 +650,8 @@ export function AiSettings() {
     setSelectedProviderHasApiKey(false);
     setCopilotDeviceFlow(null);
     setCopilotPollIntervalSeconds(0);
+    setCopilotPollTick(0);
+    setCopilotModelOptions([]);
   }
 
   async function handleConnectGitHubCopilot() {
@@ -615,6 +660,7 @@ export function AiSettings() {
       const flow = await invokeCommand("start_github_copilot_device_flow", undefined);
       setCopilotDeviceFlow(flow);
       setCopilotPollIntervalSeconds(flow.interval);
+      setCopilotPollTick(0);
       await openExternalUrl(flow.verificationUri);
     } catch (error) {
       setCopilotDeviceFlow(null);
@@ -635,6 +681,8 @@ export function AiSettings() {
       });
       setCopilotDeviceFlow(null);
       setCopilotPollIntervalSeconds(0);
+      setCopilotPollTick(0);
+      setCopilotModelOptions([]);
       setSelectedProviderHasApiKey(false);
       if (aiProviderSettings.providerKind === "github-copilot") {
         setAiProviderHasApiKey(false);
@@ -708,6 +756,11 @@ export function AiSettings() {
               field={field}
               hasApiKey={selectedProviderHasApiKey}
               key={field}
+              modelOptions={
+                draft.providerKind === "github-copilot" && copilotModelOptions.length > 0
+                  ? copilotModelOptions
+                  : undefined
+              }
               onApiKeyDraftChange={setApiKeyDraft}
               onDraftChange={(patch) =>
                 setDraft((settings) => ({
