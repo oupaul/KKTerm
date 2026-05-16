@@ -133,12 +133,32 @@ main.dashboard-page.dashboard-page-hidden,
   font-weight: 650;
 }
 
+.dashboard-pill.has-tab-color {
+  color: var(--dashboard-pill-text);
+  background: var(--dashboard-pill-bg);
+  border-color: rgb(0 0 0 / 12%);
+}
+
+.dashboard-pill.has-tab-color:hover,
+.dashboard-pill.has-tab-color.active {
+  color: var(--dashboard-pill-text);
+  background: var(--dashboard-pill-bg);
+  border-color: rgb(0 0 0 / 16%);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    inset 0 0 0 1px rgb(255 255 255 / 18%);
+}
+
 .dashboard-pill.active::before {
   content: "";
   width: 6px;
   height: 6px;
   background: var(--accent);
   border-radius: 50%;
+}
+
+.dashboard-pill.has-tab-color.active::before {
+  background: currentColor;
 }
 
 .dashboard-pill-close {
@@ -164,6 +184,56 @@ main.dashboard-page.dashboard-page-hidden,
 .dashboard-pill-close:hover {
   color: var(--red);
   background: var(--surface-muted);
+}
+
+.dashboard-pill.has-tab-color .dashboard-pill-close,
+.dashboard-pill.has-tab-color .dashboard-pill-color-clear {
+  color: var(--dashboard-pill-muted);
+}
+
+.dashboard-pill.has-tab-color .dashboard-pill-close:hover,
+.dashboard-pill.has-tab-color .dashboard-pill-color-clear:hover {
+  color: var(--dashboard-pill-text);
+  background: rgb(255 255 255 / 20%);
+}
+
+.dashboard-pill-color,
+.dashboard-pill-color-clear {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.dashboard-pill-color {
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid rgb(0 0 0 / 14%);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.dashboard-pill-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.dashboard-pill-color::-webkit-color-swatch {
+  border: 0;
+  border-radius: 999px;
+}
+
+.dashboard-pill-color-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-faint);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .dashboard-pill-add {

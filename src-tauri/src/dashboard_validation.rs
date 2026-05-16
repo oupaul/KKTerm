@@ -243,6 +243,18 @@ pub fn validate_dynamic_background(dynamic: &str) -> Result<(), ValidationError>
     }
 }
 
+pub fn validate_dashboard_tab_color(color: &str) -> Result<(), ValidationError> {
+    let bytes = color.as_bytes();
+    if bytes.len() == 7
+        && bytes[0] == b'#'
+        && bytes[1..].iter().all(|byte| byte.is_ascii_hexdigit())
+    {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidBackground)
+    }
+}
+
 pub fn validate_background_image(file: &str, fit: &str, dim: i64) -> Result<(), ValidationError> {
     validate_background_media(
         file,
@@ -573,9 +585,7 @@ fn validate_script_source_inner(source: &str) -> Result<String, String> {
         );
     }
     if collapsed.contains("for(;;)") {
-        return Err(
-            "infinite loop detected: for(;;) is forbidden in widget scripts".to_string(),
-        );
+        return Err("infinite loop detected: for(;;) is forbidden in widget scripts".to_string());
     }
     Ok(code_only)
 }
@@ -1162,6 +1172,28 @@ mod tests {
     }
 
     #[test]
+    fn dashboard_tab_color_accepts_hex_rgb() {
+        assert!(validate_dashboard_tab_color("#2563eb").is_ok());
+        assert!(validate_dashboard_tab_color("#ABCDEF").is_ok());
+    }
+
+    #[test]
+    fn dashboard_tab_color_rejects_non_hex_rgb() {
+        assert_eq!(
+            validate_dashboard_tab_color("2563eb"),
+            Err(ValidationError::InvalidBackground),
+        );
+        assert_eq!(
+            validate_dashboard_tab_color("#12345g"),
+            Err(ValidationError::InvalidBackground),
+        );
+        assert_eq!(
+            validate_dashboard_tab_color("#12345678"),
+            Err(ValidationError::InvalidBackground),
+        );
+    }
+
+    #[test]
     fn background_image_ok() {
         assert!(validate_background_image("bg-abc123.jpg", "fill", 0).is_ok());
         assert!(validate_background_image("bg-abc123.jpg", "center", -100).is_ok());
@@ -1271,10 +1303,7 @@ mod tests {
         )
         .is_ok());
         // Real backslash-escaped quote stays inside the string.
-        assert!(validate_script_source_inner(
-            "const q = 'it\\'s fine'; console.log(q);"
-        )
-        .is_ok());
+        assert!(validate_script_source_inner("const q = 'it\\'s fine'; console.log(q);").is_ok());
     }
 
     #[test]
@@ -1361,7 +1390,10 @@ mod tests {
         assert!(super::source_references_identifier("L.map()", "L"));
         assert!(!super::source_references_identifier("const null = 0;", "L"));
         assert!(!super::source_references_identifier("console.log(x);", "L"));
-        assert!(super::source_references_identifier("THREE.Scene()", "THREE"));
+        assert!(super::source_references_identifier(
+            "THREE.Scene()",
+            "THREE"
+        ));
         assert!(!super::source_references_identifier("THREEMore", "THREE"));
     }
 

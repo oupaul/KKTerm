@@ -36,6 +36,7 @@ export function DashboardPage({
   const createView = useDashboardStore((s) => s.createView);
   const renameView = useDashboardStore((s) => s.renameView);
   const removeView = useDashboardStore((s) => s.removeView);
+  const setViewTabColor = useDashboardStore((s) => s.setViewTabColor);
   const defaultLandingView = useWorkspaceStore((s) => s.dashboardSettings.defaultLandingView);
 
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -201,7 +202,8 @@ export function DashboardPage({
             return (
               <div
                 key={v.id}
-                className={`dashboard-pill${isActiveView ? " active" : ""}${isEditingView ? " editing" : ""}`}
+                className={`dashboard-pill${isActiveView ? " active" : ""}${isEditingView ? " editing" : ""}${v.tabColor ? " has-tab-color" : ""}`}
+                style={dashboardTabColorStyle(v.tabColor)}
               >
                 {isEditingView ? (
                   <input
@@ -246,6 +248,27 @@ export function DashboardPage({
                   >
                     ×
                   </button>
+                )}
+                {editMode && (
+                  <>
+                    <input
+                      aria-label={t("dashboard.viewTabColor", { view: v.title })}
+                      className="dashboard-pill-color"
+                      type="color"
+                      value={v.tabColor ?? "#2563eb"}
+                      onChange={(event) => void setViewTabColor(v.id, event.currentTarget.value)}
+                    />
+                    {v.tabColor && (
+                      <button
+                        aria-label={t("dashboard.clearViewTabColor", { view: v.title })}
+                        className="dashboard-pill-color-clear"
+                        onClick={() => void setViewTabColor(v.id, null)}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             );
@@ -305,6 +328,24 @@ export function DashboardPage({
       )}
     </main>
   );
+}
+
+function dashboardTabColorStyle(tabColor: string | null): CSSProperties | undefined {
+  if (!tabColor) return undefined;
+  const textColor = readableTextColor(tabColor);
+  return {
+    "--dashboard-pill-bg": tabColor,
+    "--dashboard-pill-text": textColor,
+    "--dashboard-pill-muted": textColor === "#ffffff" ? "rgb(255 255 255 / 78%)" : "rgb(15 23 42 / 76%)",
+  } as CSSProperties;
+}
+
+function readableTextColor(hex: string): "#0f172a" | "#ffffff" {
+  const r = Number.parseInt(hex.slice(1, 3), 16);
+  const g = Number.parseInt(hex.slice(3, 5), 16);
+  const b = Number.parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.58 ? "#0f172a" : "#ffffff";
 }
 
 function DensityControl({ value, onChange }: { value: GridDensity; onChange: (v: GridDensity) => void }) {

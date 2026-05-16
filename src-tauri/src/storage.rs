@@ -160,7 +160,8 @@ CREATE TABLE IF NOT EXISTS dashboard_views (
     sort_order INTEGER NOT NULL,
     grid_density TEXT NOT NULL DEFAULT 'default'
         CHECK (grid_density IN ('compact', 'default', 'roomy')),
-    background_json TEXT
+    background_json TEXT,
+    tab_color TEXT
 );
 
 CREATE TABLE IF NOT EXISTS dashboard_custom_widgets (
@@ -1629,6 +1630,7 @@ impl Storage {
             "INTEGER NOT NULL DEFAULT 0",
         )?;
         ensure_column(&connection, "dashboard_views", "background_json", "TEXT")?;
+        ensure_column(&connection, "dashboard_views", "tab_color", "TEXT")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;

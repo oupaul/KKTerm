@@ -41,6 +41,7 @@ export interface DashboardView {
   sortOrder: number;
   gridDensity: GridDensity;
   background: DashboardBackground | null;
+  tabColor: string | null;
 }
 
 export interface DashboardWidgetInstance {
@@ -100,6 +101,7 @@ export interface ViewPatch {
   gridDensity?: GridDensity;
   sortOrder?: number;
   background?: DashboardBackground | null;
+  tabColor?: string | null;
 }
 
 export interface CustomWidgetPatch {

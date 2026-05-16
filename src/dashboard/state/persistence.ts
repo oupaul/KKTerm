@@ -32,7 +32,7 @@ function browserPreviewState() {
   if (!previewState) {
     const viewId = createPreviewId("view");
     previewState = {
-      views: [{ id: viewId, title: "Default", sortOrder: 0, gridDensity: "default", background: null }],
+      views: [{ id: viewId, title: "Default", sortOrder: 0, gridDensity: "default", background: null, tabColor: null }],
       instances: [
         {
           id: createPreviewId("inst"),
@@ -76,6 +76,7 @@ export async function createView(title: string, gridDensity?: GridDensity): Prom
       sortOrder: state.views.length,
       gridDensity: gridDensity ?? "default",
       background: null,
+      tabColor: null,
     };
     state.views.push(view);
     return { ...view };

@@ -23,6 +23,7 @@ interface DashboardStoreState {
   renameView: (id: string, title: string) => Promise<void>;
   setViewDensity: (id: string, density: GridDensity) => Promise<void>;
   setViewBackground: (id: string, background: DashboardBackground | null) => Promise<void>;
+  setViewTabColor: (id: string, tabColor: string | null) => Promise<void>;
   backgroundImages: Record<string, string>;
   loadBackgroundImage: (file: string) => Promise<void>;
   removeView: (id: string) => Promise<void>;
@@ -121,6 +122,13 @@ export const useDashboardStore = create<DashboardStoreState>((set, get) => ({
   setViewBackground: async (id, background) => {
     try {
       const updated = await persistence.updateView(id, { background });
+      set((s) => ({ views: s.views.map((v) => (v.id === id ? updated : v)) }));
+    } catch (e) { set({ lastError: String(e) }); }
+  },
+
+  setViewTabColor: async (id, tabColor) => {
+    try {
+      const updated = await persistence.updateView(id, { tabColor });
       set((s) => ({ views: s.views.map((v) => (v.id === id ? updated : v)) }));
     } catch (e) { set({ lastError: String(e) }); }
   },

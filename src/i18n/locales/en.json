@@ -33,6 +33,8 @@
     "newViewPrompt": "View name",
     "renameView": "Rename view",
     "removeView": "Remove view",
+    "viewTabColor": "View tab color for {{view}}",
+    "clearViewTabColor": "Clear view tab color for {{view}}",
     "editLayout": "Edit Layout",
     "editDone": "Done",
     "density": {

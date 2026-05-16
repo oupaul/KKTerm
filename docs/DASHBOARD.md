@@ -23,7 +23,7 @@ It does not own:
 
 ## Domain Concepts
 
-**Dashboard View** — a tab in the Dashboard topbar. A user may have many views; the first one is named "Default" and is created on first run. Each view carries its own `grid_density` (`compact` / `default` / `roomy`), edited from the topbar's edit-mode controls.
+**Dashboard View** — a tab in the Dashboard topbar. A user may have many views; the first one is named "Default" and is created on first run. Each view carries its own `grid_density` (`compact` / `default` / `roomy`) and optional `tab_color`, edited from the topbar's edit-mode controls.
 
 **Dashboard Widget Instance** — one placed widget on a view. Carries display state (preset, accent, icon, custom title), layout state (`x`, `y`, `w`, `h` on the 12-column grid), per-instance custom settings values, a `kind` of `builtIn` / `content` / `script`, and a `source_id` that resolves either to a built-in registry entry or a `DashboardCustomWidget` row.
 
@@ -76,7 +76,7 @@ SQLite holds three Dashboard tables, defined in `src-tauri/src/storage.rs` under
 
 | Table | Purpose |
 | --- | --- |
-| `dashboard_views` | One row per view. Holds `title`, `sort_order`, and `grid_density`. |
+| `dashboard_views` | One row per view. Holds `title`, `sort_order`, `grid_density`, and optional `tab_color`. |
 | `dashboard_widget_instances` | One row per placed widget. Holds `kind`, `source_id`, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), per-instance `settings_values_json`, and layout (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Secret fields store only `secretRef` metadata here. |
 | `dashboard_custom_widgets` | One row per AI-authored `content` or `script` widget definition. Holds `body_json`, validated against the kind, plus optional app-rendered `settings_schema_json`. |
 
@@ -95,7 +95,7 @@ Each command is a thin handler over the storage layer with up-front validation:
 | --- | --- |
 | `dashboard_load_state` | One batched read on mount; returns `{ views, instances, customWidgets }`. |
 | `dashboard_create_view` | Returns the new view. |
-| `dashboard_update_view` | Patch over `title`, `gridDensity`, `sortOrder`. |
+| `dashboard_update_view` | Patch over `title`, `gridDensity`, `sortOrder`, `background`, and `tabColor`. |
 | `dashboard_remove_view` | Cascade to instances. |
 | `dashboard_reorder_views` | Single `Vec<String>` of ids. |
 | `dashboard_add_instance` | Validates preset/accent/icon/grid bounds. |
@@ -294,7 +294,7 @@ A `dashboard-settings` section under Settings holds cross-widget app preferences
 - Confirm before removing a widget (default on; persisted under `dashboard.confirmRemove`).
 - Default landing view (default `lastActive`; persisted under `dashboard.defaultLandingView`).
 
-Grid density is **not** in Settings — it is a per-view setting edited from the edit-mode topbar.
+Grid density and View tab color are **not** in Settings — they are per-view settings edited from the edit-mode topbar.
 
 Destructive "Reset Dashboard" lives in General → Settings data (per AGENTS.md: destructive Settings-wide actions belong there). It wipes all views/instances/custom widgets and reseeds the Default view with one App Launcher widget.
 

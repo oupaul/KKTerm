@@ -5,9 +5,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dashboard_validation::{
     dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_for_kind_detailed,
-    validate_custom_widget_kind, validate_grid_bounds, validate_grid_density, validate_icon,
-    validate_kind, validate_preset, validate_settings_schema_json,
-    validate_settings_values_for_schema_json, validate_title, ValidationError,
+    validate_custom_widget_kind, validate_dashboard_tab_color, validate_grid_bounds,
+    validate_grid_density, validate_icon, validate_kind, validate_preset,
+    validate_settings_schema_json, validate_settings_values_for_schema_json, validate_title,
+    ValidationError,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +20,8 @@ pub struct DashboardView {
     pub grid_density: String,
     #[serde(default)]
     pub background: Option<DashboardBackground>,
+    #[serde(default)]
+    pub tab_color: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -161,6 +164,8 @@ pub struct ViewPatch {
     pub sort_order: Option<i64>,
     #[serde(default, deserialize_with = "deserialize_nullable_patch")]
     pub background: Option<Option<DashboardBackground>>,
+    #[serde(default, deserialize_with = "deserialize_nullable_patch")]
+    pub tab_color: Option<Option<String>>,
 }
 
 fn deserialize_nullable_patch<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
@@ -261,7 +266,7 @@ impl From<(ValidationError, Option<String>)> for DashboardStorageError {
 
 pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, DashboardStorageError> {
     let mut views_stmt = conn.prepare(
-        "SELECT id, title, sort_order, grid_density, background_json FROM dashboard_views ORDER BY sort_order"
+        "SELECT id, title, sort_order, grid_density, background_json, tab_color FROM dashboard_views ORDER BY sort_order"
     )?;
     let views = views_stmt
         .query_map([], |row| {
@@ -271,6 +276,7 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
                 sort_order: row.get(2)?,
                 grid_density: row.get(3)?,
                 background: background_from_json(row.get(4)?),
+                tab_color: row.get(5)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -355,6 +361,7 @@ pub fn create_view(
         sort_order: next_sort,
         grid_density: density.to_string(),
         background: None,
+        tab_color: None,
     })
 }
 
@@ -369,9 +376,12 @@ pub fn update_view(
     if let Some(ref d) = patch.grid_density {
         validate_grid_density(d)?;
     }
+    if let Some(Some(ref color)) = patch.tab_color {
+        validate_dashboard_tab_color(color)?;
+    }
 
     let current: Option<DashboardView> = conn.query_row(
-        "SELECT id, title, sort_order, grid_density, background_json FROM dashboard_views WHERE id = ?",
+        "SELECT id, title, sort_order, grid_density, background_json, tab_color FROM dashboard_views WHERE id = ?",
         params![id],
         |row| Ok(DashboardView {
             id: row.get(0)?,
@@ -379,6 +389,7 @@ pub fn update_view(
             sort_order: row.get(2)?,
             grid_density: row.get(3)?,
             background: background_from_json(row.get(4)?),
+            tab_color: row.get(5)?,
         }),
     ).optional()?;
     let mut current = current.ok_or(DashboardStorageError::NotFound)?;
@@ -395,12 +406,15 @@ pub fn update_view(
     if let Some(bg) = patch.background.clone() {
         current.background = bg;
     }
+    if let Some(tab_color) = patch.tab_color.clone() {
+        current.tab_color = tab_color;
+    }
 
     let background_json = background_to_json(&current.background)?;
 
     conn.execute(
-        "UPDATE dashboard_views SET title = ?, sort_order = ?, grid_density = ?, background_json = ? WHERE id = ?",
-        params![current.title, current.sort_order, current.grid_density, background_json, current.id],
+        "UPDATE dashboard_views SET title = ?, sort_order = ?, grid_density = ?, background_json = ?, tab_color = ? WHERE id = ?",
+        params![current.title, current.sort_order, current.grid_density, background_json, current.tab_color, current.id],
     )?;
     Ok(current)
 }
@@ -944,7 +958,8 @@ mod tests {
                 id TEXT PRIMARY KEY, title TEXT NOT NULL, sort_order INTEGER NOT NULL,
                 grid_density TEXT NOT NULL DEFAULT 'default'
                     CHECK (grid_density IN ('compact', 'default', 'roomy')),
-                background_json TEXT
+                background_json TEXT,
+                tab_color TEXT
             );
             CREATE TABLE dashboard_custom_widgets (
                 id TEXT PRIMARY KEY,
@@ -1268,6 +1283,7 @@ mod tests {
                 grid_density: None,
                 sort_order: None,
                 background: Some(Some(preset.clone())),
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1282,10 +1298,49 @@ mod tests {
                 grid_density: None,
                 sort_order: None,
                 background: Some(None),
+                tab_color: None,
             },
         )
         .unwrap();
         assert_eq!(cleared.background, None);
+    }
+
+    #[test]
+    fn update_view_sets_and_clears_tab_color() {
+        let conn = open_test_db();
+        create_view(&conn, "v1", "First", None).unwrap();
+
+        let updated = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: None,
+                tab_color: Some(Some("#2563eb".into())),
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.tab_color.as_deref(), Some("#2563eb"));
+        assert_eq!(
+            load_state(&conn).unwrap().views[0].tab_color.as_deref(),
+            Some("#2563eb"),
+        );
+
+        let cleared = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: None,
+                tab_color: Some(None),
+            },
+        )
+        .unwrap();
+        assert_eq!(cleared.tab_color, None);
     }
 
     #[test]
@@ -1314,6 +1369,7 @@ mod tests {
                 background: Some(Some(DashboardBackground::Preset {
                     preset: "not-real".into(),
                 })),
+                tab_color: None,
             },
         );
         assert!(matches!(
@@ -1340,6 +1396,7 @@ mod tests {
                 grid_density: None,
                 sort_order: None,
                 background: Some(Some(preset.clone())),
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1352,6 +1409,7 @@ mod tests {
                 grid_density: None,
                 sort_order: None,
                 background: None,
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1378,6 +1436,7 @@ mod tests {
                     fit: "fill".into(),
                     dim: 0,
                 })),
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1391,6 +1450,7 @@ mod tests {
                 background: Some(Some(DashboardBackground::Preset {
                     preset: "mist".into(),
                 })),
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1406,6 +1466,7 @@ mod tests {
                     fit: "fill".into(),
                     dim: 0,
                 })),
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1419,6 +1480,7 @@ mod tests {
                 background: Some(Some(DashboardBackground::Dynamic {
                     dynamic: "aurora".into(),
                 })),
+                tab_color: None,
             },
         )
         .unwrap();
@@ -1445,6 +1507,7 @@ mod tests {
                 grid_density: None,
                 sort_order: None,
                 background: Some(Some(dynamic.clone())),
+                tab_color: None,
             },
         )
         .unwrap();
