@@ -60,10 +60,15 @@ windows-native-keyring-store = "1.0.0"
 webview2-com = "=0.38.2"
 tauri-plugin-single-instance = "2"
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+opt-level = "s"
 
-
-
-
+[profile.dev]
+opt-level = 1
 
 
 
