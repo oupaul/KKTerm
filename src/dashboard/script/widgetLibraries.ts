@@ -219,6 +219,13 @@ export const WIDGET_LIBRARIES: Record<string, WidgetLibrary> = {
     description: "Markdown to HTML renderer (already in the app bundle).",
     load: loadMarked,
   },
+  animejs: {
+    key: "animejs",
+    global: "anime",
+    description:
+      "DOM/SVG/CSS property animation (number countup, SVG path draw, attribute tweens, timelines). Use for data-driven transitions, not decorative entrance effects.",
+    load: () => rawDefault(() => import("widget-lib:animejs?global=anime")),
+  },
 };
 
 const sourceCache = new Map<string, Promise<string>>();
