@@ -1576,12 +1576,32 @@ impl Storage {
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
         ensure_column(&connection, "connections", "icon_data_url", "TEXT")?;
-        ensure_column(&connection, "connections", "local_startup_directory", "TEXT")?;
+        ensure_column(
+            &connection,
+            "connections",
+            "local_startup_directory",
+            "TEXT",
+        )?;
         ensure_column(&connection, "connections", "local_startup_script", "TEXT")?;
         ensure_column(&connection, "url_credentials", "field_values", "TEXT")?;
-        ensure_column(&connection, "dashboard_custom_widgets", "settings_schema_json", "TEXT NOT NULL DEFAULT '{\"fields\":[]}'")?;
-        ensure_column(&connection, "dashboard_widget_instances", "settings_values_json", "TEXT NOT NULL DEFAULT '{}'")?;
-        ensure_column(&connection, "dashboard_widget_instances", "hide_title", "INTEGER NOT NULL DEFAULT 0")?;
+        ensure_column(
+            &connection,
+            "dashboard_custom_widgets",
+            "settings_schema_json",
+            "TEXT NOT NULL DEFAULT '{\"fields\":[]}'",
+        )?;
+        ensure_column(
+            &connection,
+            "dashboard_widget_instances",
+            "settings_values_json",
+            "TEXT NOT NULL DEFAULT '{}'",
+        )?;
+        ensure_column(
+            &connection,
+            "dashboard_widget_instances",
+            "hide_title",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
         ensure_column(&connection, "dashboard_views", "background_json", "TEXT")?;
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
@@ -2054,11 +2074,17 @@ impl Storage {
             .map_err(to_storage_error)
     }
 
-    pub fn list_stored_credential_candidates(&self) -> Result<Vec<StoredCredentialCandidate>, String> {
+    pub fn list_stored_credential_candidates(
+        &self,
+    ) -> Result<Vec<StoredCredentialCandidate>, String> {
         self.with_connection(list_stored_credential_candidates)
     }
 
-    pub fn clear_widget_secret_reference(&self, instance_id: String, key: String) -> Result<(), String> {
+    pub fn clear_widget_secret_reference(
+        &self,
+        instance_id: String,
+        key: String,
+    ) -> Result<(), String> {
         let instance_id = required_field("widget instance id", instance_id)?;
         let key = required_field("widget secret key", key)?;
         self.with_connection(|connection| {
@@ -2513,11 +2539,11 @@ impl Storage {
         body(&mut connection)
     }
 
-    pub fn with_connection_infallible<R>(
-        &self,
-        f: impl FnOnce(&rusqlite::Connection) -> R,
-    ) -> R {
-        let conn = self.connection.lock().expect("dashboard storage mutex poisoned");
+    pub fn with_connection_infallible<R>(&self, f: impl FnOnce(&rusqlite::Connection) -> R) -> R {
+        let conn = self
+            .connection
+            .lock()
+            .expect("dashboard storage mutex poisoned");
         f(&*conn)
     }
 }
@@ -2786,8 +2812,8 @@ fn list_widget_secret_candidates(
             row.map_err(to_storage_error)?;
         let schema: serde_json::Value = serde_json::from_str(&settings_schema_json)
             .unwrap_or_else(|_| serde_json::json!({ "fields": [] }));
-        let values: serde_json::Value = serde_json::from_str(&settings_values_json)
-            .unwrap_or_else(|_| serde_json::json!({}));
+        let values: serde_json::Value =
+            serde_json::from_str(&settings_values_json).unwrap_or_else(|_| serde_json::json!({}));
         let fields = schema
             .get("fields")
             .and_then(serde_json::Value::as_array)
@@ -2802,8 +2828,8 @@ fn list_widget_secret_candidates(
             };
             let value = values.get(key).and_then(serde_json::Value::as_object);
             let has_ref = value.is_some_and(|object| {
-                object.get("type").and_then(serde_json::Value::as_str) == Some("secretRef") &&
-                object.get("hasSecret").and_then(serde_json::Value::as_bool) == Some(true)
+                object.get("type").and_then(serde_json::Value::as_str) == Some("secretRef")
+                    && object.get("hasSecret").and_then(serde_json::Value::as_bool) == Some(true)
             });
             if !has_ref {
                 continue;
@@ -3246,8 +3272,7 @@ fn normalize_connection_type(value: &str) -> Result<String, String> {
             Ok(value.trim().to_lowercase())
         }
         _ => Err(
-            "connection type must be local, ssh, telnet, serial, url, rdp, vnc, or ftp"
-                .to_string(),
+            "connection type must be local, ssh, telnet, serial, url, rdp, vnc, or ftp".to_string(),
         ),
     }
 }
@@ -3943,7 +3968,9 @@ pub(crate) fn app_launcher_name_from_path(path: &str) -> String {
         .to_string()
 }
 
-fn validate_dashboard_settings(mut settings: DashboardSettings) -> Result<DashboardSettings, String> {
+fn validate_dashboard_settings(
+    mut settings: DashboardSettings,
+) -> Result<DashboardSettings, String> {
     settings.default_landing_view = required_field(
         "default Dashboard landing view",
         settings.default_landing_view,
@@ -4182,9 +4209,7 @@ fn validate_ai_provider_settings(
         if !(settings.searxng_url.starts_with("https://")
             || settings.searxng_url.starts_with("http://"))
         {
-            return Err(
-                "SearXNG instance URL must start with https:// or http://".to_string(),
-            );
+            return Err("SearXNG instance URL must start with https:// or http://".to_string());
         }
         if settings.searxng_url.chars().any(char::is_whitespace) {
             return Err("SearXNG instance URL cannot contain whitespace".to_string());
@@ -4456,8 +4481,7 @@ mod tests {
 
     #[test]
     fn local_connection_persists_startup_directory_and_script() {
-        let storage =
-            Storage::open(temp_db_path("local-startup-options")).expect("storage opens");
+        let storage = Storage::open(temp_db_path("local-startup-options")).expect("storage opens");
 
         let created = storage
             .create_connection(CreateConnectionRequest {
@@ -4704,7 +4728,8 @@ mod tests {
 
     #[test]
     fn connection_icon_data_url_updates_for_any_connection_type() {
-        let storage = Storage::open(temp_db_path("connection-icon-data-url")).expect("storage opens");
+        let storage =
+            Storage::open(temp_db_path("connection-icon-data-url")).expect("storage opens");
         let created = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
         let icon_data_url = " data:image/png;base64,customicon ".to_string();
 
@@ -4718,7 +4743,9 @@ mod tests {
             Some("data:image/png;base64,customicon")
         );
 
-        let tree = storage.list_connection_tree().expect("connection tree loads");
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
         let reloaded = tree
             .connections
             .iter()
@@ -4738,7 +4765,8 @@ mod tests {
 
     #[test]
     fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
-        let storage = Storage::open(temp_db_path("stored-credential-candidates")).expect("storage opens");
+        let storage =
+            Storage::open(temp_db_path("stored-credential-candidates")).expect("storage opens");
 
         let ssh = storage
             .create_connection(CreateConnectionRequest {
@@ -4836,12 +4864,12 @@ mod tests {
         assert!(candidates.iter().any(|candidate| {
             candidate.kind == "connectionPassword" && candidate.owner_id == ssh.id
         }));
+        assert!(candidates
+            .iter()
+            .any(|candidate| { candidate.kind == "urlPassword" && candidate.owner_id == url.id }));
         assert!(candidates.iter().any(|candidate| {
-            candidate.kind == "urlPassword" && candidate.owner_id == url.id
-        }));
-        assert!(candidates.iter().any(|candidate| {
-            candidate.kind == "widgetSecret" &&
-                candidate.owner_id == "dashboard-widget-secret:inst-1:apiKey"
+            candidate.kind == "widgetSecret"
+                && candidate.owner_id == "dashboard-widget-secret:inst-1:apiKey"
         }));
     }
 
@@ -5365,9 +5393,18 @@ mod tests {
             updated.entries[0].path,
             "C:\\Program Files\\WindowsApps\\wt.exe"
         );
-        assert_eq!(updated.entries[0].arguments.as_deref(), Some("-p PowerShell"));
-        assert_eq!(updated.entries[0].working_directory.as_deref(), Some("C:\\Users"));
-        assert_eq!(updated.entries[0].icon_data_url.as_deref(), Some("data:image/png;base64,abc"));
+        assert_eq!(
+            updated.entries[0].arguments.as_deref(),
+            Some("-p PowerShell")
+        );
+        assert_eq!(
+            updated.entries[0].working_directory.as_deref(),
+            Some("C:\\Users")
+        );
+        assert_eq!(
+            updated.entries[0].icon_data_url.as_deref(),
+            Some("data:image/png;base64,abc")
+        );
         assert!(updated.entries[0].rail_pinned);
         assert_eq!(updated.entries[1].name, "tool");
         assert_eq!(updated.entries[1].path, "C:\\Tools\\tool.exe");
@@ -5431,7 +5468,9 @@ mod tests {
 
         let backup = storage.backup_database().expect("database backup succeeds");
         storage
-            .update_app_launcher_settings(AppLauncherSettings { entries: Vec::new() })
+            .update_app_launcher_settings(AppLauncherSettings {
+                entries: Vec::new(),
+            })
             .expect("app launcher settings changes after export");
 
         let imported = storage
@@ -5439,7 +5478,10 @@ mod tests {
             .expect("database imports");
 
         assert_eq!(imported.app_launcher_settings.entries.len(), 1);
-        assert_eq!(imported.app_launcher_settings.entries[0].id, "launcher-entry");
+        assert_eq!(
+            imported.app_launcher_settings.entries[0].id,
+            "launcher-entry"
+        );
         assert_eq!(
             imported.app_launcher_settings.entries[0].path,
             "Z:\\missing\\tool.exe"
@@ -5691,8 +5733,8 @@ mod tests {
 
     #[test]
     fn rdp_and_vnc_settings_round_trip_through_settings_table() {
-        let storage = Storage::open(temp_db_path("remote-desktop-settings"))
-            .expect("storage opens");
+        let storage =
+            Storage::open(temp_db_path("remote-desktop-settings")).expect("storage opens");
 
         let rdp_defaults = storage.rdp_settings().expect("default RDP settings load");
         assert_eq!(rdp_defaults.color_depth, 32);
@@ -5901,8 +5943,8 @@ mod tests {
 
     #[test]
     fn stored_credential_candidates_include_one_ai_key_owner_per_provider() {
-        let storage =
-            Storage::open(temp_db_path("ai-provider-credential-candidates")).expect("storage opens");
+        let storage = Storage::open(temp_db_path("ai-provider-credential-candidates"))
+            .expect("storage opens");
 
         let candidates = storage
             .list_stored_credential_candidates()
@@ -5946,10 +5988,7 @@ mod tests {
             })
             .expect_err("unknown tool permission mode is rejected");
 
-        assert_eq!(
-            error,
-            "AI tool permission mode must be prompt or allowAll"
-        );
+        assert_eq!(error, "AI tool permission mode must be prompt or allowAll");
     }
 
     #[test]

@@ -8,6 +8,7 @@ mod dashboard_validation;
 mod diagnostics;
 mod favicon;
 mod ftp;
+mod github_copilot;
 mod import;
 mod logging;
 mod performance;
@@ -26,9 +27,9 @@ mod telnet;
 mod vnc;
 mod webview;
 mod wiki;
+mod window_state;
 #[cfg(target_os = "windows")]
 mod windows_local_pty;
-mod window_state;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -163,9 +164,11 @@ async fn load_custom_font_data(path: String) -> Result<CustomFontData, String> {
 
 #[tauri::command]
 async fn dashboard_import_background_image(source_path: String) -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(move || dashboard_import_background_image_sync(source_path))
-        .await
-        .map_err(|error| format!("failed to import background image: {error}"))?
+    tauri::async_runtime::spawn_blocking(move || {
+        dashboard_import_background_image_sync(source_path)
+    })
+    .await
+    .map_err(|error| format!("failed to import background image: {error}"))?
 }
 
 fn dashboard_import_background_image_sync(source_path: String) -> Result<String, String> {
@@ -183,24 +186,36 @@ fn dashboard_import_background_image_sync(source_path: String) -> Result<String,
     let file_name = format!("bg-{:016x}.{extension}", hasher.finish());
 
     let folder = backgrounds_folder()?;
-    fs::create_dir_all(&folder)
-        .map_err(|error| format!("failed to create backgrounds folder {}: {error}", folder.display()))?;
+    fs::create_dir_all(&folder).map_err(|error| {
+        format!(
+            "failed to create backgrounds folder {}: {error}",
+            folder.display()
+        )
+    })?;
     let destination = folder.join(&file_name);
     if !destination.exists() {
-        fs::write(&destination, &bytes)
-            .map_err(|error| format!("failed to write background image {}: {error}", destination.display()))?;
+        fs::write(&destination, &bytes).map_err(|error| {
+            format!(
+                "failed to write background image {}: {error}",
+                destination.display()
+            )
+        })?;
     }
     Ok(file_name)
 }
 
 #[tauri::command]
-async fn dashboard_load_background_image(file: String) -> Result<DashboardBackgroundImageData, String> {
+async fn dashboard_load_background_image(
+    file: String,
+) -> Result<DashboardBackgroundImageData, String> {
     tauri::async_runtime::spawn_blocking(move || dashboard_load_background_image_sync(file))
         .await
         .map_err(|error| format!("failed to load background image: {error}"))?
 }
 
-fn dashboard_load_background_image_sync(file: String) -> Result<DashboardBackgroundImageData, String> {
+fn dashboard_load_background_image_sync(
+    file: String,
+) -> Result<DashboardBackgroundImageData, String> {
     use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     if file.is_empty() || file.contains('/') || file.contains('\\') || file.contains("..") {
@@ -208,8 +223,12 @@ fn dashboard_load_background_image_sync(file: String) -> Result<DashboardBackgro
     }
 
     let folder = backgrounds_folder()?;
-    fs::create_dir_all(&folder)
-        .map_err(|error| format!("failed to create backgrounds folder {}: {error}", folder.display()))?;
+    fs::create_dir_all(&folder).map_err(|error| {
+        format!(
+            "failed to create backgrounds folder {}: {error}",
+            folder.display()
+        )
+    })?;
     let folder = folder
         .canonicalize()
         .map_err(|error| format!("failed to resolve backgrounds folder: {error}"))?;
@@ -225,15 +244,22 @@ fn dashboard_load_background_image_sync(file: String) -> Result<DashboardBackgro
     let extension = background_media_extension(&canonical_path)
         .ok_or_else(|| background_media_extension_error().to_string())?;
 
-    let bytes = fs::read(&canonical_path)
-        .map_err(|error| format!("failed to read background media {}: {error}", canonical_path.display()))?;
+    let bytes = fs::read(&canonical_path).map_err(|error| {
+        format!(
+            "failed to read background media {}: {error}",
+            canonical_path.display()
+        )
+    })?;
 
     let data_url = format!(
         "data:{};base64,{}",
         background_media_mime(&extension),
         STANDARD.encode(bytes),
     );
-    Ok(DashboardBackgroundImageData { data_url: Some(data_url), path: None })
+    Ok(DashboardBackgroundImageData {
+        data_url: Some(data_url),
+        path: None,
+    })
 }
 
 fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
@@ -351,7 +377,10 @@ pub(crate) fn prune_unreferenced_backgrounds(app: &tauri::AppHandle) {
         };
         if !referenced.contains(&name) {
             if let Err(error) = fs::remove_file(&path) {
-                eprintln!("failed to prune background image {}: {error}", path.display());
+                eprintln!(
+                    "failed to prune background image {}: {error}",
+                    path.display()
+                );
             }
         }
     }
@@ -832,6 +861,29 @@ fn update_ai_provider_settings(
 }
 
 #[tauri::command]
+async fn start_github_copilot_device_flow(
+) -> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
+    github_copilot::start_device_flow().await
+}
+
+#[tauri::command]
+async fn poll_github_copilot_device_flow(
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: github_copilot::GitHubCopilotDevicePollRequest,
+) -> Result<github_copilot::GitHubCopilotDevicePollResponse, String> {
+    let (response, token) = github_copilot::poll_device_flow(request).await?;
+    if let Some(token) = token {
+        secrets
+            .store_ai_api_key(
+                storage::ai_provider_secret_owner_id("github-copilot"),
+                token,
+            )
+            .map_err(|error| format!("failed to store GitHub Copilot token: {error}"))?;
+    }
+    Ok(response)
+}
+
+#[tauri::command]
 fn plan_command_proposal(
     request: ai::CommandProposalRequest,
 ) -> Result<ai::CommandProposalPlan, String> {
@@ -1178,18 +1230,18 @@ fn delete_stored_credential(
             secrets.delete_secret(secrets::SecretReferenceRequest::url_password(owner_id))
         }
         "widgetSecret" => {
-            secrets.delete_secret(secrets::SecretReferenceRequest::widget_secret(owner_id.clone()))?;
+            secrets.delete_secret(secrets::SecretReferenceRequest::widget_secret(
+                owner_id.clone(),
+            ))?;
             if let Some((instance_id, key)) = parse_widget_secret_owner_id(&owner_id) {
                 storage.clear_widget_secret_reference(instance_id, key)?;
             }
             Ok(())
         }
-        "aiApiKey" => {
-            secrets.delete_secret(secrets::SecretReferenceRequest::ai_api_key(owner_id))
-        }
-        "connectionPassword" => {
-            secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(owner_id))
-        }
+        "aiApiKey" => secrets.delete_secret(secrets::SecretReferenceRequest::ai_api_key(owner_id)),
+        "connectionPassword" => secrets.delete_secret(
+            secrets::SecretReferenceRequest::connection_password(owner_id),
+        ),
         _ => Err("unsupported credential kind".to_string()),
     }
 }
@@ -1199,7 +1251,9 @@ fn credential_reference(
     owner_id: String,
 ) -> Result<secrets::SecretReferenceRequest, String> {
     match secret_kind {
-        "connectionPassword" => Ok(secrets::SecretReferenceRequest::connection_password(owner_id)),
+        "connectionPassword" => Ok(secrets::SecretReferenceRequest::connection_password(
+            owner_id,
+        )),
         "urlPassword" => Ok(secrets::SecretReferenceRequest::url_password(owner_id)),
         "aiApiKey" => Ok(secrets::SecretReferenceRequest::ai_api_key(owner_id)),
         "widgetSecret" => Ok(secrets::SecretReferenceRequest::widget_secret(owner_id)),
@@ -2070,7 +2124,9 @@ pub fn run() {
             }
             if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
                 let title = format!("KKTerm v{}", env!("CARGO_PKG_VERSION"));
-                main_window.set_title(&title).map_err(|e| setup_error(e.to_string()))?;
+                main_window
+                    .set_title(&title)
+                    .map_err(|e| setup_error(e.to_string()))?;
                 let initial_window_settings =
                     window_state::restore_main_window(&main_window, main_window_settings);
                 app.manage(window_state::MainWindowState::new(initial_window_settings));
@@ -2188,6 +2244,8 @@ pub fn run() {
             update_screenshot_settings,
             get_ai_provider_settings,
             update_ai_provider_settings,
+            start_github_copilot_device_flow,
+            poll_github_copilot_device_flow,
             plan_command_proposal,
             complete_assistant_live_tool_request,
             run_ai_agent,
@@ -2344,7 +2402,8 @@ mod tests {
     #[test]
     fn dashboard_load_background_video_returns_data_url() {
         let file = write_test_background_file("mp4", b"test-video-bytes");
-        let result = dashboard_load_background_image_sync(file.clone()).expect("load background video");
+        let result =
+            dashboard_load_background_image_sync(file.clone()).expect("load background video");
 
         assert_eq!(result.path, None);
         assert_eq!(

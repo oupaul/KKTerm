@@ -34,7 +34,6 @@ export type AiProviderDefinition = {
   modelOptions: AiModelOption[];
   settingsFields: AiProviderSettingsField[];
   capabilities: AiProviderCapability[];
-  chatDisabledReasonKey?: string;
 };
 
 export type AiProviderDefaults = Pick<

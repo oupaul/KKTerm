@@ -21,8 +21,8 @@ use winapi::um::processthreadsapi::{
 };
 use winapi::um::synchapi::WaitForSingleObject as WaitForSingleObjectSync;
 use winapi::um::winbase::{
-    CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT, INFINITE,
-    STARTF_USESTDHANDLES, STARTUPINFOEXW,
+    CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT, INFINITE, STARTF_USESTDHANDLES,
+    STARTUPINFOEXW,
 };
 use winapi::um::wincon::COORD;
 use winapi::um::winnt::HANDLE;
@@ -38,8 +38,10 @@ pub fn spawn_local_shell(
     size: PtySize,
     command: CommandBuilder,
 ) -> Result<LocalWindowsPtySession, String> {
-    let stdin = Pipe::new().map_err(|error| format!("failed to create ConPTY stdin pipe: {error}"))?;
-    let stdout = Pipe::new().map_err(|error| format!("failed to create ConPTY stdout pipe: {error}"))?;
+    let stdin =
+        Pipe::new().map_err(|error| format!("failed to create ConPTY stdin pipe: {error}"))?;
+    let stdout =
+        Pipe::new().map_err(|error| format!("failed to create ConPTY stdout pipe: {error}"))?;
     let con = PsuedoCon::new(
         COORD {
             X: size.cols as i16,
@@ -341,10 +343,7 @@ impl MasterPty for WindowsConPtyMaster {
 }
 
 impl WindowsConPtySlave {
-    fn spawn_command(
-        &self,
-        cmd: CommandBuilder,
-    ) -> anyhow::Result<Box<dyn Child + Send + Sync>> {
+    fn spawn_command(&self, cmd: CommandBuilder) -> anyhow::Result<Box<dyn Child + Send + Sync>> {
         let inner = self.inner.lock().unwrap();
         let child = inner.con.spawn_command(cmd)?;
         Ok(Box::new(child))
@@ -502,7 +501,10 @@ fn current_directory(cmd: &CommandBuilder) -> Option<Vec<u16>> {
     let home = cmd
         .get_env("USERPROFILE")
         .filter(|path| Path::new(path).is_dir());
-    let cwd = cmd.get_cwd().map(|path| path.as_os_str()).filter(|path| Path::new(path).is_dir());
+    let cwd = cmd
+        .get_cwd()
+        .map(|path| path.as_os_str())
+        .filter(|path| Path::new(path).is_dir());
     let dir = cwd.or(home);
 
     dir.map(|dir| {
@@ -536,7 +538,11 @@ fn environment_block(cmd: &CommandBuilder) -> Vec<u16> {
 fn append_quoted(arg: &OsStr, cmdline: &mut Vec<u16>) {
     if !arg.is_empty()
         && !arg.encode_wide().any(|c| {
-            c == ' ' as u16 || c == '\t' as u16 || c == '\n' as u16 || c == '\x0b' as u16 || c == '"' as u16
+            c == ' ' as u16
+                || c == '\t' as u16
+                || c == '\n' as u16
+                || c == '\x0b' as u16
+                || c == '"' as u16
         })
     {
         cmdline.extend(arg.encode_wide());

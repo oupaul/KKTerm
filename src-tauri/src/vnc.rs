@@ -540,12 +540,7 @@ fn spawn_vnc_event_loop(
     });
 }
 
-fn handle_vnc_event(
-    app: &AppHandle,
-    session_id: &str,
-    event: VncEvent,
-    pixel_format: PixelFormat,
-) {
+fn handle_vnc_event(app: &AppHandle, session_id: &str, event: VncEvent, pixel_format: PixelFormat) {
     match event {
         VncEvent::SetResolution(screen) => emit_vnc_event(
             app,

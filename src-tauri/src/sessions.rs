@@ -1,6 +1,6 @@
-use crate::{secrets, serial, ssh, telnet};
 #[cfg(target_os = "windows")]
 use crate::windows_local_pty;
+use crate::{secrets, serial, ssh, telnet};
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -234,10 +234,7 @@ impl SessionManager {
             .session_id
             .clone()
             .unwrap_or_else(|| make_session_id(&request.title));
-        let is_local_start = request
-            .connection_type
-            .trim()
-            .eq_ignore_ascii_case("local");
+        let is_local_start = request.connection_type.trim().eq_ignore_ascii_case("local");
         let password = connection_password_for(secrets, &request);
         if request
             .connection_type
@@ -362,8 +359,9 @@ impl SessionManager {
         #[cfg(target_os = "windows")]
         if is_local_start {
             let command = command_for(&request)?;
-            let local_pty = windows_local_pty::spawn_local_shell(pty_size_for(&request), command)
-                .map_err(|error| format!("failed to start Windows local shell: {error}"))?;
+            let local_pty =
+                windows_local_pty::spawn_local_shell(pty_size_for(&request), command)
+                    .map_err(|error| format!("failed to start Windows local shell: {error}"))?;
             let session = TerminalSession {
                 transport: TerminalTransport::Pty {
                     master: local_pty.master,
@@ -655,13 +653,8 @@ impl SessionManager {
         let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel(1);
         let worker_forward_id = forward_id.clone();
         let worker = thread::spawn(move || {
-            let result = run_ssh_port_forward_thread(
-                listener,
-                connection,
-                remote_port,
-                stop_rx,
-                ready_tx,
-            );
+            let result =
+                run_ssh_port_forward_thread(listener, connection, remote_port, stop_rx, ready_tx);
             if let Err(error) = result {
                 eprintln!("SSH port forward {worker_forward_id} stopped: {error}");
             }
@@ -698,7 +691,10 @@ impl SessionManager {
         }
     }
 
-    pub fn close_ssh_port_forward(&self, request: CloseSshPortForwardRequest) -> Result<(), String> {
+    pub fn close_ssh_port_forward(
+        &self,
+        request: CloseSshPortForwardRequest,
+    ) -> Result<(), String> {
         self.ssh_port_forwards
             .lock()
             .map_err(|_| "SSH port forward lock is poisoned".to_string())?
@@ -1148,7 +1144,9 @@ fn parse_remote_loopback_ports(output: &str) -> Vec<RemoteLoopbackPort> {
     for line in output.lines() {
         for token in line.split_whitespace() {
             if let Some((address, port)) = parse_loopback_endpoint(token) {
-                ports.entry(port).or_insert(RemoteLoopbackPort { port, address });
+                ports
+                    .entry(port)
+                    .or_insert(RemoteLoopbackPort { port, address });
             }
         }
     }

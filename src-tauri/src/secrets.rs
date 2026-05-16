@@ -142,6 +142,14 @@ impl Secrets {
             .map_err(to_secret_error)
     }
 
+    pub(crate) fn store_ai_api_key(&self, owner_id: String, secret: String) -> Result<(), String> {
+        self.store_secret(StoreSecretRequest {
+            kind: SecretKind::AiApiKey,
+            owner_id,
+            secret,
+        })
+    }
+
     pub fn secret_exists(&self, request: SecretReferenceRequest) -> Result<SecretPresence, String> {
         let reference = SecretReference::new(request.kind, request.owner_id)?;
         let _guard = self.lock()?;

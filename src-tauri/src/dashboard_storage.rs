@@ -4,10 +4,10 @@ use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dashboard_validation::{
-    dashboard_widget_secret_owner_id,
-    validate_accent, validate_custom_body_for_kind, validate_custom_widget_kind,
-    validate_grid_bounds, validate_grid_density, validate_icon, validate_kind, validate_preset,
-    validate_settings_schema_json, validate_settings_values_for_schema_json, validate_title, ValidationError,
+    dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_for_kind,
+    validate_custom_widget_kind, validate_grid_bounds, validate_grid_density, validate_icon,
+    validate_kind, validate_preset, validate_settings_schema_json,
+    validate_settings_values_for_schema_json, validate_title, ValidationError,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,26 +124,41 @@ pub struct DashboardLoadState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstancePatch {
-    #[serde(default)] pub preset: Option<String>,
-    #[serde(default)] pub accent_name: Option<String>,
-    #[serde(default)] pub icon_name: Option<String>,
-    #[serde(default)] pub custom_title: Option<Option<String>>,
-    #[serde(default)] pub glass: Option<bool>,
-    #[serde(default)] pub hide_title: Option<bool>,
-    #[serde(default)] pub action_direction: Option<Option<String>>,
-    #[serde(default)] pub settings_values_json: Option<String>,
-    #[serde(default)] pub grid_x: Option<i64>,
-    #[serde(default)] pub grid_y: Option<i64>,
-    #[serde(default)] pub grid_w: Option<i64>,
-    #[serde(default)] pub grid_h: Option<i64>,
+    #[serde(default)]
+    pub preset: Option<String>,
+    #[serde(default)]
+    pub accent_name: Option<String>,
+    #[serde(default)]
+    pub icon_name: Option<String>,
+    #[serde(default)]
+    pub custom_title: Option<Option<String>>,
+    #[serde(default)]
+    pub glass: Option<bool>,
+    #[serde(default)]
+    pub hide_title: Option<bool>,
+    #[serde(default)]
+    pub action_direction: Option<Option<String>>,
+    #[serde(default)]
+    pub settings_values_json: Option<String>,
+    #[serde(default)]
+    pub grid_x: Option<i64>,
+    #[serde(default)]
+    pub grid_y: Option<i64>,
+    #[serde(default)]
+    pub grid_w: Option<i64>,
+    #[serde(default)]
+    pub grid_h: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ViewPatch {
-    #[serde(default)] pub title: Option<String>,
-    #[serde(default)] pub grid_density: Option<String>,
-    #[serde(default)] pub sort_order: Option<i64>,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub grid_density: Option<String>,
+    #[serde(default)]
+    pub sort_order: Option<i64>,
     #[serde(default, deserialize_with = "deserialize_nullable_patch")]
     pub background: Option<Option<DashboardBackground>>,
 }
@@ -159,11 +174,16 @@ where
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomWidgetPatch {
-    #[serde(default)] pub title: Option<String>,
-    #[serde(default)] pub summary: Option<String>,
-    #[serde(default)] pub category: Option<String>,
-    #[serde(default)] pub body_json: Option<String>,
-    #[serde(default)] pub settings_schema_json: Option<String>,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub body_json: Option<String>,
+    #[serde(default)]
+    pub settings_schema_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,11 +205,15 @@ pub enum DashboardStorageError {
 }
 
 impl From<rusqlite::Error> for DashboardStorageError {
-    fn from(value: rusqlite::Error) -> Self { Self::Sqlite(value) }
+    fn from(value: rusqlite::Error) -> Self {
+        Self::Sqlite(value)
+    }
 }
 
 impl From<ValidationError> for DashboardStorageError {
-    fn from(value: ValidationError) -> Self { Self::Validation(value) }
+    fn from(value: ValidationError) -> Self {
+        Self::Validation(value)
+    }
 }
 
 pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, DashboardStorageError> {
@@ -256,7 +280,11 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(DashboardLoadState { views, instances, custom_widgets })
+    Ok(DashboardLoadState {
+        views,
+        instances,
+        custom_widgets,
+    })
 }
 
 pub fn create_view(
@@ -292,8 +320,12 @@ pub fn update_view(
     id: &str,
     patch: &ViewPatch,
 ) -> Result<DashboardView, DashboardStorageError> {
-    if let Some(ref title) = patch.title { validate_title(title)?; }
-    if let Some(ref d) = patch.grid_density { validate_grid_density(d)?; }
+    if let Some(ref title) = patch.title {
+        validate_title(title)?;
+    }
+    if let Some(ref d) = patch.grid_density {
+        validate_grid_density(d)?;
+    }
 
     let current: Option<DashboardView> = conn.query_row(
         "SELECT id, title, sort_order, grid_density, background_json FROM dashboard_views WHERE id = ?",
@@ -308,10 +340,18 @@ pub fn update_view(
     ).optional()?;
     let mut current = current.ok_or(DashboardStorageError::NotFound)?;
 
-    if let Some(t) = patch.title.clone()        { current.title = t; }
-    if let Some(d) = patch.grid_density.clone() { current.grid_density = d; }
-    if let Some(s) = patch.sort_order           { current.sort_order = s; }
-    if let Some(bg) = patch.background.clone()   { current.background = bg; }
+    if let Some(t) = patch.title.clone() {
+        current.title = t;
+    }
+    if let Some(d) = patch.grid_density.clone() {
+        current.grid_density = d;
+    }
+    if let Some(s) = patch.sort_order {
+        current.sort_order = s;
+    }
+    if let Some(bg) = patch.background.clone() {
+        current.background = bg;
+    }
 
     let background_json = background_to_json(&current.background)?;
 
@@ -325,9 +365,8 @@ pub fn update_view(
 pub fn referenced_background_image_files(
     conn: &SqliteConnection,
 ) -> Result<HashSet<String>, DashboardStorageError> {
-    let mut stmt = conn.prepare(
-        "SELECT background_json FROM dashboard_views WHERE background_json IS NOT NULL"
-    )?;
+    let mut stmt = conn
+        .prepare("SELECT background_json FROM dashboard_views WHERE background_json IS NOT NULL")?;
     let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
     let mut files = HashSet::new();
     for json in rows {
@@ -345,7 +384,9 @@ pub fn referenced_background_image_files(
 
 pub fn remove_view(conn: &SqliteConnection, id: &str) -> Result<(), DashboardStorageError> {
     let affected = conn.execute("DELETE FROM dashboard_views WHERE id = ?", params![id])?;
-    if affected == 0 { return Err(DashboardStorageError::NotFound); }
+    if affected == 0 {
+        return Err(DashboardStorageError::NotFound);
+    }
     Ok(())
 }
 
@@ -420,9 +461,15 @@ pub fn update_instance(
     id: &str,
     patch: &InstancePatch,
 ) -> Result<DashboardWidgetInstance, DashboardStorageError> {
-    if let Some(ref p) = patch.preset      { validate_preset(p)?; }
-    if let Some(ref a) = patch.accent_name { validate_accent(a)?; }
-    if let Some(ref i) = patch.icon_name   { validate_icon(i)?; }
+    if let Some(ref p) = patch.preset {
+        validate_preset(p)?;
+    }
+    if let Some(ref a) = patch.accent_name {
+        validate_accent(a)?;
+    }
+    if let Some(ref i) = patch.icon_name {
+        validate_icon(i)?;
+    }
     let mut current: DashboardWidgetInstance = conn.query_row(
         "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
                 glass, hide_title, action_direction, settings_values_json, grid_x, grid_y, grid_w, grid_h, sort_order
@@ -452,20 +499,49 @@ pub fn update_instance(
         other => DashboardStorageError::Sqlite(other),
     })?;
 
-    if let Some(p) = patch.preset.clone()         { current.preset = p; }
-    if let Some(a) = patch.accent_name.clone()    { current.accent_name = a; }
-    if let Some(i) = patch.icon_name.clone()      { current.icon_name = i; }
-    if let Some(ct) = patch.custom_title.clone()  { current.custom_title = ct; }
-    if let Some(g) = patch.glass                  { current.glass = g; }
-    if let Some(ht) = patch.hide_title            { current.hide_title = ht; }
-    if let Some(ad) = patch.action_direction.clone() { current.action_direction = ad; }
-    if let Some(values) = patch.settings_values_json.clone() { current.settings_values_json = values; }
-    if let Some(x) = patch.grid_x                 { current.grid_x = x; }
-    if let Some(y) = patch.grid_y                 { current.grid_y = y; }
-    if let Some(w) = patch.grid_w                 { current.grid_w = w; }
-    if let Some(h) = patch.grid_h                 { current.grid_h = h; }
+    if let Some(p) = patch.preset.clone() {
+        current.preset = p;
+    }
+    if let Some(a) = patch.accent_name.clone() {
+        current.accent_name = a;
+    }
+    if let Some(i) = patch.icon_name.clone() {
+        current.icon_name = i;
+    }
+    if let Some(ct) = patch.custom_title.clone() {
+        current.custom_title = ct;
+    }
+    if let Some(g) = patch.glass {
+        current.glass = g;
+    }
+    if let Some(ht) = patch.hide_title {
+        current.hide_title = ht;
+    }
+    if let Some(ad) = patch.action_direction.clone() {
+        current.action_direction = ad;
+    }
+    if let Some(values) = patch.settings_values_json.clone() {
+        current.settings_values_json = values;
+    }
+    if let Some(x) = patch.grid_x {
+        current.grid_x = x;
+    }
+    if let Some(y) = patch.grid_y {
+        current.grid_y = y;
+    }
+    if let Some(w) = patch.grid_w {
+        current.grid_w = w;
+    }
+    if let Some(h) = patch.grid_h {
+        current.grid_h = h;
+    }
 
-    validate_grid_bounds(current.grid_x, current.grid_y, current.grid_w, current.grid_h)?;
+    validate_grid_bounds(
+        current.grid_x,
+        current.grid_y,
+        current.grid_w,
+        current.grid_h,
+    )?;
     validate_instance_settings_values(conn, &current)?;
 
     conn.execute(
@@ -475,9 +551,18 @@ pub fn update_instance(
                 grid_x = ?, grid_y = ?, grid_w = ?, grid_h = ?
             WHERE id = ?",
         params![
-            current.preset, current.accent_name, current.icon_name, current.custom_title,
-            current.glass as i64, current.hide_title as i64, current.action_direction, current.settings_values_json,
-            current.grid_x, current.grid_y, current.grid_w, current.grid_h,
+            current.preset,
+            current.accent_name,
+            current.icon_name,
+            current.custom_title,
+            current.glass as i64,
+            current.hide_title as i64,
+            current.action_direction,
+            current.settings_values_json,
+            current.grid_x,
+            current.grid_y,
+            current.grid_w,
+            current.grid_h,
             current.id,
         ],
     )?;
@@ -510,9 +595,12 @@ fn validate_instance_settings_values(
 
 pub fn remove_instance(conn: &SqliteConnection, id: &str) -> Result<(), DashboardStorageError> {
     let affected = conn.execute(
-        "DELETE FROM dashboard_widget_instances WHERE id = ?", params![id]
+        "DELETE FROM dashboard_widget_instances WHERE id = ?",
+        params![id],
     )?;
-    if affected == 0 { return Err(DashboardStorageError::NotFound); }
+    if affected == 0 {
+        return Err(DashboardStorageError::NotFound);
+    }
     Ok(())
 }
 
@@ -530,7 +618,15 @@ pub fn apply_layout(
             "UPDATE dashboard_widget_instances
                 SET grid_x = ?, grid_y = ?, grid_w = ?, grid_h = ?, sort_order = ?
                 WHERE id = ? AND view_id = ?",
-            params![entry.grid_x, entry.grid_y, entry.grid_w, entry.grid_h, idx as i64, entry.id, view_id],
+            params![
+                entry.grid_x,
+                entry.grid_y,
+                entry.grid_w,
+                entry.grid_h,
+                idx as i64,
+                entry.id,
+                view_id
+            ],
         )?;
     }
     tx_savepoint.commit()?;
@@ -554,13 +650,24 @@ pub fn create_custom_widget(
     let settings_schema_json = settings_schema_json.unwrap_or(r#"{"fields":[]}"#);
     validate_settings_schema_json(settings_schema_json)?;
     if !matches!(created_by, "user" | "agent") {
-        return Err(DashboardStorageError::Validation(ValidationError::InvalidContentData));
+        return Err(DashboardStorageError::Validation(
+            ValidationError::InvalidContentData,
+        ));
     }
     conn.execute(
         "INSERT INTO dashboard_custom_widgets
             (id, kind, title, summary, category, body_json, settings_schema_json, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        params![id, kind, title, summary, category, body_json, settings_schema_json, created_by],
+        params![
+            id,
+            kind,
+            title,
+            summary,
+            category,
+            body_json,
+            settings_schema_json,
+            created_by
+        ],
     )?;
     Ok(DashboardCustomWidget {
         id: id.to_string(),
@@ -579,28 +686,39 @@ pub fn update_custom_widget(
     id: &str,
     patch: &CustomWidgetPatch,
 ) -> Result<DashboardCustomWidget, DashboardStorageError> {
-    let mut current: DashboardCustomWidget = conn.query_row(
-        "SELECT id, kind, title, summary, category, body_json, settings_schema_json, created_by
+    let mut current: DashboardCustomWidget = conn
+        .query_row(
+            "SELECT id, kind, title, summary, category, body_json, settings_schema_json, created_by
          FROM dashboard_custom_widgets WHERE id = ?",
-        params![id],
-        |row| Ok(DashboardCustomWidget {
-            id: row.get(0)?,
-            kind: row.get(1)?,
-            title: row.get(2)?,
-            summary: row.get(3)?,
-            category: row.get(4)?,
-            body_json: row.get(5)?,
-            settings_schema_json: row.get(6)?,
-            created_by: row.get(7)?,
-        }),
-    ).map_err(|e| match e {
-        rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
-        other => DashboardStorageError::Sqlite(other),
-    })?;
+            params![id],
+            |row| {
+                Ok(DashboardCustomWidget {
+                    id: row.get(0)?,
+                    kind: row.get(1)?,
+                    title: row.get(2)?,
+                    summary: row.get(3)?,
+                    category: row.get(4)?,
+                    body_json: row.get(5)?,
+                    settings_schema_json: row.get(6)?,
+                    created_by: row.get(7)?,
+                })
+            },
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
+            other => DashboardStorageError::Sqlite(other),
+        })?;
 
-    if let Some(t) = patch.title.clone()    { validate_title(&t)?; current.title = t; }
-    if let Some(s) = patch.summary.clone()  { current.summary = s; }
-    if let Some(c) = patch.category.clone() { current.category = c; }
+    if let Some(t) = patch.title.clone() {
+        validate_title(&t)?;
+        current.title = t;
+    }
+    if let Some(s) = patch.summary.clone() {
+        current.summary = s;
+    }
+    if let Some(c) = patch.category.clone() {
+        current.category = c;
+    }
     if let Some(b) = patch.body_json.clone() {
         validate_custom_body_for_kind(&current.kind, &b)?;
         current.body_json = b;
@@ -638,10 +756,16 @@ pub fn remove_custom_widget(
     let tx = conn.unchecked_transaction()?;
     if !instance_ids.is_empty() {
         for inst_id in &instance_ids {
-            tx.execute("DELETE FROM dashboard_widget_instances WHERE id = ?", params![inst_id])?;
+            tx.execute(
+                "DELETE FROM dashboard_widget_instances WHERE id = ?",
+                params![inst_id],
+            )?;
         }
     }
-    tx.execute("DELETE FROM dashboard_custom_widgets WHERE id = ?", params![id])?;
+    tx.execute(
+        "DELETE FROM dashboard_custom_widgets WHERE id = ?",
+        params![id],
+    )?;
     tx.commit()?;
     Ok(())
 }
@@ -698,16 +822,22 @@ pub fn widget_secret_owner_id_for_instance(
         params![instance.source_id],
         |row| row.get(0),
     )?;
-    validate_settings_values_for_schema_json(&schema_json, &instance.settings_values_json, &instance.id)?;
+    validate_settings_values_for_schema_json(
+        &schema_json,
+        &instance.settings_values_json,
+        &instance.id,
+    )?;
     let schema: serde_json::Value = serde_json::from_str(&schema_json)
         .map_err(|_| DashboardStorageError::Validation(ValidationError::InvalidSettingsSchema))?;
     let secret_field_exists = schema
         .get("fields")
         .and_then(serde_json::Value::as_array)
-        .is_some_and(|fields| fields.iter().any(|field| {
-            field.get("type").and_then(serde_json::Value::as_str) == Some("secret") &&
-            field.get("key").and_then(serde_json::Value::as_str) == Some(key)
-        }));
+        .is_some_and(|fields| {
+            fields.iter().any(|field| {
+                field.get("type").and_then(serde_json::Value::as_str) == Some("secret")
+                    && field.get("key").and_then(serde_json::Value::as_str) == Some(key)
+            })
+        });
     if !secret_field_exists {
         return Ok(None);
     }
@@ -718,24 +848,39 @@ pub fn widget_secret_owner_id_for_instance(
         .get(key)
         .and_then(serde_json::Value::as_object)
         .is_some_and(|secret_ref| {
-            secret_ref.get("type").and_then(serde_json::Value::as_str) == Some("secretRef") &&
-            secret_ref.get("ownerId").and_then(serde_json::Value::as_str) == Some(expected_owner_id.as_str()) &&
-            secret_ref.get("hasSecret").and_then(serde_json::Value::as_bool) == Some(true)
+            secret_ref.get("type").and_then(serde_json::Value::as_str) == Some("secretRef")
+                && secret_ref
+                    .get("ownerId")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(expected_owner_id.as_str())
+                && secret_ref
+                    .get("hasSecret")
+                    .and_then(serde_json::Value::as_bool)
+                    == Some(true)
         });
     Ok(has_ref.then_some(expected_owner_id))
 }
 
 pub fn seed_default(conn: &SqliteConnection) -> Result<(), DashboardStorageError> {
-    let view_exists: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM dashboard_views", [], |row| row.get(0)
-    )?;
-    if view_exists > 0 { return Ok(()); }
+    let view_exists: i64 =
+        conn.query_row("SELECT COUNT(*) FROM dashboard_views", [], |row| row.get(0))?;
+    if view_exists > 0 {
+        return Ok(());
+    }
     create_view(conn, "default", "Default", Some("default"))?;
     add_instance(
-        conn, "inst-app-launcher", "default",
-        "builtIn", "appLauncher",
-        "panel", "blue", "Wrench",
-        0, 0, 4, 3,
+        conn,
+        "inst-app-launcher",
+        "default",
+        "builtIn",
+        "appLauncher",
+        "panel",
+        "blue",
+        "Wrench",
+        0,
+        0,
+        4,
+        3,
     )?;
     Ok(())
 }
@@ -747,7 +892,8 @@ mod tests {
     fn open_test_db() -> SqliteConnection {
         let conn = SqliteConnection::open_in_memory().unwrap();
         // Apply the relevant subset of CURRENT_SCHEMA needed for these tests.
-        conn.execute_batch(r#"
+        conn.execute_batch(
+            r#"
             CREATE TABLE dashboard_views (
                 id TEXT PRIMARY KEY, title TEXT NOT NULL, sort_order INTEGER NOT NULL,
                 grid_density TEXT NOT NULL DEFAULT 'default'
@@ -779,7 +925,9 @@ mod tests {
                 grid_w INTEGER NOT NULL, grid_h INTEGER NOT NULL,
                 sort_order INTEGER NOT NULL
             );
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
         conn.execute("PRAGMA foreign_keys = ON", []).unwrap();
         conn
     }
@@ -809,17 +957,40 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
         let inst = add_instance(
-            &conn, "i1", "v1", "builtIn", "hashCalculator",
-            "panel", "indigo", "Hash", 0, 0, 3, 2
-        ).unwrap();
+            &conn,
+            "i1",
+            "v1",
+            "builtIn",
+            "hashCalculator",
+            "panel",
+            "indigo",
+            "Hash",
+            0,
+            0,
+            3,
+            2,
+        )
+        .unwrap();
         assert_eq!(inst.grid_w, 3);
-        let updated = update_instance(&conn, "i1", &InstancePatch {
-            preset: Some("ambient".into()),
-            accent_name: None, icon_name: None, custom_title: None,
-            glass: None, hide_title: None, action_direction: None,
-            settings_values_json: None,
-            grid_x: None, grid_y: None, grid_w: None, grid_h: None,
-        }).unwrap();
+        let updated = update_instance(
+            &conn,
+            "i1",
+            &InstancePatch {
+                preset: Some("ambient".into()),
+                accent_name: None,
+                icon_name: None,
+                custom_title: None,
+                glass: None,
+                hide_title: None,
+                action_direction: None,
+                settings_values_json: None,
+                grid_x: None,
+                grid_y: None,
+                grid_w: None,
+                grid_h: None,
+            },
+        )
+        .unwrap();
         assert_eq!(updated.preset, "ambient");
     }
 
@@ -828,17 +999,39 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
         add_instance(
-            &conn, "i1", "v1", "builtIn", "hashCalculator",
-            "ambient", "indigo", "Hash", 0, 0, 3, 2
-        ).unwrap();
-        let updated = update_instance(&conn, "i1", &InstancePatch {
-            preset: None,
-            accent_name: None, icon_name: None, custom_title: None,
-            glass: None, action_direction: None,
-            hide_title: Some(true),
-            settings_values_json: None,
-            grid_x: None, grid_y: None, grid_w: None, grid_h: None,
-        }).unwrap();
+            &conn,
+            "i1",
+            "v1",
+            "builtIn",
+            "hashCalculator",
+            "ambient",
+            "indigo",
+            "Hash",
+            0,
+            0,
+            3,
+            2,
+        )
+        .unwrap();
+        let updated = update_instance(
+            &conn,
+            "i1",
+            &InstancePatch {
+                preset: None,
+                accent_name: None,
+                icon_name: None,
+                custom_title: None,
+                glass: None,
+                action_direction: None,
+                hide_title: Some(true),
+                settings_values_json: None,
+                grid_x: None,
+                grid_y: None,
+                grid_w: None,
+                grid_h: None,
+            },
+        )
+        .unwrap();
         assert!(updated.hide_title);
 
         let state = load_state(&conn).unwrap();
@@ -850,12 +1043,14 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
         let err = add_instance(
-            &conn, "i-bad", "v1", "builtIn", "x",
-            "panel", "blue", "Hash", 10, 0, 5, 1
+            &conn, "i-bad", "v1", "builtIn", "x", "panel", "blue", "Hash", 10, 0, 5, 1,
         );
-        assert!(matches!(err, Err(DashboardStorageError::Validation(
-            ValidationError::InvalidGridBounds
-        ))));
+        assert!(matches!(
+            err,
+            Err(DashboardStorageError::Validation(
+                ValidationError::InvalidGridBounds
+            ))
+        ));
     }
 
     #[test]
@@ -863,9 +1058,9 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
         add_instance(
-            &conn, "i1", "v1", "builtIn", "x",
-            "panel", "blue", "Hash", 0, 0, 3, 2
-        ).unwrap();
+            &conn, "i1", "v1", "builtIn", "x", "panel", "blue", "Hash", 0, 0, 3, 2,
+        )
+        .unwrap();
         remove_view(&conn, "v1").unwrap();
         let state = load_state(&conn).unwrap();
         assert_eq!(state.instances.len(), 0);
@@ -876,15 +1071,26 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
         create_custom_widget(
-            &conn, "cw1", "content", "My Markdown", "", "custom",
-            r#"{"shape":"markdown","data":{"source":"hi"}}"#, None, "agent",
-        ).unwrap();
+            &conn,
+            "cw1",
+            "content",
+            "My Markdown",
+            "",
+            "custom",
+            r#"{"shape":"markdown","data":{"source":"hi"}}"#,
+            None,
+            "agent",
+        )
+        .unwrap();
         add_instance(
-            &conn, "inst", "v1", "content", "cw1",
-            "panel", "blue", "Hash", 0, 0, 3, 2
-        ).unwrap();
+            &conn, "inst", "v1", "content", "cw1", "panel", "blue", "Hash", 0, 0, 3, 2,
+        )
+        .unwrap();
         let err = remove_custom_widget(&conn, "cw1", false);
-        assert!(matches!(err, Err(DashboardStorageError::InstancesExist { .. })));
+        assert!(matches!(
+            err,
+            Err(DashboardStorageError::InstancesExist { .. })
+        ));
         remove_custom_widget(&conn, "cw1", true).unwrap();
         let state = load_state(&conn).unwrap();
         assert_eq!(state.instances.len(), 0);
@@ -896,24 +1102,45 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
         create_custom_widget(
-            &conn, "cw1", "script", "API Widget", "", "custom",
+            &conn,
+            "cw1",
+            "script",
+            "API Widget",
+            "",
+            "custom",
             r#"{"source":"console.log(1)","permissions":{"network":false}}"#,
             Some(r#"{"fields":[{"type":"secret","key":"apiKey","label":"API key"}]}"#),
             "agent",
-        ).unwrap();
+        )
+        .unwrap();
         add_instance(
-            &conn, "inst", "v1", "script", "cw1",
-            "panel", "blue", "Key", 0, 0, 3, 2
-        ).unwrap();
-        let err = update_instance(&conn, "inst", &InstancePatch {
-            preset: None, accent_name: None, icon_name: None, custom_title: None,
-            glass: None, hide_title: None, action_direction: None,
-            settings_values_json: Some(r#"{"apiKey":"plain-text"}"#.into()),
-            grid_x: None, grid_y: None, grid_w: None, grid_h: None,
-        });
-        assert!(matches!(err, Err(DashboardStorageError::Validation(
-            ValidationError::InvalidSettingsValues
-        ))));
+            &conn, "inst", "v1", "script", "cw1", "panel", "blue", "Key", 0, 0, 3, 2,
+        )
+        .unwrap();
+        let err = update_instance(
+            &conn,
+            "inst",
+            &InstancePatch {
+                preset: None,
+                accent_name: None,
+                icon_name: None,
+                custom_title: None,
+                glass: None,
+                hide_title: None,
+                action_direction: None,
+                settings_values_json: Some(r#"{"apiKey":"plain-text"}"#.into()),
+                grid_x: None,
+                grid_y: None,
+                grid_w: None,
+                grid_h: None,
+            },
+        );
+        assert!(matches!(
+            err,
+            Err(DashboardStorageError::Validation(
+                ValidationError::InvalidSettingsValues
+            ))
+        ));
 
         let updated = update_instance(&conn, "inst", &InstancePatch {
             preset: None, accent_name: None, icon_name: None, custom_title: None,
@@ -923,7 +1150,9 @@ mod tests {
         }).unwrap();
         assert!(updated.settings_values_json.contains("secretRef"));
         assert_eq!(
-            widget_secret_owner_id_for_instance(&conn, "inst", "apiKey").unwrap().as_deref(),
+            widget_secret_owner_id_for_instance(&conn, "inst", "apiKey")
+                .unwrap()
+                .as_deref(),
             Some("dashboard-widget-secret:inst:apiKey"),
         );
     }
@@ -932,12 +1161,35 @@ mod tests {
     fn apply_layout_updates_in_one_pass() {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
-        add_instance(&conn, "i1", "v1", "builtIn", "x", "panel", "blue", "Hash", 0, 0, 3, 2).unwrap();
-        add_instance(&conn, "i2", "v1", "builtIn", "x", "panel", "blue", "Hash", 3, 0, 3, 2).unwrap();
-        apply_layout(&conn, "v1", &[
-            LayoutEntry { id: "i1".into(), grid_x: 4, grid_y: 1, grid_w: 4, grid_h: 2 },
-            LayoutEntry { id: "i2".into(), grid_x: 0, grid_y: 0, grid_w: 4, grid_h: 1 },
-        ]).unwrap();
+        add_instance(
+            &conn, "i1", "v1", "builtIn", "x", "panel", "blue", "Hash", 0, 0, 3, 2,
+        )
+        .unwrap();
+        add_instance(
+            &conn, "i2", "v1", "builtIn", "x", "panel", "blue", "Hash", 3, 0, 3, 2,
+        )
+        .unwrap();
+        apply_layout(
+            &conn,
+            "v1",
+            &[
+                LayoutEntry {
+                    id: "i1".into(),
+                    grid_x: 4,
+                    grid_y: 1,
+                    grid_w: 4,
+                    grid_h: 2,
+                },
+                LayoutEntry {
+                    id: "i2".into(),
+                    grid_x: 0,
+                    grid_y: 0,
+                    grid_w: 4,
+                    grid_h: 1,
+                },
+            ],
+        )
+        .unwrap();
         let state = load_state(&conn).unwrap();
         let i1 = state.instances.iter().find(|i| i.id == "i1").unwrap();
         assert_eq!((i1.grid_x, i1.grid_y, i1.grid_w, i1.grid_h), (4, 1, 4, 2));
@@ -957,18 +1209,34 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
 
-        let preset = DashboardBackground::Preset { preset: "mist".into() };
-        let updated = update_view(&conn, "v1", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(preset.clone())),
-        }).unwrap();
+        let preset = DashboardBackground::Preset {
+            preset: "mist".into(),
+        };
+        let updated = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(preset.clone())),
+            },
+        )
+        .unwrap();
         assert_eq!(updated.background, Some(preset.clone()));
         assert_eq!(load_state(&conn).unwrap().views[0].background, Some(preset));
 
-        let cleared = update_view(&conn, "v1", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(None),
-        }).unwrap();
+        let cleared = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(None),
+            },
+        )
+        .unwrap();
         assert_eq!(cleared.background, None);
     }
 
@@ -976,7 +1244,8 @@ mod tests {
     fn view_patch_deserializes_null_background_as_clear() {
         let patch: ViewPatch = serde_json::from_value(serde_json::json!({
             "background": null
-        })).unwrap();
+        }))
+        .unwrap();
         assert_eq!(patch.background, Some(None));
 
         let patch: ViewPatch = serde_json::from_value(serde_json::json!({})).unwrap();
@@ -987,29 +1256,56 @@ mod tests {
     fn update_view_rejects_invalid_background() {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
-        let err = update_view(&conn, "v1", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(DashboardBackground::Preset { preset: "not-real".into() })),
-        });
-        assert!(matches!(err, Err(DashboardStorageError::Validation(
-            ValidationError::InvalidBackground
-        ))));
+        let err = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(DashboardBackground::Preset {
+                    preset: "not-real".into(),
+                })),
+            },
+        );
+        assert!(matches!(
+            err,
+            Err(DashboardStorageError::Validation(
+                ValidationError::InvalidBackground
+            ))
+        ));
     }
 
     #[test]
     fn update_view_leaves_background_untouched_when_not_patched() {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
-        let preset = DashboardBackground::Preset { preset: "sky".into() };
-        update_view(&conn, "v1", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(preset.clone())),
-        }).unwrap();
+        let preset = DashboardBackground::Preset {
+            preset: "sky".into(),
+        };
+        update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(preset.clone())),
+            },
+        )
+        .unwrap();
         // Patch only the title; background must survive.
-        let updated = update_view(&conn, "v1", &ViewPatch {
-            title: Some("Renamed".into()), grid_density: None, sort_order: None,
-            background: None,
-        }).unwrap();
+        let updated = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: Some("Renamed".into()),
+                grid_density: None,
+                sort_order: None,
+                background: None,
+            },
+        )
+        .unwrap();
         assert_eq!(updated.background, Some(preset));
     }
 
@@ -1021,26 +1317,62 @@ mod tests {
         create_view(&conn, "v3", "Third", None).unwrap();
         create_view(&conn, "v4", "Fourth", None).unwrap();
         create_view(&conn, "v5", "Fifth", None).unwrap();
-        update_view(&conn, "v1", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(DashboardBackground::Image {
-                file: "bg-aaa.jpg".into(), fit: "fill".into(), dim: 0,
-            })),
-        }).unwrap();
-        update_view(&conn, "v2", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(DashboardBackground::Preset { preset: "mist".into() })),
-        }).unwrap();
-        update_view(&conn, "v4", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(DashboardBackground::Video {
-                file: "bg-bbb.mp4".into(), fit: "fill".into(), dim: 0,
-            })),
-        }).unwrap();
-        update_view(&conn, "v5", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(DashboardBackground::Dynamic { dynamic: "aurora".into() })),
-        }).unwrap();
+        update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(DashboardBackground::Image {
+                    file: "bg-aaa.jpg".into(),
+                    fit: "fill".into(),
+                    dim: 0,
+                })),
+            },
+        )
+        .unwrap();
+        update_view(
+            &conn,
+            "v2",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(DashboardBackground::Preset {
+                    preset: "mist".into(),
+                })),
+            },
+        )
+        .unwrap();
+        update_view(
+            &conn,
+            "v4",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(DashboardBackground::Video {
+                    file: "bg-bbb.mp4".into(),
+                    fit: "fill".into(),
+                    dim: 0,
+                })),
+            },
+        )
+        .unwrap();
+        update_view(
+            &conn,
+            "v5",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(DashboardBackground::Dynamic {
+                    dynamic: "aurora".into(),
+                })),
+            },
+        )
+        .unwrap();
         // v3 left as theme default (NULL).
         let files = referenced_background_image_files(&conn).unwrap();
         assert_eq!(files.len(), 2);
@@ -1053,14 +1385,26 @@ mod tests {
         let conn = open_test_db();
         create_view(&conn, "v1", "First", None).unwrap();
 
-        let dynamic = DashboardBackground::Dynamic { dynamic: "matrix".into() };
-        let updated = update_view(&conn, "v1", &ViewPatch {
-            title: None, grid_density: None, sort_order: None,
-            background: Some(Some(dynamic.clone())),
-        }).unwrap();
+        let dynamic = DashboardBackground::Dynamic {
+            dynamic: "matrix".into(),
+        };
+        let updated = update_view(
+            &conn,
+            "v1",
+            &ViewPatch {
+                title: None,
+                grid_density: None,
+                sort_order: None,
+                background: Some(Some(dynamic.clone())),
+            },
+        )
+        .unwrap();
 
         assert_eq!(updated.background, Some(dynamic.clone()));
-        assert_eq!(load_state(&conn).unwrap().views[0].background, Some(dynamic));
+        assert_eq!(
+            load_state(&conn).unwrap().views[0].background,
+            Some(dynamic)
+        );
     }
 
     #[test]
@@ -1070,7 +1414,8 @@ mod tests {
         conn.execute(
             "UPDATE dashboard_views SET background_json = ? WHERE id = ?",
             rusqlite::params!["{not valid json", "v1"],
-        ).unwrap();
+        )
+        .unwrap();
         let state = load_state(&conn).unwrap();
         assert_eq!(state.views[0].background, None);
     }

@@ -316,7 +316,9 @@ impl FtpSessionManager {
             .unwrap_or_else(|| make_session_id(&request.title));
         let host = request.host.clone();
         let user_name = request.user.clone();
-        let port = request.port.unwrap_or_else(|| default_ftp_port(&request.options));
+        let port = request
+            .port
+            .unwrap_or_else(|| default_ftp_port(&request.options));
         let initial_path = request
             .path
             .as_deref()
@@ -460,9 +462,8 @@ impl FtpSessionManager {
         self.with_session(&request.session_id.clone(), |conn| {
             let path = normalize_remote_path(&request.path);
             let show_hidden = conn.options.show_hidden;
-            conn.runtime.block_on(async {
-                path_properties(&mut conn.transport, &path, show_hidden).await
-            })
+            conn.runtime
+                .block_on(async { path_properties(&mut conn.transport, &path, show_hidden).await })
         })
     }
 
@@ -611,10 +612,9 @@ async fn connect_and_login(
             (FtpTransport::Plain(stream), welcome)
         }
         (FtpProtocol::Ftps, FtpTlsMode::Explicit) => {
-            let plain: AsyncNativeTlsFtpStream =
-                AsyncNativeTlsFtpStream::connect(addr.as_str())
-                    .await
-                    .map_err(|e| format!("failed to connect to FTPS server: {e}"))?;
+            let plain: AsyncNativeTlsFtpStream = AsyncNativeTlsFtpStream::connect(addr.as_str())
+                .await
+                .map_err(|e| format!("failed to connect to FTPS server: {e}"))?;
             let welcome = plain.get_welcome_msg().map(|s| s.to_string());
             let connector = build_native_tls_connector(options.ignore_cert_errors)?;
             let secure: AsyncNativeTlsFtpStream = plain
@@ -625,13 +625,10 @@ async fn connect_and_login(
         }
         (FtpProtocol::Ftps, FtpTlsMode::Implicit) => {
             let connector = build_native_tls_connector(options.ignore_cert_errors)?;
-            let stream = AsyncNativeTlsFtpStream::connect_secure_implicit(
-                addr.as_str(),
-                connector,
-                host,
-            )
-            .await
-            .map_err(|e| format!("failed to connect to implicit FTPS server: {e}"))?;
+            let stream =
+                AsyncNativeTlsFtpStream::connect_secure_implicit(addr.as_str(), connector, host)
+                    .await
+                    .map_err(|e| format!("failed to connect to implicit FTPS server: {e}"))?;
             let welcome = stream.get_welcome_msg().map(|s| s.to_string());
             (FtpTransport::Tls(stream), welcome)
         }
@@ -719,14 +716,8 @@ async fn connect_and_login(
     }
 
     let resolved_path = match &mut transport {
-        FtpTransport::Plain(s) => s
-            .pwd()
-            .await
-            .unwrap_or_else(|_| initial_path.to_string()),
-        FtpTransport::Tls(s) => s
-            .pwd()
-            .await
-            .unwrap_or_else(|_| initial_path.to_string()),
+        FtpTransport::Plain(s) => s.pwd().await.unwrap_or_else(|_| initial_path.to_string()),
+        FtpTransport::Tls(s) => s.pwd().await.unwrap_or_else(|_| initial_path.to_string()),
     };
 
     let entries = read_directory(&mut transport, &resolved_path, options.show_hidden).await?;
@@ -734,9 +725,7 @@ async fn connect_and_login(
     Ok((transport, welcome, features_vec, entries, resolved_path))
 }
 
-fn build_native_tls_connector(
-    ignore_cert_errors: bool,
-) -> Result<AsyncNativeTlsConnector, String> {
+fn build_native_tls_connector(ignore_cert_errors: bool) -> Result<AsyncNativeTlsConnector, String> {
     let mut connector = async_native_tls::TlsConnector::new();
     if ignore_cert_errors {
         connector = connector
@@ -1010,8 +999,8 @@ fn upload_recursive<'a>(
             return Err(TRANSFER_CANCELED.to_string());
         }
 
-        let metadata = fs::metadata(local_path)
-            .map_err(|e| format!("cannot stat local path: {e}"))?;
+        let metadata =
+            fs::metadata(local_path).map_err(|e| format!("cannot stat local path: {e}"))?;
         let name = local_path
             .file_name()
             .and_then(|n| n.to_str())
@@ -1293,9 +1282,7 @@ async fn download_file_bytes(
                 *transferred += n as u64;
                 emit_progress(app, transfer_id, *transferred, total_bytes);
             }
-            s.finalize_retr_stream(reader)
-                .await
-                .map_err(map_ftp_err)?;
+            s.finalize_retr_stream(reader).await.map_err(map_ftp_err)?;
             buf
         }
         FtpTransport::Tls(s) => {
@@ -1317,9 +1304,7 @@ async fn download_file_bytes(
                 *transferred += n as u64;
                 emit_progress(app, transfer_id, *transferred, total_bytes);
             }
-            s.finalize_retr_stream(reader)
-                .await
-                .map_err(map_ftp_err)?;
+            s.finalize_retr_stream(reader).await.map_err(map_ftp_err)?;
             buf
         }
     };
@@ -1447,11 +1432,7 @@ fn remote_path_name(path: &str) -> Result<String, String> {
     if trimmed.is_empty() {
         return Err("remote path has no name".to_string());
     }
-    Ok(trimmed
-        .rsplit('/')
-        .next()
-        .unwrap_or(trimmed)
-        .to_string())
+    Ok(trimmed.rsplit('/').next().unwrap_or(trimmed).to_string())
 }
 
 fn validate_remote_child_name(name: &str) -> Result<String, String> {
@@ -1493,7 +1474,11 @@ fn make_session_id(title: &str) -> String {
             }
         })
         .collect();
-    let slug = if slug.is_empty() { "ftp".to_string() } else { slug };
+    let slug = if slug.is_empty() {
+        "ftp".to_string()
+    } else {
+        slug
+    };
     format!("ftp-{slug}-{now}")
 }
 

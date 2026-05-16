@@ -25,5 +25,4 @@ export const githubCopilotProvider: AiProviderDefinition = {
   ],
   settingsFields: HOSTED_PROVIDER_WITHOUT_KEY_SETTINGS_FIELDS,
   capabilities: ["chat", "imageInput", "streaming", "toolCalling", "sdkOAuth"],
-  chatDisabledReasonKey: "ai.copilotSdkOAuthRequired",
 };

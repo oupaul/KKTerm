@@ -6545,14 +6545,6 @@ fieldset.connection-specific-options > legend {
   background: var(--text-faint);
 }
 
-.settings-inline-warning {
-  margin: 0 18px 10px;
-  color: var(--amber);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
 :root:not([data-color-scheme]) .settings-section input:not([readonly]):not(:disabled),
 :root:not([data-color-scheme]) .settings-section select:not(:disabled),
 [data-color-scheme="default"] .settings-section input:not([readonly]):not(:disabled),
@@ -8913,6 +8905,29 @@ fieldset.connection-specific-options > legend {
 
 .settings-api-key-link:hover {
   opacity: 0.8;
+}
+
+.settings-copilot-connection {
+  display: grid;
+  gap: 10px;
+  margin: 0 18px 12px;
+}
+
+.settings-copilot-code {
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.settings-copilot-code small {
+  color: var(--text-muted);
+}
+
+.settings-copilot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .settings-data-actions {

@@ -62,7 +62,10 @@ pub fn launch_entry(
 }
 
 #[cfg(test)]
-pub fn plan_launch(path: &str, mode: AppLauncherLaunchMode) -> Result<AppLauncherLaunchPlan, String> {
+pub fn plan_launch(
+    path: &str,
+    mode: AppLauncherLaunchMode,
+) -> Result<AppLauncherLaunchPlan, String> {
     plan_launch_with_options(path, None, None, mode)
 }
 
@@ -79,7 +82,9 @@ fn plan_launch_with_options(
 
     let runnable = is_runnable_path(path);
     if mode != AppLauncherLaunchMode::Normal && !runnable {
-        return Err("Admin and alternate-user launch are only available for runnable files".to_string());
+        return Err(
+            "Admin and alternate-user launch are only available for runnable files".to_string(),
+        );
     }
 
     let operation = match mode {
@@ -133,7 +138,9 @@ fn launch_plan(app: tauri::AppHandle, plan: AppLauncherLaunchPlan) -> Result<(),
     #[cfg(not(target_os = "windows"))]
     {
         if plan.operation.is_some() {
-            return Err("Admin and alternate-user launch are only available on Windows".to_string());
+            return Err(
+                "Admin and alternate-user launch are only available on Windows".to_string(),
+            );
         }
         if plan.parameters.is_none() && plan.working_directory.is_none() {
             return app
@@ -177,7 +184,10 @@ fn launch_plan_windows(plan: AppLauncherLaunchPlan) -> Result<(), String> {
     let operation = plan.operation.map(wide_string);
     let target = wide_string(&plan.target);
     let parameters = plan.parameters.as_ref().map(|value| wide_string(value));
-    let working_directory = plan.working_directory.as_ref().map(|value| wide_string(value));
+    let working_directory = plan
+        .working_directory
+        .as_ref()
+        .map(|value| wide_string(value));
     let result = unsafe {
         ShellExecuteW(
             null_mut(),
@@ -225,7 +235,7 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
     use std::ffi::c_void;
     use std::mem::{size_of, zeroed};
-    use std::ptr::{null_mut};
+    use std::ptr::null_mut;
     use windows_sys::Win32::Graphics::Gdi::{
         CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits,
         ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
@@ -424,7 +434,10 @@ mod tests {
             .expect("folders open in File Explorer");
 
         assert_eq!(plan.target, "explorer.exe");
-        assert_eq!(plan.parameters.as_deref(), Some("C:\\Users\\Ryan\\Documents"));
+        assert_eq!(
+            plan.parameters.as_deref(),
+            Some("C:\\Users\\Ryan\\Documents")
+        );
         assert_eq!(plan.operation, None);
     }
 
@@ -459,8 +472,7 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn native_icon_data_url_extracts_visible_windows_app_icon() {
-        let system_root =
-            std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+        let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
         let notepad = std::path::Path::new(&system_root)
             .join("System32")
             .join("notepad.exe");

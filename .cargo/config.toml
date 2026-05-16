@@ -1,2 +1,6 @@
 [http]
 check-revoke = false
+
+[env]
+COPILOT_CLI_VERSION = "1.0.48"
+BUNDLED_CLI_CACHE_DIR = { value = "src-tauri/target/copilot-cli-cache", relative = true }

@@ -675,6 +675,21 @@ export interface VncSimpleRequest {
   sessionId: string;
 }
 
+export interface GitHubCopilotDeviceFlow {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  expiresIn: number;
+  interval: number;
+}
+
+export type GitHubCopilotDevicePollStatus = "pending" | "slowDown" | "authorized";
+
+export interface GitHubCopilotDevicePollResponse {
+  status: GitHubCopilotDevicePollStatus;
+  interval?: number | null;
+}
+
 type CommandMap = {
   app_bootstrap: {
     args: undefined;
@@ -912,6 +927,14 @@ type CommandMap = {
   update_ai_provider_settings: {
     args: { request: AiProviderSettings };
     result: AiProviderSettings;
+  };
+  start_github_copilot_device_flow: {
+    args: undefined;
+    result: GitHubCopilotDeviceFlow;
+  };
+  poll_github_copilot_device_flow: {
+    args: { request: { deviceCode: string } };
+    result: GitHubCopilotDevicePollResponse;
   };
   plan_command_proposal: {
     args: {

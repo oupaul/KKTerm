@@ -707,9 +707,7 @@ impl WebviewSessionManager {
             .get(&request.session_id)
             .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
         webview
-            .eval(format!(
-                "window.__KKTERM_URL_AUTOFILL__?.fill({payload});"
-            ))
+            .eval(format!("window.__KKTERM_URL_AUTOFILL__?.fill({payload});"))
             .map_err(|error| format!("failed to fill webview credential: {error}"))
     }
 
@@ -724,9 +722,7 @@ impl WebviewSessionManager {
             .get(&request.session_id)
             .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
         webview
-            .eval(format!(
-                "window.__KKTERM_URL_AUTOFILL__?.capture({nonce});"
-            ))
+            .eval(format!("window.__KKTERM_URL_AUTOFILL__?.capture({nonce});"))
             .map_err(|error| format!("failed to capture webview credential: {error}"))
     }
 

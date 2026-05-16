@@ -1,33 +1,95 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const PRESETS: &[&str] = &[
-    "panel", "ambient", "tile", "hero", "action",
-];
+pub const PRESETS: &[&str] = &["panel", "ambient", "tile", "hero", "action"];
 
 pub const ACCENTS: &[&str] = &[
-    "default", "blue", "indigo", "teal", "green", "amber",
-    "red", "purple", "pink", "slate", "cyan",
-    "orange", "rose", "emerald", "sky",
+    "default", "blue", "indigo", "teal", "green", "amber", "red", "purple", "pink", "slate",
+    "cyan", "orange", "rose", "emerald", "sky",
 ];
 
 pub const ICONS: &[&str] = &[
-    "Hash", "Network", "Terminal", "Server", "Cpu", "Activity", "Bolt", "Sun",
-    "Bell", "Bot", "Wrench", "Folder", "Clock", "Doc", "Cloud", "Calendar",
-    "Database", "Globe", "Lock", "Key", "Mail", "Mic", "Monitor", "Music",
-    "Package", "Phone", "Pin", "Power", "Printer", "Radio", "Search",
-    "Settings", "Shield", "ShoppingCart", "Star", "Tag", "Tool", "Trash",
-    "Truck", "User", "Users", "Video", "Volume", "Watch", "Wifi", "Wind",
-    "Zap", "Layers", "List", "Grid",
+    "Hash",
+    "Network",
+    "Terminal",
+    "Server",
+    "Cpu",
+    "Activity",
+    "Bolt",
+    "Sun",
+    "Bell",
+    "Bot",
+    "Wrench",
+    "Folder",
+    "Clock",
+    "Doc",
+    "Cloud",
+    "Calendar",
+    "Database",
+    "Globe",
+    "Lock",
+    "Key",
+    "Mail",
+    "Mic",
+    "Monitor",
+    "Music",
+    "Package",
+    "Phone",
+    "Pin",
+    "Power",
+    "Printer",
+    "Radio",
+    "Search",
+    "Settings",
+    "Shield",
+    "ShoppingCart",
+    "Star",
+    "Tag",
+    "Tool",
+    "Trash",
+    "Truck",
+    "User",
+    "Users",
+    "Video",
+    "Volume",
+    "Watch",
+    "Wifi",
+    "Wind",
+    "Zap",
+    "Layers",
+    "List",
+    "Grid",
 ];
 
 pub const BACKGROUND_PRESET_IDS: &[&str] = &[
-    "mist", "sand", "sage", "sky", "blush", "lavender", "slate", "graphite",
-    "g-dawn", "g-fog", "g-meadow", "g-dusk", "g-linen", "g-horizon", "g-petal", "g-twilight",
+    "mist",
+    "sand",
+    "sage",
+    "sky",
+    "blush",
+    "lavender",
+    "slate",
+    "graphite",
+    "g-dawn",
+    "g-fog",
+    "g-meadow",
+    "g-dusk",
+    "g-linen",
+    "g-horizon",
+    "g-petal",
+    "g-twilight",
 ];
 
 pub const DYNAMIC_BACKGROUND_IDS: &[&str] = &[
-    "aurora", "raindrops", "starfield", "nebula", "embers", "lava", "matrix", "synthwave", "confetti",
+    "aurora",
+    "raindrops",
+    "starfield",
+    "nebula",
+    "embers",
+    "lava",
+    "matrix",
+    "synthwave",
+    "confetti",
 ];
 
 pub const BACKGROUND_FITS: &[&str] = &["fill", "fit", "stretch", "tile", "center"];
@@ -65,15 +127,27 @@ pub enum ValidationError {
 }
 
 pub fn validate_preset(value: &str) -> Result<(), ValidationError> {
-    if PRESETS.contains(&value) { Ok(()) } else { Err(ValidationError::InvalidPreset) }
+    if PRESETS.contains(&value) {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidPreset)
+    }
 }
 
 pub fn validate_accent(value: &str) -> Result<(), ValidationError> {
-    if ACCENTS.contains(&value) { Ok(()) } else { Err(ValidationError::InvalidAccent) }
+    if ACCENTS.contains(&value) {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidAccent)
+    }
 }
 
 pub fn validate_icon(value: &str) -> Result<(), ValidationError> {
-    if ICONS.contains(&value) { Ok(()) } else { Err(ValidationError::InvalidIcon) }
+    if ICONS.contains(&value) {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidIcon)
+    }
 }
 
 pub fn validate_grid_bounds(x: i64, y: i64, w: i64, h: i64) -> Result<(), ValidationError> {
@@ -134,7 +208,12 @@ pub fn validate_dynamic_background(dynamic: &str) -> Result<(), ValidationError>
 }
 
 pub fn validate_background_image(file: &str, fit: &str, dim: i64) -> Result<(), ValidationError> {
-    validate_background_media(file, fit, dim, &["png", "jpg", "jpeg", "webp", "gif", "bmp"])
+    validate_background_media(
+        file,
+        fit,
+        dim,
+        &["png", "jpg", "jpeg", "webp", "gif", "bmp"],
+    )
 }
 
 pub fn validate_background_video(file: &str, fit: &str, dim: i64) -> Result<(), ValidationError> {
@@ -147,10 +226,8 @@ fn validate_background_media(
     dim: i64,
     extensions: &[&str],
 ) -> Result<(), ValidationError> {
-    let file_ok = !file.is_empty()
-        && !file.contains('/')
-        && !file.contains('\\')
-        && !file.contains("..");
+    let file_ok =
+        !file.is_empty() && !file.contains('/') && !file.contains('\\') && !file.contains("..");
     if !file_ok {
         return Err(ValidationError::InvalidBackground);
     }
@@ -240,8 +317,8 @@ pub fn validate_content_body_json(json: &str) -> Result<ContentBody, ValidationE
     if json.len() > MAX_CONTENT_BODY_BYTES {
         return Err(ValidationError::ContentTooLarge);
     }
-    let parsed: ContentBody = serde_json::from_str(json)
-        .map_err(|_| ValidationError::InvalidContentShape)?;
+    let parsed: ContentBody =
+        serde_json::from_str(json).map_err(|_| ValidationError::InvalidContentShape)?;
     match &parsed {
         ContentBody::Markdown { data } => {
             if data.source.trim().is_empty() {
@@ -271,8 +348,8 @@ pub fn validate_script_body_json(json: &str) -> Result<ScriptBody, ValidationErr
     if json.len() > MAX_SCRIPT_SOURCE_BYTES + 4096 {
         return Err(ValidationError::ScriptTooLarge);
     }
-    let parsed: ScriptBody = serde_json::from_str(json)
-        .map_err(|_| ValidationError::InvalidScriptBody)?;
+    let parsed: ScriptBody =
+        serde_json::from_str(json).map_err(|_| ValidationError::InvalidScriptBody)?;
     if parsed.source.trim().is_empty() {
         return Err(ValidationError::InvalidScriptBody);
     }
@@ -289,8 +366,14 @@ pub fn validate_script_body_json(json: &str) -> Result<ScriptBody, ValidationErr
 
 pub fn validate_custom_body_for_kind(kind: &str, body_json: &str) -> Result<(), ValidationError> {
     match kind {
-        "content" => { validate_content_body_json(body_json)?; Ok(()) }
-        "script"  => { validate_script_body_json(body_json)?; Ok(()) }
+        "content" => {
+            validate_content_body_json(body_json)?;
+            Ok(())
+        }
+        "script" => {
+            validate_script_body_json(body_json)?;
+            Ok(())
+        }
         _ => Err(ValidationError::InvalidCustomWidgetKind),
     }
 }
@@ -308,8 +391,8 @@ pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> 
     if json.len() > MAX_SETTINGS_SCHEMA_BYTES {
         return Err(ValidationError::InvalidSettingsSchema);
     }
-    let parsed: Value = serde_json::from_str(json)
-        .map_err(|_| ValidationError::InvalidSettingsSchema)?;
+    let parsed: Value =
+        serde_json::from_str(json).map_err(|_| ValidationError::InvalidSettingsSchema)?;
     let fields = parsed
         .get("fields")
         .and_then(Value::as_array)
@@ -319,7 +402,9 @@ pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> 
     }
     let mut keys = std::collections::HashSet::new();
     for field in fields {
-        let object = field.as_object().ok_or(ValidationError::InvalidSettingsSchema)?;
+        let object = field
+            .as_object()
+            .ok_or(ValidationError::InvalidSettingsSchema)?;
         let field_type = object
             .get("type")
             .and_then(Value::as_str)
@@ -337,16 +422,25 @@ pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> 
         }
         match field_type {
             "text" => {
-                if object.get("placeholder").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                if object
+                    .get("placeholder")
+                    .is_some_and(|value| !value.is_string() && !value.is_null())
+                {
                     return Err(ValidationError::InvalidSettingsSchema);
                 }
-                if object.get("defaultValue").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                if object
+                    .get("defaultValue")
+                    .is_some_and(|value| !value.is_string() && !value.is_null())
+                {
                     return Err(ValidationError::InvalidSettingsSchema);
                 }
             }
             "number" => {
                 for key in ["min", "max", "defaultValue"] {
-                    if object.get(key).is_some_and(|value| !value.is_number() && !value.is_null()) {
+                    if object
+                        .get(key)
+                        .is_some_and(|value| !value.is_number() && !value.is_null())
+                    {
                         return Err(ValidationError::InvalidSettingsSchema);
                     }
                 }
@@ -359,12 +453,18 @@ pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> 
                 }
             }
             "boolean" => {
-                if object.get("defaultValue").is_some_and(|value| !value.is_boolean() && !value.is_null()) {
+                if object
+                    .get("defaultValue")
+                    .is_some_and(|value| !value.is_boolean() && !value.is_null())
+                {
                     return Err(ValidationError::InvalidSettingsSchema);
                 }
             }
             "secret" => {
-                if object.get("placeholder").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                if object
+                    .get("placeholder")
+                    .is_some_and(|value| !value.is_string() && !value.is_null())
+                {
                     return Err(ValidationError::InvalidSettingsSchema);
                 }
                 if object.contains_key("defaultValue") {
@@ -372,7 +472,10 @@ pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> 
                 }
             }
             "select" => {
-                if object.get("defaultValue").is_some_and(|value| !value.is_string() && !value.is_null()) {
+                if object
+                    .get("defaultValue")
+                    .is_some_and(|value| !value.is_string() && !value.is_null())
+                {
                     return Err(ValidationError::InvalidSettingsSchema);
                 }
                 let options = object
@@ -383,12 +486,15 @@ pub fn validate_settings_schema_json(json: &str) -> Result<(), ValidationError> 
                     return Err(ValidationError::InvalidSettingsSchema);
                 }
                 for option in options {
-                    let option = option.as_object().ok_or(ValidationError::InvalidSettingsSchema)?;
+                    let option = option
+                        .as_object()
+                        .ok_or(ValidationError::InvalidSettingsSchema)?;
                     let label = option
                         .get("label")
                         .and_then(Value::as_str)
                         .ok_or(ValidationError::InvalidSettingsSchema)?;
-                    if label.trim().is_empty() || !option.get("value").is_some_and(Value::is_string) {
+                    if label.trim().is_empty() || !option.get("value").is_some_and(Value::is_string)
+                    {
                         return Err(ValidationError::InvalidSettingsSchema);
                     }
                 }
@@ -411,10 +517,10 @@ pub fn validate_settings_values_for_schema_json(
     validate_settings_schema_json(schema_json)?;
     validate_settings_values_json(values_json)?;
 
-    let schema: Value = serde_json::from_str(schema_json)
-        .map_err(|_| ValidationError::InvalidSettingsSchema)?;
-    let values: Value = serde_json::from_str(values_json)
-        .map_err(|_| ValidationError::InvalidSettingsValues)?;
+    let schema: Value =
+        serde_json::from_str(schema_json).map_err(|_| ValidationError::InvalidSettingsSchema)?;
+    let values: Value =
+        serde_json::from_str(values_json).map_err(|_| ValidationError::InvalidSettingsValues)?;
     let Some(value_object) = values.as_object() else {
         return Err(ValidationError::InvalidSettingsValues);
     };
@@ -424,7 +530,9 @@ pub fn validate_settings_values_for_schema_json(
         .and_then(Value::as_array)
         .ok_or(ValidationError::InvalidSettingsSchema)?;
     for field in fields {
-        let object = field.as_object().ok_or(ValidationError::InvalidSettingsSchema)?;
+        let object = field
+            .as_object()
+            .ok_or(ValidationError::InvalidSettingsSchema)?;
         if object.get("type").and_then(Value::as_str) != Some("secret") {
             continue;
         }
@@ -442,11 +550,13 @@ pub fn validate_settings_values_for_schema_json(
             return Err(ValidationError::InvalidSettingsValues);
         };
         let expected_owner_id = dashboard_widget_secret_owner_id(instance_id, key);
-        let valid_ref =
-            secret_ref.get("type").and_then(Value::as_str) == Some("secretRef") &&
-            secret_ref.get("ownerId").and_then(Value::as_str) == Some(expected_owner_id.as_str()) &&
-            secret_ref.get("hasSecret").and_then(Value::as_bool) == Some(true) &&
-            secret_ref.get("updatedAt").is_none_or(|value| value.is_string());
+        let valid_ref = secret_ref.get("type").and_then(Value::as_str) == Some("secretRef")
+            && secret_ref.get("ownerId").and_then(Value::as_str)
+                == Some(expected_owner_id.as_str())
+            && secret_ref.get("hasSecret").and_then(Value::as_bool) == Some(true)
+            && secret_ref
+                .get("updatedAt")
+                .is_none_or(|value| value.is_string());
         if !valid_ref {
             return Err(ValidationError::InvalidSettingsValues);
         }
@@ -458,8 +568,8 @@ pub fn validate_settings_values_json(json: &str) -> Result<(), ValidationError> 
     if json.len() > MAX_SETTINGS_VALUES_BYTES {
         return Err(ValidationError::InvalidSettingsValues);
     }
-    let parsed: Value = serde_json::from_str(json)
-        .map_err(|_| ValidationError::InvalidSettingsValues)?;
+    let parsed: Value =
+        serde_json::from_str(json).map_err(|_| ValidationError::InvalidSettingsValues)?;
     if parsed.is_object() {
         Ok(())
     } else {
@@ -472,11 +582,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn preset_known() { assert!(validate_preset("panel").is_ok()); }
+    fn preset_known() {
+        assert!(validate_preset("panel").is_ok());
+    }
 
     #[test]
     fn preset_unknown() {
-        assert_eq!(validate_preset("does-not-exist"), Err(ValidationError::InvalidPreset));
+        assert_eq!(
+            validate_preset("does-not-exist"),
+            Err(ValidationError::InvalidPreset)
+        );
     }
 
     #[test]
@@ -496,11 +611,16 @@ mod tests {
 
     #[test]
     fn icon_unknown() {
-        assert_eq!(validate_icon("NotAnIcon"), Err(ValidationError::InvalidIcon));
+        assert_eq!(
+            validate_icon("NotAnIcon"),
+            Err(ValidationError::InvalidIcon)
+        );
     }
 
     #[test]
-    fn grid_bounds_in_range() { assert!(validate_grid_bounds(0, 0, 4, 3).is_ok()); }
+    fn grid_bounds_in_range() {
+        assert!(validate_grid_bounds(0, 0, 4, 3).is_ok());
+    }
 
     #[test]
     fn grid_bounds_overflow() {
@@ -519,11 +639,16 @@ mod tests {
     }
 
     #[test]
-    fn grid_density_known() { assert!(validate_grid_density("compact").is_ok()); }
+    fn grid_density_known() {
+        assert!(validate_grid_density("compact").is_ok());
+    }
 
     #[test]
     fn grid_density_unknown() {
-        assert_eq!(validate_grid_density("huge"), Err(ValidationError::InvalidGridDensity));
+        assert_eq!(
+            validate_grid_density("huge"),
+            Err(ValidationError::InvalidGridDensity)
+        );
     }
 
     #[test]
@@ -714,7 +839,11 @@ mod tests {
     fn secret_settings_values_must_be_references() {
         let schema = r#"{"fields":[{"type":"secret","key":"apiKey","label":"API key"}]}"#;
         assert_eq!(
-            validate_settings_values_for_schema_json(schema, r#"{"apiKey":"plain-text"}"#, "inst-1"),
+            validate_settings_values_for_schema_json(
+                schema,
+                r#"{"apiKey":"plain-text"}"#,
+                "inst-1"
+            ),
             Err(ValidationError::InvalidSettingsValues),
         );
         assert!(validate_settings_values_for_schema_json(

@@ -1,3 +1,9 @@
+use futures::StreamExt;
+use github_copilot_sdk::{
+    Client as CopilotSdkClient, ClientOptions as CopilotSdkClientOptions, Error as CopilotSdkError,
+    LogLevel as CopilotSdkLogLevel, MessageOptions as CopilotSdkMessageOptions,
+    SessionConfig as CopilotSdkSessionConfig, SessionEvent as CopilotSdkSessionEvent,
+};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -9,7 +15,6 @@ use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use futures::StreamExt;
 use tokio::sync::oneshot;
 use tokio::time::timeout;
 
@@ -25,6 +30,7 @@ use crate::storage::{
 };
 
 static LIVE_TOOL_REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
+const COPILOT_SDK_RESPONSE_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub struct AssistantLiveToolBridge {
     pending: Mutex<HashMap<String, oneshot::Sender<String>>>,
@@ -37,12 +43,7 @@ impl AssistantLiveToolBridge {
         }
     }
 
-    async fn request(
-        &self,
-        app: &tauri::AppHandle,
-        tool_name: &str,
-        args: Value,
-    ) -> String {
+    async fn request(&self, app: &tauri::AppHandle, tool_name: &str, args: Value) -> String {
         let request_id = new_live_tool_request_id();
         let (tx, rx) = oneshot::channel();
         match self.pending.lock() {
@@ -68,10 +69,13 @@ impl AssistantLiveToolBridge {
 
         match timeout(Duration::from_secs(15), rx).await {
             Ok(Ok(result)) => result,
-            Ok(Err(_)) => json!({"ok": false, "error": "live tool response channel closed"}).to_string(),
+            Ok(Err(_)) => {
+                json!({"ok": false, "error": "live tool response channel closed"}).to_string()
+            }
             Err(_) => {
                 let _ = self.take_pending(&request_id);
-                json!({"ok": false, "error": "live tool timed out waiting for the frontend"}).to_string()
+                json!({"ok": false, "error": "live tool timed out waiting for the frontend"})
+                    .to_string()
             }
         }
     }
@@ -358,11 +362,25 @@ pub struct AgentRunResponse {
 #[derive(Clone, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum AiStreamEvent {
-    ReasoningDelta { delta: String },
-    ContentDelta { delta: String },
-    ToolCallStart { tool_id: String, tool_name: String },
-    ToolCallEnd { tool_id: String, tool_name: String, error: Option<String> },
-    Done { model: String, provider_kind: String },
+    ReasoningDelta {
+        delta: String,
+    },
+    ContentDelta {
+        delta: String,
+    },
+    ToolCallStart {
+        tool_id: String,
+        tool_name: String,
+    },
+    ToolCallEnd {
+        tool_id: String,
+        tool_name: String,
+        error: Option<String>,
+    },
+    Done {
+        model: String,
+        provider_kind: String,
+    },
 }
 
 pub async fn run_agent(
@@ -383,7 +401,9 @@ pub async fn run_agent_streaming(
     channel: Channel<Value>,
 ) -> Result<AgentRunResponse, String> {
     let provider = provider_for(settings.provider_kind())?;
-    provider.run_streaming(app, settings, api_key, request, channel).await
+    provider
+        .run_streaming(app, settings, api_key, request, channel)
+        .await
 }
 
 trait AgentProvider {
@@ -405,6 +425,62 @@ trait AgentProvider {
     ) -> Result<AgentRunResponse, String>;
 }
 
+enum AgentProviderAdapter {
+    OpenAi(OpenAiCompatibleProvider),
+    GitHubCopilot(GitHubCopilotProvider),
+}
+
+impl AgentProviderAdapter {
+    #[cfg(test)]
+    fn provider_kind(&self) -> &'static str {
+        match self {
+            AgentProviderAdapter::OpenAi(provider) => provider.provider_kind,
+            AgentProviderAdapter::GitHubCopilot(provider) => provider.provider_kind(),
+        }
+    }
+}
+
+impl AgentProvider for AgentProviderAdapter {
+    async fn run(
+        &self,
+        app: tauri::AppHandle,
+        settings: AiProviderSettings,
+        api_key: Option<String>,
+        request: AgentRunRequest,
+    ) -> Result<AgentRunResponse, String> {
+        match self {
+            AgentProviderAdapter::OpenAi(provider) => {
+                provider.run(app, settings, api_key, request).await
+            }
+            AgentProviderAdapter::GitHubCopilot(provider) => {
+                provider.run(app, settings, api_key, request).await
+            }
+        }
+    }
+
+    async fn run_streaming(
+        &self,
+        app: tauri::AppHandle,
+        settings: AiProviderSettings,
+        api_key: Option<String>,
+        request: AgentRunRequest,
+        channel: Channel<Value>,
+    ) -> Result<AgentRunResponse, String> {
+        match self {
+            AgentProviderAdapter::OpenAi(provider) => {
+                provider
+                    .run_streaming(app, settings, api_key, request, channel)
+                    .await
+            }
+            AgentProviderAdapter::GitHubCopilot(provider) => {
+                provider
+                    .run_streaming(app, settings, api_key, request, channel)
+                    .await
+            }
+        }
+    }
+}
+
 struct OpenAiCompatibleProvider {
     provider_kind: &'static str,
     label: &'static str,
@@ -412,6 +488,52 @@ struct OpenAiCompatibleProvider {
     endpoint_style: OpenAiEndpointStyle,
     auth_style: OpenAiAuthStyle,
     default_api: OpenAiApiStyle,
+}
+
+struct GitHubCopilotProvider;
+
+impl GitHubCopilotProvider {
+    fn provider_kind(&self) -> &'static str {
+        "github-copilot"
+    }
+
+    fn label(&self) -> &'static str {
+        "GitHub Copilot"
+    }
+}
+
+impl AgentProvider for GitHubCopilotProvider {
+    async fn run(
+        &self,
+        app: tauri::AppHandle,
+        settings: AiProviderSettings,
+        api_key: Option<String>,
+        request: AgentRunRequest,
+    ) -> Result<AgentRunResponse, String> {
+        let token = require_copilot_token(api_key)?;
+        let prompt = build_copilot_prompt(request);
+        let output = run_copilot_sdk(&app, &settings, &token, &prompt).await?;
+        finish_copilot_response(self, settings.model(), output)
+    }
+
+    async fn run_streaming(
+        &self,
+        app: tauri::AppHandle,
+        settings: AiProviderSettings,
+        api_key: Option<String>,
+        request: AgentRunRequest,
+        channel: Channel<Value>,
+    ) -> Result<AgentRunResponse, String> {
+        let response = self.run(app, settings, api_key, request).await?;
+        let _ = channel.send(json!(AiStreamEvent::ContentDelta {
+            delta: response.content.clone(),
+        }));
+        let _ = channel.send(json!(AiStreamEvent::Done {
+            model: response.model.clone(),
+            provider_kind: response.provider_kind.clone(),
+        }));
+        Ok(response)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -532,7 +654,6 @@ struct ToolCallAccumulator {
     name: String,
     arguments: String,
 }
-
 
 fn ai_http_client(allow_insecure_tls: bool) -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
@@ -1351,8 +1472,7 @@ impl OpenAiCompatibleProvider {
             messages.push(OpenAiCompatibleMessage {
                 role: "assistant".to_string(),
                 content: OpenAiCompatibleContent::Text(content.clone()),
-                reasoning_content: streamed_reasoning
-                    .filter(|r| !r.trim().is_empty()),
+                reasoning_content: streamed_reasoning.filter(|r| !r.trim().is_empty()),
                 tool_call_id: None,
                 tool_calls: Some(
                     tool_calls
@@ -1385,7 +1505,8 @@ impl OpenAiCompatibleProvider {
                         tool_name: tool_call.function.name.clone(),
                     },
                 )?;
-                let result = run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
+                let result =
+                    run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
                 ai_debug!(
                     "tool end provider={} model={} subturn={} id={} name={} result_len={}",
                     self.provider_kind,
@@ -1583,7 +1704,8 @@ impl OpenAiCompatibleProvider {
                         tool_name: tool_call.function.name.clone(),
                     },
                 )?;
-                let result = run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
+                let result =
+                    run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
                 let tool_error = tool_result_error(&result);
                 input.push(json!({
                     "type": "function_call_output",
@@ -1773,6 +1895,278 @@ fn finish_agent_response(
         content,
         reasoning_content: reasoning_content.filter(|r| !r.trim().is_empty()),
     })
+}
+
+fn finish_copilot_response(
+    provider: &GitHubCopilotProvider,
+    model: &str,
+    content: String,
+) -> Result<AgentRunResponse, String> {
+    let content = content.trim().to_string();
+    if content.is_empty() {
+        return Err(format!(
+            "{} response did not include assistant content",
+            provider.label()
+        ));
+    }
+
+    Ok(AgentRunResponse {
+        provider_kind: provider.provider_kind().to_string(),
+        model: model.to_string(),
+        content,
+        reasoning_content: None,
+    })
+}
+
+fn require_copilot_token(api_key: Option<String>) -> Result<String, String> {
+    api_key
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            "Connect GitHub Copilot in Settings before AI Assistant can chat.".to_string()
+        })
+}
+
+async fn run_copilot_sdk(
+    app: &tauri::AppHandle,
+    settings: &AiProviderSettings,
+    token: &str,
+    prompt: &str,
+) -> Result<String, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to locate app data directory: {error}"))?;
+    fs::create_dir_all(&app_data_dir)
+        .map_err(|error| format!("failed to create app data directory: {error}"))?;
+
+    let client_options = build_copilot_sdk_client_options(app_data_dir, token);
+    let client = CopilotSdkClient::start(client_options)
+        .await
+        .map_err(|error| format_copilot_sdk_error("start", error))?;
+
+    let result = async {
+        let session = client
+            .create_session(build_copilot_sdk_session_config(settings, token))
+            .await
+            .map_err(|error| format_copilot_sdk_error("create session", error))?;
+
+        let content_result = async {
+            let response_event = session
+                .send_and_wait(
+                    CopilotSdkMessageOptions::new(prompt)
+                        .with_wait_timeout(COPILOT_SDK_RESPONSE_TIMEOUT),
+                )
+                .await
+                .map_err(|error| format_copilot_sdk_error("send message", error))?;
+
+            let content = response_event
+                .as_ref()
+                .and_then(copilot_assistant_message_content);
+
+            match content {
+                Some(content) => Ok(content),
+                None => {
+                    let messages = session
+                        .get_messages()
+                        .await
+                        .map_err(|error| format_copilot_sdk_error("read messages", error))?;
+                    last_copilot_assistant_message_content(&messages).ok_or_else(|| {
+                        "GitHub Copilot SDK returned no assistant content".to_string()
+                    })
+                }
+            }
+        }
+        .await;
+
+        if let Err(error) = session.disconnect().await {
+            ai_debug!("copilot sdk session disconnect failed: {error}");
+        }
+
+        content_result
+    }
+    .await;
+
+    if let Err(error) = client.stop().await {
+        ai_debug!("copilot sdk client stop failed: {error}");
+    }
+
+    result
+}
+
+fn build_copilot_sdk_client_options(app_data_dir: PathBuf, token: &str) -> CopilotSdkClientOptions {
+    CopilotSdkClientOptions::new()
+        .with_cwd(app_data_dir.clone())
+        .with_copilot_home(app_data_dir.join("copilot"))
+        .with_github_token(token)
+        .with_use_logged_in_user(false)
+        .with_log_level(CopilotSdkLogLevel::Error)
+        .with_session_idle_timeout_seconds(0)
+}
+
+fn build_copilot_sdk_session_config(
+    settings: &AiProviderSettings,
+    token: &str,
+) -> CopilotSdkSessionConfig {
+    let mut config = CopilotSdkSessionConfig::default();
+    config.client_name = Some("KKTerm".to_string());
+    config.model = Some(settings.model().to_string());
+    config.streaming = Some(false);
+    config.tools = Some(Vec::new());
+    config.available_tools = Some(Vec::new());
+    config.mcp_servers = Some(HashMap::new());
+    config.enable_config_discovery = Some(false);
+    config.request_user_input = Some(false);
+    config.request_permission = Some(false);
+    config.request_exit_plan_mode = Some(false);
+    config.request_auto_mode_switch = Some(false);
+    config.request_elicitation = Some(false);
+    config.github_token = Some(token.to_string());
+    config
+}
+
+fn format_copilot_sdk_error(stage: &str, error: CopilotSdkError) -> String {
+    match error {
+        CopilotSdkError::BinaryNotFound { name, hint } => format!(
+            "GitHub Copilot SDK could not find {name}. Rebuild KKTerm with bundled Copilot CLI support, set COPILOT_CLI_PATH, or install the Copilot CLI. {hint}"
+        ),
+        _ => format!("GitHub Copilot SDK failed to {stage}: {error}"),
+    }
+}
+
+fn copilot_assistant_message_content(event: &CopilotSdkSessionEvent) -> Option<String> {
+    if event.event_type != "assistant.message" {
+        return None;
+    }
+    event
+        .data
+        .get("content")
+        .and_then(Value::as_str)
+        .map(|content| content.trim().to_string())
+        .filter(|content| !content.is_empty())
+}
+
+fn last_copilot_assistant_message_content(events: &[CopilotSdkSessionEvent]) -> Option<String> {
+    events
+        .iter()
+        .rev()
+        .find_map(copilot_assistant_message_content)
+}
+
+fn build_copilot_prompt(request: AgentRunRequest) -> String {
+    let mut sections = Vec::new();
+    sections.push(
+        "You are the KKTerm AI Assistant. Help with local-first terminal, SSH, SFTP, dashboard, and workspace workflows. Do not execute commands; propose commands for user approval when needed."
+            .to_string(),
+    );
+
+    if let Some(system_context) = non_empty(request.system_context) {
+        sections.push(format!("System context:\n{system_context}"));
+    }
+    if let Some(intent) = non_empty(request.intent) {
+        sections.push(format!("User intent:\n{intent}"));
+    }
+    if let Some(output_language) = non_empty(request.output_language) {
+        sections.push(format!(
+            "Respond in this language when practical: {output_language}"
+        ));
+    }
+    if let Some(page_context) = request.page_context {
+        if !page_context.text.trim().is_empty() {
+            sections.push(format!(
+                "Page context ({label}):\n{text}",
+                label = page_context.source_label,
+                text = truncate_prompt_section(&page_context.text, 12_000)
+            ));
+        }
+    }
+    if let Some(selected_output) = non_empty(request.selected_output) {
+        sections.push(format!(
+            "Selected output ({label}):\n{output}",
+            label = request.context_label,
+            output = truncate_prompt_section(&selected_output, 16_000)
+        ));
+    }
+
+    let screenshots: Vec<_> = request
+        .screenshots
+        .into_iter()
+        .chain(request.screenshot)
+        .filter(|screenshot| !screenshot.source_label.trim().is_empty())
+        .map(|screenshot| screenshot.source_label)
+        .collect();
+    if !screenshots.is_empty() {
+        sections.push(format!(
+            "Screenshots were attached from: {}. The current Copilot SDK chat bridge does not pass image bytes, so ask for text details if visual inspection is required.",
+            screenshots.join(", ")
+        ));
+    }
+
+    let mut file_sections = Vec::new();
+    for file in request.files {
+        if let Some(text) = file
+            .text
+            .or(file.file_data)
+            .filter(|text| !text.trim().is_empty())
+        {
+            file_sections.push(format!(
+                "File ({label}{mime}):\n{text}",
+                label = file.source_label,
+                mime = file
+                    .mime_type
+                    .map(|mime| format!(", {mime}"))
+                    .unwrap_or_default(),
+                text = truncate_prompt_section(&text, 12_000)
+            ));
+        } else if file.data_url.is_some() {
+            file_sections.push(format!(
+                "File ({label}) was attached as binary data and is not included in this Copilot SDK chat prompt.",
+                label = file.source_label
+            ));
+        }
+    }
+    if !file_sections.is_empty() {
+        sections.push(file_sections.join("\n\n"));
+    }
+
+    if !request.messages.is_empty() {
+        let history = request
+            .messages
+            .into_iter()
+            .map(|message| {
+                let role = if message.role.trim().is_empty() {
+                    "message".to_string()
+                } else {
+                    message.role
+                };
+                format!(
+                    "{role}: {content}",
+                    content = truncate_prompt_section(&message.content, 8_000)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n\n");
+        sections.push(format!("Conversation history:\n{history}"));
+    }
+
+    sections.push(format!("User request:\n{}", request.prompt));
+    sections.join("\n\n---\n\n")
+}
+
+fn non_empty(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn truncate_prompt_section(value: &str, max_chars: usize) -> String {
+    let value = value.trim();
+    if value.chars().count() <= max_chars {
+        return value.to_string();
+    }
+    let mut truncated = value.chars().take(max_chars).collect::<String>();
+    truncated.push_str("\n[truncated]");
+    truncated
 }
 
 fn require_streamed_assistant_content(
@@ -2234,7 +2628,6 @@ fn request_secret_entry_schema() -> Value {
     })
 }
 
-
 fn dashboard_create_widget_schema() -> Value {
     json!({
         "type":"object",
@@ -2393,7 +2786,8 @@ async fn run_ai_tool(
 ) -> String {
     let args: Value = serde_json::from_str(&call.function.arguments).unwrap_or_else(|_| json!({}));
     let tool_settings = settings.tools();
-    if tool_requires_allow_all(&call.function.name) && settings.tool_permission_mode() != "allowAll" {
+    if tool_requires_allow_all(&call.function.name) && settings.tool_permission_mode() != "allowAll"
+    {
         return tool_permission_required_result(&call.function.name);
     }
     match call.function.name.as_str() {
@@ -2428,8 +2822,7 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
         || (tool_name.starts_with("dashboard_") && tool_name != "dashboard_load_state")
         || matches!(
             tool_name,
-            "connection_create" | "connection_update" | "connection_delete"
-                | "connection_open"
+            "connection_create" | "connection_update" | "connection_delete" | "connection_open"
         )
         || matches!(
             tool_name,
@@ -2460,20 +2853,24 @@ fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
         "connection_list" => storage
             .list_connection_tree()
             .map(|tree| serde_json::to_value(tree).unwrap_or(Value::Null)),
-        "connection_create" => serde_json::from_value::<crate::storage::CreateConnectionRequest>(args)
-            .map_err(|error| format!("invalid connection_create request: {error}"))
-            .and_then(|request| {
-                storage
-                    .create_connection(request)
-                    .map(|connection| serde_json::to_value(connection).unwrap_or(Value::Null))
-            }),
-        "connection_update" => serde_json::from_value::<crate::storage::UpdateConnectionRequest>(args)
-            .map_err(|error| format!("invalid connection_update request: {error}"))
-            .and_then(|request| {
-                storage
-                    .update_connection(request)
-                    .map(|connection| serde_json::to_value(connection).unwrap_or(Value::Null))
-            }),
+        "connection_create" => {
+            serde_json::from_value::<crate::storage::CreateConnectionRequest>(args)
+                .map_err(|error| format!("invalid connection_create request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .create_connection(request)
+                        .map(|connection| serde_json::to_value(connection).unwrap_or(Value::Null))
+                })
+        }
+        "connection_update" => {
+            serde_json::from_value::<crate::storage::UpdateConnectionRequest>(args)
+                .map_err(|error| format!("invalid connection_update request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .update_connection(request)
+                        .map(|connection| serde_json::to_value(connection).unwrap_or(Value::Null))
+                })
+        }
         "connection_open" => {
             let id = arg_string(&args, "id");
             if id.is_empty() {
@@ -2489,9 +2886,7 @@ fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             if id.is_empty() {
                 Err("connection_delete requires id".to_string())
             } else {
-                storage
-                    .delete_connection(id)
-                    .map(|_| json!({"ok": true}))
+                storage.delete_connection(id).map(|_| json!({"ok": true}))
             }
         }
         _ => Err("Unknown Connection tool".to_string()),
@@ -2500,7 +2895,10 @@ fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     match result {
         Ok(value) => {
             if name != "connection_list" {
-                let _ = app.emit("connection-tree-changed", json!({ "source": "aiTool", "tool": name }));
+                let _ = app.emit(
+                    "connection-tree-changed",
+                    json!({ "source": "aiTool", "tool": name }),
+                );
             }
             value.to_string()
         }
@@ -2517,213 +2915,277 @@ async fn live_session_tool(app: &tauri::AppHandle, name: &str, args: Value) -> S
 
 fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     let storage = app.state::<Storage>();
-    let result: Result<Value, String> = storage.with_connection_infallible(|conn| {
-        match name {
-            "dashboard_load_state" => {
-                ds::load_state(conn)
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
+    let result: Result<Value, String> = storage.with_connection_infallible(|conn| match name {
+        "dashboard_load_state" => ds::load_state(conn)
+            .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+            .map_err(|e| format!("{e:?}")),
+        "dashboard_create_view" => {
+            let title = arg_string(&args, "title");
+            if title.is_empty() {
+                return Err("dashboard_create_view requires title".to_string());
             }
-            "dashboard_create_view" => {
-                let title = arg_string(&args, "title");
-                if title.is_empty() {
-                    return Err("dashboard_create_view requires title".to_string());
-                }
-                let grid_density = args.get("gridDensity").and_then(Value::as_str).map(str::to_owned);
-                let id = new_dashboard_id("view");
-                ds::create_view(conn, &id, &title, grid_density.as_deref())
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_update_view" => {
-                let id = arg_string(&args, "id");
-                if id.is_empty() {
-                    return Err("dashboard_update_view requires id".to_string());
-                }
-                let patch: ds::ViewPatch = serde_json::from_value(
-                    args.get("patch").cloned().unwrap_or(Value::Null)
-                ).map_err(|e| format!("invalid patch: {e}"))?;
-                ds::update_view(conn, &id, &patch)
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_remove_view" => {
-                let id = arg_string(&args, "id");
-                if id.is_empty() {
-                    return Err("dashboard_remove_view requires id".to_string());
-                }
-                ds::remove_view(conn, &id)
-                    .map(|_| json!({"ok": true}))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_reorder_views" => {
-                let ordered_ids: Vec<String> = args.get("orderedIds")
-                    .and_then(Value::as_array)
-                    .map(|arr| arr.iter().filter_map(Value::as_str).map(str::to_owned).collect())
-                    .unwrap_or_default();
-                ds::reorder_views(conn, &ordered_ids)
-                    .map(|_| json!({"ok": true}))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_add_instance" => {
-                let view_id = arg_string(&args, "viewId");
-                let kind = arg_string(&args, "kind");
-                let source_id = arg_string(&args, "sourceId");
-                let preset = arg_string(&args, "preset");
-                let accent_name = arg_string(&args, "accentName");
-                let icon_name = arg_string(&args, "iconName");
-                let grid_x = args.get("gridX").and_then(Value::as_i64).unwrap_or(0);
-                let grid_y = args.get("gridY").and_then(Value::as_i64).unwrap_or(0);
-                let mut grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
-                let mut grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
-                if grid_x + grid_w > 12 { grid_w = (12 - grid_x).max(1); }
-                if grid_w < 1 { grid_w = 1; }
-                if grid_h < 1 { grid_h = 1; }
-                let id = new_dashboard_id("inst");
-                ds::add_instance(conn, &id, &view_id, &kind, &source_id, &preset, &accent_name, &icon_name, grid_x, grid_y, grid_w, grid_h)
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_update_instance" => {
-                let id = arg_string(&args, "id");
-                if id.is_empty() {
-                    return Err("dashboard_update_instance requires id".to_string());
-                }
-                let patch: ds::InstancePatch = serde_json::from_value(
-                    args.get("patch").cloned().unwrap_or(Value::Null)
-                ).map_err(|e| format!("invalid patch: {e}"))?;
-                ds::update_instance(conn, &id, &patch)
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_remove_instance" => {
-                let id = arg_string(&args, "id");
-                if id.is_empty() {
-                    return Err("dashboard_remove_instance requires id".to_string());
-                }
-                ds::remove_instance(conn, &id)
-                    .map(|_| json!({"ok": true}))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_apply_layout" => {
-                let view_id = arg_string(&args, "viewId");
-                if view_id.is_empty() {
-                    return Err("dashboard_apply_layout requires viewId".to_string());
-                }
-                let layout: Vec<ds::LayoutEntry> = args.get("layout")
-                    .and_then(|v| serde_json::from_value(v.clone()).ok())
-                    .unwrap_or_default();
-                ds::apply_layout(conn, &view_id, &layout)
-                    .map(|_| json!({"ok": true}))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_create_widget" => {
-                let view_id = arg_string(&args, "viewId");
-                if view_id.is_empty() {
-                    return Err("dashboard_create_widget requires viewId".to_string());
-                }
-                let kind = arg_string(&args, "kind");
-                let title = arg_string(&args, "title");
-                let summary = arg_string(&args, "summary");
-                let category = arg_string(&args, "category");
-                let body = args.get("body").cloned().unwrap_or(Value::Null);
-                if body.is_null() {
-                    return Err("dashboard_create_widget requires body".to_string());
-                }
-                let body_json = serde_json::to_string(&body)
-                    .map_err(|e| format!("invalid body: {e}"))?;
-                let settings_schema_json = args
-                    .get("settingsSchema")
-                    .filter(|value| !value.is_null())
-                    .map(serde_json::to_string)
-                    .transpose()
-                    .map_err(|e| format!("invalid settingsSchema: {e}"))?;
-                let preset = arg_string(&args, "preset");
-                let accent_name = arg_string(&args, "accentName");
-                let icon_name = arg_string(&args, "iconName");
-                let grid_x = args.get("gridX").and_then(Value::as_i64).unwrap_or(0);
-                let grid_y = args.get("gridY").and_then(Value::as_i64).unwrap_or(0);
-                let requested_grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
-                let requested_grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
-                let (mut grid_w, mut grid_h) = normalize_ai_widget_initial_size(
-                    &kind,
-                    &title,
-                    &summary,
-                    &category,
-                    &body,
-                    requested_grid_w,
-                    requested_grid_h,
-                );
-                if grid_x + grid_w > 12 { grid_w = (12 - grid_x).max(1); }
-                if grid_w < 1 { grid_w = 1; }
-                if grid_h < 1 { grid_h = 1; }
-                let custom_widget_id = new_dashboard_id("cw");
-                let instance_id = new_dashboard_id("inst");
-                let custom_widget = ds::create_custom_widget(
-                    conn, &custom_widget_id, &kind, &title, &summary, &category, &body_json,
-                    settings_schema_json.as_deref(), "agent",
-                )
-                    .map_err(|e| format!("{e:?}"))?;
-                let instance = match ds::add_instance(conn, &instance_id, &view_id, &kind, &custom_widget_id, &preset, &accent_name, &icon_name, grid_x, grid_y, grid_w, grid_h) {
-                    Ok(instance) => instance,
-                    Err(error) => {
-                        let _ = ds::remove_custom_widget(conn, &custom_widget_id, true);
-                        return Err(format!("{error:?}"));
-                    }
-                };
-                Ok(json!({ "customWidget": custom_widget, "instance": instance }))
-            }
-            "dashboard_create_custom_widget" => {
-                let kind = arg_string(&args, "kind");
-                let title = arg_string(&args, "title");
-                let summary = arg_string(&args, "summary");
-                let category = arg_string(&args, "category");
-                let body_json = arg_string(&args, "bodyJson");
-                let settings_schema_json = args
-                    .get("settingsSchemaJson")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned);
-                let created_by = arg_string(&args, "createdBy");
-                let id = new_dashboard_id("cw");
-                ds::create_custom_widget(
-                    conn, &id, &kind, &title, &summary, &category, &body_json,
-                    settings_schema_json.as_deref(), &created_by,
-                )
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_update_custom_widget" => {
-                let id = arg_string(&args, "id");
-                if id.is_empty() {
-                    return Err("dashboard_update_custom_widget requires id".to_string());
-                }
-                let patch: ds::CustomWidgetPatch = serde_json::from_value(
-                    normalize_dashboard_custom_widget_patch(args.get("patch").cloned().unwrap_or(Value::Null))?
-                ).map_err(|e| format!("invalid patch: {e}"))?;
-                ds::update_custom_widget(conn, &id, &patch)
-                    .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_remove_custom_widget" => {
-                let id = arg_string(&args, "id");
-                if id.is_empty() {
-                    return Err("dashboard_remove_custom_widget requires id".to_string());
-                }
-                let force = args.get("forceDeleteInstances").and_then(Value::as_bool).unwrap_or(false);
-                ds::remove_custom_widget(conn, &id, force)
-                    .map(|_| json!({"ok": true}))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            "dashboard_reset" => {
-                ds::reset_dashboard(conn)
-                    .map(|_| json!({"ok": true}))
-                    .map_err(|e| format!("{e:?}"))
-            }
-            _ => Err(format!("unknown dashboard tool: {name}")),
+            let grid_density = args
+                .get("gridDensity")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            let id = new_dashboard_id("view");
+            ds::create_view(conn, &id, &title, grid_density.as_deref())
+                .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                .map_err(|e| format!("{e:?}"))
         }
+        "dashboard_update_view" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                return Err("dashboard_update_view requires id".to_string());
+            }
+            let patch: ds::ViewPatch =
+                serde_json::from_value(args.get("patch").cloned().unwrap_or(Value::Null))
+                    .map_err(|e| format!("invalid patch: {e}"))?;
+            ds::update_view(conn, &id, &patch)
+                .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_remove_view" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                return Err("dashboard_remove_view requires id".to_string());
+            }
+            ds::remove_view(conn, &id)
+                .map(|_| json!({"ok": true}))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_reorder_views" => {
+            let ordered_ids: Vec<String> = args
+                .get("orderedIds")
+                .and_then(Value::as_array)
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_owned)
+                        .collect()
+                })
+                .unwrap_or_default();
+            ds::reorder_views(conn, &ordered_ids)
+                .map(|_| json!({"ok": true}))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_add_instance" => {
+            let view_id = arg_string(&args, "viewId");
+            let kind = arg_string(&args, "kind");
+            let source_id = arg_string(&args, "sourceId");
+            let preset = arg_string(&args, "preset");
+            let accent_name = arg_string(&args, "accentName");
+            let icon_name = arg_string(&args, "iconName");
+            let grid_x = args.get("gridX").and_then(Value::as_i64).unwrap_or(0);
+            let grid_y = args.get("gridY").and_then(Value::as_i64).unwrap_or(0);
+            let mut grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
+            let mut grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
+            if grid_x + grid_w > 12 {
+                grid_w = (12 - grid_x).max(1);
+            }
+            if grid_w < 1 {
+                grid_w = 1;
+            }
+            if grid_h < 1 {
+                grid_h = 1;
+            }
+            let id = new_dashboard_id("inst");
+            ds::add_instance(
+                conn,
+                &id,
+                &view_id,
+                &kind,
+                &source_id,
+                &preset,
+                &accent_name,
+                &icon_name,
+                grid_x,
+                grid_y,
+                grid_w,
+                grid_h,
+            )
+            .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+            .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_update_instance" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                return Err("dashboard_update_instance requires id".to_string());
+            }
+            let patch: ds::InstancePatch =
+                serde_json::from_value(args.get("patch").cloned().unwrap_or(Value::Null))
+                    .map_err(|e| format!("invalid patch: {e}"))?;
+            ds::update_instance(conn, &id, &patch)
+                .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_remove_instance" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                return Err("dashboard_remove_instance requires id".to_string());
+            }
+            ds::remove_instance(conn, &id)
+                .map(|_| json!({"ok": true}))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_apply_layout" => {
+            let view_id = arg_string(&args, "viewId");
+            if view_id.is_empty() {
+                return Err("dashboard_apply_layout requires viewId".to_string());
+            }
+            let layout: Vec<ds::LayoutEntry> = args
+                .get("layout")
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            ds::apply_layout(conn, &view_id, &layout)
+                .map(|_| json!({"ok": true}))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_create_widget" => {
+            let view_id = arg_string(&args, "viewId");
+            if view_id.is_empty() {
+                return Err("dashboard_create_widget requires viewId".to_string());
+            }
+            let kind = arg_string(&args, "kind");
+            let title = arg_string(&args, "title");
+            let summary = arg_string(&args, "summary");
+            let category = arg_string(&args, "category");
+            let body = args.get("body").cloned().unwrap_or(Value::Null);
+            if body.is_null() {
+                return Err("dashboard_create_widget requires body".to_string());
+            }
+            let body_json =
+                serde_json::to_string(&body).map_err(|e| format!("invalid body: {e}"))?;
+            let settings_schema_json = args
+                .get("settingsSchema")
+                .filter(|value| !value.is_null())
+                .map(serde_json::to_string)
+                .transpose()
+                .map_err(|e| format!("invalid settingsSchema: {e}"))?;
+            let preset = arg_string(&args, "preset");
+            let accent_name = arg_string(&args, "accentName");
+            let icon_name = arg_string(&args, "iconName");
+            let grid_x = args.get("gridX").and_then(Value::as_i64).unwrap_or(0);
+            let grid_y = args.get("gridY").and_then(Value::as_i64).unwrap_or(0);
+            let requested_grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
+            let requested_grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
+            let (mut grid_w, mut grid_h) = normalize_ai_widget_initial_size(
+                &kind,
+                &title,
+                &summary,
+                &category,
+                &body,
+                requested_grid_w,
+                requested_grid_h,
+            );
+            if grid_x + grid_w > 12 {
+                grid_w = (12 - grid_x).max(1);
+            }
+            if grid_w < 1 {
+                grid_w = 1;
+            }
+            if grid_h < 1 {
+                grid_h = 1;
+            }
+            let custom_widget_id = new_dashboard_id("cw");
+            let instance_id = new_dashboard_id("inst");
+            let custom_widget = ds::create_custom_widget(
+                conn,
+                &custom_widget_id,
+                &kind,
+                &title,
+                &summary,
+                &category,
+                &body_json,
+                settings_schema_json.as_deref(),
+                "agent",
+            )
+            .map_err(|e| format!("{e:?}"))?;
+            let instance = match ds::add_instance(
+                conn,
+                &instance_id,
+                &view_id,
+                &kind,
+                &custom_widget_id,
+                &preset,
+                &accent_name,
+                &icon_name,
+                grid_x,
+                grid_y,
+                grid_w,
+                grid_h,
+            ) {
+                Ok(instance) => instance,
+                Err(error) => {
+                    let _ = ds::remove_custom_widget(conn, &custom_widget_id, true);
+                    return Err(format!("{error:?}"));
+                }
+            };
+            Ok(json!({ "customWidget": custom_widget, "instance": instance }))
+        }
+        "dashboard_create_custom_widget" => {
+            let kind = arg_string(&args, "kind");
+            let title = arg_string(&args, "title");
+            let summary = arg_string(&args, "summary");
+            let category = arg_string(&args, "category");
+            let body_json = arg_string(&args, "bodyJson");
+            let settings_schema_json = args
+                .get("settingsSchemaJson")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            let created_by = arg_string(&args, "createdBy");
+            let id = new_dashboard_id("cw");
+            ds::create_custom_widget(
+                conn,
+                &id,
+                &kind,
+                &title,
+                &summary,
+                &category,
+                &body_json,
+                settings_schema_json.as_deref(),
+                &created_by,
+            )
+            .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+            .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_update_custom_widget" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                return Err("dashboard_update_custom_widget requires id".to_string());
+            }
+            let patch: ds::CustomWidgetPatch =
+                serde_json::from_value(normalize_dashboard_custom_widget_patch(
+                    args.get("patch").cloned().unwrap_or(Value::Null),
+                )?)
+                .map_err(|e| format!("invalid patch: {e}"))?;
+            ds::update_custom_widget(conn, &id, &patch)
+                .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_remove_custom_widget" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                return Err("dashboard_remove_custom_widget requires id".to_string());
+            }
+            let force = args
+                .get("forceDeleteInstances")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            ds::remove_custom_widget(conn, &id, force)
+                .map(|_| json!({"ok": true}))
+                .map_err(|e| format!("{e:?}"))
+        }
+        "dashboard_reset" => ds::reset_dashboard(conn)
+            .map(|_| json!({"ok": true}))
+            .map_err(|e| format!("{e:?}")),
+        _ => Err(format!("unknown dashboard tool: {name}")),
     });
     if result.is_ok() && is_dashboard_mutating_tool(name) {
-        let _ = app.emit("dashboard-changed", json!({ "source": "aiTool", "tool": name }));
+        let _ = app.emit(
+            "dashboard-changed",
+            json!({ "source": "aiTool", "tool": name }),
+        );
     }
     match result {
         Ok(v) => serde_json::to_string(&v).unwrap_or_else(|_| "{}".to_string()),
@@ -2863,7 +3325,10 @@ fn valid_secret_field_key(value: &str) -> bool {
 fn current_time_tool() -> String {
     time::OffsetDateTime::now_local()
         .ok()
-        .and_then(|t| t.format(&time::format_description::well_known::Rfc3339).ok())
+        .and_then(|t| {
+            t.format(&time::format_description::well_known::Rfc3339)
+                .ok()
+        })
         .unwrap_or_else(|| {
             let utc = time::OffsetDateTime::now_utc();
             utc.format(&time::format_description::well_known::Rfc3339)
@@ -3157,8 +3622,7 @@ fn extract_readable_text(html: &str) -> String {
 
     if let Ok(selector) = Selector::parse("body") {
         if let Some(body) = document.select(&selector).next() {
-            let combined: String =
-                body.text().collect::<Vec<_>>().join(" ");
+            let combined: String = body.text().collect::<Vec<_>>().join(" ");
             return clean_text(&combined).chars().take(8000).collect();
         }
     }
@@ -3217,10 +3681,7 @@ async fn web_search_scraper(query: &str, allow_insecure_tls: bool) -> String {
         Err(_) => {}
     }
 
-    let html_url = format!(
-        "https://html.duckduckgo.com/html/?q={}",
-        url_encode(query)
-    );
+    let html_url = format!("https://html.duckduckgo.com/html/?q={}", url_encode(query));
     match client.get(&html_url).send().await {
         Ok(response) => match response.text().await {
             Ok(html) => {
@@ -3231,8 +3692,7 @@ async fn web_search_scraper(query: &str, allow_insecure_tls: bool) -> String {
                         if i >= 6 {
                             break;
                         }
-                        let snippet: String =
-                            el.text().collect::<Vec<_>>().join(" ");
+                        let snippet: String = el.text().collect::<Vec<_>>().join(" ");
                         let cleaned = clean_text(&snippet);
                         if !cleaned.is_empty() {
                             result.push_str(&cleaned);
@@ -3241,10 +3701,7 @@ async fn web_search_scraper(query: &str, allow_insecure_tls: bool) -> String {
                     }
                 }
                 if result.is_empty() {
-                    clean_text(&strip_html(&html))
-                        .chars()
-                        .take(4000)
-                        .collect()
+                    clean_text(&strip_html(&html)).chars().take(4000).collect()
                 } else {
                     result.chars().take(4000).collect()
                 }
@@ -3333,11 +3790,7 @@ async fn web_search_tavily(query: &str, api_key: &str, allow_insecure_tls: bool)
     }
 }
 
-async fn web_search_searxng(
-    query: &str,
-    instance_url: &str,
-    allow_insecure_tls: bool,
-) -> String {
+async fn web_search_searxng(query: &str, instance_url: &str, allow_insecure_tls: bool) -> String {
     let client = match build_web_client(allow_insecure_tls) {
         Ok(c) => c,
         Err(e) => return e,
@@ -4309,14 +4762,15 @@ mod tests {
     #[test]
     fn streamed_final_answer_requires_visible_content() {
         let provider = provider_for("deepseek").expect("DeepSeek provider is wired");
+        let provider = match provider {
+            AgentProviderAdapter::OpenAi(provider) => provider,
+            AgentProviderAdapter::GitHubCopilot(_) => panic!("DeepSeek should use OpenAI adapter"),
+        };
 
         let error = require_streamed_assistant_content(&provider, "   ")
             .expect_err("empty streamed assistant turns are rejected");
 
-        assert_eq!(
-            error,
-            "DeepSeek response did not include assistant content"
-        );
+        assert_eq!(error, "DeepSeek response did not include assistant content");
         assert!(require_streamed_assistant_content(&provider, "It is 11:34 PM.").is_ok());
     }
 
@@ -4346,8 +4800,8 @@ mod tests {
             tool_calls: None,
         };
 
-        let assistant_json = serde_json::to_value(&assistant_message)
-            .expect("assistant tool-call turn serializes");
+        let assistant_json =
+            serde_json::to_value(&assistant_message).expect("assistant tool-call turn serializes");
         let tool_json = serde_json::to_value(&tool_message).expect("tool result serializes");
 
         assert_eq!(assistant_json["role"], "assistant");
@@ -4357,7 +4811,10 @@ mod tests {
         );
         assert_eq!(assistant_json["tool_calls"][0]["id"], "call_time");
         assert_eq!(assistant_json["tool_calls"][0]["type"], "function");
-        assert_eq!(assistant_json["tool_calls"][0]["function"]["name"], "current_time");
+        assert_eq!(
+            assistant_json["tool_calls"][0]["function"]["name"],
+            "current_time"
+        );
         assert_eq!(tool_json["role"], "tool");
         assert_eq!(tool_json["tool_call_id"], "call_time");
         assert_eq!(tool_json["content"], "2026-05-12T23:00:00+08:00");
@@ -4470,9 +4927,7 @@ mod tests {
             })
             .expect("secret settings field branch is present");
 
-        assert!(!secret_branch
-            .pointer("/properties/defaultValue")
-            .is_some());
+        assert!(!secret_branch.pointer("/properties/defaultValue").is_some());
         assert!(!secret_branch
             .pointer("/required")
             .and_then(Value::as_array)
@@ -4493,10 +4948,7 @@ mod tests {
             .find(|tool| tool.function.name == "dashboard_update_custom_widget")
             .expect("dashboard update custom widget tool exists");
 
-        assert!(tool
-            .function
-            .description
-            .contains("Prefer patch.body"));
+        assert!(tool.function.description.contains("Prefer patch.body"));
         assert!(tool
             .function
             .parameters
@@ -4545,7 +4997,10 @@ mod tests {
             .find(|tool| tool.function.name == "request_secret_entry")
             .expect("secret entry request tool is available");
 
-        assert!(tool.function.description.contains("without exposing the secret"));
+        assert!(tool
+            .function
+            .description
+            .contains("without exposing the secret"));
         assert_eq!(
             tool.function.parameters.pointer("/properties/kind/enum"),
             Some(&json!(["widgetSecret", "aiApiKey"]))
@@ -4554,28 +5009,39 @@ mod tests {
 
     #[test]
     fn request_secret_entry_tool_builds_widget_secret_directive() {
-        let result = request_secret_entry_tool(json!({
-            "kind": "widgetSecret",
-            "instanceId": "inst-123",
-            "fieldKey": "apiKey",
-            "label": "API key",
-            "description": "Used to fetch population data",
-            "placeholder": null
-        }), "openrouter", None);
+        let result = request_secret_entry_tool(
+            json!({
+                "kind": "widgetSecret",
+                "instanceId": "inst-123",
+                "fieldKey": "apiKey",
+                "label": "API key",
+                "description": "Used to fetch population data",
+                "placeholder": null
+            }),
+            "openrouter",
+            None,
+        );
         let value: Value = serde_json::from_str(&result).expect("tool result is JSON");
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "dashboard-widget-secret:inst-123:apiKey");
-        assert!(value["secretRequestMarkdown"].as_str().unwrap().contains("```kkterm-secret-request"));
+        assert!(value["secretRequestMarkdown"]
+            .as_str()
+            .unwrap()
+            .contains("```kkterm-secret-request"));
         assert!(!result.contains("secret\":\""));
     }
 
     #[test]
     fn request_secret_entry_tool_uses_active_ai_provider_owner() {
-        let result = request_secret_entry_tool(json!({
-            "kind": "aiApiKey",
-            "label": "OpenRouter API key"
-        }), "openrouter", None);
+        let result = request_secret_entry_tool(
+            json!({
+                "kind": "aiApiKey",
+                "label": "OpenRouter API key"
+            }),
+            "openrouter",
+            None,
+        );
         let value: Value = serde_json::from_str(&result).expect("tool result is JSON");
 
         assert_eq!(value["ok"], true);
@@ -4652,13 +5118,17 @@ mod tests {
         assert!(tool_requires_allow_all("session_terminal_send_text"));
         assert!(tool_requires_allow_all("session_remote_desktop_send_text"));
         assert!(tool_requires_allow_all("session_remote_desktop_keypress"));
-        assert!(tool_requires_allow_all("session_remote_desktop_mouse_click"));
+        assert!(tool_requires_allow_all(
+            "session_remote_desktop_mouse_click"
+        ));
         assert!(tool_requires_allow_all("session_file_browser_delete"));
         assert!(!tool_requires_allow_all("dashboard_load_state"));
         assert!(!tool_requires_allow_all("connection_list"));
         assert!(!tool_requires_allow_all("session_state"));
         assert!(!tool_requires_allow_all("session_terminal_read_buffer"));
-        assert!(!tool_requires_allow_all("session_remote_desktop_screenshot"));
+        assert!(!tool_requires_allow_all(
+            "session_remote_desktop_screenshot"
+        ));
         assert!(!tool_requires_allow_all("session_file_browser_list"));
         assert!(!tool_requires_allow_all("current_time"));
 
@@ -4700,8 +5170,7 @@ mod tests {
 
     #[test]
     fn assistant_file_tool_paths_stay_inside_app_data() {
-        let root =
-            std::env::temp_dir().join(format!("kkterm-ai-tool-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("kkterm-ai-tool-test-{}", std::process::id()));
         let nested = root.join("nested");
         std::fs::create_dir_all(&nested).expect("test app data directory is created");
         let inside = nested.join("log.txt");
@@ -4721,8 +5190,31 @@ mod tests {
     fn deepseek_provider_uses_openai_compatible_adapter() {
         let provider = provider_for("deepseek").expect("DeepSeek provider is wired");
 
-        assert_eq!(provider.provider_kind, "deepseek");
-        assert!(provider.requires_api_key);
+        match provider {
+            AgentProviderAdapter::OpenAi(provider) => {
+                assert_eq!(provider.provider_kind, "deepseek");
+                assert!(provider.requires_api_key);
+            }
+            AgentProviderAdapter::GitHubCopilot(_) => panic!("DeepSeek should use OpenAI adapter"),
+        }
+    }
+
+    #[test]
+    fn github_copilot_provider_is_wired() {
+        let provider = provider_for("github-copilot").expect("GitHub Copilot provider is wired");
+
+        assert_eq!(provider.provider_kind(), "github-copilot");
+    }
+
+    #[test]
+    fn github_copilot_sdk_options_use_stored_token_only() {
+        let app_data_dir = PathBuf::from("C:/kkterm/app-data");
+        let options = build_copilot_sdk_client_options(app_data_dir.clone(), "ghu_test-token");
+
+        assert_eq!(options.cwd, app_data_dir);
+        assert_eq!(options.copilot_home, Some(app_data_dir.join("copilot")));
+        assert_eq!(options.github_token.as_deref(), Some("ghu_test-token"));
+        assert_eq!(options.use_logged_in_user, Some(false));
     }
 
     #[test]

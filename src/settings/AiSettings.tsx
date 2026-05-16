@@ -11,7 +11,12 @@ import {
 } from "../ai/providers";
 import { SUPPORTED_LANGUAGES } from "../i18n/config";
 import { aiProviderSecretOwnerId } from "../lib/settings";
-import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
+import {
+  invokeCommand,
+  isTauriRuntime,
+  openExternalUrl,
+  type GitHubCopilotDeviceFlow,
+} from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type {
   AiAssistantToolId,
@@ -199,6 +204,59 @@ function AiOutputLanguageControl({
   );
 }
 
+function GitHubCopilotConnectionControl({
+  deviceFlow,
+  hasApiKey,
+  isPolling,
+  onConnect,
+  onDisconnect,
+}: {
+  deviceFlow: GitHubCopilotDeviceFlow | null;
+  hasApiKey: boolean;
+  isPolling: boolean;
+  onConnect: () => void;
+  onDisconnect: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="settings-copilot-connection">
+      <p className="field-hint">{t("settings.copilotConnectionHint")}</p>
+      {deviceFlow ? (
+        <div className="settings-copilot-code">
+          <strong>{t("settings.copilotAuthCode", { code: deviceFlow.userCode })}</strong>
+          <button
+            className="settings-api-key-link"
+            onClick={() => void openExternalUrl(deviceFlow.verificationUri)}
+            type="button"
+          >
+            {t("settings.copilotOpenDevicePage")}
+          </button>
+          <small>{t("settings.copilotAuthPending")}</small>
+        </div>
+      ) : null}
+      <div className="settings-copilot-actions">
+        <button
+          className="toolbar-button"
+          disabled={isPolling || Boolean(deviceFlow) || hasApiKey || !isTauriRuntime()}
+          onClick={onConnect}
+          type="button"
+        >
+          {t("settings.copilotConnect")}
+        </button>
+        <button
+          className="toolbar-button"
+          disabled={isPolling || !hasApiKey || !isTauriRuntime()}
+          onClick={onDisconnect}
+          type="button"
+        >
+          {t("settings.copilotDisconnect")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const AI_ASSISTANT_TOOL_IDS: AiAssistantToolId[] = [
   "currentTime",
   "webSearch",
@@ -374,6 +432,10 @@ export function AiSettings() {
   const [searchApiKeyDraft, setSearchApiKeyDraft] = useState("");
   const [searchApiKeyStoredMask, setSearchApiKeyStoredMask] = useState(createStoredApiKeyMask);
   const [hasSearchApiKey, setHasSearchApiKey] = useState(false);
+  const [copilotDeviceFlow, setCopilotDeviceFlow] =
+    useState<GitHubCopilotDeviceFlow | null>(null);
+  const [copilotPollIntervalSeconds, setCopilotPollIntervalSeconds] = useState(0);
+  const [isCopilotPolling, setIsCopilotPolling] = useState(false);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(aiProviderSettings) ||
     apiKeyDraft.trim().length > 0 ||
@@ -434,6 +496,56 @@ export function AiSettings() {
     };
   }, [draft.searchProvider]);
 
+  useEffect(() => {
+    if (!copilotDeviceFlow || !isTauriRuntime()) return;
+    let disposed = false;
+    const delayMs = Math.max(1, copilotPollIntervalSeconds || copilotDeviceFlow.interval) * 1000;
+    const timeoutId = window.setTimeout(() => {
+      setIsCopilotPolling(true);
+      void invokeCommand("poll_github_copilot_device_flow", {
+        request: { deviceCode: copilotDeviceFlow.deviceCode },
+      })
+        .then((response) => {
+          if (disposed) return;
+          if (response.status === "authorized") {
+            setCopilotDeviceFlow(null);
+            setIsCopilotPolling(false);
+            setSelectedProviderHasApiKey(true);
+            if (draft.providerKind === "github-copilot") {
+              setAiProviderHasApiKey(true);
+            }
+            showStatusBarNotice(t("settings.copilotConnected"), { tone: "success" });
+            return;
+          }
+          const nextInterval =
+            response.status === "slowDown"
+              ? Math.max(1, copilotPollIntervalSeconds + (response.interval ?? 5))
+              : Math.max(1, response.interval ?? copilotPollIntervalSeconds);
+          setCopilotPollIntervalSeconds(nextInterval);
+          setIsCopilotPolling(false);
+        })
+        .catch((error) => {
+          if (disposed) return;
+          setCopilotDeviceFlow(null);
+          setIsCopilotPolling(false);
+          showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+            tone: "error",
+          });
+        });
+    }, delayMs);
+    return () => {
+      disposed = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    copilotDeviceFlow,
+    copilotPollIntervalSeconds,
+    draft.providerKind,
+    setAiProviderHasApiKey,
+    showStatusBarNotice,
+    t,
+  ]);
+
   async function handleSave() {
     try {
       const nextSettings = normalizeAiProviderDraft(draft);
@@ -493,6 +605,46 @@ export function AiSettings() {
     }));
     setApiKeyDraft("");
     setSelectedProviderHasApiKey(false);
+    setCopilotDeviceFlow(null);
+    setCopilotPollIntervalSeconds(0);
+  }
+
+  async function handleConnectGitHubCopilot() {
+    if (!isTauriRuntime()) return;
+    try {
+      const flow = await invokeCommand("start_github_copilot_device_flow", undefined);
+      setCopilotDeviceFlow(flow);
+      setCopilotPollIntervalSeconds(flow.interval);
+      await openExternalUrl(flow.verificationUri);
+    } catch (error) {
+      setCopilotDeviceFlow(null);
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    }
+  }
+
+  async function handleDisconnectGitHubCopilot() {
+    if (!isTauriRuntime()) return;
+    try {
+      await invokeCommand("delete_secret", {
+        request: {
+          kind: "aiApiKey",
+          ownerId: aiProviderSecretOwnerId("github-copilot"),
+        },
+      });
+      setCopilotDeviceFlow(null);
+      setCopilotPollIntervalSeconds(0);
+      setSelectedProviderHasApiKey(false);
+      if (aiProviderSettings.providerKind === "github-copilot") {
+        setAiProviderHasApiKey(false);
+      }
+      showStatusBarNotice(t("settings.copilotDisconnected"), { tone: "success" });
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    }
   }
 
   return (
@@ -519,11 +671,6 @@ export function AiSettings() {
         <div>
           <p className="field-hint">{t("settings.aiProviderConnectionHint")}</p>
         </div>
-        {aiProviderDefinition.chatDisabledReasonKey ? (
-          <p className="settings-inline-warning">
-            {t(aiProviderDefinition.chatDisabledReasonKey)}
-          </p>
-        ) : null}
         <div className="form-grid ai-provider-selector-grid">
           <label>
             <span>{t("settings.provider")}</span>
@@ -541,6 +688,15 @@ export function AiSettings() {
             </select>
           </label>
         </div>
+        {draft.providerKind === "github-copilot" ? (
+          <GitHubCopilotConnectionControl
+            deviceFlow={copilotDeviceFlow}
+            hasApiKey={selectedProviderHasApiKey}
+            isPolling={isCopilotPolling}
+            onConnect={() => void handleConnectGitHubCopilot()}
+            onDisconnect={() => void handleDisconnectGitHubCopilot()}
+          />
+        ) : null}
 
         <div className="ai-provider-fields">
           {aiProviderDefinition.settingsFields.map((field) => (
