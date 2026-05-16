@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectionIcon } from "../../connections/ConnectionIcon";
@@ -127,7 +127,6 @@ export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
   const [launcherSearch, setLauncherSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const activeSessionCounts = useWorkspaceStore((state) => state.activeSessionCounts);
-  const openConnection = useWorkspaceStore((state) => state.openConnection);
 
   useEffect(() => {
     let disposed = false;
@@ -240,8 +239,6 @@ export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
     closeLauncher();
   }
 
-  const subtitle = activeConnection ? connectionSubtitle(activeConnection) : "";
-
   if (showLauncher) {
     return (
       <div
@@ -276,9 +273,6 @@ export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
                   type={connection.type}
                 />
                 <span className="dashboard-connection-launcher-name">{connection.name}</span>
-                <span className="dashboard-connection-launcher-sub">
-                  {connectionSubtitle(connection)}
-                </span>
                 <span className={`status-dot ${connection.status}`} />
                 {config.connectionIds.includes(connection.id) ? (
                   <span
@@ -326,29 +320,6 @@ export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
   return (
     <div className="dashboard-connection-widget">
       <div className="dashboard-connection-pane">
-        <div className="dashboard-connection-pane-toolbar">
-          <button
-            className="dashboard-connection-pane-name"
-            onClick={openLauncher}
-            type="button"
-          >
-            <ConnectionIcon
-              localShell={activeConnection.localShell}
-              size={13}
-              type={activeConnection.type}
-            />
-            <span>{activeConnection.name}</span>
-          </button>
-          {subtitle ? <span>{subtitle}</span> : null}
-          <button
-            className="dashboard-widget-icon-button compact"
-            onClick={() => openConnection(activeConnection)}
-            type="button"
-          >
-            <ExternalLink size={13} />
-            {t("dashboard.connectionWidgetOpenWorkspace")}
-          </button>
-        </div>
         {sessionConnection ? (
           <ConnectionWidgetSession
             connection={sessionConnection}
