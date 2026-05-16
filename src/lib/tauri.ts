@@ -1610,7 +1610,106 @@ type CommandMap = {
     args: { file: string };
     result: { dataUrl?: string; path?: string };
   };
+  mcp_list_servers: {
+    args: undefined;
+    result: McpServer[];
+  };
+  mcp_create_server: {
+    args: { request: McpCreateServerRequest };
+    result: McpServer;
+  };
+  mcp_update_server: {
+    args: { request: McpUpdateServerRequest };
+    result: McpServer;
+  };
+  mcp_delete_server: {
+    args: { id: string };
+    result: null;
+  };
+  mcp_refresh_tools: {
+    args: { id: string };
+    result: McpServer;
+  };
+  mcp_call_tool: {
+    args: { serverIdOrName: string; toolName: string; arguments: unknown };
+    result: McpCallResult;
+  };
 };
+
+export interface McpServer {
+  id: string;
+  name: string;
+  url: string;
+  headers: Record<string, string>;
+  secretHeaderName: string | null;
+  secretValueTemplate: string | null;
+  hasSecret: boolean;
+  tools: unknown;
+  toolsFetchedAt: string | null;
+  lastStatus: "ok" | "unreachable" | "auth_error" | "protocol_error" | "unknown";
+  lastError: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface McpCreateServerRequest {
+  name: string;
+  url: string;
+  headers?: Record<string, string>;
+  secretHeaderName?: string;
+  secretValueTemplate?: string;
+  secret?: string;
+}
+
+export interface McpUpdateServerRequest {
+  id: string;
+  name?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  secretHeaderName?: string | null;
+  secretValueTemplate?: string | null;
+  secret?: string | null;
+}
+
+export interface McpCallResult {
+  content: unknown;
+  isError: boolean;
+}
+
+export type McpCommandError =
+  | { kind: "validation"; reason: string }
+  | { kind: "notFound" }
+  | { kind: "duplicateName" }
+  | { kind: "keychainUnavailable" }
+  | { kind: "network"; message: string }
+  | { kind: "protocol"; message: string }
+  | { kind: "authError"; message: string }
+  | { kind: "toolError"; message: string }
+  | { kind: "internal"; message: string };
+
+export function describeMcpError(error: unknown): string {
+  if (error && typeof error === "object" && "kind" in error) {
+    const err = error as McpCommandError;
+    switch (err.kind) {
+      case "validation":
+        return err.reason;
+      case "notFound":
+        return i18next.t("settings.mcpErrorNotFound");
+      case "duplicateName":
+        return i18next.t("settings.mcpErrorDuplicateName");
+      case "keychainUnavailable":
+        return i18next.t("settings.mcpErrorKeychain");
+      case "network":
+      case "protocol":
+      case "authError":
+      case "toolError":
+      case "internal":
+        return err.message;
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
 
 export function invokeCommand<Name extends keyof CommandMap>(
   name: Name,
