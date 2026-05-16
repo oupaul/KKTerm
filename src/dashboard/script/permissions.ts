@@ -318,7 +318,10 @@ export function buildSrcdoc(
         });
       });
       chain.then(function () {
-        return injectScript(${source}, 'kkterm-dashboard-widget.js');
+        // Wrap user source in a sync IIFE so top-level \`return\` is legal
+        // (matches the effect-style "return cleanup" idiom AI generators emit).
+        // No leading newline: keeps user line N at blob line N for stack traces.
+        return injectScript('(function(){' + ${source} + '\\n})();', 'kkterm-dashboard-widget.js');
       }).catch(showError);
     })();
   </script>

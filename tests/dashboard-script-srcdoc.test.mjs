@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 import ts from "typescript";
 
 async function importTypeScriptModule(path) {
@@ -77,6 +78,30 @@ test("script widget host exposes keyed secret bridge", async () => {
   assert.match(srcdoc, /type: 'getSecret'/);
   assert.match(srcdoc, /type !== 'secretValue'/);
   assert.doesNotMatch(srcdoc, /widget-api-key/);
+});
+
+test("script widget wraps user source in IIFE so top-level return is legal", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+  );
+  // A realistic AI-generated body with effect-style cleanup return.
+  const source = "let t = setInterval(() => {}, 100);\nreturn () => clearInterval(t);";
+  const srcdoc = buildSrcdoc({ source, permissions: { network: false } });
+
+  // The wrapper must appear in the injected call, with the source flanked by
+  // the IIFE prefix and suffix.
+  assert.match(
+    srcdoc,
+    /injectScript\('\(function\(\){' \+ "let t = setInterval[^\n]*?clearInterval\(t\);" \+ '\\n}\)\(\);'/,
+  );
+
+  // The wrapped script that would actually execute in the iframe must parse
+  // as a top-level Program without "Illegal return statement".
+  const wrapped = `(function(){${source}\n})();`;
+  assert.doesNotThrow(() => new vm.Script(wrapped));
+  // And the unwrapped form must still be illegal — proving the wrapper is
+  // doing the work, not some lucky parser leniency.
+  assert.throws(() => new vm.Script(source), /Illegal return/);
 });
 
 test("script widget infers common local libraries from legacy generated source", async () => {
