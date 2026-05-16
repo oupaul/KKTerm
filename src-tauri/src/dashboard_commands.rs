@@ -12,10 +12,18 @@ use crate::secrets;
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DashboardCommandError {
-    Validation { reason: String },
+    Validation {
+        reason: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        detail: Option<String>,
+    },
     NotFound,
-    InstancesExist { instance_ids: Vec<String> },
-    Internal { message: String },
+    InstancesExist {
+        instance_ids: Vec<String>,
+    },
+    Internal {
+        message: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -28,9 +36,12 @@ pub struct DashboardCreatedWidget {
 impl From<ds::DashboardStorageError> for DashboardCommandError {
     fn from(value: ds::DashboardStorageError) -> Self {
         match value {
-            ds::DashboardStorageError::Validation(v) => DashboardCommandError::Validation {
-                reason: format!("{:?}", v),
-            },
+            ds::DashboardStorageError::Validation { kind, detail } => {
+                DashboardCommandError::Validation {
+                    reason: format!("{:?}", kind),
+                    detail,
+                }
+            }
             ds::DashboardStorageError::NotFound => DashboardCommandError::NotFound,
             ds::DashboardStorageError::InstancesExist { instance_ids } => {
                 DashboardCommandError::InstancesExist { instance_ids }

@@ -317,61 +317,151 @@ pub struct ScriptPermissions {
     pub poll_seconds: Option<u64>,
 }
 
+#[allow(dead_code)]
 pub fn validate_content_body_json(json: &str) -> Result<ContentBody, ValidationError> {
+    validate_content_body_json_detailed(json).map_err(|(kind, _)| kind)
+}
+
+pub fn validate_content_body_json_detailed(
+    json: &str,
+) -> Result<ContentBody, (ValidationError, Option<String>)> {
     if json.len() > MAX_CONTENT_BODY_BYTES {
-        return Err(ValidationError::ContentTooLarge);
+        return Err((
+            ValidationError::ContentTooLarge,
+            Some(format!(
+                "content bodyJson is {} bytes; max is {}",
+                json.len(),
+                MAX_CONTENT_BODY_BYTES
+            )),
+        ));
     }
-    let parsed: ContentBody =
-        serde_json::from_str(json).map_err(|_| ValidationError::InvalidContentShape)?;
+    let parsed: ContentBody = serde_json::from_str(json).map_err(|error| {
+        (
+            ValidationError::InvalidContentShape,
+            Some(format!("content bodyJson did not parse: {error}")),
+        )
+    })?;
     match &parsed {
         ContentBody::Markdown { data } => {
             if data.source.trim().is_empty() {
-                return Err(ValidationError::InvalidContentData);
+                return Err((
+                    ValidationError::InvalidContentData,
+                    Some("markdown content 'source' is empty".to_string()),
+                ));
             }
         }
         ContentBody::KvList { data } => {
-            if data.rows.is_empty() || data.rows.iter().any(|row| row.label.trim().is_empty()) {
-                return Err(ValidationError::InvalidContentData);
+            if data.rows.is_empty() {
+                return Err((
+                    ValidationError::InvalidContentData,
+                    Some("kvList content has no rows".to_string()),
+                ));
+            }
+            if data.rows.iter().any(|row| row.label.trim().is_empty()) {
+                return Err((
+                    ValidationError::InvalidContentData,
+                    Some("kvList row has empty label".to_string()),
+                ));
             }
         }
         ContentBody::Checklist { data } => {
-            if data.items.is_empty() || data.items.iter().any(|item| item.label.trim().is_empty()) {
-                return Err(ValidationError::InvalidContentData);
+            if data.items.is_empty() {
+                return Err((
+                    ValidationError::InvalidContentData,
+                    Some("checklist has no items".to_string()),
+                ));
+            }
+            if data.items.iter().any(|item| item.label.trim().is_empty()) {
+                return Err((
+                    ValidationError::InvalidContentData,
+                    Some("checklist item has empty label".to_string()),
+                ));
             }
         }
         ContentBody::Stat { data } => {
             if data.value.trim().is_empty() {
-                return Err(ValidationError::InvalidContentData);
+                return Err((
+                    ValidationError::InvalidContentData,
+                    Some("stat 'value' is empty".to_string()),
+                ));
             }
         }
     }
     Ok(parsed)
 }
 
+#[allow(dead_code)]
 pub fn validate_script_body_json(json: &str) -> Result<ScriptBody, ValidationError> {
+    validate_script_body_json_detailed(json).map_err(|(kind, _)| kind)
+}
+
+/// Same as `validate_script_body_json`, but also surfaces a human-readable
+/// detail string explaining which check failed. The detail is passed back to
+/// agents/clients so they can correct widget source without re-guessing.
+pub fn validate_script_body_json_detailed(
+    json: &str,
+) -> Result<ScriptBody, (ValidationError, Option<String>)> {
     if json.len() > MAX_SCRIPT_SOURCE_BYTES + 4096 {
-        return Err(ValidationError::ScriptTooLarge);
+        return Err((
+            ValidationError::ScriptTooLarge,
+            Some(format!(
+                "script bodyJson is {} bytes; envelope limit is {} bytes",
+                json.len(),
+                MAX_SCRIPT_SOURCE_BYTES + 4096
+            )),
+        ));
     }
-    let parsed: ScriptBody =
-        serde_json::from_str(json).map_err(|_| ValidationError::InvalidScriptBody)?;
+    let parsed: ScriptBody = serde_json::from_str(json).map_err(|error| {
+        (
+            ValidationError::InvalidScriptBody,
+            Some(format!("script bodyJson did not parse: {error}")),
+        )
+    })?;
     if parsed.source.trim().is_empty() {
-        return Err(ValidationError::InvalidScriptBody);
+        return Err((
+            ValidationError::InvalidScriptBody,
+            Some("script body 'source' is empty after trimming".to_string()),
+        ));
     }
     if parsed.source.len() > MAX_SCRIPT_SOURCE_BYTES {
-        return Err(ValidationError::ScriptTooLarge);
+        return Err((
+            ValidationError::ScriptTooLarge,
+            Some(format!(
+                "script source is {} bytes; max is {}",
+                parsed.source.len(),
+                MAX_SCRIPT_SOURCE_BYTES
+            )),
+        ));
     }
     if let Some(secs) = parsed.permissions.poll_seconds {
         if secs < MIN_POLL_SECONDS {
-            return Err(ValidationError::InvalidPollSeconds);
+            return Err((
+                ValidationError::InvalidPollSeconds,
+                Some(format!(
+                    "permissions.pollSeconds is {secs}; minimum is {MIN_POLL_SECONDS}"
+                )),
+            ));
         }
     }
     if let Some(libs) = &parsed.libraries {
         if libs.len() > MAX_WIDGET_LIBRARIES {
-            return Err(ValidationError::InvalidLibraries);
+            return Err((
+                ValidationError::InvalidLibraries,
+                Some(format!(
+                    "{} libraries listed; max is {}",
+                    libs.len(),
+                    MAX_WIDGET_LIBRARIES
+                )),
+            ));
         }
         for entry in libs {
             if !is_valid_library_key(entry) {
-                return Err(ValidationError::InvalidLibraries);
+                return Err((
+                    ValidationError::InvalidLibraries,
+                    Some(format!(
+                        "invalid library key {entry:?}; expected lowercase ASCII id"
+                    )),
+                ));
             }
         }
     }
@@ -390,17 +480,30 @@ fn is_valid_library_key(value: &str) -> bool {
     chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
 }
 
+#[allow(dead_code)]
 pub fn validate_custom_body_for_kind(kind: &str, body_json: &str) -> Result<(), ValidationError> {
+    validate_custom_body_for_kind_detailed(kind, body_json).map_err(|(kind, _)| kind)
+}
+
+pub fn validate_custom_body_for_kind_detailed(
+    kind: &str,
+    body_json: &str,
+) -> Result<(), (ValidationError, Option<String>)> {
     match kind {
         "content" => {
-            validate_content_body_json(body_json)?;
+            validate_content_body_json_detailed(body_json)?;
             Ok(())
         }
         "script" => {
-            validate_script_body_json(body_json)?;
+            validate_script_body_json_detailed(body_json)?;
             Ok(())
         }
-        _ => Err(ValidationError::InvalidCustomWidgetKind),
+        _ => Err((
+            ValidationError::InvalidCustomWidgetKind,
+            Some(format!(
+                "custom widget kind {kind:?} is not one of: content, script"
+            )),
+        )),
     }
 }
 

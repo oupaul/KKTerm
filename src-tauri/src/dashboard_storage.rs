@@ -4,7 +4,7 @@ use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dashboard_validation::{
-    dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_for_kind,
+    dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_for_kind_detailed,
     validate_custom_widget_kind, validate_grid_bounds, validate_grid_density, validate_icon,
     validate_kind, validate_preset, validate_settings_schema_json,
     validate_settings_values_for_schema_json, validate_title, ValidationError,
@@ -65,7 +65,7 @@ fn background_to_json(
             bg.validate()?;
             serde_json::to_string(bg)
                 .map(Some)
-                .map_err(|_| DashboardStorageError::Validation(ValidationError::InvalidBackground))
+                .map_err(|_| DashboardStorageError::validation(ValidationError::InvalidBackground))
         }
     }
 }
@@ -198,10 +198,44 @@ pub struct LayoutEntry {
 
 #[derive(Debug)]
 pub enum DashboardStorageError {
-    Validation(ValidationError),
+    Validation {
+        kind: ValidationError,
+        detail: Option<String>,
+    },
     Sqlite(rusqlite::Error),
     NotFound,
-    InstancesExist { instance_ids: Vec<String> },
+    InstancesExist {
+        instance_ids: Vec<String>,
+    },
+}
+
+impl DashboardStorageError {
+    pub fn validation(kind: ValidationError) -> Self {
+        Self::Validation { kind, detail: None }
+    }
+
+    pub fn validation_with_detail(kind: ValidationError, detail: Option<String>) -> Self {
+        Self::Validation { kind, detail }
+    }
+}
+
+impl std::fmt::Display for DashboardStorageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Validation { kind, detail: None } => {
+                write!(f, "Validation({kind:?})")
+            }
+            Self::Validation {
+                kind,
+                detail: Some(reason),
+            } => write!(f, "Validation({kind:?}): {reason}"),
+            Self::NotFound => write!(f, "NotFound"),
+            Self::InstancesExist { instance_ids } => {
+                write!(f, "InstancesExist({instance_ids:?})")
+            }
+            Self::Sqlite(error) => write!(f, "Sqlite: {error}"),
+        }
+    }
 }
 
 impl From<rusqlite::Error> for DashboardStorageError {
@@ -212,7 +246,16 @@ impl From<rusqlite::Error> for DashboardStorageError {
 
 impl From<ValidationError> for DashboardStorageError {
     fn from(value: ValidationError) -> Self {
-        Self::Validation(value)
+        Self::Validation {
+            kind: value,
+            detail: None,
+        }
+    }
+}
+
+impl From<(ValidationError, Option<String>)> for DashboardStorageError {
+    fn from((kind, detail): (ValidationError, Option<String>)) -> Self {
+        Self::Validation { kind, detail }
     }
 }
 
@@ -646,12 +689,15 @@ pub fn create_custom_widget(
 ) -> Result<DashboardCustomWidget, DashboardStorageError> {
     validate_custom_widget_kind(kind)?;
     validate_title(title)?;
-    validate_custom_body_for_kind(kind, body_json)?;
+    validate_custom_body_for_kind_detailed(kind, body_json)?;
     let settings_schema_json = settings_schema_json.unwrap_or(r#"{"fields":[]}"#);
     validate_settings_schema_json(settings_schema_json)?;
     if !matches!(created_by, "user" | "agent") {
-        return Err(DashboardStorageError::Validation(
+        return Err(DashboardStorageError::validation_with_detail(
             ValidationError::InvalidContentData,
+            Some(format!(
+                "createdBy must be 'user' or 'agent'; got {created_by:?}"
+            )),
         ));
     }
     conn.execute(
@@ -720,7 +766,7 @@ pub fn update_custom_widget(
         current.category = c;
     }
     if let Some(b) = patch.body_json.clone() {
-        validate_custom_body_for_kind(&current.kind, &b)?;
+        validate_custom_body_for_kind_detailed(&current.kind, &b)?;
         current.body_json = b;
     }
     if let Some(schema) = patch.settings_schema_json.clone() {
@@ -828,7 +874,7 @@ pub fn widget_secret_owner_id_for_instance(
         &instance.id,
     )?;
     let schema: serde_json::Value = serde_json::from_str(&schema_json)
-        .map_err(|_| DashboardStorageError::Validation(ValidationError::InvalidSettingsSchema))?;
+        .map_err(|_| DashboardStorageError::validation(ValidationError::InvalidSettingsSchema))?;
     let secret_field_exists = schema
         .get("fields")
         .and_then(serde_json::Value::as_array)
@@ -842,7 +888,7 @@ pub fn widget_secret_owner_id_for_instance(
         return Ok(None);
     }
     let values: serde_json::Value = serde_json::from_str(&instance.settings_values_json)
-        .map_err(|_| DashboardStorageError::Validation(ValidationError::InvalidSettingsValues))?;
+        .map_err(|_| DashboardStorageError::validation(ValidationError::InvalidSettingsValues))?;
     let expected_owner_id = dashboard_widget_secret_owner_id(&instance.id, key);
     let has_ref = values
         .get(key)
@@ -1047,9 +1093,10 @@ mod tests {
         );
         assert!(matches!(
             err,
-            Err(DashboardStorageError::Validation(
-                ValidationError::InvalidGridBounds
-            ))
+            Err(DashboardStorageError::Validation {
+                kind: ValidationError::InvalidGridBounds,
+                ..
+            })
         ));
     }
 
@@ -1137,9 +1184,10 @@ mod tests {
         );
         assert!(matches!(
             err,
-            Err(DashboardStorageError::Validation(
-                ValidationError::InvalidSettingsValues
-            ))
+            Err(DashboardStorageError::Validation {
+                kind: ValidationError::InvalidSettingsValues,
+                ..
+            })
         ));
 
         let updated = update_instance(&conn, "inst", &InstancePatch {
@@ -1270,9 +1318,10 @@ mod tests {
         );
         assert!(matches!(
             err,
-            Err(DashboardStorageError::Validation(
-                ValidationError::InvalidBackground
-            ))
+            Err(DashboardStorageError::Validation {
+                kind: ValidationError::InvalidBackground,
+                ..
+            })
         ));
     }
 

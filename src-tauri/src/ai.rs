@@ -796,6 +796,8 @@ fn log_provider_request<T: Serialize>(
     endpoint: &str,
     body: &T,
 ) {
+    let body_value = serde_json::to_value(body).unwrap_or(Value::Null);
+    let item_summary = summarize_request_items(&body_value);
     ai_interaction_debug!(
         "provider.request",
         json!({
@@ -804,9 +806,52 @@ fn log_provider_request<T: Serialize>(
             "model": model,
             "turn": turn_index,
             "endpoint": endpoint,
-            "body": body,
+            "itemSummary": item_summary,
+            "body": body_value,
         })
     );
+}
+
+/// Per-boundary diagnostics: for each top-level item the harness sends to the
+/// provider, log `type`, `role`, and approximate size. This catches malformed
+/// items (e.g. an `output_text` content part leaked to the top level) before
+/// the provider rejects the request with an opaque enum-only 400.
+fn summarize_request_items(body: &Value) -> Vec<Value> {
+    let array = body
+        .get("input")
+        .or_else(|| body.get("messages"))
+        .and_then(Value::as_array);
+    let Some(items) = array else {
+        return Vec::new();
+    };
+    items
+        .iter()
+        .enumerate()
+        .map(|(index, item)| {
+            let type_str = item.get("type").and_then(Value::as_str);
+            let role = item.get("role").and_then(Value::as_str);
+            let content_parts: Vec<&str> = item
+                .get("content")
+                .and_then(Value::as_array)
+                .map(|parts| {
+                    parts
+                        .iter()
+                        .filter_map(|part| part.get("type").and_then(Value::as_str))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let approx_bytes = serde_json::to_string(item)
+                .map(|s| s.len())
+                .unwrap_or_default();
+            json!({
+                "index": index,
+                "type": type_str,
+                "role": role,
+                "contentParts": content_parts,
+                "approxBytes": approx_bytes,
+            })
+        })
+        .collect()
 }
 
 fn log_provider_response(
@@ -1678,6 +1723,7 @@ impl OpenAiCompatibleProvider {
             .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
         let model = settings.model().to_string();
         let exhausted = true;
+        let mut tool_error_tracker = ConsecutiveToolErrorTracker::default();
 
         for turn_index in 0..10 {
             ai_debug!(
@@ -1817,6 +1863,8 @@ impl OpenAiCompatibleProvider {
                     result.len()
                 );
                 let tool_error = tool_result_error(&result);
+                let abort_message =
+                    tool_error_tracker.note(&tool_call.function.name, &tool_error);
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1832,6 +1880,16 @@ impl OpenAiCompatibleProvider {
                         error: tool_error,
                     },
                 )?;
+                if let Some(message) = abort_message {
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::Done {
+                            model: model.clone(),
+                            provider_kind: self.provider_kind.to_string(),
+                        },
+                    )?;
+                    return finish_agent_response(self, &model, message, None);
+                }
             }
         }
 
@@ -1947,6 +2005,7 @@ impl OpenAiCompatibleProvider {
 
         let mut input = responses_input_from_messages(messages, request.files);
         let resp_tool_defs = self.responses_tool_definitions_for_provider(&tool_definitions);
+        let mut tool_error_tracker = ConsecutiveToolErrorTracker::default();
 
         for turn_index in 0..10 {
             let request_body = OpenAiResponsesRequest {
@@ -2002,7 +2061,11 @@ impl OpenAiCompatibleProvider {
                 stream_responses_completions(response, &channel).await?;
 
             if let Some(output) = &content {
-                input.push(json!({"type": "output_text", "output_text": output}));
+                input.push(json!({
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": output}],
+                }));
             }
 
             if tool_calls.is_empty() {
@@ -2041,6 +2104,8 @@ impl OpenAiCompatibleProvider {
                 let result =
                     run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
                 let tool_error = tool_result_error(&result);
+                let abort_message =
+                    tool_error_tracker.note(&tool_call.function.name, &tool_error);
                 input.push(json!({
                     "type": "function_call_output",
                     "call_id": tool_call.id,
@@ -2054,6 +2119,16 @@ impl OpenAiCompatibleProvider {
                         error: tool_error,
                     },
                 )?;
+                if let Some(message) = abort_message {
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::Done {
+                            model: model.clone(),
+                            provider_kind: self.provider_kind.to_string(),
+                        },
+                    )?;
+                    return finish_agent_response(self, &model, message, None);
+                }
             }
         }
 
@@ -3489,7 +3564,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     let result: Result<Value, String> = storage.with_connection_infallible(|conn| match name {
         "dashboard_load_state" => ds::load_state(conn)
             .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-            .map_err(|e| format!("{e:?}")),
+            .map_err(|e| e.to_string()),
         "dashboard_create_view" => {
             let title = arg_string(&args, "title");
             if title.is_empty() {
@@ -3502,7 +3577,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             let id = new_dashboard_id("view");
             ds::create_view(conn, &id, &title, grid_density.as_deref())
                 .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_update_view" => {
             let id = arg_string(&args, "id");
@@ -3514,7 +3589,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                     .map_err(|e| format!("invalid patch: {e}"))?;
             ds::update_view(conn, &id, &patch)
                 .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_remove_view" => {
             let id = arg_string(&args, "id");
@@ -3523,7 +3598,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             }
             ds::remove_view(conn, &id)
                 .map(|_| json!({"ok": true}))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_reorder_views" => {
             let ordered_ids: Vec<String> = args
@@ -3538,7 +3613,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 .unwrap_or_default();
             ds::reorder_views(conn, &ordered_ids)
                 .map(|_| json!({"ok": true}))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_add_instance" => {
             let view_id = arg_string(&args, "viewId");
@@ -3576,7 +3651,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 grid_h,
             )
             .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-            .map_err(|e| format!("{e:?}"))
+            .map_err(|e| e.to_string())
         }
         "dashboard_update_instance" => {
             let id = arg_string(&args, "id");
@@ -3588,7 +3663,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                     .map_err(|e| format!("invalid patch: {e}"))?;
             ds::update_instance(conn, &id, &patch)
                 .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_remove_instance" => {
             let id = arg_string(&args, "id");
@@ -3597,7 +3672,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             }
             ds::remove_instance(conn, &id)
                 .map(|_| json!({"ok": true}))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_apply_layout" => {
             let view_id = arg_string(&args, "viewId");
@@ -3610,7 +3685,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 .unwrap_or_default();
             ds::apply_layout(conn, &view_id, &layout)
                 .map(|_| json!({"ok": true}))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_create_widget" => {
             let view_id = arg_string(&args, "viewId");
@@ -3696,7 +3771,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 settings_schema_json.as_deref(),
                 "agent",
             )
-            .map_err(|e| format!("{e:?}"))?;
+            .map_err(|e| e.to_string())?;
             ai_interaction_debug!(
                 "dashboard.create_widget.custom_created",
                 json!({
@@ -3767,7 +3842,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 &created_by,
             )
             .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-            .map_err(|e| format!("{e:?}"))
+            .map_err(|e| e.to_string())
         }
         "dashboard_update_custom_widget" => {
             let id = arg_string(&args, "id");
@@ -3781,7 +3856,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 .map_err(|e| format!("invalid patch: {e}"))?;
             ds::update_custom_widget(conn, &id, &patch)
                 .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_remove_custom_widget" => {
             let id = arg_string(&args, "id");
@@ -3794,11 +3869,11 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 .unwrap_or(false);
             ds::remove_custom_widget(conn, &id, force)
                 .map(|_| json!({"ok": true}))
-                .map_err(|e| format!("{e:?}"))
+                .map_err(|e| e.to_string())
         }
         "dashboard_reset" => ds::reset_dashboard(conn)
             .map(|_| json!({"ok": true}))
-            .map_err(|e| format!("{e:?}")),
+            .map_err(|e| e.to_string()),
         _ => Err(format!("unknown dashboard tool: {name}")),
     });
     if result.is_ok() && is_dashboard_mutating_tool(name) {
@@ -4135,6 +4210,47 @@ fn tool_result_error(result: &str) -> Option<String> {
         .and_then(|v| v.get("error").and_then(Value::as_str).map(str::to_string))
         .map(|e| e.trim().to_string())
         .filter(|e| !e.is_empty())
+}
+
+/// Maximum number of times the same `(tool, error)` pair may repeat
+/// consecutively before the agent loop aborts. Prevents pathological
+/// retry loops where the model regenerates the same broken tool call
+/// because the tool result gave it no actionable diagnostic.
+const MAX_CONSECUTIVE_TOOL_ERRORS: u8 = 3;
+
+#[derive(Default)]
+struct ConsecutiveToolErrorTracker {
+    signature: Option<String>,
+    count: u8,
+}
+
+impl ConsecutiveToolErrorTracker {
+    /// Update tracker after a tool call. If the same `(tool, error)` pair has
+    /// repeated `MAX_CONSECUTIVE_TOOL_ERRORS` times, return an explanatory
+    /// message the caller should surface to the user before bailing out.
+    fn note(&mut self, tool_name: &str, error: &Option<String>) -> Option<String> {
+        let Some(err) = error else {
+            self.signature = None;
+            self.count = 0;
+            return None;
+        };
+        let signature = format!("{tool_name}::{err}");
+        if self.signature.as_deref() == Some(signature.as_str()) {
+            self.count += 1;
+        } else {
+            self.count = 1;
+            self.signature = Some(signature);
+        }
+        if self.count >= MAX_CONSECUTIVE_TOOL_ERRORS {
+            Some(format!(
+                "Aborted tool loop: '{tool_name}' returned the same error {} times in a row. \
+Last error: {err}",
+                self.count
+            ))
+        } else {
+            None
+        }
+    }
 }
 
 fn is_destructive_command(command: &str) -> bool {
@@ -4555,6 +4671,7 @@ fn build_agent_messages(
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
         "SESSION TOOLS: Use session_state to discover active Tabs, pane ids, remote desktop targets, and SFTP/FTP browser Sessions before using session_* interaction tools. Terminal, remote desktop, and file browser tools operate on live Sessions, not saved Connections. Prefer read tools before mutating tools. For RDP/VNC, use send_text for text, keypress for named keys, and mouse_click for remote surface coordinates. In Prompt permission mode, mutating tools return permissionRequired; explain that the user must switch AI Assistant tool permissions to Allow All if they want automatic execution.".to_string(),
         "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. When the user reports an error in an existing AI-authored widget, use dashboard_load_state to read the current Dashboard custom widget source, then call dashboard_update_custom_widget with the matching custom widget id. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_load_state. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style; do not pick decorative colors at random. Be boundary-aware: size simple timers/counters at least 4x3, forms or images at least 5x4, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. Prefer schema/content widgets when possible, and keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use body.libraries for curated local script libraries such as mermaid and animejs; use permissions.network=true only for remote network access or CDN-loaded libraries. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret, and scripts read it with await KK.getSecret('fieldKey') only when needed. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images, fetches remote data, or loads external libraries from a CDN, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
+        "MCP IN WIDGETS: When a widget's source will call KK.callMcpTool('<server>', '<tool>', <args>), you MUST first discover the real tool list and parameter shape of that server before writing the widget. Use the mcp_list_tools tool (or read tool schemas from current page context) to look up the exact tool names, required argument keys, and response field names. Do not guess tool names like 'opendata-search_datasets' or invent arguments like 'agency' or 'normalised_only' and do not assume a response has fields like 'datasets[0].dataset_id' without verifying. Quote the tool's documented argument keys verbatim in the widget source, and parse the actual response shape returned by that tool. If a tool result does not match what the widget expects at runtime, fix the parser to match the real shape rather than retrying with the same guess. If the user names an MCP server (for example twinkle-hub) but no tool list is available, ask the user to confirm the server is connected before generating widget code that depends on it.".to_string(),
     ];
     if let Some(language) = normalize_output_language(output_language) {
         system_instructions.push(language);
