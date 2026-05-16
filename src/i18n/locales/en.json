@@ -686,6 +686,7 @@
     "aiProviderConnection": "Provider connection",
     "aiProviderConnectionHint": "Endpoint, model, reasoning, and API key.",
     "copilotConnectionHint": "Uses GitHub device sign-in. The returned token stays in the OS keychain.",
+    "copilotCliInstallHelp": "How to get Copilot CLI",
     "copilotConnect": "Connect GitHub Copilot",
     "copilotDisconnect": "Disconnect GitHub Copilot",
     "copilotAuthCode": "Enter code {{code}} on GitHub.",

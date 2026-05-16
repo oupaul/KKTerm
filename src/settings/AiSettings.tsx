@@ -31,6 +31,9 @@ import { ToggleSwitch } from "./ToggleSwitch";
 import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../i18n/config";
 
+const GITHUB_COPILOT_CLI_INSTALL_URL =
+  "https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli";
+
 function createStoredApiKeyMask() {
   const maskLength = 12 + Math.floor(Math.random() * 5);
   return "*".repeat(maskLength);
@@ -225,7 +228,17 @@ function GitHubCopilotConnectionControl({
 
   return (
     <div className="settings-copilot-connection">
-      <p className="field-hint">{t("settings.copilotConnectionHint")}</p>
+      <p className="field-hint">
+        {t("settings.copilotConnectionHint")}
+        {" "}
+        <button
+          className="settings-api-key-link"
+          onClick={() => void openExternalUrl(GITHUB_COPILOT_CLI_INSTALL_URL)}
+          type="button"
+        >
+          {t("settings.copilotCliInstallHelp")}
+        </button>
+      </p>
       {deviceFlow ? (
         <div className="settings-copilot-code">
           <strong>{t("settings.copilotAuthCode", { code: deviceFlow.userCode })}</strong>
