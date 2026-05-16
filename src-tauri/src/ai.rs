@@ -3892,14 +3892,10 @@ fn normalize_dashboard_custom_widget_patch(mut patch: Value) -> Result<Value, St
     let Some(object) = patch.as_object_mut() else {
         return Ok(patch);
     };
-    if object.get("bodyJson").is_none() {
-        if let Some(body) = object.remove("body") {
-            let body_json = serde_json::to_string(&body)
-                .map_err(|error| format!("invalid patch.body: {error}"))?;
-            object.insert("bodyJson".to_string(), Value::String(body_json));
-        }
-    } else {
-        object.remove("body");
+    if let Some(body) = object.remove("body") {
+        let body_json = serde_json::to_string(&body)
+            .map_err(|error| format!("invalid patch.body: {error}"))?;
+        object.insert("bodyJson".to_string(), Value::String(body_json));
     }
     Ok(patch)
 }
@@ -5871,6 +5867,38 @@ mod tests {
             .parameters
             .pointer("/properties/patch/properties/bodyJson")
             .is_some());
+    }
+
+    #[test]
+    fn dashboard_update_patch_prefers_structured_body_over_stale_body_json() {
+        let patch = json!({
+            "body": {
+                "source": "document.getElementById('root').textContent = 'ok';",
+                "permissions": {"network": false, "pollSeconds": null},
+                "htmlShim": null,
+                "libraries": []
+            },
+            "bodyJson": "{\"source\":\"stale\"} trailing"
+        });
+
+        let normalized =
+            normalize_dashboard_custom_widget_patch(patch).expect("patch normalizes");
+
+        let body_json = normalized
+            .get("bodyJson")
+            .and_then(Value::as_str)
+            .expect("structured body is serialized into bodyJson");
+
+        assert!(!normalized.get("body").is_some());
+        assert_eq!(
+            serde_json::from_str::<Value>(body_json).expect("bodyJson parses"),
+            json!({
+                "source": "document.getElementById('root').textContent = 'ok';",
+                "permissions": {"network": false, "pollSeconds": null},
+                "htmlShim": null,
+                "libraries": []
+            })
+        );
     }
 
     #[test]
