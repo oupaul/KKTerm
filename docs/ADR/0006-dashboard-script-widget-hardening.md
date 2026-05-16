@@ -78,19 +78,45 @@ both files in the same change.
 ### 3. Active-widget cap with eviction notification
 
 `ScriptWidgetHost` tracks active script widgets in a module-level
-`Map<id, setCapped>`. When a fourth widget tries to mount, it is shown a
-muted "Click to activate" placeholder instead of an iframe. Clicking the
-placeholder evicts the oldest active widget *and notifies it via the stored
-setter* so its component flips to `capped: true` and its iframe is removed
-from the DOM.
+`Map<id, setCapped>`. When a new widget tries to mount past the cap it is
+shown a muted "Click to activate" placeholder instead of an iframe.
+Clicking the placeholder evicts the oldest active widget *and notifies it
+via the stored setter* so its component flips to `capped: true` and its
+iframe is removed from the DOM.
 
 The notify step is load-bearing. An earlier draft of this fix kept the
 evicted widget tracked-but-still-rendered, so the cap silently exceeded
 itself the first time a user clicked the placeholder. The
 `evictOldestActiveScriptWidget` helper is the canonical eviction path.
 
-The cap is currently a hard-coded `3`. Exposing it as a setting is left to a
-future change.
+The cap is a user setting: **Settings → Dashboard → Performance → Active
+script widgets cap**, persisted on `DashboardSettings.maxActiveScriptWidgets`
+(Rust struct field + TypeScript interface), default **8**, hard-clamped
+`1..=100` at the storage boundary. The default rose from the original
+post-mortem value of 3 because dashboards with several lightweight script
+widgets need more headroom; the 100 ceiling is still well below the
+regression threshold on the original incident hardware.
+
+`ScriptWidgetHost` reads the cap from `useWorkspaceStore` and passes it
+into `tryActivateScriptWidget`. The mount effect depends on the cap, so:
+
+- **Raising the cap** lets a previously-capped widget activate the next
+  time it mounts. We do not auto-activate already-mounted placeholders —
+  the user can click any of them to swap in.
+- **Lowering the cap** does *not* retroactively tear down running iframes.
+  Only new mounts honor the lower value. This is intentional: we never
+  tear down a widget the user is actively looking at.
+
+The constants live in two places that must stay in sync:
+
+- `default_max_active_script_widgets()` and
+  `MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT` in `src-tauri/src/storage.rs`.
+- `MAX_ACTIVE_SCRIPT_WIDGETS_DEFAULT`, `_LIMIT`, `_MIN` in
+  `src/app-defaults.ts`.
+
+Bumping the upper bound requires changing both files, the
+`validate_dashboard_settings` clamp, and the localization_todo hint copy
+in `docs/localization_todo/settings.dashboardMaxActiveScriptWidgetsHint.md`.
 
 ### 4. Visibility-aware throttling via IntersectionObserver
 
@@ -180,7 +206,14 @@ the prompt missed.
 - Tightening the validator: add cases to the `validate_script_source_inner`
   / `strip_strings_and_comments` test groups in `dashboard_validation.rs`.
   Each new rejection rule must come with both a positive and a negative test.
-- Raising the active-widget cap: change `MAX_ACTIVE_SCRIPT_WIDGETS` in
-  `src/dashboard/script/ScriptWidgetHost.tsx`. The current value of `3` was
-  chosen empirically based on the original incident; raising it without
-  testing on a low-end Windows machine risks reintroducing the freeze.
+- Adjusting the active-widget cap: the user-facing knob is Settings →
+  Dashboard → Performance → Active script widgets cap. Changing the
+  default value or hard ceiling requires editing both
+  `default_max_active_script_widgets()` /
+  `MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT` in `src-tauri/src/storage.rs` and the
+  matching `MAX_ACTIVE_SCRIPT_WIDGETS_DEFAULT` / `_LIMIT` / `_MIN`
+  constants in `src/app-defaults.ts`. Both halves must move together —
+  the Rust validator is the source of truth at write time, the TS
+  constants drive the input's `min`/`max` clamp at edit time. Raising the
+  ceiling without testing on a low-end Windows machine risks
+  reintroducing the freeze.

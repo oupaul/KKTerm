@@ -9,6 +9,7 @@ import {
   type WidgetFilePickFilter,
 } from "../../lib/tauri";
 import { useDashboardStore } from "../state/dashboardStore";
+import { useWorkspaceStore } from "../../store";
 import type { DashboardWidgetInstance, ScriptBody } from "../types";
 import {
   parseJsonObject,
@@ -27,16 +28,25 @@ import { loadWidgetLibraries, resolveWidgetLibraryKeys } from "./widgetLibraries
 // component to flip its `capped` state and tear its iframe down. A bare
 // Set<string> would silently exceed the cap because the evicted iframe
 // would keep running.
-const MAX_ACTIVE_SCRIPT_WIDGETS = 3;
+//
+// The cap value lives in Settings → Dashboard
+// (`dashboardSettings.maxActiveScriptWidgets`), defaults to 8, and is clamped
+// 1..=100 by the Rust validator. Components pass the current value into
+// `tryActivateScriptWidget`; existing iframes are not retroactively
+// re-capped when the user lowers the limit (the next mount picks it up).
 type SetCapped = (capped: boolean) => void;
 const activeScriptWidgets = new Map<string, SetCapped>();
 
-function tryActivateScriptWidget(id: string, setCapped: SetCapped): boolean {
+function tryActivateScriptWidget(
+  id: string,
+  setCapped: SetCapped,
+  cap: number,
+): boolean {
   if (activeScriptWidgets.has(id)) {
     activeScriptWidgets.set(id, setCapped);
     return true;
   }
-  if (activeScriptWidgets.size >= MAX_ACTIVE_SCRIPT_WIDGETS) return false;
+  if (activeScriptWidgets.size >= cap) return false;
   activeScriptWidgets.set(id, setCapped);
   return true;
 }
@@ -70,6 +80,9 @@ export function ScriptWidgetHost({
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const updateInstance = useDashboardStore((s) => s.updateInstance);
+  const maxActiveScriptWidgets = useWorkspaceStore(
+    (s) => s.dashboardSettings.maxActiveScriptWidgets,
+  );
   const { key: reloadKey } = useScriptReloadHandle();
   const [capped, setCapped] = useState(false);
   const parsed = useMemo<ScriptBody | null>(() => {
@@ -91,23 +104,30 @@ export function ScriptWidgetHost({
   const requestedLibKey = requestedLibraries.join("|");
 
   // Harden 3: register this widget in the active set. If the cap is exceeded,
-  // show a lightweight placeholder instead of the full iframe.
+  // show a lightweight placeholder instead of the full iframe. Re-runs when
+  // the user changes the cap in Settings so a raised cap can let an
+  // otherwise-capped widget mount in place (lowering it does not retroactively
+  // tear down already-running iframes — only new mounts honor the lower cap).
   useEffect(() => {
-    const activated = tryActivateScriptWidget(instance.id, setCapped);
+    const activated = tryActivateScriptWidget(
+      instance.id,
+      setCapped,
+      maxActiveScriptWidgets,
+    );
     setCapped(!activated);
     return () => {
       deactivateScriptWidget(instance.id);
     };
-  }, [instance.id]);
+  }, [instance.id, maxActiveScriptWidgets]);
 
   const activateCapped = useCallback(() => {
     // Evict the oldest active widget (notifying it so its iframe tears
     // down) before taking its slot. Without the notify step the evicted
     // iframe keeps running and the cap is silently exceeded.
     evictOldestActiveScriptWidget(instance.id);
-    tryActivateScriptWidget(instance.id, setCapped);
+    tryActivateScriptWidget(instance.id, setCapped, maxActiveScriptWidgets);
     setCapped(false);
-  }, [instance.id]);
+  }, [instance.id, maxActiveScriptWidgets]);
 
   useEffect(() => {
     if (!parsed || capped) {
@@ -335,7 +355,7 @@ export function ScriptWidgetHost({
           opacity: 0.65, fontSize: 12, userSelect: "none",
         }}
       >
-        {t("dashboard.scriptWidgetCapped", { max: MAX_ACTIVE_SCRIPT_WIDGETS })}
+        {t("dashboard.scriptWidgetCapped", { max: maxActiveScriptWidgets })}
       </div>
     );
   }

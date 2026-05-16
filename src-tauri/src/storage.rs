@@ -312,6 +312,12 @@ pub struct AppLauncherSettings {
 pub struct DashboardSettings {
     pub confirm_remove: bool,
     pub default_landing_view: String,
+    /// Maximum number of script widgets allowed to run their iframe at the
+    /// same time on a Dashboard view. Excess widgets render as a clickable
+    /// placeholder until they are activated (see ADR 0006). Existing rows
+    /// without this field load with [`default_max_active_script_widgets`].
+    #[serde(default = "default_max_active_script_widgets")]
+    pub max_active_script_widgets: u32,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -3695,8 +3701,21 @@ fn default_dashboard_settings() -> DashboardSettings {
     DashboardSettings {
         confirm_remove: true,
         default_landing_view: "lastActive".to_string(),
+        max_active_script_widgets: default_max_active_script_widgets(),
     }
 }
+
+/// Default ceiling for simultaneously active script widgets on a Dashboard.
+/// Picked above the 3 used during the post-mortem (which was too tight for
+/// dashboards with several lightweight script widgets) but well below the
+/// 100 upper bound so heavy widgets do not silently regress the freeze.
+fn default_max_active_script_widgets() -> u32 {
+    8
+}
+
+/// Hard upper bound applied at the storage boundary. The Settings UI
+/// surfaces the same value to keep the slider/number-input clamp consistent.
+pub const MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT: u32 = 100;
 
 fn default_show_connected_connections_in_rail() -> bool {
     true
@@ -4009,6 +4028,13 @@ fn validate_dashboard_settings(
         "default Dashboard landing view",
         settings.default_landing_view,
     )?;
+    if settings.max_active_script_widgets < 1
+        || settings.max_active_script_widgets > MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT
+    {
+        return Err(format!(
+            "max active script widgets must be between 1 and {MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT}"
+        ));
+    }
     Ok(settings)
 }
 
@@ -5464,21 +5490,39 @@ mod tests {
             .expect("default dashboard settings load");
         assert!(defaults.confirm_remove);
         assert_eq!(defaults.default_landing_view, "lastActive");
+        assert_eq!(defaults.max_active_script_widgets, 8);
 
         let updated = storage
             .update_dashboard_settings(DashboardSettings {
                 confirm_remove: false,
                 default_landing_view: " view-default ".to_string(),
+                max_active_script_widgets: 20,
             })
             .expect("dashboard settings update");
         assert!(!updated.confirm_remove);
         assert_eq!(updated.default_landing_view, "view-default");
+        assert_eq!(updated.max_active_script_widgets, 20);
 
         let reloaded = storage
             .dashboard_settings()
             .expect("dashboard settings reload");
         assert!(!reloaded.confirm_remove);
         assert_eq!(reloaded.default_landing_view, "view-default");
+        assert_eq!(reloaded.max_active_script_widgets, 20);
+
+        // Out-of-range values are rejected at the storage boundary.
+        let too_low = storage.update_dashboard_settings(DashboardSettings {
+            confirm_remove: true,
+            default_landing_view: "lastActive".to_string(),
+            max_active_script_widgets: 0,
+        });
+        assert!(too_low.is_err(), "0 must be rejected");
+        let too_high = storage.update_dashboard_settings(DashboardSettings {
+            confirm_remove: true,
+            default_landing_view: "lastActive".to_string(),
+            max_active_script_widgets: 101,
+        });
+        assert!(too_high.is_err(), "101 must be rejected");
     }
 
     #[test]
