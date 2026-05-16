@@ -131,6 +131,7 @@
     "widgetLibraryLoadFailed": "Failed to load widget libraries: {{error}}",
     "missingBuiltInWidget": "Missing built-in widget: {{sourceId}}",
     "missingCustomWidget": "Missing custom widget: {{sourceId}}",
+    "scriptWidgetCapped": "Click to activate (max {{max}} active widgets)",
     "untitledWidget": "Widget",
     "customize": "Customize widget",
     "customizeSectionCommon": "Common",

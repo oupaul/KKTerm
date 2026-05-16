@@ -260,6 +260,17 @@ export function buildSrcdoc(
         requestPermission: function () { return Promise.resolve(false); },
       };
       window.KK = KK;
+      // Harden 2: visibility-aware throttling. When the host reports the widget
+      // is off-screen or scrolled away, script authors can check KK.isVisible()
+      // to pause expensive rAF/animation loops.
+      var _kkVisible = true;
+      KK.isVisible = function () { return _kkVisible; };
+      window.addEventListener('message', function (event) {
+        var data = event.data;
+        if (!data || !data.kk || data.type !== 'setVisible') return;
+        _kkVisible = data.visible === true;
+      });
+
       document.addEventListener('click', function (event) {
         const target = event.target && event.target.closest ? event.target.closest('a[href]') : null;
         if (!target) return;

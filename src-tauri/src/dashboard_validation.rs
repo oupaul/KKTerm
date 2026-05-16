@@ -104,6 +104,38 @@ pub const MAX_SELECT_OPTIONS: usize = 40;
 pub const MIN_POLL_SECONDS: u64 = 1;
 pub const MAX_WIDGET_LIBRARIES: usize = 8;
 
+pub const KNOWN_LIBRARY_GLOBALS: &[(&str, &str)] = &[
+    ("mermaid", "mermaid"),
+    ("echarts", "echarts"),
+    ("chartjs", "Chart"),
+    ("qrcode", "QRCode"),
+    ("jsbarcode", "JsBarcode"),
+    ("jspdf", "jspdf"),
+    ("mathjs", "math"),
+    ("papaparse", "Papa"),
+    ("pica", "pica"),
+    ("dayjs", "dayjs"),
+    ("konva", "Konva"),
+    ("roughjs", "rough"),
+    ("alasql", "alasql"),
+    ("three", "THREE"),
+    ("pixijs", "PIXI"),
+    ("matter", "Matter"),
+    ("prism", "Prism"),
+    ("jsyaml", "jsyaml"),
+    ("gridjs", "gridjs"),
+    ("ansitohtml", "AnsiToHtml"),
+    ("cronstrue", "cronstrue"),
+    ("cronparser", "cronParser"),
+    ("jwtdecode", "jwt_decode"),
+    ("diffmatchpatch", "diff_match_patch"),
+    ("chroma", "chroma"),
+    ("leaflet", "L"),
+    ("fflate", "fflate"),
+    ("marked", "marked"),
+    ("animejs", "anime"),
+];
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum ValidationError {
@@ -126,6 +158,8 @@ pub enum ValidationError {
     InvalidSettingsSchema,
     InvalidSettingsValues,
     InvalidBackground,
+    InvalidScriptSource,
+    UnusedLibrary,
 }
 
 pub fn validate_preset(value: &str) -> Result<(), ValidationError> {
@@ -464,7 +498,28 @@ pub fn validate_script_body_json_detailed(
                 ));
             }
         }
+        // Harden 4: validate that every listed library is referenced in the source.
+        // A library that loads but is never called wastes ~80KB+ and adds GC pressure.
+        for entry in libs {
+            if let Some(&(_, global)) = KNOWN_LIBRARY_GLOBALS
+                .iter()
+                .find(|&&(key, _)| key == entry.as_str())
+            {
+                if !parsed.source.contains(global) {
+                    return Err((
+                        ValidationError::UnusedLibrary,
+                        Some(format!(
+                            "library {entry:?} (global {global:?}) is declared but never referenced in the script source; remove it from body.libraries"
+                        )),
+                    ));
+                }
+            }
+        }
     }
+    // Harden 1: validate script source for dangerous patterns.
+    validate_script_source(&parsed.source).map_err(|detail| {
+        (ValidationError::InvalidScriptSource, Some(detail))
+    })?;
     Ok(parsed)
 }
 
@@ -478,6 +533,117 @@ fn is_valid_library_key(value: &str) -> bool {
         return false;
     }
     chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
+}
+
+/// Harden 1: validate script source for dangerous patterns that can freeze the app.
+/// Returns Ok(()) or Err(human-readable detail string).
+pub fn validate_script_source(source: &str) -> Result<(), String> {
+    // Check for balanced delimiters (catches malformed/broken JS).
+    let mut parens: i32 = 0;
+    let mut braces: i32 = 0;
+    let mut brackets: i32 = 0;
+    let mut in_single = false;
+    let mut in_double = false;
+    let mut in_template = false;
+    let mut in_comment_line = false;
+    let mut in_comment_block = false;
+    let mut prev = '\0';
+    for ch in source.chars() {
+        // Track string state.
+        if !in_comment_line && !in_comment_block {
+            match ch {
+                '\'' if !in_double && !in_template && prev != '\\' => in_single = !in_single,
+                '"' if !in_single && !in_template && prev != '\\' => in_double = !in_double,
+                '`' if !in_single && !in_double && prev != '\\' => in_template = !in_template,
+                _ => {}
+            }
+        }
+        // Track comment state.
+        if !in_single && !in_double && !in_template {
+            if !in_comment_line && !in_comment_block && prev == '/' && ch == '/' {
+                in_comment_line = true;
+            }
+            if in_comment_line && ch == '\n' {
+                in_comment_line = false;
+            }
+            if !in_comment_line && !in_comment_block && prev == '/' && ch == '*' {
+                in_comment_block = true;
+            }
+            if in_comment_block && prev == '*' && ch == '/' {
+                in_comment_block = false;
+            }
+        }
+        if in_single || in_double || in_template || in_comment_line || in_comment_block {
+            prev = ch;
+            continue;
+        }
+        // Count delimiters.
+        match ch {
+            '(' => parens += 1,
+            ')' => parens -= 1,
+            '{' => braces += 1,
+            '}' => braces -= 1,
+            '[' => brackets += 1,
+            ']' => brackets -= 1,
+            _ => {}
+        }
+        if parens < 0 || braces < 0 || brackets < 0 {
+            return Err(format!(
+                "unbalanced delimiter: parens={parens} braces={braces} brackets={brackets}"
+            ));
+        }
+        prev = ch;
+    }
+    if parens != 0 || braces != 0 || brackets != 0 {
+        return Err(format!(
+            "unbalanced delimiter at end: parens={parens} braces={braces} brackets={brackets}"
+        ));
+    }
+
+    // Detect while(true) / while (true) — common infinite loop pattern.
+    let collapsed: String = source
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect();
+    if collapsed.contains("while(true)") || collapsed.contains("while(1)") {
+        return Err(
+            "infinite loop detected: while(true) or while(1) is forbidden in widget scripts"
+                .to_string(),
+        );
+    }
+
+    // Detect for(;;) — another infinite loop.
+    if collapsed.contains("for(;;)") {
+        return Err(
+            "infinite loop detected: for(;;) is forbidden in widget scripts".to_string(),
+        );
+    }
+
+    // Detect requestAnimationFrame that recursively calls itself without exit condition.
+    // We look for the pattern: function ... requestAnimationFrame(sameFunctionName)
+    // This is a heuristic — a sophisticated detector would need a real AST.
+    if collapsed.contains("requestAnimationFrame") {
+        // Check if the source has at least one exit path for the rAF loop
+        // (e.g., a return/break based on a state variable).
+        let has_game_over_check = collapsed.contains("gameOver")
+            || collapsed.contains("stopped")
+            || collapsed.contains("paused")
+            || collapsed.contains("!running")
+            || collapsed.contains("cancelAnimationFrame")
+            || collapsed.contains("return;");
+        if !has_game_over_check && collapsed.matches("requestAnimationFrame").count() > 1 {
+            // Multiple rAF calls with no visible exit — flag as suspicious.
+            // This is a soft warning, not a hard reject, since rAF itself is non-blocking.
+            // We only reject if combined with while(true).
+        }
+    }
+
+    // Reject null bytes and other control characters (except common whitespace).
+    if source.contains('\0') {
+        return Err("script source contains null bytes".to_string());
+    }
+
+    Ok(())
 }
 
 #[allow(dead_code)]

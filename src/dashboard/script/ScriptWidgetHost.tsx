@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   describeMcpError,
@@ -20,6 +20,22 @@ import {
 import { buildSrcdoc, type ResolvedWidgetLibrary } from "./permissions";
 import { loadWidgetLibraries, resolveWidgetLibraryKeys } from "./widgetLibraries";
 
+// Harden 3: cap the number of concurrently active script widgets to prevent
+// too many simultaneous rAF/animation loops from saturating the renderer.
+const MAX_ACTIVE_SCRIPT_WIDGETS = 3;
+const activeScriptWidgetIds = new Set<string>();
+
+function tryActivateScriptWidget(id: string): boolean {
+  if (activeScriptWidgetIds.has(id)) return true;
+  if (activeScriptWidgetIds.size >= MAX_ACTIVE_SCRIPT_WIDGETS) return false;
+  activeScriptWidgetIds.add(id);
+  return true;
+}
+
+function deactivateScriptWidget(id: string) {
+  activeScriptWidgetIds.delete(id);
+}
+
 export function ScriptWidgetHost({
   bodyJson,
   instance,
@@ -33,6 +49,7 @@ export function ScriptWidgetHost({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const updateInstance = useDashboardStore((s) => s.updateInstance);
   const { key: reloadKey } = useScriptReloadHandle();
+  const [capped, setCapped] = useState(false);
   const parsed = useMemo<ScriptBody | null>(() => {
     const json = parseJsonObject(bodyJson);
     if (!json.ok) return null;
@@ -50,8 +67,27 @@ export function ScriptWidgetHost({
     [parsed],
   );
   const requestedLibKey = requestedLibraries.join("|");
+
+  // Harden 3: register this widget in the active set. If the cap is exceeded,
+  // show a lightweight placeholder instead of the full iframe.
   useEffect(() => {
-    if (!parsed) {
+    const activated = tryActivateScriptWidget(instance.id);
+    setCapped(!activated);
+    return () => {
+      deactivateScriptWidget(instance.id);
+    };
+  }, [instance.id]);
+
+  const activateCapped = useCallback(() => {
+    // Deactivate the oldest entry to make room.
+    const oldest = activeScriptWidgetIds.values().next().value;
+    if (oldest) deactivateScriptWidget(oldest);
+    tryActivateScriptWidget(instance.id);
+    setCapped(false);
+  }, [instance.id]);
+
+  useEffect(() => {
+    if (!parsed || capped) {
       setLibraries(null);
       setLibraryError(null);
       return;
@@ -76,11 +112,42 @@ export function ScriptWidgetHost({
     return () => {
       cancelled = true;
     };
-  }, [parsed, requestedLibraries, requestedLibKey]);
+  }, [parsed, capped, requestedLibraries, requestedLibKey]);
   const srcdoc = useMemo(
     () => (parsed && libraries ? buildSrcdoc(parsed, settingsValuesJson, libraries) : ""),
     [parsed, settingsValuesJson, libraries],
   );
+
+  // Harden 2: post visibility messages to the sandbox when the iframe
+  // scrolls off-screen or is occluded. Widgets can check KK.isVisible()
+  // to pause expensive rAF/animation loops.
+  useEffect(() => {
+    const el = iframeRef.current;
+    if (!el || capped || !libraries) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const visible = entry.isIntersecting && entry.intersectionRatio > 0.1;
+          el.contentWindow?.postMessage(
+            { kk: true, type: "setVisible", visible },
+            "*",
+          );
+        }
+      },
+      { threshold: [0, 0.1] },
+    );
+    observer.observe(el);
+    // Send initial visibility.
+    const rect = el.getBoundingClientRect();
+    const initiallyVisible = rect.width > 0 && rect.height > 0;
+    if (!initiallyVisible) {
+      el.contentWindow?.postMessage(
+        { kk: true, type: "setVisible", visible: false },
+        "*",
+      );
+    }
+    return () => observer.disconnect();
+  }, [capped, libraries]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -229,6 +296,25 @@ export function ScriptWidgetHost({
 
   if (!parsed) {
     return <div className="dw-script-error">{t("dashboard.invalidScriptWidgetBody")}</div>;
+  }
+
+  if (capped) {
+    return (
+      <div
+        className="dw-script-capped"
+        onClick={activateCapped}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") activateCapped(); }}
+        role="button"
+        tabIndex={0}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: "100%", height: "100%", cursor: "pointer",
+          opacity: 0.65, fontSize: 12, userSelect: "none",
+        }}
+      >
+        {t("dashboard.scriptWidgetCapped", { max: MAX_ACTIVE_SCRIPT_WIDGETS })}
+      </div>
+    );
   }
 
   if (libraryError) {

@@ -2559,12 +2559,32 @@ impl Storage {
         body(&mut connection)
     }
 
+    /// Returns the result of `f` or an error if the mutex is poisoned.
+    /// Prefer this for read paths and non-critical operations to avoid
+    /// a single poisoned lock cascading into an app-wide panic.
+    #[allow(dead_code)]
+    pub fn with_connection_safe<R>(
+        &self,
+        f: impl FnOnce(&rusqlite::Connection) -> R,
+    ) -> Result<R, String> {
+        let conn = self.connection.lock().map_err(|_| {
+            "SQLite connection lock is poisoned; a prior panic may have crashed a storage operation"
+                .to_string()
+        })?;
+        Ok(f(&*conn))
+    }
+
+    /// Harden 5: recover from a poisoned mutex by unwrapping the poison error.
+    /// A prior thread panic poisons the std::sync::Mutex, but the inner
+    /// SqliteConnection handle is still intact and usable.  Recovering here
+    /// prevents a single panicking dashboard command from permanently blocking
+    /// all subsequent database access (the old `.expect()` would crash the app).
     pub fn with_connection_infallible<R>(&self, f: impl FnOnce(&rusqlite::Connection) -> R) -> R {
-        let conn = self
-            .connection
-            .lock()
-            .expect("dashboard storage mutex poisoned");
-        f(&*conn)
+        let guard = match self.connection.lock() {
+            Ok(guard) => guard,
+            Err(poison) => poison.into_inner(),
+        };
+        f(&*guard)
     }
 }
 
