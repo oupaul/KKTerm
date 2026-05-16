@@ -21,6 +21,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
   const removeInstance = useDashboardStore((s) => s.removeInstance);
   const customWidgets = useDashboardStore((s) => s.customWidgets);
   const [confirming, setConfirming] = useState(false);
+  const [revealing, setRevealing] = useState(instance.kind !== "builtIn");
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const accent = resolveAccent(instance.accentName);
@@ -43,6 +44,16 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
       if (confirmTimerRef.current !== null) clearTimeout(confirmTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (instance.kind === "builtIn") {
+      setRevealing(false);
+      return;
+    }
+    setRevealing(true);
+    const timer = setTimeout(() => setRevealing(false), 2000);
+    return () => clearTimeout(timer);
+  }, [instance.id, instance.kind]);
 
   function handleRemoveClick(e: React.MouseEvent) {
     e.stopPropagation();
@@ -99,6 +110,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
   const className = [
     "dw-instance",
     instance.kind !== "builtIn" ? "dw-custom-widget" : "",
+    revealing ? "dw-reveal-pixelating" : "",
     editMode ? "dw-edit" : "",
   ].filter(Boolean).join(" ");
 

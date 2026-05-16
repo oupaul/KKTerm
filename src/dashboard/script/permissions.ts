@@ -223,6 +223,78 @@ export function buildSrcdoc(
         var dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
         return { width: width, height: height, dpr: dpr };
       }
+      function readDroppedFile(file, path) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () {
+            resolve({
+              kind: 'file',
+              name: file.name || path || 'file',
+              path: path || file.webkitRelativePath || file.name || '',
+              type: file.type || '',
+              size: file.size || 0,
+              lastModified: file.lastModified || 0,
+              bytes: new Uint8Array(reader.result || new ArrayBuffer(0)),
+            });
+          };
+          reader.onerror = function () { reject(reader.error || new Error('Could not read dropped file.')); };
+          reader.readAsArrayBuffer(file);
+        });
+      }
+      function readDirectoryEntries(reader) {
+        return new Promise(function (resolve, reject) {
+          reader.readEntries(resolve, reject);
+        });
+      }
+      function readDroppedEntry(entry, path) {
+        var nextPath = path ? path + '/' + entry.name : entry.name;
+        if (entry.isFile) {
+          return new Promise(function (resolve, reject) {
+            entry.file(function (file) {
+              readDroppedFile(file, nextPath).then(resolve, reject);
+            }, reject);
+          });
+        }
+        if (entry.isDirectory) {
+          var reader = entry.createReader();
+          var children = [];
+          function readBatch() {
+            return readDirectoryEntries(reader).then(function (entries) {
+              if (!entries.length) {
+                return {
+                  kind: 'directory',
+                  name: entry.name,
+                  path: nextPath,
+                  children: children,
+                };
+              }
+              return Promise.all(entries.map(function (child) {
+                return readDroppedEntry(child, nextPath);
+              })).then(function (resolved) {
+                children = children.concat(resolved);
+                return readBatch();
+              });
+            });
+          }
+          return readBatch();
+        }
+        return Promise.resolve({ kind: 'unknown', name: entry.name || '', path: nextPath });
+      }
+      function readDroppedItems(dataTransfer) {
+        var items = Array.prototype.slice.call((dataTransfer && dataTransfer.items) || []);
+        var entries = items
+          .map(function (item) {
+            return item && typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null;
+          })
+          .filter(Boolean);
+        if (entries.length) {
+          return Promise.all(entries.map(function (entry) { return readDroppedEntry(entry, ''); }));
+        }
+        var files = Array.prototype.slice.call((dataTransfer && dataTransfer.files) || []);
+        return Promise.all(files.map(function (file) {
+          return readDroppedFile(file, file.webkitRelativePath || file.name || '');
+        }));
+      }
       const KK = {
         getSettings: function () { return JSON.parse(JSON.stringify(settings)); },
         getViewport: readViewport,
@@ -379,6 +451,45 @@ export function buildSrcdoc(
               filters: filters,
             }, "*");
           });
+        },
+        onFileDrop: function (target, callback, options) {
+          var element = typeof target === 'string' ? document.querySelector(target) : target;
+          if (!element || typeof element.addEventListener !== 'function') {
+            throw new Error('A drop-zone element is required.');
+          }
+          if (typeof callback !== 'function') {
+            throw new Error('A drop callback is required.');
+          }
+          var hoverClass = options && typeof options.hoverClass === 'string' ? options.hoverClass : 'is-drop-target';
+          function mark(event) {
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+            element.classList.add(hoverClass);
+          }
+          function clear(event) {
+            event.preventDefault();
+            element.classList.remove(hoverClass);
+          }
+          function drop(event) {
+            event.preventDefault();
+            element.classList.remove(hoverClass);
+            readDroppedItems(event.dataTransfer).then(function (items) {
+              callback(items, event);
+            }).catch(function (error) {
+              setTimeout(function () { throw error; }, 0);
+            });
+          }
+          element.addEventListener('dragenter', mark);
+          element.addEventListener('dragover', mark);
+          element.addEventListener('dragleave', clear);
+          element.addEventListener('drop', drop);
+          return function () {
+            element.removeEventListener('dragenter', mark);
+            element.removeEventListener('dragover', mark);
+            element.removeEventListener('dragleave', clear);
+            element.removeEventListener('drop', drop);
+            element.classList.remove(hoverClass);
+          };
         },
         postMessage: function (payload) { window.parent.postMessage({ kk: true, payload }, "*"); },
         requestPermission: function () { return Promise.resolve(false); },

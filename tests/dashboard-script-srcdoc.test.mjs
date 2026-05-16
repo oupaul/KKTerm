@@ -116,6 +116,22 @@ test("script widget host exposes app-owned UI primitives", async () => {
   }
 });
 
+test("script widget host exposes file and folder drop-zone helper", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const srcdoc = buildSrcdoc({
+    source: "KK.onFileDrop(document.getElementById('root'), () => {});",
+    permissions: { network: false },
+  });
+
+  assert.match(srcdoc, /onFileDrop: function \(target, callback, options\)/);
+  assert.match(srcdoc, /dragover/);
+  assert.match(srcdoc, /webkitGetAsEntry/);
+  assert.match(srcdoc, /readDirectoryEntries/);
+  assert.match(srcdoc, /readAsArrayBuffer/);
+});
+
 test("script widget wraps user source in IIFE so top-level return is legal", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
     new URL("../src/dashboard/script/permissions.ts", import.meta.url),
