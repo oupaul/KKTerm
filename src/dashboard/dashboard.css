@@ -1973,7 +1973,7 @@ main.dashboard-page.dashboard-page-hidden,
   gap: 7px;
   flex: 0 0 auto;
   padding: 6px 8px;
-  color: var(--text-faint);
+  color: color-mix(in srgb, var(--nav-toolbar-text) 50%, transparent);
   border-bottom: 1px solid var(--terminal-border);
 }
 
@@ -1981,7 +1981,7 @@ main.dashboard-page.dashboard-page-hidden,
   flex: 1 1 0;
   min-width: 0;
   padding: 0;
-  color: var(--text);
+  color: var(--nav-toolbar-text);
   background: transparent;
   border: none;
   outline: none;
@@ -1989,7 +1989,7 @@ main.dashboard-page.dashboard-page-hidden,
 }
 
 .dashboard-connection-launcher-search input::placeholder {
-  color: var(--text-faint);
+  color: color-mix(in srgb, var(--nav-toolbar-text) 40%, transparent);
 }
 
 .dashboard-connection-launcher-list {
@@ -2004,7 +2004,7 @@ main.dashboard-page.dashboard-page-hidden,
   gap: 7px;
   width: 100%;
   padding: 6px 9px;
-  color: var(--text);
+  color: var(--nav-toolbar-text);
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -2014,7 +2014,7 @@ main.dashboard-page.dashboard-page-hidden,
 }
 
 .dashboard-connection-launcher-list button:hover {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+  background: color-mix(in srgb, var(--nav-toolbar-text) 10%, transparent);
 }
 
 .dashboard-connection-launcher-list button.active {
@@ -2022,7 +2022,7 @@ main.dashboard-page.dashboard-page-hidden,
 }
 
 .dashboard-connection-launcher-name {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2041,7 +2041,7 @@ main.dashboard-page.dashboard-page-hidden,
 
 .dashboard-connection-launcher-empty {
   margin: 12px;
-  color: var(--text-faint);
+  color: color-mix(in srgb, var(--nav-toolbar-text) 50%, transparent);
   font-size: 12px;
 }
 
@@ -2070,7 +2070,7 @@ main.dashboard-page.dashboard-page-hidden,
   justify-content: center;
   width: 18px;
   height: 18px;
-  color: var(--text-faint);
+  color: color-mix(in srgb, var(--nav-toolbar-text) 45%, transparent);
   border-radius: 5px;
 }
 
@@ -2083,7 +2083,7 @@ main.dashboard-page.dashboard-page-hidden,
 
 .dashboard-connection-pane {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
   background: var(--terminal);
