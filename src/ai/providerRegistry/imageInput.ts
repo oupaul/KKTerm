@@ -5,6 +5,7 @@ const IMAGE_INPUT_MODEL_PATTERNS = [
   /^claude(?:[.-]|$)/,
   /^gemini(?:[.-]|$)/,
   /^grok-4(?:[.-]|$)/,
+  /^grok-4\.\d+(?:[.-]|$)/,
   /(?:^|[-_/])vision(?:[-_/]|$)/,
   /(?:^|[-_/])vl(?:[-_/]|$)/,
   /(?:^|[-_/])multimodal(?:[-_/]|$)/,
@@ -14,6 +15,9 @@ const IMAGE_INPUT_MODEL_PATTERNS = [
   /^minicpm-v(?::|[-.]|$)/,
   /^qwen\d*(?:[._-]?vl|vl)(?::|[-.]|$)/,
   /^kimi(?:[._-]?vl|[-_]k)(?::|[-.]|$)/,
+  /llama[-_/]3\.2[-_/]\d+b[-_/]vision/,
+  /llama[-_/]4[-_/]maverick/,
+  /nemotron[-_/]nano[-_/]vl/,
 ];
 
 const TEXT_ONLY_MODEL_PATTERNS = [
@@ -53,7 +57,7 @@ export function modelSupportsImageInput(
     return directOption.supportsImageInput;
   }
 
-  if (provider.kind === "deepseek" || provider.kind === "nvidia") {
+  if (provider.kind === "deepseek") {
     return false;
   }
 

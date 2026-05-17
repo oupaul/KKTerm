@@ -50,7 +50,11 @@ import {
   normalizeAiProviderDraft,
   validateAiProviderForChat,
 } from "./providers";
-import { sortModelOptionsForProvider } from "./providerModelOptions";
+import {
+  displayNameForModelOption,
+  selectModelOptionsForProvider,
+  sortModelOptionsForProvider,
+} from "./providerModelOptions";
 import {
   applyAssistantStreamEventToMessage,
   completeAssistantStreamMessageFromResponse,
@@ -774,13 +778,18 @@ export function AssistantPanel({
   const providerDefinition = getAiProviderDefinition(aiProviderSettings.providerKind);
   const assistantModelOptions = useMemo(
     () =>
-      refreshedModelOptions.length > 0
-        ? refreshedModelOptions
-        : sortModelOptionsForProvider(
-            aiProviderSettings.providerKind,
-            providerDefinition.modelOptions,
-          ),
-    [aiProviderSettings.providerKind, providerDefinition.modelOptions, refreshedModelOptions],
+      selectModelOptionsForProvider({
+        customModel: aiProviderSettings.model,
+        provider: providerDefinition,
+        refreshedModels: refreshedModelOptions,
+        showAllModels: aiProviderSettings.showAllModels,
+      }),
+    [
+      aiProviderSettings.model,
+      aiProviderSettings.showAllModels,
+      providerDefinition,
+      refreshedModelOptions,
+    ],
   );
   const currentModel = aiProviderSettings.model || providerDefinition.defaultModel;
   const currentToolPermissionMode = aiProviderSettings.toolPermissionMode ?? "prompt";
@@ -796,9 +805,11 @@ export function AssistantPanel({
   const modelSelectLabels = useMemo(
     () => [
       ...(hasCustomModel ? [currentModel] : []),
-      ...assistantModelOptions.map((model) => model.label),
+      ...assistantModelOptions.map((model) =>
+        displayNameForModelOption(model, t("settings.recommendedModel")),
+      ),
     ],
-    [assistantModelOptions, currentModel, hasCustomModel],
+    [assistantModelOptions, currentModel, hasCustomModel, t],
   );
   const currentModelSupportsImageInput = modelSupportsImageInput(
     providerDefinition,
@@ -2605,7 +2616,7 @@ export function AssistantPanel({
             {hasCustomModel ? <option value={currentModel}>{currentModel}</option> : null}
             {assistantModelOptions.map((model) => (
               <option key={model.id} value={model.id}>
-                {model.label}
+                {displayNameForModelOption(model, t("settings.recommendedModel"))}
               </option>
             ))}
           </select>

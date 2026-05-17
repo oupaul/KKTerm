@@ -512,6 +512,8 @@ pub struct AiProviderSettings {
     custom_instructions: String,
     #[serde(default)]
     allow_insecure_tls: bool,
+    #[serde(default)]
+    show_all_models: bool,
     #[serde(default = "default_ai_cli_execution_policy")]
     cli_execution_policy: String,
     #[serde(default = "default_ai_tool_permission_mode")]
@@ -4010,6 +4012,7 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         output_language: String::new(),
         custom_instructions: String::new(),
         allow_insecure_tls: false,
+        show_all_models: false,
         cli_execution_policy: default_ai_cli_execution_policy(),
         tool_permission_mode: default_ai_tool_permission_mode(),
         claude_cli_path: None,
@@ -4086,7 +4089,7 @@ fn default_ai_provider_kind() -> String {
 }
 
 fn default_ai_model() -> String {
-    "gpt-5.5".to_string()
+    "gpt-5.4-mini".to_string()
 }
 
 fn default_ai_reasoning_effort() -> String {
@@ -6149,12 +6152,13 @@ mod tests {
         assert!(!defaults.enabled);
         assert_eq!(defaults.provider_kind, "openai");
         assert_eq!(defaults.base_url, "https://api.openai.com/v1");
-        assert_eq!(defaults.model, "gpt-5.5");
+        assert_eq!(defaults.model, "gpt-5.4-mini");
         assert_eq!(defaults.reasoning_effort, "medium");
         assert_eq!(defaults.custom_instructions, "");
         assert_eq!(defaults.cli_execution_policy, "suggestOnly");
         assert_eq!(defaults.tool_permission_mode, "prompt");
         assert!(!defaults.allow_insecure_tls);
+        assert!(!defaults.show_all_models);
 
         let updated = storage
             .update_ai_provider_settings(AiProviderSettings {
@@ -6166,6 +6170,7 @@ mod tests {
                 output_language: String::new(),
                 custom_instructions: String::new(),
                 allow_insecure_tls: true,
+                show_all_models: true,
                 cli_execution_policy: "suggest-only".to_string(),
                 tool_permission_mode: " Allow All ".to_string(),
                 claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
@@ -6193,6 +6198,7 @@ mod tests {
         assert_eq!(updated.cli_execution_policy, "suggestOnly");
         assert_eq!(updated.tool_permission_mode, "allowAll");
         assert!(updated.allow_insecure_tls);
+        assert!(updated.show_all_models);
         assert_eq!(
             updated.claude_cli_path.as_deref(),
             Some("C:\\Tools\\claude.exe")
@@ -6207,6 +6213,7 @@ mod tests {
         assert_eq!(reloaded.reasoning_effort, "max");
         assert_eq!(reloaded.tool_permission_mode, "allowAll");
         assert!(reloaded.allow_insecure_tls);
+        assert!(reloaded.show_all_models);
     }
 
     #[test]
@@ -6246,6 +6253,7 @@ mod tests {
                 output_language: String::new(),
                 custom_instructions: String::new(),
                 allow_insecure_tls: false,
+                show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "autoDeleteEverything".to_string(),
                 claude_cli_path: None,
@@ -6282,6 +6290,7 @@ mod tests {
                 output_language: String::new(),
                 custom_instructions: String::new(),
                 allow_insecure_tls: false,
+                show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
                 claude_cli_path: None,
@@ -6322,6 +6331,7 @@ mod tests {
                 output_language: String::new(),
                 custom_instructions: String::new(),
                 allow_insecure_tls: false,
+                show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
                 claude_cli_path: None,
@@ -6359,6 +6369,7 @@ mod tests {
                 output_language: String::new(),
                 custom_instructions: "  Prefer concise PowerShell examples.  ".to_string(),
                 allow_insecure_tls: false,
+                show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
                 claude_cli_path: None,
@@ -6410,6 +6421,7 @@ mod tests {
                 output_language: String::new(),
                 custom_instructions: String::new(),
                 allow_insecure_tls: false,
+                show_all_models: false,
                 cli_execution_policy: "executeAutomatically".to_string(),
                 tool_permission_mode: "prompt".to_string(),
                 claude_cli_path: Some("claude".to_string()),

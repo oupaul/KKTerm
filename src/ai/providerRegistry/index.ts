@@ -11,8 +11,10 @@ import { opencodeProvider } from "./opencode";
 import { openAiCompatibleProvider } from "./openAiCompatible";
 import { openAiProvider } from "./openai";
 import { openRouterProvider } from "./openrouter";
+import { applyModelCatalog } from "./modelCatalog";
 import type { AiProviderDefinition } from "./types";
 export { modelSupportsImageInput } from "./imageInput";
+export { AI_PROVIDER_MODEL_CATALOG } from "./modelCatalog";
 
 export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
   openAiProvider,
@@ -28,7 +30,7 @@ export const AI_PROVIDER_DEFINITIONS: AiProviderDefinition[] = [
   nvidiaProvider,
   opencodeProvider,
   openAiCompatibleProvider,
-];
+].map(applyModelCatalog);
 
 export type {
   AiModelOption,

@@ -33,7 +33,11 @@ import type {
   SearchProvider,
   SmtpSecurity,
 } from "../types";
-import { sortModelOptionsForProvider } from "../ai/providerModelOptions";
+import {
+  displayNameForModelOption,
+  selectModelOptionsForProvider,
+  sortModelOptionsForProvider,
+} from "../ai/providerModelOptions";
 import { McpServersControl } from "./McpServers";
 import { SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
@@ -93,7 +97,6 @@ function AiProviderSettingsFieldControl({
 }) {
   const { t } = useTranslation();
   const [isApiKeyInputFocused, setIsApiKeyInputFocused] = useState(false);
-  const [modelSearchQuery, setModelSearchQuery] = useState("");
   const shouldShowStoredApiKeyMask =
     field === "apiKey" &&
     shouldShowStoredAiProviderKeyMask({
@@ -101,10 +104,6 @@ function AiProviderSettingsFieldControl({
       hasProviderApiKey: hasApiKey,
       isInputFocused: isApiKeyInputFocused,
     });
-
-  useEffect(() => {
-    setModelSearchQuery("");
-  }, [definition.kind]);
 
   switch (field) {
     case "baseUrl":
@@ -119,27 +118,13 @@ function AiProviderSettingsFieldControl({
         </label>
       );
     case "model": {
-      const options = sortModelOptionsForProvider(
-        definition.kind,
-        modelOptions ?? definition.modelOptions,
-      );
-      const normalizedModelSearchQuery = modelSearchQuery.trim().toLowerCase();
-      const filteredOptions = normalizedModelSearchQuery
-        ? options.filter((model) => {
-            const label = model.label.toLowerCase();
-            const id = model.id.toLowerCase();
-            return (
-              label.includes(normalizedModelSearchQuery) ||
-              id.includes(normalizedModelSearchQuery)
-            );
-          })
-        : options;
+      const options = selectModelOptionsForProvider({
+        customModel: draft.model,
+        provider: definition,
+        refreshedModels: modelOptions ?? [],
+        showAllModels: draft.showAllModels,
+      });
       const modelOptionIds = new Set(options.map((model) => model.id));
-      const selectedModelOption = options.find((model) => model.id === draft.model);
-      const selectedModelOptionIsFilteredOut = Boolean(
-        selectedModelOption &&
-          !filteredOptions.some((model) => model.id === selectedModelOption.id),
-      );
       const hasCustomModel = draft.model.trim().length > 0 && !modelOptionIds.has(draft.model);
       return (
         <>
@@ -164,34 +149,17 @@ function AiProviderSettingsFieldControl({
                 </button>
               ) : null}
             </span>
-            <div className="ai-model-picker">
-              <input
-                aria-label={t("settings.searchModels")}
-                className="ai-model-search-input"
-                onChange={(event) => setModelSearchQuery(event.currentTarget.value)}
-                placeholder={t("settings.searchModelsPlaceholder")}
-                value={modelSearchQuery}
-              />
-              <select
-                onChange={(event) => onDraftChange({ model: event.currentTarget.value })}
-                value={draft.model}
-              >
-                {hasCustomModel ? <option value={draft.model}>{draft.model}</option> : null}
-                {selectedModelOptionIsFilteredOut && selectedModelOption ? (
-                  <option hidden value={selectedModelOption.id}>
-                    {selectedModelOption.label}
-                  </option>
-                ) : null}
-                {filteredOptions.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.label}
-                  </option>
-                ))}
-              </select>
-              {normalizedModelSearchQuery && filteredOptions.length === 0 ? (
-                <small className="field-hint">{t("settings.noModelsMatchSearch")}</small>
-              ) : null}
-            </div>
+            <select
+              onChange={(event) => onDraftChange({ model: event.currentTarget.value })}
+              value={draft.model}
+            >
+              {hasCustomModel ? <option value={draft.model}>{draft.model}</option> : null}
+              {options.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {displayNameForModelOption(model, t("settings.recommendedModel"))}
+                </option>
+              ))}
+            </select>
           </label>
           {definition.allowsCustomModel ? (
             <label>
@@ -877,16 +845,24 @@ export function AiSettings() {
         const sortedModels = sortModelOptionsForProvider(draft.providerKind, models);
         setRefreshedModelOptions(sortedModels);
         setDraft((settings) => {
+          const nextModelOptions = selectModelOptionsForProvider({
+            customModel: "",
+            provider: aiProviderDefinition,
+            refreshedModels: sortedModels,
+            showAllModels: settings.showAllModels,
+          });
+          const nextModel = nextModelOptions[0]?.id ?? sortedModels[0]?.id;
           if (
             settings.providerKind !== draft.providerKind ||
             sortedModels.length === 0 ||
+            !nextModel ||
             (settings.model.trim().length > 0 &&
               (!aiProviderDefinition.strictModelList ||
                 sortedModels.some((model) => model.id === settings.model)))
           ) {
             return settings;
           }
-          return { ...settings, model: sortedModels[0].id };
+          return { ...settings, model: nextModel };
         });
       })
       .catch(() => {
@@ -928,16 +904,24 @@ export function AiSettings() {
       const sortedModels = sortModelOptionsForProvider(draft.providerKind, models);
       setRefreshedModelOptions(sortedModels);
       setDraft((settings) => {
+        const nextModelOptions = selectModelOptionsForProvider({
+          customModel: "",
+          provider: aiProviderDefinition,
+          refreshedModels: sortedModels,
+          showAllModels: settings.showAllModels,
+        });
+        const nextModel = nextModelOptions[0]?.id ?? sortedModels[0]?.id;
         if (
           settings.providerKind !== draft.providerKind ||
           sortedModels.length === 0 ||
+          !nextModel ||
           (settings.model.trim().length > 0 &&
             (!aiProviderDefinition.strictModelList ||
               sortedModels.some((model) => model.id === settings.model)))
         ) {
           return settings;
         }
-        return { ...settings, model: sortedModels[0].id };
+        return { ...settings, model: nextModel };
       });
       showStatusBarNotice(t("settings.modelListRefreshed"), { tone: "success" });
     } catch (error) {
@@ -1149,6 +1133,21 @@ export function AiSettings() {
           ))}
         </div>
         <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.showAllModels}
+              onChange={(checked) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  showAllModels: checked,
+                }))
+              }
+            />
+            <span>
+              <strong>{t("settings.showAllModels")}</strong>
+              <small>{t("settings.showAllModelsHint")}</small>
+            </span>
+          </label>
           <label className="settings-toggle-row">
             <ToggleSwitch
               checked={draft.allowInsecureTls}

@@ -73,7 +73,8 @@ provider:
 3. Import and append the definition in `src/ai/providerRegistry/index.ts`.
 4. Choose `settingsFields` from `src/ai/providerRegistry/shared.ts` rather than
    defining ad hoc field lists when possible.
-5. Put known model choices in `modelOptions`; keep exact/custom model IDs in the
+5. Put durable provider defaults and curated/recommended model choices in
+   `src/ai/providerRegistry/modelCatalog.ts`; keep exact/custom model IDs in the
    existing custom model input by setting `allowsCustomModel` appropriately.
 6. Set `capabilities` accurately. Use `openAiCompatible` only when the Rust
    provider uses the shared OpenAI-compatible runtime.

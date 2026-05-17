@@ -113,11 +113,12 @@ export const defaultAiAssistantToolSettings = {
 export const defaultAiProviderSettings: AiProviderSettings = {
   providerKind: "openai",
   baseUrl: "https://api.openai.com/v1",
-  model: "gpt-5.5",
+  model: "gpt-5.4-mini",
   reasoningEffort: "medium",
   outputLanguage: "",
   customInstructions: "",
   allowInsecureTls: false,
+  showAllModels: false,
   cliExecutionPolicy: "suggestOnly",
   toolPermissionMode: "prompt",
   claudeCliPath: "",

@@ -405,6 +405,7 @@ export interface AiProviderSettings {
   outputLanguage: string;
   customInstructions: string;
   allowInsecureTls: boolean;
+  showAllModels: boolean;
   cliExecutionPolicy: "suggestOnly";
   toolPermissionMode: AiToolPermissionMode;
   claudeCliPath?: string;

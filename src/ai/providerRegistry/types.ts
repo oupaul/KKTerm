@@ -19,6 +19,7 @@ export type AiModelOption = {
   id: string;
   label: string;
   note?: string;
+  recommended?: boolean;
   supportsImageInput?: boolean;
 };
 
