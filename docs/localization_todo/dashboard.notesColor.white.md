@@ -1,0 +1,10 @@
+# dashboard.notesColor.white
+
+- **English value**: `White`
+- **Namespace**: `dashboard`
+- **File/component**: `src/dashboard/widgets/NotesBody.tsx`
+- **UI role**: label (aria-label + tooltip on a color swatch button)
+- **User flow**: Tooltip and screen-reader label for the off-white paper-color swatch in the Notes widget toolbar.
+- **Tone**: concise/neutral, one-word color name
+- **Placeholders**: none
+- **Domain notes**: A near-white paper color. Use the locale's standard color word for white.

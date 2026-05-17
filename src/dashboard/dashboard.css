@@ -2644,3 +2644,153 @@ button.dashboard-pill-dot:focus-visible {
   margin: 0;
   accent-color: var(--accent);
 }
+
+/* Notes widget: post-it style paper note. The Ambient preset hosts this with a
+   transparent frame, so the .dw-notes element paints the entire visible note. */
+.dw-notes {
+  --note-paper: #fff59d;
+  --note-paper-edge: #f4dc66;
+  --note-ink: #2a2620;
+  --note-font: "Segoe Script", "Bradley Hand", "Comic Sans MS", "Apple Chancery", cursive;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 14px 14px 10px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 18%) 0%, rgb(0 0 0 / 0%) 35%) var(--note-paper);
+  color: var(--note-ink);
+  border-radius: 2px 14px 2px 2px;
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 10%),
+    0 8px 18px -6px rgb(0 0 0 / 22%),
+    inset 0 0 0 1px rgb(0 0 0 / 4%);
+  transform: rotate(-0.6deg);
+  transform-origin: 50% 0;
+  overflow: hidden;
+  font-family: var(--note-font);
+}
+
+.dw-notes::before {
+  /* Folded corner */
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(225deg, rgb(0 0 0 / 12%) 0%, rgb(0 0 0 / 0%) 55%),
+    linear-gradient(225deg, transparent 50%, var(--note-paper-edge) 50%);
+  pointer-events: none;
+}
+
+.dw-notes-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: none;
+  color: inherit;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1.45;
+  padding: 0;
+  letter-spacing: 0.1px;
+}
+
+.dw-notes-text::placeholder {
+  color: rgb(0 0 0 / 35%);
+  font-style: italic;
+}
+
+.dw-notes-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgb(0 0 0 / 12%);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.dw-notes:hover .dw-notes-toolbar,
+.dw-notes:focus-within .dw-notes-toolbar {
+  opacity: 1;
+}
+
+.dw-notes-colors {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.dw-notes-swatch {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 18%);
+  background: var(--swatch);
+  cursor: pointer;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.dw-notes-swatch:hover {
+  transform: scale(1.15);
+}
+
+.dw-notes-swatch.is-active {
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 55%);
+}
+
+.dw-notes-swatch--yellow { --swatch: #fff59d; }
+.dw-notes-swatch--pink   { --swatch: #f8bbd0; }
+.dw-notes-swatch--blue   { --swatch: #bbdefb; }
+.dw-notes-swatch--green  { --swatch: #c8e6c9; }
+.dw-notes-swatch--orange { --swatch: #ffcc80; }
+.dw-notes-swatch--purple { --swatch: #e1bee7; }
+.dw-notes-swatch--white  { --swatch: #fafafa; }
+
+.dw-notes-font-select {
+  font-family: var(--font, system-ui);
+  font-size: 11px;
+  padding: 2px 4px;
+  background: rgb(255 255 255 / 55%);
+  color: var(--note-ink);
+  border: 1px solid rgb(0 0 0 / 15%);
+  border-radius: 3px;
+  max-width: 110px;
+}
+
+/* Color modifiers — paper color and matching folded-edge tint. */
+.dw-notes--color-yellow { --note-paper: #fff59d; --note-paper-edge: #f4dc66; }
+.dw-notes--color-pink   { --note-paper: #f8bbd0; --note-paper-edge: #ec9bb8; }
+.dw-notes--color-blue   { --note-paper: #bbdefb; --note-paper-edge: #8fc1ee; }
+.dw-notes--color-green  { --note-paper: #c8e6c9; --note-paper-edge: #9fcfa3; }
+.dw-notes--color-orange { --note-paper: #ffcc80; --note-paper-edge: #f0ad55; }
+.dw-notes--color-purple { --note-paper: #e1bee7; --note-paper-edge: #c294cd; }
+.dw-notes--color-white  { --note-paper: #fafafa; --note-paper-edge: #d8d8d8; }
+
+/* Font modifiers — only --note-font, so .dw-notes and .dw-notes-text inherit. */
+.dw-notes--font-handwriting {
+  --note-font: "Segoe Script", "Bradley Hand", "Comic Sans MS", "Apple Chancery", cursive;
+}
+.dw-notes--font-marker {
+  --note-font: "Permanent Marker", "Segoe Print", "Marker Felt", "Comic Sans MS", cursive;
+}
+.dw-notes--font-system {
+  --note-font: var(--font, system-ui, -apple-system, "Segoe UI", sans-serif);
+}
+.dw-notes--font-serif {
+  --note-font: Georgia, "Times New Roman", serif;
+}
+.dw-notes--font-mono {
+  --note-font: Consolas, "Courier New", monospace;
+}
+

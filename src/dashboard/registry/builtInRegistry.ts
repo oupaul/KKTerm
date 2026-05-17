@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { AccentName, IconName, WidgetPreset } from "../types";
 import { AppLauncherBody } from "../widgets/AppLauncherBody";
 import { ConnectionWidgetBody } from "../widgets/ConnectionWidgetBody";
+import { NotesBody } from "../widgets/NotesBody";
 import type { DashboardWidgetInstance } from "../types";
 
 export interface BuiltInWidgetBodyProps {
@@ -42,6 +43,17 @@ export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
     defaultIcon: "Server",
     defaultSize: { w: 8, h: 5 },
     Body: ConnectionWidgetBody,
+  },
+  {
+    id: "notes",
+    titleKey: "dashboard.notesTitle",
+    summaryKey: "dashboard.notesSummary",
+    category: "note",
+    defaultPreset: "ambient",
+    defaultAccent: "amber",
+    defaultIcon: "Pin",
+    defaultSize: { w: 3, h: 3 },
+    Body: NotesBody,
   },
 ];
 
