@@ -42,6 +42,54 @@ fn resolve_chapter_path(
         .map_err(|error| format!("failed to resolve manual resource path: {error}"))
 }
 
+/// Search chapter titles and AI grep hints for a keyword. Returns a compact JSON summary.
+pub fn ai_search_manual(app: &AppHandle, query: &str) -> String {
+    let query_lower = query.to_ascii_lowercase();
+    let mut results: Vec<serde_json::Value> = Vec::new();
+    for chapter in CHAPTERS {
+        let Ok(path) = resolve_chapter_path(app, chapter.filename) else {
+            continue;
+        };
+        let Ok(content) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let matched_hints: Vec<&str> = content
+            .lines()
+            .take(60)
+            .filter(|line| line.to_ascii_lowercase().contains(&query_lower))
+            .collect();
+        let title_match = chapter.title.to_ascii_lowercase().contains(&query_lower);
+        if title_match || !matched_hints.is_empty() {
+            results.push(serde_json::json!({
+                "slug": chapter.slug,
+                "title": chapter.title,
+                "matchedLines": matched_hints,
+            }));
+        }
+    }
+    if results.is_empty() {
+        format!("No manual chapters matched \"{query}\". Available chapter slugs: {}",
+            CHAPTERS.iter().map(|c| c.slug).collect::<Vec<_>>().join(", "))
+    } else {
+        serde_json::to_string(&results).unwrap_or_default()
+    }
+}
+
+/// Read a manual chapter by slug and return its Markdown content.
+pub fn ai_read_manual_chapter(app: &AppHandle, slug: &str) -> String {
+    let Some(chapter) = CHAPTERS.iter().find(|c| c.slug == slug) else {
+        let slugs: Vec<&str> = CHAPTERS.iter().map(|c| c.slug).collect();
+        return format!("Unknown chapter slug \"{slug}\". Valid slugs: {}", slugs.join(", "));
+    };
+    let Ok(path) = resolve_chapter_path(app, chapter.filename) else {
+        return format!("Failed to locate chapter file for \"{}\".", chapter.slug);
+    };
+    match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) => format!("Failed to read chapter \"{}\": {error}", chapter.slug),
+    }
+}
+
 #[tauri::command]
 pub fn list_manual_chapters() -> Vec<ManualChapter> {
     CHAPTERS.to_vec()

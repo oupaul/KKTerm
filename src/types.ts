@@ -389,7 +389,8 @@ export type AiAssistantToolId =
   | "email"
   | "dashboard"
   | "connections"
-  | "sessions";
+  | "sessions"
+  | "manual";
 
 export type AiAssistantToolSettings = Record<AiAssistantToolId, boolean>;
 

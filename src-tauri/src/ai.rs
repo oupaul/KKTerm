@@ -3017,6 +3017,18 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
     if settings.shell_command() {
         tools.push(tool_definition("shell_command", "Run a non-destructive PowerShell or batch command from KKTerm app data only. Destructive commands are blocked.", json!({"type":"object","properties":{"command":{"type":"string"},"shell":{"type":"string","enum":["powershell","batch"]}},"required":["command"]})));
     }
+    if settings.manual() {
+        tools.push(tool_definition(
+            "manual_search",
+            "Search the KKTerm Operation Manual by keyword. Returns matching chapter slugs, titles, and matched hint lines. Call this first when the user asks how to use a KKTerm feature. Then call manual_read_chapter with the best slug to get the full instructions.",
+            json!({"type":"object","properties":{"query":{"type":"string","description":"Feature name, action, or synonym to search for (e.g. \"RDP\", \"add connection\", \"screenshot\")"}},"required":["query"]}),
+        ));
+        tools.push(tool_definition(
+            "manual_read_chapter",
+            "Read a full KKTerm Operation Manual chapter by its slug. Use after manual_search to get the complete instructions for a feature.",
+            json!({"type":"object","properties":{"slug":{"type":"string","description":"Chapter slug returned by manual_search (e.g. \"remote-desktop\", \"connections\")"}},"required":["slug"]}),
+        ));
+    }
     if settings.email() {
         tools.push(tool_definition(
             "send_email",
@@ -3514,6 +3526,14 @@ async fn run_ai_tool(
             app_data_file_read_tool(app_data_dir, args)
         }
         "shell_command" if tool_settings.shell_command() => shell_command_tool(app_data_dir, args),
+        "manual_search" if tool_settings.manual() => {
+            let query = arg_string(&args, "query");
+            crate::manual::ai_search_manual(app, &query)
+        }
+        "manual_read_chapter" if tool_settings.manual() => {
+            let slug = arg_string(&args, "slug");
+            crate::manual::ai_read_manual_chapter(app, &slug)
+        }
         "send_email" if tool_settings.email() => send_email_tool(settings, args).await,
         "performance_counters" if tool_settings.performance_counters() => {
             performance_counters_tool(app)

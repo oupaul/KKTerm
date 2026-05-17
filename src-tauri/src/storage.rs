@@ -443,6 +443,8 @@ pub struct AiAssistantToolSettings {
     sessions: bool,
     #[serde(default)]
     email: bool,
+    #[serde(default = "default_ai_manual_tool_enabled")]
+    manual: bool,
 }
 
 impl AiAssistantToolSettings {
@@ -479,6 +481,9 @@ impl AiAssistantToolSettings {
     pub(crate) fn email(&self) -> bool {
         self.email
     }
+    pub(crate) fn manual(&self) -> bool {
+        self.manual
+    }
     pub(crate) fn any_enabled(&self) -> bool {
         self.web_search
             || self.web_fetch
@@ -491,6 +496,7 @@ impl AiAssistantToolSettings {
             || self.connections
             || self.sessions
             || self.email
+            || self.manual
     }
 }
 
@@ -4042,6 +4048,7 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         connections: default_ai_connections_tool_enabled(),
         sessions: default_ai_sessions_tool_enabled(),
         email: false,
+        manual: default_ai_manual_tool_enabled(),
     }
 }
 
@@ -4062,6 +4069,10 @@ fn default_ai_connections_tool_enabled() -> bool {
 }
 
 fn default_ai_sessions_tool_enabled() -> bool {
+    true
+}
+
+fn default_ai_manual_tool_enabled() -> bool {
     true
 }
 

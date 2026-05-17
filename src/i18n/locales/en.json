@@ -827,6 +827,10 @@
       "sessions": {
         "label": "Live Sessions",
         "description": "Read visible session context and interact with active terminal, remote desktop, and file browser Sessions."
+      },
+      "manual": {
+        "label": "Operation Manual",
+        "description": "Search and read the bundled KKTerm Operation Manual to answer how-to questions about app features."
       }
     },
     "searchProvider": "Search provider",
