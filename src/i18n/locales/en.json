@@ -179,6 +179,8 @@
     "widgetAlreadySelected": "{{name}} is already selected",
     "removeWidget": "Remove {{name}}",
     "removeConfirmHint": "Click again to remove",
+    "deleteViewBody": "Delete \"{{name}}\" and all widgets in this Dashboard view? This cannot be undone.",
+    "deleteWidgetBody": "Remove \"{{name}}\" from this Dashboard view? This cannot be undone.",
     "deleteCustomWidget": "Delete {{name}}",
     "widgetDeleted": "Dashboard widget deleted.",
     "connectionPaneTitle": "Connection Pane",

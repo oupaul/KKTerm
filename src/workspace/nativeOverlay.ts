@@ -4,7 +4,6 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
   ".screenshot-region-overlay",
   ".transfer-conflict-backdrop",
   ".connection-dialog-backdrop",
-  ".confirm-delete-backdrop",
   ".app-launcher-dialog-backdrop",
   ".settings-page",
   ".dw-catalog-backdrop",
@@ -12,10 +11,7 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
 ].join(", ");
 
 const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
-  ".add-connection-menu",
-  ".quick-connect-menu",
   ".connection-dialog-backdrop",
-  ".confirm-delete-backdrop",
 ].join(", ");
 
 export function documentHasRdpBlockingOverlay(surface: Element | null) {

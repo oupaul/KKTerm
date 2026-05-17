@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConfirmDialog } from "../app/ConfirmDialog";
+import { DeleteConfirmationDialog } from "../app/DeleteConfirmationDialog";
 import { formatFileSize, formatRemoteTime } from "./format";
 import type {
   FilePropertiesState,
@@ -93,13 +93,12 @@ export function ConfirmRemoteDeleteDialog({
       : t("sftp.deleteRemoteItemsMultiple", { count: request.items.length });
 
   return (
-    <ConfirmDialog
+    <DeleteConfirmationDialog
       confirmLabel={t("sftp.deleteLabel")}
       message={message}
       onCancel={onCancel}
       onConfirm={onConfirm}
       title={t("sftp.deleteRemoteConfirm")}
-      tone="danger"
     />
   );
 }

@@ -1875,50 +1875,6 @@ button.dashboard-pill-dot:focus-visible {
   color: var(--w-accent, var(--accent));
 }
 
-.dw-catalog-confirm-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.34);
-  border-radius: 16px;
-}
-
-.dw-catalog-confirm-dialog {
-  width: min(420px, 100%);
-}
-
-.dw-catalog-confirm-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-}
-
-.dw-catalog-confirm-warning {
-  color: #d97706;
-  flex-shrink: 0;
-}
-
-.dw-catalog-confirm-actions {
-  justify-content: flex-end;
-}
-
-.dw-catalog-confirm-delete {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.dw-catalog-confirm-delete > svg {
-  display: inline-block;
-  flex-shrink: 0;
-}
-
 .app-launcher-widget {
   position: relative;
   gap: 10px;

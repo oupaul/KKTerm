@@ -2,6 +2,7 @@ import { Edit3, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { AssistantPageContext } from "../ai/AssistantPanel";
+import { DeleteConfirmationDialog } from "../app/DeleteConfirmationDialog";
 import { ariaHidden } from "../lib/aria";
 import { invokeCommand, type McpServer } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
@@ -15,7 +16,7 @@ import {
 } from "./registry/backgroundPresets";
 import { libraryCatalogForAi } from "./script/widgetLibraries";
 import { useDashboardStore } from "./state/dashboardStore";
-import type { DashboardWidgetInstance, GridDensity } from "./types";
+import type { DashboardView, DashboardWidgetInstance, GridDensity } from "./types";
 import { DashboardBackgroundHost } from "./view/DashboardBackgroundHost";
 import { DashboardCanvas, DENSITY_SETTINGS } from "./view/DashboardCanvas";
 
@@ -46,6 +47,7 @@ export function DashboardPage({
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [customize, setCustomize] = useState<{ instance: DashboardWidgetInstance; rect: DOMRect } | null>(null);
   const [editingViewId, setEditingViewId] = useState<string | null>(null);
+  const [deleteViewTarget, setDeleteViewTarget] = useState<DashboardView | null>(null);
   const [tabGradientPicker, setTabGradientPicker] = useState<{ viewId: string; rect: DOMRect } | null>(null);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
@@ -260,11 +262,11 @@ export function DashboardPage({
                     {v.title}
                   </button>
                 )}
-                {views.length > 1 && (
+                {editMode && views.length > 1 && (
                   <button
-                    aria-label={t("dashboard.removeView")}
+                    aria-label={t("dashboard.removeView", { name: v.title })}
                     className="dashboard-pill-close"
-                    onClick={() => void removeView(v.id)}
+                    onClick={() => setDeleteViewTarget(v)}
                     type="button"
                   >
                     ×
@@ -349,6 +351,19 @@ export function DashboardPage({
             void setViewTabColor(tabGradientPicker.viewId, gradientId);
             setTabGradientPicker(null);
           }}
+        />
+      )}
+      {deleteViewTarget && (
+        <DeleteConfirmationDialog
+          confirmLabel={t("common.delete")}
+          message={t("dashboard.deleteViewBody", { name: deleteViewTarget.title })}
+          onCancel={() => setDeleteViewTarget(null)}
+          onConfirm={() => {
+            const target = deleteViewTarget;
+            setDeleteViewTarget(null);
+            void removeView(target.id);
+          }}
+          title={t("dashboard.removeView")}
         />
       )}
     </main>

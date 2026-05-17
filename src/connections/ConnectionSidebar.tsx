@@ -23,6 +23,7 @@ import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";
 import { confirmNativeDialog, invokeCommand, isTauriRuntime, selectAppLauncherFolder, selectKeyFile } from "../lib/tauri";
 import { connectionTree } from "../app-defaults";
+import { DeleteConfirmationDialog } from "../app/DeleteConfirmationDialog";
 import { pushTrayMenu } from "../app/trayMenu";
 import { useWorkspaceStore } from "../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, UpdateConnectionRequest, VncSettings } from "../types";
@@ -3362,21 +3363,13 @@ function ConfirmDeleteDialog({
   const title = deleteConfirmationTitle(t, target);
 
   return (
-    <div className="dialog-backdrop confirm-delete-backdrop" role="presentation">
-      <div className="confirm-delete-dialog" role="alertdialog" aria-label={title}>
-        <p className="panel-label">{title}</p>
-        <p className="confirm-delete-name">{name}</p>
-        <p className="confirm-delete-warning">{t("connections.cannotBeUndone")}</p>
-        <div className="dialog-actions">
-          <button className="approve-button danger" type="button" onClick={onConfirm}>
-            {t("common.delete")}
-          </button>
-          <button className="toolbar-button" type="button" onClick={onCancel}>
-            {t("common.cancel")}
-          </button>
-        </div>
-      </div>
-    </div>
+    <DeleteConfirmationDialog
+      confirmLabel={t("common.delete")}
+      message={`${name}\n\n${t("connections.cannotBeUndone")}`}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      title={title}
+    />
   );
 }
 

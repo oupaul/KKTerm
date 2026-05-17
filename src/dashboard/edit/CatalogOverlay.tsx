@@ -1,8 +1,9 @@
 import * as Icons from "lucide-react";
-import { AlertTriangle, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DeleteConfirmationDialog } from "../../app/DeleteConfirmationDialog";
 import { useDashboardStore } from "../state/dashboardStore";
 import { BUILT_IN_WIDGETS } from "../registry/builtInRegistry";
 import { resolveAccent } from "../registry/palette";
@@ -178,40 +179,13 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
           {visible.length === 0 && <p className="dw-empty">{t("dashboard.catalogNoMatches")}</p>}
         </div>
         {deleteTarget && (
-          <div className="dw-catalog-confirm-backdrop" onClick={() => setDeleteTarget(null)} role="presentation">
-            <div
-              aria-label={t("dashboard.deleteCustomWidgetTitle")}
-              aria-modal="true"
-              className="connection-dialog dw-catalog-confirm-dialog"
-              role="dialog"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <header className="connection-dialog-header compact dw-catalog-confirm-header">
-                <AlertTriangle className="dw-catalog-confirm-warning" size={22} aria-hidden="true" />
-                <h2>{t("dashboard.deleteCustomWidgetTitle")}</h2>
-              </header>
-              <p className="field-hint">
-                {t("dashboard.deleteCustomWidgetBody", { name: deleteTarget.title })}
-              </p>
-              <div className="dialog-actions dw-catalog-confirm-actions">
-                <button
-                  className="secondary-button danger dw-catalog-confirm-delete"
-                  onClick={() => void handleDeleteConfirm()}
-                  type="button"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                  <span>{t("dashboard.deleteCustomWidgetConfirm")}</span>
-                </button>
-                <button
-                  className="toolbar-button"
-                  onClick={() => setDeleteTarget(null)}
-                  type="button"
-                >
-                  {t("common.cancel")}
-                </button>
-              </div>
-            </div>
-          </div>
+          <DeleteConfirmationDialog
+            confirmLabel={t("dashboard.deleteCustomWidgetConfirm")}
+            message={t("dashboard.deleteCustomWidgetBody", { name: deleteTarget.title })}
+            onCancel={() => setDeleteTarget(null)}
+            onConfirm={() => void handleDeleteConfirm()}
+            title={t("dashboard.deleteCustomWidgetTitle")}
+          />
         )}
       </div>
     </div>

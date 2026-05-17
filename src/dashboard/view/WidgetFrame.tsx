@@ -1,8 +1,9 @@
-import { Check as CheckIcon, Settings as SettingsIcon, X as XIcon } from "lucide-react";
+import { Settings as SettingsIcon, X as XIcon } from "lucide-react";
 import * as Icons from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DeleteConfirmationDialog } from "../../app/DeleteConfirmationDialog";
 import { useDashboardStore } from "../state/dashboardStore";
 import { getBuiltInWidget } from "../registry/builtInRegistry";
 import { PRESET_RENDERERS } from "../registry/presetRegistry";
@@ -22,8 +23,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
   const customWidgets = useDashboardStore((s) => s.customWidgets);
   const agentCreatedRevealInstanceIds = useDashboardStore((s) => s.agentCreatedRevealInstanceIds);
   const clearAgentCreatedReveal = useDashboardStore((s) => s.clearAgentCreatedReveal);
-  const [confirming, setConfirming] = useState(false);
-  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const shouldSpaceWarp = agentCreatedRevealInstanceIds.includes(instance.id);
 
   const accent = resolveAccent(instance.accentName);
@@ -42,12 +42,6 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
   const IconCmp = (Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>)[instance.iconName] ?? Icons.Hash;
 
   useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current !== null) clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!shouldSpaceWarp) return;
     const timer = setTimeout(() => clearAgentCreatedReveal(instance.id), 1000);
     return () => clearTimeout(timer);
@@ -55,14 +49,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
 
   function handleRemoveClick(e: React.MouseEvent) {
     e.stopPropagation();
-    if (confirming) {
-      if (confirmTimerRef.current !== null) clearTimeout(confirmTimerRef.current);
-      setConfirming(false);
-      void removeInstance(instance.id);
-    } else {
-      setConfirming(true);
-      confirmTimerRef.current = setTimeout(() => setConfirming(false), 3000);
-    }
+    setDeleteConfirmOpen(true);
   }
 
   const controls: ReactNode = (
@@ -78,21 +65,13 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
       </button>
       {editMode ? (
         <button
-          className={`dw-ctrl danger${confirming ? " confirming" : ""}`}
+          className="dw-ctrl danger"
           onClick={handleRemoveClick}
-          aria-label={
-            confirming
-              ? t("dashboard.removeConfirmHint")
-              : t("dashboard.removeWidget", { name: fallbackTitle })
-          }
-          title={
-            confirming
-              ? t("dashboard.removeConfirmHint")
-              : t("dashboard.removeWidget", { name: fallbackTitle })
-          }
+          aria-label={t("dashboard.removeWidget", { name: fallbackTitle })}
+          title={t("dashboard.removeWidget", { name: fallbackTitle })}
           type="button"
         >
-          {confirming ? <CheckIcon width={12} height={12} /> : <XIcon width={12} height={12} />}
+          <XIcon width={12} height={12} />
         </button>
       ) : null}
     </span>
@@ -113,17 +92,31 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={className} style={style}>
-      <Render
-        title={fallbackTitle}
-        icon={<IconCmp width={14} height={14} />}
-        body={<WidgetBody instance={instance} />}
-        controls={controls}
-        editMode={editMode}
-        glass={instance.glass}
-        hideTitle={instance.hideTitle}
-        actionDirection={instance.actionDirection}
-      />
-    </div>
+    <>
+      <div className={className} style={style}>
+        <Render
+          title={fallbackTitle}
+          icon={<IconCmp width={14} height={14} />}
+          body={<WidgetBody instance={instance} />}
+          controls={controls}
+          editMode={editMode}
+          glass={instance.glass}
+          hideTitle={instance.hideTitle}
+          actionDirection={instance.actionDirection}
+        />
+      </div>
+      {deleteConfirmOpen ? (
+        <DeleteConfirmationDialog
+          confirmLabel={t("common.delete")}
+          message={t("dashboard.deleteWidgetBody", { name: fallbackTitle })}
+          onCancel={() => setDeleteConfirmOpen(false)}
+          onConfirm={() => {
+            setDeleteConfirmOpen(false);
+            void removeInstance(instance.id);
+          }}
+          title={t("dashboard.removeWidget", { name: fallbackTitle })}
+        />
+      ) : null}
+    </>
   );
 }
