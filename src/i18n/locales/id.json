@@ -426,7 +426,9 @@
       "periksa ruang disk setiap jam"
     ],
     "selectedIntent": "Intent asisten yang dipilih",
-    "clearIntent": "Hapus {{intent}}"
+    "clearIntent": "Hapus {{intent}}",
+    "toolPerformanceCounters": "Membaca pencacah kinerja…",
+    "toolPerformanceCountersDone": "Pencacah kinerja dibaca"
   },
   "app": {
     "aiAssistant": "AI Assistant",
@@ -1008,7 +1010,32 @@
     "widgetLibraryLoadFailed": "Gagal memuat pustaka widget: {{error}}",
     "connectionWidgetNoResults": "Tidak ada koneksi yang cocok dengan pencarian Anda",
     "viewTabGradient": "Gradien tab tampilan untuk {{view}}",
-    "clearViewTabGradient": "Hapus gradien tab tampilan untuk {{view}}"
+    "clearViewTabGradient": "Hapus gradien tab tampilan untuk {{view}}",
+    "notesTitle": "Catatan",
+    "notesSummary": "Catatan gaya post-it untuk pengingat cepat, dengan warna kertas dan font yang dapat disesuaikan.",
+    "notesPlaceholder": "Tulis catatan…",
+    "notesAriaLabel": "Teks catatan",
+    "notesToolbarLabel": "Tampilan catatan",
+    "notesBackgroundColor": "Warna latar",
+    "notesFont": "Font",
+    "notesColor": {
+      "yellow": "Kuning",
+      "pink": "Merah muda",
+      "blue": "Biru",
+      "green": "Hijau",
+      "orange": "Jingga",
+      "purple": "Ungu",
+      "white": "Putih"
+    },
+    "notesFontOption": {
+      "handwriting": "Tulisan tangan",
+      "marker": "Spidol",
+      "system": "Sistem",
+      "serif": "Serif",
+      "mono": "Mono"
+    },
+    "deleteViewBody": "Hapus \"{{name}}\" dan semua widget di tampilan Dasbor ini? Ini tidak dapat dibatalkan.",
+    "deleteWidgetBody": "Hapus \"{{name}}\" dari tampilan Dasbor ini? Ini tidak dapat dibatalkan."
   },
   "languages": {
     "de": "Deutsch",
@@ -1126,6 +1153,10 @@
       "webSearch": {
         "description": "Cari web dan kembalikan judul hasil, tautan, dan cuplikan ringkas.",
         "label": "Pencarian web"
+      },
+      "performanceCounters": {
+        "label": "Pencacah kinerja",
+        "description": "Membaca pencacah CPU, memori, jaringan, proses, waktu aktif, dan ruang drive lokal dengan overhead rendah."
       }
     },
     "aiToolsDescription": "Pilih alat bawaan mana yang dapat dipanggil AI Assistant saat menjawab. Matikan alat berisiko kecuali Anda membutuhkannya.",

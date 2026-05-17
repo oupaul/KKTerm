@@ -426,7 +426,9 @@
       "controlla lo spazio su disco ogni ora"
     ],
     "selectedIntent": "Intento assistente selezionato",
-    "clearIntent": "Cancella {{intent}}"
+    "clearIntent": "Cancella {{intent}}",
+    "toolPerformanceCounters": "Lettura dei contatori di prestazioni…",
+    "toolPerformanceCountersDone": "Contatori di prestazioni letti"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -1009,7 +1011,32 @@
     "widgetLibraryLoadFailed": "Impossibile caricare le librerie widget: {{error}}",
     "connectionWidgetNoResults": "Nessuna connessione corrisponde alla tua ricerca",
     "viewTabGradient": "Gradiente scheda vista per {{view}}",
-    "clearViewTabGradient": "Cancella gradiente scheda vista per {{view}}"
+    "clearViewTabGradient": "Cancella gradiente scheda vista per {{view}}",
+    "notesTitle": "Note",
+    "notesSummary": "Una nota stile post-it per promemoria rapidi, con colore della carta e carattere regolabili.",
+    "notesPlaceholder": "Scrivi una nota…",
+    "notesAriaLabel": "Testo della nota",
+    "notesToolbarLabel": "Aspetto della nota",
+    "notesBackgroundColor": "Colore di sfondo",
+    "notesFont": "Carattere",
+    "notesColor": {
+      "yellow": "Giallo",
+      "pink": "Rosa",
+      "blue": "Blu",
+      "green": "Verde",
+      "orange": "Arancione",
+      "purple": "Viola",
+      "white": "Bianco"
+    },
+    "notesFontOption": {
+      "handwriting": "Scrittura a mano",
+      "marker": "Pennarello",
+      "system": "Sistema",
+      "serif": "Serif",
+      "mono": "Mono"
+    },
+    "deleteViewBody": "Eliminare \"{{name}}\" e tutti i widget in questa vista Dashboard? Non può essere annullato.",
+    "deleteWidgetBody": "Rimuovere \"{{name}}\" da questa vista Dashboard? Non può essere annullato."
   },
   "languages": {
     "de": "Deutsch",
@@ -1127,6 +1154,10 @@
       "webSearch": {
         "description": "Cerca sul web e restituisci titoli, link e snippet compatti dei risultati.",
         "label": "Ricerca web"
+      },
+      "performanceCounters": {
+        "label": "Contatori di prestazioni",
+        "description": "Leggi i contatori locali a basso overhead di CPU, memoria, rete, processi, uptime e spazio su disco."
       }
     },
     "aiToolsDescription": "Scegli quali strumenti integrati l'Assistente IA può utilizzare per rispondere. Tieni disattivati gli strumenti rischiosi a meno che non ti servano.",

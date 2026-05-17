@@ -426,7 +426,9 @@
       "ตรวจสอบพื้นที่ดิสก์ทุกชั่วโมง"
     ],
     "selectedIntent": "เจตนาผู้ช่วยที่เลือก",
-    "clearIntent": "ล้าง {{intent}}"
+    "clearIntent": "ล้าง {{intent}}",
+    "toolPerformanceCounters": "กำลังอ่านตัวนับประสิทธิภาพ…",
+    "toolPerformanceCountersDone": "อ่านตัวนับประสิทธิภาพแล้ว"
   },
   "app": {
     "aiAssistant": "ผู้ช่วย AI",
@@ -1008,7 +1010,32 @@
     "widgetLibraryLoadFailed": "โหลดไลบรารีวิดเจ็ตล้มเหลว: {{error}}",
     "connectionWidgetNoResults": "ไม่มีการเชื่อมต่อที่ตรงกับการค้นหาของคุณ",
     "viewTabGradient": "การไล่ระดับสีแท็บมุมมองสำหรับ {{view}}",
-    "clearViewTabGradient": "ล้างการไล่ระดับสีแท็บมุมมองสำหรับ {{view}}"
+    "clearViewTabGradient": "ล้างการไล่ระดับสีแท็บมุมมองสำหรับ {{view}}",
+    "notesTitle": "บันทึก",
+    "notesSummary": "บันทึกสไตล์โพสต์อิทสำหรับการเตือนความจำรวดเร็ว พร้อมปรับสีกระดาษและแบบอักษรได้",
+    "notesPlaceholder": "จดบันทึก…",
+    "notesAriaLabel": "ข้อความบันทึก",
+    "notesToolbarLabel": "ลักษณะบันทึก",
+    "notesBackgroundColor": "สีพื้นหลัง",
+    "notesFont": "แบบอักษร",
+    "notesColor": {
+      "yellow": "สีเหลือง",
+      "pink": "สีชมพู",
+      "blue": "สีฟ้า",
+      "green": "สีเขียว",
+      "orange": "สีส้ม",
+      "purple": "สีม่วง",
+      "white": "สีขาว"
+    },
+    "notesFontOption": {
+      "handwriting": "ลายมือ",
+      "marker": "ปากกาเมจิก",
+      "system": "ระบบ",
+      "serif": "เซริฟ",
+      "mono": "ความกว้างเท่า"
+    },
+    "deleteViewBody": "ลบ \"{{name}}\" และวิดเจ็ตทั้งหมดในมุมมองแดชบอร์ดนี้หรือไม่ ไม่สามารถเรียกคืนได้",
+    "deleteWidgetBody": "ลบ \"{{name}}\" ออกจากมุมมองแดชบอร์ดนี้หรือไม่ ไม่สามารถเรียกคืนได้"
   },
   "languages": {
     "de": "Deutsch",
@@ -1126,6 +1153,10 @@
       "webSearch": {
         "description": "ค้นหาเว็บและส่งคืนผลลัพธ์แบบย่อชื่อ ลิงก์ และตัวอย่าง",
         "label": "ค้นหาเว็บ"
+      },
+      "performanceCounters": {
+        "label": "ตัวนับประสิทธิภาพ",
+        "description": "อ่านตัวนับ CPU, หน่วยความจำ, เครือข่าย, กระบวนการ, เวลาทำงาน และพื้นที่ดิสก์ในเครื่องที่มีค่าใช้จ่ายต่ำ"
       }
     },
     "aiToolsDescription": "เลือกเครื่องมือในตัวที่ผู้ช่วย AI สามารถเรียกใช้ขณะตอบคำถาม ปิดเครื่องมือที่มีความเสี่ยงไว้ยกเว้นคุณจำเป็นต้องใช้",

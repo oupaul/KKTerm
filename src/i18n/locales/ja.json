@@ -426,7 +426,9 @@
       "1時間ごとにディスク空き容量を確認"
     ],
     "selectedIntent": "選択されたアシスタントインテント",
-    "clearIntent": "{{intent}}をクリア"
+    "clearIntent": "{{intent}}をクリア",
+    "toolPerformanceCounters": "パフォーマンスカウンターを読み取り中…",
+    "toolPerformanceCountersDone": "パフォーマンスカウンターを読み取りました"
   },
   "app": {
     "aiAssistant": "AIアシスタント",
@@ -1009,7 +1011,32 @@
     "widgetLibraryLoadFailed": "ウィジェットライブラリの読み込みに失敗しました: {{error}}",
     "connectionWidgetNoResults": "検索に一致する接続はありません",
     "viewTabGradient": "{{view}}のビュータブグラデーション",
-    "clearViewTabGradient": "{{view}}のビュータブグラデーションをクリア"
+    "clearViewTabGradient": "{{view}}のビュータブグラデーションをクリア",
+    "notesTitle": "メモ",
+    "notesSummary": "付箋スタイルのメモ。紙の色とフォントを調整できます。",
+    "notesPlaceholder": "メモを書く…",
+    "notesAriaLabel": "メモのテキスト",
+    "notesToolbarLabel": "メモの外観",
+    "notesBackgroundColor": "背景色",
+    "notesFont": "フォント",
+    "notesColor": {
+      "yellow": "黄色",
+      "pink": "ピンク",
+      "blue": "青",
+      "green": "緑",
+      "orange": "オレンジ",
+      "purple": "紫",
+      "white": "白"
+    },
+    "notesFontOption": {
+      "handwriting": "手書き",
+      "marker": "マーカー",
+      "system": "システム",
+      "serif": "セリフ",
+      "mono": "等幅"
+    },
+    "deleteViewBody": "「{{name}}」とこのダッシュボードビューのすべてのウィジェットを削除しますか？この操作は元に戻せません。",
+    "deleteWidgetBody": "「{{name}}」をこのダッシュボードビューから削除しますか？この操作は元に戻せません。"
   },
   "languages": {
     "de": "Deutsch",
@@ -1127,6 +1154,10 @@
       "webSearch": {
         "description": "ウェブを検索し、コンパクトな結果タイトル、リンク、スニペットを返します。",
         "label": "ウェブ検索"
+      },
+      "performanceCounters": {
+        "label": "パフォーマンスカウンター",
+        "description": "低オーバーヘッドのローカルCPU、メモリ、ネットワーク、プロセス、稼働時間、ディスク容量カウンターを読み取ります。"
       }
     },
     "aiToolsDescription": "AI アシスタントが応答中に呼び出せる組み込みツールを選択します。必要な場合を除き、リスクのあるツールはオフにしてください。",

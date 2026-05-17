@@ -426,7 +426,9 @@
       "每小时检查磁盘空间"
     ],
     "selectedIntent": "已选择的助手意图",
-    "clearIntent": "清除 {{intent}}"
+    "clearIntent": "清除 {{intent}}",
+    "toolPerformanceCounters": "正在读取性能计数器…",
+    "toolPerformanceCountersDone": "已读取性能计数器"
   },
   "app": {
     "aiAssistant": "AI 助手",
@@ -1009,7 +1011,32 @@
     "widgetLibraryLoadFailed": "加载小组件库失败：{{error}}",
     "connectionWidgetNoResults": "没有匹配搜索的连接",
     "viewTabGradient": "{{view}}的视图选项卡渐变",
-    "clearViewTabGradient": "清除{{view}}的视图选项卡渐变"
+    "clearViewTabGradient": "清除{{view}}的视图选项卡渐变",
+    "notesTitle": "笔记",
+    "notesSummary": "一张便利贴风格的笔记，用于快速提醒，可调整纸张颜色和字体。",
+    "notesPlaceholder": "随手记下…",
+    "notesAriaLabel": "笔记文字",
+    "notesToolbarLabel": "笔记外观",
+    "notesBackgroundColor": "背景颜色",
+    "notesFont": "字体",
+    "notesColor": {
+      "yellow": "黄色",
+      "pink": "粉色",
+      "blue": "蓝色",
+      "green": "绿色",
+      "orange": "橙色",
+      "purple": "紫色",
+      "white": "白色"
+    },
+    "notesFontOption": {
+      "handwriting": "手写",
+      "marker": "马克笔",
+      "system": "系统",
+      "serif": "衬线体",
+      "mono": "等宽"
+    },
+    "deleteViewBody": "删除「{{name}}」和此仪表板视图中的所有小部件？此操作无法撤销。",
+    "deleteWidgetBody": "从此仪表板视图中移除「{{name}}」？此操作无法撤销。"
   },
   "languages": {
     "de": "Deutsch",
@@ -1127,6 +1154,10 @@
       "webSearch": {
         "description": "搜索网页并返回简洁的结果标题、链接和摘要。",
         "label": "网页搜索"
+      },
+      "performanceCounters": {
+        "label": "性能计数器",
+        "description": "读取低开销的本地 CPU、内存、网络、进程、运行时间和磁盘空间计数器。"
       }
     },
     "aiToolsDescription": "选择 AI 助手在回答时可以调用的内置工具。除非需要，否则请保持有风险的工具关闭。",

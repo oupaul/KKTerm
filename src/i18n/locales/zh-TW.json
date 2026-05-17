@@ -426,7 +426,9 @@
       "每小時檢查磁碟空間"
     ],
     "selectedIntent": "已選擇的助理意圖",
-    "clearIntent": "清除 {{intent}}"
+    "clearIntent": "清除 {{intent}}",
+    "toolPerformanceCounters": "正在讀取效能計數器…",
+    "toolPerformanceCountersDone": "已讀取效能計數器"
   },
   "app": {
     "aiAssistant": "AI 助理",
@@ -1009,7 +1011,32 @@
     "widgetLibraryLoadFailed": "載入小工具庫失敗：{{error}}",
     "connectionWidgetNoResults": "沒有符合搜尋的連線",
     "viewTabGradient": "{{view}} 的檢視頁籤漸層",
-    "clearViewTabGradient": "清除 {{view}} 的檢視頁籤漸層"
+    "clearViewTabGradient": "清除 {{view}} 的檢視頁籤漸層",
+    "notesTitle": "筆記",
+    "notesSummary": "一張便利貼風格的筆記，用於快速提醒，可調整紙張顏色和字型。",
+    "notesPlaceholder": "隨手記下…",
+    "notesAriaLabel": "筆記文字",
+    "notesToolbarLabel": "筆記外觀",
+    "notesBackgroundColor": "背景顏色",
+    "notesFont": "字型",
+    "notesColor": {
+      "yellow": "黃色",
+      "pink": "粉紅色",
+      "blue": "藍色",
+      "green": "綠色",
+      "orange": "橘色",
+      "purple": "紫色",
+      "white": "白色"
+    },
+    "notesFontOption": {
+      "handwriting": "手寫",
+      "marker": "麥克筆",
+      "system": "系統",
+      "serif": "襯線體",
+      "mono": "等寬"
+    },
+    "deleteViewBody": "刪除「{{name}}」和此儀表板檢視中的所有小工具？此操作無法復原。",
+    "deleteWidgetBody": "從此儀表板檢視中移除「{{name}}」？此操作無法復原。"
   },
   "languages": {
     "de": "Deutsch",
@@ -1127,6 +1154,10 @@
       "webSearch": {
         "description": "搜尋網路並回傳精簡的結果標題、連結及摘要。",
         "label": "網頁搜尋"
+      },
+      "performanceCounters": {
+        "label": "效能計數器",
+        "description": "讀取低負擔的本機 CPU、記憶體、網路、處理程序、運作時間和磁碟空間計數器。"
       }
     },
     "aiToolsDescription": "選擇 AI 助理在回答時可呼叫的內建工具。除非需要，否則請勿開啟高風險工具。",

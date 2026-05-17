@@ -426,7 +426,9 @@
       "verificar espaço em disco a cada hora"
     ],
     "selectedIntent": "Intenção do assistente selecionada",
-    "clearIntent": "Limpar {{intent}}"
+    "clearIntent": "Limpar {{intent}}",
+    "toolPerformanceCounters": "Lendo contadores de desempenho…",
+    "toolPerformanceCountersDone": "Contadores de desempenho lidos"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -1008,7 +1010,32 @@
     "widgetLibraryLoadFailed": "Falha ao carregar bibliotecas de widgets: {{error}}",
     "connectionWidgetNoResults": "Nenhuma conexão corresponde à sua pesquisa",
     "viewTabGradient": "Gradiente da aba de visualização para {{view}}",
-    "clearViewTabGradient": "Limpar gradiente da aba de visualização para {{view}}"
+    "clearViewTabGradient": "Limpar gradiente da aba de visualização para {{view}}",
+    "notesTitle": "Notas",
+    "notesSummary": "Uma nota estilo post-it para lembretes rápidos, com cor do papel e fonte ajustáveis.",
+    "notesPlaceholder": "Escreva uma nota…",
+    "notesAriaLabel": "Texto da nota",
+    "notesToolbarLabel": "Aparência da nota",
+    "notesBackgroundColor": "Cor de fundo",
+    "notesFont": "Fonte",
+    "notesColor": {
+      "yellow": "Amarelo",
+      "pink": "Rosa",
+      "blue": "Azul",
+      "green": "Verde",
+      "orange": "Laranja",
+      "purple": "Roxo",
+      "white": "Branco"
+    },
+    "notesFontOption": {
+      "handwriting": "Escrita à mão",
+      "marker": "Marcador",
+      "system": "Sistema",
+      "serif": "Serifa",
+      "mono": "Mono"
+    },
+    "deleteViewBody": "Excluir \"{{name}}\" e todos os widgets desta visualização do Dashboard? Isso não pode ser desfeito.",
+    "deleteWidgetBody": "Remover \"{{name}}\" desta visualização do Dashboard? Isso não pode ser desfeito."
   },
   "languages": {
     "de": "Deutsch",
@@ -1126,6 +1153,10 @@
       "webSearch": {
         "description": "Buscar na web e retornar títulos de resultados, links e trechos compactos.",
         "label": "Busca na web"
+      },
+      "performanceCounters": {
+        "label": "Contadores de desempenho",
+        "description": "Lê contadores locais de baixa sobrecarga de CPU, memória, rede, processos, tempo de atividade e espaço em disco."
       }
     },
     "aiToolsDescription": "Escolha quais ferramentas integradas o Assistente IA pode usar ao responder. Mantenha as ferramentas arriscadas desativadas a menos que precise delas.",

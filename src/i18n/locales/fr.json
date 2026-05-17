@@ -426,7 +426,9 @@
       "vérifier l'espace disque toutes les heures"
     ],
     "selectedIntent": "Intention de l'assistant sélectionnée",
-    "clearIntent": "Effacer {{intent}}"
+    "clearIntent": "Effacer {{intent}}",
+    "toolPerformanceCounters": "Lecture des compteurs de performance…",
+    "toolPerformanceCountersDone": "Compteurs de performance lus"
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -1009,7 +1011,32 @@
     "widgetLibraryLoadFailed": "Échec du chargement des bibliothèques de widgets : {{error}}",
     "connectionWidgetNoResults": "Aucune connexion ne correspond à votre recherche",
     "viewTabGradient": "Dégradé de l'onglet de vue pour {{view}}",
-    "clearViewTabGradient": "Effacer le dégradé de l'onglet de vue pour {{view}}"
+    "clearViewTabGradient": "Effacer le dégradé de l'onglet de vue pour {{view}}",
+    "notesTitle": "Notes",
+    "notesSummary": "Une note style post-it pour des rappels rapides, avec couleur de papier et police réglables.",
+    "notesPlaceholder": "Écrivez une note…",
+    "notesAriaLabel": "Texte de la note",
+    "notesToolbarLabel": "Apparence de la note",
+    "notesBackgroundColor": "Couleur de fond",
+    "notesFont": "Police",
+    "notesColor": {
+      "yellow": "Jaune",
+      "pink": "Rose",
+      "blue": "Bleu",
+      "green": "Vert",
+      "orange": "Orange",
+      "purple": "Violet",
+      "white": "Blanc"
+    },
+    "notesFontOption": {
+      "handwriting": "Écriture",
+      "marker": "Marqueur",
+      "system": "Système",
+      "serif": "Serif",
+      "mono": "Mono"
+    },
+    "deleteViewBody": "Supprimer « {{name}} » et tous les widgets de cette vue du tableau de bord ? Cette action est irréversible.",
+    "deleteWidgetBody": "Supprimer « {{name}} » de cette vue du tableau de bord ? Cette action est irréversible."
   },
   "languages": {
     "de": "Deutsch",
@@ -1127,6 +1154,10 @@
       "webSearch": {
         "description": "Rechercher sur le web et renvoyer des titres, liens et extraits compacts.",
         "label": "Recherche web"
+      },
+      "performanceCounters": {
+        "label": "Compteurs de performance",
+        "description": "Lire les compteurs locaux à faible surcharge du processeur, de la mémoire, du réseau, des processus, de la disponibilité et de l'espace disque."
       }
     },
     "aiToolsDescription": "Choisissez quels outils intégrés l'assistant IA peut utiliser pour répondre. Gardez les outils risqués désactivés sauf si nécessaire.",

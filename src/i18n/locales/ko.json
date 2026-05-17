@@ -426,7 +426,9 @@
       "매시간 디스크 공간 확인"
     ],
     "selectedIntent": "선택된 어시스턴트 인텐트",
-    "clearIntent": "{{intent}} 지우기"
+    "clearIntent": "{{intent}} 지우기",
+    "toolPerformanceCounters": "성능 카운터 읽는 중…",
+    "toolPerformanceCountersDone": "성능 카운터 읽음"
   },
   "app": {
     "aiAssistant": "AI 어시스턴트",
@@ -1008,7 +1010,32 @@
     "widgetLibraryLoadFailed": "위젯 라이브러리 로드 실패: {{error}}",
     "connectionWidgetNoResults": "검색과 일치하는 연결이 없습니다",
     "viewTabGradient": "{{view}}의 보기 탭 그라데이션",
-    "clearViewTabGradient": "{{view}}의 보기 탭 그라데이션 지우기"
+    "clearViewTabGradient": "{{view}}의 보기 탭 그라데이션 지우기",
+    "notesTitle": "메모",
+    "notesSummary": "빠른 알림을 위한 포스트잇 스타일 메모. 종이 색상과 글꼴을 조정할 수 있습니다.",
+    "notesPlaceholder": "메모를 작성하세요…",
+    "notesAriaLabel": "메모 텍스트",
+    "notesToolbarLabel": "메모 모양",
+    "notesBackgroundColor": "배경색",
+    "notesFont": "글꼴",
+    "notesColor": {
+      "yellow": "노란색",
+      "pink": "분홍색",
+      "blue": "파란색",
+      "green": "초록색",
+      "orange": "주황색",
+      "purple": "보라색",
+      "white": "흰색"
+    },
+    "notesFontOption": {
+      "handwriting": "손글씨",
+      "marker": "마커",
+      "system": "시스템",
+      "serif": "세리프",
+      "mono": "고정폭"
+    },
+    "deleteViewBody": "이 대시보드 보기에서 \"{{name}}\" 및 모든 위젯을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+    "deleteWidgetBody": "이 대시보드 보기에서 \"{{name}}\"을(를) 제거하시겠습니까? 되돌릴 수 없습니다."
   },
   "languages": {
     "de": "Deutsch",
@@ -1126,6 +1153,10 @@
       "webSearch": {
         "description": "웹을 검색하고 간결한 결과 제목, 링크 및 스니펫을 반환합니다.",
         "label": "웹 검색"
+      },
+      "performanceCounters": {
+        "label": "성능 카운터",
+        "description": "오버헤드가 낮은 로컬 CPU, 메모리, 네트워크, 프로세스, 가동 시간 및 드라이브 공간 카운터를 읽습니다."
       }
     },
     "aiToolsDescription": "AI 어시스턴트가 응답 중에 호출할 수 있는 내장 도구를 선택합니다. 필요한 경우가 아니면 위험한 도구는 끄십시오.",

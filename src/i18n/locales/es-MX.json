@@ -426,7 +426,9 @@
       "revisar el espacio en disco cada hora"
     ],
     "selectedIntent": "Intención del asistente seleccionada",
-    "clearIntent": "Limpiar {{intent}}"
+    "clearIntent": "Limpiar {{intent}}",
+    "toolPerformanceCounters": "Leyendo contadores de rendimiento…",
+    "toolPerformanceCountersDone": "Contadores de rendimiento leídos"
   },
   "app": {
     "aiAssistant": "Asistente IA",
@@ -1008,7 +1010,32 @@
     "widgetLibraryLoadFailed": "Error al cargar las bibliotecas de widgets: {{error}}",
     "connectionWidgetNoResults": "No hay conexiones que coincidan con tu búsqueda",
     "viewTabGradient": "Degradado de pestaña de vista para {{view}}",
-    "clearViewTabGradient": "Limpiar degradado de pestaña de vista para {{view}}"
+    "clearViewTabGradient": "Limpiar degradado de pestaña de vista para {{view}}",
+    "notesTitle": "Notas",
+    "notesSummary": "Una nota estilo post-it para recordatorios rápidos, con color de papel y fuente ajustables.",
+    "notesPlaceholder": "Anota algo…",
+    "notesAriaLabel": "Texto de la nota",
+    "notesToolbarLabel": "Apariencia de la nota",
+    "notesBackgroundColor": "Color de fondo",
+    "notesFont": "Fuente",
+    "notesColor": {
+      "yellow": "Amarillo",
+      "pink": "Rosa",
+      "blue": "Azul",
+      "green": "Verde",
+      "orange": "Naranja",
+      "purple": "Morado",
+      "white": "Blanco"
+    },
+    "notesFontOption": {
+      "handwriting": "Escritura a mano",
+      "marker": "Marcador",
+      "system": "Sistema",
+      "serif": "Serif",
+      "mono": "Mono"
+    },
+    "deleteViewBody": "¿Eliminar \"{{name}}\" y todos los widgets de esta vista del Dashboard? No se puede deshacer.",
+    "deleteWidgetBody": "¿Quitar \"{{name}}\" de esta vista del Dashboard? No se puede deshacer."
   },
   "languages": {
     "de": "Deutsch",
@@ -1126,6 +1153,10 @@
       "webSearch": {
         "description": "Buscar en la web y devolver títulos de resultados, enlaces y fragmentos compactos.",
         "label": "Búsqueda web"
+      },
+      "performanceCounters": {
+        "label": "Contadores de rendimiento",
+        "description": "Lee contadores locales de bajo consumo de CPU, memoria, red, procesos, tiempo de actividad y espacio en disco."
       }
     },
     "aiToolsDescription": "Elija qué herramientas integradas puede usar el Asistente IA al responder. Mantenga las herramientas riesgosas desactivadas a menos que las necesite.",
