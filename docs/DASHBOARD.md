@@ -10,7 +10,7 @@ The Dashboard module owns:
 
 - The widget grid, drag/resize, and edit mode.
 - The widget registry for built-in widget types.
-- The persistence of views, widget instances, and AI-authored custom widget definitions.
+- The persistence of views, widget instances, and AI Created Widget definitions.
 - The widget customization surface (preset, accent, icon, title, kind-specific Advanced section).
 - The Tauri commands the AI Assistant uses to manipulate the dashboard.
 - The page-context payload supplied to the shared AI Assistant panel.
@@ -27,7 +27,7 @@ It does not own:
 
 **Dashboard Widget Instance** — one placed widget on a view. Carries display state (preset, accent, icon, custom title), layout state (`x`, `y`, `w`, `h` on the 12-column grid), per-instance custom settings values, a `kind` of `builtIn` / `content` / `script`, and a `source_id` that resolves either to a built-in registry entry or a `DashboardCustomWidget` row.
 
-**Dashboard Custom Widget** — a durable definition for `content` and `script` widgets authored by the AI Assistant. Stored once; multiple instances can reference the same definition. A custom widget may define a small app-rendered settings schema; each placed instance stores its own values. Secret settings are the exception: the instance stores only a reference and the actual password/API key/token lives in the OS keychain. Deleting a custom widget cascades to its instances (enforced in Rust because SQLite cannot express conditional foreign keys).
+**Dashboard AI Created Widget** — a durable definition for `content` and `script` widgets authored by the AI Assistant. Stored once; multiple instances can reference the same definition. An AI Created Widget may define a small app-rendered settings schema; each placed instance stores its own values. Secret settings are the exception: the instance stores only a reference and the actual password/API key/token lives in the OS keychain. Deleting an AI Created Widget cascades to its instances (enforced in Rust because SQLite cannot express conditional foreign keys).
 
 **Widget Kind** — three values, layered by capability:
 
@@ -78,14 +78,14 @@ SQLite holds three Dashboard tables, defined in `src-tauri/src/storage.rs` under
 | --- | --- |
 | `dashboard_views` | One row per view. Holds `title`, `sort_order`, `grid_density`, and optional `tab_color` gradient preset id. |
 | `dashboard_widget_instances` | One row per placed widget. Holds `kind`, `source_id`, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), per-instance `settings_values_json`, and layout (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Secret fields store only `secretRef` metadata here. |
-| `dashboard_custom_widgets` | One row per AI-authored `content` or `script` widget definition. Holds `body_json`, validated against the kind, plus optional app-rendered `settings_schema_json`. |
+| `dashboard_custom_widgets` | One row per AI Created `content` or `script` widget definition. Holds `body_json`, validated against the kind, plus optional app-rendered `settings_schema_json`. |
 
 Indexes: `(view_id, sort_order)` on instances for fast per-view loads.
 
 Cascade rules:
 
 - View delete → instance delete (FK CASCADE).
-- Custom widget delete → must remove referencing instances first, enforced in Rust. The remove command takes a `forceDeleteInstances` flag; without it, returns a structured error listing affected instances so the user (or AI) can confirm.
+- AI Created Widget delete → must remove referencing instances first, enforced in Rust. The remove command takes a `forceDeleteInstances` flag; without it, returns a structured error listing affected instances so the user (or AI) can confirm.
 
 ## Tauri Command Surface
 
@@ -99,11 +99,11 @@ Each command is a thin handler over the storage layer with up-front validation:
 | `dashboard_remove_view` | Cascade to instances. |
 | `dashboard_reorder_views` | Single `Vec<String>` of ids. |
 | `dashboard_add_instance` | Validates preset/accent/icon/grid bounds. |
-| `dashboard_update_instance` | Patch over presentation, per-instance settings values, and layout fields. Secret fields are validated against the custom widget schema so plaintext secrets cannot be persisted in SQLite. |
+| `dashboard_update_instance` | Patch over presentation, per-instance settings values, and layout fields. Secret fields are validated against the AI Created Widget schema so plaintext secrets cannot be persisted in SQLite. |
 | `dashboard_read_widget_secret` | Script-widget bridge command. Validates that the requested key is a `secret` field on that exact widget instance and that the instance stores the expected `secretRef`, then reads the OS-keychain `widgetSecret` value. |
 | `dashboard_remove_instance` | Hard delete. |
 | `dashboard_apply_layout` | Batched layout commit used by the debounced drag/resize pipeline. |
-| `dashboard_create_widget` | AI-facing atomic helper: validates a structured `body` and optional `settingsSchema`, creates the custom widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. |
+| `dashboard_create_widget` | AI-facing atomic helper: validates a structured `body` and optional `settingsSchema`, creates the AI Created Widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. |
 | `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` per kind and optional `settingsSchemaJson` but does not place an instance. |
 | `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind and patched `settingsSchemaJson`. |
 | `dashboard_remove_custom_widget` | Requires `forceDeleteInstances` if instances reference the widget. |
@@ -135,7 +135,7 @@ The AI-facing widget contract requires the first created widget to be complete f
 src/dashboard/
   DashboardPage.tsx              ── shell, topbar, view pills, edit-mode toggle
   motion.tsx                     ── existing centralized motion wrappers
-  schema.ts                     ── TypeScript validator for custom widget bodies and settings schemas
+  schema.ts                     ── TypeScript validator for AI Created Widget bodies and settings schemas
   state/
     dashboardStore.ts            ── Zustand store: views, instances, customWidgets, activeViewId, editMode
     persistence.ts               ── typed Tauri command wrappers
@@ -185,7 +185,7 @@ The customize popover is anchored to a widget's settings (⚙) button and contai
 2. **Accent** — palette swatches.
 3. **Icon** — scrollable grid of the curated lucide set.
 4. **Title** — text input; empty clears the override.
-5. **Widget settings** — for custom widgets with `settings_schema_json`, KKTerm renders text, number, boolean, select, and secret fields. Non-secret values are stored on the instance. Secret values are written to the OS keychain under the `widgetSecret` kind and the instance stores only a reference.
+5. **Widget settings** — for AI Created Widgets with `settings_schema_json`, KKTerm renders text, number, boolean, select, and secret fields. Non-secret values are stored on the instance. Secret values are written to the OS keychain under the `widgetSecret` kind and the instance stores only a reference.
 6. **Advanced** — kind-specific:
    - `script`: network permission, poll seconds, view source (read-only), reload.
    - `content`: view body JSON (read-only).
@@ -193,7 +193,7 @@ The customize popover is anchored to a widget's settings (⚙) button and contai
 
 The shared display sections render identically regardless of widget kind.
 
-The catalog overlay is a separate modal with search + two source-group tabs: Built-in and Custom. Widget definitions still carry a `category` field for future category UI, but current browsing is grouped only by shipped built-ins versus AI-authored custom widgets. There is no user-facing "+ Create custom widget" entry in v1 — custom widget authorship is AI-only.
+The catalog overlay is a separate modal with search + two source-group tabs: Built-in and AI Created. Widget definitions still carry a `category` field for future category UI, but current browsing is grouped only by shipped built-ins versus AI Created Widgets. There is no user-facing "+ Create AI Created Widget" entry in v1 — AI Created Widget authorship is AI-only.
 
 ## Script Widget Host
 
@@ -205,7 +205,7 @@ The catalog overlay is a separate modal with search + two source-group tabs: Bui
 - A per-instance settings snapshot loaded through `KK.getSettings()`. Scripts can persist small non-secret user options with `KK.setSetting(key, value)` or replace the object with `KK.setSettings(nextSettings)`.
 - A viewport helper for canvas/WebGL widgets: `KK.getViewport()` returns `{ width, height, dpr }` measured from the script root, and `KK.onViewportResize(callback)` calls back with the same shape when the widget body changes size.
 - A small app-owned CSS primitive set for generated UI: `kk-shell`, `kk-toolbar`, `kk-cluster`, `kk-title`, `kk-subtitle`, `kk-muted`, `kk-panel`, `kk-card`, `kk-grid`, `kk-stat`, `kk-stat-value`, `kk-stat-label`, `kk-pill`, `kk-badge`, `kk-stage`, and `kk-fill`. These are the default building blocks for polished script widgets; they avoid pulling a third-party UI framework into every iframe.
-- A secret bridge exposed as `await KK.getSecret(fieldKey)`. The parent frame validates the field against the custom widget schema and instance `secretRef` before asking Rust to read the OS keychain.
+- A secret bridge exposed as `await KK.getSecret(fieldKey)`. The parent frame validates the field against the AI Created Widget schema and instance `secretRef` before asking Rust to read the OS keychain.
 
 The iframe is a **fault-isolation** boundary, not a security boundary. KKTerm is MIT and single-user; the iframe exists so a typo in one script widget cannot crash the dashboard, and so future Tauri-command exposure (a postMessage bridge) is a deliberate per-handler decision rather than an accidental global.
 
@@ -223,7 +223,7 @@ The bridge exposes `KK.openExternal(url)`, `KK.getSettings()`, `KK.setSetting(ke
 
 ### Script Widget Libraries
 
-Curated local libraries are registered in `src/dashboard/script/widgetLibraries.ts` and requested by AI-authored scripts through `body.libraries`. The script host loads every requested library before running widget source, so generated code must declare libraries it uses instead of assuming globals already exist.
+Curated local libraries are registered in `src/dashboard/script/widgetLibraries.ts` and requested by AI Created scripts through `body.libraries`. The script host loads every requested library before running widget source, so generated code must declare libraries it uses instead of assuming globals already exist.
 
 Matter.js is the default 2D physics building block for script widgets. It is registered under the `matter` library key, exposes the `Matter` global, and should be used for widget-sized games, physics toys, collision, gravity, rigid bodies, and constraints instead of custom per-widget physics loops. Matter.js widgets should size their canvas from `KK.getViewport()`, update renderer bounds and static wall/floor bodies on `KK.onViewportResize`, keep all bodies bounded to the widget arena, and stop runners or animation loops when gameplay is paused, finished, or otherwise inactive.
 
@@ -241,7 +241,7 @@ The original script host pasted AI-generated `source` directly inside the host `
 
 ## AI Widget Reliability Direction
 
-Arbitrary AI-authored HTML is not a reliable default for dashboard creation. The reliable path is schema-first:
+Arbitrary AI Created HTML is not a reliable default for dashboard creation. The reliable path is schema-first:
 
 - The assistant should choose `content` widgets whenever the request fits the existing declarative shapes (`markdown`, `kvList`, `checklist`, `stat`). For `shape: "markdown"`, assistant-authored widget bodies must specify `data.mode` as either `markdown` or `html`; use `markdown` for Markdown text and `html` for an HTML fragment that KKTerm will sanitize before rendering.
 - Interactive widgets should move toward predefined building blocks such as form fields, buttons, expressions, fetch blocks, and layout containers rendered by KKTerm-owned React components.
@@ -300,11 +300,11 @@ A `dashboard-settings` section under Settings holds cross-widget app preferences
 
 Grid density and View tab gradient are **not** in Settings — they are per-view settings edited from the edit-mode topbar.
 
-Destructive "Reset Dashboard" lives in General → Settings data (per AGENTS.md: destructive Settings-wide actions belong there). It wipes all views/instances/custom widgets and reseeds the Default view with one App Launcher widget.
+Destructive "Reset Dashboard" lives in General → Settings data (per AGENTS.md: destructive Settings-wide actions belong there). It wipes all views/instances/AI Created Widgets and reseeds the Default view with one App Launcher widget.
 
 ## i18n
 
-All new strings route through `t()` in the `dashboard.*` namespace. English (`src/i18n/locales/en.json`) is the source of truth and the only locale updated alongside Dashboard changes; other locales are tracked per key under `docs/localization_todo/<namespace>.<keyPath>.md` per the i18n rules in AGENTS.md. Built-in widget titles use `titleKey`; AI-authored custom widget titles are not translated and are persisted in the language the AI used.
+All new strings route through `t()` in the `dashboard.*` namespace. English (`src/i18n/locales/en.json`) is the source of truth and the only locale updated alongside Dashboard changes; other locales are tracked per key under `docs/localization_todo/<namespace>.<keyPath>.md` per the i18n rules in AGENTS.md. Built-in widget titles use `titleKey`; AI Created Widget titles are not translated and are persisted in the language the AI used.
 
 ## Relationships to Other Modules
 

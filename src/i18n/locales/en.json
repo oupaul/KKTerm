@@ -23,7 +23,7 @@
   "dashboard": {
     "title": "Dashboard",
     "moduleLabel": "Widget playground",
-    "subtitle": "Select local utility widgets, reports, and agent-authored cards for the tools you want close at hand.",
+    "subtitle": "Select local utility widgets, reports, and AI Created Widgets for the tools you want close at hand.",
     "statusReady": "Dashboard widgets are local.",
     "viewsLabel": "Dashboard views",
     "defaultView": "Default view",
@@ -46,7 +46,7 @@
     "catalogSearch": "Search widgets…",
     "catalogAll": "All",
     "catalogGroupBuiltIn": "Built-in",
-    "catalogGroupCustom": "Custom",
+    "catalogGroupCustom": "AI Created",
     "catalogNoMatches": "No widgets match.",
     "presetLabel": "Style preset",
     "preset": {
@@ -132,7 +132,7 @@
     "invalidContentWidgetBody": "Content widget body is not valid JSON.",
     "widgetLibraryLoadFailed": "Failed to load widget libraries: {{error}}",
     "missingBuiltInWidget": "Missing built-in widget: {{sourceId}}",
-    "missingCustomWidget": "Missing custom widget: {{sourceId}}",
+    "missingCustomWidget": "Missing AI Created Widget: {{sourceId}}",
     "scriptWidgetCapped": "Click to activate (max {{max}} active widgets)",
     "scriptWidgetFrameTitle": "Dashboard script widget",
     "untitledWidget": "Widget",
@@ -226,8 +226,8 @@
     "urlWidgetReloadSeconds": "Reload seconds",
     "urlWidgetEmptyTitle": "No URL configured",
     "urlWidgetEmptyHint": "Enter a URL to open it inside the Dashboard.",
-    "deleteCustomWidgetTitle": "Delete Custom Widget",
-    "deleteCustomWidgetBody": "This deletes \"{{name}}\" and all its instances from every Dashboard view. This cannot be undone.",
+    "deleteCustomWidgetTitle": "Delete AI Created Widget",
+    "deleteCustomWidgetBody": "This deletes the AI Created Widget \"{{name}}\" and all its instances from every Dashboard view. This cannot be undone.",
     "deleteCustomWidgetConfirm": "Delete Widget",
     "emptyTitle": "No widgets selected",
     "emptyHint": "Choose a widget from the catalog to build a focused Dashboard workspace.",
@@ -519,7 +519,7 @@
     "settingsDataActions": "Settings backup and import actions",
     "dashboardReset": "Reset Dashboard",
     "dashboardResetTitle": "Reset Dashboard",
-    "dashboardResetBody": "This deletes all Dashboard views, widget instances, and AI-authored custom widgets. The Default view will be restored with one App Launcher widget. This cannot be undone.",
+    "dashboardResetBody": "This deletes all Dashboard views, widget instances, and AI Created Widgets. The Default view will be restored with one App Launcher widget. This cannot be undone.",
     "dashboardResetConfirm": "Reset Dashboard",
     "dashboardResetDone": "Dashboard reset to defaults.",
     "settingsExportFilter": "KKTerm backup",
@@ -817,7 +817,7 @@
       },
       "dashboard": {
         "label": "Dashboard",
-        "description": "Read and modify Dashboard views, widget instances, and custom widgets."
+        "description": "Read and modify Dashboard views, widget instances, and AI Created Widgets."
       },
       "connections": {
         "label": "Connections",

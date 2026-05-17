@@ -877,7 +877,7 @@ pub fn validate_custom_body_for_kind_detailed(
         _ => Err((
             ValidationError::InvalidCustomWidgetKind,
             Some(format!(
-                "custom widget kind {kind:?} is not one of: content, script"
+                "AI Created Widget kind {kind:?} is not one of: content, script"
             )),
         )),
     }

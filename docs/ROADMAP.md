@@ -92,10 +92,10 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### Dashboard & Widgets
 
-- [x] Dashboard module: SQLite-backed views/instances/custom widgets, five visual presets, per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, dynamic backgrounds.
+- [x] Dashboard module: SQLite-backed views/instances/AI Created Widgets, five visual presets, per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, dynamic backgrounds.
 - [x] Three-kind widget model: `builtIn`, `content`, and `script` with `iframe srcdoc` script hosting.
 - [x] App Launcher widget: local app/shortcut/script/file entries with icon/text and right-click context menu.
-- [x] AI-authored content and script widgets.
+- [x] AI Created content and script widgets.
 - [x] Legacy built-in widgets: hash, subnet, quick tools, maintenance report (kept with original internals).
 
 ### UI, Settings & i18n
@@ -137,7 +137,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 - [ ] Redesign legacy widget bodies (hash, subnet, quick tools, maintenance report) to take full advantage of the new preset chrome.
 - [ ] Native data widgets: Clock, Weather, CPU, Memory, Recent Hosts, Session Activity, Today's Brief.
-- [ ] User-facing "Create custom widget" dialog so authoring is not AI-only.
+- [ ] User-facing "Create AI Created Widget" dialog so authoring is not AI-only.
 - [ ] Built-in Connections widget and URL widget with configurable auto-reload intervals.
 - [ ] File Explorer module: lightning-fast alternative local file browser optimized for dense professional workflows.
 - [ ] Unified activity rail routing for Workspace, Dashboard, and File Explorer modules.

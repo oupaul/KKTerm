@@ -205,12 +205,12 @@ export async function createCustomWidget(input: {
   if (!isTauriRuntime()) {
     const validation = validateCustomWidgetBodyJson(input.kind, input.bodyJson);
     if (!validation.ok) {
-      throw new Error(`Invalid Dashboard custom widget body: ${validation.reason}`);
+      throw new Error(`Invalid Dashboard AI Created Widget body: ${validation.reason}`);
     }
     if (input.settingsSchemaJson !== undefined) {
       const schemaValidation = validateWidgetSettingsSchemaJson(input.settingsSchemaJson);
       if (!schemaValidation.ok) {
-        throw new Error(`Invalid Dashboard custom widget settings schema: ${schemaValidation.reason}`);
+        throw new Error(`Invalid Dashboard AI Created Widget settings schema: ${schemaValidation.reason}`);
       }
     }
     const state = browserPreviewState();
@@ -230,18 +230,18 @@ export async function updateCustomWidget(id: string, patch: CustomWidgetPatch): 
     const state = browserPreviewState();
     const widget = state.customWidgets.find((item) => item.id === id);
     if (!widget) {
-      throw new Error("Dashboard custom widget not found.");
+      throw new Error("Dashboard AI Created Widget not found.");
     }
     if (patch.bodyJson !== undefined) {
       const validation = validateCustomWidgetBodyJson(widget.kind, patch.bodyJson);
       if (!validation.ok) {
-        throw new Error(`Invalid Dashboard custom widget body: ${validation.reason}`);
+        throw new Error(`Invalid Dashboard AI Created Widget body: ${validation.reason}`);
       }
     }
     if (patch.settingsSchemaJson !== undefined) {
       const schemaValidation = validateWidgetSettingsSchemaJson(patch.settingsSchemaJson);
       if (!schemaValidation.ok) {
-        throw new Error(`Invalid Dashboard custom widget settings schema: ${schemaValidation.reason}`);
+        throw new Error(`Invalid Dashboard AI Created Widget settings schema: ${schemaValidation.reason}`);
       }
     }
     Object.assign(widget, patch);
@@ -255,7 +255,7 @@ export async function removeCustomWidget(id: string, forceDeleteInstances: boole
     const state = browserPreviewState();
     const referenced = state.instances.some((instance) => instance.sourceId === id);
     if (referenced && !forceDeleteInstances) {
-      throw new Error("Dashboard custom widget is still used by widget instances.");
+      throw new Error("Dashboard AI Created Widget is still used by widget instances.");
     }
     state.customWidgets = state.customWidgets.filter((widget) => widget.id !== id);
     if (forceDeleteInstances) {

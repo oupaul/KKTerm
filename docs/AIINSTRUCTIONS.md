@@ -327,7 +327,7 @@ Your PR description must include:
 The narrow left rail is the app's navigation spine. Icons from top to bottom:
 
 - **Workspace** (terminal icon) — the main connection and session area
-- **Dashboard** — widget playground with App Launcher and AI-created widgets
+- **Dashboard** — widget playground with App Launcher and AI Created Widgets
 - **File Explorer** — local file browser
 - **Settings** (gear icon, bottom) — app configuration
 
@@ -365,7 +365,7 @@ Open SFTP from a saved SSH Connection (right-click → Open SFTP, or from the Se
 
 ### Dashboard
 
-The Dashboard (second rail icon) hosts drag-and-resize widgets on a 12-column grid. Click the pencil (edit) icon in the topbar to enter edit mode and add, move, or resize widgets. The **App Launcher** widget lets you pin apps, files, and folders for quick access. The AI Assistant can create custom widgets.
+The Dashboard (second rail icon) hosts drag-and-resize widgets on a 12-column grid. Click the pencil (edit) icon in the topbar to enter edit mode and add, move, or resize widgets. The **App Launcher** widget lets you pin apps, files, and folders for quick access. The AI Assistant can create AI Created Widgets.
 
 ### AI Assistant Panel
 

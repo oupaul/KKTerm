@@ -31,7 +31,7 @@ The important part: KKTerm is local-first. Durable data lives in SQLite on your 
 - **Session-aware terminal panes**: split a terminal Tab, keep live Sessions mounted while switching Tabs, and use tmux-backed SSH panes that can attach to stable per-pane tmux sessions.
 - **Real file transfer tools**: dual-pane local/remote browser, recursive upload/download, transfer queue, overwrite prompts, remote properties, chmod, and chown for SFTP.
 - **Native Windows integrations**: ConPTY/local PTY, WebView2, Microsoft RDP ActiveX hosting, tray menu, current-user NSIS installer, and Windows host CPU/RAM/network status.
-- **Dashboard widgets**: multiple durable Dashboard views with a 12-column drag/resize grid, an App Launcher widget, and AI-authored custom widgets rendered as validated content or isolated script iframes.
+- **Dashboard widgets**: multiple durable Dashboard views with a 12-column drag/resize grid, an App Launcher widget, and AI Created Widgets rendered as validated content or isolated script iframes.
 - **AI with approval boundaries**: chat, selected terminal context, screenshots, command proposals, Dashboard tools, saved Connection tools, and live Session interaction tools governed by Prompt or Allow All permission mode.
 - **Local backups and import**: settings and Connection data can be exported/imported through KKTerm settings ZIPs; startup/manual backups use the same importable format.
 - **No telemetry posture**: no analytics, no automatic crash upload, and diagnostics are local files the user reviews before sharing.
@@ -46,7 +46,7 @@ The important part: KKTerm is local-first. Durable data lives in SQLite on your 
 | **SFTP / FTP** | SSH-launched SFTP plus FTP/FTPS Connections, dual-pane browser, recursive transfers, queue/cancel/clear history, conflicts, properties, chmod/chown where supported |
 | **URL WebView** | Embedded WebView2 URL Sessions, navigation toolbar, favicon capture, stored website credential metadata/fill, data partition metadata |
 | **Remote Desktop** | RDP through Windows ActiveX with geometry-scoped overlay parking; VNC through `vnc-rs` framebuffer rendered in the workspace canvas |
-| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, AI-created content/script widgets, per-widget presets/accent/icon/title/settings |
+| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, AI Created content/script widgets, per-widget presets/accent/icon/title/settings |
 | **AI Assistant** | Streaming chat, OpenAI-compatible runtime, provider registry, command proposal safety classification, screenshot/context attachments, Dashboard tool calls, saved Connection management tools, and live Session tools for terminal, RDP/VNC, and SFTP/FTP interaction |
 | **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, and About sections; custom UI fonts; minimize-to-tray; Don't Sleep; backup/import |
 | **Localization** | i18next UI with English source and dynamic locale bundles including zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, and vi |

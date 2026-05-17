@@ -44,7 +44,7 @@ A frontend workspace container that presents one session or a set of related pan
 _Avoid_: Session, connection, backend tab
 
 **Dashboard Module**:
-A built-in activity-rail module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI-authored custom widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
+A built-in activity-rail module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI Created Widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
 _Avoid_: landing page, overview
 
 **Dashboard View**:
@@ -52,11 +52,11 @@ A durable SQLite-backed tab in the Dashboard module, stored in `dashboard_views`
 _Avoid_: dashboard page, tab, board
 
 **Dashboard Widget Instance**:
-A placed widget on a Dashboard View, stored in `dashboard_widget_instances`. Carries a `kind` (`builtIn` / `content` / `script`), a `source_id` resolving to a built-in registry entry or a Dashboard Custom Widget, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), and layout coordinates (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Multiple Instances of the same source may coexist with different presets, accents, and sizes.
+A placed widget on a Dashboard View, stored in `dashboard_widget_instances`. Carries a `kind` (`builtIn` / `content` / `script`), a `source_id` resolving to a built-in registry entry or a Dashboard AI Created Widget, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), and layout coordinates (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Multiple Instances of the same source may coexist with different presets, accents, and sizes.
 _Avoid_: widget, tile, card
 
-**Dashboard Custom Widget**:
-An AI-authored widget definition stored in `dashboard_custom_widgets`. Has `kind` `content` (declarative JSON: markdown/kvList/checklist/stat) or `script` (JavaScript hosted inside an isolated `iframe srcdoc` with declared `network` and `pollSeconds` permissions). Authoring is AI-only in v1; users customize and remove Custom Widgets but do not create them through the UI.
+**Dashboard AI Created Widget**:
+An AI Created Widget definition stored in `dashboard_custom_widgets`. Has `kind` `content` (declarative JSON: markdown/kvList/checklist/stat) or `script` (JavaScript hosted inside an isolated `iframe srcdoc` with declared `network` and `pollSeconds` permissions). Authoring is AI-only in v1; users customize and remove AI Created Widgets but do not create them through the UI.
 _Avoid_: plugin, extension, custom tile
 
 **Widget Preset**:
