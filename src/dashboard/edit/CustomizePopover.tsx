@@ -100,38 +100,41 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
   }, [anchorRect, section]);
 
   return (
-    <div
-      ref={ref}
-      className="dw-customize"
-      style={{
-        top: position.top,
-        left: position.left,
-        width: POPOVER_WIDTH,
-        visibility: position.visible ? "visible" : "hidden",
-      }}
-    >
-      <nav className="dw-customize-tabs" role="tablist" aria-label={t("dashboard.customize")}>
-        {sections.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            role="tab"
-            {...ariaSelected(section === s.key)}
-            className={section === s.key ? "active" : ""}
-            onClick={() => setSection(s.key)}
-          >
-            {s.label}
-          </button>
-        ))}
-      </nav>
-      <div className="dw-customize-pane" role="tabpanel">
-        {section === "common" ? <CommonSection instance={instance} /> : null}
-        {section === "widget" ? (
-          <WidgetSection schema={settingsSchema} instance={instance} />
-        ) : null}
-        {section === "advanced" ? <AdvancedSection instance={instance} /> : null}
+    <>
+      <div className="dw-customize-dismiss-layer" aria-hidden="true" onMouseDown={onClose} />
+      <div
+        ref={ref}
+        className="dw-customize"
+        style={{
+          top: position.top,
+          left: position.left,
+          width: POPOVER_WIDTH,
+          visibility: position.visible ? "visible" : "hidden",
+        }}
+      >
+        <nav className="dw-customize-tabs" role="tablist" aria-label={t("dashboard.customize")}>
+          {sections.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              role="tab"
+              {...ariaSelected(section === s.key)}
+              className={section === s.key ? "active" : ""}
+              onClick={() => setSection(s.key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </nav>
+        <div className="dw-customize-pane" role="tabpanel">
+          {section === "common" ? <CommonSection instance={instance} /> : null}
+          {section === "widget" ? (
+            <WidgetSection schema={settingsSchema} instance={instance} />
+          ) : null}
+          {section === "advanced" ? <AdvancedSection instance={instance} /> : null}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

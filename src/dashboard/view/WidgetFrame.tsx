@@ -85,7 +85,7 @@ export function WidgetFrame({ instance, onCustomize }: WidgetFrameProps) {
   const controls: ReactNode = (
     <span className="dw-controls">
       <button
-        className="dw-ctrl"
+        className="dw-ctrl dw-ctrl-properties"
         onClick={(e) => { e.stopPropagation(); onCustomize(instance, e.currentTarget); }}
         aria-label={t("dashboard.customize")}
         title={t("dashboard.customize")}

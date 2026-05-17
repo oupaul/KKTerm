@@ -1018,6 +1018,19 @@ button.dashboard-pill-dot:focus-visible {
   background: var(--surface);
 }
 
+.dw-ctrl-properties {
+  color: var(--text-muted);
+  background: transparent;
+  border-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.dw-ctrl-properties:hover {
+  color: var(--text);
+  background: transparent;
+}
+
 .dw-ctrl.danger:hover,
 .dw-ctrl.danger.confirming {
   color: var(--red);
@@ -1374,6 +1387,13 @@ button.dashboard-pill-dot:focus-visible {
     inset 0 0 0 1px rgb(255 255 255 / 5%);
   font-size: 12.5px;
   overflow: hidden;
+}
+
+.dw-customize-dismiss-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 159;
+  background: transparent;
 }
 
 .dw-customize-tabs {
