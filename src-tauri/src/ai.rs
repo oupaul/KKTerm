@@ -8,16 +8,16 @@ use github_copilot_sdk::{
 use lettre::message::{Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::oneshot;
 use tokio::time::timeout;
@@ -30,7 +30,7 @@ use tauri::{Emitter, Manager};
 use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
 use crate::storage::{
-    ai_provider_secret_owner_id, AiAssistantToolSettings, AiProviderSettings, Storage,
+    AiAssistantToolSettings, AiProviderSettings, Storage, ai_provider_secret_owner_id,
 };
 
 static LIVE_TOOL_REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -1014,6 +1014,26 @@ fn apply_responses_stream_event(
                 }
             }
         }
+        "response.reasoning_text.done" | "response.reasoning_summary_text.done" => {
+            if let Some(text) = event.get("text").and_then(Value::as_str) {
+                let text = text.trim();
+                if !text.is_empty() && !state.reasoning.contains(text) {
+                    state.reasoning.push_str(text);
+                    deltas.reasoning_delta = Some(text.to_string());
+                }
+            }
+        }
+        "response.completed" => {
+            if let Some(response) = event.get("response") {
+                if let Some(text) = extract_responses_reasoning_text(response) {
+                    let text = text.trim();
+                    if !text.is_empty() && !state.reasoning.contains(text) {
+                        state.reasoning.push_str(text);
+                        deltas.reasoning_delta = Some(text.to_string());
+                    }
+                }
+            }
+        }
         "response.output_item.added" => {
             if let Some(item) = event.get("item") {
                 if item.get("type").and_then(Value::as_str) == Some("function_call") {
@@ -1540,6 +1560,11 @@ impl OpenAiCompatibleProvider {
                 input: input.clone(),
                 stream: false,
                 store: false,
+                reasoning: openai_responses_reasoning(
+                    self.provider_kind,
+                    settings.model(),
+                    settings.reasoning_effort(),
+                ),
                 tools: provider_tool_definitions.clone(),
                 tool_choice: (!provider_tool_definitions.is_empty()).then(|| "auto".to_string()),
             };
@@ -1597,11 +1622,7 @@ impl OpenAiCompatibleProvider {
             } else if let Some(text) = extract_responses_output_text(&response_value) {
                 content = text;
             }
-            reasoning_content = response_value
-                .get("reasoning_content")
-                .and_then(Value::as_str)
-                .filter(|r| !r.trim().is_empty())
-                .map(String::from);
+            reasoning_content = extract_responses_reasoning_text(&response_value);
 
             let tool_calls = extract_responses_tool_calls(&response_value);
             if tool_calls.is_empty() {
@@ -1628,6 +1649,11 @@ impl OpenAiCompatibleProvider {
                 input: input.clone(),
                 stream: false,
                 store: false,
+                reasoning: openai_responses_reasoning(
+                    self.provider_kind,
+                    settings.model(),
+                    settings.reasoning_effort(),
+                ),
                 tools: vec![],
                 tool_choice: None,
             };
@@ -2025,6 +2051,11 @@ impl OpenAiCompatibleProvider {
                 input: input.clone(),
                 stream: true,
                 store: false,
+                reasoning: openai_responses_reasoning(
+                    self.provider_kind,
+                    settings.model(),
+                    settings.reasoning_effort(),
+                ),
                 tools: resp_tool_defs.clone(),
                 tool_choice: (!resp_tool_defs.is_empty()).then(|| "auto".to_string()),
             };
@@ -2149,6 +2180,11 @@ impl OpenAiCompatibleProvider {
                 input: input.clone(),
                 stream: true,
                 store: false,
+                reasoning: openai_responses_reasoning(
+                    self.provider_kind,
+                    settings.model(),
+                    settings.reasoning_effort(),
+                ),
                 tools: vec![],
                 tool_choice: None,
             };
@@ -2241,10 +2277,19 @@ struct OpenAiResponsesRequest {
     input: Vec<Value>,
     stream: bool,
     store: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning: Option<OpenAiResponsesReasoning>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
+}
+
+#[derive(Serialize)]
+struct OpenAiResponsesReasoning {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    effort: Option<String>,
+    summary: &'static str,
 }
 
 #[derive(Clone, Serialize)]
@@ -2801,6 +2846,40 @@ fn deepseek_thinking(provider_kind: &str, reasoning_effort: &str) -> Option<Deep
     })
 }
 
+fn openai_responses_reasoning(
+    provider_kind: &str,
+    model: &str,
+    reasoning_effort: &str,
+) -> Option<OpenAiResponsesReasoning> {
+    let provider = provider_kind.trim().to_ascii_lowercase();
+    if provider != "openai" && provider != "azure-openai" {
+        return None;
+    }
+    let model = model.trim().to_ascii_lowercase();
+    if !(model.starts_with("gpt-5")
+        || model.starts_with("o1")
+        || model.starts_with("o3")
+        || model.starts_with("o4"))
+    {
+        return None;
+    }
+    Some(OpenAiResponsesReasoning {
+        effort: openai_reasoning_effort(reasoning_effort),
+        summary: "auto",
+    })
+}
+
+fn openai_reasoning_effort(reasoning_effort: &str) -> Option<String> {
+    match reasoning_effort.trim().to_ascii_lowercase().as_str() {
+        "" | "default" | "providerdefault" | "provider-default" | "provider_default" => None,
+        "low" => Some("low".to_string()),
+        "medium" => Some("medium".to_string()),
+        "high" => Some("high".to_string()),
+        "max" | "maximum" | "xhigh" | "x-high" | "x_high" => Some("xhigh".to_string()),
+        _ => None,
+    }
+}
+
 fn responses_tool_definitions(tools: &[OpenAiToolDefinition]) -> Vec<Value> {
     tools
         .iter()
@@ -2918,6 +2997,42 @@ fn extract_responses_output_text(response: &Value) -> Option<String> {
         };
         for part in content {
             if part.get("type").and_then(Value::as_str) == Some("output_text") {
+                if let Some(text) = part.get("text").and_then(Value::as_str) {
+                    let text = text.trim();
+                    if !text.is_empty() {
+                        parts.push(text.to_string());
+                    }
+                }
+            }
+        }
+    }
+    (!parts.is_empty()).then(|| parts.join("\n"))
+}
+
+fn extract_responses_reasoning_text(response: &Value) -> Option<String> {
+    if let Some(text) = response
+        .get("reasoning_content")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        return Some(text.to_string());
+    }
+
+    let mut parts = Vec::new();
+    for item in response.get("output")?.as_array()? {
+        if item.get("type").and_then(Value::as_str) != Some("reasoning") {
+            continue;
+        }
+        for field in ["summary", "content"] {
+            let Some(content) = item.get(field).and_then(Value::as_array) else {
+                continue;
+            };
+            for part in content {
+                let part_type = part.get("type").and_then(Value::as_str);
+                if part_type != Some("summary_text") && part_type != Some("reasoning_text") {
+                    continue;
+                }
                 if let Some(text) = part.get("text").and_then(Value::as_str) {
                     let text = text.trim();
                     if !text.is_empty() {
@@ -4415,10 +4530,22 @@ async fn send_email_sendgrid(settings: &AiProviderSettings, request: &EmailToolR
         "to": request.to.iter().map(|email| json!({"email": email})).collect::<Vec<_>>()
     });
     if !request.cc.is_empty() {
-        personalization["cc"] = json!(request.cc.iter().map(|email| json!({"email": email})).collect::<Vec<_>>());
+        personalization["cc"] = json!(
+            request
+                .cc
+                .iter()
+                .map(|email| json!({"email": email}))
+                .collect::<Vec<_>>()
+        );
     }
     if !request.bcc.is_empty() {
-        personalization["bcc"] = json!(request.bcc.iter().map(|email| json!({"email": email})).collect::<Vec<_>>());
+        personalization["bcc"] = json!(
+            request
+                .bcc
+                .iter()
+                .map(|email| json!({"email": email}))
+                .collect::<Vec<_>>()
+        );
     }
     let mut content = Vec::new();
     if let Some(text) = &request.text {
@@ -4482,7 +4609,10 @@ async fn send_email_mailgun(settings: &AiProviderSettings, request: &EmailToolRe
     }
     let url = format!("https://api.mailgun.net/v3/{domain}/messages");
     send_email_http_request(
-        client.post(url).basic_auth("api", Some(api_key)).form(&form),
+        client
+            .post(url)
+            .basic_auth("api", Some(api_key))
+            .form(&form),
         "Mailgun",
     )
     .await
@@ -4586,7 +4716,7 @@ fn send_email_smtp(settings: &AiProviderSettings, request: &EmailToolRequest) ->
             Ok(builder) => builder,
             Err(error) => {
                 return json!({"ok": false, "error": format!("Invalid SMTP host: {error}")})
-                    .to_string()
+                    .to_string();
             }
         }
     }
@@ -4609,8 +4739,9 @@ fn send_email_smtp(settings: &AiProviderSettings, request: &EmailToolRequest) ->
             "message": response.message().collect::<Vec<_>>().join(" ")
         })
         .to_string(),
-        Err(error) => json!({"ok": false, "provider": "SMTP", "error": error.to_string()})
-            .to_string(),
+        Err(error) => {
+            json!({"ok": false, "provider": "SMTP", "error": error.to_string()}).to_string()
+        }
     }
 }
 
@@ -4632,7 +4763,10 @@ fn build_smtp_message(from: &str, request: &EmailToolRequest) -> Result<Message,
     }
     match (&request.text, &request.html) {
         (Some(text), Some(html)) => builder
-            .multipart(MultiPart::alternative_plain_html(text.clone(), html.clone()))
+            .multipart(MultiPart::alternative_plain_html(
+                text.clone(),
+                html.clone(),
+            ))
             .map_err(|error| format!("Failed to build SMTP message: {error}")),
         (Some(text), None) => builder
             .singlepart(SinglePart::plain(text.clone()))
@@ -5700,10 +5834,11 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(plan.extra_confirmation_required);
-        assert!(plan
-            .safety_notes
-            .iter()
-            .any(|note| note.contains("credentials")));
+        assert!(
+            plan.safety_notes
+                .iter()
+                .any(|note| note.contains("credentials"))
+        );
     }
 
     #[test]
@@ -5718,10 +5853,11 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(!plan.extra_confirmation_required);
-        assert!(plan
-            .safety_notes
-            .iter()
-            .any(|note| note.contains("Selected terminal output")));
+        assert!(
+            plan.safety_notes
+                .iter()
+                .any(|note| note.contains("Selected terminal output"))
+        );
     }
 
     #[test]
@@ -5736,10 +5872,11 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(plan.extra_confirmation_required);
-        assert!(plan
-            .safety_notes
-            .iter()
-            .any(|note| note.contains("Selected output may contain credentials")));
+        assert!(
+            plan.safety_notes
+                .iter()
+                .any(|note| note.contains("Selected output may contain credentials"))
+        );
     }
 
     #[test]
@@ -6103,9 +6240,11 @@ mod tests {
             .get("content")
             .and_then(Value::as_array)
             .expect("user content parts are present");
-        assert!(user_content
-            .iter()
-            .any(|part| part.get("type").and_then(Value::as_str) == Some("input_image")));
+        assert!(
+            user_content
+                .iter()
+                .any(|part| part.get("type").and_then(Value::as_str) == Some("input_image"))
+        );
         let file_content = input[2]
             .get("content")
             .and_then(Value::as_array)
@@ -6191,6 +6330,44 @@ mod tests {
         assert_eq!(tool_calls.len(), 1);
         assert_eq!(tool_calls[0].id, "call_123");
         assert_eq!(tool_calls[0].function.name, "current_time");
+    }
+
+    #[test]
+    fn responses_request_includes_reasoning_summary_for_openai_reasoning_models() {
+        let reasoning = openai_responses_reasoning("openai", "gpt-5.4-mini", "medium")
+            .expect("OpenAI GPT-5 models should request reasoning summaries");
+
+        let value = serde_json::to_value(reasoning).expect("reasoning should serialize");
+
+        assert_eq!(value["effort"], "medium");
+        assert_eq!(value["summary"], "auto");
+    }
+
+    #[test]
+    fn responses_request_omits_reasoning_summary_for_non_openai_responses_models() {
+        assert!(
+            openai_responses_reasoning("openai-compatible", "gpt-5.4-mini", "medium").is_none()
+        );
+        assert!(openai_responses_reasoning("openai", "gpt-4.1", "medium").is_none());
+    }
+
+    #[test]
+    fn responses_parser_extracts_reasoning_summary_items() {
+        let response = json!({
+            "output": [
+                {
+                    "type": "reasoning",
+                    "summary": [
+                        {"type": "summary_text", "text": "Checked whether a tool is needed."}
+                    ]
+                }
+            ]
+        });
+
+        assert_eq!(
+            extract_responses_reasoning_text(&response).as_deref(),
+            Some("Checked whether a tool is needed.")
+        );
     }
 
     #[test]
@@ -6362,11 +6539,13 @@ mod tests {
             .expect("secret settings field branch is present");
 
         assert!(!secret_branch.pointer("/properties/defaultValue").is_some());
-        assert!(!secret_branch
-            .pointer("/required")
-            .and_then(Value::as_array)
-            .expect("secret branch lists required properties")
-            .contains(&json!("defaultValue")));
+        assert!(
+            !secret_branch
+                .pointer("/required")
+                .and_then(Value::as_array)
+                .expect("secret branch lists required properties")
+                .contains(&json!("defaultValue"))
+        );
     }
 
     #[test]
@@ -6383,16 +6562,18 @@ mod tests {
             .expect("dashboard update custom widget tool exists");
 
         assert!(tool.function.description.contains("Prefer patch.body"));
-        assert!(tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/body/anyOf")
-            .is_some());
-        assert!(tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/bodyJson")
-            .is_some());
+        assert!(
+            tool.function
+                .parameters
+                .pointer("/properties/patch/properties/body/anyOf")
+                .is_some()
+        );
+        assert!(
+            tool.function
+                .parameters
+                .pointer("/properties/patch/properties/bodyJson")
+                .is_some()
+        );
     }
 
     #[test]
@@ -6443,48 +6624,66 @@ mod tests {
             .find(|tool| tool.function.name == "dashboard_update_custom_widget")
             .expect("dashboard update custom widget tool exists");
 
-        assert!(create_tool
-            .function
-            .parameters
-            .pointer("/properties/body/anyOf/4/properties/libraries")
-            .is_some());
-        assert!(update_tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/body/anyOf/4/properties/libraries")
-            .is_some());
-        assert!(create_tool
-            .function
-            .parameters
-            .pointer("/properties/body/anyOf/4/required")
-            .and_then(Value::as_array)
-            .is_some_and(|required| required.contains(&json!("libraries"))));
-        assert!(create_tool
-            .function
-            .description
-            .contains("as graphical as possible"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("do not create a text-only placeholder or scaffold"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("use multiple tool-call rounds"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("wired to the actual data source"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Creative Commons images from credible sources"));
-        assert!(update_tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/body/anyOf/4/required")
-            .and_then(Value::as_array)
-            .is_some_and(|required| required.contains(&json!("libraries"))));
+        assert!(
+            create_tool
+                .function
+                .parameters
+                .pointer("/properties/body/anyOf/4/properties/libraries")
+                .is_some()
+        );
+        assert!(
+            update_tool
+                .function
+                .parameters
+                .pointer("/properties/patch/properties/body/anyOf/4/properties/libraries")
+                .is_some()
+        );
+        assert!(
+            create_tool
+                .function
+                .parameters
+                .pointer("/properties/body/anyOf/4/required")
+                .and_then(Value::as_array)
+                .is_some_and(|required| required.contains(&json!("libraries")))
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("as graphical as possible")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("do not create a text-only placeholder or scaffold")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("use multiple tool-call rounds")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("wired to the actual data source")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Creative Commons images from credible sources")
+        );
+        assert!(
+            update_tool
+                .function
+                .parameters
+                .pointer("/properties/patch/properties/body/anyOf/4/required")
+                .and_then(Value::as_array)
+                .is_some_and(|required| required.contains(&json!("libraries")))
+        );
 
         let enum_values = create_tool
             .function
@@ -6500,74 +6699,106 @@ mod tests {
                 "script library enum should include {library}"
             );
         }
-        assert!(create_tool
-            .function
-            .description
-            .contains("For Three.js widgets"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Dashboard widget physics contract"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("List body.libraries [\"matter\"]"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("For Three.js widgets")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard widget physics contract")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("List body.libraries [\"matter\"]")
+        );
         assert!(create_tool.function.description.contains("Matter.js"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("pass a real canvas element to QRCode.toCanvas"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("KK.onViewportResize"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("treat the widget root as the full allocated surface"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Do not create a smaller centered app card"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("pass a real canvas element to QRCode.toCanvas")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("KK.onViewportResize")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("treat the widget root as the full allocated surface")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Do not create a smaller centered app card")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
+        );
         assert!(create_tool.function.description.contains("kk-shell"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("chartjs, echarts, leaflet"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Top-level await is not available"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("chartjs, echarts, leaflet")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Top-level await is not available")
+        );
         assert!(create_tool.function.description.contains("async IIFE"));
         assert!(create_tool.function.description.contains("KK.onFileDrop"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("KK.getPerformanceCounters"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("generated source is smoke-checked"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("document.getElementById('some-id')"));
-        assert!(update_tool
-            .function
-            .description
-            .contains("validation reports a DOM mount"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("folder drop zones"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("choose a random non-default accent"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("KK.getPerformanceCounters")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("generated source is smoke-checked")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("document.getElementById('some-id')")
+        );
+        assert!(
+            update_tool
+                .function
+                .description
+                .contains("validation reports a DOM mount")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("folder drop zones")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("choose a random non-default accent")
+        );
     }
 
     #[test]
@@ -6581,11 +6812,13 @@ mod tests {
             markdown_branch.pointer("/properties/data/properties/mode/enum"),
             Some(&json!(["markdown", "html"]))
         );
-        assert!(markdown_branch
-            .pointer("/properties/data/required")
-            .and_then(Value::as_array)
-            .expect("markdown data has required fields")
-            .contains(&json!("mode")));
+        assert!(
+            markdown_branch
+                .pointer("/properties/data/required")
+                .and_then(Value::as_array)
+                .expect("markdown data has required fields")
+                .contains(&json!("mode"))
+        );
     }
 
     fn openai_provider(provider_kind: &str) -> OpenAiCompatibleProvider {
@@ -6652,10 +6885,11 @@ mod tests {
             .find(|tool| tool.function.name == "performance_counters")
             .expect("performance counters tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("low-overhead local Windows performance snapshot"));
+        assert!(
+            tool.function
+                .description
+                .contains("low-overhead local Windows performance snapshot")
+        );
         assert_eq!(
             tool.function.parameters,
             json!({"type":"object","properties":{}})
@@ -6675,12 +6909,15 @@ mod tests {
             .find(|tool| tool.function.name == "send_email")
             .expect("send email tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("Send one email through the configured email provider"));
+        assert!(
+            tool.function
+                .description
+                .contains("Send one email through the configured email provider")
+        );
         assert_eq!(
-            tool.function.parameters.pointer("/properties/to/items/type"),
+            tool.function
+                .parameters
+                .pointer("/properties/to/items/type"),
             Some(&json!("string"))
         );
     }
@@ -6795,8 +7032,10 @@ mod tests {
         assert!(system_content.contains("KK.getViewport()"));
         assert!(system_content.contains("treat the widget root as the full allocated surface"));
         assert!(system_content.contains("Do not create a smaller centered app card"));
-        assert!(system_content
-            .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers"));
+        assert!(
+            system_content
+                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
+        );
         assert!(system_content.contains("kk-shell"));
         assert!(system_content.contains("chartjs, echarts, leaflet"));
         assert!(system_content.contains("KK.onFileDrop"));
@@ -6826,10 +7065,11 @@ mod tests {
             .find(|tool| tool.function.name == "request_secret_entry")
             .expect("secret entry request tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("without exposing the secret"));
+        assert!(
+            tool.function
+                .description
+                .contains("without exposing the secret")
+        );
         assert_eq!(
             tool.function.parameters.pointer("/properties/kind/enum"),
             Some(&json!(["widgetSecret", "aiApiKey"]))
@@ -6854,10 +7094,12 @@ mod tests {
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "dashboard-widget-secret:inst-123:apiKey");
-        assert!(value["secretRequestMarkdown"]
-            .as_str()
-            .unwrap()
-            .contains("```kkterm-secret-request"));
+        assert!(
+            value["secretRequestMarkdown"]
+                .as_str()
+                .unwrap()
+                .contains("```kkterm-secret-request")
+        );
         assert!(!result.contains("secret\":\""));
     }
 
@@ -6875,10 +7117,12 @@ mod tests {
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "ai-provider:openrouter");
-        assert!(value["secretRequestMarkdown"]
-            .as_str()
-            .unwrap()
-            .contains("\"ownerId\":\"ai-provider:openrouter\""));
+        assert!(
+            value["secretRequestMarkdown"]
+                .as_str()
+                .unwrap()
+                .contains("\"ownerId\":\"ai-provider:openrouter\"")
+        );
     }
 
     #[test]

@@ -1,4 +1,6 @@
 import {
+  assistantWorkPanelShouldShowThinkingStep,
+  latestRunningAssistantToolCall,
   completeAssistantStreamMessageFromResponse,
   type AssistantStreamMessage,
 } from "./streamMessage.ts";
@@ -29,4 +31,46 @@ if (!completed.content.includes("Secret entry requested.")) {
 
 if (!completed.content.includes(secretRequest)) {
   throw new Error("Secret request directives emitted during streaming must survive finalization.");
+}
+
+const streamingWithTool: AssistantStreamMessage = {
+  content: "",
+  isStreaming: true,
+  toolCalls: [
+    {
+      toolId: "call-1",
+      toolName: "web_search",
+      status: "running",
+      startedAt: "2026-05-18T00:00:00.000Z",
+    },
+  ],
+};
+
+if (latestRunningAssistantToolCall(streamingWithTool)?.toolName !== "web_search") {
+  throw new Error("The work panel summary should use the active running tool.");
+}
+
+if (
+  latestRunningAssistantToolCall({
+    ...streamingWithTool,
+    toolCalls: streamingWithTool.toolCalls?.map((toolCall) => ({
+      ...toolCall,
+      status: "completed",
+    })),
+  })
+) {
+  throw new Error("Completed tool calls should not replace the waiting phrase.");
+}
+
+if (assistantWorkPanelShouldShowThinkingStep(streamingWithTool)) {
+  throw new Error("The thinking step should not render without reasoning text.");
+}
+
+if (
+  !assistantWorkPanelShouldShowThinkingStep({
+    ...streamingWithTool,
+    reasoningContent: "Checking what tool is needed.",
+  })
+) {
+  throw new Error("The thinking step should render when reasoning text is available.");
 }

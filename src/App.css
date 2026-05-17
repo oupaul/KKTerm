@@ -4409,6 +4409,10 @@ progress {
   color: var(--text);
 }
 
+.assistant-work-tool-label {
+  color: var(--accent);
+}
+
 .assistant-work-toggle svg {
   flex: 0 0 auto;
 }

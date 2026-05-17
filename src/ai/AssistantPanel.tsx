@@ -56,7 +56,9 @@ import {
 } from "./providerModelOptions";
 import {
   applyAssistantStreamEventToMessage,
+  assistantWorkPanelShouldShowThinkingStep,
   completeAssistantStreamMessageFromResponse,
+  latestRunningAssistantToolCall,
   type AssistantToolCallStatus,
 } from "./streamMessage";
 import { useWorkspaceStore } from "../store";
@@ -3168,6 +3170,7 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
   const reasoningContent = message.reasoningContent?.trim() ?? "";
   const toolCalls = message.toolCalls ?? [];
   const hasWork = Boolean(reasoningContent) || toolCalls.length > 0 || Boolean(message.isStreaming);
+  const shouldShowThinkingStep = assistantWorkPanelShouldShowThinkingStep(message);
 
   useEffect(() => {
     setExpanded(false);
@@ -3219,9 +3222,15 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
     message.workStartedAt && message.workCompletedAt
       ? formatAssistantWorkDuration(message.workStartedAt, message.workCompletedAt, t)
       : "";
-  const label = message.isStreaming
-    ? waitingPhrase || t("ai.chargingBeacon")
-    : t("ai.workedFor", { duration: duration || t("ai.workDurationUnderSecond") });
+  const latestToolCall = latestRunningAssistantToolCall(message);
+  const label =
+    latestToolCall
+      ? t("ai.toolCallUsing", {
+          tool: humanizeAssistantToolName(latestToolCall.toolName),
+        })
+      : message.isStreaming
+        ? waitingPhrase || t("ai.chargingBeacon")
+        : t("ai.workedFor", { duration: duration || t("ai.workDurationUnderSecond") });
   const thinkingStatus = message.isStreaming ? "running" : "completed";
 
   return (
@@ -3232,7 +3241,7 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
         onClick={() => setExpanded((e) => !e)}
         type="button"
       >
-        <span>
+        <span className={latestToolCall ? "assistant-work-tool-label" : undefined}>
           {label}
           {message.isStreaming ? (
             <span className="assistant-waiting-dots" aria-hidden="true">
@@ -3244,7 +3253,7 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
       </button>
       {expanded ? (
         <div className="assistant-work-timeline">
-          {reasoningContent || message.isStreaming ? (
+          {shouldShowThinkingStep ? (
             <div className="assistant-work-step" data-state={thinkingStatus}>
               <span className="assistant-work-step-icon" aria-hidden="true">
                 {message.isStreaming ? <LoaderCircle size={13} /> : null}
@@ -3274,6 +3283,10 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
       ) : null}
     </section>
   );
+}
+
+function humanizeAssistantToolName(toolName: string) {
+  return toolName.trim().replace(/[_-]+/g, " ");
 }
 
 function formatAssistantWorkDuration(

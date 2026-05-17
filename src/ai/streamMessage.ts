@@ -94,6 +94,20 @@ export function completeAssistantStreamMessageFromResponse<T extends AssistantSt
   };
 }
 
+export function latestRunningAssistantToolCall(message: AssistantStreamMessage) {
+  const toolCalls = message.toolCalls ?? [];
+  for (let index = toolCalls.length - 1; index >= 0; index -= 1) {
+    if (toolCalls[index].status === "running") {
+      return toolCalls[index];
+    }
+  }
+  return undefined;
+}
+
+export function assistantWorkPanelShouldShowThinkingStep(message: AssistantStreamMessage) {
+  return Boolean(message.reasoningContent?.trim());
+}
+
 const SECRET_REQUEST_FENCE = /```kkterm-secret-request\s*\n[\s\S]*?```/g;
 
 function preserveSecretRequestDirectives(streamedContent: string, finalContent: string) {

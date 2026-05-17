@@ -1438,6 +1438,7 @@
     "workedFor": "Worked for {{duration}}",
     "thinkingStep": "Thinking",
     "toolCallRunning": "Running",
+    "toolCallUsing": "Using {{tool}} tool...",
     "toolCallComplete": "Complete",
     "workDurationUnderSecond": "<1s",
     "workDurationSeconds": "{{count}}s",
