@@ -107,6 +107,7 @@ test("script widget host notifies generated animation code when visibility chang
   assert.match(srcdoc, /var _kkVisibilityCallbacks = new Set\(\)/);
   assert.match(srcdoc, /onVisibilityChange: function \(callback\)/);
   assert.match(srcdoc, /_kkVisibilityCallbacks\.add\(callback\)/);
+  assert.match(srcdoc, /Array\.from\(_kkVisibilityCallbacks\)\.forEach/);
   assert.match(srcdoc, /notifyKkVisibilityCallbacks\(\)/);
   assert.match(srcdoc, /if \(_kkVisible !== nextVisible\)/);
 });
@@ -122,6 +123,7 @@ test("script widget host caps animation and tight timer loops", async () => {
 
   assert.match(srcdoc, /KK_RAF_MIN_INTERVAL_MS = 33/);
   assert.match(srcdoc, /window\.requestAnimationFrame = function \(callback\)/);
+  assert.match(srcdoc, /Array\.from\(_kkRafCallbacks\.entries\(\)\)/);
   assert.match(srcdoc, /window\.setInterval = function \(handler, timeout\)/);
   assert.match(srcdoc, /KK_SET_INTERVAL_MIN_MS = 100/);
   assert.match(srcdoc, /if \(!_kkVisible\) return;/);
@@ -138,6 +140,21 @@ test("script widget parent bridge rate-limits expensive messages", async () => {
   assert.match(hostSource, /setSettings:\s*500/);
   assert.match(hostSource, /allowBridgeMessage\("getPerformanceCounters"\)/);
   assert.match(hostSource, /allowBridgeMessage\("setSettings"\)/);
+});
+
+test("script widget host resyncs iframe visibility after initial layout and load", async () => {
+  const hostSource = await readFile(
+    new URL("../src/dashboard/script/ScriptWidgetHost.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(hostSource, /function iframeRectIsVisible\(el: HTMLIFrameElement\)/);
+  assert.match(hostSource, /function postIframeVisibility\(el: HTMLIFrameElement, visible: boolean\)/);
+  assert.match(hostSource, /syncVisibility\(\);[\s\S]*syncSoon\(\);/);
+  assert.match(hostSource, /entry\.intersectionRatio > 0\.1\)[\s\S]*iframeRectIsVisible\(el\)/);
+  assert.match(hostSource, /window\.requestAnimationFrame\(\(\) => \{/);
+  assert.match(hostSource, /window\.setTimeout\(syncVisibility, 100\)/);
+  assert.match(hostSource, /onLoad=\{syncVisibility\}/);
 });
 
 test("script widget host exposes app-owned UI primitives", async () => {

@@ -262,7 +262,7 @@ export function buildSrcdoc(
           return;
         }
         _kkLastRafTimestamp = timestamp;
-        var callbacks = Array.prototype.slice.call(_kkRafCallbacks.entries());
+        var callbacks = Array.from(_kkRafCallbacks.entries());
         _kkRafCallbacks.clear();
         callbacks.forEach(function (entry) {
           try {
@@ -274,7 +274,7 @@ export function buildSrcdoc(
         scheduleKkRafPump(KK_RAF_MIN_INTERVAL_MS);
       }
       function notifyKkVisibilityCallbacks() {
-        Array.prototype.slice.call(_kkVisibilityCallbacks).forEach(function (callback) {
+        Array.from(_kkVisibilityCallbacks).forEach(function (callback) {
           try {
             callback(_kkVisible);
           } catch (error) {

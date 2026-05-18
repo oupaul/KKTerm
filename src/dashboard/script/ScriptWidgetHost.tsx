@@ -50,6 +50,27 @@ const BRIDGE_RATE_LIMITS_MS = {
 
 type RateLimitedBridgeMessage = keyof typeof BRIDGE_RATE_LIMITS_MS;
 
+function iframeRectIsVisible(el: HTMLIFrameElement): boolean {
+  const rect = el.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  return (
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.right > 0 &&
+    rect.bottom > 0 &&
+    rect.left < viewportWidth &&
+    rect.top < viewportHeight
+  );
+}
+
+function postIframeVisibility(el: HTMLIFrameElement, visible: boolean) {
+  el.contentWindow?.postMessage(
+    { kk: true, type: "setVisible", visible },
+    "*",
+  );
+}
+
 function normalizeScriptWidgetCap(cap: number): number {
   return Math.max(1, Math.floor(Number.isFinite(cap) ? cap : 1));
 }
@@ -143,6 +164,11 @@ export function ScriptWidgetHost({
   );
   const [libraries, setLibraries] = useState<ResolvedWidgetLibrary[] | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const syncVisibility = useCallback(() => {
+    const el = iframeRef.current;
+    if (!el || capped || !libraries) return;
+    postIframeVisibility(el, iframeRectIsVisible(el));
+  }, [capped, libraries]);
   const requestedLibraries = useMemo(
     () => (parsed ? resolveWidgetLibraryKeys(parsed.libraries, parsed.source) : []),
     [parsed],
@@ -215,30 +241,32 @@ export function ScriptWidgetHost({
   useEffect(() => {
     const el = iframeRef.current;
     if (!el || capped || !libraries) return;
+    const syncSoon = () => {
+      window.requestAnimationFrame(() => {
+        syncVisibility();
+        window.setTimeout(syncVisibility, 100);
+      });
+    };
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          const visible = entry.isIntersecting && entry.intersectionRatio > 0.1;
-          el.contentWindow?.postMessage(
-            { kk: true, type: "setVisible", visible },
-            "*",
-          );
+          const visible =
+            (entry.isIntersecting && entry.intersectionRatio > 0.1) ||
+            iframeRectIsVisible(el);
+          postIframeVisibility(el, visible);
         }
       },
       { threshold: [0, 0.1] },
     );
     observer.observe(el);
-    // Send initial visibility.
-    const rect = el.getBoundingClientRect();
-    const initiallyVisible = rect.width > 0 && rect.height > 0;
-    if (!initiallyVisible) {
-      el.contentWindow?.postMessage(
-        { kk: true, type: "setVisible", visible: false },
-        "*",
-      );
-    }
-    return () => observer.disconnect();
-  }, [capped, libraries]);
+    syncVisibility();
+    syncSoon();
+    window.addEventListener("resize", syncVisibility);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", syncVisibility);
+    };
+  }, [capped, libraries, syncVisibility]);
 
   useEffect(() => {
     function allowBridgeMessage(type: RateLimitedBridgeMessage): boolean {
@@ -509,6 +537,7 @@ export function ScriptWidgetHost({
       className="dw-script-frame"
       title={t("dashboard.scriptWidgetFrameTitle")}
       loading="lazy"
+      onLoad={syncVisibility}
       sandbox="allow-scripts allow-downloads"
       srcDoc={srcdoc}
     />

@@ -214,6 +214,20 @@ the prompt missed.
 
 ## Operational notes
 
+- Debug script-widget rendering from the screen, not just from static source
+  inspection. Animation, transparency, sizing, and iframe lifecycle bugs must
+  be reproduced in an actual rendered iframe through the debug browser or the
+  real Tauri/WebView2 runtime before calling them fixed. For animation bugs,
+  instrument the iframe and record live `requestAnimationFrame`,
+  `setInterval`, and visibility-message counts before and after the change.
+  String-level tests are useful regression guards, but they are not proof that
+  the browser is painting frames.
+- Be careful with iterator snapshots inside iframe guardrails. `Map.entries()`
+  and `Set` are iterators/iterables, not array-like objects; use `Array.from`
+  before clearing or iterating them. The May 2026 frozen-clock regression came
+  from using `Array.prototype.slice.call(_kkRafCallbacks.entries())`, which
+  produced an empty callback list, cleared every pending rAF callback, and made
+  clocks redraw on remount but never animate.
 - Adding a new bundled library: update `KNOWN_LIBRARY_GLOBALS` in
   `src-tauri/src/dashboard_validation.rs` alongside
   `src/dashboard/script/widgetLibraries.ts`. Without the Rust-side entry the

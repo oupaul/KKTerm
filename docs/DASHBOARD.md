@@ -197,7 +197,7 @@ The catalog overlay is a separate modal with search + two source-group tabs: Bui
 - A `<style>` block carrying compact KKTerm-like text, form-control, button, stack, row, and result defaults so simple generated DOM starts from the app's desktop UI grammar.
 - An optional `htmlShim` body markup (default: a single `<div id="root">`).
 - A small host `<script>` that loads the stored source as data. The generated source is never pasted directly into the host script text, because generated snippets commonly contain HTML/script literals such as `</script>` that would prematurely close the host script and render broken JavaScript as widget body text.
-- Renderer guardrails inside the iframe: `requestAnimationFrame` callbacks are capped to about 30 fps, tiny `setInterval` delays are clamped, and timer/animation work pauses while the host marks the widget invisible. This protects the shared WebView2 renderer from a single AI-authored widget with an overly aggressive loop.
+- Renderer guardrails inside the iframe: `requestAnimationFrame` callbacks are capped to about 30 fps, tiny `setInterval` delays are clamped, and timer/animation work pauses while the host marks the widget invisible. Scripts can read the current state with `KK.isVisible()` and subscribe with `KK.onVisibilityChange(callback)` to restart paused animation when visibility returns. This protects the shared WebView2 renderer from a single AI-authored widget with an overly aggressive loop.
 - A per-instance settings snapshot loaded through `KK.getSettings()`. Scripts can persist small non-secret user options with `KK.setSetting(key, value)` or replace the object with `KK.setSettings(nextSettings)`.
 - A viewport helper for canvas/WebGL widgets: `KK.getViewport()` returns `{ width, height, dpr }` measured from the script root, and `KK.onViewportResize(callback)` calls back with the same shape when the widget body changes size.
 - A small app-owned CSS primitive set for generated UI: `kk-shell`, `kk-toolbar`, `kk-cluster`, `kk-title`, `kk-subtitle`, `kk-muted`, `kk-panel`, `kk-card`, `kk-grid`, `kk-stat`, `kk-stat-value`, `kk-stat-label`, `kk-pill`, `kk-badge`, `kk-stage`, and `kk-fill`. These are the default building blocks for polished script widgets; they avoid pulling a third-party UI framework into every iframe.
@@ -205,6 +205,8 @@ The catalog overlay is a separate modal with search + two source-group tabs: Bui
 - Parent-side bridge throttling for expensive widget messages such as settings writes, secret reads, local file dialogs, MCP calls, context menus, and local performance counter reads. Script authors should still poll modestly; the throttle is a renderer-protection backstop, not a scheduling API.
 
 The iframe is a **fault-isolation** boundary, not a security boundary. KKTerm is MIT and single-user; the iframe exists so a typo in one script widget cannot crash the dashboard, and so future Tauri-command exposure (a postMessage bridge) is a deliberate per-handler decision rather than an accidental global.
+
+When debugging script-widget rendering, verify the behavior in a rendered iframe, not only by inspecting source or string-based tests. Animation, transparency, sizing, and visibility bugs depend on browser/WebView2 scheduling and paint behavior; use the debug browser or real Tauri runtime with live `requestAnimationFrame`, timer, and visibility counters before calling the issue fixed. See `docs/ADR/0006-dashboard-script-widget-hardening.md` for the frozen-clock regression note.
 
 Declared permissions:
 
