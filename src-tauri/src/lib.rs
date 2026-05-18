@@ -863,6 +863,29 @@ fn update_ai_provider_settings(
 }
 
 #[tauri::command]
+fn list_assistant_chat_threads(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<Vec<storage::AssistantChatThreadRecord>, String> {
+    storage.list_assistant_chat_threads()
+}
+
+#[tauri::command]
+fn upsert_assistant_chat_thread(
+    storage: tauri::State<'_, storage::Storage>,
+    request: storage::AssistantChatThreadRecord,
+) -> Result<storage::AssistantChatThreadRecord, String> {
+    storage.upsert_assistant_chat_thread(request)
+}
+
+#[tauri::command]
+fn delete_assistant_chat_thread(
+    storage: tauri::State<'_, storage::Storage>,
+    thread_id: String,
+) -> Result<(), String> {
+    storage.delete_assistant_chat_thread(thread_id)
+}
+
+#[tauri::command]
 async fn start_github_copilot_device_flow(
 ) -> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
     github_copilot::start_device_flow().await
@@ -2311,6 +2334,9 @@ pub fn run() {
             update_screenshot_settings,
             get_ai_provider_settings,
             update_ai_provider_settings,
+            list_assistant_chat_threads,
+            upsert_assistant_chat_thread,
+            delete_assistant_chat_thread,
             start_github_copilot_device_flow,
             poll_github_copilot_device_flow,
             list_github_copilot_models,

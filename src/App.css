@@ -4832,6 +4832,8 @@ progress {
   display: grid;
   gap: 7px;
   justify-items: start;
+  width: 100%;
+  min-width: 0;
 }
 
 .assistant-intent-chip,
@@ -4906,10 +4908,13 @@ progress {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
 }
 
 .assistant-intent-example-bubble {
+  min-width: 0;
   max-width: 100%;
   padding: 6px 9px;
   color: var(--text-muted);
@@ -4921,6 +4926,8 @@ progress {
   font-size: 11px;
   font-weight: 700;
   line-height: 1.2;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .assistant-intent-example-bubble:hover {
@@ -4930,11 +4937,11 @@ progress {
 
 .assistant-composer-footer {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr) minmax(0, 1fr) 29px;
   gap: 8px;
   align-items: center;
   min-height: 28px;
-  padding-right: 37px;
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -4965,8 +4972,8 @@ progress {
 .assistant-model-select {
   flex: 1 1 min(var(--assistant-model-select-width, 14rem), 18rem);
   width: auto;
-  max-width: min(42%, 18rem);
-  min-width: 4.5rem;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .assistant-permission-menu-wrapper {
@@ -4974,7 +4981,7 @@ progress {
   display: inline-flex;
   flex: 1 1 min(var(--assistant-permission-control-width, 9rem), 13rem);
   width: auto;
-  max-width: min(42%, var(--assistant-permission-control-width, 13rem));
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -5197,9 +5204,6 @@ progress {
 
 .assistant-send-button {
   flex: 0 0 auto;
-  position: absolute;
-  right: 0;
-  bottom: 0;
   color: var(--surface);
   background: var(--text-faint);
 }

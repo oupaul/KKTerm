@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `ai.*` (full namespace), `app.aiAssistant`, `settings.mcp*`, `settings.sectionAiAssistant`, `settings.credentialKindAiApiKey`
-- Topics: AI panel, chats, new chat, history, tool permission modes, intents (Watchdog / Create Widget / Extension Draft), MCP servers, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal
-- Synonyms: "chat", "copilot", "AI bot", "tools", "approval", "MCP", "agent", "watchdog"
+- Topics: AI panel, chats, new chat, history, SQLite, tool permission modes, intents (Watchdog / Create Widget / Extension Draft), MCP servers, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal
+- Synonyms: "chat", "copilot", "AI bot", "tools", "approval", "MCP", "agent", "watchdog", "where are chats stored", "clear chat storage"
 
 ## Panel
 
@@ -17,6 +17,8 @@ Header `ai.chats`. View all `ai.viewAll` → dialog `ai.allChats`. Empty `ai.noC
 - Open / close: `ai.close`, `ai.closeChatHistory`.
 - Delete: `ai.deleteChat`.
 - No-messages state: `ai.noMessages`. Saved indicator `ai.saved`.
+
+Chat history is stored in SQLite table `assistant_chat_threads`, indexed for recent-first history loading. Older WebView2 `localStorage` history under `kkterm.aiAssistant.chatHistory.v1` is migrated into SQLite on startup and then removed. The unsent composer draft is temporary `sessionStorage` under `ai-chat-draft`.
 
 ## Composer
 

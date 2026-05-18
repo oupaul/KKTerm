@@ -42,6 +42,7 @@ import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import type {
   AiProviderModelOption,
   AiStreamEvent,
+  AssistantChatThreadRecord,
   CaptureScreenshotRequest,
 } from "../lib/tauri";
 import {
@@ -514,7 +515,7 @@ function assistantIntentForPrompt(
   return asksForExtension ? "extensionCreation" : "chat";
 }
 
-function readAssistantChatHistory(): AssistantChatThread[] {
+function readLegacyAssistantChatHistory(): AssistantChatThread[] {
   if (typeof window === "undefined") {
     return [];
   }
@@ -533,11 +534,71 @@ function readAssistantChatHistory(): AssistantChatThread[] {
   }
 }
 
-function writeAssistantChatHistory(threads: AssistantChatThread[]) {
+function writeLegacyAssistantChatHistory(threads: AssistantChatThread[]) {
   if (typeof window === "undefined") {
     return;
   }
   window.localStorage.setItem(ASSISTANT_CHAT_HISTORY_KEY, JSON.stringify(threads));
+}
+
+function clearLegacyAssistantChatHistory() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.removeItem(ASSISTANT_CHAT_HISTORY_KEY);
+}
+
+function assistantChatThreadToRecord(thread: AssistantChatThread): AssistantChatThreadRecord {
+  return {
+    id: thread.id,
+    title: thread.title,
+    contextLabel: thread.contextLabel,
+    messagesJson: JSON.stringify(thread.messages),
+    createdAt: thread.createdAt,
+    updatedAt: thread.updatedAt,
+  };
+}
+
+function assistantChatThreadFromRecord(record: AssistantChatThreadRecord): AssistantChatThread[] {
+  let messages: unknown;
+  try {
+    messages = JSON.parse(record.messagesJson);
+  } catch {
+    return [];
+  }
+  return normalizeAssistantChatThread({
+    id: record.id,
+    title: record.title,
+    contextLabel: record.contextLabel,
+    messages,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  });
+}
+
+async function loadAssistantChatHistoryFromStorage(): Promise<AssistantChatThread[]> {
+  try {
+    const records = await invokeCommand("list_assistant_chat_threads", undefined);
+    const storedThreads = records.flatMap(assistantChatThreadFromRecord);
+    const legacyThreads = readLegacyAssistantChatHistory();
+    if (legacyThreads.length === 0) {
+      return storedThreads;
+    }
+
+    await Promise.all(
+      legacyThreads.map((thread) =>
+        invokeCommand("upsert_assistant_chat_thread", {
+          request: assistantChatThreadToRecord(thread),
+        }),
+      ),
+    );
+    clearLegacyAssistantChatHistory();
+    const migratedRecords = await invokeCommand("list_assistant_chat_threads", undefined);
+    return migratedRecords.flatMap(assistantChatThreadFromRecord);
+  } catch (error) {
+    console.warn("[kkterm-ai] failed to load SQLite chat history", error);
+    return readLegacyAssistantChatHistory();
+  }
 }
 
 function normalizeAssistantChatThread(value: unknown): AssistantChatThread[] {
@@ -731,7 +792,9 @@ export function AssistantPanel({
   const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
   const [currentThreadId, setCurrentThreadId] = useState(createAssistantChatThreadId);
   const [currentThreadTitle, setCurrentThreadTitle] = useState<string | undefined>();
-  const [chatHistory, setChatHistory] = useState<AssistantChatThread[]>(readAssistantChatHistory);
+  const [chatHistory, setChatHistory] = useState<AssistantChatThread[]>(() =>
+    isTauriRuntime() ? [] : readLegacyAssistantChatHistory(),
+  );
   const [showAllChats, setShowAllChats] = useState(false);
   const [chatError, setChatError] = useState("");
   const [isSendingPrompt, setIsSendingPrompt] = useState(false);
@@ -897,7 +960,26 @@ export function AssistantPanel({
   ]);
 
   useEffect(() => {
-    writeAssistantChatHistory(chatHistory);
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let disposed = false;
+    void loadAssistantChatHistoryFromStorage().then((threads) => {
+      if (!disposed) {
+        setChatHistory(threads);
+      }
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      writeLegacyAssistantChatHistory(chatHistory);
+    }
   }, [chatHistory]);
 
   useEffect(() => {
@@ -1100,6 +1182,13 @@ export function AssistantPanel({
       updatedAt: nextMessages[nextMessages.length - 1]?.createdAt ?? now,
     };
     setChatHistory((current) => upsertAssistantChatThread(current, thread));
+    if (isTauriRuntime()) {
+      void invokeCommand("upsert_assistant_chat_thread", {
+        request: assistantChatThreadToRecord(thread),
+      }).catch((error) => {
+        setChatError(error instanceof Error ? error.message : String(error));
+      });
+    }
   }
 
   function appendLocalAssistantMessage(content: string, intent?: AssistantPromptIntent) {
@@ -1130,6 +1219,11 @@ export function AssistantPanel({
 
   function deleteChat(threadId: string) {
     setChatHistory((current) => current.filter((thread) => thread.id !== threadId));
+    if (isTauriRuntime()) {
+      void invokeCommand("delete_assistant_chat_thread", { threadId }).catch((error) => {
+        setChatError(error instanceof Error ? error.message : String(error));
+      });
+    }
     if (threadId === currentThreadId) {
       setMessages([]);
       setCurrentThreadId(createAssistantChatThreadId());

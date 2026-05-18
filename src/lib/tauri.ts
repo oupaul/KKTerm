@@ -702,6 +702,15 @@ export interface AiProviderModelOption {
   supportsImageInput?: boolean | null;
 }
 
+export interface AssistantChatThreadRecord {
+  id: string;
+  title: string;
+  contextLabel: string;
+  messagesJson: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 type CommandMap = {
   app_bootstrap: {
     args: undefined;
@@ -939,6 +948,18 @@ type CommandMap = {
   update_ai_provider_settings: {
     args: { request: AiProviderSettings };
     result: AiProviderSettings;
+  };
+  list_assistant_chat_threads: {
+    args: undefined;
+    result: AssistantChatThreadRecord[];
+  };
+  upsert_assistant_chat_thread: {
+    args: { request: AssistantChatThreadRecord };
+    result: AssistantChatThreadRecord;
+  };
+  delete_assistant_chat_thread: {
+    args: { threadId: string };
+    result: null;
   };
   start_github_copilot_device_flow: {
     args: undefined;

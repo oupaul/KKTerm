@@ -219,6 +219,21 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_sort ON mcp_servers(sort_order);
+
+CREATE TABLE IF NOT EXISTS assistant_chat_threads (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    context_label TEXT NOT NULL,
+    messages_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_assistant_chat_threads_updated_at
+    ON assistant_chat_threads(updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_assistant_chat_threads_created_at
+    ON assistant_chat_threads(created_at);
 "#;
 
 pub struct Storage {
@@ -919,6 +934,17 @@ pub(crate) struct UrlCredentialFill {
     pub(crate) username_selector: Option<String>,
     pub(crate) password_selector: Option<String>,
     pub(crate) field_values: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantChatThreadRecord {
+    pub id: String,
+    pub title: String,
+    pub context_label: String,
+    pub messages_json: String,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 impl Storage {
@@ -2228,6 +2254,64 @@ impl Storage {
         &self,
     ) -> Result<Vec<StoredCredentialCandidate>, String> {
         self.with_connection(list_stored_credential_candidates)
+    }
+
+    pub fn list_assistant_chat_threads(&self) -> Result<Vec<AssistantChatThreadRecord>, String> {
+        let connection = self.lock()?;
+        let mut statement = connection
+            .prepare(
+                "SELECT id, title, context_label, messages_json, created_at, updated_at
+                 FROM assistant_chat_threads
+                 ORDER BY updated_at DESC, created_at DESC",
+            )
+            .map_err(to_storage_error)?;
+        let rows = statement
+            .query_map([], assistant_chat_thread_from_row)
+            .map_err(to_storage_error)?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(to_storage_error)
+    }
+
+    pub fn upsert_assistant_chat_thread(
+        &self,
+        request: AssistantChatThreadRecord,
+    ) -> Result<AssistantChatThreadRecord, String> {
+        let thread = validate_assistant_chat_thread(request)?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "INSERT INTO assistant_chat_threads
+                    (id, title, context_label, messages_json, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    context_label = excluded.context_label,
+                    messages_json = excluded.messages_json,
+                    created_at = excluded.created_at,
+                    updated_at = excluded.updated_at",
+                params![
+                    &thread.id,
+                    &thread.title,
+                    &thread.context_label,
+                    &thread.messages_json,
+                    &thread.created_at,
+                    &thread.updated_at,
+                ],
+            )
+            .map_err(to_storage_error)?;
+        Ok(thread)
+    }
+
+    pub fn delete_assistant_chat_thread(&self, thread_id: String) -> Result<(), String> {
+        let thread_id = required_field("assistant chat thread id", thread_id)?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "DELETE FROM assistant_chat_threads WHERE id = ?1",
+                params![thread_id],
+            )
+            .map_err(to_storage_error)?;
+        Ok(())
     }
 
     pub fn clear_widget_secret_reference(
@@ -4523,8 +4607,7 @@ fn validate_ai_provider_settings(
         "smtp" => "smtp".to_string(),
         _ => {
             return Err(
-                "Email provider must be resend, sendgrid, mailgun, postmark, or smtp"
-                    .to_string(),
+                "Email provider must be resend, sendgrid, mailgun, postmark, or smtp".to_string(),
             )
         }
     };
@@ -4547,7 +4630,10 @@ fn validate_ai_provider_settings(
     if settings.tools.email && settings.email_from.is_empty() {
         return Err("Email sender address is required when Send Email is enabled".to_string());
     }
-    if settings.tools.email && settings.email_provider == "mailgun" && settings.mailgun_domain.is_empty() {
+    if settings.tools.email
+        && settings.email_provider == "mailgun"
+        && settings.mailgun_domain.is_empty()
+    {
         return Err("Mailgun domain is required when Send Email uses Mailgun".to_string());
     }
     if settings.tools.email && settings.email_provider == "smtp" {
@@ -4646,6 +4732,44 @@ fn optional_serial_speed(value: Option<i64>) -> rusqlite::Result<Option<u32>> {
             .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error))),
         None => Ok(None),
     }
+}
+
+fn assistant_chat_thread_from_row(
+    row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<AssistantChatThreadRecord> {
+    Ok(AssistantChatThreadRecord {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        context_label: row.get(2)?,
+        messages_json: row.get(3)?,
+        created_at: row.get(4)?,
+        updated_at: row.get(5)?,
+    })
+}
+
+fn validate_assistant_chat_thread(
+    request: AssistantChatThreadRecord,
+) -> Result<AssistantChatThreadRecord, String> {
+    let id = required_field("assistant chat thread id", request.id)?;
+    let title = required_field("assistant chat title", request.title)?;
+    let context_label = required_field("assistant chat context", request.context_label)?;
+    let created_at = required_field("assistant chat created time", request.created_at)?;
+    let updated_at = required_field("assistant chat updated time", request.updated_at)?;
+    let messages_json = required_field("assistant chat messages", request.messages_json)?;
+    let messages: serde_json::Value = serde_json::from_str(&messages_json)
+        .map_err(|error| format!("assistant chat messages must be valid JSON: {error}"))?;
+    if !messages.is_array() {
+        return Err("assistant chat messages must be a JSON array".to_string());
+    }
+
+    Ok(AssistantChatThreadRecord {
+        id,
+        title,
+        context_label,
+        messages_json,
+        created_at,
+        updated_at,
+    })
 }
 
 #[cfg(test)]
@@ -6604,6 +6728,70 @@ mod tests {
                 .expect("main window settings reload"),
             Some(updated)
         );
+    }
+
+    #[test]
+    fn assistant_chat_history_round_trips_from_sqlite_by_recent_update() {
+        let storage = Storage::open(temp_db_path("assistant-chat-history")).expect("storage opens");
+        let older = AssistantChatThreadRecord {
+            id: "thread-older".to_string(),
+            title: "Older".to_string(),
+            context_label: "Workspace".to_string(),
+            messages_json: r#"[{"role":"user","content":"first"}]"#.to_string(),
+            created_at: "2026-05-01T00:00:00Z".to_string(),
+            updated_at: "2026-05-01T00:00:00Z".to_string(),
+        };
+        let newer = AssistantChatThreadRecord {
+            id: "thread-newer".to_string(),
+            title: "Newer".to_string(),
+            context_label: "Dashboard".to_string(),
+            messages_json: r#"[{"role":"user","content":"second"}]"#.to_string(),
+            created_at: "2026-05-02T00:00:00Z".to_string(),
+            updated_at: "2026-05-03T00:00:00Z".to_string(),
+        };
+
+        storage
+            .upsert_assistant_chat_thread(older.clone())
+            .expect("older thread saved");
+        storage
+            .upsert_assistant_chat_thread(newer.clone())
+            .expect("newer thread saved");
+
+        let threads = storage
+            .list_assistant_chat_threads()
+            .expect("assistant chat history loads");
+        assert_eq!(threads.len(), 2);
+        assert_eq!(threads[0].id, newer.id);
+        assert_eq!(threads[1].id, older.id);
+
+        storage
+            .delete_assistant_chat_thread(newer.id.clone())
+            .expect("newer thread deleted");
+        let threads = storage
+            .list_assistant_chat_threads()
+            .expect("assistant chat history reloads");
+        assert_eq!(threads.len(), 1);
+        assert_eq!(threads[0].id, older.id);
+    }
+
+    #[test]
+    fn assistant_chat_history_schema_has_list_indexes() {
+        let storage = Storage::open(temp_db_path("assistant-chat-indexes")).expect("storage opens");
+        let connection = storage.lock().expect("storage lock");
+        let indexes = connection
+            .prepare(
+                "SELECT name FROM sqlite_master
+                 WHERE type = 'index' AND tbl_name = 'assistant_chat_threads'
+                 ORDER BY name",
+            )
+            .expect("index query prepares")
+            .query_map([], |row| row.get::<_, String>(0))
+            .expect("index query runs")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("indexes collect");
+
+        assert!(indexes.contains(&"idx_assistant_chat_threads_created_at".to_string()));
+        assert!(indexes.contains(&"idx_assistant_chat_threads_updated_at".to_string()));
     }
 
     fn temp_db_path(name: &str) -> PathBuf {
