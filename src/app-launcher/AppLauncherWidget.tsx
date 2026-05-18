@@ -4,6 +4,7 @@ import {
   AppWindow,
   FilePlus,
   FolderPlus,
+  FolderOpen,
   LayoutGrid,
   LayoutList,
   Pencil,
@@ -1179,6 +1180,14 @@ function AppLauncherMenu({
         onClick={() => {
           onClose();
           void onLaunch(state.entry, "differentUser");
+        }}
+      />
+      <MenuButton
+        icon={<FolderOpen size={14} />}
+        label={t("appLauncher.openFolder")}
+        onClick={() => {
+          onClose();
+          void onLaunch(state.entry, "openFolder");
         }}
       />
       <MenuButton

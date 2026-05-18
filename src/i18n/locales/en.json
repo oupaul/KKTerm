@@ -349,6 +349,7 @@
     "runNormal": "Run",
     "runAdmin": "Run as Administrator",
     "runAsUser": "Run as another user",
+    "openFolder": "Open Folder",
     "edit": "Edit",
     "remove": "Remove",
     "loadError": "Could not load App Launcher pins: {{message}}",

@@ -13,6 +13,7 @@ pub enum AppLauncherLaunchMode {
     Normal,
     Admin,
     DifferentUser,
+    OpenFolder,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -97,6 +98,16 @@ fn plan_launch_with_options(
         return Err("App Launcher path is required".to_string());
     }
 
+    if mode == AppLauncherLaunchMode::OpenFolder {
+        let target_folder = containing_folder_for_launcher_path(path)?;
+        return Ok(AppLauncherLaunchPlan {
+            target: target_folder,
+            parameters: None,
+            working_directory: None,
+            operation: None,
+        });
+    }
+
     let runnable = is_runnable_path(path);
     if mode != AppLauncherLaunchMode::Normal && !runnable {
         return Err(
@@ -108,6 +119,7 @@ fn plan_launch_with_options(
         AppLauncherLaunchMode::Normal => None,
         AppLauncherLaunchMode::Admin => Some("runas"),
         AppLauncherLaunchMode::DifferentUser => Some("runasuser"),
+        AppLauncherLaunchMode::OpenFolder => None,
     };
     let arguments = arguments.map(str::trim).filter(|value| !value.is_empty());
     let working_directory = working_directory
@@ -423,6 +435,17 @@ fn path_extension(path: &str) -> Option<String> {
         .map(|extension| extension.to_lowercase())
 }
 
+fn containing_folder_for_launcher_path(path: &str) -> Result<String, String> {
+    let path = Path::new(path);
+    if path.is_dir() {
+        return Ok(path.to_string_lossy().to_string());
+    }
+    path.parent()
+        .map(|parent| parent.to_string_lossy().to_string())
+        .filter(|parent| !parent.trim().is_empty())
+        .ok_or_else(|| "Could not determine the launcher entry folder".to_string())
+}
+
 fn system_time_to_unix_ms(time: SystemTime) -> Option<u64> {
     let millis = time.duration_since(SystemTime::UNIX_EPOCH).ok()?.as_millis();
     u64::try_from(millis).ok()
@@ -495,6 +518,16 @@ mod tests {
 
         assert_eq!(plan.target, "C:\\Tools\\tool.exe");
         assert_eq!(plan.operation, Some("runasuser"));
+    }
+
+    #[test]
+    fn launch_plan_open_folder_uses_containing_folder() {
+        let plan = plan_launch("C:\\Tools\\tool.exe", AppLauncherLaunchMode::OpenFolder)
+            .expect("open folder should target the parent folder");
+
+        assert_eq!(plan.target, "C:\\Tools");
+        assert_eq!(plan.parameters, None);
+        assert_eq!(plan.operation, None);
     }
 
     #[test]

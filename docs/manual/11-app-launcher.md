@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `appLauncher.*` (full namespace)
-- Topics: launch local apps from Dashboard, run as admin, run as user, pinned apps, rail shortcuts, add/edit/remove entry, icon/list/details view mode, sort launcher entries, file metadata
-- Synonyms: "shortcuts", "dock", "quick launch", "run as administrator", "launch program", "Explorer view", "details view", "list view", "sort by name", "sort by size", "sort by modified"
+- Topics: launch local apps from Dashboard, run as admin, run as user, open containing folder, pinned apps, rail shortcuts, add/edit/remove entry, icon/list/details view mode, sort launcher entries, file metadata
+- Synonyms: "shortcuts", "dock", "quick launch", "run as administrator", "launch program", "open folder", "show in folder", "Explorer view", "details view", "list view", "sort by name", "sort by size", "sort by modified"
 
 > **Term:** the App Launcher is a Dashboard widget, **not** an Activity Rail module. The label that appears on its widget surface is `appLauncher.title` (module-style label `appLauncher.moduleLabel`, summary `appLauncher.subtitle`, status `appLauncher.statusReady`).
 
@@ -53,6 +53,7 @@ Details values come from live local file metadata when available:
 App Launcher actions live in the right-click menu, not the default surface. Icon and list views show the icon and label; Details view also shows type, size, modified time, and the stored local path for comparison.
 
 - Launch: `appLauncher.launchApp`. Variants: `appLauncher.runNormal`, `appLauncher.runAdmin` (UAC elevation), `appLauncher.runAsUser` (run as a different user).
+- `appLauncher.openFolder` — open the containing local folder for files, shortcuts, scripts, and apps; for folder entries, open that folder.
 - `appLauncher.editApp` / `appLauncher.edit` — open the edit dialog.
 - `appLauncher.removeApp` / `appLauncher.remove` — delete. Status `appLauncher.removedStatus`.
 - `appLauncher.moreActions` — overflow menu.

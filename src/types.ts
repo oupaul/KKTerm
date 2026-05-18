@@ -184,7 +184,7 @@ export interface GeneralSettings {
   lastBackupAt?: string | null;
 }
 
-export type AppLauncherLaunchMode = "normal" | "admin" | "differentUser";
+export type AppLauncherLaunchMode = "normal" | "admin" | "differentUser" | "openFolder";
 export type AppLauncherViewMode = "icons" | "list" | "details";
 export type AppLauncherSortField = "name" | "path" | "type" | "size" | "modified";
 export type AppLauncherSortDirection = "asc" | "desc";
