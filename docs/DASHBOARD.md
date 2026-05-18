@@ -77,7 +77,7 @@ SQLite holds three Dashboard tables, defined in `src-tauri/src/storage.rs` under
 | --- | --- |
 | `dashboard_views` | One row per view. Holds `title`, `sort_order`, `grid_density`, and optional `tab_color` gradient preset id. |
 | `dashboard_widget_instances` | One row per placed widget. Holds `kind`, `source_id`, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), per-instance `settings_values_json`, and layout (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Secret fields store only `secretRef` metadata here. |
-| `dashboard_custom_widgets` | One row per AI Created script-widget definition. Holds `body_json`, validated against the script body schema, plus optional app-rendered `settings_schema_json`. |
+| `dashboard_custom_widgets` | One row per AI Created script-widget definition. Holds `body_json`, validated against the script body schema, plus optional app-rendered `settings_schema_json`. It does not carry a widget kind because all AI Created Widgets are script widgets. |
 
 Indexes: `(view_id, sort_order)` on instances for fast per-view loads.
 
@@ -103,7 +103,7 @@ Each command is a thin handler over the storage layer with up-front validation:
 | `dashboard_remove_instance` | Hard delete. |
 | `dashboard_apply_layout` | Batched layout commit used by the debounced drag/resize pipeline. |
 | `dashboard_create_widget` | AI-facing atomic helper: validates a structured `body` and optional `settingsSchema`, creates the AI Created Widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. |
-| `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` per kind and optional `settingsSchemaJson` but does not place an instance. |
+| `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` against the script body schema and optional `settingsSchemaJson` but does not place an instance. |
 | `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind and patched `settingsSchemaJson`. |
 | `dashboard_remove_custom_widget` | Requires `forceDeleteInstances` if instances reference the widget. |
 
@@ -260,7 +260,7 @@ When the Dashboard page is active, `onAssistantContextChange` includes a compact
   page: "dashboard",
   activeView: { id, title, gridDensity },
   instances: [{ id, kind, sourceId, customTitle, preset, x, y, w, h }],
-  customWidgets: [{ id, kind, title }],
+  customWidgets: [{ id, title }],
 }
 ```
 

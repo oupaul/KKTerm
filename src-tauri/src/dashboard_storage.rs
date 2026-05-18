@@ -4,8 +4,8 @@ use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dashboard_validation::{
-    dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_for_kind_detailed,
-    validate_custom_widget_kind, validate_dashboard_tab_color, validate_grid_bounds,
+    dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_json_detailed,
+    validate_dashboard_tab_color, validate_grid_bounds,
     validate_grid_density, validate_icon, validate_kind, validate_preset,
     validate_settings_schema_json, validate_settings_values_for_schema_json, validate_title,
     ValidationError,
@@ -108,7 +108,6 @@ pub struct DashboardWidgetInstance {
 #[serde(rename_all = "camelCase")]
 pub struct DashboardCustomWidget {
     pub id: String,
-    pub kind: String,
     pub title: String,
     pub summary: String,
     pub category: String,
@@ -318,20 +317,19 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut custom_stmt = conn.prepare(
-        "SELECT id, kind, title, summary, category, body_json, settings_schema_json, created_by, created_at FROM dashboard_custom_widgets"
+        "SELECT id, title, summary, category, body_json, settings_schema_json, created_by, created_at FROM dashboard_custom_widgets"
     )?;
     let custom_widgets = custom_stmt
         .query_map([], |row| {
             Ok(DashboardCustomWidget {
                 id: row.get(0)?,
-                kind: row.get(1)?,
-                title: row.get(2)?,
-                summary: row.get(3)?,
-                category: row.get(4)?,
-                body_json: row.get(5)?,
-                settings_schema_json: row.get(6)?,
-                created_by: row.get(7)?,
-                created_at: row.get(8)?,
+                title: row.get(1)?,
+                summary: row.get(2)?,
+                category: row.get(3)?,
+                body_json: row.get(4)?,
+                settings_schema_json: row.get(5)?,
+                created_by: row.get(6)?,
+                created_at: row.get(7)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -720,7 +718,6 @@ pub fn apply_layout(
 pub fn create_custom_widget(
     conn: &SqliteConnection,
     id: &str,
-    kind: &str,
     title: &str,
     summary: &str,
     category: &str,
@@ -728,9 +725,8 @@ pub fn create_custom_widget(
     settings_schema_json: Option<&str>,
     created_by: &str,
 ) -> Result<DashboardCustomWidget, DashboardStorageError> {
-    validate_custom_widget_kind(kind)?;
     validate_title(title)?;
-    validate_custom_body_for_kind_detailed(kind, body_json)?;
+    validate_custom_body_json_detailed(body_json)?;
     let settings_schema_json = settings_schema_json.unwrap_or(r#"{"fields":[]}"#);
     validate_settings_schema_json(settings_schema_json)?;
     if !matches!(created_by, "user" | "agent") {
@@ -743,11 +739,10 @@ pub fn create_custom_widget(
     }
     conn.execute(
         "INSERT INTO dashboard_custom_widgets
-            (id, kind, title, summary, category, body_json, settings_schema_json, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (id, title, summary, category, body_json, settings_schema_json, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)",
         params![
             id,
-            kind,
             title,
             summary,
             category,
@@ -763,7 +758,6 @@ pub fn create_custom_widget(
     )?;
     Ok(DashboardCustomWidget {
         id: id.to_string(),
-        kind: kind.to_string(),
         title: title.to_string(),
         summary: summary.to_string(),
         category: category.to_string(),
@@ -781,20 +775,19 @@ pub fn update_custom_widget(
 ) -> Result<DashboardCustomWidget, DashboardStorageError> {
     let mut current: DashboardCustomWidget = conn
         .query_row(
-            "SELECT id, kind, title, summary, category, body_json, settings_schema_json, created_by, created_at
+            "SELECT id, title, summary, category, body_json, settings_schema_json, created_by, created_at
          FROM dashboard_custom_widgets WHERE id = ?",
             params![id],
             |row| {
                 Ok(DashboardCustomWidget {
                     id: row.get(0)?,
-                    kind: row.get(1)?,
-                    title: row.get(2)?,
-                    summary: row.get(3)?,
-                    category: row.get(4)?,
-                    body_json: row.get(5)?,
-                    settings_schema_json: row.get(6)?,
-                    created_by: row.get(7)?,
-                    created_at: row.get(8)?,
+                    title: row.get(1)?,
+                    summary: row.get(2)?,
+                    category: row.get(3)?,
+                    body_json: row.get(4)?,
+                    settings_schema_json: row.get(5)?,
+                    created_by: row.get(6)?,
+                    created_at: row.get(7)?,
                 })
             },
         )
@@ -814,7 +807,7 @@ pub fn update_custom_widget(
         current.category = c;
     }
     if let Some(b) = patch.body_json.clone() {
-        validate_custom_body_for_kind_detailed(&current.kind, &b)?;
+        validate_custom_body_json_detailed(&b)?;
         current.body_json = b;
     }
     if let Some(schema) = patch.settings_schema_json.clone() {
@@ -998,7 +991,6 @@ mod tests {
             );
             CREATE TABLE dashboard_custom_widgets (
                 id TEXT PRIMARY KEY,
-                kind TEXT NOT NULL CHECK (kind IN ('script')),
                 title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '',
                 category TEXT NOT NULL DEFAULT 'custom',
                 body_json TEXT NOT NULL,
@@ -1240,7 +1232,6 @@ mod tests {
         create_custom_widget(
             &conn,
             "cw1",
-            "script",
             "My Script",
             "",
             "custom",
@@ -1271,7 +1262,6 @@ mod tests {
         create_custom_widget(
             &conn,
             "cw1",
-            "script",
             "API Widget",
             "",
             "custom",

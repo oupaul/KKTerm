@@ -166,7 +166,6 @@ CREATE TABLE IF NOT EXISTS dashboard_views (
 
 CREATE TABLE IF NOT EXISTS dashboard_custom_widgets (
     id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL CHECK (kind IN ('script')),
     title TEXT NOT NULL,
     summary TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT 'custom',
@@ -5179,9 +5178,9 @@ mod tests {
             ).map_err(to_storage_error)?;
             connection.execute(
                 "INSERT INTO dashboard_custom_widgets
-                    (id, kind, title, summary, category, body_json, settings_schema_json, created_by)
+                    (id, title, summary, category, body_json, settings_schema_json, created_by)
                  VALUES
-                    ('cw-1', 'script', 'API Widget', '', 'custom',
+                    ('cw-1', 'API Widget', '', 'custom',
                      '{\"source\":\"console.log(1)\",\"permissions\":{\"network\":false}}',
                      '{\"fields\":[{\"type\":\"secret\",\"key\":\"apiKey\",\"label\":\"API key\"}]}',
                      'agent')",

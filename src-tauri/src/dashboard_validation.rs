@@ -217,14 +217,6 @@ pub fn validate_kind(kind: &str) -> Result<(), ValidationError> {
     }
 }
 
-pub fn validate_custom_widget_kind(kind: &str) -> Result<(), ValidationError> {
-    if kind == "script" {
-        Ok(())
-    } else {
-        Err(ValidationError::InvalidCustomWidgetKind)
-    }
-}
-
 pub fn validate_grid_density(value: &str) -> Result<(), ValidationError> {
     if matches!(value, "compact" | "default" | "roomy") {
         Ok(())
@@ -760,26 +752,14 @@ fn source_references_identifier(source: &str, identifier: &str) -> bool {
 }
 
 #[allow(dead_code)]
-pub fn validate_custom_body_for_kind(kind: &str, body_json: &str) -> Result<(), ValidationError> {
-    validate_custom_body_for_kind_detailed(kind, body_json).map_err(|(kind, _)| kind)
+pub fn validate_custom_body_json(body_json: &str) -> Result<(), ValidationError> {
+    validate_custom_body_json_detailed(body_json).map_err(|(kind, _)| kind)
 }
 
-pub fn validate_custom_body_for_kind_detailed(
-    kind: &str,
+pub fn validate_custom_body_json_detailed(
     body_json: &str,
 ) -> Result<(), (ValidationError, Option<String>)> {
-    match kind {
-        "script" => {
-            validate_script_body_json_detailed(body_json)?;
-            Ok(())
-        }
-        _ => Err((
-            ValidationError::InvalidCustomWidgetKind,
-            Some(format!(
-                "AI Created Widget kind {kind:?} is not script"
-            )),
-        )),
-    }
+    validate_script_body_json_detailed(body_json).map(|_| ())
 }
 
 fn valid_settings_key(value: &str) -> bool {
@@ -1079,11 +1059,8 @@ mod tests {
     }
 
     #[test]
-    fn custom_content_kind_is_rejected() {
-        assert_eq!(
-            validate_custom_widget_kind("content"),
-            Err(ValidationError::InvalidCustomWidgetKind)
-        );
+    fn content_instance_kind_is_rejected() {
+        assert_eq!(validate_kind("content"), Err(ValidationError::InvalidKind));
     }
 
     #[test]

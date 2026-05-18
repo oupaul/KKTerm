@@ -3249,8 +3249,8 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
         tools.push(create_widget_tool.strict());
         tools.push(tool_definition(
             "dashboard_create_custom_widget",
-            format!("Create a reusable AI Created Widget definition only; this does not place it on a view. bodyJson must be a JSON string matching the selected kind. Optional settingsSchemaJson defines app-rendered per-instance settings fields; use type secret for passwords, API keys, and tokens so only secret references are stored in SQLite. Prefer dashboard_create_widget when the user expects a visible widget. Apply the same pre-create duplicate check described on dashboard_create_widget: if an existing AI Created Widget overlaps in function, ask the user to choose edit / create new / place an instance instead of silently creating a duplicate. {DASHBOARD_WIDGET_DOM_CONTRACT}"),
-            json!({"type":"object","properties":{"kind":{"type":"string","enum":["script"]},"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"},"settingsSchemaJson":{"type":"string"},"createdBy":{"type":"string","enum":["user","agent"]}},"required":["kind","title","summary","category","bodyJson","createdBy"]}),
+            format!("Create a reusable script AI Created Widget definition only; this does not place it on a view. bodyJson must be a JSON string matching the script body schema. Optional settingsSchemaJson defines app-rendered per-instance settings fields; use type secret for passwords, API keys, and tokens so only secret references are stored in SQLite. Prefer dashboard_create_widget when the user expects a visible widget. Apply the same pre-create duplicate check described on dashboard_create_widget: if an existing AI Created Widget overlaps in function, ask the user to choose edit / create new / place an instance instead of silently creating a duplicate. {DASHBOARD_WIDGET_DOM_CONTRACT}"),
+            json!({"type":"object","properties":{"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"},"settingsSchemaJson":{"type":"string"},"createdBy":{"type":"string","enum":["user","agent"]}},"required":["title","summary","category","bodyJson","createdBy"]}),
         ));
         tools.push(tool_definition(
             "dashboard_update_custom_widget",
@@ -3435,7 +3435,6 @@ fn dashboard_create_widget_schema() -> Value {
         "type":"object",
         "properties":{
             "viewId":{"type":"string"},
-            "kind":{"type":"string","enum":["script"]},
             "title":{"type":"string","minLength":1,"maxLength":120},
             "summary":{"type":"string","maxLength":240},
             "category":{"type":"string","minLength":1,"maxLength":80},
@@ -3449,7 +3448,7 @@ fn dashboard_create_widget_schema() -> Value {
             "gridW":{"type":"integer","minimum":1,"maximum":12},
             "gridH":{"type":"integer","minimum":1}
         },
-        "required":["viewId","kind","title","summary","category","settingsSchema","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
+        "required":["viewId","title","summary","category","settingsSchema","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
         "additionalProperties":false
     })
 }
@@ -3540,7 +3539,6 @@ fn dashboard_widget_settings_field_schema() -> Value {
 }
 
 fn normalize_ai_widget_initial_size(
-    kind: &str,
     title: &str,
     summary: &str,
     category: &str,
@@ -3550,7 +3548,7 @@ fn normalize_ai_widget_initial_size(
 ) -> (i64, i64) {
     let mut width = grid_w.clamp(1, 12);
     let mut height = grid_h.max(1);
-    if kind == "script" && looks_like_compact_interactive_widget(title, summary, category, body) {
+    if looks_like_compact_interactive_widget(title, summary, category, body) {
         width = width.min(6);
         height = height.max(4);
     }
@@ -3921,7 +3919,6 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             if view_id.is_empty() {
                 return Err("dashboard_create_widget requires viewId".to_string());
             }
-            let kind = arg_string(&args, "kind");
             let title = arg_string(&args, "title");
             let summary = arg_string(&args, "summary");
             let category = arg_string(&args, "category");
@@ -3946,7 +3943,6 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             let requested_grid_w = args.get("gridW").and_then(Value::as_i64).unwrap_or(4);
             let requested_grid_h = args.get("gridH").and_then(Value::as_i64).unwrap_or(3);
             let (mut grid_w, mut grid_h) = normalize_ai_widget_initial_size(
-                &kind,
                 &title,
                 &summary,
                 &category,
@@ -3967,7 +3963,6 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 "dashboard.create_widget.prepare",
                 json!({
                     "viewId": &view_id,
-                    "kind": &kind,
                     "title": &title,
                     "summary": &summary,
                     "category": &category,
@@ -3994,7 +3989,6 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             let custom_widget = ds::create_custom_widget(
                 conn,
                 &custom_widget_id,
-                &kind,
                 &title,
                 &summary,
                 &category,
@@ -4015,7 +4009,7 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
                 conn,
                 &instance_id,
                 &view_id,
-                &kind,
+                "script",
                 &custom_widget_id,
                 &preset,
                 &accent_name,
@@ -4050,7 +4044,6 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             Ok(json!({ "customWidget": custom_widget, "instance": instance }))
         }
         "dashboard_create_custom_widget" => {
-            let kind = arg_string(&args, "kind");
             let title = arg_string(&args, "title");
             let summary = arg_string(&args, "summary");
             let category = arg_string(&args, "category");
@@ -4064,7 +4057,6 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
             ds::create_custom_widget(
                 conn,
                 &id,
-                &kind,
                 &title,
                 &summary,
                 &category,
@@ -6642,7 +6634,6 @@ mod tests {
         });
 
         let (width, height) = normalize_ai_widget_initial_size(
-            "script",
             "Tetris",
             "A playable game with keyboard controls.",
             "Games",
@@ -6664,7 +6655,6 @@ mod tests {
         });
 
         let (width, height) = normalize_ai_widget_initial_size(
-            "script",
             "Connection Health",
             "A wide operational report.",
             "Operations",
@@ -7007,10 +6997,7 @@ mod tests {
     #[test]
     fn dashboard_widget_tool_schema_is_script_only() {
         let schema = dashboard_create_widget_schema();
-        assert_eq!(
-            schema.pointer("/properties/kind/enum"),
-            Some(&json!(["script"]))
-        );
+        assert!(schema.pointer("/properties/kind").is_none());
         assert!(
             schema
                 .pointer("/properties/body/required")

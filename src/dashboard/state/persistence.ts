@@ -9,7 +9,7 @@ import {
 import type {
   DashboardCustomWidget, DashboardLoadState, DashboardView, DashboardWidgetInstance,
   CustomWidgetPatch, InstancePatch, LayoutEntry, ViewPatch,
-  WidgetKind, WidgetCustomKind, WidgetPreset, AccentName, IconName, GridDensity,
+  WidgetKind, WidgetPreset, AccentName, IconName, GridDensity,
 } from "../types";
 import { defaultWidgetPresentationForPreset } from "../types";
 
@@ -199,11 +199,11 @@ export async function applyLayout(viewId: string, layout: LayoutEntry[]): Promis
 }
 
 export async function createCustomWidget(input: {
-  kind: WidgetCustomKind; title: string; summary: string;
+  title: string; summary: string;
   category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
 }): Promise<DashboardCustomWidget> {
   if (!isTauriRuntime()) {
-    const validation = validateCustomWidgetBodyJson(input.kind, input.bodyJson);
+    const validation = validateCustomWidgetBodyJson(input.bodyJson);
     if (!validation.ok) {
       throw new Error(`Invalid Dashboard AI Created Widget body: ${validation.reason}`);
     }
@@ -234,7 +234,7 @@ export async function updateCustomWidget(id: string, patch: CustomWidgetPatch): 
       throw new Error("Dashboard AI Created Widget not found.");
     }
     if (patch.bodyJson !== undefined) {
-      const validation = validateCustomWidgetBodyJson(widget.kind, patch.bodyJson);
+      const validation = validateCustomWidgetBodyJson(patch.bodyJson);
       if (!validation.ok) {
         throw new Error(`Invalid Dashboard AI Created Widget body: ${validation.reason}`);
       }

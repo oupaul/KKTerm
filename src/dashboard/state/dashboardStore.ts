@@ -3,7 +3,7 @@ import * as persistence from "./persistence";
 import { useWorkspaceStore } from "../../store";
 import type {
   DashboardCustomWidget, DashboardView, DashboardWidgetInstance,
-  GridDensity, InstancePatch, LayoutEntry, WidgetCustomKind,
+  GridDensity, InstancePatch, LayoutEntry,
   WidgetKind, WidgetPreset, AccentName, IconName, CustomWidgetPatch, DashboardBackground,
 } from "../types";
 
@@ -37,7 +37,7 @@ interface DashboardStoreState {
   removeInstance: (id: string) => Promise<void>;
   applyLayout: (viewId: string, layout: LayoutEntry[]) => void;
   createCustomWidget: (input: {
-    kind: WidgetCustomKind; title: string; summary: string;
+    title: string; summary: string;
     category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
   }) => Promise<DashboardCustomWidget | null>;
   updateCustomWidget: (id: string, patch: CustomWidgetPatch) => Promise<void>;

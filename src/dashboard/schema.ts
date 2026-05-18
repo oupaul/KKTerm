@@ -1,5 +1,5 @@
 import type {
-  ScriptBody, WidgetCustomKind,
+  ScriptBody,
   WidgetSecretRef, WidgetSettingsField, WidgetSettingsSchema,
 } from "./types";
 
@@ -138,10 +138,7 @@ function sourceCreatesId(source: string, id: string) {
   ].some((needle) => source.includes(needle));
 }
 
-export function validateCustomWidgetBodyJson(kind: WidgetCustomKind, bodyJson: string): ValidationResult<ScriptBody> {
-  if (kind !== "script") {
-    return { ok: false, reason: "invalidCustomWidgetKind" };
-  }
+export function validateCustomWidgetBodyJson(bodyJson: string): ValidationResult<ScriptBody> {
   if (encodedLength(bodyJson) > MAX_SCRIPT_SOURCE_BYTES + 4096) {
     return { ok: false, reason: "scriptTooLarge" };
   }

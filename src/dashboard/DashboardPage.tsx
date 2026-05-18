@@ -132,7 +132,6 @@ export function DashboardPage({
       })),
       customWidgets: customWidgets.map((widget) => ({
         id: widget.id,
-        kind: widget.kind,
         title: widget.title,
         category: widget.category,
         summary: widget.summary,

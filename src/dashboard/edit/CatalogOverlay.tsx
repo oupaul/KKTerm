@@ -54,7 +54,7 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
       .map((c) => ({
         id: c.id,
-        kind: c.kind as WidgetKind,
+        kind: "script" as WidgetKind,
         title: c.title,
         summary: c.summary,
         category: c.category,

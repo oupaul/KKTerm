@@ -72,7 +72,6 @@ import type {
   LayoutEntry,
   ViewPatch,
   WidgetKind,
-  WidgetCustomKind,
   WidgetPreset,
   AccentName,
   IconName,
@@ -1607,7 +1606,7 @@ type CommandMap = {
   };
   dashboard_create_widget: {
     args: {
-      viewId: string; kind: WidgetCustomKind; title: string; summary: string;
+      viewId: string; title: string; summary: string;
       category: string; body: unknown; settingsSchema?: unknown;
       preset: WidgetPreset; accentName: AccentName; iconName: IconName;
       gridX: number; gridY: number; gridW: number; gridH: number;
@@ -1616,7 +1615,7 @@ type CommandMap = {
   };
   dashboard_create_custom_widget: {
     args: {
-      kind: WidgetCustomKind; title: string; summary: string;
+      title: string; summary: string;
       category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
     };
     result: DashboardCustomWidget;

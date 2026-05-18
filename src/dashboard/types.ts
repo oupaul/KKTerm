@@ -1,5 +1,4 @@
 export type WidgetKind = "builtIn" | "script";
-export type WidgetCustomKind = "script";
 
 export const WIDGET_PRESETS = [
   "panel", "ambient", "hero",
@@ -96,7 +95,6 @@ export interface DashboardWidgetInstance {
 
 export interface DashboardCustomWidget {
   id: string;
-  kind: WidgetCustomKind;
   title: string;
   summary: string;
   category: string;

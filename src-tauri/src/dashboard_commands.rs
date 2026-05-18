@@ -193,7 +193,6 @@ pub fn dashboard_apply_layout(
 pub fn dashboard_create_widget(
     app: AppHandle,
     view_id: String,
-    kind: String,
     title: String,
     summary: String,
     category: String,
@@ -224,7 +223,6 @@ pub fn dashboard_create_widget(
         let custom_widget = ds::create_custom_widget(
             conn,
             &custom_widget_id,
-            &kind,
             &title,
             &summary,
             &category,
@@ -236,7 +234,7 @@ pub fn dashboard_create_widget(
             conn,
             &instance_id,
             &view_id,
-            &kind,
+            "script",
             &custom_widget_id,
             &preset,
             &accent_name,
@@ -262,7 +260,6 @@ pub fn dashboard_create_widget(
 #[tauri::command]
 pub fn dashboard_create_custom_widget(
     app: AppHandle,
-    kind: String,
     title: String,
     summary: String,
     category: String,
@@ -275,7 +272,6 @@ pub fn dashboard_create_custom_widget(
         ds::create_custom_widget(
             conn,
             &id,
-            &kind,
             &title,
             &summary,
             &category,
