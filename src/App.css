@@ -1117,14 +1117,61 @@ button {
   gap: 5px;
 }
 
-.app-launcher-details-header {
+.app-launcher-sort-header {
   display: grid;
-  grid-template-columns: minmax(160px, 0.9fr) minmax(0, 1.2fr);
   gap: 10px;
-  padding: 0 10px 2px 46px;
+  padding: 0 10px 2px 48px;
   color: var(--text-faint);
   font-size: 10.5px;
   font-weight: 650;
+}
+
+.app-launcher-list-header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-launcher-details-header {
+  grid-template-columns:
+    minmax(96px, 1.1fr)
+    minmax(72px, 0.7fr)
+    minmax(58px, 0.45fr)
+    minmax(88px, 0.75fr)
+    minmax(0, 1.25fr);
+}
+
+.app-launcher-sort-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.app-launcher-sort-header button:hover,
+.app-launcher-sort-header button:focus-visible,
+.app-launcher-sort-header button.active {
+  color: var(--text);
+  outline: none;
+}
+
+.app-launcher-sort-header button span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-launcher-sort-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 .app-launcher-tile {
@@ -1170,7 +1217,13 @@ button {
 }
 
 .app-launcher-widget-details .app-launcher-tile-launch {
-  grid-template-columns: 30px minmax(160px, 0.9fr) minmax(0, 1.2fr);
+  grid-template-columns:
+    30px
+    minmax(96px, 1.1fr)
+    minmax(72px, 0.7fr)
+    minmax(58px, 0.45fr)
+    minmax(88px, 0.75fr)
+    minmax(0, 1.25fr);
   gap: 10px;
 }
 
@@ -1234,6 +1287,9 @@ button {
   text-align: left;
 }
 
+.app-launcher-tile-type,
+.app-launcher-tile-size,
+.app-launcher-tile-modified,
 .app-launcher-tile-path {
   min-width: 0;
   overflow: hidden;
@@ -1242,6 +1298,10 @@ button {
   white-space: nowrap;
   font-size: 10.5px;
   line-height: 1.2;
+}
+
+.app-launcher-tile-size {
+  justify-self: end;
 }
 
 .app-launcher-widget-empty {

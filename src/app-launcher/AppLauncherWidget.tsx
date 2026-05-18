@@ -1,4 +1,6 @@
 import {
+  ArrowDown,
+  ArrowUp,
   AppWindow,
   FilePlus,
   FolderPlus,
@@ -13,7 +15,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   DragEvent,
   FormEvent,
@@ -33,6 +35,8 @@ import type {
   AppLauncherEntry,
   AppLauncherLaunchMode,
   AppLauncherSettings,
+  AppLauncherSortField,
+  AppLauncherSortState,
   AppLauncherViewMode,
   PreparedAppLauncherEntry,
 } from "../types";
@@ -84,6 +88,13 @@ type PointerReorderState = {
 };
 
 const APP_LAUNCHER_VIEW_MODES: AppLauncherViewMode[] = ["icons", "list", "details"];
+const APP_LAUNCHER_DETAILS_COLUMNS: AppLauncherSortField[] = [
+  "name",
+  "type",
+  "size",
+  "modified",
+  "path",
+];
 
 export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInstance }) {
   const { t } = useTranslation();
@@ -172,6 +183,10 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
                 exists: false,
                 runnable: isRunnablePath(entry.path),
                 iconDataUrl: entry.iconDataUrl ?? null,
+                fileKind: "missing",
+                extension: extensionFromPath(entry.path),
+                sizeBytes: null,
+                modifiedAtUnixMs: null,
               },
             ] as const;
           }
@@ -510,7 +525,12 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   }
 
   function handleEntryPointerDown(event: ReactPointerEvent<HTMLDivElement>, entryId: string) {
-    if (!editMode || event.button !== 0 || (event.target as HTMLElement).closest(".app-launcher-tile-remove")) {
+    if (
+      !editMode ||
+      settings.viewMode !== "icons" ||
+      event.button !== 0 ||
+      (event.target as HTMLElement).closest(".app-launcher-tile-remove")
+    ) {
       return;
     }
     pointerReorderRef.current = {
@@ -618,6 +638,32 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
     }
   }
 
+  async function saveSort(field: AppLauncherSortField) {
+    if (settings.viewMode === "icons") {
+      return;
+    }
+    const sortKey = settings.viewMode === "list" ? "listSort" : "detailsSort";
+    const currentSort = settings[sortKey];
+    const nextSort: AppLauncherSortState = {
+      field,
+      direction:
+        currentSort.field === field && currentSort.direction === "asc" ? "desc" : "asc",
+    };
+    try {
+      await saveSettings({ ...settings, [sortKey]: nextSort });
+    } catch (error) {
+      showStatusBarNotice(
+        t("appLauncher.saveError", { message: errorMessage(error) }),
+        { tone: "error" },
+      );
+    }
+  }
+
+  const sortedEntries = useMemo(
+    () => sortedAppLauncherEntries(settings.entries, settings, preparedById),
+    [preparedById, settings],
+  );
+
   async function launch(entry: AppLauncherEntry, mode: AppLauncherLaunchMode) {
     if (editMode || suppressNextLaunchRef.current) {
       return;
@@ -637,7 +683,7 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
 
   return (
     <div
-      className={`dashboard-widget-body app-launcher-widget app-launcher-widget-${settings.viewMode}${isDropTarget ? " is-drop-target" : ""}${editMode ? " is-managing" : ""}${addMenuState ? " is-adding" : ""}`}
+      className={`dashboard-widget-body app-launcher-widget app-launcher-widget-${settings.viewMode}${isDropTarget ? " is-drop-target" : ""}${editMode && settings.viewMode === "icons" ? " is-managing" : ""}${addMenuState ? " is-adding" : ""}`}
       onDragLeave={() => setIsDropTarget(false)}
       onDragOver={handleBrowserDragOver}
       onDrop={handleBrowserDrop}
@@ -663,13 +709,23 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
           aria-label={t("appLauncher.entriesLabel")}
           data-view-mode={settings.viewMode}
         >
-          {settings.viewMode === "details" ? (
-            <div className="app-launcher-details-header" aria-hidden="true">
-              <span>{t("appLauncher.detailsNameColumn")}</span>
-              <span>{t("appLauncher.detailsPathColumn")}</span>
-            </div>
+          {settings.viewMode === "list" ? (
+            <AppLauncherSortableHeader
+              fields={["name"]}
+              onSort={(field) => void saveSort(field)}
+              sort={settings.listSort}
+              viewMode={settings.viewMode}
+            />
           ) : null}
-          {settings.entries.map((entry) => (
+          {settings.viewMode === "details" ? (
+            <AppLauncherSortableHeader
+              fields={APP_LAUNCHER_DETAILS_COLUMNS}
+              onSort={(field) => void saveSort(field)}
+              sort={settings.detailsSort}
+              viewMode={settings.viewMode}
+            />
+          ) : null}
+          {sortedEntries.map((entry) => (
             <AppLauncherTile
               entry={entry}
               editMode={editMode}
@@ -794,6 +850,59 @@ function viewModeLabel(
   return t("appLauncher.iconView");
 }
 
+function AppLauncherSortableHeader({
+  fields,
+  onSort,
+  sort,
+  viewMode,
+}: {
+  fields: AppLauncherSortField[];
+  onSort: (field: AppLauncherSortField) => void;
+  sort: AppLauncherSortState;
+  viewMode: "list" | "details";
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className={`app-launcher-${viewMode}-header app-launcher-sort-header`}>
+      {fields.map((field) => (
+        <button
+          aria-label={sortHeaderLabel(t, field)}
+          className={sort.field === field ? "active" : ""}
+          key={field}
+          onClick={() => onSort(field)}
+          type="button"
+        >
+          <span>{sortHeaderLabel(t, field)}</span>
+          {sort.field === field ? (
+            <span className="app-launcher-sort-indicator" aria-hidden="true">
+              {sort.direction === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+            </span>
+          ) : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function sortHeaderLabel(
+  t: ReturnType<typeof useTranslation>["t"],
+  field: AppLauncherSortField,
+) {
+  if (field === "path") {
+    return t("appLauncher.detailsPathColumn");
+  }
+  if (field === "type") {
+    return t("appLauncher.detailsTypeColumn");
+  }
+  if (field === "size") {
+    return t("appLauncher.detailsSizeColumn");
+  }
+  if (field === "modified") {
+    return t("appLauncher.detailsModifiedColumn");
+  }
+  return t("appLauncher.detailsNameColumn");
+}
+
 function AppLauncherTile({
   entry,
   editMode,
@@ -877,9 +986,9 @@ function AppLauncherTile({
       {editMode ? (
         <div className="app-launcher-tile-launch" aria-hidden="true">
           <AppLauncherTileContent
-            entryName={entry.name}
+            entry={entry}
             iconDataUrl={iconDataUrl}
-            path={entry.path}
+            prepared={prepared}
             viewMode={viewMode}
           />
         </div>
@@ -892,9 +1001,9 @@ function AppLauncherTile({
           type="button"
         >
           <AppLauncherTileContent
-            entryName={entry.name}
+            entry={entry}
             iconDataUrl={iconDataUrl}
-            path={entry.path}
+            prepared={prepared}
             viewMode={viewMode}
           />
         </button>
@@ -904,16 +1013,17 @@ function AppLauncherTile({
 }
 
 function AppLauncherTileContent({
-  entryName,
+  entry,
   iconDataUrl,
-  path,
+  prepared,
   viewMode,
 }: {
-  entryName: string;
+  entry: AppLauncherEntry;
   iconDataUrl: string | null | undefined;
-  path: string;
+  prepared?: PreparedAppLauncherEntry;
   viewMode: AppLauncherViewMode;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <span className="app-launcher-tile-icon" aria-hidden="true">
@@ -923,8 +1033,17 @@ function AppLauncherTileContent({
           <AppWindow size={20} />
         )}
       </span>
-      <span className="app-launcher-tile-label">{entryName}</span>
-      {viewMode === "details" ? <span className="app-launcher-tile-path">{path}</span> : null}
+      <span className="app-launcher-tile-label">{entry.name}</span>
+      {viewMode === "details" ? (
+        <>
+          <span className="app-launcher-tile-type">{fileTypeLabel(t, entry, prepared)}</span>
+          <span className="app-launcher-tile-size">{formatFileSize(t, prepared?.sizeBytes)}</span>
+          <span className="app-launcher-tile-modified">
+            {formatModifiedTime(t, prepared?.modifiedAtUnixMs)}
+          </span>
+          <span className="app-launcher-tile-path">{entry.path}</span>
+        </>
+      ) : null}
     </>
   );
 }
@@ -1160,6 +1279,134 @@ function MenuButton({
       {label}
     </button>
   );
+}
+
+function sortedAppLauncherEntries(
+  entries: AppLauncherEntry[],
+  settings: AppLauncherSettings,
+  preparedById: Record<string, PreparedAppLauncherEntry>,
+) {
+  if (settings.viewMode === "icons") {
+    return entries;
+  }
+  const sort = settings.viewMode === "list" ? settings.listSort : settings.detailsSort;
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => {
+      const compared = compareEntries(a.entry, b.entry, sort.field, preparedById);
+      if (compared !== 0) {
+        return sort.direction === "asc" ? compared : -compared;
+      }
+      return a.index - b.index;
+    })
+    .map(({ entry }) => entry);
+}
+
+function compareEntries(
+  a: AppLauncherEntry,
+  b: AppLauncherEntry,
+  field: AppLauncherSortField,
+  preparedById: Record<string, PreparedAppLauncherEntry>,
+) {
+  const preparedA = preparedById[a.id];
+  const preparedB = preparedById[b.id];
+  if (field === "size") {
+    return compareNullableNumbers(preparedA?.sizeBytes ?? null, preparedB?.sizeBytes ?? null);
+  }
+  if (field === "modified") {
+    return compareNullableNumbers(
+      preparedA?.modifiedAtUnixMs ?? null,
+      preparedB?.modifiedAtUnixMs ?? null,
+    );
+  }
+  return compareStrings(
+    sortStringValue(a, field, preparedA),
+    sortStringValue(b, field, preparedB),
+  );
+}
+
+function sortStringValue(
+  entry: AppLauncherEntry,
+  field: AppLauncherSortField,
+  prepared?: PreparedAppLauncherEntry,
+) {
+  if (field === "path") {
+    return entry.path;
+  }
+  if (field === "type") {
+    return `${prepared?.fileKind ?? "missing"}:${prepared?.extension ?? ""}`;
+  }
+  return entry.name;
+}
+
+function compareStrings(a: string, b: string) {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
+
+function compareNullableNumbers(a: number | null, b: number | null) {
+  if (a === null && b === null) {
+    return 0;
+  }
+  if (a === null) {
+    return 1;
+  }
+  if (b === null) {
+    return -1;
+  }
+  return a - b;
+}
+
+function fileTypeLabel(
+  t: ReturnType<typeof useTranslation>["t"],
+  entry: AppLauncherEntry,
+  prepared?: PreparedAppLauncherEntry,
+) {
+  if (prepared?.fileKind === "folder") {
+    return t("appLauncher.folderType");
+  }
+  const extension = prepared?.extension ?? extensionFromPath(entry.path);
+  if (extension) {
+    return t("appLauncher.fileTypeWithExtension", { extension: extension.toUpperCase() });
+  }
+  if (prepared?.fileKind === "missing") {
+    return t("appLauncher.unknownFileType");
+  }
+  return t("appLauncher.fileType");
+}
+
+function formatFileSize(t: ReturnType<typeof useTranslation>["t"], bytes?: number | null) {
+  if (typeof bytes !== "number" || !Number.isFinite(bytes)) {
+    return t("appLauncher.notAvailable");
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function formatModifiedTime(t: ReturnType<typeof useTranslation>["t"], unixMs?: number | null) {
+  if (typeof unixMs !== "number" || !Number.isFinite(unixMs)) {
+    return t("appLauncher.notAvailable");
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(unixMs));
+}
+
+function extensionFromPath(path: string) {
+  const filename = path.trim().replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? "";
+  const dotIndex = filename.lastIndexOf(".");
+  return dotIndex > 0 && dotIndex < filename.length - 1
+    ? filename.slice(dotIndex + 1).toLowerCase()
+    : null;
 }
 
 function optionalText(value: string) {

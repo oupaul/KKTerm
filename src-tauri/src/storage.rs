@@ -306,6 +306,19 @@ pub struct TerminalSettings {
 #[serde(rename_all = "camelCase")]
 pub struct AppLauncherSettings {
     pub entries: Vec<AppLauncherEntry>,
+    #[serde(default = "default_app_launcher_view_mode")]
+    pub view_mode: String,
+    #[serde(default = "default_app_launcher_list_sort")]
+    pub list_sort: AppLauncherSortState,
+    #[serde(default = "default_app_launcher_details_sort")]
+    pub details_sort: AppLauncherSortState,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppLauncherSortState {
+    pub field: String,
+    pub direction: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -3798,6 +3811,27 @@ fn default_general_settings() -> GeneralSettings {
 fn default_app_launcher_settings() -> AppLauncherSettings {
     AppLauncherSettings {
         entries: Vec::new(),
+        view_mode: default_app_launcher_view_mode(),
+        list_sort: default_app_launcher_list_sort(),
+        details_sort: default_app_launcher_details_sort(),
+    }
+}
+
+fn default_app_launcher_view_mode() -> String {
+    "icons".to_string()
+}
+
+fn default_app_launcher_list_sort() -> AppLauncherSortState {
+    AppLauncherSortState {
+        field: "name".to_string(),
+        direction: "asc".to_string(),
+    }
+}
+
+fn default_app_launcher_details_sort() -> AppLauncherSortState {
+    AppLauncherSortState {
+        field: "name".to_string(),
+        direction: "asc".to_string(),
     }
 }
 
@@ -4144,7 +4178,33 @@ fn validate_app_launcher_settings(
         entries.push(entry);
     }
     settings.entries = entries;
+    settings.view_mode = validate_app_launcher_view_mode(settings.view_mode);
+    settings.list_sort = validate_app_launcher_sort_state(settings.list_sort);
+    settings.details_sort = validate_app_launcher_sort_state(settings.details_sort);
     Ok(settings)
+}
+
+fn validate_app_launcher_view_mode(value: String) -> String {
+    match value.trim() {
+        "list" => "list".to_string(),
+        "details" => "details".to_string(),
+        _ => "icons".to_string(),
+    }
+}
+
+fn validate_app_launcher_sort_state(mut sort: AppLauncherSortState) -> AppLauncherSortState {
+    sort.field = match sort.field.trim() {
+        "path" => "path".to_string(),
+        "type" => "type".to_string(),
+        "size" => "size".to_string(),
+        "modified" => "modified".to_string(),
+        _ => "name".to_string(),
+    };
+    sort.direction = match sort.direction.trim() {
+        "desc" => "desc".to_string(),
+        _ => "asc".to_string(),
+    };
+    sort
 }
 
 pub(crate) fn app_launcher_name_from_path(path: &str) -> String {
@@ -5637,6 +5697,15 @@ mod tests {
                         updated_at: "2026-05-11T00:00:00Z".to_string(),
                     },
                 ],
+                view_mode: "details".to_string(),
+                list_sort: AppLauncherSortState {
+                    field: "type".to_string(),
+                    direction: "desc".to_string(),
+                },
+                details_sort: AppLauncherSortState {
+                    field: "modified".to_string(),
+                    direction: "desc".to_string(),
+                },
             })
             .expect("app launcher settings update");
 
@@ -5665,6 +5734,11 @@ mod tests {
         assert!(updated.entries[1].arguments.is_none());
         assert!(updated.entries[1].working_directory.is_none());
         assert!(updated.entries[1].icon_data_url.is_none());
+        assert_eq!(updated.view_mode, "details");
+        assert_eq!(updated.list_sort.field, "type");
+        assert_eq!(updated.list_sort.direction, "desc");
+        assert_eq!(updated.details_sort.field, "modified");
+        assert_eq!(updated.details_sort.direction, "desc");
 
         let reloaded = storage
             .app_launcher_settings()
@@ -5735,6 +5809,12 @@ mod tests {
                     created_at: "2026-05-11T00:00:00Z".to_string(),
                     updated_at: "2026-05-11T00:00:00Z".to_string(),
                 }],
+                view_mode: "list".to_string(),
+                list_sort: AppLauncherSortState {
+                    field: "name".to_string(),
+                    direction: "desc".to_string(),
+                },
+                details_sort: default_app_launcher_details_sort(),
             })
             .expect("app launcher settings update");
 
@@ -5742,6 +5822,9 @@ mod tests {
         storage
             .update_app_launcher_settings(AppLauncherSettings {
                 entries: Vec::new(),
+                view_mode: "icons".to_string(),
+                list_sort: default_app_launcher_list_sort(),
+                details_sort: default_app_launcher_details_sort(),
             })
             .expect("app launcher settings changes after export");
 

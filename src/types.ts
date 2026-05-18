@@ -186,6 +186,13 @@ export interface GeneralSettings {
 
 export type AppLauncherLaunchMode = "normal" | "admin" | "differentUser";
 export type AppLauncherViewMode = "icons" | "list" | "details";
+export type AppLauncherSortField = "name" | "path" | "type" | "size" | "modified";
+export type AppLauncherSortDirection = "asc" | "desc";
+
+export interface AppLauncherSortState {
+  field: AppLauncherSortField;
+  direction: AppLauncherSortDirection;
+}
 
 export interface AppLauncherEntry {
   id: string;
@@ -202,6 +209,8 @@ export interface AppLauncherEntry {
 export interface AppLauncherSettings {
   entries: AppLauncherEntry[];
   viewMode: AppLauncherViewMode;
+  listSort: AppLauncherSortState;
+  detailsSort: AppLauncherSortState;
 }
 
 export interface DashboardSettings {
@@ -221,6 +230,10 @@ export interface PreparedAppLauncherEntry {
   exists: boolean;
   runnable: boolean;
   iconDataUrl?: string | null;
+  fileKind: "file" | "folder" | "missing";
+  extension?: string | null;
+  sizeBytes?: number | null;
+  modifiedAtUnixMs?: number | null;
 }
 
 export interface DatabaseBackupInfo {

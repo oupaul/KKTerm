@@ -1,6 +1,7 @@
 use crate::storage;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::time::SystemTime;
 #[cfg(not(target_os = "windows"))]
 use tauri_plugin_opener::OpenerExt;
 
@@ -39,11 +40,27 @@ pub struct LaunchAppLauncherEntryRequest {
 
 pub fn prepare_entry(request: PrepareAppLauncherEntryRequest) -> PreparedAppLauncherEntry {
     let path = request.path.trim().to_string();
+    let metadata = std::fs::metadata(&path).ok();
+    let exists = metadata.is_some();
+    let file_kind = match metadata.as_ref() {
+        Some(metadata) if metadata.is_dir() => AppLauncherFileKind::Folder,
+        Some(_) => AppLauncherFileKind::File,
+        None => AppLauncherFileKind::Missing,
+    };
     PreparedAppLauncherEntry {
         name: storage::app_launcher_name_from_path(&path),
-        exists: Path::new(&path).exists(),
+        exists,
         runnable: is_runnable_path(&path),
         icon_data_url: icon_data_url_for_path(&path),
+        extension: path_extension(&path),
+        size_bytes: metadata
+            .as_ref()
+            .filter(|metadata| metadata.is_file())
+            .map(|metadata| metadata.len()),
+        modified_at_unix_ms: metadata
+            .and_then(|metadata| metadata.modified().ok())
+            .and_then(system_time_to_unix_ms),
+        file_kind,
         path,
     }
 }
@@ -223,6 +240,18 @@ pub struct PreparedAppLauncherEntry {
     pub exists: bool,
     pub runnable: bool,
     pub icon_data_url: Option<String>,
+    pub file_kind: AppLauncherFileKind,
+    pub extension: Option<String>,
+    pub size_bytes: Option<u64>,
+    pub modified_at_unix_ms: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AppLauncherFileKind {
+    File,
+    Folder,
+    Missing,
 }
 
 fn icon_data_url_for_path(path: &str) -> Option<String> {
@@ -392,6 +421,11 @@ fn path_extension(path: &str) -> Option<String> {
         .extension()
         .and_then(|extension| extension.to_str())
         .map(|extension| extension.to_lowercase())
+}
+
+fn system_time_to_unix_ms(time: SystemTime) -> Option<u64> {
+    let millis = time.duration_since(SystemTime::UNIX_EPOCH).ok()?.as_millis();
+    u64::try_from(millis).ok()
 }
 
 fn rgba_has_visible_pixels(rgba: &[u8]) -> bool {
