@@ -272,17 +272,85 @@ fn icon_data_url_for_path(path: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn native_icon_data_url(path: &str) -> Option<String> {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
-    use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+    high_quality_shell_icon(path)
+        .or_else(|| legacy_shell_icon(path))
+        .and_then(|(icon, size)| icon_handle_to_data_url(icon, size))
+}
+
+#[cfg(target_os = "windows")]
+type WindowsIconHandle = windows_sys::Win32::UI::WindowsAndMessaging::HICON;
+
+#[cfg(target_os = "windows")]
+fn high_quality_shell_icon(path: &str) -> Option<(WindowsIconHandle, i32)> {
     use std::ffi::c_void;
     use std::mem::{size_of, zeroed};
-    use std::ptr::null_mut;
-    use windows_sys::Win32::Graphics::Gdi::{
-        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits,
-        ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+    use windows_sys::Win32::UI::Controls::{
+        ImageList_GetIcon, ImageList_GetIconSize, ILD_TRANSPARENT,
     };
+    use windows_sys::Win32::UI::Shell::{
+        IUnknown_AtomicRelease, SHGetFileInfoW, SHGetImageList, SHFILEINFOW, SHGFI_SYSICONINDEX,
+        SHIL_EXTRALARGE, SHIL_JUMBO,
+    };
+
+    const IID_IIMAGELIST: windows_sys::core::GUID =
+        windows_sys::core::GUID::from_u128(0x46eb5926_582e_4017_9fdf_e8998daa0950);
+
+    let wide_path = wide_string(path);
+    let mut shell_info: SHFILEINFOW = unsafe { zeroed() };
+    let info_result = unsafe {
+        SHGetFileInfoW(
+            wide_path.as_ptr(),
+            0,
+            &mut shell_info,
+            size_of::<SHFILEINFOW>() as u32,
+            SHGFI_SYSICONINDEX,
+        )
+    };
+    if info_result == 0 || shell_info.iIcon < 0 {
+        return None;
+    }
+
+    for image_list_kind in [SHIL_JUMBO, SHIL_EXTRALARGE] {
+        let mut image_list: *mut c_void = std::ptr::null_mut();
+        let result =
+            unsafe { SHGetImageList(image_list_kind as i32, &IID_IIMAGELIST, &mut image_list) };
+        if result < 0 || image_list.is_null() {
+            continue;
+        }
+
+        let image_list_handle = image_list as isize;
+        let icon =
+            unsafe { ImageList_GetIcon(image_list_handle, shell_info.iIcon, ILD_TRANSPARENT) };
+        let mut width = 0;
+        let mut height = 0;
+        let has_size =
+            unsafe { ImageList_GetIconSize(image_list_handle, &mut width, &mut height) } != 0;
+        unsafe {
+            IUnknown_AtomicRelease(&mut image_list);
+        }
+        if icon.is_null() {
+            continue;
+        }
+        let fallback_size = if image_list_kind == SHIL_JUMBO {
+            256
+        } else {
+            48
+        };
+        let icon_size = if has_size {
+            width.max(height).clamp(32, 256)
+        } else {
+            fallback_size
+        };
+        return Some((icon, icon_size));
+    }
+
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn legacy_shell_icon(path: &str) -> Option<(WindowsIconHandle, i32)> {
+    use std::mem::{size_of, zeroed};
     use windows_sys::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
-    use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, DrawIconEx, DI_NORMAL};
 
     let wide_path = wide_string(path);
     let mut shell_info: SHFILEINFOW = unsafe { zeroed() };
@@ -299,11 +367,30 @@ fn native_icon_data_url(path: &str) -> Option<String> {
         return None;
     }
 
-    const ICON_SIZE: i32 = 32;
+    Some((shell_info.hIcon, 32))
+}
+
+#[cfg(target_os = "windows")]
+fn icon_handle_to_data_url(icon: WindowsIconHandle, icon_size: i32) -> Option<String> {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+    use std::ffi::c_void;
+    use std::mem::{size_of, zeroed};
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Graphics::Gdi::{
+        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits,
+        ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, DrawIconEx, DI_NORMAL};
+
+    if icon.is_null() || icon_size <= 0 {
+        return None;
+    }
+
     let screen_hdc = unsafe { GetDC(null_mut()) };
     if screen_hdc.is_null() {
         unsafe {
-            DestroyIcon(shell_info.hIcon);
+            DestroyIcon(icon);
         }
         return None;
     }
@@ -311,16 +398,16 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     if hdc.is_null() {
         unsafe {
             ReleaseDC(null_mut(), screen_hdc);
-            DestroyIcon(shell_info.hIcon);
+            DestroyIcon(icon);
         }
         return None;
     }
-    let bitmap = unsafe { CreateCompatibleBitmap(screen_hdc, ICON_SIZE, ICON_SIZE) };
+    let bitmap = unsafe { CreateCompatibleBitmap(screen_hdc, icon_size, icon_size) };
     if bitmap.is_null() {
         unsafe {
             DeleteDC(hdc);
             ReleaseDC(null_mut(), screen_hdc);
-            DestroyIcon(shell_info.hIcon);
+            DestroyIcon(icon);
         }
         return None;
     }
@@ -330,9 +417,9 @@ fn native_icon_data_url(path: &str) -> Option<String> {
             hdc,
             0,
             0,
-            shell_info.hIcon,
-            ICON_SIZE,
-            ICON_SIZE,
+            icon,
+            icon_size,
+            icon_size,
             0,
             null_mut(),
             DI_NORMAL,
@@ -344,7 +431,7 @@ fn native_icon_data_url(path: &str) -> Option<String> {
             DeleteObject(bitmap);
             DeleteDC(hdc);
             ReleaseDC(null_mut(), screen_hdc);
-            DestroyIcon(shell_info.hIcon);
+            DestroyIcon(icon);
         }
         return None;
     }
@@ -352,8 +439,8 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     let mut bitmap_info = BITMAPINFO {
         bmiHeader: BITMAPINFOHEADER {
             biSize: size_of::<BITMAPINFOHEADER>() as u32,
-            biWidth: ICON_SIZE,
-            biHeight: -ICON_SIZE,
+            biWidth: icon_size,
+            biHeight: -icon_size,
             biPlanes: 1,
             biBitCount: 32,
             biCompression: BI_RGB,
@@ -365,13 +452,13 @@ fn native_icon_data_url(path: &str) -> Option<String> {
         },
         bmiColors: [unsafe { zeroed() }],
     };
-    let mut bgra = vec![0u8; (ICON_SIZE * ICON_SIZE * 4) as usize];
+    let mut bgra = vec![0u8; (icon_size * icon_size * 4) as usize];
     let read = unsafe {
         GetDIBits(
             hdc,
             bitmap,
             0,
-            ICON_SIZE as u32,
+            icon_size as u32,
             bgra.as_mut_ptr().cast::<c_void>(),
             &mut bitmap_info,
             DIB_RGB_COLORS,
@@ -383,7 +470,7 @@ fn native_icon_data_url(path: &str) -> Option<String> {
         DeleteObject(bitmap);
         DeleteDC(hdc);
         ReleaseDC(null_mut(), screen_hdc);
-        DestroyIcon(shell_info.hIcon);
+        DestroyIcon(icon);
     }
 
     if read == 0 {
@@ -404,8 +491,8 @@ fn native_icon_data_url(path: &str) -> Option<String> {
     PngEncoder::new(&mut png)
         .write_image(
             &rgba,
-            ICON_SIZE as u32,
-            ICON_SIZE as u32,
+            icon_size as u32,
+            icon_size as u32,
             ColorType::Rgba8.into(),
         )
         .ok()?;
