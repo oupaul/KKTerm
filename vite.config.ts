@@ -32,7 +32,10 @@ export default defineConfig(async () => ({
     },
   },
   build: {
-    chunkSizeWarningLimit: 900,
+    // Dashboard widget libraries are optional, lazy-loaded sandbox sources.
+    // The largest known one is Mermaid; keep this below "anything goes" so
+    // new unexpectedly-large chunks still surface during release builds.
+    chunkSizeWarningLimit: 3500,
     rollupOptions: {
       output: {
         manualChunks: {

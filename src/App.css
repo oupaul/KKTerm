@@ -4907,10 +4907,12 @@ progress {
 }
 
 .assistant-composer-footer {
+  position: relative;
   display: flex;
   gap: 8px;
   align-items: center;
   min-height: 28px;
+  padding-right: 37px;
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -4939,16 +4941,18 @@ progress {
 }
 
 .assistant-model-select {
-  flex: 0 1 min(var(--assistant-model-select-width, 14rem), 18rem);
-  width: min(var(--assistant-model-select-width, 14rem), 18rem);
+  flex: 1 1 min(var(--assistant-model-select-width, 14rem), 18rem);
+  width: auto;
   max-width: min(42%, 18rem);
+  min-width: 4.5rem;
 }
 
 .assistant-permission-menu-wrapper {
   position: relative;
   display: inline-flex;
-  flex: 0 1 var(--assistant-permission-control-width, max-content);
-  width: var(--assistant-permission-control-width, auto);
+  flex: 1 1 min(var(--assistant-permission-control-width, 9rem), 13rem);
+  width: auto;
+  max-width: min(42%, var(--assistant-permission-control-width, 13rem));
   min-width: 0;
 }
 
@@ -5171,7 +5175,9 @@ progress {
 
 .assistant-send-button {
   flex: 0 0 auto;
-  margin-left: auto;
+  position: absolute;
+  right: 0;
+  bottom: 0;
   color: var(--surface);
   background: var(--text-faint);
 }
