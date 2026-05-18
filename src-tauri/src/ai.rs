@@ -38,6 +38,7 @@ static LIVE_TOOL_REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 const COPILOT_SDK_RESPONSE_TIMEOUT: Duration = Duration::from_secs(300);
 const DASHBOARD_WIDGET_COMPLETION_CONTRACT: &str = "Dashboard widget completion contract: complete the first created widget to the user's requested outcome before giving the final answer. If the request implies live/realtime data, MCP-backed data, web-fetched data, local file/session data, or any other changing external input, do not create a text-only placeholder or scaffold. In the same assistant turn, use multiple tool-call rounds as needed to discover schemas, read or fetch sample data, inspect real responses, self-correct validation errors, and then create a script widget wired to the actual data source with loading, error, empty, and refresh states. Use polling or event refresh when freshness matters. Create a static content widget only when the user explicitly asks for static text or when live data is impossible in the available permissions. If missing credentials or API access blocks live data, create settingsSchema secret/config fields and request the secret after creation, or ask one narrow blocking question instead of shipping a fake widget.";
 const DASHBOARD_WIDGET_SURFACE_CONTRACT: &str = "Dashboard widget surface contract: treat the widget root as the full allocated surface. Script widgets should make their outermost wrapper fill 100% width and height, usually with kk-shell, kk-stage, kk-panel, or kk-fill, and use KK.getViewport() plus KK.onViewportResize for canvases and visual libraries. Do not create a smaller centered app card, duplicate the host widget frame, or leave accidental blank space around the main content. If the useful object is naturally smaller, still use a full-size wrapper to align, center, or scale it intentionally. Script widgets should avoid max-width, fixed-height, or shrink-to-content outer wrappers unless the user explicitly asks for an inset miniature object.";
+const DASHBOARD_WIDGET_ANIMATION_CONTRACT: &str = "Dashboard widget animation contract: if the requested widget is meant to keep moving, such as a spinner, clock, orbit, meter, loader, or ambient 3D object, the animation must have a durable base motion that does not decay to a static frame. Drag/flick velocity may decay, but auto-spin or live animation needs an idle speed, fresh time-based angle, or restart path so it is still visibly moving after minutes of inactivity. If a requestAnimationFrame loop pauses while KK.isVisible() is false, restart that loop when visibility returns instead of leaving the widget frozen.";
 const DASHBOARD_WIDGET_PHYSICS_CONTRACT: &str = "Dashboard widget physics contract: for 2D physics, prefer the bundled Matter.js library instead of hand-rolling collision, gravity, constraints, or rigid-body integration. List body.libraries [\"matter\"] and call the Matter global from source. Size the Matter renderer/canvas from KK.getViewport(), rebuild or reposition static wall/floor bodies on KK.onViewportResize, keep the simulation bounded to the widget arena, and stop Runner or requestAnimationFrame work when the widget is paused, game-over, capped, or no longer needs animation.";
 const DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT: &str = "Dashboard performance counter contract: for local performance widgets, use a script widget that calls await KK.getPerformanceCounters(). It returns a low-overhead local snapshot with CPU, RAM, commit, process/thread/handle counts, aggregate network rates, KKTerm process memory/I/O rates, uptime, and system-drive free space. Poll at a modest interval such as 2-5 seconds; do not use requestAnimationFrame for counters.";
 const DASHBOARD_WIDGET_DOM_CONTRACT: &str = "Dashboard widget DOM contract: the generated source is smoke-checked before it is saved. Build the UI from the provided #root element with document.createElement and root.replaceChildren, or provide htmlShim for every extra element id you query. Do not call document.getElementById('some-id').innerHTML/textContent/appendChild unless that id is root, appears in htmlShim, or is created in source before use. After a dashboard_create_widget or dashboard_update_custom_widget call, inspect the tool result; if validation reports a DOM mount, JSON, library, or script-source error, fix the widget and retry before yielding to the user.";
@@ -3229,6 +3230,11 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
         create_widget_tool
             .function
             .description
+            .push_str(DASHBOARD_WIDGET_ANIMATION_CONTRACT);
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
             .push_str(DASHBOARD_WIDGET_PHYSICS_CONTRACT);
         create_widget_tool.function.description.push(' ');
         create_widget_tool
@@ -5355,6 +5361,7 @@ fn build_agent_messages(
         "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. When the user reports an error in an existing AI Created Widget, use dashboard_load_state to read the current Dashboard AI Created Widget source, then call dashboard_update_custom_widget with the matching AI Created Widget id. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_load_state. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Be boundary-aware: size simple timers/counters at least 4x3, forms or images need 5x4 or larger, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Content markdown widgets MUST set data.mode to either markdown or html: use markdown when data.source is Markdown text that KKTerm should parse, and html when data.source is an HTML fragment that KKTerm should sanitize and render. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, leaflet, konva, pixijs, matter, mermaid, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Prefer schema/content widgets when possible, and keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use KKTerm's built-in script UI classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. Use body.libraries for curated local script libraries such as mermaid, Matter.js, and animejs; use permissions.network=true only for remote network access or CDN-loaded libraries. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). KK.getSettings() is synchronous; do not await it. Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images, fetches remote data, or loads external libraries from a CDN, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
         DASHBOARD_WIDGET_COMPLETION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_SURFACE_CONTRACT.to_string(),
+        DASHBOARD_WIDGET_ANIMATION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_PHYSICS_CONTRACT.to_string(),
         DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT.to_string(),
         DASHBOARD_WIDGET_DOM_CONTRACT.to_string(),
@@ -6933,6 +6940,24 @@ mod tests {
             create_tool
                 .function
                 .description
+                .contains("durable base motion")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("does not decay to a static frame")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("restart that loop when visibility returns")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
                 .contains("chartjs, echarts, leaflet")
         );
         assert!(
@@ -7386,6 +7411,8 @@ mod tests {
         assert!(system_content.contains("the returned instance.id as instanceId"));
         assert!(system_content.contains("Top-level await is not available"));
         assert!(system_content.contains("async IIFE"));
+        assert!(system_content.contains("durable base motion"));
+        assert!(system_content.contains("does not decay to a static frame"));
     }
 
     #[test]
