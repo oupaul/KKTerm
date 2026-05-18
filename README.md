@@ -36,7 +36,22 @@
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React 19" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
-  <sub><a href="README.zh-TW.md">繁體中文</a></sub>
+  <sub>
+    <strong>English</strong> ·
+    <a href="README.zh-TW.md">繁體中文</a> ·
+    <a href="README.zh-CN.md">简体中文</a> ·
+    <a href="README.ja.md">日本語</a> ·
+    <a href="README.ko.md">한국어</a> ·
+    <a href="README.fr.md">Français</a> ·
+    <a href="README.de.md">Deutsch</a> ·
+    <a href="README.es.md">Español</a> ·
+    <a href="README.es-MX.md">Español (MX)</a> ·
+    <a href="README.it.md">Italiano</a> ·
+    <a href="README.pt-BR.md">Português (BR)</a> ·
+    <a href="README.th.md">ไทย</a> ·
+    <a href="README.id.md">Bahasa Indonesia</a> ·
+    <a href="README.vi.md">Tiếng Việt</a>
+  </sub>
 </p>
 
 ---
