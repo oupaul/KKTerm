@@ -96,6 +96,11 @@ keychain under provider-specific AI API key owners. When adding settings:
    durable settings table unless the storage model is redesigned.
 4. Add or update storage tests that round-trip the new persisted setting.
 
+The generic `openai-compatible` provider exposes `apiMode` so users can choose
+Chat Completions or Responses request mode for custom endpoints. The backend
+honors this setting only for the generic provider; provider-specific adapters
+continue to use their registered default API mode.
+
 The insecure TLS setting is intentionally a provider setting, not a global HTTP
 setting. It is off by default and is applied only to AI provider HTTP clients.
 The generic `openai-compatible` provider also has a non-secret `extraHeaders`

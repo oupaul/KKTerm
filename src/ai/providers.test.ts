@@ -49,11 +49,15 @@ const compatibleDefinition = getAiProviderDefinition("openai-compatible");
 if (!compatibleDefinition.settingsFields.includes("extraHeaders")) {
   throw new Error("OpenAI Compatible should expose the extra headers settings field.");
 }
+if (!compatibleDefinition.settingsFields.includes("apiMode")) {
+  throw new Error("OpenAI Compatible should expose the API mode settings field.");
+}
 
 const compatibleSettings = validateAiProviderForChat(
   {
     ...providerDefaultsFor("openai-compatible"),
     baseUrl: "https://gateway.example/v1",
+    apiMode: "responses",
     extraHeaders: ' sid=1, "env"="3" ',
   },
   true,
@@ -61,14 +65,21 @@ const compatibleSettings = validateAiProviderForChat(
 if (compatibleSettings.extraHeaders !== 'sid=1, "env"="3"') {
   throw new Error(`OpenAI Compatible extra headers should be trimmed, got: ${compatibleSettings.extraHeaders}`);
 }
+if (compatibleSettings.apiMode !== "responses") {
+  throw new Error(`OpenAI Compatible API mode should persist responses, got: ${compatibleSettings.apiMode}`);
+}
 
 const hostedSettings = validateAiProviderForChat(
   {
     ...providerDefaultsFor("openai"),
+    apiMode: "responses",
     extraHeaders: "sid=1",
   },
   true,
 );
 if (hostedSettings.extraHeaders !== "") {
   throw new Error("Hosted providers should not carry OpenAI Compatible extra headers.");
+}
+if (hostedSettings.apiMode !== "chatCompletions") {
+  throw new Error("Hosted providers should normalize API mode back to Chat Completions.");
 }

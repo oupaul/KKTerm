@@ -545,6 +545,8 @@ pub struct AiProviderSettings {
     output_language: String,
     #[serde(default)]
     custom_instructions: String,
+    #[serde(default = "default_ai_api_mode")]
+    api_mode: String,
     #[serde(default)]
     extra_headers: String,
     #[serde(default)]
@@ -608,6 +610,10 @@ impl AiProviderSettings {
 
     pub(crate) fn custom_instructions(&self) -> &str {
         &self.custom_instructions
+    }
+
+    pub(crate) fn api_mode(&self) -> &str {
+        &self.api_mode
     }
 
     pub(crate) fn extra_headers(&self) -> &str {
@@ -4224,6 +4230,7 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         reasoning_effort: default_ai_reasoning_effort(),
         output_language: String::new(),
         custom_instructions: String::new(),
+        api_mode: default_ai_api_mode(),
         extra_headers: String::new(),
         allow_insecure_tls: false,
         show_all_models: false,
@@ -4325,6 +4332,10 @@ fn default_ai_cli_execution_policy() -> String {
 
 fn default_ai_tool_permission_mode() -> String {
     "prompt".to_string()
+}
+
+fn default_ai_api_mode() -> String {
+    "chatCompletions".to_string()
 }
 
 fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSettings, String> {
@@ -4606,6 +4617,17 @@ fn validate_ai_provider_settings(
     };
     settings.output_language = settings.output_language.trim().to_string();
     settings.custom_instructions = settings.custom_instructions.trim().to_string();
+    settings.api_mode = match settings
+        .api_mode
+        .trim()
+        .to_lowercase()
+        .replace(['-', '_', ' '], "")
+        .as_str()
+    {
+        "" | "chat" | "chatcompletion" | "chatcompletions" => "chatCompletions".to_string(),
+        "response" | "responses" => "responses".to_string(),
+        _ => return Err("AI provider API mode must be chatCompletions or responses".to_string()),
+    };
     if settings.custom_instructions.chars().count() > 1000 {
         return Err(
             "AI Assistant custom instructions must be 1000 characters or fewer".to_string(),
@@ -6499,6 +6521,7 @@ mod tests {
         assert_eq!(defaults.model, "gpt-5.4-mini");
         assert_eq!(defaults.reasoning_effort, "medium");
         assert_eq!(defaults.custom_instructions, "");
+        assert_eq!(defaults.api_mode, "chatCompletions");
         assert_eq!(defaults.extra_headers, "");
         assert_eq!(defaults.cli_execution_policy, "suggestOnly");
         assert_eq!(defaults.tool_permission_mode, "prompt");
@@ -6526,6 +6549,7 @@ mod tests {
                 reasoning_effort: " XHIGH ".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                api_mode: " responses ".to_string(),
                 extra_headers: "  sid=1, \"env\"=\"3\"  ".to_string(),
                 allow_insecure_tls: true,
                 show_all_models: true,
@@ -6553,6 +6577,7 @@ mod tests {
         assert_eq!(updated.base_url, "https://llm-gateway.internal/v1");
         assert_eq!(updated.model, "openai/gpt-5.5");
         assert_eq!(updated.reasoning_effort, "max");
+        assert_eq!(updated.api_mode, "responses");
         assert_eq!(updated.extra_headers, "sid=1, \"env\"=\"3\"");
         assert_eq!(updated.cli_execution_policy, "suggestOnly");
         assert_eq!(updated.tool_permission_mode, "allowAll");
@@ -6570,6 +6595,7 @@ mod tests {
         assert_eq!(reloaded.base_url, "https://llm-gateway.internal/v1");
         assert_eq!(reloaded.model, "openai/gpt-5.5");
         assert_eq!(reloaded.reasoning_effort, "max");
+        assert_eq!(reloaded.api_mode, "responses");
         assert_eq!(reloaded.extra_headers, "sid=1, \"env\"=\"3\"");
         assert_eq!(reloaded.tool_permission_mode, "allowAll");
         assert!(reloaded.allow_insecure_tls);
@@ -6612,6 +6638,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
@@ -6650,6 +6677,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
@@ -6692,6 +6720,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
@@ -6731,6 +6760,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: "  Prefer concise PowerShell examples.  ".to_string(),
+                api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
@@ -6784,6 +6814,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,

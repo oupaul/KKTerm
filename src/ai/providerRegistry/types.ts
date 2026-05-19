@@ -25,6 +25,7 @@ export type AiModelOption = {
 
 export type AiProviderSettingsField =
   | "baseUrl"
+  | "apiMode"
   | "model"
   | "reasoningEffort"
   | "apiKey"
@@ -56,6 +57,7 @@ export type AiProviderDefaults = Pick<
   | "model"
   | "reasoningEffort"
   | "outputLanguage"
+  | "apiMode"
   | "extraHeaders"
   | "allowInsecureTls"
   | "cliExecutionPolicy"

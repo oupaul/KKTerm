@@ -27,6 +27,7 @@ import { useWorkspaceStore } from "../store";
 import type {
   AiAssistantToolId,
   EmailProvider,
+  AiOpenAiApiMode,
   AiProviderKind,
   AiProviderSettings as AiProviderSettingsType,
   AiReasoningEffort,
@@ -215,6 +216,21 @@ function AiProviderSettingsFieldControl({
             type="password"
             value={shouldShowStoredApiKeyMask ? apiKeyStoredMask : apiKeyDraft}
           />
+        </label>
+      );
+    case "apiMode":
+      return (
+        <label>
+          <span>{t("settings.apiMode")}</span>
+          <select
+            onChange={(event) =>
+              onDraftChange({ apiMode: event.currentTarget.value as AiOpenAiApiMode })
+            }
+            value={draft.apiMode}
+          >
+            <option value="chatCompletions">{t("settings.apiModeChatCompletions")}</option>
+            <option value="responses">{t("settings.apiModeResponses")}</option>
+          </select>
         </label>
       );
     case "extraHeaders":
@@ -1018,6 +1034,7 @@ export function AiSettings() {
       baseUrl: defaults.baseUrl,
       model: defaults.model,
       reasoningEffort: defaults.reasoningEffort,
+      apiMode: defaults.apiMode,
       extraHeaders: defaults.extraHeaders,
     }));
     setApiKeyDraft("");

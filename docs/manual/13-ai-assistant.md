@@ -107,6 +107,6 @@ Secrets land in the Windows Credential Manager under the AI-provider secret owne
 
 ## Providers and MCP
 
-Provider keys (`settings.credentialKindAiApiKey`) and per-provider model selection are configured in Settings → AI (`settings.sectionAiAssistant`). The known-model picker is a real `<select>` rendered from `src/ai/providerRegistry/`; custom model IDs go in the separate custom-model input. See [15-settings.md](15-settings.md) §AI.
+Provider keys (`settings.credentialKindAiApiKey`) and per-provider model selection are configured in Settings → AI (`settings.sectionAiAssistant`). The known-model picker is a real `<select>` rendered from `src/ai/providerRegistry/`; custom model IDs go in the separate custom-model input. OpenAI Compatible endpoints can also choose API mode with `settings.apiMode`. See [15-settings.md](15-settings.md) §AI.
 
 MCP servers are managed under Settings → Credentials (`settings.mcpServersTitle`, hint `settings.mcpServersHint`). See [15-settings.md](15-settings.md) §Credentials & MCP.

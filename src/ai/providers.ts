@@ -1,6 +1,6 @@
 import i18next from "../i18n/config";
 import { AI_PROVIDER_DEFINITIONS } from "./providerRegistry";
-import type { AiAssistantToolSettings, AiProviderKind, AiProviderSettings, AiReasoningEffort, EmailProvider, SearchProvider, SmtpSecurity } from "../types";
+import type { AiAssistantToolSettings, AiOpenAiApiMode, AiProviderKind, AiProviderSettings, AiReasoningEffort, EmailProvider, SearchProvider, SmtpSecurity } from "../types";
 export { AI_PROVIDER_DEFINITIONS, modelSupportsImageInput } from "./providerRegistry";
 export type {
   AiModelOption,
@@ -43,6 +43,7 @@ export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
     reasoningEffort: definition.defaultReasoningEffort,
     outputLanguage: "",
     customInstructions: "",
+    apiMode: "chatCompletions",
     extraHeaders: "",
     allowInsecureTls: false,
     showAllModels: false,
@@ -95,6 +96,7 @@ export function normalizeAiProviderDraft(draft: AiProviderSettings): AiProviderS
     model,
     reasoningEffort,
     customInstructions,
+    apiMode: normalizeApiMode(definition.kind, draft.apiMode),
     extraHeaders:
       definition.kind === "openai-compatible" ? (draft.extraHeaders ?? "").trim() : "",
     allowInsecureTls: Boolean(draft.allowInsecureTls),
@@ -146,6 +148,16 @@ function normalizeEmailProvider(value: string | undefined): EmailProvider {
 
 function normalizeSmtpSecurity(value: string | undefined): SmtpSecurity {
   return value === "none" ? "none" : "starttls";
+}
+
+function normalizeApiMode(
+  providerKind: AiProviderKind,
+  value: AiOpenAiApiMode | undefined,
+): AiOpenAiApiMode {
+  if (providerKind !== "openai-compatible") {
+    return "chatCompletions";
+  }
+  return value === "responses" ? "responses" : "chatCompletions";
 }
 
 function normalizeSmtpPort(value: number | undefined): number {

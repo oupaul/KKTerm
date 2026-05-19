@@ -392,6 +392,7 @@ export type AiProviderKind =
   | "openai-compatible";
 
 export type AiReasoningEffort = "default" | "low" | "medium" | "high" | "max";
+export type AiOpenAiApiMode = "chatCompletions" | "responses";
 export type AiToolPermissionMode = "prompt" | "allowAll";
 
 export type AiAssistantToolId =
@@ -421,6 +422,7 @@ export interface AiProviderSettings {
   reasoningEffort: AiReasoningEffort;
   outputLanguage: string;
   customInstructions: string;
+  apiMode: AiOpenAiApiMode;
   extraHeaders: string;
   allowInsecureTls: boolean;
   showAllModels: boolean;

@@ -118,6 +118,7 @@ export const defaultAiProviderSettings: AiProviderSettings = {
   reasoningEffort: "medium",
   outputLanguage: "",
   customInstructions: "",
+  apiMode: "chatCompletions",
   extraHeaders: "",
   allowInsecureTls: false,
   showAllModels: false,

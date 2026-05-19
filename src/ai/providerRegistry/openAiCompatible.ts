@@ -24,6 +24,6 @@ export const openAiCompatibleProvider: AiProviderDefinition = {
     { id: "llama-3.3-70b-instruct", label: "Llama 3.3 70B compatible", supportsImageInput: false },
     { id: "qwen3", label: "Qwen3 compatible", supportsImageInput: false },
   ],
-  settingsFields: ["baseUrl", "model", "reasoningEffort", "apiKey", "extraHeaders"],
+  settingsFields: ["baseUrl", "apiMode", "model", "reasoningEffort", "apiKey", "extraHeaders"],
   capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],
 };

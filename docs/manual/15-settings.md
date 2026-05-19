@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including AI provider keys `settings.extraHeaders` and `settings.extraHeadersPlaceholder`
+- Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including AI provider keys `settings.apiMode`, `settings.apiModeChatCompletions`, `settings.apiModeResponses`, `settings.extraHeaders`, and `settings.extraHeadersPlaceholder`
 - Topics: General, Appearance, Dashboard, Credentials & MCP, AI Assistant, assistant tool defaults, SSH, Terminal, Screenshots, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all
 - Synonyms: "preferences", "options", "config", "theme", "dark mode", "language", "API key", "import settings", "factory reset"
 
@@ -76,6 +76,7 @@ Section header `settings.sectionAiAssistant`. Owned by `src/settings/AiSettings.
 
 - Provider picker; known-model picker is a real `<select>` showing every model — not an `<input list>`/`datalist` (Chromium hides non-matching options behind a `datalist`).
 - Custom model ID is a separate text input.
+- OpenAI Compatible providers can choose API request mode with `settings.apiMode`: `settings.apiModeChatCompletions` uses `/chat/completions`, and `settings.apiModeResponses` uses `/responses`.
 - OpenAI Compatible providers can set `settings.extraHeaders` as comma-separated `key=value` pairs; example placeholder `settings.extraHeadersPlaceholder`. These headers are provider request metadata, not OS-keychain secrets.
 - API keys go into the OS keychain under `AI_PROVIDER_SECRET_OWNER_ID`; never written to SQLite or settings JSON.
 - Tool permission default (`ai.toolPermissionMode`) is set here as well.

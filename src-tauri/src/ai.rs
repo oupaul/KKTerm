@@ -841,7 +841,7 @@ impl AgentProvider for OpenAiCompatibleProvider {
             ));
         }
 
-        match self.default_api {
+        match self.api_style_for_settings(settings.api_mode()) {
             OpenAiApiStyle::ChatCompletions => self.run_chat(app, settings, api_key, request).await,
             OpenAiApiStyle::Responses => self.run_responses(app, settings, api_key, request).await,
         }
@@ -865,7 +865,7 @@ impl AgentProvider for OpenAiCompatibleProvider {
             ));
         }
 
-        match self.default_api {
+        match self.api_style_for_settings(settings.api_mode()) {
             OpenAiApiStyle::ChatCompletions => {
                 self.run_chat_streaming(app, settings, api_key, request, channel)
                     .await
@@ -1094,6 +1094,30 @@ impl ResponsesStreamState {
     }
 }
 
+fn append_completed_responses_text(
+    state: &mut ResponsesStreamState,
+    text: &str,
+) -> Option<String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+
+    match state.content.as_deref() {
+        Some(current) if current == text => None,
+        Some(current) if text.starts_with(current) => {
+            let delta = text[current.len()..].to_string();
+            state.append_content(&delta);
+            (!delta.is_empty()).then_some(delta)
+        }
+        Some(_) => None,
+        None => {
+            state.append_content(text);
+            Some(text.to_string())
+        }
+    }
+}
+
 fn append_completed_responses_message_text(
     state: &mut ResponsesStreamState,
     item: &Value,
@@ -1108,32 +1132,18 @@ fn append_completed_responses_message_text(
             content
                 .iter()
                 .filter_map(|part| {
-                    (part.get("type").and_then(Value::as_str) == Some("output_text"))
-                        .then(|| part.get("text").and_then(Value::as_str))
-                        .flatten()
+                    match part.get("type").and_then(Value::as_str) {
+                        Some("output_text") => part.get("text").and_then(Value::as_str),
+                        Some("refusal") => part.get("refusal").and_then(Value::as_str),
+                        _ => None,
+                    }
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
         })?
         .trim()
         .to_string();
-    if text.is_empty() {
-        return None;
-    }
-
-    match state.content.as_deref() {
-        Some(current) if current == text => None,
-        Some(current) if text.starts_with(current) => {
-            let delta = text[current.len()..].to_string();
-            state.append_content(&delta);
-            (!delta.is_empty()).then_some(delta)
-        }
-        Some(_) => None,
-        None => {
-            state.append_content(&text);
-            Some(text)
-        }
-    }
+    append_completed_responses_text(state, &text)
 }
 
 fn apply_responses_stream_event(
@@ -1150,6 +1160,24 @@ fn apply_responses_stream_event(
                     state.append_content(delta);
                     deltas.content_delta = Some(delta.to_string());
                 }
+            }
+        }
+        "response.output_text.done" => {
+            if let Some(text) = event.get("text").and_then(Value::as_str) {
+                deltas.content_delta = append_completed_responses_text(state, text);
+            }
+        }
+        "response.refusal.delta" => {
+            if let Some(delta) = event.get("delta").and_then(Value::as_str) {
+                if !delta.is_empty() {
+                    state.append_content(delta);
+                    deltas.content_delta = Some(delta.to_string());
+                }
+            }
+        }
+        "response.refusal.done" => {
+            if let Some(refusal) = event.get("refusal").and_then(Value::as_str) {
+                deltas.content_delta = append_completed_responses_text(state, refusal);
             }
         }
         "response.reasoning_text.delta" | "response.reasoning_summary_text.delta" => {
@@ -1171,6 +1199,17 @@ fn apply_responses_stream_event(
         }
         "response.completed" => {
             if let Some(response) = event.get("response") {
+                if let Some(items) = response.get("output").and_then(Value::as_array) {
+                    let mut content_delta = String::new();
+                    for item in items {
+                        if let Some(delta) = append_completed_responses_message_text(state, item) {
+                            content_delta.push_str(&delta);
+                        }
+                    }
+                    if !content_delta.is_empty() {
+                        deltas.content_delta = Some(content_delta);
+                    }
+                }
                 if let Some(text) = extract_responses_reasoning_text(response) {
                     let text = text.trim();
                     if !text.is_empty() && !state.reasoning.contains(text) {
@@ -1249,6 +1288,14 @@ fn apply_responses_stream_event(
     }
 
     deltas
+}
+
+fn sse_field_value<'a>(line: &'a str, field_name: &str) -> Option<&'a str> {
+    let (name, value) = line.split_once(':')?;
+    if name != field_name {
+        return None;
+    }
+    Some(value.strip_prefix(' ').unwrap_or(value))
 }
 
 fn emit_stream(channel: &Channel<Value>, event: &AiStreamEvent) -> Result<(), String> {
@@ -1376,24 +1423,29 @@ async fn stream_responses_completions(
 
     let mut stream = response.bytes_stream();
     let mut buf = String::new();
+    let mut body = String::new();
+    let mut saw_sse_data = false;
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.map_err(|e| format!("stream read error: {e}"))?;
-        buf.push_str(&String::from_utf8_lossy(&chunk));
+        let chunk = String::from_utf8_lossy(&chunk);
+        body.push_str(&chunk);
+        buf.push_str(&chunk);
 
         while let Some(nl) = buf.find('\n') {
             let line = buf[..nl].trim().to_string();
             buf = buf[nl + 1..].to_string();
 
-            if line.starts_with("event: ") {
-                current_event = line[7..].trim().to_string();
+            if let Some(event_name) = sse_field_value(&line, "event") {
+                current_event = event_name.trim().to_string();
                 continue;
             }
 
-            let data = match line.strip_prefix("data: ") {
+            let data = match sse_field_value(&line, "data") {
                 Some(d) => d,
                 None => continue,
             };
+            saw_sse_data = true;
             if data == "[DONE]" {
                 ai_interaction_debug!(
                     "provider.stream_data",
@@ -1421,6 +1473,32 @@ async fn stream_responses_completions(
         }
     }
 
+    let trailing_line = buf.trim();
+    if !trailing_line.is_empty() {
+        if let Some(data) = sse_field_value(trailing_line, "data") {
+            saw_sse_data = true;
+            if data != "[DONE]" {
+                ai_interaction_debug!(
+                    "provider.stream_data",
+                    json!({ "api": "responses", "event": current_event.clone(), "data": data })
+                );
+                let event: Value =
+                    serde_json::from_str(data).map_err(|e| format!("SSE parse error: {e}"))?;
+                let deltas = apply_responses_stream_event(&mut state, &event);
+                if let Some(delta) = deltas.content_delta {
+                    emit_stream(channel, &AiStreamEvent::ContentDelta { delta })?;
+                }
+                if let Some(delta) = deltas.reasoning_delta {
+                    emit_stream(channel, &AiStreamEvent::ReasoningDelta { delta })?;
+                }
+            }
+        }
+    }
+
+    if !saw_sse_data {
+        return parse_non_sse_responses_stream_body(&body);
+    }
+
     let content = state.content.clone();
     let reasoning_content = state
         .reasoning
@@ -1434,6 +1512,16 @@ async fn stream_responses_completions(
 }
 
 impl OpenAiCompatibleProvider {
+    fn api_style_for_settings(&self, api_mode: &str) -> OpenAiApiStyle {
+        if self.provider_kind != "openai-compatible" {
+            return self.default_api;
+        }
+        match api_mode {
+            "responses" => OpenAiApiStyle::Responses,
+            _ => OpenAiApiStyle::ChatCompletions,
+        }
+    }
+
     fn supports_explicit_strict_tool_schemas(&self) -> bool {
         matches!(self.provider_kind, "openai" | "azure-openai")
     }
@@ -3158,13 +3246,24 @@ fn extract_responses_output_text(response: &Value) -> Option<String> {
             continue;
         };
         for part in content {
-            if part.get("type").and_then(Value::as_str) == Some("output_text") {
-                if let Some(text) = part.get("text").and_then(Value::as_str) {
-                    let text = text.trim();
-                    if !text.is_empty() {
-                        parts.push(text.to_string());
+            match part.get("type").and_then(Value::as_str) {
+                Some("output_text") => {
+                    if let Some(text) = part.get("text").and_then(Value::as_str) {
+                        let text = text.trim();
+                        if !text.is_empty() {
+                            parts.push(text.to_string());
+                        }
                     }
                 }
+                Some("refusal") => {
+                    if let Some(text) = part.get("refusal").and_then(Value::as_str) {
+                        let text = text.trim();
+                        if !text.is_empty() {
+                            parts.push(text.to_string());
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -3237,6 +3336,22 @@ fn extract_responses_tool_calls(response: &Value) -> Vec<OpenAiToolCall> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn parse_non_sse_responses_stream_body(
+    body: &str,
+) -> Result<(Option<String>, Vec<OpenAiToolCall>, Option<String>), String> {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return Ok((None, Vec::new(), None));
+    }
+    let response: Value = serde_json::from_str(trimmed)
+        .map_err(|error| format!("Responses stream fallback parse error: {error}"))?;
+    Ok((
+        extract_responses_output_text(&response),
+        extract_responses_tool_calls(&response),
+        extract_responses_reasoning_text(&response),
+    ))
 }
 
 fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefinition> {
@@ -6647,6 +6762,29 @@ mod tests {
     }
 
     #[test]
+    fn responses_parser_extracts_refusal_content_as_assistant_text() {
+        let response = json!({
+            "output": [
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "refusal",
+                            "refusal": "I cannot help with that."
+                        }
+                    ]
+                }
+            ]
+        });
+
+        assert_eq!(
+            extract_responses_output_text(&response).as_deref(),
+            Some("I cannot help with that.")
+        );
+    }
+
+    #[test]
     fn responses_stream_parser_uses_done_text_and_function_call_id() {
         let mut state = ResponsesStreamState::default();
 
@@ -6690,6 +6828,118 @@ mod tests {
         assert_eq!(tool_calls.len(), 1);
         assert_eq!(tool_calls[0].id, "call_123");
         assert_eq!(tool_calls[0].function.name, "current_time");
+    }
+
+    #[test]
+    fn responses_stream_parser_uses_output_text_done_when_delta_is_missing() {
+        let mut state = ResponsesStreamState::default();
+
+        let deltas = apply_responses_stream_event(
+            &mut state,
+            &json!({
+                "type": "response.output_text.done",
+                "text": "Greeting"
+            }),
+        );
+
+        assert_eq!(deltas.content_delta.as_deref(), Some("Greeting"));
+        assert_eq!(state.content.as_deref(), Some("Greeting"));
+    }
+
+    #[test]
+    fn responses_stream_parser_uses_refusal_events_as_assistant_text() {
+        let mut state = ResponsesStreamState::default();
+
+        let delta = apply_responses_stream_event(
+            &mut state,
+            &json!({
+                "type": "response.refusal.delta",
+                "delta": "I cannot"
+            }),
+        );
+        assert_eq!(delta.content_delta.as_deref(), Some("I cannot"));
+
+        let done = apply_responses_stream_event(
+            &mut state,
+            &json!({
+                "type": "response.refusal.done",
+                "refusal": "I cannot help with that."
+            }),
+        );
+
+        assert_eq!(done.content_delta.as_deref(), Some(" help with that."));
+        assert_eq!(state.content.as_deref(), Some("I cannot help with that."));
+    }
+
+    #[test]
+    fn responses_stream_parser_uses_completed_response_text_when_done_event_is_missing() {
+        let mut state = ResponsesStreamState::default();
+
+        let deltas = apply_responses_stream_event(
+            &mut state,
+            &json!({
+                "type": "response.completed",
+                "response": {
+                    "output": [
+                        {
+                            "type": "message",
+                            "role": "assistant",
+                            "content": [
+                                {
+                                    "type": "output_text",
+                                    "text": "Greeting"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        );
+
+        assert_eq!(deltas.content_delta.as_deref(), Some("Greeting"));
+        assert_eq!(state.content.as_deref(), Some("Greeting"));
+    }
+
+    #[test]
+    fn responses_stream_sse_field_parser_accepts_missing_space_after_colon() {
+        assert_eq!(
+            sse_field_value("data:{\"type\":\"response.completed\"}", "data"),
+            Some("{\"type\":\"response.completed\"}")
+        );
+        assert_eq!(
+            sse_field_value("event:response.completed", "event"),
+            Some("response.completed")
+        );
+        assert_eq!(
+            sse_field_value("data: {\"type\":\"response.completed\"}", "data"),
+            Some("{\"type\":\"response.completed\"}")
+        );
+    }
+
+    #[test]
+    fn non_sse_responses_stream_body_parses_full_response_json() {
+        let response = json!({
+            "output": [
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": "Greeting"
+                        }
+                    ]
+                }
+            ]
+        })
+        .to_string();
+
+        let (content, tool_calls, reasoning) =
+            parse_non_sse_responses_stream_body(&response).expect("full response JSON parses");
+
+        assert_eq!(content.as_deref(), Some("Greeting"));
+        assert!(tool_calls.is_empty());
+        assert!(reasoning.is_none());
     }
 
     #[test]
@@ -7349,6 +7599,19 @@ mod tests {
                 "{provider_kind} should omit explicit strict tool flags"
             );
         }
+    }
+
+    #[test]
+    fn generic_openai_compatible_provider_uses_configured_api_mode() {
+        let provider = openai_provider("openai-compatible");
+        assert!(matches!(
+            provider.api_style_for_settings("chatCompletions"),
+            OpenAiApiStyle::ChatCompletions
+        ));
+        assert!(matches!(
+            provider.api_style_for_settings("responses"),
+            OpenAiApiStyle::Responses
+        ));
     }
 
     #[test]
