@@ -165,8 +165,10 @@ type AssistantToolApprovalRequest = {
 };
 
 type PendingToolApproval = AssistantToolApprovalRequest & {
-  status: "pending" | "approved" | "allowedSession" | "cancelled";
+  status: "pending" | "approved" | "allowedSession" | "denied";
 };
+
+type ToolApprovalAction = "" | "allow" | "allowSession" | "deny";
 
 export interface AssistantPageContext {
   contextKind?: "dashboard";
@@ -843,7 +845,7 @@ export function AssistantPanel({
   const regionTargetRef = useRef<HTMLDivElement | null>(null);
   const regionSelectionRef = useRef<HTMLDivElement | null>(null);
   const activeAssistantRequestIdRef = useRef(0);
-  const allowToolApprovalsForCurrentResponseRef = useRef(false);
+  const allowedToolApprovalsForCurrentChatRef = useRef<Set<string>>(new Set());
   const forceChatScrollToBottomRef = useRef(false);
   const wasCollapsedRef = useRef(collapsed);
   const workspaceContextLabel = activeTab
@@ -1087,12 +1089,19 @@ export function AssistantPanel({
         return;
       }
       const request = event.payload;
-      if (allowToolApprovalsForCurrentResponseRef.current) {
+      const normalizedToolName = normalizeAssistantToolName(request.toolName);
+      if (
+        normalizedToolName &&
+        allowedToolApprovalsForCurrentChatRef.current.has(normalizedToolName)
+      ) {
         setPendingToolApprovals((current) => [
           ...current.filter((item) => item.requestId !== request.requestId),
           { ...request, status: "allowedSession" },
         ]);
-        void completeAssistantToolApproval(request.requestId, true, { allowSession: true });
+        void completeAssistantToolApproval(request.requestId, true, {
+          allowSession: true,
+          toolName: request.toolName,
+        });
         forceChatScrollToBottomRef.current = true;
         return;
       }
@@ -1222,7 +1231,7 @@ export function AssistantPanel({
     setImagePasteRejected(false);
     setAssistantIntent("chat");
     setPendingToolApprovals([]);
-    allowToolApprovalsForCurrentResponseRef.current = false;
+    allowedToolApprovalsForCurrentChatRef.current.clear();
     setDisplayedIntentExamples([]);
     setShowAllChats(false);
   }
@@ -1281,7 +1290,7 @@ export function AssistantPanel({
     setImagePasteRejected(false);
     setAssistantIntent("chat");
     setPendingToolApprovals([]);
-    allowToolApprovalsForCurrentResponseRef.current = false;
+    allowedToolApprovalsForCurrentChatRef.current.clear();
     setDisplayedIntentExamples([]);
     setShowAllChats(false);
   }
@@ -1304,7 +1313,7 @@ export function AssistantPanel({
       setImagePasteRejected(false);
       setAssistantIntent("chat");
       setPendingToolApprovals([]);
-      allowToolApprovalsForCurrentResponseRef.current = false;
+      allowedToolApprovalsForCurrentChatRef.current.clear();
       setDisplayedIntentExamples([]);
     }
   }
@@ -1370,17 +1379,22 @@ export function AssistantPanel({
   async function completeAssistantToolApproval(
     requestId: string,
     approved: boolean,
-    options?: { allowSession?: boolean },
+    options?: { allowSession?: boolean; toolName?: string },
   ) {
     if (options?.allowSession) {
-      allowToolApprovalsForCurrentResponseRef.current = true;
+      const toolName = normalizeAssistantToolName(
+        options.toolName ?? pendingToolApprovals.find((item) => item.requestId === requestId)?.toolName,
+      );
+      if (toolName) {
+        allowedToolApprovalsForCurrentChatRef.current.add(toolName);
+      }
     }
     setPendingToolApprovals((current) =>
       current.map((item) =>
         item.requestId === requestId
           ? {
               ...item,
-              status: options?.allowSession ? "allowedSession" : approved ? "approved" : "cancelled",
+              status: options?.allowSession ? "allowedSession" : approved ? "approved" : "denied",
             }
           : item,
       ),
@@ -1895,7 +1909,6 @@ export function AssistantPanel({
     }
     setChatError("");
     setPendingToolApprovals([]);
-    allowToolApprovalsForCurrentResponseRef.current = false;
     setIsSendingPrompt(true);
     const requestId = activeAssistantRequestIdRef.current + 1;
     activeAssistantRequestIdRef.current = requestId;
@@ -2023,9 +2036,32 @@ export function AssistantPanel({
     } finally {
       if (activeAssistantRequestIdRef.current === requestId) {
         setIsSendingPrompt(false);
-        allowToolApprovalsForCurrentResponseRef.current = false;
       }
     }
+  }
+
+  function denyAssistantToolApproval(request: PendingToolApproval) {
+    activeAssistantRequestIdRef.current += 1;
+    setIsSendingPrompt(false);
+    setChatError("");
+    const completedAt = new Date().toISOString();
+    setMessages((current) =>
+      current.map((message) =>
+        message.isStreaming
+          ? {
+              ...message,
+              isStreaming: false,
+              workCompletedAt: completedAt,
+              toolCalls: (message.toolCalls ?? []).map((toolCall) =>
+                toolCall.status === "running"
+                  ? { ...toolCall, status: "completed", endedAt: completedAt }
+                  : toolCall,
+              ),
+            }
+          : message,
+      ),
+    );
+    void completeAssistantToolApproval(request.requestId, false);
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -2493,11 +2529,12 @@ export function AssistantPanel({
                   void completeAssistantToolApproval(request.requestId, true)
                 }
                 onAllowSession={(request) =>
-                  void completeAssistantToolApproval(request.requestId, true, { allowSession: true })
+                  void completeAssistantToolApproval(request.requestId, true, {
+                    allowSession: true,
+                    toolName: request.toolName,
+                  })
                 }
-                onCancel={(request) =>
-                  void completeAssistantToolApproval(request.requestId, false)
-                }
+                onDeny={denyAssistantToolApproval}
               />
             ) : null}
             <AssistantMessageView
@@ -2522,11 +2559,12 @@ export function AssistantPanel({
               void completeAssistantToolApproval(request.requestId, true)
             }
             onAllowSession={(request) =>
-              void completeAssistantToolApproval(request.requestId, true, { allowSession: true })
+              void completeAssistantToolApproval(request.requestId, true, {
+                allowSession: true,
+                toolName: request.toolName,
+              })
             }
-            onCancel={(request) =>
-              void completeAssistantToolApproval(request.requestId, false)
-            }
+            onDeny={denyAssistantToolApproval}
           />
         ) : null}
         {shouldShowPreStreamWaiting ? (
@@ -2908,12 +2946,12 @@ function AssistantToolApprovalCards({
   approvals,
   onAllow,
   onAllowSession,
-  onCancel,
+  onDeny,
 }: {
   approvals: PendingToolApproval[];
   onAllow: (request: PendingToolApproval) => void;
   onAllowSession: (request: PendingToolApproval) => void;
-  onCancel: (request: PendingToolApproval) => void;
+  onDeny: (request: PendingToolApproval) => void;
 }) {
   return (
     <>
@@ -2923,7 +2961,7 @@ function AssistantToolApprovalCards({
           request={request}
           onAllow={() => onAllow(request)}
           onAllowSession={() => onAllowSession(request)}
-          onCancel={() => onCancel(request)}
+          onDeny={() => onDeny(request)}
         />
       ))}
     </>
@@ -2933,18 +2971,35 @@ function AssistantToolApprovalCards({
 function AssistantToolApprovalCard({
   onAllow,
   onAllowSession,
-  onCancel,
+  onDeny,
   request,
 }: {
   onAllow: () => void;
   onAllowSession: () => void;
-  onCancel: () => void;
+  onDeny: () => void;
   request: PendingToolApproval;
 }) {
   const { t } = useTranslation();
+  const [selectedAction, setSelectedAction] = useState<ToolApprovalAction>("");
   const isPending = request.status === "pending";
   const argsPreview = formatToolApprovalArgs(request.args);
   const toolLabel = humanizeAssistantToolName(request.toolName);
+
+  function handleApprovalActionChange(event: ChangeEvent<HTMLSelectElement>) {
+    const action = event.currentTarget.value as ToolApprovalAction;
+    setSelectedAction(action);
+    if (action === "allow") {
+      onAllow();
+      return;
+    }
+    if (action === "allowSession") {
+      onAllowSession();
+      return;
+    }
+    if (action === "deny") {
+      onDeny();
+    }
+  }
 
   if (!isPending) {
     return (
@@ -2952,7 +3007,7 @@ function AssistantToolApprovalCard({
         <div className="assistant-message-content">
           <section className="assistant-tool-approval-card assistant-tool-approval-summary" aria-live="polite">
             <span aria-hidden="true">
-              {request.status === "cancelled" ? <X size={14} /> : <Check size={14} />}
+              {request.status === "denied" ? <X size={14} /> : <Check size={14} />}
             </span>
             <strong>{toolApprovalStatusLabel(request.status, t)}</strong>
             <small>{t("ai.toolApprovalTool", { tool: toolLabel })}</small>
@@ -2988,35 +3043,19 @@ function AssistantToolApprovalCard({
           ) : null}
           <footer>
             <span>{t("ai.toolApprovalWaiting")}</span>
-            <div className="assistant-tool-approval-actions">
-              <button
-                className="toolbar-button"
+            <label className="assistant-tool-approval-action">
+              <select
+                aria-label={t("ai.toolApprovalSelectAction")}
                 disabled={!isPending}
-                onClick={onCancel}
-                type="button"
+                onChange={handleApprovalActionChange}
+                value={selectedAction}
               >
-                <Square size={14} />
-                {t("common.cancel")}
-              </button>
-              <button
-                className="toolbar-button primary"
-                disabled={!isPending}
-                onClick={onAllow}
-                type="button"
-              >
-                <Check size={14} />
-                {t("ai.toolApprovalAllow")}
-              </button>
-              <button
-                className="toolbar-button primary"
-                disabled={!isPending}
-                onClick={onAllowSession}
-                type="button"
-              >
-                <Check size={14} />
-                {t("ai.toolApprovalAllowSession")}
-              </button>
-            </div>
+                <option value="">{t("ai.toolApprovalSelectAction")}</option>
+                <option value="allow">{t("ai.toolApprovalAllow")}</option>
+                <option value="allowSession">{t("ai.toolApprovalAllowSession")}</option>
+                <option value="deny">{t("ai.toolApprovalDeny")}</option>
+              </select>
+            </label>
           </footer>
         </section>
       </div>
@@ -3034,7 +3073,7 @@ function toolApprovalStatusLabel(
   if (status === "approved") {
     return t("ai.toolApprovalApproved");
   }
-  return t("ai.toolApprovalCancelled");
+  return t("ai.toolApprovalDenied");
 }
 
 function formatToolApprovalArgs(args: Record<string, unknown> | undefined) {

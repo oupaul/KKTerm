@@ -5584,10 +5584,27 @@ progress {
   border-radius: 6px;
 }
 
-.assistant-tool-approval-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.assistant-tool-approval-action {
+  flex: 0 1 190px;
+  min-width: 150px;
+}
+
+.assistant-tool-approval-action select {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 30px 6px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.assistant-tool-approval-action select:focus {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 .assistant-tool-approval-summary {

@@ -52,7 +52,7 @@ Assistant tool calls run under one of two modes (selector label `ai.toolPermissi
 - **Prompt** (`ai.toolPermissionPrompt`) — each tool call requires explicit approval.
 - **Allow all** (`ai.toolPermissionAllowAll`) — tool calls run without prompting. Use deliberately.
 
-In Prompt / Default permissions mode, mutating tool calls pause the current assistant response and show an in-chat approval card: `ai.toolApprovalTitle`, `ai.toolApprovalTool`, `ai.toolApprovalBody`, `ai.toolApprovalDetails`, `ai.toolApprovalWaiting`, `ai.toolApprovalAllow`, `ai.toolApprovalAllowSession`, `ai.toolApprovalApproved`, `ai.toolApprovalAllowedSession`, and `ai.toolApprovalCancelled`, with the shared `common.cancel` action. Choosing `ai.toolApprovalAllow` approves the single tool call. Choosing `ai.toolApprovalAllowSession` approves the current tool call and later approval prompts in the same assistant response. Choosing `common.cancel` skips the tool call and resumes the response.
+In Prompt / Default permissions mode, mutating tool calls pause the current assistant response and show an in-chat approval card: `ai.toolApprovalTitle`, `ai.toolApprovalTool`, `ai.toolApprovalBody`, `ai.toolApprovalDetails`, `ai.toolApprovalWaiting`, `ai.toolApprovalSelectAction`, `ai.toolApprovalAllow`, `ai.toolApprovalAllowSession`, `ai.toolApprovalDeny`, `ai.toolApprovalApproved`, `ai.toolApprovalAllowedSession`, and `ai.toolApprovalDenied`. The action selector starts blank. Choosing `ai.toolApprovalAllow` approves the single tool call. Choosing `ai.toolApprovalAllowSession` approves the current tool call and later approval prompts for the same tool in the same chat window. Choosing `ai.toolApprovalDeny` rejects the tool call and stops the visible assistant turn.
 
 ### Built-in tools
 
