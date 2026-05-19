@@ -493,6 +493,8 @@ pub struct AiAssistantToolSettings {
     connections: bool,
     #[serde(default = "default_ai_sessions_tool_enabled")]
     sessions: bool,
+    #[serde(default = "default_ai_tutorial_tool_enabled")]
+    tutorial: bool,
     #[serde(default)]
     email: bool,
     #[serde(default = "default_ai_manual_tool_enabled")]
@@ -530,6 +532,9 @@ impl AiAssistantToolSettings {
     pub(crate) fn sessions(&self) -> bool {
         self.sessions
     }
+    pub(crate) fn tutorial(&self) -> bool {
+        self.tutorial
+    }
     pub(crate) fn email(&self) -> bool {
         self.email
     }
@@ -547,6 +552,7 @@ impl AiAssistantToolSettings {
             || self.dashboard
             || self.connections
             || self.sessions
+            || self.tutorial
             || self.email
             || self.manual
     }
@@ -4302,6 +4308,7 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         dashboard: default_ai_dashboard_tool_enabled(),
         connections: default_ai_connections_tool_enabled(),
         sessions: default_ai_sessions_tool_enabled(),
+        tutorial: default_ai_tutorial_tool_enabled(),
         email: false,
         manual: default_ai_manual_tool_enabled(),
     }
@@ -4328,6 +4335,10 @@ fn default_ai_connections_tool_enabled() -> bool {
 }
 
 fn default_ai_sessions_tool_enabled() -> bool {
+    true
+}
+
+fn default_ai_tutorial_tool_enabled() -> bool {
     true
 }
 
@@ -6574,6 +6585,7 @@ mod tests {
         assert!(defaults.tools.dashboard());
         assert!(defaults.tools.connections());
         assert!(defaults.tools.sessions());
+        assert!(defaults.tools.tutorial());
         assert!(defaults.tools.manual());
         assert!(!defaults.tools.email());
 

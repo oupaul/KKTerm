@@ -8,16 +8,13 @@ import {
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { ActivePage } from "../app/ActivityRail";
 import { useWorkspaceStore } from "../store";
 
 const NOTIFICATION_FADE_MS = 220;
 
 export function StatusBar({
-  activePage,
   onOpenAssistant,
 }: {
-  activePage: ActivePage;
   onOpenAssistant: () => void;
 }) {
   const { t } = useTranslation();
@@ -59,7 +56,9 @@ export function StatusBar({
 
   return (
     <footer className="status-bar">
-      <div className="status-bar-module">{renderModuleStatus(activePage, t)}</div>
+      <div className="status-bar-module">
+        <WorkspaceHostMetrics t={t} />
+      </div>
       <div className="status-bar-notice-area">
         {renderedNotice ? (
           <span
@@ -105,17 +104,6 @@ function AssistantWorkingStatusButton({
       </span>
     </button>
   );
-}
-
-function renderModuleStatus(activePage: ActivePage, t: (key: string) => string) {
-  switch (activePage) {
-    case "workspace":
-      return <WorkspaceHostMetrics t={t} />;
-    case "dashboard":
-      return null;
-    case "settings":
-      return null;
-  }
 }
 
 function WorkspaceHostMetrics({ t }: { t: (key: string) => string }) {

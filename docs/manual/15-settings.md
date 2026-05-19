@@ -4,11 +4,13 @@
 
 - Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including AI provider keys `settings.apiMode`, `settings.apiModeChatCompletions`, `settings.apiModeResponses`, `settings.extraHeaders`, and `settings.extraHeadersPlaceholder`
 - Topics: General, Appearance, Dashboard, Credentials & MCP, AI Assistant, assistant tool defaults, SSH, Terminal, Screenshots, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all
-- Synonyms: "preferences", "options", "config", "theme", "dark mode", "language", "API key", "import settings", "factory reset"
+- Synonyms: "preferences", "options", "config", "theme", "dark mode", "color", "language", "API key", "import settings", "factory reset", "show me where"
 
 > Settings page styling is consistent across sections. Related controls live inside the shared `settings-subsection settings-fieldset` group so the group title sits in the border. Editable controls look editable; disabled / readonly controls stay muted. Delete buttons inside Settings are icon-only red trash cans (no visible "Delete" text). Destructive Settings-wide actions live in **General → Settings data**, behind app-owned confirmation dialogs — not inside feature-specific sections.
 
 Settings is owned by `src/settings/SettingsPage.tsx`. Persisted bootstrap (`useBootstrapSettings`) lives in `src/lib/settings.ts`; add new persisted settings there, not via cloned effects in `src/App.tsx`.
+
+The universal AI Assistant panel remains visible on Settings. `src/settings/settingsAssistantContext.ts` publishes the active section and visible control keys to the assistant; Appearance exposes tutorial target `settings.appearance.colorScheme` for guided color-scheme help.
 
 ## Page chrome
 
@@ -80,7 +82,7 @@ Section header `settings.sectionAiAssistant`. Owned by `src/settings/AiSettings.
 - OpenAI Compatible providers can set `settings.extraHeaders` as comma-separated `key=value` pairs; example placeholder `settings.extraHeadersPlaceholder`. These headers are provider request metadata, not OS-keychain secrets.
 - API keys go into the OS keychain under `AI_PROVIDER_SECRET_OWNER_ID`; never written to SQLite or settings JSON.
 - Tool permission default (`ai.toolPermissionMode`) is set here as well.
-- Assistant tools default enabled except `settings.aiTools.email.label`, which stays off until the user enables and configures delivery.
+- Assistant tools default enabled except `settings.aiTools.email.label`, which stays off until the user enables and configures delivery. The Tutorial tool is `settings.aiTools.tutorial.label` / `settings.aiTools.tutorial.description`.
 
 ## SSH
 

@@ -29,6 +29,7 @@ export const DEFAULT_AI_ASSISTANT_TOOLS: AiAssistantToolSettings = {
   dashboard: true,
   connections: true,
   sessions: true,
+  tutorial: true,
   manual: true,
 };
 

@@ -108,6 +108,7 @@ export const defaultAiAssistantToolSettings = {
   dashboard: true,
   connections: true,
   sessions: true,
+  tutorial: true,
   manual: true,
 };
 

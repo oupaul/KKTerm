@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `workspace.workspaceSurface`, `workspace.hostUsage`
-- Topics: Activity Rail, panel resize, pinned Connections on the rail, Connections panel collapse, AI Assistant panel collapse
+- Topics: Activity Rail, panel resize, pinned Connections on the rail, Connections panel collapse, universal AI Assistant panel, universal host usage status bar
 - Synonyms: "left bar", "sidebar", "right panel", "AI sidebar", "make panel wider", "hide the AI panel"
 
 ## Activity Rail (48 px, left edge)
@@ -38,24 +38,23 @@ Accessibility label: `workspace.workspaceSurface`. Per-Connection-kind labels us
 
 ## AI Assistant Panel (right)
 
-Resizable, collapsible. State is workspace-wide — the same width and collapsed state apply across all Tabs.
+Resizable, collapsible. State is app-wide — the same width and collapsed state apply across Workspace, Dashboard, Settings, and all Tabs.
 
 - Title: `ai.title`
 - Collapse: `ai.collapsePanel`
 - Resize handle: `app.resizeAiAssistant`
 
-Panel internals are covered in [13-ai-assistant.md](13-ai-assistant.md).
+The panel remains available on Settings and receives a Settings page context so how-to answers can refer to the active Settings section. Panel internals are covered in [13-ai-assistant.md](13-ai-assistant.md).
 
 ## Status Bar (bottom)
 
 Owned by `src/workspace/StatusBar.tsx`. Two roles:
 
-1. **Host usage metrics** (left side):
+1. **Host usage metrics** (left side, visible in every module/page):
    - `workspace.cpu` / `workspace.cpuUsage`
    - `workspace.ram` / `workspace.ramUsage` / `workspace.memory`
    - `workspace.network` / `workspace.networkUsage`, broken into `workspace.networkDownstream` and `workspace.networkUpstream`
-   - Timing readouts: `workspace.uiReady`, `workspace.localReady`, `workspace.sshReady` (and `…TimingPending` siblings).
-2. **Transient notifications** — driven by the shared `showWorkspaceStatus` store action. Success messages default to 5 seconds, then fade. Do not implement one-off toast surfaces; route through `showWorkspaceStatus`.
+2. **Transient notifications** — driven by the shared `showStatusBarNotice` store action. Success messages default to 5 seconds, then fade. Do not implement one-off toast surfaces; route through `showStatusBarNotice`.
 
 ## Workspace chrome resize behaviour
 

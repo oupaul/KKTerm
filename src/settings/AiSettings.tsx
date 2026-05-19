@@ -382,6 +382,7 @@ const AI_ASSISTANT_TOOL_IDS: AiAssistantToolId[] = [
   "dashboard",
   "connections",
   "sessions",
+  "tutorial",
   "manual",
 ];
 

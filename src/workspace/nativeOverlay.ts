@@ -6,6 +6,7 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
   ".connection-dialog-backdrop",
   ".app-launcher-dialog-backdrop",
   ".settings-page",
+  ".tutorial-overlay",
   ".dw-catalog-backdrop",
   ".dw-customize",
 ].join(", ");

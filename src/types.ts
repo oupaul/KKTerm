@@ -407,6 +407,7 @@ export type AiAssistantToolId =
   | "dashboard"
   | "connections"
   | "sessions"
+  | "tutorial"
   | "manual";
 
 export type AiAssistantToolSettings = Record<AiAssistantToolId, boolean>;

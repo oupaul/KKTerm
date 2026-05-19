@@ -314,4 +314,4 @@ All new strings route through `t()` in the `dashboard.*` namespace. English (`sr
 - **AI Assistant** (`src/ai/`) — consumes the Dashboard page-context payload and issues Tauri commands via registered tools.
 - **Settings** (`src/settings/`) — adds a Dashboard section; "Reset Dashboard" lives in General → Settings data.
 - **Activity Rail** (`src/app/ActivityRail.tsx`) — Dashboard is a peer top-level entry alongside Workspace and File Explorer. App Launcher is intentionally not a rail entry.
-- **Status Bar** (`src/workspace/StatusBar.tsx`) — receives transient dashboard status messages via `showWorkspaceStatus` for layout-save failures and similar feedback.
+- **Status Bar** (`src/workspace/StatusBar.tsx`) — receives transient dashboard status messages via `showStatusBarNotice` for layout-save failures and similar feedback.

@@ -877,6 +877,10 @@
         "label": "Live Sessions",
         "description": "Read visible session context and interact with active terminal, remote desktop, and file browser Sessions."
       },
+      "tutorial": {
+        "label": "Tutorial",
+        "description": "Highlight visible app controls, dim the rest of the window, and show one-step balloon help."
+      },
       "manual": {
         "label": "Operation Manual",
         "description": "Search and read the bundled KKTerm Operation Manual to answer how-to questions about app features."
@@ -1400,10 +1404,13 @@
     "collapsePanel": "Collapse AI Assistant panel",
     "noActiveSession": "No active session",
     "workspace": "Workspace",
+    "settingsContextLabel": "Current Settings page",
     "extensionDraft": "Extension draft",
     "extensionReviewOnly": "Review-only; no install or run without explicit approval.",
     "dashboardToolsDisabledTitle": "Dashboard tools are off",
     "dashboardToolsDisabledHint": "Turn on Settings > AI Assistant > Assistant tools > Dashboard before the Assistant can create or change widgets.",
+    "tutorialInvalidRequest": "Tutorial requests need a target, title, and help text.",
+    "tutorialTargetNotFound": "That tutorial target is not visible right now.",
     "chats": "Chats",
     "viewAll": "View All",
     "noChatsYet": "No chats yet.",
@@ -1616,6 +1623,7 @@
     "toolDashboard": "Updating Dashboard...",
     "toolConnections": "Managing Connections...",
     "toolSessions": "Working with Sessions...",
+    "toolTutorial": "Showing tutorial help...",
     "toolWebSearchDone": "Searched the web",
     "toolWebFetchDone": "Fetched web page",
     "toolShellCommandDone": "Ran command",
@@ -1628,6 +1636,7 @@
     "toolDashboardDone": "Updated Dashboard",
     "toolConnectionsDone": "Managed Connections",
     "toolSessionsDone": "Worked with Sessions",
+    "toolTutorialDone": "Showed tutorial help",
     "waitingPhrases": [
       "Compiling the tsundere kernel",
       "Defragmenting the chakra network",

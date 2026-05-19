@@ -1,4 +1,5 @@
 import { ConnectionIcon } from "../connections/ConnectionIcon";
+import type { TutorialHighlightRequest } from "../app/TutorialOverlay";
 import { workspaceKindLabel } from "../connections/utils";
 import { inspectActiveSshSystemContext } from "../terminal/TerminalWorkspace";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
@@ -171,7 +172,7 @@ type PendingToolApproval = AssistantToolApprovalRequest & {
 type ToolApprovalAction = "" | "allow" | "allowSession" | "deny";
 
 export interface AssistantPageContext {
-  contextKind?: "dashboard";
+  contextKind?: "dashboard" | "settings";
   contextLabel: string;
   connectionLabel: string;
   sourceLabel: string;
@@ -784,11 +785,13 @@ function createAiProviderSecretRequestMarkdown(
 export function AssistantPanel({
   collapsed,
   onOpenSettings,
+  onTutorialRequest,
   onToggleCollapsed,
   pageContext,
 }: {
   collapsed: boolean;
   onOpenSettings: () => void;
+  onTutorialRequest: (request: TutorialHighlightRequest) => { ok: boolean; error?: string };
   onToggleCollapsed: () => void;
   pageContext?: AssistantPageContext;
 }) {
@@ -1410,6 +1413,8 @@ export function AssistantPanel({
 
   async function runAssistantLiveTool(toolName: string, args: Record<string, unknown>) {
     switch (toolName) {
+      case "tutorial_highlight":
+        return assistantTutorialHighlight(args);
       case "session_state":
         return assistantSessionState();
       case "session_terminal_read_buffer":
@@ -1435,6 +1440,16 @@ export function AssistantPanel({
       default:
         return { ok: false, error: `Unknown live Session tool: ${toolName}` };
     }
+  }
+
+  function assistantTutorialHighlight(args: Record<string, unknown>) {
+    const targetId = typeof args.targetId === "string" ? args.targetId.trim() : "";
+    const title = typeof args.title === "string" ? args.title.trim() : "";
+    const body = typeof args.body === "string" ? args.body.trim() : "";
+    if (!targetId || !title || !body) {
+      return { ok: false, error: t("ai.tutorialInvalidRequest") };
+    }
+    return onTutorialRequest({ targetId, title, body });
   }
 
   function assistantSessionState() {
@@ -3530,6 +3545,7 @@ function toolCallLabel(
     session_file_browser_create_folder: t("ai.toolSessions"),
     session_file_browser_rename: t("ai.toolSessions"),
     session_file_browser_delete: t("ai.toolSessions"),
+    tutorial_highlight: t("ai.toolTutorial"),
   };
   const completedLabels: Record<string, string> = {
     web_search: t("ai.toolWebSearchDone"),
@@ -3572,6 +3588,7 @@ function toolCallLabel(
     session_file_browser_create_folder: t("ai.toolSessionsDone"),
     session_file_browser_rename: t("ai.toolSessionsDone"),
     session_file_browser_delete: t("ai.toolSessionsDone"),
+    tutorial_highlight: t("ai.toolTutorialDone"),
   };
   const labels = status === "running" ? runningLabels : completedLabels;
   return labels[normalizedToolName] ?? normalizedToolName;

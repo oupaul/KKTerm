@@ -322,7 +322,10 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
           </label>
         </div>
       </fieldset>
-      <fieldset className="settings-subsection settings-fieldset">
+      <fieldset
+        className="settings-subsection settings-fieldset"
+        data-tutorial-id="settings.appearance.colorScheme"
+      >
         <legend>{t("settings.theme")}</legend>
         <div>
           <p className="field-hint">{t("settings.themeHint")}</p>

@@ -6,6 +6,11 @@ import { ActivityRail } from "./app/ActivityRail";
 import type { ActivePage } from "./app/ActivityRail";
 import { AppUpdatePrompt } from "./app/AppUpdatePrompt";
 import {
+  findTutorialTargetElement,
+  TutorialOverlay,
+  type TutorialHighlightRequest,
+} from "./app/TutorialOverlay";
+import {
   useAppShellAppearance,
   useFrontendLaunchTimestamp,
   useGlobalContextMenuSuppression,
@@ -21,6 +26,7 @@ import { useDashboardBackendInvalidation } from "./dashboard/state/invalidation"
 import { ariaHidden } from "./lib/aria";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
+import type { SettingsAssistantContext } from "./settings/settingsAssistantContext";
 import { useWorkspaceStore } from "./store";
 import { StatusBar } from "./workspace/StatusBar";
 import { TabStrip, WorkspaceCanvas } from "./workspace/WorkspaceCanvas";
@@ -48,14 +54,15 @@ function App() {
   }
 
   function openAssistantPanel() {
-    if (activePage === "settings") {
-      setActivePage(previousBasePageRef.current);
-    }
     expandAiPanel();
   }
 
   const [dashboardAssistantContext, setDashboardAssistantContext] =
     useState<AssistantPageContext>();
+  const [settingsAssistantContext, setSettingsAssistantContext] =
+    useState<SettingsAssistantContext>();
+  const [tutorialHighlightRequest, setTutorialHighlightRequest] =
+    useState<TutorialHighlightRequest>();
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
   const appShellRef = useRef<HTMLDivElement | null>(null);
@@ -82,6 +89,24 @@ function App() {
     appearanceSettings,
     connectionPanelLayout,
   });
+
+  function assistantPageContext() {
+    if (activePage === "dashboard") {
+      return dashboardAssistantContext;
+    }
+    if (activePage === "settings") {
+      return settingsAssistantContext;
+    }
+    return undefined;
+  }
+
+  function handleTutorialRequest(request: TutorialHighlightRequest) {
+    if (!findTutorialTargetElement(request.targetId)) {
+      return { ok: false, error: t("ai.tutorialTargetNotFound") };
+    }
+    setTutorialHighlightRequest(request);
+    return { ok: true };
+  }
 
   return (
     <div
@@ -118,28 +143,28 @@ function App() {
           <WorkspaceCanvas workspaceActive={activePage === "workspace"} />
         </main>
       </div>
-      {activePage !== "settings" ? (
-        <PanelResizeHandle
-          key="ai-resize-handle"
-          ariaLabel={t("app.resizeAiAssistant")}
-          side="right"
-          collapsed={aiPanelLayout.collapsed}
-          collapsedLabel={t("app.aiAssistant")}
-          onClick={aiPanelLayout.collapsed ? expandAiPanel : undefined}
-          onPointerDown={handleAiPanelResize}
-        />
-      ) : null}
+      <PanelResizeHandle
+        key="ai-resize-handle"
+        ariaLabel={t("app.resizeAiAssistant")}
+        side="right"
+        collapsed={aiPanelLayout.collapsed}
+        collapsedLabel={t("app.aiAssistant")}
+        onClick={aiPanelLayout.collapsed ? expandAiPanel : undefined}
+        onPointerDown={handleAiPanelResize}
+      />
       <AssistantPanel
         key="assistant-panel"
         collapsed={aiPanelLayout.collapsed}
         onOpenSettings={() => navigateToPage("settings")}
+        onTutorialRequest={handleTutorialRequest}
         onToggleCollapsed={toggleAiPanel}
-        pageContext={activePage === "dashboard" ? dashboardAssistantContext : undefined}
+        pageContext={assistantPageContext()}
       />
       {activePage === "settings" ? (
         <SettingsPage
           key="settings-page"
           onBack={() => setActivePage(previousBasePageRef.current)}
+          onAssistantContextChange={setSettingsAssistantContext}
           onResetLayout={resetWorkspaceChromeLayout}
         />
       ) : null}
@@ -150,7 +175,12 @@ function App() {
           onAssistantContextChange={setDashboardAssistantContext}
         />
       ) : null}
-      <StatusBar key="status-bar" activePage={activePage} onOpenAssistant={openAssistantPanel} />
+      <TutorialOverlay
+        key="tutorial-overlay"
+        onDismiss={() => setTutorialHighlightRequest(undefined)}
+        request={tutorialHighlightRequest}
+      />
+      <StatusBar key="status-bar" onOpenAssistant={openAssistantPanel} />
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
     </div>
   );

@@ -414,11 +414,6 @@ button {
   pointer-events: none;
 }
 
-.settings-mode .assistant-panel {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .activity-rail {
   display: flex;
   position: relative;
@@ -6181,7 +6176,7 @@ progress {
 
 .settings-page {
   position: fixed;
-  inset: 0 0 28px 48px;
+  inset: 0 calc(var(--ai-panel-width, 334px) + var(--ai-resize-width, 1px)) 28px 48px;
   z-index: 80;
   min-width: 0;
   height: calc(100vh - 28px);
@@ -6189,6 +6184,57 @@ progress {
   scrollbar-gutter: stable;
   padding: 22px 24px 28px;
   background: var(--app-bg);
+}
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  pointer-events: none;
+}
+
+.tutorial-overlay-dim {
+  position: absolute;
+  inset: 0;
+}
+
+.tutorial-highlight {
+  position: absolute;
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 9999px rgb(12 16 24 / 52%),
+    0 0 0 4px var(--accent-soft),
+    var(--shadow);
+}
+
+.tutorial-balloon {
+  position: absolute;
+  display: grid;
+  gap: 8px;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  min-height: 104px;
+  padding: 12px 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.tutorial-balloon strong {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tutorial-balloon p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .settings-page-header {

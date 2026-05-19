@@ -2,13 +2,13 @@
 
 ## AI grep hints
 
-- Keys: `ai.*` (full namespace), `app.aiAssistant`, `settings.mcp*`, `settings.sectionAiAssistant`, `settings.credentialKindAiApiKey`
-- Topics: AI panel, chats, new chat, history, SQLite, tool permission modes, tool defaults, intents (Watchdog / Create Widget / Extension Draft), MCP servers, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal
-- Synonyms: "chat", "copilot", "AI bot", "tools", "approval", "MCP", "agent", "watchdog", "where are chats stored", "clear chat storage"
+- Keys: `ai.*` (full namespace), `app.aiAssistant`, `settings.mcp*`, `settings.sectionAiAssistant`, `settings.credentialKindAiApiKey`, `settings.aiTools.tutorial.*`
+- Topics: AI panel, chats, new chat, history, SQLite, tool permission modes, tool defaults, Tutorial overlay, intents (Watchdog / Create Widget / Extension Draft), MCP servers, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal
+- Synonyms: "chat", "copilot", "AI bot", "tools", "approval", "MCP", "agent", "watchdog", "highlight this", "show me where", "where are chats stored", "clear chat storage"
 
 ## Panel
 
-Right-side resizable, collapsible. Title `ai.title`. Refresh `ai.refresh`. Settings shortcut `ai.settings`. New chat `ai.newChat` (`ai.newAiChat`). Collapse `ai.collapsePanel` (resize handle `app.resizeAiAssistant`). Empty state `ai.noActiveSession` plus `ai.workspace` indicator.
+Right-side resizable, collapsible. Title `ai.title`. Refresh `ai.refresh`. Settings shortcut `ai.settings`. New chat `ai.newChat` (`ai.newAiChat`). Collapse `ai.collapsePanel` (resize handle `app.resizeAiAssistant`). Empty state `ai.noActiveSession` plus `ai.workspace` indicator. The same panel is available on Workspace, Dashboard, and Settings; on Settings it shows `ai.settingsContextLabel` as the context detail and receives the active Settings section plus visible control keys.
 
 ## Chat history
 
@@ -74,6 +74,11 @@ Names shown during a tool call (`ai.toolCallRunning` → `ai.toolCallComplete`):
 | Dashboard | `ai.toolDashboard` | `ai.toolDashboardDone` |
 | Connections | `ai.toolConnections` | `ai.toolConnectionsDone` |
 | Sessions | `ai.toolSessions` | `ai.toolSessionsDone` |
+| Tutorial | `ai.toolTutorial` | `ai.toolTutorialDone` |
+
+### Tutorial overlay
+
+The Tutorial tool is enabled by `settings.aiTools.tutorial.label`. It lets the assistant call `tutorial_highlight` for app-owned targets listed in the current page context. The UI dims the window, highlights the target control, and shows a short balloon beside it. The overlay dismisses on the next click or key press. Example: while Settings → Appearance is active, a color/theme question can highlight the fieldset carrying target `settings.appearance.colorScheme` and explain `settings.colorScheme`.
 
 Thinking / progress markers:
 

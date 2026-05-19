@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Bot,
@@ -26,32 +26,34 @@ import { SshSettings } from "./SshSettings";
 import { TerminalSettings as TerminalSettingsPage } from "./TerminalSettings";
 import { UrlSettings } from "./UrlSettings";
 import { VncSettings } from "./VncSettings";
+import {
+  buildSettingsAssistantContext,
+  type SettingsAssistantContext,
+  type SettingsSectionId,
+} from "./settingsAssistantContext";
 
 export { AI_PROVIDER_SECRET_OWNER_ID };
 
-type SettingsSectionId =
-  | "general-settings"
-  | "appearance-settings"
-  | "dashboard-settings"
-  | "credentials-settings"
-  | "assistant-settings"
-  | "ssh-settings"
-  | "terminal-settings"
-  | "url-settings"
-  | "rdp-settings"
-  | "vnc-settings"
-  | "about-settings";
-
 export function SettingsPage({
+  onAssistantContextChange,
   onBack,
   onResetLayout,
 }: {
+  onAssistantContextChange: (context: SettingsAssistantContext) => void;
   onBack: () => void;
   onResetLayout: () => void;
 }) {
   const { t } = useTranslation();
   const [activeSectionId, setActiveSectionId] =
     useState<SettingsSectionId>("general-settings");
+  const assistantContext = useMemo(
+    () => buildSettingsAssistantContext(activeSectionId, (key, fallback) => t(key, fallback)),
+    [activeSectionId, t],
+  );
+
+  useEffect(() => {
+    onAssistantContextChange(assistantContext);
+  }, [assistantContext, onAssistantContextChange]);
 
   return (
     <main className="settings-page">
@@ -158,7 +160,10 @@ export function SettingsPage({
           </button>
         </aside>
 
-        <section className="settings-content" aria-label={t("settings.settingsContent")}>
+        <section
+          className="settings-content"
+          aria-label={t("settings.settingsContent")}
+        >
           {activeSectionId === "general-settings" && <GeneralSettings />}
           {activeSectionId === "appearance-settings" && (
             <AppearanceSettings onResetLayout={onResetLayout} />
