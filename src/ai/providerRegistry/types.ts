@@ -23,7 +23,12 @@ export type AiModelOption = {
   supportsImageInput?: boolean;
 };
 
-export type AiProviderSettingsField = "baseUrl" | "model" | "reasoningEffort" | "apiKey";
+export type AiProviderSettingsField =
+  | "baseUrl"
+  | "model"
+  | "reasoningEffort"
+  | "apiKey"
+  | "extraHeaders";
 
 export type AiProviderDefinition = {
   kind: AiProviderKind;
@@ -51,6 +56,7 @@ export type AiProviderDefaults = Pick<
   | "model"
   | "reasoningEffort"
   | "outputLanguage"
+  | "extraHeaders"
   | "allowInsecureTls"
   | "cliExecutionPolicy"
   | "claudeCliPath"

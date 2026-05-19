@@ -942,6 +942,7 @@ async fn list_ai_provider_models(
         &app,
         request.provider_kind(),
         request.base_url(),
+        request.extra_headers(),
         api_key,
         request.allow_insecure_tls(),
     )

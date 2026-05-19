@@ -118,6 +118,7 @@ export const defaultAiProviderSettings: AiProviderSettings = {
   reasoningEffort: "medium",
   outputLanguage: "",
   customInstructions: "",
+  extraHeaders: "",
   allowInsecureTls: false,
   showAllModels: false,
   cliExecutionPolicy: "suggestOnly",

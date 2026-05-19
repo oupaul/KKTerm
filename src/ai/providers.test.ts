@@ -44,3 +44,31 @@ if (opencodeDefinition.baseUrl !== "https://opencode.ai/zen/go/v1") {
 if (opencodeDefinition.modelListStrategy !== "openAiCompatible") {
   throw new Error("OpenCode should refresh from the OpenAI-compatible models endpoint.");
 }
+
+const compatibleDefinition = getAiProviderDefinition("openai-compatible");
+if (!compatibleDefinition.settingsFields.includes("extraHeaders")) {
+  throw new Error("OpenAI Compatible should expose the extra headers settings field.");
+}
+
+const compatibleSettings = validateAiProviderForChat(
+  {
+    ...providerDefaultsFor("openai-compatible"),
+    baseUrl: "https://gateway.example/v1",
+    extraHeaders: ' sid=1, "env"="3" ',
+  },
+  true,
+);
+if (compatibleSettings.extraHeaders !== 'sid=1, "env"="3"') {
+  throw new Error(`OpenAI Compatible extra headers should be trimmed, got: ${compatibleSettings.extraHeaders}`);
+}
+
+const hostedSettings = validateAiProviderForChat(
+  {
+    ...providerDefaultsFor("openai"),
+    extraHeaders: "sid=1",
+  },
+  true,
+);
+if (hostedSettings.extraHeaders !== "") {
+  throw new Error("Hosted providers should not carry OpenAI Compatible extra headers.");
+}

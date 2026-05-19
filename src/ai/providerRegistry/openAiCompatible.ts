@@ -1,4 +1,4 @@
-import { CONFIGURABLE_ENDPOINT_SETTINGS_FIELDS, STANDARD_REASONING_EFFORTS } from "./shared";
+import { STANDARD_REASONING_EFFORTS } from "./shared";
 import type { AiProviderDefinition } from "./types";
 
 export const openAiCompatibleProvider: AiProviderDefinition = {
@@ -24,6 +24,6 @@ export const openAiCompatibleProvider: AiProviderDefinition = {
     { id: "llama-3.3-70b-instruct", label: "Llama 3.3 70B compatible", supportsImageInput: false },
     { id: "qwen3", label: "Qwen3 compatible", supportsImageInput: false },
   ],
-  settingsFields: CONFIGURABLE_ENDPOINT_SETTINGS_FIELDS,
+  settingsFields: ["baseUrl", "model", "reasoningEffort", "apiKey", "extraHeaders"],
   capabilities: ["chat", "streaming", "toolCalling", "mcpReady", "openAiCompatible"],
 };

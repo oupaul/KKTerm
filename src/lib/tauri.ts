@@ -982,6 +982,7 @@ type CommandMap = {
       request: {
         providerKind: string;
         baseUrl: string;
+        extraHeaders?: string;
         allowInsecureTls?: boolean;
       };
     };

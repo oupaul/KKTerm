@@ -217,6 +217,17 @@ function AiProviderSettingsFieldControl({
           />
         </label>
       );
+    case "extraHeaders":
+      return (
+        <label>
+          <span>{t("settings.extraHeaders")}</span>
+          <input
+            onChange={(event) => onDraftChange({ extraHeaders: event.currentTarget.value })}
+            placeholder={t("settings.extraHeadersPlaceholder")}
+            value={draft.extraHeaders}
+          />
+        </label>
+      );
     default:
       return null;
   }
@@ -837,6 +848,7 @@ export function AiSettings() {
       request: {
         providerKind: draft.providerKind,
         baseUrl: draft.baseUrl,
+        extraHeaders: draft.extraHeaders,
         allowInsecureTls: draft.allowInsecureTls,
       },
     })
@@ -880,6 +892,7 @@ export function AiSettings() {
     aiProviderDefinition.strictModelList,
     draft.allowInsecureTls,
     draft.baseUrl,
+    draft.extraHeaders,
     draft.providerKind,
     selectedProviderHasApiKey,
   ]);
@@ -898,6 +911,7 @@ export function AiSettings() {
         request: {
           providerKind: draft.providerKind,
           baseUrl: draft.baseUrl,
+          extraHeaders: draft.extraHeaders,
           allowInsecureTls: draft.allowInsecureTls,
         },
       });
@@ -1004,6 +1018,7 @@ export function AiSettings() {
       baseUrl: defaults.baseUrl,
       model: defaults.model,
       reasoningEffort: defaults.reasoningEffort,
+      extraHeaders: defaults.extraHeaders,
     }));
     setApiKeyDraft("");
     setSelectedProviderHasApiKey(false);

@@ -545,6 +545,8 @@
     "endpoint": "Endpoint",
     "model": "Model",
     "customModelId": "Custom model ID",
+    "extraHeaders": "Extra headers",
+    "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "reasoningEffort": "Reasoning effort",
     "clearAllSettings": "Reset All Settings",
     "howToGetApiKey": "How to get",

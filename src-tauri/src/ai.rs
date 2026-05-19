@@ -76,6 +76,8 @@ pub struct ListAiProviderModelsRequest {
     provider_kind: String,
     base_url: String,
     #[serde(default)]
+    extra_headers: String,
+    #[serde(default)]
     allow_insecure_tls: bool,
 }
 
@@ -86,6 +88,10 @@ impl ListAiProviderModelsRequest {
 
     pub(crate) fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    pub(crate) fn extra_headers(&self) -> &str {
+        &self.extra_headers
     }
 
     pub(crate) fn allow_insecure_tls(&self) -> bool {
@@ -1515,6 +1521,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -1610,6 +1617,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -1720,6 +1728,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -1809,6 +1818,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -1932,6 +1942,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -2097,6 +2108,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -2211,6 +2223,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -2340,6 +2353,7 @@ impl OpenAiCompatibleProvider {
                 .headers(openai_compatible_headers(
                     api_key.as_deref(),
                     self.auth_style,
+                    extra_headers_for_provider(self.provider_kind, &settings),
                 )?)
                 .json(&request_body)
                 .send()
@@ -2669,6 +2683,7 @@ pub async fn list_ai_provider_models(
     app: &tauri::AppHandle,
     provider_kind: &str,
     base_url: &str,
+    extra_headers: &str,
     api_key: Option<String>,
     allow_insecure_tls: bool,
 ) -> Result<Vec<AiProviderModelOption>, String> {
@@ -2688,7 +2703,10 @@ pub async fn list_ai_provider_models(
             let client = ai_http_client(allow_insecure_tls)?;
             let response = client
                 .get(endpoint)
-                .headers(model_list_headers(api_key.as_deref())?)
+                .headers(model_list_headers(
+                    api_key.as_deref(),
+                    extra_headers_for_provider_kind(provider_kind, extra_headers),
+                )?)
                 .send()
                 .await
                 .map_err(|error| format!("failed to reach AI provider model list: {error}"))?;
@@ -2739,7 +2757,10 @@ fn model_list_strategy_for_provider(
     }
 }
 
-fn model_list_headers(api_key: Option<&str>) -> Result<HeaderMap, String> {
+fn model_list_headers(
+    api_key: Option<&str>,
+    extra_headers: Option<&str>,
+) -> Result<HeaderMap, String> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     if let Some(api_key) = api_key.map(str::trim).filter(|value| !value.is_empty()) {
@@ -2748,6 +2769,7 @@ fn model_list_headers(api_key: Option<&str>) -> Result<HeaderMap, String> {
         })?;
         headers.insert(AUTHORIZATION, header_value);
     }
+    merge_extra_provider_headers(&mut headers, extra_headers)?;
     Ok(headers)
 }
 
@@ -5918,6 +5940,7 @@ fn model_option_from_id(id: &str) -> Option<AiProviderModelOption> {
 fn openai_compatible_headers(
     api_key: Option<&str>,
     auth_style: OpenAiAuthStyle,
+    extra_headers: Option<&str>,
 ) -> Result<HeaderMap, String> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -5940,7 +5963,141 @@ fn openai_compatible_headers(
             }
         }
     }
+    merge_extra_provider_headers(&mut headers, extra_headers)?;
     Ok(headers)
+}
+
+fn extra_headers_for_provider<'a>(
+    provider_kind: &str,
+    settings: &'a AiProviderSettings,
+) -> Option<&'a str> {
+    extra_headers_for_provider_kind(provider_kind, settings.extra_headers())
+}
+
+fn extra_headers_for_provider_kind<'a>(
+    provider_kind: &str,
+    extra_headers: &'a str,
+) -> Option<&'a str> {
+    if provider_kind == "openai-compatible" {
+        let trimmed = extra_headers.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed);
+        }
+    }
+    None
+}
+
+fn merge_extra_provider_headers(
+    headers: &mut HeaderMap,
+    extra_headers: Option<&str>,
+) -> Result<(), String> {
+    let Some(extra_headers) = extra_headers else {
+        return Ok(());
+    };
+    for (name, value) in parse_extra_provider_headers(extra_headers)? {
+        headers.insert(name, value);
+    }
+    Ok(())
+}
+
+fn parse_extra_provider_headers(
+    extra_headers: &str,
+) -> Result<Vec<(HeaderName, HeaderValue)>, String> {
+    let mut headers = Vec::new();
+    for raw_entry in split_header_entries(extra_headers) {
+        let trimmed = raw_entry.trim();
+        let entry = if find_key_value_separator(trimmed).is_some() {
+            trimmed
+        } else {
+            trim_wrapping_quotes(trimmed)
+        };
+        if entry.is_empty() {
+            continue;
+        }
+        let separator = find_key_value_separator(entry)
+            .or_else(|| find_key_value_separator(trim_wrapping_quotes(entry)))
+            .ok_or_else(|| {
+                "AI provider extra headers must use comma-separated key=value pairs".to_string()
+            })?;
+        let key = trim_wrapping_quotes(entry[..separator].trim());
+        let value = trim_wrapping_quotes(entry[separator + 1..].trim());
+        if key.is_empty() {
+            return Err("AI provider extra header names cannot be empty".to_string());
+        }
+        let header_name = HeaderName::from_bytes(key.as_bytes()).map_err(|_| {
+            format!("AI provider extra header name '{key}' is not a valid HTTP header name")
+        })?;
+        let header_value = HeaderValue::from_str(value).map_err(|_| {
+            format!("AI provider extra header value for '{key}' cannot be sent in an HTTP header")
+        })?;
+        headers.push((header_name, header_value));
+    }
+    Ok(headers)
+}
+
+fn split_header_entries(extra_headers: &str) -> Vec<&str> {
+    let mut entries = Vec::new();
+    let mut start = 0;
+    let mut quote: Option<char> = None;
+    for (index, ch) in extra_headers.char_indices() {
+        match ch {
+            '"' if quote == Some('"') => quote = None,
+            '"' if quote.is_none() => quote = Some('"'),
+            '“' if quote.is_none() => quote = Some('”'),
+            '”' if quote == Some('”') => quote = None,
+            '\'' if quote == Some('\'') => quote = None,
+            '\'' if quote.is_none() => quote = Some('\''),
+            ',' if quote.is_none() => {
+                entries.push(&extra_headers[start..index]);
+                start = index + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    entries.push(&extra_headers[start..]);
+    entries
+}
+
+fn find_key_value_separator(entry: &str) -> Option<usize> {
+    let mut quote: Option<char> = None;
+    for (index, ch) in entry.char_indices() {
+        match ch {
+            '"' if quote == Some('"') => quote = None,
+            '"' if quote.is_none() => quote = Some('"'),
+            '“' if quote.is_none() => quote = Some('”'),
+            '”' if quote == Some('”') => quote = None,
+            '\'' if quote == Some('\'') => quote = None,
+            '\'' if quote.is_none() => quote = Some('\''),
+            '=' if quote.is_none() => return Some(index),
+            _ => {}
+        }
+    }
+    None
+}
+
+fn trim_wrapping_quotes(value: &str) -> &str {
+    let trimmed = value.trim();
+    if trimmed.len() < 2 {
+        return trimmed;
+    }
+    let mut chars = trimmed.chars();
+    let Some(first) = chars.next() else {
+        return trimmed;
+    };
+    let Some(last) = trimmed.chars().last() else {
+        return trimmed;
+    };
+    let quoted = matches!(
+        (first, last),
+        ('"', '"') | ('“', '”') | ('“', '"') | ('"', '”') | ('\'', '\'')
+    );
+    if quoted {
+        let start = first.len_utf8();
+        let end = trimmed.len() - last.len_utf8();
+        trimmed[start..end].trim()
+    } else {
+        trimmed
+    }
 }
 
 fn truncate_error_body(value: &str) -> String {
@@ -7723,7 +7880,7 @@ mod tests {
 
     #[test]
     fn openai_compatible_headers_include_bearer_key_when_present() {
-        let headers = openai_compatible_headers(Some("sk-test"), OpenAiAuthStyle::Bearer)
+        let headers = openai_compatible_headers(Some("sk-test"), OpenAiAuthStyle::Bearer, None)
             .expect("headers build");
 
         assert_eq!(
@@ -7738,8 +7895,9 @@ mod tests {
 
     #[test]
     fn azure_headers_use_api_key_header() {
-        let headers = openai_compatible_headers(Some("az-test"), OpenAiAuthStyle::ApiKeyHeader)
-            .expect("headers build");
+        let headers =
+            openai_compatible_headers(Some("az-test"), OpenAiAuthStyle::ApiKeyHeader, None)
+                .expect("headers build");
 
         assert_eq!(
             headers
@@ -7748,6 +7906,66 @@ mod tests {
                 .to_str()
                 .expect("header is valid"),
             "az-test"
+        );
+    }
+
+    #[test]
+    fn parse_extra_provider_headers_accepts_simplified_key_value_list() {
+        let headers: HeaderMap = parse_extra_provider_headers(r#"sid=1, "env"="3""#)
+            .expect("extra headers parse")
+            .into_iter()
+            .collect();
+
+        assert_eq!(
+            headers
+                .get("sid")
+                .expect("sid header exists")
+                .to_str()
+                .expect("sid header is valid"),
+            "1"
+        );
+        assert_eq!(
+            headers
+                .get("env")
+                .expect("env header exists")
+                .to_str()
+                .expect("env header is valid"),
+            "3"
+        );
+    }
+
+    #[test]
+    fn openai_compatible_headers_merge_extra_headers() {
+        let headers = openai_compatible_headers(
+            Some("sk-test"),
+            OpenAiAuthStyle::Bearer,
+            Some(r#""sid=1","env"="3""#),
+        )
+        .expect("headers build");
+
+        assert_eq!(
+            headers
+                .get(AUTHORIZATION)
+                .expect("authorization header exists")
+                .to_str()
+                .expect("authorization header is valid"),
+            "Bearer sk-test"
+        );
+        assert_eq!(
+            headers
+                .get("sid")
+                .expect("sid header exists")
+                .to_str()
+                .expect("sid header is valid"),
+            "1"
+        );
+        assert_eq!(
+            headers
+                .get("env")
+                .expect("env header exists")
+                .to_str()
+                .expect("env header is valid"),
+            "3"
         );
     }
 

@@ -98,6 +98,10 @@ keychain under provider-specific AI API key owners. When adding settings:
 
 The insecure TLS setting is intentionally a provider setting, not a global HTTP
 setting. It is off by default and is applied only to AI provider HTTP clients.
+The generic `openai-compatible` provider also has a non-secret `extraHeaders`
+setting for simple comma-separated `key=value` request headers, such as
+`sid=1, "env"="3"`. Those headers are sent with OpenAI-compatible chat,
+streaming, and model-list requests for that provider only.
 
 Assistant tool settings are also persisted as non-secret AI provider settings.
 `toolPermissionMode` controls whether mutating assistant tools are blocked in

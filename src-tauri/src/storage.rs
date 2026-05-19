@@ -546,6 +546,8 @@ pub struct AiProviderSettings {
     #[serde(default)]
     custom_instructions: String,
     #[serde(default)]
+    extra_headers: String,
+    #[serde(default)]
     allow_insecure_tls: bool,
     #[serde(default)]
     show_all_models: bool,
@@ -606,6 +608,10 @@ impl AiProviderSettings {
 
     pub(crate) fn custom_instructions(&self) -> &str {
         &self.custom_instructions
+    }
+
+    pub(crate) fn extra_headers(&self) -> &str {
+        &self.extra_headers
     }
 
     pub(crate) fn tools(&self) -> &AiAssistantToolSettings {
@@ -4218,6 +4224,7 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         reasoning_effort: default_ai_reasoning_effort(),
         output_language: String::new(),
         custom_instructions: String::new(),
+        extra_headers: String::new(),
         allow_insecure_tls: false,
         show_all_models: false,
         cli_execution_policy: default_ai_cli_execution_policy(),
@@ -4604,6 +4611,7 @@ fn validate_ai_provider_settings(
             "AI Assistant custom instructions must be 1000 characters or fewer".to_string(),
         );
     }
+    settings.extra_headers = settings.extra_headers.trim().to_string();
     settings.claude_cli_path = trim_optional(settings.claude_cli_path);
     settings.codex_cli_path = trim_optional(settings.codex_cli_path);
 
@@ -6491,6 +6499,7 @@ mod tests {
         assert_eq!(defaults.model, "gpt-5.4-mini");
         assert_eq!(defaults.reasoning_effort, "medium");
         assert_eq!(defaults.custom_instructions, "");
+        assert_eq!(defaults.extra_headers, "");
         assert_eq!(defaults.cli_execution_policy, "suggestOnly");
         assert_eq!(defaults.tool_permission_mode, "prompt");
         assert!(!defaults.allow_insecure_tls);
@@ -6517,6 +6526,7 @@ mod tests {
                 reasoning_effort: " XHIGH ".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                extra_headers: "  sid=1, \"env\"=\"3\"  ".to_string(),
                 allow_insecure_tls: true,
                 show_all_models: true,
                 cli_execution_policy: "suggest-only".to_string(),
@@ -6543,6 +6553,7 @@ mod tests {
         assert_eq!(updated.base_url, "https://llm-gateway.internal/v1");
         assert_eq!(updated.model, "openai/gpt-5.5");
         assert_eq!(updated.reasoning_effort, "max");
+        assert_eq!(updated.extra_headers, "sid=1, \"env\"=\"3\"");
         assert_eq!(updated.cli_execution_policy, "suggestOnly");
         assert_eq!(updated.tool_permission_mode, "allowAll");
         assert!(updated.allow_insecure_tls);
@@ -6559,6 +6570,7 @@ mod tests {
         assert_eq!(reloaded.base_url, "https://llm-gateway.internal/v1");
         assert_eq!(reloaded.model, "openai/gpt-5.5");
         assert_eq!(reloaded.reasoning_effort, "max");
+        assert_eq!(reloaded.extra_headers, "sid=1, \"env\"=\"3\"");
         assert_eq!(reloaded.tool_permission_mode, "allowAll");
         assert!(reloaded.allow_insecure_tls);
         assert!(reloaded.show_all_models);
@@ -6600,6 +6612,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
@@ -6637,6 +6650,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
@@ -6678,6 +6692,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
@@ -6716,6 +6731,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: "  Prefer concise PowerShell examples.  ".to_string(),
+                extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
@@ -6768,6 +6784,7 @@ mod tests {
                 reasoning_effort: "medium".to_string(),
                 output_language: String::new(),
                 custom_instructions: String::new(),
+                extra_headers: String::new(),
                 allow_insecure_tls: false,
                 show_all_models: false,
                 cli_execution_policy: "executeAutomatically".to_string(),

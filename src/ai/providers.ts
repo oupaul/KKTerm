@@ -43,6 +43,7 @@ export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
     reasoningEffort: definition.defaultReasoningEffort,
     outputLanguage: "",
     customInstructions: "",
+    extraHeaders: "",
     allowInsecureTls: false,
     showAllModels: false,
     cliExecutionPolicy: "suggestOnly",
@@ -94,6 +95,8 @@ export function normalizeAiProviderDraft(draft: AiProviderSettings): AiProviderS
     model,
     reasoningEffort,
     customInstructions,
+    extraHeaders:
+      definition.kind === "openai-compatible" ? (draft.extraHeaders ?? "").trim() : "",
     allowInsecureTls: Boolean(draft.allowInsecureTls),
     showAllModels: Boolean(draft.showAllModels),
     cliExecutionPolicy: "suggestOnly",
