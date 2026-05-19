@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { AiCodingUsageStatusBar } from "../ai-coding-usage/AiCodingUsageStatusBar";
 import { useWorkspaceStore } from "../store";
 
 const NOTIFICATION_FADE_MS = 220;
@@ -59,6 +60,7 @@ export function StatusBar({
       <div className="status-bar-module">
         <WorkspaceHostMetrics t={t} />
       </div>
+      <AiCodingUsageStatusBar />
       <div className="status-bar-notice-area">
         {renderedNotice ? (
           <span

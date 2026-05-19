@@ -1,6 +1,6 @@
-import { ExternalLink, LogOut, Plus, RefreshCw, X } from "lucide-react";
+import { ExternalLink, LogOut, PanelBottom, PanelBottomDashed, Plus, RefreshCw, X } from "lucide-react";
 import { ClaudeCodeColorIcon, CodexColorIcon } from "./providerIcons";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -10,38 +10,23 @@ import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import {
   addAiCodingUsageProvider,
-  AI_CODING_USAGE_PROVIDER_ORDER,
   availableAiCodingUsageProviders,
   parseAiCodingUsageSettingsJson,
   removeAiCodingUsageProvider,
   serializeAiCodingUsageSettings,
+  setAiCodingUsageShowInStatusBar,
   type AiCodingUsageWidgetSettings,
 } from "./settings";
+import { useAiCodingUsageStore, useAiCodingUsageSubscription } from "./store";
 import type {
   AiCodingUsageProvider,
   AiCodingUsageProviderState,
   AiCodingUsageQuotaWindow,
-  AiCodingUsageState,
 } from "./types";
 
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const INSTALL_HELP_URLS: Record<AiCodingUsageProvider, string> = {
   codex: "https://developers.openai.com/codex/cli",
   claudeCode: "https://code.claude.com/docs/en/setup",
-};
-
-const EMPTY_STATE: AiCodingUsageState = {
-  providers: AI_CODING_USAGE_PROVIDER_ORDER.map((provider) => ({
-    provider,
-    authState: "disconnected",
-    accountLabel: null,
-    accountEmail: null,
-    subscriptionPlan: null,
-    fiveHour: {},
-    weekly: {},
-    lastRefreshAt: null,
-    lastError: null,
-  })),
 };
 
 type AddMenuState = {
@@ -53,12 +38,17 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
   const { t } = useTranslation();
   const updateInstance = useDashboardStore((state) => state.updateInstance);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const [state, setState] = useState<AiCodingUsageState>(EMPTY_STATE);
+  useAiCodingUsageSubscription();
+  const state = useAiCodingUsageStore((s) => s.state);
+  const loadError = useAiCodingUsageStore((s) => s.error);
+  const applyProvider = useAiCodingUsageStore((s) => s.applyProvider);
+  const setStoreError = useAiCodingUsageStore((s) => s.setError);
+  const reloadStore = useAiCodingUsageStore((s) => s.load);
+  const refreshStore = useAiCodingUsageStore((s) => s.refreshAll);
   const [settings, setSettings] = useState<AiCodingUsageWidgetSettings>(() =>
     parseAiCodingUsageSettingsJson(instance.settingsValuesJson),
   );
   const [busyProvider, setBusyProvider] = useState<AiCodingUsageProvider | "all" | null>(null);
-  const [loadError, setLoadError] = useState("");
   const [addMenuState, setAddMenuState] = useState<AddMenuState | null>(null);
   const addMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -113,52 +103,17 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
   );
   const availableProviders = availableAiCodingUsageProviders(settings);
 
-  const load = useCallback(async () => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-    try {
-      setState(await invokeCommand("ai_coding_usage_load"));
-      setLoadError("");
-    } catch (error) {
-      setLoadError(errorMessage(error));
-    }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    if (!isTauriRuntime() || connectedProviders.length === 0 || busyProvider) {
+  async function refresh() {
+    if (busyProvider) {
       return;
     }
     setBusyProvider("all");
     try {
-      let nextState = state;
-      for (const provider of connectedProviders) {
-        nextState = await invokeCommand("ai_coding_usage_refresh", {
-          provider: provider.provider,
-        });
-      }
-      setState(nextState);
-      setLoadError("");
-    } catch (error) {
-      setLoadError(errorMessage(error));
+      await refreshStore();
     } finally {
       setBusyProvider(null);
     }
-  }, [busyProvider, connectedProviders, state]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (connectedProviders.length === 0) {
-      return;
-    }
-    const id = window.setInterval(() => {
-      void refresh();
-    }, REFRESH_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [connectedProviders.length, refresh]);
+  }
 
   function openAddMenuFromElement(element: HTMLElement) {
     const bounds = element.getBoundingClientRect();
@@ -194,11 +149,11 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
     setBusyProvider(provider);
     try {
       const nextProvider = await invokeCommand("ai_coding_usage_connect", { provider });
-      setState((current) => replaceProvider(current, nextProvider));
-      setLoadError("");
+      applyProvider(nextProvider);
+      setStoreError("");
     } catch (error) {
-      setLoadError(errorMessage(error));
-      await load();
+      setStoreError(errorMessage(error));
+      await reloadStore();
     } finally {
       setBusyProvider(null);
     }
@@ -211,13 +166,17 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
     setBusyProvider(provider);
     try {
       const nextProvider = await invokeCommand("ai_coding_usage_disconnect", { provider });
-      setState((current) => replaceProvider(current, nextProvider));
-      setLoadError("");
+      applyProvider(nextProvider);
+      setStoreError("");
     } catch (error) {
-      setLoadError(errorMessage(error));
+      setStoreError(errorMessage(error));
     } finally {
       setBusyProvider(null);
     }
+  }
+
+  async function toggleStatusBar() {
+    await saveSettings(setAiCodingUsageShowInStatusBar(settings, !settings.showInStatusBar));
   }
 
   return (
@@ -226,10 +185,6 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
       data-instance-id={instance.id}
     >
       <div className="ai-coding-usage-toolbar">
-        <div>
-          <div className="ai-coding-usage-title">{t("dashboard.aiCodingUsageTitle")}</div>
-          <div className="ai-coding-usage-subtitle">{t("dashboard.aiCodingUsageSubtitle")}</div>
-        </div>
         <div className="ai-coding-usage-actions">
           <button
             type="button"
@@ -251,15 +206,34 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
           >
             <RefreshCw size={14} />
           </button>
+          <button
+            type="button"
+            className="dashboard-widget-icon-button ai-coding-usage-toggle-statusbar"
+            onClick={() => void toggleStatusBar()}
+            disabled={busyProvider !== null}
+            aria-pressed={settings.showInStatusBar}
+            aria-label={
+              settings.showInStatusBar
+                ? t("dashboard.aiCodingUsageHideFromStatusBar")
+                : t("dashboard.aiCodingUsageShowInStatusBar")
+            }
+            title={
+              settings.showInStatusBar
+                ? t("dashboard.aiCodingUsageHideFromStatusBar")
+                : t("dashboard.aiCodingUsageShowInStatusBar")
+            }
+          >
+            {settings.showInStatusBar ? <PanelBottom size={14} /> : <PanelBottomDashed size={14} />}
+          </button>
         </div>
       </div>
 
       {selectedProviders.length > 0 ? (
         <div className="ai-coding-usage-providers">
           {selectedProviders.map((provider) => {
-            const providerState =
-              state.providers.find((candidate) => candidate.provider === provider) ??
-              EMPTY_STATE.providers.find((candidate) => candidate.provider === provider)!;
+            const providerState = state.providers.find(
+              (candidate) => candidate.provider === provider,
+            )!;
             return (
               <ProviderSlot
                 busy={busyProvider === provider || busyProvider === "all"}
@@ -324,18 +298,17 @@ function ProviderSlot({
     <section className="ai-coding-provider" data-state={provider.authState}>
       <div className="ai-coding-provider-header">
         <div className="ai-coding-provider-identity">
-          <span className="ai-coding-provider-icon" aria-hidden="true">
-            <Icon size={15} />
+          <span className="ai-coding-provider-icon" aria-label={label} title={label} role="img">
+            <Icon size={20} />
           </span>
           <span>
-            <span className="ai-coding-provider-name-row">
-              <span className="ai-coding-provider-name">{label}</span>
-              {provider.subscriptionPlan ? (
+            {provider.subscriptionPlan ? (
+              <span className="ai-coding-provider-name-row">
                 <span className="ai-coding-provider-plan" title={provider.subscriptionPlan}>
                   {formatSubscriptionPlan(provider.subscriptionPlan)}
                 </span>
-              ) : null}
-            </span>
+              </span>
+            ) : null}
             <span className="ai-coding-provider-account">
               {provider.accountLabel || provider.accountEmail || t("dashboard.aiCodingUsageNotConnected")}
             </span>
@@ -524,20 +497,6 @@ function MeterFill({ percent }: { percent: number }) {
     }
   }, [percent]);
   return <span ref={ref} />;
-}
-
-function replaceProvider(
-  current: AiCodingUsageState,
-  provider: AiCodingUsageProviderState,
-): AiCodingUsageState {
-  return {
-    providers: AI_CODING_USAGE_PROVIDER_ORDER.map((id) =>
-      id === provider.provider
-        ? provider
-        : current.providers.find((candidate) => candidate.provider === id) ??
-          EMPTY_STATE.providers.find((candidate) => candidate.provider === id)!,
-    ),
-  };
 }
 
 function clamp(value: number, min: number, max: number) {

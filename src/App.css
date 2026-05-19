@@ -5997,6 +5997,87 @@ progress {
   min-width: 7ch;
 }
 
+.status-bar-ai-coding {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-left: 14px;
+  padding-left: 15px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+.status-bar-ai-coding::before {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 1px;
+  content: "";
+  background: var(--border);
+}
+
+.status-bar-ai-coding-provider {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  color: var(--text-muted);
+}
+
+.status-bar-ai-coding-provider + .status-bar-ai-coding-provider {
+  margin-left: 12px;
+  padding-left: 13px;
+}
+
+.status-bar-ai-coding-provider + .status-bar-ai-coding-provider::before {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 1px;
+  content: "";
+  background: var(--border);
+}
+
+.status-bar-ai-coding-provider svg {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.status-bar-ai-coding-bar {
+  display: inline-block;
+  width: 52px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.status-bar-ai-coding-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--text-muted);
+  transition: width 180ms ease;
+}
+
+.status-bar-ai-coding-provider[data-state="warning"] .status-bar-ai-coding-bar > span {
+  background: var(--amber);
+}
+
+.status-bar-ai-coding-provider[data-state="danger"] .status-bar-ai-coding-bar > span {
+  background: var(--red);
+}
+
+.status-bar-ai-coding-reset {
+  font-size: 11px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
 .status-notification {
   max-width: 100%;
   color: var(--text);
@@ -10375,8 +10456,52 @@ fieldset.connection-specific-options > legend {
 }
 
 .ai-coding-usage-toolbar {
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
+  min-height: 22px;
+}
+
+.ai-coding-usage-actions {
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.ai-coding-usage:hover .ai-coding-usage-actions,
+.ai-coding-usage:focus-within .ai-coding-usage-actions,
+.ai-coding-usage.is-adding .ai-coding-usage-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ai-coding-provider-actions {
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.ai-coding-usage:hover .ai-coding-provider-actions,
+.ai-coding-usage:focus-within .ai-coding-provider-actions,
+.ai-coding-provider[data-state="disconnected"] .ai-coding-provider-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ai-coding-usage .dashboard-widget-icon-button {
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+.ai-coding-usage .dashboard-widget-icon-button:hover,
+.ai-coding-usage .dashboard-widget-icon-button:focus-visible {
+  border: 0;
+  background: var(--surface-muted);
+  box-shadow: none;
+  color: var(--text);
 }
 
 .ai-coding-usage-actions,
@@ -10386,13 +10511,6 @@ fieldset.connection-specific-options > legend {
   gap: 6px;
 }
 
-.ai-coding-usage-title {
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.ai-coding-usage-subtitle,
 .ai-coding-provider-account,
 .ai-coding-provider-meta,
 .ai-coding-provider-empty,
@@ -10404,7 +10522,7 @@ fieldset.connection-specific-options > legend {
 
 .ai-coding-usage-providers {
   display: grid;
-  gap: 8px;
+  gap: 18px;
   min-height: 0;
 }
 
@@ -10439,7 +10557,7 @@ fieldset.connection-specific-options > legend {
 .ai-coding-provider {
   display: grid;
   gap: 7px;
-  padding: 8px 0 0;
+  padding: 16px 0 0;
   border-top: 1px solid var(--border);
 }
 
@@ -10466,14 +10584,10 @@ fieldset.connection-specific-options > legend {
 
 .ai-coding-provider-icon {
   display: inline-grid;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
   place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--accent);
-  background: var(--accent-soft);
 }
 
 .ai-coding-provider-name {

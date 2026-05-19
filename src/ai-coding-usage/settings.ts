@@ -7,28 +7,34 @@ export const AI_CODING_USAGE_PROVIDER_ORDER: AiCodingUsageProvider[] = [
 
 export interface AiCodingUsageWidgetSettings {
   providers: AiCodingUsageProvider[];
+  showInStatusBar: boolean;
 }
 
-const EMPTY_SETTINGS: AiCodingUsageWidgetSettings = {
+const DEFAULT_SETTINGS: AiCodingUsageWidgetSettings = {
   providers: [],
+  showInStatusBar: true,
 };
 
 export function parseAiCodingUsageSettingsJson(
   value: string | null | undefined,
 ): AiCodingUsageWidgetSettings {
   if (!value?.trim()) {
-    return { ...EMPTY_SETTINGS };
+    return { ...DEFAULT_SETTINGS };
   }
   try {
-    const parsed = JSON.parse(value) as { providers?: unknown };
+    const parsed = JSON.parse(value) as { providers?: unknown; showInStatusBar?: unknown };
     if (!Array.isArray(parsed.providers)) {
-      return { ...EMPTY_SETTINGS };
+      return { ...DEFAULT_SETTINGS };
     }
     return {
       providers: normalizeProviders(parsed.providers),
+      showInStatusBar:
+        typeof parsed.showInStatusBar === "boolean"
+          ? parsed.showInStatusBar
+          : DEFAULT_SETTINGS.showInStatusBar,
     };
   } catch {
-    return { ...EMPTY_SETTINGS };
+    return { ...DEFAULT_SETTINGS };
   }
 }
 
@@ -37,6 +43,7 @@ export function serializeAiCodingUsageSettings(
 ) {
   return JSON.stringify({
     providers: normalizeProviders(settings.providers),
+    showInStatusBar: settings.showInStatusBar,
   });
 }
 
@@ -45,6 +52,7 @@ export function addAiCodingUsageProvider(
   provider: AiCodingUsageProvider,
 ): AiCodingUsageWidgetSettings {
   return {
+    ...settings,
     providers: normalizeProviders([...settings.providers, provider]),
   };
 }
@@ -54,9 +62,20 @@ export function removeAiCodingUsageProvider(
   provider: AiCodingUsageProvider,
 ): AiCodingUsageWidgetSettings {
   return {
+    ...settings,
     providers: normalizeProviders(
       settings.providers.filter((candidate) => candidate !== provider),
     ),
+  };
+}
+
+export function setAiCodingUsageShowInStatusBar(
+  settings: AiCodingUsageWidgetSettings,
+  showInStatusBar: boolean,
+): AiCodingUsageWidgetSettings {
+  return {
+    ...settings,
+    showInStatusBar,
   };
 }
 
