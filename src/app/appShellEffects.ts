@@ -55,6 +55,9 @@ export function useHostUsagePolling() {
 export function useGlobalContextMenuSuppression() {
   useEffect(() => {
     const preventDefaultContextMenu = (event: globalThis.MouseEvent) => {
+      if (isEditableContextMenuTarget(event.target)) {
+        return;
+      }
       event.preventDefault();
     };
 
@@ -63,6 +66,35 @@ export function useGlobalContextMenuSuppression() {
       window.removeEventListener("contextmenu", preventDefaultContextMenu, { capture: true });
     };
   }, []);
+}
+
+const TEXT_INPUT_TYPES = new Set([
+  "",
+  "email",
+  "number",
+  "password",
+  "search",
+  "tel",
+  "text",
+  "url",
+]);
+
+function isEditableContextMenuTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  const editable = target.closest("input, textarea, [contenteditable]");
+  if (editable instanceof HTMLTextAreaElement) {
+    return true;
+  }
+  if (editable instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.has(editable.type);
+  }
+  if (editable instanceof HTMLElement) {
+    return editable.isContentEditable;
+  }
+  return false;
 }
 
 export function useAppShellAppearance({
