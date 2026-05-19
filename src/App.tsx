@@ -4,6 +4,7 @@ import { AssistantPanel } from "./ai/AssistantPanel";
 import type { AssistantPageContext } from "./ai/AssistantPanel";
 import { ActivityRail } from "./app/ActivityRail";
 import type { ActivePage } from "./app/ActivityRail";
+import { AppUpdatePrompt } from "./app/AppUpdatePrompt";
 import {
   useAppShellAppearance,
   useFrontendLaunchTimestamp,
@@ -70,7 +71,7 @@ function App() {
     toggleConnectionPanel,
   } = useWorkspaceChromeLayout(resetAllLayouts);
 
-  useBootstrapSettings();
+  const { generalSettingsReady } = useBootstrapSettings();
   useDashboardBackendInvalidation();
   useFrontendLaunchTimestamp();
   useHostUsagePolling();
@@ -150,6 +151,7 @@ function App() {
         />
       ) : null}
       <StatusBar key="status-bar" activePage={activePage} onOpenAssistant={openAssistantPanel} />
+      <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
     </div>
   );
 }
