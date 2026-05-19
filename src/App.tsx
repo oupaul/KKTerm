@@ -22,6 +22,7 @@ import {
 } from "./app/workspaceChromeLayout";
 import { ConnectionSidebar } from "./connections/ConnectionSidebar";
 import { DashboardPage } from "./dashboard/DashboardPage";
+import { useDashboardStore } from "./dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./dashboard/state/invalidation";
 import { ariaHidden } from "./lib/aria";
 import { useBootstrapSettings } from "./lib/settings";
@@ -55,6 +56,11 @@ function App() {
 
   function openAssistantPanel() {
     expandAiPanel();
+  }
+
+  function openDashboardView(viewId: string) {
+    useDashboardStore.getState().setActiveView(viewId);
+    navigateToPage("dashboard");
   }
 
   const [dashboardAssistantContext, setDashboardAssistantContext] =
@@ -180,7 +186,11 @@ function App() {
         onDismiss={() => setTutorialHighlightRequest(undefined)}
         request={tutorialHighlightRequest}
       />
-      <StatusBar key="status-bar" onOpenAssistant={openAssistantPanel} />
+      <StatusBar
+        key="status-bar"
+        onOpenAssistant={openAssistantPanel}
+        onOpenDashboardView={openDashboardView}
+      />
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
     </div>
   );

@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "Lecture des compteurs de performance…",
     "toolPerformanceCountersDone": "Compteurs de performance lus",
     "toolEmail": "Envoi d’un e-mail…",
-    "toolEmailDone": "E-mail envoyé"
+    "toolEmailDone": "E-mail envoyé",
+    "settingsContextLabel": "Page des paramètres actuelle",
+    "toolApprovalDenied": "Refusé.",
+    "toolApprovalDeny": "Refuser",
+    "toolApprovalSelectAction": "Sélectionner une action",
+    "toolTutorial": "Affichage de l’aide du tutoriel...",
+    "toolTutorialDone": "Aide du tutoriel affichée",
+    "tutorialInvalidRequest": "Les demandes de tutoriel nécessitent une cible, un titre et un texte d’aide.",
+    "tutorialTargetNotFound": "Cette cible du tutoriel n’est pas visible pour le moment."
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "Supprimer « {{name}} » et tous les widgets de cette vue du tableau de bord ? Cette action est irréversible.",
     "deleteWidgetBody": "Supprimer « {{name}} » de cette vue du tableau de bord ? Cette action est irréversible.",
-    "canvasOpacity": "Opacité du canevas"
+    "canvasOpacity": "Opacité du canevas",
+    "aiCodingUsageAddTool": "Ajouter un outil de codage IA",
+    "aiCodingUsageConnectProvider": "Connecter {{provider}}",
+    "aiCodingUsageConnecting": "Connexion…",
+    "aiCodingUsageDisconnectProvider": "Déconnecter {{provider}}",
+    "aiCodingUsageEmptyHint": "Cliquez sur Ajouter pour ajouter Codex ou Claude Code à ce widget.",
+    "aiCodingUsageEmptyTitle": "Aucun outil de codage IA ajouté",
+    "aiCodingUsageFiveHour": "5 h",
+    "aiCodingUsageHideFromStatusBar": "Masquer de la barre d’état",
+    "aiCodingUsageInstallHelp": "Installer {{provider}} sur Windows",
+    "aiCodingUsageLastRefresh": "Mis à jour {{time}}",
+    "aiCodingUsageNeverRefreshed": "Pas encore actualisé",
+    "aiCodingUsageNotConnected": "Non connecté",
+    "aiCodingUsagePercent": "{{percent}} %",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "Connectez ce fournisseur pour commencer à surveiller l’utilisation.",
+    "aiCodingUsageRefreshError": "Impossible d’actualiser l’utilisation : {{message}}",
+    "aiCodingUsageRefreshNow": "Actualiser l’utilisation maintenant",
+    "aiCodingUsageRemoveProvider": "Retirer {{provider}} de ce widget",
+    "aiCodingUsageResetUnknown": "Heure de réinitialisation inconnue",
+    "aiCodingUsageResetsAt": "Réinitialisation {{time}}",
+    "aiCodingUsageShowInStatusBar": "Afficher dans la barre d’état",
+    "aiCodingUsageStatusBarResetsIn": "réinitialisation dans {{time}}",
+    "aiCodingUsageSubtitle": "Fenêtres de quota Codex et Claude Code",
+    "aiCodingUsageSummary": "Surveillez les fenêtres d’utilisation de Codex et Claude Code depuis le Dashboard.",
+    "aiCodingUsageTitle": "Utilisation du codage IA",
+    "aiCodingUsageUnknownUsage": "Inconnu",
+    "aiCodingUsageWeekly": "Hebdomadaire"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "Compteurs de performance",
         "description": "Lire les compteurs locaux à faible surcharge du processeur, de la mémoire, du réseau, des processus, de la disponibilité et de l'espace disque."
+      },
+      "tutorial": {
+        "description": "Mettre en évidence les contrôles visibles de l’application, assombrir le reste de la fenêtre et afficher une aide en bulle en une étape.",
+        "label": "Tutoriel"
       }
     },
     "aiToolsDescription": "Choisissez quels outils intégrés l'assistant IA peut utiliser pour répondre. Gardez les outils risqués désactivés sauf si nécessaire.",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "Niveau de raisonnement",
     "apiMode": "Mode API",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "Réponses",
+    "apiModeResponses": "Responses",
     "extraHeaders": "En-têtes supplémentaires",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "Redimensionnement à distance",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "Guide optionnel de l'assistant, jusqu'à {{count}} caractères. Les contraintes de sécurité, d'approbation et de local-first de KKTerm s'appliquent toujours.",
     "aiCustomInstructionsTooLong": "Les instructions personnalisées de l'assistant IA doivent comporter {{count}} caractères ou moins.",
     "showAllModels": "Afficher tous les modèles",
-    "showAllModelsHint": "Afficher tous les modèles renvoyés par le fournisseur lors de l’actualisation, pas seulement les recommandations sélectionnées."
+    "showAllModelsHint": "Afficher tous les modèles renvoyés par le fournisseur lors de l’actualisation, pas seulement les recommandations sélectionnées.",
+    "lastCheckedAt": "Dernière vérification {{time}}",
+    "lastCheckedNever": "Jamais vérifié"
   },
   "sftp": {
     "accessed": "Accédé",

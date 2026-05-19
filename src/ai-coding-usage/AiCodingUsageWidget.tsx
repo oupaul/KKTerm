@@ -299,7 +299,7 @@ function ProviderSlot({
       <div className="ai-coding-provider-header">
         <div className="ai-coding-provider-identity">
           <span className="ai-coding-provider-icon" aria-label={label} title={label} role="img">
-            <Icon size={20} />
+            <Icon size={39} />
           </span>
           <span>
             {provider.subscriptionPlan ? (

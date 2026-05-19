@@ -8,9 +8,22 @@ import type { AiCodingUsageProvider, AiCodingUsageProviderState } from "./types"
 
 const TICK_MS = 60_000;
 
-export function AiCodingUsageStatusBar() {
+export function AiCodingUsageStatusBar({
+  onOpenDashboardView,
+}: {
+  onOpenDashboardView: (viewId: string) => void;
+}) {
   const instances = useDashboardStore((s) => s.instances);
+  const dashboardReady = useDashboardStore((s) => s.ready);
+  const loadDashboard = useDashboardStore((s) => s.load);
   const state = useAiCodingUsageStore((s) => s.state);
+
+  useEffect(() => {
+    if (!dashboardReady) {
+      void loadDashboard();
+    }
+  }, [dashboardReady, loadDashboard]);
+
   const usageInstance = instances.find(
     (instance) => instance.kind === "builtIn" && instance.sourceId === "aiCodingUsage",
   );
@@ -24,18 +37,30 @@ export function AiCodingUsageStatusBar() {
     return null;
   }
 
-  return <AiCodingUsageStatusBarBody providers={settings!.providers} state={state.providers} />;
+  return (
+    <AiCodingUsageStatusBarBody
+      onOpenDashboardView={onOpenDashboardView}
+      providerIds={settings!.providers}
+      state={state.providers}
+      viewId={usageInstance!.viewId}
+    />
+  );
 }
 
 function AiCodingUsageStatusBarBody({
-  providers,
+  onOpenDashboardView,
+  providerIds,
   state,
+  viewId,
 }: {
-  providers: AiCodingUsageProvider[];
+  onOpenDashboardView: (viewId: string) => void;
+  providerIds: AiCodingUsageProvider[];
   state: AiCodingUsageProviderState[];
+  viewId: string;
 }) {
+  const { t } = useTranslation();
   useAiCodingUsageSubscription();
-  const visible = providers
+  const visibleProviders = providerIds
     .map((id) => state.find((candidate) => candidate.provider === id))
     .filter(
       (candidate): candidate is AiCodingUsageProviderState =>
@@ -44,16 +69,22 @@ function AiCodingUsageStatusBarBody({
         typeof candidate!.fiveHour.usedPercent === "number",
     );
 
-  if (visible.length === 0) {
+  if (visibleProviders.length === 0) {
     return null;
   }
 
   return (
-    <div className="status-bar-ai-coding" role="group">
-      {visible.map((provider) => (
+    <button
+      type="button"
+      className="status-bar-ai-coding"
+      onClick={() => onOpenDashboardView(viewId)}
+      aria-label={t("dashboard.aiCodingUsageTitle")}
+      title={t("dashboard.aiCodingUsageTitle")}
+    >
+      {visibleProviders.map((provider) => (
         <AiCodingUsageStatusBarItem key={provider.provider} provider={provider} />
       ))}
-    </div>
+    </button>
   );
 }
 
@@ -64,7 +95,8 @@ function AiCodingUsageStatusBarItem({ provider }: { provider: AiCodingUsageProvi
   const percent = clamp(provider.fiveHour.usedPercent ?? 0, 0, 100);
   const meterState = percent >= 95 ? "danger" : percent >= 80 ? "warning" : "normal";
   const resetIso = provider.fiveHour.resetsAt ?? null;
-  const remaining = useRelativeCountdown(resetIso);
+  const showResetRemaining = meterState !== "normal";
+  const remaining = useRelativeCountdown(showResetRemaining ? resetIso : null);
   const tooltipParts = [
     `${label} · ${t("dashboard.aiCodingUsageFiveHour")} ${t("dashboard.aiCodingUsagePercent", {
       percent: Math.round(percent),
@@ -80,14 +112,21 @@ function AiCodingUsageStatusBarItem({ provider }: { provider: AiCodingUsageProvi
       data-state={meterState}
       title={tooltipParts.join(" · ")}
       aria-label={`${label} ${Math.round(percent)}%${
-        remaining ? `, ${t("dashboard.aiCodingUsageStatusBarResetsIn", { time: remaining })}` : ""
+        showResetRemaining && remaining
+          ? `, ${t("dashboard.aiCodingUsageStatusBarResetsIn", { time: remaining })}`
+          : ""
       }`}
     >
-      <Icon size={13} />
+      <Icon size={11} />
       <span className="status-bar-ai-coding-bar" aria-hidden="true">
         <span style={{ width: `${percent}%` }} />
       </span>
-      {remaining ? <span className="status-bar-ai-coding-reset">{remaining}</span> : null}
+      <span className="status-bar-ai-coding-percent">
+        {t("dashboard.aiCodingUsagePercent", { percent: Math.round(percent) })}
+      </span>
+      {showResetRemaining && remaining ? (
+        <span className="status-bar-ai-coding-reset">{remaining}</span>
+      ) : null}
     </span>
   );
 }

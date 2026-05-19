@@ -15,8 +15,10 @@ const NOTIFICATION_FADE_MS = 220;
 
 export function StatusBar({
   onOpenAssistant,
+  onOpenDashboardView,
 }: {
   onOpenAssistant: () => void;
+  onOpenDashboardView: (viewId: string) => void;
 }) {
   const { t } = useTranslation();
   const notice = useWorkspaceStore((state) => state.statusBarNotice);
@@ -59,8 +61,8 @@ export function StatusBar({
     <footer className="status-bar">
       <div className="status-bar-module">
         <WorkspaceHostMetrics t={t} />
+        <AiCodingUsageStatusBar onOpenDashboardView={onOpenDashboardView} />
       </div>
-      <AiCodingUsageStatusBar />
       <div className="status-bar-notice-area">
         {renderedNotice ? (
           <span

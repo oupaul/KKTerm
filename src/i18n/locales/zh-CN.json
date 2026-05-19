@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "正在读取性能计数器…",
     "toolPerformanceCountersDone": "已读取性能计数器",
     "toolEmail": "正在发送邮件…",
-    "toolEmailDone": "邮件已发送"
+    "toolEmailDone": "邮件已发送",
+    "settingsContextLabel": "当前设置页面",
+    "toolApprovalDenied": "已拒绝。",
+    "toolApprovalDeny": "拒绝",
+    "toolApprovalSelectAction": "选择操作",
+    "toolTutorial": "正在显示教程帮助...",
+    "toolTutorialDone": "已显示教程帮助",
+    "tutorialInvalidRequest": "教程请求需要目标、标题和帮助文本。",
+    "tutorialTargetNotFound": "该教程目标当前不可见。"
   },
   "app": {
     "aiAssistant": "AI 助手",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "删除「{{name}}」和此仪表板视图中的所有小部件？此操作无法撤销。",
     "deleteWidgetBody": "从此仪表板视图中移除「{{name}}」？此操作无法撤销。",
-    "canvasOpacity": "画布不透明度"
+    "canvasOpacity": "画布不透明度",
+    "aiCodingUsageAddTool": "添加 AI 编程工具",
+    "aiCodingUsageConnectProvider": "连接 {{provider}}",
+    "aiCodingUsageConnecting": "正在连接…",
+    "aiCodingUsageDisconnectProvider": "断开 {{provider}}",
+    "aiCodingUsageEmptyHint": "点击“添加”将 Codex 或 Claude Code 添加到此小组件。",
+    "aiCodingUsageEmptyTitle": "未添加 AI 编程工具",
+    "aiCodingUsageFiveHour": "5 小时",
+    "aiCodingUsageHideFromStatusBar": "从状态栏隐藏",
+    "aiCodingUsageInstallHelp": "在 Windows 上安装 {{provider}}",
+    "aiCodingUsageLastRefresh": "已更新 {{time}}",
+    "aiCodingUsageNeverRefreshed": "尚未刷新",
+    "aiCodingUsageNotConnected": "未连接",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "连接此提供方以开始监控使用量。",
+    "aiCodingUsageRefreshError": "无法刷新使用量：{{message}}",
+    "aiCodingUsageRefreshNow": "立即刷新使用量",
+    "aiCodingUsageRemoveProvider": "从此小组件移除 {{provider}}",
+    "aiCodingUsageResetUnknown": "重置时间未知",
+    "aiCodingUsageResetsAt": "{{time}} 重置",
+    "aiCodingUsageShowInStatusBar": "显示在状态栏",
+    "aiCodingUsageStatusBarResetsIn": "{{time}} 后重置",
+    "aiCodingUsageSubtitle": "Codex 和 Claude Code 配额窗口",
+    "aiCodingUsageSummary": "从 Dashboard 监控 Codex 和 Claude Code 使用量窗口。",
+    "aiCodingUsageTitle": "AI 编程使用量",
+    "aiCodingUsageUnknownUsage": "未知",
+    "aiCodingUsageWeekly": "每周"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "性能计数器",
         "description": "读取低开销的本地 CPU、内存、网络、进程、运行时间和磁盘空间计数器。"
+      },
+      "tutorial": {
+        "description": "突出显示可见的应用控件，调暗窗口其余部分，并显示一步式气泡帮助。",
+        "label": "教程"
       }
     },
     "aiToolsDescription": "选择 AI 助手在回答时可以调用的内置工具。除非需要，否则请保持有风险的工具关闭。",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "推理力度",
     "apiMode": "API 模式",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "响应",
+    "apiModeResponses": "Responses",
     "extraHeaders": "额外请求头",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "远程调整大小",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "可选的助手指导，最多 {{count}} 个字符。KKTerm 的安全、批准和本地优先限制仍然适用。",
     "aiCustomInstructionsTooLong": "AI 助手自定义指令不得超过 {{count}} 个字符。",
     "showAllModels": "显示所有模型",
-    "showAllModelsHint": "显示刷新时提供商返回的所有模型，而不仅是精选推荐。"
+    "showAllModelsHint": "显示刷新时提供商返回的所有模型，而不仅是精选推荐。",
+    "lastCheckedAt": "上次检查 {{time}}",
+    "lastCheckedNever": "从未检查"
   },
   "sftp": {
     "accessed": "访问日期",

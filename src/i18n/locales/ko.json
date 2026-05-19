@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "성능 카운터 읽는 중…",
     "toolPerformanceCountersDone": "성능 카운터 읽음",
     "toolEmail": "이메일 전송 중…",
-    "toolEmailDone": "이메일 전송됨"
+    "toolEmailDone": "이메일 전송됨",
+    "settingsContextLabel": "현재 설정 페이지",
+    "toolApprovalDenied": "거부됨.",
+    "toolApprovalDeny": "거부",
+    "toolApprovalSelectAction": "작업 선택",
+    "toolTutorial": "튜토리얼 도움말 표시 중...",
+    "toolTutorialDone": "튜토리얼 도움말을 표시함",
+    "tutorialInvalidRequest": "튜토리얼 요청에는 대상, 제목, 도움말 텍스트가 필요합니다.",
+    "tutorialTargetNotFound": "해당 튜토리얼 대상은 지금 보이지 않습니다."
   },
   "app": {
     "aiAssistant": "AI 어시스턴트",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "이 대시보드 보기에서 \"{{name}}\" 및 모든 위젯을 삭제하시겠습니까? 되돌릴 수 없습니다.",
     "deleteWidgetBody": "이 대시보드 보기에서 \"{{name}}\"을(를) 제거하시겠습니까? 되돌릴 수 없습니다.",
-    "canvasOpacity": "캔버스 불투명도"
+    "canvasOpacity": "캔버스 불투명도",
+    "aiCodingUsageAddTool": "AI 코딩 도구 추가",
+    "aiCodingUsageConnectProvider": "{{provider}} 연결",
+    "aiCodingUsageConnecting": "연결 중…",
+    "aiCodingUsageDisconnectProvider": "{{provider}} 연결 해제",
+    "aiCodingUsageEmptyHint": "추가를 클릭해 이 위젯에 Codex 또는 Claude Code를 추가하세요.",
+    "aiCodingUsageEmptyTitle": "추가된 AI 코딩 도구 없음",
+    "aiCodingUsageFiveHour": "5시간",
+    "aiCodingUsageHideFromStatusBar": "상태 표시줄에서 숨기기",
+    "aiCodingUsageInstallHelp": "Windows에 {{provider}} 설치",
+    "aiCodingUsageLastRefresh": "{{time}} 업데이트됨",
+    "aiCodingUsageNeverRefreshed": "아직 새로 고치지 않음",
+    "aiCodingUsageNotConnected": "연결되지 않음",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "사용량 모니터링을 시작하려면 이 제공자를 연결하세요.",
+    "aiCodingUsageRefreshError": "사용량을 새로 고칠 수 없습니다: {{message}}",
+    "aiCodingUsageRefreshNow": "지금 사용량 새로 고침",
+    "aiCodingUsageRemoveProvider": "이 위젯에서 {{provider}} 제거",
+    "aiCodingUsageResetUnknown": "재설정 시간 알 수 없음",
+    "aiCodingUsageResetsAt": "{{time}} 재설정",
+    "aiCodingUsageShowInStatusBar": "상태 표시줄에 표시",
+    "aiCodingUsageStatusBarResetsIn": "{{time}} 후 재설정",
+    "aiCodingUsageSubtitle": "Codex 및 Claude Code 할당량 창",
+    "aiCodingUsageSummary": "Dashboard에서 Codex 및 Claude Code 사용량 창을 모니터링합니다.",
+    "aiCodingUsageTitle": "AI 코딩 사용량",
+    "aiCodingUsageUnknownUsage": "알 수 없음",
+    "aiCodingUsageWeekly": "주간"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "성능 카운터",
         "description": "오버헤드가 낮은 로컬 CPU, 메모리, 네트워크, 프로세스, 가동 시간 및 드라이브 공간 카운터를 읽습니다."
+      },
+      "tutorial": {
+        "description": "보이는 앱 컨트롤을 강조 표시하고 창의 나머지 부분을 어둡게 한 다음, 한 단계 말풍선 도움말을 표시합니다.",
+        "label": "튜토리얼"
       }
     },
     "aiToolsDescription": "AI 어시스턴트가 응답 중에 호출할 수 있는 내장 도구를 선택합니다. 필요한 경우가 아니면 위험한 도구는 끄십시오.",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "추론 노력",
     "apiMode": "API 모드",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "응답",
+    "apiModeResponses": "Responses",
     "extraHeaders": "추가 헤더",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "원격 크기 조정",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "최대 {{count}}자까지의 선택적 어시스턴트 안내입니다. KKTerm 안전, 승인 및 로컬 우선 제약 조건이 계속 적용됩니다.",
     "aiCustomInstructionsTooLong": "AI 어시스턴트 사용자 지정 지침은 {{count}}자 이하여야 합니다.",
     "showAllModels": "모든 모델 표시",
-    "showAllModelsHint": "선별된 추천 모델만이 아닌 새로 고침 시 공급자가 반환한 모든 모델을 표시합니다."
+    "showAllModelsHint": "선별된 추천 모델만이 아닌 새로 고침 시 공급자가 반환한 모든 모델을 표시합니다.",
+    "lastCheckedAt": "마지막 확인 {{time}}",
+    "lastCheckedNever": "확인한 적 없음"
   },
   "sftp": {
     "accessed": "접근일",

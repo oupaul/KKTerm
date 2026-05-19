@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "Đang đọc bộ đếm hiệu suất…",
     "toolPerformanceCountersDone": "Đã đọc bộ đếm hiệu suất",
     "toolEmail": "Đang gửi email…",
-    "toolEmailDone": "Đã gửi email"
+    "toolEmailDone": "Đã gửi email",
+    "settingsContextLabel": "Trang Cài đặt hiện tại",
+    "toolApprovalDenied": "Đã từ chối.",
+    "toolApprovalDeny": "Từ chối",
+    "toolApprovalSelectAction": "Chọn hành động",
+    "toolTutorial": "Đang hiển thị trợ giúp hướng dẫn...",
+    "toolTutorialDone": "Đã hiển thị trợ giúp hướng dẫn",
+    "tutorialInvalidRequest": "Yêu cầu hướng dẫn cần có mục tiêu, tiêu đề và nội dung trợ giúp.",
+    "tutorialTargetNotFound": "Mục tiêu hướng dẫn đó hiện không hiển thị."
   },
   "app": {
     "aiAssistant": "Trợ lý AI",
@@ -1165,7 +1173,38 @@
       "mono": "Mono"
     },
     "deleteViewBody": "Xóa \"{{name}}\" và tất cả tiện ích trong chế độ xem Bảng điều khiển này? Không thể hoàn tác.",
-    "deleteWidgetBody": "Xóa \"{{name}}\" khỏi chế độ xem Bảng điều khiển này? Không thể hoàn tác."
+    "deleteWidgetBody": "Xóa \"{{name}}\" khỏi chế độ xem Bảng điều khiển này? Không thể hoàn tác.",
+    "aiCodingUsageAddTool": "Thêm công cụ lập trình AI",
+    "aiCodingUsageConnectProvider": "Kết nối {{provider}}",
+    "aiCodingUsageConnecting": "Đang kết nối…",
+    "aiCodingUsageDisconnectProvider": "Ngắt kết nối {{provider}}",
+    "aiCodingUsageEmptyHint": "Nhấp Thêm để thêm Codex hoặc Claude Code vào widget này.",
+    "aiCodingUsageEmptyTitle": "Chưa thêm công cụ lập trình AI nào",
+    "aiCodingUsageFiveHour": "5 giờ",
+    "aiCodingUsageHideFromStatusBar": "Ẩn khỏi thanh trạng thái",
+    "aiCodingUsageInstallHelp": "Cài đặt {{provider}} trên Windows",
+    "aiCodingUsageLastRefresh": "Đã cập nhật {{time}}",
+    "aiCodingUsageNeverRefreshed": "Chưa cập nhật lần nào",
+    "aiCodingUsageNotConnected": "Chưa kết nối",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "Kết nối nhà cung cấp này để bắt đầu theo dõi mức sử dụng.",
+    "aiCodingUsageRefreshError": "Không thể cập nhật mức sử dụng: {{message}}",
+    "aiCodingUsageRefreshNow": "Cập nhật mức sử dụng ngay",
+    "aiCodingUsageRemoveProvider": "Xóa {{provider}} khỏi widget này",
+    "aiCodingUsageResetUnknown": "Không rõ thời gian đặt lại",
+    "aiCodingUsageResetsAt": "Đặt lại {{time}}",
+    "aiCodingUsageShowInStatusBar": "Hiển thị trên thanh trạng thái",
+    "aiCodingUsageStatusBarResetsIn": "đặt lại sau {{time}}",
+    "aiCodingUsageSubtitle": "Cửa sổ hạn mức Codex và Claude Code",
+    "aiCodingUsageSummary": "Theo dõi cửa sổ sử dụng Codex và Claude Code từ Dashboard.",
+    "aiCodingUsageTitle": "Mức sử dụng lập trình AI",
+    "aiCodingUsageUnknownUsage": "Không rõ",
+    "aiCodingUsageWeekly": "Hàng tuần"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "Bộ đếm hiệu suất",
         "description": "Đọc bộ đếm CPU, bộ nhớ, mạng, tiến trình, thời gian hoạt động và dung lượng ổ đĩa cục bộ với chi phí thấp."
+      },
+      "tutorial": {
+        "description": "Làm nổi bật các điều khiển ứng dụng đang hiển thị, làm mờ phần còn lại của cửa sổ và hiển thị trợ giúp bong bóng một bước.",
+        "label": "Hướng dẫn"
       }
     },
     "aiToolsDescription": "Chọn công cụ tích hợp nào Trợ lý AI có thể gọi khi trả lời. Tắt các công cụ rủi ro trừ khi bạn cần chúng.",
@@ -1541,7 +1584,7 @@
     "reasoningEffort": "Reasoning effort",
     "apiMode": "Chế độ API",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "Phản hồi",
+    "apiModeResponses": "Responses",
     "extraHeaders": "Tiêu đề bổ sung",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "Remote resize",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "Hướng dẫn trợ lý tùy chọn, tối đa {{count}} ký tự. Các ràng buộc về an toàn, phê duyệt và local-first của KKTerm vẫn được áp dụng.",
     "aiCustomInstructionsTooLong": "Hướng dẫn tùy chỉnh của trợ lý AI phải từ {{count}} ký tự trở xuống.",
     "showAllModels": "Hiển thị tất cả mô hình",
-    "showAllModelsHint": "Hiển thị mọi mô hình được nhà cung cấp trả về khi làm mới thay vì chỉ các đề xuất được tuyển chọn."
+    "showAllModelsHint": "Hiển thị mọi mô hình được nhà cung cấp trả về khi làm mới thay vì chỉ các đề xuất được tuyển chọn.",
+    "lastCheckedAt": "Kiểm tra lần cuối {{time}}",
+    "lastCheckedNever": "Chưa từng kiểm tra"
   },
   "sftp": {
     "accessed": "Accessed",

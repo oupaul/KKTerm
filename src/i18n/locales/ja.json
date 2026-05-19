@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "パフォーマンスカウンターを読み取り中…",
     "toolPerformanceCountersDone": "パフォーマンスカウンターを読み取りました",
     "toolEmail": "メール送信中…",
-    "toolEmailDone": "メール送信完了"
+    "toolEmailDone": "メール送信完了",
+    "settingsContextLabel": "現在の設定ページ",
+    "toolApprovalDenied": "拒否しました。",
+    "toolApprovalDeny": "拒否",
+    "toolApprovalSelectAction": "アクションを選択",
+    "toolTutorial": "チュートリアルヘルプを表示しています...",
+    "toolTutorialDone": "チュートリアルヘルプを表示しました",
+    "tutorialInvalidRequest": "チュートリアル要求にはターゲット、タイトル、ヘルプテキストが必要です。",
+    "tutorialTargetNotFound": "そのチュートリアルターゲットは現在表示されていません。"
   },
   "app": {
     "aiAssistant": "AIアシスタント",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "「{{name}}」とこのダッシュボードビューのすべてのウィジェットを削除しますか？この操作は元に戻せません。",
     "deleteWidgetBody": "「{{name}}」をこのダッシュボードビューから削除しますか？この操作は元に戻せません。",
-    "canvasOpacity": "キャンバスの不透明度"
+    "canvasOpacity": "キャンバスの不透明度",
+    "aiCodingUsageAddTool": "AIコーディングツールを追加",
+    "aiCodingUsageConnectProvider": "{{provider}}に接続",
+    "aiCodingUsageConnecting": "接続中…",
+    "aiCodingUsageDisconnectProvider": "{{provider}}を切断",
+    "aiCodingUsageEmptyHint": "追加をクリックして、このウィジェットにCodexまたはClaude Codeを追加します。",
+    "aiCodingUsageEmptyTitle": "AIコーディングツールが追加されていません",
+    "aiCodingUsageFiveHour": "5時間",
+    "aiCodingUsageHideFromStatusBar": "ステータスバーから非表示",
+    "aiCodingUsageInstallHelp": "Windowsに{{provider}}をインストール",
+    "aiCodingUsageLastRefresh": "{{time}}に更新",
+    "aiCodingUsageNeverRefreshed": "まだ更新されていません",
+    "aiCodingUsageNotConnected": "未接続",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "このプロバイダーに接続して使用量の監視を開始します。",
+    "aiCodingUsageRefreshError": "使用量を更新できませんでした: {{message}}",
+    "aiCodingUsageRefreshNow": "使用量を今すぐ更新",
+    "aiCodingUsageRemoveProvider": "このウィジェットから{{provider}}を削除",
+    "aiCodingUsageResetUnknown": "リセット時刻は不明です",
+    "aiCodingUsageResetsAt": "{{time}}にリセット",
+    "aiCodingUsageShowInStatusBar": "ステータスバーに表示",
+    "aiCodingUsageStatusBarResetsIn": "{{time}}後にリセット",
+    "aiCodingUsageSubtitle": "CodexとClaude Codeのクォータ期間",
+    "aiCodingUsageSummary": "DashboardからCodexとClaude Codeの使用期間を監視します。",
+    "aiCodingUsageTitle": "AIコーディング使用量",
+    "aiCodingUsageUnknownUsage": "不明",
+    "aiCodingUsageWeekly": "毎週"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "パフォーマンスカウンター",
         "description": "低オーバーヘッドのローカルCPU、メモリ、ネットワーク、プロセス、稼働時間、ディスク容量カウンターを読み取ります。"
+      },
+      "tutorial": {
+        "description": "表示中のアプリコントロールを強調表示し、ウィンドウの残りを暗くして、1ステップのバルーンヘルプを表示します。",
+        "label": "チュートリアル"
       }
     },
     "aiToolsDescription": "AI アシスタントが応答中に呼び出せる組み込みツールを選択します。必要な場合を除き、リスクのあるツールはオフにしてください。",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "推論の強度",
     "apiMode": "APIモード",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "応答",
+    "apiModeResponses": "Responses",
     "extraHeaders": "追加ヘッダー",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "リモートリサイズ",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "オプションのアシスタントガイダンス、最大{{count}}文字。KKTermの安全性、承認、ローカルファーストの制約が引き続き適用されます。",
     "aiCustomInstructionsTooLong": "AIアシスタントのカスタム指示は{{count}}文字以下である必要があります。",
     "showAllModels": "すべてのモデルを表示",
-    "showAllModelsHint": "厳選された推奨モデルだけでなく、更新時にプロバイダーから返されるすべてのモデルを表示します。"
+    "showAllModelsHint": "厳選された推奨モデルだけでなく、更新時にプロバイダーから返されるすべてのモデルを表示します。",
+    "lastCheckedAt": "最終確認 {{time}}",
+    "lastCheckedNever": "未確認"
   },
   "sftp": {
     "accessed": "アクセス日時",

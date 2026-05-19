@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "Membaca pencacah kinerja…",
     "toolPerformanceCountersDone": "Pencacah kinerja dibaca",
     "toolEmail": "Mengirim email…",
-    "toolEmailDone": "Email terkirim"
+    "toolEmailDone": "Email terkirim",
+    "settingsContextLabel": "Halaman Pengaturan saat ini",
+    "toolApprovalDenied": "Ditolak.",
+    "toolApprovalDeny": "Tolak",
+    "toolApprovalSelectAction": "Pilih tindakan",
+    "toolTutorial": "Menampilkan bantuan tutorial...",
+    "toolTutorialDone": "Bantuan tutorial ditampilkan",
+    "tutorialInvalidRequest": "Permintaan tutorial memerlukan target, judul, dan teks bantuan.",
+    "tutorialTargetNotFound": "Target tutorial itu sedang tidak terlihat."
   },
   "app": {
     "aiAssistant": "AI Assistant",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "Hapus \"{{name}}\" dan semua widget di tampilan Dasbor ini? Ini tidak dapat dibatalkan.",
     "deleteWidgetBody": "Hapus \"{{name}}\" dari tampilan Dasbor ini? Ini tidak dapat dibatalkan.",
-    "canvasOpacity": "Opasitas kanvas"
+    "canvasOpacity": "Opasitas kanvas",
+    "aiCodingUsageAddTool": "Tambahkan alat coding AI",
+    "aiCodingUsageConnectProvider": "Hubungkan {{provider}}",
+    "aiCodingUsageConnecting": "Menghubungkan…",
+    "aiCodingUsageDisconnectProvider": "Putuskan {{provider}}",
+    "aiCodingUsageEmptyHint": "Klik Tambah untuk menambahkan Codex atau Claude Code ke widget ini.",
+    "aiCodingUsageEmptyTitle": "Belum ada alat coding AI yang ditambahkan",
+    "aiCodingUsageFiveHour": "5 j",
+    "aiCodingUsageHideFromStatusBar": "Sembunyikan dari bilah status",
+    "aiCodingUsageInstallHelp": "Instal {{provider}} di Windows",
+    "aiCodingUsageLastRefresh": "Diperbarui {{time}}",
+    "aiCodingUsageNeverRefreshed": "Belum pernah diperbarui",
+    "aiCodingUsageNotConnected": "Tidak terhubung",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "Hubungkan penyedia ini untuk mulai memantau penggunaan.",
+    "aiCodingUsageRefreshError": "Tidak dapat memperbarui penggunaan: {{message}}",
+    "aiCodingUsageRefreshNow": "Perbarui penggunaan sekarang",
+    "aiCodingUsageRemoveProvider": "Hapus {{provider}} dari widget ini",
+    "aiCodingUsageResetUnknown": "Waktu reset tidak diketahui",
+    "aiCodingUsageResetsAt": "Reset {{time}}",
+    "aiCodingUsageShowInStatusBar": "Tampilkan di bilah status",
+    "aiCodingUsageStatusBarResetsIn": "reset dalam {{time}}",
+    "aiCodingUsageSubtitle": "Jendela kuota Codex dan Claude Code",
+    "aiCodingUsageSummary": "Pantau jendela penggunaan Codex dan Claude Code dari Dashboard.",
+    "aiCodingUsageTitle": "Penggunaan coding AI",
+    "aiCodingUsageUnknownUsage": "Tidak diketahui",
+    "aiCodingUsageWeekly": "Mingguan"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "Pencacah kinerja",
         "description": "Membaca pencacah CPU, memori, jaringan, proses, waktu aktif, dan ruang drive lokal dengan overhead rendah."
+      },
+      "tutorial": {
+        "description": "Sorot kontrol aplikasi yang terlihat, redupkan bagian jendela lainnya, dan tampilkan bantuan balon satu langkah.",
+        "label": "Tutorial"
       }
     },
     "aiToolsDescription": "Pilih alat bawaan mana yang dapat dipanggil AI Assistant saat menjawab. Matikan alat berisiko kecuali Anda membutuhkannya.",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "Upaya penalaran",
     "apiMode": "Mode API",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "Respons",
+    "apiModeResponses": "Responses",
     "extraHeaders": "Header tambahan",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "Ubah ukuran jarak jauh",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "Panduan asisten opsional, hingga {{count}} karakter. Batasan keamanan, persetujuan, dan local-first KKTerm tetap berlaku.",
     "aiCustomInstructionsTooLong": "Instruksi kustom asisten AI harus {{count}} karakter atau kurang.",
     "showAllModels": "Tampilkan Semua Model",
-    "showAllModelsHint": "Tampilkan setiap model yang dikembalikan oleh penyedia saat penyegaran, bukan hanya rekomendasi terpilih."
+    "showAllModelsHint": "Tampilkan setiap model yang dikembalikan oleh penyedia saat penyegaran, bukan hanya rekomendasi terpilih.",
+    "lastCheckedAt": "Terakhir diperiksa {{time}}",
+    "lastCheckedNever": "Belum pernah diperiksa"
   },
   "sftp": {
     "accessed": "Diakses",

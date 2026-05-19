@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "Lendo contadores de desempenho…",
     "toolPerformanceCountersDone": "Contadores de desempenho lidos",
     "toolEmail": "Enviando e-mail…",
-    "toolEmailDone": "E-mail enviado"
+    "toolEmailDone": "E-mail enviado",
+    "settingsContextLabel": "Página atual de Configurações",
+    "toolApprovalDenied": "Negado.",
+    "toolApprovalDeny": "Negar",
+    "toolApprovalSelectAction": "Selecionar ação",
+    "toolTutorial": "Mostrando ajuda do tutorial...",
+    "toolTutorialDone": "Ajuda do tutorial exibida",
+    "tutorialInvalidRequest": "Solicitações de tutorial precisam de um alvo, um título e um texto de ajuda.",
+    "tutorialTargetNotFound": "Esse alvo do tutorial não está visível agora."
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "Excluir \"{{name}}\" e todos os widgets desta visualização do Dashboard? Isso não pode ser desfeito.",
     "deleteWidgetBody": "Remover \"{{name}}\" desta visualização do Dashboard? Isso não pode ser desfeito.",
-    "canvasOpacity": "Opacidade da tela"
+    "canvasOpacity": "Opacidade da tela",
+    "aiCodingUsageAddTool": "Adicionar ferramenta de codificação com IA",
+    "aiCodingUsageConnectProvider": "Conectar {{provider}}",
+    "aiCodingUsageConnecting": "Conectando…",
+    "aiCodingUsageDisconnectProvider": "Desconectar {{provider}}",
+    "aiCodingUsageEmptyHint": "Clique em Adicionar para incluir Codex ou Claude Code neste widget.",
+    "aiCodingUsageEmptyTitle": "Nenhuma ferramenta de codificação com IA adicionada",
+    "aiCodingUsageFiveHour": "5 h",
+    "aiCodingUsageHideFromStatusBar": "Ocultar da barra de status",
+    "aiCodingUsageInstallHelp": "Instalar {{provider}} no Windows",
+    "aiCodingUsageLastRefresh": "Atualizado {{time}}",
+    "aiCodingUsageNeverRefreshed": "Ainda não atualizado",
+    "aiCodingUsageNotConnected": "Não conectado",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "Conecte este provedor para começar a monitorar o uso.",
+    "aiCodingUsageRefreshError": "Não foi possível atualizar o uso: {{message}}",
+    "aiCodingUsageRefreshNow": "Atualizar uso agora",
+    "aiCodingUsageRemoveProvider": "Remover {{provider}} deste widget",
+    "aiCodingUsageResetUnknown": "Hora de redefinição desconhecida",
+    "aiCodingUsageResetsAt": "Redefine {{time}}",
+    "aiCodingUsageShowInStatusBar": "Mostrar na barra de status",
+    "aiCodingUsageStatusBarResetsIn": "redefine em {{time}}",
+    "aiCodingUsageSubtitle": "Janelas de cota do Codex e Claude Code",
+    "aiCodingUsageSummary": "Monitore as janelas de uso do Codex e do Claude Code pelo Dashboard.",
+    "aiCodingUsageTitle": "Uso de codificação com IA",
+    "aiCodingUsageUnknownUsage": "Desconhecido",
+    "aiCodingUsageWeekly": "Semanal"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "Contadores de desempenho",
         "description": "Lê contadores locais de baixa sobrecarga de CPU, memória, rede, processos, tempo de atividade e espaço em disco."
+      },
+      "tutorial": {
+        "description": "Destaque controles visíveis do app, escureça o restante da janela e mostre uma ajuda em balão de uma etapa.",
+        "label": "Tutorial"
       }
     },
     "aiToolsDescription": "Escolha quais ferramentas integradas o Assistente IA pode usar ao responder. Mantenha as ferramentas arriscadas desativadas a menos que precise delas.",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "Esforço de raciocínio",
     "apiMode": "Modo API",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "Respostas",
+    "apiModeResponses": "Responses",
     "extraHeaders": "Cabeçalhos extras",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "Redimensionamento remoto",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "Orientação opcional do assistente, até {{count}} caracteres. As restrições de segurança, aprovação e local-first do KKTerm ainda se aplicam.",
     "aiCustomInstructionsTooLong": "As instruções personalizadas do assistente IA devem ter {{count}} caracteres ou menos.",
     "showAllModels": "Mostrar todos os modelos",
-    "showAllModelsHint": "Mostrar todos os modelos retornados pelo provedor ao atualizar, não apenas as recomendações selecionadas."
+    "showAllModelsHint": "Mostrar todos os modelos retornados pelo provedor ao atualizar, não apenas as recomendações selecionadas.",
+    "lastCheckedAt": "Última verificação {{time}}",
+    "lastCheckedNever": "Nunca verificado"
   },
   "sftp": {
     "accessed": "Acessado",

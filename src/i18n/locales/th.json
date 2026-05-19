@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "กำลังอ่านตัวนับประสิทธิภาพ…",
     "toolPerformanceCountersDone": "อ่านตัวนับประสิทธิภาพแล้ว",
     "toolEmail": "กำลังส่งอีเมล…",
-    "toolEmailDone": "ส่งอีเมลแล้ว"
+    "toolEmailDone": "ส่งอีเมลแล้ว",
+    "settingsContextLabel": "หน้าการตั้งค่าปัจจุบัน",
+    "toolApprovalDenied": "ปฏิเสธแล้ว",
+    "toolApprovalDeny": "ปฏิเสธ",
+    "toolApprovalSelectAction": "เลือกการดำเนินการ",
+    "toolTutorial": "กำลังแสดงความช่วยเหลือบทแนะนำ...",
+    "toolTutorialDone": "แสดงความช่วยเหลือบทแนะนำแล้ว",
+    "tutorialInvalidRequest": "คำขอบทแนะนำต้องมีเป้าหมาย ชื่อเรื่อง และข้อความช่วยเหลือ",
+    "tutorialTargetNotFound": "เป้าหมายบทแนะนำนั้นยังไม่ปรากฏในตอนนี้"
   },
   "app": {
     "aiAssistant": "ผู้ช่วย AI",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "ลบ \"{{name}}\" และวิดเจ็ตทั้งหมดในมุมมองแดชบอร์ดนี้หรือไม่ ไม่สามารถเรียกคืนได้",
     "deleteWidgetBody": "ลบ \"{{name}}\" ออกจากมุมมองแดชบอร์ดนี้หรือไม่ ไม่สามารถเรียกคืนได้",
-    "canvasOpacity": "ความทึบของผ้าใบ"
+    "canvasOpacity": "ความทึบของผ้าใบ",
+    "aiCodingUsageAddTool": "เพิ่มเครื่องมือเขียนโค้ด AI",
+    "aiCodingUsageConnectProvider": "เชื่อมต่อ {{provider}}",
+    "aiCodingUsageConnecting": "กำลังเชื่อมต่อ…",
+    "aiCodingUsageDisconnectProvider": "ตัดการเชื่อมต่อ {{provider}}",
+    "aiCodingUsageEmptyHint": "คลิกเพิ่มเพื่อเพิ่ม Codex หรือ Claude Code ไปยังวิดเจ็ตนี้",
+    "aiCodingUsageEmptyTitle": "ยังไม่ได้เพิ่มเครื่องมือเขียนโค้ด AI",
+    "aiCodingUsageFiveHour": "5 ชม.",
+    "aiCodingUsageHideFromStatusBar": "ซ่อนจากแถบสถานะ",
+    "aiCodingUsageInstallHelp": "ติดตั้ง {{provider}} บน Windows",
+    "aiCodingUsageLastRefresh": "อัปเดตเมื่อ {{time}}",
+    "aiCodingUsageNeverRefreshed": "ยังไม่ได้รีเฟรช",
+    "aiCodingUsageNotConnected": "ไม่ได้เชื่อมต่อ",
+    "aiCodingUsagePercent": "{{percent}}%",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "เชื่อมต่อผู้ให้บริการนี้เพื่อเริ่มตรวจสอบการใช้งาน",
+    "aiCodingUsageRefreshError": "ไม่สามารถรีเฟรชการใช้งานได้: {{message}}",
+    "aiCodingUsageRefreshNow": "รีเฟรชการใช้งานตอนนี้",
+    "aiCodingUsageRemoveProvider": "ลบ {{provider}} ออกจากวิดเจ็ตนี้",
+    "aiCodingUsageResetUnknown": "ไม่ทราบเวลารีเซ็ต",
+    "aiCodingUsageResetsAt": "รีเซ็ต {{time}}",
+    "aiCodingUsageShowInStatusBar": "แสดงในแถบสถานะ",
+    "aiCodingUsageStatusBarResetsIn": "รีเซ็ตใน {{time}}",
+    "aiCodingUsageSubtitle": "ช่วงโควตา Codex และ Claude Code",
+    "aiCodingUsageSummary": "ตรวจสอบช่วงการใช้งาน Codex และ Claude Code จาก Dashboard",
+    "aiCodingUsageTitle": "การใช้งานการเขียนโค้ด AI",
+    "aiCodingUsageUnknownUsage": "ไม่ทราบ",
+    "aiCodingUsageWeekly": "รายสัปดาห์"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "ตัวนับประสิทธิภาพ",
         "description": "อ่านตัวนับ CPU, หน่วยความจำ, เครือข่าย, กระบวนการ, เวลาทำงาน และพื้นที่ดิสก์ในเครื่องที่มีค่าใช้จ่ายต่ำ"
+      },
+      "tutorial": {
+        "description": "ไฮไลต์ตัวควบคุมแอปที่มองเห็น หรี่ส่วนที่เหลือของหน้าต่าง และแสดงความช่วยเหลือแบบบอลลูนหนึ่งขั้นตอน",
+        "label": "บทแนะนำ"
       }
     },
     "aiToolsDescription": "เลือกเครื่องมือในตัวที่ผู้ช่วย AI สามารถเรียกใช้ขณะตอบคำถาม ปิดเครื่องมือที่มีความเสี่ยงไว้ยกเว้นคุณจำเป็นต้องใช้",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "ความพยายามในการให้เหตุผล",
     "apiMode": "โหมด API",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "การตอบกลับ",
+    "apiModeResponses": "Responses",
     "extraHeaders": "ส่วนหัวเพิ่มเติม",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "ปรับขนาดระยะไกล",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "คำแนะนำผู้ช่วยเสริม สูงสุด {{count}} ตัวอักษร ข้อจำกัดด้านความปลอดภัย การอนุมัติ และ local-first ของ KKTerm ยังคงมีผล",
     "aiCustomInstructionsTooLong": "คำแนะนำที่กำหนดเองของผู้ช่วย AI ต้องมี {{count}} ตัวอักษรหรือน้อยกว่า",
     "showAllModels": "แสดงโมเดลทั้งหมด",
-    "showAllModelsHint": "แสดงทุกโมเดลที่ผู้ให้บริการส่งกลับมาเมื่อรีเฟรช แทนที่จะแสดงเฉพาะคำแนะนำที่คัดสรร"
+    "showAllModelsHint": "แสดงทุกโมเดลที่ผู้ให้บริการส่งกลับมาเมื่อรีเฟรช แทนที่จะแสดงเฉพาะคำแนะนำที่คัดสรร",
+    "lastCheckedAt": "ตรวจสอบล่าสุด {{time}}",
+    "lastCheckedNever": "ยังไม่เคยตรวจสอบ"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",

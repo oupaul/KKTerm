@@ -535,7 +535,15 @@
     "toolPerformanceCounters": "Leistungsindikatoren werden gelesen…",
     "toolPerformanceCountersDone": "Leistungsindikatoren gelesen",
     "toolEmail": "E-Mail senden…",
-    "toolEmailDone": "E-Mail gesendet"
+    "toolEmailDone": "E-Mail gesendet",
+    "settingsContextLabel": "Aktuelle Einstellungsseite",
+    "toolApprovalDenied": "Abgelehnt.",
+    "toolApprovalDeny": "Ablehnen",
+    "toolApprovalSelectAction": "Aktion auswählen",
+    "toolTutorial": "Tutorial-Hilfe wird angezeigt...",
+    "toolTutorialDone": "Tutorial-Hilfe angezeigt",
+    "tutorialInvalidRequest": "Tutorial-Anfragen benötigen ein Ziel, einen Titel und Hilfetext.",
+    "tutorialTargetNotFound": "Dieses Tutorial-Ziel ist gerade nicht sichtbar."
   },
   "app": {
     "aiAssistant": "KI-Assistent",
@@ -1165,7 +1173,38 @@
     },
     "deleteViewBody": "„{{name}}“ und alle Widgets in dieser Dashboard-Ansicht löschen? Dies kann nicht rückgängig gemacht werden.",
     "deleteWidgetBody": "„{{name}}“ aus dieser Dashboard-Ansicht entfernen? Dies kann nicht rückgängig gemacht werden.",
-    "canvasOpacity": "Canvas-Deckkraft"
+    "canvasOpacity": "Canvas-Deckkraft",
+    "aiCodingUsageAddTool": "AI-Coding-Tool hinzufügen",
+    "aiCodingUsageConnectProvider": "{{provider}} verbinden",
+    "aiCodingUsageConnecting": "Verbindung wird hergestellt…",
+    "aiCodingUsageDisconnectProvider": "{{provider}} trennen",
+    "aiCodingUsageEmptyHint": "Klicken Sie auf Hinzufügen, um Codex oder Claude Code zu diesem Widget hinzuzufügen.",
+    "aiCodingUsageEmptyTitle": "Keine AI-Coding-Tools hinzugefügt",
+    "aiCodingUsageFiveHour": "5 h",
+    "aiCodingUsageHideFromStatusBar": "In Statusleiste ausblenden",
+    "aiCodingUsageInstallHelp": "{{provider}} unter Windows installieren",
+    "aiCodingUsageLastRefresh": "Aktualisiert {{time}}",
+    "aiCodingUsageNeverRefreshed": "Noch nicht aktualisiert",
+    "aiCodingUsageNotConnected": "Nicht verbunden",
+    "aiCodingUsagePercent": "{{percent}} %",
+    "aiCodingUsageProvider": {
+      "codex": "Codex",
+      "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderError": "{{message}}",
+    "aiCodingUsageProviderHint": "Verbinden Sie diesen Anbieter, um die Nutzung zu überwachen.",
+    "aiCodingUsageRefreshError": "Nutzung konnte nicht aktualisiert werden: {{message}}",
+    "aiCodingUsageRefreshNow": "Nutzung jetzt aktualisieren",
+    "aiCodingUsageRemoveProvider": "{{provider}} aus diesem Widget entfernen",
+    "aiCodingUsageResetUnknown": "Zurücksetzzeit unbekannt",
+    "aiCodingUsageResetsAt": "Wird zurückgesetzt {{time}}",
+    "aiCodingUsageShowInStatusBar": "In Statusleiste anzeigen",
+    "aiCodingUsageStatusBarResetsIn": "setzt in {{time}} zurück",
+    "aiCodingUsageSubtitle": "Kontingentfenster für Codex und Claude Code",
+    "aiCodingUsageSummary": "Überwachen Sie Codex- und Claude Code-Nutzungsfenster im Dashboard.",
+    "aiCodingUsageTitle": "AI-Coding-Nutzung",
+    "aiCodingUsageUnknownUsage": "Unbekannt",
+    "aiCodingUsageWeekly": "Wöchentlich"
   },
   "languages": {
     "de": "Deutsch",
@@ -1295,6 +1334,10 @@
       "performanceCounters": {
         "label": "Leistungsindikatoren",
         "description": "Lokale ressourcenschonende CPU-, Arbeitsspeicher-, Netzwerk-, Prozess-, Betriebszeit- und Laufwerksspeicher-Indikatoren lesen."
+      },
+      "tutorial": {
+        "description": "Sichtbare App-Steuerelemente hervorheben, den Rest des Fensters abdunkeln und einstufige Ballonhilfe anzeigen.",
+        "label": "Tutorial"
       }
     },
     "aiToolsDescription": "Wählen Sie, welche integrierten Werkzeuge der KI-Assistent beim Antworten verwenden darf. Lassen Sie riskante Werkzeuge deaktiviert, es sei denn, Sie benötigen sie.",
@@ -1498,7 +1541,7 @@
     "reasoningEffort": "Denkaufwand",
     "apiMode": "API-Modus",
     "apiModeChatCompletions": "Chat Completions",
-    "apiModeResponses": "Antworten",
+    "apiModeResponses": "Responses",
     "extraHeaders": "Zusätzliche Header",
     "extraHeadersPlaceholder": "sid=1, \"env\"=\"3\"",
     "remoteResize": "Remote-Größenänderung",
@@ -1719,7 +1762,9 @@
     "aiCustomInstructionsHint": "Optionale Assistenten-Anleitung, bis zu {{count}} Zeichen. KKTerm-Sicherheits-, Genehmigungs- und Local-First-Einschränkungen gelten weiterhin.",
     "aiCustomInstructionsTooLong": "KI-Assistent benutzerdefinierte Anweisungen dürfen maximal {{count}} Zeichen haben.",
     "showAllModels": "Alle Modelle anzeigen",
-    "showAllModelsHint": "Alle beim Aktualisieren vom Anbieter zurückgegebenen Modelle anzeigen, nicht nur die kuratierten Empfehlungen."
+    "showAllModelsHint": "Alle beim Aktualisieren vom Anbieter zurückgegebenen Modelle anzeigen, nicht nur die kuratierten Empfehlungen.",
+    "lastCheckedAt": "Zuletzt geprüft {{time}}",
+    "lastCheckedNever": "Noch nie geprüft"
   },
   "sftp": {
     "accessed": "Zugegriffen",
