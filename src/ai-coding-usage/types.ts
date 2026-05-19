@@ -11,6 +11,7 @@ export interface AiCodingUsageProviderState {
   authState: AiCodingUsageAuthState;
   accountLabel?: string | null;
   accountEmail?: string | null;
+  subscriptionPlan?: string | null;
   fiveHour: AiCodingUsageQuotaWindow;
   weekly: AiCodingUsageQuotaWindow;
   lastRefreshAt?: string | null;

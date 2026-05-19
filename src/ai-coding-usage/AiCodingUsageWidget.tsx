@@ -1,4 +1,5 @@
-import { Bot, Code2, ExternalLink, LogOut, Plus, RefreshCw, X } from "lucide-react";
+import { ExternalLink, LogOut, Plus, RefreshCw, X } from "lucide-react";
+import { ClaudeCodeColorIcon, CodexColorIcon } from "./providerIcons";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
@@ -35,6 +36,7 @@ const EMPTY_STATE: AiCodingUsageState = {
     authState: "disconnected",
     accountLabel: null,
     accountEmail: null,
+    subscriptionPlan: null,
     fiveHour: {},
     weekly: {},
     lastRefreshAt: null,
@@ -316,7 +318,7 @@ function ProviderSlot({
   const label = t(`dashboard.aiCodingUsageProvider.${provider.provider}`);
   const connected = provider.authState === "connected";
   const displayError = providerDisplayError(provider);
-  const Icon = provider.provider === "codex" ? Code2 : Bot;
+  const Icon = provider.provider === "codex" ? CodexColorIcon : ClaudeCodeColorIcon;
 
   return (
     <section className="ai-coding-provider" data-state={provider.authState}>
@@ -326,7 +328,14 @@ function ProviderSlot({
             <Icon size={15} />
           </span>
           <span>
-            <span className="ai-coding-provider-name">{label}</span>
+            <span className="ai-coding-provider-name-row">
+              <span className="ai-coding-provider-name">{label}</span>
+              {provider.subscriptionPlan ? (
+                <span className="ai-coding-provider-plan" title={provider.subscriptionPlan}>
+                  {formatSubscriptionPlan(provider.subscriptionPlan)}
+                </span>
+              ) : null}
+            </span>
             <span className="ai-coding-provider-account">
               {provider.accountLabel || provider.accountEmail || t("dashboard.aiCodingUsageNotConnected")}
             </span>
@@ -450,7 +459,7 @@ function AiCodingUsageAddMenu({
     >
       {providers.map((provider) => (
         <MenuButton
-          icon={provider === "codex" ? <Code2 size={14} /> : <Bot size={14} />}
+          icon={provider === "codex" ? <CodexColorIcon size={14} /> : <ClaudeCodeColorIcon size={14} />}
           key={provider}
           label={t(`dashboard.aiCodingUsageProvider.${provider}`)}
           onClick={() => {
@@ -533,6 +542,15 @@ function replaceProvider(
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function formatSubscriptionPlan(plan: string) {
+  const trimmed = plan.trim();
+  if (!trimmed) return "";
+  return trimmed
+    .split(/[\s_-]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 }
 
 function formatDateTime(value: string) {

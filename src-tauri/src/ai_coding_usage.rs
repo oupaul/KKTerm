@@ -65,6 +65,7 @@ pub struct AiCodingUsageProviderState {
     auth_state: String,
     account_label: Option<String>,
     account_email: Option<String>,
+    subscription_plan: Option<String>,
     five_hour: AiCodingUsageQuotaWindow,
     weekly: AiCodingUsageQuotaWindow,
     last_refresh_at: Option<String>,
@@ -157,6 +158,7 @@ pub async fn ai_coding_usage_disconnect(
 struct ProviderUpdate {
     account_label: Option<String>,
     account_email: Option<String>,
+    subscription_plan: Option<String>,
     auth_state: &'static str,
     snapshot: Option<ProviderSnapshot>,
     raw_provider_json: Option<Value>,
@@ -223,7 +225,7 @@ fn load_provider_state(
 ) -> Result<AiCodingUsageProviderState, String> {
     let row = connection
         .query_row(
-            "SELECT account_label, account_email, auth_state, last_refresh_at, last_error
+            "SELECT account_label, account_email, subscription_plan, auth_state, last_refresh_at, last_error
              FROM ai_coding_usage_accounts
              WHERE provider = ?1",
             params![provider.as_str()],
@@ -231,16 +233,25 @@ fn load_provider_state(
                 Ok((
                     row.get::<_, Option<String>>(0)?,
                     row.get::<_, Option<String>>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
                     row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<String>>(5)?,
                 ))
             },
         )
         .optional()
         .map_err(|error| format!("failed to load usage account: {error}"))?;
 
-    let Some((account_label, account_email, auth_state, last_refresh_at, last_error)) = row else {
+    let Some((
+        account_label,
+        account_email,
+        subscription_plan,
+        auth_state,
+        last_refresh_at,
+        last_error,
+    )) = row
+    else {
         return Ok(disconnected_state(provider));
     };
 
@@ -272,6 +283,7 @@ fn load_provider_state(
         auth_state,
         account_label,
         account_email,
+        subscription_plan,
         five_hour: snapshot
             .as_ref()
             .map(|snapshot| snapshot.five_hour.clone())
@@ -291,6 +303,7 @@ fn disconnected_state(provider: AiCodingUsageProvider) -> AiCodingUsageProviderS
         auth_state: "disconnected".to_string(),
         account_label: None,
         account_email: None,
+        subscription_plan: None,
         five_hour: AiCodingUsageQuotaWindow::unknown(),
         weekly: AiCodingUsageQuotaWindow::unknown(),
         last_refresh_at: None,
@@ -308,11 +321,12 @@ fn save_provider_update(
     connection
         .execute(
             "INSERT INTO ai_coding_usage_accounts
-                (provider, account_label, account_email, auth_state, last_refresh_at, last_error, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (provider, account_label, account_email, subscription_plan, auth_state, last_refresh_at, last_error, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
              ON CONFLICT(provider) DO UPDATE SET
                 account_label = excluded.account_label,
                 account_email = excluded.account_email,
+                subscription_plan = excluded.subscription_plan,
                 auth_state = excluded.auth_state,
                 last_refresh_at = excluded.last_refresh_at,
                 last_error = excluded.last_error,
@@ -321,6 +335,7 @@ fn save_provider_update(
                 provider.as_str(),
                 update.account_label,
                 update.account_email,
+                update.subscription_plan,
                 update.auth_state,
                 now,
                 last_error,
@@ -436,9 +451,10 @@ fn refresh_codex(cli_paths: &ProviderCliPaths) -> Result<ProviderUpdate, String>
     Ok(ProviderUpdate {
         account_label: email
             .clone()
-            .or(plan)
+            .or_else(|| plan.clone())
             .or_else(|| Some(AiCodingUsageProvider::Codex.label().to_string())),
         account_email: email,
+        subscription_plan: plan,
         auth_state: "connected",
         snapshot: Some(snapshot),
         raw_provider_json: Some(rate_limits),
@@ -462,27 +478,140 @@ fn refresh_claude(cli_paths: &ProviderCliPaths) -> Result<ProviderUpdate, String
         "claude",
         AiCodingUsageProvider::ClaudeCode,
     );
-    let output = run_command(&command, &["auth", "status"], Duration::from_secs(30))?;
-    let value =
+    let output = run_command(
+        &command,
+        &["auth", "status", "--json"],
+        Duration::from_secs(30),
+    )?;
+    let status_value =
         serde_json::from_str::<Value>(&output).unwrap_or_else(|_| json!({ "text": output }));
-    Ok(claude_update_from_status_value(value))
+
+    if status_value.get("loggedIn").and_then(Value::as_bool) == Some(false) {
+        return Err("Claude Code is not logged in.".to_string());
+    }
+
+    let mut update = claude_update_from_status_value(status_value);
+    match fetch_claude_oauth_usage() {
+        Ok(usage) => {
+            update.snapshot = Some(normalize_claude_oauth_usage(&usage));
+            update.raw_provider_json = Some(usage);
+        }
+        Err(error) => {
+            update.last_error = Some(error);
+        }
+    }
+    Ok(update)
 }
 
 fn claude_update_from_status_value(value: Value) -> ProviderUpdate {
     let email = find_string_key(&value, &["email", "accountEmail", "username"]);
     let label = email
         .clone()
+        .or_else(|| find_string_key(&value, &["orgName"]))
         .or_else(|| find_string_key(&value, &["account", "login", "name"]));
-    let snapshot = normalize_claude_rate_limits(&value);
+    let subscription_plan = find_string_key(&value, &["subscriptionType", "subscription_type"]);
     ProviderUpdate {
         account_label: label
             .or_else(|| Some(AiCodingUsageProvider::ClaudeCode.label().to_string())),
         account_email: email,
+        subscription_plan,
         auth_state: "connected",
-        snapshot: Some(snapshot),
+        snapshot: None,
         raw_provider_json: Some(value),
         last_error: None,
     }
+}
+
+const CLAUDE_OAUTH_USAGE_URL: &str = "https://api.anthropic.com/api/oauth/usage";
+const CLAUDE_OAUTH_BETA_HEADER: &str = "oauth-2025-04-20";
+
+fn fetch_claude_oauth_usage() -> Result<Value, String> {
+    let token = read_claude_oauth_token()?;
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|error| format!("failed to build HTTP client: {error}"))?;
+    let response = client
+        .get(CLAUDE_OAUTH_USAGE_URL)
+        .bearer_auth(&token)
+        .header("anthropic-beta", CLAUDE_OAUTH_BETA_HEADER)
+        .send()
+        .map_err(|error| format!("Claude usage request failed: {error}"))?;
+    let status = response.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED {
+        return Err(
+            "Claude Code OAuth token rejected. Please sign in again with `claude auth login`."
+                .to_string(),
+        );
+    }
+    if !status.is_success() {
+        return Err(format!("Claude usage endpoint returned HTTP {status}."));
+    }
+    response
+        .json::<Value>()
+        .map_err(|error| format!("failed to parse Claude usage response: {error}"))
+}
+
+fn read_claude_oauth_token() -> Result<String, String> {
+    let path = claude_credentials_path().ok_or_else(|| {
+        "Claude credentials file is not available on this platform.".to_string()
+    })?;
+    let content = std::fs::read_to_string(&path).map_err(|error| {
+        format!(
+            "failed to read Claude credentials at {}: {error}",
+            path.display()
+        )
+    })?;
+    let value: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse Claude credentials: {error}"))?;
+    value
+        .pointer("/claudeAiOauth/accessToken")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| {
+            "Claude credentials do not contain an OAuth access token. Sign in with `claude auth login`."
+                .to_string()
+        })
+}
+
+fn claude_credentials_path() -> Option<PathBuf> {
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))?;
+        Some(PathBuf::from(home).join(".claude").join(".credentials.json"))
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        None
+    }
+}
+
+fn normalize_claude_oauth_usage(value: &Value) -> ProviderSnapshot {
+    let five_hour = value
+        .pointer("/five_hour")
+        .and_then(oauth_usage_window_from_value)
+        .unwrap_or_else(AiCodingUsageQuotaWindow::unknown);
+    let weekly = value
+        .pointer("/seven_day")
+        .and_then(oauth_usage_window_from_value)
+        .unwrap_or_else(AiCodingUsageQuotaWindow::unknown);
+    ProviderSnapshot { five_hour, weekly }
+}
+
+fn oauth_usage_window_from_value(value: &Value) -> Option<AiCodingUsageQuotaWindow> {
+    let object = value.as_object()?;
+    let used_percent = object
+        .get("utilization")
+        .and_then(Value::as_f64)
+        .map(clamp_percent);
+    let resets_at = object
+        .get("resets_at")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    Some(AiCodingUsageQuotaWindow {
+        used_percent,
+        resets_at,
+    })
 }
 
 struct CodexRpcSession {
@@ -782,18 +911,6 @@ fn normalize_codex_rate_limits(value: &Value) -> ProviderSnapshot {
     ProviderSnapshot { five_hour, weekly }
 }
 
-fn normalize_claude_rate_limits(value: &Value) -> ProviderSnapshot {
-    let five_hour = value
-        .pointer("/rate_limits/five_hour")
-        .and_then(quota_window_from_value)
-        .unwrap_or_else(AiCodingUsageQuotaWindow::unknown);
-    let weekly = value
-        .pointer("/rate_limits/seven_day")
-        .and_then(quota_window_from_value)
-        .unwrap_or_else(AiCodingUsageQuotaWindow::unknown);
-    ProviderSnapshot { five_hour, weekly }
-}
-
 #[derive(Debug)]
 struct QuotaCandidate {
     used_percent: Option<f64>,
@@ -864,19 +981,6 @@ fn collect_quota_windows_inner(
     }
 }
 
-fn quota_window_from_value(value: &Value) -> Option<AiCodingUsageQuotaWindow> {
-    let object = value.as_object()?;
-    let used_percent = numeric_key(object, &["used_percentage", "usedPercent"]).map(clamp_percent);
-    let resets_at = object
-        .get("resets_at")
-        .or_else(|| object.get("resetsAt"))
-        .and_then(timestamp_to_rfc3339);
-    Some(AiCodingUsageQuotaWindow {
-        used_percent,
-        resets_at,
-    })
-}
-
 fn numeric_key(map: &serde_json::Map<String, Value>, keys: &[&str]) -> Option<f64> {
     keys.iter()
         .find_map(|key| map.get(*key))
@@ -935,42 +1039,53 @@ mod tests {
     use super::*;
 
     #[test]
-    fn normalizes_claude_status_rate_limits() {
+    fn normalizes_claude_oauth_usage() {
         let value = serde_json::json!({
-            "rate_limits": {
-                "five_hour": { "used_percentage": 42.5, "resets_at": 1770000000 },
-                "seven_day": { "used_percentage": 12.0, "resets_at": 1770400000 }
-            }
+            "five_hour": { "utilization": 23.0, "resets_at": "2026-05-19T18:30:00+00:00" },
+            "seven_day": { "utilization": 18.0, "resets_at": "2026-05-25T14:00:00+00:00" },
+            "seven_day_opus": null,
+            "extra_usage": { "is_enabled": false }
         });
 
-        let snapshot = normalize_claude_rate_limits(&value);
+        let snapshot = normalize_claude_oauth_usage(&value);
 
-        assert_eq!(snapshot.five_hour.used_percent, Some(42.5));
-        assert_eq!(snapshot.weekly.used_percent, Some(12.0));
+        assert_eq!(snapshot.five_hour.used_percent, Some(23.0));
+        assert_eq!(snapshot.weekly.used_percent, Some(18.0));
         assert_eq!(
             snapshot.five_hour.resets_at.as_deref(),
-            Some("2026-02-02T02:40:00Z")
+            Some("2026-05-19T18:30:00+00:00")
         );
         assert_eq!(
             snapshot.weekly.resets_at.as_deref(),
-            Some("2026-02-06T17:46:40Z")
+            Some("2026-05-25T14:00:00+00:00")
         );
     }
 
     #[test]
-    fn claude_auth_status_without_rate_limits_is_not_an_error() {
+    fn missing_oauth_usage_window_falls_back_to_unknown() {
+        let snapshot = normalize_claude_oauth_usage(&serde_json::json!({}));
+        assert!(snapshot.five_hour.used_percent.is_none());
+        assert!(snapshot.weekly.used_percent.is_none());
+    }
+
+    #[test]
+    fn claude_auth_status_populates_account_without_snapshot() {
         let value = serde_json::json!({
             "loggedIn": true,
             "authMethod": "claude.ai",
             "email": "ryan@example.com",
+            "orgName": "Ryan's Org",
             "subscriptionType": "pro"
         });
 
         let update = claude_update_from_status_value(value);
 
         assert_eq!(update.auth_state, "connected");
+        assert_eq!(update.account_email.as_deref(), Some("ryan@example.com"));
+        assert_eq!(update.account_label.as_deref(), Some("ryan@example.com"));
+        assert_eq!(update.subscription_plan.as_deref(), Some("pro"));
         assert_eq!(update.last_error, None);
-        assert_eq!(update.snapshot.unwrap().five_hour.used_percent, None);
+        assert!(update.snapshot.is_none());
     }
 
     #[test]

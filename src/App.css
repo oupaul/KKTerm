@@ -10439,6 +10439,30 @@ fieldset.connection-specific-options > legend {
   white-space: nowrap;
 }
 
+.ai-coding-provider-name-row {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ai-coding-provider-plan {
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text-secondary, currentColor);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 9em;
+}
+
 .ai-coding-provider-account {
   overflow: hidden;
   text-overflow: ellipsis;

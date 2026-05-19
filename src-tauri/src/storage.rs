@@ -240,6 +240,7 @@ CREATE TABLE IF NOT EXISTS ai_coding_usage_accounts (
     provider TEXT PRIMARY KEY CHECK (provider IN ('codex', 'claudeCode')),
     account_label TEXT,
     account_email TEXT,
+    subscription_plan TEXT,
     auth_state TEXT NOT NULL DEFAULT 'disconnected'
         CHECK (auth_state IN ('disconnected', 'connected', 'expired', 'error')),
     last_refresh_at TEXT,
@@ -1813,6 +1814,12 @@ impl Storage {
         )?;
         ensure_column(&connection, "dashboard_views", "background_json", "TEXT")?;
         ensure_column(&connection, "dashboard_views", "tab_color", "TEXT")?;
+        ensure_column(
+            &connection,
+            "ai_coding_usage_accounts",
+            "subscription_plan",
+            "TEXT",
+        )?;
         connection
             .execute(
                 "UPDATE dashboard_widget_instances
