@@ -706,6 +706,8 @@
     "github": "GitHub",
     "softwareUpdates": "Software updates",
     "checkForUpdates": "Check for Updates",
+    "lastCheckedAt": "Last checked {{time}}",
+    "lastCheckedNever": "Never checked",
     "checkingForUpdates": "Checking for updates...",
     "updateNoUpdates": "KKTerm is up to date.",
     "updateAvailableTitle": "Update available",

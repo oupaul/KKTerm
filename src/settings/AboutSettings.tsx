@@ -1,17 +1,32 @@
 import { ExternalLink, PackageOpen, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../app/AppUpdatePrompt";
+import { useLastUpdateCheckAt } from "../lib/lastUpdateCheck";
 import { ABOUT_PRODUCT } from "./aboutData";
 import { SettingsSectionHeader, SettingsSummary } from "./shared";
 
 export function AboutSettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lastCheckedAt = useLastUpdateCheckAt();
+  const lastCheckedLabel = lastCheckedAt
+    ? t("settings.lastCheckedAt", {
+        time: new Date(lastCheckedAt).toLocaleString(i18n.language),
+      })
+    : t("settings.lastCheckedNever");
 
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
         actions={
           <>
+            <span
+              className="field-hint"
+              title={
+                lastCheckedAt ? new Date(lastCheckedAt).toISOString() : undefined
+              }
+            >
+              {lastCheckedLabel}
+            </span>
             <button
               className="toolbar-button"
               onClick={() =>

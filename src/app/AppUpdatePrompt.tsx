@@ -8,6 +8,7 @@ import {
   type AppUpdate,
 } from "../lib/appUpdates";
 import { shouldRunStartupUpdateCheck } from "../lib/appUpdatesModel";
+import { recordUpdateCheckedNow } from "../lib/lastUpdateCheck";
 import { isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 
@@ -66,6 +67,7 @@ export function AppUpdatePrompt({
         });
       }
     } finally {
+      recordUpdateCheckedNow();
       setChecking(false);
     }
   }
