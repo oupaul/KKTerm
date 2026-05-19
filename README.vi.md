@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Không gian quản trị Windows native mà kỷ nguyên AI-tools đã quên xây — terminal, SSH, SFTP, RDP/VNC, dashboard, và một AI biết hỏi xin phép trước khi đụng vào bất cứ thứ gì.</strong>
+  <strong>Không gian quản trị Windows native mà kỷ nguyên AI-tools đã quên xây — terminal, SSH, SFTP, RDP/VNC, dashboard, và một AI build các widget công cụ của riêng bạn.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Cộng thêm vài thứ bạn còn không biết là mình muốn:
 - **SSH pane tự động attach vào tmux session có tên** để phiên `claude` / `codex` / `aider` từ xa sống sót qua mọi cơn dỗi hờn của Wi-Fi laptop.
 - Chín nền **canvas có animation** (vâng, gồm cả `matrix`) cho dashboard, vì chúng tôi không ngại làm chuyện đó.
 
-À, và AI assistant phải xin phép trước khi làm bất cứ điều gì có thể chấm dứt sự nghiệp của bạn.
+À, và AI assistant có thể biến một câu thành một công cụ dashboard nhỏ mà bạn thực sự tiếp tục dùng.
 
 > ⭐ **Nếu đây nghe giống cái app bạn đã ấp ủ định viết trong sáu năm qua — hãy star repo để chúng tôi biết có người đang theo dõi. Nó thực sự rất giúp ích.**
 
@@ -178,9 +178,9 @@ Tất cả là cùng một app. Cùng cửa sổ. Cùng phím tắt. Cùng theme
 - SSH pane dựa trên tmux có thể attach vào session per-pane bền vững, nên reconnect thực sự có nghĩa là *reconnect*, không phải "bắt đầu lại và giả vờ một tiếng vừa qua không tồn tại".
 - Chuyển **Tab** **không** giết **Session**. Đóng **Tab** thì có. Sự phân biệt này từng là chiến tranh tôn giáo nội bộ; chúng tôi đã thắng.
 
-### Một AI Assistant tôn trọng khoang an toàn
+### Một AI Assistant build công cụ của bạn
 
-Hầu hết demo "AI trong terminal của bạn" trông tuyệt vời trong video và đáng sợ trong production. Assistant của KKTerm xoay quanh hai công tắc:
+Hầu hết demo "AI trong terminal của bạn" dừng ở chat. Assistant của KKTerm cũng có thể build những widget dashboard nhỏ, bền vững, theo đúng cách bạn làm việc. Những việc nguy hiểm vẫn được giữ sau hai công tắc:
 
 - **Tool families** (Dashboard / Connections / Live Sessions) — bật/tắt theo từng loại.
 - **Permission mode** trong composer — `Prompt` (mặc định, hỏi mọi lần) hoặc `Allow All` (bạn là người lớn, bạn đã ký waiver).

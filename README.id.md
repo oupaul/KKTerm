@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Workspace admin Windows native yang lupa dibangun oleh era AI-tools — terminal, SSH, SFTP, RDP/VNC, dashboard, dan AI yang selalu minta izin sebelum menyentuh apapun.</strong>
+  <strong>Workspace admin Windows native yang lupa dibangun oleh era AI-tools — terminal, SSH, SFTP, RDP/VNC, dashboard, dan AI yang membangun widget tool milikmu sendiri.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Plus beberapa hal yang belum kamu tahu kamu inginkan:
 - **SSH pane yang otomatis attach ke sesi tmux bernama** supaya sesi remote `claude` / `codex` / `aider` kamu bertahan dari setiap tantrum Wi-Fi yang dilempar laptopmu.
 - Sembilan **latar belakang canvas beranimasi** (iya, termasuk `matrix`) untuk dashboard, karena kami memang tidak malu-malu soal itu.
 
-Oh, dan asisten AI-nya harus minta izin dulu sebelum melakukan apapun yang bisa mengakhiri karir kamu.
+Oh, dan asisten AI-nya bisa mengubah satu kalimat menjadi tool dashboard kecil yang benar-benar terus kamu pakai.
 
 > ⭐ **Kalau ini kedengarannya seperti app yang sudah kamu rencanakan ingin bangun selama enam tahun terakhir — star repo-nya supaya kami tahu ada yang memperhatikan. Ini benar-benar membantu.**
 
@@ -178,9 +178,9 @@ Semuanya satu app yang sama. Satu jendela yang sama. Hotkey yang sama. Tema yang
 - SSH pane berbasis tmux yang bisa attach ke sesi per-pane yang stabil, jadi reconnect benar-benar berarti *menyambung kembali*, bukan "mulai dari awal dan pura-pura satu jam terakhir tidak pernah terjadi."
 - Berganti **Tab** **tidak** mematikan **Session**. Menutup **Tab** yang melakukannya. Perbedaan ini sempat jadi perang saudara secara internal; kami yang menang.
 
-### Asisten AI yang menghormati airlock
+### Asisten AI yang membangun tool-mu
 
-Sebagian besar demo "AI di terminal" terlihat bagus dalam video dan mengerikan di produksi. Asisten KKTerm dibangun di atas dua sakelar:
+Sebagian besar demo "AI di terminal" berhenti di chat. Asisten KKTerm juga bisa membangun widget dashboard kecil yang tahan lama untuk cara kerjamu yang sebenarnya. Hal-hal berbahaya tetap dijaga di balik dua sakelar:
 
 - **Tool families** (Dashboard / Connections / Live Sessions) — toggle on atau off per kategori.
 - **Permission mode** di composer — `Prompt` (default, selalu tanya) atau `Allow All` (kamu sudah dewasa, kamu yang tanda tangan waivernya).

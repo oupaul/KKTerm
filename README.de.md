@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Der native Windows-Admin-Workspace, den das KI-Tools-Zeitalter zu bauen vergessen hat — Terminals, SSH, SFTP, RDP/VNC, Dashboards und eine KI, die fragt, bevor sie irgendwas anfasst.</strong>
+  <strong>Der native Windows-Admin-Workspace, den das KI-Tools-Zeitalter zu bauen vergessen hat — Terminals, SSH, SFTP, RDP/VNC, Dashboards und eine KI, die deine eigenen Tool-Widgets baut.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie willst:
 - **SSH-Panes, die sich automatisch an benannte tmux-Sessions anhängen**, damit deine Remote-`claude`- / `codex`- / `aider`-Session jeden WLAN-Aussetzer deines Laptops übersteht.
 - Neun **animierte Canvas-Hintergründe** (ja, inklusive `matrix`) für das Dashboard, weil wir uns für nichts zu schade sind.
 
-Und die KI-Assistentin muss um Erlaubnis fragen, bevor sie irgendetwas tut, das deine Karriere gefährden könnte.
+Und die KI-Assistentin kann aus einem Satz ein kleines Dashboard-Tool machen, das du tatsächlich weiterbenutzt.
 
 > ⭐ **Wenn das nach der App klingt, die du seit sechs Jahren bauen wolltest — vergib dem Repo einen Stern, damit wir wissen, dass jemand zuschaut. Das hilft wirklich.**
 
@@ -178,9 +178,9 @@ Alles dieselbe App. Dasselbe Fenster. Dieselben Hotkeys. Dasselbe hoffentlich-ni
 - tmux-gestützte SSH-Panes, die sich an stabile per-Pane-Sessions anhängen können — Wiederverbinden bedeutet wirklich *Wiederverbinden*, nicht „von vorne anfangen und so tun, als wäre die letzte Stunde nie gewesen."
 - **Tabs** wechseln **tötet die Session nicht**. Den **Tab** schließen schon. Diese Unterscheidung war intern ein Glaubenskrieg; wir haben gewonnen.
 
-### Ein KI-Assistent, der die Schleuse respektiert
+### Ein KI-Assistent, der deine Tools baut
 
-Die meisten „KI in deinem Terminal"-Demos sehen im Video großartig aus und sind in der Produktion beängstigend. KKTerms Assistent ist um zwei Schalter herum gebaut:
+Die meisten „KI in deinem Terminal"-Demos bleiben beim Chat stehen. KKTerms Assistent kann auch kleine, dauerhafte Dashboard-Widgets für deine echte Arbeitsweise bauen. Gefährliche Dinge bleiben trotzdem hinter zwei Schaltern:
 
 - **Tool-Familien** (Dashboard / Connections / Live Sessions) — ein- oder ausschalten pro Kategorie.
 - **Berechtigungsmodus** im Composer — `Prompt` (Standard, fragt jedes Mal) oder `Allow All` (du bist erwachsen, du hast den Haftungsausschluss unterschrieben).

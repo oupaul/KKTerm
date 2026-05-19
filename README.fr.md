@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>L'espace de travail d'administration Windows natif que l'ère des outils IA a oublié de construire — terminaux, SSH, SFTP, RDP/VNC, dashboards, et une IA qui demande la permission avant de toucher quoi que ce soit.</strong>
+  <strong>L'espace de travail d'administration Windows natif que l'ère des outils IA a oublié de construire — terminaux, SSH, SFTP, RDP/VNC, dashboards, et une IA qui construit tes propres Widgets d'outils.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Et quelques trucs dont tu ne savais pas encore avoir besoin :
 - **Des panes SSH qui s'attachent automatiquement à des Sessions tmux nommées** pour que ta session `claude` / `codex` / `aider` distante survive à chaque caprice Wi-Fi de ton laptop.
 - Neuf **fonds animés** (oui, dont `matrix`) pour le Dashboard, parce qu'on n'est pas au-dessus de ça.
 
-Oh, et l'assistant IA doit demander la permission avant de faire quoi que ce soit qui pourrait te coûter ta carrière.
+Oh, et l'assistant IA peut transformer une phrase en petit outil de Dashboard que tu continues vraiment à utiliser.
 
 > ⭐ **Si ça ressemble à l'appli que tu avais l'intention de construire depuis six ans — étoile le repo pour qu'on sache que quelqu'un regarde. Ça aide vraiment.**
 
@@ -178,9 +178,9 @@ Tout ça, c'est la même appli. Même fenêtre. Mêmes raccourcis clavier. Même
 - Panes SSH adossés à tmux qui peuvent s'attacher à des Sessions stables par pane, pour que se reconnecter signifie vraiment *se reconnecter*, pas « repartir de zéro et faire semblant que la dernière heure n'a pas existé ».
 - Changer de **Tab** ne tue **pas** la **Session**. Fermer le **Tab** oui. Cette distinction a été une guerre de religion en interne ; on a gagné.
 
-### Un assistant IA qui respecte le sas de sécurité
+### Un assistant IA qui construit tes outils
 
-La plupart des démos « IA dans ton terminal » sont magnifiques en vidéo et terrifiantes en production. L'assistant de KKTerm est construit autour de deux interrupteurs :
+La plupart des démos « IA dans ton terminal » s'arrêtent au chat. L'assistant de KKTerm peut aussi construire de petits Widgets de Dashboard durables, adaptés à ta vraie façon de travailler. Il garde quand même les actions dangereuses derrière deux interrupteurs :
 
 - **Familles d'outils** (Dashboard / Connections / Sessions en direct) — à activer ou désactiver par catégorie.
 - **Mode de permission** dans le compositeur — `Prompt` (par défaut, demande à chaque fois) ou `Allow All` (tu es adulte, tu as signé la décharge).

@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Workspace สำหรับแอดมิน Windows แบบ native ที่ยุค AI tools ลืมสร้าง — terminal, SSH, SFTP, RDP/VNC, dashboard, และ AI ที่ขอ permission ก่อนทำอะไรทุกอย่าง</strong>
+  <strong>Workspace สำหรับแอดมิน Windows แบบ native ที่ยุค AI tools ลืมสร้าง — terminal, SSH, SFTP, RDP/VNC, dashboard, และ AI ที่สร้าง widget เครื่องมือของคุณเอง</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@
 - **SSH pane ที่ auto-attach เข้า tmux session ที่ตั้งชื่อไว้** ให้ session remote `claude` / `codex` / `aider` ของคุณรอดจากทุก Wi-Fi tantrum ที่แล็ปท็อปพ่น
 - Nine **animated canvas background** (ใช่ รวม `matrix` ด้วย) สำหรับ dashboard เพราะเราไม่ได้ถือตัวเกินไปขนาดนั้น
 
-แถมยังมี AI assistant ที่ต้องขออนุญาตก่อนทำอะไรที่อาจพังอาชีพคุณได้
+แถม AI assistant ยังเปลี่ยนประโยคเดียวให้เป็นเครื่องมือ dashboard เล็ก ๆ ที่คุณใช้งานต่อจริงได้
 
 > ⭐ **ถ้านี่ฟังดูเหมือนแอปที่คุณตั้งใจจะสร้างมาหกปีแล้ว — กด star ให้ repo หน่อยเพื่อให้รู้ว่ามีคนดูอยู่ มันช่วยได้จริง ๆ**
 
@@ -178,9 +178,9 @@
 - SSH pane พร้อม tmux ที่ attach เข้า session ต่อ pane แบบ stable ได้ ให้การ reconnect หมายถึง *การกลับมาต่อจริง ๆ* ไม่ใช่ "เริ่มใหม่และแกล้งทำเป็นว่าชั่วโมงที่แล้วไม่เคยเกิดขึ้น"
 - การสลับ **Tab** **ไม่** kill **Session** การปิด **Tab** ถึงจะ kill ความแตกต่างนี้เคยเป็นสงครามศาสนาภายใน เราชนะ
 
-### AI Assistant ที่เคารพ airlock
+### AI Assistant ที่สร้างเครื่องมือของคุณ
 
-Demo "AI ใน terminal" ส่วนใหญ่ดูดีในวิดีโอและน่ากลัวใน production KKTerm's assistant สร้างรอบสวิตช์สองตัว:
+Demo "AI ใน terminal" ส่วนใหญ่หยุดอยู่ที่ chat แต่ assistant ของ KKTerm ยังสร้าง widget dashboard เล็ก ๆ ที่คงอยู่และเข้ากับวิธีทำงานจริงของคุณได้ด้วย ส่วนที่อันตรายยังถูกคุมไว้หลังสวิตช์สองตัว:
 
 - **Tool family** (Dashboard / Connections / Live Sessions) — toggle เปิด/ปิดแต่ละหมวด
 - **Permission mode** ใน composer — `Prompt` (ค่าเริ่มต้น ถามทุกครั้ง) หรือ `Allow All` (คุณเป็นผู้ใหญ่ คุณเซ็น waiver แล้ว)

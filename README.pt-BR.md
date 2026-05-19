@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>O workspace nativo para administradores Windows que a era das ferramentas de IA esqueceu de criar — terminais, SSH, SFTP, RDP/VNC, dashboards, e uma IA que pede permissão antes de tocar em qualquer coisa.</strong>
+  <strong>O workspace nativo para administradores Windows que a era das ferramentas de IA esqueceu de criar — terminais, SSH, SFTP, RDP/VNC, dashboards, e uma IA que cria seus próprios widgets de ferramentas.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Mais algumas coisas que você não sabia que queria:
 - **Panes de SSH com auto-attach a sessões tmux nomeadas** para que sua sessão remota do `claude` / `codex` / `aider` sobreviva a qualquer birra de Wi-Fi que o seu notebook resolver ter.
 - Nove **fundos animados em canvas** (sim, incluindo `matrix`) para o dashboard, porque a gente não tem vergonha disso não.
 
-Ah, e a IA assistente precisa pedir permissão antes de fazer qualquer coisa que possa encerrar a sua carreira.
+Ah, e o AI assistant pode transformar uma frase numa pequena ferramenta de dashboard que você realmente continua usando.
 
 > ⭐ **Se isso parece o app que você sempre quis mas nunca teve tempo de construir — dá uma estrela no repositório pra gente saber que tem alguém por aí. Ajuda de verdade.**
 
@@ -178,9 +178,9 @@ Se o cabo de rede pegar fogo, o KKTerm ainda abre.
 - Panes de SSH com tmux que fazem attach a sessões estáveis por pane, de forma que reconectar realmente significa *reconectar*, e não "começar do zero e fingir que a última hora não aconteceu."
 - Trocar de **Tab** **não** mata a **Session**. Fechar a **Tab** sim. Essa distinção foi uma guerra religiosa internamente; a gente ganhou.
 
-### Um AI Assistant que respeita a câmara de ar
+### Um AI Assistant que cria suas ferramentas
 
-A maioria das demos de "IA no seu terminal" ficam ótimas em vídeo e são aterrorizantes em produção. O assistente do KKTerm é construído em torno de dois controles:
+A maioria das demos de "IA no seu terminal" para no chat. O assistente do KKTerm também pode criar pequenos widgets de dashboard, duráveis, para o jeito como você realmente trabalha. Ainda assim, ele mantém as coisas perigosas atrás de dois controles:
 
 - **Famílias de ferramentas** (Dashboard / Connections / Live Sessions) — ative ou desative por categoria.
 - **Modo de permissão** no composer — `Prompt` (padrão, pergunta sempre) ou `Allow All` (você é adulto, assinou o termo de responsabilidade).

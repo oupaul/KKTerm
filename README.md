@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>The native Windows admin workspace the AI-tools era forgot to build — terminals, SSH, SFTP, RDP/VNC, dashboards, and an AI that asks before it touches anything.</strong>
+  <strong>The native Windows admin workspace the AI-tools era forgot to build — terminals, SSH, SFTP, RDP/VNC, dashboards, and an AI that builds your own tool widgets.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Plus a few things you didn't know you wanted:
 - **SSH panes that auto-attach to named tmux sessions** so your remote `claude` / `codex` / `aider` session survives every Wi-Fi tantrum your laptop throws.
 - Nine **animated canvas backgrounds** (yes, including `matrix`) for the dashboard, because we are not above it.
 
-Oh, and the AI assistant has to ask permission before it does anything that could end your career.
+Oh, and the AI assistant can turn a sentence into a tiny dashboard tool you actually keep using.
 
 > ⭐ **If this sounds like the app you've been meaning to build for the last six years — star the repo so we know someone's watching. It genuinely helps.**
 
@@ -178,9 +178,9 @@ It's all the same app. Same window. Same hotkeys. Same hopefully-not-eye-bleedin
 - tmux-backed SSH panes that can attach to stable per-pane sessions, so reconnecting actually means *reconnecting*, not "starting over and pretending the last hour didn't happen."
 - Switching **Tabs** does **not** kill the **Session**. Closing the **Tab** does. This distinction was a religious war internally; we won.
 
-### An AI Assistant that respects the airlock
+### An AI Assistant that builds your tools
 
-Most "AI in your terminal" demos look great in a video and terrifying in production. KKTerm's assistant is built around two switches:
+Most "AI in your terminal" demos stop at chat. KKTerm's assistant can also build small, durable dashboard widgets for the way you actually work. It still keeps the dangerous stuff behind two switches:
 
 - **Tool families** (Dashboard / Connections / Live Sessions) — toggle them on or off per category.
 - **Permission mode** in the composer — `Prompt` (default, asks every time) or `Allow All` (you're an adult, you signed the waiver).

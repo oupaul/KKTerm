@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Il workspace di amministrazione nativo per Windows che l'era degli AI-tool si è dimenticata di costruire — terminali, SSH, SFTP, RDP/VNC, dashboard, e un'AI che chiede il permesso prima di toccare qualsiasi cosa.</strong>
+  <strong>Il workspace di amministrazione nativo per Windows che l'era degli AI-tool si è dimenticata di costruire — terminali, SSH, SFTP, RDP/VNC, dashboard, e un'AI che costruisce i tuoi widget-strumento.</strong>
 </p>
 
 <p align="center">
@@ -77,7 +77,7 @@ Più qualche cosa di cui non sapevi di aver bisogno:
 - **Pane SSH che si collegano automaticamente a sessioni tmux con nome** così la tua sessione remota `claude` / `codex` / `aider` sopravvive a ogni capriccio Wi-Fi che il tuo laptop si inventa.
 - Nove **sfondi canvas animati** (sì, incluso `matrix`) per la dashboard, perché non siamo al di sopra di queste cose.
 
-E l'assistente AI deve chiedere il permesso prima di fare qualsiasi cosa che potrebbe rovinarti la carriera.
+E l'assistente AI può trasformare una frase in un piccolo strumento da dashboard che continui davvero a usare.
 
 > ⭐ **Se questa sembra l'app che stavi pensando di costruire da sei anni — metti una stella al repo così sappiamo che qualcuno sta guardando. Aiuta davvero.**
 
@@ -178,9 +178,9 @@ Se il tuo cavo di rete prende fuoco, KKTerm si apre lo stesso.
 - Pane SSH con tmux che possono collegarsi a sessioni stabili per pane, così riconnettersi significa davvero *riconnettersi*, non "ricominciare da capo fingendo che l'ultima ora non sia mai esistita."
 - Cambiare **Tab** **non** uccide la **Session**. Chiudere il **Tab** sì. Questa distinzione è stata una guerra di religione internamente; abbiamo vinto noi.
 
-### Un Assistente AI che rispetta il protocollo di sicurezza
+### Un Assistente AI che costruisce i tuoi strumenti
 
-La maggior parte delle demo "AI nel tuo terminale" sembrano fantastiche in un video e terrorizzanti in produzione. L'assistente di KKTerm è costruito attorno a due interruttori:
+La maggior parte delle demo "AI nel tuo terminale" si ferma alla chat. L'assistente di KKTerm può anche costruire piccoli widget dashboard persistenti per il tuo modo reale di lavorare. Mantiene comunque le cose pericolose dietro due interruttori:
 
 - **Famiglie di strumenti** (Dashboard / Connections / Session Live) — attivale o disattivale per categoria.
 - **Modalità permesso** nel compositore — `Prompt` (predefinita, chiede ogni volta) o `Allow All` (sei un adulto, hai firmato il modulo di esonero).
