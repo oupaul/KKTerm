@@ -1,9 +1,6 @@
-import { listen } from "@tauri-apps/api/event";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  BedSingle,
-  Coffee,
   Cpu,
   LoaderCircle,
   MemoryStick,
@@ -12,8 +9,6 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ActivePage } from "../app/ActivityRail";
-import { ariaPressed } from "../lib/aria";
-import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 
 const NOTIFICATION_FADE_MS = 220;
@@ -79,7 +74,6 @@ export function StatusBar({
       </div>
       <div className="status-bar-actions">
         <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />
-        <DontSleepStatusButton />
       </div>
     </footer>
   );
@@ -108,110 +102,6 @@ function AssistantWorkingStatusButton({
       <LoaderCircle size={14} />
       <span className="status-bar-tooltip" id="assistant-working-status-tooltip" role="tooltip">
         {t("app.aiAssistant")}
-      </span>
-    </button>
-  );
-}
-
-function DontSleepStatusButton() {
-  const { t } = useTranslation();
-  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const storedEnabled = useWorkspaceStore((state) => state.generalSettings.dontSleepEnabled);
-  const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
-  const [enabled, setEnabled] = useState(false);
-  const [updating, setUpdating] = useState(false);
-
-  useEffect(() => {
-    setEnabled(storedEnabled);
-  }, [storedEnabled]);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    let disposed = false;
-    void invokeCommand("get_dont_sleep_enabled")
-      .then((nextEnabled) => {
-        if (!disposed) {
-          setEnabled(nextEnabled);
-          setGeneralSettings({
-            ...useWorkspaceStore.getState().generalSettings,
-            dontSleepEnabled: nextEnabled,
-          });
-        }
-      })
-      .catch(() => {
-        // The status bar should still render if the desktop-only helper is unavailable.
-      });
-
-    return () => {
-      disposed = true;
-    };
-  }, [setGeneralSettings]);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-    const unlistenPromise = listen<boolean>("kkterm://dont-sleep-changed", (event) => {
-      setEnabled(event.payload);
-      setGeneralSettings({
-        ...useWorkspaceStore.getState().generalSettings,
-        dontSleepEnabled: event.payload,
-      });
-    });
-    return () => {
-      void unlistenPromise.then((unlisten) => unlisten());
-    };
-  }, [setGeneralSettings]);
-
-  async function handleClick() {
-    if (updating) {
-      return;
-    }
-
-    const nextEnabled = !enabled;
-    setUpdating(true);
-
-    try {
-      const savedEnabled = isTauriRuntime()
-        ? await invokeCommand("set_dont_sleep_enabled", { enabled: nextEnabled })
-        : nextEnabled;
-      setEnabled(savedEnabled);
-      setGeneralSettings({
-        ...useWorkspaceStore.getState().generalSettings,
-        dontSleepEnabled: savedEnabled,
-      });
-      showStatusBarNotice(
-        savedEnabled ? t("app.dontSleepEnabled") : t("app.dontSleepDisabled"),
-        { tone: savedEnabled ? "success" : "info" },
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(t("app.dontSleepError", { message }), { tone: "error" });
-    } finally {
-      setUpdating(false);
-    }
-  }
-
-  const label = enabled ? t("app.dontSleepDisable") : t("app.dontSleepEnable");
-  const Icon = enabled ? Coffee : BedSingle;
-  const tooltip = t("app.dontSleep");
-
-  return (
-    <button
-      className={`status-bar-action status-bar-dont-sleep ${enabled ? "active" : ""}`}
-      aria-label={label}
-      aria-describedby="dont-sleep-status-tooltip"
-      {...ariaPressed(enabled)}
-      disabled={updating}
-      onClick={() => void handleClick()}
-      type="button"
-    >
-      <Icon size={14} />
-      <span className="status-bar-tooltip" id="dont-sleep-status-tooltip" role="tooltip">
-        {tooltip}
       </span>
     </button>
   );

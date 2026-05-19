@@ -519,8 +519,16 @@ button {
   bottom: -4px;
 }
 
-.rail-button-settings {
+.rail-button-dont-sleep {
   margin-top: auto;
+}
+
+.rail-button-settings {
+  margin-top: 0;
+}
+
+.rail-button-dont-sleep.dont-sleep-enabled {
+  color: var(--nav-toolbar-warning);
 }
 
 .rail-button:disabled {
@@ -5851,15 +5859,6 @@ progress {
 .status-bar-action:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-.status-bar-dont-sleep.active {
-  color: var(--accent);
-}
-
-.status-bar-dont-sleep.active svg {
-  fill: currentColor;
-  stroke: currentColor;
 }
 
 .status-bar-assistant-working {
