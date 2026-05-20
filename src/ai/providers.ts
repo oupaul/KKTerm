@@ -31,6 +31,7 @@ export const DEFAULT_AI_ASSISTANT_TOOLS: AiAssistantToolSettings = {
   sessions: true,
   tutorial: true,
   manual: true,
+  network: false,
 };
 
 export const CUSTOM_AI_INSTRUCTIONS_MAX_LENGTH = 1000;

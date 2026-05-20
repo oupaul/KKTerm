@@ -3476,7 +3476,7 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
         ));
         let mut create_widget_tool = tool_definition(
             "dashboard_create_widget",
-            "Create a validated script AI Created Widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Pre-create duplicate check: before calling this tool, inspect the AI Created Widgets in the current Dashboard state. If dashboard_load_state has not been called this session, call it first. If any existing AI Created Widget (createdBy = \"agent\") has a function that would significantly overlap with the user's request, do NOT call dashboard_create_widget. Instead reply in chat naming the matched widget by title and offer three choices: (1) Edit existing - modify \"<title>\" to fit the new request, which you will then carry out by calling dashboard_update_custom_widget with the existing widget id and a body patch; (2) Create new - keep \"<title>\" and add a separate widget, which you will carry out by calling dashboard_create_widget; (3) Place it - drop \"<title>\" onto the current Dashboard View, which you will carry out by calling dashboard_add_instance with the existing widget's id as sourceId, kind \"script\", and preset \"ambient\". Wait for the user's choice before invoking any tool. All AI Created Widgets are script widgets, including static requests; render concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Strongly prefer KKTerm's bundled widget libraries (for example mermaid, three, animejs, echarts, chartjs, marked, prism, leaflet, qrcode, mathjs, papaparse, dayjs, konva, pixijs, matter, gridjs, jsyaml, chroma) over reimplementing equivalent logic from scratch: when a catalog entry fits the request, list its key in body.libraries so KKTerm preloads it offline-safe before running source, and call the documented global from your script. Runtime CDN scripts are blocked by CSP; use body.libraries for bundled local libraries only, and hand-roll the algorithm only as a last resort when no bundled library fits. For script widgets that display remote images or fetch remote data, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose. Default to ambient for AI Created Widgets - ambient hides the title bar and gives AI-authored single-purpose surfaces the right Dashboard look. Use panel only when the user explicitly wants a titled chrome, and hero only for rare high-priority summary widgets. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Size widgets generously enough to avoid inner scrollbars: simple timers/counters need at least 4x3, forms or images need 5x4 or larger, lists need height for expected rows. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, leaflet, konva, pixijs, matter, mermaid, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets; if no purpose-specific color fits, choose a random non-default accent. Never set text and background to the same or low-contrast colors; use host CSS variables and compact app-style controls. For polished script-widget UI, use KKTerm's built-in classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. If the widget needs user-configurable/persistent per-instance options, provide settingsSchema.fields with text, number, boolean, select, or secret fields. KK.getSettings() is synchronous; do not await it. Use secret fields for passwords, API keys, tokens, and similar values; secret fields require type, key, label, and placeholder only, with no defaultValue. SQLite stores only secret references. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After this tool returns, use the returned instance.id to request any needed widget secret with ownerId dashboard-widget-secret:<instance.id>:<fieldKey>. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root. CRITICAL for games and interactive canvases: always check boundary collisions against the arena edges (top, bottom, left, right) - a collision function that only checks filled cells but not the floor/walls will let pieces fall off-screen forever, turning the widget into a silent resource drain. Include an exit path for any requestAnimationFrame loop: check a stopped/paused/gameOver state at the top of the rAF callback so the loop can terminate rather than running 60fps forever. List only libraries whose documented global you actually call in source; declaring unused libraries (for example listing matter when the source never references Matter) wastes memory and bandwidth and is rejected at validation.",
+            "Create a validated script AI Created Widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Pre-create duplicate check: before calling this tool, inspect the AI Created Widgets in the current Dashboard state. If dashboard_load_state has not been called this session, call it first. If any existing AI Created Widget (createdBy = \"agent\") has a function that would significantly overlap with the user's request, do NOT call dashboard_create_widget. Instead reply in chat naming the matched widget by title and offer three choices: (1) Edit existing - modify \"<title>\" to fit the new request, which you will then carry out by calling dashboard_update_custom_widget with the existing widget id and a body patch; (2) Create new - keep \"<title>\" and add a separate widget, which you will carry out by calling dashboard_create_widget; (3) Place it - drop \"<title>\" onto the current Dashboard View, which you will carry out by calling dashboard_add_instance with the existing widget's id as sourceId, kind \"script\", and preset \"ambient\". Wait for the user's choice before invoking any tool. All AI Created Widgets are script widgets, including static requests; render concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Strongly prefer KKTerm's bundled widget libraries (for example mermaid, three, animejs, echarts, chartjs, marked, prism, leaflet, qrcode, mathjs, papaparse, dayjs, konva, pixijs, matter, gridjs, jsyaml, chroma) over reimplementing equivalent logic from scratch: when a catalog entry fits the request, list its key in body.libraries so KKTerm preloads it offline-safe before running source, and call the documented global from your script. Runtime CDN scripts are blocked by CSP; use body.libraries for bundled local libraries only, and hand-roll the algorithm only as a last resort when no bundled library fits. For script widgets that display remote images or fetch remote data, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose. Default to ambient for AI Created Widgets - ambient hides the title bar and gives AI-authored single-purpose surfaces the right Dashboard look. Use panel only when the user explicitly wants a titled chrome, and hero only for rare high-priority summary widgets. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Size widgets generously enough to avoid inner scrollbars: simple timers/counters need at least 4x3, forms or images need 5x4 or larger, lists need height for expected rows. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, leaflet, konva, pixijs, matter, mermaid, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets; if no purpose-specific color fits, choose a random non-default accent. Never set text and background to the same or low-contrast colors; use host CSS variables and compact app-style controls. For polished script-widget UI, use KKTerm's built-in classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. If the widget needs user-configurable/persistent per-instance options, provide settingsSchema.fields with text, number, boolean, select, or secret fields. KK.getSettings() is synchronous; do not await it. Use secret fields for passwords, API keys, tokens, and similar values; secret fields require type, key, label, and placeholder only, with no defaultValue. SQLite stores only secret references. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After this tool returns, use the returned instance.id to request any needed widget secret with ownerId dashboard-widget-secret:<instance.id>:<fieldKey>. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root. CRITICAL for games and interactive canvases: always check boundary collisions against the arena edges (top, bottom, left, right) - a collision function that only checks filled cells but not the floor/walls will let pieces fall off-screen forever, turning the widget into a silent resource drain. Include an exit path for any requestAnimationFrame loop: check a stopped/paused/gameOver state at the top of the rAF callback so the loop can terminate rather than running 60fps forever. List only libraries whose documented global you actually call in source; declaring unused libraries (for example listing matter when the source never references Matter) wastes memory and bandwidth and is rejected at validation. When the Dashboard global network-tools setting is on AND the widget body sets permissions.networkTools true, KK.net.* is available: KK.net.dns(host,{recordType}) resolves DNS; KK.net.tcpCheck(host,port,{timeoutMs}) checks a TCP port; KK.net.interfaces() lists local interfaces; KK.net.wol(mac,{broadcast,port}) sends Wake-on-LAN; KK.net.whois(query) runs WHOIS. Streaming operations return an AsyncIterable with a .cancel() method: KK.net.ping(host,{count,intervalMs,timeoutMs,fallbackTcpPort}) streams PingReply objects; KK.net.portScan(host,{ports,concurrency,timeoutMs,jitterMs}) streams PortResult objects. Use for-await loops to consume streams; call .cancel() to stop early. All KK.net.* methods reject with an Error if the permissions gate is closed.",
             dashboard_create_widget_schema(),
         );
         create_widget_tool.function.description.push(' ');
@@ -3620,6 +3620,43 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
             "tutorial_highlight",
             "Show a one-step in-app Tutorial overlay by highlighting a visible app-owned target, dimming the rest of the window, and placing a short help balloon beside it. Use this for how-to guidance after reading page context for listed tutorial targets. Only pass targetId values explicitly listed in current page context; do not invent CSS selectors. The overlay disappears when the user clicks or presses any key.",
             json!({"type":"object","properties":{"targetId":{"type":"string"},"title":{"type":"string","maxLength":80},"body":{"type":"string","maxLength":240}},"required":["targetId","title","body"]}),
+        ));
+    }
+    if settings.network() {
+        tools.push(tool_definition(
+            "network_ping",
+            "Ping a host (ICMP with TCP fallback). Returns per-packet RTT replies and availability.",
+            json!({"type":"object","properties":{"host":{"type":"string"},"count":{"type":"integer","minimum":1,"maximum":256},"intervalMs":{"type":"integer","minimum":100},"timeoutMs":{"type":"integer","minimum":100},"fallbackTcpPort":{"type":"integer","minimum":1,"maximum":65535}},"required":["host"]}),
+        ));
+        tools.push(tool_definition(
+            "network_dns",
+            "Resolve a hostname via DNS. Returns records and resolver RTT.",
+            json!({"type":"object","properties":{"host":{"type":"string"},"recordType":{"type":"string","enum":["A","AAAA","MX","TXT","CNAME","NS","SOA","PTR"]}},"required":["host"]}),
+        ));
+        tools.push(tool_definition(
+            "network_tcp_check",
+            "Check whether a TCP port is open on a host. Returns open/closed status and RTT.",
+            json!({"type":"object","properties":{"host":{"type":"string"},"port":{"type":"integer","minimum":1,"maximum":65535},"timeoutMs":{"type":"integer","minimum":100}},"required":["host","port"]}),
+        ));
+        tools.push(tool_definition(
+            "network_port_scan",
+            "Scan a list of TCP ports on a host. Returns open/closed status per port.",
+            json!({"type":"object","properties":{"host":{"type":"string"},"ports":{"type":"array","items":{"type":"integer","minimum":1,"maximum":65535},"minItems":1,"maxItems":1024},"concurrency":{"type":"integer","minimum":1,"maximum":64},"timeoutMs":{"type":"integer","minimum":100},"jitterMs":{"type":"integer","minimum":0}},"required":["host","ports"]}),
+        ));
+        tools.push(tool_definition(
+            "network_interfaces",
+            "List all local network interfaces with their IP addresses and MAC addresses.",
+            json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "network_wol",
+            "Send a Wake-on-LAN magic packet to wake a sleeping machine by its MAC address.",
+            json!({"type":"object","properties":{"mac":{"type":"string"},"broadcast":{"type":"string"},"port":{"type":"integer","minimum":1,"maximum":65535}},"required":["mac"]}),
+        ));
+        tools.push(tool_definition(
+            "network_whois",
+            "Run a WHOIS lookup for a domain name or IP address.",
+            json!({"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}),
         ));
     }
     tools
@@ -3953,6 +3990,9 @@ async fn run_ai_tool(
             live_session_tool(app, name, args).await
         }
         "tutorial_highlight" if tool_settings.tutorial() => live_session_tool(app, "tutorial_highlight", args).await,
+        name if tool_settings.network() && name.starts_with("network_") => {
+            network_tool(name, args).await
+        }
         _ => "Tool is disabled in AI Assistant settings.".to_string(),
     };
     ai_interaction_debug!(
@@ -4514,6 +4554,94 @@ fn valid_secret_field_key(value: &str) -> bool {
         _ => return false,
     }
     value.len() <= 64 && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+async fn network_tool(name: &str, args: Value) -> String {
+    use crate::net::{dns, interfaces, ping, scan, whois, wol};
+    use tokio_util::sync::CancellationToken;
+    fn net_err(e: &crate::net::NetError) -> Value {
+        serde_json::to_value(e).unwrap_or_else(|_| json!({"kind":"internal"}))
+    }
+    match name {
+        "network_dns" => {
+            let host = args["host"].as_str().unwrap_or("").to_string();
+            let record_type = args["recordType"].as_str().unwrap_or("A").to_string();
+            match dns::lookup(&host, &record_type).await {
+                Ok(r) => json!({"ok":true,"result":r}).to_string(),
+                Err(e) => json!({"ok":false,"netError":net_err(&e)}).to_string(),
+            }
+        }
+        "network_tcp_check" => {
+            let host = args["host"].as_str().unwrap_or("").to_string();
+            let port = args["port"].as_u64().unwrap_or(0) as u16;
+            let timeout_ms = args["timeoutMs"].as_u64();
+            let r = scan::tcp_check(&host, port, timeout_ms).await;
+            json!({"ok":true,"result":r}).to_string()
+        }
+        "network_interfaces" => match interfaces::list_interfaces() {
+            Ok(r) => json!({"ok":true,"result":r}).to_string(),
+            Err(e) => json!({"ok":false,"netError":net_err(&e)}).to_string(),
+        },
+        "network_wol" => {
+            let mac = args["mac"].as_str().unwrap_or("").to_string();
+            let broadcast = args["broadcast"].as_str().map(|s| s.to_string());
+            let port = args["port"].as_u64().map(|p| p as u16);
+            match wol::wake(&mac, broadcast.as_deref(), port).await {
+                Ok(r) => json!({"ok":true,"result":r}).to_string(),
+                Err(e) => json!({"ok":false,"netError":net_err(&e)}).to_string(),
+            }
+        }
+        "network_whois" => {
+            let query = args["query"].as_str().unwrap_or("").to_string();
+            match whois::lookup(&query).await {
+                Ok(r) => json!({"ok":true,"result":r}).to_string(),
+                Err(e) => json!({"ok":false,"netError":net_err(&e)}).to_string(),
+            }
+        }
+        "network_ping" => {
+            let host = args["host"].as_str().unwrap_or("").to_string();
+            let opts = ping::PingOptions {
+                count: args["count"].as_u64().map(|v| v as u32).unwrap_or(ping::DEFAULT_COUNT),
+                interval_ms: args["intervalMs"].as_u64().unwrap_or(ping::DEFAULT_INTERVAL_MS),
+                timeout_ms: args["timeoutMs"].as_u64().unwrap_or(ping::DEFAULT_TIMEOUT_MS),
+                ttl: ping::DEFAULT_TTL,
+                size: ping::DEFAULT_SIZE,
+                fallback_tcp_port: args["fallbackTcpPort"].as_u64().map(|v| v as u16).unwrap_or(ping::DEFAULT_FALLBACK_PORT),
+            };
+            let cancel = CancellationToken::new();
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<ping::PingReply>();
+            let mut replies: Vec<ping::PingReply> = Vec::new();
+            let run = ping::run_ping(&host, opts, cancel.clone(), tx);
+            let collect = async { while let Some(r) = rx.recv().await { replies.push(r); } };
+            let (run_result, _) = tokio::join!(run, collect);
+            match run_result {
+                Ok(()) => json!({"ok":true,"result":replies}).to_string(),
+                Err(e) => json!({"ok":false,"netError":net_err(&e),"partialResult":replies}).to_string(),
+            }
+        }
+        "network_port_scan" => {
+            let host = args["host"].as_str().unwrap_or("").to_string();
+            let ports: Vec<u16> = args["ports"].as_array()
+                .map(|a| a.iter().filter_map(|v| v.as_u64().map(|p| p as u16)).collect())
+                .unwrap_or_default();
+            let opts = scan::PortScanOptions {
+                concurrency: args["concurrency"].as_u64().map(|v| v as usize).unwrap_or(scan::SCAN_CONCURRENCY),
+                timeout_ms: args["timeoutMs"].as_u64().unwrap_or(scan::DEFAULT_CONNECT_TIMEOUT_MS),
+                jitter_ms: args["jitterMs"].as_u64().unwrap_or(scan::SCAN_JITTER_MS),
+            };
+            let cancel = CancellationToken::new();
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<scan::PortResult>();
+            let mut results: Vec<scan::PortResult> = Vec::new();
+            let run = scan::run_port_scan(&host, ports, opts, cancel.clone(), tx);
+            let collect = async { while let Some(r) = rx.recv().await { results.push(r); } };
+            let (run_result, _) = tokio::join!(run, collect);
+            match run_result {
+                Ok(()) => json!({"ok":true,"result":results}).to_string(),
+                Err(e) => json!({"ok":false,"netError":net_err(&e),"partialResult":results}).to_string(),
+            }
+        }
+        _ => json!({"ok":false,"error":"unknown network tool"}).to_string(),
+    }
 }
 
 fn current_time_tool() -> String {

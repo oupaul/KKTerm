@@ -16,6 +16,7 @@ mod import;
 mod logging;
 mod manual;
 mod mcp;
+mod net;
 mod performance;
 mod power;
 mod rdp;
@@ -2287,6 +2288,7 @@ pub fn run() {
             app.manage(rdp::RdpSessionManager::new());
             app.manage(vnc::VncSessionManager::new());
             app.manage(wiki_paths);
+            app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -2524,7 +2526,15 @@ pub fn run() {
             mcp::mcp_refresh_tools,
             mcp::mcp_call_tool,
             manual::list_manual_chapters,
-            manual::read_manual_chapter
+            manual::read_manual_chapter,
+            net::commands::network_dns_lookup,
+            net::commands::network_tcp_check,
+            net::commands::network_interfaces,
+            net::commands::network_wol,
+            net::commands::network_whois,
+            net::commands::network_ping_start,
+            net::commands::network_port_scan_start,
+            net::commands::network_stream_cancel
         ])
         .run(tauri::generate_context!())
         .expect("error while running KKTerm");

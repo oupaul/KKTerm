@@ -1315,6 +1315,10 @@
         "label": "Hướng dẫn vận hành",
         "description": "Tìm kiếm và đọc Hướng dẫn vận hành KKTerm đính kèm để trả lời các câu hỏi về tính năng ứng dụng."
       },
+      "network": {
+        "label": "Network admin tools",
+        "description": "Ping hosts, check TCP ports, resolve DNS, run WHOIS, list interfaces, and send Wake-on-LAN. Disabled by default."
+      },
       "shellCommand": {
         "description": "Chạy lệnh PowerShell hoặc batch không phá hủy từ dữ liệu ứng dụng KKTerm.",
         "label": "Lệnh PowerShell / batch"
@@ -1429,6 +1433,8 @@
     "dashboardLandingLast": "Góc nhìn hoạt động cuối cùng",
     "dashboardMaxActiveScriptWidgets": "Giới hạn tiện ích tập lệnh hoạt động",
     "dashboardMaxActiveScriptWidgetsHint": "Số tiện ích tập lệnh tối đa render iframe cùng lúc trên Bảng điều khiển. Tiện ích vượt quá hiển thị chỗ giữ nhấp để kích hoạt. Phạm vi cho phép {{min}}–{{max}}.",
+    "dashboardAllowWidgetNetworkTools": "Allow network tools in widgets",
+    "dashboardAllowWidgetNetworkToolsDesc": "When enabled, script widgets that request permissions.networkTools can run ping, port scan, DNS, WHOIS, and Wake-on-LAN. Disable to globally block these from all widgets.",
     "dashboardPerformance": "Hiệu suất",
     "dashboardReset": "Đặt lại Bảng điều khiển",
     "dashboardResetBody": "Thao tác này xóa tất cả chế độ xem Dashboard, phiên bản tiện ích và Widget do AI tạo. Chế độ xem Mặc định sẽ được khôi phục với một tiện ích Trình Khởi chạy Ứng dụng. Không thể hoàn tác.",

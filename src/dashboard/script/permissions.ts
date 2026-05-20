@@ -69,11 +69,106 @@ function scriptStringLiteral(value: string): string {
     .replace(/\u2029/g, "\\u2029");
 }
 
+export function buildKkNetSnippet(enabled: boolean): string {
+  if (!enabled) return "";
+  return `
+      (function () {
+        function _netCall(op, args) {
+          return new Promise(function (resolve, reject) {
+            var rid = 'nc-' + Math.random().toString(36).slice(2);
+            function onMsg(event) {
+              var d = event.data;
+              if (!d || d.kk !== true || d.type !== 'netCallResult' || d.requestId !== rid) return;
+              window.removeEventListener('message', onMsg);
+              if (d.ok) {
+                resolve(d.value);
+              } else {
+                var err = new Error((d.error && (d.error.reason || d.error.hint || d.error.kind)) || 'Network tool failed.');
+                if (d.error) { err.code = d.error.kind; err.hint = d.error.hint; err.reason = d.error.reason; }
+                reject(err);
+              }
+            }
+            window.addEventListener('message', onMsg);
+            window.parent.postMessage({ kk: true, type: 'netCall', requestId: rid, op: op, args: args || {} }, '*');
+          });
+        }
+        function _netStream(op, args) {
+          var sid = 'ns-' + Math.random().toString(36).slice(2);
+          var queue = [];
+          var waiters = [];
+          var isDone = false;
+          var doneErr = null;
+          function enqueue(v) {
+            if (waiters.length) { waiters.shift()({ value: v, done: false }); } else { queue.push(v); }
+          }
+          function finalize(err) {
+            if (isDone) return;
+            isDone = true;
+            doneErr = err || null;
+            while (waiters.length) {
+              var w = waiters.shift();
+              if (err) { w(null, err); } else { w({ value: undefined, done: true }); }
+            }
+          }
+          function onMsg(event) {
+            var d = event.data;
+            if (!d || d.kk !== true || d.subscriptionId !== sid) return;
+            if (d.type === 'netEvent') { enqueue(d.payload); }
+            else if (d.type === 'netDone') {
+              window.removeEventListener('message', onMsg);
+              if (d.ok) { finalize(null); }
+              else {
+                var err = new Error((d.error && (d.error.reason || d.error.hint || d.error.kind)) || 'Stream error.');
+                if (d.error) { err.code = d.error.kind; err.hint = d.error.hint; err.reason = d.error.reason; }
+                finalize(err);
+              }
+            }
+          }
+          window.addEventListener('message', onMsg);
+          window.parent.postMessage({ kk: true, type: 'netSubscribe', subscriptionId: sid, op: op, args: args || {} }, '*');
+          function cancel() {
+            window.removeEventListener('message', onMsg);
+            window.parent.postMessage({ kk: true, type: 'netCancel', subscriptionId: sid }, '*');
+            finalize(null);
+          }
+          var iterable = { cancel: cancel };
+          iterable[Symbol.asyncIterator] = function () {
+            return {
+              next: function () {
+                if (queue.length) { return Promise.resolve({ value: queue.shift(), done: false }); }
+                if (isDone) { return doneErr ? Promise.reject(doneErr) : Promise.resolve({ value: undefined, done: true }); }
+                return new Promise(function (resolve, reject) {
+                  waiters.push(function (result, err) {
+                    if (err) { reject(err); } else { resolve(result); }
+                  });
+                });
+              },
+              'return': function () {
+                cancel();
+                return Promise.resolve({ value: undefined, done: true });
+              },
+            };
+          };
+          return iterable;
+        }
+        KK.net = {
+          dns: function (host, opts) { return _netCall('dns', Object.assign({ host: host }, opts)); },
+          tcpCheck: function (host, port, opts) { return _netCall('tcpCheck', Object.assign({ host: host, port: port }, opts)); },
+          interfaces: function () { return _netCall('interfaces', {}); },
+          wol: function (mac, opts) { return _netCall('wol', Object.assign({ mac: mac }, opts)); },
+          whois: function (query, opts) { return _netCall('whois', Object.assign({ query: query }, opts)); },
+          ping: function (host, opts) { return _netStream('ping', Object.assign({ host: host }, opts)); },
+          portScan: function (host, opts) { return _netStream('portScan', Object.assign({ host: host }, opts)); },
+        };
+      })();`;
+}
+
 export function buildSrcdoc(
   body: ScriptBody,
   settingsValuesJson = "{}",
   libraries: ResolvedWidgetLibrary[] = [],
   theme: ScriptWidgetTheme = DEFAULT_SCRIPT_WIDGET_THEME,
+  allowNetworkTools = false,
 ): string {
   const csp = buildCsp(body.permissions);
   const shim = body.htmlShim?.trim().length ? body.htmlShim : '<div id="root"></div>';
@@ -704,6 +799,7 @@ export function buildSrcdoc(
         requestPermission: function () { return Promise.resolve(false); },
       };
       window.KK = KK;
+${buildKkNetSnippet(allowNetworkTools && body.permissions.networkTools === true)}
       // Harden 2: visibility-aware throttling. When the host reports the widget
       // is off-screen or scrolled away, script authors can check KK.isVisible()
       // to pause expensive rAF/animation loops.

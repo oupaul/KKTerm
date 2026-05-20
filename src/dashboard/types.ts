@@ -151,7 +151,7 @@ export interface LayoutEntry {
 
 export interface ScriptBody {
   source: string;
-  permissions: { network: boolean; pollSeconds?: number };
+  permissions: { network: boolean; networkTools?: boolean; pollSeconds?: number };
   htmlShim?: string;
   libraries?: string[];
 }
