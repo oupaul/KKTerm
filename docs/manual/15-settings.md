@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including AI provider keys `settings.apiMode`, `settings.apiModeChatCompletions`, `settings.apiModeResponses`, `settings.extraHeaders`, and `settings.extraHeadersPlaceholder`
-- Topics: General, Appearance, Dashboard, Credentials & MCP, AI Assistant, assistant tool defaults, SSH, Terminal, Screenshots, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all
-- Synonyms: "preferences", "options", "config", "theme", "dark mode", "color", "language", "API key", "import settings", "factory reset", "show me where"
+- Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including General keys `settings.autoStartWithWindows`, `settings.minimizeOnLaunch`, `settings.minimizeToTray`, and AI provider keys `settings.apiMode`, `settings.apiModeChatCompletions`, `settings.apiModeResponses`, `settings.extraHeaders`, and `settings.extraHeadersPlaceholder`
+- Topics: General, Appearance, Dashboard, Credentials & MCP, AI Assistant, assistant tool defaults, SSH, Terminal, Screenshots, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all; Windows startup; launch minimized
+- Synonyms: "preferences", "options", "config", "theme", "dark mode", "color", "language", "API key", "import settings", "factory reset", "show me where", "start with Windows", "run at login", "launch minimized"
 
 > Settings page styling is consistent across sections. Related controls live inside the shared `settings-subsection settings-fieldset` group so the group title sits in the border. Editable controls look editable; disabled / readonly controls stay muted. Delete buttons inside Settings are icon-only red trash cans (no visible "Delete" text). Destructive Settings-wide actions live in **General → Settings data**, behind app-owned confirmation dialogs — not inside feature-specific sections.
 
@@ -34,6 +34,8 @@ The universal AI Assistant panel remains visible on Settings. `src/settings/sett
 
 - Defaults group `settings.generalDefaults`.
 - Language picker: label `settings.language`. Native names come from the `languages` namespace. See [16-localization.md](16-localization.md).
+- Start with Windows: toggle `settings.autoStartWithWindows` (hint `settings.autoStartWithWindowsHint`). When on, KKTerm registers itself for the current Windows user and launches after sign-in.
+- Minimize on launch: toggle `settings.minimizeOnLaunch` (hint `settings.minimizeOnLaunchHint`). When on, KKTerm starts minimized; if `settings.minimizeToTray` is also on, the launch window hides to the system tray.
 - Minimize to tray: toggle `settings.minimizeToTray` (hint `settings.minimizeToTrayHint`). When on, the title-bar close button hides the window; when off, it exits. Tray "Exit" (`app.trayExit`) always quits.
 - Settings data subsection (destructive actions live here):
   - Backup: `settings.backupSettings` → `settings.backupSettingsComplete`. Backup ZIP uses the same shape as importable KKTerm settings export.

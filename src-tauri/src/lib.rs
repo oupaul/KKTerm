@@ -2,6 +2,7 @@ mod ai;
 mod ai_coding_usage;
 mod app_launcher;
 mod app_tray;
+mod auto_start;
 mod dashboard_commands;
 mod dashboard_ids;
 mod dashboard_storage;
@@ -638,6 +639,7 @@ fn update_general_settings(
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
     request: storage::GeneralSettings,
 ) -> Result<storage::GeneralSettings, String> {
+    auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
     let saved = storage.update_general_settings(request)?;
     tray_state.set_minimize_to_tray(saved.minimize_to_tray());
     if let Err(error) = power.set_enabled(saved.dont_sleep_enabled()) {
@@ -2229,6 +2231,11 @@ pub fn run() {
             if let Err(error) = storage.backup_if_enabled_for_startup() {
                 eprintln!("failed to create automatic database backup at startup: {error}");
             }
+            if let Err(error) =
+                auto_start::sync_auto_start_with_windows(general_settings.auto_start_with_windows())
+            {
+                eprintln!("{error}");
+            }
             let webview_sessions =
                 webview::WebviewSessionManager::new(general_settings.allow_clipboard_read());
             if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
@@ -2253,6 +2260,14 @@ pub fn run() {
             app.manage(app_tray::TrayState::new(
                 general_settings.minimize_to_tray(),
             ));
+            if general_settings.minimize_on_launch() {
+                if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+                    let _ = main_window.minimize();
+                    if general_settings.minimize_to_tray() {
+                        let _ = main_window.hide();
+                    }
+                }
+            }
             let power_manager = power::DontSleepManager::new();
             if general_settings.dont_sleep_enabled() {
                 if let Err(error) = power_manager.set_enabled(true) {

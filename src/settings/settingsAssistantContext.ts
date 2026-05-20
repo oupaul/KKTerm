@@ -46,6 +46,8 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
     controls: [
       { key: "settings.language", description: "UI language selector." },
       { key: "settings.workspaceAccess", description: "Workspace access and runtime toggles." },
+      { key: "settings.autoStartWithWindows", description: "Launch KKTerm when the user signs in to Windows." },
+      { key: "settings.minimizeOnLaunch", description: "Start the app minimized at launch." },
       { key: "settings.settingsData", description: "Backup, import, database folder, and reset actions." },
     ],
   },

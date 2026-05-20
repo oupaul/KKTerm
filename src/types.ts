@@ -180,6 +180,8 @@ export interface GeneralSettings {
   showConnectedConnectionsInRail: boolean;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
+  autoStartWithWindows: boolean;
+  minimizeOnLaunch: boolean;
   minimizeToTray: boolean;
   dontSleepEnabled: boolean;
   lastBackupAt?: string | null;
