@@ -14,6 +14,7 @@ export type AssistantStreamMessage = {
   content: string;
   reasoningContent?: string;
   toolCalls?: AssistantToolCallStatus[];
+  skillNames?: string[];
   workStartedAt?: string;
   workCompletedAt?: string;
   isStreaming?: boolean;
@@ -52,6 +53,14 @@ export function applyAssistantStreamEventToMessage(
           startedAt: options.now(),
         },
       ];
+      break;
+    case "skillInvocation":
+      const skillName = streamEventString(event, "skillName", "skill_name");
+      if (!skillName) {
+        break;
+      }
+      msg.workStartedAt = msg.workStartedAt ?? options.workStartedAt;
+      msg.skillNames = Array.from(new Set([...(msg.skillNames ?? []), skillName]));
       break;
     case "toolCallEnd":
       const endedToolId = streamEventString(event, "toolId", "tool_id");

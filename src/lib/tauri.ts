@@ -450,7 +450,6 @@ export interface AssistantSkillSummary {
   messages: AgentChatMessage[];
   outputLanguage?: string;
   allowTools?: boolean;
-  skillNames?: string[];
 }
 
 export interface AgentRunResponse {
@@ -465,6 +464,7 @@ export type AiStreamEvent =
   | { type: "contentDelta"; delta: string }
   | { type: "toolCallStart"; toolId: string; toolName: string }
   | { type: "toolCallEnd"; toolId: string; toolName: string; error?: string }
+  | { type: "skillInvocation"; skillName: string }
   | { type: "done"; model: string; providerKind: string }
   | { type: "error"; message: string };
 

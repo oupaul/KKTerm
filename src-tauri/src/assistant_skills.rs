@@ -88,38 +88,6 @@ pub fn list_skill_summaries(
     Ok(summaries)
 }
 
-pub fn resolve_invoked_skills(
-    root: &Path,
-    disabled_names: &[String],
-    requested_names: &[String],
-    prompt: &str,
-) -> Result<Vec<AssistantSkill>, String> {
-    let disabled = disabled_names.iter().cloned().collect::<HashSet<_>>();
-    let requested = requested_names
-        .iter()
-        .map(|name| name.trim().to_string())
-        .filter(|name| !name.is_empty())
-        .collect::<HashSet<_>>();
-    let mut skills = Vec::new();
-    for summary in list_skill_summaries(root, disabled_names)? {
-        if summary.invalid_reason.is_some() || !summary.enabled || disabled.contains(&summary.name)
-        {
-            continue;
-        }
-        if !requested.is_empty() && !requested.contains(&summary.name) {
-            continue;
-        }
-        let skill = parse_skill_dir(&PathBuf::from(&summary.folder_path))?;
-        if !requested.is_empty() || skill_matches_prompt(&skill, prompt) {
-            skills.push(skill);
-        }
-        if skills.len() >= 3 {
-            break;
-        }
-    }
-    Ok(skills)
-}
-
 pub fn open_skills_folder(app: &AppHandle) -> Result<(), String> {
     ensure_bundled_skills_installed(app)?;
     let root = assistant_skills_root(app)?;
@@ -176,33 +144,6 @@ pub fn parse_skill_dir(dir: &Path) -> Result<AssistantSkill, String> {
         description,
         instructions: truncate_instructions(&instructions),
     })
-}
-
-pub fn skill_matches_prompt(skill: &AssistantSkill, prompt: &str) -> bool {
-    let prompt = normalize_match_text(prompt);
-    if prompt.is_empty() {
-        return false;
-    }
-    let name = normalize_match_text(&skill.name);
-    if prompt.contains(&name) {
-        return true;
-    }
-    let name_phrase = normalize_match_text(&skill.name.replace('-', " "));
-    if prompt.contains(&name_phrase) {
-        return true;
-    }
-
-    let prompt_words = word_set(&prompt);
-    let keywords = word_set(&skill.description)
-        .into_iter()
-        .filter(|word| word.len() >= 4 && !COMMON_WORDS.contains(&word.as_str()))
-        .collect::<Vec<_>>();
-    let matches = keywords
-        .iter()
-        .filter(|word| prompt_words.contains(*word))
-        .take(2)
-        .count();
-    matches >= 2
 }
 
 fn split_frontmatter(content: &str) -> Result<(&str, &str), String> {
@@ -358,32 +299,6 @@ fn validate_skill_description(description: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn normalize_match_text(value: &str) -> String {
-    value
-        .to_ascii_lowercase()
-        .chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { ' ' })
-        .collect::<String>()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-fn word_set(value: &str) -> Vec<String> {
-    let mut words = normalize_match_text(value)
-        .split_whitespace()
-        .map(str::to_string)
-        .collect::<Vec<_>>();
-    words.sort();
-    words.dedup();
-    words
-}
-
-const COMMON_WORDS: &[&str] = &[
-    "and", "for", "with", "this", "that", "when", "from", "into", "your", "about", "using",
-    "problems",
-];
-
 fn truncate_instructions(instructions: &str) -> String {
     const MAX_CHARS: usize = 16_000;
     if instructions.chars().count() <= MAX_CHARS {
@@ -448,28 +363,6 @@ Follow a cautious read-before-write flow.
         let error = parse_skill_dir(&dir).expect_err("mismatched skill is rejected");
 
         assert!(error.contains("must match"));
-    }
-
-    #[test]
-    fn skill_matches_prompt_is_conservative() {
-        let skill = AssistantSkill {
-            name: "ssh-troubleshooter".to_string(),
-            description: "Diagnose SSH connection failures and host key problems.".to_string(),
-            instructions: "Use SSH diagnostics.".to_string(),
-        };
-
-        assert!(skill_matches_prompt(
-            &skill,
-            "Use ssh-troubleshooter on this failed connection"
-        ));
-        assert!(skill_matches_prompt(
-            &skill,
-            "Diagnose this SSH host key problem"
-        ));
-        assert!(!skill_matches_prompt(
-            &skill,
-            "Create a dashboard clock widget"
-        ));
     }
 
     #[test]

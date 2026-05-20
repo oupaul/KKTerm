@@ -82,7 +82,7 @@ The Tutorial tool is enabled by `settings.aiTools.tutorial.label`. It lets the a
 
 Thinking / progress markers:
 
-- If one or more Assistant Skills are invoked for a response, the assistant message shows green status text `ai.skillInvoked` with the skill names before the work panel.
+- If the assistant invokes one or more Assistant Skills for a response, the assistant work panel shows green `ai.skillInvoked` status text with the skill names, matching the tool-call progress treatment.
 - `ai.thinking`, `ai.thoughtFor`, `ai.workedFor`, `ai.thinkingStep`.
 - Duration formatting: `ai.workDurationUnderSecond`, `ai.workDurationSeconds`, `ai.workDurationMinutesSeconds`.
 - While a response is streaming, the work panel stays collapsed by default. During normal thinking it shows the rotating waiting phrase. During an active tool call the collapsed summary switches to `ai.toolCallUsing`, then returns to the waiting phrase after the tool completes.
@@ -115,6 +115,6 @@ Secrets land in the Windows Credential Manager under the AI-provider secret owne
 
 Provider keys (`settings.credentialKindAiApiKey`) and per-provider model selection are configured in Settings → AI (`settings.sectionAiAssistant`). The known-model picker is a real `<select>` rendered from `src/ai/providerRegistry/`; custom model IDs go in the separate custom-model input. OpenAI Compatible endpoints can also choose API mode with `settings.apiMode`. See [15-settings.md](15-settings.md) §AI.
 
-Assistant Skills are local SKILL.md-compatible folders managed in Settings → AI (`settings.assistantSkillsTitle`, hint `settings.assistantSkillsHint`). KKTerm ships bundled starter skills and copies missing ones into the editable app-data skills folder when skills are listed or invoked: `dashboard-widget-builder`, `remote-desktop-helper`, `sftp-transfer-helper`, `ssh-troubleshooter`, and `terminal-command-planner`. Open `settings.assistantSkillsOpenFolder`, add or edit one folder per skill, then refresh. Each valid skill can be enabled/disabled with `settings.assistantSkillsEnabled` / `settings.assistantSkillsDisabled` and opened directly with `settings.assistantSkillsOpen`. v1 loads skill instructions only; bundled `scripts/` are not executed.
+Assistant Skills are local SKILL.md-compatible folders managed in Settings → AI (`settings.assistantSkillsTitle`, hint `settings.assistantSkillsHint`). KKTerm ships bundled starter skills and copies missing ones into the editable app-data skills folder when skills are listed or invoked: `dashboard-widget-builder`, `remote-desktop-helper`, `sftp-transfer-helper`, `ssh-troubleshooter`, and `terminal-command-planner`. Open `settings.assistantSkillsOpenFolder`, add or edit one folder per skill, then refresh. Each valid skill can be enabled/disabled with `settings.assistantSkillsEnabled` / `settings.assistantSkillsDisabled` and opened directly with `settings.assistantSkillsOpen`. The assistant sees enabled skill metadata and must invoke `assistant_use_skill` to load full instructions; KKTerm does not use keyword matching to pick skills. v1 loads skill instructions only; bundled `scripts/` are not executed.
 
 MCP servers are managed under Settings → Credentials (`settings.mcpServersTitle`, hint `settings.mcpServersHint`). See [15-settings.md](15-settings.md) §Credentials & MCP.

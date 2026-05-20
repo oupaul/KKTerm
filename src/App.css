@@ -4037,12 +4037,6 @@ progress {
   min-width: 0;
 }
 
-.assistant-skill-invoked {
-  color: #15803d;
-  font-size: 12px;
-  font-weight: 650;
-}
-
 .assistant-message-actions {
   display: inline-flex;
   align-items: center;
@@ -4648,6 +4642,10 @@ progress {
   color: var(--accent);
 }
 
+.assistant-work-skill-label {
+  color: #15803d;
+}
+
 .assistant-work-toggle svg {
   flex: 0 0 auto;
 }
@@ -4684,6 +4682,23 @@ progress {
   content: "";
   background: var(--text-faint);
   border-radius: 50%;
+}
+
+.assistant-work-step[data-state="skill"] .assistant-work-step-icon {
+  color: #15803d;
+  border-color: rgba(21, 128, 61, 0.38);
+}
+
+.assistant-work-step[data-state="skill"] .assistant-work-step-icon::after {
+  width: 6px;
+  height: 6px;
+  content: "";
+  background: #15803d;
+  border-radius: 50%;
+}
+
+.assistant-work-step[data-state="skill"] strong {
+  color: #15803d;
 }
 
 .assistant-work-step[data-state="running"] .assistant-work-step-icon svg {

@@ -43,7 +43,6 @@ import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import type {
   AiProviderModelOption,
   AiStreamEvent,
-  AssistantSkillSummary,
   AssistantChatThreadRecord,
   CaptureScreenshotRequest,
 } from "../lib/tauri";
@@ -625,70 +624,6 @@ async function loadAssistantChatHistoryFromStorage(): Promise<AssistantChatThrea
   }
 }
 
-async function loadAssistantSkillsForChat(): Promise<AssistantSkillSummary[]> {
-  if (!isTauriRuntime()) {
-    return [];
-  }
-  try {
-    const skills = await invokeCommand("list_assistant_skills", undefined);
-    return skills.filter((skill) => skill.enabled && !skill.invalidReason);
-  } catch {
-    return [];
-  }
-}
-
-function invokedAssistantSkillNames(
-  skills: readonly AssistantSkillSummary[],
-  prompt: string,
-): string[] {
-  return skills
-    .filter((skill) => assistantSkillMatchesPrompt(skill, prompt))
-    .slice(0, 3)
-    .map((skill) => skill.name);
-}
-
-function assistantSkillMatchesPrompt(skill: AssistantSkillSummary, prompt: string) {
-  const normalizedPrompt = normalizeSkillMatchText(prompt);
-  if (!normalizedPrompt) {
-    return false;
-  }
-  const normalizedName = normalizeSkillMatchText(skill.name);
-  if (normalizedPrompt.includes(normalizedName)) {
-    return true;
-  }
-  const namePhrase = normalizeSkillMatchText(skill.name.replace(/-/g, " "));
-  if (normalizedPrompt.includes(namePhrase)) {
-    return true;
-  }
-  const promptWords = new Set(normalizedPrompt.split(" "));
-  const keywords = Array.from(new Set(normalizeSkillMatchText(skill.description).split(" ")))
-    .filter((word) => word.length >= 4 && !COMMON_SKILL_WORDS.has(word));
-  return keywords.filter((word) => promptWords.has(word)).length >= 2;
-}
-
-function normalizeSkillMatchText(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-const COMMON_SKILL_WORDS = new Set([
-  "and",
-  "for",
-  "with",
-  "this",
-  "that",
-  "when",
-  "from",
-  "into",
-  "your",
-  "about",
-  "using",
-  "problems",
-]);
-
 function normalizeAssistantChatThread(value: unknown): AssistantChatThread[] {
   if (!value || typeof value !== "object") {
     return [];
@@ -901,7 +836,6 @@ export function AssistantPanel({
   const [chatHistory, setChatHistory] = useState<AssistantChatThread[]>(() =>
     isTauriRuntime() ? [] : readLegacyAssistantChatHistory(),
   );
-  const [assistantSkills, setAssistantSkills] = useState<AssistantSkillSummary[]>([]);
   const [showAllChats, setShowAllChats] = useState(false);
   const [chatError, setChatError] = useState("");
   const [isSendingPrompt, setIsSendingPrompt] = useState(false);
@@ -1076,23 +1010,6 @@ export function AssistantPanel({
     void loadAssistantChatHistoryFromStorage().then((threads) => {
       if (!disposed) {
         setChatHistory(threads);
-      }
-    });
-
-    return () => {
-      disposed = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    let disposed = false;
-    void loadAssistantSkillsForChat().then((skills) => {
-      if (!disposed) {
-        setAssistantSkills(skills);
       }
     });
 
@@ -1962,13 +1879,6 @@ export function AssistantPanel({
         }
       }
     }
-    const currentAssistantSkills = isTauriRuntime()
-      ? await loadAssistantSkillsForChat()
-      : assistantSkills;
-    if (isTauriRuntime()) {
-      setAssistantSkills(currentAssistantSkills);
-    }
-    const invokedSkillNames = invokedAssistantSkillNames(currentAssistantSkills, normalizedPrompt);
     const userMessage = createAssistantChatMessage(
       "user",
       normalizedPrompt,
@@ -2060,7 +1970,6 @@ export function AssistantPanel({
         requestIntent,
       );
       streamingMessage.isStreaming = true;
-      streamingMessage.skillNames = invokedSkillNames.length > 0 ? invokedSkillNames : undefined;
       streamingMessage.workStartedAt = workStartedAt;
       let streamingMessageSnapshot = streamingMessage;
       const messagesWithStreaming = [...nextMessages, streamingMessage];
@@ -2117,7 +2026,6 @@ export function AssistantPanel({
           systemContext,
           messages: history,
           outputLanguage: resolveAssistantOutputLanguage(aiProviderSettings.outputLanguage),
-          skillNames: invokedSkillNames,
         },
       });
 
@@ -3307,11 +3215,6 @@ function AssistantMessageView({
               ))}
             </div>
           ) : null}
-          {message.role === "assistant" && message.skillNames?.length ? (
-            <div className="assistant-skill-invoked">
-              {t("ai.skillInvoked", { skills: message.skillNames.join(", ") })}
-            </div>
-          ) : null}
           {message.role === "assistant" ? <AssistantWorkPanel message={message} /> : null}
           <MarkdownContent
             canSendCode={canSendCode}
@@ -3724,7 +3627,12 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
   const wasStreamingRef = useRef(Boolean(message.isStreaming));
   const reasoningContent = message.reasoningContent?.trim() ?? "";
   const toolCalls = message.toolCalls ?? [];
-  const hasWork = Boolean(reasoningContent) || toolCalls.length > 0 || Boolean(message.isStreaming);
+  const skillNames = message.skillNames ?? [];
+  const hasWork =
+    Boolean(reasoningContent) ||
+    toolCalls.length > 0 ||
+    skillNames.length > 0 ||
+    Boolean(message.isStreaming);
   const shouldShowThinkingStep = assistantWorkPanelShouldShowThinkingStep(message);
 
   useEffect(() => {
@@ -3783,6 +3691,8 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
       ? t("ai.toolCallUsing", {
           tool: humanizeAssistantToolName(latestToolCall.toolName),
         })
+      : skillNames.length > 0
+        ? t("ai.skillInvoked", { skills: skillNames.map(humanizeAssistantToolName).join(", ") })
       : message.isStreaming
         ? waitingPhrase || t("ai.chargingBeacon")
         : t("ai.workedFor", { duration: duration || t("ai.workDurationUnderSecond") });
@@ -3796,7 +3706,15 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
         onClick={() => setExpanded((e) => !e)}
         type="button"
       >
-        <span className={latestToolCall ? "assistant-work-tool-label" : undefined}>
+        <span
+          className={
+            latestToolCall
+              ? "assistant-work-tool-label"
+              : skillNames.length > 0
+                ? "assistant-work-skill-label"
+                : undefined
+          }
+        >
           {label}
           {message.isStreaming ? (
             <span className="assistant-waiting-dots" aria-hidden="true">
@@ -3833,6 +3751,14 @@ function AssistantWorkPanel({ message }: { message: AssistantChatMessage }) {
               </div>
             </div>
           ) : null}
+          {skillNames.map((skillName) => (
+            <div className="assistant-work-step" data-state="skill" key={skillName}>
+              <span className="assistant-work-step-icon" aria-hidden="true" />
+              <div>
+                <strong>{t("ai.skillInvoked", { skills: humanizeAssistantToolName(skillName) })}</strong>
+              </div>
+            </div>
+          ))}
           {toolCalls.map((toolCall) => (
             <div className="assistant-work-step" data-state={toolCall.status} key={toolCall.toolId}>
               <span className="assistant-work-step-icon" aria-hidden="true">

@@ -10,8 +10,10 @@ They are lightweight workflow guides for the in-app AI Assistant.
 - Existing user skill folders are not overwritten, so users can edit or replace bundled starter skills.
 - Settings -> AI Assistant -> Assistant Skills lists the app-data folder contents.
 - Users can open the skills folder, open one skill folder directly, refresh the list, and enable or disable each valid skill.
-- The AI Assistant injects up to three matching enabled skills into the system prompt for a response and marks the assistant message with green `ai.skillInvoked` text.
+- The AI Assistant sees enabled skill metadata in the system prompt, decides whether a skill is relevant, and invokes `assistant_use_skill` to load the full `SKILL.md` instructions on demand.
+- When a skill is actually loaded, the assistant message work panel shows green `ai.skillInvoked` status text.
 - v1 loads instruction text only. `scripts/`, `references/`, and other skill resources are not executed or loaded automatically.
+- There is no keyword trigger matcher in the app. Selection is model-driven through the skill invocation tool.
 
 ## Skill format
 

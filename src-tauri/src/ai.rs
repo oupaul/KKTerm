@@ -27,7 +27,7 @@ use providers::provider_for;
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager};
 
-use crate::assistant_skills::{self, AssistantSkill};
+use crate::assistant_skills::{self, AssistantSkillSummary};
 use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
 use crate::dashboard_validation::drop_unused_script_libraries;
@@ -578,8 +578,6 @@ pub struct AgentRunRequest {
     messages: Vec<AgentChatMessage>,
     output_language: Option<String>,
     page_context: Option<AgentPageContext>,
-    #[serde(default)]
-    skill_names: Vec<String>,
 }
 
 fn default_agent_allow_tools() -> bool {
@@ -613,6 +611,9 @@ enum AiStreamEvent {
         tool_id: String,
         tool_name: String,
         error: Option<String>,
+    },
+    SkillInvocation {
+        skill_name: String,
     },
     Done {
         model: String,
@@ -1559,15 +1560,10 @@ impl OpenAiCompatibleProvider {
         api_key: Option<String>,
         request: AgentRunRequest,
     ) -> Result<AgentRunResponse, String> {
-        let requested_skill_names = request.skill_names.clone();
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let context_label = trim_required("assistant context", request.context_label)?;
-        let invoked_skills = resolve_invoked_skills_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            &requested_skill_names,
-            &prompt,
-        )?;
+        let skill_summaries =
+            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let mut messages = build_agent_messages(
@@ -1584,11 +1580,11 @@ impl OpenAiCompatibleProvider {
             request.messages,
             request.output_language,
             Some(settings.custom_instructions().to_string()),
-            invoked_skills,
+            skill_summaries.clone(),
         );
         let client = ai_http_client(settings.allow_insecure_tls())?;
         let tool_definitions = if request.allow_tools {
-            ai_tool_definitions(settings.tools())
+            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
         } else {
             Vec::new()
         };
@@ -1768,15 +1764,10 @@ impl OpenAiCompatibleProvider {
         api_key: Option<String>,
         request: AgentRunRequest,
     ) -> Result<AgentRunResponse, String> {
-        let requested_skill_names = request.skill_names.clone();
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let context_label = trim_required("assistant context", request.context_label)?;
-        let invoked_skills = resolve_invoked_skills_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            &requested_skill_names,
-            &prompt,
-        )?;
+        let skill_summaries =
+            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
@@ -1792,12 +1783,12 @@ impl OpenAiCompatibleProvider {
             request.messages,
             request.output_language,
             Some(settings.custom_instructions().to_string()),
-            invoked_skills,
+            skill_summaries.clone(),
         );
         let mut input = responses_input_from_messages(messages, request.files);
         let client = ai_http_client(settings.allow_insecure_tls())?;
         let tool_definitions = if request.allow_tools {
-            ai_tool_definitions(settings.tools())
+            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
         } else {
             Vec::new()
         };
@@ -1988,15 +1979,10 @@ impl OpenAiCompatibleProvider {
         request: AgentRunRequest,
         channel: Channel<Value>,
     ) -> Result<AgentRunResponse, String> {
-        let requested_skill_names = request.skill_names.clone();
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let context_label = trim_required("assistant context", request.context_label)?;
-        let invoked_skills = resolve_invoked_skills_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            &requested_skill_names,
-            &prompt,
-        )?;
+        let skill_summaries =
+            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let mut messages = build_agent_messages(
@@ -2013,11 +1999,11 @@ impl OpenAiCompatibleProvider {
             request.messages,
             request.output_language,
             Some(settings.custom_instructions().to_string()),
-            invoked_skills,
+            skill_summaries.clone(),
         );
         let client = ai_http_client(settings.allow_insecure_tls())?;
         let tool_definitions = if request.allow_tools {
-            ai_tool_definitions(settings.tools())
+            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
         } else {
             Vec::new()
         };
@@ -2141,6 +2127,7 @@ impl OpenAiCompatibleProvider {
                 ),
             });
             for tool_call in &tool_calls {
+                let is_skill_tool = is_assistant_skill_tool(&tool_call.function.name);
                 ai_debug!(
                     "tool start provider={} model={} subturn={} id={} name={} args_len={}",
                     self.provider_kind,
@@ -2150,13 +2137,15 @@ impl OpenAiCompatibleProvider {
                     tool_call.function.name,
                     tool_call.function.arguments.len()
                 );
-                emit_stream(
-                    &channel,
-                    &AiStreamEvent::ToolCallStart {
-                        tool_id: tool_call.id.clone(),
-                        tool_name: tool_call.function.name.clone(),
-                    },
-                )?;
+                if !is_skill_tool {
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::ToolCallStart {
+                            tool_id: tool_call.id.clone(),
+                            tool_name: tool_call.function.name.clone(),
+                        },
+                    )?;
+                }
                 let result =
                     run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
                 ai_debug!(
@@ -2177,14 +2166,16 @@ impl OpenAiCompatibleProvider {
                     tool_call_id: Some(tool_call.id.clone()),
                     tool_calls: None,
                 });
-                emit_stream(
-                    &channel,
-                    &AiStreamEvent::ToolCallEnd {
-                        tool_id: tool_call.id.clone(),
-                        tool_name: tool_call.function.name.clone(),
-                        error: tool_error,
-                    },
-                )?;
+                if !is_skill_tool {
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::ToolCallEnd {
+                            tool_id: tool_call.id.clone(),
+                            tool_name: tool_call.function.name.clone(),
+                            error: tool_error,
+                        },
+                    )?;
+                }
                 if let Some(message) = abort_message {
                     emit_stream(
                         &channel,
@@ -2279,15 +2270,10 @@ impl OpenAiCompatibleProvider {
         request: AgentRunRequest,
         channel: Channel<Value>,
     ) -> Result<AgentRunResponse, String> {
-        let requested_skill_names = request.skill_names.clone();
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let context_label = trim_required("assistant context", request.context_label)?;
-        let invoked_skills = resolve_invoked_skills_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            &requested_skill_names,
-            &prompt,
-        )?;
+        let skill_summaries =
+            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
@@ -2303,11 +2289,11 @@ impl OpenAiCompatibleProvider {
             request.messages,
             request.output_language,
             Some(settings.custom_instructions().to_string()),
-            invoked_skills,
+            skill_summaries.clone(),
         );
         let client = ai_http_client(settings.allow_insecure_tls())?;
         let tool_definitions = if request.allow_tools {
-            ai_tool_definitions(settings.tools())
+            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
         } else {
             Vec::new()
         };
@@ -2415,13 +2401,16 @@ impl OpenAiCompatibleProvider {
                 }));
             }
             for tool_call in &tool_calls {
-                emit_stream(
-                    &channel,
-                    &AiStreamEvent::ToolCallStart {
-                        tool_id: tool_call.id.clone(),
-                        tool_name: tool_call.function.name.clone(),
-                    },
-                )?;
+                let is_skill_tool = is_assistant_skill_tool(&tool_call.function.name);
+                if !is_skill_tool {
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::ToolCallStart {
+                            tool_id: tool_call.id.clone(),
+                            tool_name: tool_call.function.name.clone(),
+                        },
+                    )?;
+                }
                 let result =
                     run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
                 let tool_error = tool_result_error(&result);
@@ -2431,14 +2420,16 @@ impl OpenAiCompatibleProvider {
                     "call_id": tool_call.id,
                     "output": result,
                 }));
-                emit_stream(
-                    &channel,
-                    &AiStreamEvent::ToolCallEnd {
-                        tool_id: tool_call.id.clone(),
-                        tool_name: tool_call.function.name.clone(),
-                        error: tool_error,
-                    },
-                )?;
+                if !is_skill_tool {
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::ToolCallEnd {
+                            tool_id: tool_call.id.clone(),
+                            tool_name: tool_call.function.name.clone(),
+                            error: tool_error,
+                        },
+                    )?;
+                }
                 if let Some(message) = abort_message {
                     emit_stream(
                         &channel,
@@ -3391,11 +3382,22 @@ fn parse_non_sse_responses_stream_body(
     ))
 }
 
+#[cfg(test)]
 fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefinition> {
-    if !settings.any_enabled() {
-        return Vec::new();
-    }
+    ai_tool_definitions_with_skills(settings, &[])
+}
+
+fn ai_tool_definitions_with_skills(
+    settings: &AiAssistantToolSettings,
+    skill_summaries: &[AssistantSkillSummary],
+) -> Vec<OpenAiToolDefinition> {
     let mut tools = Vec::new();
+    if !skill_summaries.is_empty() {
+        tools.push(assistant_use_skill_tool_definition(skill_summaries));
+    }
+    if !settings.any_enabled() {
+        return tools;
+    }
     tools.push(tool_definition(
         "request_secret_entry",
         "Ask KKTerm to render a local secret entry card without exposing the secret to the AI model. Use this for API keys, passwords, tokens, and widget secrets after the owning widget or provider metadata exists.",
@@ -3709,6 +3711,30 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
     tools
 }
 
+fn assistant_use_skill_tool_definition(
+    skill_summaries: &[AssistantSkillSummary],
+) -> OpenAiToolDefinition {
+    let names = skill_summaries
+        .iter()
+        .map(|skill| Value::String(skill.name.clone()))
+        .collect::<Vec<_>>();
+    tool_definition(
+        "assistant_use_skill",
+        "Load one Assistant Skill's full SKILL.md instructions into this conversation. Use when an enabled skill's metadata is relevant to the user's current request. Call at most three different skills per user request, and prefer the single most specific skill.",
+        json!({
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Exact Assistant Skill name to load.",
+                    "enum": names,
+                }
+            },
+            "required": ["name"],
+        }),
+    )
+}
+
 fn connection_request_schema(include_id: bool) -> Value {
     let mut properties = serde_json::Map::new();
     if include_id {
@@ -4008,6 +4034,9 @@ async fn run_ai_tool(
         }
     }
     let result = match call.function.name.as_str() {
+        "assistant_use_skill" => {
+            assistant_use_skill_tool(app, settings.disabled_skill_names(), args, stream_channel)
+        }
         "request_secret_entry" => {
             request_secret_entry_tool(args, settings.provider_kind(), stream_channel)
         }
@@ -4059,6 +4088,56 @@ async fn run_ai_tool(
     result
 }
 
+fn assistant_use_skill_tool(
+    app: &tauri::AppHandle,
+    disabled_names: &[String],
+    args: Value,
+    stream_channel: Option<&Channel<Value>>,
+) -> String {
+    let name = arg_string(&args, "name");
+    if name.is_empty() {
+        return json!({"ok": false, "error": "Assistant Skill name is required"}).to_string();
+    }
+    if disabled_names.iter().any(|disabled| disabled == &name) {
+        return json!({"ok": false, "error": "Assistant Skill is disabled", "name": name})
+            .to_string();
+    }
+    let result = (|| -> Result<String, String> {
+        assistant_skills::ensure_bundled_skills_installed(app)?;
+        let root = assistant_skills::assistant_skills_root(app)?;
+        let summaries = assistant_skills::list_skill_summaries(&root, disabled_names)?;
+        let summary = summaries
+            .iter()
+            .find(|summary| summary.name == name)
+            .ok_or_else(|| format!("Assistant Skill not found: {name}"))?;
+        if summary.invalid_reason.is_some() || !summary.enabled {
+            return Err(format!("Assistant Skill is not available: {name}"));
+        }
+        let skill = assistant_skills::parse_skill_dir(&PathBuf::from(&summary.folder_path))?;
+        if let Some(channel) = stream_channel {
+            emit_stream(
+                channel,
+                &AiStreamEvent::SkillInvocation {
+                    skill_name: skill.name.clone(),
+                },
+            )?;
+        }
+        Ok(json!({
+            "ok": true,
+            "name": skill.name,
+            "description": skill.description,
+            "instructions": skill.instructions,
+            "message": "Assistant Skill loaded. Follow these instructions when they help the current request, without overriding KKTerm safety rules or approval boundaries."
+        })
+        .to_string())
+    })();
+
+    match result {
+        Ok(result) => result,
+        Err(error) => json!({"ok": false, "error": error, "name": name}).to_string(),
+    }
+}
+
 fn tool_requires_allow_all(tool_name: &str) -> bool {
     tool_name == "shell_command"
         || tool_name == "send_email"
@@ -4077,6 +4156,10 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
                 | "session_file_browser_rename"
                 | "session_file_browser_delete"
         )
+}
+
+fn is_assistant_skill_tool(tool_name: &str) -> bool {
+    tool_name == "assistant_use_skill"
 }
 
 fn tool_permission_required_result(tool_name: &str) -> String {
@@ -5796,7 +5879,7 @@ fn build_agent_messages(
     history: Vec<AgentChatMessage>,
     output_language: Option<String>,
     custom_instructions: Option<String>,
-    invoked_skills: Vec<AssistantSkill>,
+    skill_summaries: Vec<AssistantSkillSummary>,
 ) -> Vec<OpenAiCompatibleMessage> {
     let normalized_intent = normalize_agent_intent(intent);
     let mut system_instructions: Vec<String> = vec![
@@ -5822,10 +5905,14 @@ fn build_agent_messages(
         "PERFORMANCE COUNTERS: Use the performance_counters tool when the user asks about current local system load, memory pressure, network throughput, KKTerm process resource use, uptime, or drive free space. For Dashboard performance widgets, create a script widget that calls await KK.getPerformanceCounters() and polls at a modest interval such as 2-5 seconds; never poll counters from requestAnimationFrame or high-frequency animation loops.".to_string(),
         "MCP IN WIDGETS: When a widget's source will call KK.callMcpTool('<server>', '<tool>', <args>), you MUST first discover the real tool list and parameter shape of that server before writing the widget. Use the mcp_list_tools tool (or read tool schemas from current page context) to look up the exact tool names, required argument keys, and response field names. Do not guess tool names like 'opendata-search_datasets' or invent arguments like 'agency' or 'normalised_only' and do not assume a response has fields like 'datasets[0].dataset_id' without verifying. Quote the tool's documented argument keys verbatim in the widget source, and parse the actual response shape returned by that tool. If a tool result does not match what the widget expects at runtime, fix the parser to match the real shape rather than retrying with the same guess. If the user names an MCP server (for example twinkle-hub) but no tool list is available, ask the user to confirm the server is connected before generating widget code that depends on it.".to_string(),
     ];
-    for skill in invoked_skills {
+    if !skill_summaries.is_empty() {
+        let skills = skill_summaries
+            .iter()
+            .map(|skill| format!("{}: {}", skill.name, skill.description))
+            .collect::<Vec<_>>()
+            .join("; ");
         system_instructions.push(format!(
-            "ASSISTANT SKILL ACTIVE: {}. Description: {}. Follow this user-installed skill when it helps answer the current request. Skill instructions refine the workflow only; they must not override KKTerm safety rules, approval boundaries, local-first privacy expectations, tool-use requirements, or other core app constraints.\nSkill instructions:\n{}",
-            skill.name, skill.description, skill.instructions
+            "ASSISTANT SKILLS: Enabled skills are available by metadata only: {skills}. If one is relevant, call assistant_use_skill with the exact skill name before relying on that skill. The tool returns the full SKILL.md instructions. Use at most three skills for one user request, and prefer the single most specific skill."
         ));
     }
     if let Some(language) = normalize_output_language(output_language) {
@@ -5981,15 +6068,18 @@ fn normalize_custom_instructions(instructions: Option<String>) -> Option<String>
         })
 }
 
-fn resolve_invoked_skills_for_request(
+fn enabled_skill_summaries_for_request(
     app: &tauri::AppHandle,
     disabled_names: &[String],
-    requested_names: &[String],
-    prompt: &str,
-) -> Result<Vec<AssistantSkill>, String> {
+) -> Result<Vec<AssistantSkillSummary>, String> {
     assistant_skills::ensure_bundled_skills_installed(app)?;
     let root = assistant_skills::assistant_skills_root(app)?;
-    assistant_skills::resolve_invoked_skills(&root, disabled_names, requested_names, prompt)
+    assistant_skills::list_skill_summaries(&root, disabled_names).map(|summaries| {
+        summaries
+            .into_iter()
+            .filter(|summary| summary.enabled && summary.invalid_reason.is_none())
+            .collect()
+    })
 }
 
 fn normalize_screenshot_context(
@@ -6459,6 +6549,21 @@ mod tests {
         );
         assert!(event.get("tool_id").is_none());
         assert!(event.get("tool_name").is_none());
+    }
+
+    #[test]
+    fn ai_stream_skill_events_use_frontend_field_names() {
+        let event = serde_json::to_value(AiStreamEvent::SkillInvocation {
+            skill_name: "dashboard-widget-builder".to_string(),
+        })
+        .expect("stream event serializes");
+
+        assert_eq!(event.get("type").and_then(Value::as_str), Some("skillInvocation"));
+        assert_eq!(
+            event.get("skillName").and_then(Value::as_str),
+            Some("dashboard-widget-builder")
+        );
+        assert!(event.get("skill_name").is_none());
     }
 
     #[test]
@@ -8145,10 +8250,10 @@ mod tests {
     }
 
     #[test]
-    fn agent_messages_include_invoked_assistant_skill_after_core_guardrails() {
+    fn agent_messages_advertise_skill_metadata_without_loading_instructions() {
         let messages = build_agent_messages(
-            "Review the deployment runbook.".to_string(),
-            "Workspace".to_string(),
+            "Create a compact clock widget.".to_string(),
+            "Dashboard - Default".to_string(),
             None,
             "medium".to_string(),
             None,
@@ -8160,24 +8265,49 @@ mod tests {
             vec![],
             None,
             None,
-            vec![AssistantSkill {
-                name: "deploy-review".to_string(),
-                description: "Review deployment runbooks".to_string(),
-                instructions: "Check rollback and verification steps.".to_string(),
+            vec![AssistantSkillSummary {
+                name: "dashboard-widget-builder".to_string(),
+                description: "Create and repair Dashboard widgets.".to_string(),
+                enabled: true,
+                folder_path: "assistant-skills/dashboard-widget-builder".to_string(),
+                invalid_reason: None,
             }],
         );
 
         let system_content = text_content(&messages[0]);
-        let safety_index = system_content
-            .find("SAFETY: Never suggest")
-            .expect("core safety guardrails are present");
-        let skill_index = system_content
-            .find("ASSISTANT SKILL ACTIVE: deploy-review")
-            .expect("skill instructions are present");
 
-        assert!(safety_index < skill_index);
-        assert!(system_content.contains("must not override KKTerm safety rules"));
-        assert!(system_content.contains("Check rollback and verification steps."));
+        assert!(system_content.contains("ASSISTANT SKILLS:"));
+        assert!(system_content.contains("dashboard-widget-builder"));
+        assert!(system_content.contains("Create and repair Dashboard widgets."));
+        assert!(system_content.contains("assistant_use_skill"));
+        assert!(!system_content.contains("ASSISTANT SKILL ACTIVE"));
+        assert!(!system_content.contains("Skill instructions:"));
+    }
+
+    #[test]
+    fn tool_definitions_include_assistant_use_skill_for_enabled_skills() {
+        let settings: AiAssistantToolSettings =
+            serde_json::from_value(json!({})).expect("tool settings deserialize");
+        let tools = ai_tool_definitions_with_skills(
+            &settings,
+            &[AssistantSkillSummary {
+                name: "ssh-troubleshooter".to_string(),
+                description: "Diagnose SSH failures.".to_string(),
+                enabled: true,
+                folder_path: "assistant-skills/ssh-troubleshooter".to_string(),
+                invalid_reason: None,
+            }],
+        );
+        let tool = tools
+            .iter()
+            .find(|tool| tool.function.name == "assistant_use_skill")
+            .expect("skill invocation tool is available");
+
+        assert!(tool.function.description.contains("Load one Assistant Skill"));
+        assert_eq!(
+            tool.function.parameters.pointer("/properties/name/enum"),
+            Some(&json!(["ssh-troubleshooter"]))
+        );
     }
 
     #[test]
@@ -8286,6 +8416,7 @@ mod tests {
         assert!(!tool_requires_allow_all("current_time"));
         assert!(!tool_requires_allow_all("performance_counters"));
         assert!(!tool_requires_allow_all("tutorial_highlight"));
+        assert!(!tool_requires_allow_all("assistant_use_skill"));
 
         let result = tool_permission_required_result("dashboard_reset");
         let value: Value = serde_json::from_str(&result).expect("permission result is JSON");
