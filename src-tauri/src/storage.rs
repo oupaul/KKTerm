@@ -280,8 +280,6 @@ pub struct GeneralSettings {
     #[serde(default)]
     auto_start_with_windows: bool,
     #[serde(default)]
-    minimize_on_launch: bool,
-    #[serde(default)]
     minimize_to_tray: bool,
     #[serde(default)]
     dont_sleep_enabled: bool,
@@ -296,10 +294,6 @@ impl GeneralSettings {
 
     pub(crate) fn auto_start_with_windows(&self) -> bool {
         self.auto_start_with_windows
-    }
-
-    pub(crate) fn minimize_on_launch(&self) -> bool {
-        self.minimize_on_launch
     }
 
     pub(crate) fn minimize_to_tray(&self) -> bool {
@@ -4037,7 +4031,6 @@ fn default_general_settings() -> GeneralSettings {
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
         auto_start_with_windows: false,
-        minimize_on_launch: false,
         minimize_to_tray: false,
         dont_sleep_enabled: false,
         last_backup_at: None,
@@ -5931,7 +5924,6 @@ mod tests {
         assert!(defaults.pinned_connection_ids.is_empty());
         assert!(defaults.allow_clipboard_read);
         assert!(!defaults.auto_start_with_windows);
-        assert!(!defaults.minimize_on_launch);
         assert!(!defaults.minimize_to_tray);
         assert!(!defaults.dont_sleep_enabled);
         assert!(defaults.last_backup_at.is_none());
@@ -5949,7 +5941,6 @@ mod tests {
                 ],
                 allow_clipboard_read: false,
                 auto_start_with_windows: true,
-                minimize_on_launch: true,
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
                 last_backup_at: None,
@@ -5963,7 +5954,6 @@ mod tests {
         );
         assert!(!updated.allow_clipboard_read);
         assert!(updated.auto_start_with_windows);
-        assert!(updated.minimize_on_launch);
         assert!(updated.minimize_to_tray);
         assert!(updated.dont_sleep_enabled);
 
@@ -5976,7 +5966,6 @@ mod tests {
         );
         assert!(!reloaded.allow_clipboard_read);
         assert!(reloaded.auto_start_with_windows);
-        assert!(reloaded.minimize_on_launch);
         assert!(reloaded.minimize_to_tray);
         assert!(reloaded.dont_sleep_enabled);
         assert!(reloaded.last_backup_at.is_none());
@@ -6198,7 +6187,6 @@ mod tests {
                 pinned_connection_ids: vec!["connection-pinned".to_string()],
                 allow_clipboard_read: true,
                 auto_start_with_windows: true,
-                minimize_on_launch: true,
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
                 last_backup_at: None,
@@ -6215,7 +6203,6 @@ mod tests {
                 pinned_connection_ids: Vec::new(),
                 allow_clipboard_read: false,
                 auto_start_with_windows: false,
-                minimize_on_launch: false,
                 minimize_to_tray: false,
                 dont_sleep_enabled: false,
                 last_backup_at: None,

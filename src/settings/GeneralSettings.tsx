@@ -364,18 +364,6 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
           </label>
           <label className="settings-toggle-row">
             <ToggleSwitch
-              checked={draft.minimizeOnLaunch}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, minimizeOnLaunch: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.minimizeOnLaunch")}</strong>
-              <small>{t("settings.minimizeOnLaunchHint")}</small>
-            </span>
-          </label>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
               checked={draft.minimizeToTray}
               onChange={(checked) =>
                 setDraft((s) => ({ ...s, minimizeToTray: checked }))

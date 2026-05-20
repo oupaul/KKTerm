@@ -2260,7 +2260,7 @@ pub fn run() {
             app.manage(app_tray::TrayState::new(
                 general_settings.minimize_to_tray(),
             ));
-            if general_settings.minimize_on_launch() {
+            if general_settings.auto_start_with_windows() {
                 if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
                     let _ = main_window.minimize();
                     if general_settings.minimize_to_tray() {

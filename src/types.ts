@@ -181,7 +181,6 @@ export interface GeneralSettings {
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
   autoStartWithWindows: boolean;
-  minimizeOnLaunch: boolean;
   minimizeToTray: boolean;
   dontSleepEnabled: boolean;
   lastBackupAt?: string | null;
