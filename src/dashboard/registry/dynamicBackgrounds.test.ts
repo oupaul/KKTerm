@@ -4,18 +4,27 @@ import {
   isDynamicBackgroundId,
 } from "./dynamicBackgrounds";
 
-const dynamicBackgroundCount: 9 = DYNAMIC_BACKGROUNDS.length as 9;
+const dynamicBackgroundCount: 18 = DYNAMIC_BACKGROUNDS.length as 18;
 void dynamicBackgroundCount;
 
 const expectedIds = [
   "aurora",
+  "clouds",
+  "ocean",
   "raindrops",
+  "snow",
+  "sakura",
+  "fireflies",
+  "bubbles",
   "starfield",
   "nebula",
   "embers",
   "lava",
   "matrix",
+  "topo",
   "synthwave",
+  "cyberpunk",
+  "thunderstorm",
   "confetti",
 ] as const;
 

@@ -74,7 +74,7 @@ Presets are CSS wrappers that read the Instance's `--w-accent` / `--w-accent-sof
 - `dashboard.backgroundModePreset` — colour/gradient presets `dashboard.backgroundPresets.*` (mist, sand, sage, sky, blush, lavender, slate, graphite, plus gradients gDawn / gFog / gMeadow / gDusk / gLinen / gHorizon / gPetal / gTwilight).
 - `dashboard.backgroundModeImage` — choose image via `dashboard.backgroundChooseImage`. Remove with `dashboard.backgroundRemoveImage`. File filter `dashboard.backgroundImageFilter`. Hint `dashboard.backgroundImageHint`. Fit options under `dashboard.backgroundFitLabel`: `fill`, `fit`, `stretch`, `tile`, `center`. Dim slider: `dashboard.backgroundDimLabel`.
 - `dashboard.backgroundModeMedia` — video / animated source. Filter `dashboard.backgroundMediaFilter`. Hint `dashboard.backgroundMediaHint`. Source attribution `dashboard.backgroundMediaSourcePrefix` + link `dashboard.backgroundMediaSourceLink`.
-- `dashboard.backgroundModeDynamic` (`dashboard.backgroundDynamicHint`) — script-rendered animated backgrounds: `aurora`, `raindrops`, `starfield`, `nebula`, `embers`, `lava`, `matrix`, `synthwave`, `confetti` (keys under `dashboard.dynamicBackgrounds.*`).
+- `dashboard.backgroundModeDynamic` (`dashboard.backgroundDynamicHint`) — script-rendered animated backgrounds: `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `starfield`, `nebula`, `embers`, `lava`, `matrix`, `topo`, `synthwave`, `cyberpunk`, `thunderstorm`, `confetti` (keys under `dashboard.dynamicBackgrounds.*`).
 
 ## Built-in widgets
 

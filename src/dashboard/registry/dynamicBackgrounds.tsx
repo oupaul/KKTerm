@@ -616,15 +616,871 @@ function NebulaBg() {
   return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
 }
 
+interface Cloud {
+  x: number;
+  y: number;
+  r: number;
+  speed: number;
+  puffs: number;
+  a: number;
+}
+
+interface CloudsState extends CanvasAnimLifecycle {
+  clouds?: Cloud[];
+  last?: number;
+}
+
+function CloudsBg() {
+  const draw: CanvasDraw<CloudsState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      const count = Math.max(8, Math.min(18, Math.floor(nextWidth / 130)));
+      state.clouds = Array.from({ length: count }, () => ({
+        x: Math.random() * nextWidth * 1.2 - nextWidth * 0.1,
+        y: nextHeight * (0.05 + Math.random() * 0.65),
+        r: 40 + Math.random() * 90,
+        speed: 4 + Math.random() * 10,
+        puffs: 3 + Math.floor(Math.random() * 3),
+        a: 0.55 + Math.random() * 0.35,
+      }));
+      state.last = time;
+    };
+    if (!state.clouds) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#4ea8e8");
+    gradient.addColorStop(0.55, "#a3d3f0");
+    gradient.addColorStop(1, "#dcecf6");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const sunX = width * 0.78;
+    const sunY = height * 0.22;
+    const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, Math.max(width, height) * 0.55);
+    sunGlow.addColorStop(0, "rgba(255,240,200,0.55)");
+    sunGlow.addColorStop(0.3, "rgba(255,235,180,0.18)");
+    sunGlow.addColorStop(1, "rgba(255,235,180,0)");
+    ctx.fillStyle = sunGlow;
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "rgba(255,245,210,0.9)";
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (const cloud of state.clouds) {
+      cloud.x += cloud.speed * dt;
+      if (cloud.x - cloud.r * 2 > width) {
+        cloud.x = -cloud.r * 2;
+        cloud.y = height * (0.05 + Math.random() * 0.65);
+      }
+      for (let i = 0; i < cloud.puffs; i += 1) {
+        const puffX = cloud.x + Math.cos(i * 1.4) * cloud.r * 0.55;
+        const puffY = cloud.y + Math.sin(i * 1.9) * cloud.r * 0.18;
+        const puffRadius = cloud.r * (0.55 + (i % 3) * 0.15);
+        const puff = ctx.createRadialGradient(puffX, puffY - puffRadius * 0.2, 0, puffX, puffY, puffRadius);
+        puff.addColorStop(0, `rgba(255,255,255,${cloud.a})`);
+        puff.addColorStop(0.6, `rgba(245,250,255,${cloud.a * 0.45})`);
+        puff.addColorStop(1, "rgba(220,235,250,0)");
+        ctx.fillStyle = puff;
+        ctx.beginPath();
+        ctx.arc(puffX, puffY, puffRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface OceanState extends CanvasAnimLifecycle {
+  last?: number;
+}
+
+function OceanBg() {
+  const draw: CanvasDraw<OceanState> = (ctx, width, height, time, state) => {
+    state.onResize = () => {
+      state.last = time;
+    };
+    if (state.last === undefined) state.last = time;
+
+    const horizon = height * 0.38;
+    const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+    sky.addColorStop(0, "#f6e9c8");
+    sky.addColorStop(0.6, "#f0c79a");
+    sky.addColorStop(1, "#dba488");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, width, horizon);
+
+    const sea = ctx.createLinearGradient(0, horizon, 0, height);
+    sea.addColorStop(0, "#3d6b80");
+    sea.addColorStop(0.5, "#1f4a63");
+    sea.addColorStop(1, "#0b2a3c");
+    ctx.fillStyle = sea;
+    ctx.fillRect(0, horizon, width, height - horizon);
+
+    const reflection = ctx.createRadialGradient(width * 0.5, horizon, 0, width * 0.5, horizon, width * 0.5);
+    reflection.addColorStop(0, "rgba(255,210,140,0.55)");
+    reflection.addColorStop(1, "rgba(255,210,140,0)");
+    ctx.fillStyle = reflection;
+    ctx.fillRect(0, 0, width, height);
+
+    const bands = 8;
+    for (let i = 0; i < bands; i += 1) {
+      const k = i / (bands - 1);
+      const yBase = horizon + (height - horizon) * (0.08 + k * 0.95);
+      const amp = 4 + k * 18;
+      const waveLength = 80 + k * 180;
+      const speed = 0.4 + k * 1.2;
+      const lightness = 30 + k * 28;
+      const foamAlpha = 0.15 + k * 0.45;
+      const step = 6;
+
+      ctx.beginPath();
+      ctx.moveTo(0, yBase);
+      for (let x = 0; x <= width; x += step) {
+        const y = yBase
+          + Math.sin((x / waveLength) + time * speed + i) * amp
+          + Math.sin((x / (waveLength * 0.5)) - time * speed * 0.7 + i * 2.1) * amp * 0.35;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, height);
+      ctx.lineTo(0, height);
+      ctx.closePath();
+      ctx.fillStyle = `hsl(200, 35%, ${lightness}%)`;
+      ctx.fill();
+
+      ctx.beginPath();
+      for (let x = 0; x <= width; x += step) {
+        const y = yBase
+          + Math.sin((x / waveLength) + time * speed + i) * amp
+          + Math.sin((x / (waveLength * 0.5)) - time * speed * 0.7 + i * 2.1) * amp * 0.35;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = `rgba(220,235,245,${foamAlpha})`;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface SnowFlake {
+  x: number;
+  y: number;
+  r: number;
+  vy: number;
+  sway: number;
+  swaySp: number;
+  ph: number;
+  a: number;
+}
+
+interface SnowState extends CanvasAnimLifecycle {
+  flakes?: SnowFlake[];
+  last?: number;
+}
+
+function SnowBg() {
+  const draw: CanvasDraw<SnowState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      const count = Math.max(120, Math.min(260, Math.floor((nextWidth * nextHeight) / 5500)));
+      state.flakes = Array.from({ length: count }, () => ({
+        x: Math.random() * nextWidth,
+        y: Math.random() * nextHeight,
+        r: 0.8 + Math.random() * 2.2,
+        vy: 18 + Math.random() * 50,
+        sway: 8 + Math.random() * 22,
+        swaySp: 0.4 + Math.random() * 0.8,
+        ph: Math.random() * 6.28,
+        a: 0.5 + Math.random() * 0.5,
+      }));
+      state.last = time;
+    };
+    if (!state.flakes) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#2a3340");
+    gradient.addColorStop(0.5, "#3e4a5c");
+    gradient.addColorStop(1, "#6b7a8e");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const drift = ctx.createLinearGradient(0, height * 0.85, 0, height);
+    drift.addColorStop(0, "rgba(240,245,252,0)");
+    drift.addColorStop(1, "rgba(240,245,252,0.5)");
+    ctx.fillStyle = drift;
+    ctx.fillRect(0, height * 0.85, width, height * 0.15);
+
+    for (const flake of state.flakes) {
+      flake.y += flake.vy * dt;
+      flake.x += Math.sin(time * flake.swaySp + flake.ph) * flake.sway * dt;
+      if (flake.y > height + 4) {
+        flake.y = -4;
+        flake.x = Math.random() * width;
+      }
+      ctx.fillStyle = `rgba(245,250,255,${flake.a})`;
+      ctx.beginPath();
+      ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface CyberpunkWindow {
+  x: number;
+  y: number;
+  hue: number;
+  flick: number;
+  flickSp: number;
+}
+
+interface CyberpunkBuilding {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  windows: CyberpunkWindow[];
+  color: string;
+}
+
+interface CyberpunkStreak {
+  y: number;
+  x: number;
+  speed: number;
+  len: number;
+  hue: number;
+  a: number;
+}
+
+interface CyberpunkRain {
+  x: number;
+  y: number;
+  len: number;
+  sp: number;
+}
+
+interface CyberpunkState extends CanvasAnimLifecycle {
+  back?: CyberpunkBuilding[];
+  mid?: CyberpunkBuilding[];
+  fore?: CyberpunkBuilding[];
+  streaks?: CyberpunkStreak[];
+  rain?: CyberpunkRain[];
+  last?: number;
+}
+
+function CyberpunkBg() {
+  const draw: CanvasDraw<CyberpunkState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      function buildSkyline(baseY: number, hRange: [number, number], color: string) {
+        const buildings: CyberpunkBuilding[] = [];
+        let x = 0;
+        while (x < nextWidth + 60) {
+          const buildingWidth = 22 + Math.random() * 60;
+          const buildingHeight = hRange[0] + Math.random() * (hRange[1] - hRange[0]);
+          const windows: CyberpunkWindow[] = [];
+          const rows = Math.floor(buildingHeight / 14);
+          const cols = Math.max(1, Math.floor(buildingWidth / 11));
+          for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < cols; col += 1) {
+              if (Math.random() < 0.55) {
+                windows.push({
+                  x: col * 11 + 3,
+                  y: row * 14 + 6,
+                  hue: Math.random() < 0.5 ? 320 : (Math.random() < 0.5 ? 195 : 50),
+                  flick: Math.random() * 6.28,
+                  flickSp: 0.2 + Math.random() * 1.8,
+                });
+              }
+            }
+          }
+          buildings.push({ x, y: baseY - buildingHeight, w: buildingWidth, h: buildingHeight, windows, color });
+          x += buildingWidth - 1;
+        }
+        return buildings;
+      }
+
+      state.back = buildSkyline(nextHeight * 0.78, [60, 130], "#15101e");
+      state.mid = buildSkyline(nextHeight * 0.88, [80, 180], "#0d0918");
+      state.fore = buildSkyline(nextHeight, [100, 220], "#06030f");
+      state.streaks = Array.from({ length: 14 }, () => ({
+        y: nextHeight * (0.62 + Math.random() * 0.28),
+        x: Math.random() * nextWidth,
+        speed: (Math.random() < 0.5 ? -1 : 1) * (160 + Math.random() * 280),
+        len: 60 + Math.random() * 120,
+        hue: Math.random() < 0.5 ? 320 : 200,
+        a: 0.5 + Math.random() * 0.5,
+      }));
+      const rainCount = Math.max(80, Math.min(180, Math.floor((nextWidth * nextHeight) / 7200)));
+      state.rain = Array.from({ length: rainCount }, () => ({
+        x: Math.random() * nextWidth * 1.2,
+        y: Math.random() * nextHeight,
+        len: 8 + Math.random() * 12,
+        sp: 380 + Math.random() * 200,
+      }));
+      state.last = time;
+    };
+    if (!state.back || !state.mid || !state.fore || !state.streaks || !state.rain) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#08020e");
+    gradient.addColorStop(0.45, "#1a0820");
+    gradient.addColorStop(0.75, "#3a0a3a");
+    gradient.addColorStop(1, "#5e1444");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const haze = ctx.createLinearGradient(0, height * 0.5, 0, height);
+    haze.addColorStop(0, "rgba(255,80,180,0)");
+    haze.addColorStop(1, "rgba(255,80,180,0.22)");
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, height * 0.5, width, height * 0.5);
+
+    function drawLayer(layer: CyberpunkBuilding[], glow: number) {
+      for (const building of layer) {
+        ctx.fillStyle = building.color;
+        ctx.fillRect(building.x, building.y, building.w, building.h);
+        for (const win of building.windows) {
+          const flick = 0.4 + 0.6 * Math.abs(Math.sin(time * win.flickSp + win.flick));
+          ctx.fillStyle = `hsla(${win.hue},90%,65%,${flick * glow})`;
+          ctx.fillRect(building.x + win.x, building.y + win.y, 4, 5);
+        }
+      }
+    }
+    drawLayer(state.back, 0.55);
+    drawLayer(state.mid, 0.8);
+
+    ctx.lineCap = "round";
+    for (const streak of state.streaks) {
+      streak.x += streak.speed * dt;
+      if (streak.speed > 0 && streak.x - streak.len > width) streak.x = -streak.len;
+      if (streak.speed < 0 && streak.x + streak.len < 0) streak.x = width + streak.len;
+      const x2 = streak.x - Math.sign(streak.speed) * streak.len;
+      const streakGradient = ctx.createLinearGradient(x2, streak.y, streak.x, streak.y);
+      streakGradient.addColorStop(0, `hsla(${streak.hue},95%,60%,0)`);
+      streakGradient.addColorStop(1, `hsla(${streak.hue},95%,70%,${streak.a})`);
+      ctx.strokeStyle = streakGradient;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(x2, streak.y);
+      ctx.lineTo(streak.x, streak.y);
+      ctx.stroke();
+    }
+
+    drawLayer(state.fore, 1.0);
+
+    ctx.strokeStyle = "rgba(180,210,240,0.30)";
+    ctx.lineWidth = 0.9;
+    for (const drop of state.rain) {
+      drop.y += drop.sp * dt;
+      drop.x -= drop.sp * 0.18 * dt;
+      if (drop.y > height) {
+        drop.y = -drop.len;
+        drop.x = Math.random() * width * 1.2;
+      }
+      ctx.beginPath();
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x - drop.len * 0.18, drop.y + drop.len);
+      ctx.stroke();
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface SakuraPetal {
+  x: number;
+  y: number;
+  sz: number;
+  rot: number;
+  vrot: number;
+  vy: number;
+  sway: number;
+  swaySp: number;
+  ph: number;
+  hue: number;
+  a: number;
+}
+
+interface SakuraState extends CanvasAnimLifecycle {
+  petals?: SakuraPetal[];
+  last?: number;
+}
+
+function SakuraBg() {
+  const draw: CanvasDraw<SakuraState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      const count = Math.max(40, Math.min(110, Math.floor((nextWidth * nextHeight) / 13000)));
+      state.petals = Array.from({ length: count }, () => ({
+        x: Math.random() * nextWidth,
+        y: Math.random() * nextHeight,
+        sz: 6 + Math.random() * 10,
+        rot: Math.random() * 6.28,
+        vrot: (Math.random() - 0.5) * 1.6,
+        vy: 14 + Math.random() * 26,
+        sway: 14 + Math.random() * 22,
+        swaySp: 0.4 + Math.random() * 0.8,
+        ph: Math.random() * 6.28,
+        hue: 340 + (Math.random() - 0.5) * 18,
+        a: 0.7 + Math.random() * 0.3,
+      }));
+      state.last = time;
+    };
+    if (!state.petals) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#fce4ec");
+    gradient.addColorStop(0.55, "#fff1f4");
+    gradient.addColorStop(1, "#fde2cf");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const sun = ctx.createRadialGradient(width * 0.2, height * 0.15, 0, width * 0.2, height * 0.15, Math.max(width, height) * 0.4);
+    sun.addColorStop(0, "rgba(255,240,220,0.55)");
+    sun.addColorStop(1, "rgba(255,240,220,0)");
+    ctx.fillStyle = sun;
+    ctx.fillRect(0, 0, width, height);
+
+    for (const petal of state.petals) {
+      petal.y += petal.vy * dt;
+      petal.x += Math.sin(time * petal.swaySp + petal.ph) * petal.sway * dt;
+      petal.rot += petal.vrot * dt;
+      if (petal.y > height + 10) {
+        petal.y = -10;
+        petal.x = Math.random() * width;
+      }
+      ctx.save();
+      ctx.translate(petal.x, petal.y);
+      ctx.rotate(petal.rot);
+      const petalGradient = ctx.createLinearGradient(0, -petal.sz, 0, petal.sz);
+      petalGradient.addColorStop(0, `hsla(${petal.hue},85%,90%,${petal.a})`);
+      petalGradient.addColorStop(0.6, `hsla(${petal.hue},75%,75%,${petal.a})`);
+      petalGradient.addColorStop(1, `hsla(${petal.hue - 10},70%,60%,${petal.a * 0.7})`);
+      ctx.fillStyle = petalGradient;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, petal.sz * 0.45, petal.sz, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface Firefly {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+  ph: number;
+  sp: number;
+  hue: number;
+}
+
+interface FirefliesState extends CanvasAnimLifecycle {
+  bugs?: Firefly[];
+  last?: number;
+}
+
+function FirefliesBg() {
+  const draw: CanvasDraw<FirefliesState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      const count = Math.max(35, Math.min(85, Math.floor((nextWidth * nextHeight) / 16000)));
+      state.bugs = Array.from({ length: count }, () => ({
+        x: Math.random() * nextWidth,
+        y: Math.random() * nextHeight,
+        vx: (Math.random() - 0.5) * 14,
+        vy: (Math.random() - 0.5) * 10,
+        r: 1.2 + Math.random() * 1.6,
+        ph: Math.random() * 6.28,
+        sp: 0.6 + Math.random() * 1.6,
+        hue: 55 + Math.random() * 20,
+      }));
+      state.last = time;
+    };
+    if (!state.bugs) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#0b1a14");
+    gradient.addColorStop(0.5, "#13261c");
+    gradient.addColorStop(1, "#08130e");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const floorGlow = ctx.createRadialGradient(width * 0.5, height * 1.1, 0, width * 0.5, height * 1.1, Math.max(width, height) * 0.8);
+    floorGlow.addColorStop(0, "rgba(140,110,40,0.20)");
+    floorGlow.addColorStop(1, "rgba(140,110,40,0)");
+    ctx.fillStyle = floorGlow;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.globalCompositeOperation = "lighter";
+    for (const bug of state.bugs) {
+      bug.x += bug.vx * dt + Math.sin(time * bug.sp + bug.ph) * 6 * dt;
+      bug.y += bug.vy * dt + Math.cos(time * bug.sp * 0.7 + bug.ph) * 5 * dt;
+      if (bug.x < -10) bug.x = width + 10;
+      else if (bug.x > width + 10) bug.x = -10;
+      if (bug.y < -10) bug.y = height + 10;
+      else if (bug.y > height + 10) bug.y = -10;
+      const pulse = 0.3 + 0.7 * Math.abs(Math.sin(time * bug.sp * 1.3 + bug.ph));
+      const halo = ctx.createRadialGradient(bug.x, bug.y, 0, bug.x, bug.y, bug.r * 10);
+      halo.addColorStop(0, `hsla(${bug.hue},95%,70%,${0.55 * pulse})`);
+      halo.addColorStop(0.4, `hsla(${bug.hue},95%,60%,${0.18 * pulse})`);
+      halo.addColorStop(1, `hsla(${bug.hue},95%,50%,0)`);
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(bug.x, bug.y, bug.r * 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `hsla(${bug.hue},100%,90%,${pulse})`;
+      ctx.beginPath();
+      ctx.arc(bug.x, bug.y, bug.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface ThunderstormCloud {
+  x: number;
+  y: number;
+  r: number;
+  sp: number;
+}
+
+interface ThunderstormDrop {
+  x: number;
+  y: number;
+  len: number;
+  sp: number;
+}
+
+interface LightningBolt {
+  pts: { x: number; y: number }[];
+  ttl: number;
+  life: number;
+}
+
+interface ThunderstormState extends CanvasAnimLifecycle {
+  rain?: ThunderstormDrop[];
+  clouds?: ThunderstormCloud[];
+  flash?: number;
+  nextFlash?: number;
+  flashBolt?: LightningBolt | null;
+  last?: number;
+}
+
+function ThunderstormBg() {
+  const draw: CanvasDraw<ThunderstormState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      const rainCount = Math.max(140, Math.min(280, Math.floor((nextWidth * nextHeight) / 5200)));
+      state.rain = Array.from({ length: rainCount }, () => ({
+        x: Math.random() * nextWidth * 1.2,
+        y: Math.random() * nextHeight,
+        len: 10 + Math.random() * 14,
+        sp: 540 + Math.random() * 300,
+      }));
+      state.clouds = Array.from({ length: 6 }, (_, index) => ({
+        x: nextWidth * (index / 6) + Math.random() * 80,
+        y: nextHeight * (0.1 + Math.random() * 0.3),
+        r: 120 + Math.random() * 140,
+        sp: 4 + Math.random() * 7,
+      }));
+      state.flash = 0;
+      state.nextFlash = time + 2 + Math.random() * 5;
+      state.flashBolt = null;
+      state.last = time;
+    };
+    if (!state.clouds || !state.rain || state.nextFlash === undefined) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#0d1018");
+    gradient.addColorStop(0.55, "#1a2230");
+    gradient.addColorStop(1, "#0a1018");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    for (const cloud of state.clouds) {
+      cloud.x += cloud.sp * dt;
+      if (cloud.x - cloud.r > width) cloud.x = -cloud.r;
+      const cloudGradient = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.r);
+      cloudGradient.addColorStop(0, "rgba(70,80,95,0.85)");
+      cloudGradient.addColorStop(0.6, "rgba(40,48,60,0.45)");
+      cloudGradient.addColorStop(1, "rgba(20,26,38,0)");
+      ctx.fillStyle = cloudGradient;
+      ctx.beginPath();
+      ctx.arc(cloud.x, cloud.y, cloud.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (time > state.nextFlash) {
+      state.flash = 1;
+      const startX = Math.random() * width;
+      const pts = [{ x: startX, y: 0 }];
+      let currentX = startX;
+      let currentY = 0;
+      while (currentY < height * 0.85) {
+        currentY += 10 + Math.random() * 30;
+        currentX += (Math.random() - 0.5) * 60;
+        pts.push({ x: currentX, y: currentY });
+      }
+      state.flashBolt = { pts, ttl: 0.18 + Math.random() * 0.12, life: 0 };
+      state.nextFlash = time + 2.5 + Math.random() * 6;
+    }
+
+    if ((state.flash ?? 0) > 0) {
+      state.flash = Math.max(0, (state.flash ?? 0) - dt * 4.5);
+      ctx.fillStyle = `rgba(220,230,255,${state.flash * 0.5})`;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    if (state.flashBolt) {
+      state.flashBolt.life += dt;
+      if (state.flashBolt.life > state.flashBolt.ttl) {
+        state.flashBolt = null;
+      } else {
+        const k = 1 - state.flashBolt.life / state.flashBolt.ttl;
+        ctx.strokeStyle = `rgba(230,235,255,${k})`;
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = "round";
+        ctx.shadowColor = "rgba(180,210,255,0.9)";
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(state.flashBolt.pts[0].x, state.flashBolt.pts[0].y);
+        for (let i = 1; i < state.flashBolt.pts.length; i += 1) {
+          ctx.lineTo(state.flashBolt.pts[i].x, state.flashBolt.pts[i].y);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    ctx.strokeStyle = "rgba(180,200,225,0.55)";
+    ctx.lineWidth = 1.2;
+    for (const drop of state.rain) {
+      drop.y += drop.sp * dt;
+      drop.x -= drop.sp * 0.22 * dt;
+      if (drop.y > height) {
+        drop.y = -drop.len;
+        drop.x = Math.random() * width * 1.2;
+      }
+      ctx.beginPath();
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x - drop.len * 0.22, drop.y + drop.len);
+      ctx.stroke();
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface TopoField {
+  ph: number;
+  sp: number;
+  ax: number;
+  ay: number;
+  sigma: number;
+}
+
+interface TopoState extends CanvasAnimLifecycle {
+  fields?: TopoField[];
+  lo?: HTMLCanvasElement;
+  loCtx?: CanvasRenderingContext2D | null;
+  scale?: number;
+}
+
+function TopoBg() {
+  const draw: CanvasDraw<TopoState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      state.fields = Array.from({ length: 5 }, (_, index) => ({
+        ph: index * 1.3,
+        sp: 0.12 + Math.random() * 0.16,
+        ax: nextWidth * (0.2 + Math.random() * 0.6),
+        ay: nextHeight * (0.2 + Math.random() * 0.6),
+        sigma: Math.min(nextWidth, nextHeight) * (0.18 + Math.random() * 0.12),
+      }));
+      state.lo = document.createElement("canvas");
+      state.scale = 4;
+      state.lo.width = Math.max(1, Math.floor(nextWidth / state.scale));
+      state.lo.height = Math.max(1, Math.floor(nextHeight / state.scale));
+      state.loCtx = state.lo.getContext("2d");
+    };
+    if (!state.fields || !state.lo || !state.loCtx || !state.scale) return;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#0a1322");
+    gradient.addColorStop(1, "#0d1a2e");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const loWidth = state.lo.width;
+    const loHeight = state.lo.height;
+    const image = state.loCtx.createImageData(loWidth, loHeight);
+    const data = image.data;
+    const centers = state.fields.map((field) => ({
+      x: (field.ax + Math.sin(time * field.sp + field.ph) * width * 0.2) / state.scale!,
+      y: (field.ay + Math.cos(time * field.sp * 0.7 + field.ph) * height * 0.2) / state.scale!,
+      sigma2: (field.sigma / state.scale!) ** 2,
+    }));
+    const levels = 14;
+    const band = 0.04;
+    for (let py = 0; py < loHeight; py += 1) {
+      for (let px = 0; px < loWidth; px += 1) {
+        let value = 0;
+        for (const center of centers) {
+          const dx = px - center.x;
+          const dy = py - center.y;
+          value += Math.exp(-(dx * dx + dy * dy) / (2 * center.sigma2));
+        }
+        const scaled = value * levels;
+        const fraction = scaled - Math.floor(scaled);
+        const distance = Math.min(fraction, 1 - fraction);
+        const index = (py * loWidth + px) * 4;
+        if (distance < band) {
+          const k = 1 - distance / band;
+          const level = Math.min(1, value / 1.6);
+          data[index] = Math.floor(60 + level * 130);
+          data[index + 1] = Math.floor(180 + level * 60);
+          data[index + 2] = Math.floor(220 - level * 60);
+          data[index + 3] = Math.floor(200 * k * (0.4 + level * 0.6));
+        } else {
+          data[index + 3] = 0;
+        }
+      }
+    }
+    state.loCtx.putImageData(image, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(state.lo, 0, 0, width, height);
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
+interface Bubble {
+  x: number;
+  y: number;
+  r: number;
+  vy: number;
+  sway: number;
+  swaySp: number;
+  ph: number;
+  a: number;
+}
+
+interface BubblesState extends CanvasAnimLifecycle {
+  bubs?: Bubble[];
+  last?: number;
+}
+
+function BubblesBg() {
+  const draw: CanvasDraw<BubblesState> = (ctx, width, height, time, state) => {
+    state.onResize = (nextWidth, nextHeight) => {
+      const count = Math.max(40, Math.min(110, Math.floor((nextWidth * nextHeight) / 12000)));
+      state.bubs = Array.from({ length: count }, () => ({
+        x: Math.random() * nextWidth,
+        y: Math.random() * nextHeight,
+        r: 3 + Math.random() * 14,
+        vy: 18 + Math.random() * 38,
+        sway: 6 + Math.random() * 14,
+        swaySp: 0.4 + Math.random() * 0.8,
+        ph: Math.random() * 6.28,
+        a: 0.35 + Math.random() * 0.4,
+      }));
+      state.last = time;
+    };
+    if (!state.bubs) return;
+    const dt = Math.min(0.05, time - (state.last ?? time));
+    state.last = time;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#1a6b8c");
+    gradient.addColorStop(0.45, "#0e4263");
+    gradient.addColorStop(1, "#051c30");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    for (let i = 0; i < 6; i += 1) {
+      const yBase = height * 0.05 + Math.sin(time * 0.6 + i * 1.3) * 12;
+      const caustic = ctx.createLinearGradient(0, yBase, 0, yBase + height * 0.4);
+      caustic.addColorStop(0, `rgba(180,225,255,${0.10 + 0.05 * Math.sin(time + i)})`);
+      caustic.addColorStop(1, "rgba(180,225,255,0)");
+      ctx.fillStyle = caustic;
+      const wavelength = width / 4 + i * 30;
+      ctx.beginPath();
+      for (let x = 0; x <= width; x += 8) {
+        const y = yBase + Math.sin((x / wavelength) + time * 0.8 + i) * 10;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, yBase + height * 0.4);
+      ctx.lineTo(0, yBase + height * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    for (const bubble of state.bubs) {
+      bubble.y -= bubble.vy * dt;
+      bubble.x += Math.sin(time * bubble.swaySp + bubble.ph) * bubble.sway * dt;
+      if (bubble.y < -bubble.r * 2) {
+        bubble.y = height + bubble.r;
+        bubble.x = Math.random() * width;
+      }
+      const body = ctx.createRadialGradient(bubble.x - bubble.r * 0.3, bubble.y - bubble.r * 0.3, bubble.r * 0.1, bubble.x, bubble.y, bubble.r);
+      body.addColorStop(0, `rgba(220,240,255,${bubble.a * 0.9})`);
+      body.addColorStop(0.6, `rgba(180,220,245,${bubble.a * 0.35})`);
+      body.addColorStop(1, "rgba(140,200,235,0)");
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(220,240,255,${bubble.a * 0.6})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(255,255,255,${bubble.a * 0.9})`;
+      ctx.beginPath();
+      ctx.arc(bubble.x - bubble.r * 0.4, bubble.y - bubble.r * 0.4, bubble.r * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+  const ref = useCanvasAnim(draw);
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
+}
+
 const DYNAMIC_BACKGROUND_COMPONENTS = {
   aurora: AuroraBg,
+  clouds: CloudsBg,
+  ocean: OceanBg,
   raindrops: RaindropsBg,
+  snow: SnowBg,
+  sakura: SakuraBg,
+  fireflies: FirefliesBg,
+  bubbles: BubblesBg,
   starfield: StarfieldBg,
   nebula: NebulaBg,
   embers: EmbersBg,
   lava: LavaBg,
   matrix: MatrixBg,
+  topo: TopoBg,
   synthwave: SynthwaveBg,
+  cyberpunk: CyberpunkBg,
+  thunderstorm: ThunderstormBg,
   confetti: ConfettiBg,
 } satisfies Record<string, ComponentType>;
 
@@ -636,13 +1492,22 @@ export const DYNAMIC_BACKGROUNDS: readonly {
   mood: "calm" | "spacey" | "warm" | "geeky" | "erratic";
 }[] = [
   { id: "aurora", labelKey: "dashboard.dynamicBackgrounds.aurora", mood: "calm" },
+  { id: "clouds", labelKey: "dashboard.dynamicBackgrounds.clouds", mood: "calm" },
+  { id: "ocean", labelKey: "dashboard.dynamicBackgrounds.ocean", mood: "calm" },
   { id: "raindrops", labelKey: "dashboard.dynamicBackgrounds.raindrops", mood: "calm" },
+  { id: "snow", labelKey: "dashboard.dynamicBackgrounds.snow", mood: "calm" },
+  { id: "sakura", labelKey: "dashboard.dynamicBackgrounds.sakura", mood: "calm" },
+  { id: "fireflies", labelKey: "dashboard.dynamicBackgrounds.fireflies", mood: "calm" },
+  { id: "bubbles", labelKey: "dashboard.dynamicBackgrounds.bubbles", mood: "calm" },
   { id: "starfield", labelKey: "dashboard.dynamicBackgrounds.starfield", mood: "spacey" },
   { id: "nebula", labelKey: "dashboard.dynamicBackgrounds.nebula", mood: "spacey" },
   { id: "embers", labelKey: "dashboard.dynamicBackgrounds.embers", mood: "warm" },
   { id: "lava", labelKey: "dashboard.dynamicBackgrounds.lava", mood: "warm" },
   { id: "matrix", labelKey: "dashboard.dynamicBackgrounds.matrix", mood: "geeky" },
+  { id: "topo", labelKey: "dashboard.dynamicBackgrounds.topo", mood: "geeky" },
   { id: "synthwave", labelKey: "dashboard.dynamicBackgrounds.synthwave", mood: "geeky" },
+  { id: "cyberpunk", labelKey: "dashboard.dynamicBackgrounds.cyberpunk", mood: "erratic" },
+  { id: "thunderstorm", labelKey: "dashboard.dynamicBackgrounds.thunderstorm", mood: "erratic" },
   { id: "confetti", labelKey: "dashboard.dynamicBackgrounds.confetti", mood: "erratic" },
 ];
 

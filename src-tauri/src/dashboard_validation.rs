@@ -93,13 +93,22 @@ pub const DASHBOARD_TAB_GRADIENT_IDS: &[&str] = &[
 
 pub const DYNAMIC_BACKGROUND_IDS: &[&str] = &[
     "aurora",
+    "clouds",
+    "ocean",
     "raindrops",
+    "snow",
+    "sakura",
+    "fireflies",
+    "bubbles",
     "starfield",
     "nebula",
     "embers",
     "lava",
     "matrix",
+    "topo",
     "synthwave",
+    "cyberpunk",
+    "thunderstorm",
     "confetti",
 ];
 
