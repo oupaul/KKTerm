@@ -543,7 +543,8 @@
     "toolTutorial": "Affichage de l’aide du tutoriel...",
     "toolTutorialDone": "Aide du tutoriel affichée",
     "tutorialInvalidRequest": "Les demandes de tutoriel nécessitent une cible, un titre et un texte d’aide.",
-    "tutorialTargetNotFound": "Cette cible du tutoriel n’est pas visible pour le moment."
+    "tutorialTargetNotFound": "Cette cible du tutoriel n’est pas visible pour le moment.",
+    "skillInvoked": "Skill utilisé : {{skills}}"
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -1032,7 +1033,19 @@
       "nebula": "Nébuleuse",
       "raindrops": "Gouttes de pluie",
       "starfield": "Ciel nocturne",
-      "synthwave": "Synthwave"
+      "synthwave": "Synthwave",
+      "bubbles": "Bulles",
+      "clouds": "Nuages",
+      "cyberpunk": "Cyberpunk",
+      "fireflies": "Lucioles",
+      "lanterns": "Lanternes célestes",
+      "ocean": "Océan",
+      "ricefield": "Rizière",
+      "sakura": "Sakura",
+      "snow": "Chute de neige",
+      "taipei101": "Taipei 101",
+      "thunderstorm": "Orage",
+      "topo": "Carte topo"
     },
     "editDone": "Terminé",
     "editLayout": "Modifier la mise en page",
@@ -1772,7 +1785,14 @@
     "showAllModels": "Afficher tous les modèles",
     "showAllModelsHint": "Afficher tous les modèles renvoyés par le fournisseur lors de l’actualisation, pas seulement les recommandations sélectionnées.",
     "lastCheckedAt": "Dernière vérification {{time}}",
-    "lastCheckedNever": "Jamais vérifié"
+    "lastCheckedNever": "Jamais vérifié",
+    "assistantSkillsDisabled": "Désactivé",
+    "assistantSkillsEmpty": "Aucun skill d’assistant trouvé.",
+    "assistantSkillsEnabled": "Activé",
+    "assistantSkillsHint": "Dossiers SKILL.md locaux qui enseignent à l’assistant IA des workflows ciblés. Les skills de démarrage inclus sont copiés ici automatiquement. Les scripts ne sont pas exécutés dans cette version ; utilisez le bouton de dossier pour ajouter ou modifier des skills.",
+    "assistantSkillsOpen": "Ouvrir {{name}}",
+    "assistantSkillsOpenFolder": "Ouvrir le dossier des skills",
+    "assistantSkillsTitle": "Skills de l’assistant"
   },
   "sftp": {
     "accessed": "Accédé",

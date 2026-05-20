@@ -543,7 +543,8 @@
     "toolTutorial": "Menampilkan bantuan tutorial...",
     "toolTutorialDone": "Bantuan tutorial ditampilkan",
     "tutorialInvalidRequest": "Permintaan tutorial memerlukan target, judul, dan teks bantuan.",
-    "tutorialTargetNotFound": "Target tutorial itu sedang tidak terlihat."
+    "tutorialTargetNotFound": "Target tutorial itu sedang tidak terlihat.",
+    "skillInvoked": "Menggunakan skill: {{skills}}"
   },
   "app": {
     "aiAssistant": "AI Assistant",
@@ -1032,7 +1033,19 @@
       "nebula": "Nebula",
       "raindrops": "Tetes Hujan",
       "starfield": "Langit Malam",
-      "synthwave": "Synthwave"
+      "synthwave": "Synthwave",
+      "bubbles": "Gelembung",
+      "clouds": "Awan",
+      "cyberpunk": "Cyberpunk",
+      "fireflies": "Kunang-kunang",
+      "lanterns": "Lampion Terbang",
+      "ocean": "Laut",
+      "ricefield": "Sawah",
+      "sakura": "Sakura",
+      "snow": "Turun Salju",
+      "taipei101": "Taipei 101",
+      "thunderstorm": "Badai Petir",
+      "topo": "Peta Topo"
     },
     "editDone": "Selesai",
     "editLayout": "Edit Tata Letak",
@@ -1772,7 +1785,14 @@
     "showAllModels": "Tampilkan Semua Model",
     "showAllModelsHint": "Tampilkan setiap model yang dikembalikan oleh penyedia saat penyegaran, bukan hanya rekomendasi terpilih.",
     "lastCheckedAt": "Terakhir diperiksa {{time}}",
-    "lastCheckedNever": "Belum pernah diperiksa"
+    "lastCheckedNever": "Belum pernah diperiksa",
+    "assistantSkillsDisabled": "Dinonaktifkan",
+    "assistantSkillsEmpty": "Tidak ada Skill Asisten yang ditemukan.",
+    "assistantSkillsEnabled": "Diaktifkan",
+    "assistantSkillsHint": "Folder SKILL.md lokal yang mengajarkan alur kerja terfokus kepada Asisten AI. Skill awal bawaan disalin ke sini secara otomatis. Skrip tidak dijalankan dalam versi ini; gunakan tombol folder untuk menambah atau mengedit skill.",
+    "assistantSkillsOpen": "Buka {{name}}",
+    "assistantSkillsOpenFolder": "Buka folder skill",
+    "assistantSkillsTitle": "Skill Asisten"
   },
   "sftp": {
     "accessed": "Diakses",

@@ -543,7 +543,8 @@
     "toolTutorial": "チュートリアルヘルプを表示しています...",
     "toolTutorialDone": "チュートリアルヘルプを表示しました",
     "tutorialInvalidRequest": "チュートリアル要求にはターゲット、タイトル、ヘルプテキストが必要です。",
-    "tutorialTargetNotFound": "そのチュートリアルターゲットは現在表示されていません。"
+    "tutorialTargetNotFound": "そのチュートリアルターゲットは現在表示されていません。",
+    "skillInvoked": "使用中のスキル: {{skills}}"
   },
   "app": {
     "aiAssistant": "AIアシスタント",
@@ -1032,7 +1033,19 @@
       "nebula": "星雲",
       "raindrops": "雨滴",
       "starfield": "夜空",
-      "synthwave": "シンセウェーブ"
+      "synthwave": "シンセウェーブ",
+      "bubbles": "泡",
+      "clouds": "雲",
+      "cyberpunk": "サイバーパンク",
+      "fireflies": "ホタル",
+      "lanterns": "スカイランタン",
+      "ocean": "海",
+      "ricefield": "水田",
+      "sakura": "桜",
+      "snow": "降雪",
+      "taipei101": "台北101",
+      "thunderstorm": "雷雨",
+      "topo": "地形図"
     },
     "editDone": "完了",
     "editLayout": "レイアウトを編集",
@@ -1772,7 +1785,14 @@
     "showAllModels": "すべてのモデルを表示",
     "showAllModelsHint": "厳選された推奨モデルだけでなく、更新時にプロバイダーから返されるすべてのモデルを表示します。",
     "lastCheckedAt": "最終確認 {{time}}",
-    "lastCheckedNever": "未確認"
+    "lastCheckedNever": "未確認",
+    "assistantSkillsDisabled": "無効",
+    "assistantSkillsEmpty": "アシスタントスキルが見つかりません。",
+    "assistantSkillsEnabled": "有効",
+    "assistantSkillsHint": "AI アシスタントに特定のワークフローを教えるローカルの SKILL.md フォルダーです。同梱のスタータースキルはここに自動的にコピーされます。このバージョンではスクリプトは実行されません。スキルを追加または編集するにはフォルダーボタンを使用してください。",
+    "assistantSkillsOpen": "{{name}} を開く",
+    "assistantSkillsOpenFolder": "スキルフォルダーを開く",
+    "assistantSkillsTitle": "アシスタントスキル"
   },
   "sftp": {
     "accessed": "アクセス日時",

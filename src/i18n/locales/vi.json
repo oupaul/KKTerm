@@ -543,7 +543,8 @@
     "toolTutorial": "Đang hiển thị trợ giúp hướng dẫn...",
     "toolTutorialDone": "Đã hiển thị trợ giúp hướng dẫn",
     "tutorialInvalidRequest": "Yêu cầu hướng dẫn cần có mục tiêu, tiêu đề và nội dung trợ giúp.",
-    "tutorialTargetNotFound": "Mục tiêu hướng dẫn đó hiện không hiển thị."
+    "tutorialTargetNotFound": "Mục tiêu hướng dẫn đó hiện không hiển thị.",
+    "skillInvoked": "Đang dùng kỹ năng: {{skills}}"
   },
   "app": {
     "aiAssistant": "Trợ lý AI",
@@ -1033,7 +1034,19 @@
       "nebula": "Tinh vân",
       "raindrops": "Giọt mưa",
       "starfield": "Bầu trời đêm",
-      "synthwave": "Synthwave"
+      "synthwave": "Synthwave",
+      "bubbles": "Bong bóng",
+      "clouds": "Mây",
+      "cyberpunk": "Cyberpunk",
+      "fireflies": "Đom đóm",
+      "lanterns": "Đèn trời",
+      "ocean": "Đại dương",
+      "ricefield": "Ruộng lúa",
+      "sakura": "Hoa anh đào",
+      "snow": "Tuyết rơi",
+      "taipei101": "Taipei 101",
+      "thunderstorm": "Dông bão",
+      "topo": "Bản đồ địa hình"
     },
     "editDone": "Xong",
     "editLayout": "Chỉnh sửa Bố cục",
@@ -1772,7 +1785,14 @@
     "showAllModels": "Hiển thị tất cả mô hình",
     "showAllModelsHint": "Hiển thị mọi mô hình được nhà cung cấp trả về khi làm mới thay vì chỉ các đề xuất được tuyển chọn.",
     "lastCheckedAt": "Kiểm tra lần cuối {{time}}",
-    "lastCheckedNever": "Chưa từng kiểm tra"
+    "lastCheckedNever": "Chưa từng kiểm tra",
+    "assistantSkillsDisabled": "Đã tắt",
+    "assistantSkillsEmpty": "Không tìm thấy Kỹ năng Trợ lý nào.",
+    "assistantSkillsEnabled": "Đã bật",
+    "assistantSkillsHint": "Các thư mục SKILL.md cục bộ dạy cho Trợ lý AI những quy trình làm việc tập trung. Các kỹ năng khởi đầu đi kèm được tự động sao chép vào đây. Tập lệnh không được thực thi trong phiên bản này; hãy dùng nút thư mục để thêm hoặc chỉnh sửa kỹ năng.",
+    "assistantSkillsOpen": "Mở {{name}}",
+    "assistantSkillsOpenFolder": "Mở thư mục kỹ năng",
+    "assistantSkillsTitle": "Kỹ năng Trợ lý"
   },
   "sftp": {
     "accessed": "Accessed",

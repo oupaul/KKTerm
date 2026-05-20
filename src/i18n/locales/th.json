@@ -543,7 +543,8 @@
     "toolTutorial": "กำลังแสดงความช่วยเหลือบทแนะนำ...",
     "toolTutorialDone": "แสดงความช่วยเหลือบทแนะนำแล้ว",
     "tutorialInvalidRequest": "คำขอบทแนะนำต้องมีเป้าหมาย ชื่อเรื่อง และข้อความช่วยเหลือ",
-    "tutorialTargetNotFound": "เป้าหมายบทแนะนำนั้นยังไม่ปรากฏในตอนนี้"
+    "tutorialTargetNotFound": "เป้าหมายบทแนะนำนั้นยังไม่ปรากฏในตอนนี้",
+    "skillInvoked": "กำลังใช้สกิล: {{skills}}"
   },
   "app": {
     "aiAssistant": "ผู้ช่วย AI",
@@ -1032,7 +1033,19 @@
       "nebula": "เนบิวลา",
       "raindrops": "หยาดฝน",
       "starfield": "ท้องฟ้ายามค่ำคืน",
-      "synthwave": "ซินธ์เวฟ"
+      "synthwave": "ซินธ์เวฟ",
+      "bubbles": "ฟองอากาศ",
+      "clouds": "เมฆ",
+      "cyberpunk": "ไซเบอร์พังก์",
+      "fireflies": "หิ่งห้อย",
+      "lanterns": "โคมลอย",
+      "ocean": "มหาสมุทร",
+      "ricefield": "นาข้าว",
+      "sakura": "ซากุระ",
+      "snow": "หิมะตก",
+      "taipei101": "ไทเป 101",
+      "thunderstorm": "พายุฝนฟ้าคะนอง",
+      "topo": "แผนที่ภูมิประเทศ"
     },
     "editDone": "เสร็จ",
     "editLayout": "แก้ไขเค้าโครง",
@@ -1772,7 +1785,14 @@
     "showAllModels": "แสดงโมเดลทั้งหมด",
     "showAllModelsHint": "แสดงทุกโมเดลที่ผู้ให้บริการส่งกลับมาเมื่อรีเฟรช แทนที่จะแสดงเฉพาะคำแนะนำที่คัดสรร",
     "lastCheckedAt": "ตรวจสอบล่าสุด {{time}}",
-    "lastCheckedNever": "ยังไม่เคยตรวจสอบ"
+    "lastCheckedNever": "ยังไม่เคยตรวจสอบ",
+    "assistantSkillsDisabled": "ปิดใช้งาน",
+    "assistantSkillsEmpty": "ไม่พบสกิลผู้ช่วย",
+    "assistantSkillsEnabled": "เปิดใช้งาน",
+    "assistantSkillsHint": "โฟลเดอร์ SKILL.md ในเครื่องที่สอนเวิร์กโฟลว์เฉพาะให้ผู้ช่วย AI สกิลเริ่มต้นที่มาพร้อมกันจะถูกคัดลอกมาที่นี่โดยอัตโนมัติ เวอร์ชันนี้ไม่เรียกใช้สคริปต์ ใช้ปุ่มโฟลเดอร์เพื่อเพิ่มหรือแก้ไขสกิล",
+    "assistantSkillsOpen": "เปิด {{name}}",
+    "assistantSkillsOpenFolder": "เปิดโฟลเดอร์สกิล",
+    "assistantSkillsTitle": "สกิลผู้ช่วย"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",

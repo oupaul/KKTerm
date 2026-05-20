@@ -543,7 +543,8 @@
     "toolTutorial": "正在顯示教學說明...",
     "toolTutorialDone": "已顯示教學說明",
     "tutorialInvalidRequest": "教學要求需要目標、標題和說明文字。",
-    "tutorialTargetNotFound": "該教學目標目前不可見。"
+    "tutorialTargetNotFound": "該教學目標目前不可見。",
+    "skillInvoked": "正在使用技能：{{skills}}"
   },
   "app": {
     "aiAssistant": "AI 助理",
@@ -1032,7 +1033,19 @@
       "nebula": "星雲",
       "raindrops": "雨滴",
       "starfield": "星空",
-      "synthwave": "合成波"
+      "synthwave": "合成波",
+      "bubbles": "氣泡",
+      "clouds": "雲朵",
+      "cyberpunk": "賽博龐克",
+      "fireflies": "螢火蟲",
+      "lanterns": "天燈",
+      "ocean": "海洋",
+      "ricefield": "稻田",
+      "sakura": "櫻花",
+      "snow": "降雪",
+      "taipei101": "台北 101",
+      "thunderstorm": "雷雨",
+      "topo": "地形圖"
     },
     "editDone": "完成",
     "editLayout": "編輯版面配置",
@@ -1772,7 +1785,14 @@
     "showAllModels": "顯示所有模型",
     "showAllModelsHint": "顯示重新整理時供應商返回的所有模型，而非僅限精選推薦。",
     "lastCheckedAt": "上次檢查 {{time}}",
-    "lastCheckedNever": "從未檢查"
+    "lastCheckedNever": "從未檢查",
+    "assistantSkillsDisabled": "已停用",
+    "assistantSkillsEmpty": "找不到助理技能。",
+    "assistantSkillsEnabled": "已啟用",
+    "assistantSkillsHint": "本機 SKILL.md 資料夾，教 AI 助理特定工作流程。內建的入門技能會自動複製到這裡。本版本不會執行指令碼；請使用資料夾按鈕新增或編輯技能。",
+    "assistantSkillsOpen": "開啟 {{name}}",
+    "assistantSkillsOpenFolder": "開啟技能資料夾",
+    "assistantSkillsTitle": "助理技能"
   },
   "sftp": {
     "accessed": "存取日期",

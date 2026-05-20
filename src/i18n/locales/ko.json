@@ -543,7 +543,8 @@
     "toolTutorial": "튜토리얼 도움말 표시 중...",
     "toolTutorialDone": "튜토리얼 도움말을 표시함",
     "tutorialInvalidRequest": "튜토리얼 요청에는 대상, 제목, 도움말 텍스트가 필요합니다.",
-    "tutorialTargetNotFound": "해당 튜토리얼 대상은 지금 보이지 않습니다."
+    "tutorialTargetNotFound": "해당 튜토리얼 대상은 지금 보이지 않습니다.",
+    "skillInvoked": "사용 중인 스킬: {{skills}}"
   },
   "app": {
     "aiAssistant": "AI 어시스턴트",
@@ -1032,7 +1033,19 @@
       "nebula": "성운",
       "raindrops": "빗방울",
       "starfield": "밤하늘",
-      "synthwave": "신스웨이브"
+      "synthwave": "신스웨이브",
+      "bubbles": "거품",
+      "clouds": "구름",
+      "cyberpunk": "사이버펑크",
+      "fireflies": "반딧불이",
+      "lanterns": "풍등",
+      "ocean": "바다",
+      "ricefield": "논",
+      "sakura": "벚꽃",
+      "snow": "눈 내림",
+      "taipei101": "타이베이 101",
+      "thunderstorm": "뇌우",
+      "topo": "지형도"
     },
     "editDone": "완료",
     "editLayout": "레이아웃 편집",
@@ -1772,7 +1785,14 @@
     "showAllModels": "모든 모델 표시",
     "showAllModelsHint": "선별된 추천 모델만이 아닌 새로 고침 시 공급자가 반환한 모든 모델을 표시합니다.",
     "lastCheckedAt": "마지막 확인 {{time}}",
-    "lastCheckedNever": "확인한 적 없음"
+    "lastCheckedNever": "확인한 적 없음",
+    "assistantSkillsDisabled": "비활성화됨",
+    "assistantSkillsEmpty": "어시스턴트 스킬을 찾을 수 없습니다.",
+    "assistantSkillsEnabled": "활성화됨",
+    "assistantSkillsHint": "AI 어시스턴트에게 집중된 워크플로를 가르치는 로컬 SKILL.md 폴더입니다. 포함된 시작 스킬은 여기에 자동으로 복사됩니다. 이 버전에서는 스크립트가 실행되지 않습니다. 폴더 버튼을 사용해 스킬을 추가하거나 편집하세요.",
+    "assistantSkillsOpen": "{{name}} 열기",
+    "assistantSkillsOpenFolder": "스킬 폴더 열기",
+    "assistantSkillsTitle": "어시스턴트 스킬"
   },
   "sftp": {
     "accessed": "접근일",

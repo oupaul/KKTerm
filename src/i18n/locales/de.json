@@ -543,7 +543,8 @@
     "toolTutorial": "Tutorial-Hilfe wird angezeigt...",
     "toolTutorialDone": "Tutorial-Hilfe angezeigt",
     "tutorialInvalidRequest": "Tutorial-Anfragen benötigen ein Ziel, einen Titel und Hilfetext.",
-    "tutorialTargetNotFound": "Dieses Tutorial-Ziel ist gerade nicht sichtbar."
+    "tutorialTargetNotFound": "Dieses Tutorial-Ziel ist gerade nicht sichtbar.",
+    "skillInvoked": "Verwendeter Skill: {{skills}}"
   },
   "app": {
     "aiAssistant": "KI-Assistent",
@@ -1032,7 +1033,19 @@
       "nebula": "Nebel",
       "raindrops": "Regentropfen",
       "starfield": "Nachthimmel",
-      "synthwave": "Synthwave"
+      "synthwave": "Synthwave",
+      "bubbles": "Blasen",
+      "clouds": "Wolken",
+      "cyberpunk": "Cyberpunk",
+      "fireflies": "Glühwürmchen",
+      "lanterns": "Himmelslaternen",
+      "ocean": "Ozean",
+      "ricefield": "Reisfeld",
+      "sakura": "Sakura",
+      "snow": "Schneefall",
+      "taipei101": "Taipei 101",
+      "thunderstorm": "Gewitter",
+      "topo": "Topo-Karte"
     },
     "editDone": "Fertig",
     "editLayout": "Layout bearbeiten",
@@ -1772,7 +1785,14 @@
     "showAllModels": "Alle Modelle anzeigen",
     "showAllModelsHint": "Alle beim Aktualisieren vom Anbieter zurückgegebenen Modelle anzeigen, nicht nur die kuratierten Empfehlungen.",
     "lastCheckedAt": "Zuletzt geprüft {{time}}",
-    "lastCheckedNever": "Noch nie geprüft"
+    "lastCheckedNever": "Noch nie geprüft",
+    "assistantSkillsDisabled": "Deaktiviert",
+    "assistantSkillsEmpty": "Keine Assistenten-Skills gefunden.",
+    "assistantSkillsEnabled": "Aktiviert",
+    "assistantSkillsHint": "Lokale SKILL.md-Ordner, die dem KI-Assistenten fokussierte Workflows beibringen. Mitgelieferte Starter-Skills werden automatisch hierher kopiert. Skripte werden in dieser Version nicht ausgeführt; verwende die Ordnerschaltfläche, um Skills hinzuzufügen oder zu bearbeiten.",
+    "assistantSkillsOpen": "{{name}} öffnen",
+    "assistantSkillsOpenFolder": "Skills-Ordner öffnen",
+    "assistantSkillsTitle": "Assistenten-Skills"
   },
   "sftp": {
     "accessed": "Zugegriffen",

@@ -543,7 +543,8 @@
     "toolTutorial": "Visualizzazione della guida tutorial...",
     "toolTutorialDone": "Guida tutorial mostrata",
     "tutorialInvalidRequest": "Le richieste di tutorial richiedono una destinazione, un titolo e un testo di aiuto.",
-    "tutorialTargetNotFound": "Quella destinazione del tutorial non è visibile al momento."
+    "tutorialTargetNotFound": "Quella destinazione del tutorial non è visibile al momento.",
+    "skillInvoked": "Skill in uso: {{skills}}"
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -1032,7 +1033,19 @@
       "nebula": "Nebulosa",
       "raindrops": "Gocce di pioggia",
       "starfield": "Cielo notturno",
-      "synthwave": "Synthwave"
+      "synthwave": "Synthwave",
+      "bubbles": "Bolle",
+      "clouds": "Nuvole",
+      "cyberpunk": "Cyberpunk",
+      "fireflies": "Lucciole",
+      "lanterns": "Lanterne volanti",
+      "ocean": "Oceano",
+      "ricefield": "Risaia",
+      "sakura": "Sakura",
+      "snow": "Nevicata",
+      "taipei101": "Taipei 101",
+      "thunderstorm": "Temporale",
+      "topo": "Mappa topografica"
     },
     "editDone": "Fatto",
     "editLayout": "Modifica layout",
@@ -1772,7 +1785,14 @@
     "showAllModels": "Mostra tutti i modelli",
     "showAllModelsHint": "Mostra tutti i modelli restituiti dal provider all’aggiornamento, non solo le raccomandazioni selezionate.",
     "lastCheckedAt": "Ultimo controllo {{time}}",
-    "lastCheckedNever": "Mai controllato"
+    "lastCheckedNever": "Mai controllato",
+    "assistantSkillsDisabled": "Disabilitato",
+    "assistantSkillsEmpty": "Nessuna skill dell’assistente trovata.",
+    "assistantSkillsEnabled": "Abilitato",
+    "assistantSkillsHint": "Cartelle SKILL.md locali che insegnano all’assistente IA workflow mirati. Le skill iniziali incluse vengono copiate qui automaticamente. Gli script non vengono eseguiti in questa versione; usa il pulsante della cartella per aggiungere o modificare skill.",
+    "assistantSkillsOpen": "Apri {{name}}",
+    "assistantSkillsOpenFolder": "Apri cartella delle skill",
+    "assistantSkillsTitle": "Skill dell’assistente"
   },
   "sftp": {
     "accessed": "Accesso",
