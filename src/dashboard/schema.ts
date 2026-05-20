@@ -84,6 +84,30 @@ export function validateScriptWidgetBody(value: unknown): ValidationResult<Scrip
     }
     libraries = list.length > 0 ? list : undefined;
   }
+  let lifecycle: ScriptBody["lifecycle"];
+  if (value.lifecycle !== undefined && value.lifecycle !== null) {
+    if (!isRecord(value.lifecycle)) {
+      return { ok: false, reason: "invalidScriptBody" };
+    }
+    const kind = value.lifecycle.kind;
+    if (kind !== "static" && kind !== "periodic" && kind !== "animation" && kind !== "realtime") {
+      return { ok: false, reason: "invalidScriptBody" };
+    }
+    const rawMinTick = value.lifecycle.minTickMs;
+    let minTickMs: number | undefined;
+    if (rawMinTick !== undefined && rawMinTick !== null) {
+      if (
+        typeof rawMinTick !== "number" ||
+        !Number.isInteger(rawMinTick) ||
+        rawMinTick < 16 ||
+        rawMinTick > 60_000
+      ) {
+        return { ok: false, reason: "invalidScriptBody" };
+      }
+      minTickMs = rawMinTick;
+    }
+    lifecycle = { kind, minTickMs };
+  }
   return {
     ok: true,
     value: {
@@ -95,6 +119,7 @@ export function validateScriptWidgetBody(value: unknown): ValidationResult<Scrip
       },
       htmlShim: typeof value.htmlShim === "string" ? value.htmlShim : undefined,
       libraries,
+      lifecycle,
     },
   };
 }

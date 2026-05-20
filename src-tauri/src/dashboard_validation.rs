@@ -1,3 +1,9 @@
+use std::collections::HashSet;
+
+use oxc_allocator::Allocator;
+use oxc_ast_visit::Visit;
+use oxc_parser::Parser;
+use oxc_span::SourceType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -123,6 +129,12 @@ pub const MAX_SETTINGS_FIELDS: usize = 20;
 pub const MAX_SELECT_OPTIONS: usize = 40;
 pub const MIN_POLL_SECONDS: u64 = 1;
 pub const MAX_WIDGET_LIBRARIES: usize = 8;
+/// htmlShim is a mount-point fragment (`<div id='root'></div>`, layout
+/// scaffolding, fixed canvas elements, occasional inline SVG icon paths or
+/// templated rows for table-style widgets). 128 KB is a generous ceiling
+/// that allows realistic prebuilt scaffolds without enabling a multi-MB
+/// document dump.
+pub const MAX_HTML_SHIM_BYTES: usize = 128 * 1024;
 
 pub const KNOWN_LIBRARY_GLOBALS: &[(&str, &str)] = &[
     ("mermaid", "mermaid"),
@@ -316,6 +328,38 @@ pub struct ScriptBody {
     pub html_shim: Option<String>,
     #[serde(default)]
     pub libraries: Option<Vec<String>>,
+    /// Optional declared runtime lifecycle. When provided, the host
+    /// enforces invariants the static prose contract used to merely
+    /// request:
+    ///   * `animation` widgets stall-watchdog: if the iframe stops emitting
+    ///     `kk.motionTick` for >8 s while visible, the widget is marked
+    ///     `stalled` in health state and surfaces in the AI context payload.
+    ///   * `realtime` and `periodic` are reserved for future invariants
+    ///     (data-freshness, frame-of-life heartbeats).
+    ///   * `static` widgets opt out of any liveness check.
+    /// Absent / null = `static`.
+    #[serde(default)]
+    pub lifecycle: Option<ScriptLifecycle>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptLifecycle {
+    pub kind: ScriptLifecycleKind,
+    /// For `animation` and `periodic` — minimum expected interval between
+    /// frame ticks / data updates. Informational; the host clamps animation
+    /// rAF callbacks to 33 ms regardless. Range: 16..=60_000.
+    #[serde(default)]
+    pub min_tick_ms: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ScriptLifecycleKind {
+    Static,
+    Periodic,
+    Animation,
+    Realtime,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -340,7 +384,11 @@ pub fn drop_unused_script_libraries(body: &mut Value) -> Vec<String> {
     else {
         return Vec::new();
     };
-    let Ok(code_only) = validate_script_source_inner(&source) else {
+    // Sanitizer runs BEFORE storage validation, so unparseable sources fall
+    // through here — `validate_script_body_json_detailed` will reject them
+    // downstream with a detailed error. We do nothing in that case rather
+    // than mutating libraries based on a half-parsed source.
+    let Ok(identifiers) = parse_script_source_ast(&source) else {
         return Vec::new();
     };
     let Some(libraries) = body.get_mut("libraries").and_then(Value::as_array_mut) else {
@@ -358,7 +406,7 @@ pub fn drop_unused_script_libraries(body: &mut Value) -> Vec<String> {
         else {
             return true;
         };
-        if source_references_identifier(&code_only, global) {
+        if identifiers.contains(global) {
             return true;
         }
         removed.push(key.to_string());
@@ -367,19 +415,168 @@ pub fn drop_unused_script_libraries(body: &mut Value) -> Vec<String> {
     removed
 }
 
+/// AST-based parse of widget script source.
+///
+/// Wraps `source` in the same synchronous IIFE the runtime host uses
+/// (`(function(){ source })()`) and parses it with oxc_parser so a top-
+/// level `return` is legal — matching what the iframe actually executes.
+///
+/// On success, walks the AST and collects every [`IdentifierReference`]
+/// name. That set is the source of truth for the unused-library check
+/// (declaring `libraries: ["three"]` is valid iff the identifier `THREE`
+/// appears somewhere in the AST as a real reference, not inside a string
+/// or a comment).
+///
+/// On failure, returns a short human-readable detail string with the
+/// first parser error and its line/column so the assistant can self-
+/// correct on the next tool round.
+fn parse_script_source_ast(source: &str) -> Result<HashSet<String>, String> {
+    let wrapped = format!("(function(){{\n{source}\n}})();");
+    let allocator = Allocator::default();
+    let source_type = SourceType::cjs();
+    let ret = Parser::new(&allocator, &wrapped, source_type).parse();
+    // Prefer the structured error (with location) over the bare panic flag,
+    // since oxc sets `panicked` for unrecoverable parses but usually also
+    // populates `errors` with the precise failure.
+    if let Some(first) = ret.errors.first() {
+        let line_col = first
+            .labels
+            .as_ref()
+            .and_then(|labels| labels.first())
+            .map(|label| {
+                let start = label.offset();
+                map_offset_to_line_col(&wrapped, start)
+            });
+        let location = match line_col {
+            // The wrapper prepends one line; subtract it so the message
+            // refers to the AI-authored source rather than the synthetic
+            // IIFE.
+            Some((line, col)) if line >= 1 => format!(" at line {} col {}", line, col),
+            _ => String::new(),
+        };
+        return Err(format!(
+            "script source is not parseable JavaScript{location}: {}",
+            first.message
+        ));
+    }
+    if ret.panicked {
+        return Err(
+            "script source is not parseable JavaScript (parser produced no diagnostic)"
+                .to_string(),
+        );
+    }
+    let mut collector = IdentifierCollector {
+        names: HashSet::new(),
+    };
+    collector.visit_program(&ret.program);
+    Ok(collector.names)
+}
+
+struct IdentifierCollector {
+    names: HashSet<String>,
+}
+
+impl<'a> Visit<'a> for IdentifierCollector {
+    fn visit_identifier_reference(&mut self, it: &oxc_ast::ast::IdentifierReference<'a>) {
+        self.names.insert(it.name.to_string());
+    }
+}
+
+fn map_offset_to_line_col(source: &str, offset: usize) -> (u32, u32) {
+    let mut line: u32 = 1;
+    let mut col: u32 = 1;
+    for (i, ch) in source.char_indices() {
+        if i >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
+    }
+    // Wrapper occupies line 1; report widget-source-relative line.
+    (line.saturating_sub(1), col)
+}
+
+/// Tags an `htmlShim` is never allowed to contain. The CSP blocks `script`
+/// / `iframe` / `object` / `embed` at runtime, but rejecting at validation
+/// gives the assistant a clean structured error to self-correct against.
+/// Document-shell tags (`html`, `head`, `body`, `meta`, `title`, `link`)
+/// are rejected because the shim is supposed to be a small fragment
+/// dropped into the host document's `<body>` — shipping a second document
+/// inside the shim breaks layout in undefined ways.
+const HTML_SHIM_FORBIDDEN_TAGS: &[&str] = &[
+    "script", "iframe", "object", "embed", "html", "head", "body", "meta", "title", "link",
+];
+
+fn validate_html_shim(shim: &str) -> Result<(), String> {
+    if shim.is_empty() {
+        return Ok(());
+    }
+    if shim.len() > MAX_HTML_SHIM_BYTES {
+        return Err(format!(
+            "htmlShim is {} bytes; max is {} bytes",
+            shim.len(),
+            MAX_HTML_SHIM_BYTES
+        ));
+    }
+    if shim.contains('\0') {
+        return Err("htmlShim contains null bytes".to_string());
+    }
+    let lower = shim.to_ascii_lowercase();
+    for tag in HTML_SHIM_FORBIDDEN_TAGS {
+        if html_shim_contains_tag_open(&lower, tag) {
+            return Err(format!(
+                "htmlShim contains forbidden tag <{tag}>; the shim must be a small mount-point fragment without scripts, plugins, or document-shell elements"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Whole-token match for `<tag` so `<scripty>` does not match `<script`.
+/// `lower_haystack` must already be ASCII-lowercased so the comparison is
+/// case-insensitive against the forbidden list.
+fn html_shim_contains_tag_open(lower_haystack: &str, tag: &str) -> bool {
+    let needle = format!("<{tag}");
+    let bytes = lower_haystack.as_bytes();
+    let needle_bytes = needle.as_bytes();
+    let n = needle_bytes.len();
+    if n == 0 || bytes.len() < n {
+        return false;
+    }
+    let mut i = 0;
+    while i + n <= bytes.len() {
+        if &bytes[i..i + n] == needle_bytes {
+            match bytes.get(i + n).copied() {
+                None => return true,
+                Some(b) if b.is_ascii_alphanumeric() => {}
+                Some(_) => return true,
+            }
+        }
+        i += 1;
+    }
+    false
+}
+
 /// Same as `validate_script_body_json`, but also surfaces a human-readable
 /// detail string explaining which check failed. The detail is passed back to
 /// agents/clients so they can correct widget source without re-guessing.
 pub fn validate_script_body_json_detailed(
     json: &str,
 ) -> Result<ScriptBody, (ValidationError, Option<String>)> {
-    if json.len() > MAX_SCRIPT_SOURCE_BYTES + 4096 {
+    // Envelope cap accommodates the maximum source + htmlShim + a buffer for
+    // other fields (permissions / libraries / lifecycle / structural JSON).
+    let envelope_cap = MAX_SCRIPT_SOURCE_BYTES + MAX_HTML_SHIM_BYTES + 4096;
+    if json.len() > envelope_cap {
         return Err((
             ValidationError::ScriptTooLarge,
             Some(format!(
                 "script bodyJson is {} bytes; envelope limit is {} bytes",
                 json.len(),
-                MAX_SCRIPT_SOURCE_BYTES + 4096
+                envelope_cap
             )),
         ));
     }
@@ -415,6 +612,20 @@ pub fn validate_script_body_json_detailed(
             ));
         }
     }
+    if let Some(lifecycle) = &parsed.lifecycle {
+        if let Some(min_tick) = lifecycle.min_tick_ms {
+            // 16 ms floor matches a 60 fps frame; 60 s ceiling is well past
+            // any sensible declared minimum.
+            if !(16..=60_000).contains(&min_tick) {
+                return Err((
+                    ValidationError::InvalidScriptBody,
+                    Some(format!(
+                        "lifecycle.minTickMs is {min_tick}; must be in 16..=60000"
+                    )),
+                ));
+            }
+        }
+    }
     if let Some(libs) = &parsed.libraries {
         if libs.len() > MAX_WIDGET_LIBRARIES {
             return Err((
@@ -437,25 +648,40 @@ pub fn validate_script_body_json_detailed(
             }
         }
     }
-    // Harden 1: validate script source for dangerous patterns. The returned
-    // `code_only` view has strings and comments blanked out, which we reuse
-    // below so a library declared `matter` but only mentioned in a comment
-    // is still rejected as unused.
-    let code_only = validate_script_source_inner(&parsed.source)
+    // Harden 1a: heuristic safety pass — null bytes and obvious infinite
+    // loops. The AST stage (1b) owns syntactic correctness; this pass
+    // catches semantic patterns oxc_parser will accept (e.g. while(true)
+    // is valid JS that we still forbid for widgets).
+    validate_script_source_inner(&parsed.source)
         .map_err(|detail| (ValidationError::InvalidScriptSource, Some(detail)))?;
+    // Harden 1b: AST parse — catches every grammar error the heuristic
+    // delimiter pass cannot (missing operators, malformed declarations,
+    // regex literals the heuristic flagged falsely, template-literal
+    // interpolation issues, etc.). The returned identifier set is reused
+    // below for the unused-library cross-reference so we don't fall back
+    // to text scanning that misses identifier references inside template
+    // literal `${...}` interpolations.
+    let identifiers = parse_script_source_ast(&parsed.source)
+        .map_err(|detail| (ValidationError::InvalidScriptSource, Some(detail)))?;
+    if let Some(shim) = parsed.html_shim.as_deref() {
+        validate_html_shim(shim)
+            .map_err(|detail| (ValidationError::InvalidScriptSource, Some(detail)))?;
+    }
     validate_script_dom_mounts(&parsed.source, parsed.html_shim.as_deref())
         .map_err(|detail| (ValidationError::InvalidScriptSource, Some(detail)))?;
     if let Some(libs) = &parsed.libraries {
-        // Harden 4: validate that every listed library is referenced in the source.
-        // A library that loads but is never called wastes ~80KB+ and adds GC pressure.
-        // Word-boundary matching is required so short globals like `L` (Leaflet)
-        // don't pass through `null`, `let`, `class`, etc.
+        // Harden 4: every listed library global must appear as an identifier
+        // reference in the parsed AST. A library that loads but is never
+        // called wastes ~80KB+ and adds GC pressure. The AST set is exact
+        // (no string/comment false-positives, no false-negatives from
+        // template-literal interpolation), so this replaces the previous
+        // text-based word-boundary scan.
         for entry in libs {
             if let Some(&(_, global)) = KNOWN_LIBRARY_GLOBALS
                 .iter()
                 .find(|&&(key, _)| key == entry.as_str())
             {
-                if !source_references_identifier(&code_only, global) {
+                if !identifiers.contains(global) {
                     return Err((
                         ValidationError::UnusedLibrary,
                         Some(format!(
@@ -560,30 +786,23 @@ fn is_valid_library_key(value: &str) -> bool {
     chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
 }
 
-/// Harden 1: validate script source for dangerous patterns that can freeze the app.
-///
-/// This is a heuristic textual check, not a real JS parser. It runs a single
-/// pass that strips strings, template literals, and comments to a "code-only"
-/// view, then runs three rejections against that view:
-///   * delimiter imbalance (parens / braces / brackets)
+/// Harden 1: semantic prefilter — catches what oxc_parser will not, since a
+/// well-formed `while(true){}` is valid JavaScript that we still reject for
+/// dashboard widgets. The AST stage owns syntactic correctness (delimiters,
+/// grammar, regex literals); this pass only enforces the runtime-safety
+/// rules the parser cannot see:
+///   * null bytes (filesystem / WebView2 hazard)
 ///   * `while(true)`, `while(1)`, `for(;;)` infinite loops
-///   * null bytes
 ///
-/// Known limitations (kept intentional so the check stays cheap):
-///   * Regex literals (`/foo(/`) are not tracked. A widget using a regex with
-///     unbalanced delimiters in source order can trigger a false reject.
-///   * `${expr}` interpolation inside template literals is treated as part of
-///     the string, so a `while(true)` hidden there would not be caught. The
-///     active-widget cap and visibility throttle still apply, so the impact
-///     is bounded.
-/// Runs the pattern checks and returns the "code-only" view of `source` so
-/// that downstream checks (such as the unused-library cross-reference in
-/// [`validate_script_body_json_detailed`]) can reuse it without re-scanning.
-fn validate_script_source_inner(source: &str) -> Result<String, String> {
+/// Limitation: `${expr}` interpolation inside template literals is treated
+/// as part of the string, so a `while(true)` hidden there would not be
+/// caught. The active-widget cap and visibility throttle still apply, so
+/// the impact is bounded.
+fn validate_script_source_inner(source: &str) -> Result<(), String> {
     if source.contains('\0') {
         return Err("script source contains null bytes".to_string());
     }
-    let code_only = strip_strings_and_comments(source)?;
+    let code_only = strip_strings_and_comments(source);
     let collapsed: String = code_only.chars().filter(|c| !c.is_whitespace()).collect();
     if collapsed.contains("while(true)") || collapsed.contains("while(1)") {
         return Err(
@@ -594,14 +813,17 @@ fn validate_script_source_inner(source: &str) -> Result<String, String> {
     if collapsed.contains("for(;;)") {
         return Err("infinite loop detected: for(;;) is forbidden in widget scripts".to_string());
     }
-    Ok(code_only)
+    Ok(())
 }
 
-/// Returns the source with strings, template literals, and comments replaced by
-/// spaces (same character count, so byte offsets are preserved for any future
-/// diagnostic use). Errors when paren / brace / bracket delimiters are
-/// unbalanced *outside* string and comment regions.
-fn strip_strings_and_comments(source: &str) -> Result<String, String> {
+/// Returns the source with strings, template literals, and comments replaced
+/// by spaces (same character count, so byte offsets are preserved for any
+/// future diagnostic use). Used by [`validate_script_source_inner`] so its
+/// infinite-loop scan ignores `while(true)` text appearing inside a string
+/// literal or comment. Does not need to be aware of regex literals because
+/// the scan it feeds only looks at three specific token sequences; the AST
+/// stage handles syntactic correctness including regex parsing.
+fn strip_strings_and_comments(source: &str) -> String {
     #[derive(Copy, Clone, PartialEq, Eq)]
     enum State {
         Normal,
@@ -615,9 +837,6 @@ fn strip_strings_and_comments(source: &str) -> Result<String, String> {
     let mut out = String::with_capacity(source.len());
     let mut state = State::Normal;
     let mut backslashes: u32 = 0;
-    let mut parens: i32 = 0;
-    let mut braces: i32 = 0;
-    let mut brackets: i32 = 0;
     let mut i = 0;
     while i < chars.len() {
         let ch = chars[i];
@@ -652,30 +871,6 @@ fn strip_strings_and_comments(source: &str) -> Result<String, String> {
                     state = State::Template;
                     backslashes = 0;
                     out.push(' ');
-                }
-                '(' => {
-                    parens += 1;
-                    out.push(ch);
-                }
-                ')' => {
-                    parens -= 1;
-                    out.push(ch);
-                }
-                '{' => {
-                    braces += 1;
-                    out.push(ch);
-                }
-                '}' => {
-                    braces -= 1;
-                    out.push(ch);
-                }
-                '[' => {
-                    brackets += 1;
-                    out.push(ch);
-                }
-                ']' => {
-                    brackets -= 1;
-                    out.push(ch);
                 }
                 _ => out.push(ch),
             },
@@ -719,45 +914,9 @@ fn strip_strings_and_comments(source: &str) -> Result<String, String> {
                 out.push(if ch == '\n' { '\n' } else { ' ' });
             }
         }
-        if parens < 0 || braces < 0 || brackets < 0 {
-            return Err(format!(
-                "unbalanced delimiter: parens={parens} braces={braces} brackets={brackets}"
-            ));
-        }
         i += 1;
     }
-    if parens != 0 || braces != 0 || brackets != 0 {
-        return Err(format!(
-            "unbalanced delimiter at end: parens={parens} braces={braces} brackets={brackets}"
-        ));
-    }
-    Ok(out)
-}
-
-/// Returns true if `identifier` appears in `source` as a whole-word token
-/// (preceded and followed by non-identifier characters or string boundaries).
-/// Used by the unused-library check so short globals like `L` (Leaflet) do
-/// not match unrelated identifiers like `null` or `let`.
-fn source_references_identifier(source: &str, identifier: &str) -> bool {
-    if identifier.is_empty() {
-        return false;
-    }
-    let bytes = source.as_bytes();
-    let pat = identifier.as_bytes();
-    let n = pat.len();
-    let is_ident_byte = |b: u8| b.is_ascii_alphanumeric() || b == b'_' || b == b'$';
-    let mut i = 0;
-    while i + n <= bytes.len() {
-        if &bytes[i..i + n] == pat {
-            let before_ok = i == 0 || !is_ident_byte(bytes[i - 1]);
-            let after_ok = i + n == bytes.len() || !is_ident_byte(bytes[i + n]);
-            if before_ok && after_ok {
-                return true;
-            }
-        }
-        i += 1;
-    }
-    false
+    out
 }
 
 #[allow(dead_code)]
@@ -1282,10 +1441,23 @@ mod tests {
     }
 
     #[test]
-    fn script_source_rejects_unbalanced_delimiters() {
-        assert!(validate_script_source_inner("function f() { return 1;").is_err());
-        assert!(validate_script_source_inner("const a = [1, 2, 3").is_err());
-        assert!(validate_script_source_inner("const a = (1 + 2;").is_err());
+    fn script_body_rejects_unbalanced_delimiters() {
+        // Delimiter correctness now belongs to the AST stage. The error
+        // path is still `InvalidScriptSource`; only the source of the
+        // rejection moved from the heuristic to oxc_parser.
+        for source in [
+            "function f() { return 1;",
+            "const a = [1, 2, 3",
+            "const a = (1 + 2;",
+        ] {
+            let body = serde_json::json!({
+                "source": source,
+                "permissions": {"network": false},
+            });
+            let err = validate_script_body_json_detailed(&body.to_string())
+                .expect_err("unbalanced delimiters must be rejected");
+            assert_eq!(err.0, ValidationError::InvalidScriptSource, "{source}");
+        }
     }
 
     #[test]
@@ -1397,23 +1569,254 @@ mod tests {
 
     #[test]
     fn strip_treats_template_literal_as_opaque() {
-        let out = strip_strings_and_comments("const s = `a {b} c`; foo();").unwrap();
-        // Inside the backticks the `{` and `}` should not affect balance and
-        // should be blanked out.
+        let out = strip_strings_and_comments("const s = `a {b} c`; foo();");
+        // Inside the backticks the `{` and `}` should not appear in the
+        // stripped output; the infinite-loop scan that consumes this view
+        // must not see synthetic delimiters from inside template literals.
         assert!(!out.contains('{'));
         assert!(!out.contains('}'));
     }
 
+    // --- AST-based parse / identifier scan ----------------------------------
+
     #[test]
-    fn source_references_identifier_is_word_boundary() {
-        assert!(super::source_references_identifier("L.map()", "L"));
-        assert!(!super::source_references_identifier("const null = 0;", "L"));
-        assert!(!super::source_references_identifier("console.log(x);", "L"));
-        assert!(super::source_references_identifier(
-            "THREE.Scene()",
-            "THREE"
-        ));
-        assert!(!super::source_references_identifier("THREEMore", "THREE"));
+    fn ast_rejects_grammar_error_that_passes_delimiter_balance() {
+        // `const x = ;` has balanced delimiters but is not parseable. The
+        // old heuristic accepted it because nothing was textually
+        // unbalanced. The AST stage rejects it with a structured error.
+        let body = serde_json::json!({
+            "source": "const x = ;",
+            "permissions": {"network": false},
+        });
+        let err = validate_script_body_json_detailed(&body.to_string())
+            .expect_err("grammar error rejected");
+        assert_eq!(err.0, ValidationError::InvalidScriptSource);
+        let detail = err.1.unwrap();
+        assert!(
+            detail.contains("not parseable JavaScript"),
+            "detail missing parse hint: {detail}",
+        );
+    }
+
+    #[test]
+    fn ast_rejects_double_identifier_declaration() {
+        // `let x x = 5;` is delimiter-balanced and free of strings/comments,
+        // so the heuristic accepted it. The AST rejects it as an unexpected
+        // token.
+        let body = serde_json::json!({
+            "source": "let x x = 5;",
+            "permissions": {"network": false},
+        });
+        let err = validate_script_body_json_detailed(&body.to_string())
+            .expect_err("malformed decl rejected");
+        assert_eq!(err.0, ValidationError::InvalidScriptSource);
+    }
+
+    #[test]
+    fn ast_accepts_regex_literal_with_unbalanced_inner_paren() {
+        // `/^foo\(/` has a literal `(` byte inside the regex. The old
+        // heuristic strip pass did not understand regex literals and would
+        // false-reject this; the AST stage knows it's a regex.
+        let body = serde_json::json!({
+            "source": "const re = /^foo\\(/; const m = re.test('foo(');",
+            "permissions": {"network": false},
+        });
+        assert!(
+            validate_script_body_json(&body.to_string()).is_ok(),
+            "regex literal with unbalanced inner paren should parse cleanly",
+        );
+    }
+
+    #[test]
+    fn ast_detects_identifier_reference_inside_template_literal_interpolation() {
+        // The heuristic blanks `${...}` content as part of the template
+        // string, so a library referenced ONLY inside an interpolation was
+        // wrongly flagged as unused. The AST walks into interpolation
+        // expressions and sees the real reference.
+        let body = serde_json::json!({
+            "source": "const out = `engine: ${Matter.Engine.create()}`; document.getElementById('root').textContent = out;",
+            "libraries": ["matter"],
+            "permissions": {"network": false},
+        });
+        assert!(
+            validate_script_body_json(&body.to_string()).is_ok(),
+            "Matter referenced inside template interpolation must count as used",
+        );
+    }
+
+    #[test]
+    fn ast_top_level_return_is_legal_inside_widget_iiife() {
+        // Widget sources are wrapped in `(function(){ source })()` at
+        // runtime, so a bare `return` at widget top level is legal. The
+        // validator wraps identically before parsing.
+        let body = serde_json::json!({
+            "source": "if (!document.getElementById('root')) return; document.getElementById('root').textContent = 'ok';",
+            "permissions": {"network": false},
+        });
+        assert!(
+            validate_script_body_json(&body.to_string()).is_ok(),
+            "top-level return inside the synthetic IIFE wrapper should parse",
+        );
+    }
+
+    #[test]
+    fn drop_unused_libraries_falls_through_for_unparseable_source() {
+        // If a sanitizer pass runs on unparseable source, it must not
+        // mutate libraries — the storage validator will reject the source
+        // itself with a precise error on the next round.
+        let mut body = serde_json::json!({
+            "source": "const x = ;",
+            "libraries": ["matter"],
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null,
+        });
+        assert_eq!(drop_unused_script_libraries(&mut body), Vec::<String>::new());
+        assert_eq!(body["libraries"], serde_json::json!(["matter"]));
+    }
+
+    // --- B1: lifecycle -------------------------------------------------------
+
+    #[test]
+    fn lifecycle_accepts_known_kinds_and_optional_min_tick() {
+        for kind in ["static", "periodic", "animation", "realtime"] {
+            let body = serde_json::json!({
+                "source": "document.getElementById('root').textContent = 'ok';",
+                "permissions": {"network": false},
+                "lifecycle": {"kind": kind, "minTickMs": 33},
+            });
+            assert!(
+                validate_script_body_json(&body.to_string()).is_ok(),
+                "lifecycle.kind={kind} should validate",
+            );
+        }
+    }
+
+    #[test]
+    fn lifecycle_rejects_unknown_kind() {
+        let body = serde_json::json!({
+            "source": "document.getElementById('root').textContent = 'ok';",
+            "permissions": {"network": false},
+            "lifecycle": {"kind": "perpetual", "minTickMs": null},
+        });
+        let err = validate_script_body_json_detailed(&body.to_string())
+            .expect_err("unknown lifecycle kind rejected");
+        assert_eq!(err.0, ValidationError::InvalidScriptBody);
+    }
+
+    #[test]
+    fn lifecycle_rejects_min_tick_out_of_bounds() {
+        for bad_tick in [0i64, 15, 60_001, 999_999] {
+            let body = serde_json::json!({
+                "source": "document.getElementById('root').textContent = 'ok';",
+                "permissions": {"network": false},
+                "lifecycle": {"kind": "animation", "minTickMs": bad_tick},
+            });
+            let err = validate_script_body_json_detailed(&body.to_string())
+                .expect_err("out-of-bounds minTickMs rejected");
+            assert_eq!(err.0, ValidationError::InvalidScriptBody, "{bad_tick}");
+        }
+    }
+
+    #[test]
+    fn lifecycle_absent_accepts_legacy_widget() {
+        // Existing widgets in user databases have no lifecycle field. They
+        // must continue to deserialize cleanly with lifecycle = None.
+        let body = serde_json::json!({
+            "source": "document.getElementById('root').textContent = 'ok';",
+            "permissions": {"network": false},
+        });
+        let parsed = validate_script_body_json(&body.to_string())
+            .expect("legacy script body without lifecycle is valid");
+        assert!(parsed.lifecycle.is_none());
+    }
+
+    // --- B2: htmlShim caps + tag scan ---------------------------------------
+
+    #[test]
+    fn html_shim_size_cap_rejects_oversized_shim() {
+        // Build a shim just past the 128 KB cap. Each "<div>" is 5 bytes,
+        // so 27_000 copies produces ~135 KB.
+        let oversized = "<div>".repeat(27_000);
+        assert!(oversized.len() > MAX_HTML_SHIM_BYTES);
+        let body = serde_json::json!({
+            "source": "document.getElementById('mount').textContent = 'ok';",
+            "permissions": {"network": false},
+            "htmlShim": oversized,
+        });
+        let err = validate_script_body_json_detailed(&body.to_string())
+            .expect_err("oversized shim rejected");
+        assert_eq!(err.0, ValidationError::InvalidScriptSource);
+        assert!(
+            err.1.as_deref().unwrap_or("").contains("htmlShim"),
+            "detail should mention htmlShim: {:?}",
+            err.1,
+        );
+    }
+
+    #[test]
+    fn html_shim_size_cap_accepts_shim_under_128kb() {
+        // A realistic large mount fragment (lots of layout divs) must fit
+        // comfortably under the 128 KB ceiling.
+        let big_but_valid = format!(
+            "<div id=\"root\"><div class=\"scaffold\">{}</div></div>",
+            "<div></div>".repeat(1_400),
+        );
+        assert!(big_but_valid.len() < MAX_HTML_SHIM_BYTES);
+        let body = serde_json::json!({
+            "source": "document.getElementById('root').dataset.ready = '1';",
+            "permissions": {"network": false},
+            "htmlShim": big_but_valid,
+        });
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
+    }
+
+    #[test]
+    fn html_shim_rejects_script_iframe_and_document_shell_tags() {
+        for forbidden in [
+            r#"<script>alert(1)</script>"#,
+            r#"<iframe src='about:blank'></iframe>"#,
+            r#"<object data='x'></object>"#,
+            r#"<embed src='x'>"#,
+            r#"<html><body><div id='root'></div></body></html>"#,
+            r#"<head><meta charset='utf-8'></head>"#,
+            r#"<link rel='stylesheet' href='x'>"#,
+        ] {
+            let body = serde_json::json!({
+                "source": "document.getElementById('root').textContent = 'ok';",
+                "permissions": {"network": false},
+                "htmlShim": forbidden,
+            });
+            let err = validate_script_body_json_detailed(&body.to_string())
+                .expect_err("forbidden tag rejected");
+            assert_eq!(err.0, ValidationError::InvalidScriptSource, "{forbidden}");
+            assert!(
+                err.1.as_deref().unwrap_or("").contains("forbidden tag"),
+                "detail should mention forbidden tag for {forbidden}: {:?}",
+                err.1,
+            );
+        }
+    }
+
+    #[test]
+    fn html_shim_accepts_normal_mount_fragments() {
+        for ok in [
+            r#"<div id="root"></div>"#,
+            r#"<div id="root"><canvas id="canvas"></canvas></div>"#,
+            r#"<section class="kk-shell"><div id="root"></div></section>"#,
+            r#"<style>.kk-grid{gap:8px}</style><div id="root"></div>"#,
+            // Token-boundary check: `<scripty` is not `<script`.
+            r#"<div id="root"><scripty-x data-x="1"></scripty-x></div>"#,
+        ] {
+            let body = serde_json::json!({
+                "source": "document.getElementById('root').textContent = 'ok';",
+                "permissions": {"network": false},
+                "htmlShim": ok,
+            });
+            assert!(
+                validate_script_body_json(&body.to_string()).is_ok(),
+                "shim should be accepted: {ok}",
+            );
+        }
     }
 
     #[test]

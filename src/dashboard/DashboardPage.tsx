@@ -42,6 +42,7 @@ export function DashboardPage({
   const setViewDensity = useDashboardStore((s) => s.setViewDensity);
   const createView = useDashboardStore((s) => s.createView);
   const renameView = useDashboardStore((s) => s.renameView);
+  const widgetHealth = useDashboardStore((s) => s.widgetHealth);
   const removeView = useDashboardStore((s) => s.removeView);
   const removeInstance = useDashboardStore((s) => s.removeInstance);
   const setViewTabColor = useDashboardStore((s) => s.setViewTabColor);
@@ -147,6 +148,24 @@ export function DashboardPage({
         summary: widget.summary,
         activeOnView: activeCustomSourceIds.has(widget.id),
       })),
+      // Smoke-test + runtime errors bubbled up from ScriptWidgetHost.
+      // The assistant uses this to notice and offer to fix widgets it
+      // recently authored that silently failed to mount, threw at
+      // runtime, or stalled animation, rather than waiting for the user
+      // to scroll over and report the empty/blank widget.
+      unhealthyInstances: viewInstances
+        .map((instance) => {
+          const health = widgetHealth[instance.id];
+          if (!health || health.state === "pending" || health.state === "ready") return null;
+          return {
+            id: instance.id,
+            kind: instance.kind,
+            sourceId: instance.sourceId,
+            state: health.state,
+            ...(health.state === "error" ? { error: health.error } : {}),
+          };
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
       mcpServers: mcpServers.map((server) => ({
         id: server.id,
         name: server.name,
@@ -189,7 +208,7 @@ export function DashboardPage({
         JSON.stringify(dashboardSnapshot, null, 2),
       ].join("\n"),
     });
-  }, [activeView, visualContext, viewInstances, activeCustomSourceIds, customWidgets, mcpServers, onAssistantContextChange, t]);
+  }, [activeView, visualContext, viewInstances, activeCustomSourceIds, customWidgets, mcpServers, widgetHealth, onAssistantContextChange, t]);
 
   if (!ready || !activeView) {
     return (

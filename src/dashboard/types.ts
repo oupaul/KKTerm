@@ -149,11 +149,21 @@ export interface LayoutEntry {
   gridH: number;
 }
 
+export type ScriptLifecycleKind = "static" | "periodic" | "animation" | "realtime";
+
+export interface ScriptLifecycle {
+  kind: ScriptLifecycleKind;
+  minTickMs?: number;
+}
+
 export interface ScriptBody {
   source: string;
   permissions: { network: boolean; networkTools?: boolean; pollSeconds?: number };
   htmlShim?: string;
   libraries?: string[];
+  /// Declared runtime lifecycle. `animation` arms a stall watchdog in the
+  /// host; other kinds are reserved for future invariants. Absent ⇒ static.
+  lifecycle?: ScriptLifecycle;
 }
 
 export type WidgetSettingsField =

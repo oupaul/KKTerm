@@ -270,6 +270,54 @@ test("script widget wraps user source in IIFE so top-level return is legal", asy
   assert.throws(() => new vm.Script(source), /Illegal return/);
 });
 
+test("script widget signals smoke-test ready and bubbles runtime errors to parent", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const srcdoc = buildSrcdoc({
+    source: "document.getElementById('root').textContent = 'ok';",
+    permissions: { network: false },
+  });
+
+  // After the user source loads, the host posts a kk.ready signal so
+  // ScriptWidgetHost can clear its 2s smoke-test watchdog. Without this
+  // signal, every widget would appear unhealthy on first mount.
+  assert.match(
+    srcdoc,
+    /window\.parent\.postMessage\(\{\s*kk:\s*true,\s*type:\s*'ready'\s*\},\s*'\*'\)/,
+  );
+
+  // The iframe's showError handler posts kk.runtimeError to the parent so
+  // a thrown widget surfaces in the dashboard health state and the
+  // assistant context payload, not only in an in-iframe <pre>.
+  assert.match(
+    srcdoc,
+    /window\.parent\.postMessage\(\{\s*kk:\s*true,\s*type:\s*'runtimeError',\s*error:\s*serialized\s*\},\s*'\*'\)/,
+  );
+});
+
+test("script widget rAF wrapper emits throttled motionTick heartbeat for stall watchdog", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const srcdoc = buildSrcdoc({
+    source: "function frame(){ requestAnimationFrame(frame); } requestAnimationFrame(frame);",
+    permissions: { network: false },
+  });
+
+  // The wrapper centralises rAF dispatch in runKkRafPump; the heartbeat
+  // post must live inside that function so every iframe gets a stall
+  // signal whether or not the user source calls rAF.
+  assert.match(srcdoc, /KK_MOTION_TICK_MIN_MS\s*=\s*500/);
+  assert.match(
+    srcdoc,
+    /window\.parent\.postMessage\(\{\s*kk:\s*true,\s*type:\s*'motionTick',\s*ticks:\s*_kkMotionTickCounter\s*\},\s*'\*'\)/,
+  );
+  // Throttle gate: the post must be guarded by a timestamp comparison so
+  // a 60 fps widget produces ~2 messages/s, not 60.
+  assert.match(srcdoc, /if\s*\(\s*timestamp\s*-\s*_kkLastMotionTickPostAt\s*>=\s*KK_MOTION_TICK_MIN_MS\s*\)/);
+});
+
 test("script widget infers common local libraries from legacy generated source", async () => {
   const { resolveWidgetLibraryKeys } = await importTypeScriptModule(
     new URL("../src/dashboard/script/widgetLibraries.ts", import.meta.url),
