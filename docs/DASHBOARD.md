@@ -197,7 +197,7 @@ The catalog overlay is a separate modal with search + two source-group tabs: Bui
 `ScriptWidgetHost.tsx` renders an `<iframe srcdoc="...">` per script instance, with:
 
 - A `<style>` block carrying compact KKTerm-like text, form-control, button, stack, row, and result defaults so simple generated DOM starts from the app's desktop UI grammar.
-- An optional `htmlShim` body markup (default: a single `<div id="root">`).
+- An optional `htmlShim` body markup (default: a single `<div id="root">`). The shim is capped at 128 KB (`MAX_HTML_SHIM_BYTES`) and a token-boundary tag scan rejects `<script>`, `<iframe>`, `<object>`, `<embed>`, and document-shell tags (`<html>`, `<head>`, `<body>`, `<meta>`, `<title>`, `<link>`) at validation time. Runtime CSP remains the real defense; the storage check exists so the AI gets a clean structured error rather than a silent no-op at render time.
 - A small host `<script>` that loads the stored source as data. The generated source is never pasted directly into the host script text, because generated snippets commonly contain HTML/script literals such as `</script>` that would prematurely close the host script and render broken JavaScript as widget body text.
 - Renderer guardrails inside the iframe: `requestAnimationFrame` callbacks are capped to about 30 fps, tiny `setInterval` delays are clamped, and timer/animation work pauses while the host marks the widget invisible. Scripts can read the current state with `KK.isVisible()` and subscribe with `KK.onVisibilityChange(callback)` to restart paused animation when visibility returns. This protects the shared WebView2 renderer from a single AI-authored widget with an overly aggressive loop.
 - A per-instance settings snapshot loaded through `KK.getSettings()`. Scripts can persist small non-secret user options with `KK.setSetting(key, value)` or replace the object with `KK.setSettings(nextSettings)`.
@@ -228,7 +228,9 @@ Curated local libraries are registered in `src/dashboard/script/widgetLibraries.
 
 Matter.js is the default 2D physics building block for script widgets. It is registered under the `matter` library key, exposes the `Matter` global, and should be used for widget-sized games, physics toys, collision, gravity, rigid bodies, and constraints instead of custom per-widget physics loops. Matter.js widgets should size their canvas from `KK.getViewport()`, update renderer bounds and static wall/floor bodies on `KK.onViewportResize`, keep all bodies bounded to the widget arena, and stop runners or animation loops when gameplay is paused, finished, or otherwise inactive.
 
-Unused library declarations are invalid at storage validation time: a key in `body.libraries` must correspond to a referenced documented global in the script source. The AI tool boundary may sanitize structured assistant submissions by dropping unused declarations before validation, because a model can over-declare helpers such as `dayjs` while using native APIs. Keep that sanitizer narrow to `dashboard_create_widget` / structured `dashboard_update_custom_widget.patch.body`; do not relax the Rust storage validator or paper over the failure with UI error boundaries.
+Unused library declarations are invalid at storage validation time: a key in `body.libraries` must correspond to a referenced documented global in the script source. The "referenced" check is an AST identifier scan (`oxc_parser` + `IdentifierCollector`), not a text match — so a library referenced only inside a template-literal `${...}` interpolation still counts as used, and a string or comment that names the global does not. The AI tool boundary may sanitize structured assistant submissions by dropping unused declarations before validation, because a model can over-declare helpers such as `dayjs` while using native APIs. Keep that sanitizer narrow to `dashboard_create_widget` / structured `dashboard_update_custom_widget.patch.body`; do not relax the Rust storage validator or paper over the failure with UI error boundaries.
+
+Script bodies may also declare an optional `lifecycle: { kind, minTickMs? }` field, where `kind` is one of `static`, `periodic`, `animation`, `realtime`. Absent or null is treated as `static` so legacy widgets keep working. Today only `animation` carries a host-side invariant: the iframe's rAF pump emits a throttled `kk.motionTick` heartbeat (~2 Hz), and `ScriptWidgetHost` flips the widget's runtime health to `stalled` if 8 s pass without a tick while the widget is visible. The other kinds are accepted but reserved for future invariants. See `docs/ADR/0006-dashboard-script-widget-hardening.md` §4 for the threshold rationale.
 
 When adding or renaming a script-widget library:
 
@@ -265,10 +267,13 @@ When the Dashboard page is active, `onAssistantContextChange` includes a compact
   activeView: { id, title, gridDensity },
   instances: [{ id, kind, sourceId, customTitle, preset, x, y, w, h }],
   customWidgets: [{ id, title }],
+  unhealthyInstances: [{ id, kind, sourceId, state, error? }],
 }
 ```
 
-The AI sees the current dashboard without an extra tool call. Validation errors from Rust come back as structured `{ ok: false, reason, details }` shapes so the AI can self-correct on retry.
+The AI sees the current dashboard without an extra tool call. `unhealthyInstances` carries any script widget whose runtime `state` is `error`, `timeout`, or `stalled` — surfaced by `ScriptWidgetHost`'s smoke-test + motion-watchdog signals (`kk.ready`, `kk.runtimeError`, `kk.motionTick`). This closes the feedback loop: the assistant notices a widget it just authored has silently failed to mount, thrown at runtime, or stalled its animation, and can offer to fix it inside the same turn rather than waiting for the user to scroll over.
+
+Validation errors from Rust come back as structured `{ ok: false, reason, details }` shapes so the AI can self-correct on retry. For script bodies, syntactic errors include the parser's line and column mapped back to widget-source coordinates (the synthetic `(function(){ ... })()` wrapper line is subtracted).
 
 AI Assistant UX polish around widget authorship (prompt tuning, suggestion affordances, preview-before-commit, conversational diffs) is a follow-up and not part of this architecture.
 
