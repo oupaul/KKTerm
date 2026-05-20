@@ -10,8 +10,12 @@ use std::{
     sync::mpsc,
     time::{Duration, Instant},
 };
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use tauri_plugin_opener::OpenerExt;
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
 const PROVIDERS: [AiCodingUsageProvider; 2] = [
     AiCodingUsageProvider::Codex,
@@ -639,7 +643,7 @@ impl CodexRpcSession {
             "codex",
             AiCodingUsageProvider::Codex,
         );
-        let mut child = Command::new(command.as_os_str())
+        let mut child = new_provider_process(&command)
             .args(["app-server", "--listen", "stdio://"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -780,6 +784,19 @@ impl ProviderCommand {
     }
 }
 
+fn new_provider_process(command: &ProviderCommand) -> Command {
+    let mut process = Command::new(command.as_os_str());
+    hide_provider_process_window(&mut process);
+    process
+}
+
+fn hide_provider_process_window(command: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+}
+
 fn resolve_provider_command(
     configured: Option<&str>,
     fallback_name: &str,
@@ -865,7 +882,7 @@ fn run_command(
     args: &[&str],
     timeout: Duration,
 ) -> Result<String, String> {
-    let mut child = Command::new(command.as_os_str())
+    let mut child = new_provider_process(command)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
