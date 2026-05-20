@@ -29,6 +29,7 @@ mod storage;
 mod telnet;
 mod vnc;
 mod webview;
+mod webview_runtime;
 mod wiki;
 mod window_state;
 #[cfg(target_os = "windows")]
@@ -2205,6 +2206,7 @@ fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
+    webview_runtime::apply_startup_workarounds();
 
     configure_single_instance(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
