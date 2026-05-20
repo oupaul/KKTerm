@@ -538,6 +538,11 @@ fn fetch_claude_oauth_usage() -> Result<Value, String> {
         .send()
         .map_err(|error| format!("Claude usage request failed: {error}"))?;
     let status = response.status();
+    let retry_after = response
+        .headers()
+        .get(reqwest::header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
     if status == reqwest::StatusCode::UNAUTHORIZED {
         return Err(
             "Claude Code OAuth token rejected. Please sign in again with `claude auth login`."
@@ -545,11 +550,18 @@ fn fetch_claude_oauth_usage() -> Result<Value, String> {
         );
     }
     if !status.is_success() {
-        return Err(format!("Claude usage endpoint returned HTTP {status}."));
+        return Err(claude_usage_http_error(status, retry_after.as_deref()));
     }
     response
         .json::<Value>()
         .map_err(|error| format!("failed to parse Claude usage response: {error}"))
+}
+
+fn claude_usage_http_error(status: reqwest::StatusCode, retry_after: Option<&str>) -> String {
+    let Some(retry_after) = retry_after.filter(|value| !value.trim().is_empty()) else {
+        return format!("Claude usage endpoint returned HTTP {status}.");
+    };
+    format!("Claude usage endpoint returned HTTP {status}; retry after {retry_after}s.")
 }
 
 fn read_claude_oauth_token() -> Result<String, String> {
@@ -1066,6 +1078,19 @@ mod tests {
         let snapshot = normalize_claude_oauth_usage(&serde_json::json!({}));
         assert!(snapshot.five_hour.used_percent.is_none());
         assert!(snapshot.weekly.used_percent.is_none());
+    }
+
+    #[test]
+    fn claude_usage_http_error_includes_retry_after() {
+        let message = claude_usage_http_error(
+            reqwest::StatusCode::TOO_MANY_REQUESTS,
+            Some("120"),
+        );
+
+        assert_eq!(
+            message,
+            "Claude usage endpoint returned HTTP 429 Too Many Requests; retry after 120s."
+        );
     }
 
     #[test]

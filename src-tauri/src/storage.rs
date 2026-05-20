@@ -6111,6 +6111,7 @@ mod tests {
         assert!(defaults.confirm_remove);
         assert_eq!(defaults.default_landing_view, "lastActive");
         assert_eq!(defaults.max_active_script_widgets, 8);
+        assert!(defaults.allow_widget_network_tools);
 
         let updated = storage
             .update_dashboard_settings(DashboardSettings {
@@ -6123,6 +6124,7 @@ mod tests {
         assert!(!updated.confirm_remove);
         assert_eq!(updated.default_landing_view, "view-default");
         assert_eq!(updated.max_active_script_widgets, 20);
+        assert!(updated.allow_widget_network_tools);
 
         let reloaded = storage
             .dashboard_settings()
@@ -6130,6 +6132,7 @@ mod tests {
         assert!(!reloaded.confirm_remove);
         assert_eq!(reloaded.default_landing_view, "view-default");
         assert_eq!(reloaded.max_active_script_widgets, 20);
+        assert!(reloaded.allow_widget_network_tools);
 
         // Out-of-range values are rejected at the storage boundary.
         let too_low = storage.update_dashboard_settings(DashboardSettings {

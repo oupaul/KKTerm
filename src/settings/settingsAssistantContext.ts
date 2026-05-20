@@ -67,8 +67,9 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
     labelKey: "settings.sectionDashboard",
     fallbackLabel: "Dashboard",
     controls: [
-      { key: "settings.dashboardConfirmRemove", description: "Confirm before removing Dashboard widgets." },
-      { key: "settings.dashboardDefaultLandingView", description: "Default landing view behavior." },
+      { key: "settings.dashboardDefaultLanding", description: "Default landing view behavior." },
+      { key: "settings.dashboardAllowWidgetNetworkTools", description: "Global network-tools toggle for script widgets." },
+      { key: "settings.dashboardMaxActiveScriptWidgets", description: "Active script widget iframe cap." },
     ],
   },
   "credentials-settings": {

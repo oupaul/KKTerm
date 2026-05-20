@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { AI_CODING_USAGE_PROVIDER_ORDER } from "./settings";
+import {
+  AI_CODING_USAGE_REFRESH_INTERVAL_MS,
+  providersDueForAiCodingUsageRefresh,
+} from "./refreshPolicy";
 import type {
   AiCodingUsageProviderState,
   AiCodingUsageState,
 } from "./types";
-
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 const EMPTY_STATE: AiCodingUsageState = {
   providers: AI_CODING_USAGE_PROVIDER_ORDER.map((provider) => ({
@@ -29,6 +31,7 @@ interface AiCodingUsageStoreState {
   loaded: boolean;
   subscriberCount: number;
   refreshTimer: ReturnType<typeof setInterval> | null;
+  refreshInFlight: boolean;
   subscribe: () => void;
   unsubscribe: () => void;
   load: () => Promise<void>;
@@ -43,13 +46,17 @@ export const useAiCodingUsageStore = create<AiCodingUsageStoreState>((set, get) 
   loaded: false,
   subscriberCount: 0,
   refreshTimer: null,
+  refreshInFlight: false,
 
   subscribe() {
     const next = get().subscriberCount + 1;
     set({ subscriberCount: next });
     if (next === 1) {
       void get().load();
-      const timer = setInterval(() => void get().refreshAll(), REFRESH_INTERVAL_MS);
+      const timer = setInterval(
+        () => void get().refreshAll(),
+        AI_CODING_USAGE_REFRESH_INTERVAL_MS,
+      );
       set({ refreshTimer: timer });
     }
   },
@@ -79,18 +86,20 @@ export const useAiCodingUsageStore = create<AiCodingUsageStoreState>((set, get) 
   },
 
   async refreshAll() {
-    if (!isTauriRuntime()) {
+    if (!isTauriRuntime() || get().refreshInFlight) {
       return;
     }
-    const connected = get().state.providers.filter(
-      (provider) => provider.authState === "connected",
+    const due = providersDueForAiCodingUsageRefresh(
+      get().state.providers,
+      Date.now(),
     );
-    if (connected.length === 0) {
+    if (due.length === 0) {
       return;
     }
+    set({ refreshInFlight: true });
     try {
       let nextState = get().state;
-      for (const provider of connected) {
+      for (const provider of due) {
         nextState = await invokeCommand("ai_coding_usage_refresh", {
           provider: provider.provider,
         });
@@ -98,6 +107,8 @@ export const useAiCodingUsageStore = create<AiCodingUsageStoreState>((set, get) 
       set({ state: nextState, error: "" });
     } catch (error) {
       set({ error: errorMessage(error) });
+    } finally {
+      set({ refreshInFlight: false });
     }
   },
 

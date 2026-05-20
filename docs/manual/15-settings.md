@@ -54,7 +54,11 @@ The universal AI Assistant panel remains visible on Settings. `src/settings/sett
 ## Dashboard
 
 - Section header `settings.sectionDashboard`. Title and description `settings.dashboardTitle` / `settings.dashboardDescription`.
-- Toggles for AI Dashboard-tool exposure, default density, default View, etc. (extend this list as the Dashboard section grows.)
+- General group `settings.dashboardGeneral`:
+  - Default landing view: `settings.dashboardDefaultLanding`. `settings.dashboardLandingLast` reopens the last active Dashboard View; other options are durable Dashboard View titles.
+  - Widget network tools: `settings.dashboardAllowWidgetNetworkTools` (hint `settings.dashboardAllowWidgetNetworkToolsDesc`). This global switch defaults on and only allows network tools for script widgets that also declare `permissions.networkTools`.
+- Performance group `settings.dashboardPerformance`:
+  - Active script widgets cap: `settings.dashboardMaxActiveScriptWidgets` (hint `settings.dashboardMaxActiveScriptWidgetsHint`).
 
 ## Credentials & MCP
 
