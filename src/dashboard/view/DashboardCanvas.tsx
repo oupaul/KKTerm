@@ -9,7 +9,7 @@ import { clampDashboardGridY } from "../grid";
 import { DashboardDynamicBackground } from "../registry/dynamicBackgrounds";
 import { useDashboardStore } from "../state/dashboardStore";
 import type { BackgroundFit, DashboardView, DashboardWidgetInstance, GridDensity } from "../types";
-import { WidgetFrame } from "./WidgetFrame";
+import { WidgetFrame, type DashboardWidgetDeleteRequest } from "./WidgetFrame";
 
 const ResponsiveGrid = WidthProvider(GridLayout);
 
@@ -42,6 +42,7 @@ export interface DashboardCanvasProps {
   instances: DashboardWidgetInstance[];
   onCustomize: (instance: DashboardWidgetInstance, anchor: HTMLElement) => void;
   onOpenBackground: () => void;
+  onRequestWidgetDelete: (request: DashboardWidgetDeleteRequest) => void;
 }
 
 export function DashboardCanvas({
@@ -49,6 +50,7 @@ export function DashboardCanvas({
   instances,
   onCustomize,
   onOpenBackground,
+  onRequestWidgetDelete,
 }: DashboardCanvasProps) {
   const { t } = useTranslation();
   const editMode = useDashboardStore((s) => s.editMode);
@@ -139,7 +141,11 @@ export function DashboardCanvas({
       >
         {instances.map((i) => (
           <div key={i.id}>
-            <WidgetFrame instance={i} onCustomize={onCustomize} />
+            <WidgetFrame
+              instance={i}
+              onCustomize={onCustomize}
+              onRequestDelete={onRequestWidgetDelete}
+            />
           </div>
         ))}
       </ResponsiveGrid>

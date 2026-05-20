@@ -20,6 +20,7 @@ import type { DashboardView, DashboardWidgetInstance, GridDensity } from "./type
 import { dashboardVisualContextForView } from "./visualContext";
 import { DashboardBackgroundHost } from "./view/DashboardBackgroundHost";
 import { DashboardCanvas, DENSITY_SETTINGS } from "./view/DashboardCanvas";
+import type { DashboardWidgetDeleteRequest } from "./view/WidgetFrame";
 
 export function DashboardPage({
   dashboardActive,
@@ -42,6 +43,7 @@ export function DashboardPage({
   const createView = useDashboardStore((s) => s.createView);
   const renameView = useDashboardStore((s) => s.renameView);
   const removeView = useDashboardStore((s) => s.removeView);
+  const removeInstance = useDashboardStore((s) => s.removeInstance);
   const setViewTabColor = useDashboardStore((s) => s.setViewTabColor);
   const defaultLandingView = useWorkspaceStore((s) => s.dashboardSettings.defaultLandingView);
 
@@ -49,6 +51,7 @@ export function DashboardPage({
   const [customize, setCustomize] = useState<{ instance: DashboardWidgetInstance; rect: DOMRect } | null>(null);
   const [editingViewId, setEditingViewId] = useState<string | null>(null);
   const [deleteViewTarget, setDeleteViewTarget] = useState<DashboardView | null>(null);
+  const [deleteWidgetTarget, setDeleteWidgetTarget] = useState<DashboardWidgetDeleteRequest | null>(null);
   const [tabGradientPicker, setTabGradientPicker] = useState<{ viewId: string; rect: DOMRect } | null>(null);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
@@ -334,6 +337,7 @@ export function DashboardPage({
           instances={viewInstances}
           onCustomize={(instance, anchor) => setCustomize({ instance, rect: anchor.getBoundingClientRect() })}
           onOpenBackground={() => setBackgroundOpen(true)}
+          onRequestWidgetDelete={setDeleteWidgetTarget}
         />
       </div>
 
@@ -372,6 +376,19 @@ export function DashboardPage({
             void removeView(target.id);
           }}
           title={t("dashboard.removeView")}
+        />
+      )}
+      {deleteWidgetTarget && (
+        <DeleteConfirmationDialog
+          confirmLabel={t("common.delete")}
+          message={t("dashboard.deleteWidgetBody", { name: deleteWidgetTarget.title })}
+          onCancel={() => setDeleteWidgetTarget(null)}
+          onConfirm={() => {
+            const target = deleteWidgetTarget;
+            setDeleteWidgetTarget(null);
+            void removeInstance(target.instanceId);
+          }}
+          title={t("dashboard.removeWidget", { name: deleteWidgetTarget.title })}
         />
       )}
     </main>
