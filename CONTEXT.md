@@ -67,10 +67,6 @@ _Avoid_: theme, style, layout
 One of `builtIn`, `script`. Determines the body rendering path: `builtIn` resolves to a TypeScript component in `src/dashboard/widgets/`; `script` mounts a JavaScript body inside an isolated `iframe srcdoc` host.
 _Avoid_: widget type, widget variant
 
-**Default Launch State**:
-The default landing view when no Sessions are open, showing recent Connections and a workspace overview. This replaces the old "Dashboard" concept that was the landing page.
-_Avoid_: dashboard, home
-
 **App Launcher Widget**:
 A Dashboard widget where users add local desktop apps, shortcuts, scripts, or files for quick launch. The widget presents each launcher entry as an icon with text; add/edit/remove actions, launch mode choices, and other entry management controls belong in an app-owned right-click context menu instead of the default widget surface.
 _Avoid_: dock, taskbar

@@ -75,6 +75,10 @@ Use **Connection** (not "profile") for stored openable resources.
   - `src/connections/` — connection tree
   - `src/workspace/` — workspace dispatch, status, screenshots
   - `src/terminal/TerminalWorkspace.tsx`, `src/sftp/SftpWorkspace.tsx`, `src/webview/WebViewWorkspace.tsx`, `src/remote-desktop/RemoteDesktopWorkspace.tsx` — feature workspaces
+  - `src/dashboard/` — Dashboard module: grid layout, view management, widget registry, script iframe host
+  - `src/app-launcher/` — App Launcher widget storage and component
+  - `src/ai-coding-usage/` — AI coding usage tracking widget and status bar
+  - `src/manual/ManualPage.tsx` — in-app operation manual viewer
   - `src/ai/AssistantPanel.tsx` — assistant UI
   - `src/settings/SettingsPage.tsx` — Settings UI sections, draft state, save/reset, settings-specific helper controls
   - `src/lib/settings.ts` — persisted-settings bootstrap (`useBootstrapSettings`) and `AI_PROVIDER_SECRET_OWNER_ID` keychain owner constant. Add new persisted settings here rather than cloning a `useEffect` in `App.tsx`.

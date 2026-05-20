@@ -183,33 +183,59 @@ The installer uses current-user install mode — no admin rights required. It cr
 
 ```
 KKTerm/
-├── src/                     # React/TypeScript frontend
-│   ├── app/                 # Activity Rail, workspace chrome, shell effects
-│   ├── connections/         # Connection tree UI
-│   ├── workspace/           # Workspace dispatch, status bar, screenshot
-│   ├── terminal/            # Terminal workspace (local + SSH)
-│   ├── sftp/                # SFTP dual-pane workspace
-│   ├── webview/             # URL WebView workspace
-│   ├── remote-desktop/      # RDP + VNC workspace
-│   ├── ai/                  # AI Assistant panel, provider registry
-│   ├── settings/            # Settings page sections
-│   ├── i18n/                # i18next config, locale files (en.json is source of truth)
-│   └── lib/                 # Tauri command wrappers, shared utilities
-├── src-tauri/               # Rust backend (Tauri v2)
+├── src/                        # React/TypeScript frontend
+│   ├── app/                    # Activity Rail, shared RailTooltip, workspace chrome, shell effects
+│   ├── connections/            # Connection tree UI
+│   ├── workspace/              # Workspace dispatch, status bar, screenshot, native overlay
+│   ├── terminal/               # Terminal workspace (local PTY + SSH)
+│   ├── sftp/                   # SFTP dual-pane workspace
+│   ├── webview/                # URL WebView workspace
+│   ├── remote-desktop/         # RDP + VNC workspace
+│   ├── dashboard/              # Dashboard module: grid, views, widget registry, script iframe host
+│   ├── app-launcher/           # App Launcher widget storage and component
+│   ├── ai/                     # AI Assistant panel, provider registry, streaming
+│   ├── ai-coding-usage/        # AI coding usage tracking widget and status bar
+│   ├── settings/               # Settings page sections (General, AI, SSH, Terminal, MCP, …)
+│   ├── manual/                 # In-app operation manual viewer (ManualPage.tsx)
+│   ├── i18n/                   # i18next config, locale files (en.json is source of truth)
+│   └── lib/                    # Tauri command wrappers, shared utilities, ARIA helpers
+├── src-tauri/                  # Rust backend (Tauri v2)
 │   ├── src/
-│   │   ├── lib.rs           # App setup, window lifecycle, command registration
-│   │   ├── ssh/             # russh SSH client, SFTP, port forwarding
-│   │   ├── ai/              # AI provider adapters, streaming
-│   │   ├── db/              # SQLite schema, repositories
+│   │   ├── lib.rs              # App setup, window lifecycle, command registration, tray
+│   │   ├── ssh.rs              # russh SSH client, channels, keep-alive
+│   │   ├── sftp.rs             # SFTP browser commands
+│   │   ├── storage.rs          # SQLite schema, migrations, repositories
+│   │   ├── ai.rs / ai/         # AI provider adapters, streaming, tool execution
+│   │   ├── mcp.rs              # MCP server management (add, remove, list servers)
+│   │   ├── dashboard_*.rs      # Dashboard commands, storage, validation, id generation
+│   │   ├── app_launcher.rs     # App Launcher widget commands
+│   │   ├── ai_coding_usage.rs  # AI coding usage tracking commands
+│   │   ├── windows_local_pty.rs# Local PTY via portable_pty / ConPTY
+│   │   ├── telnet.rs           # Telnet session transport
+│   │   ├── serial.rs           # Serial port session transport
+│   │   ├── rdp.rs              # RDP ActiveX session commands
+│   │   ├── vnc.rs              # VNC framebuffer session (vnc-rs)
+│   │   ├── webview.rs          # WebView2 URL session commands
+│   │   ├── wiki.rs             # In-app wiki commands
+│   │   ├── manual.rs           # In-app manual search commands
+│   │   ├── screenshot.rs       # Terminal/workspace screenshot
+│   │   ├── secrets.rs          # OS keychain (Windows Credential Manager) wrappers
+│   │   ├── import.rs           # Settings import/export
+│   │   ├── github_copilot.rs   # GitHub Copilot OAuth token flow
+│   │   ├── diagnostics.rs      # Diagnostics bundle collection
+│   │   ├── window_state.rs     # Window geometry persistence
 │   │   └── ...
 │   └── Cargo.toml
-├── docs/                    # Architecture, PRD, ADRs, release notes
-│   ├── ARCHITECTURE.md      # Module map, engineering defaults
-│   ├── PRD.md               # Product requirements
-│   ├── ROADMAP.md           # Planned features
-│   └── ADR/                 # Architecture decision records
-├── AGENTS.md                # Engineering rules for AI agents and contributors
-├── CONTEXT.md               # Domain vocabulary
+├── docs/                       # Architecture, PRD, ADRs, release notes
+│   ├── ARCHITECTURE.md         # Module map, engineering defaults
+│   ├── PRD.md                  # Product requirements
+│   ├── ROADMAP.md              # Planned features
+│   ├── DASHBOARD.md            # Dashboard module durable architecture
+│   ├── AI_PROVIDERS.md         # Rules for adding/changing AI provider entries
+│   ├── PERFORMANCE.md          # Performance notes and targets
+│   └── ADR/                    # Architecture decision records
+├── AGENTS.md                   # Engineering rules for AI agents and contributors
+├── CONTEXT.md                  # Domain vocabulary
 └── package.json
 ```
 
@@ -223,6 +249,9 @@ Before touching code, read these definitions — they matter for naming, storage
 | **Quick Connect** | An unsaved one-off draft that starts a Session without saving. |
 | **Session** | A live runtime instance — a PTY, SSH channel, SFTP browser, WebView2 host, RDP control, or VNC framebuffer. |
 | **Tab** | Frontend workspace container. Tabs hold Sessions (or split Panes). Closing a Tab ends the Session. |
+| **Dashboard** | Built-in activity-rail module hosting a 12-column drag-and-resize widget grid. |
+| **Dashboard AI Created Widget** | A script-only widget defined in `dashboard_custom_widgets`, hosted in an isolated `iframe srcdoc`. Authored by the AI assistant. |
+| **Widget Preset** | One of three chrome styles per Widget Instance: `panel`, `ambient`, `hero`. |
 
 **SFTP** is opened from an SSH Connection — it is not a standalone Connection type.
 
@@ -234,6 +263,8 @@ Before touching code, read these definitions — they matter for naming, storage
 - `docs/PRD.md` — full product requirements and user stories
 - `docs/ROADMAP.md` — what is planned vs. deferred (don't build deferred features)
 - `docs/AI_PROVIDERS.md` — rules for adding or changing AI provider entries
+- `docs/DASHBOARD.md` — Dashboard module durable architecture (views, widget instances, script widget security)
+- `docs/PERFORMANCE.md` — performance notes and targets
 - `docs/manual/INDEX.md` — **operation manual** shipped with the app. One chapter per user-facing module; each chapter starts with an `## AI grep hints` block listing i18n keys and synonyms. When a user asks "how do I…" inside the app, the built-in AI Assistant searches this folder. **When a PR changes UI behavior, update the matching chapter in `docs/manual/` in the same PR**, and prefer referencing i18n keys (e.g. `connections.quickConnect`) over English label text so locale changes don't invalidate the manual.
 
 ---
@@ -374,19 +405,24 @@ Open the AI Assistant from the chat icon in the workspace toolbar or from a term
 
 - **Tool permission mode** — shown in the chat composer. **Prompt** (default) blocks mutating tool calls and asks you to approve each one. **Allow All** lets enabled tools run automatically.
 - **Tool families** — enabled in Settings → AI Assistant → Assistant tools: Dashboard tools, Connection management tools, Live Session tools (interact with open terminal/SFTP/RDP/VNC panes).
+- **MCP Servers** — custom Model Context Protocol servers can be added in Settings → MCP Servers and become available as additional tool families in the AI Assistant.
 - **Context attachments** — use the screenshot button to attach terminal content or a workspace capture to the AI message.
+- **AI Created Widgets** — the assistant can author Dashboard widgets (script-only, sandboxed `iframe srcdoc`) on request. Users customize and remove them; creation is AI-only in v1.
 - The AI can propose commands, manage saved Connections, read/write Dashboard widgets, and interact with live Sessions — within the permission boundary you set.
 
 ### Settings
 
 Open Settings from the gear icon at the bottom of the Activity Rail. Key sections:
 
-- **General** — language, minimize-to-tray, auto backup, import/export settings
+- **General** — language, minimize-to-tray, auto backup, import/export settings, reset all
 - **Appearance** — app UI font, color scheme
-- **AI Assistant** — provider, model, API key, tool permissions, output language
-- **SSH** — SSH defaults, tmux behavior, port forwarding visibility, clipboard policy
+- **Dashboard** — confirm-before-remove widget, default landing view
+- **AI Assistant** — provider, model, API key, tool permissions, output language, insecure TLS toggle
+- **MCP Servers** — add/remove Model Context Protocol servers available to the AI Assistant
+- **SSH** — SSH defaults, tmux behavior, port forwarding visibility, clipboard policy, SFTP transfer defaults
 - **Terminal** — font, size, cursor, scrollback, default shell
-- **Credentials** — view and delete stored keychain secrets
+- **URL** — URL Connection security defaults, saved password metadata, data shard management
+- **Credentials** — view and delete stored OS keychain secrets
 - **About** — version, open-source component list, app data folder
 
 #### Setting up an AI provider
