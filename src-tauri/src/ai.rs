@@ -3908,27 +3908,26 @@ fn normalize_ai_widget_initial_size(
 ) -> (i64, i64) {
     let mut width = grid_w.clamp(1, 12);
     let mut height = grid_h.max(1);
-    if looks_like_compact_interactive_widget(title, summary, category, body) {
+    let source = body.get("source").and_then(Value::as_str).unwrap_or("");
+    let lowercase_haystack = format!("{title} {summary} {category} {source}").to_ascii_lowercase();
+    // Multilingual haystack keeps title/summary/category in original casing so
+    // CJK keyword detection (e.g. 時鐘) works alongside the ASCII matcher.
+    let raw_haystack = format!("{title} {summary} {category}");
+
+    if looks_like_compact_interactive_widget(&lowercase_haystack) {
         width = width.min(6);
         height = height.max(4);
     }
+
+    let content_min_h = estimate_ai_widget_min_height_rows(source, &lowercase_haystack, &raw_haystack);
+    if height < content_min_h {
+        height = content_min_h;
+    }
+
     (width, height)
 }
 
-fn looks_like_compact_interactive_widget(
-    title: &str,
-    summary: &str,
-    category: &str,
-    body: &Value,
-) -> bool {
-    let haystack = format!(
-        "{} {} {} {}",
-        title,
-        summary,
-        category,
-        body.get("source").and_then(Value::as_str).unwrap_or("")
-    )
-    .to_ascii_lowercase();
+fn looks_like_compact_interactive_widget(lowercase_haystack: &str) -> bool {
     [
         "game",
         "tetris",
@@ -3942,7 +3941,160 @@ fn looks_like_compact_interactive_widget(
         "calculator",
     ]
     .iter()
-    .any(|needle| haystack.contains(needle))
+    .any(|needle| lowercase_haystack.contains(needle))
+}
+
+// Deterministic minimum-row estimate from widget body source. The goal is to
+// catch the common shapes the assistant produces (kk-shell + toolbar + stage +
+// footer card, multi-row stat grids, multi-field forms, drawing canvases)
+// where its self-chosen gridH is reliably too short. The estimate is a lower
+// bound — it never shrinks the model's request, only raises it.
+fn estimate_ai_widget_min_height_rows(
+    source: &str,
+    lowercase_haystack: &str,
+    raw_haystack: &str,
+) -> i64 {
+    if source.is_empty() {
+        return 1;
+    }
+    let lowercase_source = source.to_ascii_lowercase();
+    let mut rows: i64 = 2; // baseline: title bar + a single content band
+
+    // Drawing surfaces (clocks, dials, gauges, charts, scenes). SVG with a
+    // viewBox or a <canvas> needs a usable vertical area; below ~4 rows the
+    // figure becomes illegible. createElementNS('http://www.w3.org/2000/svg'
+    // is the canonical AI-emitted pattern.
+    let has_canvas = lowercase_source.contains("<canvas")
+        || lowercase_source.contains("getcontext('2d')")
+        || lowercase_source.contains("getcontext(\"2d\")")
+        || lowercase_source.contains("getcontext('webgl")
+        || lowercase_source.contains("getcontext(\"webgl");
+    let has_svg = lowercase_source.contains("createelementns")
+        || lowercase_source.contains("<svg")
+        || lowercase_source.contains("'svg'")
+        || lowercase_source.contains("\"svg\"");
+    if has_canvas || has_svg {
+        rows = rows.max(6);
+    }
+
+    // Stat grids: each `.kk-stat` / `.kk-stat-value` produces ~1 vertical
+    // tile, and they typically wrap two-per-row. Cap so a huge dashboard
+    // doesn't blow past the canvas.
+    let stat_value_hits = lowercase_source.matches("kk-stat-value").count() as i64;
+    let stat_hits = (lowercase_source.matches("kk-stat").count() as i64) - stat_value_hits;
+    let stat_count = stat_value_hits.max(stat_hits).max(0);
+    if stat_count > 0 {
+        let stat_rows = 2 + (stat_count + 1) / 2;
+        rows = rows.max(stat_rows.min(8));
+    }
+
+    // Card stacks (kk-card / kk-panel children inside a flex column) — each
+    // is typically ~1 row tall. The clock-style widget combines a stage with
+    // a digital card; without this the LLM's 4×4 truncates the footer.
+    let card_hits = lowercase_source.matches("kk-card").count() as i64;
+    if card_hits >= 2 {
+        rows = rows.max((3 + card_hits / 2).min(8));
+    }
+
+    // Stage + footer pattern: a flex:1 stage *plus* a fixed-height sibling
+    // (toolbar or card). At 4 rows the stage collapses to nothing — needs
+    // ≥5 to look intentional.
+    let has_stage = lowercase_source.contains("kk-stage") || lowercase_source.contains("flex: '1'") || lowercase_source.contains("flex:1") || lowercase_source.contains("flex: 1");
+    let has_toolbar = lowercase_source.contains("kk-toolbar");
+    let has_footer_card = card_hits >= 1 || lowercase_source.contains("kk-pill") || lowercase_source.contains("kk-badge");
+    if has_stage && (has_toolbar || has_footer_card) {
+        rows = rows.max(6);
+    }
+
+    // Form widgets: count distinct input/select/textarea references. Both
+    // declarative `<input>` markup and DOM-created controls count.
+    let mut form_fields: i64 = 0;
+    form_fields += lowercase_source.matches("<input").count() as i64;
+    form_fields += lowercase_source.matches("<select").count() as i64;
+    form_fields += lowercase_source.matches("<textarea").count() as i64;
+    form_fields += lowercase_source.matches("createelement('input')").count() as i64;
+    form_fields += lowercase_source.matches("createelement(\"input\")").count() as i64;
+    form_fields += lowercase_source.matches("createelement('select')").count() as i64;
+    form_fields += lowercase_source.matches("createelement(\"select\")").count() as i64;
+    form_fields += lowercase_source.matches("createelement('textarea')").count() as i64;
+    form_fields += lowercase_source.matches("createelement(\"textarea\")").count() as i64;
+    if form_fields >= 2 {
+        // header + per-field row + submit row, capped.
+        rows = rows.max((2 + form_fields).min(10));
+    }
+
+    // Chart libraries — `lifecycle.animation` style widgets that drive a
+    // rendering canvas tend to need ≥6 rows to read properly.
+    let chart_lib = ["chart.js", "chartjs", "echarts", "plotly", "d3.", "mermaid"]
+        .iter()
+        .any(|needle| lowercase_source.contains(needle));
+    if chart_lib {
+        rows = rows.max(6);
+    }
+
+    // Domain keyword bumps — multilingual. The ASCII haystack is lowercase,
+    // the raw haystack preserves CJK casing for the script-detect needles.
+    const ASCII_DOMAIN_HINTS: &[(&str, i64)] = &[
+        ("clock", 6),
+        ("watch face", 6),
+        ("dial", 6),
+        ("gauge", 6),
+        ("calendar", 6),
+        ("agenda", 6),
+        ("chart", 6),
+        ("graph", 6),
+        ("diagram", 6),
+        ("dashboard", 5),
+        ("map", 6),
+        ("editor", 6),
+        ("notes", 5),
+        ("list", 4),
+        ("table", 5),
+        ("kanban", 6),
+        ("scheduler", 6),
+        ("planner", 6),
+        ("monitor", 5),
+        ("metrics", 5),
+        ("status", 4),
+    ];
+    for (needle, min_rows) in ASCII_DOMAIN_HINTS {
+        if lowercase_haystack.contains(needle) {
+            rows = rows.max(*min_rows);
+        }
+    }
+    const CJK_DOMAIN_HINTS: &[(&str, i64)] = &[
+        ("時鐘", 6),
+        ("时钟", 6),
+        ("鐘錶", 6),
+        ("钟表", 6),
+        ("日曆", 6),
+        ("日历", 6),
+        ("行事曆", 6),
+        ("日程", 6),
+        ("圖表", 6),
+        ("图表", 6),
+        ("儀表", 6),
+        ("仪表", 6),
+        ("計算", 5),
+        ("计算", 5),
+        ("筆記", 5),
+        ("笔记", 5),
+        ("清單", 4),
+        ("清单", 4),
+        ("列表", 4),
+        ("看板", 6),
+        ("監控", 5),
+        ("监控", 5),
+        ("地圖", 6),
+        ("地图", 6),
+    ];
+    for (needle, min_rows) in CJK_DOMAIN_HINTS {
+        if raw_haystack.contains(needle) {
+            rows = rows.max(*min_rows);
+        }
+    }
+
+    rows.clamp(1, 12)
 }
 
 fn tool_definition(
@@ -7423,6 +7575,134 @@ mod tests {
 
         assert_eq!(width, 10);
         assert_eq!(height, 5);
+    }
+
+    #[test]
+    fn ai_widget_initial_size_grows_clock_widget_with_stage_and_footer() {
+        // Reproduces the圓形時鐘 case from aiassistant.debug.log: the model
+        // asked for 4x4 but the body has an SVG clock face + toolbar + digital
+        // footer card and clipped at 4 rows.
+        let body = json!({
+            "source": "const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');\n\
+                       panel.style.flex = '1';\n\
+                       const stage = document.createElement('div'); stage.className = 'kk-stage';\n\
+                       const toolbar = document.createElement('div'); toolbar.className = 'kk-toolbar';\n\
+                       const digital = document.createElement('div'); digital.className = 'kk-card';",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (width, height) = normalize_ai_widget_initial_size(
+            "圓形時鐘",
+            "圓形類比時鐘，顯示本機時間、日期與秒針動態。",
+            "時鐘",
+            &body,
+            4,
+            4,
+        );
+
+        assert_eq!(width, 4);
+        assert!(height >= 6, "expected clock widget to be grown to ≥6 rows, got {height}");
+    }
+
+    #[test]
+    fn ai_widget_initial_size_grows_for_canvas_chart_widget() {
+        let body = json!({
+            "source": "const c = document.createElement('canvas'); c.getContext('2d');",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (_width, height) = normalize_ai_widget_initial_size(
+            "Traffic Chart",
+            "Traffic over time.",
+            "Charts",
+            &body,
+            6,
+            3,
+        );
+
+        assert!(height >= 6, "canvas/chart widget expected ≥6 rows, got {height}");
+    }
+
+    #[test]
+    fn ai_widget_initial_size_grows_for_multi_field_form() {
+        let body = json!({
+            "source": "<form><input/><input/><input/><select></select><textarea></textarea></form>",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (_width, height) = normalize_ai_widget_initial_size(
+            "Quick Add",
+            "Submission form.",
+            "Forms",
+            &body,
+            4,
+            2,
+        );
+
+        assert!(height >= 6, "multi-field form expected ≥6 rows, got {height}");
+    }
+
+    #[test]
+    fn ai_widget_initial_size_grows_for_stat_grid() {
+        let body = json!({
+            "source": "<div class='kk-stat'><div class='kk-stat-value'>1</div></div>\
+                       <div class='kk-stat'><div class='kk-stat-value'>2</div></div>\
+                       <div class='kk-stat'><div class='kk-stat-value'>3</div></div>\
+                       <div class='kk-stat'><div class='kk-stat-value'>4</div></div>",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (_width, height) = normalize_ai_widget_initial_size(
+            "Quick Stats",
+            "KPIs.",
+            "Stats",
+            &body,
+            6,
+            2,
+        );
+
+        assert!(height >= 4, "stat-grid widget expected ≥4 rows, got {height}");
+    }
+
+    #[test]
+    fn ai_widget_initial_size_does_not_shrink_taller_model_requests() {
+        // The estimator is a lower bound. If the model asked for more height
+        // than the estimate, the model's choice wins.
+        let body = json!({
+            "source": "document.getElementById('root').textContent = 'Simple text.';",
+            "permissions": {"network": false, "pollSeconds": null},
+            "htmlShim": null
+        });
+
+        let (_width, height) = normalize_ai_widget_initial_size(
+            "Note",
+            "A short note.",
+            "Misc",
+            &body,
+            4,
+            9,
+        );
+
+        assert_eq!(height, 9);
+    }
+
+    #[test]
+    fn ai_widget_initial_size_handles_empty_body() {
+        let body = json!({});
+        let (width, height) = normalize_ai_widget_initial_size(
+            "Empty",
+            "",
+            "",
+            &body,
+            3,
+            2,
+        );
+        assert_eq!(width, 3);
+        assert_eq!(height, 2);
     }
 
     #[test]
