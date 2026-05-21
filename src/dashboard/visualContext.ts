@@ -11,8 +11,27 @@ export interface DashboardVisualContext {
   requiresOpaqueTextSurface: boolean;
 }
 
-const DARK_BACKGROUND_PRESET_IDS = new Set(["graphite", "g-twilight"]);
 const DARK_DYNAMIC_BACKGROUND_IDS = new Set(["starfield", "nebula", "matrix", "synthwave"]);
+const DARK_BACKGROUND_PRESET_IDS = new Set([
+  "graphite",
+  "midnight",
+  "pine",
+  "aubergine",
+  "ember",
+  "harbor",
+  "moss",
+  "wine",
+  "steel",
+  "g-twilight",
+  "g-midnight",
+  "g-harbor",
+  "g-ember",
+  "g-orchid",
+  "g-forest",
+  "g-eclipse",
+  "g-cobalt",
+  "g-nocturne",
+]);
 
 export function dashboardVisualContextForView(
   view: Pick<DashboardView, "background">,

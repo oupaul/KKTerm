@@ -76,6 +76,14 @@ pub const BACKGROUND_PRESET_IDS: &[&str] = &[
     "lavender",
     "slate",
     "graphite",
+    "midnight",
+    "pine",
+    "aubergine",
+    "ember",
+    "harbor",
+    "moss",
+    "wine",
+    "steel",
     "g-dawn",
     "g-fog",
     "g-meadow",
@@ -84,6 +92,14 @@ pub const BACKGROUND_PRESET_IDS: &[&str] = &[
     "g-horizon",
     "g-petal",
     "g-twilight",
+    "g-midnight",
+    "g-harbor",
+    "g-ember",
+    "g-orchid",
+    "g-forest",
+    "g-eclipse",
+    "g-cobalt",
+    "g-nocturne",
 ];
 
 pub const DASHBOARD_TAB_GRADIENT_IDS: &[&str] = &[
@@ -95,6 +111,14 @@ pub const DASHBOARD_TAB_GRADIENT_IDS: &[&str] = &[
     "g-horizon",
     "g-petal",
     "g-twilight",
+    "g-midnight",
+    "g-harbor",
+    "g-ember",
+    "g-orchid",
+    "g-forest",
+    "g-eclipse",
+    "g-cobalt",
+    "g-nocturne",
 ];
 
 pub const DYNAMIC_BACKGROUND_IDS: &[&str] = &[
@@ -1298,6 +1322,8 @@ mod tests {
     fn background_preset_known() {
         assert!(validate_background_preset("mist").is_ok());
         assert!(validate_background_preset("g-twilight").is_ok());
+        assert!(validate_background_preset("midnight").is_ok());
+        assert!(validate_background_preset("g-nocturne").is_ok());
     }
 
     #[test]
@@ -1312,6 +1338,7 @@ mod tests {
     fn dashboard_tab_color_accepts_gradient_presets() {
         assert!(validate_dashboard_tab_color("g-dawn").is_ok());
         assert!(validate_dashboard_tab_color("g-twilight").is_ok());
+        assert!(validate_dashboard_tab_color("g-nocturne").is_ok());
     }
 
     #[test]

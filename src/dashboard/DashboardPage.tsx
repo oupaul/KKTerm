@@ -12,6 +12,7 @@ import { CustomizePopover } from "./edit/CustomizePopover";
 import "./dashboard.css";
 import {
   DASHBOARD_TAB_GRADIENT_PRESETS,
+  isDarkBackgroundPresetId,
   resolveDashboardTabGradientPreset,
 } from "./registry/backgroundPresets";
 import { libraryCatalogForAi } from "./script/widgetLibraries";
@@ -417,7 +418,7 @@ export function DashboardPage({
 function dashboardTabColorStyle(tabColor: string | null): CSSProperties | undefined {
   if (!tabColor) return undefined;
   const preset = resolveDashboardTabGradientPreset(tabColor);
-  const textColor = tabColor === "g-twilight" ? "#ffffff" : "#0f172a";
+  const textColor = isDarkBackgroundPresetId(tabColor) ? "#ffffff" : "#0f172a";
   return {
     "--dashboard-pill-bg": preset.css,
     "--dashboard-pill-text": textColor,

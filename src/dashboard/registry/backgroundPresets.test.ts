@@ -7,8 +7,8 @@ import {
   resolveDashboardTabGradientPreset,
 } from "./backgroundPresets";
 
-// There must be exactly 16 presets (8 solid + 8 gradient), matching the Rust whitelist.
-const presetCount: 16 = BACKGROUND_PRESETS.length as 16;
+// There must be exactly 32 presets (16 solid + 16 gradient), matching the Rust whitelist.
+const presetCount: 32 = BACKGROUND_PRESETS.length as 32;
 void presetCount;
 
 // resolveBackgroundPreset always returns a definition (falls back to the first entry).

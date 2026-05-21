@@ -67,5 +67,15 @@ test("dashboard visual context marks dark preset backgrounds as dark", async () 
       requiresOpaqueTextSurface: false,
     },
   );
-});
 
+  assert.deepEqual(
+    dashboardVisualContextForView({ background: { kind: "preset", preset: "g-nocturne" } }),
+    {
+      colorScheme: "dark",
+      backgroundKind: "preset",
+      backgroundTone: "dark",
+      backgroundId: "g-nocturne",
+      requiresOpaqueTextSurface: false,
+    },
+  );
+});
