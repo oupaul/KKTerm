@@ -1,5 +1,9 @@
 import { ConnectionIcon } from "../connections/ConnectionIcon";
 import type { TutorialHighlightRequest } from "../app/TutorialOverlay";
+import {
+  normalizeTutorialNavigationTarget,
+  tutorialNavigationForTarget,
+} from "../app/tutorialNavigationModel";
 import { workspaceKindLabel } from "../connections/utils";
 import { inspectActiveSshSystemContext } from "../terminal/TerminalWorkspace";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
@@ -808,7 +812,9 @@ export function AssistantPanel({
 }: {
   collapsed: boolean;
   onOpenSettings: () => void;
-  onTutorialRequest: (request: TutorialHighlightRequest) => { ok: boolean; error?: string };
+  onTutorialRequest: (
+    request: TutorialHighlightRequest,
+  ) => Promise<{ ok: boolean; error?: string }>;
   onToggleCollapsed: () => void;
   pageContext?: AssistantPageContext;
 }) {
@@ -1459,14 +1465,18 @@ export function AssistantPanel({
     }
   }
 
-  function assistantTutorialHighlight(args: Record<string, unknown>) {
+  async function assistantTutorialHighlight(args: Record<string, unknown>) {
     const targetId = typeof args.targetId === "string" ? args.targetId.trim() : "";
     const title = typeof args.title === "string" ? args.title.trim() : "";
     const body = typeof args.body === "string" ? args.body.trim() : "";
     if (!targetId || !title || !body) {
       return { ok: false, error: t("ai.tutorialInvalidRequest") };
     }
-    return onTutorialRequest({ targetId, title, body });
+    const navigation =
+      normalizeTutorialNavigationTarget(args.navigation) ??
+      normalizeTutorialNavigationTarget(args) ??
+      tutorialNavigationForTarget(targetId);
+    return onTutorialRequest({ targetId, title, body, navigation });
   }
 
   function assistantSessionState() {

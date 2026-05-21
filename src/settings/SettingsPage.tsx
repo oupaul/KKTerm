@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   Bot,
@@ -35,17 +35,19 @@ import {
 export { AI_PROVIDER_SECRET_OWNER_ID };
 
 export function SettingsPage({
+  activeSectionId,
+  onActiveSectionChange,
   onAssistantContextChange,
   onBack,
   onResetLayout,
 }: {
+  activeSectionId: SettingsSectionId;
+  onActiveSectionChange: (sectionId: SettingsSectionId) => void;
   onAssistantContextChange: (context: SettingsAssistantContext) => void;
   onBack: () => void;
   onResetLayout: () => void;
 }) {
   const { t } = useTranslation();
-  const [activeSectionId, setActiveSectionId] =
-    useState<SettingsSectionId>("general-settings");
   const assistantContext = useMemo(
     () => buildSettingsAssistantContext(activeSectionId, (key, fallback) => t(key, fallback)),
     [activeSectionId, t],
@@ -72,7 +74,7 @@ export function SettingsPage({
         <aside className="settings-nav" aria-label={t("settings.sectionsNav")}>
           <button
             className={settingsNavItemClass("general-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("general-settings")}
+            onClick={() => onActiveSectionChange("general-settings")}
             type="button"
           >
             <SettingsIcon size={16} />
@@ -80,7 +82,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("appearance-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("appearance-settings")}
+            onClick={() => onActiveSectionChange("appearance-settings")}
             type="button"
           >
             <Palette size={16} />
@@ -88,7 +90,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("dashboard-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("dashboard-settings")}
+            onClick={() => onActiveSectionChange("dashboard-settings")}
             type="button"
           >
             <LayoutDashboard size={16} />
@@ -96,7 +98,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("credentials-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("credentials-settings")}
+            onClick={() => onActiveSectionChange("credentials-settings")}
             type="button"
           >
             <KeyRound size={16} />
@@ -104,7 +106,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("assistant-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("assistant-settings")}
+            onClick={() => onActiveSectionChange("assistant-settings")}
             type="button"
           >
             <Bot size={16} />
@@ -112,7 +114,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("ssh-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("ssh-settings")}
+            onClick={() => onActiveSectionChange("ssh-settings")}
             type="button"
           >
             <Server size={16} />
@@ -120,7 +122,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("terminal-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("terminal-settings")}
+            onClick={() => onActiveSectionChange("terminal-settings")}
             type="button"
           >
             <Terminal size={16} />
@@ -128,7 +130,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("url-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("url-settings")}
+            onClick={() => onActiveSectionChange("url-settings")}
             type="button"
           >
             <Globe size={16} />
@@ -136,7 +138,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("rdp-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("rdp-settings")}
+            onClick={() => onActiveSectionChange("rdp-settings")}
             type="button"
           >
             <Monitor size={16} />
@@ -144,7 +146,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("vnc-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("vnc-settings")}
+            onClick={() => onActiveSectionChange("vnc-settings")}
             type="button"
           >
             <Network size={16} />
@@ -152,7 +154,7 @@ export function SettingsPage({
           </button>
           <button
             className={settingsNavItemClass("about-settings", activeSectionId)}
-            onClick={() => setActiveSectionId("about-settings")}
+            onClick={() => onActiveSectionChange("about-settings")}
             type="button"
           >
             <Info size={16} />

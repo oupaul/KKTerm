@@ -41,10 +41,14 @@ Validation rules:
 ## Bundled starter skills
 
 - `dashboard-widget-builder`: Dashboard AI Created Widget creation, repair, layout, data, secrets, and visual polish.
+- `dns-dhcp-troubleshooter`: DNS lookup, split DNS, stale cache, DHCP lease, gateway, and resolver diagnosis.
+- `firewall-port-troubleshooter`: Firewall, NAT, listener, blocked port, and service binding diagnosis.
+- `network-connectivity-troubleshooter`: General reachability, routing, gateway, VPN, proxy, packet loss, latency, and MTU diagnosis.
 - `remote-desktop-helper`: RDP/VNC setup, screenshots, input, focus, sizing, and troubleshooting.
 - `sftp-transfer-helper`: SFTP browsing, upload/download planning, conflicts, permissions, and paths.
 - `ssh-troubleshooter`: SSH Connection, authentication, host key, ProxyJump, tmux, and SFTP startup diagnosis.
 - `terminal-command-planner`: Safe terminal command planning for local shells, SSH, PowerShell, Command Prompt, WSL, and diagnostics.
+- `tls-certificate-troubleshooter`: TLS, HTTPS certificate, hostname mismatch, chain, trust root, SNI, and WebView2 URL Connection diagnosis.
 
 ## Adding bundled skills
 

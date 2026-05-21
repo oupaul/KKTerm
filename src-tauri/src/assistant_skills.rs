@@ -385,10 +385,14 @@ Follow a cautious read-before-write flow.
             names,
             vec![
                 "dashboard-widget-builder",
+                "dns-dhcp-troubleshooter",
+                "firewall-port-troubleshooter",
+                "network-connectivity-troubleshooter",
                 "remote-desktop-helper",
                 "sftp-transfer-helper",
                 "ssh-troubleshooter",
                 "terminal-command-planner",
+                "tls-certificate-troubleshooter",
             ]
         );
     }

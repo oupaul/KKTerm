@@ -29,6 +29,7 @@ import { ariaHidden } from "./lib/aria";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./settings/SettingsPage";
 import type { SettingsAssistantContext } from "./settings/settingsAssistantContext";
+import type { SettingsSectionId } from "./settings/settingsAssistantContext";
 import { useWorkspaceStore } from "./store";
 import { StatusBar } from "./workspace/StatusBar";
 import { TabStrip, WorkspaceCanvas } from "./workspace/WorkspaceCanvas";
@@ -39,6 +40,8 @@ function App() {
   const { t } = useTranslation();
   const [activePage, setActivePage] = useState<ActivePage>("workspace");
   const [dashboardMounted, setDashboardMounted] = useState(false);
+  const [activeSettingsSectionId, setActiveSettingsSectionId] =
+    useState<SettingsSectionId>("general-settings");
   const previousBasePageRef = useRef<"workspace" | "dashboard">("workspace");
 
   function isOverlayPage(page: ActivePage): page is "settings" {
@@ -62,6 +65,17 @@ function App() {
   function openDashboardView(viewId: string) {
     useDashboardStore.getState().setActiveView(viewId);
     navigateToPage("dashboard");
+  }
+
+  function navigateForTutorial(request: TutorialHighlightRequest) {
+    const navigation = request.navigation;
+    if (!navigation) {
+      return;
+    }
+    if (navigation.settingsSectionId) {
+      setActiveSettingsSectionId(navigation.settingsSectionId);
+    }
+    navigateToPage(navigation.page);
   }
 
   const [dashboardAssistantContext, setDashboardAssistantContext] =
@@ -108,8 +122,10 @@ function App() {
     return undefined;
   }
 
-  function handleTutorialRequest(request: TutorialHighlightRequest) {
-    if (!findTutorialTargetElement(request.targetId)) {
+  async function handleTutorialRequest(request: TutorialHighlightRequest) {
+    navigateForTutorial(request);
+    const target = await waitForTutorialTarget(request.targetId);
+    if (!target) {
       return { ok: false, error: t("ai.tutorialTargetNotFound") };
     }
     setTutorialHighlightRequest(request);
@@ -171,7 +187,9 @@ function App() {
       {activePage === "settings" ? (
         <SettingsPage
           key="settings-page"
+          activeSectionId={activeSettingsSectionId}
           onBack={() => setActivePage(previousBasePageRef.current)}
+          onActiveSectionChange={setActiveSettingsSectionId}
           onAssistantContextChange={setSettingsAssistantContext}
           onResetLayout={resetWorkspaceChromeLayout}
         />
@@ -196,6 +214,24 @@ function App() {
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
     </div>
   );
+}
+
+function waitForTutorialTarget(targetId: string) {
+  return new Promise<HTMLElement | undefined>((resolve) => {
+    let attempts = 0;
+
+    function check() {
+      const target = findTutorialTargetElement(targetId);
+      if (target || attempts >= 12) {
+        resolve(target);
+        return;
+      }
+      attempts += 1;
+      window.requestAnimationFrame(check);
+    }
+
+    check();
+  });
 }
 
 export default App;

@@ -165,7 +165,7 @@ export function buildSettingsAssistantContext(
       `Active Settings section: ${sectionLabel} (${sectionId}).`,
       "Visible controls and i18n keys:",
       controls,
-      "Use the tutorial_highlight tool for guided help only when a matching tutorial target is listed and visible.",
+      "Use the tutorial_highlight tool for guided help only when a matching tutorial target is listed. Include navigation if the target belongs to another app surface.",
     ].join("\n"),
   };
 }

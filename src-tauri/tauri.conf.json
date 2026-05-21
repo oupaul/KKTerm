@@ -67,10 +67,14 @@
       "../docs/manual/16-localization.md": "manual/16-localization.md",
       "../docs/manual/17-data-backup-secrets.md": "manual/17-data-backup-secrets.md",
       "../assistant-skills/dashboard-widget-builder/SKILL.md": "assistant-skills/dashboard-widget-builder/SKILL.md",
+      "../assistant-skills/dns-dhcp-troubleshooter/SKILL.md": "assistant-skills/dns-dhcp-troubleshooter/SKILL.md",
+      "../assistant-skills/firewall-port-troubleshooter/SKILL.md": "assistant-skills/firewall-port-troubleshooter/SKILL.md",
+      "../assistant-skills/network-connectivity-troubleshooter/SKILL.md": "assistant-skills/network-connectivity-troubleshooter/SKILL.md",
       "../assistant-skills/remote-desktop-helper/SKILL.md": "assistant-skills/remote-desktop-helper/SKILL.md",
       "../assistant-skills/sftp-transfer-helper/SKILL.md": "assistant-skills/sftp-transfer-helper/SKILL.md",
       "../assistant-skills/ssh-troubleshooter/SKILL.md": "assistant-skills/ssh-troubleshooter/SKILL.md",
-      "../assistant-skills/terminal-command-planner/SKILL.md": "assistant-skills/terminal-command-planner/SKILL.md"
+      "../assistant-skills/terminal-command-planner/SKILL.md": "assistant-skills/terminal-command-planner/SKILL.md",
+      "../assistant-skills/tls-certificate-troubleshooter/SKILL.md": "assistant-skills/tls-certificate-troubleshooter/SKILL.md"
     },
     "windows": {
       "allowDowngrades": false,

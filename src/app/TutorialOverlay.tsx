@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { TutorialNavigationTarget } from "./tutorialNavigationModel";
 import { chooseTutorialBalloonPlacement, type TutorialRect } from "./tutorialOverlayModel";
 
 export type TutorialHighlightRequest = {
   targetId: string;
   title: string;
   body: string;
+  navigation?: TutorialNavigationTarget;
 };
 
 const BALLOON_SIZE = {
@@ -41,20 +43,25 @@ export function TutorialOverlay({
     }
     lastRequestRef.current = request;
 
-    function updateTargetRect() {
+    function updateTargetRect(options?: { scroll?: boolean }) {
       if (!request) {
         return;
       }
       const target = findTutorialTargetElement(request.targetId);
+      if (options?.scroll) {
+        target?.scrollIntoView({ block: "center", inline: "nearest" });
+      }
       setTargetRect(target?.getBoundingClientRect());
     }
 
-    updateTargetRect();
-    window.addEventListener("resize", updateTargetRect);
-    window.addEventListener("scroll", updateTargetRect, true);
+    const refreshTargetRect = () => updateTargetRect();
+    const frame = window.requestAnimationFrame(() => updateTargetRect({ scroll: true }));
+    window.addEventListener("resize", refreshTargetRect);
+    window.addEventListener("scroll", refreshTargetRect, true);
     return () => {
-      window.removeEventListener("resize", updateTargetRect);
-      window.removeEventListener("scroll", updateTargetRect, true);
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", refreshTargetRect);
+      window.removeEventListener("scroll", refreshTargetRect, true);
     };
   }, [request]);
 
