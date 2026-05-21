@@ -875,7 +875,10 @@ mod platform {
                         ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
                     },
                     Dxgi::{
-                        Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
+                        Common::{
+                            DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_MODE_ROTATION_IDENTITY,
+                            DXGI_SAMPLE_DESC,
+                        },
                         CreateDXGIFactory1, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter,
                         IDXGIAdapter1, IDXGIFactory1, IDXGIOutput, IDXGIOutput1, IDXGIResource,
                     },
@@ -884,6 +887,9 @@ mod platform {
         };
 
         use super::bgra_pixels_to_dib;
+
+        const DXGI_FRAME_ATTEMPTS: usize = 4;
+        const DXGI_FRAME_TIMEOUT_MS: u32 = 80;
 
         pub fn capture_screen_rect_to_dib(
             x: i32,
@@ -895,8 +901,30 @@ mod platform {
                 let factory: IDXGIFactory1 = CreateDXGIFactory1()
                     .map_err(|error| format!("failed to create DXGI factory: {error}"))?;
                 let output = find_output_for_rect(&factory, x, y, width, height)?;
+                log_dxgi(&format!(
+                    "output rect=({}, {})-({}, {}), rotation={}, request=({}, {}, {}, {})",
+                    output.left,
+                    output.top,
+                    output.right,
+                    output.bottom,
+                    output.rotation,
+                    x,
+                    y,
+                    width,
+                    height
+                ));
                 capture_output_rect(output, x, y, width, height)
             }
+        }
+
+        struct DxgiOutputTarget {
+            adapter: IDXGIAdapter1,
+            output: IDXGIOutput,
+            left: i32,
+            top: i32,
+            right: i32,
+            bottom: i32,
+            rotation: i32,
         }
 
         unsafe fn find_output_for_rect(
@@ -905,7 +933,7 @@ mod platform {
             y: i32,
             width: i32,
             height: i32,
-        ) -> Result<(IDXGIAdapter1, IDXGIOutput, i32, i32), String> {
+        ) -> Result<DxgiOutputTarget, String> {
             let right = x
                 .checked_add(width)
                 .ok_or_else(|| "screenshot region is too wide".to_string())?;
@@ -922,7 +950,15 @@ mod platform {
                     let rect = desc.DesktopCoordinates;
                     if x >= rect.left && y >= rect.top && right <= rect.right && bottom <= rect.bottom
                     {
-                        return Ok((adapter, output, rect.left, rect.top));
+                        return Ok(DxgiOutputTarget {
+                            adapter,
+                            output,
+                            left: rect.left,
+                            top: rect.top,
+                            right: rect.right,
+                            bottom: rect.bottom,
+                            rotation: desc.Rotation.0,
+                        });
                     }
                     output_index += 1;
                 }
@@ -934,17 +970,18 @@ mod platform {
         }
 
         unsafe fn capture_output_rect(
-            target: (IDXGIAdapter1, IDXGIOutput, i32, i32),
+            target: DxgiOutputTarget,
             x: i32,
             y: i32,
             width: i32,
             height: i32,
         ) -> Result<Vec<u8>, String> {
-            let (adapter1, output, output_left, output_top) = target;
-            let adapter: IDXGIAdapter = adapter1
+            let adapter: IDXGIAdapter = target
+                .adapter
                 .cast()
                 .map_err(|error| format!("failed to use DXGI adapter: {error}"))?;
-            let output1: IDXGIOutput1 = output
+            let output1: IDXGIOutput1 = target
+                .output
                 .cast()
                 .map_err(|error| format!("failed to use DXGI output duplication: {error}"))?;
             let (device, context) = create_device(&adapter)?;
@@ -952,25 +989,96 @@ mod platform {
                 .DuplicateOutput(&device)
                 .map_err(|error| format!("failed to duplicate DXGI output: {error}"))?;
 
-            let mut frame_info = DXGI_OUTDUPL_FRAME_INFO::default();
-            let mut resource: Option<IDXGIResource> = None;
-            duplication
-                .AcquireNextFrame(100, &mut frame_info, &mut resource)
-                .map_err(|error| format!("failed to acquire DXGI frame: {error}"))?;
-            let _frame_guard = FrameGuard { duplication };
+            for attempt in 1..=DXGI_FRAME_ATTEMPTS {
+                let mut frame_info = DXGI_OUTDUPL_FRAME_INFO::default();
+                let mut resource: Option<IDXGIResource> = None;
+                duplication
+                    .AcquireNextFrame(DXGI_FRAME_TIMEOUT_MS, &mut frame_info, &mut resource)
+                    .map_err(|error| format!("failed to acquire DXGI frame: {error}"))?;
+                let _frame_guard = FrameGuard {
+                    duplication: duplication.clone(),
+                };
+                let frame = DxgiFrameStats::from_frame_info(&frame_info);
+                log_dxgi(&format!(
+                    "frame attempt {attempt}/{DXGI_FRAME_ATTEMPTS}: last_present={}, last_mouse={}, accumulated={}, metadata={}, protected={}",
+                    frame.last_present_time,
+                    frame.last_mouse_update_time,
+                    frame.accumulated_frames,
+                    frame.total_metadata_buffer_size,
+                    frame.protected_content_masked_out
+                ));
+                if !frame_has_desktop_update(&frame) {
+                    continue;
+                }
 
-            let resource = resource.ok_or_else(|| "DXGI frame resource is empty".to_string())?;
-            let desktop_texture: ID3D11Texture2D = resource
-                .cast()
-                .map_err(|error| format!("failed to read DXGI frame texture: {error}"))?;
+                let resource =
+                    resource.ok_or_else(|| "DXGI frame resource is empty".to_string())?;
+                let desktop_texture: ID3D11Texture2D = resource
+                    .cast()
+                    .map_err(|error| format!("failed to read DXGI frame texture: {error}"))?;
 
-            let copy_texture = create_staging_texture(&device, width as u32, height as u32)?;
+                return copy_desktop_texture_to_dib(
+                    &device,
+                    &context,
+                    &desktop_texture,
+                    &target,
+                    x,
+                    y,
+                    width,
+                    height,
+                );
+            }
+
+            Err(format!(
+                "DXGI did not acquire a desktop image update after {DXGI_FRAME_ATTEMPTS} attempts"
+            ))
+        }
+
+        unsafe fn copy_desktop_texture_to_dib(
+            device: &ID3D11Device,
+            context: &ID3D11DeviceContext,
+            desktop_texture: &ID3D11Texture2D,
+            target: &DxgiOutputTarget,
+            x: i32,
+            y: i32,
+            width: i32,
+            height: i32,
+        ) -> Result<Vec<u8>, String> {
+            let mut texture_desc = D3D11_TEXTURE2D_DESC::default();
+            desktop_texture.GetDesc(&mut texture_desc);
+            log_dxgi(&format!(
+                "texture desc: width={}, height={}, mip_levels={}, array_size={}, format={:?}, usage={:?}, bind_flags={}, cpu_access={}, misc={}",
+                texture_desc.Width,
+                texture_desc.Height,
+                texture_desc.MipLevels,
+                texture_desc.ArraySize,
+                texture_desc.Format,
+                texture_desc.Usage,
+                texture_desc.BindFlags,
+                texture_desc.CPUAccessFlags,
+                texture_desc.MiscFlags
+            ));
+
+            let geometry = DxgiCopyGeometry {
+                source_left: (x - target.left) as u32,
+                source_top: (y - target.top) as u32,
+                source_right: (x - target.left + width) as u32,
+                source_bottom: (y - target.top + height) as u32,
+            };
+            validate_copy_geometry(
+                geometry,
+                texture_desc.Width,
+                texture_desc.Height,
+                target.rotation,
+            )?;
+
+            let copy_texture = create_staging_texture(device, width as u32, height as u32)?;
             let source_box = D3D11_BOX {
-                left: (x - output_left) as u32,
-                top: (y - output_top) as u32,
+                left: geometry.source_left,
+                top: geometry.source_top,
                 front: 0,
-                right: (x - output_left + width) as u32,
-                bottom: (y - output_top + height) as u32,
+                right: geometry.source_right,
+                bottom: geometry.source_bottom,
                 back: 1,
             };
             context.CopySubresourceRegion(
@@ -979,7 +1087,7 @@ mod platform {
                 0,
                 0,
                 0,
-                &desktop_texture,
+                desktop_texture,
                 0,
                 Some(&source_box),
             );
@@ -992,6 +1100,7 @@ mod platform {
                 context: context.clone(),
                 texture: copy_texture.clone(),
             };
+            log_dxgi(&format!("mapped row pitch: {}", mapped.RowPitch));
 
             let row_bytes = width as usize * 4;
             let mut pixels = vec![0u8; row_bytes * height as usize];
@@ -1001,6 +1110,10 @@ mod platform {
                 let target_start = row * row_bytes;
                 pixels[target_start..target_start + row_bytes].copy_from_slice(source);
             }
+            log_dxgi(&format!(
+                "first non-black pixel sample: {:?}",
+                sample_non_black_pixel(&pixels, width as u32, height as u32)
+            ));
 
             bgra_pixels_to_dib(&pixels, width, height)
         }
@@ -1067,6 +1180,116 @@ mod platform {
             texture.ok_or_else(|| "D3D11 staging texture is empty".to_string())
         }
 
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        struct DxgiFrameStats {
+            last_present_time: i64,
+            last_mouse_update_time: i64,
+            accumulated_frames: u32,
+            total_metadata_buffer_size: u32,
+            protected_content_masked_out: bool,
+        }
+
+        impl DxgiFrameStats {
+            fn from_frame_info(frame_info: &DXGI_OUTDUPL_FRAME_INFO) -> Self {
+                Self {
+                    last_present_time: frame_info.LastPresentTime,
+                    last_mouse_update_time: frame_info.LastMouseUpdateTime,
+                    accumulated_frames: frame_info.AccumulatedFrames,
+                    total_metadata_buffer_size: frame_info.TotalMetadataBufferSize,
+                    protected_content_masked_out: frame_info.ProtectedContentMaskedOut.as_bool(),
+                }
+            }
+        }
+
+        fn frame_has_desktop_update(frame: &DxgiFrameStats) -> bool {
+            frame.last_present_time != 0
+                || frame.accumulated_frames > 0
+                || frame.total_metadata_buffer_size > 0
+        }
+
+        #[derive(Clone, Copy, Debug)]
+        struct DxgiCopyGeometry {
+            source_left: u32,
+            source_top: u32,
+            source_right: u32,
+            source_bottom: u32,
+        }
+
+        fn validate_copy_geometry(
+            geometry: DxgiCopyGeometry,
+            texture_width: u32,
+            texture_height: u32,
+            rotation: i32,
+        ) -> Result<(), String> {
+            if rotation != DXGI_MODE_ROTATION_IDENTITY.0 {
+                return Err(format!(
+                    "DXGI output is rotated ({rotation}); falling back to GDI"
+                ));
+            }
+            if geometry.source_left >= geometry.source_right
+                || geometry.source_top >= geometry.source_bottom
+            {
+                return Err("DXGI screenshot source box is empty".to_string());
+            }
+            if geometry.source_right > texture_width || geometry.source_bottom > texture_height {
+                return Err(format!(
+                    "DXGI screenshot source box is outside texture bounds: box=({}, {})-({}, {}), texture={}x{}",
+                    geometry.source_left,
+                    geometry.source_top,
+                    geometry.source_right,
+                    geometry.source_bottom,
+                    texture_width,
+                    texture_height
+                ));
+            }
+            Ok(())
+        }
+
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        struct DxgiPixelSample {
+            x: u32,
+            y: u32,
+            b: u8,
+            g: u8,
+            r: u8,
+            a: u8,
+        }
+
+        fn sample_non_black_pixel(
+            pixels: &[u8],
+            width: u32,
+            height: u32,
+        ) -> Option<DxgiPixelSample> {
+            let expected_len = width as usize * height as usize * 4;
+            if pixels.len() < expected_len {
+                return None;
+            }
+            pixels[..expected_len]
+                .chunks_exact(4)
+                .enumerate()
+                .find_map(|(index, bgra)| {
+                    if bgra[0] == 0 && bgra[1] == 0 && bgra[2] == 0 {
+                        return None;
+                    }
+                    Some(DxgiPixelSample {
+                        x: (index as u32) % width,
+                        y: (index as u32) / width,
+                        b: bgra[0],
+                        g: bgra[1],
+                        r: bgra[2],
+                        a: bgra[3],
+                    })
+                })
+        }
+
+        #[cfg(debug_assertions)]
+        fn log_dxgi(message: &str) {
+            eprintln!("DXGI screenshot capture: {message}");
+        }
+
+        #[cfg(not(debug_assertions))]
+        fn log_dxgi(_message: &str) {}
+
         struct FrameGuard {
             duplication: windows::Win32::Graphics::Dxgi::IDXGIOutputDuplication,
         }
@@ -1089,6 +1312,97 @@ mod platform {
                 unsafe {
                     self.context.Unmap(&self.texture, 0);
                 }
+            }
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn dxgi_rejects_pointer_only_frame() {
+                let frame = DxgiFrameStats {
+                    last_present_time: 0,
+                    last_mouse_update_time: 12,
+                    accumulated_frames: 0,
+                    total_metadata_buffer_size: 0,
+                    protected_content_masked_out: false,
+                };
+
+                assert!(!frame_has_desktop_update(&frame));
+            }
+
+            #[test]
+            fn dxgi_accepts_desktop_frame() {
+                let frame = DxgiFrameStats {
+                    last_present_time: 15,
+                    last_mouse_update_time: 0,
+                    accumulated_frames: 1,
+                    total_metadata_buffer_size: 16,
+                    protected_content_masked_out: false,
+                };
+
+                assert!(frame_has_desktop_update(&frame));
+            }
+
+            #[test]
+            fn dxgi_rejects_rotated_output_before_copy() {
+                let geometry = DxgiCopyGeometry {
+                    source_left: 0,
+                    source_top: 0,
+                    source_right: 100,
+                    source_bottom: 80,
+                };
+
+                let error = validate_copy_geometry(geometry, 100, 80, 2)
+                    .expect_err("rotation should fall back to GDI");
+
+                assert!(error.contains("rotated"));
+            }
+
+            #[test]
+            fn dxgi_rejects_source_box_outside_texture_before_copy() {
+                let geometry = DxgiCopyGeometry {
+                    source_left: 20,
+                    source_top: 10,
+                    source_right: 140,
+                    source_bottom: 90,
+                };
+
+                let error = validate_copy_geometry(geometry, 100, 80, 1)
+                    .expect_err("invalid source box should fall back to GDI");
+
+                assert!(error.contains("outside"));
+            }
+
+            #[test]
+            fn dxgi_samples_first_non_black_pixel() {
+                let mut pixels = vec![0u8; 4 * 3];
+                pixels[8] = 12;
+                pixels[9] = 34;
+                pixels[10] = 56;
+                pixels[11] = 255;
+
+                let sample = sample_non_black_pixel(&pixels, 3, 1);
+
+                assert_eq!(
+                    sample,
+                    Some(DxgiPixelSample {
+                        x: 2,
+                        y: 0,
+                        b: 12,
+                        g: 34,
+                        r: 56,
+                        a: 255,
+                    })
+                );
+            }
+
+            #[test]
+            fn dxgi_reports_no_non_black_pixel_for_black_frame() {
+                let pixels = vec![0u8; 4 * 3];
+
+                assert_eq!(sample_non_black_pixel(&pixels, 3, 1), None);
             }
         }
     }
