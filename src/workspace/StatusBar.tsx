@@ -80,8 +80,8 @@ export function StatusBar({
         ) : null}
       </div>
       <div className="status-bar-actions">
-        <DontSleepStatusIcon />
         <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />
+        <DontSleepStatusIcon />
       </div>
     </footer>
   );
