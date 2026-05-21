@@ -1678,7 +1678,17 @@ function Taipei101Bg() {
       ctx.moveTo(tower.cx, moduleBottom - 3);
       ctx.lineTo(tower.cx, moduleTop + 6);
       ctx.stroke();
-      drawWindowGrid(tower.cx, moduleTop + tower.segH * 0.24, 5, 5, innerHalf * 0.26, 2.6, 2.8, 4.2, 500 + i * 41);
+      drawWindowGrid(
+        tower.cx,
+        moduleTop + tower.segH * 0.18,
+        7,
+        6,
+        innerHalf * 0.34,
+        tower.segH * 0.052,
+        innerHalf * 0.11,
+        tower.segH * 0.04,
+        500 + i * 41,
+      );
       ctx.strokeStyle = `rgba(185,235,255,${0.42 + segmentGlow * 0.2})`;
       ctx.lineWidth = 0.8;
       ctx.beginPath();
