@@ -3066,6 +3066,117 @@ h2 {
   opacity: 0.55;
 }
 
+.terminal-recording-button {
+  color: #d34242;
+}
+
+.terminal-recording-button.active {
+  background: rgba(211, 66, 66, 0.14);
+  color: #ff7070;
+}
+
+.terminal-recording-status {
+  align-items: center;
+  color: #ff7070;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 750;
+  height: 24px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.terminal-recordings-backdrop {
+  align-items: flex-start;
+  background: rgba(12, 18, 25, 0.34);
+  display: flex;
+  inset: 28px 0 0;
+  justify-content: center;
+  padding-top: 42px;
+  position: absolute;
+  z-index: 8;
+}
+
+.terminal-recordings-dialog {
+  background: var(--chrome);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  max-height: min(460px, calc(100% - 32px));
+  overflow: hidden;
+  width: min(620px, calc(100% - 48px));
+}
+
+.terminal-recordings-dialog header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 10px 8px 14px;
+}
+
+.terminal-recordings-dialog header > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.terminal-recordings-dialog strong,
+.terminal-recordings-dialog small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-recordings-dialog small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.terminal-recordings-dialog > p {
+  color: var(--text-muted);
+  margin: 0;
+  padding: 14px;
+}
+
+.terminal-recordings-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.terminal-recordings-list {
+  display: grid;
+  max-height: 380px;
+  overflow: auto;
+  padding: 6px;
+}
+
+.terminal-recording-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 42px;
+  padding: 7px 8px;
+  text-align: left;
+}
+
+.terminal-recording-row:hover {
+  background: var(--surface);
+}
+
+.terminal-recording-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .toolbar-icon-button {
   width: 32px;
   padding: 0;

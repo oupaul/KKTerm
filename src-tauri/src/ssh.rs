@@ -13,7 +13,7 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
 
 const SSH_TMUX_RESUME_MAX_ATTEMPTS: usize = 2;
@@ -136,13 +136,6 @@ enum SshTerminalControl {
 enum TerminalRunOutcome {
     Closed,
     Disconnected,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct TerminalOutput {
-    session_id: String,
-    data: String,
 }
 
 pub(crate) struct VerifyingClient {
@@ -695,13 +688,7 @@ fn is_benign_ssh_disconnect_error(error: &russh::Error) -> bool {
 }
 
 fn emit_terminal_output(app: &AppHandle, session_id: &str, data: String) {
-    let _ = app.emit(
-        "terminal-output",
-        TerminalOutput {
-            session_id: session_id.to_string(),
-            data,
-        },
-    );
+    crate::sessions::emit_terminal_output(app, session_id, data);
 }
 
 fn initial_directory_for(request: &NativeSshTerminalRequest) -> Option<String> {

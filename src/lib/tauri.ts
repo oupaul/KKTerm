@@ -137,6 +137,21 @@ export interface TerminalOutput {
   data: string;
 }
 
+export interface TerminalRecordingInfo {
+  sessionId: string;
+  connectionId: string;
+  connectionName: string;
+  startedAtMillis: number;
+  path: string;
+}
+
+export interface TerminalRecordingEntry {
+  fileName: string;
+  path: string;
+  sizeBytes: number;
+  modifiedAtMillis?: number;
+}
+
 export interface TmuxSession {
   id: string;
   attached: boolean;
@@ -1236,6 +1251,43 @@ type CommandMap = {
   };
   close_terminal_session: {
     args: { sessionId: string };
+    result: null;
+  };
+  start_terminal_recording: {
+    args: {
+      request: {
+        sessionId: string;
+        connectionId: string;
+        connectionName: string;
+        initialBuffer: string;
+      };
+    };
+    result: TerminalRecordingInfo;
+  };
+  stop_terminal_recording: {
+    args: { sessionId: string };
+    result: TerminalRecordingInfo | null;
+  };
+  list_terminal_recordings: {
+    args: {
+      request: {
+        connectionId: string;
+        connectionName: string;
+      };
+    };
+    result: TerminalRecordingEntry[];
+  };
+  open_terminal_recordings_folder: {
+    args: {
+      request: {
+        connectionId: string;
+        connectionName: string;
+      };
+    };
+    result: null;
+  };
+  open_terminal_recording: {
+    args: { path: string };
     result: null;
   };
   list_tmux_sessions: {

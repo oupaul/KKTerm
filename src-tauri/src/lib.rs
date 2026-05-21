@@ -1406,7 +1406,9 @@ fn credential_reference(
         "urlPassword" => Ok(secrets::SecretReferenceRequest::url_password(owner_id)),
         "aiApiKey" => Ok(secrets::SecretReferenceRequest::ai_api_key(owner_id)),
         "emailApiKey" => Ok(secrets::SecretReferenceRequest::email_api_key(owner_id)),
-        "emailSmtpPassword" => Ok(secrets::SecretReferenceRequest::email_smtp_password(owner_id)),
+        "emailSmtpPassword" => Ok(secrets::SecretReferenceRequest::email_smtp_password(
+            owner_id,
+        )),
         "widgetSecret" => Ok(secrets::SecretReferenceRequest::widget_secret(owner_id)),
         _ => Err("unsupported credential kind".to_string()),
     }
@@ -1463,6 +1465,82 @@ fn close_terminal_session(
     session_id: String,
 ) -> Result<(), String> {
     sessions.close_terminal_session(session_id)
+}
+
+#[tauri::command]
+fn start_terminal_recording(
+    app: tauri::AppHandle,
+    sessions: tauri::State<'_, sessions::SessionManager>,
+    request: sessions::StartTerminalRecordingRequest,
+) -> Result<sessions::TerminalRecordingInfo, String> {
+    sessions.start_terminal_recording(sessions::terminal_recordings_root(&app)?, request)
+}
+
+#[tauri::command]
+fn stop_terminal_recording(
+    sessions: tauri::State<'_, sessions::SessionManager>,
+    session_id: String,
+) -> Result<Option<sessions::TerminalRecordingInfo>, String> {
+    sessions.stop_terminal_recording(session_id)
+}
+
+#[tauri::command]
+fn list_terminal_recordings(
+    app: tauri::AppHandle,
+    sessions: tauri::State<'_, sessions::SessionManager>,
+    request: sessions::ListTerminalRecordingsRequest,
+) -> Result<Vec<sessions::TerminalRecordingEntry>, String> {
+    sessions.list_terminal_recordings(sessions::terminal_recordings_root(&app)?, request)
+}
+
+#[tauri::command]
+fn open_terminal_recordings_folder(
+    app: tauri::AppHandle,
+    sessions: tauri::State<'_, sessions::SessionManager>,
+    request: sessions::ListTerminalRecordingsRequest,
+) -> Result<(), String> {
+    let folder =
+        sessions.terminal_recordings_folder(sessions::terminal_recordings_root(&app)?, request)?;
+    fs::create_dir_all(&folder).map_err(|error| {
+        format!(
+            "failed to create terminal recordings folder {}: {error}",
+            folder.display()
+        )
+    })?;
+    app.opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            format!(
+                "failed to open terminal recordings folder {}: {error}",
+                folder.display()
+            )
+        })
+}
+
+#[tauri::command]
+fn open_terminal_recording(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let root = sessions::terminal_recordings_root(&app)?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recordings root: {error}"))?;
+    let requested = PathBuf::from(&path);
+    let canonical_path = requested
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve terminal recording {path}: {error}"))?;
+    if !canonical_path.starts_with(&canonical_root) {
+        return Err("terminal recording path must stay inside the recordings folder".to_string());
+    }
+    if canonical_path.extension().and_then(|value| value.to_str()) != Some("txt") {
+        return Err("terminal recording must be a text file".to_string());
+    }
+    app.opener()
+        .open_path(canonical_path.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            format!(
+                "failed to open terminal recording {}: {error}",
+                canonical_path.display()
+            )
+        })
 }
 
 #[tauri::command]
@@ -2468,6 +2546,11 @@ pub fn run() {
             write_terminal_input,
             resize_terminal,
             close_terminal_session,
+            start_terminal_recording,
+            stop_terminal_recording,
+            list_terminal_recordings,
+            open_terminal_recordings_folder,
+            open_terminal_recording,
             list_tmux_sessions,
             close_tmux_session,
             rename_tmux_session,

@@ -1,4 +1,4 @@
-use crate::sessions::TerminalOutput;
+use crate::sessions::emit_terminal_output;
 use serial2::SerialPort;
 use std::{
     sync::{
@@ -7,7 +7,7 @@ use std::{
     },
     time::Duration,
 };
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
 pub struct NativeSerialTerminal {
     writer: SerialPort,
@@ -68,12 +68,10 @@ pub fn start_native_terminal(
             match reader.read(&mut buffer) {
                 Ok(0) => break,
                 Ok(count) => {
-                    let _ = app.emit(
-                        "terminal-output",
-                        TerminalOutput {
-                            session_id: request.session_id.clone(),
-                            data: terminal_text_from_bytes(&buffer[..count]),
-                        },
+                    emit_terminal_output(
+                        &app,
+                        &request.session_id,
+                        terminal_text_from_bytes(&buffer[..count]),
                     );
                 }
                 Err(error)
@@ -85,12 +83,10 @@ pub fn start_native_terminal(
                     continue;
                 }
                 Err(error) => {
-                    let _ = app.emit(
-                        "terminal-output",
-                        TerminalOutput {
-                            session_id: request.session_id.clone(),
-                            data: format!("\r\n[serial read error: {error}]\r\n"),
-                        },
+                    emit_terminal_output(
+                        &app,
+                        &request.session_id,
+                        format!("\r\n[serial read error: {error}]\r\n"),
                     );
                     break;
                 }

@@ -1,10 +1,10 @@
-use crate::sessions::TerminalOutput;
+use crate::sessions::emit_terminal_output;
 use std::{
     io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
     time::Duration,
 };
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
 const IAC: u8 = 255;
 const DONT: u8 = 254;
@@ -118,12 +118,10 @@ pub fn start_native_terminal(
                             &mut prompts,
                             &data,
                         );
-                        let _ = app.emit(
-                            "terminal-output",
-                            TerminalOutput {
-                                session_id: request.session_id.clone(),
-                                data: String::from_utf8_lossy(&data).to_string(),
-                            },
+                        emit_terminal_output(
+                            &app,
+                            &request.session_id,
+                            String::from_utf8_lossy(&data).to_string(),
                         );
                     }
                 }
@@ -136,12 +134,10 @@ pub fn start_native_terminal(
                     continue;
                 }
                 Err(error) => {
-                    let _ = app.emit(
-                        "terminal-output",
-                        TerminalOutput {
-                            session_id: request.session_id.clone(),
-                            data: format!("\r\n[Telnet read error: {error}]\r\n"),
-                        },
+                    emit_terminal_output(
+                        &app,
+                        &request.session_id,
+                        format!("\r\n[Telnet read error: {error}]\r\n"),
                     );
                     break;
                 }
