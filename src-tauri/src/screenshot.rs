@@ -60,6 +60,7 @@ pub struct ListScreenshotsResponse {
 pub fn capture_rect_to_clipboard(
     app: &tauri::AppHandle,
     request: CaptureScreenshotRequest,
+    use_directx: bool,
 ) -> Result<(), String> {
     let target = capture_target(app, request)?;
     platform::capture_screen_rect_to_clipboard(
@@ -68,6 +69,7 @@ pub fn capture_rect_to_clipboard(
         target.y,
         target.width,
         target.height,
+        use_directx,
     )
 }
 
@@ -75,10 +77,16 @@ pub fn capture_rect_to_clipboard(
 pub fn capture_rect_for_assistant(
     app: &tauri::AppHandle,
     request: CaptureScreenshotRequest,
+    use_directx: bool,
 ) -> Result<AssistantScreenshot, String> {
     let target = capture_target(app, request)?;
-    let dib =
-        platform::capture_screen_rect_to_dib(target.x, target.y, target.width, target.height)?;
+    let dib = platform::capture_screen_rect_to_dib(
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        use_directx,
+    )?;
     let result = platform::dib_to_jpeg_data_url(&dib, target.width as u32, target.height as u32)?;
     Ok(AssistantScreenshot {
         data_url: result.data_url,
@@ -88,10 +96,15 @@ pub fn capture_rect_for_assistant(
 }
 
 #[cfg(target_os = "windows")]
-pub fn capture_fullscreen_for_assistant() -> Result<AssistantScreenshot, String> {
+pub fn capture_fullscreen_for_assistant(use_directx: bool) -> Result<AssistantScreenshot, String> {
     let target = platform::virtual_screen_rect();
-    let dib =
-        platform::capture_screen_rect_to_dib(target.x, target.y, target.width, target.height)?;
+    let dib = platform::capture_screen_rect_to_dib(
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        use_directx,
+    )?;
     let result = platform::dib_to_jpeg_data_url(&dib, target.width as u32, target.height as u32)?;
     Ok(AssistantScreenshot {
         data_url: result.data_url,
@@ -106,10 +119,16 @@ pub fn capture_rect_to_library(
     request: CaptureScreenshotRequest,
     kind: String,
     folder_path: String,
+    use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     let target = capture_target(app, request)?;
-    let dib =
-        platform::capture_screen_rect_to_dib(target.x, target.y, target.width, target.height)?;
+    let dib = platform::capture_screen_rect_to_dib(
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        use_directx,
+    )?;
     save_dib_to_library(
         &dib,
         target.width as u32,
@@ -124,11 +143,17 @@ pub fn capture_fullscreen_to_library(
     app: &tauri::AppHandle,
     kind: String,
     folder_path: String,
+    use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let target = platform::virtual_screen_rect();
-    let dib =
-        platform::capture_screen_rect_to_dib(target.x, target.y, target.width, target.height)?;
+    let dib = platform::capture_screen_rect_to_dib(
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        use_directx,
+    )?;
     save_dib_to_library(
         &dib,
         target.width as u32,
@@ -143,11 +168,17 @@ pub fn capture_active_window_to_library(
     app: &tauri::AppHandle,
     kind: String,
     folder_path: String,
+    use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let screen = platform::virtual_screen_rect();
-    let screen_dib =
-        platform::capture_screen_rect_to_dib(screen.x, screen.y, screen.width, screen.height)?;
+    let screen_dib = platform::capture_screen_rect_to_dib(
+        screen.x,
+        screen.y,
+        screen.width,
+        screen.height,
+        use_directx,
+    )?;
     let windows = platform::enumerate_window_rects(&screen);
     let target = platform::select_window_rect(&screen_dib, &screen, windows)?
         .ok_or_else(|| "screenshot capture canceled".to_string())?;
@@ -166,11 +197,17 @@ pub fn capture_interactive_region_to_library(
     app: &tauri::AppHandle,
     kind: String,
     folder_path: String,
+    use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     let _guard = MinimizedCaptureWindow::new(app)?;
     let screen = platform::virtual_screen_rect();
-    let screen_dib =
-        platform::capture_screen_rect_to_dib(screen.x, screen.y, screen.width, screen.height)?;
+    let screen_dib = platform::capture_screen_rect_to_dib(
+        screen.x,
+        screen.y,
+        screen.width,
+        screen.height,
+        use_directx,
+    )?;
     let target = platform::select_region_rect(&screen_dib, &screen)?
         .ok_or_else(|| "screenshot capture canceled".to_string())?;
     let dib = platform::crop_dib(&screen_dib, screen.width, screen.height, &screen, &target)?;
@@ -268,6 +305,7 @@ fn capture_target(
 pub fn capture_rect_to_clipboard(
     _app: &tauri::AppHandle,
     _request: CaptureScreenshotRequest,
+    _use_directx: bool,
 ) -> Result<(), String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
@@ -276,12 +314,13 @@ pub fn capture_rect_to_clipboard(
 pub fn capture_rect_for_assistant(
     _app: &tauri::AppHandle,
     _request: CaptureScreenshotRequest,
+    _use_directx: bool,
 ) -> Result<AssistantScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn capture_fullscreen_for_assistant() -> Result<AssistantScreenshot, String> {
+pub fn capture_fullscreen_for_assistant(_use_directx: bool) -> Result<AssistantScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
 
@@ -291,6 +330,7 @@ pub fn capture_rect_to_library(
     _request: CaptureScreenshotRequest,
     _kind: String,
     _folder_path: String,
+    _use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
@@ -300,6 +340,7 @@ pub fn capture_fullscreen_to_library(
     _app: &tauri::AppHandle,
     _kind: String,
     _folder_path: String,
+    _use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
@@ -309,6 +350,7 @@ pub fn capture_active_window_to_library(
     _app: &tauri::AppHandle,
     _kind: String,
     _folder_path: String,
+    _use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
@@ -318,6 +360,7 @@ pub fn capture_interactive_region_to_library(
     _app: &tauri::AppHandle,
     _kind: String,
     _folder_path: String,
+    _use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
 }
@@ -713,12 +756,31 @@ mod platform {
         y: i32,
         width: i32,
         height: i32,
+        use_directx: bool,
     ) -> Result<(), String> {
-        let dib = capture_screen_rect_to_dib(x, y, width, height)?;
+        let dib = capture_screen_rect_to_dib(x, y, width, height, use_directx)?;
         unsafe { write_dib_to_clipboard(owner_hwnd, &dib) }
     }
 
     pub fn capture_screen_rect_to_dib(
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        use_directx: bool,
+    ) -> Result<Vec<u8>, String> {
+        if use_directx {
+            match capture_screen_rect_to_dib_dxgi(x, y, width, height) {
+                Ok(dib) => return Ok(dib),
+                Err(error) => {
+                    eprintln!("DXGI screenshot capture fell back to GDI: {error}");
+                }
+            }
+        }
+        capture_screen_rect_to_dib_gdi(x, y, width, height)
+    }
+
+    fn capture_screen_rect_to_dib_gdi(
         x: i32,
         y: i32,
         width: i32,
@@ -754,6 +816,280 @@ mod platform {
             }
 
             bitmap_to_dib(screen_dc.0, bitmap.0, width, height)
+        }
+    }
+
+    fn capture_screen_rect_to_dib_dxgi(
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> Result<Vec<u8>, String> {
+        if width <= 0 || height <= 0 {
+            return Err("screenshot region must have a positive size".to_string());
+        }
+
+        directx::capture_screen_rect_to_dib(x, y, width, height)
+    }
+
+    fn bgra_pixels_to_dib(pixels: &[u8], width: i32, height: i32) -> Result<Vec<u8>, String> {
+        let stride = ((width * 32 + 31) / 32) * 4;
+        let image_size = (stride * height) as usize;
+        let header_size = mem::size_of::<BITMAPINFOHEADER>();
+        let expected_len = image_size;
+        if pixels.len() < expected_len {
+            return Err("captured screenshot image data is incomplete".to_string());
+        }
+
+        let mut dib = vec![0u8; header_size + image_size];
+        unsafe {
+            let header = dib.as_mut_ptr() as *mut BITMAPINFOHEADER;
+            (*header).biSize = header_size as u32;
+            (*header).biWidth = width;
+            (*header).biHeight = -height;
+            (*header).biPlanes = 1;
+            (*header).biBitCount = 32;
+            (*header).biCompression = BI_RGB;
+            (*header).biSizeImage = image_size as u32;
+
+            dib[header_size..header_size + image_size].copy_from_slice(&pixels[..expected_len]);
+        }
+        Ok(dib)
+    }
+
+    mod directx {
+        use std::slice;
+
+        use windows::{
+            core::Interface,
+            Win32::{
+                Foundation::HMODULE,
+                Graphics::{
+                    Direct3D::{
+                        D3D_DRIVER_TYPE_UNKNOWN, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
+                    },
+                    Direct3D11::{
+                        D3D11_BOX, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_FLAG,
+                        D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ, D3D11_SDK_VERSION,
+                        D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING, D3D11CreateDevice,
+                        ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
+                    },
+                    Dxgi::{
+                        Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
+                        CreateDXGIFactory1, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter,
+                        IDXGIAdapter1, IDXGIFactory1, IDXGIOutput, IDXGIOutput1, IDXGIResource,
+                    },
+                },
+            },
+        };
+
+        use super::bgra_pixels_to_dib;
+
+        pub fn capture_screen_rect_to_dib(
+            x: i32,
+            y: i32,
+            width: i32,
+            height: i32,
+        ) -> Result<Vec<u8>, String> {
+            unsafe {
+                let factory: IDXGIFactory1 = CreateDXGIFactory1()
+                    .map_err(|error| format!("failed to create DXGI factory: {error}"))?;
+                let output = find_output_for_rect(&factory, x, y, width, height)?;
+                capture_output_rect(output, x, y, width, height)
+            }
+        }
+
+        unsafe fn find_output_for_rect(
+            factory: &IDXGIFactory1,
+            x: i32,
+            y: i32,
+            width: i32,
+            height: i32,
+        ) -> Result<(IDXGIAdapter1, IDXGIOutput, i32, i32), String> {
+            let right = x
+                .checked_add(width)
+                .ok_or_else(|| "screenshot region is too wide".to_string())?;
+            let bottom = y
+                .checked_add(height)
+                .ok_or_else(|| "screenshot region is too tall".to_string())?;
+            let mut adapter_index = 0;
+            while let Ok(adapter) = factory.EnumAdapters1(adapter_index) {
+                let mut output_index = 0;
+                while let Ok(output) = adapter.EnumOutputs(output_index) {
+                    let desc = output
+                        .GetDesc()
+                        .map_err(|error| format!("failed to read DXGI output: {error}"))?;
+                    let rect = desc.DesktopCoordinates;
+                    if x >= rect.left && y >= rect.top && right <= rect.right && bottom <= rect.bottom
+                    {
+                        return Ok((adapter, output, rect.left, rect.top));
+                    }
+                    output_index += 1;
+                }
+                adapter_index += 1;
+            }
+
+            Err("screenshot region spans multiple outputs or no matching DXGI output was found"
+                .to_string())
+        }
+
+        unsafe fn capture_output_rect(
+            target: (IDXGIAdapter1, IDXGIOutput, i32, i32),
+            x: i32,
+            y: i32,
+            width: i32,
+            height: i32,
+        ) -> Result<Vec<u8>, String> {
+            let (adapter1, output, output_left, output_top) = target;
+            let adapter: IDXGIAdapter = adapter1
+                .cast()
+                .map_err(|error| format!("failed to use DXGI adapter: {error}"))?;
+            let output1: IDXGIOutput1 = output
+                .cast()
+                .map_err(|error| format!("failed to use DXGI output duplication: {error}"))?;
+            let (device, context) = create_device(&adapter)?;
+            let duplication = output1
+                .DuplicateOutput(&device)
+                .map_err(|error| format!("failed to duplicate DXGI output: {error}"))?;
+
+            let mut frame_info = DXGI_OUTDUPL_FRAME_INFO::default();
+            let mut resource: Option<IDXGIResource> = None;
+            duplication
+                .AcquireNextFrame(100, &mut frame_info, &mut resource)
+                .map_err(|error| format!("failed to acquire DXGI frame: {error}"))?;
+            let _frame_guard = FrameGuard { duplication };
+
+            let resource = resource.ok_or_else(|| "DXGI frame resource is empty".to_string())?;
+            let desktop_texture: ID3D11Texture2D = resource
+                .cast()
+                .map_err(|error| format!("failed to read DXGI frame texture: {error}"))?;
+
+            let copy_texture = create_staging_texture(&device, width as u32, height as u32)?;
+            let source_box = D3D11_BOX {
+                left: (x - output_left) as u32,
+                top: (y - output_top) as u32,
+                front: 0,
+                right: (x - output_left + width) as u32,
+                bottom: (y - output_top + height) as u32,
+                back: 1,
+            };
+            context.CopySubresourceRegion(
+                &copy_texture,
+                0,
+                0,
+                0,
+                0,
+                &desktop_texture,
+                0,
+                Some(&source_box),
+            );
+
+            let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
+            context
+                .Map(&copy_texture, 0, D3D11_MAP_READ, 0, Some(&mut mapped))
+                .map_err(|error| format!("failed to map DXGI screenshot texture: {error}"))?;
+            let _map_guard = MapGuard {
+                context: context.clone(),
+                texture: copy_texture.clone(),
+            };
+
+            let row_bytes = width as usize * 4;
+            let mut pixels = vec![0u8; row_bytes * height as usize];
+            for row in 0..height as usize {
+                let source = (mapped.pData as *const u8).add(row * mapped.RowPitch as usize);
+                let source = slice::from_raw_parts(source, row_bytes);
+                let target_start = row * row_bytes;
+                pixels[target_start..target_start + row_bytes].copy_from_slice(source);
+            }
+
+            bgra_pixels_to_dib(&pixels, width, height)
+        }
+
+        unsafe fn create_device(
+            adapter: &IDXGIAdapter,
+        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
+            let preferred = [D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0];
+            create_device_with_feature_levels(adapter, &preferred).or_else(|_| {
+                let fallback = [D3D_FEATURE_LEVEL_11_0];
+                create_device_with_feature_levels(adapter, &fallback)
+            })
+        }
+
+        unsafe fn create_device_with_feature_levels(
+            adapter: &IDXGIAdapter,
+            feature_levels: &[windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL],
+        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
+            let mut device = None;
+            let mut context = None;
+            D3D11CreateDevice(
+                adapter,
+                D3D_DRIVER_TYPE_UNKNOWN,
+                HMODULE::default(),
+                D3D11_CREATE_DEVICE_FLAG(0),
+                Some(feature_levels),
+                D3D11_SDK_VERSION,
+                Some(&mut device),
+                None,
+                Some(&mut context),
+            )
+            .map_err(|error| format!("failed to create D3D11 device: {error}"))?;
+
+            Ok((
+                device.ok_or_else(|| "D3D11 device is empty".to_string())?,
+                context.ok_or_else(|| "D3D11 device context is empty".to_string())?,
+            ))
+        }
+
+        unsafe fn create_staging_texture(
+            device: &ID3D11Device,
+            width: u32,
+            height: u32,
+        ) -> Result<ID3D11Texture2D, String> {
+            let desc = D3D11_TEXTURE2D_DESC {
+                Width: width.max(1),
+                Height: height.max(1),
+                MipLevels: 1,
+                ArraySize: 1,
+                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                SampleDesc: DXGI_SAMPLE_DESC {
+                    Count: 1,
+                    Quality: 0,
+                },
+                Usage: D3D11_USAGE_STAGING,
+                BindFlags: 0,
+                CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
+                MiscFlags: 0,
+            };
+            let mut texture = None;
+            device
+                .CreateTexture2D(&desc, None, Some(&mut texture))
+                .map_err(|error| format!("failed to create D3D11 staging texture: {error}"))?;
+            texture.ok_or_else(|| "D3D11 staging texture is empty".to_string())
+        }
+
+        struct FrameGuard {
+            duplication: windows::Win32::Graphics::Dxgi::IDXGIOutputDuplication,
+        }
+
+        impl Drop for FrameGuard {
+            fn drop(&mut self) {
+                unsafe {
+                    let _ = self.duplication.ReleaseFrame();
+                }
+            }
+        }
+
+        struct MapGuard {
+            context: ID3D11DeviceContext,
+            texture: ID3D11Texture2D,
+        }
+
+        impl Drop for MapGuard {
+            fn drop(&mut self) {
+                unsafe {
+                    self.context.Unmap(&self.texture, 0);
+                }
+            }
         }
     }
 

@@ -1162,23 +1162,29 @@ fn update_tray_menu(
 #[tauri::command]
 fn capture_screenshot_to_clipboard(
     app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
     request: screenshot::CaptureScreenshotRequest,
 ) -> Result<(), String> {
-    screenshot::capture_rect_to_clipboard(&app, request)
+    let settings = storage.general_settings()?;
+    screenshot::capture_rect_to_clipboard(&app, request, settings.use_directx_screen_capture())
 }
 
 #[tauri::command]
 fn capture_screenshot_for_assistant(
     app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
     request: screenshot::CaptureScreenshotRequest,
 ) -> Result<screenshot::AssistantScreenshot, String> {
-    screenshot::capture_rect_for_assistant(&app, request)
+    let settings = storage.general_settings()?;
+    screenshot::capture_rect_for_assistant(&app, request, settings.use_directx_screen_capture())
 }
 
 #[tauri::command]
-fn capture_fullscreen_screenshot_for_assistant() -> Result<screenshot::AssistantScreenshot, String>
-{
-    screenshot::capture_fullscreen_for_assistant()
+fn capture_fullscreen_screenshot_for_assistant(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<screenshot::AssistantScreenshot, String> {
+    let settings = storage.general_settings()?;
+    screenshot::capture_fullscreen_for_assistant(settings.use_directx_screen_capture())
 }
 
 #[tauri::command]
@@ -1189,7 +1195,14 @@ fn capture_screenshot_to_library(
     kind: String,
 ) -> Result<screenshot::StoredScreenshot, String> {
     let settings = storage.screenshot_settings()?;
-    screenshot::capture_rect_to_library(&app, request, kind, settings.folder_path().to_string())
+    let general_settings = storage.general_settings()?;
+    screenshot::capture_rect_to_library(
+        &app,
+        request,
+        kind,
+        settings.folder_path().to_string(),
+        general_settings.use_directx_screen_capture(),
+    )
 }
 
 #[tauri::command]
@@ -1199,7 +1212,13 @@ fn capture_fullscreen_screenshot_to_library(
     kind: String,
 ) -> Result<screenshot::StoredScreenshot, String> {
     let settings = storage.screenshot_settings()?;
-    screenshot::capture_fullscreen_to_library(&app, kind, settings.folder_path().to_string())
+    let general_settings = storage.general_settings()?;
+    screenshot::capture_fullscreen_to_library(
+        &app,
+        kind,
+        settings.folder_path().to_string(),
+        general_settings.use_directx_screen_capture(),
+    )
 }
 
 #[tauri::command]
@@ -1209,7 +1228,13 @@ fn capture_active_window_screenshot_to_library(
     kind: String,
 ) -> Result<screenshot::StoredScreenshot, String> {
     let settings = storage.screenshot_settings()?;
-    screenshot::capture_active_window_to_library(&app, kind, settings.folder_path().to_string())
+    let general_settings = storage.general_settings()?;
+    screenshot::capture_active_window_to_library(
+        &app,
+        kind,
+        settings.folder_path().to_string(),
+        general_settings.use_directx_screen_capture(),
+    )
 }
 
 #[tauri::command]
@@ -1219,10 +1244,12 @@ fn capture_interactive_region_screenshot_to_library(
     kind: String,
 ) -> Result<screenshot::StoredScreenshot, String> {
     let settings = storage.screenshot_settings()?;
+    let general_settings = storage.general_settings()?;
     screenshot::capture_interactive_region_to_library(
         &app,
         kind,
         settings.folder_path().to_string(),
+        general_settings.use_directx_screen_capture(),
     )
 }
 

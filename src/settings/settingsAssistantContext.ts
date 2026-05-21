@@ -50,6 +50,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         tutorialTargetId: "settings.language",
       },
       { key: "settings.workspaceAccess", description: "Workspace access and runtime toggles." },
+      { key: "settings.useDirectxScreenCapture", description: "DXGI Desktop Duplication screenshot acceleration toggle." },
       { key: "settings.autoStartWithWindows", description: "Launch KKTerm minimized when the user signs in to Windows." },
       { key: "settings.settingsData", description: "Backup, import, database folder, and reset actions." },
     ],

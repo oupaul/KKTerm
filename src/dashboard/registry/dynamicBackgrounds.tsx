@@ -1680,7 +1680,7 @@ function Taipei101Bg() {
       ctx.stroke();
       drawWindowGrid(
         tower.cx,
-        moduleTop + tower.segH * 0.18,
+        moduleTop + tower.segH * 0.29,
         7,
         6,
         innerHalf * 0.34,

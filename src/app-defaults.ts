@@ -29,6 +29,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   autoStartWithWindows: false,
   minimizeToTray: true,
   dontSleepEnabled: false,
+  useDirectxScreenCapture: true,
   lastBackupAt: null,
 };
 

@@ -378,6 +378,27 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
       </fieldset>
 
       <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.performance")}</legend>
+        <div>
+          <p className="field-hint">{t("settings.performanceHint")}</p>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.useDirectxScreenCapture}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, useDirectxScreenCapture: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.useDirectxScreenCapture")}</strong>
+              <small>{t("settings.useDirectxScreenCaptureHint")}</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.settingsData")}</legend>
         <div>
           <p className="field-hint">

@@ -183,6 +183,7 @@ export interface GeneralSettings {
   autoStartWithWindows: boolean;
   minimizeToTray: boolean;
   dontSleepEnabled: boolean;
+  useDirectxScreenCapture: boolean;
   lastBackupAt?: string | null;
 }
 

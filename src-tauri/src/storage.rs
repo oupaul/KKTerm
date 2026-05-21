@@ -283,6 +283,8 @@ pub struct GeneralSettings {
     minimize_to_tray: bool,
     #[serde(default)]
     dont_sleep_enabled: bool,
+    #[serde(default = "default_use_directx_screen_capture")]
+    use_directx_screen_capture: bool,
     #[serde(default)]
     last_backup_at: Option<String>,
 }
@@ -302,6 +304,10 @@ impl GeneralSettings {
 
     pub(crate) fn dont_sleep_enabled(&self) -> bool {
         self.dont_sleep_enabled
+    }
+
+    pub(crate) fn use_directx_screen_capture(&self) -> bool {
+        self.use_directx_screen_capture
     }
 }
 
@@ -4067,8 +4073,13 @@ fn default_general_settings() -> GeneralSettings {
         auto_start_with_windows: false,
         minimize_to_tray: false,
         dont_sleep_enabled: false,
+        use_directx_screen_capture: default_use_directx_screen_capture(),
         last_backup_at: None,
     }
+}
+
+fn default_use_directx_screen_capture() -> bool {
+    true
 }
 
 fn default_app_launcher_settings() -> AppLauncherSettings {
@@ -5975,6 +5986,7 @@ mod tests {
         assert!(!defaults.auto_start_with_windows);
         assert!(!defaults.minimize_to_tray);
         assert!(!defaults.dont_sleep_enabled);
+        assert!(defaults.use_directx_screen_capture);
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
@@ -5992,6 +6004,7 @@ mod tests {
                 auto_start_with_windows: true,
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
+                use_directx_screen_capture: false,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -6005,6 +6018,7 @@ mod tests {
         assert!(updated.auto_start_with_windows);
         assert!(updated.minimize_to_tray);
         assert!(updated.dont_sleep_enabled);
+        assert!(!updated.use_directx_screen_capture);
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
@@ -6017,6 +6031,7 @@ mod tests {
         assert!(reloaded.auto_start_with_windows);
         assert!(reloaded.minimize_to_tray);
         assert!(reloaded.dont_sleep_enabled);
+        assert!(!reloaded.use_directx_screen_capture);
         assert!(reloaded.last_backup_at.is_none());
     }
 
@@ -6250,6 +6265,7 @@ mod tests {
                 auto_start_with_windows: true,
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
+                use_directx_screen_capture: false,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -6266,6 +6282,7 @@ mod tests {
                 auto_start_with_windows: false,
                 minimize_to_tray: false,
                 dont_sleep_enabled: false,
+                use_directx_screen_capture: true,
                 last_backup_at: None,
             })
             .expect("general settings changes after export");
@@ -6285,6 +6302,7 @@ mod tests {
         );
         assert!(imported.general_settings.minimize_to_tray);
         assert!(imported.general_settings.dont_sleep_enabled);
+        assert!(!imported.general_settings.use_directx_screen_capture);
         assert_eq!(
             imported.general_settings.last_backup_at.as_deref(),
             Some(imported.backup.created_at.as_str())
