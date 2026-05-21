@@ -973,7 +973,23 @@
       "sage": "Sauge",
       "sand": "Sable chaud",
       "sky": "Ciel",
-      "slate": "Ardoise"
+      "slate": "Ardoise",
+      "midnight": "Minuit",
+      "pine": "Pin",
+      "aubergine": "Aubergine",
+      "ember": "Braise",
+      "harbor": "Port",
+      "moss": "Mousse",
+      "wine": "Vin",
+      "steel": "Acier",
+      "gMidnight": "Minuit",
+      "gHarbor": "Port",
+      "gEmber": "Braise",
+      "gOrchid": "Orchidée",
+      "gForest": "Forêt",
+      "gEclipse": "Éclipse",
+      "gCobalt": "Cobalt",
+      "gNocturne": "Nocturne"
     },
     "backgroundRemoveImage": "Supprimer",
     "broadcast": "Diffusion",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "Dossiers SKILL.md locaux qui enseignent à l’assistant IA des workflows ciblés. Les skills de démarrage inclus sont copiés ici automatiquement. Les scripts ne sont pas exécutés dans cette version ; utilisez le bouton de dossier pour ajouter ou modifier des skills.",
     "assistantSkillsOpen": "Ouvrir {{name}}",
     "assistantSkillsOpenFolder": "Ouvrir le dossier des skills",
-    "assistantSkillsTitle": "Skills de l’assistant"
+    "assistantSkillsTitle": "Skills de l’assistant",
+    "dashboardUseRandomDynamicBackground": "Utiliser un arrière-plan dynamique aléatoire",
+    "dashboardUseRandomDynamicBackgroundDesc": "Les nouvelles vues du Dashboard démarrent automatiquement avec un arrière-plan dynamique aléatoire."
   },
   "sftp": {
     "accessed": "Accédé",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "sessions tmux",
     "trustHostKey": "Faire confiance à la clé d'hôte SSH pour",
     "verifyingHostKey": "Vérification de la clé d'hôte SSH...",
-    "view": "Affichage"
+    "view": "Affichage",
+    "startRecording": "Démarrer l'enregistrement",
+    "stopRecording": "Arrêter l'enregistrement",
+    "recording": "Enregistrement",
+    "recordingStarted": "Enregistrement du terminal démarré.",
+    "recordingStopped": "Enregistrement du terminal arrêté.",
+    "recordingSaved": "Enregistrement du terminal enregistré dans {{path}}.",
+    "recordingFailed": "Échec de l'enregistrement du terminal : {{message}}",
+    "recordingUnavailable": "L'enregistrement du terminal nécessite une session de terminal de bureau active.",
+    "openRecordings": "Ouvrir les enregistrements",
+    "recordingsTitle": "Enregistrements du terminal",
+    "openRecordingsFolder": "Ouvrir le dossier des enregistrements",
+    "noRecordings": "Aucun enregistrement pour cette connexion.",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "Adresse",

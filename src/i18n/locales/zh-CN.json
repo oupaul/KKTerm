@@ -973,7 +973,23 @@
       "sage": "鼠尾草",
       "sand": "暖沙",
       "sky": "天空",
-      "slate": "岩灰"
+      "slate": "岩灰",
+      "midnight": "午夜",
+      "pine": "松木",
+      "aubergine": "茄紫",
+      "ember": "余烬",
+      "harbor": "港湾",
+      "moss": "苔藓",
+      "wine": "酒红",
+      "steel": "钢铁",
+      "gMidnight": "午夜",
+      "gHarbor": "港湾",
+      "gEmber": "余烬",
+      "gOrchid": "兰花",
+      "gForest": "森林",
+      "gEclipse": "日食",
+      "gCobalt": "钴蓝",
+      "gNocturne": "夜曲"
     },
     "backgroundRemoveImage": "移除",
     "broadcast": "广播",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "本地 SKILL.md 文件夹，用于教 AI 助手执行专注的工作流。内置的入门技能会自动复制到这里。此版本不会执行脚本；请使用文件夹按钮添加或编辑技能。",
     "assistantSkillsOpen": "打开 {{name}}",
     "assistantSkillsOpenFolder": "打开技能文件夹",
-    "assistantSkillsTitle": "助手技能"
+    "assistantSkillsTitle": "助手技能",
+    "dashboardUseRandomDynamicBackground": "使用随机动态背景",
+    "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 视图会自动以随机动态背景开始。"
   },
   "sftp": {
     "accessed": "访问日期",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "tmux 会话",
     "trustHostKey": "信任 SSH 主机密钥",
     "verifyingHostKey": "正在验证 SSH 主机密钥…",
-    "view": "查看"
+    "view": "查看",
+    "startRecording": "开始录制",
+    "stopRecording": "停止录制",
+    "recording": "正在录制",
+    "recordingStarted": "Terminal 录制已开始。",
+    "recordingStopped": "Terminal 录制已停止。",
+    "recordingSaved": "Terminal 录制已保存到 {{path}}。",
+    "recordingFailed": "Terminal 录制失败：{{message}}",
+    "recordingUnavailable": "Terminal 录制需要一个活动的桌面 Terminal Session。",
+    "openRecordings": "打开录制",
+    "recordingsTitle": "Terminal 录制",
+    "openRecordingsFolder": "打开录制文件夹",
+    "noRecordings": "此 Connection 没有录制。",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "网址",

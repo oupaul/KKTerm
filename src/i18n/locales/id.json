@@ -973,7 +973,23 @@
       "sage": "Sage",
       "sand": "Pasir Hangat",
       "sky": "Langit",
-      "slate": "Batu Tulis"
+      "slate": "Batu Tulis",
+      "midnight": "Tengah malam",
+      "pine": "Pinus",
+      "aubergine": "Terung",
+      "ember": "Bara",
+      "harbor": "Pelabuhan",
+      "moss": "Lumut",
+      "wine": "Anggur",
+      "steel": "Baja",
+      "gMidnight": "Tengah malam",
+      "gHarbor": "Pelabuhan",
+      "gEmber": "Bara",
+      "gOrchid": "Anggrek",
+      "gForest": "Hutan",
+      "gEclipse": "Gerhana",
+      "gCobalt": "Kobalt",
+      "gNocturne": "Nokturnal"
     },
     "backgroundRemoveImage": "Hapus",
     "broadcast": "Broadcast",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "Folder SKILL.md lokal yang mengajarkan alur kerja terfokus kepada Asisten AI. Skill awal bawaan disalin ke sini secara otomatis. Skrip tidak dijalankan dalam versi ini; gunakan tombol folder untuk menambah atau mengedit skill.",
     "assistantSkillsOpen": "Buka {{name}}",
     "assistantSkillsOpenFolder": "Buka folder skill",
-    "assistantSkillsTitle": "Skill Asisten"
+    "assistantSkillsTitle": "Skill Asisten",
+    "dashboardUseRandomDynamicBackground": "Gunakan latar belakang dinamis acak",
+    "dashboardUseRandomDynamicBackgroundDesc": "Tampilan Dashboard baru otomatis dimulai dengan latar belakang dinamis acak."
   },
   "sftp": {
     "accessed": "Diakses",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "sesi tmux",
     "trustHostKey": "Percayai kunci host SSH untuk",
     "verifyingHostKey": "Memverifikasi kunci host SSH...",
-    "view": "Tampilan"
+    "view": "Tampilan",
+    "startRecording": "Mulai perekaman",
+    "stopRecording": "Hentikan perekaman",
+    "recording": "Merekam",
+    "recordingStarted": "Perekaman Terminal dimulai.",
+    "recordingStopped": "Perekaman Terminal dihentikan.",
+    "recordingSaved": "Perekaman Terminal disimpan ke {{path}}.",
+    "recordingFailed": "Perekaman Terminal gagal: {{message}}",
+    "recordingUnavailable": "Perekaman Terminal memerlukan Session Terminal desktop yang aktif.",
+    "openRecordings": "Buka rekaman",
+    "recordingsTitle": "Rekaman Terminal",
+    "openRecordingsFolder": "Buka folder rekaman",
+    "noRecordings": "Tidak ada rekaman untuk Connection ini.",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "Alamat",

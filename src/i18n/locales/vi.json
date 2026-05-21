@@ -973,7 +973,23 @@
       "sage": "Xô thơm",
       "sand": "Cát ấm",
       "sky": "Bầu trời",
-      "slate": "Đá phiến"
+      "slate": "Đá phiến",
+      "midnight": "Nửa đêm",
+      "pine": "Thông",
+      "aubergine": "Cà tím",
+      "ember": "Than hồng",
+      "harbor": "Bến cảng",
+      "moss": "Rêu",
+      "wine": "Rượu vang",
+      "steel": "Thép",
+      "gMidnight": "Nửa đêm",
+      "gHarbor": "Bến cảng",
+      "gEmber": "Than hồng",
+      "gOrchid": "Hoa lan",
+      "gForest": "Rừng",
+      "gEclipse": "Nhật thực",
+      "gCobalt": "Coban",
+      "gNocturne": "Dạ khúc"
     },
     "backgroundRemoveImage": "Xóa",
     "canvasOpacity": "Độ mờ canvas",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "Các thư mục SKILL.md cục bộ dạy cho Trợ lý AI những quy trình làm việc tập trung. Các kỹ năng khởi đầu đi kèm được tự động sao chép vào đây. Tập lệnh không được thực thi trong phiên bản này; hãy dùng nút thư mục để thêm hoặc chỉnh sửa kỹ năng.",
     "assistantSkillsOpen": "Mở {{name}}",
     "assistantSkillsOpenFolder": "Mở thư mục kỹ năng",
-    "assistantSkillsTitle": "Kỹ năng Trợ lý"
+    "assistantSkillsTitle": "Kỹ năng Trợ lý",
+    "dashboardUseRandomDynamicBackground": "Dùng nền động ngẫu nhiên",
+    "dashboardUseRandomDynamicBackgroundDesc": "Các chế độ xem Dashboard mới tự động bắt đầu với nền động ngẫu nhiên."
   },
   "sftp": {
     "accessed": "Accessed",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "tmux sessions",
     "trustHostKey": "Trust SSH host key for",
     "verifyingHostKey": "Verifying SSH host key...",
-    "view": "View"
+    "view": "View",
+    "startRecording": "Bắt đầu ghi",
+    "stopRecording": "Dừng ghi",
+    "recording": "Đang ghi",
+    "recordingStarted": "Đã bắt đầu ghi Terminal.",
+    "recordingStopped": "Đã dừng ghi Terminal.",
+    "recordingSaved": "Đã lưu bản ghi Terminal vào {{path}}.",
+    "recordingFailed": "Ghi Terminal thất bại: {{message}}",
+    "recordingUnavailable": "Ghi Terminal cần một phiên Terminal desktop đang hoạt động.",
+    "openRecordings": "Mở bản ghi",
+    "recordingsTitle": "Bản ghi Terminal",
+    "openRecordingsFolder": "Mở thư mục bản ghi",
+    "noRecordings": "Không có bản ghi nào cho kết nối này.",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "Address",

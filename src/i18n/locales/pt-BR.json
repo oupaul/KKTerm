@@ -973,7 +973,23 @@
       "sage": "Sálvia",
       "sand": "Areia quente",
       "sky": "Céu",
-      "slate": "Ardósia"
+      "slate": "Ardósia",
+      "midnight": "Meia-noite",
+      "pine": "Pinheiro",
+      "aubergine": "Berinjela",
+      "ember": "Brasa",
+      "harbor": "Porto",
+      "moss": "Musgo",
+      "wine": "Vinho",
+      "steel": "Aço",
+      "gMidnight": "Meia-noite",
+      "gHarbor": "Porto",
+      "gEmber": "Brasa",
+      "gOrchid": "Orquídea",
+      "gForest": "Floresta",
+      "gEclipse": "Eclipse",
+      "gCobalt": "Cobalto",
+      "gNocturne": "Noturno"
     },
     "backgroundRemoveImage": "Remover",
     "broadcast": "Broadcast",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "Pastas SKILL.md locais que ensinam fluxos de trabalho focados ao Assistente de IA. As skills iniciais incluídas são copiadas para cá automaticamente. Scripts não são executados nesta versão; use o botão de pasta para adicionar ou editar skills.",
     "assistantSkillsOpen": "Abrir {{name}}",
     "assistantSkillsOpenFolder": "Abrir pasta de skills",
-    "assistantSkillsTitle": "Skills do Assistente"
+    "assistantSkillsTitle": "Skills do Assistente",
+    "dashboardUseRandomDynamicBackground": "Usar plano de fundo dinâmico aleatório",
+    "dashboardUseRandomDynamicBackgroundDesc": "Novas visualizações do Dashboard iniciam automaticamente com um plano de fundo dinâmico aleatório."
   },
   "sftp": {
     "accessed": "Acessado",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "sessões tmux",
     "trustHostKey": "Confiar na chave do host SSH para",
     "verifyingHostKey": "Verificando chave do host SSH...",
-    "view": "Visualizar"
+    "view": "Visualizar",
+    "startRecording": "Iniciar gravação",
+    "stopRecording": "Parar gravação",
+    "recording": "Gravando",
+    "recordingStarted": "Gravação do terminal iniciada.",
+    "recordingStopped": "Gravação do terminal interrompida.",
+    "recordingSaved": "Gravação do terminal salva em {{path}}.",
+    "recordingFailed": "Falha na gravação do terminal: {{message}}",
+    "recordingUnavailable": "A gravação do terminal requer uma sessão de terminal desktop ativa.",
+    "openRecordings": "Abrir gravações",
+    "recordingsTitle": "Gravações do terminal",
+    "openRecordingsFolder": "Abrir pasta de gravações",
+    "noRecordings": "Nenhuma gravação para esta conexão.",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "Endereço",

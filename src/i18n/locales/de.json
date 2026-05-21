@@ -973,7 +973,23 @@
       "sage": "Salbei",
       "sand": "Warmer Sand",
       "sky": "Himmel",
-      "slate": "Schiefer"
+      "slate": "Schiefer",
+      "midnight": "Mitternacht",
+      "pine": "Kiefer",
+      "aubergine": "Aubergine",
+      "ember": "Glut",
+      "harbor": "Hafen",
+      "moss": "Moos",
+      "wine": "Weinrot",
+      "steel": "Stahl",
+      "gMidnight": "Mitternacht",
+      "gHarbor": "Hafen",
+      "gEmber": "Glut",
+      "gOrchid": "Orchidee",
+      "gForest": "Wald",
+      "gEclipse": "Finsternis",
+      "gCobalt": "Kobalt",
+      "gNocturne": "Nocturne"
     },
     "backgroundRemoveImage": "Entfernen",
     "broadcast": "Broadcast",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "Lokale SKILL.md-Ordner, die dem KI-Assistenten fokussierte Workflows beibringen. Mitgelieferte Starter-Skills werden automatisch hierher kopiert. Skripte werden in dieser Version nicht ausgeführt; verwende die Ordnerschaltfläche, um Skills hinzuzufügen oder zu bearbeiten.",
     "assistantSkillsOpen": "{{name}} öffnen",
     "assistantSkillsOpenFolder": "Skills-Ordner öffnen",
-    "assistantSkillsTitle": "Assistenten-Skills"
+    "assistantSkillsTitle": "Assistenten-Skills",
+    "dashboardUseRandomDynamicBackground": "Zufälligen dynamischen Hintergrund verwenden",
+    "dashboardUseRandomDynamicBackgroundDesc": "Neue Dashboard-Ansichten starten automatisch mit einem zufälligen dynamischen Hintergrund."
   },
   "sftp": {
     "accessed": "Zugegriffen",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "tmux-Sitzungen",
     "trustHostKey": "SSH-Host-Schlüssel vertrauen für",
     "verifyingHostKey": "Überprüfe SSH-Host-Schlüssel...",
-    "view": "Ansicht"
+    "view": "Ansicht",
+    "startRecording": "Aufzeichnung starten",
+    "stopRecording": "Aufzeichnung stoppen",
+    "recording": "Aufzeichnung",
+    "recordingStarted": "Terminal-Aufzeichnung gestartet.",
+    "recordingStopped": "Terminal-Aufzeichnung gestoppt.",
+    "recordingSaved": "Terminal-Aufzeichnung unter {{path}} gespeichert.",
+    "recordingFailed": "Terminal-Aufzeichnung fehlgeschlagen: {{message}}",
+    "recordingUnavailable": "Terminal-Aufzeichnung erfordert eine aktive Desktop-Terminal-Sitzung.",
+    "openRecordings": "Aufzeichnungen öffnen",
+    "recordingsTitle": "Terminal-Aufzeichnungen",
+    "openRecordingsFolder": "Aufzeichnungsordner öffnen",
+    "noRecordings": "Keine Aufzeichnungen für diese Verbindung.",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "Adresse",

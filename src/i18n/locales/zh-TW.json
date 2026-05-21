@@ -973,7 +973,23 @@
       "sage": "鼠尾草",
       "sand": "暖沙",
       "sky": "天空",
-      "slate": "岩灰"
+      "slate": "岩灰",
+      "midnight": "午夜",
+      "pine": "松木",
+      "aubergine": "茄紫",
+      "ember": "餘燼",
+      "harbor": "港灣",
+      "moss": "苔蘚",
+      "wine": "酒紅",
+      "steel": "鋼鐵",
+      "gMidnight": "午夜",
+      "gHarbor": "港灣",
+      "gEmber": "餘燼",
+      "gOrchid": "蘭花",
+      "gForest": "森林",
+      "gEclipse": "日蝕",
+      "gCobalt": "鈷藍",
+      "gNocturne": "夜曲"
     },
     "backgroundRemoveImage": "移除",
     "broadcast": "廣播",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "本機 SKILL.md 資料夾，教 AI 助理特定工作流程。內建的入門技能會自動複製到這裡。本版本不會執行指令碼；請使用資料夾按鈕新增或編輯技能。",
     "assistantSkillsOpen": "開啟 {{name}}",
     "assistantSkillsOpenFolder": "開啟技能資料夾",
-    "assistantSkillsTitle": "助理技能"
+    "assistantSkillsTitle": "助理技能",
+    "dashboardUseRandomDynamicBackground": "使用隨機動態背景",
+    "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 檢視會自動以隨機動態背景開始。"
   },
   "sftp": {
     "accessed": "存取日期",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "tmux 工作階段",
     "trustHostKey": "信任 SSH 主機金鑰",
     "verifyingHostKey": "正在驗證 SSH 主機金鑰…",
-    "view": "檢視"
+    "view": "檢視",
+    "startRecording": "開始錄製",
+    "stopRecording": "停止錄製",
+    "recording": "正在錄製",
+    "recordingStarted": "Terminal 錄製已開始。",
+    "recordingStopped": "Terminal 錄製已停止。",
+    "recordingSaved": "Terminal 錄製已儲存到 {{path}}。",
+    "recordingFailed": "Terminal 錄製失敗：{{message}}",
+    "recordingUnavailable": "Terminal 錄製需要一個作用中的桌面 Terminal Session。",
+    "openRecordings": "開啟錄製",
+    "recordingsTitle": "Terminal 錄製",
+    "openRecordingsFolder": "開啟錄製資料夾",
+    "noRecordings": "此 Connection 沒有錄製。",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "網址",

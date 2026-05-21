@@ -973,7 +973,23 @@
       "sage": "セージ",
       "sand": "ウォームサンド",
       "sky": "スカイ",
-      "slate": "スレート"
+      "slate": "スレート",
+      "midnight": "真夜中",
+      "pine": "松",
+      "aubergine": "ナス",
+      "ember": "残り火",
+      "harbor": "港",
+      "moss": "苔",
+      "wine": "ワイン",
+      "steel": "鋼",
+      "gMidnight": "真夜中",
+      "gHarbor": "港",
+      "gEmber": "残り火",
+      "gOrchid": "蘭",
+      "gForest": "森",
+      "gEclipse": "日食",
+      "gCobalt": "コバルト",
+      "gNocturne": "ノクターン"
     },
     "backgroundRemoveImage": "削除",
     "broadcast": "ブロードキャスト",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "AI アシスタントに特定のワークフローを教えるローカルの SKILL.md フォルダーです。同梱のスタータースキルはここに自動的にコピーされます。このバージョンではスクリプトは実行されません。スキルを追加または編集するにはフォルダーボタンを使用してください。",
     "assistantSkillsOpen": "{{name}} を開く",
     "assistantSkillsOpenFolder": "スキルフォルダーを開く",
-    "assistantSkillsTitle": "アシスタントスキル"
+    "assistantSkillsTitle": "アシスタントスキル",
+    "dashboardUseRandomDynamicBackground": "ランダムな動的背景を使用",
+    "dashboardUseRandomDynamicBackgroundDesc": "新しいDashboardビューは、ランダムな動的背景で自動的に開始されます。"
   },
   "sftp": {
     "accessed": "アクセス日時",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "tmuxセッション",
     "trustHostKey": "SSHホストキーを信頼：",
     "verifyingHostKey": "SSHホストキーを確認中...",
-    "view": "表示"
+    "view": "表示",
+    "startRecording": "録画を開始",
+    "stopRecording": "録画を停止",
+    "recording": "録画中",
+    "recordingStarted": "Terminalの録画を開始しました。",
+    "recordingStopped": "Terminalの録画を停止しました。",
+    "recordingSaved": "Terminalの録画を{{path}}に保存しました。",
+    "recordingFailed": "Terminalの録画に失敗しました: {{message}}",
+    "recordingUnavailable": "Terminalの録画には、アクティブなデスクトップTerminal Sessionが必要です。",
+    "openRecordings": "録画を開く",
+    "recordingsTitle": "Terminalの録画",
+    "openRecordingsFolder": "録画フォルダーを開く",
+    "noRecordings": "このConnectionには録画がありません。",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "アドレス",

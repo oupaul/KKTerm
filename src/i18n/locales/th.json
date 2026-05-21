@@ -973,7 +973,23 @@
       "sage": "เสจ",
       "sand": "ทรายอุ่น",
       "sky": "ท้องฟ้า",
-      "slate": "สเลท"
+      "slate": "สเลท",
+      "midnight": "เที่ยงคืน",
+      "pine": "สน",
+      "aubergine": "มะเขือม่วง",
+      "ember": "ถ่านคุ",
+      "harbor": "ท่าเรือ",
+      "moss": "มอส",
+      "wine": "ไวน์",
+      "steel": "เหล็ก",
+      "gMidnight": "เที่ยงคืน",
+      "gHarbor": "ท่าเรือ",
+      "gEmber": "ถ่านคุ",
+      "gOrchid": "กล้วยไม้",
+      "gForest": "ป่า",
+      "gEclipse": "คราส",
+      "gCobalt": "โคบอลต์",
+      "gNocturne": "น็อกเทิร์น"
     },
     "backgroundRemoveImage": "ลบ",
     "broadcast": "บรอดคาสต์",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "โฟลเดอร์ SKILL.md ในเครื่องที่สอนเวิร์กโฟลว์เฉพาะให้ผู้ช่วย AI สกิลเริ่มต้นที่มาพร้อมกันจะถูกคัดลอกมาที่นี่โดยอัตโนมัติ เวอร์ชันนี้ไม่เรียกใช้สคริปต์ ใช้ปุ่มโฟลเดอร์เพื่อเพิ่มหรือแก้ไขสกิล",
     "assistantSkillsOpen": "เปิด {{name}}",
     "assistantSkillsOpenFolder": "เปิดโฟลเดอร์สกิล",
-    "assistantSkillsTitle": "สกิลผู้ช่วย"
+    "assistantSkillsTitle": "สกิลผู้ช่วย",
+    "dashboardUseRandomDynamicBackground": "ใช้พื้นหลังไดนามิกแบบสุ่ม",
+    "dashboardUseRandomDynamicBackgroundDesc": "มุมมอง Dashboard ใหม่จะเริ่มต้นโดยอัตโนมัติด้วยพื้นหลังไดนามิกแบบสุ่ม"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "เซสชัน tmux",
     "trustHostKey": "เชื่อถือคีย์โฮสต์ SSH สำหรับ",
     "verifyingHostKey": "กำลังตรวจสอบคีย์โฮสต์ SSH...",
-    "view": "มุมมอง"
+    "view": "มุมมอง",
+    "startRecording": "เริ่มบันทึก",
+    "stopRecording": "หยุดบันทึก",
+    "recording": "กำลังบันทึก",
+    "recordingStarted": "เริ่มบันทึก Terminal แล้ว",
+    "recordingStopped": "หยุดบันทึก Terminal แล้ว",
+    "recordingSaved": "บันทึก Terminal ไปที่ {{path}} แล้ว",
+    "recordingFailed": "การบันทึก Terminal ล้มเหลว: {{message}}",
+    "recordingUnavailable": "การบันทึก Terminal ต้องมี Session Terminal เดสก์ท็อปที่ใช้งานอยู่",
+    "openRecordings": "เปิดรายการบันทึก",
+    "recordingsTitle": "รายการบันทึก Terminal",
+    "openRecordingsFolder": "เปิดโฟลเดอร์รายการบันทึก",
+    "noRecordings": "ไม่มีรายการบันทึกสำหรับ Connection นี้",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "ที่อยู่",

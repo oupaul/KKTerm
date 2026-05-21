@@ -973,7 +973,23 @@
       "sage": "Salvia",
       "sand": "Sabbia calda",
       "sky": "Cielo",
-      "slate": "Ardesia"
+      "slate": "Ardesia",
+      "midnight": "Mezzanotte",
+      "pine": "Pino",
+      "aubergine": "Melanzana",
+      "ember": "Brace",
+      "harbor": "Porto",
+      "moss": "Muschio",
+      "wine": "Vino",
+      "steel": "Acciaio",
+      "gMidnight": "Mezzanotte",
+      "gHarbor": "Porto",
+      "gEmber": "Brace",
+      "gOrchid": "Orchidea",
+      "gForest": "Foresta",
+      "gEclipse": "Eclissi",
+      "gCobalt": "Cobalto",
+      "gNocturne": "Notturno"
     },
     "backgroundRemoveImage": "Rimuovi",
     "broadcast": "Broadcast",
@@ -1792,7 +1808,9 @@
     "assistantSkillsHint": "Cartelle SKILL.md locali che insegnano all’assistente IA workflow mirati. Le skill iniziali incluse vengono copiate qui automaticamente. Gli script non vengono eseguiti in questa versione; usa il pulsante della cartella per aggiungere o modificare skill.",
     "assistantSkillsOpen": "Apri {{name}}",
     "assistantSkillsOpenFolder": "Apri cartella delle skill",
-    "assistantSkillsTitle": "Skill dell’assistente"
+    "assistantSkillsTitle": "Skill dell’assistente",
+    "dashboardUseRandomDynamicBackground": "Usa sfondo dinamico casuale",
+    "dashboardUseRandomDynamicBackgroundDesc": "Le nuove viste del Dashboard si avviano automaticamente con uno sfondo dinamico casuale."
   },
   "sftp": {
     "accessed": "Accesso",
@@ -1986,7 +2004,20 @@
     "tmuxSessions": "sessioni tmux",
     "trustHostKey": "Fidati della chiave host SSH per",
     "verifyingHostKey": "Verifica chiave host SSH...",
-    "view": "Visualizza"
+    "view": "Visualizza",
+    "startRecording": "Avvia registrazione",
+    "stopRecording": "Interrompi registrazione",
+    "recording": "Registrazione",
+    "recordingStarted": "Registrazione del terminale avviata.",
+    "recordingStopped": "Registrazione del terminale interrotta.",
+    "recordingSaved": "Registrazione del terminale salvata in {{path}}.",
+    "recordingFailed": "Registrazione del terminale non riuscita: {{message}}",
+    "recordingUnavailable": "La registrazione del terminale richiede una sessione terminale desktop attiva.",
+    "openRecordings": "Apri registrazioni",
+    "recordingsTitle": "Registrazioni del terminale",
+    "openRecordingsFolder": "Apri cartella registrazioni",
+    "noRecordings": "Nessuna registrazione per questa connessione.",
+    "recordingMetadata": "{{metadata}}"
   },
   "webview": {
     "address": "Indirizzo",
