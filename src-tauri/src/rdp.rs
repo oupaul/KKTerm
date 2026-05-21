@@ -31,7 +31,9 @@ mod platform {
             },
             UI::{
                 Input::KeyboardAndMouse::{
-                    MapVirtualKeyW, SetFocus, VkKeyScanW, MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX,
+                    MapVirtualKeyW, SendInput, SetFocus, VkKeyScanW, INPUT, INPUT_0,
+                    INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
+                    MAPVK_VK_TO_VSC, MAPVK_VK_TO_VSC_EX, VIRTUAL_KEY,
                 },
                 WindowsAndMessaging::{
                     CreateWindowExW, DestroyWindow, GetWindowRect, SendMessageW,
@@ -52,6 +54,7 @@ mod platform {
     const RDP_DISPLAY_SCALE_FACTOR_PERCENT: i32 = 100;
     const RDP_CONNECTED_STATE: i32 = 1;
     const RDP_ESTABLISHING_STATE: i32 = 2;
+    const RDP_STANDARD_SAS_SEQUENCE: i32 = 0xaa03;
     const VK_CONTROL_KEY: usize = 0x11;
     const VK_ALT_KEY: usize = 0x12;
     const VK_END_KEY: usize = 0x23;
@@ -511,8 +514,8 @@ mod platform {
                             .to_string(),
                     );
                 }
-                focus_rdp_control(session.hwnd);
-                send_ctrl_alt_end_to_rdp(&session.dispatch)
+                send_ctrl_alt_end_via_windows_input(session.owner, session.hwnd)
+                    .or_else(|_| send_ctrl_alt_end_to_rdp(&session.dispatch))
                     .or_else(|_| invoke_method(&session.dispatch, "SendCtrlAltDel"))
             })
         }
@@ -559,7 +562,7 @@ mod platform {
                         char_count: 0,
                     });
                 }
-                focus_rdp_control(session.hwnd);
+                focus_rdp_control(session.owner, session.hwnd);
                 match requested_mode.as_str() {
                     RDP_TEXT_MODE_SEND_KEYS => {
                         send_text_via_keys(&session.dispatch, &request.text, press_enter)?;
@@ -615,9 +618,10 @@ mod platform {
                             .to_string(),
                     );
                 }
-                focus_rdp_control(session.hwnd);
+                focus_rdp_control(session.owner, session.hwnd);
                 if normalize_remote_key_name(&request.key) == "ctrlaltdelete" {
-                    return send_ctrl_alt_end_to_rdp(&session.dispatch)
+                    return send_ctrl_alt_end_via_windows_input(session.owner, session.hwnd)
+                        .or_else(|_| send_ctrl_alt_end_to_rdp(&session.dispatch))
                         .or_else(|_| invoke_method(&session.dispatch, "SendCtrlAltDel"));
                 }
                 let vk = rdp_virtual_key_for_name(&request.key)?;
@@ -646,7 +650,7 @@ mod platform {
                 }
                 let (down_message, up_message, button_mask) =
                     rdp_mouse_messages_for_button(&request.button)?;
-                focus_rdp_control(session.hwnd);
+                focus_rdp_control(session.owner, session.hwnd);
                 send_rdp_mouse_click_messages(
                     session.hwnd,
                     request.x,
@@ -879,6 +883,7 @@ mod platform {
             let _ = set_property_bool(&advanced, "RedirectPorts", false);
             let _ = set_property_bool(&advanced, "RedirectPrinters", false);
             let _ = set_property_bool(&advanced, "RedirectSmartCards", false);
+            let _ = set_property_i32(&advanced, "SasSequence", RDP_STANDARD_SAS_SEQUENCE);
             let _ = set_property_i32(&advanced, "HotKeyCtrlAltDel", VK_END_KEY as i32);
             let _ = set_property_bool(&advanced, "SmartSizing", false);
             let _ = set_property_bool(&advanced, "BitmapPersistence", options.bitmap_cache);
@@ -1239,15 +1244,65 @@ mod platform {
         events.push(KeyEvent::up(vk));
     }
 
-    fn focus_rdp_control(hwnd: HWND) {
+    fn focus_rdp_control(owner: HWND, hwnd: HWND) {
         // Bring the RDP ActiveX HWND forward and give it keyboard focus so synthesised
         // keystrokes route into the remote session even when the assistant panel
         // currently holds focus. Ignore errors: SetForegroundWindow can be denied by
         // Windows foreground-lock rules, but SetFocus on the in-process HWND still
         // delivers messages to the control.
         unsafe {
-            let _ = SetForegroundWindow(hwnd);
+            let _ = SetForegroundWindow(owner);
             let _ = SetFocus(Some(hwnd));
+        }
+    }
+
+    fn send_ctrl_alt_end_via_windows_input(owner: HWND, hwnd: HWND) -> Result<(), String> {
+        focus_rdp_control(owner, hwnd);
+        let mut inputs = [
+            keyboard_input(VK_CONTROL_KEY, false),
+            keyboard_input(VK_ALT_KEY, false),
+            keyboard_input(VK_END_KEY, false),
+            keyboard_input(VK_END_KEY, true),
+            keyboard_input(VK_ALT_KEY, true),
+            keyboard_input(VK_CONTROL_KEY, true),
+        ];
+        let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+        if sent == inputs.len() as u32 {
+            Ok(())
+        } else {
+            // Release the modifiers if Windows accepted only a partial sequence.
+            inputs = [
+                keyboard_input(VK_END_KEY, true),
+                keyboard_input(VK_ALT_KEY, true),
+                keyboard_input(VK_CONTROL_KEY, true),
+                keyboard_input(VK_END_KEY, true),
+                keyboard_input(VK_ALT_KEY, true),
+                keyboard_input(VK_CONTROL_KEY, true),
+            ];
+            let _ = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+            Err(format!(
+                "failed to send Ctrl+Alt+End to RDP control: Windows accepted {sent} of {} inputs",
+                inputs.len()
+            ))
+        }
+    }
+
+    fn keyboard_input(vk: usize, up: bool) -> INPUT {
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VIRTUAL_KEY(vk as u16),
+                    wScan: 0,
+                    dwFlags: if up {
+                        KEYEVENTF_KEYUP
+                    } else {
+                        KEYBD_EVENT_FLAGS(0)
+                    },
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
         }
     }
 
@@ -1859,6 +1914,38 @@ mod platform {
                 Ok("rdp-session_1")
             );
             assert!(required_id("bad/session".to_string()).is_err());
+        }
+
+        #[test]
+        fn ctrl_alt_end_windows_inputs_match_hardware_order() {
+            let inputs = [
+                keyboard_input(VK_CONTROL_KEY, false),
+                keyboard_input(VK_ALT_KEY, false),
+                keyboard_input(VK_END_KEY, false),
+                keyboard_input(VK_END_KEY, true),
+                keyboard_input(VK_ALT_KEY, true),
+                keyboard_input(VK_CONTROL_KEY, true),
+            ];
+
+            let observed: Vec<(u16, bool)> = inputs
+                .iter()
+                .map(|input| {
+                    let key = unsafe { input.Anonymous.ki };
+                    (key.wVk.0, key.dwFlags == KEYEVENTF_KEYUP)
+                })
+                .collect();
+
+            assert_eq!(
+                observed,
+                vec![
+                    (VK_CONTROL_KEY as u16, false),
+                    (VK_ALT_KEY as u16, false),
+                    (VK_END_KEY as u16, false),
+                    (VK_END_KEY as u16, true),
+                    (VK_ALT_KEY as u16, true),
+                    (VK_CONTROL_KEY as u16, true),
+                ]
+            );
         }
 
         #[test]
