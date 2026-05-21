@@ -1486,6 +1486,9 @@ async fn stream_responses_completions(
 
             let event: Value =
                 serde_json::from_str(data).map_err(|e| format!("SSE parse error: {e}"))?;
+            if let Some(message) = responses_stream_error_message(&event) {
+                return Err(message);
+            }
 
             let deltas = apply_responses_stream_event(&mut state, &event);
             if let Some(delta) = deltas.content_delta {
@@ -1510,6 +1513,9 @@ async fn stream_responses_completions(
                 );
                 let event: Value =
                     serde_json::from_str(data).map_err(|e| format!("SSE parse error: {e}"))?;
+                if let Some(message) = responses_stream_error_message(&event) {
+                    return Err(message);
+                }
                 let deltas = apply_responses_stream_event(&mut state, &event);
                 if let Some(delta) = deltas.content_delta {
                     emit_stream(channel, &AiStreamEvent::ContentDelta { delta })?;
@@ -3402,6 +3408,24 @@ fn parse_non_sse_responses_stream_body(
     ))
 }
 
+fn responses_stream_error_message(event: &Value) -> Option<String> {
+    match event.get("type").and_then(Value::as_str) {
+        Some("error") => event
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str),
+        Some("response.failed") => event
+            .get("response")
+            .and_then(|response| response.get("error"))
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str),
+        _ => None,
+    }
+    .map(str::trim)
+    .filter(|message| !message.is_empty())
+    .map(str::to_string)
+}
+
 #[cfg(test)]
 fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefinition> {
     ai_tool_definitions_with_skills(settings, &[])
@@ -3490,8 +3514,13 @@ fn ai_tool_definitions_with_skills(
     if settings.dashboard() {
         tools.push(tool_definition(
             "dashboard_load_state",
-            "Load the full Dashboard state: all views, widget instances, and AI Created Widgets.",
+            "Load compact Dashboard metadata: views, widget instances, AI Created Widget titles/summaries/categories, body metadata, and settings schema metadata. This does not return script source, bodyJson, settingsSchemaJson, or per-instance settings values. Use dashboard_read_widget_source only when checking or updating one specific AI Created Widget.",
             json!({"type":"object","properties":{}}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_read_widget_source",
+            "Read the full bodyJson/source and settingsSchemaJson for one specific Dashboard AI Created Widget. Use only when the user asks to check, repair, or update that widget, after selecting the widget id from dashboard_load_state metadata.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
         ));
         tools.push(tool_definition(
             "dashboard_create_view",
@@ -4315,7 +4344,11 @@ fn assistant_use_skill_tool(
 fn tool_requires_allow_all(tool_name: &str) -> bool {
     tool_name == "shell_command"
         || tool_name == "send_email"
-        || (tool_name.starts_with("dashboard_") && tool_name != "dashboard_load_state")
+        || (tool_name.starts_with("dashboard_")
+            && !matches!(
+                tool_name,
+                "dashboard_load_state" | "dashboard_read_widget_source"
+            ))
         || matches!(
             tool_name,
             "connection_create" | "connection_update" | "connection_delete" | "connection_open"
@@ -4420,7 +4453,12 @@ fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     let result: Result<Value, String> = storage.with_connection_infallible(|conn| match name {
         "dashboard_load_state" => ds::load_state(conn)
             .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+            .map(redact_dashboard_state_for_ai)
             .map_err(|e| e.to_string()),
+        "dashboard_read_widget_source" => ds::load_state(conn)
+            .map(|v| serde_json::to_value(v).unwrap_or(Value::Null))
+            .map_err(|e| e.to_string())
+            .and_then(|state| dashboard_widget_source_for_ai(&state, &arg_string(&args, "id"))),
         "dashboard_create_view" => {
             let title = arg_string(&args, "title");
             if title.is_empty() {
@@ -4754,7 +4792,8 @@ fn normalize_dashboard_custom_widget_patch(mut patch: Value) -> Result<Value, St
 }
 
 fn is_dashboard_mutating_tool(name: &str) -> bool {
-    name.starts_with("dashboard_") && name != "dashboard_load_state"
+    name.starts_with("dashboard_")
+        && !matches!(name, "dashboard_load_state" | "dashboard_read_widget_source")
 }
 
 fn request_secret_entry_tool(
@@ -5575,6 +5614,154 @@ fn tool_result_error(result: &str) -> Option<String> {
 /// because the tool result gave it no actionable diagnostic.
 const MAX_CONSECUTIVE_TOOL_ERRORS: u8 = 3;
 
+fn dashboard_body_meta(body_json: Option<&str>) -> Value {
+    let Some(body_json) = body_json else {
+        return json!({"hasBody": false});
+    };
+    let Ok(body) = serde_json::from_str::<Value>(body_json) else {
+        return json!({"hasBody": true, "parseable": false});
+    };
+    let permissions = body
+        .get("permissions")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let libraries = body
+        .get("libraries")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let lifecycle_kind = body
+        .get("lifecycle")
+        .and_then(|lifecycle| lifecycle.get("kind"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let source_bytes = body
+        .get("source")
+        .and_then(Value::as_str)
+        .map(str::len)
+        .unwrap_or(0);
+    json!({
+        "hasBody": true,
+        "parseable": true,
+        "sourceBytes": source_bytes,
+        "libraries": libraries,
+        "permissions": permissions,
+        "lifecycleKind": lifecycle_kind,
+    })
+}
+
+fn dashboard_settings_meta(settings_schema_json: Option<&str>) -> Value {
+    let Some(settings_schema_json) = settings_schema_json else {
+        return json!({"hasSettingsSchema": false, "fieldCount": 0});
+    };
+    let Ok(schema) = serde_json::from_str::<Value>(settings_schema_json) else {
+        return json!({"hasSettingsSchema": true, "parseable": false, "fieldCount": 0});
+    };
+    let fields = schema
+        .get("fields")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|field| {
+                    let mut object = serde_json::Map::new();
+                    for key in ["key", "type", "label"] {
+                        if let Some(value) = field.get(key) {
+                            object.insert(key.to_string(), value.clone());
+                        }
+                    }
+                    (!object.is_empty()).then_some(Value::Object(object))
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    json!({
+        "hasSettingsSchema": true,
+        "parseable": true,
+        "fieldCount": fields.len(),
+        "fields": fields,
+    })
+}
+
+fn redact_dashboard_state_for_ai(mut state: Value) -> Value {
+    if let Some(instances) = state.get_mut("instances").and_then(Value::as_array_mut) {
+        for instance in instances {
+            if let Some(object) = instance.as_object_mut() {
+                object.remove("settingsValuesJson");
+            }
+        }
+    }
+
+    if let Some(custom_widgets) = state
+        .get_mut("customWidgets")
+        .and_then(Value::as_array_mut)
+    {
+        for widget in custom_widgets {
+            if let Some(object) = widget.as_object_mut() {
+                let body_json = object
+                    .remove("bodyJson")
+                    .and_then(|value| value.as_str().map(str::to_string));
+                let settings_schema_json = object
+                    .remove("settingsSchemaJson")
+                    .and_then(|value| value.as_str().map(str::to_string));
+                object.insert(
+                    "hasBodySource".to_string(),
+                    Value::Bool(body_json.is_some()),
+                );
+                object.insert(
+                    "bodyMeta".to_string(),
+                    dashboard_body_meta(body_json.as_deref()),
+                );
+                object.insert(
+                    "settingsMeta".to_string(),
+                    dashboard_settings_meta(settings_schema_json.as_deref()),
+                );
+            }
+        }
+    }
+
+    state
+}
+
+fn dashboard_widget_source_for_ai(state: &Value, widget_id: &str) -> Result<Value, String> {
+    let widget_id = widget_id.trim();
+    if widget_id.is_empty() {
+        return Err("dashboard_read_widget_source requires id".to_string());
+    }
+    let widgets = state
+        .get("customWidgets")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "Dashboard state did not include AI Created Widgets.".to_string())?;
+    let widget = widgets
+        .iter()
+        .find(|widget| widget.get("id").and_then(Value::as_str) == Some(widget_id))
+        .ok_or_else(|| "Dashboard AI Created Widget not found.".to_string())?;
+
+    let mut object = serde_json::Map::new();
+    for key in [
+        "id",
+        "title",
+        "summary",
+        "category",
+        "bodyJson",
+        "settingsSchemaJson",
+        "createdBy",
+        "createdAt",
+        "updatedAt",
+    ] {
+        if let Some(value) = widget.get(key) {
+            object.insert(key.to_string(), value.clone());
+        }
+    }
+    Ok(Value::Object(object))
+}
+
 #[derive(Default)]
 struct ConsecutiveToolErrorTracker {
     signature: Option<String>,
@@ -6067,7 +6254,7 @@ fn build_agent_messages(
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
         "SESSION TOOLS: Use session_state to discover active Tabs, pane ids, remote desktop targets, and SFTP/FTP browser Sessions before using session_* interaction tools. Terminal, remote desktop, and file browser tools operate on live Sessions, not saved Connections. Prefer read tools before mutating tools. For RDP/VNC, use send_text for text, keypress for named keys, and mouse_click for remote surface coordinates. In Default permissions mode, KKTerm shows an in-chat Yes/No approval prompt for mutating tools and resumes the same tool call after the user answers; do not ask the user to change the global permission mode.".to_string(),
         "TUTORIAL TOOL: For UI/how-to questions, first answer with concise steps. When a known tutorial target is relevant, offer to navigate to that UI for the user. Do not navigate in the same answer unless the user explicitly asks to be shown/taken there. If the user accepts that offer or says yes to it in a follow-up, only call tutorial_highlight after the user accepts, using the exact targetId from current page context or the tutorial_highlight schema and including navigation when the target is on another app surface. Do not invent target ids or CSS selectors.".to_string(),
-        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. When the user reports an error in an existing AI Created Widget, use dashboard_load_state to read the current Dashboard AI Created Widget source, then call dashboard_update_custom_widget with the matching AI Created Widget id. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_load_state. All AI Created Widgets are script widgets. For static requests, create a small script widget that renders concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Be boundary-aware: size simple timers/counters at least 4x3, forms or images need 5x4 or larger, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, leaflet, konva, pixijs, matter, mermaid, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use KKTerm's built-in script UI classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. Use body.libraries for curated local script libraries such as mermaid, Matter.js, and animejs; runtime CDN scripts are blocked by CSP. Use permissions.network=true only for remote network access or remote images. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). KK.getSettings() is synchronous; do not await it. Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
+        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. dashboard_load_state returns compact metadata only. When the user reports an error in an existing AI Created Widget, use dashboard_load_state to identify the widget id, then call dashboard_read_widget_source for that one widget before checking or updating source. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_read_widget_source. All AI Created Widgets are script widgets. For static requests, create a small script widget that renders concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Be boundary-aware: size simple timers/counters at least 4x3, forms or images need 5x4 or larger, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, leaflet, konva, pixijs, matter, mermaid, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use KKTerm's built-in script UI classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. Use body.libraries for curated local script libraries such as mermaid, Matter.js, and animejs; runtime CDN scripts are blocked by CSP. Use permissions.network=true only for remote network access or remote images. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). KK.getSettings() is synchronous; do not await it. Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
         DASHBOARD_WIDGET_COMPLETION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_VISUAL_CONTRACT.to_string(),
         DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT.to_string(),
@@ -7397,6 +7584,103 @@ mod tests {
     }
 
     #[test]
+    fn responses_stream_error_message_uses_failed_response_message() {
+        let event = json!({
+            "type": "response.failed",
+            "response": {
+                "error": {
+                    "code": "context_length_exceeded",
+                    "message": "Your input exceeds the context window of this model. Please adjust your input and try again."
+                }
+            }
+        });
+
+        assert_eq!(
+            responses_stream_error_message(&event).as_deref(),
+            Some("Your input exceeds the context window of this model. Please adjust your input and try again.")
+        );
+    }
+
+    #[test]
+    fn dashboard_ai_state_redacts_script_bodies_and_settings_values() {
+        let state = json!({
+            "views": [{"id": "default", "title": "Default"}],
+            "instances": [
+                {
+                    "id": "inst-builtin",
+                    "kind": "builtIn",
+                    "sourceId": "appLauncher",
+                    "settingsValuesJson": "{\"secret\":\"keep-out\"}"
+                },
+                {
+                    "id": "inst-script",
+                    "kind": "script",
+                    "sourceId": "cw-1",
+                    "settingsValuesJson": "{\"threshold\":80}"
+                }
+            ],
+            "customWidgets": [
+                {
+                    "id": "cw-1",
+                    "title": "Bandwidth Watchdog",
+                    "summary": "Alerts on sudden bandwidth spikes.",
+                    "category": "Monitoring",
+                    "bodyJson": "{\"source\":\"const secret = 'big source';\",\"permissions\":{\"network\":false},\"libraries\":[\"chartjs\"]}",
+                    "settingsSchemaJson": "{\"fields\":[{\"key\":\"threshold\",\"type\":\"number\"}]}",
+                    "createdBy": "agent"
+                }
+            ]
+        });
+
+        let redacted = redact_dashboard_state_for_ai(state);
+        let serialized = redacted.to_string();
+
+        assert!(!serialized.contains("big source"));
+        assert!(!serialized.contains("bodyJson"));
+        assert!(!serialized.contains("settingsValuesJson"));
+        assert!(!serialized.contains("settingsSchemaJson"));
+        assert_eq!(
+            redacted["customWidgets"][0]["hasBodySource"].as_bool(),
+            Some(true)
+        );
+        assert_eq!(
+            redacted["customWidgets"][0]["bodyMeta"]["libraries"][0].as_str(),
+            Some("chartjs")
+        );
+        assert_eq!(
+            redacted["customWidgets"][0]["settingsMeta"]["fieldCount"].as_u64(),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn dashboard_widget_source_tool_returns_only_requested_widget_source() {
+        let state = json!({
+            "customWidgets": [
+                {
+                    "id": "cw-1",
+                    "title": "Clock",
+                    "bodyJson": "{\"source\":\"const clock = true;\",\"permissions\":{\"network\":false}}",
+                    "settingsSchemaJson": null
+                },
+                {
+                    "id": "cw-2",
+                    "title": "Bandwidth Watchdog",
+                    "bodyJson": "{\"source\":\"const watchdog = true;\",\"permissions\":{\"network\":false}}",
+                    "settingsSchemaJson": null
+                }
+            ]
+        });
+
+        let source = dashboard_widget_source_for_ai(&state, "cw-2").expect("source is returned");
+        let serialized = source.to_string();
+
+        assert!(serialized.contains("const watchdog = true"));
+        assert!(!serialized.contains("const clock = true"));
+        assert_eq!(source["id"].as_str(), Some("cw-2"));
+    }
+
+    #[test]
     fn responses_stream_sse_field_parser_accepts_missing_space_after_colon() {
         assert_eq!(
             sse_field_value("data:{\"type\":\"response.completed\"}", "data"),
@@ -8709,6 +8993,7 @@ mod tests {
         assert!(tool_requires_allow_all("session_file_browser_delete"));
         assert!(tool_requires_allow_all("send_email"));
         assert!(!tool_requires_allow_all("dashboard_load_state"));
+        assert!(!tool_requires_allow_all("dashboard_read_widget_source"));
         assert!(!tool_requires_allow_all("connection_list"));
         assert!(!tool_requires_allow_all("session_state"));
         assert!(!tool_requires_allow_all("session_terminal_read_buffer"));

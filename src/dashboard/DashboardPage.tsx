@@ -15,6 +15,7 @@ import {
   isDarkBackgroundPresetId,
   resolveDashboardTabGradientPreset,
 } from "./registry/backgroundPresets";
+import { BUILT_IN_WIDGETS } from "./registry/builtInRegistry";
 import { libraryCatalogForAi } from "./script/widgetLibraries";
 import { useDashboardStore } from "./state/dashboardStore";
 import type { DashboardView, DashboardWidgetInstance, GridDensity } from "./types";
@@ -22,6 +23,55 @@ import { dashboardVisualContextForView } from "./visualContext";
 import { DashboardBackgroundHost } from "./view/DashboardBackgroundHost";
 import { DashboardCanvas, DENSITY_SETTINGS } from "./view/DashboardCanvas";
 import type { DashboardWidgetDeleteRequest } from "./view/WidgetFrame";
+
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function scriptBodyMeta(bodyJson: string) {
+  const body = parseJsonObject(bodyJson);
+  const permissions =
+    body?.permissions && typeof body.permissions === "object" && !Array.isArray(body.permissions)
+      ? body.permissions
+      : {};
+  const libraries = Array.isArray(body?.libraries) ? body.libraries.filter((item) => typeof item === "string") : [];
+  const lifecycle: Record<string, unknown> | null =
+    body?.lifecycle && typeof body.lifecycle === "object" && !Array.isArray(body.lifecycle)
+      ? (body.lifecycle as Record<string, unknown>)
+      : null;
+  const source = typeof body?.source === "string" ? body.source : "";
+  return {
+    hasBody: Boolean(body),
+    sourceBytes: source.length,
+    libraries,
+    permissions,
+    lifecycleKind: typeof lifecycle?.kind === "string" ? lifecycle.kind : null,
+  };
+}
+
+function settingsSchemaMeta(settingsSchemaJson: string | null | undefined) {
+  const schema = parseJsonObject(settingsSchemaJson);
+  const fields = Array.isArray(schema?.fields)
+    ? schema.fields
+        .filter((field): field is Record<string, unknown> => Boolean(field) && typeof field === "object")
+        .map((field) => ({
+          key: typeof field.key === "string" ? field.key : null,
+          type: typeof field.type === "string" ? field.type : null,
+          label: typeof field.label === "string" ? field.label : null,
+        }))
+    : [];
+  return {
+    hasSettingsSchema: Boolean(schema),
+    fieldCount: fields.length,
+    fields,
+  };
+}
 
 export function DashboardPage({
   dashboardActive,
@@ -148,6 +198,19 @@ export function DashboardPage({
         category: widget.category,
         summary: widget.summary,
         activeOnView: activeCustomSourceIds.has(widget.id),
+        bodyMeta: scriptBodyMeta(widget.bodyJson),
+        settingsMeta: settingsSchemaMeta(widget.settingsSchemaJson),
+      })),
+      builtInWidgets: BUILT_IN_WIDGETS.map((widget) => ({
+        id: widget.id,
+        title: t(widget.titleKey),
+        category: widget.category,
+        summary: t(widget.summaryKey),
+        defaultPreset: widget.defaultPreset,
+        defaultAccent: widget.defaultAccent,
+        defaultIcon: widget.defaultIcon,
+        defaultSize: widget.defaultSize,
+        activeOnView: viewInstances.some((instance) => instance.kind === "builtIn" && instance.sourceId === widget.id),
       })),
       // Smoke-test + runtime errors bubbled up from ScriptWidgetHost.
       // The assistant uses this to notice and offer to fix widgets it
@@ -183,7 +246,7 @@ export function DashboardPage({
       text: [
         t("dashboard.assistantContextIntro"),
         "For a user request to create a visible Dashboard widget, use dashboard_create_widget with activeView.id so the widget is validated and placed on the selected view in one step.",
-        "For a user request to fix or edit an existing AI-authored widget, use dashboard_load_state to read the current customWidgets[].bodyJson and instances[].sourceId, then call dashboard_update_custom_widget. Prefer patch.body over patch.bodyJson so you can submit structured script bodies without manual JSON escaping.",
+        "For a user request to fix or edit an existing AI-authored widget, use dashboard_load_state to identify the widget id from metadata, then dashboard_read_widget_source for that one widget before calling dashboard_update_custom_widget. Prefer patch.body over patch.bodyJson so you can submit structured script bodies without manual JSON escaping.",
         "AI-authored widgets are script widgets only. For static notes, sanitized fragments, checklists, stats, and key/value summaries, create a small script widget that renders DOM inside #root.",
         "When using a script widget, provide JavaScript source only. Do not generate a full HTML document or include <script> tags; create DOM nodes inside #root instead.",
         "Your script runs inside a synchronous function wrapper, so top-level `return` is allowed for early exit but any returned cleanup function is ignored. The iframe is destroyed on unmount, so cleanup is usually unnecessary. Use KK.isVisible() to skip expensive work while hidden, and KK.onVisibilityChange((visible) => { ... }) to restart animation when the widget becomes visible again. Top-level `await` is not available; wrap async work in an `async` IIFE.",
