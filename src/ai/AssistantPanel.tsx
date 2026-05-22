@@ -112,6 +112,7 @@ type AssistantChatMessage = {
   createdAt: string;
   toolCalls?: AssistantToolCallStatus[];
   skillNames?: string[];
+  runManifest?: AssistantRunManifest;
   workStartedAt?: string;
   workCompletedAt?: string;
   isStreaming?: boolean;
@@ -127,6 +128,23 @@ type AssistantChatThread = {
 };
 
 type AssistantPromptIntent = "chat" | "extensionCreation" | "createWidget" | "watchdog";
+
+type AssistantRunManifestStep = {
+  id: string;
+  label: string;
+  status: "pending" | "running" | "completed" | "blocked";
+  detail?: string;
+};
+
+type AssistantRunManifest = {
+  runId: string;
+  goal: string;
+  scope: string;
+  definitionOfDone: string;
+  verificationStatus: "pending" | "passed" | "failed";
+  steps: AssistantRunManifestStep[];
+  updatedAt: string;
+};
 
 type AssistantTextAttachment = {
   id: string;
@@ -225,6 +243,46 @@ function createAssistantChatMessage(
     fileAttachments,
     intent,
     createdAt: new Date().toISOString(),
+  };
+}
+
+function createAssistantRunManifest(
+  goal: string,
+  intent: AssistantPromptIntent,
+  toolCalls?: AssistantToolCallStatus[],
+): AssistantRunManifest {
+  const scopeByIntent: Record<AssistantPromptIntent, string> = {
+    chat: "assistant.chat",
+    extensionCreation: "assistant.extensionCreation",
+    createWidget: "assistant.dashboardWidget",
+    watchdog: "assistant.watchdog",
+  };
+  const hasToolErrors = (toolCalls ?? []).some(
+    (toolCall) => toolCall.status === "completed" && Boolean(toolCall.error?.trim()),
+  );
+  const hasRunningTools = (toolCalls ?? []).some((toolCall) => toolCall.status === "running");
+  const verificationStatus = hasToolErrors ? "failed" : hasRunningTools ? "pending" : "passed";
+  const steps: AssistantRunManifestStep[] = [
+    {
+      id: "plan",
+      label: "Plan response",
+      status: "completed",
+    },
+    {
+      id: "verify",
+      label: "Verify tool outcomes",
+      status: hasToolErrors ? "blocked" : hasRunningTools ? "running" : "completed",
+      detail: hasToolErrors ? "One or more tool calls reported an error." : undefined,
+    },
+  ];
+  return {
+    runId: `assistant-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    goal: goal.trim(),
+    scope: scopeByIntent[intent],
+    definitionOfDone: "Provide response with completed verification step or explicit blocker.",
+    verificationStatus,
+    steps,
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -692,8 +750,43 @@ function normalizeAssistantChatMessage(value: unknown): AssistantChatMessage[] {
       skillNames: normalizeAssistantSkillNames(candidate.skillNames),
       workStartedAt: normalizeDateString(candidate.workStartedAt),
       workCompletedAt: normalizeDateString(candidate.workCompletedAt),
+      runManifest: normalizeAssistantRunManifest(candidate.runManifest),
     },
   ];
+}
+
+function normalizeAssistantRunManifest(value: unknown): AssistantRunManifest | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const candidate = value as Partial<AssistantRunManifest>;
+  if (typeof candidate.goal !== "string" || !candidate.goal.trim()) {
+    return undefined;
+  }
+  if (typeof candidate.scope !== "string" || !candidate.scope.trim()) {
+    return undefined;
+  }
+  if (typeof candidate.definitionOfDone !== "string" || !candidate.definitionOfDone.trim()) {
+    return undefined;
+  }
+  const normalizedStatus =
+    candidate.verificationStatus === "failed" ||
+    candidate.verificationStatus === "passed" ||
+    candidate.verificationStatus === "pending"
+      ? candidate.verificationStatus
+      : "pending";
+  return {
+    runId:
+      typeof candidate.runId === "string" && candidate.runId
+        ? candidate.runId
+        : `assistant-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    goal: candidate.goal.trim(),
+    scope: candidate.scope.trim(),
+    definitionOfDone: candidate.definitionOfDone.trim(),
+    verificationStatus: normalizedStatus,
+    steps: Array.isArray(candidate.steps) ? candidate.steps.filter(Boolean) as AssistantRunManifestStep[] : [],
+    updatedAt: normalizeDateString(candidate.updatedAt) ?? new Date().toISOString(),
+  };
 }
 
 function normalizeAssistantSkillNames(value: unknown): string[] | undefined {
@@ -1897,6 +1990,7 @@ export function AssistantPanel({
       imageAttachments.length > 0 ? imageAttachments : undefined,
       fileContexts.length > 0 ? fileContexts : undefined,
     );
+    userMessage.runManifest = createAssistantRunManifest(normalizedPrompt, requestIntent);
     const previousMessages = messages;
     const nextMessages = [...previousMessages, userMessage];
     forceChatScrollToBottomRef.current = true;
@@ -1919,6 +2013,7 @@ export function AssistantPanel({
           : `${t("ai.providerError")}: ${providerErrorMessage}`,
         requestIntent,
       );
+      assistantMessage.runManifest = createAssistantRunManifest(normalizedPrompt, requestIntent);
       const failedMessages = [...nextMessages, assistantMessage];
       setMessages(failedMessages);
       setCurrentThreadTitle(fallbackTitle);
@@ -1981,6 +2076,7 @@ export function AssistantPanel({
       );
       streamingMessage.isStreaming = true;
       streamingMessage.workStartedAt = workStartedAt;
+      streamingMessage.runManifest = createAssistantRunManifest(normalizedPrompt, requestIntent);
       let streamingMessageSnapshot = streamingMessage;
       const messagesWithStreaming = [...nextMessages, streamingMessage];
       setMessages(messagesWithStreaming);
@@ -2009,6 +2105,11 @@ export function AssistantPanel({
             workStartedAt,
           }),
         };
+        streamingMessageSnapshot.runManifest = createAssistantRunManifest(
+          normalizedPrompt,
+          requestIntent,
+          streamingMessageSnapshot.toolCalls,
+        );
         setMessages((current) =>
           current.map((message) =>
             message.id === streamingMessage.id ? streamingMessageSnapshot : message,
@@ -2056,6 +2157,11 @@ export function AssistantPanel({
           tc.status === "running" ? { ...tc, status: "completed", endedAt: completedAt } : tc,
         ),
       };
+      streamingMessageSnapshot.runManifest = createAssistantRunManifest(
+        normalizedPrompt,
+        requestIntent,
+        streamingMessageSnapshot.toolCalls,
+      );
       setMessages((current) =>
         current.map((message) =>
           message.id === streamingMessage.id ? streamingMessageSnapshot : message,
@@ -2071,7 +2177,24 @@ export function AssistantPanel({
       setChatError(message);
       const failedMessages = [
         ...nextMessages,
-        createAssistantChatMessage("assistant", `${t("ai.errorPrefix")}: ${message}`, requestIntent),
+        (() => {
+          const failedMessage = createAssistantChatMessage(
+            "assistant",
+            `${t("ai.errorPrefix")}: ${message}`,
+            requestIntent,
+          );
+          failedMessage.runManifest = createAssistantRunManifest(normalizedPrompt, requestIntent, [
+            {
+              toolId: "assistant-request",
+              toolName: "assistant.request",
+              status: "completed",
+              startedAt: workStartedAt,
+              endedAt: new Date().toISOString(),
+              error: message,
+            },
+          ]);
+          return failedMessage;
+        })(),
       ];
       setMessages(failedMessages);
       saveChatMessages(failedMessages, threadTitle);
