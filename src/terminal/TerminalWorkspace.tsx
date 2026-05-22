@@ -1110,6 +1110,27 @@ function TerminalPaneView({
     terminal.fit();
     focusTerminalUnlessExternalInputIsActive(terminal, paneRef.current);
     terminal.attachCustomKeyEventHandler((event) => {
+      // xterm.js emits a bare CR for Shift+Enter, indistinguishable from a
+      // plain Enter, so Node.js TUIs running inside local PowerShell/cmd/WSL
+      // (e.g. Claude Code) submit the line instead of inserting a newline.
+      // Translate Shift+Enter to LF here, matching Windows Terminal's
+      // behavior. Only for local connections; SSH uses the NativeSsh
+      // transport and its own remote PTY semantics.
+      if (
+        event.type === "keydown" &&
+        event.code === "Enter" &&
+        event.shiftKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.isComposing &&
+        connection.type === "local"
+      ) {
+        event.preventDefault();
+        writeInputToSession(encodeShiftEnterForLocalPty());
+        return false;
+      }
+
       if (event.type !== "keydown" || !event.ctrlKey) {
         return true;
       }
@@ -2180,6 +2201,16 @@ function formatByteCount(bytes: number) {
 
 function encodeTerminalInput(data: string) {
   return Array.from(terminalInputEncoder.encode(data));
+}
+
+// Node.js TUIs (Claude Code, etc.) read stdin as raw bytes and never call
+// ReadConsoleInputW, so the win32-input-mode KEY_EVENT_RECORD CSI sequences
+// that ConPTY translates for native Win32 console clients are invisible to
+// them. Both plain Enter and Shift+Enter arrive as bare CR ("\r"), which
+// readline treats as "submit". Send LF ("\n") instead so the TUI sees a
+// real newline, matching what Windows Terminal emits for Shift+Enter.
+function encodeShiftEnterForLocalPty(): string {
+  return "\n";
 }
 
 function terminalDimensionsEqual(left: TerminalDimensions, right: TerminalDimensions) {
