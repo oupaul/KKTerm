@@ -9,7 +9,6 @@ import { useWorkspaceStore } from "../store";
 import { BackgroundPopover } from "./edit/BackgroundPopover";
 import { CatalogOverlay } from "./edit/CatalogOverlay";
 import { CustomizePopover } from "./edit/CustomizePopover";
-import "./dashboard.css";
 import {
   DASHBOARD_TAB_GRADIENT_PRESETS,
   isDarkBackgroundPresetId,

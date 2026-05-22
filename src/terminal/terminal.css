@@ -1,0 +1,752 @@
+.terminal-workspace,
+.sftp-workspace {
+  display: none;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px;
+  background: var(--chrome-strong);
+}
+
+.terminal-workspace.active,
+.sftp-workspace.active {
+  display: grid;
+}
+
+.terminal-workspace {
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+}
+
+.terminal-workspace-embedded-only {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.terminal-workspace-embedded-only .terminal-grid {
+  gap: 0;
+}
+
+.workspace-toolbar {
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.terminal-workspace .workspace-toolbar {
+  margin-bottom: 0;
+}
+
+.workspace-toolbar > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.workspace-toolbar strong {
+  font-size: 14px;
+}
+
+.terminal-grid {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  gap: 10px;
+}
+
+.terminal-grid > * {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.terminal-layout-split {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  gap: 10px;
+}
+
+.terminal-layout-split-horizontal {
+  flex-direction: row;
+}
+
+.terminal-layout-split-vertical {
+  flex-direction: column;
+}
+
+.terminal-layout-leaf {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-layout-leaf > .terminal-pane,
+.terminal-layout-leaf > .embedded-workspace-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.embedded-workspace-pane {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--terminal-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.embedded-workspace-pane > .terminal-workspace {
+  flex: 1 1 0;
+  width: 100%;
+  padding: 0;
+  background: var(--chrome-strong);
+}
+
+.embedded-workspace-pane > .webview-workspace .webview-pane > header {
+  padding-right: 40px;
+}
+
+.embedded-workspace-pane > .remote-desktop-shell .remote-desktop-pane > header {
+  padding-right: 40px;
+}
+
+.embedded-pane-close {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.embedded-workspace-pane:has(> .remote-desktop-shell) .embedded-pane-close {
+  top: 5px;
+  color: #95a7bb;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(128, 153, 184, 0.18);
+  border-radius: 5px;
+}
+
+.embedded-workspace-pane:has(> .remote-desktop-shell) .embedded-pane-close:hover {
+  color: #ff7070;
+  background: rgba(255, 100, 100, 0.12);
+  border-color: rgba(255, 112, 112, 0.28);
+}
+
+.embedded-workspace-pane:has(> .webview-workspace) .embedded-pane-close {
+  top: 5px;
+  color: #95a7bb;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(128, 153, 184, 0.18);
+  border-radius: 5px;
+}
+
+.embedded-workspace-pane:has(> .webview-workspace) .embedded-pane-close:hover {
+  color: #ff7070;
+  background: rgba(255, 100, 100, 0.12);
+  border-color: rgba(255, 112, 112, 0.28);
+}
+
+.terminal-workspace-embedded-only .embedded-workspace-pane {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.terminal-pane-inactive::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: rgba(4, 8, 14, 0.48);
+  content: "";
+  transition: opacity 120ms ease-out;
+}
+
+.terminal-pane-focused::after {
+  opacity: 0;
+}
+
+
+.terminal-pane {
+  position: relative;
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: #c9d4e2;
+  background: linear-gradient(180deg, var(--terminal), var(--terminal-2));
+  border: 1px solid var(--terminal-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.terminal-pane-recording {
+  outline: 3px solid rgba(196, 62, 62, 0.72);
+  outline-offset: 0;
+}
+
+.terminal-pane-search-open {
+  grid-template-rows: 34px auto minmax(0, 1fr);
+}
+
+.terminal-pane header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  color: #95a7bb;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+.terminal-pane header span {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.terminal-pane header small {
+  max-width: 55%;
+  margin-left: 8px;
+  color: #69798b;
+  font-size: 11px;
+}
+
+.terminal-pane-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.terminal-pane-actions small {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tmux-session-wrapper {
+  position: relative;
+}
+
+.tmux-session-tag-group,
+.tmux-session-rename {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+}
+
+.tmux-session-tag {
+  max-width: 220px;
+  height: 24px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: #c9d4e2;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(86, 166, 255, 0.12);
+  border: 1px solid rgba(86, 166, 255, 0.28);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tmux-session-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: #95a7bb;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tmux-session-edit-button:hover {
+  color: #d9e5f4;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(149, 167, 187, 0.28);
+}
+
+.tmux-session-rename input {
+  width: 180px;
+  height: 24px;
+  padding: 0 7px;
+  color: #d9e5f4;
+  font-size: 11px;
+  font-weight: 700;
+  background: #101824;
+  border: 1px solid #526178;
+  border-radius: 5px;
+  outline: none;
+}
+
+.tmux-session-rename input:focus {
+  border-color: #56a6ff;
+  box-shadow: 0 0 0 2px rgba(86, 166, 255, 0.18);
+}
+
+.tmux-session-rename-error {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  z-index: 61;
+  width: 240px;
+  padding: 7px 8px;
+  color: #ffd1d1;
+  background: #2a1216;
+  border: 1px solid #8a3a42;
+  border-radius: 6px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+}
+
+.tmux-session-menu {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 60;
+  width: min(360px, 80vw);
+  max-height: 320px;
+  padding: 10px;
+  overflow: auto;
+  color: #d9e5f4;
+  background: #0f1722;
+  border: 1px solid #7f90a7;
+  border-radius: 8px;
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+.tmux-session-menu header,
+.tmux-session-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tmux-session-menu p {
+  margin: 8px 0 0;
+  color: #9fb0c6;
+  font-size: 12px;
+}
+
+.tmux-session-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tmux-session-row {
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  justify-items: stretch;
+  min-width: 0;
+  padding: 6px 7px;
+  color: #d9e5f4;
+  background: #151f2c;
+  border: 1px solid #526178;
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  position: relative;
+}
+
+.tmux-session-row-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  gap: 6px;
+  align-items: center;
+  justify-self: stretch;
+  min-width: 0;
+  inline-size: 100%;
+}
+
+.tmux-session-row-info {
+  display: grid;
+  min-width: 0;
+  inline-size: 100%;
+  gap: 1px;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.tmux-session-row-info:hover strong {
+  color: #a8d4ff;
+}
+
+.tmux-session-row-info.in-app strong {
+  color: #56a6ff;
+}
+
+.tmux-session-row strong,
+.tmux-session-row small {
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tmux-session-row strong {
+  color: #e5edf8;
+  font-size: 12px;
+}
+
+.tmux-session-row small {
+  color: #9fb0c6;
+  font-size: 11px;
+}
+
+.tmux-session-row .tmux-session-rename {
+  width: 100%;
+}
+
+.tmux-session-row .tmux-session-rename input {
+  width: 100%;
+}
+
+.tmux-session-row .tmux-session-rename-error {
+  position: static;
+  width: auto;
+  margin: 2px 0 0;
+  box-shadow: none;
+}
+
+.ssh-port-menu {
+  width: min(300px, 80vw);
+}
+
+.ssh-port-row .tmux-session-row-info {
+  cursor: default;
+}
+
+.ssh-port-row .tmux-session-row-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.tmux-mouse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: #526178;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tmux-mouse-toggle:hover {
+  color: #9fb0c6;
+  border-color: #526178;
+}
+
+.tmux-mouse-toggle.active {
+  color: #56a6ff;
+  background: rgba(86, 166, 255, 0.1);
+  border-color: rgba(86, 166, 255, 0.35);
+}
+
+.tmux-session-directions {
+  display: flex;
+  gap: 4px;
+  padding-top: 2px;
+  border-top: 1px solid #2a3a4f;
+}
+
+.tmux-direction-btn {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  color: #7f96af;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #384d63;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
+}
+
+.tmux-direction-btn:hover {
+  color: #d9e5f4;
+  background: rgba(86, 166, 255, 0.1);
+  border-color: rgba(86, 166, 255, 0.35);
+}
+
+.terminal-pane-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: #95a7bb;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.terminal-pane-action-text {
+  gap: 5px;
+  width: auto;
+  min-width: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.terminal-pane-action:disabled {
+  color: #536174;
+  cursor: default;
+  opacity: 0.55;
+}
+
+.terminal-recording-button {
+  width: 20px;
+  height: 20px;
+  color: #a94d4d;
+  background: rgba(169, 77, 77, 0.06);
+}
+
+.terminal-recording-button.active {
+  background: rgba(169, 77, 77, 0.1);
+  color: #bf5a5a;
+}
+
+.terminal-recording-status {
+  align-items: center;
+  color: #ff7070;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 750;
+  height: 24px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.terminal-recordings-backdrop {
+  align-items: flex-start;
+  background: rgba(12, 18, 25, 0.34);
+  display: flex;
+  inset: 28px 0 0;
+  justify-content: center;
+  padding-top: 42px;
+  position: absolute;
+  z-index: 8;
+}
+
+.terminal-recordings-dialog {
+  background: var(--chrome);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  max-height: min(460px, calc(100% - 32px));
+  overflow: hidden;
+  width: min(620px, calc(100% - 48px));
+}
+
+.terminal-recordings-dialog header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 10px 8px 14px;
+}
+
+.terminal-recordings-dialog header > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.terminal-recordings-dialog strong,
+.terminal-recordings-dialog small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-recordings-dialog small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.terminal-recordings-dialog > p {
+  color: var(--text-muted);
+  margin: 0;
+  padding: 14px;
+}
+
+.terminal-recordings-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.terminal-recordings-list {
+  display: grid;
+  max-height: 380px;
+  overflow: auto;
+  padding: 6px;
+}
+
+.terminal-recording-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 42px;
+  padding: 7px 8px;
+  text-align: left;
+}
+
+.terminal-recording-row:hover {
+  background: var(--surface);
+}
+
+.terminal-recording-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toolbar-icon-button {
+  width: 32px;
+  padding: 0;
+}
+
+.connection-wiki-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.terminal-menu .connection-wiki-anchor {
+  display: flex;
+  width: 100%;
+}
+
+.terminal-menu .connection-wiki-popover {
+  top: -5px;
+  right: calc(100% + 4px);
+}
+
+.terminal-pane-close:hover {
+  color: #ff7070;
+  background: rgba(255, 100, 100, 0.12);
+}
+
+.terminal-search-bar {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) minmax(54px, auto) repeat(3, 24px);
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  padding: 6px 8px;
+  background: rgba(9, 14, 21, 0.9);
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+.terminal-search-bar input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  color: #d9e2ef;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(128, 153, 184, 0.28);
+  border-radius: 5px;
+  outline: none;
+}
+
+.terminal-search-bar input:focus {
+  border-color: #5aa0ff;
+}
+
+.terminal-search-count {
+  min-width: 54px;
+  color: #95a7bb;
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.terminal-search-count.empty {
+  color: #f28b82;
+}
+
+.terminal-pane pre,
+.approval-card pre,
+.assistant-message-text-attachment pre,
+.assistant-selection-context pre,
+.proposal-context-details pre {
+  margin: 0;
+  overflow: auto;
+  font-family: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.58;
+}
+
+.terminal-pane pre {
+  padding: 14px;
+}
+
+.terminal-pane code {
+  color: #d9e2ef;
+}
+
+.xterm-host {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.xterm-host .xterm {
+  height: 100%;
+  padding: 8px;
+}
+
+.xterm-host .xterm .xterm-viewport::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

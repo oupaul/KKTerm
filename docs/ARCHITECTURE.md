@@ -302,7 +302,7 @@ The primary UI is a dense desktop workspace:
 
 Default visual direction: quiet productivity light chrome with dark terminal panes.
 
-Dashboard motion is centralized in `src/dashboard/motion.tsx` using `motion/react`. Dashboard surfaces should use those wrappers for entry, exit, hover, and layout transitions instead of local one-off animation props. Motion may animate opacity, transforms, scale, and layout only; colors, borders, shadows, and backgrounds must remain owned by CSS classes and the color-scheme variables in `src/App.css`. The Dashboard motion root uses user reduced-motion preferences, so new Dashboard animation should stay inside that root unless there is a product reason to opt out.
+Dashboard motion is centralized in `src/dashboard/motion.tsx` using `motion/react`. Dashboard surfaces should use those wrappers for entry, exit, hover, and layout transitions instead of local one-off animation props. Motion may animate opacity, transforms, scale, and layout only; colors, borders, shadows, and backgrounds must remain owned by CSS classes and the color-scheme variables in `src/styles/colorSchemes.css`. The Dashboard motion root uses user reduced-motion preferences, so new Dashboard animation should stay inside that root unless there is a product reason to opt out.
 
 The Dashboard module supports multiple views, each a durable SQLite-backed row in `dashboard_views` carrying its own widget instances and `grid_density`. The first view is named "Default" and is seeded on first run with one App Launcher widget. Views do not create backend Sessions or saved Connections. Dashboard supplies the shared right AI Assistant panel with an active page-context summary for the current view, including widget instances and known AI Created Widgets as compact metadata only; Settings supplies the same shared Assistant panel with the active Settings section and visible control keys from `src/settings/settingsAssistantContext.ts`. Keep page context separate from terminal selected-output context in the assistant request model. App Launcher belongs to Dashboard as a widget: users add the widget to a view, then add local app, shortcut, script, or file entries inside it. Each launcher entry should render as only an icon and text label in the widget surface; editing, removal, administrator launch, alternate-user launch, and other management actions must stay in an app-owned right-click context menu. See `docs/DASHBOARD.md` for the durable Dashboard architecture, including the three widget kinds, the three visual presets, drag-and-drop layout, and the AI-Assistant tool surface.
 
@@ -319,6 +319,10 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 `src/App.tsx` is intentionally a small shell now. It composes page routing, Settings routing, global Workspace chrome, the app-wide Status Bar, and startup/bootstrap hooks. Workspace surfaces, Connection UI, Activity Rail internals, and app-shell effects live in feature or app-shell modules so terminal, SFTP, URL, RDP/VNC, assistant, connection-tree, and Activity Rail work can proceed independently without repeatedly touching the root shell.
 
 - `src/App.tsx` — root `App` composition, Workspace/Settings routing, Workspace chrome assembly, app-wide Status Bar placement, settings reset handoff, and startup hook wiring.
+- `src/App.css` — global CSS entrypoint and cascade-order manifest. Keep `@import "tailwindcss"` first, then import shared token/base CSS, then module CSS.
+- `src/styles/colorSchemes.css` — global font faces, `:root` design tokens, and `[data-color-scheme="..."]` CSS custom property blocks consumed by app modules.
+- `src/styles/base.css` — resets and shared CSS primitives used across modules: icon/text buttons, dialog backdrops, command menus, form basics, and shared context-menu surfaces.
+- `src/app/app.css` — app shell, Activity Rail, rail tooltips, panel resize chrome, and Tutorial overlay styling.
 - `src/app/ActivityRail.tsx` — Activity Rail rendering, connected Connection shortcuts, pinned Connection actions, native rail Connection context menu, connected Connection drag ordering, and Don't Sleep control.
 - `src/app/RailTooltip.tsx` — shared app-owned Activity Rail tooltip surface; use this instead of browser-native `title` tooltips for rail icon labels.
 - `src/app/workspaceChromeLayout.tsx` — global Workspace chrome panel widths/collapse state, panel resize handles, layout reset, and localStorage persistence for the Connection panel and AI Assistant Panel.
@@ -329,13 +333,16 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/connections/connectionSidebarState.ts` — sidebar-local persistence/event helpers for recent Connections, stored-secret masking, and connection-tree invalidation.
 - `src/connections/treeUtils.ts` — pure connection tree transforms, filtering, flattening, folder counts, and live status projection.
 - `src/connections/utils.tsx` — connection labels/icons, default ports, Quick Connect runtime ids, local shell options, and SSH host-key confirmation helpers shared by terminal/SFTP.
+- `src/connections/connections.css` — Connection sidebar, Quick Connect/Add Connection browser-preview menus, Connection dialog, import dialog, and connection-tree CSS.
 - `src/workspace/WorkspaceCanvas.tsx` — `TabStrip` and `WorkspaceCanvas`, including active Tab dispatch to terminal, SFTP, URL, and remote desktop surfaces.
 - `src/workspace/paneRegistry.ts` — in-memory registry for mounted Pane/Session affordances that must stay frontend-owned, including terminal renderers, input writers, RDP text senders, remote desktop assistant controllers, and SFTP/FTP file-browser assistant controllers.
 - `src/workspace/ScreenshotMenu.tsx` — native screenshot command menu, Region overlay, screenshot-to-clipboard, and screenshot-to-AI handoff.
 - `src/workspace/StatusBar.tsx` — bottom app-wide **Status Bar**. It remains visible across current and future modules/pages. The left segment always renders low-frequency host usage metrics as plain icon-plus-value items with fixed-width numeric columns so the row does not shift as values change. The center segment is the universal notifications text area driven by `statusBarNotice`/`showStatusBarNotice`; all modules should use it for transient status and error notices. CPU, RAM, downstream transfer rate, and upstream transfer rate come from low-overhead direct Windows APIs. It should not grow back into a debug timing strip; detailed performance measurements belong in diagnostics, scripts, or explicit release-measurement workflows.
 - `src/workspace/nativeOverlay.ts` — geometry-based overlay suppression detection for RDP ActiveX only; update this when a new DOM dialog or non-menu overlay may intersect RDP. Keep the detector surface-aware, not document-wide. Simple command menus should use `src/lib/nativeContextMenu.ts` instead of joining this selector list.
+- `src/workspace/workspace.css` — tab strip, workspace canvas, screenshot menu/Region overlay, bottom Status Bar, and screenshot gallery CSS.
 - `src/app/TutorialOverlay.tsx` — app-owned guided-help overlay used by the AI Assistant Tutorial tool. It resolves constrained `data-tutorial-id` anchors, scrolls the target into view, dims the rest of the app, places a short balloon, and dismisses on the next user interaction. Because it can intersect RDP, it participates in `src/workspace/nativeOverlay.ts` for RDP ActiveX parking only.
 - `src/dashboard/DashboardPage.tsx` — Dashboard shell: topbar, view pills, edit-mode toggle, per-view grid density control. Hosts `DashboardCanvas`.
+- `src/dashboard/dashboard.css` — Dashboard page, widget-grid, widget chrome, and Dashboard-specific widget CSS. It is imported through `src/App.css`, not from `DashboardPage.tsx`, so global CSS order stays centralized.
 - `src/dashboard/schema.ts` — TypeScript validator for AI Created content/script widget body JSON before browser-preview persistence and render.
 - `src/dashboard/state/dashboardStore.ts` — Zustand store: views, widget instances, AI Created Widgets, `activeViewId`, `editMode`, AI-Assistant read projection. The single source of truth for in-memory Dashboard state.
 - `src/dashboard/state/persistence.ts` — typed Tauri command wrappers for every `dashboard_*` command.
@@ -346,6 +353,8 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/dashboard/view/WidgetFrame.tsx` — preset chrome wrapper plus edit-mode controls (remove, customize). Sets inline accent CSS variables.
 - `src/dashboard/view/WidgetBody.tsx` — dispatcher: `builtIn` → registry lookup; `content` → `ContentWidgetRenderer`; `script` → `ScriptWidgetHost`.
 - `src/dashboard/widgets/` — one file per built-in widget body. `AppLauncherBody.tsx` delegates to `src/app-launcher/`.
+- `src/app-launcher/app-launcher.css` — App Launcher widget, list/details/tile layouts, and launcher dialogs/menus.
+- `src/ai-coding-usage/ai-coding-usage.css` — AI Coding Usage Dashboard widget CSS; its compact Status Bar presentation stays with `src/workspace/workspace.css`.
 - `src/dashboard/content/ContentWidgetRenderer.tsx` — declarative `content`-kind renderer; switches over `shape: 'markdown' | 'kvList' | 'checklist' | 'stat'`, parsing Markdown or sanitizing HTML according to markdown-shaped `data.mode`.
 - `src/dashboard/script/ScriptWidgetHost.tsx` — `iframe srcdoc` host for `script`-kind widgets. Wires the postMessage bridge and applies declared permissions through CSP.
 - `src/dashboard/script/permissions.ts` — script-kind capability validation shared with the Rust validator surface.
@@ -354,9 +363,13 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/dashboard/motion.tsx` — centralized motion wrappers for Dashboard surfaces; per the motion rule above.
 - `src/terminal/TerminalWorkspace.tsx` — terminal workspace, split layout view, pane host, tmux session tag/popover, terminal context menu, SSH tmux inspection helpers.
 - `src/terminal/renderer.ts` — renderer abstraction and xterm/WebGL renderer implementation.
+- `src/terminal/terminal.css` — terminal workspace, split panes, xterm host, tmux controls, terminal toolbar, and terminal-local menu affordances.
 - `src/sftp/SftpWorkspace.tsx` — SFTP dual-pane browser, file panes, transfers, overwrite conflicts, context menu, properties popup.
+- `src/sftp/sftp.css` — SFTP/FTP workspace, file panes, transfer queue, conflict dialogs, properties popover, and SFTP-specific context menu CSS.
 - `src/webview/WebViewWorkspace.tsx` — URL Connection WebView2 host, URL Session visibility for active/inactive Tabs, webview session lease management, toolbar navigation, credential fill.
+- `src/webview/webview.css` — URL/WebView2 workspace toolbar, address input, status, and placeholder CSS.
 - `src/remote-desktop/RemoteDesktopWorkspace.tsx` — RDP/VNC workspace host, RDP ActiveX visibility/bounds synchronization, RDP-only snapshot/parking for intersecting DOM overlays, and VNC canvas framebuffer/input handling.
+- `src/remote-desktop/remote-desktop.css` — RDP/VNC workspace shell, placeholder, VNC canvas, and RDP suppression snapshot CSS.
 - `src/ai/AssistantPanel.tsx` — AI Assistant chat orchestration: chat history, prompt submission, attachment capture, extension/dashboard intent UI, terminal send handoff, tool permission mode UI, and frontend completion of live Session tool requests. Keep new long-lived rendering helpers out of this file unless they need direct access to Assistant Panel state.
 - `src/ai/AssistantMarkdownContent.tsx` — assistant markdown rendering, code-block copy/send controls, and safe external-link handoff.
 - `src/ai/AssistantWorkPanel.tsx` — assistant work/timeline disclosure for reasoning content, skill invocations, tool-call progress, and waiting phrases.
@@ -366,11 +379,15 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/ai/assistantTypes.ts` — shared Assistant Panel data shapes, including `AssistantPageContext`, chat messages, attachment records, and pending tool approval records.
 - `src/ai/providers.ts` — frontend provider registry barrel and provider validation.
 - `src/ai/providerRegistry/` — one provider definition per file plus shared registry types. Provider model suggestions live here, not in Settings. The Settings model picker must render these suggestions as a real provider-specific select so users can see every known model; freeform model or deployment IDs belong in the separate custom model ID input. See `docs/AI_PROVIDERS.md` before adding or changing provider structure.
+- `src/ai/assistant.css` — AI Assistant panel, markdown renderer, composer, attachment previews, permission menus, tool approval cards, and assistant work timeline CSS.
 - `src/settings/SettingsPage.tsx` — Settings shell with sidebar nav and section routing.
 - `src/settings/settingsAssistantContext.ts` — Settings-to-AI context projection: active section, visible i18n control keys, and allowed tutorial targets.
 - `src/settings/UrlSettings.tsx` — URL Connection security defaults, saved website password metadata, and URL data shard management.
 - `src/settings/shared.tsx` — Shared `SettingsSummary` and `PlannedSettingsGrid` for settings pages.
 - `src/settings/aboutData.ts` — Product metadata and open-source component groups.
+- `src/settings/settings.css` — Settings shell, section fieldsets, form grids, Settings dialogs, MCP server management, assistant-skill settings, and Settings-owned import/export surfaces.
+- `src/manual/manual.css` — in-app manual viewer layout and markdown CSS.
+- `src/styles/wiki.css` — legacy Wiki module CSS. Keep it separate from `src/App.css` until the Wiki frontend has a dedicated `src/wiki/` owner.
 - `src/lib/clipboard.ts` — shared clipboard read/write fallback helpers.
 - `src/lib/nativeContextMenu.ts` — shared Tauri native context-menu adapter for simple text command menus, including SVG/PNG/data URL-to-PNG-byte icon rasterization, with `src/lib/nativeContextMenuModel.ts` containing testable menu normalization.
 - `src/lib/nativeMenuIcons.ts` — app-owned lucide-style SVG strings used by native context menu `iconSvg` entries for command-only actions; Connection menus should prefer existing Connection image assets via `iconSrc`.
@@ -378,11 +395,11 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/i18n/useT.ts` — typed translation hook with key autocompletion.
 - `src/i18n/locales/en.json` — English source-of-truth; 12 additional locale files under the same directory.
 
-New feature code should land in the owning module above. Keep `src/App.tsx` limited to app chrome and cross-cutting bootstrap. Workspace state, settings I/O, layout serialization, terminal rendering, pane input routing, and the Tauri command boundary remain separated under `src/store.ts`, `src/lib/`, `src/workspace/`, `src/terminal/`, and `src/lib/tauri.ts`.
+New feature code should land in the owning module above. New module CSS should live beside that module and be imported from `src/App.css` in a deliberate cascade order. Shared selectors such as `.status-bar`, `.terminal-menu`, `.dialog-backdrop`, `.icon-button`, form basics, and generic context-menu rules belong in `src/styles/base.css` unless they are truly module-specific. Keep `src/App.tsx` limited to app chrome and cross-cutting bootstrap. Workspace state, settings I/O, layout serialization, terminal rendering, pane input routing, and the Tauri command boundary remain separated under `src/store.ts`, `src/lib/`, `src/workspace/`, `src/terminal/`, and `src/lib/tauri.ts`.
 
 ## Color Scheme CSS Variables
 
-Color schemes are defined in `src/App.css` as CSS custom property blocks keyed by `[data-color-scheme="scheme-name"]`. The `:root` block defines the `"default"` scheme. Each scheme must define every variable in the list below. When adding a new scheme, also update:
+Color schemes are defined in `src/styles/colorSchemes.css` as CSS custom property blocks keyed by `[data-color-scheme="scheme-name"]`. The `:root` block defines the `"default"` scheme. `src/App.css` imports this file before shared selectors so all modules can consume the same design tokens. Each scheme must define every variable in the list below. When adding a new scheme, also update:
 
 - `src/types.ts` — `ColorScheme` union type
 - `src/settings/AppearanceSettings.tsx` — `COLOR_SCHEME_OPTIONS` and `SCHEME_PREVIEW_COLORS`

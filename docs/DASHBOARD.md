@@ -19,7 +19,7 @@ That page-context payload is an AI-facing projection, not a serialization of the
 
 It does not own:
 
-- App-wide color schemes (handled by `src/App.css` + `AppearanceSettings`).
+- App-wide color schemes (handled by `src/styles/colorSchemes.css` + `AppearanceSettings`).
 - Settings export/import shape (handled by `src-tauri/src/storage.rs` general settings flow).
 - The App Launcher's entry management (kept inside `src/app-launcher/`; Dashboard renders App Launcher as a widget but does not own its data model).
 
@@ -151,6 +151,7 @@ The AI-facing widget contract requires the first created widget to be complete f
 
 ```text
 src/dashboard/
+  dashboard.css                  ── Dashboard page, widget-grid, preset chrome, and Dashboard widget CSS (imported by src/App.css)
   DashboardPage.tsx              ── shell, topbar, view pills, edit-mode toggle
   motion.tsx                     ── existing centralized motion wrappers
   schema.ts                     ── TypeScript validator for AI Created Widget bodies and settings schemas

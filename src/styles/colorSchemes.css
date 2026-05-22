@@ -1,0 +1,348 @@
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/inter/web/InterVariable.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/inter/web/InterVariable-Italic.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+  font-style: italic;
+}
+
+:root {
+  color: var(--text);
+  background: var(--app-bg);
+  font-family: var(--app-ui-font-family);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --app-bg: #eef1f5;
+  --chrome: #f8fafc;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f3f6fa;
+  --terminal: #111820;
+  --terminal-2: #0c1219;
+  --terminal-border: #243344;
+  --text: #17202b;
+  --text-muted: #687386;
+  --text-faint: #8a95a6;
+  --border: #d7dde7;
+  --border-strong: #c3ccd9;
+  --accent: #2563eb;
+  --accent-soft: #dbe8ff;
+  --green-soft: #ecfdf5;
+  --amber-soft: #fff8e7;
+  --green: #15915f;
+  --amber: #b7791f;
+  --red: #c2413b;
+  --nav-toolbar-bg: #202936;
+  --nav-toolbar-text: #d8e1ef;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-toolbar-accent: #60a5fa;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #111827;
+  --nav-toolbar-tooltip-text: #f8fafc;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
+  --shadow: 0 18px 50px rgba(31, 42, 58, 0.12);
+  --app-ui-font-family:
+    "Inter", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+[data-color-scheme="dark"] {
+  --app-bg: #1a1d24;
+  --chrome: #232730;
+  --chrome-strong: #2b303b;
+  --surface: #2b303b;
+  --surface-muted: #232730;
+  --text: #e4e7ee;
+  --text-muted: #8b92a5;
+  --text-faint: #5c6275;
+  --border: #363a47;
+  --border-strong: #454b5b;
+  --accent: #4b8bff;
+  --accent-soft: #1e3053;
+  --green-soft: #0d3326;
+  --amber-soft: #33270d;
+  --green: #3fb87b;
+  --amber: #d99a3d;
+  --red: #d9534f;
+  --nav-toolbar-bg: #202936;
+  --nav-toolbar-text: #d8e1ef;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-toolbar-accent: #60a5fa;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #111827;
+  --nav-toolbar-tooltip-text: #f8fafc;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+[data-color-scheme="light"] {
+  --app-bg: #ffffff;
+  --chrome: #ffffff;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f5f7fa;
+  --text: #0a1628;
+  --text-muted: #3a4560;
+  --text-faint: #6b7796;
+  --border: #cdd5e3;
+  --border-strong: #a0abbf;
+  --accent: #1d4ed8;
+  --accent-soft: #dbeafe;
+  --green-soft: #ecfdf5;
+  --amber-soft: #fff8e7;
+  --green: #0d6b3d;
+  --amber: #a3620a;
+  --red: #b91c1c;
+  --nav-toolbar-bg: #202936;
+  --nav-toolbar-text: #d8e1ef;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
+  --nav-toolbar-accent: #60a5fa;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #111827;
+  --nav-toolbar-tooltip-text: #f8fafc;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
+  --shadow: 0 12px 40px rgba(0, 8, 32, 0.1);
+}
+
+[data-color-scheme="mac"] {
+  --app-bg: #ececec;
+  --chrome: #f5f5f7;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f5f5f7;
+  --text: #1d1d1f;
+  --text-muted: #6e6e73;
+  --text-faint: #aeaeb2;
+  --border: #d2d2d7;
+  --border-strong: #c7c7cc;
+  --accent: #0071e3;
+  --accent-soft: #e8f0fe;
+  --green-soft: #e8f8f0;
+  --amber-soft: #fff8e7;
+  --green: #34c759;
+  --amber: #ff9500;
+  --red: #ff3b30;
+  --nav-toolbar-bg: #e4e4e8;
+  --nav-toolbar-text: #1d1d1f;
+  --nav-toolbar-hover-bg: rgba(0, 0, 0, 0.08);
+  --nav-toolbar-accent: #0071e3;
+  --nav-toolbar-warning: #b36b00;
+  --nav-toolbar-tooltip-bg: #1d1d1f;
+  --nav-toolbar-tooltip-text: #f5f5f7;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.18);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+[data-color-scheme="orange"] {
+  --app-bg: #fff0d6;
+  --chrome: #ff8a00;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #fff7e8;
+  --text: #102047;
+  --text-muted: #41506e;
+  --text-faint: #77809a;
+  --border: #ffd28a;
+  --border-strong: #ffab30;
+  --accent: #ff6f00;
+  --accent-soft: #ffe2b5;
+  --green-soft: #e8f8dd;
+  --amber-soft: #fff1bf;
+  --green: #2db833;
+  --amber: #ff8a00;
+  --red: #d9271f;
+  --nav-toolbar-bg: #ff7900;
+  --nav-toolbar-text: #ffffff;
+  --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.2);
+  --nav-toolbar-accent: #113d86;
+  --nav-toolbar-warning: #fff05a;
+  --nav-toolbar-tooltip-bg: #12306b;
+  --nav-toolbar-tooltip-text: #ffffff;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.28);
+  --shadow: 0 14px 42px rgba(255, 111, 0, 0.18);
+}
+
+[data-color-scheme="purple"] {
+  --app-bg: #1e1836;
+  --chrome: #252042;
+  --chrome-strong: #2d2650;
+  --surface: #2d2650;
+  --surface-muted: #252042;
+  --text: #e8e4f4;
+  --text-muted: #9d93c9;
+  --text-faint: #6e65a3;
+  --border: #3d3566;
+  --border-strong: #50487a;
+  --accent: #a78bfa;
+  --accent-soft: #2e2852;
+  --green-soft: #1a2e24;
+  --amber-soft: #2e2618;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --nav-toolbar-bg: #1b1536;
+  --nav-toolbar-text: #ece6ff;
+  --nav-toolbar-hover-bg: rgba(167, 139, 250, 0.18);
+  --nav-toolbar-accent: #c4b5fd;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #120d27;
+  --nav-toolbar-tooltip-text: #f5f1ff;
+  --nav-toolbar-tooltip-border: rgba(196, 181, 253, 0.25);
+  --shadow: 0 18px 50px rgba(10, 6, 30, 0.45);
+}
+
+[data-color-scheme="pink"] {
+  --app-bg: #fff0f5;
+  --chrome: #fff5f8;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #fff0f3;
+  --text: #2d1b3a;
+  --text-muted: #6e4b7c;
+  --text-faint: #9b85a8;
+  --border: #e8d0e0;
+  --border-strong: #d4b8cc;
+  --accent: #c026d3;
+  --accent-soft: #fae8ff;
+  --green-soft: #ecf8f0;
+  --amber-soft: #fff5ec;
+  --green: #15803d;
+  --amber: #b45309;
+  --red: #dc2626;
+  --nav-toolbar-bg: #5a2148;
+  --nav-toolbar-text: #ffe3f1;
+  --nav-toolbar-hover-bg: rgba(255, 190, 220, 0.18);
+  --nav-toolbar-accent: #f9a8d4;
+  --nav-toolbar-warning: #fbbf24;
+  --nav-toolbar-tooltip-bg: #3b1430;
+  --nav-toolbar-tooltip-text: #fff0f7;
+  --nav-toolbar-tooltip-border: rgba(255, 190, 220, 0.25);
+  --shadow: 0 12px 40px rgba(80, 20, 60, 0.1);
+}
+
+[data-color-scheme="green-kuai-kuai"] {
+  --app-bg: #ffffff;
+  --chrome: #a7ec5a;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f6fff0;
+  --text: #082d68;
+  --text-muted: #385a8e;
+  --text-faint: #6f86aa;
+  --border: #8bcf4c;
+  --border-strong: #5ea72c;
+  --toggle-off-bg: #9eaab7;
+  --accent: #082d68;
+  --accent-soft: #dde8fa;
+  --green-soft: #edfbdc;
+  --amber-soft: #fff7d8;
+  --green: #62bd2f;
+  --amber: #d8a128;
+  --red: #d71920;
+  --nav-toolbar-bg: #ffffff;
+  --nav-toolbar-text: #082d68;
+  --nav-toolbar-hover-bg: rgba(8, 45, 104, 0.08);
+  --nav-toolbar-accent: #082d68;
+  --nav-toolbar-warning: #cc8800;
+  --nav-toolbar-tooltip-bg: #082d68;
+  --nav-toolbar-tooltip-text: #ffffff;
+  --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.2);
+  --shadow: 0 18px 46px rgba(44, 104, 18, 0.2);
+}
+
+[data-color-scheme="blue-see"] {
+  --app-bg: #0c1929;
+  --chrome: #111f33;
+  --chrome-strong: #182840;
+  --surface: #182840;
+  --surface-muted: #111f33;
+  --text: #d8e6f4;
+  --text-muted: #6d8eae;
+  --text-faint: #4a6c8e;
+  --border: #1e3252;
+  --border-strong: #2c4468;
+  --accent: #4da6ff;
+  --accent-soft: #152e4a;
+  --green-soft: #0f2a20;
+  --amber-soft: #2a2410;
+  --green: #3fb87b;
+  --amber: #d9a03d;
+  --red: #e0554d;
+  --nav-toolbar-bg: #0a1525;
+  --nav-toolbar-text: #c8dcf0;
+  --nav-toolbar-hover-bg: rgba(77, 166, 255, 0.18);
+  --nav-toolbar-accent: #7dc2ff;
+  --nav-toolbar-warning: #ffd54f;
+  --nav-toolbar-tooltip-bg: #08101d;
+  --nav-toolbar-tooltip-text: #e8f2fc;
+  --nav-toolbar-tooltip-border: rgba(125, 194, 255, 0.25);
+  --shadow: 0 18px 50px rgba(0, 12, 30, 0.5);
+}
+
+[data-color-scheme="confetti"] {
+  --app-bg: #fef9f0;
+  --chrome: #fffcf7;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #fff8ec;
+  --text: #2d1f3a;
+  --text-muted: #7a5c8e;
+  --text-faint: #aa8ec0;
+  --border: #e8dae8;
+  --border-strong: #d4c0d8;
+  --accent: #e040b0;
+  --accent-soft: #ffe8f8;
+  --green-soft: #e8faf0;
+  --amber-soft: #fff5e0;
+  --green: #2eaa6a;
+  --amber: #e89520;
+  --red: #e04040;
+  --nav-toolbar-bg: #3a2550;
+  --nav-toolbar-text: #f0e0f8;
+  --nav-toolbar-hover-bg: rgba(224, 64, 176, 0.18);
+  --nav-toolbar-accent: #f098d0;
+  --nav-toolbar-warning: #ffd54f;
+  --nav-toolbar-tooltip-bg: #221435;
+  --nav-toolbar-tooltip-text: #fff0f8;
+  --nav-toolbar-tooltip-border: rgba(240, 152, 208, 0.25);
+  --shadow: 0 12px 40px rgba(60, 20, 70, 0.08);
+}
+
+[data-color-scheme="bubble-tea"] {
+  --app-bg: #faf3e6;
+  --chrome: #fefbf6;
+  --chrome-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f8f0e2;
+  --text: #3b2216;
+  --text-muted: #8c6a4a;
+  --text-faint: #b89a7a;
+  --border: #e8d5b8;
+  --border-strong: #d4bfa0;
+  --accent: #c47a38;
+  --accent-soft: #fdf0e2;
+  --green-soft: #eef5e8;
+  --amber-soft: #fdf5e8;
+  --green: #6b8e4e;
+  --amber: #c47a38;
+  --red: #c04030;
+  --nav-toolbar-bg: #3b2216;
+  --nav-toolbar-text: #f5e6d0;
+  --nav-toolbar-hover-bg: rgba(196, 122, 56, 0.18);
+  --nav-toolbar-accent: #e0b080;
+  --nav-toolbar-warning: #ffd166;
+  --nav-toolbar-tooltip-bg: #2a1710;
+  --nav-toolbar-tooltip-text: #fff4e8;
+  --nav-toolbar-tooltip-border: rgba(224, 176, 128, 0.25);
+  --shadow: 0 12px 40px rgba(60, 30, 10, 0.1);
+}

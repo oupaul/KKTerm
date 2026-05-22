@@ -1,0 +1,355 @@
+.app-launcher-widget {
+  min-width: 0;
+}
+
+.app-launcher-widget-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.app-launcher-view-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.app-launcher-view-mode button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.app-launcher-view-mode button:hover,
+.app-launcher-view-mode button:focus-visible {
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+}
+
+.app-launcher-view-mode button.active {
+  color: var(--w-accent, var(--accent));
+  background: var(--surface);
+}
+
+.app-launcher-add {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 6px;
+  align-items: center;
+  height: 28px;
+}
+
+.app-launcher-add-menu {
+  min-width: 150px;
+}
+
+.app-launcher-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.app-launcher-tile-grid[data-view-mode="list"],
+.app-launcher-tile-grid[data-view-mode="details"] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.app-launcher-sort-header {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 2px 48px;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.app-launcher-list-header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-launcher-details-header {
+  grid-template-columns:
+    minmax(96px, 1.1fr)
+    minmax(72px, 0.7fr)
+    minmax(58px, 0.45fr)
+    minmax(88px, 0.75fr)
+    minmax(0, 1.25fr);
+}
+
+.app-launcher-sort-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.app-launcher-sort-header button:hover,
+.app-launcher-sort-header button:focus-visible,
+.app-launcher-sort-header button.active {
+  color: var(--text);
+  outline: none;
+}
+
+.app-launcher-sort-header button span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-launcher-sort-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.app-launcher-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.app-launcher-tile-launch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 6px;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.app-launcher-widget-list .app-launcher-tile-launch,
+.app-launcher-widget-details .app-launcher-tile-launch {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 7px 9px;
+  text-align: left;
+}
+
+.app-launcher-widget-details .app-launcher-tile-launch {
+  grid-template-columns:
+    30px
+    minmax(96px, 1.1fr)
+    minmax(72px, 0.7fr)
+    minmax(58px, 0.45fr)
+    minmax(88px, 0.75fr)
+    minmax(0, 1.25fr);
+  gap: 10px;
+}
+
+.app-launcher-tile:hover,
+.app-launcher-tile:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.app-launcher-tile.missing {
+  border-color: var(--amber);
+}
+
+.app-launcher-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  color: var(--w-accent, var(--accent));
+  background: var(--w-accent-soft, var(--surface-muted));
+  border-radius: 8px;
+}
+
+.app-launcher-widget-list .app-launcher-tile-icon,
+.app-launcher-widget-details .app-launcher-tile-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+
+.app-launcher-tile-icon img {
+  max-width: 30px;
+  max-height: 30px;
+}
+
+.app-launcher-widget-list .app-launcher-tile-icon img,
+.app-launcher-widget-details .app-launcher-tile-icon img {
+  max-width: 22px;
+  max-height: 22px;
+}
+
+.app-launcher-tile-label {
+  max-width: 100%;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.app-launcher-widget-list .app-launcher-tile-label,
+.app-launcher-widget-details .app-launcher-tile-label {
+  justify-self: start;
+  text-align: left;
+}
+
+.app-launcher-tile-type,
+.app-launcher-tile-size,
+.app-launcher-tile-modified,
+.app-launcher-tile-path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  line-height: 1.2;
+}
+
+.app-launcher-tile-size {
+  justify-self: end;
+}
+
+.app-launcher-widget-empty {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  min-height: 120px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.app-launcher-widget-empty h4,
+.app-launcher-widget-empty p {
+  margin: 0;
+}
+
+.app-launcher-widget-empty h4 {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.app-launcher-widget-empty p {
+  max-width: 300px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.dialog-backdrop.app-launcher-dialog-backdrop {
+  z-index: 100;
+}
+
+.app-launcher-dialog {
+  display: grid;
+  gap: 12px;
+  width: min(560px, calc(100vw - 96px));
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  padding: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.app-launcher-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.app-launcher-field,
+.app-launcher-checkbox {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.app-launcher-field span,
+.app-launcher-checkbox span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.app-launcher-field input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  font-size: 12px;
+}
+
+.app-launcher-field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.app-launcher-checkbox {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.app-launcher-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.app-launcher-menu {
+  position: fixed;
+  right: auto;
+  z-index: 160;
+}
