@@ -304,6 +304,9 @@ export function DashboardPage({
               <div
                 key={v.id}
                 className={`dashboard-pill${isActiveView ? " active" : ""}${isEditingView ? " editing" : ""}${v.tabColor ? " has-tab-color" : ""}`}
+                onClick={() => {
+                  if (!isEditingView) setActiveView(v.id);
+                }}
                 style={dashboardTabColorStyle(v.tabColor)}
               >
                 {editMode ? (
@@ -311,6 +314,7 @@ export function DashboardPage({
                     aria-label={t("dashboard.viewTabGradient", { view: v.title })}
                     className="dashboard-pill-dot"
                     onClick={(event) => {
+                      event.stopPropagation();
                       setTabGradientPicker({
                         viewId: v.id,
                         rect: event.currentTarget.getBoundingClientRect(),
@@ -346,7 +350,6 @@ export function DashboardPage({
                 ) : (
                   <button
                     className="dashboard-pill-main"
-                    onClick={() => setActiveView(v.id)}
                     onDoubleClick={() => {
                       setActiveView(v.id);
                       setEditingViewId(v.id);
@@ -360,7 +363,10 @@ export function DashboardPage({
                   <button
                     aria-label={t("dashboard.removeView", { name: v.title })}
                     className="dashboard-pill-close"
-                    onClick={() => setDeleteViewTarget(v)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDeleteViewTarget(v);
+                    }}
                     type="button"
                   >
                     ×
@@ -372,7 +378,10 @@ export function DashboardPage({
                       <button
                         aria-label={t("dashboard.clearViewTabGradient", { view: v.title })}
                         className="dashboard-pill-color-clear"
-                        onClick={() => void setViewTabColor(v.id, null)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void setViewTabColor(v.id, null);
+                        }}
                         type="button"
                       >
                         ×
