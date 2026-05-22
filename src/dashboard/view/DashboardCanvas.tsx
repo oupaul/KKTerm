@@ -40,6 +40,7 @@ function dimColor(dim: number): string | undefined {
 export interface DashboardCanvasProps {
   view: DashboardView;
   instances: DashboardWidgetInstance[];
+  isViewActive: boolean;
   onCustomize: (instance: DashboardWidgetInstance, anchor: HTMLElement) => void;
   onOpenBackground: () => void;
   onRequestWidgetDelete: (request: DashboardWidgetDeleteRequest) => void;
@@ -48,6 +49,7 @@ export interface DashboardCanvasProps {
 export function DashboardCanvas({
   view,
   instances,
+  isViewActive,
   onCustomize,
   onOpenBackground,
   onRequestWidgetDelete,
@@ -143,6 +145,7 @@ export function DashboardCanvas({
           <div key={i.id}>
             <WidgetFrame
               instance={i}
+              isViewActive={isViewActive}
               onCustomize={onCustomize}
               onRequestDelete={onRequestWidgetDelete}
             />

@@ -6,9 +6,11 @@ import type { DashboardWidgetInstance } from "../types";
 import type { NativeContextMenuPosition } from "../../lib/nativeContextMenu";
 
 export function WidgetBody({
+  isViewActive,
   instance,
   onWidgetContextMenu,
 }: {
+  isViewActive: boolean;
   instance: DashboardWidgetInstance;
   onWidgetContextMenu: (position: NativeContextMenuPosition) => void | Promise<void>;
 }) {
@@ -25,7 +27,7 @@ export function WidgetBody({
       );
     }
     const { Body } = entry;
-    return <Body instance={instance} />;
+    return <Body instance={instance} isViewActive={isViewActive} />;
   }
   const cw = customWidgets.find((c) => c.id === instance.sourceId);
   if (!cw) {
@@ -39,6 +41,7 @@ export function WidgetBody({
   return (
     <ScriptWidgetHost
       bodyJson={cw.bodyJson}
+      isViewActive={isViewActive}
       instance={instance}
       onWidgetContextMenu={onWidgetContextMenu}
       settingsSchemaJson={cw.settingsSchemaJson}

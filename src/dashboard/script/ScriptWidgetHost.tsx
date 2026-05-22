@@ -159,11 +159,13 @@ function activateScriptWidgetWithEviction(
 
 export function ScriptWidgetHost({
   bodyJson,
+  isViewActive,
   instance,
   onWidgetContextMenu,
   settingsSchemaJson,
 }: {
   bodyJson: string;
+  isViewActive: boolean;
   instance: DashboardWidgetInstance;
   onWidgetContextMenu: (position: NativeContextMenuPosition) => void | Promise<void>;
   settingsSchemaJson: string;
@@ -205,10 +207,10 @@ export function ScriptWidgetHost({
   const syncVisibility = useCallback(() => {
     const el = iframeRef.current;
     if (!el || capped || !libraries) return;
-    const visible = iframeRectIsVisible(el);
+    const visible = isViewActive && iframeRectIsVisible(el);
     visibleRef.current = visible;
     postIframeVisibility(el, visible);
-  }, [capped, libraries]);
+  }, [capped, isViewActive, libraries]);
   const requestedLibraries = useMemo(
     () => (parsed ? resolveWidgetLibraryKeys(parsed.libraries, parsed.source) : []),
     [parsed],
@@ -229,6 +231,12 @@ export function ScriptWidgetHost({
   // the user changes the cap in Settings so the active set honors the current
   // ceiling and capped widgets can claim newly available room.
   useEffect(() => {
+    if (!isViewActive) {
+      setCapped(true);
+      return () => {
+        deactivateScriptWidget(instance.id);
+      };
+    }
     const activated = tryActivateScriptWidget(
       instance.id,
       setCapped,
@@ -238,9 +246,10 @@ export function ScriptWidgetHost({
     return () => {
       deactivateScriptWidget(instance.id);
     };
-  }, [instance.id, maxActiveScriptWidgets]);
+  }, [instance.id, isViewActive, maxActiveScriptWidgets]);
 
   const activateCapped = useCallback(() => {
+    if (!isViewActive) return;
     // Evict the oldest active widget (notifying it so its iframe tears
     // down) before taking its slot. Without the notify step the evicted
     // iframe keeps running and the cap is silently exceeded.
@@ -250,7 +259,7 @@ export function ScriptWidgetHost({
       maxActiveScriptWidgets,
     );
     setCapped(!activated);
-  }, [instance.id, maxActiveScriptWidgets]);
+  }, [instance.id, isViewActive, maxActiveScriptWidgets]);
 
   useEffect(() => {
     if (!parsed || capped) {
@@ -353,8 +362,9 @@ export function ScriptWidgetHost({
       (entries) => {
         for (const entry of entries) {
           const visible =
-            (entry.isIntersecting && entry.intersectionRatio > 0.1) ||
-            iframeRectIsVisible(el);
+            isViewActive &&
+            ((entry.isIntersecting && entry.intersectionRatio > 0.1) ||
+              iframeRectIsVisible(el));
           visibleRef.current = visible;
           postIframeVisibility(el, visible);
         }
@@ -369,7 +379,7 @@ export function ScriptWidgetHost({
       observer.disconnect();
       window.removeEventListener("resize", syncVisibility);
     };
-  }, [capped, libraries, syncVisibility]);
+  }, [capped, isViewActive, libraries, syncVisibility]);
 
   // Forward net://event Tauri events to this widget's iframe subscribers.
   useEffect(() => {

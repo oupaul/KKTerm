@@ -114,7 +114,7 @@ function createConnectionWidgetPane(instanceId: string, connection: Connection):
   };
 }
 
-export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
+export function ConnectionWidgetBody({ instance, isViewActive }: BuiltInWidgetBodyProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useWidgetConfig(
     storageKey(instance.id),
@@ -324,6 +324,7 @@ export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
           <ConnectionWidgetSession
             connection={sessionConnection}
             instanceId={instance.id}
+            isViewActive={isViewActive}
             key={sessionConnection.id}
           />
         ) : null}
@@ -335,9 +336,11 @@ export function ConnectionWidgetBody({ instance }: BuiltInWidgetBodyProps) {
 function ConnectionWidgetSession({
   connection,
   instanceId,
+  isViewActive,
 }: {
   connection: Connection;
   instanceId: string;
+  isViewActive: boolean;
 }) {
   const tab = useMemo(
     () => createConnectionWidgetTab(instanceId, connection),
@@ -345,12 +348,12 @@ function ConnectionWidgetSession({
   );
 
   if (connection.type === "url") {
-    return <WebViewWorkspace isActive tab={tab} />;
+    return <WebViewWorkspace isActive={isViewActive} tab={tab} />;
   }
 
   if (connection.type === "rdp" || connection.type === "vnc") {
-    return <RemoteDesktopWorkspace isActive tab={tab} />;
+    return <RemoteDesktopWorkspace isActive={isViewActive} tab={tab} />;
   }
 
-  return <TerminalWorkspace allowPaneLayoutControls={false} isActive tab={tab} />;
+  return <TerminalWorkspace allowPaneLayoutControls={false} isActive={isViewActive} tab={tab} />;
 }

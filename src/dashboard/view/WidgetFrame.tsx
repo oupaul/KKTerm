@@ -15,6 +15,7 @@ import { WidgetBody } from "./WidgetBody";
 
 export interface WidgetFrameProps {
   instance: DashboardWidgetInstance;
+  isViewActive: boolean;
   onCustomize: (instance: DashboardWidgetInstance, anchor: HTMLElement) => void;
   onRequestDelete: (request: DashboardWidgetDeleteRequest) => void;
 }
@@ -24,7 +25,7 @@ export interface DashboardWidgetDeleteRequest {
   title: string;
 }
 
-export function WidgetFrame({ instance, onCustomize, onRequestDelete }: WidgetFrameProps) {
+export function WidgetFrame({ instance, isViewActive, onCustomize, onRequestDelete }: WidgetFrameProps) {
   const { t } = useTranslation();
   const editMode = useDashboardStore((s) => s.editMode);
   const customWidgets = useDashboardStore((s) => s.customWidgets);
@@ -137,7 +138,13 @@ export function WidgetFrame({ instance, onCustomize, onRequestDelete }: WidgetFr
       <Render
         title={fallbackTitle}
         icon={<IconCmp width={14} height={14} />}
-        body={<WidgetBody instance={instance} onWidgetContextMenu={openWidgetContextMenu} />}
+        body={(
+          <WidgetBody
+            instance={instance}
+            isViewActive={isViewActive}
+            onWidgetContextMenu={openWidgetContextMenu}
+          />
+        )}
         controls={controls}
         editMode={editMode}
         glass={instance.glass}

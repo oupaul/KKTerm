@@ -8,6 +8,7 @@ import type { DashboardWidgetInstance } from "../types";
 
 export interface BuiltInWidgetBodyProps {
   instance: DashboardWidgetInstance;
+  isViewActive: boolean;
 }
 
 export interface BuiltInWidgetEntry {

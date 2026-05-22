@@ -161,12 +161,14 @@ export function DashboardPage({
     () => dashboardVisualContextForView({ background: activeView?.background ?? null }),
     [activeView?.background],
   );
-  const densitySettings = DENSITY_SETTINGS[activeView?.gridDensity ?? "default"];
-  const canvasGridStyle = {
-    "--dw-row-height": `${densitySettings.rowHeight}px`,
-    "--dw-grid-gap-x": `${densitySettings.margin[0]}px`,
-    "--dw-grid-gap-y": `${densitySettings.margin[1]}px`,
-  } as CSSProperties;
+  function canvasGridStyleForView(view: DashboardView) {
+    const densitySettings = DENSITY_SETTINGS[view.gridDensity];
+    return {
+      "--dw-row-height": `${densitySettings.rowHeight}px`,
+      "--dw-grid-gap-x": `${densitySettings.margin[0]}px`,
+      "--dw-grid-gap-y": `${densitySettings.margin[1]}px`,
+    } as CSSProperties;
+  }
 
   useEffect(() => {
     if (!activeView) return;
@@ -418,19 +420,37 @@ export function DashboardPage({
         </div>
       </header>
 
-      <div className={`dw-canvas-scroll${editMode ? " is-editing" : ""}`} style={canvasGridStyle}>
-        <DashboardBackgroundHost
-          activeView={activeView}
-          dashboardActive={dashboardActive}
-          views={views}
-        />
-        <DashboardCanvas
-          view={activeView}
-          instances={viewInstances}
-          onCustomize={(instance, anchor) => setCustomize({ instance, rect: anchor.getBoundingClientRect() })}
-          onOpenBackground={() => setBackgroundOpen(true)}
-          onRequestWidgetDelete={setDeleteWidgetTarget}
-        />
+      <div className="dw-canvas-stack">
+        {views.map((view) => {
+          const isActiveView = view.id === activeView.id;
+          const cachedViewInstances = instances.filter((instance) => instance.viewId === view.id);
+          return (
+            <div
+              key={view.id}
+              className={[
+                "dw-canvas-scroll",
+                editMode ? "is-editing" : "",
+                isActiveView ? "is-active-view" : "is-cached-view",
+              ].filter(Boolean).join(" ")}
+              style={canvasGridStyleForView(view)}
+              {...ariaHidden(!isActiveView || !dashboardActive)}
+            >
+              <DashboardBackgroundHost
+                activeView={view}
+                dashboardActive={dashboardActive && isActiveView}
+                views={views}
+              />
+              <DashboardCanvas
+                view={view}
+                instances={cachedViewInstances}
+                isViewActive={dashboardActive && isActiveView}
+                onCustomize={(instance, anchor) => setCustomize({ instance, rect: anchor.getBoundingClientRect() })}
+                onOpenBackground={() => setBackgroundOpen(true)}
+                onRequestWidgetDelete={setDeleteWidgetTarget}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {catalogOpen && (

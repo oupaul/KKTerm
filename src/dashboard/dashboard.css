@@ -359,6 +359,12 @@ button.dashboard-pill-dot:focus-visible {
   filter: brightness(1.05);
 }
 
+.dw-canvas-stack {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .dw-canvas-scroll {
   box-sizing: border-box;
   position: relative;
@@ -374,6 +380,13 @@ button.dashboard-pill-dot:focus-visible {
   padding: var(--dw-canvas-padding-top) var(--dw-canvas-padding-x) var(--dw-canvas-padding-bottom);
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.dw-canvas-scroll.is-cached-view {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .dw-canvas {
