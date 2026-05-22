@@ -878,6 +878,7 @@ button.dashboard-pill-dot:focus-visible {
   --dw-grid-column-width: calc((100% - (var(--dw-grid-gap-x, 16px) * 13)) / 12);
   --dw-grid-step-x: calc(var(--dw-grid-column-width) + var(--dw-grid-gap-x, 16px));
   --dw-grid-step-y: calc(var(--dw-row-height, 68px) + var(--dw-grid-gap-y, 16px));
+  height: 100%;
   min-height: 0;
   padding: var(--dw-canvas-padding-top) var(--dw-canvas-padding-x) var(--dw-canvas-padding-bottom);
   overflow-x: hidden;
