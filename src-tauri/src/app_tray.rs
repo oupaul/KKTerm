@@ -70,8 +70,19 @@ pub fn install(app: &tauri::App, tooltip: &str) -> Result<(), String> {
             | TrayIconEvent::DoubleClick {
                 button: MouseButton::Left,
                 ..
-            } => restore_main_window(tray.app_handle()),
-            _ => {}
+            } => {
+                crate::debug_heartbeat::record_tray_event("left-click");
+                restore_main_window(tray.app_handle());
+            }
+            TrayIconEvent::Click {
+                button: MouseButton::Right,
+                ..
+            } => crate::debug_heartbeat::record_tray_event("right-click"),
+            TrayIconEvent::DoubleClick {
+                button: MouseButton::Right,
+                ..
+            } => crate::debug_heartbeat::record_tray_event("right-double-click"),
+            _ => crate::debug_heartbeat::record_tray_event("other"),
         })
         .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
         .build(app)
@@ -153,6 +164,8 @@ fn build_menu<R: tauri::Runtime>(
 }
 
 fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &str) {
+    crate::debug_heartbeat::record_tray_event(format!("menu:{id}"));
+
     if id == EXIT_ITEM_ID {
         app.exit(0);
         return;
@@ -198,12 +211,19 @@ fn toggle_dont_sleep<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 
 pub fn restore_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     if let Some(main_window) = app.get_window(crate::window_state::MAIN_WINDOW_LABEL) {
-        if main_window.is_minimized().unwrap_or(false) {
-            let _ = main_window.unminimize();
-        }
-
-        let _ = main_window.show();
-        let _ = main_window.set_focus();
+        let was_minimized = main_window.is_minimized().unwrap_or(false);
+        let unminimize_result = if was_minimized {
+            main_window.unminimize().map(|_| "ok").unwrap_or("error")
+        } else {
+            "skipped"
+        };
+        let show_result = main_window.show().map(|_| "ok").unwrap_or("error");
+        let focus_result = main_window.set_focus().map(|_| "ok").unwrap_or("error");
+        crate::debug_heartbeat::record_tray_event(format!(
+            "restore:wasMinimized={was_minimized}:unminimize={unminimize_result}:show={show_result}:focus={focus_result}"
+        ));
+    } else {
+        crate::debug_heartbeat::record_tray_event("restore:no-main-window");
     }
 }
 
@@ -216,6 +236,7 @@ pub fn hide_minimized_window_if_enabled<R: tauri::Runtime>(window: &tauri::Windo
         return;
     }
 
+    crate::debug_heartbeat::record_window_event("hide-minimized-to-tray");
     let _ = window.hide();
 }
 
@@ -236,5 +257,6 @@ pub fn hide_window_on_close_if_enabled<R: tauri::Runtime>(
     }
 
     api.prevent_close();
+    crate::debug_heartbeat::record_window_event("hide-close-to-tray");
     let _ = window.hide();
 }

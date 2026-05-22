@@ -24,23 +24,71 @@ export function useDebugFrontendHeartbeat() {
 
     let disposed = false;
     let intervalId = 0;
+    let animationFrameId = 0;
+    let lastAnimationFrameMs = performance.now();
+    let lastPointerMs: number | null = null;
+    let lastKeyMs: number | null = null;
+    let lastFocusMs: number | null = null;
+    let lastBlurMs: number | null = null;
+    const age = (timestamp: number | null) =>
+      timestamp === null ? null : Math.max(0, Math.round(performance.now() - timestamp));
+    const recordAnimationFrame = () => {
+      lastAnimationFrameMs = performance.now();
+      animationFrameId = window.requestAnimationFrame(recordAnimationFrame);
+    };
+    const recordPointer = () => {
+      lastPointerMs = performance.now();
+    };
+    const recordKey = () => {
+      lastKeyMs = performance.now();
+    };
+    const recordFocus = () => {
+      lastFocusMs = performance.now();
+    };
+    const recordBlur = () => {
+      lastBlurMs = performance.now();
+    };
     const sendHeartbeat = () => {
-      void invokeCommand("debug_frontend_heartbeat").catch(() => undefined);
+      void invokeCommand("debug_frontend_heartbeat", {
+        heartbeat: {
+          documentHasFocus: document.hasFocus(),
+          visibilityState: document.visibilityState,
+          rafAgeMs: age(lastAnimationFrameMs),
+          pointerAgeMs: age(lastPointerMs),
+          keyAgeMs: age(lastKeyMs),
+          windowFocusAgeMs: age(lastFocusMs),
+          windowBlurAgeMs: age(lastBlurMs),
+        },
+      }).catch(() => undefined);
     };
 
     void invokeCommand("is_debug_build").then((debugBuild) => {
       if (disposed || !debugBuild) {
         return;
       }
+      animationFrameId = window.requestAnimationFrame(recordAnimationFrame);
+      window.addEventListener("pointerdown", recordPointer, { capture: true });
+      window.addEventListener("pointermove", recordPointer, { capture: true });
+      window.addEventListener("keydown", recordKey, { capture: true });
+      window.addEventListener("focus", recordFocus);
+      window.addEventListener("blur", recordBlur);
       sendHeartbeat();
       intervalId = window.setInterval(sendHeartbeat, 2_000);
     });
 
     return () => {
       disposed = true;
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       if (intervalId) {
         window.clearInterval(intervalId);
       }
+      window.removeEventListener("pointerdown", recordPointer, { capture: true });
+      window.removeEventListener("pointermove", recordPointer, { capture: true });
+      window.removeEventListener("keydown", recordKey, { capture: true });
+      window.removeEventListener("focus", recordFocus);
+      window.removeEventListener("blur", recordBlur);
     };
   }, []);
 }

@@ -125,8 +125,8 @@ fn is_debug_build() -> bool {
 }
 
 #[tauri::command]
-fn debug_frontend_heartbeat() {
-    debug_heartbeat::record_frontend_heartbeat();
+fn debug_frontend_heartbeat(heartbeat: debug_heartbeat::FrontendHeartbeat) {
+    debug_heartbeat::record_frontend_heartbeat(heartbeat);
 }
 
 #[tauri::command]
@@ -2438,12 +2438,17 @@ pub fn run() {
             }
 
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                debug_heartbeat::record_window_event("close-requested");
                 app_tray::hide_window_on_close_if_enabled(window, api);
             }
 
             if let Some(window_tracker) = window.try_state::<window_state::MainWindowState>() {
                 match event {
                     tauri::WindowEvent::Resized(size) => {
+                        debug_heartbeat::record_window_event(format!(
+                            "resized:{}x{}",
+                            size.width, size.height
+                        ));
                         if !window.is_maximized().unwrap_or(false) {
                             window_tracker.update_normal_size(*size);
                         }
@@ -2456,8 +2461,11 @@ pub fn run() {
                         }
                         app_tray::hide_minimized_window_if_enabled(window);
                     }
-                    tauri::WindowEvent::Focused(false) => {
-                        app_tray::hide_minimized_window_if_enabled(window);
+                    tauri::WindowEvent::Focused(focused) => {
+                        debug_heartbeat::record_window_event(format!("focused:{focused}"));
+                        if !focused {
+                            app_tray::hide_minimized_window_if_enabled(window);
+                        }
                     }
                     _ => {}
                 }

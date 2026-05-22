@@ -760,7 +760,17 @@ type CommandMap = {
     result: boolean;
   };
   debug_frontend_heartbeat: {
-    args: undefined;
+    args: {
+      heartbeat: {
+        documentHasFocus: boolean;
+        visibilityState: string;
+        rafAgeMs: number | null;
+        pointerAgeMs: number | null;
+        keyAgeMs: number | null;
+        windowFocusAgeMs: number | null;
+        windowBlurAgeMs: number | null;
+      };
+    };
     result: void;
   };
   list_connection_tree: {
