@@ -1127,6 +1127,9 @@ function TerminalPaneView({
       }
 
       if (key === "v") {
+        // Prevent the browser's native paste event from also reaching xterm's
+        // hidden textarea — otherwise the clipboard text is written twice.
+        event.preventDefault();
         void handlePasteIntoTerminal();
         return false;
       }
