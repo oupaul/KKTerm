@@ -10754,6 +10754,7 @@ fieldset.connection-specific-options > legend {
 
 .ai-coding-usage:hover .ai-coding-provider-actions,
 .ai-coding-usage:focus-within .ai-coding-provider-actions,
+.ai-coding-usage.is-managing .ai-coding-provider-actions,
 .ai-coding-provider[data-state="disconnected"] .ai-coding-provider-actions {
   opacity: 1;
   pointer-events: auto;
@@ -10916,9 +10917,31 @@ fieldset.connection-specific-options > legend {
 
 .ai-coding-connect:disabled,
 .ai-coding-usage-refresh:disabled,
-.ai-coding-usage-add:disabled {
+.ai-coding-usage-add:disabled,
+.ai-coding-provider-remove:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+.ai-coding-provider-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: #fff;
+  background: var(--red);
+  border: 1px solid rgb(255 255 255 / 85%);
+  border-radius: 999px;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 20%);
+  cursor: pointer;
+}
+
+.ai-coding-provider-remove:hover,
+.ai-coding-provider-remove:focus-visible {
+  filter: brightness(1.04);
+  outline: none;
 }
 
 .ai-coding-install-link {

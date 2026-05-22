@@ -242,6 +242,7 @@
     "aiCodingUsageConnectProvider": "Connect {{provider}}",
     "aiCodingUsageConnecting": "Connecting…",
     "aiCodingUsageDisconnectProvider": "Disconnect {{provider}}",
+    "aiCodingUsageReconnectProvider": "Reconnect/Refresh {{provider}}",
     "aiCodingUsageRemoveProvider": "Remove {{provider}} from this widget",
     "aiCodingUsageInstallHelp": "Install {{provider}} on Windows",
     "aiCodingUsageRefreshNow": "Refresh usage now",

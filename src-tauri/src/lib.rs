@@ -2548,6 +2548,7 @@ pub fn run() {
             ai_coding_usage::ai_coding_usage_load,
             ai_coding_usage::ai_coding_usage_connect,
             ai_coding_usage::ai_coding_usage_refresh,
+            ai_coding_usage::ai_coding_usage_reconnect,
             ai_coding_usage::ai_coding_usage_disconnect,
             keychain_status,
             get_performance_snapshot,

@@ -1,4 +1,4 @@
-import { ExternalLink, LogOut, PanelBottom, PanelBottomDashed, Plus, RefreshCw, X } from "lucide-react";
+import { ExternalLink, PanelBottom, PanelBottomDashed, Plus, RefreshCw, X } from "lucide-react";
 import { ClaudeCodeColorIcon, CodexColorIcon } from "./providerIcons";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
@@ -37,6 +37,7 @@ type AddMenuState = {
 export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetInstance }) {
   const { t } = useTranslation();
   const updateInstance = useDashboardStore((state) => state.updateInstance);
+  const editMode = useDashboardStore((state) => state.editMode);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   useAiCodingUsageSubscription();
   const state = useAiCodingUsageStore((s) => s.state);
@@ -159,17 +160,18 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
     }
   }
 
-  async function disconnectProvider(provider: AiCodingUsageProvider) {
+  async function reconnectProvider(provider: AiCodingUsageProvider) {
     if (!isTauriRuntime() || busyProvider) {
       return;
     }
     setBusyProvider(provider);
     try {
-      const nextProvider = await invokeCommand("ai_coding_usage_disconnect", { provider });
+      const nextProvider = await invokeCommand("ai_coding_usage_reconnect", { provider });
       applyProvider(nextProvider);
       setStoreError("");
     } catch (error) {
       setStoreError(errorMessage(error));
+      await reloadStore();
     } finally {
       setBusyProvider(null);
     }
@@ -181,7 +183,7 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
 
   return (
     <div
-      className={`ai-coding-usage${addMenuState ? " is-adding" : ""}`}
+      className={`ai-coding-usage${addMenuState ? " is-adding" : ""}${editMode ? " is-managing" : ""}`}
       data-instance-id={instance.id}
     >
       <div className="ai-coding-usage-toolbar">
@@ -237,9 +239,10 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
             return (
               <ProviderSlot
                 busy={busyProvider === provider || busyProvider === "all"}
+                editMode={editMode}
                 key={provider}
                 onConnect={() => void connectProvider(provider)}
-                onDisconnect={() => void disconnectProvider(provider)}
+                onReconnect={() => void reconnectProvider(provider)}
                 onRemove={() => void removeProvider(provider)}
                 provider={providerState}
               />
@@ -277,14 +280,16 @@ export function AiCodingUsageWidget({ instance }: { instance: DashboardWidgetIns
 
 function ProviderSlot({
   busy,
+  editMode,
   onConnect,
-  onDisconnect,
+  onReconnect,
   onRemove,
   provider,
 }: {
   busy: boolean;
+  editMode: boolean;
   onConnect: () => void;
-  onDisconnect: () => void;
+  onReconnect: () => void;
   onRemove: () => void;
   provider: AiCodingUsageProviderState;
 }) {
@@ -329,36 +334,30 @@ function ProviderSlot({
               <button
                 type="button"
                 className="dashboard-widget-icon-button"
-                onClick={onDisconnect}
+                onClick={onReconnect}
                 disabled={busy}
-                aria-label={t("dashboard.aiCodingUsageDisconnectProvider", { provider: label })}
-                title={t("dashboard.aiCodingUsageDisconnectProvider", { provider: label })}
+                aria-label={t("dashboard.aiCodingUsageReconnectProvider", { provider: label })}
+                title={t("dashboard.aiCodingUsageReconnectProvider", { provider: label })}
               >
-                <LogOut size={13} />
+                <RefreshCw size={13} />
               </button>
-              <button
-                type="button"
-                className="dashboard-widget-icon-button"
-                onClick={onRemove}
-                disabled={busy}
-                aria-label={t("dashboard.aiCodingUsageRemoveProvider", { provider: label })}
-                title={t("dashboard.aiCodingUsageRemoveProvider", { provider: label })}
-              >
-                <X size={13} />
-              </button>
+              {editMode ? (
+                <ProviderRemoveButton
+                  busy={busy}
+                  label={t("dashboard.aiCodingUsageRemoveProvider", { provider: label })}
+                  onRemove={onRemove}
+                />
+              ) : null}
             </div>
           ) : (
             <div className="ai-coding-provider-actions">
-              <button
-                type="button"
-                className="dashboard-widget-icon-button"
-                onClick={onRemove}
-                disabled={busy}
-                aria-label={t("dashboard.aiCodingUsageRemoveProvider", { provider: label })}
-                title={t("dashboard.aiCodingUsageRemoveProvider", { provider: label })}
-              >
-                <X size={13} />
-              </button>
+              {editMode ? (
+                <ProviderRemoveButton
+                  busy={busy}
+                  label={t("dashboard.aiCodingUsageRemoveProvider", { provider: label })}
+                  onRemove={onRemove}
+                />
+              ) : null}
               <button
                 type="button"
                 className="ai-coding-connect"
@@ -409,6 +408,29 @@ function ProviderSlot({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function ProviderRemoveButton({
+  busy,
+  label,
+  onRemove,
+}: {
+  busy: boolean;
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="ai-coding-provider-remove"
+      onClick={onRemove}
+      disabled={busy}
+      aria-label={label}
+      title={label}
+    >
+      <X size={12} />
+    </button>
   );
 }
 

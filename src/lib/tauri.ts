@@ -1097,6 +1097,10 @@ type CommandMap = {
     args: { provider?: AiCodingUsageProvider | null };
     result: AiCodingUsageState;
   };
+  ai_coding_usage_reconnect: {
+    args: { provider: AiCodingUsageProvider };
+    result: AiCodingUsageProviderState;
+  };
   ai_coding_usage_disconnect: {
     args: { provider: AiCodingUsageProvider };
     result: AiCodingUsageProviderState;

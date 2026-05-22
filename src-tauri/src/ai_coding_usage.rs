@@ -137,6 +137,27 @@ pub async fn ai_coding_usage_refresh(
 }
 
 #[tauri::command]
+pub async fn ai_coding_usage_reconnect(
+    app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
+    provider: AiCodingUsageProvider,
+) -> Result<AiCodingUsageProviderState, String> {
+    let cli_paths = provider_cli_paths(&storage)?;
+    let result = run_provider_reconnect(app, provider, cli_paths).await;
+    storage.with_connection_mut(|connection| {
+        match result {
+            Ok(update) => {
+                save_provider_update(connection, provider, update)?;
+            }
+            Err(error) => {
+                save_provider_error(connection, provider, &error)?;
+            }
+        }
+        load_provider_state(connection, provider)
+    })
+}
+
+#[tauri::command]
 pub async fn ai_coding_usage_disconnect(
     storage: tauri::State<'_, storage::Storage>,
     provider: AiCodingUsageProvider,
@@ -194,9 +215,8 @@ async fn run_provider_connect(
     provider: AiCodingUsageProvider,
     cli_paths: ProviderCliPaths,
 ) -> Result<ProviderUpdate, String> {
-    tauri::async_runtime::spawn_blocking(move || match provider {
-        AiCodingUsageProvider::Codex => connect_codex(app, &cli_paths),
-        AiCodingUsageProvider::ClaudeCode => connect_claude(&cli_paths),
+    tauri::async_runtime::spawn_blocking(move || {
+        run_provider_connect_blocking(app, provider, &cli_paths)
     })
     .await
     .map_err(|error| format!("provider connect task failed: {error}"))?
@@ -206,12 +226,73 @@ async fn run_provider_refresh(
     provider: AiCodingUsageProvider,
     cli_paths: ProviderCliPaths,
 ) -> Result<ProviderUpdate, String> {
-    tauri::async_runtime::spawn_blocking(move || match provider {
-        AiCodingUsageProvider::Codex => refresh_codex(&cli_paths),
-        AiCodingUsageProvider::ClaudeCode => refresh_claude(&cli_paths),
+    tauri::async_runtime::spawn_blocking(move || {
+        run_provider_refresh_blocking(provider, &cli_paths)
     })
     .await
     .map_err(|error| format!("provider refresh task failed: {error}"))?
+}
+
+async fn run_provider_reconnect(
+    app: tauri::AppHandle,
+    provider: AiCodingUsageProvider,
+    cli_paths: ProviderCliPaths,
+) -> Result<ProviderUpdate, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        match run_provider_refresh_blocking(provider, &cli_paths) {
+            Ok(update) if provider_update_needs_reauth(&update) => {
+                run_provider_connect_blocking(app, provider, &cli_paths)
+            }
+            Ok(update) => Ok(update),
+            Err(error) if provider_error_needs_reauth(&error) => {
+                run_provider_connect_blocking(app, provider, &cli_paths)
+            }
+            Err(error) => Err(error),
+        }
+    })
+    .await
+    .map_err(|error| format!("provider reconnect task failed: {error}"))?
+}
+
+fn run_provider_connect_blocking(
+    app: tauri::AppHandle,
+    provider: AiCodingUsageProvider,
+    cli_paths: &ProviderCliPaths,
+) -> Result<ProviderUpdate, String> {
+    match provider {
+        AiCodingUsageProvider::Codex => connect_codex(app, cli_paths),
+        AiCodingUsageProvider::ClaudeCode => connect_claude(cli_paths),
+    }
+}
+
+fn run_provider_refresh_blocking(
+    provider: AiCodingUsageProvider,
+    cli_paths: &ProviderCliPaths,
+) -> Result<ProviderUpdate, String> {
+    match provider {
+        AiCodingUsageProvider::Codex => refresh_codex(cli_paths),
+        AiCodingUsageProvider::ClaudeCode => refresh_claude(cli_paths),
+    }
+}
+
+fn provider_update_needs_reauth(update: &ProviderUpdate) -> bool {
+    update
+        .last_error
+        .as_deref()
+        .is_some_and(provider_error_needs_reauth)
+}
+
+fn provider_error_needs_reauth(error: &str) -> bool {
+    let normalized = error.to_ascii_lowercase();
+    normalized.contains("not logged in")
+        || normalized.contains("not connected")
+        || normalized.contains("token rejected")
+        || normalized.contains("token revoked")
+        || normalized.contains("token has expired")
+        || normalized.contains("authentication_error")
+        || normalized.contains("invalid authentication")
+        || normalized.contains("invalid credentials")
+        || normalized.contains("oauth token")
 }
 
 fn load_state(connection: &Connection) -> Result<AiCodingUsageState, String> {
@@ -1158,6 +1239,19 @@ mod tests {
     fn provider_labels_are_stable() {
         assert_eq!(AiCodingUsageProvider::Codex.label(), "Codex");
         assert_eq!(AiCodingUsageProvider::ClaudeCode.label(), "Claude Code");
+    }
+
+    #[test]
+    fn reauth_detection_catches_claude_oauth_failures() {
+        assert!(provider_error_needs_reauth(
+            "Claude Code OAuth token rejected. Please sign in again with `claude auth login`."
+        ));
+        assert!(provider_error_needs_reauth(
+            "API Error: 401 {\"error\":{\"type\":\"authentication_error\"}}"
+        ));
+        assert!(!provider_error_needs_reauth(
+            "Claude usage endpoint returned HTTP 429; retry after 60s."
+        ));
     }
 
     #[test]
