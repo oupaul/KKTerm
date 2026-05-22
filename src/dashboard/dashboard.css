@@ -1908,6 +1908,13 @@ button.dashboard-pill-dot:focus-visible {
   outline: none;
 }
 
+.dw-warning-text {
+  margin: 0;
+  color: var(--amber);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .dw-customize {
   position: fixed;
   z-index: 160;

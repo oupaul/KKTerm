@@ -566,7 +566,8 @@
     "trayDontSleep": "ไม่พักเครื่อง",
     "trayExit": "ออก",
     "wiki": "วิกิ",
-    "manual": "คู่มือ"
+    "manual": "คู่มือ",
+    "dontSleepStatusEnabled": "เปิดใช้งานไม่ให้พักเครื่อง"
   },
   "appLauncher": {
     "addApp": "เพิ่มแอป",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "เลือกไฟล์…",
     "backgroundDefaultHint": "ใช้พื้นหลังของชุดสีที่ใช้งานอยู่",
     "backgroundDimLabel": "เข้มขึ้น / สว่างขึ้น",
-    "backgroundDynamicHint": "เรียกใช้แอนิเมชัน HTML5 ภายในเครื่องหลังตารางวิดเจ็ต",
+    "backgroundDynamicHint": "คำเตือน: พื้นหลังบางรายการอาจส่งผลต่อประสิทธิภาพ",
     "backgroundFit": {
       "center": "กึ่งกลาง",
       "fill": "เติมเต็ม",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "ตรวจสอบช่วงการใช้งาน Codex และ Claude Code จาก Dashboard",
     "aiCodingUsageTitle": "การใช้งานการเขียนโค้ด AI",
     "aiCodingUsageUnknownUsage": "ไม่ทราบ",
-    "aiCodingUsageWeekly": "รายสัปดาห์"
+    "aiCodingUsageWeekly": "รายสัปดาห์",
+    "aiCodingUsageReconnectProvider": "เชื่อมต่อใหม่/รีเฟรช {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "เปิดโฟลเดอร์สกิล",
     "assistantSkillsTitle": "สกิลผู้ช่วย",
     "dashboardUseRandomDynamicBackground": "ใช้พื้นหลังไดนามิกแบบสุ่ม",
-    "dashboardUseRandomDynamicBackgroundDesc": "มุมมอง Dashboard ใหม่จะเริ่มต้นโดยอัตโนมัติด้วยพื้นหลังไดนามิกแบบสุ่ม"
+    "dashboardUseRandomDynamicBackgroundDesc": "มุมมอง Dashboard ใหม่จะเริ่มต้นโดยอัตโนมัติด้วยพื้นหลังไดนามิกแบบสุ่ม",
+    "advancedDebugging": "การดีบักขั้นสูง",
+    "advancedDebuggingHint": "เขียนบันทึกดีบัก AI Assistant แบบเต็มแม้ในบิลด์ release บันทึกอาจมีพรอมป์ อาร์กิวเมนต์ของเครื่องมือ ภาพหน้าจอ และซอร์สของวิดเจ็ตที่สร้างขึ้น",
+    "debug": "ดีบัก",
+    "debugHint": "ควบคุมการวินิจฉัยในเครื่องแบบละเอียด",
+    "performance": "ประสิทธิภาพ",
+    "performanceHint": "ควบคุมการเรนเดอร์ในเครื่องและการเร่งการจับภาพหน้าจอ",
+    "statusBar": "แถบสถานะ",
+    "statusBarHint": "ควบคุมตัวบ่งชี้ในแถบสถานะด้านล่าง",
+    "statusBarMonitor": "แสดงสวิตช์มอนิเตอร์ CPU/RAM/เครือข่าย",
+    "statusBarMonitorHint": "เมื่อปิด KKTerm จะหยุดเก็บสแนปช็อตการใช้งานโฮสต์",
+    "statusBarMonitorInterval": "ช่วงเวลามอนิเตอร์",
+    "statusBarMonitorInterval5": "5 วินาที",
+    "statusBarMonitorInterval15": "15 วินาที",
+    "statusBarMonitorInterval30": "30 วินาที",
+    "statusBarMonitorInterval60": "1 นาที",
+    "statusBarMonitorInterval300": "5 นาที",
+    "useDirectxScreenCapture": "ใช้ DirectX สำหรับการจับภาพหน้าจอ",
+    "useDirectxScreenCaptureHint": "ใช้ DXGI Desktop Duplication เมื่อพร้อมใช้งาน พร้อม fallback เป็น GDI สำหรับการจับภาพที่ไม่รองรับ"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",

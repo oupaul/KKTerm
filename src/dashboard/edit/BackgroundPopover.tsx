@@ -160,7 +160,7 @@ export function BackgroundPopover({ view, onClose }: BackgroundPopoverProps) {
               </button>
             ))}
           </div>
-          <p className="dw-muted">{t("dashboard.backgroundDynamicHint")}</p>
+          <p className="dw-warning-text">{t("dashboard.backgroundDynamicHint")}</p>
         </div>
       )}
 

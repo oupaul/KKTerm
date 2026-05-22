@@ -566,7 +566,8 @@
     "trayDontSleep": "Jangan Tidur",
     "trayExit": "Keluar",
     "wiki": "Wiki",
-    "manual": "Panduan"
+    "manual": "Panduan",
+    "dontSleepStatusEnabled": "Jangan Tidur Aktif"
   },
   "appLauncher": {
     "addApp": "Tambah Aplikasi",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "Pilih File…",
     "backgroundDefaultHint": "Menggunakan latar skema warna aktif.",
     "backgroundDimLabel": "Gelapkan / Terangkan",
-    "backgroundDynamicHint": "Menjalankan animasi HTML5 lokal di belakang kisi widget.",
+    "backgroundDynamicHint": "Peringatan: beberapa latar belakang dapat memengaruhi performa.",
     "backgroundFit": {
       "center": "Tengah",
       "fill": "Isi",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "Pantau jendela penggunaan Codex dan Claude Code dari Dashboard.",
     "aiCodingUsageTitle": "Penggunaan coding AI",
     "aiCodingUsageUnknownUsage": "Tidak diketahui",
-    "aiCodingUsageWeekly": "Mingguan"
+    "aiCodingUsageWeekly": "Mingguan",
+    "aiCodingUsageReconnectProvider": "Sambungkan ulang/segarkan {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "Buka folder skill",
     "assistantSkillsTitle": "Skill Asisten",
     "dashboardUseRandomDynamicBackground": "Gunakan latar belakang dinamis acak",
-    "dashboardUseRandomDynamicBackgroundDesc": "Tampilan Dashboard baru otomatis dimulai dengan latar belakang dinamis acak."
+    "dashboardUseRandomDynamicBackgroundDesc": "Tampilan Dashboard baru otomatis dimulai dengan latar belakang dinamis acak.",
+    "advancedDebugging": "Debug Lanjutan",
+    "advancedDebuggingHint": "Menulis log debug AI Assistant lengkap bahkan pada build rilis. Log dapat menyertakan prompt, argumen alat, tangkapan layar, dan sumber widget yang dihasilkan.",
+    "debug": "Debug",
+    "debugHint": "Mengontrol diagnostik lokal yang terperinci.",
+    "performance": "Performa",
+    "performanceHint": "Mengontrol rendering lokal dan akselerasi tangkapan layar.",
+    "statusBar": "Bilah Status",
+    "statusBarHint": "Mengontrol indikator Bilah Status bawah.",
+    "statusBarMonitor": "Tampilkan sakelar monitor CPU/RAM/Jaringan",
+    "statusBarMonitorHint": "Saat nonaktif, KKTerm berhenti mengumpulkan snapshot penggunaan host.",
+    "statusBarMonitorInterval": "Interval monitor",
+    "statusBarMonitorInterval5": "5 detik",
+    "statusBarMonitorInterval15": "15 detik",
+    "statusBarMonitorInterval30": "30 detik",
+    "statusBarMonitorInterval60": "1 menit",
+    "statusBarMonitorInterval300": "5 menit",
+    "useDirectxScreenCapture": "Gunakan DirectX untuk tangkapan layar",
+    "useDirectxScreenCaptureHint": "Menggunakan DXGI Desktop Duplication bila tersedia, dengan fallback GDI untuk tangkapan yang tidak didukung."
   },
   "sftp": {
     "accessed": "Diakses",

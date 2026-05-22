@@ -566,7 +566,8 @@
     "trayDontSleep": "절전 해제",
     "trayExit": "종료",
     "wiki": "위키",
-    "manual": "매뉴얼"
+    "manual": "매뉴얼",
+    "dontSleepStatusEnabled": "절전 방지 활성화됨"
   },
   "appLauncher": {
     "addApp": "앱 추가",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "파일 선택…",
     "backgroundDefaultHint": "활성 색상 구성표의 배경을 사용합니다.",
     "backgroundDimLabel": "어둡게 / 밝게",
-    "backgroundDynamicHint": "위젯 그리드 뒤에서 로컬 HTML5 애니메이션을 실행합니다.",
+    "backgroundDynamicHint": "경고: 일부 배경은 성능에 영향을 줄 수 있습니다.",
     "backgroundFit": {
       "center": "가운데",
       "fill": "채우기",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "Dashboard에서 Codex 및 Claude Code 사용량 창을 모니터링합니다.",
     "aiCodingUsageTitle": "AI 코딩 사용량",
     "aiCodingUsageUnknownUsage": "알 수 없음",
-    "aiCodingUsageWeekly": "주간"
+    "aiCodingUsageWeekly": "주간",
+    "aiCodingUsageReconnectProvider": "{{provider}} 다시 연결/새로 고침"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "스킬 폴더 열기",
     "assistantSkillsTitle": "어시스턴트 스킬",
     "dashboardUseRandomDynamicBackground": "무작위 동적 배경 사용",
-    "dashboardUseRandomDynamicBackgroundDesc": "새 Dashboard 보기는 자동으로 무작위 동적 배경으로 시작됩니다."
+    "dashboardUseRandomDynamicBackgroundDesc": "새 Dashboard 보기는 자동으로 무작위 동적 배경으로 시작됩니다.",
+    "advancedDebugging": "고급 디버깅",
+    "advancedDebuggingHint": "릴리스 빌드에서도 AI Assistant 전체 디버그 로그를 기록합니다. 로그에는 프롬프트, 도구 인수, 스크린샷, 생성된 위젯 소스가 포함될 수 있습니다.",
+    "debug": "디버그",
+    "debugHint": "자세한 로컬 진단을 제어합니다.",
+    "performance": "성능",
+    "performanceHint": "로컬 렌더링 및 화면 캡처 가속을 제어합니다.",
+    "statusBar": "상태 표시줄",
+    "statusBarHint": "하단 상태 표시줄 표시기를 제어합니다.",
+    "statusBarMonitor": "CPU/RAM/네트워크 모니터 토글 표시",
+    "statusBarMonitorHint": "끄면 KKTerm이 호스트 사용량 스냅샷 수집을 중지합니다.",
+    "statusBarMonitorInterval": "모니터 간격",
+    "statusBarMonitorInterval5": "5초",
+    "statusBarMonitorInterval15": "15초",
+    "statusBarMonitorInterval30": "30초",
+    "statusBarMonitorInterval60": "1분",
+    "statusBarMonitorInterval300": "5분",
+    "useDirectxScreenCapture": "화면 캡처에 DirectX 사용",
+    "useDirectxScreenCaptureHint": "사용 가능한 경우 DXGI Desktop Duplication을 사용하고, 지원되지 않는 캡처에는 GDI로 대체합니다."
   },
   "sftp": {
     "accessed": "접근일",

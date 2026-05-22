@@ -566,7 +566,8 @@
     "trayDontSleep": "Non sospendere",
     "trayExit": "Esci",
     "wiki": "Wiki",
-    "manual": "Manuale"
+    "manual": "Manuale",
+    "dontSleepStatusEnabled": "Non sospendere attivo"
   },
   "appLauncher": {
     "addApp": "Aggiungi app",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "Scegli file…",
     "backgroundDefaultHint": "Utilizza lo sfondo della combinazione di colori attiva.",
     "backgroundDimLabel": "Scurisci / Schiarisci",
-    "backgroundDynamicHint": "Esegue un'animazione HTML5 locale dietro la griglia dei widget.",
+    "backgroundDynamicHint": "Avviso: alcuni sfondi possono influire sulle prestazioni.",
     "backgroundFit": {
       "center": "Centra",
       "fill": "Riempi",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "Monitora le finestre di utilizzo di Codex e Claude Code dal Dashboard.",
     "aiCodingUsageTitle": "Utilizzo coding AI",
     "aiCodingUsageUnknownUsage": "Sconosciuto",
-    "aiCodingUsageWeekly": "Settimanale"
+    "aiCodingUsageWeekly": "Settimanale",
+    "aiCodingUsageReconnectProvider": "Riconnetti/aggiorna {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "Apri cartella delle skill",
     "assistantSkillsTitle": "Skill dell’assistente",
     "dashboardUseRandomDynamicBackground": "Usa sfondo dinamico casuale",
-    "dashboardUseRandomDynamicBackgroundDesc": "Le nuove viste del Dashboard si avviano automaticamente con uno sfondo dinamico casuale."
+    "dashboardUseRandomDynamicBackgroundDesc": "Le nuove viste del Dashboard si avviano automaticamente con uno sfondo dinamico casuale.",
+    "advancedDebugging": "Debug avanzato",
+    "advancedDebuggingHint": "Scrive log di debug completi dell’Assistente IA anche nelle build di rilascio. I log possono includere prompt, argomenti degli strumenti, screenshot e sorgente dei widget generati.",
+    "debug": "Debug",
+    "debugHint": "Controlla la diagnostica locale dettagliata.",
+    "performance": "Prestazioni",
+    "performanceHint": "Controlla il rendering locale e l’accelerazione della cattura schermo.",
+    "statusBar": "Barra di stato",
+    "statusBarHint": "Controlla gli indicatori della barra di stato inferiore.",
+    "statusBarMonitor": "Mostra interruttore monitor CPU/RAM/rete",
+    "statusBarMonitorHint": "Quando è disattivato, KKTerm smette di raccogliere snapshot dell’utilizzo dell’host.",
+    "statusBarMonitorInterval": "Intervallo monitor",
+    "statusBarMonitorInterval5": "5 secondi",
+    "statusBarMonitorInterval15": "15 secondi",
+    "statusBarMonitorInterval30": "30 secondi",
+    "statusBarMonitorInterval60": "1 min",
+    "statusBarMonitorInterval300": "5 min",
+    "useDirectxScreenCapture": "Usa DirectX per la cattura schermo",
+    "useDirectxScreenCaptureHint": "Usa DXGI Desktop Duplication quando disponibile, con fallback GDI per le catture non supportate."
   },
   "sftp": {
     "accessed": "Accesso",

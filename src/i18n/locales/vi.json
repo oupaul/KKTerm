@@ -566,7 +566,8 @@
     "trayDontSleep": "Không ngủ",
     "trayExit": "Thoát",
     "wiki": "Wiki",
-    "manual": "Hướng dẫn"
+    "manual": "Hướng dẫn",
+    "dontSleepStatusEnabled": "Đã bật Không ngủ"
   },
   "appLauncher": {
     "addApp": "Thêm Ứng dụng",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "Chọn tệp…",
     "backgroundDefaultHint": "Sử dụng nền của bảng màu đang hoạt động.",
     "backgroundDimLabel": "Tối đi / Sáng lên",
-    "backgroundDynamicHint": "Chạy hoạt ảnh HTML5 cục bộ phía sau lưới tiện ích.",
+    "backgroundDynamicHint": "Cảnh báo: một số nền có thể ảnh hưởng đến hiệu năng.",
     "backgroundFit": {
       "center": "Căn giữa",
       "fill": "Lấp đầy",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "Theo dõi cửa sổ sử dụng Codex và Claude Code từ Dashboard.",
     "aiCodingUsageTitle": "Mức sử dụng lập trình AI",
     "aiCodingUsageUnknownUsage": "Không rõ",
-    "aiCodingUsageWeekly": "Hàng tuần"
+    "aiCodingUsageWeekly": "Hàng tuần",
+    "aiCodingUsageReconnectProvider": "Kết nối lại/làm mới {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "Mở thư mục kỹ năng",
     "assistantSkillsTitle": "Kỹ năng Trợ lý",
     "dashboardUseRandomDynamicBackground": "Dùng nền động ngẫu nhiên",
-    "dashboardUseRandomDynamicBackgroundDesc": "Các chế độ xem Dashboard mới tự động bắt đầu với nền động ngẫu nhiên."
+    "dashboardUseRandomDynamicBackgroundDesc": "Các chế độ xem Dashboard mới tự động bắt đầu với nền động ngẫu nhiên.",
+    "advancedDebugging": "Gỡ lỗi nâng cao",
+    "advancedDebuggingHint": "Ghi đầy đủ nhật ký gỡ lỗi AI Assistant ngay cả trong bản dựng phát hành. Nhật ký có thể bao gồm lời nhắc, đối số công cụ, ảnh chụp màn hình và mã nguồn widget được tạo.",
+    "debug": "Gỡ lỗi",
+    "debugHint": "Điều khiển chẩn đoán cục bộ chi tiết.",
+    "performance": "Hiệu năng",
+    "performanceHint": "Điều khiển kết xuất cục bộ và tăng tốc chụp màn hình.",
+    "statusBar": "Thanh trạng thái",
+    "statusBarHint": "Điều khiển các chỉ báo ở Thanh trạng thái dưới cùng.",
+    "statusBarMonitor": "Hiển thị công tắc giám sát CPU/RAM/Mạng",
+    "statusBarMonitorHint": "Khi tắt, KKTerm dừng thu thập ảnh chụp nhanh mức sử dụng máy chủ.",
+    "statusBarMonitorInterval": "Khoảng giám sát",
+    "statusBarMonitorInterval5": "5 giây",
+    "statusBarMonitorInterval15": "15 giây",
+    "statusBarMonitorInterval30": "30 giây",
+    "statusBarMonitorInterval60": "1 phút",
+    "statusBarMonitorInterval300": "5 phút",
+    "useDirectxScreenCapture": "Dùng DirectX để chụp màn hình",
+    "useDirectxScreenCaptureHint": "Dùng DXGI Desktop Duplication khi có, với dự phòng GDI cho các kiểu chụp không được hỗ trợ."
   },
   "sftp": {
     "accessed": "Accessed",

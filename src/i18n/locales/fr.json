@@ -566,7 +566,8 @@
     "trayDontSleep": "Ne pas mettre en veille",
     "trayExit": "Quitter",
     "wiki": "Wiki",
-    "manual": "Manuel"
+    "manual": "Manuel",
+    "dontSleepStatusEnabled": "Mode Ne pas dormir activé"
   },
   "appLauncher": {
     "addApp": "Ajouter une application",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "Choisir un fichier…",
     "backgroundDefaultHint": "Utilise le fond du thème de couleur actif.",
     "backgroundDimLabel": "Assombrir / Éclaircir",
-    "backgroundDynamicHint": "Exécute une animation HTML5 locale derrière la grille de widgets.",
+    "backgroundDynamicHint": "Avertissement : certains arrière-plans peuvent affecter les performances.",
     "backgroundFit": {
       "center": "Centrer",
       "fill": "Remplir",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "Surveillez les fenêtres d’utilisation de Codex et Claude Code depuis le Dashboard.",
     "aiCodingUsageTitle": "Utilisation du codage IA",
     "aiCodingUsageUnknownUsage": "Inconnu",
-    "aiCodingUsageWeekly": "Hebdomadaire"
+    "aiCodingUsageWeekly": "Hebdomadaire",
+    "aiCodingUsageReconnectProvider": "Reconnecter/actualiser {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "Ouvrir le dossier des skills",
     "assistantSkillsTitle": "Skills de l’assistant",
     "dashboardUseRandomDynamicBackground": "Utiliser un arrière-plan dynamique aléatoire",
-    "dashboardUseRandomDynamicBackgroundDesc": "Les nouvelles vues du Dashboard démarrent automatiquement avec un arrière-plan dynamique aléatoire."
+    "dashboardUseRandomDynamicBackgroundDesc": "Les nouvelles vues du Dashboard démarrent automatiquement avec un arrière-plan dynamique aléatoire.",
+    "advancedDebugging": "Débogage avancé",
+    "advancedDebuggingHint": "Écrit les journaux de débogage complets de l’Assistant IA même dans les builds de production. Les journaux peuvent inclure des prompts, des arguments d’outils, des captures d’écran et le code source de widgets générés.",
+    "debug": "Débogage",
+    "debugHint": "Contrôle les diagnostics locaux détaillés.",
+    "performance": "Performances",
+    "performanceHint": "Contrôle le rendu local et l’accélération de capture d’écran.",
+    "statusBar": "Barre d’état",
+    "statusBarHint": "Contrôle les indicateurs de la barre d’état inférieure.",
+    "statusBarMonitor": "Afficher le bouton du moniteur CPU/RAM/réseau",
+    "statusBarMonitorHint": "Quand il est désactivé, KKTerm cesse de collecter les instantanés d’utilisation de l’hôte.",
+    "statusBarMonitorInterval": "Intervalle du moniteur",
+    "statusBarMonitorInterval5": "5 secondes",
+    "statusBarMonitorInterval15": "15 secondes",
+    "statusBarMonitorInterval30": "30 secondes",
+    "statusBarMonitorInterval60": "1 min",
+    "statusBarMonitorInterval300": "5 min",
+    "useDirectxScreenCapture": "Utiliser DirectX pour la capture d’écran",
+    "useDirectxScreenCaptureHint": "Utilise DXGI Desktop Duplication lorsque disponible, avec repli GDI pour les captures non prises en charge."
   },
   "sftp": {
     "accessed": "Accédé",

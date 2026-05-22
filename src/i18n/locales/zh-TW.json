@@ -566,7 +566,8 @@
     "trayDontSleep": "禁止休眠",
     "trayExit": "結束",
     "wiki": "Wiki",
-    "manual": "手冊"
+    "manual": "手冊",
+    "dontSleepStatusEnabled": "防止睡眠已啟用"
   },
   "appLauncher": {
     "addApp": "新增應用程式",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "選擇檔案…",
     "backgroundDefaultHint": "使用目前色彩配置的背景。",
     "backgroundDimLabel": "變暗 / 變亮",
-    "backgroundDynamicHint": "在小工具網格後方執行本機 HTML5 動畫。",
+    "backgroundDynamicHint": "警告：部分背景可能會影響效能。",
     "backgroundFit": {
       "center": "置中",
       "fill": "填滿",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "從 Dashboard 監控 Codex 與 Claude Code 使用量時段。",
     "aiCodingUsageTitle": "AI 程式碼使用量",
     "aiCodingUsageUnknownUsage": "未知",
-    "aiCodingUsageWeekly": "每週"
+    "aiCodingUsageWeekly": "每週",
+    "aiCodingUsageReconnectProvider": "重新連線/重新整理 {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "開啟技能資料夾",
     "assistantSkillsTitle": "助理技能",
     "dashboardUseRandomDynamicBackground": "使用隨機動態背景",
-    "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 檢視會自動以隨機動態背景開始。"
+    "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 檢視會自動以隨機動態背景開始。",
+    "advancedDebugging": "進階偵錯",
+    "advancedDebuggingHint": "即使在發行版本中也會寫入完整的 AI Assistant 偵錯記錄。記錄可能包含提示詞、工具引數、螢幕截圖，以及產生的小工具原始碼。",
+    "debug": "偵錯",
+    "debugHint": "控制詳細的本機診斷。",
+    "performance": "效能",
+    "performanceHint": "控制本機轉譯與螢幕擷取加速。",
+    "statusBar": "狀態列",
+    "statusBarHint": "控制底部狀態列指示器。",
+    "statusBarMonitor": "顯示 CPU/RAM/網路監視器切換",
+    "statusBarMonitorHint": "關閉時，KKTerm 會停止收集主機使用狀態快照。",
+    "statusBarMonitorInterval": "監視間隔",
+    "statusBarMonitorInterval5": "5 秒",
+    "statusBarMonitorInterval15": "15 秒",
+    "statusBarMonitorInterval30": "30 秒",
+    "statusBarMonitorInterval60": "1 分鐘",
+    "statusBarMonitorInterval300": "5 分鐘",
+    "useDirectxScreenCapture": "使用 DirectX 進行螢幕擷取",
+    "useDirectxScreenCaptureHint": "可用時使用 DXGI Desktop Duplication；不支援的擷取則回退到 GDI。"
   },
   "sftp": {
     "accessed": "存取日期",

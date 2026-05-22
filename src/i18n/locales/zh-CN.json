@@ -566,7 +566,8 @@
     "trayDontSleep": "禁止休眠",
     "trayExit": "退出",
     "wiki": "Wiki",
-    "manual": "手册"
+    "manual": "手册",
+    "dontSleepStatusEnabled": "防止睡眠已启用"
   },
   "appLauncher": {
     "addApp": "添加应用",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "选择文件…",
     "backgroundDefaultHint": "使用当前色彩方案的背景。",
     "backgroundDimLabel": "变暗 / 变亮",
-    "backgroundDynamicHint": "在小部件网格后面运行本地 HTML5 动画。",
+    "backgroundDynamicHint": "警告：部分背景可能会影响性能。",
     "backgroundFit": {
       "center": "居中",
       "fill": "填满",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "从 Dashboard 监控 Codex 和 Claude Code 使用量窗口。",
     "aiCodingUsageTitle": "AI 编程使用量",
     "aiCodingUsageUnknownUsage": "未知",
-    "aiCodingUsageWeekly": "每周"
+    "aiCodingUsageWeekly": "每周",
+    "aiCodingUsageReconnectProvider": "重新连接/刷新 {{provider}}"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "打开技能文件夹",
     "assistantSkillsTitle": "助手技能",
     "dashboardUseRandomDynamicBackground": "使用随机动态背景",
-    "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 视图会自动以随机动态背景开始。"
+    "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 视图会自动以随机动态背景开始。",
+    "advancedDebugging": "高级调试",
+    "advancedDebuggingHint": "即使在发布版本中也写入完整的 AI Assistant 调试日志。日志可能包含提示词、工具参数、屏幕截图和生成的组件源代码。",
+    "debug": "调试",
+    "debugHint": "控制详细的本地诊断。",
+    "performance": "性能",
+    "performanceHint": "控制本地渲染和屏幕捕获加速。",
+    "statusBar": "状态栏",
+    "statusBarHint": "控制底部状态栏指示器。",
+    "statusBarMonitor": "显示 CPU/RAM/网络监视器开关",
+    "statusBarMonitorHint": "关闭时，KKTerm 会停止收集主机使用情况快照。",
+    "statusBarMonitorInterval": "监视间隔",
+    "statusBarMonitorInterval5": "5 秒",
+    "statusBarMonitorInterval15": "15 秒",
+    "statusBarMonitorInterval30": "30 秒",
+    "statusBarMonitorInterval60": "1 分钟",
+    "statusBarMonitorInterval300": "5 分钟",
+    "useDirectxScreenCapture": "使用 DirectX 进行屏幕捕获",
+    "useDirectxScreenCaptureHint": "可用时使用 DXGI Desktop Duplication；不支持的捕获则回退到 GDI。"
   },
   "sftp": {
     "accessed": "访问日期",

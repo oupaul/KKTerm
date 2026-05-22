@@ -566,7 +566,8 @@
     "trayDontSleep": "スリープしない",
     "trayExit": "終了",
     "wiki": "ウィキ",
-    "manual": "マニュアル"
+    "manual": "マニュアル",
+    "dontSleepStatusEnabled": "スリープ防止が有効"
   },
   "appLauncher": {
     "addApp": "アプリを追加",
@@ -937,7 +938,7 @@
     "backgroundChooseMedia": "ファイルを選択…",
     "backgroundDefaultHint": "アクティブな配色の背景を使用します。",
     "backgroundDimLabel": "暗く / 明るく",
-    "backgroundDynamicHint": "ウィジェットグリッドの背後でローカルHTML5アニメーションを実行します。",
+    "backgroundDynamicHint": "警告: 一部の背景はパフォーマンスに影響する場合があります。",
     "backgroundFit": {
       "center": "中央",
       "fill": "塗りつぶし",
@@ -1233,7 +1234,8 @@
     "aiCodingUsageSummary": "DashboardからCodexとClaude Codeの使用期間を監視します。",
     "aiCodingUsageTitle": "AIコーディング使用量",
     "aiCodingUsageUnknownUsage": "不明",
-    "aiCodingUsageWeekly": "毎週"
+    "aiCodingUsageWeekly": "毎週",
+    "aiCodingUsageReconnectProvider": "{{provider}} を再接続/更新"
   },
   "languages": {
     "de": "Deutsch",
@@ -1810,7 +1812,25 @@
     "assistantSkillsOpenFolder": "スキルフォルダーを開く",
     "assistantSkillsTitle": "アシスタントスキル",
     "dashboardUseRandomDynamicBackground": "ランダムな動的背景を使用",
-    "dashboardUseRandomDynamicBackgroundDesc": "新しいDashboardビューは、ランダムな動的背景で自動的に開始されます。"
+    "dashboardUseRandomDynamicBackgroundDesc": "新しいDashboardビューは、ランダムな動的背景で自動的に開始されます。",
+    "advancedDebugging": "高度なデバッグ",
+    "advancedDebuggingHint": "リリースビルドでも AI Assistant の完全なデバッグログを書き込みます。ログにはプロンプト、ツール引数、スクリーンショット、生成されたウィジェットソースが含まれる場合があります。",
+    "debug": "デバッグ",
+    "debugHint": "詳細なローカル診断を制御します。",
+    "performance": "パフォーマンス",
+    "performanceHint": "ローカル描画と画面キャプチャの高速化を制御します。",
+    "statusBar": "ステータスバー",
+    "statusBarHint": "下部ステータスバーのインジケーターを制御します。",
+    "statusBarMonitor": "CPU/RAM/ネットワークモニター切り替えを表示",
+    "statusBarMonitorHint": "オフにすると、KKTerm はホスト使用状況スナップショットの収集を停止します。",
+    "statusBarMonitorInterval": "モニター間隔",
+    "statusBarMonitorInterval5": "5 秒",
+    "statusBarMonitorInterval15": "15 秒",
+    "statusBarMonitorInterval30": "30 秒",
+    "statusBarMonitorInterval60": "1 分",
+    "statusBarMonitorInterval300": "5 分",
+    "useDirectxScreenCapture": "画面キャプチャに DirectX を使用",
+    "useDirectxScreenCaptureHint": "利用可能な場合は DXGI Desktop Duplication を使用し、未対応のキャプチャでは GDI にフォールバックします。"
   },
   "sftp": {
     "accessed": "アクセス日時",
