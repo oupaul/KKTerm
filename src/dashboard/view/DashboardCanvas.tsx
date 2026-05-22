@@ -42,7 +42,9 @@ export interface DashboardCanvasProps {
   instances: DashboardWidgetInstance[];
   isViewActive: boolean;
   onCustomize: (instance: DashboardWidgetInstance, anchor: HTMLElement) => void;
+  onOpenCatalog: () => void;
   onOpenBackground: () => void;
+  onToggleEditMode: () => void;
   onRequestWidgetDelete: (request: DashboardWidgetDeleteRequest) => void;
 }
 
@@ -51,7 +53,9 @@ export function DashboardCanvas({
   instances,
   isViewActive,
   onCustomize,
+  onOpenCatalog,
   onOpenBackground,
+  onToggleEditMode,
   onRequestWidgetDelete,
 }: DashboardCanvasProps) {
   const { t } = useTranslation();
@@ -92,7 +96,12 @@ export function DashboardCanvas({
     if ((event.target as HTMLElement).closest(".react-grid-item")) return;
     event.preventDefault();
     await showNativeContextMenu(
-      [{ kind: "item", label: t("dashboard.changeBackground"), action: onOpenBackground }],
+      [
+        { kind: "item", label: t("dashboard.addWidgetLabel"), action: onOpenCatalog },
+        { kind: "item", label: t("dashboard.editLayout"), action: onToggleEditMode },
+        { kind: "separator" },
+        { kind: "item", label: t("dashboard.changeBackground"), action: onOpenBackground },
+      ],
       { x: event.clientX, y: event.clientY },
     );
   }

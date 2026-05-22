@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `dashboard.*` (full namespace)
-- Topics: Dashboard Views, Widget Instances, cached Views, instant View switching, embedded Connection pane, presets (panel / ambient / tile / hero / action), accents, icons, backgrounds, density, edit layout, catalog, custom script widgets, AI-authored widgets, widget design preflight, agent widget JSON, UTF-8 widget source, non-English widget text, widget visual context, compact AI context, duplicate widget detection, AI coding usage, Codex usage, Claude Code usage, adding AI coding tools, removing AI coding tools, reconnecting AI coding usage, missing CLI binaries, five-hour limit, weekly limit, quota, rate limits
-- Synonyms: "homepage", "tiles", "cards", "widgets", "report", "view reload", "connection widget reload", "switch views", "background image", "wallpaper", "translucent widget", "see-through widget", "canvas opacity", "low contrast widget", "hard to read widget", "garbled widget text", "mojibake", "encoding", "UTF8", "UTF-8", "Codex quota", "Claude quota", "5h usage", "7d usage", "AI coding meter", "add Codex", "add Claude Code", "remove Codex", "remove Claude Code", "reconnect Claude Code", "refresh Claude Code auth", "install Codex", "install Claude Code", "program not found"
+- Topics: Dashboard Views, Widget Instances, cached Views, instant View switching, embedded Connection pane, presets (panel / ambient / tile / hero / action), accents, icons, backgrounds, density, edit layout, empty-canvas context menu, catalog, custom script widgets, AI-authored widgets, widget design preflight, agent widget JSON, UTF-8 widget source, non-English widget text, widget visual context, compact AI context, duplicate widget detection, AI coding usage, Codex usage, Claude Code usage, adding AI coding tools, removing AI coding tools, reconnecting AI coding usage, missing CLI binaries, five-hour limit, weekly limit, quota, rate limits
+- Synonyms: "homepage", "tiles", "cards", "widgets", "right click dashboard", "context menu", "shortcut menu", "report", "view reload", "connection widget reload", "switch views", "background image", "wallpaper", "translucent widget", "see-through widget", "canvas opacity", "low contrast widget", "hard to read widget", "garbled widget text", "mojibake", "encoding", "UTF8", "UTF-8", "Codex quota", "Claude quota", "5h usage", "7d usage", "AI coding meter", "add Codex", "add Claude Code", "remove Codex", "remove Claude Code", "reconnect Claude Code", "refresh Claude Code auth", "install Codex", "install Claude Code", "program not found"
 
 > **Terms:** see `CONTEXT.md`. **Dashboard View** is a durable SQLite-backed tab; **Widget Instance** is a placed widget on a View with its own preset/accent/title/layout. **Dashboard Custom Widget** is an AI-authored script-widget definition. Architecture details live in `docs/DASHBOARD.md`.
 
@@ -28,6 +28,7 @@ Previously opened Views remain mounted while hidden so switching between View ta
 ## Edit layout mode
 
 `dashboard.editLayout` toggles drag/drop + resize on the 12-column grid. Done editing: `dashboard.editDone`. Empty Views show `dashboard.emptyTitle` and `dashboard.emptyHint`.
+Right-clicking empty Dashboard View canvas space opens a shortcut menu for `dashboard.addWidgetLabel`, `dashboard.editLayout`, and `dashboard.changeBackground`.
 
 While editing:
 

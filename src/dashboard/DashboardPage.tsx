@@ -444,7 +444,9 @@ export function DashboardPage({
                 instances={cachedViewInstances}
                 isViewActive={dashboardActive && isActiveView}
                 onCustomize={(instance, anchor) => setCustomize({ instance, rect: anchor.getBoundingClientRect() })}
+                onOpenCatalog={() => setCatalogOpen(true)}
                 onOpenBackground={() => setBackgroundOpen(true)}
+                onToggleEditMode={toggleEditMode}
                 onRequestWidgetDelete={setDeleteWidgetTarget}
               />
             </div>

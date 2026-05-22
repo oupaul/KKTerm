@@ -3,6 +3,7 @@
 > **To the AI assistant reading this:**
 > Read this entire document before taking any action or asking the user questions.
 > Once you have read it fully, go directly to the **[Choose Your Path](#choose-your-path)** section at the bottom and ask the user which path they want. Do not install anything, clone anything, or open any browser until the user has chosen.
+> Translate all interactions to user's target language to the best of your ability, keep the project name "KKTerm" untranslated
 
 ---
 
@@ -13,12 +14,13 @@ KKTerm is a Windows-first, local-first desktop workspace for people who live in 
 **Tech stack:** Rust + Tauri v2 backend, React 19 + TypeScript + Vite frontend, SQLite for non-secret local data, OS keychain (Windows Credential Manager) for secrets, xterm.js for terminal rendering, WebView2 for URL and RDP surfaces.
 
 **Key values:**
+
 - **Local-first** — no telemetry, no cloud account. Durable data is in SQLite on the user's machine, secrets are in the OS keychain.
 - **MIT license** — permissive, open-source.
 - **Windows-first** — primary acceptance platform is Windows. macOS and Linux are planned.
 - **Current version:** see `package.json` `version` field or the About section in Settings.
 
-**GitHub repository:** https://github.com/ryantsai/KKTerm
+**GitHub repository:** <https://github.com/ryantsai/KKTerm>
 
 ---
 
@@ -32,7 +34,7 @@ Check for each tool before installing. Install only what is missing.
 git --version
 ```
 
-If missing: download from https://git-scm.com/download/win and install with default options.
+If missing: download from <https://git-scm.com/download/win> and install with default options.
 
 ### GitHub CLI (`gh`)
 
@@ -46,7 +48,7 @@ If missing:
 winget install --id GitHub.cli
 ```
 
-Or download from https://cli.github.com. After installing, authenticate:
+Or download from <https://cli.github.com>. After installing, authenticate:
 
 ```powershell
 gh auth login
@@ -60,7 +62,7 @@ Choose **GitHub.com → HTTPS → Login with a web browser** and follow the prom
 rustup --version
 ```
 
-If missing, install `rustup` from https://rustup.rs — run the downloaded `rustup-init.exe` and accept the defaults (stable toolchain).
+If missing, install `rustup` from <https://rustup.rs> — run the downloaded `rustup-init.exe` and accept the defaults (stable toolchain).
 
 After installing, verify:
 
@@ -76,7 +78,7 @@ node --version
 npm --version
 ```
 
-If missing: download the LTS installer from https://nodejs.org and install with defaults.
+If missing: download the LTS installer from <https://nodejs.org> and install with defaults.
 
 ### WebView2 Runtime
 
@@ -86,7 +88,7 @@ WebView2 is required by Tauri on Windows. It is pre-installed on Windows 11 and 
 Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" -ErrorAction SilentlyContinue | Select-Object pv
 ```
 
-If the command returns nothing, download and run the WebView2 Evergreen bootstrapper from https://developer.microsoft.com/en-us/microsoft-edge/webview2/.
+If the command returns nothing, download and run the WebView2 Evergreen bootstrapper from <https://developer.microsoft.com/en-us/microsoft-edge/webview2/>.
 
 ### Tauri CLI
 
@@ -110,7 +112,7 @@ This step takes a few minutes on first install.
 
 ### Fork on GitHub
 
-1. Go to https://github.com/ryantsai/KKTerm
+1. Go to <https://github.com/ryantsai/KKTerm>
 2. Click **Fork** (top right) and fork to your own GitHub account.
 
 Or with `gh`:
@@ -167,7 +169,7 @@ All four must pass cleanly before opening a PR.
 
 > **AI note:** Use this path if the user just wants to try KKTerm without building from source.
 
-1. Go to https://github.com/ryantsai/KKTerm/releases
+1. Go to <https://github.com/ryantsai/KKTerm/releases>
 2. Download the latest `kkterm-<version>-windows-x64-setup.exe`
 3. Run the installer.
 
@@ -271,7 +273,7 @@ Before touching code, read these definitions — they matter for naming, storage
 
 ## Reporting an Issue
 
-Before filing, search existing issues at https://github.com/ryantsai/KKTerm/issues to avoid duplicates.
+Before filing, search existing issues at <https://github.com/ryantsai/KKTerm/issues> to avoid duplicates.
 
 ### Required for all bug reports
 
@@ -291,7 +293,7 @@ Before filing, search existing issues at https://github.com/ryantsai/KKTerm/issu
 - Whether the issue is reproducible every time or intermittent
 - Any relevant SSH host OS, shell, or terminal tool (for terminal/SSH issues)
 
-File issues at: https://github.com/ryantsai/KKTerm/issues/new
+File issues at: <https://github.com/ryantsai/KKTerm/issues/new>
 
 ---
 
@@ -386,6 +388,7 @@ Each open Session appears as a Tab in the workspace area. Tabs are managed from 
 ### Terminal Panes
 
 Each terminal pane in a Tab runs an independent shell (local or SSH). Key behaviors:
+
 - Copy-on-select is a configurable toggle in Settings → Terminal
 - Multiline paste shows a confirmation dialog
 - Scrollback search: Ctrl+Shift+F inside a pane
