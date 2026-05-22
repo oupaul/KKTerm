@@ -59,7 +59,7 @@ Per-kind defaults (resolution, colour depth, etc.) live in Settings → RDP (`se
 
 Controls the desktop size and scaling KKTerm asks the RDP ActiveX control to apply. Available both as a global default (Settings → RDP) and as a per-connection override.
 
-- `settings.rdpRemoteResolutionAutomatic` (default) — push the pane's logical (DIP) size as `DesktopWidth`/`DesktopHeight`. Smart Sizing stays off. Best on high-DPI displays because it stops the remote UI from rendering at physical pixel density and looking too small.
+- `settings.rdpRemoteResolutionAutomatic` (default) — push the pane's physical host size as `DesktopWidth`/`DesktopHeight`. Smart Sizing stays off and the remote desktop is resized with the Pane so it fills the available RDP surface.
 - `settings.rdpRemoteResolutionSmartSizing` — push the pane's physical pixel size once and enable the ActiveX `SmartSizing` property. The framebuffer is then stretched to fit subsequent pane resizes.
 - `settings.rdpRemoteResolutionDpiZoom` — push the pane's physical pixel size and set `ZoomLevel` to `round(scale_factor * 100)`. The remote OS renders at native DPI; the client scales the framebuffer.
 - Fixed resolutions (`1440x900` through `3840x2400`) — push the chosen size as `DesktopWidth`/`DesktopHeight` and enable `SmartSizing` so the framebuffer is letterboxed/scaled to fit the pane. Subsequent pane resizes do not change the remote desktop size.

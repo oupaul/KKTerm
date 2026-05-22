@@ -253,15 +253,15 @@ mod platform {
 
         pub fn desktop_size(
             &self,
-            logical_w: f64,
-            logical_h: f64,
+            _logical_w: f64,
+            _logical_h: f64,
             physical_w: i32,
             physical_h: i32,
         ) -> (i32, i32) {
             match self {
                 Self::Automatic => (
-                    desktop_width_for(logical_w.round() as i32),
-                    desktop_height_for(logical_h.round() as i32),
+                    desktop_width_for(physical_w),
+                    desktop_height_for(physical_h),
                 ),
                 Self::SmartSizing | Self::DpiZoom => (
                     desktop_width_for(physical_w),
@@ -2065,6 +2065,14 @@ mod platform {
             assert_eq!(desktop_height_for(240), RDP_MIN_DESKTOP_HEIGHT);
             assert_eq!(desktop_width_for(1200), 1200);
             assert_eq!(desktop_height_for(900), 900);
+        }
+
+        #[test]
+        fn automatic_resolution_uses_physical_host_size() {
+            assert_eq!(
+                RemoteResolutionMode::Automatic.desktop_size(1200.0, 800.0, 1800, 1200),
+                (1800, 1200)
+            );
         }
 
         #[test]
