@@ -6,6 +6,12 @@ use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
 
+#[cfg(target_os = "windows")]
+use windows::Win32::{
+    Foundation::HWND,
+    UI::WindowsAndMessaging::ShowOwnedPopups,
+};
+
 const TRAY_ID: &str = "kkterm-main";
 const DONT_SLEEP_ITEM_ID: &str = "kkterm-tray-dont-sleep";
 const EXIT_ITEM_ID: &str = "kkterm-tray-exit";
@@ -218,6 +224,7 @@ pub fn restore_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
             "skipped"
         };
         let show_result = main_window.show().map(|_| "ok").unwrap_or("error");
+        set_owned_popups_visible(&main_window, true);
         let focus_result = main_window.set_focus().map(|_| "ok").unwrap_or("error");
         crate::debug_heartbeat::record_tray_event(format!(
             "restore:wasMinimized={was_minimized}:unminimize={unminimize_result}:show={show_result}:focus={focus_result}"
@@ -238,16 +245,24 @@ pub fn hide_minimized_window_if_enabled<R: tauri::Runtime>(window: &tauri::Windo
 
     crate::debug_heartbeat::record_window_event("hide-minimized-to-tray");
     let _ = window.hide();
+    set_owned_popups_visible(window, false);
 }
 
 /// Diverts the native title-bar close button to a hide-to-tray when minimize-to-tray is enabled.
 /// When disabled, the close request is left untouched so the window quits natively. The tray
 /// "Exit" item calls `app.exit(0)`, which never routes through `CloseRequested`, so quitting
 /// always remains possible.
+///
+/// In both branches we synchronously hide every owned popup HWND (e.g. the RDP ActiveX host
+/// window). Owned popups are not auto-hidden when their owner is hidden via `ShowWindow(SW_HIDE)`
+/// (only when the owner is minimized), so without this the RDP pane lingers on screen after the
+/// main window goes away.
 pub fn hide_window_on_close_if_enabled<R: tauri::Runtime>(
     window: &tauri::Window<R>,
     api: &tauri::CloseRequestApi,
 ) {
+    set_owned_popups_visible(window, false);
+
     let Some(tray_state) = window.try_state::<TrayState>() else {
         return;
     };
@@ -260,3 +275,16 @@ pub fn hide_window_on_close_if_enabled<R: tauri::Runtime>(
     crate::debug_heartbeat::record_window_event("hide-close-to-tray");
     let _ = window.hide();
 }
+
+#[cfg(target_os = "windows")]
+fn set_owned_popups_visible<R: tauri::Runtime>(window: &tauri::Window<R>, visible: bool) {
+    let Ok(handle) = window.hwnd() else { return };
+    let hwnd = HWND(handle.0);
+    // ShowOwnedPopups walks the owner's owned-window list and sets/clears WS_VISIBLE on each.
+    // It is purely a flag flip plus a paint message, so it is safe to call from the close-event
+    // handler on the main thread.
+    let _ = unsafe { ShowOwnedPopups(hwnd, visible) };
+}
+
+#[cfg(not(target_os = "windows"))]
+fn set_owned_popups_visible<R: tauri::Runtime>(_window: &tauri::Window<R>, _visible: bool) {}

@@ -258,19 +258,24 @@ mod platform {
             matches!(self, Self::Automatic | Self::DpiZoom)
         }
 
+        fn applies_host_dpi(&self) -> bool {
+            matches!(self, Self::Automatic | Self::DpiZoom)
+        }
+
         pub fn desktop_size(
             &self,
-            logical_w: f64,
-            logical_h: f64,
+            _logical_w: f64,
+            _logical_h: f64,
             physical_w: i32,
             physical_h: i32,
         ) -> (i32, i32) {
             match self {
-                Self::Automatic => (
-                    desktop_width_for(logical_w.round() as i32),
-                    desktop_height_for(logical_h.round() as i32),
-                ),
-                Self::SmartSizing | Self::DpiZoom => (
+                // Automatic, SmartSizing, and DpiZoom all render at the pane's physical pixel
+                // resolution so the bitmap is 1:1 with the host surface. Automatic and DpiZoom
+                // additionally pass the host scale factor so the remote re-renders UI at the
+                // host's DPI (e.g. 150% on a 4K screen), instead of relying on the bitmap stretch
+                // which leaves text/icons tiny.
+                Self::Automatic | Self::SmartSizing | Self::DpiZoom => (
                     desktop_width_for(physical_w),
                     desktop_height_for(physical_h),
                 ),
@@ -320,16 +325,15 @@ mod platform {
         }
 
         fn desktop_scale_factor(&self, scale_factor: f64) -> i32 {
-            if let Self::DpiZoom = self {
-                let raw = (scale_factor * 100.0).round() as i32;
-                raw.clamp(100, 500)
-            } else {
-                RDP_DISPLAY_SCALE_FACTOR_PERCENT
+            if !self.applies_host_dpi() {
+                return RDP_DISPLAY_SCALE_FACTOR_PERCENT;
             }
+            let raw = (scale_factor * 100.0).round() as i32;
+            raw.clamp(100, 500)
         }
 
         fn device_scale_factor(&self, scale_factor: f64) -> i32 {
-            if !matches!(self, Self::DpiZoom) {
+            if !self.applies_host_dpi() {
                 return RDP_DISPLAY_SCALE_FACTOR_PERCENT;
             }
             let raw = (scale_factor * 100.0).round() as i32;
@@ -2210,24 +2214,36 @@ mod platform {
         }
 
         #[test]
-        fn automatic_resolution_uses_logical_desktop_with_smart_sizing() {
+        fn automatic_resolution_uses_physical_desktop_with_smart_sizing() {
             assert_eq!(
                 RemoteResolutionMode::Automatic.desktop_size(1200.0, 800.0, 1800, 1200),
-                (1200, 800)
+                (1800, 1200)
             );
             assert!(RemoteResolutionMode::Automatic.smart_sizing());
         }
 
         #[test]
-        fn automatic_display_settings_stretch_logical_desktop_with_smart_sizing() {
+        fn automatic_display_settings_apply_host_dpi_at_physical_size() {
             let settings =
                 RemoteResolutionMode::Automatic.display_settings(1200.0, 800.0, 1800, 1200, 1.5);
 
-            assert_eq!(settings.desktop_width, 1200);
-            assert_eq!(settings.desktop_height, 800);
-            assert_eq!(settings.physical_width, 1200);
-            assert_eq!(settings.physical_height, 800);
+            assert_eq!(settings.desktop_width, 1800);
+            assert_eq!(settings.desktop_height, 1200);
+            assert_eq!(settings.physical_width, 1800);
+            assert_eq!(settings.physical_height, 1200);
+            assert_eq!(settings.desktop_scale_factor, 150);
+            assert_eq!(settings.device_scale_factor, 140);
+        }
+
+        #[test]
+        fn automatic_display_settings_pass_through_native_dpi() {
+            let settings =
+                RemoteResolutionMode::Automatic.display_settings(1920.0, 1080.0, 1920, 1080, 1.0);
+
+            assert_eq!(settings.desktop_width, 1920);
+            assert_eq!(settings.desktop_height, 1080);
             assert_eq!(settings.desktop_scale_factor, 100);
+            assert_eq!(settings.device_scale_factor, 100);
         }
 
         #[test]
