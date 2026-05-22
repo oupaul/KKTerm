@@ -733,6 +733,10 @@
     "rdpPerformanceBalanced": "Balanced",
     "rdpPerformanceQuality": "Quality",
     "rdpPerformanceSpeed": "Speed",
+    "rdpRemoteResolution": "Remote resolution",
+    "rdpRemoteResolutionAutomatic": "Automatic",
+    "rdpRemoteResolutionSmartSizing": "Smart Sizing",
+    "rdpRemoteResolutionDpiZoom": "DPI Zoom",
     "rdpRedirectClipboard": "Clipboard redirection",
     "rdpRedirectClipboardHint": "Allow clipboard copy and paste between KKTerm and the remote desktop.",
     "rdpRedirectDrives": "Drive redirection",
@@ -1470,6 +1474,7 @@
   "remoteDesktop": {
     "typeLabel": "Remote desktop",
     "sendCtrlAltDel": "Send Ctrl+Alt+Delete",
+    "sendCtrlAltDelHint": "Press CTRL+ALT+END to Send CTRL+ALT+DEL",
     "reconnect": "Reconnect",
     "reconnecting": "Reconnecting",
     "connecting": "Connecting",

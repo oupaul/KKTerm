@@ -2,6 +2,7 @@ import { connectionIconForType, connectionSubtitle, connectionToolbarTitle, conn
 import { ScreenshotMenu } from "../workspace/ScreenshotMenu";
 
 import { documentHasRdpBlockingOverlay } from "../workspace/nativeOverlay";
+import { showNativeContextMenu } from "../lib/nativeContextMenu";
 import { Bot, Keyboard, Monitor, RotateCcw } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
@@ -601,13 +602,27 @@ export function RemoteDesktopWorkspace({
     setRdpStartKey((key) => key + 1);
   };
 
-  const handleSendCtrlAltDelete = () => {
+  const handleSendCtrlAltDelete = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (canStartRdp) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      void showNativeContextMenu(
+        [
+          {
+            kind: "item",
+            label: t("remoteDesktop.sendCtrlAltDelHint"),
+            disabled: true,
+            action: () => {},
+          },
+        ],
+        { x: rect.left, y: rect.bottom },
+      );
+      return;
+    }
     const sessionId = sessionIdRef.current;
     if (!sessionId || !sessionStartedRef.current || !isTauriRuntime()) {
       return;
     }
-    const command = canStartVnc ? "send_vnc_ctrl_alt_delete" : "send_rdp_ctrl_alt_delete";
-    void invokeCommand(command, { request: { sessionId } }).catch((error) => {
+    void invokeCommand("send_vnc_ctrl_alt_delete", { request: { sessionId } }).catch((error) => {
       setRdpError(error instanceof Error ? error.message : String(error));
     });
   };
@@ -1231,9 +1246,9 @@ export function RemoteDesktopWorkspace({
               aria-label={`${t("remoteDesktop.sendCtrlAltDel")} ${typeLabel} ${t("remoteDesktop.session")}`}
               className="terminal-pane-action"
               data-tutorial-id="remoteDesktop.sendCtrlAltDel"
-              disabled={!isTauriRuntime() || !sessionStartedRef.current}
+              disabled={!isTauriRuntime() || (!canStartRdp && !sessionStartedRef.current)}
               onClick={handleSendCtrlAltDelete}
-              title={t("remoteDesktop.sendCtrlAltDel")}
+              title={canStartRdp ? t("remoteDesktop.sendCtrlAltDelHint") : t("remoteDesktop.sendCtrlAltDel")}
               type="button"
             >
               <Keyboard size={13} />
@@ -1387,6 +1402,7 @@ function resolveRdpOptions(
     redirectDrives: overrides.redirectDrives ?? defaults.redirectDrives,
     bitmapCache: overrides.bitmapCache ?? defaults.bitmapCache,
     performanceProfile: overrides.performanceProfile ?? defaults.performanceProfile,
+    remoteResolution: overrides.remoteResolution ?? defaults.remoteResolution,
   };
 }
 

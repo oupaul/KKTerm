@@ -61,7 +61,7 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "settings.defaultUser, settings.defaultPort, settings.defaultKey, settings.sshBufferLines with navigation page=settings settingsSectionId=ssh-settings; ",
     "settings.terminalFontFamily, settings.terminalFontSize, settings.defaultShell, settings.scrollbackLines with navigation page=settings settingsSectionId=terminal-settings; ",
     "settings.ignoreCertificateErrors, settings.urlSavedPasswords, settings.urlDataShards with navigation page=settings settingsSectionId=url-settings; ",
-    "settings.rdpColorDepth, settings.rdpPerformanceProfile with navigation page=settings settingsSectionId=rdp-settings; ",
+    "settings.rdpColorDepth, settings.rdpPerformanceProfile, settings.rdpRemoteResolution with navigation page=settings settingsSectionId=rdp-settings; ",
     "settings.vncViewOnly, settings.vncColorLevel with navigation page=settings settingsSectionId=vnc-settings; ",
     "settings.aboutVersion with navigation page=settings settingsSectionId=about-settings"
 );

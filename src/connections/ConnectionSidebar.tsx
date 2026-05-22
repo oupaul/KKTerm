@@ -28,6 +28,7 @@ import { DeleteConfirmationDialog } from "../app/DeleteConfirmationDialog";
 import { pushTrayMenu } from "../app/trayMenu";
 import { useWorkspaceStore } from "../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, UpdateConnectionRequest, VncSettings } from "../types";
+import { RDP_REMOTE_RESOLUTION_FIXED } from "../types";
 
 type DraggedTreeItem =
   | { kind: "folder"; folderId: string }
@@ -2567,6 +2568,11 @@ function ConnectionDialog({
                   ? rdpSettings.performanceProfile
                   : form.get("rdpPerformanceProfile") ?? rdpSettings.performanceProfile,
               ) as RdpSettings["performanceProfile"],
+              remoteResolution: String(
+                inheritRdpDefaults
+                  ? rdpSettings.remoteResolution
+                  : form.get("rdpRemoteResolution") ?? rdpSettings.remoteResolution,
+              ) as RdpSettings["remoteResolution"],
             }
           : undefined,
       vncOptions:
@@ -3088,6 +3094,23 @@ function ConnectionDialog({
                         <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
                         <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
                         <option value="speed">{t("settings.rdpPerformanceSpeed")}</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>{t("settings.rdpRemoteResolution")}</span>
+                      <select
+                        disabled={rdpInheritsSettingsDefaults}
+                        name="rdpRemoteResolution"
+                        defaultValue={initialConnection?.rdpOptions?.remoteResolution ?? rdpSettings.remoteResolution}
+                      >
+                        <option value="automatic">{t("settings.rdpRemoteResolutionAutomatic")}</option>
+                        <option value="smartSizing">{t("settings.rdpRemoteResolutionSmartSizing")}</option>
+                        <option value="dpiZoom">{t("settings.rdpRemoteResolutionDpiZoom")}</option>
+                        {RDP_REMOTE_RESOLUTION_FIXED.map((value) => (
+                          <option key={value} value={value}>
+                            {value.replace("x", "×")}
+                          </option>
+                        ))}
                       </select>
                     </label>
                   </div>

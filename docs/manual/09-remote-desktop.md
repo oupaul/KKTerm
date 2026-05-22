@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`
-- Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`
-- Synonyms: "remote desktop", "screen sharing", "mstsc", "VNC viewer", "send three-finger salute"
+- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`
+- Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / Smart Sizing / DPI Zoom / fixed `WxH`), reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
+- Synonyms: "remote desktop", "screen sharing", "mstsc", "VNC viewer", "send three-finger salute", "high DPI scaling", "smart sizing", "remote screen size"
 
 ## Connection kinds
 
@@ -34,7 +34,9 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
 
 ## Toolbar actions
 
-- `remoteDesktop.sendCtrlAltDel` — sends Ctrl+Alt+Del to the remote (RDP). Required for the Windows lock screen; the local OS intercepts the real key combo.
+- `remoteDesktop.sendCtrlAltDel` — keyboard icon in the toolbar.
+  - **RDP**: clicking opens a native context menu with the hint `remoteDesktop.sendCtrlAltDelHint` ("Press CTRL+ALT+END to Send CTRL+ALT+DEL"). The embedded Microsoft RDP ActiveX control cannot reliably synthesize the Secure Attention Sequence from outside its own keyboard hook, so the local Ctrl+Alt+End hotkey (set via `HotKeyCtrlAltDel = VK_END`) is the supported path.
+  - **VNC**: the same button still calls `send_vnc_ctrl_alt_delete` directly.
 - `remoteDesktop.reconnect` — explicit reconnect button.
 
 Tutorial targets: `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`.
@@ -52,3 +54,12 @@ This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never
 ## RDP / VNC settings
 
 Per-kind defaults (resolution, colour depth, etc.) live in Settings → RDP (`settings.sectionRdp`) and Settings → VNC (`settings.sectionVnc`). See [15-settings.md](15-settings.md).
+
+### Remote resolution (`settings.rdpRemoteResolution`)
+
+Controls the desktop size and scaling KKTerm asks the RDP ActiveX control to apply. Available both as a global default (Settings → RDP) and as a per-connection override.
+
+- `settings.rdpRemoteResolutionAutomatic` (default) — push the pane's logical (DIP) size as `DesktopWidth`/`DesktopHeight`. Smart Sizing stays off. Best on high-DPI displays because it stops the remote UI from rendering at physical pixel density and looking too small.
+- `settings.rdpRemoteResolutionSmartSizing` — push the pane's physical pixel size once and enable the ActiveX `SmartSizing` property. The framebuffer is then stretched to fit subsequent pane resizes.
+- `settings.rdpRemoteResolutionDpiZoom` — push the pane's physical pixel size and set `ZoomLevel` to `round(scale_factor * 100)`. The remote OS renders at native DPI; the client scales the framebuffer.
+- Fixed resolutions (`1440x900` through `3840x2400`) — push the chosen size as `DesktopWidth`/`DesktopHeight` and enable `SmartSizing` so the framebuffer is letterboxed/scaled to fit the pane. Subsequent pane resizes do not change the remote desktop size.

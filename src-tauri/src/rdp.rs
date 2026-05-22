@@ -201,6 +201,78 @@ mod platform {
         bitmap_cache: bool,
         #[serde(default = "default_performance_profile")]
         performance_profile: String,
+        #[serde(default = "default_remote_resolution")]
+        remote_resolution: String,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum RemoteResolutionMode {
+        Automatic,
+        SmartSizing,
+        DpiZoom,
+        Fixed { width: i32, height: i32 },
+    }
+
+    impl RemoteResolutionMode {
+        pub fn parse(value: &str) -> Self {
+            match value.trim() {
+                "automatic" | "" => Self::Automatic,
+                "smartSizing" => Self::SmartSizing,
+                "dpiZoom" => Self::DpiZoom,
+                other => other
+                    .split_once('x')
+                    .and_then(|(w, h)| {
+                        let width: i32 = w.parse().ok()?;
+                        let height: i32 = h.parse().ok()?;
+                        if width > 0 && height > 0 {
+                            Some(Self::Fixed { width, height })
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(Self::Automatic),
+            }
+        }
+
+        pub fn smart_sizing(&self) -> bool {
+            matches!(self, Self::SmartSizing | Self::Fixed { .. })
+        }
+
+        pub fn zoom_level(&self, scale_factor: f64) -> Option<i32> {
+            if let Self::DpiZoom = self {
+                let raw = (scale_factor * 100.0).round() as i32;
+                Some(raw.clamp(100, 500))
+            } else {
+                None
+            }
+        }
+
+        pub fn tracks_pane_size(&self) -> bool {
+            matches!(self, Self::Automatic | Self::DpiZoom)
+        }
+
+        pub fn desktop_size(
+            &self,
+            logical_w: f64,
+            logical_h: f64,
+            physical_w: i32,
+            physical_h: i32,
+        ) -> (i32, i32) {
+            match self {
+                Self::Automatic => (
+                    desktop_width_for(logical_w.round() as i32),
+                    desktop_height_for(logical_h.round() as i32),
+                ),
+                Self::SmartSizing | Self::DpiZoom => (
+                    desktop_width_for(physical_w),
+                    desktop_height_for(physical_h),
+                ),
+                Self::Fixed { width, height } => (
+                    desktop_width_for(*width),
+                    desktop_height_for(*height),
+                ),
+            }
+        }
     }
 
     #[derive(Serialize)]
@@ -308,6 +380,7 @@ mod platform {
         dispatch: IDispatch,
         desktop_width: i32,
         desktop_height: i32,
+        resolution_mode: RemoteResolutionMode,
     }
 
     // These values are always created, used, and destroyed through closures
@@ -438,8 +511,12 @@ mod platform {
                     request.width,
                     request.height,
                 )?;
-                let desktop_width = desktop_width_for(rect.2);
-                let desktop_height = desktop_height_for(rect.3);
+                let (desktop_width, desktop_height) = session.resolution_mode.desktop_size(
+                    request.width,
+                    request.height,
+                    rect.2,
+                    rect.3,
+                );
                 let connection_state = get_property_i32(&session.dispatch, "Connected")?;
                 let connected = is_rdp_connected_state(connection_state);
                 let display_synced = is_rdp_displayable_state(connection_state)
@@ -731,15 +808,22 @@ mod platform {
         let initial_rect = staged_rect(size.2, size.3);
         let (hwnd, dispatch, control) = create_rdp_control(parent_hwnd, initial_rect)?;
 
+        let options = request.options.unwrap_or_default();
+        let resolution_mode = RemoteResolutionMode::parse(&options.remote_resolution);
+        let (desktop_width, desktop_height) =
+            resolution_mode.desktop_size(request.width, request.height, size.2, size.3);
+
         configure_rdp_control(
             &dispatch,
             &host,
             &user,
             port,
             request.password.as_deref(),
-            desktop_width_for(size.2),
-            desktop_height_for(size.3),
-            &request.options.unwrap_or_default(),
+            desktop_width,
+            desktop_height,
+            scale_factor,
+            resolution_mode,
+            &options,
         )?;
         invoke_method(&dispatch, "Connect")?;
 
@@ -756,6 +840,7 @@ mod platform {
                 // startup bounds pushes retry the real remote desktop resize.
                 desktop_width: 0,
                 desktop_height: 0,
+                resolution_mode,
             },
         );
 
@@ -841,6 +926,8 @@ mod platform {
         password: Option<&str>,
         desktop_width: i32,
         desktop_height: i32,
+        scale_factor: f64,
+        resolution_mode: RemoteResolutionMode,
         options: &RdpSessionOptions,
     ) -> Result<(), String> {
         let (domain, username) = split_windows_user(user);
@@ -885,7 +972,10 @@ mod platform {
             let _ = set_property_bool(&advanced, "RedirectSmartCards", false);
             let _ = set_property_i32(&advanced, "SasSequence", RDP_STANDARD_SAS_SEQUENCE);
             let _ = set_property_i32(&advanced, "HotKeyCtrlAltDel", VK_END_KEY as i32);
-            let _ = set_property_bool(&advanced, "SmartSizing", false);
+            let _ = set_property_bool(&advanced, "SmartSizing", resolution_mode.smart_sizing());
+            if let Some(zoom) = resolution_mode.zoom_level(scale_factor) {
+                let _ = set_property_i32(&advanced, "ZoomLevel", zoom);
+            }
             let _ = set_property_bool(&advanced, "BitmapPersistence", options.bitmap_cache);
             let _ = set_property_bool(&advanced, "CachePersistenceActive", options.bitmap_cache);
             let _ = set_property_i32(
@@ -909,8 +999,13 @@ mod platform {
                 redirect_drives: false,
                 bitmap_cache: true,
                 performance_profile: default_performance_profile(),
+                remote_resolution: default_remote_resolution(),
             }
         }
+    }
+
+    fn default_remote_resolution() -> String {
+        "automatic".to_string()
     }
 
     fn default_color_depth() -> u16 {
@@ -1545,8 +1640,11 @@ mod platform {
             width,
             height,
         )?;
-        let desktop_width = desktop_width_for(rect.2);
-        let desktop_height = desktop_height_for(rect.3);
+        if !session.resolution_mode.tracks_pane_size() {
+            return Ok(());
+        }
+        let (desktop_width, desktop_height) =
+            session.resolution_mode.desktop_size(width, height, rect.2, rect.3);
         let _ = sync_remote_desktop_size(session, desktop_width, desktop_height, false);
         Ok(())
     }
@@ -2036,6 +2134,8 @@ mod platform {
         pub redirect_drives: bool,
         pub bitmap_cache: bool,
         pub performance_profile: String,
+        #[serde(default)]
+        pub remote_resolution: String,
     }
 
     #[derive(Serialize)]
