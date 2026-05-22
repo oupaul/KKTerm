@@ -94,6 +94,7 @@ export const defaultRdpSettings: RdpSettings = {
   redirectDrives: false,
   bitmapCache: true,
   performanceProfile: "balanced",
+  remoteResolution: "automatic",
 };
 
 export const defaultVncSettings: VncSettings = {

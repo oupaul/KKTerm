@@ -53,6 +53,7 @@ const SETTINGS_TUTORIAL_TARGET_SECTIONS: Record<string, SettingsSectionId> = {
   "settings.urlDataShards": "url-settings",
   "settings.rdpColorDepth": "rdp-settings",
   "settings.rdpPerformanceProfile": "rdp-settings",
+  "settings.rdpRemoteResolution": "rdp-settings",
   "settings.vncViewOnly": "vnc-settings",
   "settings.vncColorLevel": "vnc-settings",
   "settings.aboutVersion": "about-settings",

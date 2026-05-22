@@ -475,6 +475,8 @@ pub struct RdpSettings {
     bitmap_cache: bool,
     #[serde(default = "default_remote_desktop_performance_profile")]
     performance_profile: String,
+    #[serde(default = "default_remote_desktop_resolution")]
+    remote_resolution: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -902,6 +904,8 @@ pub struct RdpConnectionOptions {
     bitmap_cache: Option<bool>,
     #[serde(default)]
     performance_profile: Option<String>,
+    #[serde(default)]
+    remote_resolution: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -3939,6 +3943,7 @@ fn normalize_rdp_connection_options(
             redirect_drives: None,
             bitmap_cache: None,
             performance_profile: None,
+            remote_resolution: None,
         }));
     }
     if let Some(color_depth) = options.color_depth {
@@ -3946,6 +3951,9 @@ fn normalize_rdp_connection_options(
     }
     if let Some(profile) = options.performance_profile {
         options.performance_profile = Some(validate_remote_desktop_performance_profile(profile)?);
+    }
+    if let Some(resolution) = options.remote_resolution {
+        options.remote_resolution = Some(validate_remote_desktop_resolution(resolution)?);
     }
     Ok(Some(options))
 }
@@ -4241,7 +4249,12 @@ fn default_rdp_settings() -> RdpSettings {
         redirect_drives: false,
         bitmap_cache: true,
         performance_profile: default_remote_desktop_performance_profile(),
+        remote_resolution: default_remote_desktop_resolution(),
     }
+}
+
+fn default_remote_desktop_resolution() -> String {
+    "automatic".to_string()
 }
 
 fn default_rdp_color_depth() -> u16 {
@@ -4640,7 +4653,27 @@ fn validate_rdp_settings(mut settings: RdpSettings) -> Result<RdpSettings, Strin
     settings.color_depth = validate_rdp_color_depth(settings.color_depth)?;
     settings.performance_profile =
         validate_remote_desktop_performance_profile(settings.performance_profile)?;
+    settings.remote_resolution = validate_remote_desktop_resolution(settings.remote_resolution)?;
     Ok(settings)
+}
+
+fn validate_remote_desktop_resolution(value: String) -> Result<String, String> {
+    let trimmed = value.trim();
+    if matches!(trimmed, "automatic" | "smartSizing" | "dpiZoom") {
+        return Ok(trimmed.to_string());
+    }
+    if let Some((w, h)) = trimmed.split_once('x') {
+        let width: u32 = w
+            .parse()
+            .map_err(|_| format!("RDP remote resolution '{value}' is not recognized"))?;
+        let height: u32 = h
+            .parse()
+            .map_err(|_| format!("RDP remote resolution '{value}' is not recognized"))?;
+        if width >= 640 && height >= 480 && width <= 7680 && height <= 4320 {
+            return Ok(format!("{width}x{height}"));
+        }
+    }
+    Err(format!("RDP remote resolution '{value}' is not recognized"))
 }
 
 fn validate_vnc_settings(mut settings: VncSettings) -> Result<VncSettings, String> {
@@ -6567,6 +6600,7 @@ mod tests {
                 redirect_drives: true,
                 bitmap_cache: true,
                 performance_profile: "quality".to_string(),
+                remote_resolution: "automatic".to_string(),
             })
             .expect("RDP settings update");
 
@@ -6627,6 +6661,7 @@ mod tests {
                     redirect_drives: Some(true),
                     bitmap_cache: Some(true),
                     performance_profile: Some("quality".to_string()),
+                    remote_resolution: None,
                 }),
                 vnc_options: Some(VncConnectionOptions {
                     inherit_defaults: false,
@@ -6669,6 +6704,7 @@ mod tests {
                     redirect_drives: Some(true),
                     bitmap_cache: Some(true),
                     performance_profile: Some("quality".to_string()),
+                    remote_resolution: None,
                 }),
                 vnc_options: Some(VncConnectionOptions {
                     inherit_defaults: false,

@@ -339,12 +339,46 @@ export interface UrlSettings {
 export type RdpPerformanceProfile = "balanced" | "quality" | "speed";
 export type RdpColorDepth = 15 | 16 | 24 | 32;
 
+export type RdpRemoteResolutionMode = "automatic" | "smartSizing" | "dpiZoom";
+export type RdpRemoteResolutionFixed =
+  | "1440x900"
+  | "1400x1050"
+  | "1600x1024"
+  | "1600x1200"
+  | "1600x1280"
+  | "1680x1050"
+  | "1900x1200"
+  | "1920x1080"
+  | "1920x1200"
+  | "2048x1536"
+  | "2560x2048"
+  | "3200x2400"
+  | "3840x2400";
+export type RdpRemoteResolution = RdpRemoteResolutionMode | RdpRemoteResolutionFixed;
+
+export const RDP_REMOTE_RESOLUTION_FIXED: readonly RdpRemoteResolutionFixed[] = [
+  "1440x900",
+  "1400x1050",
+  "1600x1024",
+  "1600x1200",
+  "1600x1280",
+  "1680x1050",
+  "1900x1200",
+  "1920x1080",
+  "1920x1200",
+  "2048x1536",
+  "2560x2048",
+  "3200x2400",
+  "3840x2400",
+] as const;
+
 export interface RdpSettings {
   colorDepth: RdpColorDepth;
   redirectClipboard: boolean;
   redirectDrives: boolean;
   bitmapCache: boolean;
   performanceProfile: RdpPerformanceProfile;
+  remoteResolution: RdpRemoteResolution;
 }
 
 export interface RdpConnectionOptions {
@@ -354,6 +388,7 @@ export interface RdpConnectionOptions {
   redirectDrives?: boolean;
   bitmapCache?: boolean;
   performanceProfile?: RdpPerformanceProfile;
+  remoteResolution?: RdpRemoteResolution;
 }
 
 export type VncColorLevel = "full" | "256" | "64" | "8";

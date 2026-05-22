@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
-import type { RdpColorDepth, RdpPerformanceProfile } from "../types";
+import {
+  RDP_REMOTE_RESOLUTION_FIXED,
+  type RdpColorDepth,
+  type RdpPerformanceProfile,
+  type RdpRemoteResolution,
+} from "../types";
 import { SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -81,6 +86,28 @@ export function RdpSettings() {
               <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
               <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
               <option value="speed">{t("settings.rdpPerformanceSpeed")}</option>
+            </select>
+          </label>
+          <label data-tutorial-id="settings.rdpRemoteResolution">
+            <span>{t("settings.rdpRemoteResolution")}</span>
+            <select
+              value={draft.remoteResolution}
+              onChange={(event) => {
+                const remoteResolution = event.currentTarget.value as RdpRemoteResolution;
+                setDraft((settings) => ({
+                  ...settings,
+                  remoteResolution,
+                }));
+              }}
+            >
+              <option value="automatic">{t("settings.rdpRemoteResolutionAutomatic")}</option>
+              <option value="smartSizing">{t("settings.rdpRemoteResolutionSmartSizing")}</option>
+              <option value="dpiZoom">{t("settings.rdpRemoteResolutionDpiZoom")}</option>
+              {RDP_REMOTE_RESOLUTION_FIXED.map((value) => (
+                <option key={value} value={value}>
+                  {value.replace("x", "×")}
+                </option>
+              ))}
             </select>
           </label>
         </div>
