@@ -1213,13 +1213,17 @@
     "aiCodingUsageFiveHour": "5시간",
     "aiCodingUsageHideFromStatusBar": "상태 표시줄에서 숨기기",
     "aiCodingUsageInstallHelp": "Windows에 {{provider}} 설치",
-    "aiCodingUsageLastRefresh": "{{time}} 업데이트됨",
+    "aiCodingUsageLastRefresh": "{{time}}",
     "aiCodingUsageNeverRefreshed": "아직 새로 고치지 않음",
     "aiCodingUsageNotConnected": "연결되지 않음",
     "aiCodingUsagePercent": "{{percent}}%",
     "aiCodingUsageProvider": {
       "codex": "Codex",
       "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderProduct": {
+      "codex": "OpenAI Codex",
+      "claudeCode": "Anthropic Claude Code"
     },
     "aiCodingUsageProviderError": "{{message}}",
     "aiCodingUsageProviderHint": "사용량 모니터링을 시작하려면 이 제공자를 연결하세요.",

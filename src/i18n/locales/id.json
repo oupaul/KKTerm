@@ -1213,13 +1213,17 @@
     "aiCodingUsageFiveHour": "5 j",
     "aiCodingUsageHideFromStatusBar": "Sembunyikan dari bilah status",
     "aiCodingUsageInstallHelp": "Instal {{provider}} di Windows",
-    "aiCodingUsageLastRefresh": "Diperbarui {{time}}",
+    "aiCodingUsageLastRefresh": "{{time}}",
     "aiCodingUsageNeverRefreshed": "Belum pernah diperbarui",
     "aiCodingUsageNotConnected": "Tidak terhubung",
     "aiCodingUsagePercent": "{{percent}}%",
     "aiCodingUsageProvider": {
       "codex": "Codex",
       "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderProduct": {
+      "codex": "OpenAI Codex",
+      "claudeCode": "Anthropic Claude Code"
     },
     "aiCodingUsageProviderError": "{{message}}",
     "aiCodingUsageProviderHint": "Hubungkan penyedia ini untuk mulai memantau penggunaan.",

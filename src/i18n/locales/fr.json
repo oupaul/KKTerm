@@ -1213,13 +1213,17 @@
     "aiCodingUsageFiveHour": "5 h",
     "aiCodingUsageHideFromStatusBar": "Masquer de la barre d’état",
     "aiCodingUsageInstallHelp": "Installer {{provider}} sur Windows",
-    "aiCodingUsageLastRefresh": "Mis à jour {{time}}",
+    "aiCodingUsageLastRefresh": "{{time}}",
     "aiCodingUsageNeverRefreshed": "Pas encore actualisé",
     "aiCodingUsageNotConnected": "Non connecté",
     "aiCodingUsagePercent": "{{percent}} %",
     "aiCodingUsageProvider": {
       "codex": "Codex",
       "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderProduct": {
+      "codex": "OpenAI Codex",
+      "claudeCode": "Anthropic Claude Code"
     },
     "aiCodingUsageProviderError": "{{message}}",
     "aiCodingUsageProviderHint": "Connectez ce fournisseur pour commencer à surveiller l’utilisation.",

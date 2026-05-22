@@ -1213,13 +1213,17 @@
     "aiCodingUsageFiveHour": "5 小時",
     "aiCodingUsageHideFromStatusBar": "從狀態列隱藏",
     "aiCodingUsageInstallHelp": "在 Windows 上安裝 {{provider}}",
-    "aiCodingUsageLastRefresh": "已更新 {{time}}",
+    "aiCodingUsageLastRefresh": "{{time}}",
     "aiCodingUsageNeverRefreshed": "尚未重新整理",
     "aiCodingUsageNotConnected": "未連線",
     "aiCodingUsagePercent": "{{percent}}%",
     "aiCodingUsageProvider": {
       "codex": "Codex",
       "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderProduct": {
+      "codex": "OpenAI Codex",
+      "claudeCode": "Anthropic Claude Code"
     },
     "aiCodingUsageProviderError": "{{message}}",
     "aiCodingUsageProviderHint": "連線此提供者以開始監控使用量。",

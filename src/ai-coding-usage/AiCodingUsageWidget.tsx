@@ -9,6 +9,11 @@ import type { DashboardWidgetInstance } from "../dashboard/types";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import {
+  aiCodingUsageProviderProductKey,
+  formatDateTime,
+  formatTimeOnly,
+} from "./display";
+import {
   addAiCodingUsageProvider,
   availableAiCodingUsageProviders,
   parseAiCodingUsageSettingsJson,
@@ -295,6 +300,7 @@ function ProviderSlot({
 }) {
   const { t } = useTranslation();
   const label = t(`dashboard.aiCodingUsageProvider.${provider.provider}`);
+  const productLabel = t(aiCodingUsageProviderProductKey(provider.provider));
   const connected = provider.authState === "connected";
   const displayError = providerDisplayError(provider);
   const Icon = provider.provider === "codex" ? CodexColorIcon : ClaudeCodeColorIcon;
@@ -307,13 +313,14 @@ function ProviderSlot({
             <Icon size={39} />
           </span>
           <span>
-            {provider.subscriptionPlan ? (
-              <span className="ai-coding-provider-name-row">
+            <span className="ai-coding-provider-name-row">
+              <span className="ai-coding-provider-name">{productLabel}</span>
+              {provider.subscriptionPlan ? (
                 <span className="ai-coding-provider-plan" title={provider.subscriptionPlan}>
                   {formatSubscriptionPlan(provider.subscriptionPlan)}
                 </span>
-              </span>
-            ) : null}
+              ) : null}
+            </span>
             <span className="ai-coding-provider-account">
               {provider.accountLabel || provider.accountEmail || t("dashboard.aiCodingUsageNotConnected")}
             </span>
@@ -324,7 +331,7 @@ function ProviderSlot({
             <div className="ai-coding-provider-meta">
               {provider.lastRefreshAt
                 ? t("dashboard.aiCodingUsageLastRefresh", {
-                    time: formatDateTime(provider.lastRefreshAt),
+                    time: formatTimeOnly(provider.lastRefreshAt),
                   })
                 : t("dashboard.aiCodingUsageNeverRefreshed")}
             </div>
@@ -536,19 +543,6 @@ function formatSubscriptionPlan(plan: string) {
     .split(/[\s_-]+/)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    month: "short",
-    day: "numeric",
-  }).format(date);
 }
 
 function errorMessage(error: unknown) {

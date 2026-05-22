@@ -234,6 +234,10 @@
       "codex": "Codex",
       "claudeCode": "Claude Code"
     },
+    "aiCodingUsageProviderProduct": {
+      "codex": "OpenAI Codex",
+      "claudeCode": "Anthropic Claude Code"
+    },
     "aiCodingUsageNotConnected": "Not connected",
     "aiCodingUsageProviderHint": "Connect this provider to start monitoring usage.",
     "aiCodingUsageAddTool": "Add AI coding tool",
@@ -252,7 +256,7 @@
     "aiCodingUsagePercent": "{{percent}}%",
     "aiCodingUsageResetsAt": "Resets {{time}}",
     "aiCodingUsageResetUnknown": "Reset time unknown",
-    "aiCodingUsageLastRefresh": "Updated {{time}}",
+    "aiCodingUsageLastRefresh": "{{time}}",
     "aiCodingUsageNeverRefreshed": "Not refreshed yet",
     "aiCodingUsageProviderError": "{{message}}",
     "aiCodingUsageRefreshError": "Could not refresh usage: {{message}}",

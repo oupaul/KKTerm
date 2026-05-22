@@ -1213,13 +1213,17 @@
     "aiCodingUsageFiveHour": "5 ชม.",
     "aiCodingUsageHideFromStatusBar": "ซ่อนจากแถบสถานะ",
     "aiCodingUsageInstallHelp": "ติดตั้ง {{provider}} บน Windows",
-    "aiCodingUsageLastRefresh": "อัปเดตเมื่อ {{time}}",
+    "aiCodingUsageLastRefresh": "{{time}}",
     "aiCodingUsageNeverRefreshed": "ยังไม่ได้รีเฟรช",
     "aiCodingUsageNotConnected": "ไม่ได้เชื่อมต่อ",
     "aiCodingUsagePercent": "{{percent}}%",
     "aiCodingUsageProvider": {
       "codex": "Codex",
       "claudeCode": "Claude Code"
+    },
+    "aiCodingUsageProviderProduct": {
+      "codex": "OpenAI Codex",
+      "claudeCode": "Anthropic Claude Code"
     },
     "aiCodingUsageProviderError": "{{message}}",
     "aiCodingUsageProviderHint": "เชื่อมต่อผู้ให้บริการนี้เพื่อเริ่มตรวจสอบการใช้งาน",
