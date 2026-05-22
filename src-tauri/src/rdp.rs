@@ -27,7 +27,9 @@ mod platform {
                 LibraryLoader::{GetProcAddress, LoadLibraryW},
                 Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
                 Ole::{OleInitialize, CF_UNICODETEXT, DISPID_PROPERTYPUT},
-                Variant::{VariantClear, VARIANT, VT_BOOL, VT_BSTR, VT_DISPATCH, VT_I2, VT_I4},
+                Variant::{
+                    VariantClear, VARIANT, VT_BOOL, VT_BSTR, VT_DISPATCH, VT_I2, VT_I4, VT_UI4,
+                },
             },
             UI::{
                 Input::KeyboardAndMouse::{
@@ -118,6 +120,7 @@ mod platform {
         "AdvancedSettings2",
         "AdvancedSettings",
     ];
+    const EXTENDED_SETTINGS_PROPERTIES: &[&str] = &["ExtendedSettings"];
     const SECURED_SETTINGS_PROPERTIES: &[&str] = &["SecuredSettings", "SecuredSettings2"];
 
     #[repr(transparent)]
@@ -213,6 +216,16 @@ mod platform {
         Fixed { width: i32, height: i32 },
     }
 
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct RdpDisplaySettings {
+        desktop_width: i32,
+        desktop_height: i32,
+        physical_width: i32,
+        physical_height: i32,
+        desktop_scale_factor: i32,
+        device_scale_factor: i32,
+    }
+
     impl RemoteResolutionMode {
         pub fn parse(value: &str) -> Self {
             match value.trim() {
@@ -235,16 +248,10 @@ mod platform {
         }
 
         pub fn smart_sizing(&self) -> bool {
-            matches!(self, Self::SmartSizing | Self::Fixed { .. })
-        }
-
-        pub fn zoom_level(&self, scale_factor: f64) -> Option<i32> {
-            if let Self::DpiZoom = self {
-                let raw = (scale_factor * 100.0).round() as i32;
-                Some(raw.clamp(100, 500))
-            } else {
-                None
-            }
+            matches!(
+                self,
+                Self::Automatic | Self::SmartSizing | Self::Fixed { .. }
+            )
         }
 
         pub fn tracks_pane_size(&self) -> bool {
@@ -253,24 +260,66 @@ mod platform {
 
         pub fn desktop_size(
             &self,
-            _logical_w: f64,
-            _logical_h: f64,
+            logical_w: f64,
+            logical_h: f64,
             physical_w: i32,
             physical_h: i32,
         ) -> (i32, i32) {
             match self {
                 Self::Automatic => (
-                    desktop_width_for(physical_w),
-                    desktop_height_for(physical_h),
+                    desktop_width_for(logical_w.round() as i32),
+                    desktop_height_for(logical_h.round() as i32),
                 ),
                 Self::SmartSizing | Self::DpiZoom => (
                     desktop_width_for(physical_w),
                     desktop_height_for(physical_h),
                 ),
-                Self::Fixed { width, height } => (
-                    desktop_width_for(*width),
-                    desktop_height_for(*height),
-                ),
+                Self::Fixed { width, height } => {
+                    (desktop_width_for(*width), desktop_height_for(*height))
+                }
+            }
+        }
+
+        fn display_settings(
+            &self,
+            logical_w: f64,
+            logical_h: f64,
+            physical_w: i32,
+            physical_h: i32,
+            scale_factor: f64,
+        ) -> RdpDisplaySettings {
+            let (desktop_width, desktop_height) =
+                self.desktop_size(logical_w, logical_h, physical_w, physical_h);
+            RdpDisplaySettings {
+                desktop_width,
+                desktop_height,
+                physical_width: desktop_width_for(physical_w),
+                physical_height: desktop_height_for(physical_h),
+                desktop_scale_factor: self.desktop_scale_factor(scale_factor),
+                device_scale_factor: self.device_scale_factor(scale_factor),
+            }
+        }
+
+        fn desktop_scale_factor(&self, scale_factor: f64) -> i32 {
+            if let Self::DpiZoom = self {
+                let raw = (scale_factor * 100.0).round() as i32;
+                raw.clamp(100, 500)
+            } else {
+                RDP_DISPLAY_SCALE_FACTOR_PERCENT
+            }
+        }
+
+        fn device_scale_factor(&self, scale_factor: f64) -> i32 {
+            if !matches!(self, Self::DpiZoom) {
+                return RDP_DISPLAY_SCALE_FACTOR_PERCENT;
+            }
+            let raw = (scale_factor * 100.0).round() as i32;
+            if raw >= 160 {
+                180
+            } else if raw >= 120 {
+                140
+            } else {
+                100
             }
         }
     }
@@ -511,16 +560,17 @@ mod platform {
                     request.width,
                     request.height,
                 )?;
-                let (desktop_width, desktop_height) = session.resolution_mode.desktop_size(
+                let display_settings = session.resolution_mode.display_settings(
                     request.width,
                     request.height,
                     rect.2,
                     rect.3,
+                    scale_factor,
                 );
                 let connection_state = get_property_i32(&session.dispatch, "Connected")?;
                 let connected = is_rdp_connected_state(connection_state);
                 let display_synced = is_rdp_displayable_state(connection_state)
-                    && sync_remote_desktop_size(session, desktop_width, desktop_height, true);
+                    && sync_remote_desktop_size(session, display_settings, true);
                 Ok(RdpDisplaySizeSync {
                     session_id: request.session_id,
                     connection_state,
@@ -810,8 +860,13 @@ mod platform {
 
         let options = request.options.unwrap_or_default();
         let resolution_mode = RemoteResolutionMode::parse(&options.remote_resolution);
-        let (desktop_width, desktop_height) =
-            resolution_mode.desktop_size(request.width, request.height, size.2, size.3);
+        let display_settings = resolution_mode.display_settings(
+            request.width,
+            request.height,
+            size.2,
+            size.3,
+            scale_factor,
+        );
 
         configure_rdp_control(
             &dispatch,
@@ -819,9 +874,7 @@ mod platform {
             &user,
             port,
             request.password.as_deref(),
-            desktop_width,
-            desktop_height,
-            scale_factor,
+            display_settings,
             resolution_mode,
             &options,
         )?;
@@ -924,9 +977,7 @@ mod platform {
         user: &str,
         port: u16,
         password: Option<&str>,
-        desktop_width: i32,
-        desktop_height: i32,
-        scale_factor: f64,
+        display_settings: RdpDisplaySettings,
         resolution_mode: RemoteResolutionMode,
         options: &RdpSessionOptions,
     ) -> Result<(), String> {
@@ -939,8 +990,8 @@ mod platform {
             set_property_string(dispatch, "Domain", domain)?;
         }
         set_property_i32(dispatch, "ColorDepth", i32::from(options.color_depth))?;
-        set_property_i32(dispatch, "DesktopWidth", desktop_width)?;
-        set_property_i32(dispatch, "DesktopHeight", desktop_height)?;
+        set_property_i32(dispatch, "DesktopWidth", display_settings.desktop_width)?;
+        set_property_i32(dispatch, "DesktopHeight", display_settings.desktop_height)?;
         set_optional_property_bool(dispatch, "PromptForCredentials", password.is_none())?;
         set_optional_property_string(dispatch, "ConnectingText", "Connecting to remote desktop")?;
         set_optional_property_string(dispatch, "DisconnectedText", "Remote desktop disconnected")?;
@@ -973,9 +1024,6 @@ mod platform {
             let _ = set_property_i32(&advanced, "SasSequence", RDP_STANDARD_SAS_SEQUENCE);
             let _ = set_property_i32(&advanced, "HotKeyCtrlAltDel", VK_END_KEY as i32);
             let _ = set_property_bool(&advanced, "SmartSizing", resolution_mode.smart_sizing());
-            if let Some(zoom) = resolution_mode.zoom_level(scale_factor) {
-                let _ = set_property_i32(&advanced, "ZoomLevel", zoom);
-            }
             let _ = set_property_bool(&advanced, "BitmapPersistence", options.bitmap_cache);
             let _ = set_property_bool(&advanced, "CachePersistenceActive", options.bitmap_cache);
             let _ = set_property_i32(
@@ -983,6 +1031,20 @@ mod platform {
                 "PerformanceFlags",
                 performance_flags_for(&options.performance_profile),
             );
+        }
+        if display_settings.desktop_scale_factor != RDP_DISPLAY_SCALE_FACTOR_PERCENT {
+            if let Some(extended) = get_extended_settings(dispatch) {
+                let _ = set_extended_setting_u32(
+                    &extended,
+                    "DesktopScaleFactor",
+                    display_settings.desktop_scale_factor as u32,
+                );
+                let _ = set_extended_setting_u32(
+                    &extended,
+                    "DeviceScaleFactor",
+                    display_settings.device_scale_factor as u32,
+                );
+            }
         }
         if let Some(secured) = get_secured_settings(dispatch) {
             let _ = set_property_i32(&secured, "KeyboardHookMode", 1);
@@ -1107,10 +1169,50 @@ mod platform {
             .find_map(|name| get_dispatch_property(dispatch, name).ok())
     }
 
+    fn get_extended_settings(dispatch: &IDispatch) -> Option<IDispatch> {
+        EXTENDED_SETTINGS_PROPERTIES
+            .iter()
+            .find_map(|name| get_dispatch_property(dispatch, name).ok())
+    }
+
     fn get_secured_settings(dispatch: &IDispatch) -> Option<IDispatch> {
         SECURED_SETTINGS_PROPERTIES
             .iter()
             .find_map(|name| get_dispatch_property(dispatch, name).ok())
+    }
+
+    fn set_extended_setting_u32(
+        dispatch: &IDispatch,
+        name: &str,
+        value: u32,
+    ) -> Result<(), String> {
+        let dispid = get_dispid(dispatch, "Property")?;
+        let mut args = [variant_u4(value), variant_bstr(name)];
+        let mut named_arg = DISPID_PROPERTYPUT;
+        let mut params = DISPPARAMS {
+            rgvarg: args.as_mut_ptr(),
+            rgdispidNamedArgs: &mut named_arg,
+            cArgs: args.len() as u32,
+            cNamedArgs: 1,
+        };
+        unsafe {
+            let result = dispatch.Invoke(
+                dispid,
+                &windows::core::GUID::zeroed(),
+                LOCALE_USER_DEFAULT,
+                DISPATCH_PROPERTYPUT,
+                &mut params,
+                None,
+                None,
+                None,
+            );
+            for arg in args.iter_mut() {
+                let _ = VariantClear(arg);
+            }
+            result.map_err(|error| {
+                format!("failed to set RDP ActiveX extended property '{name}': {error}")
+            })
+        }
     }
 
     fn invoke_property_put(
@@ -1643,33 +1745,34 @@ mod platform {
         if !session.resolution_mode.tracks_pane_size() {
             return Ok(());
         }
-        let (desktop_width, desktop_height) =
-            session.resolution_mode.desktop_size(width, height, rect.2, rect.3);
-        let _ = sync_remote_desktop_size(session, desktop_width, desktop_height, false);
+        let display_settings =
+            session
+                .resolution_mode
+                .display_settings(width, height, rect.2, rect.3, scale_factor);
+        let _ = sync_remote_desktop_size(session, display_settings, false);
         Ok(())
     }
 
     fn sync_remote_desktop_size(
         session: &mut RdpSession,
-        desktop_width: i32,
-        desktop_height: i32,
+        display_settings: RdpDisplaySettings,
         force: bool,
     ) -> bool {
         if !force
             && !should_resize_remote_desktop(
                 session.desktop_width,
                 session.desktop_height,
-                desktop_width,
-                desktop_height,
+                display_settings.desktop_width,
+                display_settings.desktop_height,
             )
         {
             return true;
         }
-        if resize_remote_desktop(&session.dispatch, desktop_width, desktop_height).is_err() {
+        if resize_remote_desktop(&session.dispatch, display_settings).is_err() {
             return false;
         }
-        session.desktop_width = desktop_width;
-        session.desktop_height = desktop_height;
+        session.desktop_width = display_settings.desktop_width;
+        session.desktop_height = display_settings.desktop_height;
         true
     }
 
@@ -1684,24 +1787,30 @@ mod platform {
 
     fn resize_remote_desktop(
         dispatch: &IDispatch,
-        desktop_width: i32,
-        desktop_height: i32,
+        display_settings: RdpDisplaySettings,
     ) -> Result<(), String> {
         invoke_method_with_i32_args(
             dispatch,
             "UpdateSessionDisplaySettings",
             &[
-                desktop_width,
-                desktop_height,
-                desktop_width,
-                desktop_height,
+                display_settings.desktop_width,
+                display_settings.desktop_height,
+                display_settings.physical_width,
+                display_settings.physical_height,
                 RDP_DISPLAY_ORIENTATION_LANDSCAPE,
-                RDP_DISPLAY_SCALE_FACTOR_PERCENT,
-                RDP_DISPLAY_SCALE_FACTOR_PERCENT,
+                display_settings.desktop_scale_factor,
+                display_settings.device_scale_factor,
             ],
         )
         .or_else(|_| {
-            invoke_method_with_i32_args(dispatch, "Reconnect", &[desktop_width, desktop_height])
+            invoke_method_with_i32_args(
+                dispatch,
+                "Reconnect",
+                &[
+                    display_settings.desktop_width,
+                    display_settings.desktop_height,
+                ],
+            )
         })
     }
 
@@ -1930,13 +2039,7 @@ mod platform {
 
     impl VariantArg {
         fn bstr(value: &str) -> Self {
-            let mut variant = VARIANT::default();
-            unsafe {
-                let variant_data = &mut *variant.Anonymous.Anonymous;
-                variant_data.vt = VT_BSTR;
-                variant_data.Anonymous.bstrVal = ManuallyDrop::new(BSTR::from(value));
-            }
-            Self(variant)
+            Self(variant_bstr(value))
         }
 
         fn i4(value: i32) -> Self {
@@ -1958,6 +2061,26 @@ mod platform {
             }
             Self(variant)
         }
+    }
+
+    fn variant_bstr(value: &str) -> VARIANT {
+        let mut variant = VARIANT::default();
+        unsafe {
+            let variant_data = &mut *variant.Anonymous.Anonymous;
+            variant_data.vt = VT_BSTR;
+            variant_data.Anonymous.bstrVal = ManuallyDrop::new(BSTR::from(value));
+        }
+        variant
+    }
+
+    fn variant_u4(value: u32) -> VARIANT {
+        let mut variant = VARIANT::default();
+        unsafe {
+            let variant_data = &mut *variant.Anonymous.Anonymous;
+            variant_data.vt = VT_UI4;
+            variant_data.Anonymous.ulVal = value;
+        }
+        variant
     }
 
     impl Drop for VariantArg {
@@ -2068,11 +2191,37 @@ mod platform {
         }
 
         #[test]
-        fn automatic_resolution_uses_physical_host_size() {
+        fn automatic_resolution_uses_logical_desktop_with_smart_sizing() {
             assert_eq!(
                 RemoteResolutionMode::Automatic.desktop_size(1200.0, 800.0, 1800, 1200),
-                (1800, 1200)
+                (1200, 800)
             );
+            assert!(RemoteResolutionMode::Automatic.smart_sizing());
+        }
+
+        #[test]
+        fn automatic_display_settings_keep_physical_host_separate() {
+            let settings =
+                RemoteResolutionMode::Automatic.display_settings(1200.0, 800.0, 1800, 1200, 1.5);
+
+            assert_eq!(settings.desktop_width, 1200);
+            assert_eq!(settings.desktop_height, 800);
+            assert_eq!(settings.physical_width, 1800);
+            assert_eq!(settings.physical_height, 1200);
+            assert_eq!(settings.desktop_scale_factor, 100);
+        }
+
+        #[test]
+        fn dpi_zoom_display_settings_apply_local_scale_factor() {
+            let settings =
+                RemoteResolutionMode::DpiZoom.display_settings(1200.0, 800.0, 1800, 1200, 1.5);
+
+            assert_eq!(settings.desktop_width, 1800);
+            assert_eq!(settings.desktop_height, 1200);
+            assert_eq!(settings.physical_width, 1800);
+            assert_eq!(settings.physical_height, 1200);
+            assert_eq!(settings.desktop_scale_factor, 150);
+            assert_eq!(settings.device_scale_factor, 140);
         }
 
         #[test]
