@@ -1677,7 +1677,8 @@
 }
 
 .built-in-mcp-config-dialog {
-  max-width: 860px;
+  width: min(1280px, calc(100vw - 28px));
+  max-width: min(1280px, calc(100vw - 28px));
 }
 
 .built-in-mcp-config-tabs {
@@ -1740,24 +1741,25 @@
 .built-in-mcp-config-locations {
   display: grid;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .built-in-mcp-config-table-wrap {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: visible;
   border: 1px solid var(--border);
   border-radius: 6px;
 }
 
 .built-in-mcp-config-table {
   width: 100%;
-  min-width: 760px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
 .built-in-mcp-config-table th,
 .built-in-mcp-config-table td {
-  padding: 7px 8px;
+  padding: 6px 7px;
   color: var(--text);
   text-align: left;
   vertical-align: top;
@@ -1781,24 +1783,33 @@
 }
 
 .built-in-mcp-config-table tbody th {
-  width: 150px;
   font-weight: 850;
+}
+
+.built-in-mcp-config-table th:nth-child(1),
+.built-in-mcp-config-table td:nth-child(1) {
+  width: 160px;
+}
+
+.built-in-mcp-config-table th:nth-child(2),
+.built-in-mcp-config-table td:nth-child(2) {
+  width: 82px;
 }
 
 .built-in-mcp-config-table td {
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 .built-in-mcp-config-table code {
   display: block;
   color: var(--text);
-  font: 12px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  font: 11px/1.42 ui-monospace, "SF Mono", Menlo, monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .built-in-mcp-config-table td:nth-child(2) {
-  width: 118px;
-  white-space: nowrap;
+  white-space: normal;
   text-align: left;
 }

@@ -112,7 +112,7 @@ function builtInMcpSetupRows(commandPath: string): BuiltInMcpSetupRow[] {
       globalScope: "~/.gemini/antigravity/mcp_config.json",
     },
     {
-      agent: "GitHub Copilot in VS Code",
+      agent: "GitHub Copilot",
       methodKey: "settings.builtInMcpConfigMethodManualEdit",
       projectScope: ".vscode/mcp.json",
       globalScope: "%APPDATA%\\Code\\User\\mcp.json",
