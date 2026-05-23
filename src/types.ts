@@ -484,6 +484,8 @@ export interface AiProviderSettings {
   showAllModels: boolean;
   cliExecutionPolicy: "suggestOnly";
   toolPermissionMode: AiToolPermissionMode;
+  builtInMcpServerEnabled: boolean;
+  builtInMcpAllowAllDangerous: boolean;
   claudeCliPath?: string;
   codexCliPath?: string;
   disabledSkillNames: string[];

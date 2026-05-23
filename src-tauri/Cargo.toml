@@ -111,3 +111,8 @@ opt-level = 1
 
 
 
+
+
+[[bin]]
+name = "kkterm-cli"
+path = "src/bin/kkterm-cli.rs"

@@ -136,3 +136,10 @@ Section header `settings.sectionScreenshots`.
 ## About
 
 `settings.sectionAbout`. Shows version (`settings.version`) and slogan (`settings.appSlogan`). The version value should match `package.json`'s `version` field. License info, GitHub link, and acknowledgements live here.
+
+
+## Built-in MCP Server
+
+- Location: Settings → AI Assistant section.
+- Toggle keys: `settings.builtInMcpServerEnabled` (`settings.builtInMcpServerEnabledHint`) and `settings.builtInMcpAllowAllDangerous` (`settings.builtInMcpAllowAllDangerousHint`).
+- Purpose: enable/disable the local built-in MCP server surface and control whether dangerous built-in MCP tools (`kkterm.dangerous.*`) require confirmation prompts or run in allow-all mode.

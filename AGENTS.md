@@ -59,6 +59,8 @@ Use **Connection** (not "profile") for stored openable resources.
 
 ## Engineering Defaults
 
+- Built-in MCP route rule: any PR that adds or changes built-in MCP tools must update `docs/MCP.md` in the same PR, and if user-facing behavior/safety text changes in Settings AI section, also update `docs/manual/15-settings.md`.
+
 - Prefer existing repo patterns over new abstractions.
 - KKTerm is a desktop-only app. Optimize layouts for desktop windows and Tauri/WebView2 runtime behavior; do not spend implementation or QA time on mobile viewport layouts unless the user explicitly requests mobile support.
 - When designing UI, prefer concise, accurate short terms over expressive terminology and explanatory text.

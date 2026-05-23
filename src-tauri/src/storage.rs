@@ -626,6 +626,10 @@ pub struct AiProviderSettings {
     cli_execution_policy: String,
     #[serde(default = "default_ai_tool_permission_mode")]
     tool_permission_mode: String,
+    #[serde(default = "default_built_in_mcp_server_enabled")]
+    built_in_mcp_server_enabled: bool,
+    #[serde(default)]
+    built_in_mcp_allow_all_dangerous: bool,
     #[serde(default)]
     claude_cli_path: Option<String>,
     #[serde(default)]
@@ -4375,6 +4379,8 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         show_all_models: false,
         cli_execution_policy: default_ai_cli_execution_policy(),
         tool_permission_mode: default_ai_tool_permission_mode(),
+        built_in_mcp_server_enabled: default_built_in_mcp_server_enabled(),
+        built_in_mcp_allow_all_dangerous: false,
         claude_cli_path: None,
         codex_cli_path: None,
         disabled_skill_names: Vec::new(),
@@ -4478,6 +4484,10 @@ fn default_ai_cli_execution_policy() -> String {
 
 fn default_ai_tool_permission_mode() -> String {
     "prompt".to_string()
+}
+
+fn default_built_in_mcp_server_enabled() -> bool {
+    true
 }
 
 fn default_ai_api_mode() -> String {
