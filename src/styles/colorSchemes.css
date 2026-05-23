@@ -232,7 +232,7 @@
 
 [data-color-scheme="green-kuai-kuai"] {
   --app-bg: #ffffff;
-  --chrome: #a7ec5a;
+  --chrome: #f6fff0;
   --chrome-strong: #ffffff;
   --surface: #ffffff;
   --surface-muted: #f6fff0;
@@ -249,7 +249,7 @@
   --green: #62bd2f;
   --amber: #d8a128;
   --red: #d71920;
-  --nav-toolbar-bg: #ffffff;
+  --nav-toolbar-bg: #a7ec5a;
   --nav-toolbar-text: #082d68;
   --nav-toolbar-hover-bg: rgba(8, 45, 104, 0.08);
   --nav-toolbar-accent: #082d68;

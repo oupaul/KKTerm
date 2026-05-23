@@ -134,12 +134,12 @@ const SCHEME_PREVIEW_COLORS: Record<ColorScheme, SchemePreviewColor[]> = {
     { color: "#ffe3f1", labelKey: "settings.toolbarText" },
   ],
   "green-kuai-kuai": [
-    { color: "#71c83a", labelKey: "settings.appBg" },
+    { color: "#ffffff", labelKey: "settings.appBg" },
     { color: "#ffffff", labelKey: "settings.surface" },
     { color: "#082d68", labelKey: "settings.text" },
     { color: "#d71920", labelKey: "settings.accent" },
     { color: "#62bd2f", labelKey: "settings.green" },
-    { color: "#71c83a", labelKey: "settings.navToolbar" },
+    { color: "#a7ec5a", labelKey: "settings.navToolbar" },
     { color: "#082d68", labelKey: "settings.toolbarText" },
   ],
   "blue-see": [

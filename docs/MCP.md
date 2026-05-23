@@ -209,7 +209,9 @@ client should see six tools; `tools/call` requires KKTerm.exe to be
 running.
 
 Settings → AI Assistant → Built-in MCP Server includes a "Show config"
-dialog with the generic JSON snippet and links to the locations above.
+dialog with a JSON snippet whose `command` is the resolved `kkterm-cli`
+path beside the running `KKTerm.exe`. Its common config location rows open
+the matching user config file in Notepad.
 Debug builds write raw built-in and remote MCP request/response records to
 `mcp.debug.log` beside `kkterm.log`.
 

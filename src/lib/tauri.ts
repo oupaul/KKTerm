@@ -1024,6 +1024,16 @@ type CommandMap = {
     args: { name: string };
     result: null;
   };
+  get_built_in_mcp_command_path: {
+    args: undefined;
+    result: string;
+  };
+  open_built_in_mcp_config_location: {
+    args: {
+      location: "codex" | "claudeCode" | "antigravity" | "githubCopilot" | "openCode";
+    };
+    result: null;
+  };
   list_assistant_chat_threads: {
     args: undefined;
     result: AssistantChatThreadRecord[];

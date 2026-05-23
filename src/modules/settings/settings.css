@@ -1,9 +1,9 @@
 .settings-page {
   position: fixed;
-  inset: var(--app-titlebar-height, 0px) calc(var(--ai-panel-width, 334px) + var(--ai-resize-width, 1px)) 28px 48px;
+  inset: calc(var(--app-titlebar-height, 0px) + 1px) calc(var(--ai-panel-width, 334px) + var(--ai-resize-width, 1px)) 28px 48px;
   z-index: 80;
   min-width: 0;
-  height: calc(100vh - 28px - var(--app-titlebar-height, 0px));
+  height: calc(100vh - 28px - var(--app-titlebar-height, 0px) - 1px);
   overflow: auto;
   scrollbar-gutter: stable;
   padding: 22px 24px 28px;
@@ -1607,6 +1607,35 @@
   width: 100%;
 }
 
+.settings-mcp-dialog .connection-dialog-header.compact {
+  position: relative;
+  padding-right: 44px;
+}
+
+.mcp-dialog-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mcp-dialog-close-button:hover,
+.mcp-dialog-close-button:focus-visible {
+  color: var(--text);
+  background: var(--surface-muted);
+  outline: none;
+}
+
 .mcp-dialog-body {
   display: flex;
   flex-direction: column;
@@ -1662,6 +1691,13 @@
   color: var(--text);
   font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
   white-space: pre-wrap;
+}
+
+.built-in-mcp-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .built-in-mcp-config-locations {

@@ -144,6 +144,6 @@ Section header `settings.sectionScreenshots`.
 - Location: Settings → AI Assistant section.
 - Toggle keys: `settings.builtInMcpServerEnabled` (`settings.builtInMcpServerEnabledHint`) and `settings.builtInMcpAllowAllDangerous` (`settings.builtInMcpAllowAllDangerousHint`).
 - Config dialog keys: `settings.builtInMcpShowConfig`, `settings.builtInMcpConfigTitle`, `settings.builtInMcpConfigIntro`, `settings.builtInMcpConfigCopy`, `settings.builtInMcpConfigCopied`, `settings.builtInMcpConfigLocationsTitle`, and `settings.builtInMcpConfigLocation*`.
-- Config dialog behavior: shows a copyable generic `mcpServers.kkterm` JSON snippet for stdio MCP clients and links to common client config locations for Codex, Claude Code, Antigravity, GitHub Copilot, and OpenCode.
+- Config dialog behavior: shows a copyable `mcpServers.kkterm` JSON snippet for stdio MCP clients using the resolved `kkterm-cli.exe` path beside the running `KKTerm.exe`; common config location rows open the matching user config file in Notepad for Codex, Claude Code, Antigravity, GitHub Copilot, and OpenCode.
 - Purpose: enable/disable the local built-in MCP server surface and control whether dangerous built-in MCP tools (`kkterm.dangerous.*`) require confirmation prompts or run in allow-all mode.
 - Debug logging: debug builds write raw built-in and remote MCP request/response records to `mcp.debug.log` beside `kkterm.log`.

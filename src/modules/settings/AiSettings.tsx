@@ -47,7 +47,23 @@ import i18next from "../../i18n/config";
 
 const GITHUB_COPILOT_CLI_INSTALL_URL =
   "https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli";
-const BUILT_IN_MCP_CONFIG_SNIPPET = `{
+
+function builtInMcpConfigSnippet(commandPath: string) {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        kkterm: {
+          command: commandPath,
+          args: [],
+        },
+      },
+    },
+    null,
+    2,
+  );
+}
+
+const BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK = `{
   "mcpServers": {
     "kkterm": {
       "command": "C:\\\\Path\\\\To\\\\kkterm-cli.exe",
@@ -59,27 +75,22 @@ const BUILT_IN_MCP_CONFIG_LINKS = [
   {
     key: "codex",
     labelKey: "settings.builtInMcpConfigLocationCodex",
-    url: "https://www.mintlify.com/openai/codex/configuration/mcp-servers",
   },
   {
     key: "claudeCode",
     labelKey: "settings.builtInMcpConfigLocationClaudeCode",
-    url: "https://code.claude.com/docs/en/mcp",
   },
   {
     key: "antigravity",
     labelKey: "settings.builtInMcpConfigLocationAntigravity",
-    url: "https://docs.maestrohub.com/next/how-to-guides/mcp-integration/antigravity",
   },
   {
     key: "githubCopilot",
     labelKey: "settings.builtInMcpConfigLocationGithubCopilot",
-    url: "https://code.visualstudio.com/docs/copilot/reference/mcp-configuration",
   },
   {
     key: "openCode",
     labelKey: "settings.builtInMcpConfigLocationOpenCode",
-    url: "https://dev.opencode.ai/docs/config/",
   },
 ] as const;
 
@@ -90,11 +101,46 @@ function createStoredApiKeyMask() {
 
 function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [copied, setCopied] = useState(false);
+  const [configSnippet, setConfigSnippet] = useState(BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    let isMounted = true;
+    invokeCommand("get_built_in_mcp_command_path", undefined)
+      .then((commandPath) => {
+        if (isMounted) {
+          setConfigSnippet(builtInMcpConfigSnippet(commandPath));
+        }
+      })
+      .catch((error: unknown) => {
+        showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+          tone: "error",
+        });
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [showStatusBarNotice]);
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(BUILT_IN_MCP_CONFIG_SNIPPET);
+    await navigator.clipboard.writeText(configSnippet);
     setCopied(true);
+  }
+
+  async function handleOpenConfigLocation(
+    location: (typeof BUILT_IN_MCP_CONFIG_LINKS)[number]["key"],
+  ) {
+    try {
+      await invokeCommand("open_built_in_mcp_config_location", { location });
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    }
   }
 
   return (
@@ -112,19 +158,23 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
           </div>
           <button
             aria-label={t("common.close")}
-            className="icon-button"
+            className="mcp-dialog-close-button"
             onClick={onClose}
             type="button"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </header>
         <div className="mcp-dialog-body">
           <p className="field-hint">{t("settings.builtInMcpConfigIntro")}</p>
           <pre className="built-in-mcp-config-snippet">
-            <code>{BUILT_IN_MCP_CONFIG_SNIPPET}</code>
+            <code>{configSnippet}</code>
           </pre>
-          <button className="secondary-button" onClick={() => void handleCopy()} type="button">
+          <button
+            className="secondary-button built-in-mcp-copy-button"
+            onClick={() => void handleCopy()}
+            type="button"
+          >
             <Copy size={14} />
             {copied ? t("settings.builtInMcpConfigCopied") : t("settings.builtInMcpConfigCopy")}
           </button>
@@ -135,7 +185,7 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
                 <li key={link.key}>
                   <button
                     className="settings-api-key-link"
-                    onClick={() => void openExternalUrl(link.url)}
+                    onClick={() => void handleOpenConfigLocation(link.key)}
                     type="button"
                   >
                     {t(link.labelKey)}

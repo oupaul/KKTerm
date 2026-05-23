@@ -1004,7 +1004,7 @@
     "builtInMcpAllowAllDangerousHint": "When enabled, dangerous kkterm.dangerous.* MCP tools execute without confirmation prompts.",
     "builtInMcpShowConfig": "Show config",
     "builtInMcpConfigTitle": "Built-in MCP config",
-    "builtInMcpConfigIntro": "Paste this generic stdio MCP server snippet into an MCP-capable tool, then replace the command path with your kkterm-cli.exe path.",
+    "builtInMcpConfigIntro": "Paste this stdio MCP server snippet into an MCP-capable tool. The command path uses the kkterm-cli.exe beside your running KKTerm.exe.",
     "builtInMcpConfigCopy": "Copy config",
     "builtInMcpConfigCopied": "Config copied",
     "builtInMcpConfigLocationsTitle": "Common config locations",

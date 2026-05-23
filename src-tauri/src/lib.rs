@@ -46,6 +46,16 @@ use std::path::PathBuf;
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum BuiltInMcpConfigLocation {
+    Codex,
+    ClaudeCode,
+    Antigravity,
+    GithubCopilot,
+    OpenCode,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AppBootstrap {
@@ -929,6 +939,82 @@ fn open_assistant_skills_folder(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn open_assistant_skill(app: tauri::AppHandle, name: String) -> Result<(), String> {
     assistant_skills::open_skill_folder(&app, &name)
+}
+
+#[tauri::command]
+fn get_built_in_mcp_command_path() -> Result<String, String> {
+    let exe_path = std::env::current_exe()
+        .map_err(|error| format!("failed to resolve app executable path: {error}"))?;
+    let exe_folder = exe_path
+        .parent()
+        .ok_or_else(|| "failed to resolve app executable folder".to_string())?;
+    let cli_name = if cfg!(target_os = "windows") {
+        "kkterm-cli.exe"
+    } else {
+        "kkterm-cli"
+    };
+    Ok(exe_folder.join(cli_name).to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn open_built_in_mcp_config_location(location: BuiltInMcpConfigLocation) -> Result<(), String> {
+    let path = built_in_mcp_config_path(location)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| {
+            format!(
+                "failed to create MCP config folder {}: {error}",
+                parent.display()
+            )
+        })?;
+    }
+    if !path.exists() {
+        fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&path)
+            .map_err(|error| {
+                format!(
+                    "failed to create MCP config file {}: {error}",
+                    path.display()
+                )
+            })?;
+    }
+    std::process::Command::new("notepad.exe")
+        .arg(&path)
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "failed to open MCP config file {} in Notepad: {error}",
+                path.display()
+            )
+        })?;
+    Ok(())
+}
+
+fn built_in_mcp_config_path(location: BuiltInMcpConfigLocation) -> Result<PathBuf, String> {
+    let user_profile = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .ok_or_else(|| "failed to resolve user profile folder".to_string())?;
+
+    match location {
+        BuiltInMcpConfigLocation::Codex => Ok(user_profile.join(".codex").join("config.toml")),
+        BuiltInMcpConfigLocation::ClaudeCode => Ok(user_profile.join(".claude.json")),
+        BuiltInMcpConfigLocation::Antigravity => Ok(user_profile
+            .join(".gemini")
+            .join("antigravity")
+            .join("mcp_config.json")),
+        BuiltInMcpConfigLocation::GithubCopilot => {
+            let app_data = std::env::var_os("APPDATA")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| user_profile.join("AppData").join("Roaming"));
+            Ok(app_data.join("Code").join("User").join("mcp.json"))
+        }
+        BuiltInMcpConfigLocation::OpenCode => Ok(user_profile
+            .join(".config")
+            .join("opencode")
+            .join("opencode.json")),
+    }
 }
 
 #[tauri::command]
@@ -2561,6 +2647,8 @@ pub fn run() {
             set_assistant_skill_enabled,
             open_assistant_skills_folder,
             open_assistant_skill,
+            get_built_in_mcp_command_path,
+            open_built_in_mcp_config_location,
             list_assistant_chat_threads,
             upsert_assistant_chat_thread,
             delete_assistant_chat_thread,
