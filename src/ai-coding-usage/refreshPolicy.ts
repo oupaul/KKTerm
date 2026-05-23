@@ -12,6 +12,17 @@ export function providersDueForAiCodingUsageRefresh(
   );
 }
 
+export function providersDueForAiCodingUsageBackgroundRefresh(
+  providers: AiCodingUsageProviderState[],
+  nowMs = Date.now(),
+) {
+  return providers.filter(
+    (provider) =>
+      isAiCodingUsageRefreshAllowed(provider, nowMs) &&
+      isAiCodingUsageRefreshStale(provider, nowMs),
+  );
+}
+
 export function isAiCodingUsageRefreshAllowed(
   provider: AiCodingUsageProviderState,
   nowMs = Date.now(),
@@ -56,6 +67,17 @@ function retryAfterSecondsFromError(message?: string | null) {
   }
   const seconds = Number(match[1]);
   return Number.isFinite(seconds) ? seconds : null;
+}
+
+function isAiCodingUsageRefreshStale(
+  provider: AiCodingUsageProviderState,
+  nowMs: number,
+) {
+  const lastRefreshMs = parseTimestampMs(provider.lastRefreshAt);
+  return (
+    lastRefreshMs === null ||
+    nowMs - lastRefreshMs > AI_CODING_USAGE_REFRESH_INTERVAL_MS
+  );
 }
 
 function parseTimestampMs(value?: string | null) {

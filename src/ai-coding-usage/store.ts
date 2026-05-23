@@ -4,6 +4,7 @@ import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { AI_CODING_USAGE_PROVIDER_ORDER } from "./settings";
 import {
   AI_CODING_USAGE_REFRESH_INTERVAL_MS,
+  providersDueForAiCodingUsageBackgroundRefresh,
   providersDueForAiCodingUsageRefresh,
 } from "./refreshPolicy";
 import type {
@@ -36,6 +37,7 @@ interface AiCodingUsageStoreState {
   unsubscribe: () => void;
   load: () => Promise<void>;
   refreshAll: () => Promise<void>;
+  refreshDue: () => Promise<void>;
   applyProvider: (next: AiCodingUsageProviderState) => void;
   setError: (message: string) => void;
 }
@@ -54,7 +56,7 @@ export const useAiCodingUsageStore = create<AiCodingUsageStoreState>((set, get) 
     if (next === 1) {
       void get().load();
       const timer = setInterval(
-        () => void get().refreshAll(),
+        () => void get().refreshDue(),
         AI_CODING_USAGE_REFRESH_INTERVAL_MS,
       );
       set({ refreshTimer: timer });
@@ -80,6 +82,7 @@ export const useAiCodingUsageStore = create<AiCodingUsageStoreState>((set, get) 
     try {
       const state = await invokeCommand("ai_coding_usage_load");
       set({ state, error: "", loaded: true });
+      void get().refreshDue();
     } catch (error) {
       set({ error: errorMessage(error) });
     }
@@ -90,6 +93,33 @@ export const useAiCodingUsageStore = create<AiCodingUsageStoreState>((set, get) 
       return;
     }
     const due = providersDueForAiCodingUsageRefresh(
+      get().state.providers,
+      Date.now(),
+    );
+    if (due.length === 0) {
+      return;
+    }
+    set({ refreshInFlight: true });
+    try {
+      let nextState = get().state;
+      for (const provider of due) {
+        nextState = await invokeCommand("ai_coding_usage_refresh", {
+          provider: provider.provider,
+        });
+      }
+      set({ state: nextState, error: "" });
+    } catch (error) {
+      set({ error: errorMessage(error) });
+    } finally {
+      set({ refreshInFlight: false });
+    }
+  },
+
+  async refreshDue() {
+    if (!isTauriRuntime() || get().refreshInFlight) {
+      return;
+    }
+    const due = providersDueForAiCodingUsageBackgroundRefresh(
       get().state.providers,
       Date.now(),
     );

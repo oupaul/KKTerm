@@ -82,3 +82,31 @@ test("AI coding usage refresh honors Claude retry-after longer than poll interva
     true,
   );
 });
+
+test("AI coding usage background refresh only treats connected stale providers as due", async () => {
+  const {
+    AI_CODING_USAGE_REFRESH_INTERVAL_MS,
+    providersDueForAiCodingUsageBackgroundRefresh,
+  } = await loadRefreshPolicyModule();
+  const nowMs = Date.parse("2026-05-20T00:05:00.000Z");
+  const recent = connectedProvider({
+    provider: "codex",
+    lastRefreshAt: new Date(nowMs - 60 * 1000).toISOString(),
+  });
+  const exactlyFiveMinutes = connectedProvider({
+    provider: "claudeCode",
+    lastRefreshAt: new Date(nowMs - AI_CODING_USAGE_REFRESH_INTERVAL_MS).toISOString(),
+  });
+  const stale = connectedProvider({
+    provider: "codex",
+    lastRefreshAt: new Date(nowMs - AI_CODING_USAGE_REFRESH_INTERVAL_MS - 1).toISOString(),
+  });
+
+  assert.deepEqual(
+    providersDueForAiCodingUsageBackgroundRefresh(
+      [recent, exactlyFiveMinutes, stale, connectedProvider({ authState: "disconnected" })],
+      nowMs,
+    ).map((provider) => provider.lastRefreshAt),
+    [stale.lastRefreshAt],
+  );
+});
