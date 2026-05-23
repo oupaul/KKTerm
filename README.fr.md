@@ -77,7 +77,7 @@ Et quelques trucs dont tu ne savais pas encore avoir besoin :
 - **Des panes SSH qui s'attachent automatiquement à des Sessions tmux nommées** pour que ta session `claude` / `codex` distante survive à chaque caprice Wi-Fi de ton laptop.
 - Un **Widget de consommation d'IA de codage** qui affiche tes quotas Claude Code et Codex — fenêtre 5 heures, fenêtre hebdomadaire, plan en cours, e-mail du compte — sur le **Dashboard** et dans la barre d'état, pour ne plus te prendre le mur du rate-limit à 3 h du mat.
 - Un **serveur MCP intégré** (`kkterm-cli`) qui permet aux agents de code externes (Claude Code, Codex, Copilot, Antigravity, OpenCode) de piloter ton Workspace et ton Dashboard — lister les Connections, lire des buffers de terminal, placer des Widgets — via une surface d'outils curatée et soumise à approbation. IA-vers-IA, sur ta machine, sans relais cloud.
-- Neuf **fonds animés** (oui, dont `matrix`) pour le Dashboard, parce qu'on n'est pas au-dessus de ça.
+- Vingt et un **fonds animés** (oui, dont `matrix`) pour le Dashboard, parce qu'on n'est pas au-dessus de ça.
 
 Oh, et l'assistant IA peut transformer une phrase en petit outil de Dashboard que tu continues vraiment à utiliser.
 
@@ -201,15 +201,15 @@ Chaque Widget que tu gardes t'appartient. Ils persistent dans SQLite à côté d
 
 #### Fonds animés pour le Dashboard (parce qu'on en avait envie)
 
-Le Dashboard propose neuf fonds animés sur canvas que tu peux choisir par **Dashboard View** :
+Le Dashboard propose vingt et un fonds animés sur canvas que tu peux choisir par **Dashboard View** :
 
 | Ambiance | Fonds |
 | --- | --- |
-| Calme | `aurora`, `raindrops` |
+| Calme | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | Spatial | `starfield`, `nebula` |
 | Chaleureux | `embers`, `lava` |
-| Geek | `matrix`, `synthwave` |
-| Erratique | `confetti` |
+| Geek | `matrix`, `topo`, `synthwave` |
+| Erratique | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
 Ils tournent sur un seul `requestAnimationFrame` partagé et respectent le focus de la fenêtre, donc ils ne coûtent pratiquement rien quand tu es ailleurs. Associe `matrix` à ton assistant IA pour une ambiance qui dit « je suis extrêmement productif et peut-être aussi dans un film des Wachowski. » Ou choisis `aurora` et donne l'impression d'être quelqu'un de sérieux. On ne juge ni l'un ni l'autre.
 
@@ -268,7 +268,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -304,7 +304,7 @@ La forme qui compte : les données sauvegardées durables (**Connection**) sont 
 | **SFTP / FTP** | SFTP lancé via SSH plus **Connections** FTP/FTPS, navigateur double-volet, transferts récursifs, file d'attente/annulation/historique effaçable, conflits, propriétés, chmod/chown où supporté |
 | **URL WebView** | **Sessions** URL WebView2 embarquées, barre de navigation, capture favicon, métadonnées/remplissage d'identifiants de sites web stockés, métadonnées de partition de données |
 | **Remote Desktop** | RDP via Windows ActiveX avec parking d'overlay délimité géométriquement ; VNC via framebuffer `vnc-rs` rendu sur le canvas du Workspace |
-| **Dashboard** | Vues durables, instances de Widgets, mode édition, drag/resize, App Launcher, **Widgets contenu/script créés par IA** (JSON déclaratif ou iframe JS sandboxé avec permissions), préréglages / accent / icône / titre par Widget, **9 fonds animés sur canvas** (aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti) |
+| **Dashboard** | Vues durables, instances de Widgets, mode édition, drag/resize, App Launcher, **Widgets contenu/script créés par IA** (JSON déclaratif ou iframe JS sandboxé avec permissions), préréglages / accent / icône / titre par Widget, **21 fonds animés sur canvas** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
 | **AI Assistant** | Chat en streaming, runtime compatible OpenAI, registre de fournisseurs, classification de sécurité des propositions de commandes, captures d'écran/pièces jointes contextuelles, **création de Widgets Dashboard (contenu + script sandboxé)**, **capture de pane tmux** comme contexte de conversation pour les Sessions distantes, outils de gestion des **Connections**, et outils de **Session** en direct pour terminal, RDP/VNC, et SFTP/FTP |
 | **Consommation d'IA de codage** | **Widget Dashboard + indicateur dans la barre d'état** suivant la consommation des quotas **Claude Code** et **Codex** : compte connecté, niveau du plan, pourcentages des fenêtres 5 heures et hebdomadaire, prochaine heure de reset, état d'auth (`connected` / `expired` / `error`), politique de rafraîchissement respectueuse des rate limits |
 | **Serveur MCP intégré** | Serveur MCP stdio (`kkterm-cli`) exposant des outils Workspace et Dashboard curatés aux agents de code externes (Claude Code, Codex, Copilot, Antigravity, OpenCode) ; bridge named pipe authentifié ; sous-espaces `dangerous.*` par Module verrouillés derrière un unique toggle de sécurité ; dialogue Settings avec snippets JSON / TOML en un clic et commandes `claude mcp add` / `codex mcp add` |
@@ -413,7 +413,7 @@ On aimerait bien un coup de main. Vraiment. Même les petites choses comptent :
 
 - **Essaie le build de dev** et ouvre un ticket quand quelque chose paraît bizarre. « Ça paraissait bizarre » est un rapport de bug légitime ; on creusera avec toi.
 - **Traduis une locale.** L'anglais est la source de vérité dans [`src/i18n/locales/en.json`](src/i18n/locales/en.json) ; 12 autres locales vivent à côté et se chargent à la demande. Les chaînes en attente sont suivies par clé dans [`docs/localization_todo/`](docs/localization_todo/) — prends-en une, traduis-la, supprime le fichier.
-- **Ajoute un Widget Dashboard.** Les Widgets intégrés vivent dans [`src/dashboard/widgets/`](src/dashboard/widgets/). Prends une petite idée, livre-la, apprends le pattern.
+- **Ajoute un Widget Dashboard.** Les Widgets intégrés vivent dans [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Prends une petite idée, livre-la, apprends le pattern.
 - **Resserre la surface des outils IA.** Les adaptateurs de fournisseurs vivent dans [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/) ; le registre frontend est dans [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
 - **Améliore le manuel.** La doc utilisateur final vit dans [`docs/manual/`](docs/manual/). Un chapitre par module UI. Si tu as utilisé une fonctionnalité et que la doc n'a pas aidé, une PR qui corrige ça, c'est de l'or.
 

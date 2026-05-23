@@ -77,7 +77,7 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie willst:
 - **SSH-Panes, die sich automatisch an benannte tmux-Sessions anhängen**, damit deine Remote-`claude`- / `codex`-Session jeden WLAN-Aussetzer deines Laptops übersteht.
 - Ein **AI-Coding-Nutzungs-Widget**, das deine Claude-Code- und Codex-Quoten zeigt — 5-Stunden-Fenster, Wochenfenster, aktueller Plan, Account-E-Mail — auf dem **Dashboard** und in der Statusleiste, damit du nicht mehr um 3 Uhr morgens überrascht gegen die Rate-Limit-Wand läufst.
 - Ein **eingebauter MCP-Server** (`kkterm-cli`), der externe Coding-Agenten (Claude Code, Codex, Copilot, Antigravity, OpenCode) deinen Workspace und dein Dashboard steuern lässt — Connections auflisten, Terminal-Buffer lesen, Widgets platzieren — über eine kuratierte, sicherheits-gegate Tool-Oberfläche. KI-zu-KI, auf deiner Maschine, ohne Cloud-Relay.
-- Neun **animierte Canvas-Hintergründe** (ja, inklusive `matrix`) für das Dashboard, weil wir uns für nichts zu schade sind.
+- Einundzwanzig **animierte Canvas-Hintergründe** (ja, inklusive `matrix`) für das Dashboard, weil wir uns für nichts zu schade sind.
 
 Und die KI-Assistentin kann aus einem Satz ein kleines Dashboard-Tool machen, das du tatsächlich weiterbenutzt.
 
@@ -201,17 +201,17 @@ Jedes Widget, das du behältst, gehört dir. Es persistiert in SQLite neben dein
 
 #### Animierte Dashboard-Hintergründe (weil wir es wollten)
 
-Das Dashboard hat neun canvas-animierte Hintergründe, die du pro **Dashboard View** auswählen kannst:
+Das Dashboard hat einundzwanzig canvas-animierte Hintergründe, die du pro **Dashboard View** auswählen kannst:
 
 | Stimmung | Hintergründe |
 | --- | --- |
-| Ruhig | `aurora`, `raindrops` |
+| Ruhig | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | Weltraum | `starfield`, `nebula` |
 | Warm | `embers`, `lava` |
-| Nerd | `matrix`, `synthwave` |
-| Chaotisch | `confetti` |
+| Nerd | `matrix`, `topo`, `synthwave` |
+| Chaotisch | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
-Sie laufen auf einem einzigen gemeinsamen `requestAnimationFrame` und respektieren den Fensterfokus, sodass sie so gut wie nichts kosten, wenn du woanders bist. Kombiniere `matrix` mit deinem KI-Assistenten für eine Atmosphäre, die sagt „Ich bin extrem produktiv und möglicherweise in einem Wachowski-Film." Oder wähle `mist` und wirke wie ein ernsthafter Mensch. Wir urteilen über keine der beiden Entscheidungen.
+Sie laufen auf einem einzigen gemeinsamen `requestAnimationFrame` und respektieren den Fensterfokus, sodass sie so gut wie nichts kosten, wenn du woanders bist. Kombiniere `matrix` mit deinem KI-Assistenten für eine Atmosphäre, die sagt „Ich bin extrem produktiv und möglicherweise in einem Wachowski-Film." Oder wähle `ocean` und wirke wie ein ernsthafter Mensch. Wir urteilen über keine der beiden Entscheidungen.
 
 ### KI-Coding-Agents auf einem Server — richtig gemacht
 
@@ -268,7 +268,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -304,7 +304,7 @@ Die wichtige Form: persistente gespeicherte Daten (**Connection**) sind getrennt
 | **SFTP / FTP** | SSH-gestartetes SFTP plus FTP/FTPS-**Connections**, Doppelscheiben-Browser, rekursive Transfers, Warteschlange/Abbruch/Verlauf löschen, Konflikte, Eigenschaften, chmod/chown wo unterstützt |
 | **URL WebView** | Eingebettete WebView2-URL-**Sessions**, Navigations-Toolbar, Favicon-Erfassung, gespeicherte Website-Credential-Metadaten/-Fill, Datenpartitions-Metadaten |
 | **Remote Desktop** | RDP über Windows ActiveX mit geometriebegrenztem Overlay-Parking; VNC über `vnc-rs`-Framebuffer im Workspace-Canvas gerendert |
-| **Dashboard** | Dauerhafte Views, Widget-Instanzen, Bearbeitungsmodus, Drag/Resize, App Launcher, **KI-authored Content-/Script-Widgets** (deklaratives JSON oder sandboxed iframe JS mit Berechtigungen), per-Widget-Presets / Akzent / Icon / Titel, **9 animierte Canvas-Hintergründe** (aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti) |
+| **Dashboard** | Dauerhafte Views, Widget-Instanzen, Bearbeitungsmodus, Drag/Resize, App Launcher, **KI-authored Content-/Script-Widgets** (deklaratives JSON oder sandboxed iframe JS mit Berechtigungen), per-Widget-Presets / Akzent / Icon / Titel, **21 animierte Canvas-Hintergründe** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
 | **AI Assistant** | Streaming-Chat, OpenAI-kompatibler Runtime, Provider-Registry, Sicherheitsklassifikation für Befehlsvorschläge, Screenshot-/Kontext-Anhänge, **Dashboard-Widget-Authoring (Content + sandboxed Script)**, **tmux-Pane-Capture** als Gesprächskontext für Remote-Sessions, **Connection**-Management-Tools und Live-**Session**-Tools für Terminal, RDP/VNC und SFTP/FTP |
 | **AI Coding Nutzung** | **Dashboard-Widget + Statusleisten-Anzeige**, die die Quoten-Nutzung von **Claude Code** und **Codex** verfolgen: verbundener Account, Plan-Stufe, Prozentwerte für 5-Stunden- und Wochen-Fenster, nächster Reset-Zeitpunkt, Auth-Status (`connected` / `expired` / `error`), Rate-Limit-bewusste Refresh-Policy |
 | **Eingebauter MCP-Server** | stdio-MCP-Server (`kkterm-cli`), der kuratierte Workspace- und Dashboard-Tools für externe Coding-Agenten (Claude Code, Codex, Copilot, Antigravity, OpenCode) freigibt; authentifizierte Named-Pipe-Brücke; per-Modul-`dangerous.*`-Namespaces hinter einem einzelnen Safety-Toggle; Einstellungs-Dialog mit Ein-Klick-JSON-/-TOML-Snippets und `claude mcp add` / `codex mcp add`-Befehlen |
@@ -413,7 +413,7 @@ Wir würden uns freuen über jede Hilfe. Wirklich. Auch kleine Dinge zählen:
 
 - **Probiere den Dev-Build aus** und melde ein Issue, wenn etwas sich falsch anfühlt. „Es fühlte sich falsch an" ist ein legitimer Bug-Report; wir graben gemeinsam.
 - **Übersetze eine Locale.** Englisch ist die Source of Truth in [`src/i18n/locales/en.json`](src/i18n/locales/en.json); 12 weitere Locales liegen daneben und laden on demand. Ausstehende Strings werden per Key unter [`docs/localization_todo/`](docs/localization_todo/) verfolgt — nimm einen, übersetze ihn, lösch die Datei.
-- **Füge ein Dashboard-Widget hinzu.** Eingebaute Widgets liegen in [`src/dashboard/widgets/`](src/dashboard/widgets/). Nimm eine kleine Idee, liefere sie aus, lern das Muster.
+- **Füge ein Dashboard-Widget hinzu.** Eingebaute Widgets liegen in [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Nimm eine kleine Idee, liefere sie aus, lern das Muster.
 - **Verschlanke die KI-Tool-Oberfläche.** Provider-Adapter liegen in [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); die Frontend-Registry ist in [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
 - **Verbessere das Handbuch.** Endbenutzer-Docs liegen in [`docs/manual/`](docs/manual/). Ein Kapitel pro UI-Modul. Wenn du ein Feature benutzt hast und die Docs nicht halfen, ist ein PR, der das behebt, Gold wert.
 
