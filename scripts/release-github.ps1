@@ -52,6 +52,16 @@ function Assert-Version {
     }
 }
 
+function Set-TextFileUtf8NoBom {
+    param(
+        [string]$Path,
+        [string]$Value
+    )
+
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Value, $Utf8NoBom)
+}
+
 function Test-GitHubReleaseExists {
     param([string]$TagName)
 
@@ -84,7 +94,7 @@ function Set-CargoPackageVersion {
         throw "Unable to update package version in $Path."
     }
 
-    Set-Content -Path $Path -Value $Updated -Encoding UTF8
+    Set-TextFileUtf8NoBom -Path $Path -Value $Updated
 }
 
 function Set-TauriConfigVersion {
@@ -96,9 +106,8 @@ function Set-TauriConfigVersion {
     Write-Host "==> Update Tauri version"
     $Config = Get-Content -Raw $Path | ConvertFrom-Json
     $Config.version = $Version
-    $Config |
-        ConvertTo-Json -Depth 10 |
-        Set-Content -Path $Path -Encoding UTF8
+    $Updated = $Config | ConvertTo-Json -Depth 10
+    Set-TextFileUtf8NoBom -Path $Path -Value ($Updated + [Environment]::NewLine)
 }
 
 Push-Location $RepoRoot

@@ -18,3 +18,14 @@ test("release script updates tauri config without inline node argument quoting",
   assert.match(functionBody, /ConvertTo-Json/);
   assert.doesNotMatch(functionBody, /node"\s*-ArgumentList @\("-e"/);
 });
+
+test("release script writes version files as utf8 without bom", () => {
+  assert.match(script, /function Set-TextFileUtf8NoBom \{/);
+  assert.match(script, /New-Object System\.Text\.UTF8Encoding\(\$false\)/);
+  assert.match(script, /\[System\.IO\.File\]::WriteAllText\(\$Path, \$Value, \$Utf8NoBom\)/);
+
+  const tauriMatch = script.match(/function Set-TauriConfigVersion \{[\s\S]*?\n\}/);
+  assert.ok(tauriMatch, "Set-TauriConfigVersion function should exist");
+  assert.match(tauriMatch[0], /Set-TextFileUtf8NoBom/);
+  assert.doesNotMatch(tauriMatch[0], /Set-Content[\s\S]*-Encoding UTF8/);
+});
