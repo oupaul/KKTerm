@@ -1,4 +1,7 @@
 .webview-workspace {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
   padding: 14px;
 }
 
@@ -9,7 +12,10 @@
 }
 
 .webview-pane > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 28ch) max-content;
   gap: 8px;
+  overflow: hidden;
 }
 
 .webview-nav-group {
@@ -17,6 +23,7 @@
   gap: 6px;
   align-items: center;
   min-width: 0;
+  overflow: hidden;
   flex-shrink: 1;
 }
 
@@ -28,8 +35,8 @@
 
 .webview-nav-group .webview-toolbar-form {
   display: flex;
-  flex: 1 1 960px;
-  min-width: 200px;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 24px;
 }
 
@@ -53,9 +60,9 @@
 
 .webview-pane > header > .webview-title-center {
   display: block;
-  flex: 0 1 360px;
+  justify-self: center;
+  width: 100%;
   min-width: 0;
-  max-width: 34%;
   padding: 0 10px;
   box-sizing: border-box;
   overflow: hidden;
@@ -66,6 +73,7 @@
 
 .webview-pane .terminal-pane-actions {
   flex-shrink: 0;
+  min-width: max-content;
 }
 
 .webview-auto-refresh-select {

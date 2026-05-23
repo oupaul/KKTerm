@@ -133,6 +133,26 @@ function createCredentialCaptureNonce() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function webviewBoundsClipElement(node: HTMLElement) {
+  return node.closest(".dashboard-connection-pane, .embedded-workspace-pane, .workspace-canvas");
+}
+
+function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly) {
+  const left = Math.max(rect.left, clipRect.left);
+  const top = Math.max(rect.top, clipRect.top);
+  const right = Math.min(rect.right, clipRect.right);
+  const bottom = Math.min(rect.bottom, clipRect.bottom);
+  if (right <= left || bottom <= top) {
+    return null;
+  }
+  return {
+    left,
+    top,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
 export function WebViewWorkspace({
   isActive,
   layoutTabId,
@@ -183,11 +203,16 @@ export function WebViewWorkspace({
       return null;
     }
     const rect = node.getBoundingClientRect();
+    const clipRect = webviewBoundsClipElement(node)?.getBoundingClientRect();
+    const visibleRect = clipRect ? intersectClientRects(rect, clipRect) : rect;
+    if (!visibleRect) {
+      return null;
+    }
     return {
-      x: Math.max(0, Math.round(rect.left)),
-      y: Math.max(0, Math.round(rect.top)),
-      width: Math.max(1, Math.round(rect.width)),
-      height: Math.max(1, Math.round(rect.height)),
+      x: Math.max(0, Math.round(visibleRect.left)),
+      y: Math.max(0, Math.round(visibleRect.top)),
+      width: Math.max(1, Math.round(visibleRect.width)),
+      height: Math.max(1, Math.round(visibleRect.height)),
     };
   };
 
