@@ -8,6 +8,7 @@ import {
   minimizeMainWindow,
   toggleMaximizeMainWindow,
 } from "../lib/tauri";
+import appIconUrl from "../../src-tauri/icons/32x32.png";
 
 const ICON_SIZE = 10;
 
@@ -135,7 +136,7 @@ export function TitleBar() {
       <div className="app-titlebar-label" data-tauri-drag-region>
         <img
           className="app-titlebar-icon"
-          src="/favicon.svg"
+          src={appIconUrl}
           alt=""
           aria-hidden="true"
           draggable={false}

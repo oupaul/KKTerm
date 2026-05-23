@@ -1,5 +1,5 @@
 .app-root {
-  --app-titlebar-height: 32px;
+  --app-titlebar-height: 31px;
   display: grid;
   grid-template-rows: var(--app-titlebar-height) minmax(0, 1fr);
   width: 100%;
@@ -15,10 +15,11 @@
 }
 
 .app-titlebar {
+  box-sizing: border-box;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  height: 32px;
+  height: var(--app-titlebar-height);
   background: var(--nav-toolbar-bg);
   color: var(--nav-toolbar-text);
   border-bottom: 1px solid var(--nav-toolbar-tooltip-border);

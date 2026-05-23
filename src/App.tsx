@@ -144,7 +144,10 @@ function App() {
   const useCustomTitleBar = appearanceSettings.useCustomTitleBar;
 
   return (
-    <div className={`app-root ${useCustomTitleBar ? "" : "app-root--no-titlebar"}`}>
+    <div
+      className={`app-root ${useCustomTitleBar ? "" : "app-root--no-titlebar"}`}
+      data-color-scheme={appearanceSettings.colorScheme}
+    >
       {useCustomTitleBar ? <TitleBar /> : null}
       <div
         ref={appShellRef}
