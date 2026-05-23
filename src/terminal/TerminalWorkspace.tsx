@@ -55,10 +55,12 @@ function formatBufferLogFilename(panelTitle: string, date = new Date()) {
 export function TerminalWorkspace({
   allowPaneLayoutControls = true,
   isActive,
+  showSftpButton = true,
   tab,
 }: {
   allowPaneLayoutControls?: boolean;
   isActive: boolean;
+  showSftpButton?: boolean;
   tab: WorkspaceTab;
 }) {
   const splitTerminalPaneDirected = useWorkspaceStore(
@@ -158,6 +160,7 @@ export function TerminalWorkspace({
             onFontChange={handleFontChange}
             onOpenSftp={(connection) => openSftpBrowser(connection)}
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
+            showSftpButton={showSftpButton}
             onSplit={handleSplit}
           />
         ) : null}
@@ -177,6 +180,7 @@ function TerminalLayoutView({
   onFontChange,
   onOpenSftp,
   onSaveBuffer,
+  showSftpButton,
   onSplit,
 }: {
   isActive: boolean;
@@ -189,6 +193,7 @@ function TerminalLayoutView({
   onFontChange: (delta: number | "reset") => void;
   onOpenSftp: (connection: Connection) => void;
   onSaveBuffer: (paneId: string) => void;
+  showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
 }) {
   if (layout.type === "leaf") {
@@ -210,6 +215,7 @@ function TerminalLayoutView({
             onFontChange={onFontChange}
             onOpenSftp={onOpenSftp}
             onSaveBuffer={onSaveBuffer}
+            showSftpButton={showSftpButton}
             onSplit={onSplit}
           />
         ) : (
@@ -245,6 +251,7 @@ function TerminalLayoutView({
           onFontChange={onFontChange}
           onOpenSftp={onOpenSftp}
           onSaveBuffer={onSaveBuffer}
+          showSftpButton={showSftpButton}
           onSplit={onSplit}
         />
       ))}
@@ -959,6 +966,7 @@ function TerminalPaneView({
   onFontChange,
   onOpenSftp,
   onSaveBuffer,
+  showSftpButton,
   onSplit,
 }: {
   isActive: boolean;
@@ -971,6 +979,7 @@ function TerminalPaneView({
   onFontChange: (delta: number | "reset") => void;
   onOpenSftp: (connection: Connection) => void;
   onSaveBuffer: (paneId: string) => void;
+  showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
 }) {
   const paneRef = useRef<HTMLElement | null>(null);
@@ -1695,7 +1704,7 @@ function TerminalPaneView({
           >
             {recordingInfo ? <Square size={9} fill="currentColor" /> : <Circle size={8} fill="currentColor" />}
           </button>
-          {isSshPane ? (
+          {isSshPane && showSftpButton ? (
             <button
               className="terminal-pane-action terminal-pane-action-text"
               aria-label={t("terminal.openSftp")}

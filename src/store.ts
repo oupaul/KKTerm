@@ -269,7 +269,7 @@ function tmuxSessionIdsForConnection(connection: Connection, count: number) {
   return sessionIds;
 }
 
-function appendTmuxSessionId(connection: Connection) {
+export function appendTmuxSessionId(connection: Connection) {
   if (!connectionUsesTmux(connection)) {
     return undefined;
   }

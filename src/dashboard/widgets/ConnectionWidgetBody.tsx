@@ -5,7 +5,7 @@ import { ConnectionIcon } from "../../connections/ConnectionIcon";
 import { connectionSubtitle, connectionTypeLabel } from "../../connections/utils";
 import { flattenConnections, withLiveConnectionStatuses } from "../../connections/treeUtils";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
-import { useWorkspaceStore } from "../../store";
+import { appendTmuxSessionId, useWorkspaceStore } from "../../store";
 import { defaultLayoutFor } from "../../workspace/layout";
 import { RemoteDesktopWorkspace } from "../../remote-desktop/RemoteDesktopWorkspace";
 import { TerminalWorkspace } from "../../terminal/TerminalWorkspace";
@@ -111,6 +111,7 @@ function createConnectionWidgetPane(instanceId: string, connection: Connection):
     cwd: connection.type === "local" ? "C:\\Users\\ryan" : "~",
     buffer: "",
     connection,
+    tmuxSessionId: appendTmuxSessionId(connection),
   };
 }
 
@@ -355,5 +356,12 @@ function ConnectionWidgetSession({
     return <RemoteDesktopWorkspace isActive={isViewActive} tab={tab} />;
   }
 
-  return <TerminalWorkspace allowPaneLayoutControls={false} isActive={isViewActive} tab={tab} />;
+  return (
+    <TerminalWorkspace
+      allowPaneLayoutControls={false}
+      isActive={isViewActive}
+      showSftpButton={false}
+      tab={tab}
+    />
+  );
 }
