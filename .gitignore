@@ -11,6 +11,8 @@ logs
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+.env
+.env.*.local
 
 # Frontend build outputs
 artifacts

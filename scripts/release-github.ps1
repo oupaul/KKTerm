@@ -7,6 +7,7 @@ param(
     [switch]$DryRun,
     [switch]$SkipBuild,
     [switch]$SkipSmoke,
+    [switch]$SkipAiReleaseNotes,
     [switch]$AllowDirty
 )
 
@@ -18,6 +19,7 @@ $PackageJsonPath = Join-Path $RepoRoot "package.json"
 $PackageLockPath = Join-Path $RepoRoot "package-lock.json"
 $TauriConfigPath = Join-Path $RepoRoot "src-tauri\tauri.conf.json"
 $CargoTomlPath = Join-Path $RepoRoot "src-tauri\Cargo.toml"
+$ChangelogPath = Join-Path $RepoRoot "CHANGELOG.md"
 $ResolvedOutputDir = Join-Path $RepoRoot $OutputDir
 
 function Invoke-Checked {
@@ -109,6 +111,8 @@ try {
     $TargetTriple = "windows-x64"
     $InstallerExe = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-$TargetTriple-setup.exe"
     $InstallerSha = "$InstallerExe.sha256"
+    $ReleaseNotesPath = Join-Path $ResolvedOutputDir "release-notes-$TagName.md"
+    $VersionReleaseNotesPath = Join-Path $RepoRoot "docs\releases\$TagName.md"
     # TODO(updates): Restore updater signature and latest.json release assets
     # when the update mechanism is re-enabled.
     # $InstallerSig = "$InstallerExe.sig"
@@ -143,6 +147,37 @@ try {
     if ($LASTEXITCODE -eq 0) {
         throw "GitHub release already exists: $TagName"
     }
+
+    $PreviousTag = (git tag --sort=-v:refname "v*" | Select-Object -First 1)
+    if (-not $PreviousTag) {
+        Write-Warning "No previous v* tag found; release notes will use recent commits."
+    } else {
+        Write-Host "Previous tag:    $PreviousTag"
+    }
+
+    $ReleaseNotesArgs = @(
+        "scripts/generate-release-notes.mjs",
+        "--version",
+        $TagName,
+        "--target",
+        "HEAD",
+        "--output",
+        $ReleaseNotesPath,
+        "--release-file",
+        $VersionReleaseNotesPath,
+        "--changelog",
+        $ChangelogPath,
+        "--model",
+        "gpt-5.4-nano"
+    )
+    if ($PreviousTag) {
+        $ReleaseNotesArgs += @("--previous-tag", $PreviousTag)
+    }
+    if ($SkipAiReleaseNotes) {
+        $ReleaseNotesArgs += "--skip-ai"
+    }
+
+    Invoke-Checked -FilePath "node" -ArgumentList $ReleaseNotesArgs -Action "Generate release notes"
 
     Invoke-Checked -FilePath "npm" -ArgumentList @("version", $NextVersion, "--no-git-tag-version", "--allow-same-version") -Action "Update npm package version"
     Set-TauriConfigVersion -Path $TauriConfigPath -Version $NextVersion
@@ -189,14 +224,14 @@ try {
     Invoke-Checked -FilePath "cargo" -ArgumentList @("check", "--manifest-path", "src-tauri/Cargo.toml") -Action "Rust check"
     Invoke-Checked -FilePath "cargo" -ArgumentList @("test", "--manifest-path", "src-tauri/Cargo.toml") -Action "Rust tests"
 
-    $AddOutput = git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml 2>&1
+    $AddOutput = git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml CHANGELOG.md $VersionReleaseNotesPath 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Unable to stage version files:`n$($AddOutput -join "`n")"
     }
 
     $StagedDiff = git diff --cached --name-only
     if (-not $StagedDiff) {
-        throw "No staged version changes to commit. Files may already be at $NextVersion from a prior run; reset them with 'git checkout -- package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml' and rerun."
+        throw "No staged release changes to commit. Files may already be at $NextVersion from a prior run; reset the version files and generated release notes, then rerun."
     }
 
     $CommitOutput = git commit -m "chore: release $TagName" 2>&1
@@ -259,8 +294,8 @@ try {
         $InstallerSha,
         "--title",
         "KKTerm $TagName",
-        "--notes",
-        "KKTerm $TagName Windows release."
+        "--notes-file",
+        $ReleaseNotesPath
     )
 
     if ($Draft) {
@@ -278,6 +313,7 @@ try {
         Draft = [bool]$Draft
         Prerelease = [bool]$Prerelease
         Assets = $ReleaseAssets
+        ReleaseNotes = $ReleaseNotesPath
     }
 }
 finally {

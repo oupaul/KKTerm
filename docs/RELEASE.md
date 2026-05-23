@@ -72,7 +72,22 @@ Publish the next build release with:
 npm run release:github
 ```
 
-The script increments the `<major>.<minor>.<build>` version across npm, Tauri, and Cargo metadata, builds the NSIS installer artifact, smoke tests the installer, runs frontend and Rust checks, commits the version bump, tags it as `v<version>`, pushes to `origin/main`, and creates a GitHub release with the installer and checksum. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1 -DryRun` to preview the next version, add `-Draft` for a draft release, or add `-SkipBuild` to publish from existing artifacts.
+The script generates release notes, increments the `<major>.<minor>.<build>` version across npm, Tauri, and Cargo metadata, builds the NSIS installer artifact, smoke tests the installer, runs frontend and Rust checks, commits the version bump plus release notes, tags it as `v<version>`, pushes to `origin/main`, and creates a GitHub release with the installer, checksum, and generated notes. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1 -DryRun` to preview the next version, add `-Draft` for a draft release, or add `-SkipBuild` to publish from existing artifacts.
+
+Release notes are generated before the version-bump commit so the summary covers changes since the previous `v*` tag and not the release commit itself. The generator writes:
+
+- `artifacts/release-notes-v<version>.md` for `gh release create --notes-file`
+- `docs/releases/v<version>.md` as the per-version release note
+- `CHANGELOG.md` with the newest version prepended
+
+When `OPENAI_API_KEY` is available, `scripts/generate-release-notes.mjs` asks OpenAI to summarize the GitHub-generated notes and commit context using `gpt-5.4-nano` by default. If the key is missing or the API call fails, the script falls back to deterministic notes from GitHub generated notes and commit subjects. Local runs may set secrets in the process environment or in an uncommitted `.env.local` file:
+
+```powershell
+$env:OPENAI_API_KEY = "sk-..."
+npm run release:github
+```
+
+GitHub Actions uses the same script through the manual **Release** workflow. Store the API key as the repository secret `OPENAI_API_KEY`; the workflow exposes it to the script as the same environment variable. Use the workflow inputs to mark a release as draft/prerelease, skip the installer build or smoke test, disable AI notes, or run a dry preview.
 
 ## Known Limitations
 

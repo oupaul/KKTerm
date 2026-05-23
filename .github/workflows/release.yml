@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: "Create the GitHub release as a draft"
+        required: false
+        default: false
+        type: boolean
+      prerelease:
+        description: "Mark the GitHub release as a prerelease"
+        required: false
+        default: false
+        type: boolean
+      skip_build:
+        description: "Use existing release artifacts instead of building the installer"
+        required: false
+        default: false
+        type: boolean
+      skip_smoke:
+        description: "Skip installer smoke test"
+        required: false
+        default: false
+        type: boolean
+      skip_ai_release_notes:
+        description: "Use deterministic release notes without OpenAI"
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: "Preview release version only; do not change files, tags, or releases"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: GitHub Release
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_RELEASE_NOTES_MODEL: gpt-5.4-nano
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+
+      - run: npm ci
+
+      - name: Configure release commit author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Publish release
+        shell: pwsh
+        run: |
+          $releaseArgs = @("-File", "scripts/release-github.ps1")
+          if ("${{ inputs.draft }}" -eq "true") { $releaseArgs += "-Draft" }
+          if ("${{ inputs.prerelease }}" -eq "true") { $releaseArgs += "-Prerelease" }
+          if ("${{ inputs.skip_build }}" -eq "true") { $releaseArgs += "-SkipBuild" }
+          if ("${{ inputs.skip_smoke }}" -eq "true") { $releaseArgs += "-SkipSmoke" }
+          if ("${{ inputs.skip_ai_release_notes }}" -eq "true") { $releaseArgs += "-SkipAiReleaseNotes" }
+          if ("${{ inputs.dry_run }}" -eq "true") { $releaseArgs += "-DryRun" }
+          powershell -NoProfile -ExecutionPolicy Bypass @releaseArgs
