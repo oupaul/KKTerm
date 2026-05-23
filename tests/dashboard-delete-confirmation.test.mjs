@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("Dashboard View deletion is edit-mode only and uses the shared delete confirmation dialog", async () => {
-  const page = await readFile(new URL("../src/dashboard/DashboardPage.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../src/modules/dashboard/DashboardPage.tsx", import.meta.url), "utf8");
 
   assert.match(page, /import \{ DeleteConfirmationDialog \} from "\.\.\/app\/DeleteConfirmationDialog";/);
   assert.match(page, /const \[deleteViewTarget, setDeleteViewTarget\]/);
@@ -15,7 +15,7 @@ test("Dashboard View deletion is edit-mode only and uses the shared delete confi
 });
 
 test("Dashboard widget deletion uses the shared delete confirmation dialog", async () => {
-  const frame = await readFile(new URL("../src/dashboard/view/WidgetFrame.tsx", import.meta.url), "utf8");
+  const frame = await readFile(new URL("../src/modules/dashboard/view/WidgetFrame.tsx", import.meta.url), "utf8");
 
   assert.match(frame, /import \{ DeleteConfirmationDialog \} from "\.\.\/\.\.\/app\/DeleteConfirmationDialog";/);
   assert.match(frame, /const \[deleteConfirmOpen, setDeleteConfirmOpen\] = useState\(false\);/);

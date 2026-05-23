@@ -75,7 +75,7 @@ Drag a Connection onto a folder to move it; drag onto another Connection to reor
 
 ## Status badges
 
-Each Connection in the tree shows a live status dot when it has one or more Sessions open. The dot is derived from `withLiveConnectionStatuses` in `src/connections/treeUtils.ts` and is **display-only**. Do not pass the live-status Connection to workspace components that own Session lifecycle (TerminalWorkspace, WebViewWorkspace, RemoteDesktopWorkspace, SftpWorkspace) — they look up the stable Connection by id from the raw tree. See `src/dashboard/widgets/ConnectionWidgetBody.tsx` for the safe pattern.
+Each Connection in the tree shows a live status dot when it has one or more Sessions open. The dot is derived from `withLiveConnectionStatuses` in `src/modules/workspace/connections/treeUtils.ts` and is **display-only**. Do not pass the live-status Connection to workspace components that own Session lifecycle (TerminalWorkspace, WebViewWorkspace, RemoteDesktopWorkspace, SftpWorkspace) — they look up the stable Connection by id from the raw tree. See `src/modules/dashboard/widgets/ConnectionWidgetBody.tsx` for the safe pattern.
 
 ## Pinned Connections on the Activity Rail
 

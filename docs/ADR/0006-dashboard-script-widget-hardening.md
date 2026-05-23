@@ -110,7 +110,7 @@ globals like `L` (Leaflet) forced into a brittle whole-token match against
 the stripped code view.
 
 `KNOWN_LIBRARY_GLOBALS` must stay in lockstep with
-`src/dashboard/script/widgetLibraries.ts`. A new bundled library that is
+`src/modules/dashboard/script/widgetLibraries.ts`. A new bundled library that is
 not added to `KNOWN_LIBRARY_GLOBALS` silently skips this check — soft
 degradation, but reviewers must remember to update both files in the same
 change.
@@ -165,8 +165,8 @@ validator, which gives the assistant the wrong error to react to.
 ### 4. Declared lifecycle and motion watchdog
 
 `ScriptBody` carries an optional `lifecycle: { kind, minTickMs? }` field
-(`ScriptLifecycle` in Rust, mirrored in `src/dashboard/types.ts` and
-`src/dashboard/schema.ts`). `kind` is one of `static`, `periodic`,
+(`ScriptLifecycle` in Rust, mirrored in `src/modules/dashboard/types.ts` and
+`src/modules/dashboard/schema.ts`). `kind` is one of `static`, `periodic`,
 `animation`, `realtime`. Absent or null lifecycle is treated as `static`
 so legacy widgets without the field continue to deserialize cleanly.
 `minTickMs` is informational, clamped to `16..=60_000` at the storage
@@ -394,7 +394,7 @@ the prompt missed.
   clocks redraw on remount but never animate.
 - Adding a new bundled library: update `KNOWN_LIBRARY_GLOBALS` in
   `src-tauri/src/dashboard_validation.rs` alongside
-  `src/dashboard/script/widgetLibraries.ts`. Without the Rust-side entry the
+  `src/modules/dashboard/script/widgetLibraries.ts`. Without the Rust-side entry the
   unused-library check is silently skipped for that key.
 - If the AI Assistant trips `Validation(UnusedLibrary)`, first check whether
   the tool boundary is still sanitizing structured bodies with
@@ -434,8 +434,8 @@ the prompt missed.
   positives during GC pauses; lower tick interval = lower latency but
   more bridge traffic per frame loop. Change them together.
 - Adding a new lifecycle kind: extend `ScriptLifecycleKind` (Rust),
-  `ScriptLifecycleKind` (TypeScript in `src/dashboard/types.ts`), and the
-  schema check in `src/dashboard/schema.ts::validateScriptWidgetBody`.
+  `ScriptLifecycleKind` (TypeScript in `src/modules/dashboard/types.ts`), and the
+  schema check in `src/modules/dashboard/schema.ts::validateScriptWidgetBody`.
   A kind without a host-side invariant is allowed (current behavior for
   `realtime` and `periodic`), but document the intended invariant in this
   ADR and in the `ScriptLifecycle` Rust doc comment before users start

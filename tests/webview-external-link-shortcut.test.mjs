@@ -8,7 +8,7 @@ test("URL WebView Shift-click opens http links externally through the title brid
     "utf8",
   );
   const workspaceSource = await readFile(
-    new URL("../src/webview/WebViewWorkspace.tsx", import.meta.url),
+    new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
     "utf8",
   );
 

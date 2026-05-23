@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("ordinary workspace command menus are not RDP-blocking DOM overlays", async () => {
   const source = await readFile(
-    new URL("../src/workspace/nativeOverlay.ts", import.meta.url),
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
     "utf8",
   );
 

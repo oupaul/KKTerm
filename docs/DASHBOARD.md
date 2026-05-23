@@ -21,7 +21,7 @@ It does not own:
 
 - App-wide color schemes (handled by `src/styles/colorSchemes.css` + `AppearanceSettings`).
 - Settings export/import shape (handled by `src-tauri/src/storage.rs` general settings flow).
-- The App Launcher's entry management (kept inside `src/app-launcher/`; Dashboard renders App Launcher as a widget but does not own its data model).
+- The App Launcher's entry management (kept inside `src/modules/dashboard/widgets/builtin/app-launcher/`; Dashboard renders App Launcher as a widget but does not own its data model).
 
 ## Domain Concepts
 
@@ -37,7 +37,7 @@ AI Created Widget text is UTF-8 end to end. Titles, summaries, labels, placehold
 
 | Kind | Body source | Execution model |
 | --- | --- | --- |
-| `builtIn` | TypeScript component in `src/dashboard/widgets/` registered in `builtInRegistry.ts` | Normal React render. App Launcher is the only current built-in. |
+| `builtIn` | TypeScript component in `src/modules/dashboard/widgets/` registered in `builtInRegistry.ts` | Normal React render. App Launcher is the only current built-in. |
 | `script` | JavaScript source string in `dashboard_custom_widgets.body_json` | Hosted inside an isolated `iframe srcdoc` via `ScriptWidgetHost.tsx`. Has `document`, `fetch`, `setInterval`, and a minimal `KK` postMessage bridge. Permissions (`network`, `pollSeconds`) declared per widget. Fault-isolation boundary — a bad script breaks one widget, not the dashboard. |
 
 **Visual Preset** — one of three framing styles applied per widget instance: `panel`, `ambient`, `hero`. Implemented in `presetRegistry.tsx` as thin CSS-driven chrome wrappers. Each preset reads `--w-accent` and `--w-accent-soft` for the widget's accent color; presets do not encode their own palette. Ambient supports optional frosted-glass background and hides its title bar by default.
@@ -135,13 +135,13 @@ Rust validation invariants:
 - Settings schemas are bounded JSON objects with up to 20 fields. Supported field types are `text`, `number`, `boolean`, `select`, and `secret`; keys must be stable ASCII identifiers and select fields must declare bounded label/value options.
 - Settings schemas use `secret` fields for passwords, API keys, tokens, and similar values. A secret field never has a default value.
 - Settings values are per-instance JSON objects capped at 32 KB. For `secret` fields, Rust rejects plaintext values; the only valid stored shape is a `secretRef` whose owner id matches `dashboard-widget-secret:<instanceId>:<fieldKey>`.
-- Frontend renderers use the matching TypeScript validator in `src/dashboard/schema.ts` before rendering script widgets, so malformed stored JSON falls back to the existing invalid-body state instead of partially rendering.
+- Frontend renderers use the matching TypeScript validator in `src/modules/dashboard/schema.ts` before rendering script widgets, so malformed stored JSON falls back to the existing invalid-body state instead of partially rendering.
 
 Validation failures return structured error text to the AI Assistant so it can self-correct. Successful create/update results intentionally do not replay the widget source into the next model turn; the model already supplied the source as tool arguments, and future inspection should go through `dashboard_read_widget_source` for one selected widget. The Assistant page context tells the model to call `dashboard_create_widget` with the active view id for creation requests; after any dashboard mutating tool completes, the frontend reloads Dashboard state and the newly mounted widget frame runs the canvas fade-in animation.
 
 Duplicate detection must work from metadata. Before creating a new AI Created Widget, the assistant should compare the user's request against existing AI Created Widget `title`, `summary`, `category`, active-on-view state, declared libraries, permissions, lifecycle, source byte count, and settings field metadata. If an existing widget substantially overlaps, it should offer to edit the existing widget, create a separate new one, or place the existing one on the current View. Full source is only read after the user chooses an edit/check path.
 
-Dashboard mutating tools run from the Rust Assistant tool loop, outside the frontend Dashboard store. To keep the live Dashboard view in sync, every successful mutating dashboard tool emits a `dashboard-changed` event. `src/dashboard/state/invalidation.ts` listens once at the app shell and reloads `useDashboardStore`. The streaming `toolCallEnd` refresh remains a useful fallback, but the backend event is the authoritative invalidation path for out-of-band mutations.
+Dashboard mutating tools run from the Rust Assistant tool loop, outside the frontend Dashboard store. To keep the live Dashboard view in sync, every successful mutating dashboard tool emits a `dashboard-changed` event. `src/modules/dashboard/state/invalidation.ts` listens once at the app shell and reloads `useDashboardStore`. The streaming `toolCallEnd` refresh remains a useful fallback, but the backend event is the authoritative invalidation path for out-of-band mutations.
 
 The `dashboard_create_widget` assistant tool schema is strict-compatible where possible. It uses a closed root object, bounded enums, required fields, and closed nested object shapes so capable providers produce structured widget arguments instead of free-form prose or partial JSON. Rust validation remains the final authority before anything is persisted.
 
@@ -150,7 +150,7 @@ The AI-facing widget contract requires the first created widget to be complete f
 ## Frontend Source Map (Dashboard)
 
 ```text
-src/dashboard/
+src/modules/dashboard/
   dashboard.css                  ── Dashboard page, widget-grid, preset chrome, and Dashboard widget CSS (imported by src/App.css)
   DashboardPage.tsx              ── shell, topbar, view pills, edit-mode toggle
   motion.tsx                     ── existing centralized motion wrappers
@@ -244,7 +244,7 @@ The bridge exposes `KK.openExternal(url)`, `KK.getSettings()`, `KK.setSetting(ke
 
 ### Script Widget Libraries
 
-Curated local libraries are registered in `src/dashboard/script/widgetLibraries.ts` and requested by AI Created scripts through `body.libraries`. The script host loads every requested library before running widget source, so generated code must declare libraries it uses instead of assuming globals already exist.
+Curated local libraries are registered in `src/modules/dashboard/script/widgetLibraries.ts` and requested by AI Created scripts through `body.libraries`. The script host loads every requested library before running widget source, so generated code must declare libraries it uses instead of assuming globals already exist.
 
 Matter.js is the default 2D physics building block for script widgets. It is registered under the `matter` library key, exposes the `Matter` global, and should be used for widget-sized games, physics toys, collision, gravity, rigid bodies, and constraints instead of custom per-widget physics loops. Matter.js widgets should size their canvas from `KK.getViewport()`, update renderer bounds and static wall/floor bodies on `KK.onViewportResize`, keep all bodies bounded to the widget arena, and stop runners or animation loops when gameplay is paused, finished, or otherwise inactive.
 
@@ -255,7 +255,7 @@ Script bodies may also declare an optional `lifecycle: { kind, minTickMs? }` fie
 When adding or renaming a script-widget library:
 
 - Add the npm package dependency if the library is not already present.
-- Add the registry entry in `src/dashboard/script/widgetLibraries.ts` with a stable key, global name, description, and loader.
+- Add the registry entry in `src/modules/dashboard/script/widgetLibraries.ts` with a stable key, global name, description, and loader.
 - Add the same key to `dashboard_widget_library_keys()` in `src-tauri/src/ai.rs` so `dashboard_create_widget` and `dashboard_update_custom_widget` expose the key to the AI Assistant tool schema.
 - If old generated widgets may already reference the global without `body.libraries`, add a narrow legacy inference pattern in `resolveWidgetLibraryKeys`.
 - Run `node --test tests/dashboard-script-srcdoc.test.mjs`, `npm run build`, and `cargo test --manifest-path src-tauri/Cargo.toml dashboard_widget_tool_schema_exposes_script_libraries`. `npm run build` is the check that proves the registered loader and package dependency can actually bundle.
@@ -310,9 +310,9 @@ Secret widget settings are also visible from Settings → Credentials. That unif
 Each Dashboard View carries an optional background, stored as a nullable `background_json` column on `dashboard_views` (`NULL` = theme default). Right-clicking empty canvas space opens a native context menu with "Change Background…", which opens the app-owned `BackgroundPopover`. Four modes:
 
 - **Theme Default** — `NULL`; the canvas uses the active color scheme's `--app-bg`.
-- **Color & Gradient** — `{ kind: "preset", preset }` referencing one of the 16 fixed entries in `src/dashboard/registry/backgroundPresets.ts` (whitelisted in Rust as `BACKGROUND_PRESET_IDS`).
+- **Color & Gradient** — `{ kind: "preset", preset }` referencing one of the 16 fixed entries in `src/modules/dashboard/registry/backgroundPresets.ts` (whitelisted in Rust as `BACKGROUND_PRESET_IDS`).
 - **Image** — `{ kind: "image", file, fit, dim }`. The image file is copied into a `backgrounds/` folder next to the executable (mirroring custom fonts) and referenced by filename. `fit` is one of fill/fit/stretch/tile/center; `dim` is a signed −100..100 value (negative darkens, positive lightens). Unreferenced image files are swept after view-mutating commands by `prune_unreferenced_backgrounds`.
-- **Dynamic** — `{ kind: "dynamic", dynamic }` referencing one of the local HTML5 animation backgrounds in `src/dashboard/registry/dynamicBackgrounds.tsx` (whitelisted in Rust as `DYNAMIC_BACKGROUND_IDS`). Dynamic backgrounds are app-owned React/canvas/CSS animations, not script widgets and not persisted code.
+- **Dynamic** — `{ kind: "dynamic", dynamic }` referencing one of the local HTML5 animation backgrounds in `src/modules/dashboard/registry/dynamicBackgrounds.tsx` (whitelisted in Rust as `DYNAMIC_BACKGROUND_IDS`). Dynamic backgrounds are app-owned React/canvas/CSS animations, not script widgets and not persisted code.
 
 The background renders on a dedicated layer behind the widget grid and does not affect the topbar or widget chrome. A missing image file, unknown dynamic id, or unparseable `background_json` falls back to theme default rather than erroring.
 
@@ -335,8 +335,8 @@ All new strings route through `t()` in the `dashboard.*` namespace. English (`sr
 
 ## Relationships to Other Modules and Source Areas
 
-- **App Launcher** (`src/app-launcher/`) — rendered as a `builtIn` widget. Its data model and management UI stay inside `src/app-launcher/`; the Dashboard widget is a thin host.
+- **App Launcher** (`src/modules/dashboard/widgets/builtin/app-launcher/`) — rendered as a `builtIn` widget. Its data model and management UI stay inside `src/modules/dashboard/widgets/builtin/app-launcher/`; the Dashboard widget is a thin host.
 - **AI Assistant** (`src/ai/`) — consumes the Dashboard page-context payload and issues Tauri commands via registered tools.
-- **Settings** (`src/settings/`) — adds a Dashboard section; "Reset Dashboard" lives in General → Settings data.
+- **Settings** (`src/modules/settings/`) — adds a Dashboard section; "Reset Dashboard" lives in General → Settings data.
 - **Activity Rail** (`src/app/ActivityRail.tsx`) — Dashboard is a peer top-level entry alongside Workspace and File Explorer. App Launcher is intentionally not a rail entry.
-- **Status Bar** (`src/workspace/StatusBar.tsx`) — receives transient dashboard status messages via `showStatusBarNotice` for layout-save failures and similar feedback.
+- **Status Bar** (`src/modules/workspace/StatusBar.tsx`) — receives transient dashboard status messages via `showStatusBarNotice` for layout-save failures and similar feedback.

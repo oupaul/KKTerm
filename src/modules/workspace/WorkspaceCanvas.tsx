@@ -1,0 +1,232 @@
+import { connectionTypeForTab } from "./connections/utils";
+import {
+  dispatchConnectionTabContextMenu,
+  isConnectionTabContextMenuConnection,
+} from "./connections/connectionTabContextMenu";
+import { ftpBrowserCommands } from "../../lib/fileBrowserCommands";
+import { RemoteDesktopWorkspace } from "./connections/remote-desktop/RemoteDesktopWorkspace";
+import { SftpWorkspace } from "./connections/sftp/SftpWorkspace";
+import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
+import { WebViewWorkspace } from "./connections/webview/WebViewWorkspace";
+import { ConnectionIcon } from "./connections/ConnectionIcon";
+import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { useWorkspaceStore } from "../../store";
+
+export function TabStrip() {
+  const { t } = useTranslation();
+  const tabs = useWorkspaceStore((state) => state.tabs);
+  const activeTabId = useWorkspaceStore((state) => state.activeTabId);
+  const activateTab = useWorkspaceStore((state) => state.activateTab);
+  const closeTab = useWorkspaceStore((state) => state.closeTab);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    updateScroll();
+    const observer = new ResizeObserver(updateScroll);
+    observer.observe(el);
+    el.addEventListener("scroll", updateScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", updateScroll);
+    };
+  }, [tabs.length, updateScroll]);
+
+  function scrollLeft() {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    el.scrollBy({ left: -200, behavior: "smooth" });
+  }
+
+  function scrollRight() {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    el.scrollBy({ left: 200, behavior: "smooth" });
+  }
+
+  function handleTabContextMenu(tab: (typeof tabs)[number], event: ReactMouseEvent<HTMLElement>) {
+    if (!isConnectionTabContextMenuConnection(tab.connection) || tab.sshPortForwardSessionId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    activateTab(tab.id);
+    dispatchConnectionTabContextMenu({
+      connection: tab.connection,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }
+
+  return (
+    <div className="tab-strip" aria-label={t("workspace.tabs")} data-tutorial-id="workspace.tabStrip">
+      {canScrollLeft ? (
+        <button
+          aria-label={t("workspace.scrollTabsLeft")}
+          className="tab-scroll-arrow tab-scroll-left"
+          onClick={scrollLeft}
+          type="button"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      ) : null}
+      <div className="tab-scroll-container" ref={scrollRef}>
+        {tabs.map((tab) => (
+          <div
+            className={tab.id === activeTabId ? "tab active" : "tab"}
+            key={tab.id}
+            onContextMenu={(event) => handleTabContextMenu(tab, event)}
+          >
+            <button className="tab-button" onClick={() => activateTab(tab.id)} type="button">
+              <ConnectionIcon
+                iconBackgroundColor={connectionTypeForTab(tab).iconBackgroundColor}
+                iconDataUrl={connectionTypeForTab(tab).iconDataUrl}
+                localShell={connectionTypeForTab(tab).localShell}
+                size={14}
+                type={connectionTypeForTab(tab).type}
+              />
+              <span>{tab.title}</span>
+            </button>
+            <button
+              aria-label={t("workspace.closeTab", { title: tab.title })}
+              className="tab-close-button"
+              onClick={(event) => {
+                event.stopPropagation();
+                closeTab(tab.id);
+              }}
+              title={t("workspace.closeTab", { title: tab.title })}
+              type="button"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ))}
+      </div>
+      {canScrollRight ? (
+        <button
+          aria-label={t("workspace.scrollTabsRight")}
+          className="tab-scroll-arrow tab-scroll-right"
+          onClick={scrollRight}
+          type="button"
+        >
+          <ChevronRight size={16} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function WorkspaceCanvas({
+  workspaceActive = true,
+}: {
+  workspaceActive?: boolean;
+} = {}) {
+  const { t } = useTranslation();
+  const tabs = useWorkspaceStore((state) => state.tabs);
+  const activeTabId = useWorkspaceStore((state) => state.activeTabId);
+
+  if (tabs.length === 0) {
+    return (
+      <div className="workspace-canvas" data-tutorial-id="workspace.canvas">
+        <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
+          <Terminal size={28} />
+          <h2>{t("workspace.noActiveSession")}</h2>
+          <p>{t("workspace.openFromTree")}</p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="workspace-canvas" data-tutorial-id="workspace.canvas">
+      {tabs.map((tab) => {
+        if (tab.kind === "sftp") {
+          return (
+            <SftpWorkspace
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        if (tab.kind === "ftp") {
+          const connection = tab.connection;
+          const ftpOptions = connection?.ftpOptions ?? {
+            protocol: "ftp" as const,
+            mode: "passive" as const,
+            transferType: "binary" as const,
+            utf8: true,
+            showHidden: false,
+            ignoreCertErrors: false,
+          };
+          // Route plain FTP / FTPS through the same SftpWorkspace, parameterized
+          // with the FTP transport adapter so the UI is identical to the
+          // SSH-launched SFTP browser. The adapter disables features the FTP
+          // protocol can't support (e.g. POSIX permissions editor).
+          const commands = connection
+            ? ftpBrowserCommands(connection, ftpOptions)
+            : undefined;
+          return (
+            <SftpWorkspace
+              commands={commands}
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        if (tab.kind === "webview") {
+          return (
+            <WebViewWorkspace
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        if (tab.kind === "remoteDesktop") {
+          return (
+            <RemoteDesktopWorkspace
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        return (
+          <TerminalWorkspace
+            isActive={workspaceActive && tab.id === activeTabId}
+            key={tab.id}
+            tab={tab}
+          />
+        );
+      })}
+    </div>
+  );
+}

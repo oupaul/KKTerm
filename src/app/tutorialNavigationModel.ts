@@ -1,5 +1,5 @@
 import type { ActivePage } from "./ActivityRail";
-import type { SettingsSectionId } from "../settings/settingsAssistantContext";
+import type { SettingsSectionId } from "../modules/settings/settingsAssistantContext";
 
 export type TutorialNavigationTarget = {
   page: ActivePage;

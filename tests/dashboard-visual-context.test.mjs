@@ -18,7 +18,7 @@ async function importTypeScriptModule(path) {
 
 test("dashboard visual context stays compact for light preset backgrounds", async () => {
   const { dashboardVisualContextForView } = await importTypeScriptModule(
-    new URL("../src/dashboard/visualContext.ts", import.meta.url),
+    new URL("../src/modules/dashboard/visualContext.ts", import.meta.url),
   );
 
   assert.deepEqual(
@@ -35,7 +35,7 @@ test("dashboard visual context stays compact for light preset backgrounds", asyn
 
 test("dashboard visual context marks image backgrounds as mixed and requiring readable surfaces", async () => {
   const { dashboardVisualContextForView } = await importTypeScriptModule(
-    new URL("../src/dashboard/visualContext.ts", import.meta.url),
+    new URL("../src/modules/dashboard/visualContext.ts", import.meta.url),
   );
 
   assert.deepEqual(
@@ -54,7 +54,7 @@ test("dashboard visual context marks image backgrounds as mixed and requiring re
 
 test("dashboard visual context marks dark preset backgrounds as dark", async () => {
   const { dashboardVisualContextForView } = await importTypeScriptModule(
-    new URL("../src/dashboard/visualContext.ts", import.meta.url),
+    new URL("../src/modules/dashboard/visualContext.ts", import.meta.url),
   );
 
   assert.deepEqual(

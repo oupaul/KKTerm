@@ -18,7 +18,7 @@ async function importTypeScriptModule(path) {
 
 test("terminal agent detector promotes command and OSC title matches", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const codexDetector = createTerminalAgentDetector();
@@ -32,7 +32,7 @@ test("terminal agent detector promotes command and OSC title matches", async () 
 
 test("terminal agent detector keeps ordinary transcript mentions below badge threshold", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -43,7 +43,7 @@ test("terminal agent detector keeps ordinary transcript mentions below badge thr
 
 test("terminal agent detector recognizes the Codex startup screen from output", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -62,7 +62,7 @@ test("terminal agent detector recognizes the Codex startup screen from output", 
 
 test("terminal agent detector recognizes the Claude Code startup screen from output", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -80,7 +80,7 @@ test("terminal agent detector recognizes the Claude Code startup screen from out
 
 test("terminal agent detector clears after a shell prompt returns", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -94,7 +94,7 @@ test("terminal agent detector clears after a shell prompt returns", async () => 
 
 test("terminal agent detector clears for common Linux macOS and Windows prompts", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const returnedPrompts = [
@@ -118,7 +118,7 @@ test("terminal agent detector clears for common Linux macOS and Windows prompts"
 
 test("terminal agent detector clears when a restored prompt appears at the output tail", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -132,7 +132,7 @@ test("terminal agent detector clears when a restored prompt appears at the outpu
 
 test("terminal agent detector clears on alternate screen exit without redetecting stale text", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -146,7 +146,7 @@ test("terminal agent detector clears on alternate screen exit without redetectin
 
 test("terminal agent detector clears after an empty managed terminal title", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -160,7 +160,7 @@ test("terminal agent detector clears after an empty managed terminal title", asy
 
 test("terminal agent detector clears when the user submits agent exit commands", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   for (const exitInput of ["/exit\r", "/quit\r", "exit\r", "quit\r", ":q\r", "\u0004"]) {
@@ -176,7 +176,7 @@ test("terminal agent detector clears when the user submits agent exit commands",
 
 test("terminal agent detector switches after returning to shell between agents", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -198,7 +198,7 @@ test("terminal agent detector switches after returning to shell between agents",
 
 test("terminal agent detector switches when another agent command starts before prompt clear", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -214,7 +214,7 @@ test("terminal agent detector switches when another agent command starts before 
 
 test("terminal agent detector prefers newer agent evidence over older accumulated score", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector();
@@ -229,7 +229,7 @@ test("terminal agent detector prefers newer agent evidence over older accumulate
 
 test("terminal agent detector can be extended with new agent rules", async () => {
   const { createTerminalAgentDetector } = await importTypeScriptModule(
-    new URL("../src/terminal/agentDetection.ts", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/agentDetection.ts", import.meta.url),
   );
 
   const detector = createTerminalAgentDetector([

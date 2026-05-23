@@ -19,7 +19,7 @@ async function importTypeScriptModule(path) {
 
 test("script widget source is encoded as data before iframe execution", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const source = "document.body.innerHTML = `<div><script>alert(1)</script></div>`;";
   const srcdoc = buildSrcdoc({
@@ -36,7 +36,7 @@ test("script widget source is encoded as data before iframe execution", async ()
 
 test("script widget srcdoc declares UTF-8 for document and injected blobs", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const source = "document.getElementById('root').textContent = '中文テスト한글 café';";
   const srcdoc = buildSrcdoc({
@@ -51,7 +51,7 @@ test("script widget srcdoc declares UTF-8 for document and injected blobs", asyn
 
 test("script widget CSP allows remote images only with network permission", async () => {
   const { buildCsp } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
 
   assert.match(buildCsp({ network: true }), /img-src http: https: data: blob:/);
@@ -66,7 +66,7 @@ test("script widget CSP allows remote images only with network permission", asyn
 
 test("script widget host intercepts external links for parent opener bridge", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "document.getElementById('root').innerHTML = '<a href=\"https://example.com\">Example</a>';",
@@ -82,7 +82,7 @@ test("script widget host intercepts external links for parent opener bridge", as
 
 test("script widget host exposes keyed secret bridge", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "KK.getSecret('apiKey');",
@@ -97,7 +97,7 @@ test("script widget host exposes keyed secret bridge", async () => {
 
 test("script widget host exposes measured viewport bridge", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "const viewport = KK.getViewport(); KK.onViewportResize(() => {});",
@@ -112,7 +112,7 @@ test("script widget host exposes measured viewport bridge", async () => {
 
 test("script widget host exposes runtime theme contract without prompt payload bloat", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc(
     {
@@ -151,7 +151,7 @@ test("script widget host exposes runtime theme contract without prompt payload b
 
 test("script widget host notifies generated animation code when visibility changes", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "KK.onVisibilityChange((visible) => { if (visible) requestAnimationFrame(() => {}); });",
@@ -168,7 +168,7 @@ test("script widget host notifies generated animation code when visibility chang
 
 test("script widget host caps animation and tight timer loops", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "requestAnimationFrame(() => {}); setInterval(() => {}, 0);",
@@ -185,7 +185,7 @@ test("script widget host caps animation and tight timer loops", async () => {
 
 test("script widget parent bridge rate-limits expensive messages", async () => {
   const hostSource = await readFile(
-    new URL("../src/dashboard/script/ScriptWidgetHost.tsx", import.meta.url),
+    new URL("../src/modules/dashboard/script/ScriptWidgetHost.tsx", import.meta.url),
     "utf8",
   );
 
@@ -198,7 +198,7 @@ test("script widget parent bridge rate-limits expensive messages", async () => {
 
 test("script widget host resyncs iframe visibility after initial layout and load", async () => {
   const hostSource = await readFile(
-    new URL("../src/dashboard/script/ScriptWidgetHost.tsx", import.meta.url),
+    new URL("../src/modules/dashboard/script/ScriptWidgetHost.tsx", import.meta.url),
     "utf8",
   );
 
@@ -213,7 +213,7 @@ test("script widget host resyncs iframe visibility after initial layout and load
 
 test("script widget host exposes app-owned UI primitives", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "document.getElementById('root').className = 'kk-shell';",
@@ -234,7 +234,7 @@ test("script widget host exposes app-owned UI primitives", async () => {
 
 test("script widget stage primitive does not impose a dark object background", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "document.getElementById('root').innerHTML = '<div class=\"kk-stage\"></div>';",
@@ -247,7 +247,7 @@ test("script widget stage primitive does not impose a dark object background", a
 
 test("script widget host exposes file and folder drop-zone helper", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "KK.onFileDrop(document.getElementById('root'), () => {});",
@@ -263,7 +263,7 @@ test("script widget host exposes file and folder drop-zone helper", async () => 
 
 test("script widget wraps user source in IIFE so top-level return is legal", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   // A realistic AI-generated body with effect-style cleanup return.
   const source = "let t = setInterval(() => {}, 100);\nreturn () => clearInterval(t);";
@@ -287,7 +287,7 @@ test("script widget wraps user source in IIFE so top-level return is legal", asy
 
 test("script widget signals smoke-test ready and bubbles runtime errors to parent", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "document.getElementById('root').textContent = 'ok';",
@@ -313,7 +313,7 @@ test("script widget signals smoke-test ready and bubbles runtime errors to paren
 
 test("script widget rAF wrapper emits throttled motionTick heartbeat for stall watchdog", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/permissions.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
   );
   const srcdoc = buildSrcdoc({
     source: "function frame(){ requestAnimationFrame(frame); } requestAnimationFrame(frame);",
@@ -335,7 +335,7 @@ test("script widget rAF wrapper emits throttled motionTick heartbeat for stall w
 
 test("script widget infers common local libraries from legacy generated source", async () => {
   const { resolveWidgetLibraryKeys } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/widgetLibraries.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/widgetLibraries.ts", import.meta.url),
   );
 
   assert.deepEqual(
@@ -346,7 +346,7 @@ test("script widget infers common local libraries from legacy generated source",
 
 test("script widget resolver accepts every advertised local library", async () => {
   const { WIDGET_LIBRARIES, resolveWidgetLibraryKeys } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/widgetLibraries.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/widgetLibraries.ts", import.meta.url),
   );
 
   const keys = Object.keys(WIDGET_LIBRARIES);
@@ -356,7 +356,7 @@ test("script widget resolver accepts every advertised local library", async () =
 
 test("script widget library catalog documents qrcode canvas target contract", async () => {
   const { libraryCatalogForAi } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/widgetLibraries.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/widgetLibraries.ts", import.meta.url),
   );
 
   const catalog = libraryCatalogForAi();
@@ -366,7 +366,7 @@ test("script widget library catalog documents qrcode canvas target contract", as
 
 test("script widget library catalog documents Matter.js physics contract", async () => {
   const { libraryCatalogForAi } = await importTypeScriptModule(
-    new URL("../src/dashboard/script/widgetLibraries.ts", import.meta.url),
+    new URL("../src/modules/dashboard/script/widgetLibraries.ts", import.meta.url),
   );
 
   const catalog = libraryCatalogForAi();

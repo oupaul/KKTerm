@@ -1,0 +1,146 @@
+import { useEffect, useState } from "react";
+import { LayoutDashboard, Save } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useDashboardStore } from "../dashboard/state/dashboardStore";
+import { useWorkspaceStore } from "../../store";
+import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import type { DashboardSettings as DashboardSettingsState } from "../../types";
+import {
+  MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT,
+  MAX_ACTIVE_SCRIPT_WIDGETS_MIN,
+} from "../../app-defaults";
+import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
+
+export function DashboardSettings() {
+  const { t } = useTranslation();
+  const views = useDashboardStore((s) => s.views);
+  const dashboardSettings = useWorkspaceStore((s) => s.dashboardSettings);
+  const setDashboardSettings = useWorkspaceStore((s) => s.setDashboardSettings);
+  const showStatusBarNotice = useWorkspaceStore((s) => s.showStatusBarNotice);
+  const [draft, setDraft] = useState<DashboardSettingsState>(dashboardSettings);
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(dashboardSettings);
+  const showWidgetNetworkToolsSetting = false;
+
+  useEffect(() => {
+    setDraft(dashboardSettings);
+  }, [dashboardSettings]);
+
+  async function handleSave() {
+    try {
+      const request = { ...draft, allowWidgetNetworkTools: true };
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_dashboard_settings", { request })
+        : request;
+      setDashboardSettings(saved);
+      setDraft(saved);
+      showStatusBarNotice(t("settings.dashboardSaved"), { tone: "success" });
+    } catch (saveError) {
+      showStatusBarNotice(
+        saveError instanceof Error ? saveError.message : String(saveError),
+        { tone: "error" },
+      );
+    }
+  }
+
+  return (
+    <section className="settings-card settings-section">
+      <SettingsSectionHeader
+        actions={
+          <button
+            className="toolbar-button"
+            disabled={!hasChanges}
+            onClick={() => void handleSave()}
+            type="button"
+          >
+            <Save size={15} />
+            {t("settings.save")}
+          </button>
+        }
+        icon={<LayoutDashboard size={18} />}
+        label={t("settings.sectionDashboard")}
+        title={t("settings.sectionDashboard")}
+      />
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.dashboardGeneral")}</legend>
+        <div className="form-grid">
+          <label data-tutorial-id="settings.dashboardDefaultLanding">
+            <span>{t("settings.dashboardDefaultLanding")}</span>
+            <select
+              value={draft.defaultLandingView}
+              onChange={(e) =>
+                setDraft((s) => ({ ...s, defaultLandingView: e.target.value }))
+              }
+            >
+              <option value="lastActive">{t("settings.dashboardLandingLast")}</option>
+              {views.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="settings-toggle-list">
+          <label
+            className="settings-toggle-row"
+            data-tutorial-id="settings.dashboardUseRandomDynamicBackground"
+          >
+            <ToggleSwitch
+              checked={draft.useRandomDynamicBackground}
+              onChange={(checked) => setDraft((s) => ({ ...s, useRandomDynamicBackground: checked }))}
+            />
+            <span>
+              <strong>{t("settings.dashboardUseRandomDynamicBackground")}</strong>
+              <small>{t("settings.dashboardUseRandomDynamicBackgroundDesc")}</small>
+            </span>
+          </label>
+          {showWidgetNetworkToolsSetting && (
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.allowWidgetNetworkTools}
+              onChange={(checked) => setDraft((s) => ({ ...s, allowWidgetNetworkTools: checked }))}
+            />
+            <span>
+              <strong>{t("settings.dashboardAllowWidgetNetworkTools")}</strong>
+              <small>{t("settings.dashboardAllowWidgetNetworkToolsDesc")}</small>
+            </span>
+          </label>
+          )}
+        </div>
+      </fieldset>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.dashboardPerformance")}</legend>
+        <div className="form-grid">
+          <label data-tutorial-id="settings.dashboardMaxActiveScriptWidgets">
+            <span>{t("settings.dashboardMaxActiveScriptWidgets")}</span>
+            <input
+              inputMode="numeric"
+              max={MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT}
+              min={MAX_ACTIVE_SCRIPT_WIDGETS_MIN}
+              onChange={(event) => {
+                const raw = Number(event.currentTarget.value);
+                const clamped = Number.isFinite(raw)
+                  ? Math.min(
+                      MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT,
+                      Math.max(MAX_ACTIVE_SCRIPT_WIDGETS_MIN, Math.round(raw)),
+                    )
+                  : MAX_ACTIVE_SCRIPT_WIDGETS_MIN;
+                setDraft((s) => ({ ...s, maxActiveScriptWidgets: clamped }));
+              }}
+              step={1}
+              type="number"
+              value={draft.maxActiveScriptWidgets}
+            />
+            <small className="field-hint">
+              {t("settings.dashboardMaxActiveScriptWidgetsHint", {
+                min: MAX_ACTIVE_SCRIPT_WIDGETS_MIN,
+                max: MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT,
+              })}
+            </small>
+          </label>
+        </div>
+      </fieldset>
+    </section>
+  );
+}

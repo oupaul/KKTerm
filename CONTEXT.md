@@ -64,7 +64,7 @@ One of three visual chrome styles applied per Widget Instance: `panel`, `ambient
 _Avoid_: theme, style, layout
 
 **Widget Kind**:
-One of `builtIn`, `script`. Determines the body rendering path: `builtIn` resolves to a TypeScript component in `src/dashboard/widgets/`; `script` mounts a JavaScript body inside an isolated `iframe srcdoc` host.
+One of `builtIn`, `script`. Determines the body rendering path: `builtIn` resolves to a TypeScript component in `src/modules/dashboard/widgets/`; `script` mounts a JavaScript body inside an isolated `iframe srcdoc` host.
 _Avoid_: widget type, widget variant
 
 **App Launcher Widget**:
