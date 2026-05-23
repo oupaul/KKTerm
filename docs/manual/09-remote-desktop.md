@@ -49,7 +49,7 @@ The native HWND backing an RDP Session does not obey DOM z-index. When an app-ow
 2. Shows that bitmap underneath the DOM overlay.
 3. Hides ("parks") the ActiveX HWND until the overlay closes.
 
-This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/workspace/nativeOverlay.ts`. Do not extend this workaround to other surfaces.
+This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/modules/workspace/nativeOverlay.ts`. Do not extend this workaround to other surfaces.
 
 ## RDP / VNC settings
 

@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 
 async function loadGridModule() {
-  const source = await readFile(new URL("../src/dashboard/grid.ts", import.meta.url), "utf8");
+  const source = await readFile(new URL("../src/modules/dashboard/grid.ts", import.meta.url), "utf8");
   const js = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,

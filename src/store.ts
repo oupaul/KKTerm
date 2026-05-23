@@ -19,7 +19,7 @@ import {
   leafOrder,
   serializeLayout,
   splitLayout,
-} from "./workspace/layout";
+} from "./modules/workspace/layout";
 import type {
   AppearanceSettings,
   AiProviderSettings,

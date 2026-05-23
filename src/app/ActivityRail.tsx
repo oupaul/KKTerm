@@ -11,8 +11,8 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ConnectionIcon } from "../connections/ConnectionIcon";
-import { flattenConnections } from "../connections/treeUtils";
+import { ConnectionIcon } from "../modules/workspace/connections/ConnectionIcon";
+import { flattenConnections } from "../modules/workspace/connections/treeUtils";
 import { ariaPressed } from "../lib/aria";
 import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";

@@ -8,9 +8,9 @@
 
 > Settings page styling is consistent across sections. Related controls live inside the shared `settings-subsection settings-fieldset` group so the group title sits in the border. Editable controls look editable; disabled / readonly controls stay muted. Delete buttons inside Settings are icon-only red trash cans (no visible "Delete" text). Destructive Settings-wide actions live in **General → Settings data**, behind app-owned confirmation dialogs — not inside feature-specific sections.
 
-Settings is owned by `src/settings/SettingsPage.tsx`. Persisted bootstrap (`useBootstrapSettings`) lives in `src/lib/settings.ts`; add new persisted settings there, not via cloned effects in `src/App.tsx`.
+Settings is owned by `src/modules/settings/SettingsPage.tsx`. Persisted bootstrap (`useBootstrapSettings`) lives in `src/lib/settings.ts`; add new persisted settings there, not via cloned effects in `src/App.tsx`.
 
-The universal AI Assistant panel remains visible on Settings. `src/settings/settingsAssistantContext.ts` publishes the active section, visible control keys, and tutorial targets to the assistant. The Tutorial tool can navigate to the owning Settings section before highlighting known targets after the user accepts a navigation offer.
+The universal AI Assistant panel remains visible on Settings. `src/modules/settings/settingsAssistantContext.ts` publishes the active section, visible control keys, and tutorial targets to the assistant. The Tutorial tool can navigate to the owning Settings section before highlighting known targets after the user accepts a navigation offer.
 
 Settings tutorial targets:
 
@@ -98,7 +98,7 @@ This is the central manager for OS-keychain-backed secrets.
 
 ## AI Assistant
 
-Section header `settings.sectionAiAssistant`. Owned by `src/settings/AiSettings.tsx`. Per-provider configuration lives in `src/ai/providerRegistry/`.
+Section header `settings.sectionAiAssistant`. Owned by `src/modules/settings/AiSettings.tsx`. Per-provider configuration lives in `src/ai/providerRegistry/`.
 
 - Provider picker; known-model picker is a real `<select>` showing every model — not an `<input list>`/`datalist` (Chromium hides non-matching options behind a `datalist`).
 - Custom model ID is a separate text input.

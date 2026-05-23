@@ -78,12 +78,12 @@ import type {
   AccentName,
   IconName,
   GridDensity,
-} from "../dashboard/types";
+} from "../modules/dashboard/types";
 import type {
   AiCodingUsageProvider,
   AiCodingUsageProviderState,
   AiCodingUsageState,
-} from "../ai-coding-usage/types";
+} from "../modules/dashboard/widgets/builtin/ai-coding-usage/types";
 
 type BrowserFileHandle = {
   createWritable: () => Promise<{

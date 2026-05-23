@@ -6,7 +6,7 @@ import ts from "typescript";
 
 async function loadDisplayModule() {
   const source = await readFile(
-    new URL("../src/ai-coding-usage/display.ts", import.meta.url),
+    new URL("../src/modules/dashboard/widgets/builtin/ai-coding-usage/display.ts", import.meta.url),
     "utf8",
   );
   const compiled = ts.transpileModule(source, {

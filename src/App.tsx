@@ -22,18 +22,18 @@ import {
   PanelResizeHandle,
   useWorkspaceChromeLayout,
 } from "./app/workspaceChromeLayout";
-import { ConnectionSidebar } from "./connections/ConnectionSidebar";
-import { DashboardPage } from "./dashboard/DashboardPage";
-import { useDashboardStore } from "./dashboard/state/dashboardStore";
-import { useDashboardBackendInvalidation } from "./dashboard/state/invalidation";
+import { ConnectionSidebar } from "./modules/workspace/connections/ConnectionSidebar";
+import { DashboardPage } from "./modules/dashboard/DashboardPage";
+import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
+import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
 import { ariaHidden } from "./lib/aria";
 import { useBootstrapSettings } from "./lib/settings";
-import { SettingsPage } from "./settings/SettingsPage";
-import type { SettingsAssistantContext } from "./settings/settingsAssistantContext";
-import type { SettingsSectionId } from "./settings/settingsAssistantContext";
+import { SettingsPage } from "./modules/settings/SettingsPage";
+import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
+import type { SettingsSectionId } from "./modules/settings/settingsAssistantContext";
 import { useWorkspaceStore } from "./store";
-import { StatusBar } from "./workspace/StatusBar";
-import { TabStrip, WorkspaceCanvas } from "./workspace/WorkspaceCanvas";
+import { StatusBar } from "./modules/workspace/StatusBar";
+import { TabStrip, WorkspaceCanvas } from "./modules/workspace/WorkspaceCanvas";
 import "@xterm/xterm/css/xterm.css";
 import "./App.css";
 

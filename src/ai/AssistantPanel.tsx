@@ -1,11 +1,11 @@
-import { ConnectionIcon } from "../connections/ConnectionIcon";
+import { ConnectionIcon } from "../modules/workspace/connections/ConnectionIcon";
 import type { TutorialHighlightRequest } from "../app/TutorialOverlay";
 import {
   normalizeTutorialNavigationTarget,
   tutorialNavigationForTarget,
 } from "../app/tutorialNavigationModel";
-import { workspaceKindLabel } from "../connections/utils";
-import { inspectActiveSshSystemContext } from "../terminal/TerminalWorkspace";
+import { workspaceKindLabel } from "../modules/workspace/connections/utils";
+import { inspectActiveSshSystemContext } from "../modules/workspace/connections/terminal/TerminalWorkspace";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
 import {
   Bot,
@@ -64,14 +64,14 @@ import {
   type AssistantToolCallStatus,
 } from "./streamMessage";
 import { useWorkspaceStore } from "../store";
-import { useDashboardStore } from "../dashboard/state/dashboardStore";
+import { useDashboardStore } from "../modules/dashboard/state/dashboardStore";
 import {
   getFileBrowserController,
   getPaneRenderer,
   getRemoteDesktopController,
   sendTextToRdpPane,
   writeInputToPane,
-} from "../workspace/paneRegistry";
+} from "../modules/workspace/paneRegistry";
 import i18next from "../i18n/config";
 import { prepareAssistantTerminalInput } from "./terminalCommandSend";
 import { Channel } from "@tauri-apps/api/core";

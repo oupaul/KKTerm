@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("URL toolbar includes an open externally button for the current address", async () => {
   const source = await readFile(
-    new URL("../src/webview/WebViewWorkspace.tsx", import.meta.url),
+    new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
     "utf8",
   );
 

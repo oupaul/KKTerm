@@ -54,7 +54,7 @@ The panel remains available on Settings and receives a Settings page context so 
 
 ## Status Bar (bottom)
 
-Owned by `src/workspace/StatusBar.tsx`. Three roles:
+Owned by `src/modules/workspace/StatusBar.tsx`. Three roles:
 
 1. **Host usage metrics** (left side, visible in every Module and page):
    - `workspace.cpu` / `workspace.cpuUsage`

@@ -76,9 +76,9 @@ Implement this as a built-in Dashboard widget, not an AI Created widget.
 
 Frontend ownership:
 
-- `src/dashboard/widgets/AiCodingUsageBody.tsx`: widget body.
-- `src/dashboard/registry/builtInRegistry.ts`: register the built-in entry.
-- `src/ai-coding-usage/`: provider-specific UI helpers, state hooks, and types.
+- `src/modules/dashboard/widgets/AiCodingUsageBody.tsx`: widget body.
+- `src/modules/dashboard/registry/builtInRegistry.ts`: register the built-in entry.
+- `src/modules/dashboard/widgets/builtin/ai-coding-usage/`: provider-specific UI helpers, state hooks, and types.
 - `src/lib/tauri.ts`: typed wrappers for new Tauri commands.
 
 Backend ownership:

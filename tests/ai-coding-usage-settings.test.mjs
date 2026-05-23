@@ -6,7 +6,7 @@ import ts from "typescript";
 
 async function loadSettingsModule() {
   const source = await readFile(
-    new URL("../src/ai-coding-usage/settings.ts", import.meta.url),
+    new URL("../src/modules/dashboard/widgets/builtin/ai-coding-usage/settings.ts", import.meta.url),
     "utf8",
   );
   const compiled = ts.transpileModule(source, {

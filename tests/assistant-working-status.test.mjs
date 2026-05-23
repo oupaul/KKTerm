@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("status bar exposes a clickable AI working indicator", async () => {
   const statusBarSource = await readFile(
-    new URL("../src/workspace/StatusBar.tsx", import.meta.url),
+    new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url),
     "utf8",
   );
   const appSource = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");

@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("workspace pane close buttons render only when a tab has multiple panes", async () => {
   const source = await readFile(
-    new URL("../src/terminal/TerminalWorkspace.tsx", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
     "utf8",
   );
 
@@ -16,7 +16,7 @@ test("workspace pane close buttons render only when a tab has multiple panes", a
 
 test("embedded URL and remote desktop headers reserve close-button space only when close is visible", async () => {
   const css = await readFile(
-    new URL("../src/terminal/terminal.css", import.meta.url),
+    new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url),
     "utf8",
   );
 
@@ -28,7 +28,7 @@ test("embedded URL and remote desktop headers reserve close-button space only wh
 
 test("stored Connection layouts include URL panes and URL Connections hydrate them on open", async () => {
   const layoutSource = await readFile(
-    new URL("../src/workspace/layout.ts", import.meta.url),
+    new URL("../src/modules/workspace/layout.ts", import.meta.url),
     "utf8",
   );
   const storeSource = await readFile(

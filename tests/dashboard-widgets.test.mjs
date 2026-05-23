@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DASHBOARD_BUILTIN_WIDGETS } from "../src/dashboard/widgets.ts";
+import { DASHBOARD_BUILTIN_WIDGETS } from "../src/modules/dashboard/widgets.ts";
 
 test("App Launcher is available as a built-in Dashboard widget", () => {
   const widget = DASHBOARD_BUILTIN_WIDGETS.find((entry) => entry.id === "app-launcher");

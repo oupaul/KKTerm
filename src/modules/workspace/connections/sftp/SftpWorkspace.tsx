@@ -1,0 +1,1086 @@
+import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { ScreenshotMenu } from "../../ScreenshotMenu";
+
+import { Download, Terminal, Trash2, Upload, X } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { invokeCommand, isTauriRuntime, type LocalDirectoryEntry, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../../../../lib/tauri";
+import {
+  fileBrowserCommandsFor,
+  type FileBrowserCommands,
+} from "../../../../lib/fileBrowserCommands";
+import {
+  registerFileBrowserController,
+  unregisterFileBrowserController,
+  type FileBrowserController,
+} from "../../paneRegistry";
+import { useWorkspaceStore } from "../../../../store";
+import type { FileEntry, SftpSettings, WorkspaceTab } from "../../../../types";
+import { FilePane } from "./SftpFilePane";
+import {
+  ConfirmRemoteDeleteDialog,
+  NewRemoteFolderDialog,
+  SftpContextMenu,
+  SftpPropertiesPopup,
+  TransferConflictDialog,
+} from "./SftpOverlays";
+import { formatFileSize, formatMode, formatRemoteTime, formatTransferResult, joinLocalPath, joinRemotePath } from "./format";
+import type {
+  FilePaneSide,
+  FilePropertiesState,
+  RemoteDeleteRequest,
+  SftpContextMenuState,
+  TransferConflictDecision,
+  TransferConflictState,
+  TransferDirection,
+  TransferRecord,
+} from "./types";
+
+const TRANSFER_HISTORY_STATES: TransferRecord["state"][] = ["canceled", "done", "failed"];
+
+export function SftpWorkspace({
+  isActive,
+  tab,
+  commands: commandsProp,
+}: {
+  isActive: boolean;
+  tab: WorkspaceTab;
+  commands?: FileBrowserCommands;
+}) {
+  const { t } = useTranslation();
+  const openTerminalHere = useWorkspaceStore((state) => state.openTerminalHere);
+  const connection = tab.connection;
+  const commands = useMemo<FileBrowserCommands | null>(
+    () => (commandsProp ?? (connection ? fileBrowserCommandsFor(connection) : null)),
+    [commandsProp, connection],
+  );
+  const workspaceRef = useRef<HTMLElement | null>(null);
+  const [localPath, setLocalPath] = useState("");
+  const [localFiles, setLocalFiles] = useState<FileEntry[]>([]);
+  const [remotePath, setRemotePath] = useState(".");
+  const [remoteFiles, setRemoteFiles] = useState<FileEntry[]>([]);
+  const [status, setStatus] = useState(t("sftp.connecting"));
+  const [localStatus, setLocalStatus] = useState("");
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
+  const [isRemoteLoading, setIsRemoteLoading] = useState(false);
+  const [selectedLocalNames, setSelectedLocalNames] = useState<string[]>([]);
+  const [selectedRemoteNames, setSelectedRemoteNames] = useState<string[]>([]);
+  const [transfers, setTransfers] = useState<TransferRecord[]>([]);
+  const [contextMenu, setContextMenu] = useState<SftpContextMenuState | null>(null);
+  const [propertiesState, setPropertiesState] = useState<FilePropertiesState | null>(null);
+  const [transferConflict, setTransferConflict] = useState<TransferConflictState | null>(null);
+  const [newRemoteFolderOpen, setNewRemoteFolderOpen] = useState(false);
+  const [remoteDeleteRequest, setRemoteDeleteRequest] = useState<RemoteDeleteRequest | null>(null);
+  const [renameRequest, setRenameRequest] = useState<{
+    side: FilePaneSide;
+    name: string;
+    requestId: number;
+  } | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const activeTransferIdRef = useRef<string | null>(null);
+  const transferConflictResolverRef = useRef<
+    ((decision: TransferConflictDecision) => void) | null
+  >(null);
+  const overwriteAllConflictsRef = useRef<Record<TransferDirection, boolean>>({
+    upload: false,
+    download: false,
+  });
+  const markConnectionSessionStarted = useWorkspaceStore(
+    (state) => state.markConnectionSessionStarted,
+  );
+  const markConnectionSessionEnded = useWorkspaceStore(
+    (state) => state.markConnectionSessionEnded,
+  );
+
+  useEffect(() => {
+    void loadLocalDirectory();
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let dispose: (() => void) | undefined;
+    let disposed = false;
+    const progressEvent = commands?.transferProgressEvent ?? "sftp-transfer-progress";
+    void listen<SftpTransferProgress>(progressEvent, (event) => {
+      const progress = event.payload;
+      setTransfers((current) =>
+        current.map((transfer) =>
+          transfer.id === progress.transferId
+            ? {
+                ...transfer,
+                progress: progress.progress,
+                detail:
+                  progress.totalBytes > 0
+                    ? `${formatFileSize(progress.transferredBytes)} / ${formatFileSize(
+                        progress.totalBytes,
+                      )}`
+                    : `${formatFileSize(progress.transferredBytes)} transferred`,
+              }
+            : transfer,
+        ),
+      );
+    }).then((unlisten) => {
+      if (disposed) {
+        unlisten();
+        return;
+      }
+      dispose = unlisten;
+    });
+
+    return () => {
+      disposed = true;
+      dispose?.();
+    };
+  }, [commands]);
+
+  const loadLocalDirectory = async (path?: string) => {
+    if (!isTauriRuntime()) {
+      setLocalStatus(t("sftp.tauriUnavailable"));
+      setLocalFiles([]);
+      return;
+    }
+
+    setIsLocalLoading(true);
+    setLocalStatus(path ? t("sftp.openingFolder") : t("sftp.loadingLocal"));
+    try {
+      const result = await invokeCommand("list_local_directory", {
+        request: { path },
+      });
+      setLocalPath(result.path);
+      setLocalFiles(result.entries.map(localEntryToFileEntry));
+      setSelectedLocalNames([]);
+      setLocalStatus("");
+    } catch (error) {
+      setLocalStatus(String(error));
+      setLocalFiles([]);
+    } finally {
+      setIsLocalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!connection) {
+      setStatus(t("sftp.noSshConnection"));
+      return;
+    }
+
+    if (!isTauriRuntime()) {
+      setStatus(t("sftp.tauriUnavailable"));
+      return;
+    }
+
+    let disposed = false;
+    let sessionStarted = false;
+    const requestedSessionId = uniqueRuntimeId(`${connection.id}-sftp`);
+    sessionIdRef.current = requestedSessionId;
+    setIsRemoteLoading(true);
+    setStatus(t("sftp.verifyingHost"));
+
+    (async () => {
+      try {
+        if (!commands) {
+          throw new Error("file-browser commands adapter not initialized");
+        }
+        if (commands.capabilities.verifySshHostKey && usesNativeSshHostKeyVerification(connection)) {
+          const preview = await invokeCommand("inspect_ssh_host_key", {
+            request: {
+              host: connection.host,
+              port: connection.port,
+            },
+          });
+          await confirmTrustedSshHostKey(preview);
+        }
+
+        setStatus(t("sftp.openingSftp"));
+        const result = await commands.startSession({
+          sessionId: requestedSessionId,
+          path: ".",
+        });
+
+        if (disposed) {
+          void commands.closeSession(result.sessionId);
+          return;
+        }
+
+        sessionIdRef.current = result.sessionId;
+        sessionStarted = true;
+        markConnectionSessionStarted(connection.id);
+        setRemotePath(result.path);
+        setRemoteFiles(result.entries.map(remoteEntryToFileEntry));
+        setSelectedRemoteNames([]);
+        setStatus(t("sftp.connected"));
+      } catch (error) {
+        if (!disposed) {
+          setStatus(String(error));
+          setRemoteFiles([]);
+        }
+      } finally {
+        if (!disposed) {
+          setIsRemoteLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      const sessionId =
+        sessionIdRef.current === requestedSessionId ? sessionIdRef.current : requestedSessionId;
+      if (sessionId && commands) {
+        void commands.closeSession(sessionId);
+      }
+      if (sessionStarted) {
+        markConnectionSessionEnded(connection.id);
+      }
+      if (sessionIdRef.current === requestedSessionId) {
+        sessionIdRef.current = null;
+      }
+    };
+  }, [commands, connection, markConnectionSessionEnded, markConnectionSessionStarted]);
+
+  const refreshRemoteDirectory = async () => {
+    await loadRemoteDirectory(remotePath, t("sftp.refreshing"));
+  };
+
+  const loadRemoteDirectory = async (path: string, loadingStatus = t("sftp.openingFolder")) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    setIsRemoteLoading(true);
+    setStatus(loadingStatus);
+    try {
+      const result = await commands.listDirectory({ sessionId, path });
+      setRemotePath(result.path);
+      setRemoteFiles(result.entries.map(remoteEntryToFileEntry));
+      setSelectedRemoteNames([]);
+      setStatus(t("sftp.connected"));
+    } catch (error) {
+      setStatus(String(error));
+    } finally {
+      setIsRemoteLoading(false);
+    }
+  };
+
+  const openRemoteFolder = async (folderName: string) => {
+    await loadRemoteDirectory(joinRemotePath(remotePath, folderName));
+  };
+
+  const openRemoteParent = async () => {
+    await loadRemoteDirectory(joinRemotePath(remotePath, ".."));
+  };
+
+  const refreshLocalDirectory = async () => {
+    await loadLocalDirectory(localPath || undefined);
+  };
+
+  const openLocalFolder = async (folderName: string) => {
+    await loadLocalDirectory(joinLocalPath(localPath, folderName));
+  };
+
+  const openLocalParent = async () => {
+    await loadLocalDirectory(joinLocalPath(localPath, ".."));
+  };
+
+  const setTransferState = (id: string, patch: Partial<TransferRecord>) => {
+    setTransfers((current) =>
+      current.map((transfer) => (transfer.id === id ? { ...transfer, ...patch } : transfer)),
+    );
+  };
+
+  const resolveTransferConflict = (decision: TransferConflictDecision) => {
+    transferConflictResolverRef.current?.(decision);
+    transferConflictResolverRef.current = null;
+    setTransferConflict(null);
+  };
+
+  const promptTransferConflict = (conflict: TransferConflictState) =>
+    new Promise<TransferConflictDecision>((resolve) => {
+      transferConflictResolverRef.current = resolve;
+      setTransferConflict(conflict);
+    });
+
+  const conflictTargetPath = (direction: TransferDirection, fileName: string) =>
+    direction === "upload" ? joinRemotePath(remotePath, fileName) : joinLocalPath(localPath, fileName);
+
+  const destinationHasVisibleConflict = (direction: TransferDirection, fileName: string) => {
+    const targetFiles = direction === "upload" ? remoteFiles : localFiles;
+    return targetFiles.some((file) =>
+      direction === "download"
+        ? file.name.localeCompare(fileName, undefined, { sensitivity: "accent" }) === 0
+        : file.name === fileName,
+    );
+  };
+
+  const isExistingDestinationError = (message: string) =>
+    /already exists/i.test(message) || /destination .*exists/i.test(message);
+
+  const conflictPathFromError = (message: string, fallbackPath: string) => {
+    const match = message.match(/already exists:\s*(.+)$/i);
+    return match?.[1]?.trim() || fallbackPath;
+  };
+
+  const runQueuedTransfer = async (transfer: TransferRecord) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !isTauriRuntime()) {
+      setTransferState(transfer.id, {
+        state: "failed",
+        progress: 100,
+        detail: t("sftp.sessionUnavailable"),
+      });
+      activeTransferIdRef.current = null;
+      return;
+    }
+
+    setTransferState(transfer.id, {
+      state: "active",
+      detail: t("sftp.preparing"),
+    });
+
+    try {
+      if (!commands) throw new Error("commands adapter not initialized");
+      const result =
+        transfer.direction === "upload"
+          ? await commands.uploadPath({
+              sessionId,
+              transferId: transfer.id,
+              localPath: transfer.localPath ?? "",
+              remoteDirectory: transfer.remoteDirectory ?? remotePath,
+              overwriteBehavior: transfer.overwriteBehavior,
+            })
+          : await commands.downloadPath({
+              sessionId,
+              transferId: transfer.id,
+              remotePath: transfer.remotePath ?? "",
+              localDirectory: transfer.localDirectory ?? localPath,
+              overwriteBehavior: transfer.overwriteBehavior,
+            });
+
+      setTransferState(transfer.id, {
+        state: "done",
+        progress: 100,
+        detail: formatTransferResult(result),
+      });
+
+      if (transfer.direction === "upload") {
+        await refreshRemoteDirectory();
+      } else {
+        await refreshLocalDirectory();
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        transfer.overwriteBehavior !== "overwrite" &&
+        isExistingDestinationError(message) &&
+        overwriteAllConflictsRef.current[transfer.direction]
+      ) {
+        setTransferState(transfer.id, {
+          state: "queued",
+          progress: 0,
+          detail: t("sftp.waitingToOverwrite"),
+          overwriteBehavior: "overwrite",
+        });
+        return;
+      }
+
+      if (
+        transfer.overwriteBehavior !== "overwrite" &&
+        isExistingDestinationError(message) &&
+        !overwriteAllConflictsRef.current[transfer.direction]
+      ) {
+        const decision = await promptTransferConflict({
+          direction: transfer.direction,
+          name: transfer.name,
+          targetPath: conflictPathFromError(
+            message,
+            transfer.direction === "upload"
+              ? joinRemotePath(transfer.remoteDirectory ?? remotePath, transfer.name)
+              : joinLocalPath(transfer.localDirectory ?? localPath, transfer.name),
+          ),
+          isFolder: false,
+          remainingConflicts: transfers.filter(
+            (queuedTransfer) =>
+              queuedTransfer.direction === transfer.direction && queuedTransfer.state === "queued",
+          ).length,
+        });
+
+        if (decision === "overwrite" || decision === "overwriteAll") {
+          if (decision === "overwriteAll") {
+            overwriteAllConflictsRef.current[transfer.direction] = true;
+            setTransfers((current) =>
+              current.map((queuedTransfer) =>
+                queuedTransfer.direction === transfer.direction && queuedTransfer.state === "queued"
+                  ? { ...queuedTransfer, overwriteBehavior: "overwrite" }
+                  : queuedTransfer,
+              ),
+            );
+          }
+          setTransferState(transfer.id, {
+            state: "queued",
+            progress: 0,
+            detail: t("sftp.waitingToOverwrite"),
+            overwriteBehavior: "overwrite",
+          });
+          return;
+        }
+
+        setTransferState(transfer.id, {
+          state: decision === "skip" ? "canceled" : "failed",
+          progress: 100,
+          detail: decision === "skip" ? t("sftp.skippedExisting") : t("sftp.transferCanceled"),
+        });
+        return;
+      }
+
+      setTransferState(transfer.id, {
+        state: message.includes("transfer canceled") ? "canceled" : "failed",
+        progress: 100,
+        detail: message.includes("transfer canceled") ? t("sftp.canceled") : message,
+      });
+    } finally {
+      activeTransferIdRef.current = null;
+      setTransfers((current) => [...current]);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTransferIdRef.current) {
+      return;
+    }
+
+    const nextTransfer = transfers.find((transfer) => transfer.state === "queued");
+    if (!nextTransfer) {
+      return;
+    }
+
+    activeTransferIdRef.current = nextTransfer.id;
+    void runQueuedTransfer(nextTransfer);
+  }, [transfers]);
+
+  useEffect(() => {
+    if (transfers.some((transfer) => transfer.state === "queued" || transfer.state === "active")) {
+      return;
+    }
+
+    overwriteAllConflictsRef.current = {
+      upload: false,
+      download: false,
+    };
+  }, [transfers]);
+
+  const enqueueTransfers = async (direction: TransferDirection, names: string[]) => {
+    const sessionId = sessionIdRef.current;
+    const selected =
+      direction === "upload"
+        ? localFiles.filter((file) => names.includes(file.name))
+        : remoteFiles.filter((file) => names.includes(file.name));
+    if (!sessionId || selected.length === 0 || !localPath || !isTauriRuntime()) {
+      return;
+    }
+
+    const visibleConflictCount = selected.filter((file) =>
+      destinationHasVisibleConflict(direction, file.name),
+    ).length;
+    let batchOverwriteAll = overwriteAllConflictsRef.current[direction];
+    let promptedConflictCount = 0;
+    const nextTransfers: TransferRecord[] = [];
+
+    for (const file of selected) {
+      let overwriteBehavior: SftpSettings["overwriteBehavior"] = "fail";
+      if (destinationHasVisibleConflict(direction, file.name)) {
+        if (!batchOverwriteAll) {
+          const decision = await promptTransferConflict({
+            direction,
+            name: file.name,
+            targetPath: conflictTargetPath(direction, file.name),
+            isFolder: file.kind === "folder",
+            remainingConflicts: Math.max(visibleConflictCount - promptedConflictCount - 1, 0),
+          });
+          promptedConflictCount += 1;
+
+          if (decision === "cancel") {
+            break;
+          }
+          if (decision === "skip") {
+            continue;
+          }
+          if (decision === "overwriteAll") {
+            batchOverwriteAll = true;
+            overwriteAllConflictsRef.current[direction] = true;
+          }
+        }
+
+        overwriteBehavior = "overwrite";
+      }
+
+      nextTransfers.push({
+        id: uniqueRuntimeId(direction),
+        direction,
+        name: file.name,
+        state: "queued",
+        progress: 0,
+        detail: t("sftp.waiting"),
+        overwriteBehavior,
+        localPath: direction === "upload" ? joinLocalPath(localPath, file.name) : undefined,
+        remoteDirectory: direction === "upload" ? remotePath : undefined,
+        remotePath: direction === "download" ? joinRemotePath(remotePath, file.name) : undefined,
+        localDirectory: direction === "download" ? localPath : undefined,
+      });
+    }
+
+    if (nextTransfers.length > 0) {
+      setTransfers((current) => [...current, ...nextTransfers]);
+    }
+  };
+
+  const handleUpload = (names = selectedLocalNames) => {
+    void enqueueTransfers("upload", names);
+  };
+
+  const handleDownload = (names = selectedRemoteNames) => {
+    void enqueueTransfers("download", names);
+  };
+
+  const handleCancelTransfer = async (transfer: TransferRecord) => {
+    if (transfer.state === "queued") {
+      setTransferState(transfer.id, {
+        state: "canceled",
+        progress: 100,
+        detail: t("sftp.canceledBeforeStart"),
+      });
+      return;
+    }
+
+    if (transfer.state !== "active") {
+      return;
+    }
+
+    setTransferState(transfer.id, { detail: t("sftp.canceling") });
+    try {
+      if (!commands) throw new Error("commands adapter not initialized");
+      await commands.cancelTransfer({ transferId: transfer.id });
+    } catch (error) {
+      setTransferState(transfer.id, {
+        state: "failed",
+        progress: 100,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const handleCreateRemoteFolder = () => {
+    if (!sessionIdRef.current || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    setNewRemoteFolderOpen(true);
+  };
+
+  const handleConfirmCreateRemoteFolder = async (name: string) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setStatus(t("sftp.folderNameBlank"));
+      return;
+    }
+
+    setNewRemoteFolderOpen(false);
+    setIsRemoteLoading(true);
+    setStatus(t("sftp.creatingFolder"));
+    try {
+      await commands.createFolder({
+        sessionId,
+        parentPath: remotePath,
+        name: trimmedName,
+      });
+      await refreshRemoteDirectory();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsRemoteLoading(false);
+    }
+  };
+
+  const handleRenameRemotePath = async (currentName: string, newName: string) => {
+    const sessionId = sessionIdRef.current;
+    const selected = remoteFiles.find((file) => file.name === currentName);
+    if (!sessionId || !selected || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+      setStatus(t("sftp.remoteNameBlank"));
+      return;
+    }
+    if (trimmedName === selected.name) {
+      return;
+    }
+
+    setIsRemoteLoading(true);
+    setStatus(t("sftp.renaming"));
+    try {
+      await commands.renamePath({
+        sessionId,
+        path: joinRemotePath(remotePath, selected.name),
+        newName: trimmedName,
+      });
+      await refreshRemoteDirectory();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsRemoteLoading(false);
+    }
+  };
+
+  const handleDeleteRemotePath = async (names = selectedRemoteNames) => {
+    const selected = remoteFiles.filter((file) => names.includes(file.name));
+    if (!sessionIdRef.current || selected.length === 0 || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    setRemoteDeleteRequest({
+      items: selected.map((item) => ({ kind: item.kind, name: item.name })),
+    });
+  };
+
+  const handleConfirmDeleteRemotePath = async () => {
+    const sessionId = sessionIdRef.current;
+    const request = remoteDeleteRequest;
+    if (!sessionId || !request || !isTauriRuntime() || !commands) {
+      return;
+    }
+
+    setRemoteDeleteRequest(null);
+    setIsRemoteLoading(true);
+    setStatus(t("sftp.deleting"));
+    try {
+      for (const item of request.items) {
+        await commands.deletePath({
+          sessionId,
+          path: joinRemotePath(remotePath, item.name),
+        });
+      }
+      await refreshRemoteDirectory();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsRemoteLoading(false);
+    }
+  };
+
+  const handleOpenTerminalHere = () => {
+    if (!connection || !isConnected || !commands?.capabilities.openTerminalHere) {
+      return;
+    }
+
+    openTerminalHere(connection, remotePath);
+  };
+
+  const selectedLocalFiles = localFiles.filter((file) => selectedLocalNames.includes(file.name));
+  const selectedRemoteFiles = remoteFiles.filter((file) => selectedRemoteNames.includes(file.name));
+
+  const handleDropTransfer = (targetSide: FilePaneSide, names: string[]) => {
+    if (targetSide === "remote") {
+      handleUpload(names);
+      return;
+    }
+
+    handleDownload(names);
+  };
+
+  const handleOpenContextMenu = (
+    side: FilePaneSide,
+    names: string[],
+    event: ReactMouseEvent,
+  ) => {
+    event.preventDefault();
+    const fallbackNames = side === "local" ? selectedLocalNames : selectedRemoteNames;
+    const nextNames = names.length > 0 ? names : fallbackNames;
+    if (nextNames.length === 0) {
+      setContextMenu(null);
+      return;
+    }
+
+    if (side === "local") {
+      setSelectedLocalNames(nextNames);
+    } else {
+      setSelectedRemoteNames(nextNames);
+    }
+
+    setContextMenu({
+      side,
+      names: nextNames,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  const handleContextTransfer = (menu: SftpContextMenuState) => {
+    if (menu.side === "local") {
+      handleUpload(menu.names);
+    } else {
+      handleDownload(menu.names);
+    }
+    setContextMenu(null);
+  };
+
+  const handleContextRename = (menu: SftpContextMenuState) => {
+    if (menu.side === "remote" && menu.names.length === 1) {
+      setSelectedRemoteNames(menu.names);
+      setRenameRequest({
+        side: "remote",
+        name: menu.names[0],
+        requestId: Date.now(),
+      });
+    }
+    setContextMenu(null);
+  };
+
+  const handleContextDelete = (menu: SftpContextMenuState) => {
+    if (menu.side === "remote") {
+      void handleDeleteRemotePath(menu.names);
+    }
+    setContextMenu(null);
+  };
+
+  const handleOpenProperties = async (side: FilePaneSide, names: string[]) => {
+    const name = names[0];
+    const entry =
+      side === "local"
+        ? localFiles.find((file) => file.name === name)
+        : remoteFiles.find((file) => file.name === name);
+    if (!entry) {
+      return;
+    }
+
+    const path =
+      side === "local" ? joinLocalPath(localPath, entry.name) : joinRemotePath(remotePath, entry.name);
+    let remoteProperties: SftpPathProperties | undefined;
+    if (side === "remote") {
+      const sessionId = sessionIdRef.current;
+      if (!sessionId || !isTauriRuntime() || !commands) {
+        setStatus(t("sftp.sessionUnavailable"));
+        return;
+      }
+
+      try {
+        remoteProperties = await commands.pathProperties({ sessionId, path });
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    setPropertiesState({ side, entry, path, remoteProperties });
+  };
+
+  const handleContextProperties = (menu: SftpContextMenuState) => {
+    void handleOpenProperties(menu.side, menu.names);
+    setContextMenu(null);
+  };
+
+  const handleUpdateRemoteProperties = async (request: {
+    permissions?: string;
+    uid?: number;
+    gid?: number;
+  }) => {
+    const sessionId = sessionIdRef.current;
+    if (
+      !sessionId ||
+      !propertiesState ||
+      propertiesState.side !== "remote" ||
+      !isTauriRuntime() ||
+      !commands ||
+      !commands.capabilities.editPermissions
+    ) {
+      return;
+    }
+
+    try {
+      const remoteProperties = await commands.updatePathProperties({
+        sessionId,
+        path: propertiesState.path,
+        ...request,
+      });
+      setPropertiesState((current) =>
+        current ? { ...current, remoteProperties } : current,
+      );
+      await refreshRemoteDirectory();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const isConnected = status === t("sftp.connected") && Boolean(sessionIdRef.current);
+  const isTransferring = transfers.some((transfer) => transfer.state === "active");
+  const activeTransferCount = transfers.filter((transfer) => transfer.state === "active").length;
+  const clearableTransferCount = transfers.filter((transfer) =>
+    TRANSFER_HISTORY_STATES.includes(transfer.state),
+  ).length;
+  const toolbarTitle = tab.toolbarTitle ?? (connection ? connectionToolbarTitle(connection) : tab.title);
+
+  useEffect(() => {
+    if (!commands || !isTauriRuntime()) {
+      return;
+    }
+    const controller: FileBrowserController = {
+      kind: tab.kind === "ftp" ? "ftp" : "sftp",
+      list: async (path) => {
+        const sessionId = sessionIdRef.current;
+        if (!sessionId) {
+          throw new Error(t("sftp.sessionUnavailable"));
+        }
+        return commands.listDirectory({ sessionId, path: path?.trim() || remotePath });
+      },
+      createFolder: async (parentPath, name) => {
+        const sessionId = sessionIdRef.current;
+        if (!sessionId) {
+          throw new Error(t("sftp.sessionUnavailable"));
+        }
+        const result = await commands.createFolder({ sessionId, parentPath, name });
+        await refreshRemoteDirectory();
+        return result ?? { ok: true };
+      },
+      rename: async (path, newName) => {
+        const sessionId = sessionIdRef.current;
+        if (!sessionId) {
+          throw new Error(t("sftp.sessionUnavailable"));
+        }
+        const result = await commands.renamePath({ sessionId, path, newName });
+        await refreshRemoteDirectory();
+        return result ?? { ok: true };
+      },
+      deletePath: async (path) => {
+        const sessionId = sessionIdRef.current;
+        if (!sessionId) {
+          throw new Error(t("sftp.sessionUnavailable"));
+        }
+        const result = await commands.deletePath({ sessionId, path });
+        await refreshRemoteDirectory();
+        return result ?? { ok: true };
+      },
+      snapshot: () => ({
+        kind: tab.kind === "ftp" ? "ftp" : "sftp",
+        tabId: tab.id,
+        connectionId: connection?.id,
+        connectionName: connection?.name,
+        remotePath,
+        remoteFiles,
+        selectedRemoteNames,
+        status,
+      }),
+    };
+    registerFileBrowserController(tab.id, controller);
+    return () => unregisterFileBrowserController(tab.id, controller);
+  }, [commands, connection?.id, connection?.name, remoteFiles, remotePath, selectedRemoteNames, status, t, tab.id, tab.kind]);
+
+  return (
+    <section
+      className={isActive ? "sftp-workspace active" : "sftp-workspace"}
+      ref={workspaceRef}
+    >
+      <div className="workspace-toolbar" data-tutorial-id="sftp.toolbar">
+        <div>
+          <strong>{toolbarTitle}</strong>
+          <span>{status === t("sftp.connected") ? tab.subtitle : status}</span>
+        </div>
+        <div className="toolbar-cluster">
+          <button
+            className="toolbar-button"
+            data-tutorial-id="sftp.upload"
+            disabled={!isConnected || selectedLocalFiles.length === 0}
+            onClick={() => handleUpload()}
+            type="button"
+          >
+            <Upload size={15} />
+            {t("sftp.upload")}
+          </button>
+          <button
+            className="toolbar-button"
+            data-tutorial-id="sftp.download"
+            disabled={!isConnected || selectedRemoteFiles.length === 0 || !localPath}
+            onClick={() => handleDownload()}
+            type="button"
+          >
+            <Download size={15} />
+            {t("sftp.download")}
+          </button>
+          <button
+            className="toolbar-button"
+            data-tutorial-id="sftp.terminal"
+            disabled={!isConnected}
+            onClick={handleOpenTerminalHere}
+            type="button"
+          >
+            <Terminal size={15} />
+            {t("sftp.terminal")}
+          </button>
+          <ScreenshotMenu
+            dataTutorialId="workspace.screenshotMenu"
+            targetLabel={t("sftp.screenshotTarget", { title: tab.title })}
+            targetRef={workspaceRef}
+          />
+        
+        </div>
+      </div>
+
+      <div className="file-manager">
+        <FilePane
+          side="local"
+          title={t("sftp.local")}
+          path={localPath || localStatus || t("sftp.localFiles")}
+          files={localFiles}
+          isLoading={isLocalLoading}
+          status={localStatus}
+          selectedNames={selectedLocalNames}
+          onRefresh={refreshLocalDirectory}
+          onGoUp={openLocalParent}
+          onOpenFolder={openLocalFolder}
+          onSelectionChange={setSelectedLocalNames}
+          onContextMenuRequest={handleOpenContextMenu}
+          onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
+        />
+        <FilePane
+          side="remote"
+          title={t("sftp.remote")}
+          path={remotePath}
+          files={remoteFiles}
+          isLoading={isRemoteLoading}
+          status={status === t("sftp.connected") ? "" : status}
+          selectedNames={selectedRemoteNames}
+          onRefresh={refreshRemoteDirectory}
+          onGoUp={openRemoteParent}
+          onCreateFolder={isConnected && !isTransferring ? handleCreateRemoteFolder : undefined}
+          onRenameSelected={isConnected && !isTransferring ? handleRenameRemotePath : undefined}
+          onDeleteSelected={isConnected && !isTransferring ? handleDeleteRemotePath : undefined}
+          onOpenFolder={openRemoteFolder}
+          onSelectionChange={setSelectedRemoteNames}
+          onContextMenuRequest={handleOpenContextMenu}
+          onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
+          renameRequest={renameRequest?.side === "remote" ? renameRequest : undefined}
+        />
+      </div>
+
+      <div className="transfer-queue" data-tutorial-id="sftp.transferQueue">
+        <header>
+          <strong>{t("sftp.transferActivity")}</strong>
+          <div className="transfer-queue-actions">
+            <span>{t("sftp.transferCountActive", { count: activeTransferCount })}</span>
+            <button
+              className="toolbar-button transfer-clear-button"
+              disabled={clearableTransferCount === 0}
+              onClick={() =>
+                setTransfers((current) =>
+                  current.filter((transfer) => !TRANSFER_HISTORY_STATES.includes(transfer.state)),
+                )
+              }
+              type="button"
+            >
+              <Trash2 size={14} />
+              {t("sftp.clear")}
+            </button>
+          </div>
+        </header>
+        {transfers.length === 0 ? (
+          <div className="transfer-row transfer-row-muted">{t("sftp.noTransfers")}</div>
+        ) : null}
+        {transfers.map((transfer) => (
+          <div className="transfer-row" key={transfer.id}>
+            <span>
+              {t(transfer.direction === "upload" ? "sftp.upload" : "sftp.download")} {transfer.name}
+            </span>
+            <progress value={transfer.progress} max="100" />
+            <small className={`transfer-state transfer-state-${transfer.state}`}>
+              {transfer.state}
+            </small>
+            <small>{transfer.detail}</small>
+            <button
+              className="row-action"
+              aria-label={t("sftp.cancelTransferName", { name: transfer.name })}
+              disabled={!["active", "queued"].includes(transfer.state)}
+              onClick={() => void handleCancelTransfer(transfer)}
+              title={t("sftp.cancelTransferName", { name: transfer.name })}
+              type="button"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ))}
+      </div>
+      {contextMenu ? (
+        <SftpContextMenu
+          menu={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onDelete={handleContextDelete}
+          onProperties={handleContextProperties}
+          onRename={handleContextRename}
+          onTransfer={handleContextTransfer}
+        />
+      ) : null}
+      {propertiesState ? (
+        <SftpPropertiesPopup
+          properties={propertiesState}
+          onClose={() => setPropertiesState(null)}
+          onSave={(request) => void handleUpdateRemoteProperties(request)}
+        />
+      ) : null}
+      {newRemoteFolderOpen ? (
+        <NewRemoteFolderDialog
+          onCancel={() => setNewRemoteFolderOpen(false)}
+          onCreate={(name) => void handleConfirmCreateRemoteFolder(name)}
+        />
+      ) : null}
+      {remoteDeleteRequest ? (
+        <ConfirmRemoteDeleteDialog
+          request={remoteDeleteRequest}
+          onCancel={() => setRemoteDeleteRequest(null)}
+          onConfirm={() => void handleConfirmDeleteRemotePath()}
+        />
+      ) : null}
+      {transferConflict ? (
+        <TransferConflictDialog
+          conflict={transferConflict}
+          onDecision={resolveTransferConflict}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function localEntryToFileEntry(entry: LocalDirectoryEntry): FileEntry {
+  return {
+    name: entry.name,
+    kind: entry.kind,
+    size: entry.kind === "folder" ? "-" : formatFileSize(entry.size),
+    sizeBytes: entry.size,
+    modified: formatRemoteTime(entry.modified),
+    modifiedTimestamp: entry.modified,
+  };
+}
+
+function remoteEntryToFileEntry(entry: SftpDirectoryEntry): FileEntry {
+  return {
+    name: entry.name,
+    kind: entry.kind,
+    size: entry.kind === "folder" ? "-" : formatFileSize(entry.size),
+    sizeBytes: entry.size,
+    modified: formatRemoteTime(entry.modified),
+    modifiedTimestamp: entry.modified,
+    accessedTimestamp: entry.accessed,
+    permissions: entry.permissions,
+    mode: entry.permissions === undefined ? undefined : formatMode(entry.permissions),
+    uid: entry.uid,
+    user: entry.user,
+    gid: entry.gid,
+    group: entry.group,
+  };
+}

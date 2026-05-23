@@ -19,13 +19,13 @@ const sampleContext = {
       sha: "da94b9e",
       subject: "feat(terminal): implement coding agent detection and display in terminal pane",
       body: "",
-      files: ["src/terminal/agentDetection.ts", "src/terminal/terminal.css"],
+      files: ["src/modules/workspace/connections/terminal/agentDetection.ts", "src/modules/workspace/connections/terminal/terminal.css"],
     },
     {
       sha: "4ca8a56",
       subject: "feat(ai-coding-usage): implement background refresh for AI coding usage providers",
       body: "",
-      files: ["src/ai-coding-usage/refreshPolicy.ts"],
+      files: ["src/modules/dashboard/widgets/builtin/ai-coding-usage/refreshPolicy.ts"],
     },
   ],
 };

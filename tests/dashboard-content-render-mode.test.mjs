@@ -4,15 +4,15 @@ import test from "node:test";
 
 test("content widgets render markdown or sanitized HTML by explicit mode", async () => {
   const rendererSource = await readFile(
-    new URL("../src/dashboard/content/ContentWidgetRenderer.tsx", import.meta.url),
+    new URL("../src/modules/dashboard/content/ContentWidgetRenderer.tsx", import.meta.url),
     "utf8",
   );
   const schemaSource = await readFile(
-    new URL("../src/dashboard/schema.ts", import.meta.url),
+    new URL("../src/modules/dashboard/schema.ts", import.meta.url),
     "utf8",
   );
   const typesSource = await readFile(
-    new URL("../src/dashboard/types.ts", import.meta.url),
+    new URL("../src/modules/dashboard/types.ts", import.meta.url),
     "utf8",
   );
   const aiSource = await readFile(new URL("../src-tauri/src/ai.rs", import.meta.url), "utf8");
