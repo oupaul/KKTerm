@@ -85,5 +85,9 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
+  },
+  "overrides": {
+    "glob": "^13.0.6",
+    "rimraf": "^6.1.3"
   }
 }
