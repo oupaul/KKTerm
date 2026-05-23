@@ -93,16 +93,12 @@ function Set-TauriConfigVersion {
         [string]$Version
     )
 
-    $NodeScript = @"
-const fs = require("fs");
-const path = process.argv[1];
-const version = process.argv[2];
-const config = JSON.parse(fs.readFileSync(path, "utf8"));
-config.version = version;
-fs.writeFileSync(path, JSON.stringify(config, null, 2) + "\n");
-"@
-
-    Invoke-Checked -FilePath "node" -ArgumentList @("-e", $NodeScript, $Path, $Version) -Action "Update Tauri version"
+    Write-Host "==> Update Tauri version"
+    $Config = Get-Content -Raw $Path | ConvertFrom-Json
+    $Config.version = $Version
+    $Config |
+        ConvertTo-Json -Depth 10 |
+        Set-Content -Path $Path -Encoding UTF8
 }
 
 Push-Location $RepoRoot
@@ -161,7 +157,7 @@ try {
         throw "GitHub release already exists: $TagName"
     }
 
-    $PreviousTag = (git tag --sort=-v:refname "v*" | Select-Object -First 1)
+    $PreviousTag = (git tag --list "v*" --sort=-v:refname | Select-Object -First 1)
     if (-not $PreviousTag) {
         Write-Warning "No previous v* tag found; release notes will use recent commits."
     } else {

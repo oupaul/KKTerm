@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "check": "node tests/tutorial-target-navigation.test.mjs && node tests/terminal-agent-detection.test.mjs && node tests/release-notes-generator.test.mjs && tsc --noEmit",
+    "check": "node tests/tutorial-target-navigation.test.mjs && node tests/terminal-agent-detection.test.mjs && node tests/release-notes-generator.test.mjs && node tests/release-github-script.test.mjs && tsc --noEmit",
     "package:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-installer.ps1",
     "release:github": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1",
     "release:notes": "node scripts/generate-release-notes.mjs",
