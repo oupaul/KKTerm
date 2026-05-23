@@ -11,10 +11,10 @@ KKTerm supports 13 UI languages through i18next. The English locale (`src/i18n/l
 A language-region bundle stored as a JSON file under `src/i18n/locales/`. English is bundled with the app; 12 additional locales load on demand via dynamic `import()`. The active locale is persisted in `localStorage` (`kkterm.language`) and survives app restarts.
 
 **Translation key**:
-A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend module map. New UI strings require a new key in all 13 locale files.
+A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend source layout. New UI strings require a new key in all 13 locale files.
 
 **Namespace**:
-A top-level section of the locale JSON mapping to a frontend module: `app`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `workspace`, `common`, `languages`. Keep new keys in the namespace closest to the owning component.
+A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `workspace`, `common`, `languages`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
 
 
 **Connection**:
@@ -44,11 +44,11 @@ A frontend workspace container that presents one session or a set of related pan
 _Avoid_: Session, connection, backend tab
 
 **Dashboard Module**:
-A built-in activity-rail module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI Created Widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
+A built-in Activity Rail Module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI Created Widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
 _Avoid_: landing page, overview
 
 **Dashboard View**:
-A durable SQLite-backed tab in the Dashboard module, stored in `dashboard_views`. Each View carries its own ordered set of Widget Instances and a `grid_density` (`compact` / `default` / `roomy`). The first View is named "Default" and is seeded on first run with one App Launcher Widget Instance. Views are not Sessions and not Connections.
+A durable SQLite-backed tab in the Dashboard Module, stored in `dashboard_views`. Each View carries its own ordered set of Widget Instances and a `grid_density` (`compact` / `default` / `roomy`). The first View is named "Default" and is seeded on first run with one App Launcher Widget Instance. Views are not Sessions and not Connections.
 _Avoid_: dashboard page, tab, board
 
 **Dashboard Widget Instance**:
@@ -72,7 +72,7 @@ A Dashboard widget where users add local desktop apps, shortcuts, scripts, or fi
 _Avoid_: dock, taskbar
 
 **File Explorer Module**:
-A built-in activity-rail module providing a lightning-fast alternative local file explorer optimized for speed and dense professional workflows. Distinct from the SFTP browser, which handles remote file operations over SSH connections.
+A built-in Activity Rail Module providing a lightning-fast alternative local file explorer optimized for speed and dense professional workflows. Distinct from the SFTP browser, which handles remote file operations over SSH connections.
 _Avoid_: SFTP browser, remote file pane
 
 **Pane**:
@@ -84,11 +84,11 @@ Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly t
 ## UI Layout
 
 **Activity Rail (Left Rail)**:
-The vertical icon bar on the far left of the app. Shows top-level built-in modules (Workspace, Dashboard, File Explorer), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a rail module; it lives inside Dashboard as a widget.
+The vertical icon bar on the far left of the app. Shows top-level built-in Modules (Workspace, Dashboard, File Explorer), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
 _Avoid_: sidebar, left sidebar, nav bar
 
 **Connection Tree (Connections Panel)**:
-The left-side tree view of saved Connections, folders, and subfolders. Visible inside the Workspace module. Supports search, filtering, drag/drop ordering, rename, delete, duplicate, Quick Connect, and open-Session status badges. Collapsed/expanded state is persisted.
+The left-side tree view of saved Connections, folders, and subfolders. Visible inside the Workspace Module. Supports search, filtering, drag/drop ordering, rename, delete, duplicate, Quick Connect, and open-Session status badges. Collapsed/expanded state is persisted.
 _Avoid_: connection sidebar, host list
 
 **AI Assistant Panel**:
@@ -96,15 +96,15 @@ The right-side resizable panel for AI chat interactions. Collapsed/expanded stat
 _Avoid_: AI sidebar, chat panel
 
 **Dashboard Widget Playground**:
-The content area of the Dashboard module. Hosts dynamic, user-selectable widgets and reports, including the App Launcher Widget. The AI Assistant can create new widgets on request.
+The content area of the Dashboard Module. Hosts dynamic, user-selectable widgets and reports, including the App Launcher Widget. The AI Assistant can create new widgets on request.
 _Avoid_: landing page, overview
 
 **Default Launch State**:
-The fallback view shown when no Sessions are open, displaying recent Connections and a brief workspace overview. Not a user-navigable module; it is reached by closing all Tabs.
+The fallback view shown when no Sessions are open, displaying recent Connections and a brief workspace overview. Not a Module; it is reached by closing all Tabs inside the Workspace Module.
 _Avoid_: dashboard page, home screen
 
 **Workspace Canvas**:
-The central content area for the active built-in module. Each module (Workspace, Dashboard, File Explorer) owns its own content layout within this area. For the Workspace module, this includes the Tab Strip, active Tab content (terminals, RDP/VNC surfaces, WebView2 surfaces, SFTP browsers), and optional pane splits.
+The central content area for the active Module. Each Module (Workspace, Dashboard, File Explorer) owns its own content layout within this area. For the Workspace Module, this includes the Tab Strip, active Tab content (terminals, RDP/VNC surfaces, WebView2 surfaces, SFTP browsers), and optional pane splits.
 _Avoid_: main area, content area
 
 **Tab Strip**:

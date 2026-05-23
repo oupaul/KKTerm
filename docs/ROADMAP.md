@@ -4,7 +4,7 @@
 
 Quick snapshot as of May 15, 2026:
 
-All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard module redesign, and UI customization are implemented and shipping. The app is currently at v0.1.10 and releasing continuously.
+All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, and UI customization are implemented and shipping. The app is currently at v0.1.10 and releasing continuously.
 
 Latest validation: `npm run check`, `npm run build`, `cargo check --manifest-path src-tauri/Cargo.toml`, and `cargo test --manifest-path src-tauri/Cargo.toml` (215 passed, 1 ignored) all clean. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
 
@@ -92,7 +92,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### Dashboard & Widgets
 
-- [x] Dashboard module: SQLite-backed views/instances/AI Created Widgets, five visual presets, per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, dynamic backgrounds.
+- [x] Dashboard Module: SQLite-backed views/instances/AI Created Widgets, five visual presets, per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, dynamic backgrounds.
 - [x] Three-kind widget model: `builtIn`, `content`, and `script` with `iframe srcdoc` script hosting.
 - [x] App Launcher widget: local app/shortcut/script/file entries with icon/text and right-click context menu.
 - [x] AI Created content and script widgets.
@@ -139,8 +139,8 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [ ] Native data widgets: Clock, Weather, CPU, Memory, Recent Hosts, Session Activity, Today's Brief.
 - [ ] User-facing "Create AI Created Widget" dialog so authoring is not AI-only.
 - [ ] Built-in Connections widget and URL widget with configurable auto-reload intervals.
-- [ ] File Explorer module: lightning-fast alternative local file browser optimized for dense professional workflows.
-- [ ] Unified activity rail routing for Workspace, Dashboard, and File Explorer modules.
+- [ ] File Explorer Module: lightning-fast alternative local file browser optimized for dense professional workflows.
+- [ ] Unified Activity Rail routing for Workspace, Dashboard, and File Explorer Modules.
 
 ### Extension Platform
 

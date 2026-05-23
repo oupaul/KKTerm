@@ -1,12 +1,12 @@
 # Dashboard Module Architecture
 
-The Dashboard is a built-in activity-rail module that presents a dynamic widget grid. Users select from prebuilt widgets, customize them visually, and arrange them on a 12-column drag-and-drop canvas. The AI Assistant can read the current dashboard and create, customize, or remove widgets through atomic Tauri commands.
+The Dashboard is a built-in Activity Rail Module that presents a dynamic widget grid. Users select from prebuilt widgets, customize them visually, and arrange them on a 12-column drag-and-drop canvas. The AI Assistant can read the current dashboard and create, customize, or remove widgets through atomic Tauri commands.
 
 This document describes the durable architecture. The design decision record for the redesign that introduced this architecture is at `docs/superpowers/specs/2026-05-11-dashboard-redesign-design.md`. When this doc conflicts with `docs/ARCHITECTURE.md`, this doc wins for Dashboard-internal concerns.
 
-## Module Boundaries
+## Scope
 
-The Dashboard module owns:
+The Dashboard Module owns:
 
 - The widget grid, drag/resize, and edit mode.
 - The widget registry for built-in widget types.
@@ -147,7 +147,7 @@ The `dashboard_create_widget` assistant tool schema is strict-compatible where p
 
 The AI-facing widget contract requires the first created widget to be complete for the user's requested outcome. If a request implies live/realtime data, MCP-backed data, web-fetched data, local file/session data, or another changing input, the assistant should use the needed discovery/read/fetch tool rounds before creation and create a script widget wired to the actual data source with loading, error, empty, and refresh states. Explicitly static requests should still become small script widgets that render their content into `#root`; missing credentials should become `settingsSchema` secret/config fields plus a secret-entry request, not a placeholder scaffold.
 
-## Frontend Module Map (Dashboard)
+## Frontend Source Map (Dashboard)
 
 ```text
 src/dashboard/
@@ -333,7 +333,7 @@ Destructive "Reset Dashboard" lives in General → Settings data (per AGENTS.md:
 
 All new strings route through `t()` in the `dashboard.*` namespace. English (`src/i18n/locales/en.json`) is the source of truth and the only locale updated alongside Dashboard changes; other locales are tracked per key under `docs/localization_todo/<namespace>.<keyPath>.md` per the i18n rules in AGENTS.md. Built-in widget titles use `titleKey`; AI Created Widget titles are not translated and are persisted in the language the AI used.
 
-## Relationships to Other Modules
+## Relationships to Other Modules and Source Areas
 
 - **App Launcher** (`src/app-launcher/`) — rendered as a `builtIn` widget. Its data model and management UI stay inside `src/app-launcher/`; the Dashboard widget is a thin host.
 - **AI Assistant** (`src/ai/`) — consumes the Dashboard page-context payload and issues Tauri commands via registered tools.

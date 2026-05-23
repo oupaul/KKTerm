@@ -14,7 +14,7 @@ The implementation removes the `content` renderer, content body validation, cont
 
 Frontend types change from `WidgetKind = "builtIn" | "content" | "script"` to `WidgetKind = "builtIn" | "script"`. The separate `WidgetCustomKind` type is removed because a Dashboard AI Created Widget no longer has a kind field.
 
-`WidgetBody` dispatches only built-ins and script widgets. The content renderer module is deleted. The customize popover no longer exposes a content-specific advanced section. Dashboard catalog and state projections continue to list AI Created Widgets, but all of them are script definitions and custom widget records do not expose a `kind` field.
+`WidgetBody` dispatches only built-ins and script widgets. The content renderer source file is deleted. The customize popover no longer exposes a content-specific advanced section. Dashboard catalog and state projections continue to list AI Created Widgets, but all of them are script definitions and custom widget records do not expose a `kind` field.
 
 Rust validation changes `validate_kind` to allow `builtIn` and `script`. Content body structs and validators are removed. Custom widget body validation directly validates the script body schema. Storage tests and schemas are updated to use script examples and remove `dashboard_custom_widgets.kind`. SQLite schema checks are updated because local compatibility is not required.
 

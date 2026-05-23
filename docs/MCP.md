@@ -2,67 +2,177 @@
 
 ## Overview
 
-KKTerm now includes a Rust-native stdio MCP server binary: `kkterm-cli`.
+KKTerm includes a Rust-native stdio MCP server binary, `kkterm-cli`, that
+exposes a curated set of in-app capabilities to external MCP-capable tools
+(Claude Desktop, Claude Code, Codex, GitHub Copilot, Antigravity, etc.).
 
-Current implementation focuses on MCP protocol plumbing and tool contract stability, with a strict tool namespace split:
+The binary is a thin forwarder. The actual tool handlers live inside the
+running KKTerm app and are reached over a Windows named pipe established
+by `src-tauri/src/mcp_bridge.rs`.
 
-- `kkterm.*` — curated allowlist tools.
-- `kkterm.dangerous.*` — sensitive tools that may mutate sessions/UI.
+Tool names are organised by **Module** (activity-rail destinations such as
+Workspace and Dashboard). Each Module owns a top-level namespace, and any
+sensitive tool lives under that Module's `dangerous` sub-namespace so the
+safety gate applies uniformly:
+
+- `kkterm.<module>.*` — curated allowlist tools for the named Module.
+- `kkterm.<module>.dangerous.*` — sensitive tools (mutate UI, run script
+  widget code, click into remote desktops); gated by
+  `built_in_mcp_allow_all_dangerous`.
+
+Module namespaces in this build:
+
+- `kkterm.workspace.*` — Workspace Module: saved Connections, live
+  Sessions, and remote-desktop interaction.
+- `kkterm.dashboard.*` — Dashboard Module: views, widget instances,
+  AI-Created Widgets.
+
+## Architecture
+
+```
++--------------------+   stdio JSON-RPC   +--------------+   named pipe    +-------------+
+|  external MCP      | <----------------> |  kkterm-cli  | <-------------> |  kkterm.exe |
+|  client (Claude…)  |                    |  (forwarder) |    JSON-RPC     |  (bridge)   |
++--------------------+                    +--------------+                 +-------------+
+                                                                                  |
+                                                                                  v
+                                                                          SessionManager,
+                                                                          Storage, frontend
+                                                                          event bus
+```
+
+- `initialize`, `tools/list`, `ping`, and `notifications/initialized` are
+  answered locally by `kkterm-cli` so MCP clients can introspect the
+  surface even when KKTerm.exe is not running.
+- `tools/call` always forwards to the live app over the named pipe. When
+  KKTerm.exe is not running (or the user has disabled the built-in MCP
+  server), the binary returns a structured JSON-RPC error with
+  `code: -32002` and `data.reason: "app_not_running"`.
 
 ## Transport
 
-- **Transport:** stdio (JSON-RPC messages over stdin/stdout)
-- **Binary:** `src-tauri/src/bin/kkterm-cli.rs`
-- **Cargo bin target:** `kkterm-cli`
+- **External transport:** stdio (one JSON-RPC message per line over
+  stdin/stdout). The MCP client launches `kkterm-cli` as a child process.
+- **Bridge transport:** Windows named pipe at
+  `\\.\pipe\kkterm-mcp-<token-prefix>`. The pipe name is published in the
+  bridge descriptor file (see below) along with a per-launch bearer token.
+- **Bridge descriptor file:** `%APPDATA%\com.kkterm.app\mcp-bridge.json`.
+  Written when KKTerm.exe starts with the bridge enabled, removed on the
+  next start before a new descriptor is written. Stale files cause clients
+  to fail with `app_not_running`.
+- **Auth:** the first framed line `kkterm-cli` sends on the pipe is the
+  bearer token from the descriptor file. KKTerm.exe responds with
+  `{"ok":true}` on success and closes the connection on mismatch.
 
 ## Tool safety model
 
-Built-in MCP dangerous calls support an optional confirmation gate. By default:
+Two settings live in `AiProviderSettings` and are surfaced under
+**Settings → AI Assistant → Built-in MCP Server**:
 
-- dangerous tools require confirmation
-- users may opt into **Allow All** under:
-  - Settings → AI Settings → Built-in MCP Server
+| Setting key | Default | Effect |
+|---|---|---|
+| `built_in_mcp_server_enabled` | `true` | KKTerm.exe starts the named-pipe bridge on launch. When `false`, the descriptor file is deleted and no bridge is created. |
+| `built_in_mcp_allow_all_dangerous` | `false` | When `true`, tools in any `kkterm.<module>.dangerous.*` namespace execute through the bridge. When `false`, the bridge returns a `permissionRequired` tool error for any dangerous call. The gate matches the literal segment `dangerous` anywhere in the dotted tool name, so new Modules can adopt the same convention without touching the gate. |
 
-The setting is persisted in `AiProviderSettings.built_in_mcp_allow_all_dangerous`.
+The bridge reads both settings at startup. Toggling either takes effect on
+the next KKTerm.exe launch.
 
-## Tool namespaces
+## Tool list
 
-### Curated allowlist (`kkterm.*`)
+### Workspace Module (`kkterm.workspace.*`)
 
-- `kkterm.connections.open`
-- `kkterm.sessions.send_input`
-- `kkterm.sessions.read_buffer`
+The Workspace Module owns saved Connections and live Sessions
+(terminals, SFTP browsers, RDP/VNC surfaces, WebView2 panes).
 
-### Dangerous namespace (`kkterm.dangerous.*`)
+| Name | Description |
+|---|---|
+| `kkterm.workspace.connections.list` | List saved Connections (folders + connections) from KKTerm storage. |
+| `kkterm.workspace.connections.open` | Open a saved Connection by `connectionId`. Routes through the existing AI assistant `connection_open` path and emits `assistant-open-connection` for the frontend to start the appropriate session (terminal, SSH, URL, RDP, VNC). |
+| `kkterm.workspace.sessions.list` | List live Sessions (terminal Panes, remote desktop targets, file browsers). Backed by `session_state`. |
+| `kkterm.workspace.sessions.send_input` | Send text/keystrokes to a live terminal Pane. `submit: true` appends a newline. Backed by `session_terminal_send_text`. |
+| `kkterm.workspace.sessions.read_buffer` | Read a snapshot of the visible terminal buffer for a live Pane. Backed by `session_terminal_read_buffer`. |
 
-- `kkterm.dangerous.pointer_click`
+### Workspace Module — dangerous (`kkterm.workspace.dangerous.*`)
+
+| Name | Description |
+|---|---|
+| `kkterm.workspace.dangerous.pointer_click` | Send a mouse click to a live RDP/VNC remote desktop surface. Requires `built_in_mcp_allow_all_dangerous = true`. Backed by `session_remote_desktop_mouse_click`. |
+
+### Dashboard Module (`kkterm.dashboard.*`)
+
+Safe view/instance/layout operations. Backed by the same `dashboard_*` AI
+tools in `src-tauri/src/ai.rs`, so MCP and the in-app assistant share one
+storage and event path (`dashboard-changed` is emitted on mutations).
+
+| Name | Description |
+|---|---|
+| `kkterm.dashboard.load_state` | Read the redacted Dashboard state (views + instances + AI widget metadata). |
+| `kkterm.dashboard.read_widget_source` | Fetch the script body of a single AI-Created Widget by id. |
+| `kkterm.dashboard.create_view` | Add a new Dashboard view. |
+| `kkterm.dashboard.update_view` | Edit a view (title, gridDensity). |
+| `kkterm.dashboard.remove_view` | Delete a view and its instances. |
+| `kkterm.dashboard.reorder_views` | Reorder views by id list. |
+| `kkterm.dashboard.add_instance` | Place a widget instance on a view (built-in widget or AI widget by `sourceId`). |
+| `kkterm.dashboard.update_instance` | Change a widget instance's size, position, preset, accent, or icon. |
+| `kkterm.dashboard.remove_instance` | Remove a widget instance. |
+| `kkterm.dashboard.apply_layout` | Bulk-update many instance positions on a single view. |
+
+### Dashboard Module — dangerous (`kkterm.dashboard.dangerous.*`)
+
+These tools touch executable widget code or wipe Dashboard data, so they
+go through the `built_in_mcp_allow_all_dangerous` gate. The bridge looks
+for the literal segment `dangerous` anywhere in the dotted tool name when
+applying the gate, so every Module's `dangerous` sub-namespace gets the
+same protection without any per-Module gate code.
+
+| Name | Description |
+|---|---|
+| `kkterm.dashboard.dangerous.create_widget` | Create an AI-Created (script) Widget AND place it on a view. |
+| `kkterm.dashboard.dangerous.create_custom_widget` | Create a reusable AI-Created Widget definition without placement. |
+| `kkterm.dashboard.dangerous.update_custom_widget` | Edit an existing AI-Created Widget body/title/etc. |
+| `kkterm.dashboard.dangerous.remove_custom_widget` | Delete an AI-Created Widget definition (use `forceDeleteInstances` to also remove placements). |
+| `kkterm.dashboard.dangerous.reset` | Wipe the entire Dashboard. Irreversible. |
+
+All tool inputs use JSON schemas published in `tools/list`. The handler in
+the bridge translates the curated `kkterm.<module>.*` names into the
+existing AI assistant tool functions in `src-tauri/src/ai.rs`, so MCP and
+the in-app assistant share one implementation.
+
+### Adding a new Module
+
+When a new activity-rail Module is added (e.g. File Explorer, Wiki), give
+it its own `kkterm.<module>.*` namespace and, if any of its tools touch
+executable code or wipe data, a `kkterm.<module>.dangerous.*` sibling.
+The gate, the `tools/list` discovery path, and the bridge dispatcher do
+not need per-Module changes — only schema and dispatch arms.
 
 ## Feature growth contract (required for new MCP functions)
 
-When adding a new built-in MCP function/tool, update all of the following in the same PR:
+When adding a new built-in MCP function/tool, update all of the following
+in the same PR:
 
-1. `src-tauri/src/bin/kkterm-cli.rs`
-   - register tool in `tools/list`
-   - implement handler in `tools/call`
-   - document input schema changes inline
-2. `docs/MCP.md`
-   - add tool to namespace list
+1. `src-tauri/src/mcp_bridge.rs`
+   - add an entry to `tool_descriptors()` (schema)
+   - add a match arm in `dispatch_tool()` translating to the appropriate
+     `crate::ai::connection_tool` / `crate::ai::live_session_tool` /
+     `crate::ai::dashboard_tool` call
+   - if the tool is sensitive, put it in a `*.dangerous.*` namespace so
+     the existing `dangerous_tool()` gate catches it without changes
+2. `src-tauri/src/bin/kkterm-cli.rs`
+   - mirror the descriptor in `static_tool_descriptors()` so offline
+     introspection still works
+3. `docs/MCP.md`
+   - add the tool to the namespace list above
    - document risk level and confirmation behavior
-3. `docs/manual/15-settings.md`
+4. `docs/manual/15-settings.md`
    - update Built-in MCP Server setting behavior if safety toggles change
-4. `AGENTS.md`
-   - keep this update rule referenced so future contributors don't skip MCP route updates
-
-## Design notes
-
-- Rust-native CLI keeps dependencies low and avoids a separate Node runtime.
-- Stdio MCP server is architected so future non-MCP CLI features can share the same binary.
-- Runtime bridge wiring to a live KKTerm app/session manager is intentionally incremental; protocol/tool contract is landed first.
-
+5. `AGENTS.md`
+   - the update rule there references MCP docs; do not remove it
 
 ## Client setup examples
 
-Use the `kkterm-cli` binary path in your MCP client settings.
+Use the `kkterm-cli` binary path in your MCP client settings. On Windows
+the release build lives next to `kkterm.exe`.
 
 - **Claude Code / Claude Desktop style config**
 ```json
@@ -87,4 +197,14 @@ Use the `kkterm-cli` binary path in your MCP client settings.
 - **Antigravity / other MCP-capable clients**
   - add stdio server command pointing to `kkterm-cli`
 
-After configuration, reconnect the client and run `tools/list` to verify connectivity.
+After configuration, start KKTerm.exe (so the bridge is available),
+reconnect the client, and run `tools/list` to verify connectivity. The
+client should see six tools; `tools/call` requires KKTerm.exe to be
+running.
+
+## Platform support
+
+The bridge is Windows-only at this time. On macOS and Linux, `kkterm-cli`
+builds and answers `initialize` / `tools/list` locally but every
+`tools/call` returns `app_not_running` with a "Windows-only" detail.
+Non-Windows transport is tracked as a follow-up.

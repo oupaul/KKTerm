@@ -12,7 +12,7 @@ Activity Rail label `app.wiki`. Module page title `wiki.title`. Empty workspace 
 
 ## Layout
 
-Three columns inside the module page:
+Three columns inside the Module page:
 
 1. **Explorer** (left) — page tree. Collapse `wiki.collapseExplorer` / expand `wiki.expandExplorer`. Generic collapse/expand labels `wiki.collapse` / `wiki.expand`.
 2. **Editor / Viewer** (centre) — view modes:

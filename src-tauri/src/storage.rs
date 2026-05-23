@@ -703,6 +703,14 @@ impl AiProviderSettings {
         &self.tool_permission_mode
     }
 
+    pub(crate) fn built_in_mcp_server_enabled(&self) -> bool {
+        self.built_in_mcp_server_enabled
+    }
+
+    pub(crate) fn built_in_mcp_allow_all_dangerous(&self) -> bool {
+        self.built_in_mcp_allow_all_dangerous
+    }
+
     pub(crate) fn claude_cli_path(&self) -> Option<&str> {
         self.claude_cli_path.as_deref()
     }
@@ -6794,6 +6802,8 @@ mod tests {
                 show_all_models: true,
                 cli_execution_policy: "suggest-only".to_string(),
                 tool_permission_mode: " Allow All ".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
                 claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
                 codex_cli_path: Some("  codex  ".to_string()),
                 disabled_skill_names: vec!["ssh-helper".to_string(), "bad name".to_string()],
@@ -6885,6 +6895,8 @@ mod tests {
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "autoDeleteEverything".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -6925,6 +6937,8 @@ mod tests {
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -6969,6 +6983,8 @@ mod tests {
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -7010,6 +7026,8 @@ mod tests {
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -7065,6 +7083,8 @@ mod tests {
                 show_all_models: false,
                 cli_execution_policy: "executeAutomatically".to_string(),
                 tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
                 claude_cli_path: Some("claude".to_string()),
                 codex_cli_path: Some("codex".to_string()),
                 disabled_skill_names: Vec::new(),

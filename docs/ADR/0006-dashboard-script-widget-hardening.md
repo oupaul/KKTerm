@@ -230,7 +230,7 @@ or reload anyway, so the only meaningful state is the current one.
 
 ### 6. Active-widget cap with eviction notification
 
-`ScriptWidgetHost` tracks active script widgets in a module-level
+`ScriptWidgetHost` tracks active script widgets in a file-scope
 `Map<id, setCapped>`. When a new widget tries to mount past the cap it is
 shown a muted "Click to activate" placeholder instead of an iframe.
 Clicking the placeholder evicts the oldest active widget *and notifies it
@@ -348,7 +348,7 @@ the prompt missed.
   identifier collection (§2) *does* walk into interpolation expressions,
   so this limitation is specific to the infinite-loop pattern check.
 - `KNOWN_LIBRARY_GLOBALS` must be kept in sync with the TypeScript catalog.
-- The active-widget cap is module-global, so it is shared across all
+- The active-widget cap is process-wide, so it is shared across all
   Dashboards in one process. This is intentional for now (one WebView2
   renderer to protect), but multi-Dashboard users will eventually notice.
 - Cooperative visibility throttling does nothing for widgets that don't call

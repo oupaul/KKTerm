@@ -21,15 +21,15 @@ On first launch KKTerm seeds:
 - Default Settings, persisted to SQLite.
 - Locale defaulting to the user's OS language if a matching JSON exists under `src/i18n/locales/`, falling back to English.
 
-No Sessions are open. The Workspace Canvas shows the **Default Launch State** — recent Connections and a brief overview. It is not a navigable module; it appears whenever all Tabs are closed.
+No Sessions are open. The Workspace Canvas shows the **Default Launch State** — recent Connections and a brief overview. It is not a Module; it appears inside the Workspace Module whenever all Tabs are closed.
 
 ## App shell
 
 The window is divided into four regions:
 
 1. **Activity Rail** (48 px, left edge) — primary navigation. See [02-app-layout.md](02-app-layout.md).
-2. **Connections Panel** (resizable, left) — visible inside the Workspace module only. See [03-connections.md](03-connections.md).
-3. **Workspace Canvas** (centre) — Tab Strip plus active Tab content for the current module.
+2. **Connections Panel** (resizable, left) — visible inside the Workspace Module only. See [03-connections.md](03-connections.md).
+3. **Workspace Canvas** (centre) — Tab Strip plus active Tab content for the current Module.
 4. **AI Assistant Panel** (resizable, right) — `app.aiAssistant`. Collapsible. See [13-ai-assistant.md](13-ai-assistant.md).
 5. **Status Bar** (bottom, full width) — host usage metrics and transient notifications.
 
