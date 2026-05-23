@@ -192,7 +192,7 @@ KKTerm/
 │   ├── sftp/                   # SFTP dual-pane workspace
 │   ├── webview/                # URL WebView workspace
 │   ├── remote-desktop/         # RDP + VNC workspace
-│   ├── dashboard/              # Dashboard module: grid, views, widget registry, script iframe host
+│   ├── dashboard/              # Dashboard Module source: grid, views, widget registry, script iframe host
 │   ├── app-launcher/           # App Launcher widget storage and component
 │   ├── ai/                     # AI Assistant panel, provider registry, streaming
 │   ├── ai-coding-usage/        # AI coding usage tracking widget and status bar
@@ -228,10 +228,10 @@ KKTerm/
 │   │   └── ...
 │   └── Cargo.toml
 ├── docs/                       # Architecture, PRD, ADRs, release notes
-│   ├── ARCHITECTURE.md         # Module map, engineering defaults
+│   ├── ARCHITECTURE.md         # Frontend source map, engineering defaults
 │   ├── PRD.md                  # Product requirements
 │   ├── ROADMAP.md              # Planned features
-│   ├── DASHBOARD.md            # Dashboard module durable architecture
+│   ├── DASHBOARD.md            # Dashboard Module durable architecture
 │   ├── AI_PROVIDERS.md         # Rules for adding/changing AI provider entries
 │   ├── PERFORMANCE.md          # Performance notes and targets
 │   └── ADR/                    # Architecture decision records
@@ -250,7 +250,7 @@ Before touching code, read these definitions — they matter for naming, storage
 | **Quick Connect** | An unsaved one-off draft that starts a Session without saving. |
 | **Session** | A live runtime instance — a PTY, SSH channel, SFTP browser, WebView2 host, RDP control, or VNC framebuffer. |
 | **Tab** | Frontend workspace container. Tabs hold Sessions (or split Panes). Closing a Tab ends the Session. |
-| **Dashboard** | Built-in activity-rail module hosting a 12-column drag-and-resize widget grid. |
+| **Dashboard** | Built-in Activity Rail Module hosting a 12-column drag-and-resize widget grid. |
 | **Dashboard AI Created Widget** | A script-only widget defined in `dashboard_custom_widgets`, hosted in an isolated `iframe srcdoc`. Authored by the AI assistant. |
 | **Widget Preset** | One of three chrome styles per Widget Instance: `panel`, `ambient`, `hero`. |
 
@@ -260,13 +260,13 @@ Before touching code, read these definitions — they matter for naming, storage
 
 - `AGENTS.md` — engineering rules every contributor must follow before writing code
 - `CONTEXT.md` — full domain vocabulary with "avoid" terms
-- `docs/ARCHITECTURE.md` — module map, where to place new code, UI/settings conventions
+- `docs/ARCHITECTURE.md` — frontend source map, where to place new code, UI/settings conventions
 - `docs/PRD.md` — full product requirements and user stories
 - `docs/ROADMAP.md` — what is planned vs. deferred (don't build deferred features)
 - `docs/AI_PROVIDERS.md` — rules for adding or changing AI provider entries
-- `docs/DASHBOARD.md` — Dashboard module durable architecture (views, widget instances, script widget security)
+- `docs/DASHBOARD.md` — Dashboard Module durable architecture (views, widget instances, script widget security)
 - `docs/PERFORMANCE.md` — performance notes and targets
-- `docs/manual/INDEX.md` — **operation manual** shipped with the app. One chapter per user-facing module; each chapter starts with an `## AI grep hints` block listing i18n keys and synonyms. When a user asks "how do I…" inside the app, the built-in AI Assistant searches this folder. **When a PR changes UI behavior, update the matching chapter in `docs/manual/` in the same PR**, and prefer referencing i18n keys (e.g. `connections.quickConnect`) over English label text so locale changes don't invalidate the manual. If the assistant can offer to show the user a UI element, add a stable `data-tutorial-id`, route it in `src/app/tutorialNavigationModel.ts`, document it in the `tutorial_highlight` tool metadata, and keep `npm run check` green.
+- `docs/manual/INDEX.md` — **operation manual** shipped with the app. Chapters cover rail Modules and their sub-features; each chapter starts with an `## AI grep hints` block listing i18n keys and synonyms. When a user asks "how do I…" inside the app, the built-in AI Assistant searches this folder. **When a PR changes UI behavior, update the matching chapter in `docs/manual/` in the same PR**, and prefer referencing i18n keys (e.g. `connections.quickConnect`) over English label text so locale changes don't invalidate the manual. If the assistant can offer to show the user a UI element, add a stable `data-tutorial-id`, route it in `src/app/tutorialNavigationModel.ts`, document it in the `tutorial_highlight` tool metadata, and keep `npm run check` green.
 
 ---
 
@@ -309,7 +309,7 @@ File issues at: <https://github.com/ryantsai/KKTerm/issues/new>
 
 2. **Check `docs/ROADMAP.md`** — if the feature you want to build is listed as deferred, open an issue first to discuss before building it.
 
-3. **Check `docs/ARCHITECTURE.md`** — before placing new UI or Rust code, verify you're putting it in the right module.
+3. **Check `docs/ARCHITECTURE.md`** — before placing new UI or Rust code, verify you're putting it in the right source area.
 
 ### Branch naming
 

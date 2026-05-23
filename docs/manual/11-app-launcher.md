@@ -6,7 +6,7 @@
 - Topics: launch local apps from Dashboard, run as admin, run as user, open containing folder, pinned apps, rail shortcuts, add/edit/remove entry, icon/list/details view mode, sort launcher entries, file metadata
 - Synonyms: "shortcuts", "dock", "quick launch", "run as administrator", "launch program", "open folder", "show in folder", "Explorer view", "details view", "list view", "sort by name", "sort by size", "sort by modified"
 
-> **Term:** the App Launcher is a Dashboard widget, **not** an Activity Rail module. The label that appears on its widget surface is `appLauncher.title` (module-style label `appLauncher.moduleLabel`, summary `appLauncher.subtitle`, status `appLauncher.statusReady`).
+> **Term:** the App Launcher is a Dashboard widget, **not** an Activity Rail Module. The label that appears on its widget surface is `appLauncher.title` (Module-style label `appLauncher.moduleLabel`, summary `appLauncher.subtitle`, status `appLauncher.statusReady`).
 
 ## Entries
 

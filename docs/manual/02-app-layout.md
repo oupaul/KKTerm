@@ -10,7 +10,7 @@
 
 Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
 
-1. **Built-in modules** — Workspace, Dashboard, File Explorer, Wiki.
+1. **Built-in Modules** — Workspace, Dashboard, File Explorer, Wiki.
 2. **Connection Rail** (`app.connectionRail`) — a divider group `app.connectedConnectionsRail` that shows:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
@@ -23,7 +23,7 @@ Tutorial targets: `app.activityRailWorkspace`, `app.activityRailDashboard`, `app
 
 Non-Workspace pages (Dashboard, App Launcher, File Explorer, Settings, Wiki) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active.
 
-## Connections Panel (left, inside Workspace module)
+## Connections Panel (left, inside Workspace Module)
 
 Resizable. Collapsed/expanded state persists across launches. See [03-connections.md](03-connections.md) for the tree itself.
 
@@ -32,11 +32,11 @@ Resizable. Collapsed/expanded state persists across launches. See [03-connection
 
 Tutorial target: `app.connectionsResize`.
 
-The panel only appears inside the Workspace module. Switching to Dashboard, File Explorer, Wiki, or Settings replaces this region with that module's own content.
+The panel only appears inside the Workspace Module. Switching to Dashboard, File Explorer, Wiki, or Settings replaces this region with that Module's own content.
 
 ## Workspace Canvas (centre)
 
-The active built-in module owns this area. Each module renders its own layout inside it. For the Workspace module specifically, the Canvas contains the Tab Strip and active Tab content (terminal, SFTP, WebView, RDP, VNC, Pane splits). See [04-workspace-tabs-panes.md](04-workspace-tabs-panes.md).
+The active Module owns this area. Each Module renders its own layout inside it. For the Workspace Module specifically, the Canvas contains the Tab Strip and active Tab content (terminal, SFTP, WebView, RDP, VNC, Pane splits). See [04-workspace-tabs-panes.md](04-workspace-tabs-panes.md).
 
 Accessibility label: `workspace.workspaceSurface`. Per-Connection-kind labels use `workspace.connectionKind` with the kind interpolated.
 
@@ -56,7 +56,7 @@ The panel remains available on Settings and receives a Settings page context so 
 
 Owned by `src/workspace/StatusBar.tsx`. Three roles:
 
-1. **Host usage metrics** (left side, visible in every module/page):
+1. **Host usage metrics** (left side, visible in every Module and page):
    - `workspace.cpu` / `workspace.cpuUsage`
    - `workspace.ram` / `workspace.ramUsage` / `workspace.memory`
    - `workspace.network` / `workspace.networkUsage`, broken into `workspace.networkDownstream` and `workspace.networkUpstream`

@@ -1193,6 +1193,36 @@ export function AiSettings() {
           </label>
           <label className="settings-toggle-row">
             <ToggleSwitch
+              checked={Boolean(draft.builtInMcpServerEnabled)}
+              onChange={(checked) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  builtInMcpServerEnabled: checked,
+                }))
+              }
+            />
+            <span>
+              <strong>{t("settings.builtInMcpServerEnabled")}</strong>
+              <small>{t("settings.builtInMcpServerEnabledHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={Boolean(draft.builtInMcpAllowAllDangerous)}
+              onChange={(checked) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  builtInMcpAllowAllDangerous: checked,
+                }))
+              }
+            />
+            <span>
+              <strong>{t("settings.builtInMcpAllowAllDangerous")}</strong>
+              <small>{t("settings.builtInMcpAllowAllDangerousHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
               checked={draft.allowInsecureTls}
               onChange={(checked) =>
                 setDraft((settings) => ({

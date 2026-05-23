@@ -17,6 +17,7 @@ mod import;
 mod logging;
 mod manual;
 mod mcp;
+mod mcp_bridge;
 mod net;
 mod performance;
 mod power;
@@ -2379,9 +2380,11 @@ pub fn run() {
                 setup_error(format!("failed to resolve app data directory: {error}"))
             })?;
             let db_path = app_data_dir.join("kkterm.sqlite3");
+            let mcp_bridge_dir = app_data_dir.clone();
             let wiki_paths = wiki::WikiPaths::new(app_data_dir);
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
             let general_settings = storage.general_settings().map_err(setup_error)?;
+            let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
             logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
             let main_window_settings = storage.main_window_settings().map_err(setup_error)?;
             if let Err(error) = storage.backup_if_enabled_for_startup() {
@@ -2449,6 +2452,12 @@ pub fn run() {
             app.manage(vnc::VncSessionManager::new());
             app.manage(wiki_paths);
             app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
+            mcp_bridge::start_if_enabled(
+                app.handle().clone(),
+                mcp_bridge_dir,
+                ai_provider_settings.built_in_mcp_server_enabled(),
+                ai_provider_settings.built_in_mcp_allow_all_dangerous(),
+            );
             Ok(())
         })
         .on_window_event(|window, event| {

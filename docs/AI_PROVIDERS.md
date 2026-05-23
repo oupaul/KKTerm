@@ -52,11 +52,11 @@ pub(super) fn provider() -> OpenAiCompatibleProvider {
 
 Then update `src-tauri/src/ai/providers.rs`:
 
-1. Add `mod example_provider;` with the other provider modules.
+1. Add `mod example_provider;` with the other provider files.
 2. Add a `match` arm in `provider_for(kind)` returning
    `Ok(example_provider::provider())`.
 
-This explicit module registration is required by Rust's static module system. Do
+This explicit `mod` registration is required by Rust's static source layout. Do
 not add `build.rs` code generation, `inventory`-style registration, dynamic
 loading, or macro discovery only to make provider files auto-register; those are
 not worth the complexity for KKTerm's current provider list. If the team later

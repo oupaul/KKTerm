@@ -28,7 +28,7 @@ Failure: `workspace.screenshotCaptureError`. Outside the Tauri runtime: `workspa
 
 ## Screenshots library
 
-A dedicated module page for browsing past captures.
+A dedicated full-page surface for browsing past captures (reachable from the Workspace Module's screenshot menu).
 
 - Header: `screenshots.title`, summary `screenshots.subtitle`. Collection grouping label `screenshots.collection`.
 - View toggle: `screenshots.viewOptions` (`screenshots.gridView`, `screenshots.listView`).

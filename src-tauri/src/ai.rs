@@ -4386,7 +4386,7 @@ fn tool_permission_required_result(tool_name: &str) -> String {
     .to_string()
 }
 
-fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+pub(crate) fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     let storage = app.state::<Storage>();
     let result: Result<Value, String> = match name {
         "connection_list" => storage
@@ -4445,14 +4445,14 @@ fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     }
 }
 
-async fn live_session_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+pub(crate) async fn live_session_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     match app.try_state::<AssistantLiveToolBridge>() {
         Some(bridge) => bridge.request(app, name, args).await,
         None => json!({"ok": false, "error": "live session tools are unavailable"}).to_string(),
     }
 }
 
-fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
+pub(crate) fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
     let storage = app.state::<Storage>();
     let result: Result<Value, String> = storage.with_connection_infallible(|conn| match name {
         "dashboard_load_state" => ds::load_state(conn)

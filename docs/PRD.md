@@ -8,7 +8,7 @@ KKTerm is intended to be a fast, professional desktop workspace for personal/loc
 
 ## Solution
 
-KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in modules accessible from a left-side activity rail: **Workspace** (remote connection manager with VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP dual-pane file management, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **File Explorer** (lightning-fast alternative local file browser).
+KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (remote connection manager with VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP dual-pane file management, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **File Explorer** (lightning-fast alternative local file browser).
 
 Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, OS keychain secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 
@@ -90,7 +90,7 @@ High-level product decisions that are not duplicated elsewhere:
 - Privacy: no telemetry or automatic crash upload in v0.1. Update checks (v0.2) are described separately from telemetry.
 - AI model: typed assistant tool calling with permission boundaries. Prompt is the default mode for mutating tools; Allow All is an explicit user setting for automatic execution of enabled tools. CLI agent integrations remain suggest-only/ask-before-execute where possible.
 
-The full stack, module map, storage/secrets boundaries, command-runtime rules, RDP overlay model, Settings layout, and Activity Rail layout live in `docs/ARCHITECTURE.md`. Standalone decision records (SSH transport, security/privacy, extension platform, etc.) live in `docs/ADR/`. Performance budgets and the measurement runbook live in `docs/PERFORMANCE.md`. Distribution, packaging scripts, and the v0.2 updater scope live in `docs/RELEASE.md`.
+The full stack, frontend source map, storage/secrets boundaries, command-runtime rules, RDP overlay model, Settings layout, and Activity Rail layout live in `docs/ARCHITECTURE.md`. Standalone decision records (SSH transport, security/privacy, extension platform, etc.) live in `docs/ADR/`. Performance budgets and the measurement runbook live in `docs/PERFORMANCE.md`. Distribution, packaging scripts, and the v0.2 updater scope live in `docs/RELEASE.md`.
 
 ## Testing Decisions
 
@@ -118,6 +118,6 @@ The full stack, module map, storage/secrets boundaries, command-runtime rules, R
 
 ## Further Notes
 
-KKTerm is open-source under MIT. The codebase should prefer deep modules with small, testable interfaces for storage, connections, terminal sessions, SSH/SFTP transport, renderer abstraction, AI provider adapters, command approval, and importers.
+KKTerm is open-source under MIT. The codebase should prefer deep, single-purpose source areas with small, testable interfaces for storage, connections, terminal sessions, SSH/SFTP transport, renderer abstraction, AI provider adapters, command approval, and importers.
 
 The product should feel like a quiet, dense, professional desktop tool. Avoid marketing-style layouts, decorative gradients, oversized cards, or generic admin-dashboard styling.
