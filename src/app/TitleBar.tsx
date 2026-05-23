@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { getVersion } from "@tauri-apps/api/app";
+import {
+  closeMainWindow,
+  getAppVersion,
+  isMainWindowMaximized,
+  listenMainWindowResized,
+  minimizeMainWindow,
+  toggleMaximizeMainWindow,
+} from "../lib/tauri";
 
 const ICON_SIZE = 10;
 
@@ -100,11 +106,10 @@ export function TitleBar() {
   const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
-    const win = getCurrentWindow();
-    void win.isMaximized().then(setMaximized);
-    void getVersion().then(setVersion);
-    const unlistenPromise = win.onResized(() => {
-      void win.isMaximized().then(setMaximized);
+    void isMainWindowMaximized().then(setMaximized);
+    void getAppVersion().then(setVersion);
+    const unlistenPromise = listenMainWindowResized(() => {
+      void isMainWindowMaximized().then(setMaximized);
     });
     return () => {
       void unlistenPromise.then((unlisten) => unlisten());
@@ -112,15 +117,15 @@ export function TitleBar() {
   }, []);
 
   function handleMinimize() {
-    void getCurrentWindow().minimize();
+    void minimizeMainWindow();
   }
 
   function handleToggleMaximize() {
-    void getCurrentWindow().toggleMaximize();
+    void toggleMaximizeMainWindow();
   }
 
   function handleClose() {
-    void getCurrentWindow().close();
+    void closeMainWindow();
   }
 
   const titleText = version ? `KKTerm v${version}` : "KKTerm";

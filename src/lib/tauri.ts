@@ -1,4 +1,6 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
+import { getVersion as getTauriAppVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   confirm as confirmDialog,
   open as openDialog,
@@ -2139,6 +2141,48 @@ export function isTauriRuntime() {
     "__TAURI_INTERNALS__" in
       (window as Window & { __TAURI_INTERNALS__?: unknown })
   );
+}
+
+export async function getAppVersion() {
+  if (!isTauriRuntime()) {
+    return "";
+  }
+  return getTauriAppVersion();
+}
+
+export async function isMainWindowMaximized() {
+  if (!isTauriRuntime()) {
+    return false;
+  }
+  return getCurrentWindow().isMaximized();
+}
+
+export async function minimizeMainWindow() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().minimize();
+}
+
+export async function toggleMaximizeMainWindow() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().toggleMaximize();
+}
+
+export async function closeMainWindow() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().close();
+}
+
+export async function listenMainWindowResized(handler: () => void) {
+  if (!isTauriRuntime()) {
+    return () => undefined;
+  }
+  return getCurrentWindow().onResized(handler);
 }
 
 export interface WidgetFilePickFilter {
