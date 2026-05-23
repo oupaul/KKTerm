@@ -426,6 +426,14 @@ pub struct AppearanceSettings {
     color_scheme: String,
     #[serde(default)]
     custom_font_path: Option<String>,
+    #[serde(default)]
+    use_custom_title_bar: bool,
+}
+
+impl AppearanceSettings {
+    pub fn use_custom_title_bar(&self) -> bool {
+        self.use_custom_title_bar
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -4207,6 +4215,7 @@ fn default_appearance_settings() -> AppearanceSettings {
         app_font_family: "\"Inter\", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif".to_string(),
         color_scheme: "default".to_string(),
         custom_font_path: None,
+        use_custom_title_bar: false,
     }
 }
 
@@ -6484,6 +6493,7 @@ mod tests {
                 app_font_family: "  \"Custom UI Font\", \"Segoe UI\", sans-serif  ".to_string(),
                 color_scheme: "dark".to_string(),
                 custom_font_path: Some("  C:/KKTerm/fonts/custom.ttf  ".to_string()),
+                use_custom_title_bar: true,
             })
             .expect("appearance settings update");
 

@@ -567,7 +567,13 @@
     "trayExit": "Thoát",
     "wiki": "Wiki",
     "manual": "Hướng dẫn",
-    "dontSleepStatusEnabled": "Đã bật Không ngủ"
+    "dontSleepStatusEnabled": "Đã bật Không ngủ",
+    "titlebar": {
+      "minimize": "Thu nhỏ",
+      "maximize": "Phóng to",
+      "restore": "Khôi phục",
+      "close": "Đóng"
+    }
   },
   "appLauncher": {
     "addApp": "Thêm Ứng dụng",
@@ -1834,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 phút",
     "statusBarMonitorInterval300": "5 phút",
     "useDirectxScreenCapture": "Dùng DirectX để chụp màn hình",
-    "useDirectxScreenCaptureHint": "Dùng DXGI Desktop Duplication khi có, với dự phòng GDI cho các kiểu chụp không được hỗ trợ."
+    "useDirectxScreenCaptureHint": "Dùng DXGI Desktop Duplication khi có, với dự phòng GDI cho các kiểu chụp không được hỗ trợ.",
+    "titleBar": "Thanh tiêu đề",
+    "useCustomTitleBar": "Dùng thanh tiêu đề tuỳ chỉnh",
+    "useCustomTitleBarHint": "Thay thanh tiêu đề mặc định của Windows bằng thanh theo chủ đề KKTerm. Có hiệu lực ngay khi lưu."
   },
   "sftp": {
     "accessed": "Accessed",

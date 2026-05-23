@@ -5,6 +5,7 @@ import type { AssistantPageContext } from "./ai/AssistantPanel";
 import { ActivityRail } from "./app/ActivityRail";
 import type { ActivePage } from "./app/ActivityRail";
 import { AppUpdatePrompt } from "./app/AppUpdatePrompt";
+import { TitleBar } from "./app/TitleBar";
 import {
   findTutorialTargetElement,
   TutorialOverlay,
@@ -140,15 +141,19 @@ function App() {
     return { ok: true };
   }
 
+  const useCustomTitleBar = appearanceSettings.useCustomTitleBar;
+
   return (
-    <div
-      ref={appShellRef}
-      className={`app-shell ${panelAnimating ? "panel-animating" : ""} ${
-        activePage === "settings" ? "settings-mode" : ""
-      } ${
-        connectionPanelLayout.collapsed ? "connections-collapsed" : ""
-      } ${aiPanelLayout.collapsed ? "ai-assist-collapsed" : ""}`}
-    >
+    <div className={`app-root ${useCustomTitleBar ? "" : "app-root--no-titlebar"}`}>
+      {useCustomTitleBar ? <TitleBar /> : null}
+      <div
+        ref={appShellRef}
+        className={`app-shell ${panelAnimating ? "panel-animating" : ""} ${
+          activePage === "settings" ? "settings-mode" : ""
+        } ${
+          connectionPanelLayout.collapsed ? "connections-collapsed" : ""
+        } ${aiPanelLayout.collapsed ? "ai-assist-collapsed" : ""}`}
+      >
       <ActivityRail
         key="activity-rail"
         activePage={activePage}
@@ -222,6 +227,7 @@ function App() {
         onOpenDashboardView={openDashboardView}
       />
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
+      </div>
     </div>
   );
 }

@@ -34,6 +34,7 @@ mod telnet;
 mod vnc;
 mod webview;
 mod wiki;
+mod window_effects;
 mod window_state;
 #[cfg(target_os = "windows")]
 mod windows_local_pty;
@@ -699,6 +700,7 @@ fn launch_app_launcher_entry(
 
 #[tauri::command]
 fn import_settings_database(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
     tray_state: tauri::State<'_, app_tray::TrayState>,
     power: tauri::State<'_, power::DontSleepManager>,
@@ -713,6 +715,13 @@ fn import_settings_database(
         eprintln!("failed to apply imported Don't Sleep setting: {error}");
     }
     webviews.set_clipboard_read_allowed(general_settings.allow_clipboard_read());
+    if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+        let appearance = storage.appearance_settings()?;
+        window_effects::apply_title_bar_mode(
+            &main_webview,
+            appearance.use_custom_title_bar(),
+        );
+    }
     Ok(snapshot)
 }
 
@@ -755,10 +764,15 @@ fn get_appearance_settings(
 
 #[tauri::command]
 fn update_appearance_settings(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
     request: storage::AppearanceSettings,
 ) -> Result<storage::AppearanceSettings, String> {
-    storage.update_appearance_settings(request)
+    let saved = storage.update_appearance_settings(request)?;
+    if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+        window_effects::apply_title_bar_mode(&main_webview, saved.use_custom_title_bar());
+    }
+    Ok(saved)
 }
 
 #[tauri::command]
@@ -2386,6 +2400,11 @@ pub fn run() {
                     webview_sessions.clipboard_read_allowed_state(),
                 )
                 .map_err(setup_error)?;
+                let appearance = storage.appearance_settings().map_err(setup_error)?;
+                window_effects::apply_title_bar_mode(
+                    &main_webview,
+                    appearance.use_custom_title_bar(),
+                );
             }
             if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
                 let title = format!("KKTerm v{}", env!("CARGO_PKG_VERSION"));

@@ -20,7 +20,13 @@
     "openConnectedConnection": "Open {{name}}",
     "openPinnedConnection": "Open pinned Connection {{name}}",
     "trayDontSleep": "Don't Sleep",
-    "trayExit": "Exit"
+    "trayExit": "Exit",
+    "titlebar": {
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "close": "Close"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -988,7 +994,10 @@
     "smtpPassword": "SMTP password",
     "connectedConnectionsRail": "Show connected Connections",
     "connectedConnectionsRailHint": "Adds connected Connection icons to the Activity Rail.",
-    "connectedConnectionsRailSaved": "Show Connection in Left Rail setting saved."
+    "connectedConnectionsRailSaved": "Show Connection in Left Rail setting saved.",
+    "titleBar": "Title Bar",
+    "useCustomTitleBar": "Use custom title bar",
+    "useCustomTitleBarHint": "Replace the Windows native title bar with KKTerm's themed bar. The change takes effect immediately on save."
   },
   "connections": {
     "title": "Connections",

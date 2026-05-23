@@ -567,7 +567,13 @@
     "trayExit": "Esci",
     "wiki": "Wiki",
     "manual": "Manuale",
-    "dontSleepStatusEnabled": "Non sospendere attivo"
+    "dontSleepStatusEnabled": "Non sospendere attivo",
+    "titlebar": {
+      "minimize": "Riduci a icona",
+      "maximize": "Ingrandisci",
+      "restore": "Ripristina",
+      "close": "Chiudi"
+    }
   },
   "appLauncher": {
     "addApp": "Aggiungi app",
@@ -1834,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 min",
     "statusBarMonitorInterval300": "5 min",
     "useDirectxScreenCapture": "Usa DirectX per la cattura schermo",
-    "useDirectxScreenCaptureHint": "Usa DXGI Desktop Duplication quando disponibile, con fallback GDI per le catture non supportate."
+    "useDirectxScreenCaptureHint": "Usa DXGI Desktop Duplication quando disponibile, con fallback GDI per le catture non supportate.",
+    "titleBar": "Barra del titolo",
+    "useCustomTitleBar": "Usa barra del titolo personalizzata",
+    "useCustomTitleBarHint": "Sostituisce la barra del titolo nativa di Windows con quella a tema KKTerm. Si applica al salvataggio."
   },
   "sftp": {
     "accessed": "Accesso",

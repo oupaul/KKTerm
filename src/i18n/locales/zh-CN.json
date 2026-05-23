@@ -567,7 +567,13 @@
     "trayExit": "退出",
     "wiki": "Wiki",
     "manual": "手册",
-    "dontSleepStatusEnabled": "防止睡眠已启用"
+    "dontSleepStatusEnabled": "防止睡眠已启用",
+    "titlebar": {
+      "minimize": "最小化",
+      "maximize": "最大化",
+      "restore": "还原",
+      "close": "关闭"
+    }
   },
   "appLauncher": {
     "addApp": "添加应用",
@@ -1834,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 分钟",
     "statusBarMonitorInterval300": "5 分钟",
     "useDirectxScreenCapture": "使用 DirectX 进行屏幕捕获",
-    "useDirectxScreenCaptureHint": "可用时使用 DXGI Desktop Duplication；不支持的捕获则回退到 GDI。"
+    "useDirectxScreenCaptureHint": "可用时使用 DXGI Desktop Duplication；不支持的捕获则回退到 GDI。",
+    "titleBar": "标题栏",
+    "useCustomTitleBar": "使用自定义标题栏",
+    "useCustomTitleBarHint": "以 KKTerm 主题化标题栏替换 Windows 原生标题栏，保存后立即生效。"
   },
   "sftp": {
     "accessed": "访问日期",

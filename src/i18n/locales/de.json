@@ -567,7 +567,13 @@
     "trayExit": "Beenden",
     "wiki": "Wiki",
     "manual": "Handbuch",
-    "dontSleepStatusEnabled": "Nicht schlafen aktiviert"
+    "dontSleepStatusEnabled": "Nicht schlafen aktiviert",
+    "titlebar": {
+      "minimize": "Minimieren",
+      "maximize": "Maximieren",
+      "restore": "Wiederherstellen",
+      "close": "Schließen"
+    }
   },
   "appLauncher": {
     "addApp": "App hinzufügen",
@@ -1834,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 Min.",
     "statusBarMonitorInterval300": "5 Min.",
     "useDirectxScreenCapture": "DirectX für Bildschirmaufnahme verwenden",
-    "useDirectxScreenCaptureHint": "Verwendet DXGI Desktop Duplication, wenn verfügbar, mit GDI-Fallback für nicht unterstützte Aufnahmen."
+    "useDirectxScreenCaptureHint": "Verwendet DXGI Desktop Duplication, wenn verfügbar, mit GDI-Fallback für nicht unterstützte Aufnahmen.",
+    "titleBar": "Titelleiste",
+    "useCustomTitleBar": "Eigene Titelleiste verwenden",
+    "useCustomTitleBarHint": "Ersetzt die native Windows-Titelleiste durch die KKTerm-Themenleiste. Wirkt sofort nach dem Speichern."
   },
   "sftp": {
     "accessed": "Zugegriffen",

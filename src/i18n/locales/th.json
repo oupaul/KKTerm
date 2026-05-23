@@ -567,7 +567,13 @@
     "trayExit": "ออก",
     "wiki": "วิกิ",
     "manual": "คู่มือ",
-    "dontSleepStatusEnabled": "เปิดใช้งานไม่ให้พักเครื่อง"
+    "dontSleepStatusEnabled": "เปิดใช้งานไม่ให้พักเครื่อง",
+    "titlebar": {
+      "minimize": "ย่อ",
+      "maximize": "ขยาย",
+      "restore": "คืนค่า",
+      "close": "ปิด"
+    }
   },
   "appLauncher": {
     "addApp": "เพิ่มแอป",
@@ -1834,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 นาที",
     "statusBarMonitorInterval300": "5 นาที",
     "useDirectxScreenCapture": "ใช้ DirectX สำหรับการจับภาพหน้าจอ",
-    "useDirectxScreenCaptureHint": "ใช้ DXGI Desktop Duplication เมื่อพร้อมใช้งาน พร้อม fallback เป็น GDI สำหรับการจับภาพที่ไม่รองรับ"
+    "useDirectxScreenCaptureHint": "ใช้ DXGI Desktop Duplication เมื่อพร้อมใช้งาน พร้อม fallback เป็น GDI สำหรับการจับภาพที่ไม่รองรับ",
+    "titleBar": "แถบชื่อเรื่อง",
+    "useCustomTitleBar": "ใช้แถบชื่อเรื่องแบบกำหนดเอง",
+    "useCustomTitleBarHint": "แทนที่แถบชื่อเรื่องดั้งเดิมของ Windows ด้วยแถบธีม KKTerm จะมีผลทันทีเมื่อบันทึก"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",

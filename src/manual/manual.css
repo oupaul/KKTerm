@@ -1,9 +1,9 @@
 .manual-page {
   position: fixed;
-  inset: 0 0 28px 48px;
+  inset: var(--app-titlebar-height, 0px) 0 28px 48px;
   z-index: 80;
   min-width: 0;
-  height: calc(100vh - 28px);
+  height: calc(100vh - 28px - var(--app-titlebar-height, 0px));
   overflow: hidden;
   padding: 22px 24px 28px;
   background: var(--app-bg);

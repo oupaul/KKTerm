@@ -567,7 +567,13 @@
     "trayExit": "Quitter",
     "wiki": "Wiki",
     "manual": "Manuel",
-    "dontSleepStatusEnabled": "Mode Ne pas dormir activé"
+    "dontSleepStatusEnabled": "Mode Ne pas dormir activé",
+    "titlebar": {
+      "minimize": "Réduire",
+      "maximize": "Agrandir",
+      "restore": "Restaurer",
+      "close": "Fermer"
+    }
   },
   "appLauncher": {
     "addApp": "Ajouter une application",
@@ -1834,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 min",
     "statusBarMonitorInterval300": "5 min",
     "useDirectxScreenCapture": "Utiliser DirectX pour la capture d’écran",
-    "useDirectxScreenCaptureHint": "Utilise DXGI Desktop Duplication lorsque disponible, avec repli GDI pour les captures non prises en charge."
+    "useDirectxScreenCaptureHint": "Utilise DXGI Desktop Duplication lorsque disponible, avec repli GDI pour les captures non prises en charge.",
+    "titleBar": "Barre de titre",
+    "useCustomTitleBar": "Utiliser une barre de titre personnalisée",
+    "useCustomTitleBarHint": "Remplace la barre de titre native de Windows par celle aux couleurs de KKTerm. Effectif dès l'enregistrement."
   },
   "sftp": {
     "accessed": "Accédé",

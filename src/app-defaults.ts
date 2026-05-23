@@ -68,6 +68,7 @@ export const defaultAppearanceSettings: AppearanceSettings = {
   appFontFamily:
     '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   colorScheme: "default",
+  useCustomTitleBar: false,
 };
 
 export const defaultSshSettings: SshSettings = {
