@@ -1457,7 +1457,9 @@ export function AiSettings() {
               }
             />
             <span>
-              <strong>{t("settings.builtInMcpAllowAllDangerous")}</strong>
+              <strong className="built-in-mcp-dangerous-label">
+                {t("settings.builtInMcpAllowAllDangerous")}
+              </strong>
               <small>{t("settings.builtInMcpAllowAllDangerousHint")}</small>
             </span>
           </label>

@@ -1281,6 +1281,10 @@
   line-height: 1.3;
 }
 
+.settings-toggle-row .built-in-mcp-dangerous-label {
+  color: var(--red);
+}
+
 .settings-toggle-row small {
   color: var(--text-muted);
   font-size: 13px;
