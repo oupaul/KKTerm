@@ -2161,7 +2161,7 @@ mod tests {
         ));
 
         request.auth_method = Some("keyFile".to_string());
-        request.key_path = Some("C:\\Users\\ryan\\.ssh\\id_ed25519".to_string());
+        request.key_path = Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string());
         assert!(matches!(
             ssh_auth_method_for(&request, None),
             Ok(SshAuthMethod::KeyFile)

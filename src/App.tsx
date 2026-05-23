@@ -68,6 +68,13 @@ function App() {
     navigateToPage("dashboard");
   }
 
+  function openDashboardPage(viewId?: string) {
+    if (viewId) {
+      useDashboardStore.getState().setActiveView(viewId);
+    }
+    navigateToPage("dashboard");
+  }
+
   function navigateForTutorial(request: TutorialHighlightRequest) {
     const navigation = request.navigation;
     if (!navigation) {
@@ -197,7 +204,9 @@ function App() {
       <AssistantPanel
         key="assistant-panel"
         collapsed={aiPanelLayout.collapsed}
+        onOpenDashboard={openDashboardPage}
         onOpenSettings={() => navigateToPage("settings")}
+        onOpenWorkspace={() => navigateToPage("workspace")}
         onTutorialRequest={handleTutorialRequest}
         onToggleCollapsed={toggleAiPanel}
         pageContext={assistantPageContext()}

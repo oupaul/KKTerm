@@ -308,6 +308,16 @@ fn tool_descriptors() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "kkterm.workspace.connections.screenshot",
+            "description": "Capture the visible Workspace surface for an open Connection by id. The app activates the Connection tab before capturing and returns a JPEG data URL plus dimensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"connectionId": {"type": "string"}},
+                "required": ["connectionId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "kkterm.workspace.sessions.list",
             "description": "List live Sessions (terminal Panes, remote desktop targets, file browsers).",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
@@ -358,6 +368,25 @@ fn tool_descriptors() -> Vec<Value> {
             "name": "kkterm.dashboard.load_state",
             "description": "Load full Dashboard state: views, instances, and AI-Created Widget metadata. Widget bodies are returned as `bodyMeta` (size, library hints); call read_widget_source to fetch the actual script.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.dashboard.screenshot_view",
+            "description": "Capture an entire Dashboard View. If viewId is omitted, captures the active Dashboard View. Returns a JPEG data URL plus dimensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"viewId": {"type": "string"}},
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.dashboard.screenshot_widget",
+            "description": "Capture a single Dashboard Widget Instance region by id. The app activates the owning Dashboard View before capturing and returns a JPEG data URL plus dimensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"instanceId": {"type": "string"}},
+                "required": ["instanceId"],
+                "additionalProperties": false,
+            },
         }),
         json!({
             "name": "kkterm.dashboard.read_widget_source",
@@ -659,6 +688,19 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             );
             parse_tool_json(&raw)
         }
+        "kkterm.workspace.connections.screenshot" => {
+            let connection_id = args
+                .get("connectionId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "connectionId is required".to_string())?;
+            let raw = crate::ai::live_session_tool(
+                app,
+                "workspace_connection_screenshot",
+                json!({"connectionId": connection_id}),
+            )
+            .await;
+            parse_tool_json(&raw)
+        }
         "kkterm.workspace.sessions.list" => {
             let raw = crate::ai::live_session_tool(app, "session_state", json!({})).await;
             parse_tool_json(&raw)
@@ -723,6 +765,28 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
         "kkterm.dashboard.load_state" => {
             let raw = crate::ai::dashboard_tool(app, "dashboard_load_state", json!({}));
             parse_dashboard_json(&raw)
+        }
+        "kkterm.dashboard.screenshot_view" => {
+            let raw = crate::ai::live_session_tool(
+                app,
+                "dashboard_view_screenshot",
+                json!({"viewId": args.get("viewId").and_then(Value::as_str)}),
+            )
+            .await;
+            parse_tool_json(&raw)
+        }
+        "kkterm.dashboard.screenshot_widget" => {
+            let instance_id = args
+                .get("instanceId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "instanceId is required".to_string())?;
+            let raw = crate::ai::live_session_tool(
+                app,
+                "dashboard_widget_screenshot",
+                json!({"instanceId": instance_id}),
+            )
+            .await;
+            parse_tool_json(&raw)
         }
         "kkterm.dashboard.read_widget_source" => {
             let id = args
@@ -956,11 +1020,14 @@ mod tests {
             .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_string))
             .collect();
         assert!(names.contains(&"kkterm.workspace.connections.open".to_string()));
+        assert!(names.contains(&"kkterm.workspace.connections.screenshot".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.send_input".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.read_buffer".to_string()));
         assert!(names.contains(&"kkterm.workspace.dangerous.pointer_click".to_string()));
         // Dashboard surface
         assert!(names.contains(&"kkterm.dashboard.load_state".to_string()));
+        assert!(names.contains(&"kkterm.dashboard.screenshot_view".to_string()));
+        assert!(names.contains(&"kkterm.dashboard.screenshot_widget".to_string()));
         assert!(names.contains(&"kkterm.dashboard.create_view".to_string()));
         assert!(names.contains(&"kkterm.dashboard.update_view".to_string()));
         assert!(names.contains(&"kkterm.dashboard.add_instance".to_string()));

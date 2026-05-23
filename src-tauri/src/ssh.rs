@@ -1066,7 +1066,7 @@ mod tests {
     #[test]
     fn native_terminal_lifecycle_starts_for_credentials_without_proxy_jump() {
         assert!(can_start_native_terminal(
-            Some("C:\\Users\\ryan\\.ssh\\id_ed25519"),
+            Some("C:\\Users\\example\\.ssh\\id_ed25519"),
             None,
             false,
             None
@@ -1082,7 +1082,7 @@ mod tests {
         assert!(!can_start_native_terminal(Some("  "), None, false, None));
         assert!(!can_start_native_terminal(None, Some("  "), false, None));
         assert!(!can_start_native_terminal(
-            Some("C:\\Users\\ryan\\.ssh\\id_ed25519"),
+            Some("C:\\Users\\example\\.ssh\\id_ed25519"),
             None,
             false,
             Some("bastion")

@@ -618,13 +618,13 @@ mod tests {
 
     #[test]
     fn launch_plan_opens_folders_through_explorer() {
-        let plan = plan_launch("C:\\Users\\Ryan\\Documents", AppLauncherLaunchMode::Normal)
+        let plan = plan_launch("C:\\Users\\example\\Documents", AppLauncherLaunchMode::Normal)
             .expect("folders open in File Explorer");
 
         assert_eq!(plan.target, "explorer.exe");
         assert_eq!(
             plan.parameters.as_deref(),
-            Some("C:\\Users\\Ryan\\Documents")
+            Some("C:\\Users\\example\\Documents")
         );
         assert_eq!(plan.operation, None);
     }

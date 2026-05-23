@@ -65,7 +65,7 @@ Settings tutorial targets:
 - Group `settings.appearanceInterface`.
 - Colour scheme: `settings.colorScheme`. Options: `settings.schemeDefault`, `settings.schemeDark`, `settings.schemeLight`, `settings.schemeMac`, `settings.schemeOrange`, `settings.schemePurple`, `settings.schemePink`, `settings.schemeGreenKuaiKuai`, `settings.schemeBlueSee`, `settings.schemeConfetti`, `settings.schemeBubbleTea`. Preview `settings.colorSchemePreview`. App background `settings.appBg`. Theme grouping `settings.theme` (hint `settings.themeHint`).
 - App UI font: `settings.appUiFontFamily` / `settings.activeUiFont`. Reset `settings.resetFont`. Validation `settings.appFontFamilyRequired`. Generic `settings.fontFamily` / `settings.fontSize` (range `settings.fontSizeRange`, blank check `settings.fontFamilyRequired`).
-- Title bar group `settings.titleBar`: toggle `settings.useCustomTitleBar` (hint `settings.useCustomTitleBarHint`). When off, KKTerm uses the native Windows title bar. When on, KKTerm switches the main window to app-painted chrome that follows the current KKTerm theme.
+- Title bar group `settings.titleBar`: toggle `settings.useCustomTitleBar` (hint `settings.useCustomTitleBarHint`). It is on by default, so KKTerm starts with app-painted chrome that follows the current KKTerm theme. When off, KKTerm uses the native Windows title bar.
 - Layout group `settings.layout`. Reset layout: `settings.resetLayout` (description `settings.resetLayoutDescription`) — resets Connections / AI panel widths.
 - Save status: `settings.appearanceSaved`. Reset status `settings.appearanceReset`.
 

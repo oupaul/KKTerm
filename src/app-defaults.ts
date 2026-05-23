@@ -68,13 +68,13 @@ export const defaultAppearanceSettings: AppearanceSettings = {
   appFontFamily:
     '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   colorScheme: "default",
-  useCustomTitleBar: false,
+  useCustomTitleBar: true,
 };
 
 export const defaultSshSettings: SshSettings = {
   defaultUser: "admin",
   defaultPort: 22,
-  defaultKeyPath: "C:\\Users\\ryan\\.ssh\\id_ed25519",
+  defaultKeyPath: "",
   defaultProxyJump: "",
   bufferLines: 5000,
   hideCommonPortRedirects: true,

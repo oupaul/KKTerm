@@ -108,7 +108,7 @@ function createConnectionWidgetPane(instanceId: string, connection: Connection):
     id: paneId,
     title: connection.type,
     toolbarTitle: connection.name,
-    cwd: connection.type === "local" ? "C:\\Users\\ryan" : "~",
+    cwd: connection.type === "local" ? "C:\\Users\\example" : "~",
     buffer: "",
     connection,
     tmuxSessionId: appendTmuxSessionId(connection),

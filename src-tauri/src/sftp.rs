@@ -1547,7 +1547,7 @@ mod tests {
     #[test]
     fn sftp_auth_uses_key_file_when_key_path_exists() {
         let mut request = sftp_request();
-        request.key_path = Some("C:\\Users\\ryan\\.ssh\\id_ed25519".to_string());
+        request.key_path = Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string());
 
         assert!(matches!(
             auth_method_for(&request),

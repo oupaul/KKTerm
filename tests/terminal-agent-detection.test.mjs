@@ -101,8 +101,8 @@ test("terminal agent detector clears for common Linux macOS and Windows prompts"
     "\r\n\u001b[32mryan@pb60\u001b[0m:\u001b[34m~\u001b[0m$ ",
     "\r\nroot@server:/var/log# ",
     "\r\nryan@MacBook-Pro ~ % ",
-    "\r\nPS C:\\Users\\ryan> ",
-    "\r\nC:\\Users\\ryan> ",
+    "\r\nPS C:\\Users\\example> ",
+    "\r\nC:\\Users\\example> ",
   ];
 
   for (const prompt of returnedPrompts) {

@@ -814,13 +814,17 @@ function createAiProviderSecretRequestMarkdown(
 
 export function AssistantPanel({
   collapsed,
+  onOpenDashboard,
   onOpenSettings,
+  onOpenWorkspace,
   onTutorialRequest,
   onToggleCollapsed,
   pageContext,
 }: {
   collapsed: boolean;
+  onOpenDashboard: (viewId?: string) => void;
   onOpenSettings: () => void;
+  onOpenWorkspace: () => void;
   onTutorialRequest: (
     request: TutorialHighlightRequest,
   ) => Promise<{ ok: boolean; error?: string }>;
@@ -1461,6 +1465,12 @@ export function AssistantPanel({
         return assistantTerminalSendText(args);
       case "session_remote_desktop_screenshot":
         return assistantRemoteDesktopScreenshot(args);
+      case "workspace_connection_screenshot":
+        return assistantWorkspaceConnectionScreenshot(args);
+      case "dashboard_view_screenshot":
+        return assistantDashboardViewScreenshot(args);
+      case "dashboard_widget_screenshot":
+        return assistantDashboardWidgetScreenshot(args);
       case "session_remote_desktop_send_text":
         return assistantRemoteDesktopSendText(args);
       case "session_remote_desktop_keypress":
@@ -1478,6 +1488,120 @@ export function AssistantPanel({
       default:
         return { ok: false, error: `Unknown live Session tool: ${toolName}` };
     }
+  }
+
+  function attrSelector(name: string, value: string) {
+    return `[${name}="${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"]`;
+  }
+
+  function screenshotRequestForElement(element: HTMLElement): CaptureScreenshotRequest | null {
+    const bounds = element.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) {
+      return null;
+    }
+    return {
+      x: Math.max(0, Math.round(bounds.left)),
+      y: Math.max(0, Math.round(bounds.top)),
+      width: Math.max(1, Math.round(bounds.width)),
+      height: Math.max(1, Math.round(bounds.height)),
+    };
+  }
+
+  async function waitForElement(selector: string) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const element = document.querySelector<HTMLElement>(selector);
+      const request = element ? screenshotRequestForElement(element) : null;
+      if (element && request) {
+        return element;
+      }
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    }
+    return null;
+  }
+
+  async function captureElementForLiveTool(element: HTMLElement) {
+    const request = screenshotRequestForElement(element);
+    if (!request) {
+      throw new Error("Screenshot target is not visible.");
+    }
+    await waitForScreenshotSurface();
+    const screenshot = await invokeCommand("capture_screenshot_for_assistant", { request });
+    return { screenshot, bounds: request };
+  }
+
+  async function assistantWorkspaceConnectionScreenshot(args: Record<string, unknown>) {
+    if (!isTauriRuntime()) {
+      return { ok: false, error: t("workspace.screenshotsRequireRuntime") };
+    }
+    const connectionId = typeof args.connectionId === "string" ? args.connectionId.trim() : "";
+    if (!connectionId) {
+      return { ok: false, error: "connectionId is required." };
+    }
+    const workspace = useWorkspaceStore.getState();
+    const tab = workspace.tabs.find(
+      (entry) =>
+        entry.connection?.id === connectionId ||
+        entry.panes.some((pane) => pane.connection?.id === connectionId),
+    );
+    if (!tab) {
+      return { ok: false, error: "Connection is not open in the Workspace." };
+    }
+    onOpenWorkspace();
+    useWorkspaceStore.getState().activateTab(tab.id);
+    const target = await waitForElement(attrSelector("data-tutorial-id", "workspace.canvas"));
+    if (!target) {
+      return { ok: false, error: "Workspace Canvas is not visible." };
+    }
+    const { screenshot, bounds } = await captureElementForLiveTool(target);
+    return { ok: true, connectionId, tabId: tab.id, bounds, screenshot };
+  }
+
+  async function assistantDashboardViewScreenshot(args: Record<string, unknown>) {
+    if (!isTauriRuntime()) {
+      return { ok: false, error: t("workspace.screenshotsRequireRuntime") };
+    }
+    const dashboard = useDashboardStore.getState();
+    if (!dashboard.ready) {
+      await dashboard.load();
+    }
+    const state = useDashboardStore.getState();
+    const requestedViewId = typeof args.viewId === "string" ? args.viewId.trim() : "";
+    const viewId = requestedViewId || state.activeViewId || state.views[0]?.id || "";
+    if (!viewId || !state.views.some((view) => view.id === viewId)) {
+      return { ok: false, error: "Dashboard View was not found." };
+    }
+    onOpenDashboard(viewId);
+    const target = await waitForElement(attrSelector("data-dashboard-view-id", viewId));
+    if (!target) {
+      return { ok: false, error: "Dashboard View is not visible." };
+    }
+    const { screenshot, bounds } = await captureElementForLiveTool(target);
+    return { ok: true, viewId, bounds, screenshot };
+  }
+
+  async function assistantDashboardWidgetScreenshot(args: Record<string, unknown>) {
+    if (!isTauriRuntime()) {
+      return { ok: false, error: t("workspace.screenshotsRequireRuntime") };
+    }
+    const instanceId = typeof args.instanceId === "string" ? args.instanceId.trim() : "";
+    if (!instanceId) {
+      return { ok: false, error: "instanceId is required." };
+    }
+    const dashboard = useDashboardStore.getState();
+    if (!dashboard.ready) {
+      await dashboard.load();
+    }
+    const instance = useDashboardStore.getState().instances.find((entry) => entry.id === instanceId);
+    if (!instance) {
+      return { ok: false, error: "Dashboard Widget Instance was not found." };
+    }
+    onOpenDashboard(instance.viewId);
+    const target = await waitForElement(attrSelector("data-dashboard-widget-instance-id", instanceId));
+    if (!target) {
+      return { ok: false, error: "Dashboard Widget Instance is not visible." };
+    }
+    const { screenshot, bounds } = await captureElementForLiveTool(target);
+    return { ok: true, instanceId, viewId: instance.viewId, bounds, screenshot };
   }
 
   async function assistantTutorialHighlight(args: Record<string, unknown>) {

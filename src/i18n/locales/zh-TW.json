@@ -1484,7 +1484,7 @@
     "defaultFontHint": "預設使用 src/assets/fonts/inter/web/InterVariable.woff2。",
     "defaultKey": "預設金鑰",
     "defaultKeyHint": "用於使用金鑰檔案驗證的新 SSH 連線。",
-    "defaultKeyPlaceholder": "C:\\Users\\ryan\\.ssh\\id_ed25519",
+    "defaultKeyPlaceholder": "C:\\Users\\example\\.ssh\\id_ed25519",
     "defaultPort": "預設連接埠",
     "defaultShell": "預設 Shell",
     "defaultShellRequired": "需要預設 Shell。",

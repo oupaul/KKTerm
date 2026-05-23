@@ -88,6 +88,7 @@ The Workspace Module owns saved Connections and live Sessions
 |---|---|
 | `kkterm.workspace.connections.list` | List saved Connections (folders + connections) from KKTerm storage. |
 | `kkterm.workspace.connections.open` | Open a saved Connection by `connectionId`. Routes through the existing AI assistant `connection_open` path and emits `assistant-open-connection` for the frontend to start the appropriate session (terminal, SSH, URL, RDP, VNC). |
+| `kkterm.workspace.connections.screenshot` | Capture the visible Workspace Canvas for an open Connection by `connectionId`. The app activates the matching Tab before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.workspace.sessions.list` | List live Sessions (terminal Panes, remote desktop targets, file browsers). Backed by `session_state`. |
 | `kkterm.workspace.sessions.send_input` | Send text/keystrokes to a live terminal Pane. `submit: true` appends a terminal Enter key as carriage return (`\r`) after the text. Backed by `session_terminal_send_text`. |
 | `kkterm.workspace.sessions.read_buffer` | Read a snapshot of the visible terminal buffer for a live Pane. Backed by `session_terminal_read_buffer`. |
@@ -107,6 +108,8 @@ storage and event path (`dashboard-changed` is emitted on mutations).
 | Name | Description |
 |---|---|
 | `kkterm.dashboard.load_state` | Read the redacted Dashboard state (views + instances + AI widget metadata). |
+| `kkterm.dashboard.screenshot_view` | Capture an entire Dashboard View by optional `viewId` (defaults to the active View). The app activates the Dashboard View before capture and returns a JPEG data URL plus dimensions. |
+| `kkterm.dashboard.screenshot_widget` | Capture a single Dashboard Widget Instance region by `instanceId`. The app activates the owning Dashboard View before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.dashboard.read_widget_source` | Fetch the script body of a single AI-Created Widget by id. |
 | `kkterm.dashboard.create_view` | Add a new Dashboard view. |
 | `kkterm.dashboard.update_view` | Edit a view (title, gridDensity). |
@@ -136,7 +139,11 @@ same protection without any per-Module gate code.
 All tool inputs use JSON schemas published in `tools/list`. The handler in
 the bridge translates the curated `kkterm.<module>.*` names into the
 existing AI assistant tool functions in `src-tauri/src/ai.rs`, so MCP and
-the in-app assistant share one implementation.
+the in-app assistant share one implementation. Screenshot tools are safe
+tools because they only read the currently rendered KKTerm UI, but they do
+return image data that may include visible terminal, remote desktop, URL,
+file, or widget content. They do not bypass the normal desktop rendering
+path and cannot capture hidden/unmounted content.
 
 ### Adding a new Module
 
@@ -213,8 +220,8 @@ args = []
 
 After configuration, start KKTerm.exe (so the bridge is available),
 reconnect the client, and run `tools/list` to verify connectivity. The
-client should see six tools; `tools/call` requires KKTerm.exe to be
-running.
+client should see the published tool list; `tools/call` requires KKTerm.exe
+to be running.
 
 Settings → AI Assistant → Built-in MCP Server includes a "Show config"
 dialog with JSON and TOML snippets whose `command` is the resolved

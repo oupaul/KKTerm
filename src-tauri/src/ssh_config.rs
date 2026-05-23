@@ -256,7 +256,7 @@ Host bastion-east
   HostName bastion-east.internal
   User admin
   Port 2222
-  IdentityFile "C:\Users\ryan\.ssh\id_ed25519"
+  IdentityFile "C:\Users\example\.ssh\id_ed25519"
   ProxyJump jump.internal
 "#,
             Some("imported"),
@@ -270,7 +270,7 @@ Host bastion-east
         assert_eq!(preview.drafts[0].port, Some(2222));
         assert_eq!(
             preview.drafts[0].key_path.as_deref(),
-            Some("C:\\Users\\ryan\\.ssh\\id_ed25519")
+            Some("C:\\Users\\example\\.ssh\\id_ed25519")
         );
         assert_eq!(
             preview.drafts[0].proxy_jump.as_deref(),

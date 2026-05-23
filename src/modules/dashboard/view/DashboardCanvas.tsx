@@ -132,7 +132,7 @@ export function DashboardCanvas({
   }
 
   return (
-    <div className="dw-canvas-host" onContextMenu={onCanvasContextMenu}>
+    <div className="dw-canvas-host" data-dashboard-view-id={view.id} onContextMenu={onCanvasContextMenu}>
       {backgroundLayer}
       {editMode ? <div className="dw-canvas-blueprint" /> : null}
       <ResponsiveGrid

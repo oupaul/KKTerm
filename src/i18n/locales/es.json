@@ -829,7 +829,7 @@
     "jumpInternal": "salto.interno",
     "keyFile": "Archivo de clave",
     "keyPath": "Ruta de clave",
-    "keyPathExample": "C:\\Users\\ryan\\.ssh\\id_ed25519",
+    "keyPathExample": "C:\\Users\\example\\.ssh\\id_ed25519",
     "layout": "Diseño",
     "leaveBlankPassword": "Dejar en blanco para mantener la contraseña guardada",
     "left": "Izquierda",

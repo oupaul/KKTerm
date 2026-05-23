@@ -30,6 +30,7 @@ if ($OwnsInstallDir) {
 
 $ResolvedInstallDir = [System.IO.Path]::GetFullPath($InstallDir)
 $InstalledExe = Join-Path $ResolvedInstallDir "kkterm.exe"
+$InstalledCliExe = Join-Path $ResolvedInstallDir "kkterm-cli.exe"
 $Uninstaller = Join-Path $ResolvedInstallDir "uninstall.exe"
 
 function Assert-ChildPath {
@@ -111,6 +112,15 @@ try {
         throw "Installed kkterm.exe is empty."
     }
 
+    if (-not (Test-Path $InstalledCliExe)) {
+        throw "Silent installer completed but kkterm-cli.exe was not found at $InstalledCliExe."
+    }
+
+    $InstalledCliItem = Get-Item -LiteralPath $InstalledCliExe
+    if ($InstalledCliItem.Length -le 0) {
+        throw "Installed kkterm-cli.exe is empty."
+    }
+
     $InstallSucceeded = $true
 }
 finally {
@@ -135,6 +145,7 @@ finally {
     ChecksumVerified = -not $SkipChecksum
     InstallDirectory = $ResolvedInstallDir
     InstalledExecutable = $InstalledExe
+    InstalledCliExecutable = $InstalledCliExe
     SilentInstall = $InstallSucceeded
     Cleanup = if ($KeepInstall) { "kept" } else { "removed" }
 }

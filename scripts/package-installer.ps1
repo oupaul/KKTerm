@@ -40,7 +40,15 @@ try {
     #     throw "TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PATH is required to build updater artifacts."
     # }
 
-    npm exec tauri -- build --bundles=nsis
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-tauri-sidecars.ps1
+    $PreviousTauriConfig = $env:TAURI_CONFIG
+    $env:TAURI_CONFIG = '{"bundle":{"externalBin":["binaries/kkterm-cli"]}}'
+    try {
+        npm exec tauri -- build --bundles=nsis
+    }
+    finally {
+        $env:TAURI_CONFIG = $PreviousTauriConfig
+    }
 }
 finally {
     Pop-Location

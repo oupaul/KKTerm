@@ -4227,7 +4227,7 @@ fn default_appearance_settings() -> AppearanceSettings {
         app_font_family: "\"Inter\", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif".to_string(),
         color_scheme: "default".to_string(),
         custom_font_path: None,
-        use_custom_title_bar: false,
+        use_custom_title_bar: true,
     }
 }
 
@@ -5201,7 +5201,7 @@ mod tests {
                 connection_type: "ssh".to_string(),
                 folder_id: None,
                 port: Some(2222),
-                key_path: Some("C:\\Users\\ryan\\.ssh\\id_ed25519".to_string()),
+                key_path: Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string()),
                 proxy_jump: Some("jump.internal".to_string()),
                 auth_method: Some("keyFile".to_string()),
                 local_shell: None,
@@ -5747,7 +5747,7 @@ mod tests {
                 connection_type: "ssh".to_string(),
                 folder_id: Some(production.id.clone()),
                 port: Some(2222),
-                key_path: Some("C:\\Users\\ryan\\.ssh\\prod".to_string()),
+                key_path: Some("C:\\Users\\example\\.ssh\\prod".to_string()),
                 proxy_jump: Some("jump.internal".to_string()),
                 auth_method: Some("keyFile".to_string()),
                 local_shell: None,
@@ -5771,7 +5771,7 @@ mod tests {
         assert_eq!(updated.port, Some(2222));
         assert_eq!(
             updated.key_path.as_deref(),
-            Some("C:\\Users\\ryan\\.ssh\\prod")
+            Some("C:\\Users\\example\\.ssh\\prod")
         );
         assert_eq!(updated.proxy_jump.as_deref(), Some("jump.internal"));
         assert_eq!(updated.auth_method, "keyFile");
@@ -6505,6 +6505,7 @@ mod tests {
             .appearance_settings()
             .expect("default appearance settings load");
         assert!(defaults.app_font_family.contains("Inter"));
+        assert!(defaults.use_custom_title_bar);
 
         let updated = storage
             .update_appearance_settings(AppearanceSettings {
@@ -6548,7 +6549,7 @@ mod tests {
             .update_ssh_settings(SshSettings {
                 default_user: "deploy".to_string(),
                 default_port: 2200,
-                default_key_path: Some("  C:\\Users\\ryan\\.ssh\\deploy_ed25519  ".to_string()),
+                default_key_path: Some("  C:\\Users\\example\\.ssh\\deploy_ed25519  ".to_string()),
                 default_proxy_jump: Some("  bastion.internal  ".to_string()),
                 buffer_lines: 12_000,
                 hide_common_port_redirects: false,
@@ -6559,7 +6560,7 @@ mod tests {
         assert_eq!(updated.default_user, "deploy");
         assert_eq!(
             updated.default_key_path.as_deref(),
-            Some("C:\\Users\\ryan\\.ssh\\deploy_ed25519")
+            Some("C:\\Users\\example\\.ssh\\deploy_ed25519")
         );
 
         let reloaded = storage.ssh_settings().expect("SSH settings reload");

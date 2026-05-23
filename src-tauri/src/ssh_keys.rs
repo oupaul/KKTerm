@@ -319,8 +319,8 @@ mod tests {
     #[test]
     fn public_key_path_appends_pub_suffix() {
         assert_eq!(
-            public_key_path_for(Path::new("C:\\Users\\ryan\\.ssh\\id_ed25519")),
-            PathBuf::from("C:\\Users\\ryan\\.ssh\\id_ed25519.pub")
+            public_key_path_for(Path::new("C:\\Users\\example\\.ssh\\id_ed25519")),
+            PathBuf::from("C:\\Users\\example\\.ssh\\id_ed25519.pub")
         );
     }
 

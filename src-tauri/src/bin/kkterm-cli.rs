@@ -118,6 +118,16 @@ fn static_tool_descriptors() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "kkterm.workspace.connections.screenshot",
+            "description": "Capture the visible Workspace surface for an open Connection by id. The app activates the Connection tab before capturing and returns a JPEG data URL plus dimensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"connectionId": {"type": "string"}},
+                "required": ["connectionId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "kkterm.workspace.sessions.list",
             "description": "List live Sessions (terminal Panes, remote desktop targets, file browsers).",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
@@ -166,6 +176,25 @@ fn static_tool_descriptors() -> Vec<Value> {
             "name": "kkterm.dashboard.load_state",
             "description": "Load full Dashboard state: views, instances, and AI-Created Widget metadata. Widget bodies are returned as `bodyMeta` (size, library hints); call read_widget_source to fetch the actual script.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.dashboard.screenshot_view",
+            "description": "Capture an entire Dashboard View. If viewId is omitted, captures the active Dashboard View. Returns a JPEG data URL plus dimensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"viewId": {"type": "string"}},
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.dashboard.screenshot_widget",
+            "description": "Capture a single Dashboard Widget Instance region by id. The app activates the owning Dashboard View before capturing and returns a JPEG data URL plus dimensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"instanceId": {"type": "string"}},
+                "required": ["instanceId"],
+                "additionalProperties": false,
+            },
         }),
         json!({
             "name": "kkterm.dashboard.read_widget_source",
