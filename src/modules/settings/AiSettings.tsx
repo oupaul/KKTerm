@@ -48,7 +48,19 @@ import i18next from "../../i18n/config";
 const GITHUB_COPILOT_CLI_INSTALL_URL =
   "https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli";
 
-function builtInMcpConfigSnippet(commandPath: string) {
+type BuiltInMcpConfigFormat = "json" | "toml";
+
+type BuiltInMcpSetupRow = {
+  agent: string;
+  methodKey: string;
+  projectScope: string;
+  globalScope: string;
+};
+
+const BUILT_IN_MCP_COMMAND_PATH_FALLBACK = "C:\\Path\\To\\kkterm-cli.exe";
+const BUILT_IN_MCP_PROJECT_CONFIG_UNAVAILABLE = "-";
+
+function builtInMcpJsonSnippet(commandPath: string) {
   return JSON.stringify(
     {
       mcpServers: {
@@ -63,36 +75,68 @@ function builtInMcpConfigSnippet(commandPath: string) {
   );
 }
 
-const BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK = `{
+function builtInMcpTomlSnippet(commandPath: string) {
+  return `[mcp_servers.kkterm]
+command = "${escapeTomlBasicString(commandPath)}"
+args = []
+`;
+}
+
+function escapeTomlBasicString(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function quoteCliArgument(value: string) {
+  return `"${value.replace(/"/g, '\\"')}"`;
+}
+
+function builtInMcpSetupRows(commandPath: string): BuiltInMcpSetupRow[] {
+  const command = quoteCliArgument(commandPath);
+  return [
+    {
+      agent: "Codex",
+      methodKey: "settings.builtInMcpConfigMethodRunCommandOrManualEdit",
+      projectScope: ".codex/config.toml",
+      globalScope: `codex mcp add KKTerm -- ${command}`,
+    },
+    {
+      agent: "Claude Code",
+      methodKey: "settings.builtInMcpConfigMethodRunCommand",
+      projectScope: `claude mcp add --scope project KKTerm -- ${command}`,
+      globalScope: `claude mcp add --scope user KKTerm -- ${command}`,
+    },
+    {
+      agent: "Antigravity",
+      methodKey: "settings.builtInMcpConfigMethodManualEdit",
+      projectScope: BUILT_IN_MCP_PROJECT_CONFIG_UNAVAILABLE,
+      globalScope: "~/.gemini/antigravity/mcp_config.json",
+    },
+    {
+      agent: "GitHub Copilot in VS Code",
+      methodKey: "settings.builtInMcpConfigMethodManualEdit",
+      projectScope: ".vscode/mcp.json",
+      globalScope: "%APPDATA%\\Code\\User\\mcp.json",
+    },
+    {
+      agent: "OpenCode",
+      methodKey: "settings.builtInMcpConfigMethodManualEdit",
+      projectScope: "opencode.json",
+      globalScope: "~/.config/opencode/opencode.json",
+    },
+  ];
+}
+
+const BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK = {
+  json: `{
   "mcpServers": {
     "kkterm": {
       "command": "C:\\\\Path\\\\To\\\\kkterm-cli.exe",
       "args": []
     }
   }
-}`;
-const BUILT_IN_MCP_CONFIG_LINKS = [
-  {
-    key: "codex",
-    labelKey: "settings.builtInMcpConfigLocationCodex",
-  },
-  {
-    key: "claudeCode",
-    labelKey: "settings.builtInMcpConfigLocationClaudeCode",
-  },
-  {
-    key: "antigravity",
-    labelKey: "settings.builtInMcpConfigLocationAntigravity",
-  },
-  {
-    key: "githubCopilot",
-    labelKey: "settings.builtInMcpConfigLocationGithubCopilot",
-  },
-  {
-    key: "openCode",
-    labelKey: "settings.builtInMcpConfigLocationOpenCode",
-  },
-] as const;
+}`,
+  toml: builtInMcpTomlSnippet(BUILT_IN_MCP_COMMAND_PATH_FALLBACK),
+};
 
 function createStoredApiKeyMask() {
   const maskLength = 12 + Math.floor(Math.random() * 5);
@@ -103,7 +147,20 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [copied, setCopied] = useState(false);
-  const [configSnippet, setConfigSnippet] = useState(BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK);
+  const [activeFormat, setActiveFormat] = useState<BuiltInMcpConfigFormat>("json");
+  const [commandPath, setCommandPath] = useState(BUILT_IN_MCP_COMMAND_PATH_FALLBACK);
+  const configSnippets = {
+    json:
+      commandPath === BUILT_IN_MCP_COMMAND_PATH_FALLBACK
+        ? BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK.json
+        : builtInMcpJsonSnippet(commandPath),
+    toml:
+      commandPath === BUILT_IN_MCP_COMMAND_PATH_FALLBACK
+        ? BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK.toml
+        : builtInMcpTomlSnippet(commandPath),
+  };
+  const configSnippet = configSnippets[activeFormat];
+  const setupRows = builtInMcpSetupRows(commandPath);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -113,7 +170,7 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
     invokeCommand("get_built_in_mcp_command_path", undefined)
       .then((commandPath) => {
         if (isMounted) {
-          setConfigSnippet(builtInMcpConfigSnippet(commandPath));
+          setCommandPath(commandPath);
         }
       })
       .catch((error: unknown) => {
@@ -131,18 +188,6 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
     setCopied(true);
   }
 
-  async function handleOpenConfigLocation(
-    location: (typeof BUILT_IN_MCP_CONFIG_LINKS)[number]["key"],
-  ) {
-    try {
-      await invokeCommand("open_built_in_mcp_config_location", { location });
-    } catch (error) {
-      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
-        tone: "error",
-      });
-    }
-  }
-
   return (
     <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
       <div
@@ -153,7 +198,6 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
       >
         <header className="connection-dialog-header compact">
           <div>
-            <p className="panel-label">{t("settings.builtInMcpServerEnabled")}</p>
             <h2>{t("settings.builtInMcpConfigTitle")}</h2>
           </div>
           <button
@@ -167,6 +211,25 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
         </header>
         <div className="mcp-dialog-body">
           <p className="field-hint">{t("settings.builtInMcpConfigIntro")}</p>
+          <div className="built-in-mcp-config-tabs" role="tablist">
+            {(["json", "toml"] as const).map((format) => (
+              <button
+                aria-selected={activeFormat === format}
+                className="built-in-mcp-config-tab"
+                key={format}
+                onClick={() => {
+                  setActiveFormat(format);
+                  setCopied(false);
+                }}
+                role="tab"
+                type="button"
+              >
+                {format === "json"
+                  ? t("settings.builtInMcpConfigFormatJson")
+                  : t("settings.builtInMcpConfigFormatToml")}
+              </button>
+            ))}
+          </div>
           <pre className="built-in-mcp-config-snippet">
             <code>{configSnippet}</code>
           </pre>
@@ -180,19 +243,32 @@ function BuiltInMcpConfigDialog({ onClose }: { onClose: () => void }) {
           </button>
           <div className="built-in-mcp-config-locations">
             <strong>{t("settings.builtInMcpConfigLocationsTitle")}</strong>
-            <ul>
-              {BUILT_IN_MCP_CONFIG_LINKS.map((link) => (
-                <li key={link.key}>
-                  <button
-                    className="settings-api-key-link"
-                    onClick={() => void handleOpenConfigLocation(link.key)}
-                    type="button"
-                  >
-                    {t(link.labelKey)}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="built-in-mcp-config-table-wrap">
+              <table className="built-in-mcp-config-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t("settings.builtInMcpConfigAgentHeader")}</th>
+                    <th scope="col">{t("settings.builtInMcpConfigMethodHeader")}</th>
+                    <th scope="col">{t("settings.builtInMcpConfigProjectScopeHeader")}</th>
+                    <th scope="col">{t("settings.builtInMcpConfigGlobalScopeHeader")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {setupRows.map((row) => (
+                    <tr key={row.agent}>
+                      <th scope="row">{row.agent}</th>
+                      <td>{t(row.methodKey)}</td>
+                      <td>
+                        <code>{row.projectScope}</code>
+                      </td>
+                      <td>
+                        <code>{row.globalScope}</code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

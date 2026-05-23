@@ -188,11 +188,19 @@ the release build lives next to `kkterm.exe`.
 
 - **Codex-style local MCP command**
   - config location: `~/.codex/config.toml`
-  - add a stdio MCP server named `kkterm` under `[mcp_servers]`
+  - CLI command for user/global config: `codex mcp add kkterm -- <path-to-kkterm-cli>`
+  - project-scoped config: manually add the same TOML shape to `.codex/config.toml`
+
+```toml
+[mcp_servers.kkterm]
+command = "<path-to-kkterm-cli>"
+args = []
+```
 
 - **GitHub Copilot agent/tooling that supports MCP stdio**
   - config location: `.vscode/mcp.json` in the workspace or the user MCP config
-  - register `kkterm-cli` as an MCP stdio server command in the `servers` map
+  - use the VS Code `MCP: Add Server` command or manually register `kkterm-cli`
+    as an MCP stdio server command in the `servers` map
 
 - **Antigravity / other MCP-capable clients**
   - config location: `~/.gemini/antigravity/mcp_config.json`
@@ -201,7 +209,7 @@ the release build lives next to `kkterm.exe`.
 
 - **OpenCode**
   - config location: `opencode.json`, commonly `~/.config/opencode/opencode.json`
-  - add `kkterm` under the `mcp` object with local transport
+  - manually add `kkterm` under the `mcp` object with local transport
 
 After configuration, start KKTerm.exe (so the bridge is available),
 reconnect the client, and run `tools/list` to verify connectivity. The
@@ -209,9 +217,10 @@ client should see six tools; `tools/call` requires KKTerm.exe to be
 running.
 
 Settings → AI Assistant → Built-in MCP Server includes a "Show config"
-dialog with a JSON snippet whose `command` is the resolved `kkterm-cli`
-path beside the running `KKTerm.exe`. Its common config location rows open
-the matching user config file in Notepad.
+dialog with JSON and TOML snippets whose `command` is the resolved
+`kkterm-cli` path beside the running `KKTerm.exe`. Its setup table shows
+copyable command examples for clients that support CLI MCP registration and
+config paths for clients that require manual editing.
 Debug builds write raw built-in and remote MCP request/response records to
 `mcp.debug.log` beside `kkterm.log`.
 
