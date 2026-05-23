@@ -211,7 +211,7 @@ The dashboard has twenty-one canvas-animated backgrounds you can pick per **Dash
 | Geeky | `matrix`, `topo`, `synthwave` |
 | Erratic | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
-They run on a single shared `requestAnimationFrame` and respect window focus, so they cost roughly nothing when you're elsewhere. Pair `matrix` with your AI assistant for a vibe that says "I am extremely productive and also possibly in a Wachowski film." Or pick `mist` and look like a serious person. We do not judge either choice.
+They run on a single shared `requestAnimationFrame` and respect window focus, so they cost roughly nothing when you're elsewhere. Pair `matrix` with your AI assistant for a vibe that says "I am extremely productive and also possibly in a Wachowski film." Or pick `ocean` and look like a serious person. We do not judge either choice.
 
 ### Running AI coding agents on a server, the right way
 
@@ -268,7 +268,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -304,7 +304,7 @@ The shape that matters: durable saved data (**Connection**) is separate from liv
 | **SFTP / FTP** | SSH-launched SFTP plus FTP/FTPS **Connections**, dual-pane browser, recursive transfers, queue/cancel/clear history, conflicts, properties, chmod/chown where supported |
 | **URL WebView** | Embedded WebView2 URL **Sessions**, navigation toolbar, favicon capture, stored website credential metadata/fill, data partition metadata |
 | **Remote Desktop** | RDP through Windows ActiveX with geometry-scoped overlay parking; VNC through `vnc-rs` framebuffer rendered in the workspace canvas |
-| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, **AI-authored content/script widgets** (declarative JSON or sandboxed iframe JS with permissions), per-widget presets / accent / icon / title, **9 animated canvas backgrounds** (aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti) |
+| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, **AI-authored content/script widgets** (declarative JSON or sandboxed iframe JS with permissions), per-widget presets / accent / icon / title, **21 animated canvas backgrounds** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
 | **AI Assistant** | Streaming chat, OpenAI-compatible runtime, provider registry, command proposal safety classification, screenshot/context attachments, **Dashboard widget authoring (content + sandboxed script)**, **tmux pane capture** as conversation context for remote sessions, **Connection** management tools, and live **Session** tools for terminal, RDP/VNC, and SFTP/FTP |
 | **AI Coding Usage** | **Dashboard widget + status-bar indicator** tracking **Claude Code** and **Codex** quota usage: connected account, plan tier, 5-hour and weekly window percentages, next reset time, auth state (`connected` / `expired` / `error`), rate-limit-aware refresh policy |
 | **Built-in MCP Server** | Stdio MCP server (`kkterm-cli`) exposing curated Workspace and Dashboard tools to external coding agents (Claude Code, Codex, Copilot, Antigravity, OpenCode); authenticated named-pipe bridge; per-Module `dangerous.*` namespaces gated behind a single safety toggle; Settings dialog with one-click JSON / TOML snippets and `claude mcp add` / `codex mcp add` commands |
@@ -413,7 +413,7 @@ We would love a hand. Genuinely. Even small things matter:
 
 - **Try the dev build** and file an issue when something feels off. "It felt off" is a legitimate bug report; we'll dig with you.
 - **Translate a locale.** English is the source of truth at [`src/i18n/locales/en.json`](src/i18n/locales/en.json); 12 other locales live next to it and load on demand. Pending strings are tracked per-key under [`docs/localization_todo/`](docs/localization_todo/) — pick one, translate it, delete the file.
-- **Add a Dashboard widget.** Built-in widgets live in [`src/dashboard/widgets/`](src/dashboard/widgets/). Pick a small idea, ship it, learn the pattern.
+- **Add a Dashboard widget.** Built-in widgets live in [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Pick a small idea, ship it, learn the pattern.
 - **Tighten the AI tool surface.** Provider adapters live in [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); the frontend registry is in [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
 - **Improve the manual.** End-user docs live in [`docs/manual/`](docs/manual/). One chapter per UI module. If you used a feature and the docs didn't help, a PR fixing that is gold.
 
