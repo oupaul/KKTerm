@@ -43,6 +43,8 @@ File-name labels may wrap to two lines in the launcher surface so longer local a
 
 List and Details headers are clickable sort controls. List sort and Details sort are stored separately; switching view modes restores that mode's last sort. Icon view remains separate and keeps the manual drag order stored in the entry list.
 
+For desktop file/folder drag import, the browser-preview drop target highlight now covers the entire App Launcher widget body (not only populated icon rows), so drops can land anywhere inside the widget surface.
+
 Details values come from live local file metadata when available:
 
 - Type values use `appLauncher.folderType`, `appLauncher.fileType`, `appLauncher.fileTypeWithExtension`, or `appLauncher.unknownFileType`.
