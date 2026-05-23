@@ -141,9 +141,11 @@ function App() {
     return { ok: true };
   }
 
+  const useCustomTitleBar = appearanceSettings.useCustomTitleBar;
+
   return (
-    <div className="app-root">
-      <TitleBar />
+    <div className={`app-root ${useCustomTitleBar ? "" : "app-root--no-titlebar"}`}>
+      {useCustomTitleBar ? <TitleBar /> : null}
       <div
         ref={appShellRef}
         className={`app-shell ${panelAnimating ? "panel-animating" : ""} ${

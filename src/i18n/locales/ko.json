@@ -1840,7 +1840,10 @@
     "statusBarMonitorInterval60": "1분",
     "statusBarMonitorInterval300": "5분",
     "useDirectxScreenCapture": "화면 캡처에 DirectX 사용",
-    "useDirectxScreenCaptureHint": "사용 가능한 경우 DXGI Desktop Duplication을 사용하고, 지원되지 않는 캡처에는 GDI로 대체합니다."
+    "useDirectxScreenCaptureHint": "사용 가능한 경우 DXGI Desktop Duplication을 사용하고, 지원되지 않는 캡처에는 GDI로 대체합니다.",
+    "titleBar": "제목 표시줄",
+    "useCustomTitleBar": "사용자 지정 제목 표시줄 사용",
+    "useCustomTitleBarHint": "Windows 기본 제목 표시줄을 KKTerm 테마 표시줄로 바꿉니다. 저장 시 즉시 적용됩니다."
   },
   "sftp": {
     "accessed": "접근일",

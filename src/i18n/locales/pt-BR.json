@@ -1840,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 min",
     "statusBarMonitorInterval300": "5 min",
     "useDirectxScreenCapture": "Usar DirectX para captura de tela",
-    "useDirectxScreenCaptureHint": "Usa DXGI Desktop Duplication quando disponível, com fallback GDI para capturas sem suporte."
+    "useDirectxScreenCaptureHint": "Usa DXGI Desktop Duplication quando disponível, com fallback GDI para capturas sem suporte.",
+    "titleBar": "Barra de título",
+    "useCustomTitleBar": "Usar barra de título personalizada",
+    "useCustomTitleBarHint": "Substitui a barra de título nativa do Windows pela barra temática do KKTerm. Aplica-se ao salvar."
   },
   "sftp": {
     "accessed": "Acessado",

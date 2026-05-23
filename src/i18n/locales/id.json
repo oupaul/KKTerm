@@ -1840,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 menit",
     "statusBarMonitorInterval300": "5 menit",
     "useDirectxScreenCapture": "Gunakan DirectX untuk tangkapan layar",
-    "useDirectxScreenCaptureHint": "Menggunakan DXGI Desktop Duplication bila tersedia, dengan fallback GDI untuk tangkapan yang tidak didukung."
+    "useDirectxScreenCaptureHint": "Menggunakan DXGI Desktop Duplication bila tersedia, dengan fallback GDI untuk tangkapan yang tidak didukung.",
+    "titleBar": "Bilah Judul",
+    "useCustomTitleBar": "Gunakan bilah judul kustom",
+    "useCustomTitleBarHint": "Gantikan bilah judul bawaan Windows dengan bilah bertema KKTerm. Berlaku langsung setelah disimpan."
   },
   "sftp": {
     "accessed": "Diakses",

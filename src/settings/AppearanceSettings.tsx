@@ -12,6 +12,7 @@ import { defaultAppearanceSettings } from "../app-defaults";
 import { useWorkspaceStore } from "../store";
 import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../types";
 import { SettingsSectionHeader } from "./shared";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 const APP_UI_FONT_OPTIONS = [
   {
@@ -367,6 +368,23 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
               </div>
             ))}
           </div>
+        </div>
+      </fieldset>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.titleBar")}</legend>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.useCustomTitleBar}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, useCustomTitleBar: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.useCustomTitleBar")}</strong>
+              <small>{t("settings.useCustomTitleBarHint")}</small>
+            </span>
+          </label>
         </div>
       </fieldset>
       <div

@@ -1,7 +1,20 @@
-//! Restores Win11 rounded window corners after `decorations: false`
-//! removed the system frame. The app paints its own title bar via React,
-//! but we still want the OS-level corner radius so the window blends with
-//! other Win11 apps instead of looking like a rectangular legacy window.
+//! Title-bar mode switching for the main window. When the user opts into the
+//! custom React-painted title bar, system decorations are removed and Win11
+//! rounded corners are reinstated via DwmSetWindowAttribute. When opting out,
+//! decorations are restored so the OS provides its native frame.
+
+pub fn apply_title_bar_mode<R: tauri::Runtime>(
+    window: &tauri::WebviewWindow<R>,
+    use_custom_title_bar: bool,
+) {
+    if let Err(error) = window.set_decorations(!use_custom_title_bar) {
+        eprintln!("title-bar mode: set_decorations failed: {error}");
+    }
+
+    if use_custom_title_bar {
+        apply_main_window_backdrop(window);
+    }
+}
 
 #[cfg(target_os = "windows")]
 pub fn apply_main_window_backdrop<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {

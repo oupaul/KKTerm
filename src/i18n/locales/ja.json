@@ -1840,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 分",
     "statusBarMonitorInterval300": "5 分",
     "useDirectxScreenCapture": "画面キャプチャに DirectX を使用",
-    "useDirectxScreenCaptureHint": "利用可能な場合は DXGI Desktop Duplication を使用し、未対応のキャプチャでは GDI にフォールバックします。"
+    "useDirectxScreenCaptureHint": "利用可能な場合は DXGI Desktop Duplication を使用し、未対応のキャプチャでは GDI にフォールバックします。",
+    "titleBar": "タイトルバー",
+    "useCustomTitleBar": "カスタムタイトルバーを使う",
+    "useCustomTitleBarHint": "Windows ネイティブのタイトルバーを KKTerm テーマのバーに置き換えます。保存すると即時反映されます。"
   },
   "sftp": {
     "accessed": "アクセス日時",

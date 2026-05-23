@@ -1840,7 +1840,10 @@
     "statusBarMonitorInterval60": "1 分鐘",
     "statusBarMonitorInterval300": "5 分鐘",
     "useDirectxScreenCapture": "使用 DirectX 進行螢幕擷取",
-    "useDirectxScreenCaptureHint": "可用時使用 DXGI Desktop Duplication；不支援的擷取則回退到 GDI。"
+    "useDirectxScreenCaptureHint": "可用時使用 DXGI Desktop Duplication；不支援的擷取則回退到 GDI。",
+    "titleBar": "標題列",
+    "useCustomTitleBar": "使用自訂標題列",
+    "useCustomTitleBarHint": "以 KKTerm 主題化標題列取代 Windows 原生標題列，儲存後立即生效。"
   },
   "sftp": {
     "accessed": "存取日期",

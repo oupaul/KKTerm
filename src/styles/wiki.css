@@ -1,9 +1,9 @@
 .wiki-page {
   position: fixed;
-  inset: 0 0 0 48px;
+  inset: var(--app-titlebar-height, 0px) 0 0 48px;
   z-index: 80;
   min-width: 0;
-  height: 100vh;
+  height: calc(100vh - var(--app-titlebar-height, 0px));
   overflow: hidden;
   background: var(--app-bg);
   color: var(--text);

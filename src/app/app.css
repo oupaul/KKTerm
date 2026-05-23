@@ -1,11 +1,17 @@
 .app-root {
+  --app-titlebar-height: 32px;
   display: grid;
-  grid-template-rows: 32px minmax(0, 1fr);
+  grid-template-rows: var(--app-titlebar-height) minmax(0, 1fr);
   width: 100%;
   height: 100vh;
   min-width: 1120px;
   overflow: hidden;
   background: var(--app-bg);
+}
+
+.app-root.app-root--no-titlebar {
+  --app-titlebar-height: 0px;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .app-titlebar {
