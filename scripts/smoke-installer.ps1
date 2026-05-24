@@ -32,6 +32,7 @@ $ResolvedInstallDir = [System.IO.Path]::GetFullPath($InstallDir)
 $InstalledExe = Join-Path $ResolvedInstallDir "kkterm.exe"
 $InstalledCliExe = Join-Path $ResolvedInstallDir "kkterm-cli.exe"
 $Uninstaller = Join-Path $ResolvedInstallDir "uninstall.exe"
+$SmokeRegistryKey = "Registry::HKEY_CURRENT_USER\Software\Ryan Tsai\KKTerm"
 
 function Assert-ChildPath {
     param(
@@ -62,6 +63,12 @@ function Invoke-CheckedProcess {
 
     if ($Process.ExitCode -ne 0) {
         throw "$Action failed with exit code $($Process.ExitCode)."
+    }
+}
+
+function Remove-SmokeRegistryKey {
+    if (Test-Path $SmokeRegistryKey) {
+        Remove-Item -LiteralPath $SmokeRegistryKey -Recurse -Force
     }
 }
 
@@ -137,6 +144,10 @@ finally {
             throw "Refusing to clean unexpected smoke-test directory: $ResolvedInstallDir"
         }
         Remove-Item -LiteralPath $ResolvedInstallDir -Recurse -Force
+    }
+
+    if (-not $KeepInstall) {
+        Remove-SmokeRegistryKey
     }
 }
 
