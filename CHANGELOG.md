@@ -3,6 +3,15 @@
 All notable changes to KKTerm are documented here.
 
 ## Highlights
+
+- No user-facing highlights were provided for this release. (Your terminal is still waiting for something exciting.)
+
+## Internal
+
+- Updated Cargo lockfiles (`.env.example`, `src-tauri/Cargo.lock`) as part of the v0.1.34 release.  
+  - Commit: `e2f856e` — “updated cargo lock”
+
+## Highlights
 - Dashboard Connection widget Session/Tab/Pane creation now resolves tmux IDs in an effect (reducing render-time churn and avoiding brief ID reuse when switching Connections).  
 - System tray/assistant “external-open” events now switch the app shell to the Workspace Module before opening/focusing the target Connection.
 
