@@ -201,3 +201,4 @@ Ryan
 | 2026-05-24 | 7 | Opened Rust-community CFP issue for contributors | https://github.com/ryantsai/KKTerm/issues/145 |
 | 2026-05-24 | 7 | Submitted KKTerm CFP to This Week in Rust | https://github.com/rust-lang/this-week-in-rust/pull/8118 |
 | 2026-05-24 | 7 | Published GitHub launch announcement Discussion | https://github.com/ryantsai/KKTerm/discussions/146 |
+| 2026-05-24 | 7 | Added landing-page SEO metadata, sitemap, robots, and SoftwareApplication JSON-LD | https://ryantsai.github.io/KKTerm/sitemap.xml |
