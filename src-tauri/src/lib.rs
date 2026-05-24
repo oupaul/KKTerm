@@ -33,6 +33,7 @@ mod ssh_keys;
 mod storage;
 mod telnet;
 mod vnc;
+mod watchdog;
 mod webview;
 mod wiki;
 mod window_effects;
@@ -2538,6 +2539,8 @@ pub fn run() {
             app.manage(vnc::VncSessionManager::new());
             app.manage(wiki_paths);
             app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
+            app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
+            app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
             mcp_bridge::start_if_enabled(
                 app.handle().clone(),
                 mcp_bridge_dir,
@@ -2809,7 +2812,12 @@ pub fn run() {
             net::commands::network_whois,
             net::commands::network_ping_start,
             net::commands::network_port_scan_start,
-            net::commands::network_stream_cancel
+            net::commands::network_stream_cancel,
+            watchdog::commands::watchdog_create,
+            watchdog::commands::watchdog_list,
+            watchdog::commands::watchdog_cancel,
+            watchdog::commands::watchdog_get_report,
+            watchdog::commands::watchdog_record_intervention
         ])
         .run(tauri::generate_context!())
         .expect("error while running KKTerm");

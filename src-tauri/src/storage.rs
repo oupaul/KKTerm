@@ -543,6 +543,8 @@ pub struct AiAssistantToolSettings {
     manual: bool,
     #[serde(default)]
     network: bool,
+    #[serde(default = "default_ai_watchdog_tool_enabled")]
+    watchdog: bool,
 }
 
 impl AiAssistantToolSettings {
@@ -588,6 +590,9 @@ impl AiAssistantToolSettings {
     pub(crate) fn network(&self) -> bool {
         self.network
     }
+    pub(crate) fn watchdog(&self) -> bool {
+        self.watchdog
+    }
     pub(crate) fn any_enabled(&self) -> bool {
         self.web_search
             || self.web_fetch
@@ -603,6 +608,7 @@ impl AiAssistantToolSettings {
             || self.email
             || self.manual
             || self.network
+            || self.watchdog
     }
 }
 
@@ -4432,7 +4438,12 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         email: false,
         manual: default_ai_manual_tool_enabled(),
         network: false,
+        watchdog: default_ai_watchdog_tool_enabled(),
     }
+}
+
+fn default_ai_watchdog_tool_enabled() -> bool {
+    true
 }
 
 fn default_ai_general_tool_enabled() -> bool {

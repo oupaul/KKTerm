@@ -529,6 +529,11 @@ pub(crate) fn emit_terminal_output(app: &AppHandle, session_id: &str, data: Stri
     if let Some(manager) = app.try_state::<SessionManager>() {
         let _ = manager.record_terminal_output(session_id, &data);
     }
+    if let Some(tracker) =
+        app.try_state::<std::sync::Arc<crate::watchdog::SessionActivityTracker>>()
+    {
+        tracker.record(session_id, data.as_bytes());
+    }
     let _ = app.emit(
         "terminal-output",
         TerminalOutput {
