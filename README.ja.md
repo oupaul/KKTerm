@@ -77,7 +77,7 @@
 - **SSHのPane が名前付きtmux Sessionに自動アタッチ**されるので、ラップトップのWi-Fiがどれだけ癇癪を起こしても、リモートの `claude` / `codex` のセッションは生き続ける。
 - **AIコーディング使用量Widget** が、Claude Code と Codex のクォータ（5時間ウィンドウ・週次ウィンドウ・現在のプラン・アカウントメール）を **Dashboard** とステータスバーに表示。深夜3時にレートリミットの壁に突き当たって驚かなくなる。
 - **ビルトインMCPサーバー**（`kkterm-cli`）。外部コーディングエージェント（Claude Code、Codex、Copilot、Antigravity、OpenCode）が、キュレートされた安全ゲート付きツール経由で、あなたのWorkspaceとDashboardを操作できる——Connection一覧、ターミナルバッファ読み取り、Widget配置など。AIからAIへ、ローカルマシン上で、クラウドリレーなし。
-- Dashboard用のアニメーションキャンバス背景が9種類（そう、`matrix` もある）。やりすぎかもしれないが、後悔はしていない。
+- Dashboard用のアニメーションキャンバス背景が21種類（そう、`matrix` もある）。やりすぎかもしれないが、後悔はしていない。
 
 それと、AIアシスタントは一文から、実際に使い続けられる小さなDashboardツールを作れる。
 
@@ -106,21 +106,11 @@
 
 ## 動いている様子を見る
 
-<!--
-  TODO: Replace this placeholder with a real demo GIF.
-  Recommended:
-    - 5-10 seconds, looped
-    - Show: open a Connection -> split a pane -> SFTP upload -> AI proposes a command
-    - Target ~5 MB so GitHub renders it inline without lazy-loading
-  Suggested path: docs/assets/demo.gif
-  Then change the <img src=...> below to: src="docs/assets/demo.gif"
--->
-
 <p align="center">
   <a href="https://github.com/ryantsai/KKTerm">
     <img
-      src="https://placehold.co/1280x720/0d1117/8b949e?text=Drop+demo.gif+here%0A%E2%86%92+docs%2Fassets%2Fdemo.gif&font=source-code-pro"
-      alt="KKTerm demo placeholder — replace with docs/assets/demo.gif"
+      src="docs/assets/demo.gif"
+      alt="KKTerm demo"
       width="720"
     />
   </a>
@@ -211,17 +201,17 @@ OpenAI、Anthropic、OpenRouter、DeepSeek、Grok、Azure OpenAI、LiteLLM、Git
 
 #### アニメーションダッシュボード背景（作りたかったから作った）
 
-ダッシュボードには、**Dashboard View** ごとに選べる9種類のキャンバスアニメーション背景がある：
+ダッシュボードには、**Dashboard View** ごとに選べる21種類のキャンバスアニメーション背景がある：
 
 | 気分 | 背景 |
 | --- | --- |
-| 落ち着き | `aurora`, `raindrops` |
+| 落ち着き | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | 宇宙的 | `starfield`, `nebula` |
 | 温かみ | `embers`, `lava` |
-| ギーク | `matrix`, `synthwave` |
-| カオス | `confetti` |
+| ギーク | `matrix`, `topo`, `synthwave` |
+| カオス | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
-単一共有の requestAnimationFrame で動作し、ウィンドウのフォーカスを尊重するので、別の作業中はほぼコストゼロ。`matrix` とAIアシスタントを組み合わせれば「めちゃくちゃ生産的でしかもウォシャウスキー兄弟（姉妹）の映画の登場人物みたい」というバイブになる。真面目な人に見せたければ `mist` を選ぶといい。どちらの選択も我々は支持する。
+単一共有の requestAnimationFrame で動作し、ウィンドウのフォーカスを尊重するので、別の作業中はほぼコストゼロ。`matrix` とAIアシスタントを組み合わせれば「めちゃくちゃ生産的でしかもウォシャウスキー兄弟（姉妹）の映画の登場人物みたい」というバイブになる。真面目な人に見せたければ `ocean` を選ぶといい。どちらの選択も我々は支持する。
 
 ### サーバー上でAIコーディングエージェントを動かす、正しい方法
 
@@ -278,7 +268,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -314,7 +304,7 @@ flowchart LR
 | **SFTP / FTP** | SSH起動SFTP＋FTP/FTPS Connection、デュアルペインブラウザ、再帰転送、キュー/キャンセル/クリア履歴、競合処理、プロパティ、サポートされている場合のchmod/chown |
 | **URL WebView** | 埋め込みWebView2 URL Session、ナビゲーションツールバー、ファビキャプチャ、保存されたWebサイト認証情報メタデータ/自動入力、データパーティションメタデータ |
 | **Remote Desktop** | ジオメトリスコープのオーバーレイパーキングを持つWindows ActiveX経由のRDP；`vnc-rs` フレームバッファをWorkspaceキャンバスにレンダリングするVNC |
-| **Dashboard** | 永続View、Widgetインスタンス、編集モード、ドラッグ/リサイズ、App Launcher、**AI作成のcontent/script Widget**（宣言的JSONまたはパーミッション付きサンドボックスiframe JS）、Widget毎のプリセット/アクセント/アイコン/タイトル、**9種類のアニメーションキャンバス背景**（aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti）|
+| **Dashboard** | 永続View、Widgetインスタンス、編集モード、ドラッグ/リサイズ、App Launcher、**AI作成のcontent/script Widget**（宣言的JSONまたはパーミッション付きサンドボックスiframe JS）、Widget毎のプリセット/アクセント/アイコン/タイトル、**21種類のアニメーションキャンバス背景**（aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti）|
 | **AI Assistant** | ストリーミングチャット、OpenAI互換ランタイム、プロバイダーレジストリ、コマンド提案の安全分類、スクリーンショット/コンテキスト添付、**Dashboard Widgetオーサリング（contentおよびサンドボックスscript）**、リモートSession用会話コンテキストとしての **tmux Paneキャプチャ**、**Connection** 管理ツール、ターミナル・RDP/VNC・SFTP/FTP用ライブ **Session** ツール |
 | **AIコーディング使用量** | **Claude Code** と **Codex** のクォータ使用量を追跡する **Dashboard Widget + ステータスバーインジケータ**：接続済みアカウント、プラン階層、5時間および週次ウィンドウの使用率、次回リセット時刻、認証状態（`connected` / `expired` / `error`）、レートリミットを意識したリフレッシュ方針 |
 | **ビルトインMCPサーバー** | 外部コーディングエージェント（Claude Code、Codex、Copilot、Antigravity、OpenCode）にキュレート版のWorkspaceおよびDashboardツールを公開するstdio MCPサーバー（`kkterm-cli`）；認証付き名前付きパイプブリッジ；モジュール毎の `dangerous.*` ネームスペースは単一の安全トグルの背後でゲート；解決済みバイナリパス入りJSON / TOMLスニペットと `claude mcp add` / `codex mcp add` コマンドのSettingsダイアログ |
@@ -423,7 +413,7 @@ VS Codeユーザー：`Run KKTerm exe` 起動設定は `RUST_BACKTRACE=1` で `s
 
 - **devビルドを試して**、何かおかしいと感じたらIssueを立ててほしい。「なんか変だった」は正当なバグレポートだ；一緒に掘り下げる。
 - **ロケールを翻訳する。** [`src/i18n/locales/en.json`](src/i18n/locales/en.json) が英語のソース；12の他のロケールが隣にあってオンデマンドで読み込まれる。未翻訳の文字列は [`docs/localization_todo/`](docs/localization_todo/) にキーごとに記録されている——ひとつ選んで、翻訳して、ファイルを削除する。
-- **Dashboard Widgetを追加する。** 組み込みWidgetは [`src/dashboard/widgets/`](src/dashboard/widgets/) にある。小さなアイデアを選んで、出荷して、パターンを学ぶ。
+- **Dashboard Widgetを追加する。** 組み込みWidgetは [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/) にある。小さなアイデアを選んで、出荷して、パターンを学ぶ。
 - **AIのtoolサーフェスを改善する。** プロバイダーアダプターは [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/) に、フロントエンドレジストリは [`src/ai/providerRegistry/`](src/ai/providerRegistry/) にある。
 - **マニュアルを改善する。** エンドユーザー向けのドキュメントは [`docs/manual/`](docs/manual/) にある。UIモジュールごとに1チャプター。機能を使ってドキュメントが役に立たなかったなら、それを修正するPRは金だ。
 

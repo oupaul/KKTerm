@@ -77,7 +77,7 @@ Mais algumas coisas que você não sabia que queria:
 - **Panes de SSH com auto-attach a sessões tmux nomeadas** para que sua sessão remota do `claude` / `codex` sobreviva a qualquer birra de Wi-Fi que o seu notebook resolver ter.
 - Um **widget de uso de IA para codar** que mostra suas cotas do Claude Code e do Codex — janela de 5 horas, janela semanal, plano atual, e-mail da conta — no **Dashboard** e na barra de status, para você parar de bater na parede do rate-limit às 3 da manhã.
 - Um **servidor MCP integrado** (`kkterm-cli`) que deixa agentes de codificação externos (Claude Code, Codex, Copilot, Antigravity, OpenCode) dirigirem seu Workspace e Dashboard — listar Connections, ler buffers de terminal, posicionar widgets — sobre uma superfície de ferramentas curada e com aprovação. IA-para-IA, na sua máquina, sem relay na nuvem.
-- Nove **fundos animados em canvas** (sim, incluindo `matrix`) para o dashboard, porque a gente não tem vergonha disso não.
+- Vinte e um **fundos animados em canvas** (sim, incluindo `matrix`) para o dashboard, porque a gente não tem vergonha disso não.
 
 Ah, e o AI assistant pode transformar uma frase numa pequena ferramenta de dashboard que você realmente continua usando.
 
@@ -119,8 +119,8 @@ Ainda não conseguimos incluir um saquinho de Kuai Kuai de verdade com o instala
 <p align="center">
   <a href="https://github.com/ryantsai/KKTerm">
     <img
-      src="https://placehold.co/1280x720/0d1117/8b949e?text=Drop+demo.gif+here%0A%E2%86%92+docs%2Fassets%2Fdemo.gif&font=source-code-pro"
-      alt="KKTerm demo placeholder — replace with docs/assets/demo.gif"
+      src="docs/assets/demo.gif"
+      alt="KKTerm demo"
       width="720"
     />
   </a>
@@ -211,17 +211,17 @@ Todo widget que você mantém é seu. Eles persistem no SQLite ao lado das suas 
 
 #### Fundos animados para o dashboard (porque a gente quis)
 
-O dashboard tem nove fundos animados em canvas que você pode escolher por **Dashboard View**:
+O dashboard tem vinte e um fundos animados em canvas que você pode escolher por **Dashboard View**:
 
 | Clima | Fundos |
 | --- | --- |
-| Calmo | `aurora`, `raindrops` |
+| Calmo | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | Espacial | `starfield`, `nebula` |
 | Aconchegante | `embers`, `lava` |
-| Nerd | `matrix`, `synthwave` |
-| Caótico | `confetti` |
+| Nerd | `matrix`, `topo`, `synthwave` |
+| Caótico | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
-Eles rodam num único `requestAnimationFrame` compartilhado e respeitam o foco da janela, então custam praticamente nada quando você está em outra janela. Combine `matrix` com seu assistente de IA para um visual que diz "sou extremamente produtivo e possivelmente estou num filme dos Wachowski." Ou escolha `mist` e pareça uma pessoa séria. A gente não julga nenhuma das opções.
+Eles rodam num único `requestAnimationFrame` compartilhado e respeitam o foco da janela, então custam praticamente nada quando você está em outra janela. Combine `matrix` com seu assistente de IA para um visual que diz "sou extremamente produtivo e possivelmente estou num filme dos Wachowski." Ou escolha `ocean` e pareça uma pessoa séria. A gente não julga nenhuma das opções.
 
 ### Rodando agentes de IA em servidor, do jeito certo
 
@@ -278,7 +278,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -314,7 +314,7 @@ O que importa nessa forma: dados salvos duráveis (**Connection**) são separado
 | **SFTP / FTP** | SFTP via SSH mais **Connections** FTP/FTPS, navegador de painel duplo, transferências recursivas, fila/cancelamento/histórico, conflitos, propriedades, chmod/chown onde suportado |
 | **URL WebView** | **Sessions** de URL WebView2 embutidas, barra de navegação, captura de favicon, metadados/preenchimento de credenciais de site salvas, metadados de partição de dados |
 | **Remote Desktop** | RDP via ActiveX Windows com parking de overlay com escopo geométrico; VNC via framebuffer `vnc-rs` renderizado no canvas do workspace |
-| **Dashboard** | Views duráveis, instâncias de widget, modo de edição, arrastar/redimensionar, App Launcher, **widgets de conteúdo/script criados pela IA** (JSON declarativo ou iframe JS sandboxed com permissões), presets / destaque / ícone / título por widget, **9 fundos animados em canvas** (aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti) |
+| **Dashboard** | Views duráveis, instâncias de widget, modo de edição, arrastar/redimensionar, App Launcher, **widgets de conteúdo/script criados pela IA** (JSON declarativo ou iframe JS sandboxed com permissões), presets / destaque / ícone / título por widget, **21 fundos animados em canvas** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
 | **AI Assistant** | Chat em streaming, runtime compatível com OpenAI, registro de provedores, classificação de segurança de propostas de comandos, anexos de screenshot/contexto, **criação de widgets para Dashboard (conteúdo + script sandboxed)**, **captura de pane tmux** como contexto de conversa para sessões remotas, ferramentas de gerenciamento de **Connection** e ferramentas de **Session** ao vivo para terminal, RDP/VNC e SFTP/FTP |
 | **Uso de IA para codar** | **Widget do Dashboard + indicador na barra de status** que rastreiam o uso das cotas do **Claude Code** e do **Codex**: conta conectada, nível do plano, percentuais das janelas de 5 horas e semanal, próximo horário de reset, estado de auth (`connected` / `expired` / `error`), política de refresh ciente do rate-limit |
 | **Servidor MCP integrado** | Servidor MCP via stdio (`kkterm-cli`) que expõe ferramentas curadas de Workspace e Dashboard a agentes de codificação externos (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge de named pipe autenticado; sub-namespaces `dangerous.*` por Módulo atrás de um único toggle de segurança; diálogo nas Settings com snippets JSON / TOML de um clique e comandos `claude mcp add` / `codex mcp add` |
@@ -423,7 +423,7 @@ Adoraríamos uma ajuda. De verdade. Até coisas pequenas importam:
 
 - **Teste o build de desenvolvimento** e abra uma issue quando algo parecer errado. "Parecia estranho" é um bug report legítimo; vamos investigar com você.
 - **Traduza um locale.** O inglês é a fonte da verdade em [`src/i18n/locales/en.json`](src/i18n/locales/en.json); outros 12 locales ficam ao lado e carregam sob demanda. Strings pendentes são rastreadas por chave em [`docs/localization_todo/`](docs/localization_todo/) — escolha uma, traduza, delete o arquivo.
-- **Adicione um widget ao Dashboard.** Os widgets integrados ficam em [`src/dashboard/widgets/`](src/dashboard/widgets/). Escolha uma ideia pequena, entregue, aprenda o padrão.
+- **Adicione um widget ao Dashboard.** Os widgets integrados ficam em [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Escolha uma ideia pequena, entregue, aprenda o padrão.
 - **Aperte a superfície de ferramentas da IA.** Adaptadores de provedores ficam em [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); o registro do frontend está em [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
 - **Melhore o manual.** A documentação para usuários finais fica em [`docs/manual/`](docs/manual/). Um capítulo por módulo de interface. Se você usou uma funcionalidade e a documentação não ajudou, um PR corrigindo isso vale ouro.
 

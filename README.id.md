@@ -77,7 +77,7 @@ Plus beberapa hal yang belum kamu tahu kamu inginkan:
 - **SSH pane yang otomatis attach ke sesi tmux bernama** supaya sesi remote `claude` / `codex` kamu bertahan dari setiap tantrum Wi-Fi yang dilempar laptopmu.
 - Sebuah **widget penggunaan AI Coding** yang menampilkan kuota Claude Code dan Codex kamu — jendela 5 jam, jendela mingguan, plan saat ini, email akun — di **Dashboard** dan di status bar, supaya kamu berhenti kaget kena tembok rate-limit jam 3 pagi.
 - Sebuah **server MCP built-in** (`kkterm-cli`) yang memungkinkan coding agent eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode) mengendalikan Workspace dan Dashboard kamu — list Connections, baca buffer terminal, place widget — lewat surface tool yang dikurasi dan di-gate dengan safety. AI-ke-AI, di mesin kamu, tanpa relay cloud.
-- Sembilan **latar belakang canvas beranimasi** (iya, termasuk `matrix`) untuk dashboard, karena kami memang tidak malu-malu soal itu.
+- Dua puluh satu **latar belakang canvas beranimasi** (iya, termasuk `matrix`) untuk dashboard, karena kami memang tidak malu-malu soal itu.
 
 Oh, dan asisten AI-nya bisa mengubah satu kalimat menjadi tool dashboard kecil yang benar-benar terus kamu pakai.
 
@@ -119,8 +119,8 @@ Kami belum berhasil menyertakan kantong Kuai Kuai sungguhan dengan installer. It
 <p align="center">
   <a href="https://github.com/ryantsai/KKTerm">
     <img
-      src="https://placehold.co/1280x720/0d1117/8b949e?text=Drop+demo.gif+here%0A%E2%86%92+docs%2Fassets%2Fdemo.gif&font=source-code-pro"
-      alt="KKTerm demo placeholder — replace with docs/assets/demo.gif"
+      src="docs/assets/demo.gif"
+      alt="KKTerm demo"
       width="720"
     />
   </a>
@@ -211,17 +211,17 @@ Setiap widget yang kamu simpan adalah milikmu. Mereka bertahan di SQLite di samp
 
 #### Latar belakang dashboard beranimasi (karena kami memang mau)
 
-Dashboard punya sembilan latar belakang canvas beranimasi yang bisa kamu pilih per **Dashboard View**:
+Dashboard punya dua puluh satu latar belakang canvas beranimasi yang bisa kamu pilih per **Dashboard View**:
 
 | Suasana | Latar Belakang |
 | --- | --- |
-| Tenang | `aurora`, `raindrops` |
+| Tenang | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | Luar Angkasa | `starfield`, `nebula` |
 | Hangat | `embers`, `lava` |
-| Geek | `matrix`, `synthwave` |
-| Ugal-ugalan | `confetti` |
+| Geek | `matrix`, `topo`, `synthwave` |
+| Ugal-ugalan | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
-Semuanya berjalan di satu `requestAnimationFrame` bersama dan menghormati focus jendela, jadi biayanya hampir nol saat kamu ada di tempat lain. Pasangkan `matrix` dengan asisten AI untuk vibe yang terkesan "aku sangat produktif dan mungkin juga berada dalam film Wachowski." Atau pilih `mist` dan terlihat seperti orang serius. Kami tidak menghakimi pilihan apapun.
+Semuanya berjalan di satu `requestAnimationFrame` bersama dan menghormati focus jendela, jadi biayanya hampir nol saat kamu ada di tempat lain. Pasangkan `matrix` dengan asisten AI untuk vibe yang terkesan "aku sangat produktif dan mungkin juga berada dalam film Wachowski." Atau pilih `ocean` dan terlihat seperti orang serius. Kami tidak menghakimi pilihan apapun.
 
 ### Menjalankan agen coding AI di server, dengan benar
 
@@ -278,7 +278,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -314,7 +314,7 @@ Bentuk yang penting: data tersimpan yang tahan lama (**Connection**) terpisah da
 | **SFTP / FTP** | SFTP yang diluncurkan via SSH plus **Connections** FTP/FTPS, browser dual-pane, transfer rekursif, antrean/batalkan/bersihkan riwayat, konflik, properti, chmod/chown jika didukung |
 | **URL WebView** | **Sessions** URL WebView2 tertanam, toolbar navigasi, pengambilan favicon, metadata/isian kredensial website tersimpan, metadata partisi data |
 | **Remote Desktop** | RDP melalui Windows ActiveX dengan geometry-scoped overlay parking; VNC melalui `vnc-rs` framebuffer yang dirender di canvas workspace |
-| **Dashboard** | View yang tahan lama, instance widget, mode edit, drag/resize, App Launcher, **widget konten/skrip buatan AI** (JSON deklaratif atau iframe JS tersandbox dengan izin), preset / aksen / ikon / judul per-widget, **9 latar belakang canvas beranimasi** (aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti) |
+| **Dashboard** | View yang tahan lama, instance widget, mode edit, drag/resize, App Launcher, **widget konten/skrip buatan AI** (JSON deklaratif atau iframe JS tersandbox dengan izin), preset / aksen / ikon / judul per-widget, **21 latar belakang canvas beranimasi** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
 | **AI Assistant** | Chat streaming, runtime kompatibel OpenAI, registri provider, klasifikasi keamanan proposal perintah, lampiran screenshot/context, **pembuatan widget Dashboard (konten + skrip tersandbox)**, **penangkapan pane tmux** sebagai context percakapan untuk sesi remote, tools manajemen **Connection**, dan tools **Session** langsung untuk terminal, RDP/VNC, dan SFTP/FTP |
 | **Penggunaan AI Coding** | **Widget Dashboard + indikator status bar** yang melacak penggunaan kuota **Claude Code** dan **Codex**: akun terhubung, level plan, persen jendela 5 jam dan mingguan, waktu reset berikutnya, status auth (`connected` / `expired` / `error`), policy refresh yang sadar rate-limit |
 | **Server MCP Built-in** | Server MCP stdio (`kkterm-cli`) yang membuka tools Workspace dan Dashboard yang dikurasi ke agen coding eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge named pipe ter-authenticate; sub-namespace `dangerous.*` per-Modul di balik satu toggle safety; dialog Settings dengan snippet JSON / TOML satu klik dan command `claude mcp add` / `codex mcp add` |
@@ -423,7 +423,7 @@ Kami sangat butuh bantuan. Sungguh. Bahkan hal kecil pun berarti:
 
 - **Coba dev build** dan buat issue ketika ada yang terasa aneh. "Rasanya aneh" adalah laporan bug yang sah; kami akan menggali bersama kamu.
 - **Terjemahkan satu lokal.** Bahasa Inggris adalah sumber kebenaran di [`src/i18n/locales/en.json`](src/i18n/locales/en.json); 12 lokal lainnya ada di sebelahnya dan dimuat sesuai permintaan. String yang tertunda dilacak per-key di bawah [`docs/localization_todo/`](docs/localization_todo/) — pilih satu, terjemahkan, hapus file-nya.
-- **Tambahkan widget Dashboard.** Widget bawaan ada di [`src/dashboard/widgets/`](src/dashboard/widgets/). Pilih ide kecil, kirim, pelajari polanya.
+- **Tambahkan widget Dashboard.** Widget bawaan ada di [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Pilih ide kecil, kirim, pelajari polanya.
 - **Sempurnakan tool surface AI.** Adapter provider ada di [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); registri frontend ada di [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
 - **Tingkatkan manual.** Dokumen pengguna akhir ada di [`docs/manual/`](docs/manual/). Satu bab per modul UI. Kalau kamu menggunakan sebuah fitur dan dokumennya tidak membantu, PR yang memperbaiki itu sangat berharga.
 

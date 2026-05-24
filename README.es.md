@@ -77,7 +77,7 @@ Además, algunas cosas que no sabías que necesitabas:
 - **Paneles SSH que se reconectan automáticamente a sesiones tmux con nombre**, para que tu sesión remota de `claude` / `codex` sobreviva a cada berrinche Wi-Fi que le dé a tu portátil.
 - Un **Widget de uso de IA para programar** que muestra tus cuotas de Claude Code y Codex — ventana de 5 horas, ventana semanal, plan actual, email de la cuenta — en el **Dashboard** y en la barra de estado, para que dejes de chocar con el muro del rate-limit a las 3 de la madrugada.
 - Un **servidor MCP integrado** (`kkterm-cli`) que permite a agentes de programación externos (Claude Code, Codex, Copilot, Antigravity, OpenCode) manejar tu Workspace y Dashboard — listar Connections, leer buffers del terminal, colocar Widgets — sobre una superficie de herramientas curada y con aprobación. IA-a-IA, en tu máquina, sin relay en la nube.
-- Nueve **fondos animados de canvas** (sí, incluido `matrix`) para el dashboard, porque no somos de los que se reprimen.
+- Veintiuno **fondos animados de canvas** (sí, incluido `matrix`) para el dashboard, porque no somos de los que se reprimen.
 
 Y el asistente de IA puede convertir una frase en una pequeña herramienta de dashboard que de verdad sigues usando.
 
@@ -106,21 +106,11 @@ Todavía no hemos podido incluir una bolsa real de Kuai Kuai en el instalador. E
 
 ## Véelo en acción
 
-<!--
-  TODO: Replace this placeholder with a real demo GIF.
-  Recommended:
-    - 5-10 seconds, looped
-    - Show: open a Connection -> split a pane -> SFTP upload -> AI proposes a command
-    - Target ~5 MB so GitHub renders it inline without lazy-loading
-  Suggested path: docs/assets/demo.gif
-  Then change the <img src=...> below to: src="docs/assets/demo.gif"
--->
-
 <p align="center">
   <a href="https://github.com/ryantsai/KKTerm">
     <img
-      src="https://placehold.co/1280x720/0d1117/8b949e?text=Drop+demo.gif+here%0A%E2%86%92+docs%2Fassets%2Fdemo.gif&font=source-code-pro"
-      alt="KKTerm demo placeholder — replace with docs/assets/demo.gif"
+      src="docs/assets/demo.gif"
+      alt="KKTerm demo"
       width="720"
     />
   </a>
@@ -211,17 +201,17 @@ Cada widget que conservas es tuyo. Persisten en SQLite junto a tus **Connections
 
 #### Fondos animados del dashboard (porque nos apetecía)
 
-El dashboard tiene nueve fondos animados de canvas que puedes elegir por cada **Dashboard View**:
+El dashboard tiene veintiuno fondos animados de canvas que puedes elegir por cada **Dashboard View**:
 
 | Ambiente | Fondos |
 | --- | --- |
-| Calma | `aurora`, `raindrops` |
+| Calma | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | Espacial | `starfield`, `nebula` |
 | Cálido | `embers`, `lava` |
-| Friki | `matrix`, `synthwave` |
-| Caótico | `confetti` |
+| Friki | `matrix`, `topo`, `synthwave` |
+| Caótico | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
 
-Corren sobre un único `requestAnimationFrame` compartido y respetan el foco de la ventana, así que consumen prácticamente nada cuando estás en otra parte. Combina `matrix` con tu asistente de IA para conseguir esa vibración de "soy extremadamente productivo/a y puede que también esté en una película de los Wachowski." O elige `mist` y aparenta ser una persona seria. No juzgamos ninguna de las dos opciones.
+Corren sobre un único `requestAnimationFrame` compartido y respetan el foco de la ventana, así que consumen prácticamente nada cuando estás en otra parte. Combina `matrix` con tu asistente de IA para conseguir esa vibración de "soy extremadamente productivo/a y puede que también esté en una película de los Wachowski." O elige `ocean` y aparenta ser una persona seria. No juzgamos ninguna de las dos opciones.
 
 ### Agentes de codificación IA en un servidor, como es debido
 
@@ -278,7 +268,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
-    Rail --> FE[File Explorer]
+    Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
     WS --> Tabs[Tabs &amp; Panes]
@@ -314,7 +304,7 @@ La forma que importa: los datos duraderos guardados (**Connection**) son distint
 | **SFTP / FTP** | SFTP lanzado desde SSH más **Connections** FTP/FTPS, explorador de doble panel, transferencias recursivas, cola/cancelar/limpiar historial, conflictos, propiedades, chmod/chown donde se admita |
 | **URL WebView** | **Sessions** de URL embebidas con WebView2, barra de navegación, captura de favicon, metadatos/relleno de credenciales de sitios web almacenados, metadatos de partición de datos |
 | **Remote Desktop** | RDP mediante ActiveX de Windows con aparcamiento de superposición por geometría; VNC mediante framebuffer `vnc-rs` renderizado en el canvas del espacio de trabajo |
-| **Dashboard** | Vistas duraderas, instancias de widgets, modo de edición, arrastrar/redimensionar, App Launcher, **widgets de contenido/script creados por IA** (JSON declarativo o JS en iframe con permisos), presets / acento / icono / título por widget, **9 fondos animados de canvas** (aurora, raindrops, starfield, nebula, embers, lava, matrix, synthwave, confetti) |
+| **Dashboard** | Vistas duraderas, instancias de widgets, modo de edición, arrastrar/redimensionar, App Launcher, **widgets de contenido/script creados por IA** (JSON declarativo o JS en iframe con permisos), presets / acento / icono / título por widget, **21 fondos animados de canvas** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
 | **AI Assistant** | Chat en streaming, runtime compatible con OpenAI, registro de proveedores, clasificación de seguridad de propuestas de comandos, capturas de pantalla/contexto adjuntos, **creación de widgets del Dashboard (contenido + script en sandbox)**, **captura de panel tmux** como contexto de conversación para sesiones remotas, herramientas de gestión de **Connection** y herramientas de **Session** en vivo para terminal, RDP/VNC y SFTP/FTP |
 | **Uso de IA para programar** | **Widget del Dashboard + indicador en la barra de estado** que rastrean el uso de cuotas de **Claude Code** y **Codex**: cuenta conectada, nivel de plan, porcentajes de las ventanas de 5 horas y semanal, hora del próximo reset, estado de autenticación (`connected` / `expired` / `error`), política de refresco consciente del rate-limit |
 | **Servidor MCP integrado** | Servidor MCP por stdio (`kkterm-cli`) que expone herramientas curadas de Workspace y Dashboard a agentes de programación externos (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge de named pipe autenticado; sub-namespaces `dangerous.*` por Módulo protegidos tras un único toggle de seguridad; diálogo de Settings con snippets JSON / TOML de un clic y comandos `claude mcp add` / `codex mcp add` |
@@ -423,7 +413,7 @@ Agradeceríamos una mano. De verdad. Incluso las cosas pequeñas importan:
 
 - **Prueba la versión de desarrollo** y abre un issue cuando algo se note raro. "Se notaba raro" es un informe de error legítimo; investigaremos contigo.
 - **Traduce una variante de idioma.** El inglés es la fuente de verdad en [`src/i18n/locales/en.json`](src/i18n/locales/en.json); otros 12 idiomas viven junto a él y se cargan bajo demanda. Las cadenas pendientes se rastrean por clave en [`docs/localization_todo/`](docs/localization_todo/) — elige uno, tradúcelo, borra el archivo.
-- **Añade un widget al Dashboard.** Los widgets integrados viven en [`src/dashboard/widgets/`](src/dashboard/widgets/). Elige una idea pequeña, impleméntala, aprende el patrón.
+- **Añade un widget al Dashboard.** Los widgets integrados viven en [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Elige una idea pequeña, impleméntala, aprende el patrón.
 - **Ajusta la superficie de herramientas de IA.** Los adaptadores de proveedores viven en [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); el registro del frontend está en [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
 - **Mejora el manual.** La documentación para usuarios finales vive en [`docs/manual/`](docs/manual/). Un capítulo por módulo de interfaz. Si usaste una función y la documentación no te ayudó, un PR que lo corrija vale su peso en oro.
 
