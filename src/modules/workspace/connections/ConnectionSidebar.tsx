@@ -109,9 +109,11 @@ type ConnectionDialogRequest = CreateConnectionRequest & {
 };
 
 export function ConnectionSidebar({
+  onExternalOpenConnection,
   onToggleCollapsed,
 }: {
   collapsed: boolean;
+  onExternalOpenConnection?: () => void;
   onToggleCollapsed: () => void;
 }) {
   const { i18n, t } = useTranslation();
@@ -825,6 +827,8 @@ export function ConnectionSidebar({
   treeRef.current = treeWithLiveStatuses;
   const handleOpenConnectionRef = useRef(handleOpenConnection);
   handleOpenConnectionRef.current = handleOpenConnection;
+  const onExternalOpenConnectionRef = useRef(onExternalOpenConnection);
+  onExternalOpenConnectionRef.current = onExternalOpenConnection;
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -835,6 +839,7 @@ export function ConnectionSidebar({
         (candidate) => candidate.id === connectionId,
       );
       if (connection) {
+        onExternalOpenConnectionRef.current?.();
         handleOpenConnectionRef.current(connection);
       }
     };

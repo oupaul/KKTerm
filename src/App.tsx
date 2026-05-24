@@ -174,6 +174,7 @@ function App() {
       <div key="workspace-page" className="workspace-page" {...ariaHidden(activePage !== "workspace")}>
         <ConnectionSidebar
           collapsed={connectionPanelLayout.collapsed}
+          onExternalOpenConnection={() => navigateToPage("workspace")}
           onToggleCollapsed={toggleConnectionPanel}
         />
         {connectionPanelLayout.collapsed ? (
