@@ -194,3 +194,5 @@ Ryan
 | 2026-05-24 | 7 | Rewrote latest release notes for public conversion | https://github.com/ryantsai/KKTerm/releases/tag/v0.1.34 |
 | 2026-05-24 | 7 | Opened contributor-friendly issues | #142 first-run checklist; #143 README screenshots; #144 installer verification |
 | 2026-05-24 | 7 | Added GitHub Pages landing page and set repo homepage | https://ryantsai.github.io/KKTerm/ |
+| 2026-05-24 | 7 | Opened Awesome Tauri listing PR | https://github.com/tauri-apps/awesome-tauri/pull/715 |
+| 2026-05-24 | 7 | Added demo GIF and Open Graph image to landing page | https://ryantsai.github.io/KKTerm/assets/demo.gif |

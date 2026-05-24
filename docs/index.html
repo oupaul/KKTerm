@@ -15,7 +15,9 @@
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ryantsai.github.io/KKTerm/" />
+    <meta property="og:image" content="https://ryantsai.github.io/KKTerm/assets/demo.gif" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://ryantsai.github.io/KKTerm/assets/demo.gif" />
     <style>
       :root {
         color-scheme: dark;
@@ -327,6 +329,26 @@
         color: var(--muted);
       }
 
+      .demo-frame {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 30px;
+        background: rgba(5, 8, 7, 0.72);
+        box-shadow: var(--shadow);
+      }
+
+      .demo-frame img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .demo-caption {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
       .callout {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -461,6 +483,17 @@
             </p>
           </article>
         </div>
+      </section>
+
+      <section class="section" aria-labelledby="demo">
+        <h2 id="demo">See the workspace in motion.</h2>
+        <div class="demo-frame">
+          <img src="assets/demo.gif" alt="KKTerm demo showing the desktop admin workspace" loading="lazy" />
+        </div>
+        <p class="demo-caption">
+          The demo GIF is intentionally part of the landing page so shared links
+          show a real app preview instead of another text-only project page.
+        </p>
       </section>
 
       <section class="section" aria-labelledby="fit">
