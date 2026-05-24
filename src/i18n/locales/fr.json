@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "Ouvrir le dossier des enregistrements",
     "noRecordings": "Aucun enregistrement pour cette connexion.",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "Agent de codage {{agent}} détecté",
     "layoutReset": "Disposition de la Connection enregistrée réinitialisée.",
     "layoutSaved": "Disposition de la Connection enregistrée.",
     "resetLayout": "Réinitialiser la disposition",

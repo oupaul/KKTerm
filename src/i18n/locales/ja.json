@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "録画フォルダーを開く",
     "noRecordings": "このConnectionには録画がありません。",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "{{agent}} coding agent を検出しました",
     "layoutReset": "保存済みの Connection レイアウトをリセットしました。",
     "layoutSaved": "Connection レイアウトを保存しました。",
     "resetLayout": "レイアウトをリセット",

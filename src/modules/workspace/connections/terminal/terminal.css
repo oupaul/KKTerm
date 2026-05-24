@@ -244,37 +244,6 @@
   white-space: nowrap;
 }
 
-.terminal-agent-badge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 24px;
-  min-width: 40px;
-  padding: 0;
-  color: #bfe7dc;
-  font-size: 10px;
-  font-weight: 850;
-  line-height: 1;
-  background: transparent;
-  border: 0;
-}
-
-.terminal-agent-badge svg {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
-}
-
-.terminal-agent-badge > span {
-  font-size: 10px;
-  font-weight: 850;
-}
-
 .tmux-session-wrapper {
   position: relative;
 }

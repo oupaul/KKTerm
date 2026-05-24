@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "Mở thư mục bản ghi",
     "noRecordings": "Không có bản ghi nào cho kết nối này.",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "Đã phát hiện coding agent {{agent}}",
     "layoutReset": "Đã đặt lại bố cục Connection đã lưu.",
     "layoutSaved": "Đã lưu bố cục Connection.",
     "resetLayout": "Đặt lại bố cục",

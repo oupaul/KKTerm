@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "เปิดโฟลเดอร์รายการบันทึก",
     "noRecordings": "ไม่มีรายการบันทึกสำหรับ Connection นี้",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "ตรวจพบ coding agent {{agent}}",
     "layoutReset": "รีเซ็ตเลย์เอาต์ Connection ที่บันทึกไว้แล้ว",
     "layoutSaved": "บันทึกเลย์เอาต์ Connection แล้ว",
     "resetLayout": "รีเซ็ตเลย์เอาต์",

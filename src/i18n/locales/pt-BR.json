@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "Abrir pasta de gravações",
     "noRecordings": "Nenhuma gravação para esta conexão.",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "Agente de codificação {{agent}} detectado",
     "layoutReset": "Layout salvo da Connection redefinido.",
     "layoutSaved": "Layout da Connection salvo.",
     "resetLayout": "Redefinir layout",

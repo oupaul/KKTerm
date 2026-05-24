@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `terminal.actions`, `terminal.copy`, `terminal.copyShortcut`, `terminal.paste`, `terminal.pasteMultilineConfirm`, `terminal.find`, `terminal.findInScrollback`, `terminal.noResults`, `terminal.closeSearch`, `terminal.previousSearch`, `terminal.nextSearch`, `terminal.font`, `terminal.increaseSize`, `terminal.decreaseSize`, `terminal.resetSize`, `terminal.save`, `terminal.saveBuffer`, `terminal.bufferSaveFailed`, `terminal.startRecording`, `terminal.stopRecording`, `terminal.recording`, `terminal.detectedCodingAgent`, `terminal.openRecordings`, `terminal.recordingsTitle`, `terminal.openRecordingsFolder`, `terminal.noRecordings`, `terminal.logFiles`, `terminal.textFiles`, `terminal.starting`, `terminal.sessionFor`, `terminal.startingSessionFor`, `terminal.failedToStart`, `terminal.failedToStartDetail`, `terminal.desktopRuntimeRequired`, `terminal.tauriRequired`, `terminal.noSaveDialog`, `terminal.saveDialog`, `terminal.connectLabel`, `terminal.targetLabel`
-- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, save buffer to file, recording terminal output, coding-agent detection badge, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
-- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "export log", "record session", "terminal recording", "transcript", "Codex badge", "Claude Code badge", "agent icon"
+- Keys: `terminal.actions`, `terminal.copy`, `terminal.copyShortcut`, `terminal.paste`, `terminal.pasteMultilineConfirm`, `terminal.find`, `terminal.findInScrollback`, `terminal.noResults`, `terminal.closeSearch`, `terminal.previousSearch`, `terminal.nextSearch`, `terminal.font`, `terminal.increaseSize`, `terminal.decreaseSize`, `terminal.resetSize`, `terminal.save`, `terminal.saveBuffer`, `terminal.bufferSaveFailed`, `terminal.startRecording`, `terminal.stopRecording`, `terminal.recording`, `terminal.openRecordings`, `terminal.recordingsTitle`, `terminal.openRecordingsFolder`, `terminal.noRecordings`, `terminal.logFiles`, `terminal.textFiles`, `terminal.starting`, `terminal.sessionFor`, `terminal.startingSessionFor`, `terminal.failedToStart`, `terminal.failedToStartDetail`, `terminal.desktopRuntimeRequired`, `terminal.tauriRequired`, `terminal.noSaveDialog`, `terminal.saveDialog`, `terminal.connectLabel`, `terminal.targetLabel`
+- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, save buffer to file, recording terminal output, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
+- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "export log", "record session", "terminal recording", "transcript"
 
 ## Rendering
 
@@ -64,8 +64,6 @@ Font family, default size, ligature settings, and cursor style are configured gl
 `terminal.startRecording` starts a local text recording for the current terminal Pane. KKTerm first writes the current frontend terminal buffer, then appends live output until recording stops. While active, the toolbar shows `terminal.recording`, the button changes to `terminal.stopRecording`, and the terminal Pane has a red outer border.
 
 Stopping the recording, closing the Pane, or ending the terminal Session finalizes the text file under KKTerm app data. The terminal actions menu item `terminal.openRecordings` opens `terminal.recordingsTitle`, listing saved `.txt` files for that Connection. `terminal.openRecordingsFolder` opens the Connection's local recordings folder. Deleting a Connection does not delete its recording files.
-
-The Pane toolbar may show `terminal.detectedCodingAgent` when KKTerm passively detects a coding-agent CLI in the live terminal Session. Detection uses already-visible terminal input/output signals and does not run local or remote process probes.
 
 Tutorial targets: `terminal.startRecording`, `terminal.actions`.
 

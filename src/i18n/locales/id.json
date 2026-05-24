@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "Buka folder rekaman",
     "noRecordings": "Tidak ada rekaman untuk Connection ini.",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "Coding agent {{agent}} terdeteksi",
     "layoutReset": "Tata letak Connection tersimpan direset.",
     "layoutSaved": "Tata letak Connection disimpan.",
     "resetLayout": "Reset tata letak",

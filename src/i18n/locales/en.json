@@ -1277,7 +1277,6 @@
     "startRecording": "Start recording",
     "stopRecording": "Stop recording",
     "recording": "Recording",
-    "detectedCodingAgent": "{{agent}} coding agent detected",
     "recordingStarted": "Terminal recording started.",
     "recordingStopped": "Terminal recording stopped.",
     "recordingSaved": "Terminal recording saved to {{path}}.",

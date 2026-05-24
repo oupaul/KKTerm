@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "打开录制文件夹",
     "noRecordings": "此 Connection 没有录制。",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "检测到 {{agent}} coding agent",
     "layoutReset": "已重置保存的 Connection 布局。",
     "layoutSaved": "已保存 Connection 布局。",
     "resetLayout": "重置布局",

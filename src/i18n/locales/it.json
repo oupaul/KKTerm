@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "Apri cartella registrazioni",
     "noRecordings": "Nessuna registrazione per questa connessione.",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "Agente di codifica {{agent}} rilevato",
     "layoutReset": "Layout salvato della Connection reimpostato.",
     "layoutSaved": "Layout della Connection salvato.",
     "resetLayout": "Reimposta layout",

@@ -2056,7 +2056,6 @@
     "openRecordingsFolder": "녹화 폴더 열기",
     "noRecordings": "이 Connection에 대한 녹화가 없습니다.",
     "recordingMetadata": "{{metadata}}",
-    "detectedCodingAgent": "{{agent}} coding agent 감지됨",
     "layoutReset": "저장된 Connection 레이아웃이 재설정되었습니다.",
     "layoutSaved": "Connection 레이아웃이 저장되었습니다.",
     "resetLayout": "레이아웃 재설정",

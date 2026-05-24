@@ -13,13 +13,13 @@ const sampleContext = {
   previousTag: "v0.1.31",
   target: "HEAD",
   compareUrl: "https://github.com/ryantsai/KKTerm/compare/v0.1.31...v0.1.32",
-  githubGeneratedNotes: "## What's Changed\n* Add terminal agent detection by @ryan in #132",
+  githubGeneratedNotes: "## What's Changed\n* Add terminal recording controls by @ryan in #132",
   commits: [
     {
       sha: "da94b9e",
-      subject: "feat(terminal): implement coding agent detection and display in terminal pane",
+      subject: "feat(terminal): implement recording controls in terminal pane",
       body: "",
-      files: ["src/modules/workspace/connections/terminal/agentDetection.ts", "src/modules/workspace/connections/terminal/terminal.css"],
+      files: ["src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", "src/modules/workspace/connections/terminal/terminal.css"],
     },
     {
       sha: "4ca8a56",
@@ -48,7 +48,7 @@ test("composeFallbackReleaseNotes creates a publishable markdown changelog witho
   assert.match(notes, /^# KKTerm v0\.1\.32/m);
   assert.match(notes, /## Highlights/);
   assert.match(notes, /## Changes/);
-  assert.match(notes, /terminal agent detection/);
+  assert.match(notes, /terminal recording controls/);
   assert.match(notes, /da94b9e/);
   assert.match(notes, /Compare: https:\/\/github\.com\/ryantsai\/KKTerm\/compare\/v0\.1\.31\.\.\.v0\.1\.32/);
 });
