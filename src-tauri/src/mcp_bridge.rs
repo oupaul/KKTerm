@@ -152,10 +152,7 @@ struct BridgeContext {
 }
 
 #[cfg(target_os = "windows")]
-async fn run_named_pipe_server(
-    ctx: Arc<BridgeContext>,
-    pipe_name: String,
-) -> std::io::Result<()> {
+async fn run_named_pipe_server(ctx: Arc<BridgeContext>, pipe_name: String) -> std::io::Result<()> {
     // The first server instance is created with first_pipe_instance(true) so
     // we own the name on this user's session and reject impostors.
     let mut server = ServerOptions::new()
@@ -194,7 +191,9 @@ async fn serve_client(ctx: Arc<BridgeContext>, stream: NamedPipeServer) -> std::
     if line.trim() != ctx.token {
         crate::logging::mcp_debug("bridge.client_auth_failed", &json!({}));
         let _ = writer
-            .write_all(b"{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32001,\"message\":\"unauthorized\"}}\n")
+            .write_all(
+                b"{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32001,\"message\":\"unauthorized\"}}\n",
+            )
             .await;
         return Ok(());
     }
@@ -519,11 +518,12 @@ fn tool_descriptors() -> Vec<Value> {
         // -- Dashboard: AI-Created Widget management (executes user scripts) --
         json!({
             "name": "kkterm.dashboard.dangerous.create_widget",
-            "description": "DANGEROUS: create an AI-Created (script) Widget AND place it on a view in one call. `body` is the structured widget body (libraries, source, permissions, etc.). Requires built_in_mcp_allow_all_dangerous = true because the body runs as a sandboxed script widget.",
+            "description": "DANGEROUS: create an AI-Created (script) Widget AND place it on a view in one call. `widgetArchetype` selects the generation scaffold (dataMonitor, metricChart, utilityInstrument, desktopObject, canvasToyGame, or generalWorkbench). `body` is the structured widget body (libraries, source, permissions, etc.). Requires built_in_mcp_allow_all_dangerous = true because the body runs as a sandboxed script widget.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "viewId": {"type": "string"},
+                    "widgetArchetype": {"type": "string", "enum": ["dataMonitor", "metricChart", "utilityInstrument", "desktopObject", "canvasToyGame", "generalWorkbench"]},
                     "title": {"type": "string"},
                     "summary": {"type": "string"},
                     "category": {"type": "string"},
@@ -537,7 +537,7 @@ fn tool_descriptors() -> Vec<Value> {
                     "gridW": {"type": "integer"},
                     "gridH": {"type": "integer"},
                 },
-                "required": ["viewId", "title", "body"],
+                "required": ["viewId", "widgetArchetype", "title", "body"],
                 "additionalProperties": false,
             },
         }),
@@ -681,11 +681,8 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
                 .get("connectionId")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "connectionId is required".to_string())?;
-            let raw = crate::ai::connection_tool(
-                app,
-                "connection_open",
-                json!({"id": connection_id}),
-            );
+            let raw =
+                crate::ai::connection_tool(app, "connection_open", json!({"id": connection_id}));
             parse_tool_json(&raw)
         }
         "kkterm.workspace.connections.screenshot" => {
@@ -749,10 +746,7 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
                 .get("y")
                 .and_then(Value::as_i64)
                 .ok_or_else(|| "y is required".to_string())?;
-            let button = args
-                .get("button")
-                .and_then(Value::as_str)
-                .unwrap_or("left");
+            let button = args.get("button").and_then(Value::as_str).unwrap_or("left");
             let raw = crate::ai::live_session_tool(
                 app,
                 "session_remote_desktop_mouse_click",
@@ -793,11 +787,8 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
                 .get("id")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "id is required".to_string())?;
-            let raw = crate::ai::dashboard_tool(
-                app,
-                "dashboard_read_widget_source",
-                json!({"id": id}),
-            );
+            let raw =
+                crate::ai::dashboard_tool(app, "dashboard_read_widget_source", json!({"id": id}));
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.create_view" => {
@@ -866,11 +857,8 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
                 .get("id")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "id is required".to_string())?;
-            let raw = crate::ai::dashboard_tool(
-                app,
-                "dashboard_remove_instance",
-                json!({"id": id}),
-            );
+            let raw =
+                crate::ai::dashboard_tool(app, "dashboard_remove_instance", json!({"id": id}));
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.apply_layout" => {
@@ -892,8 +880,7 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.dangerous.create_custom_widget" => {
-            let raw =
-                crate::ai::dashboard_tool(app, "dashboard_create_custom_widget", args);
+            let raw = crate::ai::dashboard_tool(app, "dashboard_create_custom_widget", args);
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.dangerous.update_custom_widget" => {
@@ -910,8 +897,7 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.dangerous.remove_custom_widget" => {
-            let raw =
-                crate::ai::dashboard_tool(app, "dashboard_remove_custom_widget", args);
+            let raw = crate::ai::dashboard_tool(app, "dashboard_remove_custom_widget", args);
             parse_dashboard_json(&raw)
         }
         "kkterm.dashboard.dangerous.reset" => {
@@ -927,8 +913,7 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
 /// Unify both shapes into a `Result<Value, String>` so the MCP layer can
 /// emit a consistent tool-error response.
 fn parse_dashboard_json(raw: &str) -> Result<Value, String> {
-    let value: Value =
-        serde_json::from_str(raw).unwrap_or_else(|_| Value::String(raw.to_string()));
+    let value: Value = serde_json::from_str(raw).unwrap_or_else(|_| Value::String(raw.to_string()));
     if let Some(error) = value.get("error").and_then(Value::as_str) {
         return Err(error.to_string());
     }
@@ -936,8 +921,7 @@ fn parse_dashboard_json(raw: &str) -> Result<Value, String> {
 }
 
 fn parse_tool_json(raw: &str) -> Result<Value, String> {
-    let value: Value = serde_json::from_str(raw)
-        .unwrap_or_else(|_| Value::String(raw.to_string()));
+    let value: Value = serde_json::from_str(raw).unwrap_or_else(|_| Value::String(raw.to_string()));
     if value
         .get("ok")
         .and_then(Value::as_bool)

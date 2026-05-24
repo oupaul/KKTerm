@@ -63,6 +63,10 @@ _Avoid_: plugin, extension, custom tile
 One of three visual chrome styles applied per Widget Instance: `panel`, `ambient`, `hero`. Presets are CSS wrappers that read the Instance's `--w-accent` / `--w-accent-soft` variables; presets do not encode their own palette. Ambient hides the title bar by default.
 _Avoid_: theme, style, layout
 
+**Widget Archetype**:
+An AI-facing scaffold family selected before creating a Dashboard AI Created Widget. It guides chrome, layout, state handling, lifecycle, library choice, and first-pass grid size, but is not persisted as durable Dashboard data. Current archetypes are **Data Monitor**, **Metric/Chart**, **Utility Instrument**, **Desktop Object**, **Canvas Toy/Game**, and last-resort **General Workbench**.
+_Avoid_: widget type, widget kind, preset
+
 **Widget Kind**:
 One of `builtIn`, `script`. Determines the body rendering path: `builtIn` resolves to a TypeScript component in `src/modules/dashboard/widgets/`; `script` mounts a JavaScript body inside an isolated `iframe srcdoc` host.
 _Avoid_: widget type, widget variant

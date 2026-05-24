@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `dashboard.*` (full namespace)
-- Topics: Dashboard Views, Widget Instances, cached Views, instant View switching, embedded Connection pane, embedded SSH terminal, embedded tmux toolbar, hidden embedded SFTP shortcut, presets (panel / ambient / tile / hero / action), accents, icons, backgrounds, density, edit layout, empty-canvas context menu, catalog, custom script widgets, AI-authored widgets, widget design preflight, agent widget JSON, UTF-8 widget source, non-English widget text, widget visual context, compact AI context, duplicate widget detection, AI coding usage, Codex usage, Claude Code usage, adding AI coding tools, removing AI coding tools, reconnecting AI coding usage, missing CLI binaries, five-hour limit, weekly limit, quota, rate limits
+- Topics: Dashboard Views, Widget Instances, cached Views, instant View switching, embedded Connection pane, embedded SSH terminal, embedded tmux toolbar, hidden embedded SFTP shortcut, presets (panel / ambient / tile / hero / action), Widget Archetype, Data Monitor, Metric/Chart, Utility Instrument, Desktop Object, Canvas Toy/Game, General Workbench, accents, icons, backgrounds, density, edit layout, empty-canvas context menu, catalog, custom script widgets, AI-authored widgets, widget design preflight, agent widget JSON, UTF-8 widget source, non-English widget text, widget visual context, compact AI context, duplicate widget detection, AI coding usage, Codex usage, Claude Code usage, adding AI coding tools, removing AI coding tools, reconnecting AI coding usage, missing CLI binaries, five-hour limit, weekly limit, quota, rate limits
 - Synonyms: "homepage", "tiles", "cards", "widgets", "right click dashboard", "context menu", "shortcut menu", "report", "view reload", "connection widget reload", "connection pane tmux", "connection widget tmux", "embedded terminal tmux", "hide SFTP in widget", "switch views", "background image", "wallpaper", "translucent widget", "see-through widget", "canvas opacity", "low contrast widget", "hard to read widget", "garbled widget text", "mojibake", "encoding", "UTF8", "UTF-8", "Codex quota", "Claude quota", "5h usage", "7d usage", "AI coding meter", "add Codex", "add Claude Code", "remove Codex", "remove Claude Code", "reconnect Claude Code", "refresh Claude Code auth", "install Codex", "install Claude Code", "program not found"
 
 > **Terms:** see `CONTEXT.md`. **Dashboard View** is a durable SQLite-backed tab; **Widget Instance** is a placed widget on a View with its own preset/accent/title/layout. **Dashboard Custom Widget** is an AI-authored script-widget definition. Architecture details live in `docs/DASHBOARD.md`.
@@ -105,7 +105,16 @@ Custom Widgets are authored by the AI Assistant (`ai.createWidget`), not by user
 
 Widget source and settings schema payloads are UTF-8 JSON. When the assistant creates or updates a widget in a non-English output language, titles, summaries, labels, placeholders, setting options, `htmlShim`, and JavaScript string literals should stay as Unicode text; do not rewrite them as mojibake, percent-encoded strings, base64, HTML entities, or ASCII-only text.
 
-When creating a Custom Widget, the assistant uses an OpenDesign-style preflight before calling the Dashboard tool. It picks an internal visual direction (operator console, data observatory, desktop object, spatial canvas, or branded vignette), chooses the rendering library or DOM/canvas approach, sizes the Widget Instance, then critiques contrast, hierarchy, density, responsiveness, and motion cost before saving the widget.
+When creating a Custom Widget, the assistant chooses a **Widget Archetype** before calling the Dashboard tool. Supported archetypes are Data Monitor, Metric/Chart, Utility Instrument, Desktop Object, Canvas Toy/Game, and the last-resort General Workbench fallback. It then uses an OpenDesign-style preflight: pick an internal visual direction (operator console, data observatory, desktop object, spatial canvas, or branded vignette), choose the rendering library or DOM/canvas approach, size the Widget Instance, then critique contrast, hierarchy, density, responsiveness, and motion cost before saving the widget.
+
+Archetype defaults:
+
+- **Data Monitor** — web/API/list/status data. Use compact provenance, freshness, loading, empty, stale, and error states.
+- **Metric/Chart** — numeric summaries, gauges, charts, and meters. Ambient is allowed when the widget renders its own compact label.
+- **Utility Instrument** — QR, hash, converter, calculator, parser, generator, formatter, or encoder/decoder tools. Use panel chrome with explicit labels, validation, results, and copy/export actions.
+- **Desktop Object** — clock, dial, note, tray, scanner, calculator, tuner, or other tactile singleton object. Use ambient chrome by default; avoid body subtitles and explanatory prose.
+- **Canvas Toy/Game** — small games, physics toys, fidget tools, and canvas/WebGL scenes. Use ambient chrome by default; put score/status/controls inside the scene as HUD affordances.
+- **General Workbench** — mixed-purpose fallback only when none of the primary archetypes fit.
 
 Validation errors surface as:
 

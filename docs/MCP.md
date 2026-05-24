@@ -130,7 +130,7 @@ same protection without any per-Module gate code.
 
 | Name | Description |
 |---|---|
-| `kkterm.dashboard.dangerous.create_widget` | Create an AI-Created (script) Widget AND place it on a view. |
+| `kkterm.dashboard.dangerous.create_widget` | Create an AI-Created (script) Widget AND place it on a view. Requires `widgetArchetype` (`dataMonitor`, `metricChart`, `utilityInstrument`, `desktopObject`, `canvasToyGame`, or last-resort `generalWorkbench`) so callers choose the scaffold before providing script source. |
 | `kkterm.dashboard.dangerous.create_custom_widget` | Create a reusable AI-Created Widget definition without placement. |
 | `kkterm.dashboard.dangerous.update_custom_widget` | Edit an existing AI-Created Widget body/title/etc. |
 | `kkterm.dashboard.dangerous.remove_custom_widget` | Delete an AI-Created Widget definition (use `forceDeleteInstances` to also remove placements). |

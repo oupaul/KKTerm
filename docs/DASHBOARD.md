@@ -46,11 +46,22 @@ AI Created Widget text is UTF-8 end to end. Titles, summaries, labels, placehold
 
 **Icon** — a lucide icon name from a curated whitelist of ~50 entries in `palette.ts`. The whitelist bounds the visual language and keeps the bundle predictable.
 
+**Widget Archetype** — the AI-facing scaffold family selected before creating an AI Created Widget. The archetype defines the expected chrome, root layout, state handling, library bias, lifecycle, and first-pass grid size. It is not stored as durable Dashboard data; the persisted result remains a script widget plus normal Widget Instance presentation fields.
+
+| Widget Archetype | Use for | Default scaffold |
+| --- | --- | --- |
+| `dataMonitor` | Web/API/list/status data, freshness-sensitive feeds, health rows, local status snapshots | Ambient or panel surface with compact in-widget provenance, refresh/freshness state, loading, empty, stale, and error states. |
+| `metricChart` | Numeric summaries, gauges, charts, meters, timelines, local performance counters | Ambient by default for glanceable metrics; keep a compact in-widget title when the number or chart is ambiguous. |
+| `utilityInstrument` | QR, hash, converter, calculator, parser, generator, formatter, encoder/decoder tools | Panel by default. Labels, tabs, validation, units, results, and copy/export affordances are part of the tool surface. |
+| `desktopObject` | Clock, dial, note, tuner, tray, scanner, calculator, or other tactile singleton object | Ambient by default. Hide host title chrome; avoid explanatory body text. Optional object state appears as hover/focus reveal or as part of the object. |
+| `canvasToyGame` | Small games, physics toys, fidget tools, interactive canvas/SVG/WebGL scenes | Ambient by default. Hide host title chrome; status, score, pause/reset, and controls belong inside the scene as HUD affordances. |
+| `generalWorkbench` | Last-resort mixed tools that genuinely do not fit the five primary archetypes | Panel by default with one primary work region. The assistant must prefer a primary archetype unless none fits. |
+
 ## AI Visual Selection Rules
 
 The AI Assistant must choose `preset`, `accent_name`, `icon_name`, and grid size as part of widget design, not as arbitrary required fields. Generated widgets should feel like built-in KKTerm surfaces: quiet, dense, desktop-oriented, and consistent with the app's typography and control spacing.
 
-Widget creation follows an OpenDesign-style structure before the assistant calls `dashboard_create_widget`: pick a bounded visual direction, plan the artifact, then critique the plan before emitting source. The assistant chooses one internal direction from KKTerm's widget library:
+Widget creation follows an OpenDesign-style structure before the assistant calls `dashboard_create_widget`: choose one Widget Archetype, pick a bounded visual direction, plan the artifact, then critique the plan before emitting source. The assistant chooses one internal direction from KKTerm's widget library:
 
 - **Operator console** — dense technical surfaces, terminal-adjacent contrast, grids, meters, log-like rhythm, and restrained signal colors.
 - **Data observatory** — charts, gauges, timelines, maps, and numeric hierarchy where the data is the main visual.
@@ -58,12 +69,12 @@ Widget creation follows an OpenDesign-style structure before the assistant calls
 - **Spatial canvas** — canvas/WebGL/SVG-first widgets such as 3D scenes, physics toys, diagrams, weather, maps, or animated monitors.
 - **Branded vignette** — image-led or editorial widgets for user-supplied brands, references, places, or media.
 
-Before creation, the assistant should silently preflight the selected direction, visual metaphor, data hierarchy, library/native rendering choice, preset/accent/icon/grid size, state handling, and motion budget. It should self-critique contrast, hierarchy, density, responsiveness, and motion cost, then revise before the first tool call if the plan would produce low contrast, too much prose, a generic form layout, inner scrollbars, unbounded animation, or a widget that does not look like a finished singleton object.
+Before creation, the assistant should silently preflight the selected Widget Archetype, selected direction, visual metaphor, data hierarchy, library/native rendering choice, preset/accent/icon/grid size, state handling, and motion budget. It should self-critique contrast, hierarchy, density, responsiveness, and motion cost, then revise before the first tool call if the plan would produce low contrast, too much prose, a generic form layout, inner scrollbars, unbounded animation, or a widget that does not look like a finished singleton object.
 
 Preset guidance:
 
-- `panel` — default for ordinary tools, forms, checklists, and mixed content.
-- `ambient` — soft informational summaries where low visual weight matters.
+- `panel` — default for Utility Instrument and General Workbench widgets where labels, validation, and controls must be explicit.
+- `ambient` — default for Desktop Object and Canvas Toy/Game widgets; also preferred for glanceable Metric/Chart and Data Monitor widgets that render their own compact in-body title/provenance.
 - `hero` — rare high-priority summary widgets; avoid for normal utilities.
 
 Accent guidance:
@@ -78,6 +89,8 @@ Script widget UI should use the provided root and compact app-style controls. Do
 Generated widgets must be boundary-aware. The assistant should choose `grid_w` and `grid_h` from the expected content, not from a fixed default: simple timers and counters normally start at 4x3; forms, remote image widgets, and multi-row lists usually need 5x4 or larger. A successful generated widget should not show an inner vertical scrollbar for its intended initial state.
 
 Generated widgets must also treat the widget root as the full allocated surface. Script widgets should make their outermost wrapper fill `100%` width and height, normally through `kk-shell`, `kk-stage`, `kk-panel`, or `kk-fill`, then align, center, or scale any naturally smaller object inside that full-size wrapper. Do not duplicate the host widget frame with a smaller centered app card. Script widgets should avoid `max-width`, fixed-height, or shrink-to-content outer wrappers unless the user explicitly asks for an inset miniature object.
+
+Desktop Object and Canvas Toy/Game archetypes should not render explanatory subtitles inside the widget body. If an object or scene needs labels, they should be object-native or HUD-like: a clock face, a small hover/focus state chip, score/fuel/status chips, or a compact control overlay. Do not add prose that describes what the object or scene is.
 
 Generated widgets must preserve readable contrast. Script widgets should prefer host CSS variables (`--kk-text`, `--kk-muted`, `--kk-surface`, `--kk-accent`) and only override backgrounds when text and control colors remain explicit and legible.
 
@@ -119,7 +132,7 @@ Each command is a thin handler over the storage layer with up-front validation:
 | `dashboard_read_widget_secret` | Script-widget bridge command. Validates that the requested key is a `secret` field on that exact widget instance and that the instance stores the expected `secretRef`, then reads the OS-keychain `widgetSecret` value. |
 | `dashboard_remove_instance` | Hard delete. |
 | `dashboard_apply_layout` | Batched layout commit used by the debounced drag/resize pipeline. |
-| `dashboard_create_widget` | AI-facing atomic helper: validates a structured `body` and optional `settingsSchema`, creates the AI Created Widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. Successful assistant tool results are redacted to metadata and instance id; they do not echo full source. |
+| `dashboard_create_widget` | AI-facing atomic helper: accepts a required `widgetArchetype`, validates a structured `body` and optional `settingsSchema`, creates the AI Created Widget, and places an instance on the supplied selected view. Use this when the user expects a visible widget. Successful assistant tool results are redacted to metadata and instance id; they do not echo full source. |
 | `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` against the script body schema and optional `settingsSchemaJson` but does not place an instance. Successful assistant tool results are redacted to metadata. |
 | `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind and patched `settingsSchemaJson`. Successful assistant tool results are redacted to metadata. |
 | `dashboard_remove_custom_widget` | Requires `forceDeleteInstances` if instances reference the widget. |
@@ -143,7 +156,7 @@ Duplicate detection must work from metadata. Before creating a new AI Created Wi
 
 Dashboard mutating tools run from the Rust Assistant tool loop, outside the frontend Dashboard store. To keep the live Dashboard view in sync, every successful mutating dashboard tool emits a `dashboard-changed` event. `src/modules/dashboard/state/invalidation.ts` listens once at the app shell and reloads `useDashboardStore`. The streaming `toolCallEnd` refresh remains a useful fallback, but the backend event is the authoritative invalidation path for out-of-band mutations.
 
-The `dashboard_create_widget` assistant tool schema is strict-compatible where possible. It uses a closed root object, bounded enums, required fields, and closed nested object shapes so capable providers produce structured widget arguments instead of free-form prose or partial JSON. Rust validation remains the final authority before anything is persisted.
+The `dashboard_create_widget` assistant tool schema is strict-compatible where possible. It uses a closed root object, a bounded `widgetArchetype` enum, required fields, and closed nested object shapes so capable providers produce structured widget arguments instead of free-form prose or partial JSON. Rust validation remains the final authority before anything is persisted.
 
 The AI-facing widget contract requires the first created widget to be complete for the user's requested outcome. If a request implies live/realtime data, MCP-backed data, web-fetched data, local file/session data, or another changing input, the assistant should use the needed discovery/read/fetch tool rounds before creation and create a script widget wired to the actual data source with loading, error, empty, and refresh states. Explicitly static requests should still become small script widgets that render their content into `#root`; missing credentials should become `settingsSchema` secret/config fields plus a secret-entry request, not a placeholder scaffold.
 
@@ -274,6 +287,7 @@ AI Created Widgets use a single script body shape. The reliable path is bounded 
 - Per-instance custom options should use `settingsSchema.fields` rather than model-authored settings UI. KKTerm owns the settings form and stores values in `dashboard_widget_instances.settings_values_json`.
 - Sensitive per-instance options must use `settingsSchema.fields[].type = "secret"`. The model must not place passwords, API keys, tokens, or similar values in `defaultValue`, script source, or `settings_values_json`.
 - Assistant-facing widget creation schemas should stay strict-compatible where possible: root object, required fields, `additionalProperties: false`, bounded enums, and Rust validation as the final authority.
+- The assistant must choose a Widget Archetype before authoring source. `generalWorkbench` is a fallback only; it should not be used when Data Monitor, Metric/Chart, Utility Instrument, Desktop Object, or Canvas Toy/Game fits.
 
 ## AI Assistant Integration
 

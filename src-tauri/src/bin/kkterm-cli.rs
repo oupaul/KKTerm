@@ -313,11 +313,12 @@ fn static_tool_descriptors() -> Vec<Value> {
         }),
         json!({
             "name": "kkterm.dashboard.dangerous.create_widget",
-            "description": "DANGEROUS: create an AI-Created (script) Widget AND place it on a view in one call. Requires built_in_mcp_allow_all_dangerous = true.",
+            "description": "DANGEROUS: create an AI-Created (script) Widget AND place it on a view in one call. `widgetArchetype` selects the generation scaffold. Requires built_in_mcp_allow_all_dangerous = true.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "viewId": {"type": "string"},
+                    "widgetArchetype": {"type": "string", "enum": ["dataMonitor", "metricChart", "utilityInstrument", "desktopObject", "canvasToyGame", "generalWorkbench"]},
                     "title": {"type": "string"},
                     "summary": {"type": "string"},
                     "category": {"type": "string"},
@@ -331,7 +332,7 @@ fn static_tool_descriptors() -> Vec<Value> {
                     "gridW": {"type": "integer"},
                     "gridH": {"type": "integer"},
                 },
-                "required": ["viewId", "title", "body"],
+                "required": ["viewId", "widgetArchetype", "title", "body"],
                 "additionalProperties": false,
             },
         }),
@@ -415,8 +416,8 @@ fn app_not_running_error(id: Value, detail: &str) -> Value {
 }
 
 async fn forward_inner(request: &Value) -> Result<Value, String> {
-    let info_path = bridge_info_path()
-        .ok_or_else(|| "could not resolve app data directory".to_string())?;
+    let info_path =
+        bridge_info_path().ok_or_else(|| "could not resolve app data directory".to_string())?;
     let info = read_bridge_info(&info_path)
         .map_err(|e| format!("bridge info unavailable at {}: {e}", info_path.display()))?;
 
@@ -452,10 +453,7 @@ async fn forward_inner(request: &Value) -> Result<Value, String> {
         .write_all(&body)
         .await
         .map_err(|e| format!("forward write: {e}"))?;
-    writer
-        .flush()
-        .await
-        .map_err(|e| format!("flush: {e}"))?;
+    writer.flush().await.map_err(|e| format!("flush: {e}"))?;
 
     let mut response = String::new();
     timeout(CALL_TIMEOUT, reader.read_line(&mut response))
@@ -563,7 +561,10 @@ impl PipeStream {
     }
 }
 
-async fn write_line<W: AsyncWriteExt + Unpin>(writer: &mut W, value: &Value) -> std::io::Result<()> {
+async fn write_line<W: AsyncWriteExt + Unpin>(
+    writer: &mut W,
+    value: &Value,
+) -> std::io::Result<()> {
     let mut bytes = serde_json::to_vec(value).unwrap_or_else(|_| b"{}".to_vec());
     bytes.push(b'\n');
     writer.write_all(&bytes).await?;
