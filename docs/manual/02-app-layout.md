@@ -10,7 +10,7 @@
 
 Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
 
-1. **Built-in Modules** — Workspace, Dashboard, File Explorer, Wiki.
+1. **Built-in Modules** — Workspace and Dashboard.
 2. **Connection Rail** (`app.connectionRail`) — a divider group `app.connectedConnectionsRail` that shows:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
@@ -21,7 +21,7 @@ The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from
 
 Tutorial targets: `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailSettings`.
 
-Non-Workspace pages (Dashboard, App Launcher, File Explorer, Settings, Wiki) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active.
+Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active.
 
 ## Connections Panel (left, inside Workspace Module)
 
@@ -32,7 +32,7 @@ Resizable. Collapsed/expanded state persists across launches. See [03-connection
 
 Tutorial target: `app.connectionsResize`.
 
-The panel only appears inside the Workspace Module. Switching to Dashboard, File Explorer, Wiki, or Settings replaces this region with that Module's own content.
+The panel only appears inside the Workspace Module. Switching to Dashboard or Settings replaces this region with that destination's own content.
 
 ## Workspace Canvas (centre)
 

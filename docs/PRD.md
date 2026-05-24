@@ -8,7 +8,7 @@ KKTerm is intended to be a fast, professional desktop workspace for personal/loc
 
 ## Solution
 
-KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (remote connection manager with VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP dual-pane file management, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **File Explorer** (lightning-fast alternative local file browser).
+KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (remote connection manager with VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, RDP, VNC, and URL connections) and **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files).
 
 Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, OS keychain secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 

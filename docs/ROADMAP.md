@@ -139,8 +139,6 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [ ] Native data widgets: Clock, Weather, CPU, Memory, Recent Hosts, Session Activity, Today's Brief.
 - [ ] User-facing "Create AI Created Widget" dialog so authoring is not AI-only.
 - [ ] Built-in Connections widget and URL widget with configurable auto-reload intervals.
-- [ ] File Explorer Module: lightning-fast alternative local file browser optimized for dense professional workflows.
-- [ ] Unified Activity Rail routing for Workspace, Dashboard, and File Explorer Modules.
 
 ### Extension Platform
 

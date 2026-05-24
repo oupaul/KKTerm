@@ -41,7 +41,6 @@ Top to bottom:
 
 - Workspace (label `workspace.workspace`)
 - Dashboard (label `dashboard.moduleLabel`)
-- File Explorer
 - Wiki (label `app.wiki`)
 - Connection Rail shortcuts (label `app.connectionRail`, group `app.connectedConnectionsRail`) — pinned and currently-connected Connections appear here as direct shortcuts.
 - Settings (label `app.settings`, anchored to the bottom)

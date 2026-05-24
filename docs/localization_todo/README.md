@@ -12,7 +12,7 @@ Examples:
 
 ## Flow
 
-When you add or change an English key in `src/i18n/locales/en.json` and do **not** translate it into the other 12 locales in the same change:
+When you add or change an English key in `src/i18n/locales/en.json` and do **not** translate it into the other 13 locales in the same change:
 
 1. Copy `_TEMPLATE.md` to `<namespace>.<keyPath>.md`.
 2. Fill in every field.

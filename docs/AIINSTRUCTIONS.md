@@ -305,7 +305,7 @@ File issues at: <https://github.com/ryantsai/KKTerm/issues/new>
    - No speculative features or abstractions beyond what was asked
    - All user-visible strings must use `t()` / `useTranslation()` — no hardcoded English in JSX
    - Follow existing code patterns — don't introduce new abstractions for single-use code
-   - Run `npm run check` and all four checks before submitting
+   - Run the full check suite only when required by `AGENTS.md`
 
 2. **Check `docs/ROADMAP.md`** — if the feature you want to build is listed as deferred, open an issue first to discuss before building it.
 
@@ -345,8 +345,8 @@ Your PR description must include:
 
 ## Checklist
 - [ ] Read AGENTS.md and followed all rules
-- [ ] All four checks pass (npm run check, npm run build, cargo check, cargo test)
-- [ ] Added i18n keys to all 13 locale files if any user-visible strings changed
+- [ ] Required checks pass, or this change does not require the full check suite under `AGENTS.md`
+- [ ] Added i18n keys to all 14 locale files or created pending localization TODOs if any user-visible strings changed
 - [ ] No hardcoded English strings in JSX
 - [ ] Screenshot included if UI changed
 ```
@@ -361,7 +361,6 @@ The narrow left rail is the app's navigation spine. Icons from top to bottom:
 
 - **Workspace** (terminal icon) — the main connection and session area
 - **Dashboard** — widget playground with App Launcher and AI Created Widgets
-- **File Explorer** — local file browser
 - **Settings** (gear icon, bottom) — app configuration
 
 Hover any rail icon for a tooltip label. Right-click connection shortcut icons in the rail for quick actions.

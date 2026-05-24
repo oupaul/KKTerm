@@ -147,7 +147,7 @@ path and cannot capture hidden/unmounted content.
 
 ### Adding a new Module
 
-When a new activity-rail Module is added (e.g. File Explorer, Wiki), give
+When a new activity-rail Module is added, give
 it its own `kkterm.<module>.*` namespace and, if any of its tools touch
 executable code or wipe data, a `kkterm.<module>.dangerous.*` sibling.
 The gate, the `tools/list` discovery path, and the bridge dispatcher do

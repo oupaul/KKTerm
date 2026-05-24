@@ -5,16 +5,16 @@ KKTerm is a local-first desktop administration workspace for terminal, SSH, SFTP
 ## Language
 
 **i18n / Localization**:
-KKTerm supports 13 UI languages through i18next. The English locale (`src/i18n/locales/en.json`) is the source-of-truth key structure. All user-visible strings must be routed through `t()` or `useTranslation()`; bare English text in JSX is a bug.
+KKTerm supports 14 UI languages through i18next. The English locale (`src/i18n/locales/en.json`) is the source-of-truth key structure. All user-visible strings must be routed through `t()` or `useTranslation()`; bare English text in JSX is a bug.
 
 **Locale**:
-A language-region bundle stored as a JSON file under `src/i18n/locales/`. English is bundled with the app; 12 additional locales load on demand via dynamic `import()`. The active locale is persisted in `localStorage` (`kkterm.language`) and survives app restarts.
+A language-region bundle stored as a JSON file under `src/i18n/locales/`. English is bundled with the app; 13 additional locales load on demand via dynamic `import()`. The active locale is persisted in `localStorage` (`kkterm.language`) and survives app restarts.
 
 **Translation key**:
-A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend source layout. New UI strings require a new key in all 13 locale files.
+A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend source layout. New UI strings require a new key in all 14 locale files.
 
 **Namespace**:
-A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `workspace`, `common`, `languages`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
+A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `workspace`, `common`, `languages`, `wiki`, `manual`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
 
 
 **Connection**:
@@ -36,7 +36,7 @@ An unsaved one-off connection draft used to start a session without creating a d
 _Avoid_: Temporary profile, ad hoc host
 
 **Session**:
-A live runtime instance for a process, SSH channel, or SFTP browser state.
+A live runtime instance for a process, SSH channel, file-browser, webview, or remote-desktop state.
 _Avoid_: Connection, profile, tab
 
 **Tab**:
@@ -71,10 +71,6 @@ _Avoid_: widget type, widget variant
 A Dashboard widget where users add local desktop apps, shortcuts, scripts, or files for quick launch. The widget presents each launcher entry as an icon with text; add/edit/remove actions, launch mode choices, and other entry management controls belong in an app-owned right-click context menu instead of the default widget surface.
 _Avoid_: dock, taskbar
 
-**File Explorer Module**:
-A built-in Activity Rail Module providing a lightning-fast alternative local file explorer optimized for speed and dense professional workflows. Distinct from the SFTP browser, which handles remote file operations over SSH connections.
-_Avoid_: SFTP browser, remote file pane
-
 **Pane**:
 A subdivision of a tab that presents one terminal surface or workspace view.
 _Avoid_: Session, split
@@ -84,7 +80,7 @@ Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly t
 ## UI Layout
 
 **Activity Rail (Left Rail)**:
-The vertical icon bar on the far left of the app. Shows top-level built-in Modules (Workspace, Dashboard, File Explorer), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
+The vertical icon bar on the far left of the app. Shows top-level built-in Modules (Workspace, Dashboard), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
 _Avoid_: sidebar, left sidebar, nav bar
 
 **Connection Tree (Connections Panel)**:
@@ -104,7 +100,7 @@ The fallback view shown when no Sessions are open, displaying recent Connections
 _Avoid_: dashboard page, home screen
 
 **Workspace Canvas**:
-The central content area for the active Module. Each Module (Workspace, Dashboard, File Explorer) owns its own content layout within this area. For the Workspace Module, this includes the Tab Strip, active Tab content (terminals, RDP/VNC surfaces, WebView2 surfaces, SFTP browsers), and optional pane splits.
+The central content area for the active Module. Each Module (Workspace, Dashboard) owns its own content layout within this area. For the Workspace Module, this includes the Tab Strip, active Tab content (terminals, RDP/VNC surfaces, WebView2 surfaces, SFTP/FTP browsers), and optional pane splits.
 _Avoid_: main area, content area
 
 **Tab Strip**:

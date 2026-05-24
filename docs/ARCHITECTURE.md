@@ -2,7 +2,7 @@
 
 ## Overview
 
-KKTerm is a Windows-first, cross-platform desktop workspace for local terminals, SSH sessions, and SFTP. The architecture prioritizes startup speed, local-first privacy, testable Rust source files, and a UI that can evolve toward GPU-accelerated terminal rendering without blocking the first usable prototype.
+KKTerm is a Windows-first, cross-platform desktop workspace for local terminals, SSH sessions, SFTP/FTP file browsing, URL workspaces, and remote desktop. The architecture prioritizes startup speed, local-first privacy, testable Rust source files, and a UI that can evolve toward GPU-accelerated terminal rendering without blocking the first usable prototype.
 
 ## Platform Shape
 
@@ -69,9 +69,9 @@ The i18n layer lives in `src/i18n/` and uses **i18next** with **react-i18next**.
 
 - **`src/i18n/config.ts`** owns the i18next instance, language detection (`localStorage` key `kkterm.language`), dynamic locale chunk loading, the `switchLanguage()` API, and the `ensureI18nReady()` startup guard.
 - **`src/i18n/useT.ts`** provides a typed `useT()` hook with full key autocompletion from the English locale shape.
-- **`src/i18n/locales/en.json`** is the source-of-truth translation file (11 namespaces, ~500 keys). English is bundled with the app; the 12 other locales (`fr`, `it`, `de`, `es`, `es-MX`, `pt-BR`, `zh-TW`, `zh-CN`, `ja`, `ko`, `th`, `id`) load on demand via dynamic `import()` and are automatically code-split by Vite.
+- **`src/i18n/locales/en.json`** is the source-of-truth translation file (16 namespaces, ~2,200 keys). English is bundled with the app; the 13 other locales (`fr`, `it`, `de`, `es`, `es-MX`, `pt-BR`, `zh-TW`, `zh-CN`, `ja`, `ko`, `th`, `id`, `vi`) load on demand via dynamic `import()` and are automatically code-split by Vite.
 - **Settings → General → Language** exposes a dropdown that calls `switchLanguage()`, which hot-swaps the locale bundle and persists the choice.
-- **All user-visible strings must go through `t()` or `useTranslation()`**. Hardcoded English text in JSX is forbidden. New keys go into `en.json` first, then are propagated to all 12 other locale files. Renamed or removed keys must be updated in every file. Pure helper functions that cannot use React hooks import `i18next` from `src/i18n/config` and call `i18next.t(key)`.
+- **All user-visible strings must go through `t()` or `useTranslation()`**. Hardcoded English text in JSX is forbidden. New keys go into `en.json` first, then are propagated to all 13 other locale files or tracked under `docs/localization_todo/`. Renamed or removed keys must be updated in every file. Pure helper functions that cannot use React hooks import `i18next` from `src/i18n/config` and call `i18next.t(key)`.
 
 ### Storage
 
@@ -109,8 +109,9 @@ Represents all openable resources as saved connections. Current connection types
 - URL
 - RDP
 - VNC
+- FTP/FTPS
 
-SFTP is a related workspace surface opened from an SSH Connection, not a standalone saved Connection type.
+SFTP is a related workspace surface opened from an SSH Connection, not a standalone saved Connection type. FTP/FTPS is a standalone Connection type that routes through the same file-browser workspace with FTP command adapters.
 
 SSH Connections may store a non-secret `useTmuxSessions` preference. This value describes how future terminal Sessions should launch; it does not represent a live remote process.
 
@@ -290,7 +291,7 @@ SQLite contains local, non-secret data only. OS keychain contains secrets. Termi
 
 The primary UI is a dense desktop workspace:
 
-- left activity rail with Workspace, Dashboard, File Explorer, and Settings entries
+- left activity rail with Workspace, Dashboard, and Settings entries
 - left connection tree with root Connections and optional nested folders (inside the Workspace Module)
 - main Module content area (each Module owns its layout: Workspace has tabs/panes, Dashboard has widget grid, etc.)
 - terminal split panes inside terminal tabs
@@ -306,7 +307,7 @@ Dashboard motion is centralized in `src/modules/dashboard/motion.tsx` using `mot
 
 The Dashboard Module supports multiple views, each a durable SQLite-backed row in `dashboard_views` carrying its own widget instances and `grid_density`. The first view is named "Default" and is seeded on first run with one App Launcher widget. Views do not create backend Sessions or saved Connections. Dashboard supplies the shared right AI Assistant panel with an active page-context summary for the current view, including widget instances and known AI Created Widgets as compact metadata only; Settings supplies the same shared Assistant panel with the active Settings section and visible control keys from `src/modules/settings/settingsAssistantContext.ts`. Keep page context separate from terminal selected-output context in the assistant request model. App Launcher belongs to Dashboard as a widget: users add the widget to a view, then add local app, shortcut, script, or file entries inside it. Each launcher entry should render as only an icon and text label in the widget surface; editing, removal, administrator launch, alternate-user launch, and other management actions must stay in an app-owned right-click context menu. See `docs/DASHBOARD.md` for the durable Dashboard architecture, including the three widget kinds, the three visual presets, drag-and-drop layout, and the AI-Assistant tool surface.
 
-The Activity Rail uses icons with delayed app-owned hover labels for built-in Modules and connected Connection shortcuts. Rail labels are rendered through the shared `RailTooltip` helper in `src/app/RailTooltip.tsx`; do not add native `title` tooltips because they can appear beside the app tooltip in Tauri/WebView2. Rail tooltips use the same light native-style bordered popup treatment, and connected Connection shortcuts show an insertion separator while being reordered with pointer drag. Non-Workspace Module pages must stay inset from the 48px rail and below the rail stacking layer so rail hover/focus tooltips keep working when those pages are active. The built-in rail entries are Workspace, Dashboard, and File Explorer, followed by connected Connection shortcuts when enabled; Settings remains the bottom destination. App Launcher must not be reintroduced as a peer rail entry.
+The Activity Rail uses icons with delayed app-owned hover labels for built-in Modules and connected Connection shortcuts. Rail labels are rendered through the shared `RailTooltip` helper in `src/app/RailTooltip.tsx`; do not add native `title` tooltips because they can appear beside the app tooltip in Tauri/WebView2. Rail tooltips use the same light native-style bordered popup treatment, and connected Connection shortcuts show an insertion separator while being reordered with pointer drag. Non-Workspace Module pages must stay inset from the 48px rail and below the rail stacking layer so rail hover/focus tooltips keep working when those pages are active. The built-in rail entries are Workspace and Dashboard, followed by connected Connection shortcuts when enabled; Settings remains the bottom destination. App Launcher must not be reintroduced as a peer rail entry.
 
 KKTerm does not include a global command palette in the current product scope; navigation and workflow entry points should stay visible in the Dashboard/connection tree, tab workspace, SFTP toolbar/context actions, assistant panel, and Settings.
 
@@ -393,7 +394,7 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/lib/nativeMenuIcons.ts` — app-owned lucide-style SVG strings used by native context menu `iconSvg` entries for command-only actions; Connection menus should prefer existing Connection image assets via `iconSrc`.
 - `src/i18n/config.ts` — i18next instance, language detection, dynamic locale loading, `switchLanguage()`, `ensureI18nReady()`.
 - `src/i18n/useT.ts` — typed translation hook with key autocompletion.
-- `src/i18n/locales/en.json` — English source-of-truth; 12 additional locale files under the same directory.
+- `src/i18n/locales/en.json` — English source-of-truth; 13 additional locale files under the same directory.
 
 New feature code should land in the owning source area above. New feature CSS should live beside that source area and be imported from `src/App.css` in a deliberate cascade order. Shared selectors such as `.status-bar`, `.terminal-menu`, `.dialog-backdrop`, `.icon-button`, form basics, and generic context-menu rules belong in `src/styles/base.css` unless they are truly area-specific. Keep `src/App.tsx` limited to app chrome and cross-cutting bootstrap. Workspace state, settings I/O, layout serialization, terminal rendering, pane input routing, and the Tauri command boundary remain separated under `src/store.ts`, `src/lib/`, `src/modules/workspace/`, `src/modules/workspace/connections/terminal/`, and `src/lib/tauri.ts`.
 

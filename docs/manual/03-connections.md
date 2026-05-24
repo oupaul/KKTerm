@@ -19,6 +19,7 @@
 | URL | `connections.embeddedWebApp` | Embedded WebView2. See [08-url-webview.md](08-url-webview.md). |
 | RDP | `connections.windowsRdp` | Windows native via mstscax. See [09-remote-desktop.md](09-remote-desktop.md). |
 | VNC | `connections.screenControl` | RFB through `vnc-rs`. |
+| FTP/FTPS | `connections.ftp` | Standalone file-transfer Connection routed through the SFTP/FTP browser surface. |
 
 SFTP is not a standalone Connection kind — it is opened from an SSH Connection (`terminal.openSftp`, `terminal.sftp`).
 
