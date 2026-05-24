@@ -398,7 +398,7 @@ async function handleOsc52ClipboardSequence(data: string) {
 }
 
 function handleTerminalLink(event: MouseEvent, uri: string) {
-  if (!event.shiftKey) {
+  if (!event.ctrlKey) {
     return;
   }
   let url: URL;

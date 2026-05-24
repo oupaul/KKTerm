@@ -123,7 +123,7 @@ Validation errors surface as:
 - Missing references: `dashboard.missingBuiltInWidget`, `dashboard.missingCustomWidget`.
 - Resource cap: `dashboard.scriptWidgetCapped`.
 
-Hardening details: `docs/ADR/0006-dashboard-script-widget-hardening.md`. Script widgets are isolated in iframes, capped by the active-script-widget limit, run animation/timer guardrails inside the iframe, and have parent bridge throttles for expensive host requests.
+Hardening details: `docs/ADR/0006-dashboard-script-widget-hardening.md`. Script widgets are isolated in iframes, capped by the active-script-widget limit, run animation/timer guardrails inside the iframe, honor `body.lifecycle.minTickMs` down to a 16 ms floor for intentional animation widgets, and have parent bridge throttles for expensive host requests.
 
 Visual context for AI-authored script widgets is supplied as `activeView.visualContext` in Dashboard Assistant context. The iframe exposes exact theme values through `KK.getTheme()` and CSS variables such as `--kk-readable-surface`; widgets should place text on readable surfaces when the View background is image, video, dynamic, or otherwise mixed.
 

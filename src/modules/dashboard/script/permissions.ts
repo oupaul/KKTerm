@@ -174,6 +174,11 @@ export function buildSrcdoc(
   const shim = body.htmlShim?.trim().length ? body.htmlShim : '<div id="root"></div>';
   const source = scriptStringLiteral(body.source);
   const settings = scriptStringLiteral(settingsValuesJson);
+  const requestedMinTickMs = body.lifecycle?.minTickMs;
+  const rafMinIntervalMs =
+    typeof requestedMinTickMs === "number" && Number.isFinite(requestedMinTickMs)
+      ? Math.max(16, Math.floor(requestedMinTickMs))
+      : 16;
   const normalizedTheme: ScriptWidgetTheme = {
     ...DEFAULT_SCRIPT_WIDGET_THEME,
     ...theme,
@@ -399,7 +404,7 @@ export function buildSrcdoc(
       var _kkLastRafTimestamp = 0;
       var _kkRafTimer = 0;
       var _kkRafHandle = 0;
-      var KK_RAF_MIN_INTERVAL_MS = 33;
+      var KK_RAF_MIN_INTERVAL_MS = ${rafMinIntervalMs};
       var KK_SET_TIMEOUT_MIN_MS = 16;
       var KK_SET_INTERVAL_MIN_MS = 100;
       // Motion watchdog: emit a kk.motionTick every N rAF callbacks so the

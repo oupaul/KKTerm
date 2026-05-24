@@ -175,12 +175,31 @@ test("script widget host caps animation and tight timer loops", async () => {
     permissions: { network: false },
   });
 
-  assert.match(srcdoc, /KK_RAF_MIN_INTERVAL_MS = 33/);
+  assert.match(srcdoc, /KK_RAF_MIN_INTERVAL_MS = 16/);
   assert.match(srcdoc, /window\.requestAnimationFrame = function \(callback\)/);
   assert.match(srcdoc, /Array\.from\(_kkRafCallbacks\.entries\(\)\)/);
   assert.match(srcdoc, /window\.setInterval = function \(handler, timeout\)/);
   assert.match(srcdoc, /KK_SET_INTERVAL_MIN_MS = 100/);
   assert.match(srcdoc, /if \(!_kkVisible\) return;/);
+});
+
+test("script widget host honors lifecycle minTickMs with a 16 ms floor", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const sixtyFpsSrcdoc = buildSrcdoc({
+    source: "requestAnimationFrame(() => {});",
+    permissions: { network: false },
+    lifecycle: { kind: "animation", minTickMs: 16 },
+  });
+  const tooFastSrcdoc = buildSrcdoc({
+    source: "requestAnimationFrame(() => {});",
+    permissions: { network: false },
+    lifecycle: { kind: "animation", minTickMs: 1 },
+  });
+
+  assert.match(sixtyFpsSrcdoc, /KK_RAF_MIN_INTERVAL_MS = 16/);
+  assert.match(tooFastSrcdoc, /KK_RAF_MIN_INTERVAL_MS = 16/);
 });
 
 test("script widget parent bridge rate-limits expensive messages", async () => {

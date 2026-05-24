@@ -169,9 +169,11 @@ validator, which gives the assistant the wrong error to react to.
 `src/modules/dashboard/schema.ts`). `kind` is one of `static`, `periodic`,
 `animation`, `realtime`. Absent or null lifecycle is treated as `static`
 so legacy widgets without the field continue to deserialize cleanly.
-`minTickMs` is informational, clamped to `16..=60_000` at the storage
-boundary; the iframe host still clamps animation rAF callbacks to 33 ms
-regardless.
+`minTickMs` is clamped to `16..=60_000` at the storage boundary. The
+iframe host honors it for the rAF guardrail with a 16 ms lower bound, so
+intentional animation widgets can target 60 fps while still preventing
+tight-loop scheduling. Widgets without a declared cadence use the same 16 ms
+rAF floor.
 
 The lifecycle kind turns the *prompt-only* contract for animation widgets
 into a *mechanically checked* invariant. The iframe's centralized

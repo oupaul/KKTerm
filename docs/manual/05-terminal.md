@@ -24,7 +24,7 @@ Failure shows `terminal.failedToStart` / `terminal.failedToStartDetail`. Outside
 
 ## Copy and paste
 
-Shift-click an `http` or `https` link rendered in any terminal Pane to open it in the OS default browser through KKTerm's external opener. This applies to local, SSH, Telnet, and Serial terminal Sessions because they share the same xterm.js renderer.
+Ctrl-click an `http` or `https` link rendered in any terminal Pane to open it in the OS default browser through KKTerm's external opener. This applies to local, SSH, Telnet, and Serial terminal Sessions because they share the same xterm.js renderer.
 
 - Selecting text with the mouse copies via `terminal.copy` (shortcut hint `terminal.copyShortcut`). Right-click → `terminal.copy` is also available.
 - Paste: `terminal.paste`. Multi-line pastes prompt a confirmation `terminal.pasteMultilineConfirm` to prevent accidental command execution.
