@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `terminal.actions`, `terminal.copy`, `terminal.copyShortcut`, `terminal.paste`, `terminal.pasteMultilineConfirm`, `terminal.find`, `terminal.findInScrollback`, `terminal.noResults`, `terminal.closeSearch`, `terminal.previousSearch`, `terminal.nextSearch`, `terminal.font`, `terminal.increaseSize`, `terminal.decreaseSize`, `terminal.resetSize`, `terminal.save`, `terminal.saveBuffer`, `terminal.bufferSaveFailed`, `terminal.startRecording`, `terminal.stopRecording`, `terminal.recording`, `terminal.detectedCodingAgent`, `terminal.openRecordings`, `terminal.recordingsTitle`, `terminal.openRecordingsFolder`, `terminal.noRecordings`, `terminal.logFiles`, `terminal.textFiles`, `terminal.starting`, `terminal.sessionFor`, `terminal.startingSessionFor`, `terminal.failedToStart`, `terminal.failedToStartDetail`, `terminal.desktopRuntimeRequired`, `terminal.tauriRequired`, `terminal.noSaveDialog`, `terminal.saveDialog`, `terminal.connectLabel`, `terminal.targetLabel`
-- Topics: copy/paste, multiline paste confirmation, find in scrollback, font size, save buffer to file, recording terminal output, coding-agent detection badge, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
-- Synonyms: "highlight text", "search terminal", "zoom terminal", "shrink font", "export log", "record session", "terminal recording", "transcript", "Codex badge", "Claude Code badge", "agent icon"
+- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, save buffer to file, recording terminal output, coding-agent detection badge, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
+- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "export log", "record session", "terminal recording", "transcript", "Codex badge", "Claude Code badge", "agent icon"
 
 ## Rendering
 
@@ -23,6 +23,8 @@ While a Session is starting up, the Pane shows:
 Failure shows `terminal.failedToStart` / `terminal.failedToStartDetail`. Outside the Tauri runtime (e.g. browser preview), `terminal.desktopRuntimeRequired` or `terminal.tauriRequired` is shown instead.
 
 ## Copy and paste
+
+Shift-click an `http` or `https` link rendered in any terminal Pane to open it in the OS default browser through KKTerm's external opener. This applies to local, SSH, Telnet, and Serial terminal Sessions because they share the same xterm.js renderer.
 
 - Selecting text with the mouse copies via `terminal.copy` (shortcut hint `terminal.copyShortcut`). Right-click → `terminal.copy` is also available.
 - Paste: `terminal.paste`. Multi-line pastes prompt a confirmation `terminal.pasteMultilineConfirm` to prevent accidental command execution.

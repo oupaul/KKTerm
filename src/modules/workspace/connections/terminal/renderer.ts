@@ -12,6 +12,7 @@ import {
   type ITerminalOptions,
 } from "@xterm/xterm";
 import { writeToClipboard } from "../../../../lib/clipboard";
+import { openExternalUrl } from "../../../../lib/tauri";
 import type { TerminalSettings } from "../../../../types";
 
 export type TerminalRendererBackend = "xterm";
@@ -104,7 +105,7 @@ class XtermTerminalRenderer implements TerminalRenderer {
     this.terminal = new XtermTerminal(terminalOptionsFor(settings));
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.searchAddon);
-    this.terminal.loadAddon(new WebLinksAddon());
+    this.terminal.loadAddon(new WebLinksAddon(handleTerminalLink));
     if (settings.allowOsc52Clipboard) {
       this.osc52Disposable = this.terminal.parser.registerOscHandler(52, (data) =>
         handleOsc52ClipboardSequence(data),
@@ -394,6 +395,26 @@ async function handleOsc52ClipboardSequence(data: string) {
     console.warn("OSC 52 clipboard write failed.", error);
   }
   return true;
+}
+
+function handleTerminalLink(event: MouseEvent, uri: string) {
+  if (!event.shiftKey) {
+    return;
+  }
+  let url: URL;
+  try {
+    url = new URL(uri);
+  } catch {
+    return;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  void openExternalUrl(url.href).catch((error) => {
+    console.warn("Terminal external link open failed.", error);
+  });
 }
 
 export function decodeOsc52ClipboardText(data: string) {
