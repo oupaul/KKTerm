@@ -83,6 +83,9 @@ Oh, and the AI assistant can turn a sentence into a tiny dashboard tool you actu
 
 > ⭐ **If this sounds like the app you've been meaning to build for the last six years — star the repo so we know someone's watching. It genuinely helps.**
 
+Have an opinion on what should come next? Join the public feedback thread:
+**[What should KKTerm prioritize for Windows-first admin workflows?](https://github.com/ryantsai/KKTerm/discussions/141)**
+
 ---
 
 ## Why "KKTerm"?
