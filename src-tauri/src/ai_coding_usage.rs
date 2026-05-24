@@ -1,7 +1,9 @@
 use crate::storage;
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::{
     ffi::{OsStr, OsString},
     io::{BufRead, BufReader, Write},
@@ -10,10 +12,8 @@ use std::{
     sync::mpsc,
     time::{Duration, Instant},
 };
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 use tauri_plugin_opener::OpenerExt;
-use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
@@ -22,6 +22,8 @@ const PROVIDERS: [AiCodingUsageProvider; 2] = [
     AiCodingUsageProvider::ClaudeCode,
 ];
 const PROVIDER_TIMEOUT: Duration = Duration::from_secs(180);
+const CODEX_CHATGPT_DEFAULT_BASE_URL: &str = "https://chatgpt.com/backend-api";
+const CODEX_CHATGPT_USAGE_PATH: &str = "/wham/usage";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -508,6 +510,18 @@ fn connect_codex(
 }
 
 fn refresh_codex(cli_paths: &ProviderCliPaths) -> Result<ProviderUpdate, String> {
+    match refresh_codex_app_server(cli_paths) {
+        Ok(update) => Ok(update),
+        Err(app_server_error) => match refresh_codex_wham_usage() {
+            Ok(update) => Ok(update),
+            Err(wham_error) => Err(format!(
+                "{app_server_error}; Codex direct usage fallback failed: {wham_error}"
+            )),
+        },
+    }
+}
+
+fn refresh_codex_app_server(cli_paths: &ProviderCliPaths) -> Result<ProviderUpdate, String> {
     let mut session = CodexRpcSession::start(cli_paths)?;
     session.initialize()?;
     let account = session.request(json!({
@@ -545,6 +559,170 @@ fn refresh_codex(cli_paths: &ProviderCliPaths) -> Result<ProviderUpdate, String>
         raw_provider_json: Some(rate_limits),
         last_error: None,
     })
+}
+
+#[derive(Debug)]
+struct CodexWhamCredentials {
+    access_token: String,
+    account_id: Option<String>,
+}
+
+fn refresh_codex_wham_usage() -> Result<ProviderUpdate, String> {
+    let credentials = read_codex_wham_credentials()?;
+    let url = format!(
+        "{}{}",
+        resolve_codex_chatgpt_base_url(),
+        CODEX_CHATGPT_USAGE_PATH
+    );
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|error| format!("failed to build Codex direct usage client: {error}"))?;
+    let mut request = client
+        .get(url)
+        .bearer_auth(credentials.access_token)
+        .header("Accept", "application/json")
+        .header("User-Agent", "KKTerm");
+    if let Some(account_id) = credentials.account_id.as_deref() {
+        request = request.header("ChatGPT-Account-Id", account_id);
+    }
+    let response = request
+        .send()
+        .map_err(|error| format!("Codex direct usage request failed: {error}"))?;
+    let status = response.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err("Codex OAuth token rejected. Please sign in again with `codex`.".to_string());
+    }
+    if !status.is_success() {
+        return Err(format!(
+            "Codex direct usage endpoint returned HTTP {status}."
+        ));
+    }
+    let usage = response
+        .json::<Value>()
+        .map_err(|error| format!("failed to parse Codex direct usage response: {error}"))?;
+    let email = usage
+        .get("email")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let plan = usage
+        .get("plan_type")
+        .or_else(|| usage.get("planType"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let snapshot = normalize_codex_rate_limits(&usage);
+    Ok(ProviderUpdate {
+        account_label: email
+            .clone()
+            .or_else(|| plan.clone())
+            .or_else(|| Some(AiCodingUsageProvider::Codex.label().to_string())),
+        account_email: email,
+        subscription_plan: plan,
+        auth_state: "connected",
+        snapshot: Some(snapshot),
+        raw_provider_json: Some(usage),
+        last_error: None,
+    })
+}
+
+fn read_codex_wham_credentials() -> Result<CodexWhamCredentials, String> {
+    let path = codex_auth_path();
+    let content = std::fs::read_to_string(&path).map_err(|error| {
+        format!(
+            "failed to read Codex credentials at {}: {error}",
+            path.display()
+        )
+    })?;
+    let value: Value = serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse Codex credentials: {error}"))?;
+    let tokens = value.get("tokens").unwrap_or(&Value::Null);
+    let access_token = tokens
+        .get("access_token")
+        .and_then(Value::as_str)
+        .or_else(|| value.get("OPENAI_API_KEY").and_then(Value::as_str))
+        .filter(|token| !token.trim().is_empty())
+        .ok_or_else(|| {
+            "Codex credentials do not contain an access token. Sign in with `codex`.".to_string()
+        })?
+        .to_string();
+    let account_id = tokens
+        .get("account_id")
+        .and_then(Value::as_str)
+        .filter(|account_id| !account_id.trim().is_empty())
+        .map(str::to_string);
+    Ok(CodexWhamCredentials {
+        access_token,
+        account_id,
+    })
+}
+
+fn codex_auth_path() -> PathBuf {
+    if let Some(codex_home) = std::env::var_os("CODEX_HOME").filter(|value| !value.is_empty()) {
+        return PathBuf::from(codex_home).join("auth.json");
+    }
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .unwrap_or_else(|| OsString::from("."));
+    PathBuf::from(home).join(".codex").join("auth.json")
+}
+
+fn resolve_codex_chatgpt_base_url() -> String {
+    let config_path = if let Some(codex_home) =
+        std::env::var_os("CODEX_HOME").filter(|value| !value.is_empty())
+    {
+        PathBuf::from(codex_home).join("config.toml")
+    } else {
+        let home = std::env::var_os("USERPROFILE")
+            .or_else(|| std::env::var_os("HOME"))
+            .unwrap_or_else(|| OsString::from("."));
+        PathBuf::from(home).join(".codex").join("config.toml")
+    };
+
+    std::fs::read_to_string(config_path)
+        .ok()
+        .and_then(|content| parse_codex_chatgpt_base_url(&content))
+        .map(|url| normalize_codex_chatgpt_base_url(&url))
+        .filter(|url| {
+            url.starts_with("https://")
+                || url.starts_with("http://127.0.0.1")
+                || url.starts_with("http://localhost")
+        })
+        .unwrap_or_else(|| CODEX_CHATGPT_DEFAULT_BASE_URL.to_string())
+}
+
+fn parse_codex_chatgpt_base_url(config: &str) -> Option<String> {
+    config.lines().find_map(|line| {
+        let line = line.split('#').next().unwrap_or("").trim();
+        let (key, value) = line.split_once('=')?;
+        if key.trim() != "chatgpt_base_url" {
+            return None;
+        }
+        let value = value.trim();
+        let unquoted = value
+            .strip_prefix('"')
+            .and_then(|value| value.strip_suffix('"'))
+            .or_else(|| {
+                value
+                    .strip_prefix('\'')
+                    .and_then(|value| value.strip_suffix('\''))
+            })
+            .unwrap_or(value);
+        Some(unquoted.trim().to_string())
+    })
+}
+
+fn normalize_codex_chatgpt_base_url(url: &str) -> String {
+    let mut normalized = url.trim().trim_end_matches('/').to_string();
+    if normalized.is_empty() {
+        return CODEX_CHATGPT_DEFAULT_BASE_URL.to_string();
+    }
+    if (normalized.starts_with("https://chatgpt.com")
+        || normalized.starts_with("https://chat.openai.com"))
+        && !normalized.contains("/backend-api")
+    {
+        normalized.push_str("/backend-api");
+    }
+    normalized
 }
 
 fn connect_claude(cli_paths: &ProviderCliPaths) -> Result<ProviderUpdate, String> {
@@ -650,9 +828,8 @@ fn claude_usage_http_error(status: reqwest::StatusCode, retry_after: Option<&str
 }
 
 fn read_claude_oauth_token() -> Result<String, String> {
-    let path = claude_credentials_path().ok_or_else(|| {
-        "Claude credentials file is not available on this platform.".to_string()
-    })?;
+    let path = claude_credentials_path()
+        .ok_or_else(|| "Claude credentials file is not available on this platform.".to_string())?;
     let content = std::fs::read_to_string(&path).map_err(|error| {
         format!(
             "failed to read Claude credentials at {}: {error}",
@@ -675,7 +852,11 @@ fn claude_credentials_path() -> Option<PathBuf> {
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
         let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))?;
-        Some(PathBuf::from(home).join(".claude").join(".credentials.json"))
+        Some(
+            PathBuf::from(home)
+                .join(".claude")
+                .join(".credentials.json"),
+        )
     }
     #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
@@ -1001,21 +1182,41 @@ fn normalize_codex_rate_limits(value: &Value) -> ProviderSnapshot {
     let windows = collect_quota_windows(value);
     let five_hour = windows
         .iter()
-        .find(|window| {
-            window
-                .duration_minutes
-                .is_some_and(|duration| duration <= 360.0)
+        .find(|window| window.name_contains("primary"))
+        .or_else(|| {
+            windows
+                .iter()
+                .find(|window| window.name_contains("session"))
+        })
+        .or_else(|| {
+            windows.iter().find(|window| {
+                window
+                    .duration_minutes
+                    .is_some_and(|duration| duration <= 360.0)
+            })
         })
         .map(QuotaCandidate::to_window)
         .unwrap_or_else(AiCodingUsageQuotaWindow::unknown);
     let weekly = windows
         .iter()
-        .find(|window| {
-            window
-                .duration_minutes
-                .is_some_and(|duration| duration >= 7_000.0)
-        })
+        .find(|window| window.name_contains("secondary"))
         .or_else(|| windows.iter().find(|window| window.name_contains("week")))
+        .or_else(|| windows.iter().find(|window| window.name_contains("seven")))
+        .or_else(|| {
+            windows.iter().find(|window| {
+                window
+                    .duration_minutes
+                    .is_some_and(|duration| duration >= 7_000.0)
+                    && !window.name_contains("code")
+            })
+        })
+        .or_else(|| {
+            windows.iter().find(|window| {
+                window
+                    .duration_minutes
+                    .is_some_and(|duration| duration >= 7_000.0)
+            })
+        })
         .map(QuotaCandidate::to_window)
         .unwrap_or_else(AiCodingUsageQuotaWindow::unknown);
     ProviderSnapshot { five_hour, weekly }
@@ -1064,11 +1265,24 @@ fn collect_quota_windows_inner(
                 .and_then(Value::as_str)
                 .map(str::to_string)
                 .or(label);
-            let used_percent = numeric_key(map, &["usedPercent", "used_percentage", "percentUsed"]);
-            let duration_minutes = numeric_key(map, &["windowDurationMins", "durationMinutes"]);
+            let used_percent = numeric_key(
+                map,
+                &[
+                    "usedPercent",
+                    "used_percentage",
+                    "used_percent",
+                    "usage_percent",
+                    "percentUsed",
+                ],
+            );
+            let duration_minutes = numeric_key(map, &["windowDurationMins", "durationMinutes"])
+                .or_else(|| {
+                    numeric_key(map, &["limit_window_seconds"]).map(|seconds| seconds / 60.0)
+                });
             let resets_at = map
                 .get("resetsAt")
                 .or_else(|| map.get("resets_at"))
+                .or_else(|| map.get("reset_at"))
                 .and_then(timestamp_to_rfc3339);
             if used_percent.is_some() || resets_at.is_some() {
                 windows.push(QuotaCandidate {
@@ -1078,8 +1292,12 @@ fn collect_quota_windows_inner(
                     label: label.clone(),
                 });
             }
-            for nested in map.values() {
-                collect_quota_windows_inner(nested, label.clone(), windows);
+            for (key, nested) in map {
+                let nested_label = label
+                    .as_ref()
+                    .map(|label| format!("{label}.{key}"))
+                    .or_else(|| Some(key.to_string()));
+                collect_quota_windows_inner(nested, nested_label, windows);
             }
         }
         Value::Array(items) => {
@@ -1180,10 +1398,7 @@ mod tests {
 
     #[test]
     fn claude_usage_http_error_includes_retry_after() {
-        let message = claude_usage_http_error(
-            reqwest::StatusCode::TOO_MANY_REQUESTS,
-            Some("120"),
-        );
+        let message = claude_usage_http_error(reqwest::StatusCode::TOO_MANY_REQUESTS, Some("120"));
 
         assert_eq!(
             message,
@@ -1226,6 +1441,65 @@ mod tests {
 
         assert_eq!(snapshot.five_hour.used_percent, Some(31.0));
         assert_eq!(snapshot.weekly.used_percent, Some(74.0));
+    }
+
+    #[test]
+    fn normalizes_codex_wham_usage_rate_limit_windows() {
+        let value = serde_json::json!({
+            "plan_type": "pro",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 44.0,
+                    "limit_window_seconds": 18000,
+                    "reset_at": 1779633820
+                },
+                "secondary_window": {
+                    "used_percent": 7.0,
+                    "limit_window_seconds": 604800,
+                    "reset_at": 1780220620
+                }
+            },
+            "code_review_rate_limit": {
+                "used_percent": 12.0,
+                "limit_window_seconds": 604800,
+                "reset_at": 1780220620
+            },
+            "credits": {
+                "has_credits": true,
+                "balance": "4.20"
+            }
+        });
+
+        let snapshot = normalize_codex_rate_limits(&value);
+
+        assert_eq!(snapshot.five_hour.used_percent, Some(44.0));
+        assert_eq!(snapshot.weekly.used_percent, Some(7.0));
+        assert!(snapshot.five_hour.resets_at.is_some());
+        assert!(snapshot.weekly.resets_at.is_some());
+    }
+
+    #[test]
+    fn parses_codex_chatgpt_base_url_from_config() {
+        let config = r#"
+            model = "gpt-5"
+            chatgpt_base_url = "https://chatgpt.com/"
+        "#;
+
+        let parsed = parse_codex_chatgpt_base_url(config);
+
+        assert_eq!(parsed.as_deref(), Some("https://chatgpt.com/"));
+    }
+
+    #[test]
+    fn normalizes_codex_chatgpt_base_url_to_backend_api() {
+        assert_eq!(
+            normalize_codex_chatgpt_base_url("https://chatgpt.com/"),
+            "https://chatgpt.com/backend-api"
+        );
+        assert_eq!(
+            normalize_codex_chatgpt_base_url("https://example.com/backend-api/"),
+            "https://example.com/backend-api"
+        );
     }
 
     #[test]
