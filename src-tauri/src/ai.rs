@@ -8,30 +8,31 @@ use github_copilot_sdk::{
 use lettre::message::{Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::oneshot;
 use tokio::time::timeout;
 
-mod providers;
 mod prompt_contracts;
-use providers::provider_for;
+mod providers;
 use prompt_contracts::{
-    DASHBOARD_WIDGET_ANIMATION_CONTRACT, DASHBOARD_WIDGET_COMPLETION_CONTRACT,
-    DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT, DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT,
-    DASHBOARD_WIDGET_DOM_CONTRACT, DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT,
-    DASHBOARD_WIDGET_PHYSICS_CONTRACT, DASHBOARD_WIDGET_SURFACE_CONTRACT,
-    DASHBOARD_WIDGET_UTF8_CONTRACT, DASHBOARD_WIDGET_VISUAL_CONTRACT,
+    DASHBOARD_WIDGET_ANIMATION_CONTRACT, DASHBOARD_WIDGET_ARCHETYPE_CONTRACT,
+    DASHBOARD_WIDGET_COMPLETION_CONTRACT, DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT,
+    DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT, DASHBOARD_WIDGET_DOM_CONTRACT,
+    DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT, DASHBOARD_WIDGET_PHYSICS_CONTRACT,
+    DASHBOARD_WIDGET_SURFACE_CONTRACT, DASHBOARD_WIDGET_UTF8_CONTRACT,
+    DASHBOARD_WIDGET_VISUAL_CONTRACT,
 };
+use providers::provider_for;
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager};
 
@@ -40,7 +41,7 @@ use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
 use crate::dashboard_validation::drop_unused_script_libraries;
 use crate::storage::{
-    AiAssistantToolSettings, AiProviderSettings, Storage, ai_provider_secret_owner_id,
+    ai_provider_secret_owner_id, AiAssistantToolSettings, AiProviderSettings, Storage,
 };
 
 static LIVE_TOOL_REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -626,7 +627,11 @@ pub struct AgentRunResponse {
 }
 
 #[derive(Clone, Serialize)]
-#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 enum AiStreamEvent {
     ReasoningDelta {
         delta: String,
@@ -1131,10 +1136,7 @@ impl ResponsesStreamState {
     }
 }
 
-fn append_completed_responses_text(
-    state: &mut ResponsesStreamState,
-    text: &str,
-) -> Option<String> {
+fn append_completed_responses_text(state: &mut ResponsesStreamState, text: &str) -> Option<String> {
     let text = text.trim();
     if text.is_empty() {
         return None;
@@ -1168,12 +1170,10 @@ fn append_completed_responses_message_text(
         .map(|content| {
             content
                 .iter()
-                .filter_map(|part| {
-                    match part.get("type").and_then(Value::as_str) {
-                        Some("output_text") => part.get("text").and_then(Value::as_str),
-                        Some("refusal") => part.get("refusal").and_then(Value::as_str),
-                        _ => None,
-                    }
+                .filter_map(|part| match part.get("type").and_then(Value::as_str) {
+                    Some("output_text") => part.get("text").and_then(Value::as_str),
+                    Some("refusal") => part.get("refusal").and_then(Value::as_str),
+                    _ => None,
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -1399,12 +1399,7 @@ async fn stream_chat_completions(
                 if let Some(r) = chat_sse_delta_reasoning(&choice.delta) {
                     if !r.is_empty() {
                         reasoning.push_str(&r);
-                        emit_stream(
-                            channel,
-                            &AiStreamEvent::ReasoningDelta {
-                                delta: r,
-                            },
-                        )?;
+                        emit_stream(channel, &AiStreamEvent::ReasoningDelta { delta: r })?;
                     }
                 }
                 for tc in &choice.delta.tool_calls {
@@ -3575,9 +3570,14 @@ fn ai_tool_definitions_with_skills(
         ));
         let mut create_widget_tool = tool_definition(
             "dashboard_create_widget",
-            "Create a validated script AI Created Widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Pre-create duplicate check: before calling this tool, inspect the AI Created Widgets in the current Dashboard state. If dashboard_load_state has not been called this session, call it first. If any existing AI Created Widget (createdBy = \"agent\") has a function that would significantly overlap with the user's request, do NOT call dashboard_create_widget. Instead reply in chat naming the matched widget by title and offer three choices: (1) Edit existing - modify \"<title>\" to fit the new request, which you will then carry out by calling dashboard_update_custom_widget with the existing widget id and a body patch; (2) Create new - keep \"<title>\" and add a separate widget, which you will carry out by calling dashboard_create_widget; (3) Place it - drop \"<title>\" onto the current Dashboard View, which you will carry out by calling dashboard_add_instance with the existing widget's id as sourceId, kind \"script\", and preset \"ambient\". Wait for the user's choice before invoking any tool. All AI Created Widgets are script widgets, including static requests; render concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Strongly prefer KKTerm's bundled widget libraries (for example uplot, fusejs, simplestatistics, three, animejs, echarts, chartjs, marked, prism, leaflet, qrcode, mathjs, papaparse, dayjs, konva, pixijs, matter, gridjs, jsyaml, chroma) over reimplementing equivalent logic from scratch: when a catalog entry fits the request, list its key in body.libraries so KKTerm preloads it offline-safe before running source, and call the documented global from your script. Runtime CDN scripts are blocked by CSP; use body.libraries for bundled local libraries only, and hand-roll the algorithm only as a last resort when no bundled library fits. For script widgets that display remote images or fetch remote data, set permissions.network to true; otherwise keep it false. External website links must be normal http/https anchors or call KK.openExternal(url), and KKTerm will open them in the user's external browser. Choose preset, accentName, iconName, and grid size deliberately from the widget purpose. Default to ambient for AI Created Widgets - ambient hides the title bar and gives AI-authored single-purpose surfaces the right Dashboard look. Use panel only when the user explicitly wants a titled chrome, and hero only for rare high-priority summary widgets. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Size widgets generously enough to avoid inner scrollbars: simple timers/counters need at least 4x3, forms or images need 5x4 or larger, lists need height for expected rows. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, uplot, leaflet, konva, pixijs, matter, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Prefer calm app-like accents such as blue, teal, slate, emerald, amber for warnings, and red/rose only for destructive or error-oriented widgets; if no purpose-specific color fits, choose a random non-default accent. Never set text and background to the same or low-contrast colors; use host CSS variables and compact app-style controls. For polished script-widget UI, use KKTerm's built-in classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. If the widget needs user-configurable/persistent per-instance options, provide settingsSchema.fields with text, number, boolean, select, or secret fields. KK.getSettings() is synchronous; do not await it. Use secret fields for passwords, API keys, tokens, and similar values; secret fields require type, key, label, and placeholder only, with no defaultValue. SQLite stores only secret references. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After this tool returns, use the returned instance.id to request any needed widget secret with ownerId dashboard-widget-secret:<instance.id>:<fieldKey>. Do not generate full HTML documents; script source should create or update DOM nodes inside the provided root. CRITICAL for games and interactive canvases: always check boundary collisions against the arena edges (top, bottom, left, right) - a collision function that only checks filled cells but not the floor/walls will let pieces fall off-screen forever, turning the widget into a silent resource drain. Include an exit path for any requestAnimationFrame loop: check a stopped/paused/gameOver state at the top of the rAF callback so the loop can terminate rather than running 60fps forever. List only libraries whose documented global you actually call in source; declaring unused libraries (for example listing matter when the source never references Matter) wastes memory and bandwidth and is rejected at validation. When the Dashboard global network-tools setting is on AND the widget body sets permissions.networkTools true, KK.net.* is available: KK.net.dns(host,{recordType}) resolves DNS; KK.net.tcpCheck(host,port,{timeoutMs}) checks a TCP port; KK.net.interfaces() lists local interfaces; KK.net.wol(mac,{broadcast,port}) sends Wake-on-LAN; KK.net.whois(query) runs WHOIS. Streaming operations return an AsyncIterable with a .cancel() method: KK.net.ping(host,{count,intervalMs,timeoutMs,fallbackTcpPort}) streams PingReply objects; KK.net.portScan(host,{ports,concurrency,timeoutMs,jitterMs}) streams PortResult objects. Use for-await loops to consume streams; call .cancel() to stop early. All KK.net.* methods reject with an Error if the permissions gate is closed.",
+            "Create a validated script AI Created Widget and place it on the selected Dashboard view in one step. Prefer this for user requests to create a visible widget. Pre-create duplicate check: before calling this tool, inspect the AI Created Widgets in the current Dashboard state. If dashboard_load_state has not been called this session, call it first. If any existing AI Created Widget (createdBy = \"agent\") has a function that would significantly overlap with the user's request, do NOT call dashboard_create_widget. Instead reply in chat naming the matched widget by title and offer three choices: (1) Edit existing - modify \"<title>\" to fit the new request, which you will then carry out by calling dashboard_update_custom_widget with the existing widget id and a body patch; (2) Create new - keep \"<title>\" and add a separate widget, which you will carry out by calling dashboard_create_widget; (3) Place it - drop \"<title>\" onto the current Dashboard View, which you will carry out by calling dashboard_add_instance with the existing widget's id as sourceId, kind \"script\", and preset \"ambient\". Wait for the user's choice before invoking any tool. All AI Created Widgets are script widgets, including static requests; render concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Dashboard widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Choose widgetArchetype before writing source. Make widgets graphical by default with charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless explicitly requested. Avoid generic form-like layouts unless the user explicitly asks for data entry. Use bundled widget libraries when they fit. For Three.js widgets, list body.libraries [\"three\"] and size/resize with KK.getViewport and KK.onViewportResize. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas. For chartjs, echarts, uplot, leaflet, konva, pixijs, matter, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and resize it on KK.onViewportResize. Script widgets can create file and folder drop zones with KK.onFileDrop. Runtime CDN scripts are blocked by CSP. For remote images or data, set permissions.network to true; otherwise keep it false. Choose preset, accentName, iconName, and grid size deliberately from widgetArchetype. Utility Instrument and General Workbench normally use panel. Desktop Object and Canvas Toy/Game normally use ambient with hidden host title chrome. Data Monitor and Metric/Chart may use ambient if they render compact in-body provenance/title. Hero is rare and only for high-priority summaries. Keep UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Do not duplicate the host widget frame. Use settingsSchema.fields for persistent per-instance options and secret fields for credentials. Top-level await is not available; wrap async bridge calls in an async IIFE. After creating a widget with a secret field, request the secret using the returned instance id. For games and interactive canvases, keep simulation bounded to arena edges and include an exit path for requestAnimationFrame loops. List only libraries whose documented global you actually call.",
             dashboard_create_widget_schema(),
         );
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
+            .push_str(DASHBOARD_WIDGET_ARCHETYPE_CONTRACT);
         create_widget_tool.function.description.push(' ');
         create_widget_tool
             .function
@@ -3986,6 +3986,7 @@ fn dashboard_create_widget_schema() -> Value {
         "type":"object",
         "properties":{
             "viewId":{"type":"string"},
+            "widgetArchetype":{"type":"string","enum":["dataMonitor","metricChart","utilityInstrument","desktopObject","canvasToyGame","generalWorkbench"]},
             "title":{"type":"string","minLength":1,"maxLength":120},
             "summary":{"type":"string","maxLength":240},
             "category":{"type":"string","minLength":1,"maxLength":80},
@@ -3999,7 +4000,7 @@ fn dashboard_create_widget_schema() -> Value {
             "gridW":{"type":"integer","minimum":1,"maximum":12},
             "gridH":{"type":"integer","minimum":1}
         },
-        "required":["viewId","title","summary","category","settingsSchema","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
+        "required":["viewId","widgetArchetype","title","summary","category","settingsSchema","body","preset","accentName","iconName","gridX","gridY","gridW","gridH"],
         "additionalProperties":false
     })
 }
@@ -4118,7 +4119,8 @@ fn normalize_ai_widget_initial_size(
         height = height.max(4);
     }
 
-    let content_min_h = estimate_ai_widget_min_height_rows(source, &lowercase_haystack, &raw_haystack);
+    let content_min_h =
+        estimate_ai_widget_min_height_rows(source, &lowercase_haystack, &raw_haystack);
     if height < content_min_h {
         height = content_min_h;
     }
@@ -4198,9 +4200,14 @@ fn estimate_ai_widget_min_height_rows(
     // Stage + footer pattern: a flex:1 stage *plus* a fixed-height sibling
     // (toolbar or card). At 4 rows the stage collapses to nothing — needs
     // ≥5 to look intentional.
-    let has_stage = lowercase_source.contains("kk-stage") || lowercase_source.contains("flex: '1'") || lowercase_source.contains("flex:1") || lowercase_source.contains("flex: 1");
+    let has_stage = lowercase_source.contains("kk-stage")
+        || lowercase_source.contains("flex: '1'")
+        || lowercase_source.contains("flex:1")
+        || lowercase_source.contains("flex: 1");
     let has_toolbar = lowercase_source.contains("kk-toolbar");
-    let has_footer_card = card_hits >= 1 || lowercase_source.contains("kk-pill") || lowercase_source.contains("kk-badge");
+    let has_footer_card = card_hits >= 1
+        || lowercase_source.contains("kk-pill")
+        || lowercase_source.contains("kk-badge");
     if has_stage && (has_toolbar || has_footer_card) {
         rows = rows.max(6);
     }
@@ -4214,9 +4221,15 @@ fn estimate_ai_widget_min_height_rows(
     form_fields += lowercase_source.matches("createelement('input')").count() as i64;
     form_fields += lowercase_source.matches("createelement(\"input\")").count() as i64;
     form_fields += lowercase_source.matches("createelement('select')").count() as i64;
-    form_fields += lowercase_source.matches("createelement(\"select\")").count() as i64;
-    form_fields += lowercase_source.matches("createelement('textarea')").count() as i64;
-    form_fields += lowercase_source.matches("createelement(\"textarea\")").count() as i64;
+    form_fields += lowercase_source
+        .matches("createelement(\"select\")")
+        .count() as i64;
+    form_fields += lowercase_source
+        .matches("createelement('textarea')")
+        .count() as i64;
+    form_fields += lowercase_source
+        .matches("createelement(\"textarea\")")
+        .count() as i64;
     if form_fields >= 2 {
         // header + per-field row + submit row, capped.
         rows = rows.max((2 + form_fields).min(10));
@@ -4396,7 +4409,9 @@ async fn run_ai_tool(
         name if tool_settings.sessions() && name.starts_with("session_") => {
             live_session_tool(app, name, args).await
         }
-        "tutorial_highlight" if tool_settings.tutorial() => live_session_tool(app, "tutorial_highlight", args).await,
+        "tutorial_highlight" if tool_settings.tutorial() => {
+            live_session_tool(app, "tutorial_highlight", args).await
+        }
         name if tool_settings.network() && name.starts_with("network_") => {
             network_tool(name, args).await
         }
@@ -4714,6 +4729,7 @@ pub(crate) fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) ->
             let title = arg_string(&args, "title");
             let summary = arg_string(&args, "summary");
             let category = arg_string(&args, "category");
+            let widget_archetype = arg_string(&args, "widgetArchetype");
             let mut body = args.get("body").cloned().unwrap_or(Value::Null);
             if body.is_null() {
                 return Err("dashboard_create_widget requires body".to_string());
@@ -4758,6 +4774,7 @@ pub(crate) fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) ->
                     "title": &title,
                     "summary": &summary,
                     "category": &category,
+                    "widgetArchetype": &widget_archetype,
                     "bodyJson": &body_json,
                     "droppedUnusedLibraries": &dropped_libraries,
                     "settingsSchemaJson": &settings_schema_json,
@@ -4931,7 +4948,10 @@ fn normalize_dashboard_custom_widget_patch(mut patch: Value) -> Result<Value, St
 
 fn is_dashboard_mutating_tool(name: &str) -> bool {
     name.starts_with("dashboard_")
-        && !matches!(name, "dashboard_load_state" | "dashboard_read_widget_source")
+        && !matches!(
+            name,
+            "dashboard_load_state" | "dashboard_read_widget_source"
+        )
 }
 
 fn request_secret_entry_tool(
@@ -5088,43 +5108,75 @@ async fn network_tool(name: &str, args: Value) -> String {
         "network_ping" => {
             let host = args["host"].as_str().unwrap_or("").to_string();
             let opts = ping::PingOptions {
-                count: args["count"].as_u64().map(|v| v as u32).unwrap_or(ping::DEFAULT_COUNT),
-                interval_ms: args["intervalMs"].as_u64().unwrap_or(ping::DEFAULT_INTERVAL_MS),
-                timeout_ms: args["timeoutMs"].as_u64().unwrap_or(ping::DEFAULT_TIMEOUT_MS),
+                count: args["count"]
+                    .as_u64()
+                    .map(|v| v as u32)
+                    .unwrap_or(ping::DEFAULT_COUNT),
+                interval_ms: args["intervalMs"]
+                    .as_u64()
+                    .unwrap_or(ping::DEFAULT_INTERVAL_MS),
+                timeout_ms: args["timeoutMs"]
+                    .as_u64()
+                    .unwrap_or(ping::DEFAULT_TIMEOUT_MS),
                 ttl: ping::DEFAULT_TTL,
                 size: ping::DEFAULT_SIZE,
-                fallback_tcp_port: args["fallbackTcpPort"].as_u64().map(|v| v as u16).unwrap_or(ping::DEFAULT_FALLBACK_PORT),
+                fallback_tcp_port: args["fallbackTcpPort"]
+                    .as_u64()
+                    .map(|v| v as u16)
+                    .unwrap_or(ping::DEFAULT_FALLBACK_PORT),
             };
             let cancel = CancellationToken::new();
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<ping::PingReply>();
             let mut replies: Vec<ping::PingReply> = Vec::new();
             let run = ping::run_ping(&host, opts, cancel.clone(), tx);
-            let collect = async { while let Some(r) = rx.recv().await { replies.push(r); } };
+            let collect = async {
+                while let Some(r) = rx.recv().await {
+                    replies.push(r);
+                }
+            };
             let (run_result, _) = tokio::join!(run, collect);
             match run_result {
                 Ok(()) => json!({"ok":true,"result":replies}).to_string(),
-                Err(e) => json!({"ok":false,"netError":net_err(&e),"partialResult":replies}).to_string(),
+                Err(e) => {
+                    json!({"ok":false,"netError":net_err(&e),"partialResult":replies}).to_string()
+                }
             }
         }
         "network_port_scan" => {
             let host = args["host"].as_str().unwrap_or("").to_string();
-            let ports: Vec<u16> = args["ports"].as_array()
-                .map(|a| a.iter().filter_map(|v| v.as_u64().map(|p| p as u16)).collect())
+            let ports: Vec<u16> = args["ports"]
+                .as_array()
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_u64().map(|p| p as u16))
+                        .collect()
+                })
                 .unwrap_or_default();
             let opts = scan::PortScanOptions {
-                concurrency: args["concurrency"].as_u64().map(|v| v as usize).unwrap_or(scan::SCAN_CONCURRENCY),
-                timeout_ms: args["timeoutMs"].as_u64().unwrap_or(scan::DEFAULT_CONNECT_TIMEOUT_MS),
+                concurrency: args["concurrency"]
+                    .as_u64()
+                    .map(|v| v as usize)
+                    .unwrap_or(scan::SCAN_CONCURRENCY),
+                timeout_ms: args["timeoutMs"]
+                    .as_u64()
+                    .unwrap_or(scan::DEFAULT_CONNECT_TIMEOUT_MS),
                 jitter_ms: args["jitterMs"].as_u64().unwrap_or(scan::SCAN_JITTER_MS),
             };
             let cancel = CancellationToken::new();
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<scan::PortResult>();
             let mut results: Vec<scan::PortResult> = Vec::new();
             let run = scan::run_port_scan(&host, ports, opts, cancel.clone(), tx);
-            let collect = async { while let Some(r) = rx.recv().await { results.push(r); } };
+            let collect = async {
+                while let Some(r) = rx.recv().await {
+                    results.push(r);
+                }
+            };
             let (run_result, _) = tokio::join!(run, collect);
             match run_result {
                 Ok(()) => json!({"ok":true,"result":results}).to_string(),
-                Err(e) => json!({"ok":false,"netError":net_err(&e),"partialResult":results}).to_string(),
+                Err(e) => {
+                    json!({"ok":false,"netError":net_err(&e),"partialResult":results}).to_string()
+                }
             }
         }
         _ => json!({"ok":false,"error":"unknown network tool"}).to_string(),
@@ -5153,7 +5205,8 @@ async fn watchdog_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Strin
             if let WatchdogAction::AiIntervene { .. } = &config.action {
                 let approval_args = json!({ "config": config });
                 let Some(bridge) = app.try_state::<AssistantToolApprovalBridge>() else {
-                    return json!({"ok": false, "error": "approval bridge unavailable"}).to_string();
+                    return json!({"ok": false, "error": "approval bridge unavailable"})
+                        .to_string();
                 };
                 let approved = bridge.request(app, "watchdog_create", &approval_args).await;
                 if !approved {
@@ -5501,22 +5554,18 @@ async fn send_email_sendgrid(settings: &AiProviderSettings, request: &EmailToolR
         "to": request.to.iter().map(|email| json!({"email": email})).collect::<Vec<_>>()
     });
     if !request.cc.is_empty() {
-        personalization["cc"] = json!(
-            request
-                .cc
-                .iter()
-                .map(|email| json!({"email": email}))
-                .collect::<Vec<_>>()
-        );
+        personalization["cc"] = json!(request
+            .cc
+            .iter()
+            .map(|email| json!({"email": email}))
+            .collect::<Vec<_>>());
     }
     if !request.bcc.is_empty() {
-        personalization["bcc"] = json!(
-            request
-                .bcc
-                .iter()
-                .map(|email| json!({"email": email}))
-                .collect::<Vec<_>>()
-        );
+        personalization["bcc"] = json!(request
+            .bcc
+            .iter()
+            .map(|email| json!({"email": email}))
+            .collect::<Vec<_>>());
     }
     let mut content = Vec::new();
     if let Some(text) = &request.text {
@@ -5902,10 +5951,7 @@ fn redact_dashboard_state_for_ai(mut state: Value) -> Value {
         }
     }
 
-    if let Some(custom_widgets) = state
-        .get_mut("customWidgets")
-        .and_then(Value::as_array_mut)
-    {
+    if let Some(custom_widgets) = state.get_mut("customWidgets").and_then(Value::as_array_mut) {
         for widget in custom_widgets {
             if let Some(object) = widget.as_object_mut() {
                 let body_json = object
@@ -5978,7 +6024,10 @@ fn dashboard_mutating_widget_result_for_ai(
         );
     }
     if let Some(instance) = instance {
-        result.insert("instance".to_string(), redact_dashboard_instance_for_ai(instance));
+        result.insert(
+            "instance".to_string(),
+            redact_dashboard_instance_for_ai(instance),
+        );
     }
     Value::Object(result)
 }
@@ -6507,8 +6556,9 @@ fn build_agent_messages(
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
         "SESSION TOOLS: Use session_state to discover active Tabs, pane ids, remote desktop targets, and SFTP/FTP browser Sessions before using session_* interaction tools. Terminal, remote desktop, and file browser tools operate on live Sessions, not saved Connections. Prefer read tools before mutating tools. For RDP/VNC, use send_text for text, keypress for named keys, and mouse_click for remote surface coordinates. In Default permissions mode, KKTerm shows an in-chat Yes/No approval prompt for mutating tools and resumes the same tool call after the user answers; do not ask the user to change the global permission mode.".to_string(),
         "TUTORIAL TOOL: For UI/how-to questions, first answer with concise steps. When a known tutorial target is relevant, offer to navigate to that UI for the user. Do not navigate in the same answer unless the user explicitly asks to be shown/taken there. If the user accepts that offer or says yes to it in a follow-up, only call tutorial_highlight after the user accepts, using the exact targetId from current page context or the tutorial_highlight schema and including navigation when the target is on another app surface. Do not invent target ids or CSS selectors.".to_string(),
-        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. dashboard_load_state returns compact metadata only. When the user reports an error in an existing AI Created Widget, use dashboard_load_state to identify the widget id, then call dashboard_read_widget_source for that one widget before checking or updating source. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_read_widget_source. All AI Created Widgets are script widgets. For static requests, create a small script widget that renders concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Be boundary-aware: size simple timers/counters at least 4x3, forms or images need 5x4 or larger, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, uplot, leaflet, konva, pixijs, matter, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use KKTerm's built-in script UI classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. Use body.libraries for curated local script libraries such as uplot, Fuse.js, simple-statistics, Matter.js, and animejs; runtime CDN scripts are blocked by CSP. Use permissions.network=true only for remote network access or remote images. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). KK.getSettings() is synchronous; do not await it. Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
+        "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. dashboard_load_state returns compact metadata only. When the user reports an error in an existing AI Created Widget, use dashboard_load_state to identify the widget id, then call dashboard_read_widget_source for that one widget before checking or updating source. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_read_widget_source. All AI Created Widgets are script widgets. For static requests, create a small script widget that renders concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Be boundary-aware: size simple timers/counters at least 4x3, forms or images need 5x4 or larger, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, echarts, leaflet, uplot, konva, pixijs, matter, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use KKTerm's built-in script UI classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. Use body.libraries for curated local script libraries such as uplot, Fuse.js, simple-statistics, Matter.js, and animejs; runtime CDN scripts are blocked by CSP. Use permissions.network=true only for remote network access or remote images. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). KK.getSettings() is synchronous; do not await it. Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
         DASHBOARD_WIDGET_COMPLETION_CONTRACT.to_string(),
+        DASHBOARD_WIDGET_ARCHETYPE_CONTRACT.to_string(),
         DASHBOARD_WIDGET_VISUAL_CONTRACT.to_string(),
         DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT.to_string(),
@@ -7179,7 +7229,10 @@ mod tests {
         })
         .expect("stream event serializes");
 
-        assert_eq!(event.get("type").and_then(Value::as_str), Some("skillInvocation"));
+        assert_eq!(
+            event.get("type").and_then(Value::as_str),
+            Some("skillInvocation")
+        );
         assert_eq!(
             event.get("skillName").and_then(Value::as_str),
             Some("dashboard-widget-builder")
@@ -7245,11 +7298,10 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(plan.extra_confirmation_required);
-        assert!(
-            plan.safety_notes
-                .iter()
-                .any(|note| note.contains("credentials"))
-        );
+        assert!(plan
+            .safety_notes
+            .iter()
+            .any(|note| note.contains("credentials")));
     }
 
     #[test]
@@ -7264,11 +7316,10 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(!plan.extra_confirmation_required);
-        assert!(
-            plan.safety_notes
-                .iter()
-                .any(|note| note.contains("Selected terminal output"))
-        );
+        assert!(plan
+            .safety_notes
+            .iter()
+            .any(|note| note.contains("Selected terminal output")));
     }
 
     #[test]
@@ -7283,11 +7334,10 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(plan.extra_confirmation_required);
-        assert!(
-            plan.safety_notes
-                .iter()
-                .any(|note| note.contains("Selected output may contain credentials"))
-        );
+        assert!(plan
+            .safety_notes
+            .iter()
+            .any(|note| note.contains("Selected output may contain credentials")));
     }
 
     #[test]
@@ -7657,11 +7707,9 @@ mod tests {
             .get("content")
             .and_then(Value::as_array)
             .expect("user content parts are present");
-        assert!(
-            user_content
-                .iter()
-                .any(|part| part.get("type").and_then(Value::as_str) == Some("input_image"))
-        );
+        assert!(user_content
+            .iter()
+            .any(|part| part.get("type").and_then(Value::as_str) == Some("input_image")));
         let file_content = input[2]
             .get("content")
             .and_then(Value::as_array)
@@ -7958,10 +8006,7 @@ mod tests {
             "settingsValuesJson": "{\"threshold\":90}"
         });
 
-        let redacted = dashboard_mutating_widget_result_for_ai(
-            Some(custom_widget),
-            Some(instance),
-        );
+        let redacted = dashboard_mutating_widget_result_for_ai(Some(custom_widget), Some(instance));
         let serialized = redacted.to_string();
 
         assert!(!serialized.contains("do not replay"));
@@ -8310,7 +8355,10 @@ mod tests {
         );
 
         assert_eq!(width, 4);
-        assert!(height >= 6, "expected clock widget to be grown to ≥6 rows, got {height}");
+        assert!(
+            height >= 6,
+            "expected clock widget to be grown to ≥6 rows, got {height}"
+        );
     }
 
     #[test]
@@ -8330,7 +8378,10 @@ mod tests {
             3,
         );
 
-        assert!(height >= 6, "canvas/chart widget expected ≥6 rows, got {height}");
+        assert!(
+            height >= 6,
+            "canvas/chart widget expected ≥6 rows, got {height}"
+        );
     }
 
     #[test]
@@ -8341,16 +8392,13 @@ mod tests {
             "htmlShim": null
         });
 
-        let (_width, height) = normalize_ai_widget_initial_size(
-            "Quick Add",
-            "Submission form.",
-            "Forms",
-            &body,
-            4,
-            2,
-        );
+        let (_width, height) =
+            normalize_ai_widget_initial_size("Quick Add", "Submission form.", "Forms", &body, 4, 2);
 
-        assert!(height >= 6, "multi-field form expected ≥6 rows, got {height}");
+        assert!(
+            height >= 6,
+            "multi-field form expected ≥6 rows, got {height}"
+        );
     }
 
     #[test]
@@ -8364,16 +8412,13 @@ mod tests {
             "htmlShim": null
         });
 
-        let (_width, height) = normalize_ai_widget_initial_size(
-            "Quick Stats",
-            "KPIs.",
-            "Stats",
-            &body,
-            6,
-            2,
-        );
+        let (_width, height) =
+            normalize_ai_widget_initial_size("Quick Stats", "KPIs.", "Stats", &body, 6, 2);
 
-        assert!(height >= 4, "stat-grid widget expected ≥4 rows, got {height}");
+        assert!(
+            height >= 4,
+            "stat-grid widget expected ≥4 rows, got {height}"
+        );
     }
 
     #[test]
@@ -8386,14 +8431,8 @@ mod tests {
             "htmlShim": null
         });
 
-        let (_width, height) = normalize_ai_widget_initial_size(
-            "Note",
-            "A short note.",
-            "Misc",
-            &body,
-            4,
-            9,
-        );
+        let (_width, height) =
+            normalize_ai_widget_initial_size("Note", "A short note.", "Misc", &body, 4, 9);
 
         assert_eq!(height, 9);
     }
@@ -8401,14 +8440,7 @@ mod tests {
     #[test]
     fn ai_widget_initial_size_handles_empty_body() {
         let body = json!({});
-        let (width, height) = normalize_ai_widget_initial_size(
-            "Empty",
-            "",
-            "",
-            &body,
-            3,
-            2,
-        );
+        let (width, height) = normalize_ai_widget_initial_size("Empty", "", "", &body, 3, 2);
         assert_eq!(width, 3);
         assert_eq!(height, 2);
     }
@@ -8431,13 +8463,11 @@ mod tests {
             .expect("secret settings field branch is present");
 
         assert!(!secret_branch.pointer("/properties/defaultValue").is_some());
-        assert!(
-            !secret_branch
-                .pointer("/required")
-                .and_then(Value::as_array)
-                .expect("secret branch lists required properties")
-                .contains(&json!("defaultValue"))
-        );
+        assert!(!secret_branch
+            .pointer("/required")
+            .and_then(Value::as_array)
+            .expect("secret branch lists required properties")
+            .contains(&json!("defaultValue")));
     }
 
     #[test]
@@ -8461,12 +8491,11 @@ mod tests {
             .expect("structured script body schema exists");
         assert!(body_schema.pointer("/properties/source").is_some());
         assert!(body_schema.pointer("/anyOf").is_none());
-        assert!(
-            tool.function
-                .parameters
-                .pointer("/properties/patch/properties/bodyJson")
-                .is_some()
-        );
+        assert!(tool
+            .function
+            .parameters
+            .pointer("/properties/patch/properties/bodyJson")
+            .is_some());
     }
 
     #[test]
@@ -8545,66 +8574,56 @@ mod tests {
             .find(|tool| tool.function.name == "dashboard_update_custom_widget")
             .expect("dashboard update custom widget tool exists");
 
-        assert!(
-            create_tool
-                .function
-                .parameters
-                .pointer("/properties/body/properties/libraries")
-                .is_some()
-        );
-        assert!(
-            update_tool
-                .function
-                .parameters
-                .pointer("/properties/patch/properties/body/properties/libraries")
-                .is_some()
-        );
-        assert!(
-            create_tool
-                .function
-                .parameters
-                .pointer("/properties/body/required")
-                .and_then(Value::as_array)
-                .is_some_and(|required| required.contains(&json!("libraries")))
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("as graphical as possible")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("do not create a text-only placeholder or scaffold")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("use multiple tool-call rounds")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("wired to the actual data source")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("Creative Commons images from credible sources")
-        );
-        assert!(
-            update_tool
-                .function
-                .parameters
-                .pointer("/properties/patch/properties/body/required")
-                .and_then(Value::as_array)
-                .is_some_and(|required| required.contains(&json!("libraries")))
-        );
+        assert!(create_tool
+            .function
+            .parameters
+            .pointer("/properties/body/properties/libraries")
+            .is_some());
+        assert!(update_tool
+            .function
+            .parameters
+            .pointer("/properties/patch/properties/body/properties/libraries")
+            .is_some());
+        assert!(create_tool
+            .function
+            .parameters
+            .pointer("/properties/body/required")
+            .and_then(Value::as_array)
+            .is_some_and(|required| required.contains(&json!("libraries"))));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Dashboard Widget Archetype contract"));
+        assert!(create_tool
+            .function
+            .parameters
+            .pointer("/properties/widgetArchetype/enum")
+            .and_then(Value::as_array)
+            .is_some_and(|values| values.contains(&json!("utilityInstrument"))));
+        assert!(create_tool
+            .function
+            .parameters
+            .pointer("/required")
+            .and_then(Value::as_array)
+            .is_some_and(|required| required.contains(&json!("widgetArchetype"))));
+        assert!(create_tool
+            .function
+            .description
+            .contains("do not create a text-only placeholder or scaffold"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("use multiple tool-call rounds"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("wired to the actual data source"));
+        assert!(update_tool
+            .function
+            .parameters
+            .pointer("/properties/patch/properties/body/required")
+            .and_then(Value::as_array)
+            .is_some_and(|required| required.contains(&json!("libraries"))));
 
         let enum_values = create_tool
             .function
@@ -8629,149 +8648,101 @@ mod tests {
             );
         }
         assert!(!enum_values.contains(&json!("mermaid")));
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("For Three.js widgets")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("Dashboard widget physics contract")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("List body.libraries [\"matter\"]")
-        );
+        assert!(create_tool
+            .function
+            .description
+            .contains("For Three.js widgets"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Dashboard widget physics contract"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("List body.libraries [\"matter\"]"));
         assert!(create_tool.function.description.contains("Matter.js"));
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("pass a real canvas element to QRCode.toCanvas")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("KK.onViewportResize")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("treat the widget root as the full allocated surface")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("Do not create a smaller centered app card")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
-        );
+        assert!(create_tool
+            .function
+            .description
+            .contains("pass a real canvas element to QRCode.toCanvas"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("KK.onViewportResize"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("treat the widget root as the full allocated surface"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Do not create a smaller centered app card"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers"));
         assert!(create_tool.function.description.contains("kk-shell"));
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("durable base motion")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("does not decay to a static frame")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("restart that loop when visibility returns")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("chartjs, echarts, uplot, leaflet")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("Top-level await is not available")
-        );
+        assert!(create_tool
+            .function
+            .description
+            .contains("durable base motion"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("does not decay to a static frame"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("restart that loop when visibility returns"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("chartjs, echarts, uplot, leaflet"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Top-level await is not available"));
         assert!(create_tool.function.description.contains("async IIFE"));
         assert!(create_tool.function.description.contains("KK.onFileDrop"));
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("KK.getPerformanceCounters")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("generated source is smoke-checked")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("document.getElementById('some-id')")
-        );
-        assert!(
-            update_tool
-                .function
-                .description
-                .contains("validation reports a DOM mount")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("folder drop zones")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("choose a random non-default accent")
-        );
-        assert!(
-            create_tool
-                .function
-                .description
-                .contains("Dashboard widget UTF-8 contract")
-        );
-        assert!(
-            update_tool
-                .function
-                .description
-                .contains("pre-serialized UTF-8 JSON string")
-        );
+        assert!(create_tool
+            .function
+            .description
+            .contains("KK.getPerformanceCounters"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("generated source is smoke-checked"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("document.getElementById('some-id')"));
+        assert!(update_tool
+            .function
+            .description
+            .contains("validation reports a DOM mount"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("folder drop zones"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Dashboard widget UTF-8 contract"));
+        assert!(update_tool
+            .function
+            .description
+            .contains("pre-serialized UTF-8 JSON string"));
     }
 
     #[test]
     fn dashboard_widget_tool_schema_is_script_only() {
         let schema = dashboard_create_widget_schema();
         assert!(schema.pointer("/properties/kind").is_none());
-        assert!(
-            schema
-                .pointer("/properties/body/required")
-                .and_then(Value::as_array)
-                .expect("script body has required fields")
-                .contains(&json!("source"))
-        );
+        assert!(schema
+            .pointer("/properties/body/required")
+            .and_then(Value::as_array)
+            .expect("script body has required fields")
+            .contains(&json!("source")));
         assert!(schema.pointer("/properties/body/anyOf").is_none());
     }
 
@@ -8852,11 +8823,10 @@ mod tests {
             .find(|tool| tool.function.name == "performance_counters")
             .expect("performance counters tool is available");
 
-        assert!(
-            tool.function
-                .description
-                .contains("low-overhead local Windows performance snapshot")
-        );
+        assert!(tool
+            .function
+            .description
+            .contains("low-overhead local Windows performance snapshot"));
         assert_eq!(
             tool.function.parameters,
             json!({"type":"object","properties":{}})
@@ -8876,11 +8846,10 @@ mod tests {
             .find(|tool| tool.function.name == "send_email")
             .expect("send email tool is available");
 
-        assert!(
-            tool.function
-                .description
-                .contains("Send one email through the configured email provider")
-        );
+        assert!(tool
+            .function
+            .description
+            .contains("Send one email through the configured email provider"));
         assert_eq!(
             tool.function
                 .parameters
@@ -9000,10 +8969,8 @@ mod tests {
         assert!(system_content.contains("KK.getViewport()"));
         assert!(system_content.contains("treat the widget root as the full allocated surface"));
         assert!(system_content.contains("Do not create a smaller centered app card"));
-        assert!(
-            system_content
-                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
-        );
+        assert!(system_content
+            .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers"));
         assert!(system_content.contains("kk-shell"));
         assert!(system_content.contains("chartjs, echarts, leaflet"));
         assert!(system_content.contains("KK.onFileDrop"));
@@ -9033,11 +9000,10 @@ mod tests {
             .find(|tool| tool.function.name == "request_secret_entry")
             .expect("secret entry request tool is available");
 
-        assert!(
-            tool.function
-                .description
-                .contains("without exposing the secret")
-        );
+        assert!(tool
+            .function
+            .description
+            .contains("without exposing the secret"));
         assert_eq!(
             tool.function.parameters.pointer("/properties/kind/enum"),
             Some(&json!(["widgetSecret", "aiApiKey"]))
@@ -9062,12 +9028,10 @@ mod tests {
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "dashboard-widget-secret:inst-123:apiKey");
-        assert!(
-            value["secretRequestMarkdown"]
-                .as_str()
-                .unwrap()
-                .contains("```kkterm-secret-request")
-        );
+        assert!(value["secretRequestMarkdown"]
+            .as_str()
+            .unwrap()
+            .contains("```kkterm-secret-request"));
         assert!(!result.contains("secret\":\""));
     }
 
@@ -9085,12 +9049,10 @@ mod tests {
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "ai-provider:openrouter");
-        assert!(
-            value["secretRequestMarkdown"]
-                .as_str()
-                .unwrap()
-                .contains("\"ownerId\":\"ai-provider:openrouter\"")
-        );
+        assert!(value["secretRequestMarkdown"]
+            .as_str()
+            .unwrap()
+            .contains("\"ownerId\":\"ai-provider:openrouter\""));
     }
 
     #[test]
@@ -9207,7 +9169,10 @@ mod tests {
             .find(|tool| tool.function.name == "assistant_use_skill")
             .expect("skill invocation tool is available");
 
-        assert!(tool.function.description.contains("Load one Assistant Skill"));
+        assert!(tool
+            .function
+            .description
+            .contains("Load one Assistant Skill"));
         assert_eq!(
             tool.function.parameters.pointer("/properties/name/enum"),
             Some(&json!(["ssh-troubleshooter"]))
@@ -9255,11 +9220,23 @@ mod tests {
             .find(|tool| tool.function.name == "dashboard_create_widget")
             .expect("dashboard create widget tool exists");
 
-        assert!(create_tool.function.description.contains("OpenDesign-style design direction"));
-        assert!(create_tool.function.description.contains("Operator console"));
-        assert!(create_tool.function.description.contains("Data observatory"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("OpenDesign-style design direction"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Operator console"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("Data observatory"));
         assert!(create_tool.function.description.contains("self-critique"));
-        assert!(create_tool.function.description.contains("contrast, hierarchy, density, responsiveness, and motion cost"));
+        assert!(create_tool
+            .function
+            .description
+            .contains("contrast, hierarchy, density, responsiveness, and motion cost"));
 
         let messages = build_agent_messages(
             "Create an eye-catching dashboard widget.".to_string(),
