@@ -203,3 +203,4 @@ Ryan
 | 2026-05-24 | 7 | Published GitHub launch announcement Discussion | https://github.com/ryantsai/KKTerm/discussions/146 |
 | 2026-05-24 | 7 | Added landing-page SEO metadata, sitemap, robots, and SoftwareApplication JSON-LD | https://ryantsai.github.io/KKTerm/sitemap.xml |
 | 2026-05-24 | 7 | Submitted KKTerm to Made with Tauri | https://madewithtauri.com/submitted |
+| 2026-05-24 | 7 | Sent targeted outreach email from mail.ryantsai.com | suggestions@windowstechies.com |
