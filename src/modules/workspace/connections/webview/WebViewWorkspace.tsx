@@ -44,6 +44,7 @@ interface WebviewSessionLease {
 }
 
 const webviewSessionLeases = new Map<string, WebviewSessionLease>();
+const HIDDEN_WEBVIEW_BOUNDS = { x: 0, y: 0, width: 1, height: 1 };
 
 function acquireWebviewSession(sessionId: string, start: () => Promise<WebviewSessionStarted>) {
   const current = webviewSessionLeases.get(sessionId);
@@ -221,16 +222,16 @@ export function WebViewWorkspace({
       return;
     }
     const bounds = computeBounds();
-    if (!bounds) {
+    const visible = visibilityRef.current.isActive && !visibilityRef.current.suppressed;
+    if (!bounds && visible) {
       return;
     }
-    const visible = visibilityRef.current.isActive && !visibilityRef.current.suppressed;
     void invokeCommand("set_webview_visibility", {
-      request: { sessionId: sessionIdRef.current, visible, ...bounds },
+      request: { sessionId: sessionIdRef.current, visible, ...(bounds ?? HIDDEN_WEBVIEW_BOUNDS) },
     }).catch((error) => {
       setNavError(error instanceof Error ? error.message : String(error));
     });
-    if (visible) {
+    if (visible && bounds) {
       lastBoundsRef.current = bounds;
     }
   };
@@ -245,15 +246,15 @@ export function WebViewWorkspace({
     rafRef.current = window.requestAnimationFrame(() => {
       rafRef.current = null;
       const bounds = computeBounds();
-      if (!bounds) {
-        return;
-      }
       if (!visibilityRef.current.isActive || visibilityRef.current.suppressed) {
         void invokeCommand("set_webview_visibility", {
-          request: { sessionId: sessionIdRef.current, visible: false, ...bounds },
+          request: { sessionId: sessionIdRef.current, visible: false, ...(bounds ?? HIDDEN_WEBVIEW_BOUNDS) },
         }).catch((error) => {
           setNavError(error instanceof Error ? error.message : String(error));
         });
+        return;
+      }
+      if (!bounds) {
         return;
       }
       const previous = lastBoundsRef.current;

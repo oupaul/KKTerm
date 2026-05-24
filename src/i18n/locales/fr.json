@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "Les captures d'écran nécessitent l'environnement de bureau Tauri.",
     "scrollTabsLeft": "Défiler les onglets vers la gauche",
     "scrollTabsRight": "Défiler les onglets vers la droite",
+    "renameTab": "Renommer {{title}}",
     "selectRegion": "Sélectionner la région de capture",
     "sendEntirePanelToAi": "Capturer toute la fenêtre (Assistant IA)",
     "sendRegionToAi": "Capturer la région (Assistant IA)",

@@ -651,6 +651,7 @@ interface WorkspaceState {
   ) => void;
   clearStatusBarNotice: (id: number) => void;
   activateTab: (tabId: string) => void;
+  renameTab: (tabId: string, title: string) => void;
   closeTab: (tabId: string) => void;
   openConnection: (connection: Connection) => void;
   openUrlConnection: (connection: Connection) => void;
@@ -815,6 +816,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         : {},
     ),
   activateTab: (tabId) => set({ activeTabId: tabId }),
+  renameTab: (tabId, title) => {
+    const displayTitle = title.trim();
+    if (!displayTitle) {
+      return;
+    }
+    set((state) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, displayTitle } : tab,
+      ),
+    }));
+  },
   closeAllTabs: () => {
     const urlConnectionIds = get().tabs.flatMap(urlConnectionIdsForTab);
     set((state) => ({

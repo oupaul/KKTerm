@@ -8,7 +8,7 @@
 
 ## Tab Strip
 
-Horizontal row above the Workspace Canvas. Accessible label `workspace.tabs`. Scroll affordances: `workspace.scrollTabsLeft`, `workspace.scrollTabsRight`. Per-tab close label uses `workspace.closeTab` with the tab title interpolated as `{{title}}`.
+Horizontal row above the Workspace Canvas. Accessible label `workspace.tabs`. Scroll affordances: `workspace.scrollTabsLeft`, `workspace.scrollTabsRight`. Double-clicking a Tab title starts inline rename with accessible label `workspace.renameTab`; the Tab display name is Workspace UI state and does not rename the underlying Connection. Middle-clicking a Tab closes it through the same close path as the close button. Per-tab close label uses `workspace.closeTab` with the tab title interpolated as `{{title}}`.
 
 A new tab opens via:
 

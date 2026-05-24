@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "ภาพหน้าจอต้องใช้รันไทม์เดสก์ท็อป Tauri",
     "scrollTabsLeft": "เลื่อนแท็บไปทางซ้าย",
     "scrollTabsRight": "เลื่อนแท็บไปทางขวา",
+    "renameTab": "เปลี่ยนชื่อ {{title}}",
     "selectRegion": "เลือกพื้นที่ภาพหน้าจอ",
     "sendEntirePanelToAi": "จับภาพทั้งหน้าต่าง（ผู้ช่วย AI）",
     "sendRegionToAi": "จับภาพพื้นที่（ผู้ช่วย AI）",

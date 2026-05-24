@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "스크린샷에는 Tauri 데스크톱 런타임이 필요합니다.",
     "scrollTabsLeft": "탭 왼쪽으로 스크롤",
     "scrollTabsRight": "탭 오른쪽으로 스크롤",
+    "renameTab": "{{title}} 이름 바꾸기",
     "selectRegion": "스크린샷 영역 선택",
     "sendEntirePanelToAi": "전체 창 캡처（AI 어시스턴트）",
     "sendRegionToAi": "영역 캡처（AI 어시스턴트）",

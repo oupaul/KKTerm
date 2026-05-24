@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "Screenshots require the Tauri desktop runtime.",
     "scrollTabsLeft": "Cuộn tab sang trái",
     "scrollTabsRight": "Cuộn tab sang phải",
+    "renameTab": "Đổi tên {{title}}",
     "selectRegion": "Select screenshot region",
     "sendEntirePanelToAi": "Capture Entire Window(AI Assistant)",
     "sendRegionToAi": "Capture Region(AI Assistant)",

@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "Gli screenshot richiedono il runtime desktop Tauri.",
     "scrollTabsLeft": "Scorri schede a sinistra",
     "scrollTabsRight": "Scorri schede a destra",
+    "renameTab": "Rinomina {{title}}",
     "selectRegion": "Seleziona regione screenshot",
     "sendEntirePanelToAi": "Cattura intera finestra (Assistente IA)",
     "sendRegionToAi": "Cattura regione (Assistente IA)",

@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "截图需要 Tauri 桌面运行环境。",
     "scrollTabsLeft": "向左滚动标签页",
     "scrollTabsRight": "向右滚动标签页",
+    "renameTab": "重命名 {{title}}",
     "selectRegion": "选择截图区域",
     "sendEntirePanelToAi": "捕获整个窗口（AI 助手）",
     "sendRegionToAi": "捕获区域（AI 助手）",

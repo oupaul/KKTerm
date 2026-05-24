@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "スクリーンショットにはTauriデスクトップランタイムが必要です。",
     "scrollTabsLeft": "タブを左にスクロール",
     "scrollTabsRight": "タブを右にスクロール",
+    "renameTab": "{{title}} の名前を変更",
     "selectRegion": "スクリーンショット領域を選択",
     "sendEntirePanelToAi": "ウィンドウ全体をキャプチャ（AIアシスタント）",
     "sendRegionToAi": "領域をキャプチャ（AIアシスタント）",

@@ -2119,6 +2119,7 @@
     "screenshot": "screenshot",
     "scrollTabsLeft": "Scroll tabs left",
     "scrollTabsRight": "Scroll tabs right",
+    "renameTab": "Rename {{title}}",
     "closeTab": "Close {{title}}",
     "workspaceSurface": "Workspace surface",
     "terminalPane": "terminal Pane",

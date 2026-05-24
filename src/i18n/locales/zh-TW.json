@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "螢幕截圖需要 Tauri 桌面執行環境。",
     "scrollTabsLeft": "向左捲動分頁",
     "scrollTabsRight": "向右捲動分頁",
+    "renameTab": "重新命名 {{title}}",
     "selectRegion": "選取螢幕截圖區域",
     "sendEntirePanelToAi": "擷取整個視窗（AI 助理）",
     "sendRegionToAi": "擷取區域（AI 助理）",

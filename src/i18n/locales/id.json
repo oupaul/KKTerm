@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "Screenshot memerlukan runtime desktop Tauri.",
     "scrollTabsLeft": "Gulir tab ke kiri",
     "scrollTabsRight": "Gulir tab ke kanan",
+    "renameTab": "Ganti nama {{title}}",
     "selectRegion": "Pilih wilayah screenshot",
     "sendEntirePanelToAi": "Tangkap Seluruh Jendela (AI Assistant)",
     "sendRegionToAi": "Tangkap Wilayah (AI Assistant)",

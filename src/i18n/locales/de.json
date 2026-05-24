@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "Screenshots erfordern die Tauri-Desktop-Laufzeitumgebung.",
     "scrollTabsLeft": "Tabs nach links scrollen",
     "scrollTabsRight": "Tabs nach rechts scrollen",
+    "renameTab": "{{title}} umbenennen",
     "selectRegion": "Screenshot-Bereich auswählen",
     "sendEntirePanelToAi": "Gesamtes Fenster erfassen (KI-Assistent)",
     "sendRegionToAi": "Bereich erfassen (KI-Assistent)",

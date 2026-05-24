@@ -506,6 +506,7 @@ export interface AiProviderSettings {
 export interface WorkspaceTab {
   id: string;
   title: string;
+  displayTitle?: string;
   toolbarTitle?: string;
   subtitle: string;
   kind: "terminal" | "sftp" | "webview" | "remoteDesktop" | "ftp";

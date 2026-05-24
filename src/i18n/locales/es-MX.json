@@ -2241,6 +2241,7 @@
     "screenshotsRequireRuntime": "Las capturas requieren el entorno de escritorio Tauri.",
     "scrollTabsLeft": "Desplazar pestañas a la izquierda",
     "scrollTabsRight": "Desplazar pestañas a la derecha",
+    "renameTab": "Renombrar {{title}}",
     "selectRegion": "Seleccionar región de captura",
     "sendEntirePanelToAi": "Capturar ventana completa (Asistente IA)",
     "sendRegionToAi": "Capturar región (Asistente IA)",
