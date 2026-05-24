@@ -3,6 +3,41 @@
 All notable changes to KKTerm are documented here.
 
 ## Highlights
+
+- No user-facing highlights were provided for this release. (Your terminal is still waiting for something exciting.)
+
+## Internal
+
+- Updated Cargo lockfiles (`.env.example`, `src-tauri/Cargo.lock`) as part of the v0.1.34 release.  
+  - Commit: `e2f856e` — “updated cargo lock”
+
+## Highlights
+- Dashboard Connection widget Session/Tab/Pane creation now resolves tmux IDs in an effect (reducing render-time churn and avoiding brief ID reuse when switching Connections).  
+- System tray/assistant “external-open” events now switch the app shell to the Workspace Module before opening/focusing the target Connection.
+
+## New
+- Added comments to `.env.example` (because even terminals like a little guidance).
+
+## Improved
+- Dashboard Connection widget: resolve tmux id in an effect using the reuse-first helper, then create the Tab/Pane from that id (instead of calling `appendTmuxSessionId()` during render). Also keyed by `connection.id` to avoid momentary reuse while switching widget Connections.  
+  - PRs/changes include `tests/dashboard-connection-widget-tmux.test.mjs`, `src/modules/dashboard/widgets/builtin/connections/ConnectionWidget.tsx`, and `docs/manual/10-dashboard.md` (via the same update set as https://github.com/ryantsai/KKTerm/pull/139).
+- System tray behavior note updated in the manual to match the updated external-open flow.  
+  - Updated: `docs/manual/01-getting-started.md`
+
+## Fixed
+- Docs consistency updates:
+  - Marked File Explorer as **planned** in architecture diagrams.
+  - Corrected Dashboard animated canvas background count from 9 to 21 across all README locales (full list included in the PR).
+  - Fixed contributing guide widget path from `src/dashboard/widgets/` to `src/modules/dashboard/widgets/builtin/`.
+  - Replaced non-existent `mist` background reference with `ocean` in all locales.
+- Updated tray/assistant external-open events so the app shell switches to the Workspace Module before opening or focusing the Connection (instead of racing ahead of the module switch).
+  - Updated: `src/App.tsx`, `src/modules/workspace/connections/ConnectionSidebar.tsx`
+
+## Internal
+- Docs maintenance: pruned/reorganized `AGENTS.md` into a smaller “routing + guardrails” doc and moved the durable architectural/source-of-truth burden back to `CONTEXT.md`, `docs/ARCHITECTURE.md`, product docs, and manual docs.
+- Docs/readme updates across all languages reflecting current codebase state (PR #139 by @ryantsai): https://github.com/ryantsai/KKTerm/pull/139
+
+## Highlights
 - App Launcher drop target now covers the full Dashboard Widget Instance body (no more “your file is hovering, but not landing”).
 - URL Pane is contained to its nearest host panel (Dashboard Connection widget, embedded split Pane, or Workspace Canvas)—so it can’t spill into adjacent panes/panels.
 - Custom titlebar work continues: the titlebar appearance is now theme-integrated and better aligned, with a fix to custom titlebar chrome.
