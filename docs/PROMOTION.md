@@ -5,7 +5,11 @@ and outreach email consistent, accurate, and easy to send.
 
 Primary link: https://github.com/ryantsai/KKTerm
 
+Landing page: https://ryantsai.github.io/KKTerm/
+
 Feedback thread: https://github.com/ryantsai/KKTerm/discussions/141
+
+Launch announcement: https://github.com/ryantsai/KKTerm/discussions/146
 
 Latest release: https://github.com/ryantsai/KKTerm/releases/tag/v0.1.34
 
@@ -191,3 +195,10 @@ Ryan
 | 2026-05-24 | 7 | Enabled GitHub Discussions and opened feedback thread | https://github.com/ryantsai/KKTerm/discussions/141 |
 | 2026-05-24 | 7 | Rewrote latest release notes for public conversion | https://github.com/ryantsai/KKTerm/releases/tag/v0.1.34 |
 | 2026-05-24 | 7 | Opened contributor-friendly issues | #142 first-run checklist; #143 README screenshots; #144 installer verification |
+| 2026-05-24 | 7 | Added GitHub Pages landing page and set repo homepage | https://ryantsai.github.io/KKTerm/ |
+| 2026-05-24 | 7 | Opened Awesome Tauri listing PR | https://github.com/tauri-apps/awesome-tauri/pull/715 |
+| 2026-05-24 | 7 | Added demo GIF and Open Graph image to landing page | https://ryantsai.github.io/KKTerm/assets/demo.gif |
+| 2026-05-24 | 7 | Opened Rust-community CFP issue for contributors | https://github.com/ryantsai/KKTerm/issues/145 |
+| 2026-05-24 | 7 | Submitted KKTerm CFP to This Week in Rust | https://github.com/rust-lang/this-week-in-rust/pull/8118 |
+| 2026-05-24 | 7 | Published GitHub launch announcement Discussion | https://github.com/ryantsai/KKTerm/discussions/146 |
+| 2026-05-24 | 7 | Added landing-page SEO metadata, sitemap, robots, and SoftwareApplication JSON-LD | https://ryantsai.github.io/KKTerm/sitemap.xml |
