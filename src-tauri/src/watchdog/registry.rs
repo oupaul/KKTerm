@@ -44,9 +44,7 @@ const INTERVENTION_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 enum InterventionSignal {
     /// Sub-turn completed (ok or not). Loop resumes; if the AI declared the
     /// job done it carries `completion_reason`.
-    Recorded {
-        completion_reason: Option<String>,
-    },
+    Recorded { completion_reason: Option<String> },
 }
 
 pub const EVENT_CHANNEL: &str = "watchdog://event";
@@ -142,7 +140,13 @@ impl WatchdogRegistry {
             json!({ "state": WatchdogState::Armed }),
         );
 
-        spawn_poll_task(registry.clone(), app.clone(), id.clone(), config.clone(), cancel);
+        spawn_poll_task(
+            registry.clone(),
+            app.clone(),
+            id.clone(),
+            config.clone(),
+            cancel,
+        );
 
         Ok(WatchdogSummary {
             id,
@@ -577,6 +581,10 @@ fn update_sustained_window(
         return false;
     }
     let Some(threshold) = sustained_for_ms else {
+        if state.condition_true_since == Some(u64::MAX) {
+            return false;
+        }
+        state.condition_true_since = Some(u64::MAX);
         return true;
     };
     let since = *state.condition_true_since.get_or_insert(now);
@@ -607,7 +615,12 @@ fn stop_reached(stop: &WatchdogStop, state: &LoopState, trigger_fired: bool) -> 
     }
 }
 
-fn transition_to_running(registry: &Arc<WatchdogRegistry>, app: &AppHandle, id: &str, state: &LoopState) {
+fn transition_to_running(
+    registry: &Arc<WatchdogRegistry>,
+    app: &AppHandle,
+    id: &str,
+    state: &LoopState,
+) {
     let new_state = WatchdogState::Running {
         last_poll_at: now_ms(),
         ticks_observed: state.poll_count,
@@ -683,7 +696,11 @@ fn write_state(registry: &Arc<WatchdogRegistry>, id: &str, new_state: WatchdogSt
 }
 
 fn current_intervention_count(registry: &Arc<WatchdogRegistry>, id: &str) -> u32 {
-    registry.lock().get(id).map(|e| e.intervention_count).unwrap_or(0)
+    registry
+        .lock()
+        .get(id)
+        .map(|e| e.intervention_count)
+        .unwrap_or(0)
 }
 
 fn install_intervention_sender(
@@ -726,7 +743,10 @@ fn collect_intervention_snapshot(
             // Last 8 ticks — keeps the snapshot small enough to fit in a
             // single AI turn without blowing the context budget.
             let tail: Vec<_> = entry.ticks.iter().rev().take(8).rev().cloned().collect();
-            snapshot.insert("tickHistory".into(), serde_json::to_value(tail).unwrap_or(json!([])));
+            snapshot.insert(
+                "tickHistory".into(),
+                serde_json::to_value(tail).unwrap_or(json!([])),
+            );
         }
     }
     if want("sessionOutputTail") {
@@ -734,8 +754,7 @@ fn collect_intervention_snapshot(
         // Other targets get null so the AI sees the field is empty rather
         // than missing.
         if let WatchdogTarget::SshSessionOutputSilence { session_id } = target {
-            let tail = super::targets::session_output_tail(app, session_id)
-                .unwrap_or_default();
+            let tail = super::targets::session_output_tail(app, session_id).unwrap_or_default();
             snapshot.insert("sessionOutputTail".into(), json!(tail));
         } else {
             snapshot.insert("sessionOutputTail".into(), Value::Null);
@@ -743,10 +762,7 @@ fn collect_intervention_snapshot(
     }
     if want("sessionMeta") {
         if let WatchdogTarget::SshSessionOutputSilence { session_id } = target {
-            snapshot.insert(
-                "sessionMeta".into(),
-                json!({ "sessionId": session_id }),
-            );
+            snapshot.insert("sessionMeta".into(), json!({ "sessionId": session_id }));
         } else {
             snapshot.insert("sessionMeta".into(), Value::Null);
         }
@@ -763,8 +779,8 @@ fn collect_intervention_snapshot(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::types::{PredicateOp, WatchdogNotification, WatchdogTrigger};
+    use super::*;
 
     fn mock_config(name: &str) -> WatchdogConfig {
         WatchdogConfig {
@@ -889,8 +905,11 @@ mod tests {
             suppression_until: None,
             mock_counter: 0.0,
         };
-        // Without sustained_for_ms, every tick fires — caller must dedupe.
+        // Without sustained_for_ms, the first true tick is the rising edge.
         assert!(update_sustained_window(&mut state, true, None));
+        assert!(!update_sustained_window(&mut state, true, None));
+        assert!(!update_sustained_window(&mut state, true, None));
+        assert!(!update_sustained_window(&mut state, false, None));
         assert!(update_sustained_window(&mut state, true, None));
     }
 
