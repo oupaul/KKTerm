@@ -86,10 +86,20 @@
         letter-spacing: 0.02em;
       }
 
-      .brand img {
+      .brand-mark {
+        display: grid;
+        place-items: center;
         width: 42px;
         height: 42px;
         border-radius: 12px;
+        background:
+          radial-gradient(circle at 36% 32%, #f4f2df 0 10%, transparent 11%),
+          linear-gradient(135deg, var(--green-strong), var(--green));
+        color: #07110e;
+        font-family: "Georgia Pro", Georgia, serif;
+        font-size: 1.45rem;
+        font-weight: 900;
+        letter-spacing: -0.08em;
         box-shadow: 0 10px 30px rgba(131, 210, 107, 0.22);
       }
 
@@ -376,7 +386,7 @@
     <main class="shell">
       <nav class="nav" aria-label="Primary">
         <a class="brand" href="https://github.com/ryantsai/KKTerm">
-          <img src="../src-tauri/icons/logo.png" alt="" />
+          <span class="brand-mark" aria-hidden="true">K</span>
           <span>KKTerm</span>
         </a>
         <div class="nav-links">
