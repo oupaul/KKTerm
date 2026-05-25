@@ -1205,6 +1205,22 @@ pub fn launch_elevated_terminal(request: LaunchElevatedTerminalRequest) -> Resul
     launch_elevated_terminal_impl(normalize_elevated_shell(&request.shell)?)
 }
 
+pub fn is_app_elevated() -> bool {
+    is_app_elevated_impl()
+}
+
+#[cfg(target_os = "windows")]
+fn is_app_elevated_impl() -> bool {
+    use windows_sys::Win32::UI::Shell::IsUserAnAdmin;
+
+    unsafe { IsUserAnAdmin() != 0 }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn is_app_elevated_impl() -> bool {
+    false
+}
+
 fn normalize_elevated_shell(shell: &str) -> Result<&'static str, String> {
     match shell.trim().to_lowercase().as_str() {
         "cmd.exe" => Ok("cmd.exe"),

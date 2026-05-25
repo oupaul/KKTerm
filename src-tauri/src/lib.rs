@@ -1804,6 +1804,11 @@ fn launch_elevated_terminal(
     sessions::launch_elevated_terminal(request)
 }
 
+#[tauri::command]
+fn is_app_elevated() -> bool {
+    sessions::is_app_elevated()
+}
+
 async fn run_blocking_command<T, F>(label: &'static str, job: F) -> Result<T, String>
 where
     T: Send + 'static,
@@ -2729,6 +2734,7 @@ pub fn run() {
             list_remote_loopback_ports,
             start_ssh_port_forward,
             close_ssh_port_forward,
+            is_app_elevated,
             launch_elevated_terminal,
             start_sftp_session,
             list_sftp_directory,

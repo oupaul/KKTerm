@@ -1444,6 +1444,10 @@ type CommandMap = {
     args: { request: { forwardId: string } };
     result: null;
   };
+  is_app_elevated: {
+    args: undefined;
+    result: boolean;
+  };
   launch_elevated_terminal: {
     args: { request: { shell: string } };
     result: null;

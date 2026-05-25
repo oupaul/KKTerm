@@ -66,6 +66,12 @@ Both are app-owned DOM dialogs (not browser-native `prompt`).
 - Permission tier toggle: `connections.normal` / `connections.admin`
 - Recently used Connections list, empty state `connections.noRecent`
 
+For local Command Prompt and PowerShell Quick Connect entries, `connections.admin`
+checks whether the KKTerm process is already elevated. When it is elevated,
+KKTerm opens an embedded local terminal Session and labels the draft shell with
+the admin tier. When it is not elevated, KKTerm keeps the Windows UAC path and
+opens the shell through an external elevated window.
+
 **Add Connection** uses the same form shape but persists to SQLite. The Type selector label is `connections.type`.
 
 For saved Connections, the properties/Add Connection header includes Connection icon presentation controls. `connections.editIcon` changes the icon image. `connections.editIconBackground` opens the circular icon background picker; `connections.iconBackground` labels the picker, `connections.transparentIconBackground` clears the color back to the default transparent state, and `connections.selectIconBackground` applies a palette color. The chosen background is shown behind Connection icons in the Connection Tree and on pinned/connected Activity Rail Connection shortcuts. Workspace Tab rename stores a separate `tabTitle` on the Connection, leaving `name` as the Connection Tree label.

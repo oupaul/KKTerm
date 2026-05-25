@@ -129,6 +129,7 @@ export function ConnectionSidebar({
   const activeSessionCounts = useWorkspaceStore((state) => state.activeSessionCounts);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
+  const openElevatedLocalTerminal = useWorkspaceStore((state) => state.openElevatedLocalTerminal);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
   const vncSettings = useWorkspaceStore((state) => state.vncSettings);
@@ -430,11 +431,7 @@ export function ConnectionSidebar({
     setTreeError("");
     setQuickConnectMenuOpen(false);
     try {
-      await invokeCommand("launch_elevated_terminal", {
-        request: {
-          shell: option.value,
-        },
-      });
+      await openElevatedLocalTerminal(option);
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
     }

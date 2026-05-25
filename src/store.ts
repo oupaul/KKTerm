@@ -46,6 +46,8 @@ import type {
 } from "./types";
 import i18next from "./i18n/config";
 import { invokeCommand } from "./lib/tauri";
+import { elevatedLocalShellAction } from "./modules/workspace/connections/quickConnectMenuModel";
+import type { LocalShellOption } from "./modules/workspace/connections/utils";
 
 const LAYOUT_STORAGE_PREFIX = "kkterm.layout.";
 const TMUX_SESSION_STORAGE_PREFIX = "kkterm.tmuxSessions.";
@@ -664,7 +666,8 @@ interface WorkspaceState {
   openSftpBrowser: (connection: Connection) => void;
   openFtpBrowser: (connection: Connection) => void;
   openTerminalHere: (connection: Connection, remotePath: string) => void;
-  openLocalTerminal: () => void;
+  openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
+  openElevatedLocalTerminal: (option: LocalShellOption) => Promise<void>;
   splitTerminalPane: (tabId: string) => void;
   splitTerminalPaneDirected: (tabId: string, direction: SplitDirection) => void;
   addConnectionToTerminalPane: (
@@ -1154,17 +1157,34 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       activeTabId: tab.id,
     }));
   },
-  openLocalTerminal: () => {
+  openLocalTerminal: (options) => {
     const id = `local-${Date.now()}`;
-    const shell = get().terminalSettings.defaultShell;
+    const shell = options?.shell ?? get().terminalSettings.defaultShell;
     get().openConnection({
       id,
-      name: shell,
+      name: options?.name ?? shell,
       host: "localhost",
       user: "local",
       localShell: shell,
       type: "local",
       status: "idle",
+    });
+  },
+  openElevatedLocalTerminal: async (option) => {
+    const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
+    const action = elevatedLocalShellAction({
+      adminLabel: i18next.t("connections.admin"),
+      isAppElevated,
+      option,
+    });
+
+    if (action.mode === "embedded") {
+      get().openLocalTerminal({ name: action.name, shell: action.shell });
+      return;
+    }
+
+    await invokeCommand("launch_elevated_terminal", {
+      request: { shell: action.shell },
     });
   },
   splitTerminalPane: (tabId) => {
