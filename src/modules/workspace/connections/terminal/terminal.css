@@ -18,6 +18,11 @@
   gap: 0;
 }
 
+.terminal-workspace.quick-command-bar-visible {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
 .terminal-workspace-embedded-only {
   grid-template-rows: minmax(0, 1fr);
 }
@@ -534,6 +539,844 @@
   color: #536174;
   cursor: default;
   opacity: 0.55;
+}
+
+.terminal-pane-action.active,
+.quick-command-toggle.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.quick-command-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px;
+  overflow-x: auto;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.quick-command-button,
+.quick-command-empty,
+.quick-command-manage {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  min-width: 0;
+  padding: 0 9px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--quick-command-accent, var(--accent));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.quick-command-button:hover,
+.quick-command-empty:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.quick-command-button span {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-command-empty {
+  color: var(--text-muted);
+  border-left-color: var(--border-strong);
+}
+
+.quick-command-manage {
+  width: 28px;
+  margin-left: auto;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border-color: transparent;
+  border-left-width: 1px;
+  opacity: 0;
+  transition:
+    opacity 150ms ease-out,
+    color 120ms ease-out;
+}
+
+.quick-command-bar:hover .quick-command-manage,
+.quick-command-bar:focus-within .quick-command-manage {
+  opacity: 1;
+}
+
+.quick-command-manage:hover,
+.quick-command-manage:focus-visible {
+  color: var(--text);
+  background: transparent;
+  border-color: transparent;
+}
+
+.quick-command-dialog-backdrop {
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-command-dialog {
+  position: relative;
+  width: min(1800px, calc(100vw - 48px));
+  max-height: min(720px, calc(100vh - 48px));
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.quick-command-dialog .connection-dialog-header {
+  padding-right: 56px;
+}
+
+.quick-command-dialog .connection-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
+.quick-command-manager-dialog {
+  width: min(1800px, calc(100vw - 48px));
+}
+
+.quick-command-custom-dialog {
+  width: min(760px, calc(100vw - 48px));
+}
+
+.quick-command-preset-dialog {
+  width: min(1680px, calc(100vw - 32px));
+  height: min(860px, calc(100vh - 36px));
+  max-height: none;
+}
+
+.quick-command-dialog-body {
+  display: grid;
+  grid-template-columns: minmax(360px, 520px) minmax(0, 1fr);
+  min-height: 0;
+  max-height: min(600px, calc(100vh - 170px));
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+}
+
+.quick-command-list,
+.quick-command-editor {
+  min-width: 0;
+  min-height: 0;
+}
+
+.quick-command-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 12px;
+  overflow: auto;
+  background: var(--surface-muted);
+  border-right: 1px solid var(--border);
+}
+
+.quick-command-manager-body {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 10px;
+  min-height: min(560px, calc(100vh - 210px));
+  padding: 8px 18px 18px;
+  overflow: auto;
+}
+
+.quick-command-list-rows {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+}
+
+.quick-command-list-header {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.quick-command-list-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 7px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  user-select: none;
+}
+
+.quick-command-list-row.dragging {
+  opacity: 0.55;
+}
+
+.quick-command-list-row.drag-over {
+  border-color: rgba(86, 166, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(86, 166, 255, 0.18);
+}
+
+.quick-command-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.quick-command-list-row.dragging .quick-command-drag-handle {
+  cursor: grabbing;
+}
+
+.quick-command-list-row > button {
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.quick-command-list-row span,
+.quick-command-list-row code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-command-list-row span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quick-command-list-row code {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.quick-command-row-actions {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.quick-command-row-actions button,
+.quick-command-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.quick-command-row-actions button:hover {
+  color: var(--text);
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.quick-command-row-actions button:disabled {
+  color: var(--text-faint);
+  cursor: default;
+  opacity: 0.45;
+}
+
+.quick-command-delete:hover {
+  color: var(--red);
+}
+
+.quick-command-add-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.quick-command-editor {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.quick-command-tabs {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-tabs button {
+  height: 26px;
+  padding: 0 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.quick-command-tabs button.active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.quick-command-library,
+.quick-command-custom-form {
+  min-height: 0;
+  margin-top: 4px;
+  overflow: auto;
+}
+
+.quick-command-custom-dialog .quick-command-custom-form,
+.quick-command-preset-dialog .quick-command-library {
+  padding: 8px 12px 12px;
+  overflow: auto;
+}
+
+.quick-command-custom-dialog .quick-command-custom-form {
+  max-height: min(720px, calc(100vh - 150px));
+}
+
+.quick-command-preset-dialog .quick-command-library {
+  max-height: none;
+}
+
+.quick-command-subdialog-backdrop {
+  z-index: 14;
+  background: rgba(3, 8, 18, 0.68);
+  backdrop-filter: blur(1px);
+}
+
+.quick-command-custom-dialog .quick-command-custom-form {
+  grid-template-rows: auto auto minmax(160px, 1fr) auto auto;
+  min-height: min(560px, calc(100vh - 170px));
+}
+
+.quick-command-library {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  font-size: 11px;
+}
+
+.quick-command-library-tabs,
+.quick-command-library-subtabs {
+  gap: 6px;
+  align-items: stretch;
+  min-width: 0;
+  overflow: visible;
+}
+
+.quick-command-library-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.quick-command-library-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.quick-command-library-tabs {
+  padding: 4px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-library-subtabs {
+  padding: 3px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-library-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.quick-command-library-tabs .quick-command-library-tab {
+  width: 100%;
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.quick-command-library-subtabs .quick-command-library-tab {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+.quick-command-library-tab:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.quick-command-library-tab[data-state="active"] {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.quick-command-library > input,
+.quick-command-custom-form input,
+.quick-command-custom-form textarea {
+  width: 100%;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  outline: none;
+}
+
+.quick-command-library > input,
+.quick-command-custom-form input {
+  height: 30px;
+  padding: 0 8px;
+}
+
+.quick-command-custom-form textarea {
+  min-height: 96px;
+  padding: 8px 9px;
+  resize: vertical;
+}
+
+.quick-command-library > input:focus,
+.quick-command-custom-form input:focus,
+.quick-command-custom-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.quick-command-library-group {
+  display: grid;
+  gap: 7px;
+}
+
+.quick-command-library-group h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.quick-command-library-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-library-entry strong,
+.quick-command-library-entry p,
+.quick-command-library-entry code {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-command-library-entry-title {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+}
+
+.quick-command-library-entry strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.quick-command-library-entry-danger strong,
+.quick-command-library-entry-danger code {
+  color: var(--red);
+}
+
+.quick-command-danger-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 900;
+  background: rgba(196, 62, 62, 0.1);
+  border: 1px solid rgba(196, 62, 62, 0.35);
+  border-radius: 5px;
+}
+
+.quick-command-library-entry p {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.quick-command-library-entry code {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.quick-command-library-entry-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.quick-command-library-entry-actions .toolbar-button {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.quick-command-custom-form {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.quick-command-appearance-row {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+}
+
+.quick-command-selector {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quick-command-selector-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.quick-command-selector:nth-child(2) .quick-command-selector-button {
+  color: transparent;
+  background: var(--quick-command-accent);
+}
+
+.quick-command-selector-button:hover,
+.quick-command-selector-button[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.quick-command-mini-dialog {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 16;
+  display: grid;
+  gap: 6px;
+  max-height: min(290px, calc(100vh - 220px));
+  padding: 8px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+}
+
+.quick-command-icon-grid {
+  grid-template-columns: repeat(8, 30px);
+  width: max-content;
+}
+
+.quick-command-color-grid {
+  grid-template-columns: repeat(5, 30px);
+  width: max-content;
+}
+
+.quick-command-mini-dialog button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.quick-command-color-grid button {
+  color: transparent;
+  background: var(--quick-command-accent);
+}
+
+.quick-command-mini-dialog button.active {
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.quick-command-custom-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quick-command-command-field {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 3px;
+  min-height: 0;
+}
+
+.quick-command-field-header {
+  align-self: start;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quick-command-command-label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  width: fit-content;
+}
+
+.quick-command-command-input-wrap {
+  position: relative;
+  min-height: 0;
+}
+
+.quick-command-command-field textarea {
+  height: 100%;
+}
+
+.quick-command-ai-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.quick-command-ai-button:hover,
+.quick-command-ai-button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.quick-command-toggle-list {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-command-toggle-row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 9px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-toggle-row .toggle-switch {
+  margin-left: auto;
+}
+
+.quick-command-ai-popover {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 15;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100% - 16px));
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.quick-command-ai-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.quick-command-ai-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+}
+
+.quick-command-picker,
+.quick-command-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-picker legend,
+.quick-command-icon-picker legend {
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.quick-command-picker button,
+.quick-command-icon-picker button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.quick-command-picker button {
+  background: var(--quick-command-accent);
+}
+
+.quick-command-picker button.active,
+.quick-command-icon-picker button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.connection-dialog .quick-command-custom-actions {
+  justify-content: flex-end;
+  padding-top: 8px;
+  margin-top: auto;
+}
+
+.quick-command-muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .quick-command-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-command-list {
+    max-height: 180px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .quick-command-library-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-command-library-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .quick-command-library-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .terminal-recording-button {

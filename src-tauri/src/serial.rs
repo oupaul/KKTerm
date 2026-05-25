@@ -2,8 +2,8 @@ use crate::sessions::emit_terminal_output;
 use serial2::SerialPort;
 use std::{
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };

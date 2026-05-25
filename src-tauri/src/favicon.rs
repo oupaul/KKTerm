@@ -1,5 +1,5 @@
-use base64::{engine::general_purpose::STANDARD, Engine as _};
-use reqwest::{header, Client};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use reqwest::{Client, header};
 use std::time::Duration;
 use url::Url;
 

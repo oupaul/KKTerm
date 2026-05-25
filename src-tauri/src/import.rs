@@ -8,8 +8,8 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
 };
@@ -1652,10 +1652,12 @@ mod tests {
 </RDCMan>"#;
         let preview = parse_rdcman(text);
         assert_eq!(preview.drafts.len(), 2);
-        assert!(preview
-            .drafts
-            .iter()
-            .all(|draft| !draft.folder_path.iter().any(|segment| segment == "True")));
+        assert!(
+            preview
+                .drafts
+                .iter()
+                .all(|draft| !draft.folder_path.iter().any(|segment| segment == "True"))
+        );
         let web = preview
             .drafts
             .iter()

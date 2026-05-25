@@ -1,14 +1,13 @@
 use std::collections::HashSet;
 
-use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
+use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dashboard_validation::{
-    dashboard_widget_secret_owner_id, validate_accent, validate_custom_body_json_detailed,
-    validate_dashboard_tab_color, validate_grid_bounds,
+    ValidationError, dashboard_widget_secret_owner_id, validate_accent,
+    validate_custom_body_json_detailed, validate_dashboard_tab_color, validate_grid_bounds,
     validate_grid_density, validate_icon, validate_kind, validate_preset,
     validate_settings_schema_json, validate_settings_values_for_schema_json, validate_title,
-    ValidationError,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -289,7 +288,7 @@ pub fn load_state(conn: &SqliteConnection) -> Result<DashboardLoadState, Dashboa
                 glass, hide_title, action_direction, settings_values_json, body_opacity,
                 grid_x, grid_y, grid_w, grid_h, sort_order
          FROM dashboard_widget_instances
-         ORDER BY view_id, sort_order"
+         ORDER BY view_id, sort_order",
     )?;
     let instances = inst_stmt
         .query_map([], |row| {
@@ -497,7 +496,21 @@ pub fn add_instance(
              glass, hide_title, action_direction, settings_values_json, body_opacity,
              grid_x, grid_y, grid_w, grid_h, sort_order)
          VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0, ?, NULL, '{}', NULL, ?, ?, ?, ?, ?)",
-        params![id, view_id, kind, source_id, preset, accent_name, icon_name, hide_title as i64, x, y, w, h, next_sort],
+        params![
+            id,
+            view_id,
+            kind,
+            source_id,
+            preset,
+            accent_name,
+            icon_name,
+            hide_title as i64,
+            x,
+            y,
+            w,
+            h,
+            next_sort
+        ],
     )?;
     Ok(DashboardWidgetInstance {
         id: id.to_string(),
@@ -535,36 +548,40 @@ pub fn update_instance(
     if let Some(ref i) = patch.icon_name {
         validate_icon(i)?;
     }
-    let mut current: DashboardWidgetInstance = conn.query_row(
-        "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
+    let mut current: DashboardWidgetInstance = conn
+        .query_row(
+            "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
                 glass, hide_title, action_direction, settings_values_json, body_opacity,
                 grid_x, grid_y, grid_w, grid_h, sort_order
          FROM dashboard_widget_instances WHERE id = ?",
-        params![id],
-        |row| Ok(DashboardWidgetInstance {
-            id: row.get(0)?,
-            view_id: row.get(1)?,
-            kind: row.get(2)?,
-            source_id: row.get(3)?,
-            preset: normalize_loaded_preset(row.get(4)?),
-            accent_name: row.get(5)?,
-            icon_name: row.get(6)?,
-            custom_title: row.get(7)?,
-            glass: row.get::<_, i64>(8)? != 0,
-            hide_title: row.get::<_, i64>(9)? != 0,
-            action_direction: row.get(10)?,
-            settings_values_json: row.get(11)?,
-            body_opacity: row.get(12)?,
-            grid_x: row.get(13)?,
-            grid_y: row.get(14)?,
-            grid_w: row.get(15)?,
-            grid_h: row.get(16)?,
-            sort_order: row.get(17)?,
-        }),
-    ).map_err(|e| match e {
-        rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
-        other => DashboardStorageError::Sqlite(other),
-    })?;
+            params![id],
+            |row| {
+                Ok(DashboardWidgetInstance {
+                    id: row.get(0)?,
+                    view_id: row.get(1)?,
+                    kind: row.get(2)?,
+                    source_id: row.get(3)?,
+                    preset: normalize_loaded_preset(row.get(4)?),
+                    accent_name: row.get(5)?,
+                    icon_name: row.get(6)?,
+                    custom_title: row.get(7)?,
+                    glass: row.get::<_, i64>(8)? != 0,
+                    hide_title: row.get::<_, i64>(9)? != 0,
+                    action_direction: row.get(10)?,
+                    settings_values_json: row.get(11)?,
+                    body_opacity: row.get(12)?,
+                    grid_x: row.get(13)?,
+                    grid_y: row.get(14)?,
+                    grid_w: row.get(15)?,
+                    grid_h: row.get(16)?,
+                    sort_order: row.get(17)?,
+                })
+            },
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
+            other => DashboardStorageError::Sqlite(other),
+        })?;
 
     let preset_changed_to_ambient = patch.preset.as_deref() == Some("ambient");
     if let Some(p) = patch.preset.clone() {
@@ -598,7 +615,9 @@ pub fn update_instance(
             if !(0..=100).contains(&value) {
                 return Err(DashboardStorageError::validation_with_detail(
                     ValidationError::InvalidBodyOpacity,
-                    Some(format!("body_opacity must be between 0 and 100; got {value}")),
+                    Some(format!(
+                        "body_opacity must be between 0 and 100; got {value}"
+                    )),
                 ));
             }
         }
@@ -829,8 +848,9 @@ pub fn remove_custom_widget(
     id: &str,
     force_delete_instances: bool,
 ) -> Result<(), DashboardStorageError> {
-    let mut stmt =
-        conn.prepare("SELECT id FROM dashboard_widget_instances WHERE source_id = ? AND kind = 'script'")?;
+    let mut stmt = conn.prepare(
+        "SELECT id FROM dashboard_widget_instances WHERE source_id = ? AND kind = 'script'",
+    )?;
     let instance_ids: Vec<String> = stmt
         .query_map(params![id], |row| row.get::<_, String>(0))?
         .collect::<Result<Vec<_>, _>>()?;
@@ -871,36 +891,40 @@ pub fn widget_secret_owner_id_for_instance(
     instance_id: &str,
     key: &str,
 ) -> Result<Option<String>, DashboardStorageError> {
-    let instance: DashboardWidgetInstance = conn.query_row(
-        "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
+    let instance: DashboardWidgetInstance = conn
+        .query_row(
+            "SELECT id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
                 glass, hide_title, action_direction, settings_values_json, body_opacity,
                 grid_x, grid_y, grid_w, grid_h, sort_order
          FROM dashboard_widget_instances WHERE id = ?",
-        params![instance_id],
-        |row| Ok(DashboardWidgetInstance {
-            id: row.get(0)?,
-            view_id: row.get(1)?,
-            kind: row.get(2)?,
-            source_id: row.get(3)?,
-            preset: normalize_loaded_preset(row.get(4)?),
-            accent_name: row.get(5)?,
-            icon_name: row.get(6)?,
-            custom_title: row.get(7)?,
-            glass: row.get::<_, i64>(8)? != 0,
-            hide_title: row.get::<_, i64>(9)? != 0,
-            action_direction: row.get(10)?,
-            settings_values_json: row.get(11)?,
-            body_opacity: row.get(12)?,
-            grid_x: row.get(13)?,
-            grid_y: row.get(14)?,
-            grid_w: row.get(15)?,
-            grid_h: row.get(16)?,
-            sort_order: row.get(17)?,
-        }),
-    ).map_err(|e| match e {
-        rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
-        other => DashboardStorageError::Sqlite(other),
-    })?;
+            params![instance_id],
+            |row| {
+                Ok(DashboardWidgetInstance {
+                    id: row.get(0)?,
+                    view_id: row.get(1)?,
+                    kind: row.get(2)?,
+                    source_id: row.get(3)?,
+                    preset: normalize_loaded_preset(row.get(4)?),
+                    accent_name: row.get(5)?,
+                    icon_name: row.get(6)?,
+                    custom_title: row.get(7)?,
+                    glass: row.get::<_, i64>(8)? != 0,
+                    hide_title: row.get::<_, i64>(9)? != 0,
+                    action_direction: row.get(10)?,
+                    settings_values_json: row.get(11)?,
+                    body_opacity: row.get(12)?,
+                    grid_x: row.get(13)?,
+                    grid_y: row.get(14)?,
+                    grid_w: row.get(15)?,
+                    grid_h: row.get(16)?,
+                    sort_order: row.get(17)?,
+                })
+            },
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => DashboardStorageError::NotFound,
+            other => DashboardStorageError::Sqlite(other),
+        })?;
 
     if instance.kind != "script" {
         return Ok(None);

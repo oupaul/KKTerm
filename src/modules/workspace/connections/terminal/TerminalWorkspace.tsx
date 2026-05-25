@@ -5,7 +5,7 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
@@ -19,6 +19,7 @@ import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer 
 import { ensureLayout } from "../../layout";
 import { getPaneRenderer, registerPaneInputWriter, registerPaneRenderer, unregisterPaneInputWriter, unregisterPaneRenderer } from "../../paneRegistry";
 import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspacePane, WorkspaceTab } from "../../../../types";
+import { QuickCommandBar } from "./QuickCommandBar";
 
 type TerminalContextMenuState = {
   x: number;
@@ -26,6 +27,7 @@ type TerminalContextMenuState = {
   hasSelection: boolean;
 };
 
+const TMUX_MOUSE_MODE_EVENT = "kkterm:tmux-mouse-mode";
 const terminalInputEncoder = new TextEncoder();
 
 function normalizeFilenamePart(value: string) {
@@ -66,6 +68,9 @@ export function TerminalWorkspace({
   const splitTerminalPaneDirected = useWorkspaceStore(
     (state) => state.splitTerminalPaneDirected,
   );
+  const setQuickCommandBarVisible = useWorkspaceStore(
+    (state) => state.setQuickCommandBarVisible,
+  );
   const openSftpBrowser = useWorkspaceStore((state) => state.openSftpBrowser);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const setFocusedPane = useWorkspaceStore((state) => state.setFocusedPane);
@@ -76,6 +81,7 @@ export function TerminalWorkspace({
   const focusedPaneId = tab.focusedPaneId ?? tab.panes[0]?.id;
   const layout = useMemo(() => ensureLayout(tab.layout, tab.panes), [tab.layout, tab.panes]);
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
+  const quickCommandBarVisible = Boolean(tab.quickCommandBarVisible) && !isSingleEmbeddedPane;
 
   function handleSplit(paneId: string, direction: "right" | "left" | "down" | "up") {
     setFocusedPane(tab.id, paneId);
@@ -143,6 +149,7 @@ export function TerminalWorkspace({
         "terminal-workspace",
         isActive ? "active" : "",
         isSingleEmbeddedPane ? "terminal-workspace-embedded-only" : "",
+        quickCommandBarVisible ? "quick-command-bar-visible" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -162,9 +169,12 @@ export function TerminalWorkspace({
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
             showSftpButton={showSftpButton}
             onSplit={handleSplit}
+            quickCommandBarVisible={quickCommandBarVisible}
+            onToggleQuickCommandBar={() => setQuickCommandBarVisible(tab.id, !quickCommandBarVisible)}
           />
         ) : null}
       </div>
+      {quickCommandBarVisible ? <QuickCommandBar tab={tab} /> : null}
     </section>
   );
 }
@@ -182,6 +192,8 @@ function TerminalLayoutView({
   onSaveBuffer,
   showSftpButton,
   onSplit,
+  quickCommandBarVisible,
+  onToggleQuickCommandBar,
 }: {
   isActive: boolean;
   tabId: string;
@@ -195,6 +207,8 @@ function TerminalLayoutView({
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
+  quickCommandBarVisible: boolean;
+  onToggleQuickCommandBar: () => void;
 }) {
   if (layout.type === "leaf") {
     const pane = panes.find((entry) => entry.id === layout.paneId);
@@ -217,6 +231,8 @@ function TerminalLayoutView({
             onSaveBuffer={onSaveBuffer}
             showSftpButton={showSftpButton}
             onSplit={onSplit}
+            quickCommandBarVisible={quickCommandBarVisible}
+            onToggleQuickCommandBar={onToggleQuickCommandBar}
           />
         ) : (
           <EmbeddedConnectionPane
@@ -253,6 +269,8 @@ function TerminalLayoutView({
           onSaveBuffer={onSaveBuffer}
           showSftpButton={showSftpButton}
           onSplit={onSplit}
+          quickCommandBarVisible={quickCommandBarVisible}
+          onToggleQuickCommandBar={onToggleQuickCommandBar}
         />
       ))}
     </div>
@@ -331,10 +349,12 @@ function formatRemoteDesktopPaneSubtitle(connection: Connection) {
 
 function TmuxSessionTag({
   connection,
+  onMouseModeChange,
   sessionId,
   tabId,
 }: {
   connection: Connection;
+  onMouseModeChange: (enabled: boolean) => void;
   sessionId?: string;
   tabId: string;
 }) {
@@ -558,6 +578,14 @@ function TmuxSessionTag({
         }
         return next;
       });
+      if (targetSessionId === sessionId) {
+        onMouseModeChange(nextEnabled);
+      }
+      window.dispatchEvent(
+        new CustomEvent(TMUX_MOUSE_MODE_EVENT, {
+          detail: { enabled: nextEnabled, sessionId: targetSessionId },
+        }),
+      );
     } catch (mouseError) {
       setError(mouseError instanceof Error ? mouseError.message : String(mouseError));
     }
@@ -968,6 +996,8 @@ function TerminalPaneView({
   onSaveBuffer,
   showSftpButton,
   onSplit,
+  quickCommandBarVisible,
+  onToggleQuickCommandBar,
 }: {
   isActive: boolean;
   tabId: string;
@@ -981,6 +1011,8 @@ function TerminalPaneView({
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
+  quickCommandBarVisible: boolean;
+  onToggleQuickCommandBar: () => void;
 }) {
   const paneRef = useRef<HTMLElement | null>(null);
   const terminalElementRef = useRef<HTMLDivElement | null>(null);
@@ -992,6 +1024,8 @@ function TerminalPaneView({
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
   const startedRef = useRef(false);
+  const tmuxWheelFlushTimerRef = useRef<number | null>(null);
+  const tmuxWheelPendingLinesRef = useRef(0);
   const multilinePasteConfirmationResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
   const onFocusRef = useRef(onFocus);
   useEffect(() => {
@@ -1011,6 +1045,7 @@ function TerminalPaneView({
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [recordingsOpen, setRecordingsOpen] = useState(false);
+  const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(true);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
@@ -1035,10 +1070,35 @@ function TerminalPaneView({
 
   useEffect(() => {
     return () => {
+      if (tmuxWheelFlushTimerRef.current !== null) {
+        window.clearTimeout(tmuxWheelFlushTimerRef.current);
+        tmuxWheelFlushTimerRef.current = null;
+      }
       multilinePasteConfirmationResolverRef.current?.(false);
       multilinePasteConfirmationResolverRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    setTmuxMouseEnabled(true);
+  }, [pane.tmuxSessionId]);
+
+  useEffect(() => {
+    function handleTmuxMouseModeEvent(event: Event) {
+      const detail = event instanceof CustomEvent ? event.detail : null;
+      if (
+        !detail ||
+        detail.sessionId !== pane.tmuxSessionId ||
+        typeof detail.enabled !== "boolean"
+      ) {
+        return;
+      }
+      setTmuxMouseEnabled(detail.enabled);
+    }
+
+    window.addEventListener(TMUX_MOUSE_MODE_EVENT, handleTmuxMouseModeEvent);
+    return () => window.removeEventListener(TMUX_MOUSE_MODE_EVENT, handleTmuxMouseModeEvent);
+  }, [pane.tmuxSessionId]);
 
   function requestMultilinePasteConfirmation() {
     multilinePasteConfirmationResolverRef.current?.(false);
@@ -1063,6 +1123,33 @@ function TerminalPaneView({
     }
 
     writeInput(data);
+  }
+
+  function flushTmuxWheelScroll() {
+    tmuxWheelFlushTimerRef.current = null;
+    const lines = Math.max(-120, Math.min(120, tmuxWheelPendingLinesRef.current));
+    tmuxWheelPendingLinesRef.current = 0;
+    if (!lines || pane.connection?.type !== "ssh" || !pane.tmuxSessionId) {
+      return;
+    }
+
+    void invokeCommand("scroll_tmux_pane", {
+      request: {
+        ...tmuxConnectionRequest(pane.connection),
+        tmuxSessionId: pane.tmuxSessionId,
+        lines,
+      },
+    }).catch((error) => {
+      console.warn("tmux wheel scroll failed.", error);
+    });
+  }
+
+  function handleTmuxWheelScroll(lines: number) {
+    tmuxWheelPendingLinesRef.current += lines;
+    if (tmuxWheelFlushTimerRef.current !== null) {
+      return;
+    }
+    tmuxWheelFlushTimerRef.current = window.setTimeout(flushTmuxWheelScroll, 40);
   }
 
   useEffect(() => {
@@ -1115,6 +1202,7 @@ function TerminalPaneView({
         : terminalSettings;
     const terminal = createTerminalRenderer(rendererSettings);
     terminalRendererRef.current = terminal;
+    terminal.setWheelScrollbackOverride(Boolean(pane.tmuxSessionId && !tmuxMouseEnabled), handleTmuxWheelScroll);
     terminal.open(element);
     terminal.fit();
     focusTerminalUnlessExternalInputIsActive(terminal, paneRef.current);
@@ -1380,6 +1468,11 @@ function TerminalPaneView({
         resizeFrameRef.current = null;
       }
       clearScheduledResizeTimeouts();
+      if (tmuxWheelFlushTimerRef.current !== null) {
+        window.clearTimeout(tmuxWheelFlushTimerRef.current);
+        tmuxWheelFlushTimerRef.current = null;
+      }
+      tmuxWheelPendingLinesRef.current = 0;
       removeOutputListener?.();
       const sessionId = sessionIdRef.current;
       if (sessionId) {
@@ -1409,6 +1502,13 @@ function TerminalPaneView({
     recordTerminalStartMetric,
     terminalSettings,
   ]);
+
+  useEffect(() => {
+    terminalRendererRef.current?.setWheelScrollbackOverride(
+      Boolean(pane.tmuxSessionId && !tmuxMouseEnabled),
+      handleTmuxWheelScroll,
+    );
+  }, [pane.tmuxSessionId, tmuxMouseEnabled]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -1690,7 +1790,12 @@ function TerminalPaneView({
         </span>
         <div className="terminal-pane-actions">
           {pane.connection ? (
-            <TmuxSessionTag connection={pane.connection} sessionId={pane.tmuxSessionId} tabId={tabId} />
+            <TmuxSessionTag
+              connection={pane.connection}
+              onMouseModeChange={setTmuxMouseEnabled}
+              sessionId={pane.tmuxSessionId}
+              tabId={tabId}
+            />
           ) : null}
           {recordingInfo ? <span className="terminal-recording-status">{t("terminal.recording")}</span> : null}
           <button
@@ -1717,6 +1822,16 @@ function TerminalPaneView({
               <span>{t("terminal.sftp")}</span>
             </button>
           ) : null}
+          <button
+            className={`terminal-pane-action quick-command-toggle${quickCommandBarVisible ? " active" : ""}`}
+            aria-label={quickCommandBarVisible ? t("terminal.quickCommandsHide") : t("terminal.quickCommandsShow")}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onToggleQuickCommandBar}
+            title={quickCommandBarVisible ? t("terminal.quickCommandsHide") : t("terminal.quickCommandsShow")}
+            type="button"
+          >
+            <PanelBottom size={13} />
+          </button>
           <button
             className="terminal-pane-action"
             aria-label={t("terminal.copySelection")}

@@ -249,10 +249,7 @@ impl Secrets {
         self.read_secret(SecretReferenceRequest::tavily_search_api_key(owner_id))
     }
 
-    pub(crate) fn read_email_api_key(
-        &self,
-        owner_id: String,
-    ) -> Result<Option<String>, String> {
+    pub(crate) fn read_email_api_key(&self, owner_id: String) -> Result<Option<String>, String> {
         self.read_secret(SecretReferenceRequest::email_api_key(owner_id))
     }
 
@@ -267,7 +264,10 @@ impl Secrets {
         self.read_secret(SecretReferenceRequest::widget_secret(owner_id))
     }
 
-    pub(crate) fn read_mcp_server_secret(&self, owner_id: String) -> Result<Option<String>, String> {
+    pub(crate) fn read_mcp_server_secret(
+        &self,
+        owner_id: String,
+    ) -> Result<Option<String>, String> {
         self.read_secret(SecretReferenceRequest::mcp_server_secret(owner_id))
     }
 

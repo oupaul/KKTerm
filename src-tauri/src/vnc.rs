@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -8,7 +8,7 @@ use std::{
 };
 use tauri::{AppHandle, Emitter};
 use tokio::{
-    net::{lookup_host, TcpStream},
+    net::{TcpStream, lookup_host},
     runtime::Runtime,
     sync::{mpsc, oneshot},
     time,

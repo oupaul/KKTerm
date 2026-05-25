@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Deserialize;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
@@ -7,10 +7,7 @@ use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
 
 #[cfg(target_os = "windows")]
-use windows::Win32::{
-    Foundation::HWND,
-    UI::WindowsAndMessaging::ShowOwnedPopups,
-};
+use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::ShowOwnedPopups};
 
 const TRAY_ID: &str = "kkterm-main";
 const DONT_SLEEP_ITEM_ID: &str = "kkterm-tray-dont-sleep";

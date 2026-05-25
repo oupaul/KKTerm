@@ -130,9 +130,18 @@ mod tests {
 
     #[test]
     fn extracts_simple_metric() {
-        assert_eq!(extract_metric(&fake_snapshot(), PerformanceMetric::CpuPercent), json!(42.5));
-        assert_eq!(extract_metric(&fake_snapshot(), PerformanceMetric::RamPercent), json!(70.0));
-        assert_eq!(extract_metric(&fake_snapshot(), PerformanceMetric::HandleCount), json!(1234));
+        assert_eq!(
+            extract_metric(&fake_snapshot(), PerformanceMetric::CpuPercent),
+            json!(42.5)
+        );
+        assert_eq!(
+            extract_metric(&fake_snapshot(), PerformanceMetric::RamPercent),
+            json!(70.0)
+        );
+        assert_eq!(
+            extract_metric(&fake_snapshot(), PerformanceMetric::HandleCount),
+            json!(1234)
+        );
     }
 
     #[test]
@@ -147,14 +156,23 @@ mod tests {
     #[test]
     fn missing_field_yields_null() {
         let empty = json!({});
-        assert_eq!(extract_metric(&empty, PerformanceMetric::CpuPercent), Value::Null);
-        assert_eq!(extract_metric(&empty, PerformanceMetric::DiskUsedPercent), Value::Null);
+        assert_eq!(
+            extract_metric(&empty, PerformanceMetric::CpuPercent),
+            Value::Null
+        );
+        assert_eq!(
+            extract_metric(&empty, PerformanceMetric::DiskUsedPercent),
+            Value::Null
+        );
     }
 
     #[test]
     fn null_field_yields_null_not_panic() {
         // First-tick CPU is null until two samples have been taken.
         let snapshot = json!({ "cpuPercent": Value::Null });
-        assert_eq!(extract_metric(&snapshot, PerformanceMetric::CpuPercent), Value::Null);
+        assert_eq!(
+            extract_metric(&snapshot, PerformanceMetric::CpuPercent),
+            Value::Null
+        );
     }
 }

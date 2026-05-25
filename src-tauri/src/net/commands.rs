@@ -4,7 +4,7 @@
 //! Policy gates (allowWidgetNetworkTools, ai.network) are wired in lib.rs at the
 //! registration boundary in a follow-up task once storage accessors exist.
 
-use crate::net::{dns, interfaces, ping, scan, stream::StreamRegistry, whois, wol, NetError};
+use crate::net::{NetError, dns, interfaces, ping, scan, stream::StreamRegistry, whois, wol};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
@@ -26,23 +26,29 @@ struct NetEventPayload {
 }
 
 fn emit_event(app: &AppHandle, subscription_id: &str, payload: serde_json::Value) {
-    let _ = app.emit(EVENT_CHANNEL, NetEventPayload {
-        subscription_id: subscription_id.into(),
-        kind: "event",
-        payload: Some(payload),
-        ok: None,
-        error: None,
-    });
+    let _ = app.emit(
+        EVENT_CHANNEL,
+        NetEventPayload {
+            subscription_id: subscription_id.into(),
+            kind: "event",
+            payload: Some(payload),
+            ok: None,
+            error: None,
+        },
+    );
 }
 
 fn emit_done(app: &AppHandle, subscription_id: &str, ok: bool, error: Option<NetError>) {
-    let _ = app.emit(EVENT_CHANNEL, NetEventPayload {
-        subscription_id: subscription_id.into(),
-        kind: "done",
-        payload: None,
-        ok: Some(ok),
-        error,
-    });
+    let _ = app.emit(
+        EVENT_CHANNEL,
+        NetEventPayload {
+            subscription_id: subscription_id.into(),
+            kind: "done",
+            payload: None,
+            ok: Some(ok),
+            error,
+        },
+    );
 }
 
 // ============ One-shot commands ============
@@ -113,7 +119,9 @@ pub async fn network_ping_start(
         timeout_ms: args.timeout_ms.unwrap_or(ping::DEFAULT_TIMEOUT_MS),
         ttl: args.ttl.unwrap_or(ping::DEFAULT_TTL),
         size: args.size.unwrap_or(ping::DEFAULT_SIZE),
-        fallback_tcp_port: args.fallback_tcp_port.unwrap_or(ping::DEFAULT_FALLBACK_PORT),
+        fallback_tcp_port: args
+            .fallback_tcp_port
+            .unwrap_or(ping::DEFAULT_FALLBACK_PORT),
     };
     let reg_arc: Arc<StreamRegistry> = registry.inner().clone();
     let app_clone = app.clone();
@@ -125,7 +133,11 @@ pub async fn network_ping_start(
         let app_for_pump = app_clone.clone();
         let pump = tokio::spawn(async move {
             while let Some(reply) = rx.recv().await {
-                emit_event(&app_for_pump, &id_for_pump, serde_json::to_value(reply).unwrap_or_default());
+                emit_event(
+                    &app_for_pump,
+                    &id_for_pump,
+                    serde_json::to_value(reply).unwrap_or_default(),
+                );
             }
         });
         let outcome = ping::run_ping(&host, opts, token.clone(), tx).await;
@@ -133,9 +145,14 @@ pub async fn network_ping_start(
         let cancelled = token.is_cancelled();
         match outcome {
             Ok(()) => emit_done(
-                &app_clone, &id,
+                &app_clone,
+                &id,
                 !cancelled,
-                if cancelled { Some(NetError::Cancelled) } else { None },
+                if cancelled {
+                    Some(NetError::Cancelled)
+                } else {
+                    None
+                },
             ),
             Err(e) => emit_done(&app_clone, &id, false, Some(e)),
         }
@@ -180,7 +197,11 @@ pub async fn network_port_scan_start(
         let app_for_pump = app_clone.clone();
         let pump = tokio::spawn(async move {
             while let Some(r) = rx.recv().await {
-                emit_event(&app_for_pump, &id_for_pump, serde_json::to_value(r).unwrap_or_default());
+                emit_event(
+                    &app_for_pump,
+                    &id_for_pump,
+                    serde_json::to_value(r).unwrap_or_default(),
+                );
             }
         });
         let outcome = scan::run_port_scan(&host, ports, opts, token.clone(), tx).await;
@@ -188,9 +209,14 @@ pub async fn network_port_scan_start(
         let cancelled = token.is_cancelled();
         match outcome {
             Ok(()) => emit_done(
-                &app_clone, &id,
+                &app_clone,
+                &id,
                 !cancelled,
-                if cancelled { Some(NetError::Cancelled) } else { None },
+                if cancelled {
+                    Some(NetError::Cancelled)
+                } else {
+                    None
+                },
             ),
             Err(e) => emit_done(&app_clone, &id, false, Some(e)),
         }

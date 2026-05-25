@@ -38,6 +38,7 @@ import type {
   TerminalPane,
   GeneralSettings,
   DashboardSettings,
+  QuickCommand,
   TerminalSettings,
   TerminalStartMetric,
   WorkspacePane,
@@ -51,6 +52,8 @@ import type { LocalShellOption } from "./modules/workspace/connections/utils";
 
 const LAYOUT_STORAGE_PREFIX = "kkterm.layout.";
 const TMUX_SESSION_STORAGE_PREFIX = "kkterm.tmuxSessions.";
+const QUICK_COMMAND_BAR_STORAGE_PREFIX = "kkterm.quickCommandBar.";
+const QUICK_COMMANDS_STORAGE_PREFIX = "kkterm.quickCommands.";
 const TMUX_SESSION_ID_PATTERN = /^[^\s:;]+$/u;
 let statusBarNoticeSequence = 0;
 // English fallback names used only when the active locale has no tmux-safe
@@ -250,6 +253,68 @@ function persistTmuxSessionIds(connectionId: string, sessionIds: string[]) {
   } catch {
     // Storage may be unavailable (private mode, quota); fail silently.
   }
+}
+
+function loadStoredQuickCommandBarVisible(connectionId: string | undefined) {
+  if (!connectionId || typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(`${QUICK_COMMAND_BAR_STORAGE_PREFIX}${connectionId}`) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistQuickCommandBarVisible(connectionId: string | undefined, visible: boolean) {
+  if (!connectionId || typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(`${QUICK_COMMAND_BAR_STORAGE_PREFIX}${connectionId}`, visible ? "true" : "false");
+  } catch {
+    // Storage may be unavailable (private mode, quota); fail silently.
+  }
+}
+
+function loadStoredQuickCommands(connectionId: string | undefined): QuickCommand[] {
+  if (!connectionId || typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(parsed) ? parsed.filter(isQuickCommand) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistQuickCommands(connectionId: string | undefined, commands: QuickCommand[]) {
+  if (!connectionId || typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(`${QUICK_COMMANDS_STORAGE_PREFIX}${connectionId}`, JSON.stringify(commands));
+  } catch {
+    // Storage may be unavailable (private mode, quota); fail silently.
+  }
+}
+
+function isQuickCommand(value: unknown): value is QuickCommand {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const command = value as Partial<QuickCommand>;
+  return (
+    typeof command.id === "string" &&
+    typeof command.label === "string" &&
+    typeof command.command === "string" &&
+    typeof command.iconName === "string" &&
+    typeof command.accentName === "string" &&
+    typeof command.sendEnter === "boolean" &&
+    typeof command.confirm === "boolean"
+  );
 }
 
 function connectionUsesTmux(connection: Connection) {
@@ -635,6 +700,7 @@ interface WorkspaceState {
   activeSessionCounts: Record<string, number>;
   performanceMetrics: PerformanceMetrics;
   statusBarNotice?: StatusBarNotice;
+  quickCommandsByConnection: Record<string, QuickCommand[]>;
   setQuery: (query: string) => void;
   setGeneralSettings: (settings: GeneralSettings) => void;
   setDashboardSettings: (settings: DashboardSettings) => void;
@@ -689,6 +755,17 @@ interface WorkspaceState {
     direction: SplitDirection,
   ) => void;
   closePane: (tabId: string, paneId: string) => void;
+  setQuickCommandBarVisible: (tabId: string, visible: boolean) => void;
+  ensureQuickCommandsLoaded: (connectionId: string | undefined) => void;
+  addQuickCommand: (connectionId: string | undefined, command: QuickCommand) => void;
+  updateQuickCommand: (connectionId: string | undefined, command: QuickCommand) => void;
+  moveQuickCommand: (connectionId: string | undefined, commandId: string, direction: -1 | 1) => void;
+  reorderQuickCommand: (
+    connectionId: string | undefined,
+    commandId: string,
+    targetCommandId: string,
+  ) => void;
+  removeQuickCommand: (connectionId: string | undefined, commandId: string) => void;
   openTmuxSessionInPane: (
     tabId: string,
     connection: Connection,
@@ -737,6 +814,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   activeSessionCounts: {},
   performanceMetrics: {},
   statusBarNotice: undefined,
+  quickCommandsByConnection: {},
   setQuery: (query) => set({ query }),
   setGeneralSettings: (generalSettings) => set({ generalSettings }),
   setDashboardSettings: (dashboardSettings) => set({ dashboardSettings }),
@@ -908,6 +986,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       panes,
       layout,
       focusedPaneId: panes[0]?.id,
+      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
       connection,
     };
 
@@ -977,6 +1056,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       panes: [pane],
       layout: defaultLayoutFor([pane]),
       focusedPaneId: pane.id,
+      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
       connection,
       url: connection.url,
       dataPartition: connection.dataPartition,
@@ -1017,6 +1097,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       panes: [pane],
       layout: defaultLayoutFor([pane]),
       focusedPaneId: pane.id,
+      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
       connection,
     };
 
@@ -1059,6 +1140,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       panes,
       layout,
       focusedPaneId: panes[0]?.id,
+      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
       connection,
       url: connection.url,
       dataPartition: connection.dataPartition,
@@ -1108,6 +1190,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       panes: [pane],
       layout: defaultLayoutFor([pane]),
       focusedPaneId: pane.id,
+      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
       connection,
       url: forward.url,
       sshPortForwardSessionId: forward.forwardId,
@@ -1234,6 +1317,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           tmuxSessionId: appendTmuxSessionId(connection),
         },
       ],
+      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
       connection,
     };
 
@@ -1404,6 +1488,130 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           ? decrementActiveSessionCounts(s.activeSessionCounts, [closingPane.connection.id])
           : s.activeSessionCounts,
     }));
+  },
+  setQuickCommandBarVisible: (tabId, visible) => {
+    const tab = get().tabs.find((entry) => entry.id === tabId);
+    persistQuickCommandBarVisible(tab?.connection?.id, visible);
+    set((state) => ({
+      tabs: state.tabs.map((entry) =>
+        entry.id === tabId ? { ...entry, quickCommandBarVisible: visible } : entry,
+      ),
+    }));
+  },
+  ensureQuickCommandsLoaded: (connectionId) => {
+    if (!connectionId || get().quickCommandsByConnection[connectionId]) {
+      return;
+    }
+    set((state) => ({
+      quickCommandsByConnection: {
+        ...state.quickCommandsByConnection,
+        [connectionId]: loadStoredQuickCommands(connectionId),
+      },
+    }));
+  },
+  addQuickCommand: (connectionId, command) => {
+    if (!connectionId) {
+      return;
+    }
+    set((state) => {
+      const quickCommands = [
+        ...(state.quickCommandsByConnection[connectionId] ?? loadStoredQuickCommands(connectionId)),
+        command,
+      ];
+      persistQuickCommands(connectionId, quickCommands);
+      return {
+        quickCommandsByConnection: {
+          ...state.quickCommandsByConnection,
+          [connectionId]: quickCommands,
+        },
+      };
+    });
+  },
+  updateQuickCommand: (connectionId, command) => {
+    if (!connectionId) {
+      return;
+    }
+    set((state) => {
+      const existing = state.quickCommandsByConnection[connectionId] ?? loadStoredQuickCommands(connectionId);
+      const quickCommands = existing.map((entry) =>
+        entry.id === command.id ? command : entry,
+      );
+      persistQuickCommands(connectionId, quickCommands);
+      return {
+        quickCommandsByConnection: {
+          ...state.quickCommandsByConnection,
+          [connectionId]: quickCommands,
+        },
+      };
+    });
+  },
+  moveQuickCommand: (connectionId, commandId, direction) => {
+    if (!connectionId) {
+      return;
+    }
+    set((state) => {
+      const existing = state.quickCommandsByConnection[connectionId] ?? loadStoredQuickCommands(connectionId);
+      const index = existing.findIndex((entry) => entry.id === commandId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= existing.length) {
+        return {};
+      }
+      const quickCommands = [...existing];
+      const [command] = quickCommands.splice(index, 1);
+      if (!command) {
+        return {};
+      }
+      quickCommands.splice(nextIndex, 0, command);
+      persistQuickCommands(connectionId, quickCommands);
+      return {
+        quickCommandsByConnection: {
+          ...state.quickCommandsByConnection,
+          [connectionId]: quickCommands,
+        },
+      };
+    });
+  },
+  reorderQuickCommand: (connectionId, commandId, targetCommandId) => {
+    if (!connectionId || commandId === targetCommandId) {
+      return;
+    }
+    set((state) => {
+      const existing = state.quickCommandsByConnection[connectionId] ?? loadStoredQuickCommands(connectionId);
+      const index = existing.findIndex((entry) => entry.id === commandId);
+      const targetIndex = existing.findIndex((entry) => entry.id === targetCommandId);
+      if (index < 0 || targetIndex < 0) {
+        return {};
+      }
+      const quickCommands = [...existing];
+      const [command] = quickCommands.splice(index, 1);
+      if (!command) {
+        return {};
+      }
+      quickCommands.splice(targetIndex, 0, command);
+      persistQuickCommands(connectionId, quickCommands);
+      return {
+        quickCommandsByConnection: {
+          ...state.quickCommandsByConnection,
+          [connectionId]: quickCommands,
+        },
+      };
+    });
+  },
+  removeQuickCommand: (connectionId, commandId) => {
+    if (!connectionId) {
+      return;
+    }
+    set((state) => {
+      const existing = state.quickCommandsByConnection[connectionId] ?? loadStoredQuickCommands(connectionId);
+      const quickCommands = existing.filter((entry) => entry.id !== commandId);
+      persistQuickCommands(connectionId, quickCommands);
+      return {
+        quickCommandsByConnection: {
+          ...state.quickCommandsByConnection,
+          [connectionId]: quickCommands,
+        },
+      };
+    });
   },
   openTmuxSessionInPane: (tabId, connection, tmuxSessionId, direction) => {
     set((state) => ({

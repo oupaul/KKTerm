@@ -1,4 +1,4 @@
-use std::sync::{mpsc, Mutex};
+use std::sync::{Mutex, mpsc};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -85,14 +85,14 @@ mod platform {
         System::{
             LibraryLoader::GetModuleHandleW,
             Power::{
-                SetThreadExecutionState, ES_AWAYMODE_REQUIRED, ES_CONTINUOUS, ES_DISPLAY_REQUIRED,
-                ES_SYSTEM_REQUIRED,
+                ES_AWAYMODE_REQUIRED, ES_CONTINUOUS, ES_DISPLAY_REQUIRED, ES_SYSTEM_REQUIRED,
+                SetThreadExecutionState,
             },
             Shutdown::{ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy},
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, PeekMessageW,
-            RegisterClassW, TranslateMessage, UnregisterClassW, CW_USEDEFAULT, MSG, PM_REMOVE,
+            CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, MSG,
+            PM_REMOVE, PeekMessageW, RegisterClassW, TranslateMessage, UnregisterClassW,
             WM_ENDSESSION, WM_QUERYENDSESSION, WNDCLASSW, WS_OVERLAPPED,
         },
     };

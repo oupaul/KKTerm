@@ -8,16 +8,16 @@ use github_copilot_sdk::{
 use lettre::message::{Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::oneshot;
 use tokio::time::timeout;
@@ -41,7 +41,7 @@ use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
 use crate::dashboard_validation::drop_unused_script_libraries;
 use crate::storage::{
-    ai_provider_secret_owner_id, AiAssistantToolSettings, AiProviderSettings, Storage,
+    AiAssistantToolSettings, AiProviderSettings, Storage, ai_provider_secret_owner_id,
 };
 
 static LIVE_TOOL_REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -5184,7 +5184,7 @@ async fn network_tool(name: &str, args: Value) -> String {
 }
 
 async fn watchdog_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
-    use crate::watchdog::registry::{validate_config, WatchdogRegistry};
+    use crate::watchdog::registry::{WatchdogRegistry, validate_config};
     use crate::watchdog::types::{WatchdogAction, WatchdogConfig};
     let Some(registry) = app.try_state::<std::sync::Arc<WatchdogRegistry>>() else {
         return json!({"ok": false, "error": "watchdog registry unavailable"}).to_string();
@@ -5554,18 +5554,22 @@ async fn send_email_sendgrid(settings: &AiProviderSettings, request: &EmailToolR
         "to": request.to.iter().map(|email| json!({"email": email})).collect::<Vec<_>>()
     });
     if !request.cc.is_empty() {
-        personalization["cc"] = json!(request
-            .cc
-            .iter()
-            .map(|email| json!({"email": email}))
-            .collect::<Vec<_>>());
+        personalization["cc"] = json!(
+            request
+                .cc
+                .iter()
+                .map(|email| json!({"email": email}))
+                .collect::<Vec<_>>()
+        );
     }
     if !request.bcc.is_empty() {
-        personalization["bcc"] = json!(request
-            .bcc
-            .iter()
-            .map(|email| json!({"email": email}))
-            .collect::<Vec<_>>());
+        personalization["bcc"] = json!(
+            request
+                .bcc
+                .iter()
+                .map(|email| json!({"email": email}))
+                .collect::<Vec<_>>()
+        );
     }
     let mut content = Vec::new();
     if let Some(text) = &request.text {
@@ -7298,10 +7302,11 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(plan.extra_confirmation_required);
-        assert!(plan
-            .safety_notes
-            .iter()
-            .any(|note| note.contains("credentials")));
+        assert!(
+            plan.safety_notes
+                .iter()
+                .any(|note| note.contains("credentials"))
+        );
     }
 
     #[test]
@@ -7316,10 +7321,11 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(!plan.extra_confirmation_required);
-        assert!(plan
-            .safety_notes
-            .iter()
-            .any(|note| note.contains("Selected terminal output")));
+        assert!(
+            plan.safety_notes
+                .iter()
+                .any(|note| note.contains("Selected terminal output"))
+        );
     }
 
     #[test]
@@ -7334,10 +7340,11 @@ mod tests {
         .expect("proposal is planned");
 
         assert!(plan.extra_confirmation_required);
-        assert!(plan
-            .safety_notes
-            .iter()
-            .any(|note| note.contains("Selected output may contain credentials")));
+        assert!(
+            plan.safety_notes
+                .iter()
+                .any(|note| note.contains("Selected output may contain credentials"))
+        );
     }
 
     #[test]
@@ -7707,9 +7714,11 @@ mod tests {
             .get("content")
             .and_then(Value::as_array)
             .expect("user content parts are present");
-        assert!(user_content
-            .iter()
-            .any(|part| part.get("type").and_then(Value::as_str) == Some("input_image")));
+        assert!(
+            user_content
+                .iter()
+                .any(|part| part.get("type").and_then(Value::as_str) == Some("input_image"))
+        );
         let file_content = input[2]
             .get("content")
             .and_then(Value::as_array)
@@ -7904,7 +7913,9 @@ mod tests {
 
         assert_eq!(
             responses_stream_error_message(&event).as_deref(),
-            Some("Your input exceeds the context window of this model. Please adjust your input and try again.")
+            Some(
+                "Your input exceeds the context window of this model. Please adjust your input and try again."
+            )
         );
     }
 
@@ -8463,11 +8474,13 @@ mod tests {
             .expect("secret settings field branch is present");
 
         assert!(!secret_branch.pointer("/properties/defaultValue").is_some());
-        assert!(!secret_branch
-            .pointer("/required")
-            .and_then(Value::as_array)
-            .expect("secret branch lists required properties")
-            .contains(&json!("defaultValue")));
+        assert!(
+            !secret_branch
+                .pointer("/required")
+                .and_then(Value::as_array)
+                .expect("secret branch lists required properties")
+                .contains(&json!("defaultValue"))
+        );
     }
 
     #[test]
@@ -8491,11 +8504,12 @@ mod tests {
             .expect("structured script body schema exists");
         assert!(body_schema.pointer("/properties/source").is_some());
         assert!(body_schema.pointer("/anyOf").is_none());
-        assert!(tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/bodyJson")
-            .is_some());
+        assert!(
+            tool.function
+                .parameters
+                .pointer("/properties/patch/properties/bodyJson")
+                .is_some()
+        );
     }
 
     #[test]
@@ -8574,56 +8588,76 @@ mod tests {
             .find(|tool| tool.function.name == "dashboard_update_custom_widget")
             .expect("dashboard update custom widget tool exists");
 
-        assert!(create_tool
-            .function
-            .parameters
-            .pointer("/properties/body/properties/libraries")
-            .is_some());
-        assert!(update_tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/body/properties/libraries")
-            .is_some());
-        assert!(create_tool
-            .function
-            .parameters
-            .pointer("/properties/body/required")
-            .and_then(Value::as_array)
-            .is_some_and(|required| required.contains(&json!("libraries"))));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Dashboard Widget Archetype contract"));
-        assert!(create_tool
-            .function
-            .parameters
-            .pointer("/properties/widgetArchetype/enum")
-            .and_then(Value::as_array)
-            .is_some_and(|values| values.contains(&json!("utilityInstrument"))));
-        assert!(create_tool
-            .function
-            .parameters
-            .pointer("/required")
-            .and_then(Value::as_array)
-            .is_some_and(|required| required.contains(&json!("widgetArchetype"))));
-        assert!(create_tool
-            .function
-            .description
-            .contains("do not create a text-only placeholder or scaffold"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("use multiple tool-call rounds"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("wired to the actual data source"));
-        assert!(update_tool
-            .function
-            .parameters
-            .pointer("/properties/patch/properties/body/required")
-            .and_then(Value::as_array)
-            .is_some_and(|required| required.contains(&json!("libraries"))));
+        assert!(
+            create_tool
+                .function
+                .parameters
+                .pointer("/properties/body/properties/libraries")
+                .is_some()
+        );
+        assert!(
+            update_tool
+                .function
+                .parameters
+                .pointer("/properties/patch/properties/body/properties/libraries")
+                .is_some()
+        );
+        assert!(
+            create_tool
+                .function
+                .parameters
+                .pointer("/properties/body/required")
+                .and_then(Value::as_array)
+                .is_some_and(|required| required.contains(&json!("libraries")))
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard Widget Archetype contract")
+        );
+        assert!(
+            create_tool
+                .function
+                .parameters
+                .pointer("/properties/widgetArchetype/enum")
+                .and_then(Value::as_array)
+                .is_some_and(|values| values.contains(&json!("utilityInstrument")))
+        );
+        assert!(
+            create_tool
+                .function
+                .parameters
+                .pointer("/required")
+                .and_then(Value::as_array)
+                .is_some_and(|required| required.contains(&json!("widgetArchetype")))
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("do not create a text-only placeholder or scaffold")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("use multiple tool-call rounds")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("wired to the actual data source")
+        );
+        assert!(
+            update_tool
+                .function
+                .parameters
+                .pointer("/properties/patch/properties/body/required")
+                .and_then(Value::as_array)
+                .is_some_and(|required| required.contains(&json!("libraries")))
+        );
 
         let enum_values = create_tool
             .function
@@ -8648,101 +8682,143 @@ mod tests {
             );
         }
         assert!(!enum_values.contains(&json!("mermaid")));
-        assert!(create_tool
-            .function
-            .description
-            .contains("For Three.js widgets"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Dashboard widget physics contract"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("List body.libraries [\"matter\"]"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("For Three.js widgets")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard widget physics contract")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("List body.libraries [\"matter\"]")
+        );
         assert!(create_tool.function.description.contains("Matter.js"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("pass a real canvas element to QRCode.toCanvas"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("KK.onViewportResize"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("treat the widget root as the full allocated surface"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Do not create a smaller centered app card"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("pass a real canvas element to QRCode.toCanvas")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("KK.onViewportResize")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("treat the widget root as the full allocated surface")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Do not create a smaller centered app card")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
+        );
         assert!(create_tool.function.description.contains("kk-shell"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("durable base motion"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("does not decay to a static frame"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("restart that loop when visibility returns"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("chartjs, echarts, uplot, leaflet"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Top-level await is not available"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("durable base motion")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("does not decay to a static frame")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("restart that loop when visibility returns")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("chartjs, echarts, uplot, leaflet")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Top-level await is not available")
+        );
         assert!(create_tool.function.description.contains("async IIFE"));
         assert!(create_tool.function.description.contains("KK.onFileDrop"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("KK.getPerformanceCounters"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("generated source is smoke-checked"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("document.getElementById('some-id')"));
-        assert!(update_tool
-            .function
-            .description
-            .contains("validation reports a DOM mount"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("folder drop zones"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Dashboard widget UTF-8 contract"));
-        assert!(update_tool
-            .function
-            .description
-            .contains("pre-serialized UTF-8 JSON string"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("KK.getPerformanceCounters")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("generated source is smoke-checked")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("document.getElementById('some-id')")
+        );
+        assert!(
+            update_tool
+                .function
+                .description
+                .contains("validation reports a DOM mount")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("folder drop zones")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard widget UTF-8 contract")
+        );
+        assert!(
+            update_tool
+                .function
+                .description
+                .contains("pre-serialized UTF-8 JSON string")
+        );
     }
 
     #[test]
     fn dashboard_widget_tool_schema_is_script_only() {
         let schema = dashboard_create_widget_schema();
         assert!(schema.pointer("/properties/kind").is_none());
-        assert!(schema
-            .pointer("/properties/body/required")
-            .and_then(Value::as_array)
-            .expect("script body has required fields")
-            .contains(&json!("source")));
+        assert!(
+            schema
+                .pointer("/properties/body/required")
+                .and_then(Value::as_array)
+                .expect("script body has required fields")
+                .contains(&json!("source"))
+        );
         assert!(schema.pointer("/properties/body/anyOf").is_none());
     }
 
@@ -8823,10 +8899,11 @@ mod tests {
             .find(|tool| tool.function.name == "performance_counters")
             .expect("performance counters tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("low-overhead local Windows performance snapshot"));
+        assert!(
+            tool.function
+                .description
+                .contains("low-overhead local Windows performance snapshot")
+        );
         assert_eq!(
             tool.function.parameters,
             json!({"type":"object","properties":{}})
@@ -8846,10 +8923,11 @@ mod tests {
             .find(|tool| tool.function.name == "send_email")
             .expect("send email tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("Send one email through the configured email provider"));
+        assert!(
+            tool.function
+                .description
+                .contains("Send one email through the configured email provider")
+        );
         assert_eq!(
             tool.function
                 .parameters
@@ -8969,8 +9047,10 @@ mod tests {
         assert!(system_content.contains("KK.getViewport()"));
         assert!(system_content.contains("treat the widget root as the full allocated surface"));
         assert!(system_content.contains("Do not create a smaller centered app card"));
-        assert!(system_content
-            .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers"));
+        assert!(
+            system_content
+                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
+        );
         assert!(system_content.contains("kk-shell"));
         assert!(system_content.contains("chartjs, echarts, leaflet"));
         assert!(system_content.contains("KK.onFileDrop"));
@@ -9000,10 +9080,11 @@ mod tests {
             .find(|tool| tool.function.name == "request_secret_entry")
             .expect("secret entry request tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("without exposing the secret"));
+        assert!(
+            tool.function
+                .description
+                .contains("without exposing the secret")
+        );
         assert_eq!(
             tool.function.parameters.pointer("/properties/kind/enum"),
             Some(&json!(["widgetSecret", "aiApiKey"]))
@@ -9028,10 +9109,12 @@ mod tests {
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "dashboard-widget-secret:inst-123:apiKey");
-        assert!(value["secretRequestMarkdown"]
-            .as_str()
-            .unwrap()
-            .contains("```kkterm-secret-request"));
+        assert!(
+            value["secretRequestMarkdown"]
+                .as_str()
+                .unwrap()
+                .contains("```kkterm-secret-request")
+        );
         assert!(!result.contains("secret\":\""));
     }
 
@@ -9049,10 +9132,12 @@ mod tests {
 
         assert_eq!(value["ok"], true);
         assert_eq!(value["ownerId"], "ai-provider:openrouter");
-        assert!(value["secretRequestMarkdown"]
-            .as_str()
-            .unwrap()
-            .contains("\"ownerId\":\"ai-provider:openrouter\""));
+        assert!(
+            value["secretRequestMarkdown"]
+                .as_str()
+                .unwrap()
+                .contains("\"ownerId\":\"ai-provider:openrouter\"")
+        );
     }
 
     #[test]
@@ -9169,10 +9254,11 @@ mod tests {
             .find(|tool| tool.function.name == "assistant_use_skill")
             .expect("skill invocation tool is available");
 
-        assert!(tool
-            .function
-            .description
-            .contains("Load one Assistant Skill"));
+        assert!(
+            tool.function
+                .description
+                .contains("Load one Assistant Skill")
+        );
         assert_eq!(
             tool.function.parameters.pointer("/properties/name/enum"),
             Some(&json!(["ssh-troubleshooter"]))
@@ -9220,23 +9306,31 @@ mod tests {
             .find(|tool| tool.function.name == "dashboard_create_widget")
             .expect("dashboard create widget tool exists");
 
-        assert!(create_tool
-            .function
-            .description
-            .contains("OpenDesign-style design direction"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Operator console"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("Data observatory"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("OpenDesign-style design direction")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Operator console")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Data observatory")
+        );
         assert!(create_tool.function.description.contains("self-critique"));
-        assert!(create_tool
-            .function
-            .description
-            .contains("contrast, hierarchy, density, responsiveness, and motion cost"));
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("contrast, hierarchy, density, responsiveness, and motion cost")
+        );
 
         let messages = build_agent_messages(
             "Create an eye-catching dashboard widget.".to_string(),
@@ -9314,10 +9408,12 @@ mod tests {
 
         assert_eq!(value["needsChatApproval"], true);
         assert_eq!(value["approved"], Value::Null);
-        assert!(!value["message"]
-            .as_str()
-            .unwrap_or_default()
-            .contains("Allow All"));
+        assert!(
+            !value["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Allow All")
+        );
 
         let messages = build_agent_messages(
             "Create a widget".to_string(),
@@ -9377,14 +9473,18 @@ mod tests {
             .find(|tool| tool.function.name == "tutorial_highlight")
             .expect("tutorial tool is registered");
 
-        assert!(tutorial
-            .function
-            .description
-            .contains("connections.addConnection"));
-        assert!(tutorial
-            .function
-            .description
-            .contains("navigation page=workspace"));
+        assert!(
+            tutorial
+                .function
+                .description
+                .contains("connections.addConnection")
+        );
+        assert!(
+            tutorial
+                .function
+                .description
+                .contains("navigation page=workspace")
+        );
     }
 
     #[test]

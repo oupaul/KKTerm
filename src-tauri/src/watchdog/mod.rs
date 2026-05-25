@@ -44,18 +44,24 @@ pub const WATCHDOG_TICK_RING_CAP: usize = 200;
 pub enum WatchdogError {
     CapacityExceeded,
     NotFound,
-    InvalidConfig { reason: String },
+    InvalidConfig {
+        reason: String,
+    },
     /// Reserved for staged rollouts where a new `WatchdogTarget` variant
     /// is added to the schema before its sampler ships — validators can
     /// return this until the wiring completes. Currently no variants are
     /// in that state.
     #[allow(dead_code)]
-    UnsupportedTarget { reason: String },
+    UnsupportedTarget {
+        reason: String,
+    },
     AlreadyTerminal,
     /// Reserved for step 7+ target dispatchers that can fail at sample time
     /// (network unreachable, SSH session gone, etc.).
     #[allow(dead_code)]
-    Internal { reason: String },
+    Internal {
+        reason: String,
+    },
 }
 
 impl WatchdogError {
@@ -149,19 +155,30 @@ mod tests {
 
     #[test]
     fn gt_compares_numerics() {
-        assert!(evaluate_predicate(&PredicateOp::Gt { value: 90.0 }, &json!(95)));
-        assert!(!evaluate_predicate(&PredicateOp::Gt { value: 90.0 }, &json!(80)));
+        assert!(evaluate_predicate(
+            &PredicateOp::Gt { value: 90.0 },
+            &json!(95)
+        ));
+        assert!(!evaluate_predicate(
+            &PredicateOp::Gt { value: 90.0 },
+            &json!(80)
+        ));
     }
 
     #[test]
     fn gt_returns_false_for_non_numeric() {
-        assert!(!evaluate_predicate(&PredicateOp::Gt { value: 1.0 }, &json!("abc")));
+        assert!(!evaluate_predicate(
+            &PredicateOp::Gt { value: 1.0 },
+            &json!("abc")
+        ));
     }
 
     #[test]
     fn contains_matches_substring() {
         assert!(evaluate_predicate(
-            &PredicateOp::Contains { value: "stalled".to_string() },
+            &PredicateOp::Contains {
+                value: "stalled".to_string()
+            },
             &json!("process stalled at line 12"),
         ));
     }

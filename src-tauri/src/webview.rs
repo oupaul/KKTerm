@@ -1,16 +1,16 @@
 use std::{
     collections::{HashMap, HashSet},
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Mutex, MutexGuard,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use tauri::{
-    webview::{DownloadEvent, PageLoadEvent},
     AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Webview, WebviewBuilder, WebviewUrl,
+    webview::{DownloadEvent, PageLoadEvent},
 };
 
 const HOST_WINDOW_LABEL: &str = "main";
@@ -885,8 +885,8 @@ where
 {
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::{
-            ICoreWebView2PermissionRequestedEventArgs2,
             COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ, COREWEBVIEW2_PERMISSION_STATE_ALLOW,
+            ICoreWebView2PermissionRequestedEventArgs2,
         },
         PermissionRequestedEventHandler,
     };
@@ -988,7 +988,7 @@ fn configure_platform_certificate_error_bypass(webview: &Webview) -> Result<(), 
 
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::{
-            ICoreWebView2_14, COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW,
+            COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW, ICoreWebView2_14,
         },
         ServerCertificateErrorDetectedEventHandler,
     };
@@ -1106,8 +1106,5 @@ fn external_link_bridge_token() -> String {
 fn external_link_shortcut_agent(token: &str) -> Result<String, String> {
     let token = serde_json::to_string(token)
         .map_err(|error| format!("failed to prepare URL external-link token: {error}"))?;
-    Ok(EXTERNAL_LINK_SHORTCUT_AGENT.replace(
-        "__KKTERM_EXTERNAL_LINK_BRIDGE_TOKEN__",
-        &token,
-    ))
+    Ok(EXTERNAL_LINK_SHORTCUT_AGENT.replace("__KKTERM_EXTERNAL_LINK_BRIDGE_TOKEN__", &token))
 }

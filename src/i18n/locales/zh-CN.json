@@ -2054,7 +2054,373 @@
     "layoutReset": "已重置保存的 Connection 布局。",
     "layoutSaved": "已保存 Connection 布局。",
     "resetLayout": "重置布局",
-    "saveLayout": "保存布局"
+    "saveLayout": "保存布局",
+    "quickCommandsBar": "Quick commands",
+    "quickCommandsShow": "Show quick commands",
+    "quickCommandsHide": "Hide quick commands",
+    "quickCommandsAddFirst": "Add quick command",
+    "quickCommandsManage": "Manage Quick Commands",
+    "quickCommandsNoPane": "No active terminal Pane for quick commands.",
+    "quickCommandsRun": "Run command",
+    "quickCommandsDangerous": "Dangerous",
+    "quickCommandsConfirmTitle": "Run quick command?",
+    "quickCommandsConfirm": "Run \"{{label}}\" in the focused terminal Pane?",
+    "quickCommandsDialogHint": "Add saved commands from the library or create your own.",
+    "quickCommandsSaved": "Saved commands",
+    "quickCommandsEmpty": "No quick commands yet.",
+    "quickCommandsDelete": "Delete quick command {{label}}",
+    "quickCommandsMoveUp": "Move {{label}} up",
+    "quickCommandsMoveDown": "Move {{label}} down",
+    "quickCommandsAddCommand": "Add Command",
+    "quickCommandsPickFromLibrary": "Pick From Library",
+    "quickCommandsCustomCommand": "Custom Command",
+    "quickCommandsAddMenu": "Add quick command options",
+    "quickCommandsGenerateWithAi": "Generate command with AI",
+    "quickCommandsAiPromptLabel": "Describe command",
+    "quickCommandsAiPromptPlaceholder": "update apt packages",
+    "quickCommandsAiGenerate": "Generate",
+    "quickCommandsAiGenerating": "Generating...",
+    "quickCommandsAiFailed": "AI could not generate a command: {{message}}",
+    "quickCommandsLibrary": "From Library",
+    "quickCommandsCustom": "Custom",
+    "quickCommandsSearch": "Search command library",
+    "quickCommandsAdd": "Add",
+    "quickCommandsNoLibraryMatches": "No library commands match.",
+    "quickCommandsLabel": "Label",
+    "quickCommandsCommand": "Command",
+    "quickCommandsSendEnter": "Send Enter after command",
+    "quickCommandsRequireConfirm": "Require confirmation before running",
+    "quickCommandsColor": "Color",
+    "quickCommandsIcon": "Icon",
+    "quickCommandsCreate": "Create command",
+    "quickCommandLibrary": {
+      "categoryTabs": "Quick Command Library categories",
+      "subcategoryTabs": "Quick Command Library subcategories",
+      "categories": {
+        "aiAgents": "AI Agents",
+        "developerWorkflow": "Developer Workflow",
+        "containersKubernetes": "Containers & Kubernetes",
+        "linuxAdministration": "Linux Administration",
+        "macosAdministration": "macOS Administration"
+      },
+      "subcategories": {
+        "codingAgents": "Coding Agents",
+        "autonomousAgents": "Autonomous Agents",
+        "git": "Git",
+        "packageManagersRuntimes": "Package Managers & Runtimes",
+        "docker": "Docker",
+        "dockerCompose": "Docker Compose",
+        "kubectl": "kubectl",
+        "servicesLogs": "Services & Logs",
+        "packages": "Packages",
+        "softwareUpdate": "Software Update",
+        "networking": "Networking",
+        "launchdPower": "launchd & Power",
+        "preferences": "Preferences"
+      },
+      "entries": {
+        "aiClaudeNativeInstall": {
+          "label": "Install Claude Code",
+          "description": "Install Claude Code with Anthropic's native installer."
+        },
+        "aiClaudeStart": {
+          "label": "Claude",
+          "description": "Start an interactive Claude Code session."
+        },
+        "aiClaudeBypass": {
+          "label": "Claude bypass permissions",
+          "description": "Run Claude Code without permission prompts. Use only in a trusted sandbox."
+        },
+        "aiClaudeBrewInstall": {
+          "label": "Install Claude Code with Homebrew",
+          "description": "Install Claude Code through Homebrew Cask on macOS."
+        },
+        "aiClaudeBrewUpgrade": {
+          "label": "Upgrade Claude Code",
+          "description": "Upgrade the Homebrew Cask install of Claude Code."
+        },
+        "aiCodexNpmInstall": {
+          "label": "Install Codex with npm",
+          "description": "Install the OpenAI Codex CLI globally with npm."
+        },
+        "aiCodexBrewInstall": {
+          "label": "Install Codex with Homebrew",
+          "description": "Install the OpenAI Codex CLI through Homebrew."
+        },
+        "aiCodexStart": {
+          "label": "Codex",
+          "description": "Start an interactive OpenAI Codex CLI session."
+        },
+        "aiCodexPrompt": {
+          "label": "Codex explain codebase",
+          "description": "Start Codex with a prompt to explain the current repository."
+        },
+        "aiCodexMcpContext7": {
+          "label": "Add Context7 MCP to Codex",
+          "description": "Register the documented Context7 MCP server example with Codex CLI."
+        },
+        "aiCodexNpmUpgrade": {
+          "label": "Upgrade Codex with npm",
+          "description": "Install the latest OpenAI Codex CLI package globally."
+        },
+        "aiGeminiInstall": {
+          "label": "Install Gemini CLI",
+          "description": "Install Google's Gemini CLI globally with npm."
+        },
+        "aiGeminiStart": {
+          "label": "Gemini",
+          "description": "Start an interactive Gemini CLI session."
+        },
+        "aiQwenNpmInstall": {
+          "label": "Install Qwen Code with npm",
+          "description": "Install the latest Qwen Code terminal agent with npm."
+        },
+        "aiQwenBrewInstall": {
+          "label": "Install Qwen Code with Homebrew",
+          "description": "Install Qwen Code through Homebrew."
+        },
+        "aiQwenStart": {
+          "label": "Qwen Code",
+          "description": "Start an interactive Qwen Code session. Configure a provider or API key first."
+        },
+        "aiAiderInstall": {
+          "label": "Install Aider",
+          "description": "Install Aider with the official Mac/Linux installer."
+        },
+        "aiAiderMessage": {
+          "label": "Aider one-shot edit",
+          "description": "Run Aider with a single edit request against a target file."
+        },
+        "aiAiderGemini": {
+          "label": "Aider with Gemini",
+          "description": "Launch Aider using the Gemini model setting."
+        },
+        "aiOpenclawInstall": {
+          "label": "Install OpenClaw",
+          "description": "Run the OpenClaw hosted installer."
+        },
+        "aiOpenclawNpmInstall": {
+          "label": "Install OpenClaw with npm",
+          "description": "Install the latest OpenClaw package globally with npm."
+        },
+        "aiOpenclawOnboard": {
+          "label": "OpenClaw onboard",
+          "description": "Start the recommended OpenClaw onboarding flow."
+        },
+        "aiOpenclawDaemon": {
+          "label": "OpenClaw daemon onboarding",
+          "description": "Run OpenClaw onboarding and install its background daemon."
+        },
+        "aiOpenclawUpdate": {
+          "label": "Update OpenClaw",
+          "description": "Update the OpenClaw installation."
+        },
+        "aiHermesInstall": {
+          "label": "Install Hermes Agent",
+          "description": "Run the Hermes Agent installer from the Nous Research repository."
+        },
+        "aiHermesSourceBashrc": {
+          "label": "Reload bash shell",
+          "description": "Reload bash startup configuration after installing Hermes."
+        },
+        "aiHermesStart": {
+          "label": "Hermes",
+          "description": "Start an interactive Hermes Agent chat."
+        },
+        "aiHermesSetup": {
+          "label": "Hermes setup",
+          "description": "Open the Hermes provider and account setup flow."
+        },
+        "aiHermesModel": {
+          "label": "Hermes model",
+          "description": "Configure or inspect the active Hermes model."
+        },
+        "aiHermesDoctor": {
+          "label": "Hermes doctor",
+          "description": "Run Hermes health checks."
+        },
+        "aiHermesDashboard": {
+          "label": "Hermes dashboard",
+          "description": "Open the local Hermes dashboard."
+        },
+        "aiGooseInstall": {
+          "label": "Install Goose",
+          "description": "Run the stable Goose CLI installer."
+        },
+        "devGitSwitch": {
+          "label": "Create feature branch",
+          "description": "Create and switch to a new Git feature branch."
+        },
+        "devGitPullRebase": {
+          "label": "Pull with rebase",
+          "description": "Fetch and replay local commits on top of the upstream branch."
+        },
+        "devGitRestoreHead": {
+          "label": "Restore working tree",
+          "description": "Restore tracked files from HEAD. This can discard local edits."
+        },
+        "devGitClean": {
+          "label": "Clean untracked files",
+          "description": "Remove untracked files and folders from the working tree."
+        },
+        "devGitRevert": {
+          "label": "Revert commit",
+          "description": "Create a history-preserving commit that undoes a selected commit."
+        },
+        "devHomebrewInstall": {
+          "label": "Install Homebrew",
+          "description": "Run the standard Homebrew install script."
+        },
+        "devBrewBundleGlobal": {
+          "label": "Install global Brewfile",
+          "description": "Install packages from the global Homebrew Brewfile."
+        },
+        "devNvmInstall": {
+          "label": "Install nvm",
+          "description": "Install nvm using the official install script."
+        },
+        "devNvmInstallNode24": {
+          "label": "Install Node 24",
+          "description": "Install Node.js 24 with nvm."
+        },
+        "devNvmUseNode24": {
+          "label": "Use Node 24",
+          "description": "Switch the current shell to Node.js 24 with nvm."
+        },
+        "devBrewClaude": {
+          "label": "Brew install Claude Code",
+          "description": "Install Claude Code through Homebrew Cask."
+        },
+        "devBrewCodex": {
+          "label": "Brew install Codex",
+          "description": "Install the OpenAI Codex CLI through Homebrew."
+        },
+        "devBrewDocker": {
+          "label": "Brew install Docker Desktop",
+          "description": "Install Docker Desktop through Homebrew Cask."
+        },
+        "devBrewKubectl": {
+          "label": "Brew install kubectl",
+          "description": "Install kubectl through Homebrew."
+        },
+        "containerDockerPs": {
+          "label": "Docker containers",
+          "description": "List running Docker containers."
+        },
+        "containerDockerLogs": {
+          "label": "Docker follow logs",
+          "description": "Follow logs for a container. Replace the placeholder before running."
+        },
+        "containerDockerStop": {
+          "label": "Docker stop container",
+          "description": "Stop a container. Replace the placeholder before running."
+        },
+        "containerComposeUp": {
+          "label": "Compose up detached",
+          "description": "Start the Docker Compose project in the background."
+        },
+        "containerComposeExec": {
+          "label": "Compose shell",
+          "description": "Open a shell in the web service container."
+        },
+        "containerKubectlVersion": {
+          "label": "kubectl client version",
+          "description": "Show the installed kubectl client version."
+        },
+        "containerKubectlPods": {
+          "label": "kubectl pods",
+          "description": "List pods across all namespaces."
+        },
+        "containerKubectlLogs": {
+          "label": "kubectl follow logs",
+          "description": "Follow logs for a pod. Replace the placeholder before running."
+        },
+        "containerKubectlExec": {
+          "label": "kubectl pod shell",
+          "description": "Open a shell in a pod. Replace the placeholder before running."
+        },
+        "containerKubectlApply": {
+          "label": "kubectl apply",
+          "description": "Apply Kubernetes resources from k8s.yaml."
+        },
+        "linuxSystemctlStatusSshd": {
+          "label": "SSH service status",
+          "description": "Check the status of the sshd systemd service."
+        },
+        "linuxSystemctlRestartSshd": {
+          "label": "Restart SSH service",
+          "description": "Restart the sshd systemd service with sudo."
+        },
+        "linuxSystemctlEnableDocker": {
+          "label": "Enable Docker service",
+          "description": "Enable and start the Docker systemd service."
+        },
+        "linuxJournalctlSshd": {
+          "label": "SSH service logs",
+          "description": "Read journal logs for the sshd service."
+        },
+        "linuxAptUpgrade": {
+          "label": "APT update and upgrade",
+          "description": "Update package metadata and upgrade Debian packages."
+        },
+        "linuxAptInstallDocker": {
+          "label": "APT install Docker packages",
+          "description": "Install Docker Engine and the Compose plugin with apt."
+        },
+        "linuxDnfUpgrade": {
+          "label": "DNF upgrade",
+          "description": "Upgrade Fedora packages with dnf."
+        },
+        "linuxDnfInstallCompose": {
+          "label": "DNF install Compose plugin",
+          "description": "Install the Docker Compose plugin with dnf."
+        },
+        "macosSoftwareupdateInstallers": {
+          "label": "List macOS installers",
+          "description": "List available full macOS installers."
+        },
+        "macosNetworksetupServices": {
+          "label": "List network services",
+          "description": "List macOS network services with networksetup."
+        },
+        "macosNetworksetupManual": {
+          "label": "Set manual Ethernet IP",
+          "description": "Set a manual IP configuration for Ethernet. Edit values before running."
+        },
+        "macosScutilSmbProtocol": {
+          "label": "Edit SMB protocol map",
+          "description": "Open an advanced scutil preferences command for SMB protocol settings."
+        },
+        "macosLaunchctlUnloadNetbiosd": {
+          "label": "Unload netbiosd",
+          "description": "Unload the macOS netbiosd launch daemon."
+        },
+        "macosLaunchctlLoadNetbiosd": {
+          "label": "Load netbiosd",
+          "description": "Load the macOS netbiosd launch daemon."
+        },
+        "macosPmsetSchedule": {
+          "label": "Show power schedule",
+          "description": "Show scheduled macOS power events."
+        },
+        "macosPmsetRepeatWake": {
+          "label": "Schedule Monday wake",
+          "description": "Schedule a repeating Monday wake event."
+        },
+        "macosPmsetRepeatCancel": {
+          "label": "Cancel repeat power schedule",
+          "description": "Cancel repeating macOS power events."
+        },
+        "macosDefaultsRead": {
+          "label": "Read defaults domain",
+          "description": "Read a macOS preferences domain. Replace the placeholder before running."
+        },
+        "macosDefaultsWrite": {
+          "label": "Write defaults value",
+          "description": "Write a macOS preferences value. Replace placeholders before running."
+        }
+      }
+    }
   },
   "webview": {
     "address": "网址",

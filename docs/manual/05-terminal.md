@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `terminal.actions`, `terminal.copy`, `terminal.copyShortcut`, `terminal.paste`, `terminal.pasteMultilineConfirm`, `terminal.find`, `terminal.findInScrollback`, `terminal.noResults`, `terminal.closeSearch`, `terminal.previousSearch`, `terminal.nextSearch`, `terminal.font`, `terminal.increaseSize`, `terminal.decreaseSize`, `terminal.resetSize`, `terminal.save`, `terminal.saveBuffer`, `terminal.bufferSaveFailed`, `terminal.startRecording`, `terminal.stopRecording`, `terminal.recording`, `terminal.openRecordings`, `terminal.recordingsTitle`, `terminal.openRecordingsFolder`, `terminal.noRecordings`, `terminal.logFiles`, `terminal.textFiles`, `terminal.starting`, `terminal.sessionFor`, `terminal.startingSessionFor`, `terminal.failedToStart`, `terminal.failedToStartDetail`, `terminal.desktopRuntimeRequired`, `terminal.tauriRequired`, `terminal.noSaveDialog`, `terminal.saveDialog`, `terminal.connectLabel`, `terminal.targetLabel`
-- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, save buffer to file, recording terminal output, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
-- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "export log", "record session", "terminal recording", "transcript"
+- Keys: `terminal.actions`, `terminal.copy`, `terminal.copyShortcut`, `terminal.paste`, `terminal.pasteMultilineConfirm`, `terminal.find`, `terminal.findInScrollback`, `terminal.noResults`, `terminal.closeSearch`, `terminal.previousSearch`, `terminal.nextSearch`, `terminal.font`, `terminal.increaseSize`, `terminal.decreaseSize`, `terminal.resetSize`, `terminal.save`, `terminal.saveBuffer`, `terminal.bufferSaveFailed`, `terminal.startRecording`, `terminal.stopRecording`, `terminal.recording`, `terminal.openRecordings`, `terminal.recordingsTitle`, `terminal.openRecordingsFolder`, `terminal.noRecordings`, `terminal.logFiles`, `terminal.textFiles`, `terminal.quickCommandsShow`, `terminal.quickCommandsHide`, `terminal.quickCommandsManage`, `terminal.quickCommandsLibrary`, `terminal.quickCommandLibrary`, `terminal.quickCommandsCustomCommand`, `terminal.quickCommandsGenerateWithAi`, `terminal.quickCommandsAiPromptLabel`, `terminal.quickCommandsAiPromptPlaceholder`, `terminal.quickCommandsNoPane`, `terminal.starting`, `terminal.sessionFor`, `terminal.startingSessionFor`, `terminal.failedToStart`, `terminal.failedToStartDetail`, `terminal.desktopRuntimeRequired`, `terminal.tauriRequired`, `terminal.noSaveDialog`, `terminal.saveDialog`, `terminal.connectLabel`, `terminal.targetLabel`
+- Topics: terminal external links, copy/paste, multiline paste confirmation, find in scrollback, font size, Quick Command Bar, quick commands, save buffer to file, recording terminal output, starting state, tutorial targets `terminal.pane`, `terminal.startRecording`, `terminal.openSftp`, `terminal.copySelection`, `terminal.sendToAi`, `terminal.actions`, `terminal.searchBar`, `terminal.surface`
+- Synonyms: "open link in browser", "external browser", "highlight text", "search terminal", "zoom terminal", "shrink font", "quick command bar", "quick command", "command shortcut", "export log", "record session", "terminal recording", "transcript"
 
 ## Rendering
 
@@ -54,6 +54,20 @@ Font family, default size, ligature settings, and cursor style are configured gl
 ## View submenu
 
 `terminal.view` toggles per-Pane rendering preferences exposed by the terminal Pane (cursor, line height, etc.).
+
+## Quick Command Bar
+
+The **Quick Command Bar** is the optional bottom bar for terminal Tabs. `terminal.quickCommandsShow` / `terminal.quickCommandsHide` toggles it. The default is off. The visible state is remembered per Connection id in frontend workspace storage and restored when that Connection is opened again.
+
+The Quick Command Bar shows the active Connection's saved Quick Commands and sends one to the focused terminal Pane. If the Tab has no active terminal Pane, KKTerm reports `terminal.quickCommandsNoPane` through the Status Bar. Quick Commands can optionally append Enter to the command text, and commands marked as risky show the app-owned confirmation dialog `terminal.quickCommandsConfirmTitle` / `terminal.quickCommandsConfirm` before sending input.
+
+`terminal.quickCommandsManage` opens the manager dialog for the current Connection's Quick Command Bar. The Add menu offers `terminal.quickCommandsCustomCommand` and `terminal.quickCommandsLibrary` (From Library). Custom commands let the user choose a built-in icon and app palette color from compact picker dialogs, and decide whether confirmation is required. If an AI API key is configured, `terminal.quickCommandsGenerateWithAi` can turn a short request such as `terminal.quickCommandsAiPromptPlaceholder` into a single command using the active Connection context, then inserts the generated text into the Command field without running it. Presets add common executable snippets to that Connection only.
+
+The From Library dialog keeps `terminal.quickCommandsSearch` at the top as a global filter, then organizes results with `terminal.quickCommandLibrary.categoryTabs` and `terminal.quickCommandLibrary.subcategoryTabs`. Built-in category tabs use the `terminal.quickCommandLibrary.categories.*` keys. Risky or state-changing entries show the `terminal.quickCommandsDangerous` tag, use red command emphasis, and are saved with confirmation enabled so they show `terminal.quickCommandsConfirmTitle` / `terminal.quickCommandsConfirm` before sending input.
+
+Each library entry has `terminal.quickCommandsAdd` to save it to the current Connection and `terminal.quickCommandsRun` to run it once in the selected terminal Pane without saving. One-shot runs close the library dialog first, then use the same confirmation prompt for risky entries. Entries with placeholders such as container, pod, commit, domain, key, or value keep Send Enter disabled by default so the user can edit the command before submitting.
+
+Saved commands can be reordered with drag-and-drop from the grip handle or the `terminal.quickCommandsMoveUp` / `terminal.quickCommandsMoveDown` buttons.
 
 ## Saving the buffer
 

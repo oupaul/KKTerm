@@ -41,10 +41,22 @@ pub fn list_interfaces() -> Result<Vec<NetInterface>, NetError> {
             is_up,
         });
         let (ip, family, cidr) = match &iface.addr {
-            if_addrs::IfAddr::V4(v) => (v.ip.to_string(), "v4", cidr_from_mask_v4(v.netmask.octets())),
-            if_addrs::IfAddr::V6(v) => (v.ip.to_string(), "v6", cidr_from_mask_v6(v.netmask.octets())),
+            if_addrs::IfAddr::V4(v) => (
+                v.ip.to_string(),
+                "v4",
+                cidr_from_mask_v4(v.netmask.octets()),
+            ),
+            if_addrs::IfAddr::V6(v) => (
+                v.ip.to_string(),
+                "v6",
+                cidr_from_mask_v6(v.netmask.octets()),
+            ),
         };
-        entry.addresses.push(InterfaceAddress { ip, family, cidr: Some(cidr) });
+        entry.addresses.push(InterfaceAddress {
+            ip,
+            family,
+            cidr: Some(cidr),
+        });
         // If any address on this interface signals loopback / up, surface it.
         entry.is_loopback = entry.is_loopback || is_loopback;
         entry.is_up = entry.is_up || is_up;
@@ -69,7 +81,10 @@ mod tests {
     #[test]
     fn returns_at_least_loopback() {
         let ifaces = list_interfaces().unwrap();
-        assert!(ifaces.iter().any(|i| i.is_loopback), "expected at least one loopback interface");
+        assert!(
+            ifaces.iter().any(|i| i.is_loopback),
+            "expected at least one loopback interface"
+        );
     }
 
     #[test]
@@ -82,7 +97,9 @@ mod tests {
     #[test]
     fn cidr_v6_full_prefix() {
         let mut mask = [0u8; 16];
-        for byte in mask.iter_mut().take(8) { *byte = 0xFF; }
+        for byte in mask.iter_mut().take(8) {
+            *byte = 0xFF;
+        }
         assert_eq!(cidr_from_mask_v6(mask), 64);
     }
 }

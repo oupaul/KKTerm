@@ -17,7 +17,9 @@ pub struct StreamRegistry {
 
 impl StreamRegistry {
     pub fn new() -> Self {
-        Self { inner: Mutex::new(HashMap::new()) }
+        Self {
+            inner: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Register a subscription. Returns Err if global cap exceeded or id duplicates an existing entry.
@@ -50,7 +52,10 @@ impl StreamRegistry {
 
     #[cfg(test)]
     pub fn active_count(&self) -> usize {
-        self.inner.lock().expect("StreamRegistry mutex poisoned").len()
+        self.inner
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .len()
     }
 }
 
@@ -92,7 +97,10 @@ mod tests {
     fn double_register_same_id_is_error() {
         let reg = StreamRegistry::new();
         let _ = reg.register("c".into()).unwrap();
-        assert_eq!(reg.register("c".into()).unwrap_err(), RegisterError::DuplicateId);
+        assert_eq!(
+            reg.register("c".into()).unwrap_err(),
+            RegisterError::DuplicateId
+        );
     }
 
     #[test]

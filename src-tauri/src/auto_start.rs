@@ -5,8 +5,8 @@ mod windows_auto_start {
 
     use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS};
     use windows_sys::Win32::System::Registry::{
-        RegCloseKey, RegDeleteValueW, RegOpenKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER,
-        KEY_SET_VALUE, REG_SZ,
+        HKEY, HKEY_CURRENT_USER, KEY_SET_VALUE, REG_SZ, RegCloseKey, RegDeleteValueW,
+        RegOpenKeyExW, RegSetValueExW,
     };
 
     const RUN_SUBKEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";

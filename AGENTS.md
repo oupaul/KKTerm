@@ -71,9 +71,20 @@ Strong success criteria let you loop independently.
   in `src-tauri/src/ai.rs`, and manual grep hints. `npm run check` validates
   these mappings.
 - All user-visible strings go through i18n. Add English keys first in
-  `src/i18n/locales/en.json`; if translations are not completed in the same
-  change, add one pending file per key under `docs/localization_todo/`. See
+  `src/i18n/locales/en.json`; whenever new UI strings are created or changed,
+  follow `docs/localization_todo/README.md` exactly. If translations are not
+  completed in the same change, add one pending file per key under
+  `docs/localization_todo/` using that README's flow and template. See
   `docs/manual/16-localization.md` and `docs/ARCHITECTURE.md`.
+- App-owned popup dialogs use a single concise title by default. Do not add a
+  subtitle or explanatory header copy unless the flow truly needs it; put
+  supporting text in the dialog body near the relevant controls instead.
+- Dialog footers follow Windows button order: the primary/confirm action comes
+  immediately before Cancel, and the action group anchors to the bottom right
+  unless an existing platform pattern in the same dialog family differs.
+- App-owned popup dialogs must anchor their close button to the dialog's top
+  right corner, independent of header text flow; pad header/content so titles
+  and actions cannot overlap the close control.
 - Built-in MCP tool changes must update `docs/MCP.md`; if Settings AI
   behavior/safety text changes, also update `docs/manual/15-settings.md`.
 

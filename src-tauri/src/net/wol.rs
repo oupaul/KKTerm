@@ -16,9 +16,15 @@ pub struct WolResult {
 }
 
 pub fn parse_mac(input: &str) -> Result<[u8; 6], NetError> {
-    let cleaned: String = input.chars().filter(|c| !matches!(c, ':' | '-' | '.')).collect();
+    let cleaned: String = input
+        .chars()
+        .filter(|c| !matches!(c, ':' | '-' | '.'))
+        .collect();
     if cleaned.len() != 12 {
-        return Err(NetError::invalid(format!("MAC must be 12 hex digits, got {}", cleaned.len())));
+        return Err(NetError::invalid(format!(
+            "MAC must be 12 hex digits, got {}",
+            cleaned.len()
+        )));
     }
     let mut out = [0u8; 6];
     for i in 0..6 {
@@ -37,7 +43,11 @@ pub fn build_magic_packet(mac: [u8; 6]) -> Vec<u8> {
     packet
 }
 
-pub async fn wake(mac_input: &str, broadcast: Option<&str>, port: Option<u16>) -> Result<WolResult, NetError> {
+pub async fn wake(
+    mac_input: &str,
+    broadcast: Option<&str>,
+    port: Option<u16>,
+) -> Result<WolResult, NetError> {
     let mac = parse_mac(mac_input)?;
     let packet = build_magic_packet(mac);
     let dest_str = broadcast.unwrap_or(DEFAULT_BROADCAST);
@@ -46,9 +56,16 @@ pub async fn wake(mac_input: &str, broadcast: Option<&str>, port: Option<u16>) -
         .parse()
         .map_err(|_| NetError::invalid(format!("invalid broadcast address: {}", dest_str)))?;
 
-    let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(|e| NetError::internal(e.to_string()))?;
-    socket.set_broadcast(true).map_err(|e| NetError::internal(e.to_string()))?;
-    socket.send_to(&packet, dest).await.map_err(|e| NetError::internal(e.to_string()))?;
+    let socket = UdpSocket::bind("0.0.0.0:0")
+        .await
+        .map_err(|e| NetError::internal(e.to_string()))?;
+    socket
+        .set_broadcast(true)
+        .map_err(|e| NetError::internal(e.to_string()))?;
+    socket
+        .send_to(&packet, dest)
+        .await
+        .map_err(|e| NetError::internal(e.to_string()))?;
     Ok(WolResult { sent: true })
 }
 
@@ -58,27 +75,42 @@ mod tests {
 
     #[test]
     fn parse_mac_colon_format() {
-        assert_eq!(parse_mac("AA:BB:CC:DD:EE:FF").unwrap(), [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]);
+        assert_eq!(
+            parse_mac("AA:BB:CC:DD:EE:FF").unwrap(),
+            [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
+        );
     }
 
     #[test]
     fn parse_mac_dash_format() {
-        assert_eq!(parse_mac("aa-bb-cc-dd-ee-ff").unwrap(), [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]);
+        assert_eq!(
+            parse_mac("aa-bb-cc-dd-ee-ff").unwrap(),
+            [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
+        );
     }
 
     #[test]
     fn parse_mac_no_separator() {
-        assert_eq!(parse_mac("AABBCCDDEEFF").unwrap(), [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]);
+        assert_eq!(
+            parse_mac("AABBCCDDEEFF").unwrap(),
+            [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
+        );
     }
 
     #[test]
     fn parse_mac_rejects_short() {
-        assert!(matches!(parse_mac("AABB").unwrap_err(), NetError::InvalidArgument { .. }));
+        assert!(matches!(
+            parse_mac("AABB").unwrap_err(),
+            NetError::InvalidArgument { .. }
+        ));
     }
 
     #[test]
     fn parse_mac_rejects_non_hex() {
-        assert!(matches!(parse_mac("ZZ:BB:CC:DD:EE:FF").unwrap_err(), NetError::InvalidArgument { .. }));
+        assert!(matches!(
+            parse_mac("ZZ:BB:CC:DD:EE:FF").unwrap_err(),
+            NetError::InvalidArgument { .. }
+        ));
     }
 
     #[test]

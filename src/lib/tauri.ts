@@ -1339,6 +1339,22 @@ type CommandMap = {
     };
     result: null;
   };
+  scroll_tmux_pane: {
+    args: {
+      request: {
+        host: string;
+        user: string;
+        port?: number;
+        keyPath?: string;
+        proxyJump?: string;
+        authMethod?: "keyFile" | "password" | "agent";
+        secretOwnerId?: string;
+        tmuxSessionId: string;
+        lines: number;
+      };
+    };
+    result: null;
+  };
   close_tmux_session: {
     args: {
       request: {

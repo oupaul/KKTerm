@@ -1,7 +1,7 @@
 use crate::{secrets, ssh};
-use russh::{client, Disconnect};
+use russh::{Disconnect, client};
 use russh_sftp::{
-    client::{fs::Metadata, SftpSession},
+    client::{SftpSession, fs::Metadata},
     protocol::{FileAttributes, FileType, OpenFlags},
 };
 use serde::{Deserialize, Serialize};
@@ -13,8 +13,8 @@ use std::{
     path::{Path, PathBuf},
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::{SystemTime, UNIX_EPOCH},
 };
