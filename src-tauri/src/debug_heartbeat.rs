@@ -5,9 +5,8 @@ mod debug_impl {
         io::Write,
         path::PathBuf,
         sync::{
+            Mutex, OnceLock,
             atomic::{AtomicBool, AtomicU64, Ordering},
-            Mutex,
-            OnceLock,
         },
         thread,
         time::{Duration, Instant},
@@ -136,13 +135,21 @@ mod debug_impl {
                 .as_deref()
                 .map(sanitize_log_value)
                 .unwrap_or_else(|| "none".to_string()),
-            age_or_none(runtime_ms, guard.last_window_event_ms, guard.last_window_event.is_some()),
+            age_or_none(
+                runtime_ms,
+                guard.last_window_event_ms,
+                guard.last_window_event.is_some()
+            ),
             guard
                 .last_tray_event
                 .as_deref()
                 .map(sanitize_log_value)
                 .unwrap_or_else(|| "none".to_string()),
-            age_or_none(runtime_ms, guard.last_tray_event_ms, guard.last_tray_event.is_some()),
+            age_or_none(
+                runtime_ms,
+                guard.last_tray_event_ms,
+                guard.last_tray_event.is_some()
+            ),
         )
     }
 
@@ -182,7 +189,8 @@ mod debug_impl {
     }
 
     fn append_line(line: &str) -> std::io::Result<()> {
-        let path = heartbeat_log_path().unwrap_or_else(|| PathBuf::from("logs").join("kkterm-heartbeat.debug.log"));
+        let path = heartbeat_log_path()
+            .unwrap_or_else(|| PathBuf::from("logs").join("kkterm-heartbeat.debug.log"));
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -206,7 +214,7 @@ mod debug_impl {
 
 #[cfg(debug_assertions)]
 pub(crate) use debug_impl::{
-    record_frontend_heartbeat, record_tray_event, record_window_event, start, FrontendHeartbeat,
+    FrontendHeartbeat, record_frontend_heartbeat, record_tray_event, record_window_event, start,
 };
 
 #[cfg(not(debug_assertions))]

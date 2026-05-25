@@ -136,6 +136,15 @@ pub struct SetTmuxSessionMouseRequest {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ScrollTmuxPaneRequest {
+    #[serde(flatten)]
+    pub connection: TmuxConnectionRequest,
+    pub tmux_session_id: String,
+    pub lines: i32,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StartSshPortForwardRequest {
     #[serde(flatten)]
     pub connection: TmuxConnectionRequest,
@@ -975,6 +984,26 @@ impl SessionManager {
         Ok(())
     }
 
+    pub fn scroll_tmux_pane(
+        &self,
+        app: AppHandle,
+        secrets: &secrets::Secrets,
+        request: ScrollTmuxPaneRequest,
+    ) -> Result<(), String> {
+        let tmux_session_id = required_tmux_session_id(request.tmux_session_id)?;
+        let lines = request.lines.clamp(-200, 200);
+        if lines == 0 {
+            return Ok(());
+        }
+        run_tmux_command(
+            app,
+            secrets,
+            &request.connection,
+            tmux_scroll_pane_command(&tmux_session_id, lines),
+        )?;
+        Ok(())
+    }
+
     pub fn capture_tmux_pane(
         &self,
         app: AppHandle,
@@ -1810,6 +1839,17 @@ fn ssh_buffer_lines_for(value: Option<u32>) -> u32 {
         .unwrap_or(DEFAULT_SSH_BUFFER_LINES)
 }
 
+fn tmux_scroll_pane_command(tmux_session_id: &str, lines: i32) -> String {
+    let target = format!("{}:", shell_single_quote(tmux_session_id));
+    let count = lines.unsigned_abs().max(1);
+    if lines < 0 {
+        return format!(
+            "tmux copy-mode -e -t {target} \\; send-keys -X -t {target} -N {count} scroll-up"
+        );
+    }
+    format!("tmux send-keys -X -t {target} -N {count} scroll-down 2>/dev/null || true")
+}
+
 fn tmux_capture_pane_command(tmux_session_id: &str, buffer_lines: u32) -> String {
     format!(
         "if ! command -v tmux >/dev/null 2>&1; then printf 'tmux is not available on the remote host\\n' >&2; exit 127; fi; tmux capture-pane -p -S -{} -t {}:",
@@ -2321,6 +2361,30 @@ mod tests {
         assert_eq!(
             tmux_capture_pane_command("kkterm-test", 5_000),
             "if ! command -v tmux >/dev/null 2>&1; then printf 'tmux is not available on the remote host\\n' >&2; exit 127; fi; tmux capture-pane -p -S -5000 -t 'kkterm-test':"
+        );
+    }
+
+    #[test]
+    fn tmux_scroll_pane_command_enters_copy_mode_for_wheel_up() {
+        assert_eq!(
+            tmux_scroll_pane_command("kkterm-test", -4),
+            "tmux copy-mode -e -t 'kkterm-test': \\; send-keys -X -t 'kkterm-test': -N 4 scroll-up"
+        );
+    }
+
+    #[test]
+    fn tmux_scroll_pane_command_scrolls_down_only_in_copy_mode() {
+        assert_eq!(
+            tmux_scroll_pane_command("kkterm-test", 3),
+            "tmux send-keys -X -t 'kkterm-test': -N 3 scroll-down 2>/dev/null || true"
+        );
+    }
+
+    #[test]
+    fn tmux_scroll_pane_command_quotes_session_id() {
+        assert_eq!(
+            tmux_scroll_pane_command("kkterm-test'quoted", -1),
+            "tmux copy-mode -e -t 'kkterm-test'\\''quoted': \\; send-keys -X -t 'kkterm-test'\\''quoted': -N 1 scroll-up"
         );
     }
 

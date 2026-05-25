@@ -490,8 +490,7 @@ fn parse_script_source_ast(source: &str) -> Result<HashSet<String>, String> {
     }
     if ret.panicked {
         return Err(
-            "script source is not parseable JavaScript (parser produced no diagnostic)"
-                .to_string(),
+            "script source is not parseable JavaScript (parser produced no diagnostic)".to_string(),
         );
     }
     let mut collector = IdentifierCollector {
@@ -726,8 +725,7 @@ pub fn validate_script_body_json_detailed(
 
 fn validate_script_dom_mounts(source: &str, html_shim: Option<&str>) -> Result<(), String> {
     for id in extract_get_element_by_id_targets(source) {
-        if id == "root" || html_shim_contains_id(html_shim, &id) || source_creates_id(source, &id)
-        {
+        if id == "root" || html_shim_contains_id(html_shim, &id) || source_creates_id(source, &id) {
             continue;
         }
         return Err(format!(
@@ -1183,7 +1181,10 @@ mod tests {
     #[test]
     fn preset_tile_and_action_are_removed() {
         assert_eq!(validate_preset("tile"), Err(ValidationError::InvalidPreset));
-        assert_eq!(validate_preset("action"), Err(ValidationError::InvalidPreset));
+        assert_eq!(
+            validate_preset("action"),
+            Err(ValidationError::InvalidPreset)
+        );
     }
 
     #[test]
@@ -1446,28 +1447,34 @@ mod tests {
     fn script_source_allows_while_true_inside_string() {
         // Regression: the original collapsed-string check rejected scripts that
         // merely mentioned "while(true)" in a string or comment.
-        assert!(validate_script_source_inner(
-            "const note = 'never use while(true) here'; console.log(note);"
-        )
-        .is_ok());
-        assert!(validate_script_source_inner(
-            "// avoid while(true) and for(;;) in widget scripts\nconsole.log(1);"
-        )
-        .is_ok());
-        assert!(validate_script_source_inner(
-            "/* docs say while(true) is forbidden */ console.log(1);"
-        )
-        .is_ok());
+        assert!(
+            validate_script_source_inner(
+                "const note = 'never use while(true) here'; console.log(note);"
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_script_source_inner(
+                "// avoid while(true) and for(;;) in widget scripts\nconsole.log(1);"
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_script_source_inner("/* docs say while(true) is forbidden */ console.log(1);")
+                .is_ok()
+        );
     }
 
     #[test]
     fn script_source_handles_escaped_backslash_in_string() {
         // Regression: the original prev != '\\' check left the parser stuck in
         // a string after an escaped backslash, then reported unbalanced delims.
-        assert!(validate_script_source_inner(
-            "const path = 'C:\\\\Users\\\\widget'; console.log(path);"
-        )
-        .is_ok());
+        assert!(
+            validate_script_source_inner(
+                "const path = 'C:\\\\Users\\\\widget'; console.log(path);"
+            )
+            .is_ok()
+        );
         // Real backslash-escaped quote stays inside the string.
         assert!(validate_script_source_inner("const q = 'it\\'s fine'; console.log(q);").is_ok());
     }
@@ -1496,10 +1503,12 @@ mod tests {
     fn script_source_allows_braces_inside_template_literals() {
         // We treat template literals as opaque strings — `${expr}` braces inside
         // do not affect the outer delimiter balance.
-        assert!(validate_script_source_inner(
-            "const s = `hello {world}`; const t = `${1 + 2}`; console.log(s, t);"
-        )
-        .is_ok());
+        assert!(
+            validate_script_source_inner(
+                "const s = `hello {world}`; const t = `${1 + 2}`; console.log(s, t);"
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -1714,7 +1723,10 @@ mod tests {
             "permissions": {"network": false, "pollSeconds": null},
             "htmlShim": null,
         });
-        assert_eq!(drop_unused_script_libraries(&mut body), Vec::<String>::new());
+        assert_eq!(
+            drop_unused_script_libraries(&mut body),
+            Vec::<String>::new()
+        );
         assert_eq!(body["libraries"], serde_json::json!(["matter"]));
     }
 

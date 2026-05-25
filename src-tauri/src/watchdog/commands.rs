@@ -7,11 +7,9 @@
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
-use super::registry::WatchdogRegistry;
-use super::types::{
-    WatchdogConfig, WatchdogInterventionRecord, WatchdogReport, WatchdogSummary,
-};
 use super::WatchdogError;
+use super::registry::WatchdogRegistry;
+use super::types::{WatchdogConfig, WatchdogInterventionRecord, WatchdogReport, WatchdogSummary};
 
 #[tauri::command]
 pub fn watchdog_create(

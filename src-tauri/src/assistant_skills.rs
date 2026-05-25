@@ -192,7 +192,8 @@ fn copy_missing_skill_dirs(source_root: &Path, user_root: &Path) -> Result<(), S
     for entry in fs::read_dir(source_root)
         .map_err(|error| format!("failed to read bundled assistant skills: {error}"))?
     {
-        let entry = entry.map_err(|error| format!("failed to read bundled skill entry: {error}"))?;
+        let entry =
+            entry.map_err(|error| format!("failed to read bundled skill entry: {error}"))?;
         let source_dir = entry.path();
         if !source_dir.is_dir() {
             continue;

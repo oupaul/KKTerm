@@ -1,4 +1,5 @@
 import * as Icons from "lucide-react";
+import * as RadixTabs from "@radix-ui/react-tabs";
 import type { ComponentType, CSSProperties, FormEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +11,11 @@ import type { Connection, QuickCommand, WorkspaceTab } from "../../../../types";
 import { ACCENT_PALETTE, isAccentName, resolveAccent } from "../../../dashboard/registry/palette";
 import { ICON_NAMES, type IconName } from "../../../dashboard/types";
 import { getPaneRenderer, writeInputToPane } from "../../paneRegistry";
-import { QUICK_COMMAND_LIBRARY, type QuickCommandLibraryEntry } from "./quickCommandLibrary";
+import {
+  QUICK_COMMAND_LIBRARY,
+  QUICK_COMMAND_LIBRARY_CATEGORIES,
+  type QuickCommandLibraryEntry,
+} from "./quickCommandLibrary";
 
 type QuickCommandDraft = Omit<QuickCommand, "id">;
 
@@ -164,7 +169,15 @@ export function QuickCommandBar({ tab }: { tab: WorkspaceTab }) {
         </button>
       </div>
       {dialogOpen ? (
-        <QuickCommandManagerDialog connection={tab.connection} connectionId={connectionId} onClose={() => setDialogOpen(false)} />
+        <QuickCommandManagerDialog
+          connection={tab.connection}
+          connectionId={connectionId}
+          onClose={() => setDialogOpen(false)}
+          onRunCommand={(command) => {
+            setDialogOpen(false);
+            run(command);
+          }}
+        />
       ) : null}
       {pendingCommand ? (
         <ConfirmDialog
@@ -186,10 +199,12 @@ function QuickCommandManagerDialog({
   connection,
   connectionId,
   onClose,
+  onRunCommand,
 }: {
   connection: Connection | undefined;
   connectionId: string | undefined;
   onClose: () => void;
+  onRunCommand: (command: QuickCommand) => void;
 }) {
   const { t } = useTranslation();
   const quickCommands = useWorkspaceStore((state) =>
@@ -198,33 +213,16 @@ function QuickCommandManagerDialog({
   const moveQuickCommand = useWorkspaceStore((state) => state.moveQuickCommand);
   const reorderQuickCommand = useWorkspaceStore((state) => state.reorderQuickCommand);
   const removeQuickCommand = useWorkspaceStore((state) => state.removeQuickCommand);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [editingCommand, setEditingCommand] = useState<QuickCommand | null>(null);
   const [draggingCommandId, setDraggingCommandId] = useState<string | null>(null);
   const [dragOverCommandId, setDragOverCommandId] = useState<string | null>(null);
   const dragOverCommandIdRef = useRef<string | null>(null);
-  const addMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     dragOverCommandIdRef.current = dragOverCommandId;
   }, [dragOverCommandId]);
-
-  useEffect(() => {
-    if (!addMenuOpen) {
-      return;
-    }
-    function onPointerDown(event: PointerEvent) {
-      const target = event.target as Node | null;
-      if (target && addMenuRef.current?.contains(target)) {
-        return;
-      }
-      setAddMenuOpen(false);
-    }
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, [addMenuOpen]);
 
   useEffect(() => {
     if (!draggingCommandId) {
@@ -264,13 +262,11 @@ function QuickCommandManagerDialog({
     setEditingCommand(command);
     setCustomDialogOpen(true);
     setPresetDialogOpen(false);
-    setAddMenuOpen(false);
   }
 
   function openPresetDialog() {
     setPresetDialogOpen(true);
     setCustomDialogOpen(false);
-    setAddMenuOpen(false);
   }
 
   function startReorderDrag(event: ReactPointerEvent, commandId: string) {
@@ -298,23 +294,15 @@ function QuickCommandManagerDialog({
 
         <section className="quick-command-manager-body">
           <div className="quick-command-list-header">
-            <div className="quick-command-add-wrapper" ref={addMenuRef}>
-              <button className="toolbar-button" onClick={() => setAddMenuOpen((open) => !open)} type="button" {...menuExpanded(addMenuOpen)}>
+            <div className="quick-command-add-actions">
+              <button className="toolbar-button" onClick={() => openCustomDialog()} type="button">
                 <Icons.Plus size={13} />
-                {t("common.add")}
+                {t("terminal.quickCommandsAddCommand")}
               </button>
-              {addMenuOpen ? (
-                <div className="quick-command-add-menu" role="menu" aria-label={t("terminal.quickCommandsAddMenu")}>
-                  <button onClick={() => openCustomDialog()} role="menuitem" type="button">
-                    <Icons.Pencil size={14} />
-                    {t("terminal.quickCommandsCustomCommand")}
-                  </button>
-                  <button onClick={openPresetDialog} role="menuitem" type="button">
-                    <Icons.Library size={14} />
-                    {t("terminal.quickCommandsLibrary")}
-                  </button>
-                </div>
-              ) : null}
+              <button className="toolbar-button" onClick={openPresetDialog} type="button">
+                <Icons.Library size={13} />
+                {t("terminal.quickCommandsPickFromLibrary")}
+              </button>
             </div>
           </div>
           {quickCommands.length === 0 ? (
@@ -390,7 +378,11 @@ function QuickCommandManagerDialog({
         />
       ) : null}
       {presetDialogOpen ? (
-        <PresetLibraryDialog connectionId={connectionId} onClose={() => setPresetDialogOpen(false)} />
+        <PresetLibraryDialog
+          connectionId={connectionId}
+          onClose={() => setPresetDialogOpen(false)}
+          onRunCommand={onRunCommand}
+        />
       ) : null}
     </div>
   );
@@ -667,13 +659,17 @@ function CustomCommandDialog({
 function PresetLibraryDialog({
   connectionId,
   onClose,
+  onRunCommand,
 }: {
   connectionId: string | undefined;
   onClose: () => void;
+  onRunCommand: (command: QuickCommand) => void;
 }) {
   const { t } = useTranslation();
   const addQuickCommand = useWorkspaceStore((state) => state.addQuickCommand);
   const [query, setQuery] = useState("");
+  const [activeCategoryKey, setActiveCategoryKey] = useState(QUICK_COMMAND_LIBRARY_CATEGORIES[0]?.categoryKey ?? "");
+  const [activeSubcategoryKey, setActiveSubcategoryKey] = useState(QUICK_COMMAND_LIBRARY_CATEGORIES[0]?.subcategoryKeys[0] ?? "");
 
   const filteredLibrary = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -682,8 +678,8 @@ function PresetLibraryDialog({
     }
     return QUICK_COMMAND_LIBRARY.filter((entry) =>
       [
-        t(entry.sectionKey),
-        t(entry.subsectionKey),
+        t(entry.categoryKey),
+        t(entry.subcategoryKey),
         t(entry.labelKey),
         entry.command,
         t(entry.descriptionKey),
@@ -694,11 +690,43 @@ function PresetLibraryDialog({
     );
   }, [query, t]);
 
-  const groupedLibrary = filteredLibrary.reduce<Record<string, QuickCommandLibraryEntry[]>>((groups, entry) => {
-    const key = `${t(entry.sectionKey)} / ${t(entry.subsectionKey)}`;
-    groups[key] = [...(groups[key] ?? []), entry];
-    return groups;
-  }, {});
+  const activeCategory = useMemo(
+    () => QUICK_COMMAND_LIBRARY_CATEGORIES.find((category) => category.categoryKey === activeCategoryKey) ?? QUICK_COMMAND_LIBRARY_CATEGORIES[0],
+    [activeCategoryKey],
+  );
+  const visibleSubcategoryKeys = useMemo(() => {
+    const subcategoryKeys = activeCategory?.subcategoryKeys ?? [];
+    if (!query.trim()) {
+      return subcategoryKeys;
+    }
+    return subcategoryKeys.filter((subcategoryKey) =>
+      filteredLibrary.some((entry) => entry.categoryKey === activeCategory?.categoryKey && entry.subcategoryKey === subcategoryKey),
+    );
+  }, [activeCategory, filteredLibrary, query]);
+  const visibleEntries = filteredLibrary.filter(
+    (entry) => entry.categoryKey === activeCategory?.categoryKey && entry.subcategoryKey === activeSubcategoryKey,
+  );
+
+  useEffect(() => {
+    const firstMatch = filteredLibrary[0];
+    if (query.trim() && firstMatch) {
+      setActiveCategoryKey(firstMatch.categoryKey);
+      setActiveSubcategoryKey(firstMatch.subcategoryKey);
+      return;
+    }
+    if (!activeCategory) {
+      return;
+    }
+    if (!activeCategory.subcategoryKeys.includes(activeSubcategoryKey)) {
+      setActiveSubcategoryKey(activeCategory.subcategoryKeys[0] ?? "");
+    }
+  }, [activeCategory, activeSubcategoryKey, filteredLibrary, query]);
+
+  function selectCategory(categoryKey: string) {
+    const category = QUICK_COMMAND_LIBRARY_CATEGORIES.find((item) => item.categoryKey === categoryKey);
+    setActiveCategoryKey(categoryKey);
+    setActiveSubcategoryKey(category?.subcategoryKeys[0] ?? "");
+  }
 
   return (
     <div className="dialog-backdrop connection-dialog-backdrop quick-command-subdialog-backdrop" role="presentation">
@@ -718,25 +746,63 @@ function PresetLibraryDialog({
             placeholder={t("terminal.quickCommandsSearch")}
             value={query}
           />
-          {Object.entries(groupedLibrary).map(([group, entries]) => (
-            <section className="quick-command-library-group" key={group}>
-              <h3>{group}</h3>
-              {entries.map((entry) => (
-                <article className="quick-command-library-entry" key={entry.libraryId}>
+          <RadixTabs.Root value={activeCategory?.categoryKey ?? ""} onValueChange={selectCategory}>
+            <RadixTabs.List className="quick-command-library-tabs" aria-label={t("terminal.quickCommandLibrary.categoryTabs")}>
+              {QUICK_COMMAND_LIBRARY_CATEGORIES.map((category) => (
+                <RadixTabs.Trigger className="quick-command-library-tab" key={category.categoryKey} value={category.categoryKey}>
+                  {t(category.categoryKey)}
+                </RadixTabs.Trigger>
+              ))}
+            </RadixTabs.List>
+          </RadixTabs.Root>
+          {visibleSubcategoryKeys.length > 0 ? (
+            <RadixTabs.Root value={activeSubcategoryKey} onValueChange={setActiveSubcategoryKey}>
+              <RadixTabs.List className="quick-command-library-subtabs" aria-label={t("terminal.quickCommandLibrary.subcategoryTabs")}>
+                {visibleSubcategoryKeys.map((subcategoryKey) => (
+                  <RadixTabs.Trigger className="quick-command-library-tab" key={subcategoryKey} value={subcategoryKey}>
+                    {t(subcategoryKey)}
+                  </RadixTabs.Trigger>
+                ))}
+              </RadixTabs.List>
+            </RadixTabs.Root>
+          ) : null}
+          {visibleEntries.length > 0 ? (
+            <section className="quick-command-library-group">
+              {visibleEntries.map((entry) => (
+                <article
+                  className={[
+                    "quick-command-library-entry",
+                    entry.confirm ? "quick-command-library-entry-danger" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  key={entry.libraryId}
+                >
                   <div>
-                    <strong>{t(entry.labelKey)}</strong>
+                    <span className="quick-command-library-entry-title">
+                      <strong>{t(entry.labelKey)}</strong>
+                      {entry.confirm ? (
+                        <span className="quick-command-danger-tag">{t("terminal.quickCommandsDangerous")}</span>
+                      ) : null}
+                    </span>
                     <p>{t(entry.descriptionKey)}</p>
                     <code>{entry.command}</code>
                   </div>
-                  <button className="toolbar-button" onClick={() => addQuickCommand(connectionId, commandFromLibrary(entry, t))} type="button">
-                    <Icons.Plus size={13} />
-                    {t("terminal.quickCommandsAdd")}
-                  </button>
+                  <div className="quick-command-library-entry-actions">
+                    <button className="toolbar-button" onClick={() => addQuickCommand(connectionId, commandFromLibrary(entry, t))} type="button">
+                      <Icons.Plus size={13} />
+                      {t("terminal.quickCommandsAdd")}
+                    </button>
+                    <button className="toolbar-button" onClick={() => onRunCommand(commandFromLibrary(entry, t))} type="button">
+                      <Icons.Play size={13} />
+                      {t("terminal.quickCommandsRun")}
+                    </button>
+                  </div>
                 </article>
               ))}
             </section>
-          ))}
-          {filteredLibrary.length === 0 ? (
+          ) : null}
+          {visibleEntries.length === 0 ? (
             <p className="quick-command-muted">{t("terminal.quickCommandsNoLibraryMatches")}</p>
           ) : null}
         </section>

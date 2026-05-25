@@ -585,8 +585,7 @@
 }
 
 .quick-command-button:hover,
-.quick-command-empty:hover,
-.quick-command-manage:hover {
+.quick-command-empty:hover {
   color: var(--text);
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -608,7 +607,26 @@
   width: 28px;
   margin-left: auto;
   padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border-color: transparent;
   border-left-width: 1px;
+  opacity: 0;
+  transition:
+    opacity 150ms ease-out,
+    color 120ms ease-out;
+}
+
+.quick-command-bar:hover .quick-command-manage,
+.quick-command-bar:focus-within .quick-command-manage {
+  opacity: 1;
+}
+
+.quick-command-manage:hover,
+.quick-command-manage:focus-visible {
+  color: var(--text);
+  background: transparent;
+  border-color: transparent;
 }
 
 .quick-command-dialog-backdrop {
@@ -620,6 +638,7 @@
   position: relative;
   width: min(1800px, calc(100vw - 48px));
   max-height: min(720px, calc(100vh - 48px));
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .quick-command-dialog .connection-dialog-header {
@@ -642,7 +661,9 @@
 }
 
 .quick-command-preset-dialog {
-  width: min(1120px, calc(100vw - 48px));
+  width: min(1680px, calc(100vw - 32px));
+  height: min(860px, calc(100vh - 36px));
+  max-height: none;
 }
 
 .quick-command-dialog-body {
@@ -674,9 +695,9 @@
   display: grid;
   grid-template-rows: auto auto;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
   min-height: min(560px, calc(100vh - 210px));
-  padding: 18px;
+  padding: 8px 18px 18px;
   overflow: auto;
 }
 
@@ -796,43 +817,11 @@
   color: var(--red);
 }
 
-.quick-command-add-wrapper {
-  position: relative;
-}
-
-.quick-command-add-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 8;
-  display: grid;
-  min-width: 190px;
-  padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-}
-
-.quick-command-add-menu button {
+.quick-command-add-actions {
   display: flex;
   gap: 8px;
   align-items: center;
-  min-width: 0;
-  height: 30px;
-  padding: 0 8px;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.quick-command-add-menu button:hover {
-  background: var(--surface-muted);
+  justify-content: flex-end;
 }
 
 .quick-command-editor {
@@ -872,15 +861,22 @@
 .quick-command-library,
 .quick-command-custom-form {
   min-height: 0;
-  margin-top: 12px;
+  margin-top: 4px;
   overflow: auto;
 }
 
 .quick-command-custom-dialog .quick-command-custom-form,
 .quick-command-preset-dialog .quick-command-library {
-  max-height: min(580px, calc(100vh - 170px));
-  padding: 14px;
+  padding: 8px 12px 12px;
   overflow: auto;
+}
+
+.quick-command-custom-dialog .quick-command-custom-form {
+  max-height: min(720px, calc(100vh - 150px));
+}
+
+.quick-command-preset-dialog .quick-command-library {
+  max-height: none;
 }
 
 .quick-command-subdialog-backdrop {
@@ -896,7 +892,86 @@
 
 .quick-command-library {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  align-content: start;
+  font-size: 11px;
+}
+
+.quick-command-library-tabs,
+.quick-command-library-subtabs {
+  gap: 6px;
+  align-items: stretch;
+  min-width: 0;
+  overflow: visible;
+}
+
+.quick-command-library-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.quick-command-library-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.quick-command-library-tabs {
+  padding: 4px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-library-subtabs {
+  padding: 3px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.quick-command-library-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.quick-command-library-tabs .quick-command-library-tab {
+  width: 100%;
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.quick-command-library-subtabs .quick-command-library-tab {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+.quick-command-library-tab:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.quick-command-library-tab[data-state="active"] {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .quick-command-library > input,
@@ -912,8 +987,8 @@
 
 .quick-command-library > input,
 .quick-command-custom-form input {
-  height: 32px;
-  padding: 0 9px;
+  height: 30px;
+  padding: 0 8px;
 }
 
 .quick-command-custom-form textarea {
@@ -946,9 +1021,9 @@
 .quick-command-library-entry {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 9px;
+  padding: 8px;
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -964,21 +1039,60 @@
   text-overflow: ellipsis;
 }
 
+.quick-command-library-entry-title {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+}
+
 .quick-command-library-entry strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
+}
+
+.quick-command-library-entry-danger strong,
+.quick-command-library-entry-danger code {
+  color: var(--red);
+}
+
+.quick-command-danger-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 900;
+  background: rgba(196, 62, 62, 0.1);
+  border: 1px solid rgba(196, 62, 62, 0.35);
+  border-radius: 5px;
 }
 
 .quick-command-library-entry p {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .quick-command-library-entry code {
   margin-top: 4px;
   color: var(--text);
-  font-size: 11px;
+  font-size: 10px;
   white-space: nowrap;
+}
+
+.quick-command-library-entry-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.quick-command-library-entry-actions .toolbar-button {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
 }
 
 .quick-command-custom-form {
@@ -1251,6 +1365,16 @@
   }
 
   .quick-command-library-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-command-library-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .quick-command-library-tabs {
     grid-template-columns: minmax(0, 1fr);
   }
 }

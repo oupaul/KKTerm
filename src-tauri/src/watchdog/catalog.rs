@@ -28,7 +28,7 @@
 //! AI should consider them (most-common first), which is also the order
 //! they appear in the generated schema's `oneOf`.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// One row in the catalog. Used by the schema generator AND the system
 /// prompt builder, so descriptions read both as machine-readable docs and
@@ -255,7 +255,11 @@ mod tests {
                 .pointer("/properties/kind/const")
                 .and_then(|v| v.as_str())
                 .expect("schema fragment missing const kind");
-            assert_eq!(const_kind, d.kind, "kind mismatch in fragment for {}", d.kind);
+            assert_eq!(
+                const_kind, d.kind,
+                "kind mismatch in fragment for {}",
+                d.kind
+            );
         }
     }
 
@@ -298,10 +302,17 @@ mod tests {
         ];
         let variant_kinds: std::collections::HashSet<String> = known_variants
             .iter()
-            .map(|t| serde_json::to_value(t).unwrap()["kind"].as_str().unwrap().to_string())
+            .map(|t| {
+                serde_json::to_value(t).unwrap()["kind"]
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            })
             .collect();
-        let catalog_kinds: std::collections::HashSet<String> =
-            target_catalog().iter().map(|d| d.kind.to_string()).collect();
+        let catalog_kinds: std::collections::HashSet<String> = target_catalog()
+            .iter()
+            .map(|d| d.kind.to_string())
+            .collect();
         assert_eq!(
             variant_kinds, catalog_kinds,
             "catalog kinds out of sync with WatchdogTarget variants"

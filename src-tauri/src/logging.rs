@@ -2,11 +2,11 @@ use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, Ordering},
     sync::OnceLock,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 static LOG_STATUS: OnceLock<String> = OnceLock::new();
 static LOG_PATH: OnceLock<PathBuf> = OnceLock::new();
@@ -173,6 +173,10 @@ mod tests {
             parsed["payload"]["arguments"]["body"]["source"],
             "const chart = new uPlot(opts, data, root);"
         );
-        assert!(parsed["timestamp"].as_str().is_some_and(|value| !value.is_empty()));
+        assert!(
+            parsed["timestamp"]
+                .as_str()
+                .is_some_and(|value| !value.is_empty())
+        );
     }
 }

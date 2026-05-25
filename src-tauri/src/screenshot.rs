@@ -5,7 +5,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -603,31 +603,32 @@ fn system_time_to_millis(time: SystemTime) -> Option<u128> {
 mod platform {
     use std::{ffi::c_void, mem, ptr};
 
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
-    use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use image::{ColorType, ImageEncoder, codecs::jpeg::JpegEncoder};
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture, VK_ESCAPE};
     use windows_sys::Win32::{
         Foundation::{GlobalFree, HANDLE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         Graphics::Gdi::{
-            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateSolidBrush,
-            DeleteDC, DeleteObject, EndPaint, FillRect, FrameRect, GetDC, GetDIBits,
-            InvalidateRect, ReleaseDC, SelectObject, SetDIBitsToDevice, BITMAPINFO,
-            BITMAPINFOHEADER, BI_RGB, CAPTUREBLT, DIB_RGB_COLORS, HBITMAP, HBRUSH, HDC, HGDIOBJ,
-            PAINTSTRUCT, SRCCOPY,
+            BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BeginPaint, BitBlt, CAPTUREBLT,
+            CreateCompatibleBitmap, CreateCompatibleDC, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC,
+            DeleteObject, EndPaint, FillRect, FrameRect, GetDC, GetDIBits, HBITMAP, HBRUSH, HDC,
+            HGDIOBJ, InvalidateRect, PAINTSTRUCT, ReleaseDC, SRCCOPY, SelectObject,
+            SetDIBitsToDevice,
         },
         System::{
             DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
-            Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
+            Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock},
             Ole::CF_DIB,
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, EnumWindows,
-            GetMessageW, GetSystemMetrics, GetWindowLongPtrW, GetWindowRect, IsWindowVisible,
-            LoadCursorW, PostQuitMessage, RegisterClassW, SetWindowLongPtrW, ShowWindow,
-            TranslateMessage, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, GWLP_USERDATA, IDC_CROSS, MSG,
-            SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_SHOW,
-            WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
-            WM_NCCREATE, WM_PAINT, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+            CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DestroyWindow,
+            DispatchMessageW, EnumWindows, GWLP_USERDATA, GetMessageW, GetSystemMetrics,
+            GetWindowLongPtrW, GetWindowRect, IDC_CROSS, IsWindowVisible, LoadCursorW, MSG,
+            PostQuitMessage, RegisterClassW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+            SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_SHOW, SetWindowLongPtrW, ShowWindow,
+            TranslateMessage, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP,
+            WM_MOUSEMOVE, WM_NCCREATE, WM_PAINT, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+            WS_POPUP,
         },
     };
 
@@ -861,7 +862,6 @@ mod platform {
         use std::slice;
 
         use windows::{
-            core::Interface,
             Win32::{
                 Foundation::HMODULE,
                 Graphics::{
@@ -869,21 +869,22 @@ mod platform {
                         D3D_DRIVER_TYPE_UNKNOWN, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
                     },
                     Direct3D11::{
-                        D3D11_BOX, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_FLAG,
-                        D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ, D3D11_SDK_VERSION,
-                        D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING, D3D11CreateDevice,
-                        ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
+                        D3D11_BOX, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_FLAG, D3D11_MAP_READ,
+                        D3D11_MAPPED_SUBRESOURCE, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
+                        D3D11_USAGE_STAGING, D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext,
+                        ID3D11Texture2D,
                     },
                     Dxgi::{
                         Common::{
                             DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_MODE_ROTATION_IDENTITY,
                             DXGI_SAMPLE_DESC,
                         },
-                        CreateDXGIFactory1, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter,
-                        IDXGIAdapter1, IDXGIFactory1, IDXGIOutput, IDXGIOutput1, IDXGIResource,
+                        CreateDXGIFactory1, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter, IDXGIAdapter1,
+                        IDXGIFactory1, IDXGIOutput, IDXGIOutput1, IDXGIResource,
                     },
                 },
             },
+            core::Interface,
         };
 
         use super::bgra_pixels_to_dib;
@@ -948,7 +949,10 @@ mod platform {
                         .GetDesc()
                         .map_err(|error| format!("failed to read DXGI output: {error}"))?;
                     let rect = desc.DesktopCoordinates;
-                    if x >= rect.left && y >= rect.top && right <= rect.right && bottom <= rect.bottom
+                    if x >= rect.left
+                        && y >= rect.top
+                        && right <= rect.right
+                        && bottom <= rect.bottom
                     {
                         return Ok(DxgiOutputTarget {
                             adapter,
@@ -965,8 +969,10 @@ mod platform {
                 adapter_index += 1;
             }
 
-            Err("screenshot region spans multiple outputs or no matching DXGI output was found"
-                .to_string())
+            Err(
+                "screenshot region spans multiple outputs or no matching DXGI output was found"
+                    .to_string(),
+            )
         }
 
         unsafe fn capture_output_rect(

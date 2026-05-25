@@ -22,18 +22,29 @@ pub struct WhoisResult {
 pub async fn lookup(domain: &str) -> Result<WhoisResult, NetError> {
     let d = domain.trim().to_ascii_lowercase();
     if !is_valid_domain_query(&d) {
-        return Err(NetError::invalid("expected a valid domain (e.g. example.com)"));
+        return Err(NetError::invalid(
+            "expected a valid domain (e.g. example.com)",
+        ));
     }
     let fut = async {
         let iana = whois_query(IANA_SERVER, &d).await?;
         let referral_server = extract_referral(&iana);
         let raw = if let Some(server) = referral_server {
-            whois_query(&format!("{}:43", server), &d).await.unwrap_or(iana)
+            whois_query(&format!("{}:43", server), &d)
+                .await
+                .unwrap_or(iana)
         } else {
             iana
         };
         let parsed = parse_kv(&raw);
-        Ok::<_, NetError>(WhoisResult { raw, parsed: if parsed.is_empty() { None } else { Some(parsed) } })
+        Ok::<_, NetError>(WhoisResult {
+            raw,
+            parsed: if parsed.is_empty() {
+                None
+            } else {
+                Some(parsed)
+            },
+        })
     };
     timeout(Duration::from_millis(PER_OP_TIMEOUT_MS), fut)
         .await
@@ -50,12 +61,17 @@ fn is_valid_domain_query(value: &str) -> bool {
 }
 
 async fn whois_query(server: &str, query: &str) -> Result<String, NetError> {
-    let mut stream = TcpStream::connect(server).await
+    let mut stream = TcpStream::connect(server)
+        .await
         .map_err(|_| NetError::Unreachable)?;
-    stream.write_all(format!("{}\r\n", query).as_bytes()).await
+    stream
+        .write_all(format!("{}\r\n", query).as_bytes())
+        .await
         .map_err(|e| NetError::internal(e.to_string()))?;
     let mut buf = Vec::with_capacity(8192);
-    stream.read_to_end(&mut buf).await
+    stream
+        .read_to_end(&mut buf)
+        .await
         .map_err(|e| NetError::internal(e.to_string()))?;
     Ok(String::from_utf8_lossy(&buf).into_owned())
 }
@@ -63,7 +79,10 @@ async fn whois_query(server: &str, query: &str) -> Result<String, NetError> {
 fn extract_referral(text: &str) -> Option<String> {
     for line in text.lines() {
         let l = line.trim();
-        if let Some(rest) = l.strip_prefix("refer:").or_else(|| l.strip_prefix("whois:")) {
+        if let Some(rest) = l
+            .strip_prefix("refer:")
+            .or_else(|| l.strip_prefix("whois:"))
+        {
             return Some(rest.trim().to_string());
         }
     }
@@ -74,7 +93,9 @@ fn parse_kv(text: &str) -> HashMap<String, String> {
     let mut out = HashMap::new();
     for line in text.lines() {
         let l = line.trim();
-        if l.is_empty() || l.starts_with('%') || l.starts_with('#') { continue; }
+        if l.is_empty() || l.starts_with('%') || l.starts_with('#') {
+            continue;
+        }
         if let Some(idx) = l.find(':') {
             let key = l[..idx].trim().to_ascii_lowercase();
             let val = l[idx + 1..].trim().to_string();
@@ -92,8 +113,14 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_invalid_domain() {
-        assert!(matches!(lookup("not-a-domain").await.unwrap_err(), NetError::InvalidArgument { .. }));
-        assert!(matches!(lookup("").await.unwrap_err(), NetError::InvalidArgument { .. }));
+        assert!(matches!(
+            lookup("not-a-domain").await.unwrap_err(),
+            NetError::InvalidArgument { .. }
+        ));
+        assert!(matches!(
+            lookup("").await.unwrap_err(),
+            NetError::InvalidArgument { .. }
+        ));
     }
 
     #[tokio::test]
@@ -114,6 +141,9 @@ mod tests {
     #[test]
     fn extract_referral_finds_refer_line() {
         let sample = "domain: example\nrefer: whois.verisign-grs.com\n";
-        assert_eq!(extract_referral(sample), Some("whois.verisign-grs.com".into()));
+        assert_eq!(
+            extract_referral(sample),
+            Some("whois.verisign-grs.com".into())
+        );
     }
 }

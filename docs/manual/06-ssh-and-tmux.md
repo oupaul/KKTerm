@@ -54,6 +54,7 @@ Per-row actions:
 ### Tmux mouse toggle
 
 `terminal.mouseOn` / `terminal.mouseOff` enables or disables tmux mouse mode in the attached session.
+When tmux mouse mode is off, wheel input over the Pane is kept in KKTerm's terminal scrollback path instead of being sent to the remote shell as cursor-key input.
 
 ## SSH local port forwarding
 

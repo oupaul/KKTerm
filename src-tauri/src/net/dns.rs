@@ -39,16 +39,22 @@ fn parse_record_type(kind: &str) -> Result<RecordType, NetError> {
         "CNAME" => RecordType::CNAME,
         "SOA" => RecordType::SOA,
         "SRV" => RecordType::SRV,
-        _ => return Err(NetError::invalid(format!("unsupported record type: {}", kind))),
+        _ => {
+            return Err(NetError::invalid(format!(
+                "unsupported record type: {}",
+                kind
+            )));
+        }
     })
 }
 
 fn build_resolver() -> Result<TokioResolver, NetError> {
-    let builder = TokioResolver::builder_tokio()
-        .map_err(|e| NetError::ResolverError { reason: format!("resolver init: {}", e) })?;
-    builder
-        .build()
-        .map_err(|e| NetError::ResolverError { reason: format!("resolver build: {}", e) })
+    let builder = TokioResolver::builder_tokio().map_err(|e| NetError::ResolverError {
+        reason: format!("resolver init: {}", e),
+    })?;
+    builder.build().map_err(|e| NetError::ResolverError {
+        reason: format!("resolver build: {}", e),
+    })
 }
 
 pub async fn lookup(host: &str, record_type: &str) -> Result<DnsResult, NetError> {
@@ -86,7 +92,10 @@ pub async fn lookup(host: &str, record_type: &str) -> Result<DnsResult, NetError
     let records = tokio::time::timeout(std::time::Duration::from_millis(PER_OP_TIMEOUT_MS), fut)
         .await
         .map_err(|_| NetError::Timeout)??;
-    Ok(DnsResult { records, resolver_ms: start.elapsed().as_millis() })
+    Ok(DnsResult {
+        records,
+        resolver_ms: start.elapsed().as_millis(),
+    })
 }
 
 fn format_rdata(data: &RData) -> (String, Option<u16>) {
@@ -96,13 +105,19 @@ fn format_rdata(data: &RData) -> (String, Option<u16>) {
         RData::MX(mx) => {
             // MX::Display is "priority exchange" — keep priority field structured.
             let s = format!("{}", mx);
-            let priority = s.split_whitespace().next().and_then(|w| w.parse::<u16>().ok());
+            let priority = s
+                .split_whitespace()
+                .next()
+                .and_then(|w| w.parse::<u16>().ok());
             let exchange = s.split_whitespace().nth(1).unwrap_or("").to_string();
             (exchange, priority)
         }
         RData::SRV(srv) => {
             let s = format!("{}", srv);
-            let priority = s.split_whitespace().next().and_then(|w| w.parse::<u16>().ok());
+            let priority = s
+                .split_whitespace()
+                .next()
+                .and_then(|w| w.parse::<u16>().ok());
             (s, priority)
         }
         other => (format!("{}", other), None),
@@ -112,7 +127,10 @@ fn format_rdata(data: &RData) -> (String, Option<u16>) {
 fn map_err(e: hickory_resolver::net::NetError) -> NetError {
     let msg = e.to_string();
     let lower = msg.to_lowercase();
-    if lower.contains("no record") || lower.contains("nxdomain") || lower.contains("no records found") {
+    if lower.contains("no record")
+        || lower.contains("nxdomain")
+        || lower.contains("no records found")
+    {
         NetError::HostNotFound { reason: msg }
     } else if lower.contains("timeout") || lower.contains("timed out") {
         NetError::Timeout

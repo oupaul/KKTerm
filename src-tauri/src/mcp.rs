@@ -13,9 +13,9 @@
 use std::collections::HashMap;
 
 use futures::StreamExt;
-use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
+use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tauri::{AppHandle, Manager, State};
 
 use crate::dashboard_ids::new_dashboard_id;
@@ -127,8 +127,8 @@ pub fn get_server_by_name(
 
 fn row_to_server(row: &rusqlite::Row<'_>) -> rusqlite::Result<McpServer> {
     let headers_json: String = row.get(3)?;
-    let headers = serde_json::from_str::<HashMap<String, String>>(&headers_json)
-        .unwrap_or_default();
+    let headers =
+        serde_json::from_str::<HashMap<String, String>>(&headers_json).unwrap_or_default();
     let tools_json: Option<String> = row.get(7)?;
     let tools = tools_json
         .as_deref()
@@ -173,10 +173,9 @@ fn insert_server(
         ],
     )
     .map_err(map_unique_violation)?;
-    get_server_by_id(conn, &server.id)?
-        .ok_or(McpCommandError::Internal {
-            message: "inserted MCP server vanished".to_string(),
-        })
+    get_server_by_id(conn, &server.id)?.ok_or(McpCommandError::Internal {
+        message: "inserted MCP server vanished".to_string(),
+    })
 }
 
 fn map_unique_violation(error: rusqlite::Error) -> McpCommandError {
@@ -313,10 +312,7 @@ fn validate_headers(headers: &HashMap<String, String>) -> Result<(), McpCommandE
 
 // -- HTTP client ------------------------------------------------------------
 
-fn build_headers(
-    server: &McpServer,
-    secret_value: Option<&str>,
-) -> reqwest::header::HeaderMap {
+fn build_headers(server: &McpServer, secret_value: Option<&str>) -> reqwest::header::HeaderMap {
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -328,7 +324,10 @@ fn build_headers(
         HeaderValue::from_static("application/json, text/event-stream"),
     );
     for (name, value) in &server.headers {
-        if let (Ok(n), Ok(v)) = (HeaderName::from_bytes(name.as_bytes()), HeaderValue::from_str(value)) {
+        if let (Ok(n), Ok(v)) = (
+            HeaderName::from_bytes(name.as_bytes()),
+            HeaderValue::from_str(value),
+        ) {
             headers.insert(n, v);
         }
     }
@@ -338,7 +337,10 @@ fn build_headers(
         secret_value,
     ) {
         let resolved = template.replace("{SECRET}", secret);
-        if let (Ok(n), Ok(v)) = (HeaderName::from_bytes(name.as_bytes()), HeaderValue::from_str(&resolved)) {
+        if let (Ok(n), Ok(v)) = (
+            HeaderName::from_bytes(name.as_bytes()),
+            HeaderValue::from_str(&resolved),
+        ) {
             headers.insert(n, v);
         }
     }
@@ -727,8 +729,7 @@ pub async fn mcp_create_server(
         });
     }
     let id = new_dashboard_id("mcp");
-    let sort_order = storage(&app)
-        .with_connection_infallible(|conn| next_sort_order(conn))?;
+    let sort_order = storage(&app).with_connection_infallible(|conn| next_sort_order(conn))?;
     let server = McpServer {
         id: id.clone(),
         name,
@@ -758,7 +759,11 @@ pub async fn mcp_create_server(
 
 fn next_sort_order(conn: &SqliteConnection) -> Result<i64, McpCommandError> {
     let next: Option<i64> = conn
-        .query_row("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM mcp_servers", [], |row| row.get(0))
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM mcp_servers",
+            [],
+            |row| row.get(0),
+        )
         .optional()?;
     Ok(next.unwrap_or(0))
 }
@@ -789,7 +794,9 @@ pub async fn mcp_update_server(
         None => existing.headers.clone(),
     };
     let new_secret_header_name = match request.secret_header_name {
-        Some(value) => value.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+        Some(value) => value
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty()),
         None => existing.secret_header_name.clone(),
     };
     let new_value_template = match request.secret_value_template {
@@ -950,10 +957,7 @@ pub async fn mcp_call_tool(
         .get("isError")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let content = result_value
-        .get("content")
-        .cloned()
-        .unwrap_or(Value::Null);
+    let content = result_value.get("content").cloned().unwrap_or(Value::Null);
     Ok(McpCallResult { content, is_error })
 }
 

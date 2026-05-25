@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Error};
+use anyhow::{Error, bail, ensure};
 use filedescriptor::{FileDescriptor, OwnedHandle, Pipe};
 use lazy_static::lazy_static;
 use portable_pty::{Child, ChildKiller, CommandBuilder, ExitStatus, MasterPty, PtySize};
@@ -16,8 +16,8 @@ use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::minwinbase::STILL_ACTIVE;
 use winapi::um::processthreadsapi::{
     CreateProcessW, DeleteProcThreadAttributeList, GetExitCodeProcess, GetProcessId,
-    InitializeProcThreadAttributeList, TerminateProcess, UpdateProcThreadAttribute,
-    LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_INFORMATION,
+    InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_INFORMATION,
+    TerminateProcess, UpdateProcThreadAttribute,
 };
 use winapi::um::synchapi::WaitForSingleObject as WaitForSingleObjectSync;
 use winapi::um::winbase::{
@@ -434,11 +434,7 @@ impl Child for WindowsChild {
 
     fn process_id(&self) -> Option<u32> {
         let res = unsafe { GetProcessId(self.proc.lock().unwrap().as_raw_handle() as _) };
-        if res == 0 {
-            None
-        } else {
-            Some(res)
-        }
+        if res == 0 { None } else { Some(res) }
     }
 
     fn as_raw_handle(&self) -> Option<RawHandle> {

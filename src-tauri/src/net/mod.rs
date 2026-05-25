@@ -28,16 +28,16 @@ impl NetError {
     }
 }
 
-pub mod stream;
+pub mod commands;
 pub mod dns;
 pub mod interfaces;
-pub mod wol;
-pub mod scan;
-pub mod whois;
-pub mod snmp;
 pub mod ping;
+pub mod scan;
+pub mod snmp;
+pub mod stream;
 pub mod traceroute;
-pub mod commands;
+pub mod whois;
+pub mod wol;
 
 #[cfg(test)]
 mod tests {
@@ -55,7 +55,8 @@ mod tests {
         let err = NetError::PermissionDenied {
             hint: "Run as administrator for ICMP.".into(),
         };
-        let v: serde_json::Value = serde_json::from_str(&serde_json::to_string(&err).unwrap()).unwrap();
+        let v: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&err).unwrap()).unwrap();
         assert_eq!(v["kind"], "permissionDenied");
         assert_eq!(v["hint"], "Run as administrator for ICMP.");
     }

@@ -1,16 +1,16 @@
-use crate::window_state::{validate_main_window_settings, MainWindowSettings};
-use rusqlite::{params, Connection as SqliteConnection, OptionalExtension};
+use crate::window_state::{MainWindowSettings, validate_main_window_settings};
+use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
     fs::{File, OpenOptions},
-    io::{copy, Read, Write},
+    io::{Read, Write, copy},
     path::{Path, PathBuf},
     sync::Mutex,
     time::{Duration, SystemTime},
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 const SCHEMA_USER_VERSION: i32 = 16;
 
@@ -2891,7 +2891,7 @@ impl Storage {
                 return Err(format!(
                     "failed to read backup directory {}: {error}",
                     backup_dir.display()
-                ))
+                ));
             }
         };
 
@@ -4326,9 +4326,9 @@ fn windows_screenshots_folder_path() -> Option<String> {
     use std::ffi::OsString;
     use std::os::windows::ffi::OsStringExt;
 
-    use windows_sys::core::GUID;
     use windows_sys::Win32::System::Com::CoTaskMemFree;
     use windows_sys::Win32::UI::Shell::SHGetKnownFolderPath;
+    use windows_sys::core::GUID;
 
     const FOLDERID_SCREENSHOTS: GUID = GUID {
         data1: 0xb7bede81,
@@ -4509,11 +4509,11 @@ fn default_ai_api_mode() -> String {
 
 fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSettings, String> {
     settings.pinned_connection_ids = unique_non_empty_strings(settings.pinned_connection_ids);
-    settings.status_bar_monitor_interval_seconds = match settings.status_bar_monitor_interval_seconds
-    {
-        5 | 15 | 30 | 60 | 300 => settings.status_bar_monitor_interval_seconds,
-        _ => default_status_bar_monitor_interval_seconds(),
-    };
+    settings.status_bar_monitor_interval_seconds =
+        match settings.status_bar_monitor_interval_seconds {
+            5 | 15 | 30 | 60 | 300 => settings.status_bar_monitor_interval_seconds,
+            _ => default_status_bar_monitor_interval_seconds(),
+        };
     Ok(settings)
 }
 
@@ -4787,7 +4787,7 @@ fn validate_ai_provider_settings(
         _ => {
             return Err(
                 "AI reasoning effort must be default, low, medium, high, or max".to_string(),
-            )
+            );
         }
     };
     settings.cli_execution_policy = match settings.cli_execution_policy.trim() {
@@ -4796,7 +4796,7 @@ fn validate_ai_provider_settings(
             return Err(
                 "CLI adapter policy must remain suggest-only for approval-based execution"
                     .to_string(),
-            )
+            );
         }
     };
     settings.tool_permission_mode = match settings
@@ -4893,7 +4893,7 @@ fn validate_ai_provider_settings(
         _ => {
             return Err(
                 "Email provider must be resend, sendgrid, mailgun, postmark, or smtp".to_string(),
-            )
+            );
         }
     };
     settings.email_from = settings.email_from.trim().to_string();
@@ -5522,7 +5522,10 @@ mod tests {
         let created = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
 
         let updated = storage
-            .update_connection_icon_background_color(created.id.clone(), Some(" #2563eb ".to_string()))
+            .update_connection_icon_background_color(
+                created.id.clone(),
+                Some(" #2563eb ".to_string()),
+            )
             .expect("connection icon background is updated")
             .expect("changed background returns the updated connection");
 
@@ -5672,9 +5675,11 @@ mod tests {
         assert!(candidates.iter().any(|candidate| {
             candidate.kind == "connectionPassword" && candidate.owner_id == ssh.id
         }));
-        assert!(candidates
-            .iter()
-            .any(|candidate| { candidate.kind == "urlPassword" && candidate.owner_id == url.id }));
+        assert!(
+            candidates.iter().any(|candidate| {
+                candidate.kind == "urlPassword" && candidate.owner_id == url.id
+            })
+        );
         assert!(candidates.iter().any(|candidate| {
             candidate.kind == "widgetSecret"
                 && candidate.owner_id == "dashboard-widget-secret:inst-1:apiKey"
@@ -6432,7 +6437,9 @@ mod tests {
         assert!(!imported.general_settings.use_directx_screen_capture);
         assert!(!imported.general_settings.status_bar_monitor_enabled);
         assert_eq!(
-            imported.general_settings.status_bar_monitor_interval_seconds,
+            imported
+                .general_settings
+                .status_bar_monitor_interval_seconds,
             15
         );
         assert!(imported.general_settings.advanced_debugging_enabled);
@@ -6898,12 +6905,16 @@ mod tests {
             .filter(|candidate| candidate.kind == "aiApiKey")
             .collect::<Vec<_>>();
 
-        assert!(ai_candidates
-            .iter()
-            .any(|candidate| candidate.owner_id == "ai-provider:openai"));
-        assert!(ai_candidates
-            .iter()
-            .any(|candidate| candidate.owner_id == "ai-provider:openrouter"));
+        assert!(
+            ai_candidates
+                .iter()
+                .any(|candidate| candidate.owner_id == "ai-provider:openai")
+        );
+        assert!(
+            ai_candidates
+                .iter()
+                .any(|candidate| candidate.owner_id == "ai-provider:openrouter")
+        );
         assert!(ai_candidates.len() > 1);
     }
 

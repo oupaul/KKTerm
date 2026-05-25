@@ -52,6 +52,7 @@ export interface TerminalRenderer {
   onSearchResultsChange: (handler: (result: ISearchResultChangeEvent) => void) => IDisposable;
   onSelectionChange: (handler: () => void) => IDisposable;
   open: (element: HTMLElement) => void;
+  setWheelScrollbackOverride: (enabled: boolean, handler?: (lines: number) => void) => void;
   write: (data: string) => void;
   writeln: (data: string) => void;
   setFontSize: (size: number) => void;
@@ -100,9 +101,12 @@ class XtermTerminalRenderer implements TerminalRenderer {
   private readonly terminal: XtermTerminal;
   private webglAddon: WebglAddon | null = null;
   private webglContextLossDisposable: IDisposable | null = null;
+  private wheelScrollbackHandler: ((lines: number) => void) | null = null;
+  private wheelScrollbackOverride = false;
 
   constructor(settings: TerminalSettings) {
     this.terminal = new XtermTerminal(terminalOptionsFor(settings));
+    this.terminal.attachCustomWheelEventHandler((event) => this.handleWheelEvent(event));
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.searchAddon);
     this.terminal.loadAddon(new WebLinksAddon(handleTerminalLink));
@@ -192,6 +196,11 @@ class XtermTerminalRenderer implements TerminalRenderer {
 
   onSelectionChange(handler: () => void) {
     return this.terminal.onSelectionChange(handler);
+  }
+
+  setWheelScrollbackOverride(enabled: boolean, handler?: (lines: number) => void) {
+    this.wheelScrollbackOverride = enabled;
+    this.wheelScrollbackHandler = enabled ? handler ?? null : null;
   }
 
   open(element: HTMLElement) {
@@ -307,6 +316,24 @@ class XtermTerminalRenderer implements TerminalRenderer {
       ? listenToFocus(this.terminal.textarea, handler)
       : { dispose: () => undefined };
   }
+
+  private handleWheelEvent(event: WheelEvent) {
+    if (!this.wheelScrollbackOverride) {
+      return true;
+    }
+
+    const lines = wheelScrollLinesForEvent(event, this.terminal.rows, terminalCellHeight(this.terminal.element ?? null));
+    if (lines !== 0) {
+      if (this.wheelScrollbackHandler) {
+        this.wheelScrollbackHandler(lines);
+      } else {
+        this.terminal.scrollLines(lines);
+      }
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
 }
 
 function listenToFocus(textarea: HTMLTextAreaElement, handler: () => void): IDisposable {
@@ -346,6 +373,29 @@ function screenPixelDimensionsFor(element: HTMLElement | null) {
 function numericStyleValue(value: string | undefined) {
   const parsed = Number.parseFloat(value ?? "0");
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function terminalCellHeight(element: HTMLElement | null) {
+  const row = element?.querySelector<HTMLElement>(".xterm-rows > div");
+  const height = row?.getBoundingClientRect().height;
+  return height && Number.isFinite(height) && height > 0 ? height : 16;
+}
+
+export function wheelScrollLinesForEvent(event: WheelEvent, rows: number, cellHeight: number) {
+  if (event.deltaY === 0) {
+    return 0;
+  }
+
+  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    return Math.trunc(Math.sign(event.deltaY) * Math.max(1, rows - 1));
+  }
+
+  const rawLines =
+    event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? event.deltaY
+      : event.deltaY / Math.max(1, cellHeight);
+  const magnitude = Math.min(Math.max(1, Math.ceil(Math.abs(rawLines))), Math.max(1, rows - 1));
+  return Math.sign(event.deltaY) * magnitude;
 }
 
 function terminalOptionsFor(settings: TerminalSettings): ITerminalOptions {

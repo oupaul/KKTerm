@@ -78,8 +78,7 @@ pub fn create_bundle(
         created_at_unix_seconds,
         target_os: std::env::consts::OS,
         target_arch: std::env::consts::ARCH,
-        privacy_note:
-            "Local-only diagnostics; no telemetry, terminal output, secrets, or database copy included by default.",
+        privacy_note: "Local-only diagnostics; no telemetry, terminal output, secrets, or database copy included by default.",
         performance: performance.snapshot(),
         included_files,
         excluded_by_default: vec![

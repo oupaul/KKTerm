@@ -1,15 +1,15 @@
 use russh::{
-    client,
+    ChannelMsg, Disconnect, client,
     keys::{
-        agent::{client::AgentClient, AgentIdentity},
-        load_secret_key, PrivateKeyWithHashAlg,
+        PrivateKeyWithHashAlg,
+        agent::{AgentIdentity, client::AgentClient},
+        load_secret_key,
     },
-    ChannelMsg, Disconnect,
 };
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,
-    sync::{mpsc as std_mpsc, Arc},
+    sync::{Arc, mpsc as std_mpsc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };

@@ -27,6 +27,7 @@ type TerminalContextMenuState = {
   hasSelection: boolean;
 };
 
+const TMUX_MOUSE_MODE_EVENT = "kkterm:tmux-mouse-mode";
 const terminalInputEncoder = new TextEncoder();
 
 function normalizeFilenamePart(value: string) {
@@ -348,10 +349,12 @@ function formatRemoteDesktopPaneSubtitle(connection: Connection) {
 
 function TmuxSessionTag({
   connection,
+  onMouseModeChange,
   sessionId,
   tabId,
 }: {
   connection: Connection;
+  onMouseModeChange: (enabled: boolean) => void;
   sessionId?: string;
   tabId: string;
 }) {
@@ -575,6 +578,14 @@ function TmuxSessionTag({
         }
         return next;
       });
+      if (targetSessionId === sessionId) {
+        onMouseModeChange(nextEnabled);
+      }
+      window.dispatchEvent(
+        new CustomEvent(TMUX_MOUSE_MODE_EVENT, {
+          detail: { enabled: nextEnabled, sessionId: targetSessionId },
+        }),
+      );
     } catch (mouseError) {
       setError(mouseError instanceof Error ? mouseError.message : String(mouseError));
     }
@@ -1013,6 +1024,8 @@ function TerminalPaneView({
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
   const startedRef = useRef(false);
+  const tmuxWheelFlushTimerRef = useRef<number | null>(null);
+  const tmuxWheelPendingLinesRef = useRef(0);
   const multilinePasteConfirmationResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
   const onFocusRef = useRef(onFocus);
   useEffect(() => {
@@ -1032,6 +1045,7 @@ function TerminalPaneView({
   const [recordingInfo, setRecordingInfo] = useState<TerminalRecordingInfo | null>(null);
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [recordingsOpen, setRecordingsOpen] = useState(false);
+  const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(true);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
@@ -1056,10 +1070,35 @@ function TerminalPaneView({
 
   useEffect(() => {
     return () => {
+      if (tmuxWheelFlushTimerRef.current !== null) {
+        window.clearTimeout(tmuxWheelFlushTimerRef.current);
+        tmuxWheelFlushTimerRef.current = null;
+      }
       multilinePasteConfirmationResolverRef.current?.(false);
       multilinePasteConfirmationResolverRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    setTmuxMouseEnabled(true);
+  }, [pane.tmuxSessionId]);
+
+  useEffect(() => {
+    function handleTmuxMouseModeEvent(event: Event) {
+      const detail = event instanceof CustomEvent ? event.detail : null;
+      if (
+        !detail ||
+        detail.sessionId !== pane.tmuxSessionId ||
+        typeof detail.enabled !== "boolean"
+      ) {
+        return;
+      }
+      setTmuxMouseEnabled(detail.enabled);
+    }
+
+    window.addEventListener(TMUX_MOUSE_MODE_EVENT, handleTmuxMouseModeEvent);
+    return () => window.removeEventListener(TMUX_MOUSE_MODE_EVENT, handleTmuxMouseModeEvent);
+  }, [pane.tmuxSessionId]);
 
   function requestMultilinePasteConfirmation() {
     multilinePasteConfirmationResolverRef.current?.(false);
@@ -1084,6 +1123,33 @@ function TerminalPaneView({
     }
 
     writeInput(data);
+  }
+
+  function flushTmuxWheelScroll() {
+    tmuxWheelFlushTimerRef.current = null;
+    const lines = Math.max(-120, Math.min(120, tmuxWheelPendingLinesRef.current));
+    tmuxWheelPendingLinesRef.current = 0;
+    if (!lines || pane.connection?.type !== "ssh" || !pane.tmuxSessionId) {
+      return;
+    }
+
+    void invokeCommand("scroll_tmux_pane", {
+      request: {
+        ...tmuxConnectionRequest(pane.connection),
+        tmuxSessionId: pane.tmuxSessionId,
+        lines,
+      },
+    }).catch((error) => {
+      console.warn("tmux wheel scroll failed.", error);
+    });
+  }
+
+  function handleTmuxWheelScroll(lines: number) {
+    tmuxWheelPendingLinesRef.current += lines;
+    if (tmuxWheelFlushTimerRef.current !== null) {
+      return;
+    }
+    tmuxWheelFlushTimerRef.current = window.setTimeout(flushTmuxWheelScroll, 40);
   }
 
   useEffect(() => {
@@ -1136,6 +1202,7 @@ function TerminalPaneView({
         : terminalSettings;
     const terminal = createTerminalRenderer(rendererSettings);
     terminalRendererRef.current = terminal;
+    terminal.setWheelScrollbackOverride(Boolean(pane.tmuxSessionId && !tmuxMouseEnabled), handleTmuxWheelScroll);
     terminal.open(element);
     terminal.fit();
     focusTerminalUnlessExternalInputIsActive(terminal, paneRef.current);
@@ -1401,6 +1468,11 @@ function TerminalPaneView({
         resizeFrameRef.current = null;
       }
       clearScheduledResizeTimeouts();
+      if (tmuxWheelFlushTimerRef.current !== null) {
+        window.clearTimeout(tmuxWheelFlushTimerRef.current);
+        tmuxWheelFlushTimerRef.current = null;
+      }
+      tmuxWheelPendingLinesRef.current = 0;
       removeOutputListener?.();
       const sessionId = sessionIdRef.current;
       if (sessionId) {
@@ -1430,6 +1502,13 @@ function TerminalPaneView({
     recordTerminalStartMetric,
     terminalSettings,
   ]);
+
+  useEffect(() => {
+    terminalRendererRef.current?.setWheelScrollbackOverride(
+      Boolean(pane.tmuxSessionId && !tmuxMouseEnabled),
+      handleTmuxWheelScroll,
+    );
+  }, [pane.tmuxSessionId, tmuxMouseEnabled]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -1711,7 +1790,12 @@ function TerminalPaneView({
         </span>
         <div className="terminal-pane-actions">
           {pane.connection ? (
-            <TmuxSessionTag connection={pane.connection} sessionId={pane.tmuxSessionId} tabId={tabId} />
+            <TmuxSessionTag
+              connection={pane.connection}
+              onMouseModeChange={setTmuxMouseEnabled}
+              sessionId={pane.tmuxSessionId}
+              tabId={tabId}
+            />
           ) : null}
           {recordingInfo ? <span className="terminal-recording-status">{t("terminal.recording")}</span> : null}
           <button

@@ -16,7 +16,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 use tokio::time::{Duration, MissedTickBehavior};
@@ -27,8 +27,8 @@ use super::types::{
     WatchdogStop, WatchdogSummary, WatchdogTarget, WatchdogTick, WatchdogTriggerEvent,
 };
 use super::{
-    evaluate_predicate, new_watchdog_id, now_ms, WatchdogError, MAX_CONCURRENT_WATCHDOGS,
-    MAX_POLL_MS, MIN_POLL_MS, WATCHDOG_TICK_RING_CAP,
+    MAX_CONCURRENT_WATCHDOGS, MAX_POLL_MS, MIN_POLL_MS, WATCHDOG_TICK_RING_CAP, WatchdogError,
+    evaluate_predicate, new_watchdog_id, now_ms,
 };
 
 /// Hard upper bound on how long a single intervention sub-turn may run before

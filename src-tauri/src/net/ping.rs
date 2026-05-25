@@ -6,8 +6,8 @@
 //! Both paths fall through to TCP-connect on `fallback_tcp_port` if ICMP returns
 //! a permission/EPERM error on the very first packet.
 
-use crate::net::scan::tcp_check;
 use crate::net::NetError;
+use crate::net::scan::tcp_check;
 use serde::Serialize;
 use std::net::IpAddr;
 use std::time::Duration;
@@ -64,7 +64,10 @@ impl Default for PingOptions {
 
 pub fn validate_options(opts: &PingOptions) -> Result<(), NetError> {
     if opts.count == 0 || opts.count > MAX_COUNT {
-        return Err(NetError::invalid(format!("count must be 1..={}", MAX_COUNT)));
+        return Err(NetError::invalid(format!(
+            "count must be 1..={}",
+            MAX_COUNT
+        )));
     }
     Ok(())
 }
@@ -72,16 +75,24 @@ pub fn validate_options(opts: &PingOptions) -> Result<(), NetError> {
 async fn resolve_first(host: &str) -> Result<IpAddr, NetError> {
     let mut addrs = tokio::net::lookup_host(format!("{}:0", host))
         .await
-        .map_err(|e| NetError::HostNotFound { reason: e.to_string() })?;
+        .map_err(|e| NetError::HostNotFound {
+            reason: e.to_string(),
+        })?;
     addrs
         .next()
         .map(|s| s.ip())
-        .ok_or_else(|| NetError::HostNotFound { reason: "no addresses".into() })
+        .ok_or_else(|| NetError::HostNotFound {
+            reason: "no addresses".into(),
+        })
 }
 
 /// Outcome of a single ICMP probe attempt before TCP-fallback decision.
 enum IcmpOutcome {
-    Ok { rtt_ms: u128, ttl: Option<u8>, from_ip: Option<String> },
+    Ok {
+        rtt_ms: u128,
+        ttl: Option<u8>,
+        from_ip: Option<String>,
+    },
     Timeout,
     PermissionDenied(String),
     OtherError(String),
@@ -124,7 +135,7 @@ mod backend {
     use super::{IcmpOutcome, PingOptions};
     use std::net::IpAddr;
     use std::time::Duration;
-    use surge_ping::{Client, Config, IcmpPacket, PingIdentifier, PingSequence, ICMP};
+    use surge_ping::{Client, Config, ICMP, IcmpPacket, PingIdentifier, PingSequence};
 
     pub async fn ping_one(ip: IpAddr, opts: &PingOptions) -> IcmpOutcome {
         let icmp_kind = match ip {
@@ -136,13 +147,18 @@ mod backend {
             Ok(c) => c,
             Err(e) => {
                 let s = format!("{:?}", e).to_lowercase();
-                if s.contains("permission") || s.contains("operation not permitted") || s.contains("eperm") {
+                if s.contains("permission")
+                    || s.contains("operation not permitted")
+                    || s.contains("eperm")
+                {
                     return IcmpOutcome::PermissionDenied(format!("{:?}", e));
                 }
                 return IcmpOutcome::OtherError(format!("{:?}", e));
             }
         };
-        let mut pinger = client.pinger(ip, PingIdentifier(rand::random::<u16>())).await;
+        let mut pinger = client
+            .pinger(ip, PingIdentifier(rand::random::<u16>()))
+            .await;
         pinger.timeout(Duration::from_millis(opts.timeout_ms));
         let payload = vec![0u8; opts.size];
         match pinger.ping(PingSequence(0), &payload).await {
@@ -158,10 +174,13 @@ mod backend {
             },
             Err(e) => {
                 let s = format!("{:?}", e).to_lowercase();
-                if s.contains("timeout") { IcmpOutcome::Timeout }
-                else if s.contains("permission") || s.contains("eperm") {
+                if s.contains("timeout") {
+                    IcmpOutcome::Timeout
+                } else if s.contains("permission") || s.contains("eperm") {
                     IcmpOutcome::PermissionDenied(format!("{:?}", e))
-                } else { IcmpOutcome::OtherError(format!("{:?}", e)) }
+                } else {
+                    IcmpOutcome::OtherError(format!("{:?}", e))
+                }
             }
         }
     }
@@ -179,31 +198,49 @@ pub async fn run_ping(
     let mut use_tcp_fallback = false;
 
     for seq in 0..opts.count {
-        if cancel.is_cancelled() { return Ok(()); }
+        if cancel.is_cancelled() {
+            return Ok(());
+        }
         tick.tick().await;
 
         if use_tcp_fallback {
             let r = tcp_check(host, opts.fallback_tcp_port, Some(opts.timeout_ms)).await;
             let _ = out.send(PingReply {
-                seq, mode: "tcp", ok: r.open,
-                rtt_ms: r.rtt_ms, ttl: None, from_ip: Some(ip.to_string()),
+                seq,
+                mode: "tcp",
+                ok: r.open,
+                rtt_ms: r.rtt_ms,
+                ttl: None,
+                from_ip: Some(ip.to_string()),
                 error: r.error,
             });
             continue;
         }
 
         match backend::ping_one(ip, &opts).await {
-            IcmpOutcome::Ok { rtt_ms, ttl, from_ip } => {
+            IcmpOutcome::Ok {
+                rtt_ms,
+                ttl,
+                from_ip,
+            } => {
                 let _ = out.send(PingReply {
-                    seq, mode: "icmp", ok: true,
-                    rtt_ms: Some(rtt_ms), ttl, from_ip,
+                    seq,
+                    mode: "icmp",
+                    ok: true,
+                    rtt_ms: Some(rtt_ms),
+                    ttl,
+                    from_ip,
                     error: None,
                 });
             }
             IcmpOutcome::Timeout => {
                 let _ = out.send(PingReply {
-                    seq, mode: "icmp", ok: false,
-                    rtt_ms: None, ttl: None, from_ip: Some(ip.to_string()),
+                    seq,
+                    mode: "icmp",
+                    ok: false,
+                    rtt_ms: None,
+                    ttl: None,
+                    from_ip: Some(ip.to_string()),
                     error: Some(NetError::Timeout),
                 });
             }
@@ -211,24 +248,38 @@ pub async fn run_ping(
                 use_tcp_fallback = true;
                 let r = tcp_check(host, opts.fallback_tcp_port, Some(opts.timeout_ms)).await;
                 let _ = out.send(PingReply {
-                    seq, mode: "tcp", ok: r.open,
-                    rtt_ms: r.rtt_ms, ttl: None, from_ip: Some(ip.to_string()),
+                    seq,
+                    mode: "tcp",
+                    ok: r.open,
+                    rtt_ms: r.rtt_ms,
+                    ttl: None,
+                    from_ip: Some(ip.to_string()),
                     error: if !r.open && r.error.is_none() {
                         Some(NetError::PermissionDenied { hint })
-                    } else { r.error },
+                    } else {
+                        r.error
+                    },
                 });
             }
             IcmpOutcome::PermissionDenied(hint) => {
                 let _ = out.send(PingReply {
-                    seq, mode: "icmp", ok: false,
-                    rtt_ms: None, ttl: None, from_ip: Some(ip.to_string()),
+                    seq,
+                    mode: "icmp",
+                    ok: false,
+                    rtt_ms: None,
+                    ttl: None,
+                    from_ip: Some(ip.to_string()),
                     error: Some(NetError::PermissionDenied { hint }),
                 });
             }
             IcmpOutcome::OtherError(reason) => {
                 let _ = out.send(PingReply {
-                    seq, mode: "icmp", ok: false,
-                    rtt_ms: None, ttl: None, from_ip: Some(ip.to_string()),
+                    seq,
+                    mode: "icmp",
+                    ok: false,
+                    rtt_ms: None,
+                    ttl: None,
+                    from_ip: Some(ip.to_string()),
                     error: Some(NetError::internal(reason)),
                 });
             }

@@ -285,10 +285,10 @@ fn high_quality_shell_icon(path: &str) -> Option<(WindowsIconHandle, i32)> {
     use std::ffi::c_void;
     use std::mem::{size_of, zeroed};
     use windows_sys::Win32::UI::Controls::{
-        ImageList_GetIcon, ImageList_GetIconSize, ILD_TRANSPARENT,
+        ILD_TRANSPARENT, ImageList_GetIcon, ImageList_GetIconSize,
     };
     use windows_sys::Win32::UI::Shell::{
-        IUnknown_AtomicRelease, SHGetFileInfoW, SHGetImageList, SHFILEINFOW, SHGFI_SYSICONINDEX,
+        IUnknown_AtomicRelease, SHFILEINFOW, SHGFI_SYSICONINDEX, SHGetFileInfoW, SHGetImageList,
         SHIL_EXTRALARGE, SHIL_JUMBO,
     };
 
@@ -350,7 +350,7 @@ fn high_quality_shell_icon(path: &str) -> Option<(WindowsIconHandle, i32)> {
 #[cfg(target_os = "windows")]
 fn legacy_shell_icon(path: &str) -> Option<(WindowsIconHandle, i32)> {
     use std::mem::{size_of, zeroed};
-    use windows_sys::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
+    use windows_sys::Win32::UI::Shell::{SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON, SHGetFileInfoW};
 
     let wide_path = wide_string(path);
     let mut shell_info: SHFILEINFOW = unsafe { zeroed() };
@@ -372,16 +372,16 @@ fn legacy_shell_icon(path: &str) -> Option<(WindowsIconHandle, i32)> {
 
 #[cfg(target_os = "windows")]
 fn icon_handle_to_data_url(icon: WindowsIconHandle, icon_size: i32) -> Option<String> {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
-    use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use image::{ColorType, ImageEncoder, codecs::png::PngEncoder};
     use std::ffi::c_void;
     use std::mem::{size_of, zeroed};
     use std::ptr::null_mut;
     use windows_sys::Win32::Graphics::Gdi::{
-        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits,
-        ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+        BI_RGB, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleBitmap, CreateCompatibleDC,
+        DIB_RGB_COLORS, DeleteDC, DeleteObject, GetDC, GetDIBits, ReleaseDC, SelectObject,
     };
-    use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, DrawIconEx, DI_NORMAL};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DI_NORMAL, DestroyIcon, DrawIconEx};
 
     if icon.is_null() || icon_size <= 0 {
         return None;
@@ -528,7 +528,10 @@ fn containing_folder_for_launcher_path(path: &str) -> Result<String, String> {
 }
 
 fn system_time_to_unix_ms(time: SystemTime) -> Option<u64> {
-    let millis = time.duration_since(SystemTime::UNIX_EPOCH).ok()?.as_millis();
+    let millis = time
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .ok()?
+        .as_millis();
     u64::try_from(millis).ok()
 }
 
@@ -618,8 +621,11 @@ mod tests {
 
     #[test]
     fn launch_plan_opens_folders_through_explorer() {
-        let plan = plan_launch("C:\\Users\\example\\Documents", AppLauncherLaunchMode::Normal)
-            .expect("folders open in File Explorer");
+        let plan = plan_launch(
+            "C:\\Users\\example\\Documents",
+            AppLauncherLaunchMode::Normal,
+        )
+        .expect("folders open in File Explorer");
 
         assert_eq!(plan.target, "explorer.exe");
         assert_eq!(

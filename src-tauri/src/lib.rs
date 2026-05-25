@@ -1736,6 +1736,19 @@ async fn set_tmux_mouse(
 }
 
 #[tauri::command]
+async fn scroll_tmux_pane(
+    app: tauri::AppHandle,
+    request: sessions::ScrollTmuxPaneRequest,
+) -> Result<(), String> {
+    run_blocking_command("tmux scroll pane", move || {
+        let sessions = app.state::<sessions::SessionManager>();
+        let secrets = app.state::<secrets::Secrets>();
+        sessions.scroll_tmux_pane(app.clone(), &secrets, request)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn capture_tmux_pane(
     app: tauri::AppHandle,
     request: sessions::CaptureTmuxPaneRequest,
@@ -2632,6 +2645,7 @@ pub fn run() {
             close_tmux_session,
             rename_tmux_session,
             set_tmux_mouse,
+            scroll_tmux_pane,
             capture_tmux_pane,
             inspect_ssh_system_context,
             list_remote_loopback_ports,
