@@ -341,8 +341,6 @@ A `dashboard-settings` section under Settings holds cross-widget app preferences
 
 Grid density and View tab gradient are **not** in Settings — they are per-view settings edited from the edit-mode topbar.
 
-Destructive "Reset Dashboard" lives in General → Settings data (per `docs/ARCHITECTURE.md` Settings rules). It wipes all views/instances/AI Created Widgets and reseeds the Default view with one App Launcher widget.
-
 ## i18n
 
 All new strings route through `t()` in the `dashboard.*` namespace. English (`src/i18n/locales/en.json`) is the source of truth and the only locale updated alongside Dashboard changes; other locales are tracked per key under `docs/localization_todo/<namespace>.<keyPath>.md` per the i18n rules in `docs/ARCHITECTURE.md` and `docs/manual/16-localization.md`. Built-in widget titles use `titleKey`; AI Created Widget titles are not translated and are persisted in the language the AI used.
@@ -351,6 +349,6 @@ All new strings route through `t()` in the `dashboard.*` namespace. English (`sr
 
 - **App Launcher** (`src/modules/dashboard/widgets/builtin/app-launcher/`) — rendered as a `builtIn` widget. Its data model and management UI stay inside `src/modules/dashboard/widgets/builtin/app-launcher/`; the Dashboard widget is a thin host.
 - **AI Assistant** (`src/ai/`) — consumes the Dashboard page-context payload and issues Tauri commands via registered tools.
-- **Settings** (`src/modules/settings/`) — adds a Dashboard section; "Reset Dashboard" lives in General → Settings data.
+- **Settings** (`src/modules/settings/`) — adds a Dashboard section for cross-widget app preferences.
 - **Activity Rail** (`src/app/ActivityRail.tsx`) — Dashboard is a peer top-level entry alongside Workspace. App Launcher is intentionally not a rail entry.
 - **Status Bar** (`src/modules/workspace/StatusBar.tsx`) — receives transient dashboard status messages via `showStatusBarNotice` for layout-save failures and similar feedback.

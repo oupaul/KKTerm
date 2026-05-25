@@ -53,7 +53,7 @@ Settings tutorial targets:
 - Performance subsection `settings.performance`: toggle `settings.useDirectxScreenCapture` (hint `settings.useDirectxScreenCaptureHint`). When on, screenshot capture tries DXGI Desktop Duplication first and falls back to GDI when DirectX capture is unavailable or unsupported for the requested region.
 - Status Bar subsection `settings.statusBar`: toggle `settings.statusBarMonitor` (hint `settings.statusBarMonitorHint`) controls whether the bottom Status Bar shows and polls CPU/RAM/Network host metrics. When off, KKTerm stops host usage polling completely. `settings.statusBarMonitorInterval` chooses the polling interval: `settings.statusBarMonitorInterval5`, `settings.statusBarMonitorInterval15`, `settings.statusBarMonitorInterval30`, `settings.statusBarMonitorInterval60`, or `settings.statusBarMonitorInterval300`.
 - Settings data subsection (destructive actions live here):
-  - Backup: `settings.backupSettings` → `settings.backupSettingsComplete`. Backup ZIP uses the same shape as importable KKTerm settings export.
+  - Export: `settings.exportSettings` → `settings.exportSettingsComplete`. Export ZIP uses the same shape as importable KKTerm settings export.
   - Import: `settings.importSettings`, confirmation `settings.importSettingsConfirm`, success `settings.importSettingsComplete`.
   - Reset all: `settings.resetAllSettings`, confirmation `settings.resetAllSettingsConfirm`, success `settings.resetAllSettingsComplete`.
 - Debug subsection `settings.debug`: toggle `settings.advancedDebugging` (hint `settings.advancedDebuggingHint`) enables full AI Assistant debug log writing even in release builds. These local logs may include prompts, tool arguments, screenshots, and generated Dashboard AI Created Widget source.

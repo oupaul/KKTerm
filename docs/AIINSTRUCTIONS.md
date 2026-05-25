@@ -217,7 +217,6 @@ KKTerm/
 │   │   ├── rdp.rs              # RDP ActiveX session commands
 │   │   ├── vnc.rs              # VNC framebuffer session (vnc-rs)
 │   │   ├── webview.rs          # WebView2 URL session commands
-│   │   ├── wiki.rs             # In-app wiki commands
 │   │   ├── manual.rs           # In-app manual search commands
 │   │   ├── screenshot.rs       # Terminal/workspace screenshot
 │   │   ├── secrets.rs          # OS keychain (Windows Credential Manager) wrappers

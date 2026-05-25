@@ -2,13 +2,13 @@
 
 ## AI grep hints
 
-- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.wiki`, `app.dontSleep`, `app.trayExit`
+- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.trayExit`
 - Topics: first launch, what KKTerm is, system tray, "Don't Sleep" mode, primary navigation
 - Synonyms users may type: "open the app", "left bar icons", "tray icon", "keep awake", "prevent sleep"
 
 ## What KKTerm is
 
-KKTerm is a local-first Windows desktop workspace for terminal, SSH, SFTP, URL (embedded WebView), RDP, and VNC work, with a built-in Dashboard, Wiki, and AI Assistant. Durable data lives in SQLite on the user's machine; secrets live in the Windows Credential Manager. There is no cloud account.
+KKTerm is a local-first Windows desktop workspace for terminal, SSH, SFTP, URL (embedded WebView), RDP, and VNC work, with a built-in Dashboard and AI Assistant. Durable data lives in SQLite on the user's machine; secrets live in the Windows Credential Manager. There is no cloud account.
 
 See `CONTEXT.md` for the canonical domain terms — **Connection**, **Quick Connect**, **Session**, **Tab**, **Pane**, **Dashboard View**, **Widget Instance**.
 
@@ -41,7 +41,6 @@ Top to bottom:
 
 - Workspace (label `workspace.workspace`)
 - Dashboard (label `dashboard.moduleLabel`)
-- Wiki (label `app.wiki`)
 - Connection Rail shortcuts (label `app.connectionRail`, group `app.connectedConnectionsRail`) — pinned and currently-connected Connections appear here as direct shortcuts.
 - Settings (label `app.settings`, anchored to the bottom)
 

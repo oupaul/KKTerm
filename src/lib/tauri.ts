@@ -52,17 +52,6 @@ import type {
   UrlDataPartitionSummary,
   UrlSettings,
   VncSettings,
-  CreateWikiPageRequest,
-  DeleteWikiAttachmentRequest,
-  MoveWikiPageRequest,
-  SaveWikiAttachmentRequest,
-  UpdateWikiPageRequest,
-  WikiAttachment,
-  WikiExportInfo,
-  WikiPage,
-  WikiPageReference,
-  WikiSearchHit,
-  WikiTree,
 } from "../types";
 import type {
   DashboardCustomWidget,
@@ -907,8 +896,8 @@ type CommandMap = {
     args: { path: string };
     result: ImportedDatabaseSnapshot;
   };
-  backup_settings_database: {
-    args: undefined;
+  export_settings_database: {
+    args: { path: string };
     result: DatabaseBackupInfo;
   };
   get_database_folder: {
@@ -1688,54 +1677,6 @@ type CommandMap = {
     args: { request: VncSimpleRequest };
     result: null;
   };
-  list_wiki_tree: {
-    args: undefined;
-    result: WikiTree;
-  };
-  get_wiki_page: {
-    args: { pageId: string };
-    result: WikiPage;
-  };
-  create_wiki_page: {
-    args: { request: CreateWikiPageRequest };
-    result: WikiPage;
-  };
-  update_wiki_page: {
-    args: { request: UpdateWikiPageRequest };
-    result: WikiPage;
-  };
-  delete_wiki_page: {
-    args: { pageId: string };
-    result: null;
-  };
-  move_wiki_page: {
-    args: { request: MoveWikiPageRequest };
-    result: WikiTree;
-  };
-  search_wiki: {
-    args: { query: string; limit?: number };
-    result: WikiSearchHit[];
-  };
-  list_wiki_pages_for_connection: {
-    args: { connectionId: string };
-    result: WikiPageReference[];
-  };
-  save_wiki_attachment: {
-    args: { request: SaveWikiAttachmentRequest };
-    result: WikiAttachment;
-  };
-  delete_wiki_attachment: {
-    args: { request: DeleteWikiAttachmentRequest };
-    result: null;
-  };
-  export_wiki_zip: {
-    args: { destPath: string };
-    result: WikiExportInfo;
-  };
-  get_wiki_attachments_folder: {
-    args: undefined;
-    result: string;
-  };
   dashboard_load_state: {
     args: undefined;
     result: DashboardLoadState;
@@ -2011,6 +1952,24 @@ export async function selectSettingsImportFile(options: {
   return typeof selectedPath === "string" ? selectedPath : null;
 }
 
+export async function selectSettingsExportFile(options: {
+  title: string;
+  filterName: string;
+  defaultFilename: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await saveDialog({
+    defaultPath: options.defaultFilename,
+    filters: [{ name: options.filterName, extensions: ["zip"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
 export async function selectConnectionImportFile() {
   if (!isTauriRuntime()) {
     return null;
@@ -2277,33 +2236,6 @@ export async function pickAndSaveFile(
   if (typeof path !== "string" || !path) return null;
   await writeFile(path, bytes);
   return path;
-}
-
-export async function selectWikiExportPath(defaultFilename: string) {
-  if (!isTauriRuntime()) {
-    return null;
-  }
-  const path = await saveDialog({
-    defaultPath: defaultFilename,
-    filters: [{ name: "KKTerm wiki export", extensions: ["zip"] }],
-    title: i18next.t("wiki.export"),
-  });
-  return typeof path === "string" ? path : null;
-}
-
-export async function selectWikiAttachmentFiles() {
-  if (!isTauriRuntime()) {
-    return [] as string[];
-  }
-  const selection = await openDialog({
-    directory: false,
-    multiple: true,
-    title: i18next.t("wiki.attach"),
-  });
-  if (Array.isArray(selection)) {
-    return selection;
-  }
-  return typeof selection === "string" ? [selection] : [];
 }
 
 export async function selectScreenshotFolder(options: {

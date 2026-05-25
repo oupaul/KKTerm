@@ -67,7 +67,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       { key: "settings.autoStartWithWindows", description: "Launch KKTerm minimized when the user signs in to Windows." },
       {
         key: "settings.settingsData",
-        description: "Backup, import, database folder, and reset actions.",
+        description: "Export, import, database folder, and reset actions.",
         tutorialTargetId: "settings.settingsData",
       },
       {

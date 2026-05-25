@@ -394,6 +394,14 @@
   gap: 6px;
 }
 
+.settings-reset-dialog .dialog-actions .secondary-button,
+.settings-reset-dialog .dialog-actions .toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .settings-data-note {
   display: inline-flex;
   align-items: center;

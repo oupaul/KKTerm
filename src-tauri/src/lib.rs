@@ -35,7 +35,6 @@ mod telnet;
 mod vnc;
 mod watchdog;
 mod webview;
-mod wiki;
 mod window_effects;
 mod window_state;
 #[cfg(target_os = "windows")]
@@ -747,10 +746,11 @@ fn import_settings_database(
 }
 
 #[tauri::command]
-fn backup_settings_database(
+fn export_settings_database(
     storage: tauri::State<'_, storage::Storage>,
+    path: String,
 ) -> Result<storage::DatabaseBackupInfo, String> {
-    storage.backup_database()
+    storage.export_database(path.into())
 }
 
 #[tauri::command]
@@ -2348,101 +2348,6 @@ fn send_vnc_ctrl_alt_delete(
     vnc_sessions.send_ctrl_alt_delete(request)
 }
 
-#[tauri::command]
-fn list_wiki_tree(storage: tauri::State<'_, storage::Storage>) -> Result<wiki::WikiTree, String> {
-    wiki::list_wiki_tree(&storage)
-}
-
-#[tauri::command]
-fn get_wiki_page(
-    storage: tauri::State<'_, storage::Storage>,
-    page_id: String,
-) -> Result<wiki::WikiPage, String> {
-    wiki::get_wiki_page(&storage, page_id)
-}
-
-#[tauri::command]
-fn create_wiki_page(
-    storage: tauri::State<'_, storage::Storage>,
-    request: wiki::CreateWikiPageRequest,
-) -> Result<wiki::WikiPage, String> {
-    wiki::create_wiki_page(&storage, request)
-}
-
-#[tauri::command]
-fn update_wiki_page(
-    storage: tauri::State<'_, storage::Storage>,
-    request: wiki::UpdateWikiPageRequest,
-) -> Result<wiki::WikiPage, String> {
-    wiki::update_wiki_page(&storage, request)
-}
-
-#[tauri::command]
-fn delete_wiki_page(
-    storage: tauri::State<'_, storage::Storage>,
-    paths: tauri::State<'_, wiki::WikiPaths>,
-    page_id: String,
-) -> Result<(), String> {
-    wiki::delete_wiki_page(&storage, &paths, page_id)
-}
-
-#[tauri::command]
-fn move_wiki_page(
-    storage: tauri::State<'_, storage::Storage>,
-    request: wiki::MoveWikiPageRequest,
-) -> Result<wiki::WikiTree, String> {
-    wiki::move_wiki_page(&storage, request)
-}
-
-#[tauri::command]
-fn search_wiki(
-    storage: tauri::State<'_, storage::Storage>,
-    query: String,
-    limit: Option<u32>,
-) -> Result<Vec<wiki::WikiSearchHit>, String> {
-    wiki::search_wiki(&storage, query, limit.unwrap_or(20))
-}
-
-#[tauri::command]
-fn list_wiki_pages_for_connection(
-    storage: tauri::State<'_, storage::Storage>,
-    connection_id: String,
-) -> Result<Vec<wiki::WikiPageReference>, String> {
-    wiki::list_wiki_pages_for_connection(&storage, connection_id)
-}
-
-#[tauri::command]
-fn save_wiki_attachment(
-    storage: tauri::State<'_, storage::Storage>,
-    paths: tauri::State<'_, wiki::WikiPaths>,
-    request: wiki::SaveWikiAttachmentRequest,
-) -> Result<wiki::WikiAttachment, String> {
-    wiki::save_wiki_attachment(&storage, &paths, request)
-}
-
-#[tauri::command]
-fn delete_wiki_attachment(
-    storage: tauri::State<'_, storage::Storage>,
-    paths: tauri::State<'_, wiki::WikiPaths>,
-    request: wiki::DeleteWikiAttachmentRequest,
-) -> Result<(), String> {
-    wiki::delete_wiki_attachment(&storage, &paths, request)
-}
-
-#[tauri::command]
-fn export_wiki_zip(
-    storage: tauri::State<'_, storage::Storage>,
-    paths: tauri::State<'_, wiki::WikiPaths>,
-    dest_path: String,
-) -> Result<wiki::WikiExportInfo, String> {
-    wiki::export_wiki_zip(&storage, &paths, std::path::PathBuf::from(dest_path))
-}
-
-#[tauri::command]
-fn get_wiki_attachments_folder(paths: tauri::State<'_, wiki::WikiPaths>) -> Result<String, String> {
-    Ok(paths.root().display().to_string())
-}
-
 #[cfg(target_os = "windows")]
 fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -2483,7 +2388,6 @@ pub fn run() {
             })?;
             let db_path = app_data_dir.join("kkterm.sqlite3");
             let mcp_bridge_dir = app_data_dir.clone();
-            let wiki_paths = wiki::WikiPaths::new(app_data_dir);
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
             let general_settings = storage.general_settings().map_err(setup_error)?;
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
@@ -2552,7 +2456,6 @@ pub fn run() {
             app.manage(webview_sessions);
             app.manage(rdp::RdpSessionManager::new());
             app.manage(vnc::VncSessionManager::new());
-            app.manage(wiki_paths);
             app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
@@ -2636,7 +2539,7 @@ pub fn run() {
             prepare_app_launcher_entry,
             launch_app_launcher_entry,
             import_settings_database,
-            backup_settings_database,
+            export_settings_database,
             get_database_folder,
             get_terminal_settings,
             update_terminal_settings,
@@ -2785,18 +2688,6 @@ pub fn run() {
             close_vnc_session,
             get_vnc_session_status,
             send_vnc_ctrl_alt_delete,
-            list_wiki_tree,
-            get_wiki_page,
-            create_wiki_page,
-            update_wiki_page,
-            delete_wiki_page,
-            move_wiki_page,
-            search_wiki,
-            list_wiki_pages_for_connection,
-            save_wiki_attachment,
-            delete_wiki_attachment,
-            export_wiki_zip,
-            get_wiki_attachments_folder,
             dashboard_commands::dashboard_load_state,
             dashboard_commands::dashboard_create_view,
             dashboard_commands::dashboard_update_view,

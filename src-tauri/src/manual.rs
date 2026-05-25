@@ -25,7 +25,6 @@ const CHAPTERS: &[ManualChapter] = &[
     ManualChapter { slug: "remote-desktop", order: 9, filename: "09-remote-desktop.md", title: "Remote desktop (RDP / VNC)" },
     ManualChapter { slug: "dashboard", order: 10, filename: "10-dashboard.md", title: "Dashboard" },
     ManualChapter { slug: "app-launcher", order: 11, filename: "11-app-launcher.md", title: "App Launcher widget" },
-    ManualChapter { slug: "wiki", order: 12, filename: "12-wiki.md", title: "Wiki" },
     ManualChapter { slug: "ai-assistant", order: 13, filename: "13-ai-assistant.md", title: "AI Assistant" },
     ManualChapter { slug: "screenshots", order: 14, filename: "14-screenshots.md", title: "Screenshots" },
     ManualChapter { slug: "settings", order: 15, filename: "15-settings.md", title: "Settings" },

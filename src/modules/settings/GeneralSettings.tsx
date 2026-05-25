@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  DatabaseBackup,
+  Download,
   FolderOpen,
   Languages,
   RotateCcw,
@@ -23,6 +23,7 @@ import {
 } from "../../app-defaults";
 import {
   SUPPORTED_LANGUAGES,
+  LANGUAGE_STORAGE_KEY,
   switchLanguage,
   detectLanguage,
   type SupportedLanguage,
@@ -31,10 +32,10 @@ import {
   invokeCommand,
   isTauriRuntime,
   openFilesystemPath,
+  selectSettingsExportFile,
   selectSettingsImportFile,
 } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import { useDashboardStore } from "../dashboard/state/dashboardStore";
 import {
   AI_PROVIDER_SECRET_OWNER_ID,
   EMAIL_API_SECRET_OWNER_ID,
@@ -93,7 +94,6 @@ export function GeneralSettings() {
   const [draft, setDraft] = useState(generalSettings);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [dashboardResetDialogOpen, setDashboardResetDialogOpen] = useState(false);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(generalSettings);
 
   useEffect(() => {
@@ -113,16 +113,20 @@ export function GeneralSettings() {
     }
   }
 
-  async function handleBackupSettings() {
+  async function handleExportSettings() {
     try {
-      const backup = await invokeCommand("backup_settings_database");
-      setGeneralSettings({
-        ...generalSettings,
-        lastBackupAt: backup.createdAt,
+      const path = await selectSettingsExportFile({
+        title: t("settings.exportSettings"),
+        filterName: t("settings.settingsExportFilter"),
+        defaultFilename: defaultSettingsExportFilename(),
       });
-      showStatusBarNotice(t("settings.backupSettingsComplete", { filename: backup.filename }), { tone: "success" });
-    } catch (backupError) {
-      showStatusBarNotice(backupError instanceof Error ? backupError.message : String(backupError), { tone: "error" });
+      if (!path) {
+        return;
+      }
+      const exported = await invokeCommand("export_settings_database", { path });
+      showStatusBarNotice(t("settings.exportSettingsComplete", { filename: exported.filename }), { tone: "success" });
+    } catch (exportError) {
+      showStatusBarNotice(exportError instanceof Error ? exportError.message : String(exportError), { tone: "error" });
     }
   }
 
@@ -164,6 +168,7 @@ export function GeneralSettings() {
       );
       showStatusBarNotice(t("settings.importSettingsComplete", { filename: snapshot.backup.filename }), { tone: "success" });
       setImportDialogOpen(false);
+      window.setTimeout(() => window.location.reload(), 250);
     } catch (importError) {
       showStatusBarNotice(importError instanceof Error ? importError.message : String(importError), { tone: "error" });
     }
@@ -257,23 +262,20 @@ export function GeneralSettings() {
         setAiProviderSettings(defaultAiProviderSettings);
       }
 
-      setCurrentLanguage(detectLanguage());
+      try {
+        window.localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+      } catch {
+        // Storage may be unavailable.
+      }
+      const resetLanguage = detectLanguage();
+      await switchLanguage(resetLanguage);
+      setCurrentLanguage(resetLanguage);
       setAiProviderHasApiKey(false);
       window.dispatchEvent(
-new CustomEvent("kkterm:connection-tree-invalidated"),
+        new CustomEvent("kkterm:connection-tree-invalidated"),
       );
       showStatusBarNotice(t("settings.resetAllSettingsComplete"), { tone: "success" });
       setResetDialogOpen(false);
-    } catch (resetError) {
-      showStatusBarNotice(resetError instanceof Error ? resetError.message : String(resetError), { tone: "error" });
-    }
-  }
-
-  async function handleResetDashboard() {
-    try {
-      await useDashboardStore.getState().resetDashboard();
-      showStatusBarNotice(t("settings.dashboardResetDone"), { tone: "success" });
-      setDashboardResetDialogOpen(false);
     } catch (resetError) {
       showStatusBarNotice(resetError instanceof Error ? resetError.message : String(resetError), { tone: "error" });
     }
@@ -496,10 +498,10 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
           <button
             className="secondary-button"
             type="button"
-            onClick={() => void handleBackupSettings()}
+            onClick={() => void handleExportSettings()}
           >
-            <DatabaseBackup size={16} />
-            {t("settings.backupSettings")}
+            <Download size={16} />
+            {t("settings.exportSettings")}
           </button>
           <button
             className="secondary-button"
@@ -524,14 +526,6 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
           >
             <RotateCcw size={16} />
             {t("settings.resetAllSettings")}
-          </button>
-          <button
-            className="secondary-button danger"
-            type="button"
-            onClick={() => setDashboardResetDialogOpen(true)}
-          >
-            <RotateCcw size={16} />
-            {t("settings.dashboardReset")}
           </button>
         </div>
       </fieldset>
@@ -630,41 +624,20 @@ new CustomEvent("kkterm:connection-tree-invalidated"),
           </div>
         </div>
       ) : null}
-      {dashboardResetDialogOpen ? (
-        <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
-          <div
-            aria-label={t("settings.dashboardResetTitle")}
-            aria-modal="true"
-            className="connection-dialog settings-reset-dialog"
-            role="dialog"
-          >
-            <header className="connection-dialog-header compact">
-              <div>
-                <p className="panel-label">{t("settings.sectionGeneral")}</p>
-                <h2>{t("settings.dashboardResetTitle")}</h2>
-              </div>
-            </header>
-            <p className="field-hint">{t("settings.dashboardResetBody")}</p>
-            <div className="dialog-actions">
-              <button
-                className="secondary-button danger"
-                onClick={() => void handleResetDashboard()}
-                type="button"
-              >
-                <RotateCcw size={15} />
-                {t("settings.dashboardResetConfirm")}
-              </button>
-              <button
-                className="toolbar-button"
-                onClick={() => setDashboardResetDialogOpen(false)}
-                type="button"
-              >
-                {t("common.cancel")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
+}
+
+function defaultSettingsExportFilename() {
+  const now = new Date();
+  const timestamp = [
+    now.getUTCFullYear(),
+    String(now.getUTCMonth() + 1).padStart(2, "0"),
+    String(now.getUTCDate()).padStart(2, "0"),
+    "-",
+    String(now.getUTCHours()).padStart(2, "0"),
+    String(now.getUTCMinutes()).padStart(2, "0"),
+    String(now.getUTCSeconds()).padStart(2, "0"),
+  ].join("");
+  return `kkterm-${timestamp}-001.zip`;
 }

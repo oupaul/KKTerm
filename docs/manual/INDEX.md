@@ -30,7 +30,6 @@ When a doc says "right-click on X", the implementation is a Tauri native context
 | 09 | [09-remote-desktop.md](09-remote-desktop.md) | RDP and VNC Sessions, Ctrl+Alt+Del, reconnect | `remoteDesktop` |
 | 10 | [10-dashboard.md](10-dashboard.md) | Dashboard Module, Views, Widgets, presets, accents, backgrounds | `dashboard` |
 | 11 | [11-app-launcher.md](11-app-launcher.md) | App Launcher widget — adding apps/files/folders, run modes | `appLauncher` |
-| 12 | [12-wiki.md](12-wiki.md) | Wiki Module — pages, tags, backlinks, attachments | `wiki` |
 | 13 | [13-ai-assistant.md](13-ai-assistant.md) | AI Assistant panel, chats, tools, intents (Watchdog / Create Widget / Extension Draft), MCP | `ai` |
 | 14 | [14-screenshots.md](14-screenshots.md) | Region / window / full-screen capture, screenshot library | `screenshots`, `workspace` |
 | 15 | [15-settings.md](15-settings.md) | Every Settings section: General, Appearance, AI, SSH, Terminal, Screenshots, RDP, VNC, About | `settings` |

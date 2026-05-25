@@ -87,75 +87,6 @@ CREATE TABLE IF NOT EXISTS settings (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS wiki_pages (
-    id TEXT PRIMARY KEY,
-    parent_id TEXT REFERENCES wiki_pages(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    body_md TEXT NOT NULL DEFAULT '',
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_wiki_pages_parent_sort
-    ON wiki_pages(parent_id, sort_order);
-
-CREATE INDEX IF NOT EXISTS idx_wiki_pages_slug
-    ON wiki_pages(slug);
-
-CREATE TABLE IF NOT EXISTS wiki_page_links (
-    page_id TEXT NOT NULL REFERENCES wiki_pages(id) ON DELETE CASCADE,
-    target_page_id TEXT NOT NULL REFERENCES wiki_pages(id) ON DELETE CASCADE,
-    PRIMARY KEY (page_id, target_page_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_wiki_page_links_target
-    ON wiki_page_links(target_page_id);
-
-CREATE TABLE IF NOT EXISTS wiki_page_connections (
-    page_id TEXT NOT NULL REFERENCES wiki_pages(id) ON DELETE CASCADE,
-    connection_id TEXT NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
-    PRIMARY KEY (page_id, connection_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_wiki_page_connections_connection
-    ON wiki_page_connections(connection_id);
-
-CREATE VIRTUAL TABLE IF NOT EXISTS wiki_pages_fts USING fts5(
-    title,
-    body_md,
-    content='wiki_pages',
-    content_rowid='rowid',
-    tokenize='unicode61'
-);
-
-CREATE TRIGGER IF NOT EXISTS wiki_pages_ai AFTER INSERT ON wiki_pages BEGIN
-    INSERT INTO wiki_pages_fts(rowid, title, body_md) VALUES (new.rowid, new.title, new.body_md);
-END;
-
-CREATE TRIGGER IF NOT EXISTS wiki_pages_ad AFTER DELETE ON wiki_pages BEGIN
-    INSERT INTO wiki_pages_fts(wiki_pages_fts, rowid, title, body_md) VALUES('delete', old.rowid, old.title, old.body_md);
-END;
-
-CREATE TRIGGER IF NOT EXISTS wiki_pages_au AFTER UPDATE ON wiki_pages BEGIN
-    INSERT INTO wiki_pages_fts(wiki_pages_fts, rowid, title, body_md) VALUES('delete', old.rowid, old.title, old.body_md);
-    INSERT INTO wiki_pages_fts(rowid, title, body_md) VALUES (new.rowid, new.title, new.body_md);
-END;
-
-CREATE TABLE IF NOT EXISTS wiki_attachments (
-    id TEXT PRIMARY KEY,
-    page_id TEXT NOT NULL REFERENCES wiki_pages(id) ON DELETE CASCADE,
-    filename TEXT NOT NULL,
-    relative_path TEXT NOT NULL,
-    mime TEXT,
-    bytes INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_wiki_attachments_page
-    ON wiki_attachments(page_id);
-
 CREATE TABLE IF NOT EXISTS dashboard_views (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -1159,6 +1090,22 @@ impl Storage {
         };
         self.record_last_backup_at(&backup.created_at)?;
         Ok(backup)
+    }
+
+    pub fn export_database(&self, export_path: PathBuf) -> Result<DatabaseBackupInfo, String> {
+        self.write_database_zip(&export_path, "export", false)?;
+        let created_at = OffsetDateTime::now_utc()
+            .format(&Rfc3339)
+            .unwrap_or_else(|_| "unknown".to_string());
+        Ok(DatabaseBackupInfo {
+            filename: export_path
+                .file_name()
+                .and_then(|filename| filename.to_str())
+                .ok_or_else(|| "export filename is not valid UTF-8".to_string())?
+                .to_string(),
+            path: export_path.display().to_string(),
+            created_at,
+        })
     }
 
     fn write_database_zip(
