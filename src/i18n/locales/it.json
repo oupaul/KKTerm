@@ -2054,7 +2054,121 @@
     "layoutReset": "Layout salvato della Connection reimpostato.",
     "layoutSaved": "Layout della Connection salvato.",
     "resetLayout": "Reimposta layout",
-    "saveLayout": "Salva layout"
+    "saveLayout": "Salva layout",
+    "quickCommandsBar": "Quick commands",
+    "quickCommandsShow": "Show quick commands",
+    "quickCommandsHide": "Hide quick commands",
+    "quickCommandsAddFirst": "Add quick command",
+    "quickCommandsManage": "Manage Quick Commands",
+    "quickCommandsNoPane": "No active terminal Pane for quick commands.",
+    "quickCommandsRun": "Run command",
+    "quickCommandsConfirmTitle": "Run quick command?",
+    "quickCommandsConfirm": "Run \"{{label}}\" in the focused terminal Pane?",
+    "quickCommandsDialogHint": "Add saved commands from the library or create your own.",
+    "quickCommandsSaved": "Saved commands",
+    "quickCommandsEmpty": "No quick commands yet.",
+    "quickCommandsDelete": "Delete quick command {{label}}",
+    "quickCommandsLibrary": "From Library",
+    "quickCommandsCustom": "Custom",
+    "quickCommandsSearch": "Search command library",
+    "quickCommandsAdd": "Add",
+    "quickCommandsNoLibraryMatches": "No library commands match.",
+    "quickCommandsLabel": "Label",
+    "quickCommandsCommand": "Command",
+    "quickCommandsSendEnter": "Send Enter after command",
+    "quickCommandsRequireConfirm": "Require confirmation before running",
+    "quickCommandsColor": "Color",
+    "quickCommandsIcon": "Icon",
+    "quickCommandsCreate": "Create command",
+    "quickCommandLibrary": {
+      "sections": {
+        "aiAgents": "AI Agents",
+        "systemAdministrator": "System Administrator"
+      },
+      "subsections": {
+        "claude": "Claude",
+        "codex": "Codex",
+        "openclaw": "OpenClaw",
+        "hermesAgents": "Hermes Agents",
+        "general": "General",
+        "docker": "Docker",
+        "k8s": "K8s"
+      },
+      "entries": {
+        "aiClaudeStart": {
+          "label": "Claude",
+          "description": "Start an interactive Claude Code session."
+        },
+        "aiClaudeBypass": {
+          "label": "Claude bypass permissions",
+          "description": "Run Claude Code without permission prompts. Use only in a trusted sandbox."
+        },
+        "aiClaudeInstall": {
+          "label": "Install Claude Code",
+          "description": "Install Claude Code with npm."
+        },
+        "aiCodexStart": {
+          "label": "Codex",
+          "description": "Start an interactive OpenAI Codex CLI session."
+        },
+        "aiCodexInstall": {
+          "label": "Install Codex",
+          "description": "Install the OpenAI Codex CLI with npm."
+        },
+        "aiOpenclawInstall": {
+          "label": "Install OpenClaw",
+          "description": "Run the OpenClaw installer for macOS, Linux, or WSL2."
+        },
+        "aiOpenclawOnboard": {
+          "label": "OpenClaw onboard",
+          "description": "Launch OpenClaw onboarding and install the daemon."
+        },
+        "aiHermesInstall": {
+          "label": "Install Hermes Agent",
+          "description": "Run the Hermes Agent installer for macOS, Linux, or WSL2."
+        },
+        "aiHermesSetup": {
+          "label": "Hermes setup",
+          "description": "Open the Hermes setup wizard."
+        },
+        "sysNodeInstall": {
+          "label": "Install Node with nvm",
+          "description": "Install and use the active Node.js LTS release with nvm."
+        },
+        "sysDiskUsage": {
+          "label": "Disk usage",
+          "description": "Show mounted filesystem space in human-readable units."
+        },
+        "sysServiceStatus": {
+          "label": "Service status",
+          "description": "Check a systemd service. Add the service name before running."
+        },
+        "sysDockerInstall": {
+          "label": "Install Docker Engine",
+          "description": "Install Docker Engine with Docker's convenience script."
+        },
+        "sysDockerAdmin": {
+          "label": "Docker administration",
+          "description": "List containers, images, and volumes."
+        },
+        "sysDockerLogs": {
+          "label": "Docker logs",
+          "description": "Stream container logs. Add the container name or id before running."
+        },
+        "sysK8sPods": {
+          "label": "K8s pods",
+          "description": "List pods across all namespaces."
+        },
+        "sysK8sLogs": {
+          "label": "K8s pod logs",
+          "description": "Stream pod logs. Add the pod name before running."
+        },
+        "sysK8sShell": {
+          "label": "K8s shell",
+          "description": "Open a shell in a pod. Add the pod name before the double space."
+        }
+      }
+    }
   },
   "webview": {
     "address": "Indirizzo",

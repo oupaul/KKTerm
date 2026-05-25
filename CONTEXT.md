@@ -35,6 +35,14 @@ _Avoid_: Remote desktop session, screen profile, saved desktop
 An unsaved one-off connection draft used to start a session without creating a durable connection.
 _Avoid_: Temporary profile, ad hoc host
 
+**Quick Command**:
+A reusable terminal command shortcut the user can send to the focused terminal Pane from the **Quick Command Bar**. Quick Commands are per-Connection workspace UI shortcuts; they do not create Connections and do not own Session lifecycle.
+_Avoid_: Connection command, Session command, profile command
+
+**Quick Command Bar**:
+The optional bottom bar in a terminal Tab that displays the active Connection's Quick Commands. The Quick Command Bar is off by default, can be toggled from the terminal Pane toolbar, and remembers visibility per Connection.
+_Avoid_: Command bar, shortcut bar, Session command bar
+
 **Session**:
 A live runtime instance for a process, SSH channel, file-browser, webview, or remote-desktop state.
 _Avoid_: Connection, profile, tab
@@ -130,6 +138,7 @@ _Avoid_: settings nav, settings menu
 - An **RDP Connection** starts a Windows-native remote-desktop **Session** hosted as a native child control over its **Tab**.
 - A **VNC Connection** starts a Rust-managed remote framebuffer **Session** rendered into its **Tab**.
 - A **Quick Connect** starts exactly one **Session** unless the user saves it as a **Connection**.
+- A **Quick Command** writes input from the **Quick Command Bar** to a terminal **Pane** in an existing **Session**.
 - A **Session** may be presented by one **Tab**.
 - A terminal **Tab** may contain one or more **Panes**.
 - A tmux-enabled SSH terminal **Pane** may start or attach to a named remote tmux session. If `tmux` is unavailable on the remote host, the Pane falls back to the normal remote shell.

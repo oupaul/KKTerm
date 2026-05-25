@@ -1,3 +1,5 @@
+import type { AccentName, IconName } from "./modules/dashboard/types";
+
 export type ConnectionType =
   | "local"
   | "ssh"
@@ -144,6 +146,16 @@ export interface RemoteDesktopPane {
 }
 
 export type WorkspacePane = TerminalPane | UrlPane | RemoteDesktopPane;
+
+export interface QuickCommand {
+  id: string;
+  label: string;
+  command: string;
+  iconName: IconName;
+  accentName: AccentName;
+  sendEnter: boolean;
+  confirm: boolean;
+}
 
 export type SplitDirection = "right" | "left" | "down" | "up";
 export type SplitOrientation = "horizontal" | "vertical";
@@ -514,6 +526,7 @@ export interface WorkspaceTab {
   panes: WorkspacePane[];
   layout?: LayoutNode;
   focusedPaneId?: string;
+  quickCommandBarVisible?: boolean;
   connection?: Connection;
   url?: string;
   dataPartition?: string;

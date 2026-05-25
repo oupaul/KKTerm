@@ -394,6 +394,8 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/i18n/config.ts` — i18next instance, language detection, dynamic locale loading, `switchLanguage()`, `ensureI18nReady()`.
 - `src/i18n/useT.ts` — typed translation hook with key autocompletion.
 - `src/i18n/locales/en.json` — English source-of-truth; 13 additional locale files under the same directory.
+- `src/modules/workspace/connections/terminal/QuickCommandBar.tsx` — terminal Quick Command Bar, per-Connection manager dialog, From Library add flow, and custom command editor.
+- `src/modules/workspace/connections/terminal/quickCommandLibrary.ts` — curated Quick Command library entries and executable snippets.
 
 New feature code should land in the owning source area above. New feature CSS should live beside that source area and be imported from `src/App.css` in a deliberate cascade order. Shared selectors such as `.status-bar`, `.terminal-menu`, `.dialog-backdrop`, `.icon-button`, form basics, and generic context-menu rules belong in `src/styles/base.css` unless they are truly area-specific. Keep `src/App.tsx` limited to app chrome and cross-cutting bootstrap. Workspace state, settings I/O, layout serialization, terminal rendering, pane input routing, and the Tauri command boundary remain separated under `src/store.ts`, `src/lib/`, `src/modules/workspace/`, `src/modules/workspace/connections/terminal/`, and `src/lib/tauri.ts`.
 

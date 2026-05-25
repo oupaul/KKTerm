@@ -5,7 +5,7 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
@@ -19,6 +19,7 @@ import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer 
 import { ensureLayout } from "../../layout";
 import { getPaneRenderer, registerPaneInputWriter, registerPaneRenderer, unregisterPaneInputWriter, unregisterPaneRenderer } from "../../paneRegistry";
 import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspacePane, WorkspaceTab } from "../../../../types";
+import { QuickCommandBar } from "./QuickCommandBar";
 
 type TerminalContextMenuState = {
   x: number;
@@ -66,6 +67,9 @@ export function TerminalWorkspace({
   const splitTerminalPaneDirected = useWorkspaceStore(
     (state) => state.splitTerminalPaneDirected,
   );
+  const setQuickCommandBarVisible = useWorkspaceStore(
+    (state) => state.setQuickCommandBarVisible,
+  );
   const openSftpBrowser = useWorkspaceStore((state) => state.openSftpBrowser);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const setFocusedPane = useWorkspaceStore((state) => state.setFocusedPane);
@@ -76,6 +80,7 @@ export function TerminalWorkspace({
   const focusedPaneId = tab.focusedPaneId ?? tab.panes[0]?.id;
   const layout = useMemo(() => ensureLayout(tab.layout, tab.panes), [tab.layout, tab.panes]);
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
+  const quickCommandBarVisible = Boolean(tab.quickCommandBarVisible) && !isSingleEmbeddedPane;
 
   function handleSplit(paneId: string, direction: "right" | "left" | "down" | "up") {
     setFocusedPane(tab.id, paneId);
@@ -143,6 +148,7 @@ export function TerminalWorkspace({
         "terminal-workspace",
         isActive ? "active" : "",
         isSingleEmbeddedPane ? "terminal-workspace-embedded-only" : "",
+        quickCommandBarVisible ? "quick-command-bar-visible" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -162,9 +168,12 @@ export function TerminalWorkspace({
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
             showSftpButton={showSftpButton}
             onSplit={handleSplit}
+            quickCommandBarVisible={quickCommandBarVisible}
+            onToggleQuickCommandBar={() => setQuickCommandBarVisible(tab.id, !quickCommandBarVisible)}
           />
         ) : null}
       </div>
+      {quickCommandBarVisible ? <QuickCommandBar tab={tab} /> : null}
     </section>
   );
 }
@@ -182,6 +191,8 @@ function TerminalLayoutView({
   onSaveBuffer,
   showSftpButton,
   onSplit,
+  quickCommandBarVisible,
+  onToggleQuickCommandBar,
 }: {
   isActive: boolean;
   tabId: string;
@@ -195,6 +206,8 @@ function TerminalLayoutView({
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
+  quickCommandBarVisible: boolean;
+  onToggleQuickCommandBar: () => void;
 }) {
   if (layout.type === "leaf") {
     const pane = panes.find((entry) => entry.id === layout.paneId);
@@ -217,6 +230,8 @@ function TerminalLayoutView({
             onSaveBuffer={onSaveBuffer}
             showSftpButton={showSftpButton}
             onSplit={onSplit}
+            quickCommandBarVisible={quickCommandBarVisible}
+            onToggleQuickCommandBar={onToggleQuickCommandBar}
           />
         ) : (
           <EmbeddedConnectionPane
@@ -253,6 +268,8 @@ function TerminalLayoutView({
           onSaveBuffer={onSaveBuffer}
           showSftpButton={showSftpButton}
           onSplit={onSplit}
+          quickCommandBarVisible={quickCommandBarVisible}
+          onToggleQuickCommandBar={onToggleQuickCommandBar}
         />
       ))}
     </div>
@@ -968,6 +985,8 @@ function TerminalPaneView({
   onSaveBuffer,
   showSftpButton,
   onSplit,
+  quickCommandBarVisible,
+  onToggleQuickCommandBar,
 }: {
   isActive: boolean;
   tabId: string;
@@ -981,6 +1000,8 @@ function TerminalPaneView({
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
+  quickCommandBarVisible: boolean;
+  onToggleQuickCommandBar: () => void;
 }) {
   const paneRef = useRef<HTMLElement | null>(null);
   const terminalElementRef = useRef<HTMLDivElement | null>(null);
@@ -1717,6 +1738,16 @@ function TerminalPaneView({
               <span>{t("terminal.sftp")}</span>
             </button>
           ) : null}
+          <button
+            className={`terminal-pane-action quick-command-toggle${quickCommandBarVisible ? " active" : ""}`}
+            aria-label={quickCommandBarVisible ? t("terminal.quickCommandsHide") : t("terminal.quickCommandsShow")}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onToggleQuickCommandBar}
+            title={quickCommandBarVisible ? t("terminal.quickCommandsHide") : t("terminal.quickCommandsShow")}
+            type="button"
+          >
+            <PanelBottom size={13} />
+          </button>
           <button
             className="terminal-pane-action"
             aria-label={t("terminal.copySelection")}

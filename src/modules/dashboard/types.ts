@@ -48,7 +48,17 @@ export const ICON_NAMES = [
   "Package","Phone","Pin","Power","Printer","Radio","Search",
   "Settings","Shield","ShoppingCart","Star","Tag","Tool","Trash",
   "Truck","User","Users","Video","Volume","Watch","Wifi","Wind",
-  "Zap","Layers","List","Grid",
+  "Zap","Layers","List","Grid","Archive","BadgeCheck","BookOpen",
+  "Bookmark","Brain","Briefcase","Bug","ChartBar","ChartLine",
+  "CheckCircle","ChevronRight","CircleHelp","Clipboard","ClipboardCheck",
+  "ClipboardList","Code","Code2","Cog","Command","Compass","Container",
+  "Copy","Download","ExternalLink","Eye","File","FileCode","FileJson",
+  "FileTerminal","FileText","Fingerprint","Flag","Gauge","GitBranch",
+  "GitCommit","GitFork","Github","Hammer","HardDrive","HeartPulse","Home",
+  "Inbox","Keyboard","Laptop","Link","ListChecks","LogIn","LogOut","Map",
+  "MessageSquare","MousePointer2","PackageCheck","PanelTop","Play","Plus",
+  "Rocket","Route","Save","Send","Shell","SlidersHorizontal","Sparkles",
+  "SquareTerminal","Upload","Usb","Waypoints","Webhook","Workflow","XCircle",
 ] as const;
 export type IconName = (typeof ICON_NAMES)[number];
 
