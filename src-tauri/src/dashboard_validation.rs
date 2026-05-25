@@ -102,7 +102,15 @@ pub const BACKGROUND_PRESET_IDS: &[&str] = &[
     "g-nocturne",
 ];
 
-pub const DASHBOARD_TAB_GRADIENT_IDS: &[&str] = &[
+pub const DASHBOARD_TAB_COLOR_IDS: &[&str] = &[
+    "mist",
+    "sand",
+    "sage",
+    "sky",
+    "blush",
+    "lavender",
+    "graphite",
+    "midnight",
     "g-dawn",
     "g-fog",
     "g-meadow",
@@ -301,7 +309,7 @@ pub fn validate_dynamic_background(dynamic: &str) -> Result<(), ValidationError>
 }
 
 pub fn validate_dashboard_tab_color(color: &str) -> Result<(), ValidationError> {
-    if DASHBOARD_TAB_GRADIENT_IDS.contains(&color) {
+    if DASHBOARD_TAB_COLOR_IDS.contains(&color) {
         Ok(())
     } else {
         Err(ValidationError::InvalidBackground)
@@ -1337,20 +1345,22 @@ mod tests {
     }
 
     #[test]
-    fn dashboard_tab_color_accepts_gradient_presets() {
+    fn dashboard_tab_color_accepts_tab_color_presets() {
+        assert!(validate_dashboard_tab_color("mist").is_ok());
+        assert!(validate_dashboard_tab_color("midnight").is_ok());
         assert!(validate_dashboard_tab_color("g-dawn").is_ok());
         assert!(validate_dashboard_tab_color("g-twilight").is_ok());
         assert!(validate_dashboard_tab_color("g-nocturne").is_ok());
     }
 
     #[test]
-    fn dashboard_tab_color_rejects_custom_or_solid_colors() {
+    fn dashboard_tab_color_rejects_custom_or_unlisted_solid_colors() {
         assert_eq!(
             validate_dashboard_tab_color("#2563eb"),
             Err(ValidationError::InvalidBackground),
         );
         assert_eq!(
-            validate_dashboard_tab_color("mist"),
+            validate_dashboard_tab_color("pine"),
             Err(ValidationError::InvalidBackground),
         );
         assert_eq!(

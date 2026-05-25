@@ -1,10 +1,10 @@
 import {
   BACKGROUND_PRESETS,
-  DASHBOARD_TAB_GRADIENT_PRESETS,
+  DASHBOARD_TAB_COLOR_PRESETS,
   isBackgroundPresetId,
-  isDashboardTabGradientPresetId,
+  isDashboardTabColorPresetId,
   resolveBackgroundPreset,
-  resolveDashboardTabGradientPreset,
+  resolveDashboardTabColorPreset,
 } from "./backgroundPresets";
 
 // There must be exactly 32 presets (16 solid + 16 gradient), matching the Rust whitelist.
@@ -22,18 +22,22 @@ if (isBackgroundPresetId(maybeId)) {
   void known;
 }
 
-if (!DASHBOARD_TAB_GRADIENT_PRESETS.every((preset) => preset.id.startsWith("g-"))) {
-  throw new Error("Dashboard View tab presets should only expose gradients.");
+if (DASHBOARD_TAB_COLOR_PRESETS.length !== 24) {
+  throw new Error("Dashboard View tab presets should expose 16 gradients and 8 flat colors.");
 }
 
-if (!isDashboardTabGradientPresetId("g-dawn")) {
-  throw new Error("Dashboard View tab gradient ids should accept known gradients.");
+if (!isDashboardTabColorPresetId("g-dawn")) {
+  throw new Error("Dashboard View tab color ids should accept known gradients.");
 }
 
-if (isDashboardTabGradientPresetId("mist")) {
-  throw new Error("Dashboard View tab gradient ids should reject solid color presets.");
+if (!isDashboardTabColorPresetId("mist")) {
+  throw new Error("Dashboard View tab color ids should accept known flat colors.");
 }
 
-if (resolveDashboardTabGradientPreset("does-not-exist").id !== "g-dawn") {
-  throw new Error("Dashboard View tab gradient fallback should be stable.");
+if (isDashboardTabColorPresetId("pine")) {
+  throw new Error("Dashboard View tab color ids should reject flat colors outside the tab palette.");
+}
+
+if (resolveDashboardTabColorPreset("does-not-exist").id !== "mist") {
+  throw new Error("Dashboard View tab color fallback should be stable.");
 }

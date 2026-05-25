@@ -704,43 +704,21 @@ button.dashboard-pill-dot:focus-visible {
   background: var(--surface-muted);
 }
 
-.dashboard-pill.has-tab-color .dashboard-pill-close,
-.dashboard-pill.has-tab-color .dashboard-pill-color-clear {
+.dashboard-pill.has-tab-color .dashboard-pill-close {
   color: var(--dashboard-pill-muted);
 }
 
-.dashboard-pill.has-tab-color .dashboard-pill-close:hover,
-.dashboard-pill.has-tab-color .dashboard-pill-color-clear:hover {
+.dashboard-pill.has-tab-color .dashboard-pill-close:hover {
   color: var(--dashboard-pill-text);
   background: rgb(255 255 255 / 20%);
-}
-
-.dashboard-pill-color-clear {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-}
-
-.dashboard-pill-color-clear {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  color: var(--text-faint);
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
 }
 
 .dashboard-tab-gradient-popover {
   position: fixed;
   z-index: 210;
   display: grid;
-  grid-template-columns: repeat(4, 42px);
-  gap: 7px;
+  grid-template-columns: repeat(5, 24px);
+  gap: 6px;
   width: max-content;
   padding: 8px;
   background: var(--surface);
@@ -750,10 +728,30 @@ button.dashboard-pill-dot:focus-visible {
 }
 
 .dashboard-tab-gradient-popover button {
-  height: 28px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 5px;
   cursor: pointer;
+}
+
+.dashboard-tab-gradient-popover .dashboard-tab-gradient-none {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.dashboard-tab-gradient-popover .dashboard-tab-gradient-none::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  width: 34px;
+  height: 2px;
+  background: #dc2626;
+  transform: rotate(-45deg);
+  transform-origin: center;
 }
 
 .dashboard-tab-gradient-popover button:hover,

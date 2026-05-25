@@ -20,7 +20,7 @@ A View is a Dashboard tab. The first View is named `dashboard.defaultView` and s
 - Add: `dashboard.addView`. New-View dialog `dashboard.newViewPrompt`, field `dashboard.newViewName`.
 - Rename: `dashboard.renameView`.
 - Remove: `dashboard.removeView`. Confirmation body `dashboard.deleteViewBody`.
-- Tab gradient styling: `dashboard.viewTabGradient`, clear `dashboard.clearViewTabGradient`.
+- Tab color styling: `dashboard.viewTabGradient`, theme/default swatch `dashboard.clearViewTabGradient`.
 
 Each View has its own `grid_density` (`dashboard.density.compact`, `dashboard.density.default`, `dashboard.density.roomy`) and its own background.
 Previously opened Views remain mounted while hidden so switching between View tabs preserves Widget Instance state and keeps embedded Connection panes responsive; hidden Connection panes are marked inactive instead of being closed.

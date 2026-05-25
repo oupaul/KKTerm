@@ -72,15 +72,26 @@ export function isDarkBackgroundPresetId(value: string): boolean {
   return DARK_BACKGROUND_PRESET_IDS.has(value);
 }
 
-export const DASHBOARD_TAB_GRADIENT_PRESETS = BACKGROUND_PRESETS.filter((preset) => (
-  preset.id.startsWith("g-")
+const DASHBOARD_TAB_FLAT_COLOR_IDS = new Set([
+  "mist",
+  "sand",
+  "sage",
+  "sky",
+  "blush",
+  "lavender",
+  "graphite",
+  "midnight",
+]);
+
+export const DASHBOARD_TAB_COLOR_PRESETS = BACKGROUND_PRESETS.filter((preset) => (
+  preset.id.startsWith("g-") || DASHBOARD_TAB_FLAT_COLOR_IDS.has(preset.id)
 ));
 
-export function resolveDashboardTabGradientPreset(id: string): BackgroundPresetDefinition {
-  return DASHBOARD_TAB_GRADIENT_PRESETS.find((preset) => preset.id === id)
-    ?? DASHBOARD_TAB_GRADIENT_PRESETS[0];
+export function resolveDashboardTabColorPreset(id: string): BackgroundPresetDefinition {
+  return DASHBOARD_TAB_COLOR_PRESETS.find((preset) => preset.id === id)
+    ?? DASHBOARD_TAB_COLOR_PRESETS[0];
 }
 
-export function isDashboardTabGradientPresetId(value: string): value is (typeof DASHBOARD_TAB_GRADIENT_PRESETS)[number]["id"] {
-  return DASHBOARD_TAB_GRADIENT_PRESETS.some((preset) => preset.id === value);
+export function isDashboardTabColorPresetId(value: string): value is (typeof DASHBOARD_TAB_COLOR_PRESETS)[number]["id"] {
+  return DASHBOARD_TAB_COLOR_PRESETS.some((preset) => preset.id === value);
 }

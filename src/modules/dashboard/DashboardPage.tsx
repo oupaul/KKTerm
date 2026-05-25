@@ -10,9 +10,9 @@ import { BackgroundPopover } from "./edit/BackgroundPopover";
 import { CatalogOverlay } from "./edit/CatalogOverlay";
 import { CustomizePopover } from "./edit/CustomizePopover";
 import {
-  DASHBOARD_TAB_GRADIENT_PRESETS,
+  DASHBOARD_TAB_COLOR_PRESETS,
   isDarkBackgroundPresetId,
-  resolveDashboardTabGradientPreset,
+  resolveDashboardTabColorPreset,
 } from "./registry/backgroundPresets";
 import { BUILT_IN_WIDGETS } from "./registry/builtInRegistry";
 import { compactLibraryCatalogForAi } from "./script/widgetLibraries";
@@ -375,23 +375,6 @@ export function DashboardPage({
                     ×
                   </button>
                 )}
-                {editMode && (
-                  <>
-                    {v.tabColor && (
-                      <button
-                        aria-label={t("dashboard.clearViewTabGradient", { view: v.title })}
-                        className="dashboard-pill-color-clear"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void setViewTabColor(v.id, null);
-                        }}
-                        type="button"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </>
-                )}
               </div>
             );
           })}
@@ -473,6 +456,7 @@ export function DashboardPage({
         <TabGradientPopover
           anchorRect={tabGradientPicker.rect}
           activeGradientId={views.find((view) => view.id === tabGradientPicker.viewId)?.tabColor ?? null}
+          viewTitle={views.find((view) => view.id === tabGradientPicker.viewId)?.title ?? ""}
           onClose={() => setTabGradientPicker(null)}
           onSelect={(gradientId) => {
             void setViewTabColor(tabGradientPicker.viewId, gradientId);
@@ -512,7 +496,7 @@ export function DashboardPage({
 
 function dashboardTabColorStyle(tabColor: string | null): CSSProperties | undefined {
   if (!tabColor) return undefined;
-  const preset = resolveDashboardTabGradientPreset(tabColor);
+  const preset = resolveDashboardTabColorPreset(tabColor);
   const textColor = isDarkBackgroundPresetId(tabColor) ? "#ffffff" : "#0f172a";
   return {
     "--dashboard-pill-bg": preset.css,
@@ -523,7 +507,7 @@ function dashboardTabColorStyle(tabColor: string | null): CSSProperties | undefi
 
 function dashboardTabDotStyle(tabColor: string | null): CSSProperties | undefined {
   if (!tabColor) return undefined;
-  return { background: resolveDashboardTabGradientPreset(tabColor).css };
+  return { background: resolveDashboardTabColorPreset(tabColor).css };
 }
 
 function TabGradientPopover({
@@ -531,11 +515,13 @@ function TabGradientPopover({
   anchorRect,
   onClose,
   onSelect,
+  viewTitle,
 }: {
   activeGradientId: string | null;
   anchorRect: DOMRect;
   onClose: () => void;
-  onSelect: (gradientId: string) => void;
+  onSelect: (gradientId: string | null) => void;
+  viewTitle: string;
 }) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -557,12 +543,18 @@ function TabGradientPopover({
 
   const style = {
     top: anchorRect.bottom + 6,
-    left: Math.min(anchorRect.left, window.innerWidth - 214),
+    left: Math.min(anchorRect.left, window.innerWidth - 168),
   } as CSSProperties;
 
   return (
     <div ref={ref} className="dashboard-tab-gradient-popover" style={style}>
-      {DASHBOARD_TAB_GRADIENT_PRESETS.map((preset) => (
+      <button
+        aria-label={t("dashboard.clearViewTabGradient", { view: viewTitle })}
+        className={`dashboard-tab-gradient-none${activeGradientId === null ? " active" : ""}`}
+        onClick={() => onSelect(null)}
+        type="button"
+      />
+      {DASHBOARD_TAB_COLOR_PRESETS.map((preset) => (
         <button
           key={preset.id}
           aria-label={t(preset.labelKey)}

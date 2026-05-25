@@ -25,7 +25,7 @@ It does not own:
 
 ## Domain Concepts
 
-**Dashboard View** — a tab in the Dashboard topbar. A user may have many views; the first one is named "Default" and is created on first run. Each view carries its own `grid_density` (`compact` / `default` / `roomy`) and optional `tab_color` gradient preset id, edited from the topbar's edit-mode controls.
+**Dashboard View** — a tab in the Dashboard topbar. A user may have many views; the first one is named "Default" and is created on first run. Each view carries its own `grid_density` (`compact` / `default` / `roomy`) and optional `tab_color` preset id, edited from the topbar's edit-mode controls.
 
 **Dashboard Widget Instance** — one placed widget on a view. Carries display state (preset, accent, icon, custom title), layout state (`x`, `y`, `w`, `h` on the 12-column grid), per-instance custom settings values, a `kind` of `builtIn` / `script`, and a `source_id` that resolves either to a built-in registry entry or a `DashboardCustomWidget` row.
 
@@ -104,7 +104,7 @@ SQLite holds three Dashboard tables, defined in `src-tauri/src/storage.rs` under
 
 | Table | Purpose |
 | --- | --- |
-| `dashboard_views` | One row per view. Holds `title`, `sort_order`, `grid_density`, and optional `tab_color` gradient preset id. |
+| `dashboard_views` | One row per view. Holds `title`, `sort_order`, `grid_density`, and optional `tab_color` preset id. |
 | `dashboard_widget_instances` | One row per placed widget. Holds `kind`, `source_id`, presentation fields (`preset`, `accent_name`, `icon_name`, `custom_title`), per-instance `settings_values_json`, and layout (`grid_x`, `grid_y`, `grid_w`, `grid_h`). Secret fields store only `secretRef` metadata here. |
 | `dashboard_custom_widgets` | One row per AI Created script-widget definition. Holds `body_json`, validated against the script body schema, plus optional app-rendered `settings_schema_json`. It does not carry a widget kind because all AI Created Widgets are script widgets. |
 

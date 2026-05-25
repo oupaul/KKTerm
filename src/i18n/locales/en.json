@@ -40,8 +40,8 @@
     "newViewPrompt": "View name",
     "renameView": "Rename view",
     "removeView": "Remove view",
-    "viewTabGradient": "View tab gradient for {{view}}",
-    "clearViewTabGradient": "Clear view tab gradient for {{view}}",
+    "viewTabGradient": "View tab color for {{view}}",
+    "clearViewTabGradient": "Use theme tab color for {{view}}",
     "editLayout": "Edit Layout",
     "editDone": "Done",
     "density": {
