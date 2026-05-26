@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "Acento",
     "accentDefault": "Por defecto",
-    "actionDirection": "Dirección del diseño",
-    "actionDirectionOptions": {
-      "horizontal": "Horizontal",
-      "vertical": "Vertical"
-    },
     "addAgentWidget": "Agregar widget de agente",
     "addView": "Agregar vista",
     "addWidget": "Agregar {{name}}",
@@ -1079,11 +1074,9 @@
     "playground": "Zona de pruebas",
     "playgroundHint": "Agrega widgets del catálogo y luego elimínalos o reemplázalos según cambie tu flujo de trabajo.",
     "preset": {
-      "action": "Acción",
       "ambient": "Ambiente",
       "hero": "Hero",
-      "panel": "Panel",
-      "tile": "Azulejo"
+      "panel": "Panel"
     },
     "presetLabel": "Estilo predefinido",
     "quickInput": "Entrada",

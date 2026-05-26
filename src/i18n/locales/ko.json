@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "강조",
     "accentDefault": "기본값",
-    "actionDirection": "레이아웃 방향",
-    "actionDirectionOptions": {
-      "horizontal": "가로",
-      "vertical": "세로"
-    },
     "addAgentWidget": "에이전트 위젯 추가",
     "addView": "보기 추가",
     "addWidget": "{{name}} 추가",
@@ -1079,11 +1074,9 @@
     "playground": "플레이그라운드",
     "playgroundHint": "카탈로그에서 위젯을 추가한 후 필요에 따라 제거하거나 교체하세요.",
     "preset": {
-      "action": "액션",
       "ambient": "앰비언트",
       "hero": "히어로",
-      "panel": "패널",
-      "tile": "타일"
+      "panel": "패널"
     },
     "presetLabel": "스타일 프리셋",
     "quickInput": "입력",

@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "アクセント",
     "accentDefault": "デフォルト",
-    "actionDirection": "レイアウト方向",
-    "actionDirectionOptions": {
-      "horizontal": "横",
-      "vertical": "縦"
-    },
     "addAgentWidget": "エージェントウィジェットを追加",
     "addView": "ビューを追加",
     "addWidget": "{{name}} を追加",
@@ -1079,11 +1074,9 @@
     "playground": "プレイグラウンド",
     "playgroundHint": "カタログからウィジェットを追加し、ワークフローの変更に応じて削除または交換します。",
     "preset": {
-      "action": "アクション",
       "ambient": "アンビエント",
       "hero": "ヒーロー",
-      "panel": "パネル",
-      "tile": "タイル"
+      "panel": "パネル"
     },
     "presetLabel": "スタイルプリセット",
     "quickInput": "入力",

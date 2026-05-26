@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "Aksen",
     "accentDefault": "Default",
-    "actionDirection": "Arah tata letak",
-    "actionDirectionOptions": {
-      "horizontal": "Horizontal",
-      "vertical": "Vertikal"
-    },
     "addAgentWidget": "Tambah Widget Agen",
     "addView": "Tambah tampilan",
     "addWidget": "Tambah {{name}}",
@@ -1079,11 +1074,9 @@
     "playground": "Taman bermain",
     "playgroundHint": "Tambahkan widget dari katalog, lalu hapus atau ganti saat alur kerja Anda berubah.",
     "preset": {
-      "action": "Aksi",
       "ambient": "Ambient",
       "hero": "Hero",
-      "panel": "Panel",
-      "tile": "Ubin"
+      "panel": "Panel"
     },
     "presetLabel": "Preset gaya",
     "quickInput": "Input",

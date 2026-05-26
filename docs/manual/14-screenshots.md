@@ -26,28 +26,9 @@ Per-surface "screenshot target" labels used in dialog headings:
 
 Failure: `workspace.screenshotCaptureError`. Outside the Tauri runtime: `workspace.screenshotsRequireRuntime`.
 
-## Screenshots library
+## Capture targets
 
-A dedicated full-page surface for browsing past captures (reachable from the Workspace Module's screenshot menu).
-
-- Header: `screenshots.title`, summary `screenshots.subtitle`. Collection grouping label `screenshots.collection`.
-- View toggle: `screenshots.viewOptions` (`screenshots.gridView`, `screenshots.listView`).
-- Capture from inside the library: `screenshots.takeScreenshot` opens a submenu with `screenshots.fullScreenOption`, `screenshots.windowOption`, `screenshots.regionOption`. Backing actions: `screenshots.captureRegion`, `screenshots.captureFullscreen`, `screenshots.captureWindow`. Type labels: `screenshots.regionCapture`, `screenshots.fullscreenCapture`, `screenshots.windowCapture`.
-- Paging: `screenshots.loadMore`, loading `screenshots.loading`.
-- Clear all: `screenshots.clearAll` → status `screenshots.clearSuccess`.
-- Empty state: `screenshots.emptyTitle`, `screenshots.emptyHint`.
-
-Per-item actions:
-
-- Metadata: `screenshots.metadata`.
-- Copy: `screenshots.copyScreenshot` → `screenshots.copySuccess`. Error `screenshots.copyError`.
-- Delete: `screenshots.deleteScreenshot` → `screenshots.deleteSuccess`. Error `screenshots.deleteError`.
-
-Capture status: `screenshots.captureSuccess` / `screenshots.captureError`. Library load failure: `screenshots.loadError`.
-
-## Storage location
-
-Screenshots are saved to the folder configured in Settings → Screenshots — see [15-settings.md](15-settings.md) §Screenshots. The folder picker is `settings.chooseFolder` and the open-folder action is `settings.openScreenshotFolder`.
+Screenshots are transient by design: a capture is either copied to the clipboard or attached to the AI Assistant context. KKTerm does not maintain a screenshot gallery surface; the standalone gallery page was removed. The Rust backend retains the capture path so the in-context flow keeps working across terminal Panes, URL/WebView, SFTP, and RDP/VNC surfaces.
 
 ## RDP screenshots
 

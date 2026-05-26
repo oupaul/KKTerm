@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "Akzent",
     "accentDefault": "Standard",
-    "actionDirection": "Layoutrichtung",
-    "actionDirectionOptions": {
-      "horizontal": "Horizontal",
-      "vertical": "Vertikal"
-    },
     "addAgentWidget": "Agenten-Widget hinzufügen",
     "addView": "Ansicht hinzufügen",
     "addWidget": "{{name}} hinzufügen",
@@ -1079,11 +1074,9 @@
     "playground": "Spielwiese",
     "playgroundHint": "Fügen Sie Widgets aus dem Katalog hinzu und entfernen oder ersetzen Sie sie, wenn sich Ihr Workflow ändert.",
     "preset": {
-      "action": "Aktion",
       "ambient": "Ambient",
       "hero": "Hero",
-      "panel": "Panel",
-      "tile": "Kachel"
+      "panel": "Panel"
     },
     "presetLabel": "Stilvorlage",
     "quickInput": "Eingabe",

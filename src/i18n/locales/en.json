@@ -59,18 +59,11 @@
     "preset": {
       "panel": "Panel",
       "ambient": "Ambient",
-      "tile": "Tile",
-      "hero": "Hero",
-      "action": "Action"
+      "hero": "Hero"
     },
     "glassBackground": "Frosted glass background",
     "hideTitle": "Hide title bar",
     "canvasOpacity": "Canvas opacity",
-    "actionDirection": "Layout direction",
-    "actionDirectionOptions": {
-      "vertical": "Vertical",
-      "horizontal": "Horizontal"
-    },
     "accent": "Accent",
     "accentDefault": "Default",
     "icon": "Icon",
