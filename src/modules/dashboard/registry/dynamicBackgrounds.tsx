@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ComponentType } from "react";
+import { DashboardAnimationGate, useDashboardAnimationActive } from "../view/animationGating";
 
 interface CanvasAnimLifecycle {
   onResize?: (width: number, height: number, ctx: CanvasRenderingContext2D) => void;
@@ -13,9 +14,12 @@ type CanvasDraw<State extends CanvasAnimLifecycle> = (
 ) => void;
 
 function useCanvasAnim<State extends CanvasAnimLifecycle>(draw: CanvasDraw<State>) {
+  const active = useDashboardAnimationActive();
   const drawRef = useRef(draw);
   drawRef.current = draw;
   const ref = useRef<HTMLCanvasElement | null>(null);
+  const activeRef = useRef(active);
+  const runtimeRef = useRef<{ start: () => void; stop: () => void } | null>(null);
 
   useEffect(() => {
     const canvasElement = ref.current;
@@ -30,6 +34,8 @@ function useCanvasAnim<State extends CanvasAnimLifecycle>(draw: CanvasDraw<State
     let raf = 0;
     let width = 0;
     let height = 0;
+    let elapsed = 0;
+    let lastNow = 0;
     const dpr = Math.max(1, window.devicePixelRatio || 1);
     const state = {} as State;
 
@@ -50,19 +56,46 @@ function useCanvasAnim<State extends CanvasAnimLifecycle>(draw: CanvasDraw<State
     drawRef.current(ctx, 0, 0, 0, state);
     resize();
 
-    const start = performance.now();
     function frame(now: number) {
-      const time = (now - start) / 1000;
-      drawRef.current(ctx, width, height, time, state);
+      const dt = lastNow ? (now - lastNow) / 1000 : 0;
+      lastNow = now;
+      // Cap per-frame advance after a long pause so animations don't jump.
+      elapsed += Math.min(dt, 0.05);
+      drawRef.current(ctx, width, height, elapsed, state);
+      raf = activeRef.current ? requestAnimationFrame(frame) : 0;
+    }
+
+    function start() {
+      if (raf || !activeRef.current) return;
+      lastNow = 0;
       raf = requestAnimationFrame(frame);
     }
-    raf = requestAnimationFrame(frame);
+
+    function stop() {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      lastNow = 0;
+    }
+
+    runtimeRef.current = { start, stop };
+    if (activeRef.current) start();
 
     return () => {
-      cancelAnimationFrame(raf);
+      stop();
       resizeObserver.disconnect();
+      runtimeRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    activeRef.current = active;
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    if (active) runtime.start();
+    else runtime.stop();
+  }, [active]);
 
   return ref;
 }
@@ -2198,12 +2231,14 @@ export function getDashboardDynamicBackgroundHostClassName() {
   return "dw-canvas-bg dw-dynamic-bg-layer";
 }
 
-export function DashboardDynamicBackground({ id }: { id: string }) {
+export function DashboardDynamicBackground({ id, active }: { id: string; active: boolean }) {
   if (!isDynamicBackgroundId(id)) return null;
   const Component = DYNAMIC_BACKGROUND_COMPONENTS[id];
   return (
     <div className={getDashboardDynamicBackgroundHostClassName()} aria-hidden="true">
-      <Component />
+      <DashboardAnimationGate active={active}>
+        <Component />
+      </DashboardAnimationGate>
     </div>
   );
 }
