@@ -2120,304 +2120,304 @@
       },
       "entries": {
         "aiClaudeNativeInstall": {
-          "label": "Install Claude Code",
-          "description": "Install Claude Code with Anthropic's native installer."
+          "label": "Claude Code 설치",
+          "description": "Anthropic의 네이티브 설치 프로그램으로 Claude Code를 설치합니다."
         },
         "aiClaudeStart": {
           "label": "Claude",
-          "description": "Start an interactive Claude Code session."
+          "description": "대화형 Claude Code 세션을 시작합니다."
         },
         "aiClaudeBypass": {
-          "label": "Claude bypass permissions",
-          "description": "Run Claude Code without permission prompts. Use only in a trusted sandbox."
+          "label": "Claude 권한 우회",
+          "description": "권한 프롬프트 없이 Claude Code를 실행합니다. 신뢰할 수 있는 샌드박스에서만 사용하세요."
         },
         "aiClaudeBrewInstall": {
-          "label": "Install Claude Code with Homebrew",
-          "description": "Install Claude Code through Homebrew Cask on macOS."
+          "label": "Homebrew로 Claude Code 설치",
+          "description": "macOS에서 Homebrew Cask를 통해 Claude Code를 설치합니다."
         },
         "aiClaudeBrewUpgrade": {
-          "label": "Upgrade Claude Code",
-          "description": "Upgrade the Homebrew Cask install of Claude Code."
+          "label": "Claude Code 업그레이드",
+          "description": "Claude Code의 Homebrew Cask 설치를 업그레이드합니다."
         },
         "aiCodexNpmInstall": {
-          "label": "Install Codex with npm",
-          "description": "Install the OpenAI Codex CLI globally with npm."
+          "label": "npm으로 Codex 설치",
+          "description": "npm으로 OpenAI Codex CLI를 전역 설치합니다."
         },
         "aiCodexBrewInstall": {
-          "label": "Install Codex with Homebrew",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "Homebrew로 Codex 설치",
+          "description": "Homebrew를 통해 OpenAI Codex CLI를 설치합니다."
         },
         "aiCodexStart": {
           "label": "Codex",
-          "description": "Start an interactive OpenAI Codex CLI session."
+          "description": "대화형 OpenAI Codex CLI 세션을 시작합니다."
         },
         "aiCodexPrompt": {
-          "label": "Codex explain codebase",
-          "description": "Start Codex with a prompt to explain the current repository."
+          "label": "Codex 코드베이스 설명",
+          "description": "현재 저장소를 설명하는 프롬프트로 Codex를 시작합니다."
         },
         "aiCodexMcpContext7": {
-          "label": "Add Context7 MCP to Codex",
-          "description": "Register the documented Context7 MCP server example with Codex CLI."
+          "label": "Codex에 Context7 MCP 추가",
+          "description": "문서화된 Context7 MCP 서버 예제를 Codex CLI에 등록합니다."
         },
         "aiCodexNpmUpgrade": {
-          "label": "Upgrade Codex with npm",
-          "description": "Install the latest OpenAI Codex CLI package globally."
+          "label": "npm으로 Codex 업그레이드",
+          "description": "최신 OpenAI Codex CLI 패키지를 전역 설치합니다."
         },
         "aiGeminiInstall": {
-          "label": "Install Gemini CLI",
-          "description": "Install Google's Gemini CLI globally with npm."
+          "label": "Gemini CLI 설치",
+          "description": "npm으로 Google의 Gemini CLI를 전역 설치합니다."
         },
         "aiGeminiStart": {
           "label": "Gemini",
-          "description": "Start an interactive Gemini CLI session."
+          "description": "대화형 Gemini CLI 세션을 시작합니다."
         },
         "aiQwenNpmInstall": {
-          "label": "Install Qwen Code with npm",
-          "description": "Install the latest Qwen Code terminal agent with npm."
+          "label": "npm으로 Qwen Code 설치",
+          "description": "npm으로 최신 Qwen Code 터미널 에이전트를 설치합니다."
         },
         "aiQwenBrewInstall": {
-          "label": "Install Qwen Code with Homebrew",
-          "description": "Install Qwen Code through Homebrew."
+          "label": "Homebrew로 Qwen Code 설치",
+          "description": "Homebrew를 통해 Qwen Code를 설치합니다."
         },
         "aiQwenStart": {
           "label": "Qwen Code",
-          "description": "Start an interactive Qwen Code session. Configure a provider or API key first."
+          "description": "대화형 Qwen Code 세션을 시작합니다. 먼저 공급자 또는 API 키를 구성하세요."
         },
         "aiAiderInstall": {
-          "label": "Install Aider",
-          "description": "Install Aider with the official Mac/Linux installer."
+          "label": "Aider 설치",
+          "description": "공식 Mac/Linux 설치 프로그램으로 Aider를 설치합니다."
         },
         "aiAiderMessage": {
-          "label": "Aider one-shot edit",
-          "description": "Run Aider with a single edit request against a target file."
+          "label": "Aider 단일 편집",
+          "description": "대상 파일에 단일 편집 요청으로 Aider를 실행합니다."
         },
         "aiAiderGemini": {
-          "label": "Aider with Gemini",
-          "description": "Launch Aider using the Gemini model setting."
+          "label": "Gemini와 함께 Aider",
+          "description": "Gemini 모델 설정을 사용하여 Aider를 실행합니다."
         },
         "aiOpenclawInstall": {
-          "label": "Install OpenClaw",
-          "description": "Run the OpenClaw hosted installer."
+          "label": "OpenClaw 설치",
+          "description": "OpenClaw 호스팅 설치 프로그램을 실행합니다."
         },
         "aiOpenclawNpmInstall": {
-          "label": "Install OpenClaw with npm",
-          "description": "Install the latest OpenClaw package globally with npm."
+          "label": "npm으로 OpenClaw 설치",
+          "description": "npm으로 최신 OpenClaw 패키지를 전역 설치합니다."
         },
         "aiOpenclawOnboard": {
-          "label": "OpenClaw onboard",
-          "description": "Start the recommended OpenClaw onboarding flow."
+          "label": "OpenClaw 온보딩",
+          "description": "권장 OpenClaw 온보딩 흐름을 시작합니다."
         },
         "aiOpenclawDaemon": {
-          "label": "OpenClaw daemon onboarding",
-          "description": "Run OpenClaw onboarding and install its background daemon."
+          "label": "OpenClaw 데몬 온보딩",
+          "description": "OpenClaw 온보딩을 실행하고 백그라운드 데몬을 설치합니다."
         },
         "aiOpenclawUpdate": {
-          "label": "Update OpenClaw",
-          "description": "Update the OpenClaw installation."
+          "label": "OpenClaw 업데이트",
+          "description": "OpenClaw 설치를 업데이트합니다."
         },
         "aiHermesInstall": {
-          "label": "Install Hermes Agent",
-          "description": "Run the Hermes Agent installer from the Nous Research repository."
+          "label": "Hermes Agent 설치",
+          "description": "Nous Research 저장소에서 Hermes Agent 설치 프로그램을 실행합니다."
         },
         "aiHermesSourceBashrc": {
-          "label": "Reload bash shell",
-          "description": "Reload bash startup configuration after installing Hermes."
+          "label": "bash 쉘 다시 로드",
+          "description": "Hermes 설치 후 bash 시작 구성을 다시 로드합니다."
         },
         "aiHermesStart": {
           "label": "Hermes",
-          "description": "Start an interactive Hermes Agent chat."
+          "description": "대화형 Hermes Agent 채팅을 시작합니다."
         },
         "aiHermesSetup": {
-          "label": "Hermes setup",
-          "description": "Open the Hermes provider and account setup flow."
+          "label": "Hermes 설정",
+          "description": "Hermes 공급자 및 계정 설정 흐름을 엽니다."
         },
         "aiHermesModel": {
-          "label": "Hermes model",
-          "description": "Configure or inspect the active Hermes model."
+          "label": "Hermes 모델",
+          "description": "활성 Hermes 모델을 구성하거나 검사합니다."
         },
         "aiHermesDoctor": {
-          "label": "Hermes doctor",
-          "description": "Run Hermes health checks."
+          "label": "Hermes 진단",
+          "description": "Hermes 상태 점검을 실행합니다."
         },
         "aiHermesDashboard": {
-          "label": "Hermes dashboard",
-          "description": "Open the local Hermes dashboard."
+          "label": "Hermes 대시보드",
+          "description": "로컬 Hermes 대시보드를 엽니다."
         },
         "aiGooseInstall": {
-          "label": "Install Goose",
-          "description": "Run the stable Goose CLI installer."
+          "label": "Goose 설치",
+          "description": "안정 버전 Goose CLI 설치 프로그램을 실행합니다."
         },
         "devGitSwitch": {
-          "label": "Create feature branch",
-          "description": "Create and switch to a new Git feature branch."
+          "label": "기능 브랜치 생성",
+          "description": "새 Git 기능 브랜치를 만들고 전환합니다."
         },
         "devGitPullRebase": {
-          "label": "Pull with rebase",
-          "description": "Fetch and replay local commits on top of the upstream branch."
+          "label": "리베이스로 Pull",
+          "description": "로컬 커밋을 업스트림 브랜치 위에 가져와 재적용합니다."
         },
         "devGitRestoreHead": {
-          "label": "Restore working tree",
-          "description": "Restore tracked files from HEAD. This can discard local edits."
+          "label": "작업 트리 복원",
+          "description": "HEAD에서 추적된 파일을 복원합니다. 로컬 편집이 삭제될 수 있습니다."
         },
         "devGitClean": {
-          "label": "Clean untracked files",
-          "description": "Remove untracked files and folders from the working tree."
+          "label": "추적되지 않은 파일 삭제",
+          "description": "작업 트리에서 추적되지 않은 파일과 폴더를 제거합니다."
         },
         "devGitRevert": {
-          "label": "Revert commit",
-          "description": "Create a history-preserving commit that undoes a selected commit."
+          "label": "커밋 되돌리기",
+          "description": "선택한 커밋을 되돌리는 히스토리 보존 커밋을 생성합니다."
         },
         "devHomebrewInstall": {
-          "label": "Install Homebrew",
-          "description": "Run the standard Homebrew install script."
+          "label": "Homebrew 설치",
+          "description": "표준 Homebrew 설치 스크립트를 실행합니다."
         },
         "devBrewBundleGlobal": {
-          "label": "Install global Brewfile",
-          "description": "Install packages from the global Homebrew Brewfile."
+          "label": "전역 Brewfile 설치",
+          "description": "전역 Homebrew Brewfile에서 패키지를 설치합니다."
         },
         "devNvmInstall": {
-          "label": "Install nvm",
-          "description": "Install nvm using the official install script."
+          "label": "nvm 설치",
+          "description": "공식 설치 스크립트를 사용하여 nvm을 설치합니다."
         },
         "devNvmInstallNode24": {
-          "label": "Install Node 24",
-          "description": "Install Node.js 24 with nvm."
+          "label": "Node 24 설치",
+          "description": "nvm으로 Node.js 24를 설치합니다."
         },
         "devNvmUseNode24": {
-          "label": "Use Node 24",
-          "description": "Switch the current shell to Node.js 24 with nvm."
+          "label": "Node 24 사용",
+          "description": "nvm으로 현재 셸을 Node.js 24로 전환합니다."
         },
         "devBrewClaude": {
-          "label": "Brew install Claude Code",
-          "description": "Install Claude Code through Homebrew Cask."
+          "label": "Brew로 Claude Code 설치",
+          "description": "Homebrew Cask를 통해 Claude Code를 설치합니다."
         },
         "devBrewCodex": {
-          "label": "Brew install Codex",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "Brew로 Codex 설치",
+          "description": "Homebrew를 통해 OpenAI Codex CLI를 설치합니다."
         },
         "devBrewDocker": {
-          "label": "Brew install Docker Desktop",
-          "description": "Install Docker Desktop through Homebrew Cask."
+          "label": "Brew로 Docker Desktop 설치",
+          "description": "Homebrew Cask를 통해 Docker Desktop을 설치합니다."
         },
         "devBrewKubectl": {
-          "label": "Brew install kubectl",
-          "description": "Install kubectl through Homebrew."
+          "label": "Brew로 kubectl 설치",
+          "description": "Homebrew를 통해 kubectl을 설치합니다."
         },
         "containerDockerPs": {
-          "label": "Docker containers",
-          "description": "List running Docker containers."
+          "label": "Docker 컨테이너",
+          "description": "실행 중인 Docker 컨테이너를 나열합니다."
         },
         "containerDockerLogs": {
-          "label": "Docker follow logs",
-          "description": "Follow logs for a container. Replace the placeholder before running."
+          "label": "Docker 로그 추적",
+          "description": "컨테이너의 로그를 추적합니다. 실행 전 플레이스홀더를 교체하세요."
         },
         "containerDockerStop": {
-          "label": "Docker stop container",
-          "description": "Stop a container. Replace the placeholder before running."
+          "label": "Docker 컨테이너 중지",
+          "description": "컨테이너를 중지합니다. 실행 전 플레이스홀더를 교체하세요."
         },
         "containerComposeUp": {
-          "label": "Compose up detached",
-          "description": "Start the Docker Compose project in the background."
+          "label": "Compose 백그라운드 실행",
+          "description": "Docker Compose 프로젝트를 백그라운드에서 시작합니다."
         },
         "containerComposeExec": {
-          "label": "Compose shell",
-          "description": "Open a shell in the web service container."
+          "label": "Compose 쉘",
+          "description": "웹 서비스 컨테이너에서 셸을 엽니다."
         },
         "containerKubectlVersion": {
-          "label": "kubectl client version",
-          "description": "Show the installed kubectl client version."
+          "label": "kubectl 클라이언트 버전",
+          "description": "설치된 kubectl 클라이언트 버전을 표시합니다."
         },
         "containerKubectlPods": {
-          "label": "kubectl pods",
-          "description": "List pods across all namespaces."
+          "label": "kubectl Pod 목록",
+          "description": "모든 네임스페이스의 Pod를 나열합니다."
         },
         "containerKubectlLogs": {
-          "label": "kubectl follow logs",
-          "description": "Follow logs for a pod. Replace the placeholder before running."
+          "label": "kubectl 로그 추적",
+          "description": "Pod의 로그를 추적합니다. 실행 전 플레이스홀더를 교체하세요."
         },
         "containerKubectlExec": {
-          "label": "kubectl pod shell",
-          "description": "Open a shell in a pod. Replace the placeholder before running."
+          "label": "kubectl Pod 쉘",
+          "description": "Pod에서 셸을 엽니다. 실행 전 플레이스홀더를 교체하세요."
         },
         "containerKubectlApply": {
           "label": "kubectl apply",
-          "description": "Apply Kubernetes resources from k8s.yaml."
+          "description": "k8s.yaml에서 Kubernetes 리소스를 적용합니다."
         },
         "linuxSystemctlStatusSshd": {
-          "label": "SSH service status",
-          "description": "Check the status of the sshd systemd service."
+          "label": "SSH 서비스 상태",
+          "description": "sshd systemd 서비스의 상태를 확인합니다."
         },
         "linuxSystemctlRestartSshd": {
-          "label": "Restart SSH service",
-          "description": "Restart the sshd systemd service with sudo."
+          "label": "SSH 서비스 재시작",
+          "description": "sudo로 sshd systemd 서비스를 재시작합니다."
         },
         "linuxSystemctlEnableDocker": {
-          "label": "Enable Docker service",
-          "description": "Enable and start the Docker systemd service."
+          "label": "Docker 서비스 활성화",
+          "description": "Docker systemd 서비스를 활성화하고 시작합니다."
         },
         "linuxJournalctlSshd": {
-          "label": "SSH service logs",
-          "description": "Read journal logs for the sshd service."
+          "label": "SSH 서비스 로그",
+          "description": "sshd 서비스의 저널 로그를 읽습니다."
         },
         "linuxAptUpgrade": {
-          "label": "APT update and upgrade",
-          "description": "Update package metadata and upgrade Debian packages."
+          "label": "APT 업데이트 및 업그레이드",
+          "description": "패키지 메타데이터를 업데이트하고 Debian 패키지를 업그레이드합니다."
         },
         "linuxAptInstallDocker": {
-          "label": "APT install Docker packages",
-          "description": "Install Docker Engine and the Compose plugin with apt."
+          "label": "APT로 Docker 패키지 설치",
+          "description": "apt로 Docker Engine과 Compose 플러그인을 설치합니다."
         },
         "linuxDnfUpgrade": {
-          "label": "DNF upgrade",
-          "description": "Upgrade Fedora packages with dnf."
+          "label": "DNF 업그레이드",
+          "description": "dnf로 Fedora 패키지를 업그레이드합니다."
         },
         "linuxDnfInstallCompose": {
-          "label": "DNF install Compose plugin",
-          "description": "Install the Docker Compose plugin with dnf."
+          "label": "DNF로 Compose 플러그인 설치",
+          "description": "dnf로 Docker Compose 플러그인을 설치합니다."
         },
         "macosSoftwareupdateInstallers": {
-          "label": "List macOS installers",
-          "description": "List available full macOS installers."
+          "label": "macOS 설치 프로그램 목록",
+          "description": "사용 가능한 전체 macOS 설치 프로그램을 나열합니다."
         },
         "macosNetworksetupServices": {
-          "label": "List network services",
-          "description": "List macOS network services with networksetup."
+          "label": "네트워크 서비스 목록",
+          "description": "networksetup으로 macOS 네트워크 서비스를 나열합니다."
         },
         "macosNetworksetupManual": {
-          "label": "Set manual Ethernet IP",
-          "description": "Set a manual IP configuration for Ethernet. Edit values before running."
+          "label": "수동 Ethernet IP 설정",
+          "description": "Ethernet의 수동 IP 구성을 설정합니다. 실행 전 값을 편집하세요."
         },
         "macosScutilSmbProtocol": {
-          "label": "Edit SMB protocol map",
-          "description": "Open an advanced scutil preferences command for SMB protocol settings."
+          "label": "SMB 프로토콜 맵 편집",
+          "description": "SMB 프로토콜 설정을 위한 고급 scutil 기본 설정 명령을 엽니다."
         },
         "macosLaunchctlUnloadNetbiosd": {
-          "label": "Unload netbiosd",
-          "description": "Unload the macOS netbiosd launch daemon."
+          "label": "netbiosd 언로드",
+          "description": "macOS netbiosd 실행 데몬을 언로드합니다."
         },
         "macosLaunchctlLoadNetbiosd": {
-          "label": "Load netbiosd",
-          "description": "Load the macOS netbiosd launch daemon."
+          "label": "netbiosd 로드",
+          "description": "macOS netbiosd 실행 데몬을 로드합니다."
         },
         "macosPmsetSchedule": {
-          "label": "Show power schedule",
-          "description": "Show scheduled macOS power events."
+          "label": "전원 일정 표시",
+          "description": "예약된 macOS 전원 이벤트를 표시합니다."
         },
         "macosPmsetRepeatWake": {
-          "label": "Schedule Monday wake",
-          "description": "Schedule a repeating Monday wake event."
+          "label": "월요일 시작 예약",
+          "description": "반복되는 월요일 시작 이벤트를 예약합니다."
         },
         "macosPmsetRepeatCancel": {
-          "label": "Cancel repeat power schedule",
-          "description": "Cancel repeating macOS power events."
+          "label": "반복 전원 일정 취소",
+          "description": "반복되는 macOS 전원 이벤트를 취소합니다."
         },
         "macosDefaultsRead": {
-          "label": "Read defaults domain",
-          "description": "Read a macOS preferences domain. Replace the placeholder before running."
+          "label": "defaults 도메인 읽기",
+          "description": "macOS 기본 설정 도메인을 읽습니다. 실행 전 플레이스홀더를 교체하세요."
         },
         "macosDefaultsWrite": {
-          "label": "Write defaults value",
-          "description": "Write a macOS preferences value. Replace placeholders before running."
+          "label": "defaults 값 쓰기",
+          "description": "macOS 기본 설정 값을 씁니다. 실행 전 플레이스홀더를 교체하세요."
         }
       }
     }

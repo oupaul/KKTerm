@@ -2120,304 +2120,304 @@
       },
       "entries": {
         "aiClaudeNativeInstall": {
-          "label": "Install Claude Code",
-          "description": "Install Claude Code with Anthropic's native installer."
+          "label": "安裝 Claude Code",
+          "description": "使用 Anthropic 的原生安裝程式安裝 Claude Code。"
         },
         "aiClaudeStart": {
           "label": "Claude",
-          "description": "Start an interactive Claude Code session."
+          "description": "啟動互動式 Claude Code 工作階段。"
         },
         "aiClaudeBypass": {
-          "label": "Claude bypass permissions",
-          "description": "Run Claude Code without permission prompts. Use only in a trusted sandbox."
+          "label": "Claude 略過權限",
+          "description": "無需權限提示執行 Claude Code。僅在受信任的沙盒中使用。"
         },
         "aiClaudeBrewInstall": {
-          "label": "Install Claude Code with Homebrew",
-          "description": "Install Claude Code through Homebrew Cask on macOS."
+          "label": "用 Homebrew 安裝 Claude Code",
+          "description": "透過 macOS 上的 Homebrew Cask 安裝 Claude Code。"
         },
         "aiClaudeBrewUpgrade": {
-          "label": "Upgrade Claude Code",
-          "description": "Upgrade the Homebrew Cask install of Claude Code."
+          "label": "升級 Claude Code",
+          "description": "升級 Claude Code 的 Homebrew Cask 安裝。"
         },
         "aiCodexNpmInstall": {
-          "label": "Install Codex with npm",
-          "description": "Install the OpenAI Codex CLI globally with npm."
+          "label": "用 npm 安裝 Codex",
+          "description": "透過 npm 全域安裝 OpenAI Codex CLI。"
         },
         "aiCodexBrewInstall": {
-          "label": "Install Codex with Homebrew",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "用 Homebrew 安裝 Codex",
+          "description": "透過 Homebrew 安裝 OpenAI Codex CLI。"
         },
         "aiCodexStart": {
           "label": "Codex",
-          "description": "Start an interactive OpenAI Codex CLI session."
+          "description": "啟動互動式 OpenAI Codex CLI 工作階段。"
         },
         "aiCodexPrompt": {
-          "label": "Codex explain codebase",
-          "description": "Start Codex with a prompt to explain the current repository."
+          "label": "Codex 說明程式碼庫",
+          "description": "使用提示詞啟動 Codex 以說明目前儲存庫。"
         },
         "aiCodexMcpContext7": {
-          "label": "Add Context7 MCP to Codex",
-          "description": "Register the documented Context7 MCP server example with Codex CLI."
+          "label": "將 Context7 MCP 新增至 Codex",
+          "description": "將 Context7 MCP 伺服器範例登錄至 Codex CLI。"
         },
         "aiCodexNpmUpgrade": {
-          "label": "Upgrade Codex with npm",
-          "description": "Install the latest OpenAI Codex CLI package globally."
+          "label": "用 npm 升級 Codex",
+          "description": "全域安裝最新的 OpenAI Codex CLI 套件。"
         },
         "aiGeminiInstall": {
-          "label": "Install Gemini CLI",
-          "description": "Install Google's Gemini CLI globally with npm."
+          "label": "安裝 Gemini CLI",
+          "description": "透過 npm 全域安裝 Google 的 Gemini CLI。"
         },
         "aiGeminiStart": {
           "label": "Gemini",
-          "description": "Start an interactive Gemini CLI session."
+          "description": "啟動互動式 Gemini CLI 工作階段。"
         },
         "aiQwenNpmInstall": {
-          "label": "Install Qwen Code with npm",
-          "description": "Install the latest Qwen Code terminal agent with npm."
+          "label": "用 npm 安裝 Qwen Code",
+          "description": "透過 npm 安裝最新的 Qwen Code 終端代理。"
         },
         "aiQwenBrewInstall": {
-          "label": "Install Qwen Code with Homebrew",
-          "description": "Install Qwen Code through Homebrew."
+          "label": "用 Homebrew 安裝 Qwen Code",
+          "description": "透過 Homebrew 安裝 Qwen Code。"
         },
         "aiQwenStart": {
           "label": "Qwen Code",
-          "description": "Start an interactive Qwen Code session. Configure a provider or API key first."
+          "description": "啟動互動式 Qwen Code 工作階段。請先設定提供者或 API 金鑰。"
         },
         "aiAiderInstall": {
-          "label": "Install Aider",
-          "description": "Install Aider with the official Mac/Linux installer."
+          "label": "安裝 Aider",
+          "description": "使用官方 Mac/Linux 安裝程式安裝 Aider。"
         },
         "aiAiderMessage": {
-          "label": "Aider one-shot edit",
-          "description": "Run Aider with a single edit request against a target file."
+          "label": "Aider 單次編輯",
+          "description": "對目標檔案執行單次編輯請求的 Aider。"
         },
         "aiAiderGemini": {
-          "label": "Aider with Gemini",
-          "description": "Launch Aider using the Gemini model setting."
+          "label": "Aider 搭配 Gemini",
+          "description": "使用 Gemini 模型設定啟動 Aider。"
         },
         "aiOpenclawInstall": {
-          "label": "Install OpenClaw",
-          "description": "Run the OpenClaw hosted installer."
+          "label": "安裝 OpenClaw",
+          "description": "執行 OpenClaw 託管安裝程式。"
         },
         "aiOpenclawNpmInstall": {
-          "label": "Install OpenClaw with npm",
-          "description": "Install the latest OpenClaw package globally with npm."
+          "label": "用 npm 安裝 OpenClaw",
+          "description": "透過 npm 全域安裝最新的 OpenClaw 套件。"
         },
         "aiOpenclawOnboard": {
-          "label": "OpenClaw onboard",
-          "description": "Start the recommended OpenClaw onboarding flow."
+          "label": "OpenClaw 引導",
+          "description": "啟動建議的 OpenClaw 引導流程。"
         },
         "aiOpenclawDaemon": {
-          "label": "OpenClaw daemon onboarding",
-          "description": "Run OpenClaw onboarding and install its background daemon."
+          "label": "OpenClaw 守護程式引導",
+          "description": "執行 OpenClaw 引導並安裝其背景守護程式。"
         },
         "aiOpenclawUpdate": {
-          "label": "Update OpenClaw",
-          "description": "Update the OpenClaw installation."
+          "label": "更新 OpenClaw",
+          "description": "更新 OpenClaw 安裝。"
         },
         "aiHermesInstall": {
-          "label": "Install Hermes Agent",
-          "description": "Run the Hermes Agent installer from the Nous Research repository."
+          "label": "安裝 Hermes Agent",
+          "description": "從 Nous Research 儲存庫執行 Hermes Agent 安裝程式。"
         },
         "aiHermesSourceBashrc": {
-          "label": "Reload bash shell",
-          "description": "Reload bash startup configuration after installing Hermes."
+          "label": "重新載入 bash shell",
+          "description": "安裝 Hermes 後重新載入 bash 啟動設定。"
         },
         "aiHermesStart": {
           "label": "Hermes",
-          "description": "Start an interactive Hermes Agent chat."
+          "description": "啟動互動式 Hermes Agent 聊天。"
         },
         "aiHermesSetup": {
-          "label": "Hermes setup",
-          "description": "Open the Hermes provider and account setup flow."
+          "label": "Hermes 設定",
+          "description": "開啟 Hermes 提供者和帳號設定流程。"
         },
         "aiHermesModel": {
-          "label": "Hermes model",
-          "description": "Configure or inspect the active Hermes model."
+          "label": "Hermes 模型",
+          "description": "設定或查看目前使用的 Hermes 模型。"
         },
         "aiHermesDoctor": {
-          "label": "Hermes doctor",
-          "description": "Run Hermes health checks."
+          "label": "Hermes 診斷",
+          "description": "執行 Hermes 健康檢查。"
         },
         "aiHermesDashboard": {
-          "label": "Hermes dashboard",
-          "description": "Open the local Hermes dashboard."
+          "label": "Hermes 儀表板",
+          "description": "開啟本機 Hermes 儀表板。"
         },
         "aiGooseInstall": {
-          "label": "Install Goose",
-          "description": "Run the stable Goose CLI installer."
+          "label": "安裝 Goose",
+          "description": "執行穩定版 Goose CLI 安裝程式。"
         },
         "devGitSwitch": {
-          "label": "Create feature branch",
-          "description": "Create and switch to a new Git feature branch."
+          "label": "建立功能分支",
+          "description": "建立並切換到新的 Git 功能分支。"
         },
         "devGitPullRebase": {
-          "label": "Pull with rebase",
-          "description": "Fetch and replay local commits on top of the upstream branch."
+          "label": "變基拉取",
+          "description": "取得並將本地提交重新套用到上游分支上。"
         },
         "devGitRestoreHead": {
-          "label": "Restore working tree",
-          "description": "Restore tracked files from HEAD. This can discard local edits."
+          "label": "還原工作目錄",
+          "description": "從 HEAD 還原已追蹤的檔案。這可能會捨棄本地編輯。"
         },
         "devGitClean": {
-          "label": "Clean untracked files",
-          "description": "Remove untracked files and folders from the working tree."
+          "label": "清除未追蹤的檔案",
+          "description": "從工作目錄移除未追蹤的檔案和資料夾。"
         },
         "devGitRevert": {
-          "label": "Revert commit",
-          "description": "Create a history-preserving commit that undoes a selected commit."
+          "label": "還原提交",
+          "description": "建立保留歷程記錄的提交，以撤銷選定的提交。"
         },
         "devHomebrewInstall": {
-          "label": "Install Homebrew",
-          "description": "Run the standard Homebrew install script."
+          "label": "安裝 Homebrew",
+          "description": "執行標準 Homebrew 安裝腳本。"
         },
         "devBrewBundleGlobal": {
-          "label": "Install global Brewfile",
-          "description": "Install packages from the global Homebrew Brewfile."
+          "label": "安裝全域 Brewfile",
+          "description": "從全域 Homebrew Brewfile 安裝套件。"
         },
         "devNvmInstall": {
-          "label": "Install nvm",
-          "description": "Install nvm using the official install script."
+          "label": "安裝 nvm",
+          "description": "使用官方安裝腳本安裝 nvm。"
         },
         "devNvmInstallNode24": {
-          "label": "Install Node 24",
-          "description": "Install Node.js 24 with nvm."
+          "label": "安裝 Node 24",
+          "description": "使用 nvm 安裝 Node.js 24。"
         },
         "devNvmUseNode24": {
-          "label": "Use Node 24",
-          "description": "Switch the current shell to Node.js 24 with nvm."
+          "label": "切換至 Node 24",
+          "description": "使用 nvm 將目前 shell 切換至 Node.js 24。"
         },
         "devBrewClaude": {
-          "label": "Brew install Claude Code",
-          "description": "Install Claude Code through Homebrew Cask."
+          "label": "Brew 安裝 Claude Code",
+          "description": "透過 Homebrew Cask 安裝 Claude Code。"
         },
         "devBrewCodex": {
-          "label": "Brew install Codex",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "Brew 安裝 Codex",
+          "description": "透過 Homebrew 安裝 OpenAI Codex CLI。"
         },
         "devBrewDocker": {
-          "label": "Brew install Docker Desktop",
-          "description": "Install Docker Desktop through Homebrew Cask."
+          "label": "Brew 安裝 Docker Desktop",
+          "description": "透過 Homebrew Cask 安裝 Docker Desktop。"
         },
         "devBrewKubectl": {
-          "label": "Brew install kubectl",
-          "description": "Install kubectl through Homebrew."
+          "label": "Brew 安裝 kubectl",
+          "description": "透過 Homebrew 安裝 kubectl。"
         },
         "containerDockerPs": {
-          "label": "Docker containers",
-          "description": "List running Docker containers."
+          "label": "Docker 容器",
+          "description": "列出正在執行的 Docker 容器。"
         },
         "containerDockerLogs": {
-          "label": "Docker follow logs",
-          "description": "Follow logs for a container. Replace the placeholder before running."
+          "label": "追蹤 Docker 記錄",
+          "description": "追蹤容器記錄。執行前請替換占位符。"
         },
         "containerDockerStop": {
-          "label": "Docker stop container",
-          "description": "Stop a container. Replace the placeholder before running."
+          "label": "停止 Docker 容器",
+          "description": "停止容器。執行前請替換占位符。"
         },
         "containerComposeUp": {
-          "label": "Compose up detached",
-          "description": "Start the Docker Compose project in the background."
+          "label": "在背景啟動 Compose",
+          "description": "在背景啟動 Docker Compose 專案。"
         },
         "containerComposeExec": {
-          "label": "Compose shell",
-          "description": "Open a shell in the web service container."
+          "label": "Compose Shell",
+          "description": "在 Web 服務容器中開啟 shell。"
         },
         "containerKubectlVersion": {
-          "label": "kubectl client version",
-          "description": "Show the installed kubectl client version."
+          "label": "kubectl 用戶端版本",
+          "description": "顯示已安裝的 kubectl 用戶端版本。"
         },
         "containerKubectlPods": {
-          "label": "kubectl pods",
-          "description": "List pods across all namespaces."
+          "label": "kubectl Pod 清單",
+          "description": "列出所有命名空間中的 Pod。"
         },
         "containerKubectlLogs": {
-          "label": "kubectl follow logs",
-          "description": "Follow logs for a pod. Replace the placeholder before running."
+          "label": "追蹤 kubectl 記錄",
+          "description": "追蹤 Pod 記錄。執行前請替換占位符。"
         },
         "containerKubectlExec": {
-          "label": "kubectl pod shell",
-          "description": "Open a shell in a pod. Replace the placeholder before running."
+          "label": "kubectl Pod Shell",
+          "description": "在 Pod 中開啟 shell。執行前請替換占位符。"
         },
         "containerKubectlApply": {
           "label": "kubectl apply",
-          "description": "Apply Kubernetes resources from k8s.yaml."
+          "description": "從 k8s.yaml 套用 Kubernetes 資源。"
         },
         "linuxSystemctlStatusSshd": {
-          "label": "SSH service status",
-          "description": "Check the status of the sshd systemd service."
+          "label": "SSH 服務狀態",
+          "description": "檢查 sshd systemd 服務的狀態。"
         },
         "linuxSystemctlRestartSshd": {
-          "label": "Restart SSH service",
-          "description": "Restart the sshd systemd service with sudo."
+          "label": "重新啟動 SSH 服務",
+          "description": "使用 sudo 重新啟動 sshd systemd 服務。"
         },
         "linuxSystemctlEnableDocker": {
-          "label": "Enable Docker service",
-          "description": "Enable and start the Docker systemd service."
+          "label": "啟用 Docker 服務",
+          "description": "啟用並啟動 Docker systemd 服務。"
         },
         "linuxJournalctlSshd": {
-          "label": "SSH service logs",
-          "description": "Read journal logs for the sshd service."
+          "label": "SSH 服務記錄",
+          "description": "讀取 sshd 服務的 journal 記錄。"
         },
         "linuxAptUpgrade": {
-          "label": "APT update and upgrade",
-          "description": "Update package metadata and upgrade Debian packages."
+          "label": "APT 更新和升級",
+          "description": "更新套件中繼資料並升級 Debian 套件。"
         },
         "linuxAptInstallDocker": {
-          "label": "APT install Docker packages",
-          "description": "Install Docker Engine and the Compose plugin with apt."
+          "label": "APT 安裝 Docker 套件",
+          "description": "使用 apt 安裝 Docker Engine 和 Compose 外掛程式。"
         },
         "linuxDnfUpgrade": {
-          "label": "DNF upgrade",
-          "description": "Upgrade Fedora packages with dnf."
+          "label": "DNF 升級",
+          "description": "使用 dnf 升級 Fedora 套件。"
         },
         "linuxDnfInstallCompose": {
-          "label": "DNF install Compose plugin",
-          "description": "Install the Docker Compose plugin with dnf."
+          "label": "DNF 安裝 Compose 外掛程式",
+          "description": "使用 dnf 安裝 Docker Compose 外掛程式。"
         },
         "macosSoftwareupdateInstallers": {
-          "label": "List macOS installers",
-          "description": "List available full macOS installers."
+          "label": "列出 macOS 安裝程式",
+          "description": "列出可用的完整 macOS 安裝程式。"
         },
         "macosNetworksetupServices": {
-          "label": "List network services",
-          "description": "List macOS network services with networksetup."
+          "label": "列出網路服務",
+          "description": "使用 networksetup 列出 macOS 網路服務。"
         },
         "macosNetworksetupManual": {
-          "label": "Set manual Ethernet IP",
-          "description": "Set a manual IP configuration for Ethernet. Edit values before running."
+          "label": "設定手動乙太網路 IP",
+          "description": "設定 Ethernet 的手動 IP 組態。執行前請編輯值。"
         },
         "macosScutilSmbProtocol": {
-          "label": "Edit SMB protocol map",
-          "description": "Open an advanced scutil preferences command for SMB protocol settings."
+          "label": "編輯 SMB 通訊協定對應",
+          "description": "開啟用於 SMB 通訊協定設定的進階 scutil 喜好設定命令。"
         },
         "macosLaunchctlUnloadNetbiosd": {
-          "label": "Unload netbiosd",
-          "description": "Unload the macOS netbiosd launch daemon."
+          "label": "卸載 netbiosd",
+          "description": "卸載 macOS netbiosd 啟動守護程式。"
         },
         "macosLaunchctlLoadNetbiosd": {
-          "label": "Load netbiosd",
-          "description": "Load the macOS netbiosd launch daemon."
+          "label": "載入 netbiosd",
+          "description": "載入 macOS netbiosd 啟動守護程式。"
         },
         "macosPmsetSchedule": {
-          "label": "Show power schedule",
-          "description": "Show scheduled macOS power events."
+          "label": "顯示電源排程",
+          "description": "顯示已排程的 macOS 電源事件。"
         },
         "macosPmsetRepeatWake": {
-          "label": "Schedule Monday wake",
-          "description": "Schedule a repeating Monday wake event."
+          "label": "排程週一喚醒",
+          "description": "排程每週一重複喚醒事件。"
         },
         "macosPmsetRepeatCancel": {
-          "label": "Cancel repeat power schedule",
-          "description": "Cancel repeating macOS power events."
+          "label": "取消重複電源排程",
+          "description": "取消重複的 macOS 電源事件。"
         },
         "macosDefaultsRead": {
-          "label": "Read defaults domain",
-          "description": "Read a macOS preferences domain. Replace the placeholder before running."
+          "label": "讀取 defaults 網域",
+          "description": "讀取 macOS 偏好設定網域。執行前請替換占位符。"
         },
         "macosDefaultsWrite": {
-          "label": "Write defaults value",
-          "description": "Write a macOS preferences value. Replace placeholders before running."
+          "label": "寫入 defaults 值",
+          "description": "寫入 macOS 偏好設定值。執行前請替換占位符。"
         }
       }
     }

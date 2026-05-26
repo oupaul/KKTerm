@@ -2120,304 +2120,304 @@
       },
       "entries": {
         "aiClaudeNativeInstall": {
-          "label": "Install Claude Code",
-          "description": "Install Claude Code with Anthropic's native installer."
+          "label": "ติดตั้ง Claude Code",
+          "description": "ติดตั้ง Claude Code ด้วยตัวติดตั้งแบบเนทีฟของ Anthropic"
         },
         "aiClaudeStart": {
           "label": "Claude",
-          "description": "Start an interactive Claude Code session."
+          "description": "เริ่มเซสชัน Claude Code แบบโต้ตอบ"
         },
         "aiClaudeBypass": {
-          "label": "Claude bypass permissions",
-          "description": "Run Claude Code without permission prompts. Use only in a trusted sandbox."
+          "label": "Claude ข้ามการอนุญาต",
+          "description": "รัน Claude Code โดยไม่มีการขอสิทธิ์ ใช้เฉพาะในแซนด์บ็อกซ์ที่เชื่อถือได้"
         },
         "aiClaudeBrewInstall": {
-          "label": "Install Claude Code with Homebrew",
-          "description": "Install Claude Code through Homebrew Cask on macOS."
+          "label": "ติดตั้ง Claude Code ด้วย Homebrew",
+          "description": "ติดตั้ง Claude Code ผ่าน Homebrew Cask บน macOS"
         },
         "aiClaudeBrewUpgrade": {
-          "label": "Upgrade Claude Code",
-          "description": "Upgrade the Homebrew Cask install of Claude Code."
+          "label": "อัปเกรด Claude Code",
+          "description": "อัปเกรดการติดตั้ง Homebrew Cask ของ Claude Code"
         },
         "aiCodexNpmInstall": {
-          "label": "Install Codex with npm",
-          "description": "Install the OpenAI Codex CLI globally with npm."
+          "label": "ติดตั้ง Codex ด้วย npm",
+          "description": "ติดตั้ง OpenAI Codex CLI แบบ global ด้วย npm"
         },
         "aiCodexBrewInstall": {
-          "label": "Install Codex with Homebrew",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "ติดตั้ง Codex ด้วย Homebrew",
+          "description": "ติดตั้ง OpenAI Codex CLI ผ่าน Homebrew"
         },
         "aiCodexStart": {
           "label": "Codex",
-          "description": "Start an interactive OpenAI Codex CLI session."
+          "description": "เริ่มเซสชัน OpenAI Codex CLI แบบโต้ตอบ"
         },
         "aiCodexPrompt": {
-          "label": "Codex explain codebase",
-          "description": "Start Codex with a prompt to explain the current repository."
+          "label": "Codex อธิบาย codebase",
+          "description": "เริ่ม Codex ด้วย prompt เพื่ออธิบาย repository ปัจจุบัน"
         },
         "aiCodexMcpContext7": {
-          "label": "Add Context7 MCP to Codex",
-          "description": "Register the documented Context7 MCP server example with Codex CLI."
+          "label": "เพิ่ม Context7 MCP ให้ Codex",
+          "description": "ลงทะเบียนตัวอย่าง Context7 MCP server ที่มีเอกสารกับ Codex CLI"
         },
         "aiCodexNpmUpgrade": {
-          "label": "Upgrade Codex with npm",
-          "description": "Install the latest OpenAI Codex CLI package globally."
+          "label": "อัปเกรด Codex ด้วย npm",
+          "description": "ติดตั้งแพ็กเกจ OpenAI Codex CLI ล่าสุดแบบ global"
         },
         "aiGeminiInstall": {
-          "label": "Install Gemini CLI",
-          "description": "Install Google's Gemini CLI globally with npm."
+          "label": "ติดตั้ง Gemini CLI",
+          "description": "ติดตั้ง Gemini CLI ของ Google แบบ global ด้วย npm"
         },
         "aiGeminiStart": {
           "label": "Gemini",
-          "description": "Start an interactive Gemini CLI session."
+          "description": "เริ่มเซสชัน Gemini CLI แบบโต้ตอบ"
         },
         "aiQwenNpmInstall": {
-          "label": "Install Qwen Code with npm",
-          "description": "Install the latest Qwen Code terminal agent with npm."
+          "label": "ติดตั้ง Qwen Code ด้วย npm",
+          "description": "ติดตั้ง Qwen Code terminal agent ล่าสุดด้วย npm"
         },
         "aiQwenBrewInstall": {
-          "label": "Install Qwen Code with Homebrew",
-          "description": "Install Qwen Code through Homebrew."
+          "label": "ติดตั้ง Qwen Code ด้วย Homebrew",
+          "description": "ติดตั้ง Qwen Code ผ่าน Homebrew"
         },
         "aiQwenStart": {
           "label": "Qwen Code",
-          "description": "Start an interactive Qwen Code session. Configure a provider or API key first."
+          "description": "เริ่มเซสชัน Qwen Code แบบโต้ตอบ กำหนดค่า provider หรือ API key ก่อน"
         },
         "aiAiderInstall": {
-          "label": "Install Aider",
-          "description": "Install Aider with the official Mac/Linux installer."
+          "label": "ติดตั้ง Aider",
+          "description": "ติดตั้ง Aider ด้วยตัวติดตั้งอย่างเป็นทางการของ Mac/Linux"
         },
         "aiAiderMessage": {
-          "label": "Aider one-shot edit",
-          "description": "Run Aider with a single edit request against a target file."
+          "label": "แก้ไขครั้งเดียวด้วย Aider",
+          "description": "รัน Aider ด้วยคำขอแก้ไขครั้งเดียวกับไฟล์เป้าหมาย"
         },
         "aiAiderGemini": {
-          "label": "Aider with Gemini",
-          "description": "Launch Aider using the Gemini model setting."
+          "label": "Aider กับ Gemini",
+          "description": "เปิด Aider โดยใช้การตั้งค่าโมเดล Gemini"
         },
         "aiOpenclawInstall": {
-          "label": "Install OpenClaw",
-          "description": "Run the OpenClaw hosted installer."
+          "label": "ติดตั้ง OpenClaw",
+          "description": "รันตัวติดตั้ง OpenClaw ที่โฮสต์ไว้"
         },
         "aiOpenclawNpmInstall": {
-          "label": "Install OpenClaw with npm",
-          "description": "Install the latest OpenClaw package globally with npm."
+          "label": "ติดตั้ง OpenClaw ด้วย npm",
+          "description": "ติดตั้งแพ็กเกจ OpenClaw ล่าสุดแบบ global ด้วย npm"
         },
         "aiOpenclawOnboard": {
           "label": "OpenClaw onboard",
-          "description": "Start the recommended OpenClaw onboarding flow."
+          "description": "เริ่มขั้นตอน onboarding ที่แนะนำของ OpenClaw"
         },
         "aiOpenclawDaemon": {
           "label": "OpenClaw daemon onboarding",
-          "description": "Run OpenClaw onboarding and install its background daemon."
+          "description": "รัน OpenClaw onboarding และติดตั้ง background daemon"
         },
         "aiOpenclawUpdate": {
-          "label": "Update OpenClaw",
-          "description": "Update the OpenClaw installation."
+          "label": "อัปเดต OpenClaw",
+          "description": "อัปเดตการติดตั้ง OpenClaw"
         },
         "aiHermesInstall": {
-          "label": "Install Hermes Agent",
-          "description": "Run the Hermes Agent installer from the Nous Research repository."
+          "label": "ติดตั้ง Hermes Agent",
+          "description": "รันตัวติดตั้ง Hermes Agent จาก Nous Research repository"
         },
         "aiHermesSourceBashrc": {
-          "label": "Reload bash shell",
-          "description": "Reload bash startup configuration after installing Hermes."
+          "label": "โหลด bash shell ใหม่",
+          "description": "โหลดการกำหนดค่าเริ่มต้น bash ใหม่หลังติดตั้ง Hermes"
         },
         "aiHermesStart": {
           "label": "Hermes",
-          "description": "Start an interactive Hermes Agent chat."
+          "description": "เริ่มแชท Hermes Agent แบบโต้ตอบ"
         },
         "aiHermesSetup": {
-          "label": "Hermes setup",
-          "description": "Open the Hermes provider and account setup flow."
+          "label": "ตั้งค่า Hermes",
+          "description": "เปิดขั้นตอนการตั้งค่า provider และบัญชี Hermes"
         },
         "aiHermesModel": {
           "label": "Hermes model",
-          "description": "Configure or inspect the active Hermes model."
+          "description": "กำหนดค่าหรือตรวจสอบโมเดล Hermes ที่ใช้งานอยู่"
         },
         "aiHermesDoctor": {
           "label": "Hermes doctor",
-          "description": "Run Hermes health checks."
+          "description": "รันการตรวจสุขภาพ Hermes"
         },
         "aiHermesDashboard": {
           "label": "Hermes dashboard",
-          "description": "Open the local Hermes dashboard."
+          "description": "เปิด Hermes dashboard ในเครื่อง"
         },
         "aiGooseInstall": {
-          "label": "Install Goose",
-          "description": "Run the stable Goose CLI installer."
+          "label": "ติดตั้ง Goose",
+          "description": "รันตัวติดตั้ง Goose CLI เวอร์ชันเสถียร"
         },
         "devGitSwitch": {
-          "label": "Create feature branch",
-          "description": "Create and switch to a new Git feature branch."
+          "label": "สร้าง feature branch",
+          "description": "สร้างและเปลี่ยนไปยัง Git feature branch ใหม่"
         },
         "devGitPullRebase": {
-          "label": "Pull with rebase",
-          "description": "Fetch and replay local commits on top of the upstream branch."
+          "label": "Pull ด้วย rebase",
+          "description": "ดึงและใช้ local commits ซ้ำบน upstream branch"
         },
         "devGitRestoreHead": {
-          "label": "Restore working tree",
-          "description": "Restore tracked files from HEAD. This can discard local edits."
+          "label": "กู้คืน working tree",
+          "description": "กู้คืนไฟล์ที่ติดตามจาก HEAD อาจทิ้งการแก้ไขในเครื่อง"
         },
         "devGitClean": {
-          "label": "Clean untracked files",
-          "description": "Remove untracked files and folders from the working tree."
+          "label": "ลบไฟล์ที่ไม่ถูกติดตาม",
+          "description": "ลบไฟล์และโฟลเดอร์ที่ไม่ถูกติดตามออกจาก working tree"
         },
         "devGitRevert": {
-          "label": "Revert commit",
-          "description": "Create a history-preserving commit that undoes a selected commit."
+          "label": "ยกเลิก commit",
+          "description": "สร้าง commit ที่รักษาประวัติและยกเลิก commit ที่เลือก"
         },
         "devHomebrewInstall": {
-          "label": "Install Homebrew",
-          "description": "Run the standard Homebrew install script."
+          "label": "ติดตั้ง Homebrew",
+          "description": "รันสคริปต์ติดตั้ง Homebrew มาตรฐาน"
         },
         "devBrewBundleGlobal": {
-          "label": "Install global Brewfile",
-          "description": "Install packages from the global Homebrew Brewfile."
+          "label": "ติดตั้ง Brewfile ทั่วโลก",
+          "description": "ติดตั้งแพ็กเกจจาก Homebrew Brewfile ทั่วโลก"
         },
         "devNvmInstall": {
-          "label": "Install nvm",
-          "description": "Install nvm using the official install script."
+          "label": "ติดตั้ง nvm",
+          "description": "ติดตั้ง nvm โดยใช้สคริปต์ติดตั้งอย่างเป็นทางการ"
         },
         "devNvmInstallNode24": {
-          "label": "Install Node 24",
-          "description": "Install Node.js 24 with nvm."
+          "label": "ติดตั้ง Node 24",
+          "description": "ติดตั้ง Node.js 24 ด้วย nvm"
         },
         "devNvmUseNode24": {
-          "label": "Use Node 24",
-          "description": "Switch the current shell to Node.js 24 with nvm."
+          "label": "ใช้ Node 24",
+          "description": "เปลี่ยน shell ปัจจุบันเป็น Node.js 24 ด้วย nvm"
         },
         "devBrewClaude": {
-          "label": "Brew install Claude Code",
-          "description": "Install Claude Code through Homebrew Cask."
+          "label": "Brew ติดตั้ง Claude Code",
+          "description": "ติดตั้ง Claude Code ผ่าน Homebrew Cask"
         },
         "devBrewCodex": {
-          "label": "Brew install Codex",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "Brew ติดตั้ง Codex",
+          "description": "ติดตั้ง OpenAI Codex CLI ผ่าน Homebrew"
         },
         "devBrewDocker": {
-          "label": "Brew install Docker Desktop",
-          "description": "Install Docker Desktop through Homebrew Cask."
+          "label": "Brew ติดตั้ง Docker Desktop",
+          "description": "ติดตั้ง Docker Desktop ผ่าน Homebrew Cask"
         },
         "devBrewKubectl": {
-          "label": "Brew install kubectl",
-          "description": "Install kubectl through Homebrew."
+          "label": "Brew ติดตั้ง kubectl",
+          "description": "ติดตั้ง kubectl ผ่าน Homebrew"
         },
         "containerDockerPs": {
           "label": "Docker containers",
-          "description": "List running Docker containers."
+          "description": "แสดงรายการ Docker containers ที่กำลังทำงาน"
         },
         "containerDockerLogs": {
-          "label": "Docker follow logs",
-          "description": "Follow logs for a container. Replace the placeholder before running."
+          "label": "ติดตาม Docker logs",
+          "description": "ติดตาม logs ของ container แทนที่ placeholder ก่อนรัน"
         },
         "containerDockerStop": {
-          "label": "Docker stop container",
-          "description": "Stop a container. Replace the placeholder before running."
+          "label": "หยุด Docker container",
+          "description": "หยุด container แทนที่ placeholder ก่อนรัน"
         },
         "containerComposeUp": {
-          "label": "Compose up detached",
-          "description": "Start the Docker Compose project in the background."
+          "label": "เริ่ม Compose แบบ detached",
+          "description": "เริ่มโปรเจกต์ Docker Compose ในพื้นหลัง"
         },
         "containerComposeExec": {
           "label": "Compose shell",
-          "description": "Open a shell in the web service container."
+          "description": "เปิด shell ใน web service container"
         },
         "containerKubectlVersion": {
           "label": "kubectl client version",
-          "description": "Show the installed kubectl client version."
+          "description": "แสดงเวอร์ชัน kubectl client ที่ติดตั้ง"
         },
         "containerKubectlPods": {
           "label": "kubectl pods",
-          "description": "List pods across all namespaces."
+          "description": "แสดงรายการ pods ในทุก namespace"
         },
         "containerKubectlLogs": {
-          "label": "kubectl follow logs",
-          "description": "Follow logs for a pod. Replace the placeholder before running."
+          "label": "ติดตาม kubectl logs",
+          "description": "ติดตาม logs ของ pod แทนที่ placeholder ก่อนรัน"
         },
         "containerKubectlExec": {
           "label": "kubectl pod shell",
-          "description": "Open a shell in a pod. Replace the placeholder before running."
+          "description": "เปิด shell ใน pod แทนที่ placeholder ก่อนรัน"
         },
         "containerKubectlApply": {
           "label": "kubectl apply",
-          "description": "Apply Kubernetes resources from k8s.yaml."
+          "description": "ใช้ Kubernetes resources จาก k8s.yaml"
         },
         "linuxSystemctlStatusSshd": {
-          "label": "SSH service status",
-          "description": "Check the status of the sshd systemd service."
+          "label": "สถานะบริการ SSH",
+          "description": "ตรวจสอบสถานะของ sshd systemd service"
         },
         "linuxSystemctlRestartSshd": {
-          "label": "Restart SSH service",
-          "description": "Restart the sshd systemd service with sudo."
+          "label": "รีสตาร์ทบริการ SSH",
+          "description": "รีสตาร์ท sshd systemd service ด้วย sudo"
         },
         "linuxSystemctlEnableDocker": {
-          "label": "Enable Docker service",
-          "description": "Enable and start the Docker systemd service."
+          "label": "เปิดใช้งานบริการ Docker",
+          "description": "เปิดใช้งานและเริ่ม Docker systemd service"
         },
         "linuxJournalctlSshd": {
           "label": "SSH service logs",
-          "description": "Read journal logs for the sshd service."
+          "description": "อ่าน journal logs ของ sshd service"
         },
         "linuxAptUpgrade": {
-          "label": "APT update and upgrade",
-          "description": "Update package metadata and upgrade Debian packages."
+          "label": "APT update และ upgrade",
+          "description": "อัปเดตข้อมูล metadata ของแพ็กเกจและอัปเกรดแพ็กเกจ Debian"
         },
         "linuxAptInstallDocker": {
-          "label": "APT install Docker packages",
-          "description": "Install Docker Engine and the Compose plugin with apt."
+          "label": "APT ติดตั้ง Docker packages",
+          "description": "ติดตั้ง Docker Engine และ Compose plugin ด้วย apt"
         },
         "linuxDnfUpgrade": {
           "label": "DNF upgrade",
-          "description": "Upgrade Fedora packages with dnf."
+          "description": "อัปเกรดแพ็กเกจ Fedora ด้วย dnf"
         },
         "linuxDnfInstallCompose": {
-          "label": "DNF install Compose plugin",
-          "description": "Install the Docker Compose plugin with dnf."
+          "label": "DNF ติดตั้ง Compose plugin",
+          "description": "ติดตั้ง Docker Compose plugin ด้วย dnf"
         },
         "macosSoftwareupdateInstallers": {
-          "label": "List macOS installers",
-          "description": "List available full macOS installers."
+          "label": "แสดงรายการตัวติดตั้ง macOS",
+          "description": "แสดงรายการตัวติดตั้ง macOS แบบเต็มที่มีอยู่"
         },
         "macosNetworksetupServices": {
-          "label": "List network services",
-          "description": "List macOS network services with networksetup."
+          "label": "แสดงรายการบริการเครือข่าย",
+          "description": "แสดงรายการ macOS network services ด้วย networksetup"
         },
         "macosNetworksetupManual": {
-          "label": "Set manual Ethernet IP",
-          "description": "Set a manual IP configuration for Ethernet. Edit values before running."
+          "label": "ตั้งค่า IP Ethernet แบบ manual",
+          "description": "ตั้งค่า IP แบบ manual สำหรับ Ethernet แก้ไขค่าก่อนรัน"
         },
         "macosScutilSmbProtocol": {
-          "label": "Edit SMB protocol map",
-          "description": "Open an advanced scutil preferences command for SMB protocol settings."
+          "label": "แก้ไข SMB protocol map",
+          "description": "เปิดคำสั่ง scutil preferences ขั้นสูงสำหรับการตั้งค่า SMB protocol"
         },
         "macosLaunchctlUnloadNetbiosd": {
           "label": "Unload netbiosd",
-          "description": "Unload the macOS netbiosd launch daemon."
+          "description": "Unload macOS netbiosd launch daemon"
         },
         "macosLaunchctlLoadNetbiosd": {
           "label": "Load netbiosd",
-          "description": "Load the macOS netbiosd launch daemon."
+          "description": "Load macOS netbiosd launch daemon"
         },
         "macosPmsetSchedule": {
-          "label": "Show power schedule",
-          "description": "Show scheduled macOS power events."
+          "label": "แสดงตารางพลังงาน",
+          "description": "แสดงเหตุการณ์พลังงาน macOS ที่กำหนดเวลา"
         },
         "macosPmsetRepeatWake": {
-          "label": "Schedule Monday wake",
-          "description": "Schedule a repeating Monday wake event."
+          "label": "ตั้งเวลาปลุกวันจันทร์",
+          "description": "ตั้งเวลาเหตุการณ์ปลุกซ้ำในวันจันทร์"
         },
         "macosPmsetRepeatCancel": {
-          "label": "Cancel repeat power schedule",
-          "description": "Cancel repeating macOS power events."
+          "label": "ยกเลิกตารางพลังงานซ้ำ",
+          "description": "ยกเลิกเหตุการณ์พลังงาน macOS ที่ซ้ำ"
         },
         "macosDefaultsRead": {
-          "label": "Read defaults domain",
-          "description": "Read a macOS preferences domain. Replace the placeholder before running."
+          "label": "อ่าน defaults domain",
+          "description": "อ่าน macOS preferences domain แทนที่ placeholder ก่อนรัน"
         },
         "macosDefaultsWrite": {
-          "label": "Write defaults value",
-          "description": "Write a macOS preferences value. Replace placeholders before running."
+          "label": "เขียนค่า defaults",
+          "description": "เขียนค่า macOS preferences แทนที่ placeholder ก่อนรัน"
         }
       }
     }

@@ -2120,304 +2120,304 @@
       },
       "entries": {
         "aiClaudeNativeInstall": {
-          "label": "Install Claude Code",
-          "description": "Install Claude Code with Anthropic's native installer."
+          "label": "Instalar Claude Code",
+          "description": "Instalar Claude Code com o instalador nativo da Anthropic."
         },
         "aiClaudeStart": {
           "label": "Claude",
-          "description": "Start an interactive Claude Code session."
+          "description": "Iniciar uma sessão interativa do Claude Code."
         },
         "aiClaudeBypass": {
-          "label": "Claude bypass permissions",
-          "description": "Run Claude Code without permission prompts. Use only in a trusted sandbox."
+          "label": "Claude sem permissões",
+          "description": "Executar Claude Code sem prompts de permissão. Usar apenas em um sandbox confiável."
         },
         "aiClaudeBrewInstall": {
-          "label": "Install Claude Code with Homebrew",
-          "description": "Install Claude Code through Homebrew Cask on macOS."
+          "label": "Instalar Claude Code com Homebrew",
+          "description": "Instalar Claude Code via Homebrew Cask no macOS."
         },
         "aiClaudeBrewUpgrade": {
-          "label": "Upgrade Claude Code",
-          "description": "Upgrade the Homebrew Cask install of Claude Code."
+          "label": "Atualizar Claude Code",
+          "description": "Atualizar a instalação do Claude Code pelo Homebrew Cask."
         },
         "aiCodexNpmInstall": {
-          "label": "Install Codex with npm",
-          "description": "Install the OpenAI Codex CLI globally with npm."
+          "label": "Instalar Codex com npm",
+          "description": "Instalar globalmente a CLI do OpenAI Codex com npm."
         },
         "aiCodexBrewInstall": {
-          "label": "Install Codex with Homebrew",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "Instalar Codex com Homebrew",
+          "description": "Instalar a CLI do OpenAI Codex via Homebrew."
         },
         "aiCodexStart": {
           "label": "Codex",
-          "description": "Start an interactive OpenAI Codex CLI session."
+          "description": "Iniciar uma sessão interativa da CLI do OpenAI Codex."
         },
         "aiCodexPrompt": {
-          "label": "Codex explain codebase",
-          "description": "Start Codex with a prompt to explain the current repository."
+          "label": "Codex explica o código",
+          "description": "Iniciar Codex com um prompt para explicar o repositório atual."
         },
         "aiCodexMcpContext7": {
-          "label": "Add Context7 MCP to Codex",
-          "description": "Register the documented Context7 MCP server example with Codex CLI."
+          "label": "Adicionar Context7 MCP ao Codex",
+          "description": "Registrar o exemplo documentado do servidor Context7 MCP com a CLI do Codex."
         },
         "aiCodexNpmUpgrade": {
-          "label": "Upgrade Codex with npm",
-          "description": "Install the latest OpenAI Codex CLI package globally."
+          "label": "Atualizar Codex com npm",
+          "description": "Instalar globalmente o pacote mais recente da CLI do OpenAI Codex."
         },
         "aiGeminiInstall": {
-          "label": "Install Gemini CLI",
-          "description": "Install Google's Gemini CLI globally with npm."
+          "label": "Instalar Gemini CLI",
+          "description": "Instalar globalmente a CLI Gemini do Google com npm."
         },
         "aiGeminiStart": {
           "label": "Gemini",
-          "description": "Start an interactive Gemini CLI session."
+          "description": "Iniciar uma sessão interativa do Gemini CLI."
         },
         "aiQwenNpmInstall": {
-          "label": "Install Qwen Code with npm",
-          "description": "Install the latest Qwen Code terminal agent with npm."
+          "label": "Instalar Qwen Code com npm",
+          "description": "Instalar o agente de terminal Qwen Code mais recente com npm."
         },
         "aiQwenBrewInstall": {
-          "label": "Install Qwen Code with Homebrew",
-          "description": "Install Qwen Code through Homebrew."
+          "label": "Instalar Qwen Code com Homebrew",
+          "description": "Instalar Qwen Code via Homebrew."
         },
         "aiQwenStart": {
           "label": "Qwen Code",
-          "description": "Start an interactive Qwen Code session. Configure a provider or API key first."
+          "description": "Iniciar uma sessão interativa do Qwen Code. Configure um provedor ou chave de API primeiro."
         },
         "aiAiderInstall": {
-          "label": "Install Aider",
-          "description": "Install Aider with the official Mac/Linux installer."
+          "label": "Instalar Aider",
+          "description": "Instalar Aider com o instalador oficial Mac/Linux."
         },
         "aiAiderMessage": {
-          "label": "Aider one-shot edit",
-          "description": "Run Aider with a single edit request against a target file."
+          "label": "Edição única com Aider",
+          "description": "Executar Aider com uma única solicitação de edição em um arquivo alvo."
         },
         "aiAiderGemini": {
-          "label": "Aider with Gemini",
-          "description": "Launch Aider using the Gemini model setting."
+          "label": "Aider com Gemini",
+          "description": "Iniciar Aider usando a configuração do modelo Gemini."
         },
         "aiOpenclawInstall": {
-          "label": "Install OpenClaw",
-          "description": "Run the OpenClaw hosted installer."
+          "label": "Instalar OpenClaw",
+          "description": "Executar o instalador hospedado do OpenClaw."
         },
         "aiOpenclawNpmInstall": {
-          "label": "Install OpenClaw with npm",
-          "description": "Install the latest OpenClaw package globally with npm."
+          "label": "Instalar OpenClaw com npm",
+          "description": "Instalar globalmente o pacote mais recente do OpenClaw com npm."
         },
         "aiOpenclawOnboard": {
-          "label": "OpenClaw onboard",
-          "description": "Start the recommended OpenClaw onboarding flow."
+          "label": "Integração do OpenClaw",
+          "description": "Iniciar o fluxo de integração recomendado do OpenClaw."
         },
         "aiOpenclawDaemon": {
-          "label": "OpenClaw daemon onboarding",
-          "description": "Run OpenClaw onboarding and install its background daemon."
+          "label": "Integração do daemon do OpenClaw",
+          "description": "Executar o onboarding do OpenClaw e instalar seu daemon em segundo plano."
         },
         "aiOpenclawUpdate": {
-          "label": "Update OpenClaw",
-          "description": "Update the OpenClaw installation."
+          "label": "Atualizar OpenClaw",
+          "description": "Atualizar a instalação do OpenClaw."
         },
         "aiHermesInstall": {
-          "label": "Install Hermes Agent",
-          "description": "Run the Hermes Agent installer from the Nous Research repository."
+          "label": "Instalar Hermes Agent",
+          "description": "Executar o instalador do Hermes Agent a partir do repositório Nous Research."
         },
         "aiHermesSourceBashrc": {
-          "label": "Reload bash shell",
-          "description": "Reload bash startup configuration after installing Hermes."
+          "label": "Recarregar shell bash",
+          "description": "Recarregar a configuração de inicialização do bash após instalar o Hermes."
         },
         "aiHermesStart": {
           "label": "Hermes",
-          "description": "Start an interactive Hermes Agent chat."
+          "description": "Iniciar um chat interativo do Hermes Agent."
         },
         "aiHermesSetup": {
-          "label": "Hermes setup",
-          "description": "Open the Hermes provider and account setup flow."
+          "label": "Configurar Hermes",
+          "description": "Abrir o fluxo de configuração de provedor e conta do Hermes."
         },
         "aiHermesModel": {
-          "label": "Hermes model",
-          "description": "Configure or inspect the active Hermes model."
+          "label": "Modelo Hermes",
+          "description": "Configurar ou inspecionar o modelo Hermes ativo."
         },
         "aiHermesDoctor": {
-          "label": "Hermes doctor",
-          "description": "Run Hermes health checks."
+          "label": "Diagnóstico Hermes",
+          "description": "Executar verificações de integridade do Hermes."
         },
         "aiHermesDashboard": {
-          "label": "Hermes dashboard",
-          "description": "Open the local Hermes dashboard."
+          "label": "Painel Hermes",
+          "description": "Abrir o painel local do Hermes."
         },
         "aiGooseInstall": {
-          "label": "Install Goose",
-          "description": "Run the stable Goose CLI installer."
+          "label": "Instalar Goose",
+          "description": "Executar o instalador estável da CLI do Goose."
         },
         "devGitSwitch": {
-          "label": "Create feature branch",
-          "description": "Create and switch to a new Git feature branch."
+          "label": "Criar branch de funcionalidade",
+          "description": "Criar e mudar para um novo branch de funcionalidade do Git."
         },
         "devGitPullRebase": {
-          "label": "Pull with rebase",
-          "description": "Fetch and replay local commits on top of the upstream branch."
+          "label": "Pull com rebase",
+          "description": "Buscar e reaplicar commits locais sobre o branch upstream."
         },
         "devGitRestoreHead": {
-          "label": "Restore working tree",
-          "description": "Restore tracked files from HEAD. This can discard local edits."
+          "label": "Restaurar árvore de trabalho",
+          "description": "Restaurar arquivos rastreados do HEAD. Isso pode descartar edições locais."
         },
         "devGitClean": {
-          "label": "Clean untracked files",
-          "description": "Remove untracked files and folders from the working tree."
+          "label": "Limpar arquivos não rastreados",
+          "description": "Remover arquivos e pastas não rastreados da árvore de trabalho."
         },
         "devGitRevert": {
-          "label": "Revert commit",
-          "description": "Create a history-preserving commit that undoes a selected commit."
+          "label": "Reverter commit",
+          "description": "Criar um commit que preserva o histórico e desfaz um commit selecionado."
         },
         "devHomebrewInstall": {
-          "label": "Install Homebrew",
-          "description": "Run the standard Homebrew install script."
+          "label": "Instalar Homebrew",
+          "description": "Executar o script de instalação padrão do Homebrew."
         },
         "devBrewBundleGlobal": {
-          "label": "Install global Brewfile",
-          "description": "Install packages from the global Homebrew Brewfile."
+          "label": "Instalar Brewfile global",
+          "description": "Instalar pacotes do Brewfile global do Homebrew."
         },
         "devNvmInstall": {
-          "label": "Install nvm",
-          "description": "Install nvm using the official install script."
+          "label": "Instalar nvm",
+          "description": "Instalar nvm usando o script de instalação oficial."
         },
         "devNvmInstallNode24": {
-          "label": "Install Node 24",
-          "description": "Install Node.js 24 with nvm."
+          "label": "Instalar Node 24",
+          "description": "Instalar Node.js 24 com nvm."
         },
         "devNvmUseNode24": {
-          "label": "Use Node 24",
-          "description": "Switch the current shell to Node.js 24 with nvm."
+          "label": "Usar Node 24",
+          "description": "Mudar o shell atual para Node.js 24 com nvm."
         },
         "devBrewClaude": {
-          "label": "Brew install Claude Code",
-          "description": "Install Claude Code through Homebrew Cask."
+          "label": "Instalar Claude Code com Brew",
+          "description": "Instalar Claude Code via Homebrew Cask."
         },
         "devBrewCodex": {
-          "label": "Brew install Codex",
-          "description": "Install the OpenAI Codex CLI through Homebrew."
+          "label": "Instalar Codex com Brew",
+          "description": "Instalar a CLI do OpenAI Codex via Homebrew."
         },
         "devBrewDocker": {
-          "label": "Brew install Docker Desktop",
-          "description": "Install Docker Desktop through Homebrew Cask."
+          "label": "Instalar Docker Desktop com Brew",
+          "description": "Instalar Docker Desktop via Homebrew Cask."
         },
         "devBrewKubectl": {
-          "label": "Brew install kubectl",
-          "description": "Install kubectl through Homebrew."
+          "label": "Instalar kubectl com Brew",
+          "description": "Instalar kubectl via Homebrew."
         },
         "containerDockerPs": {
-          "label": "Docker containers",
-          "description": "List running Docker containers."
+          "label": "Containers Docker",
+          "description": "Listar os containers Docker em execução."
         },
         "containerDockerLogs": {
-          "label": "Docker follow logs",
-          "description": "Follow logs for a container. Replace the placeholder before running."
+          "label": "Seguir logs do Docker",
+          "description": "Seguir logs de um container. Substitua o marcador antes de executar."
         },
         "containerDockerStop": {
-          "label": "Docker stop container",
-          "description": "Stop a container. Replace the placeholder before running."
+          "label": "Parar container Docker",
+          "description": "Parar um container. Substitua o marcador antes de executar."
         },
         "containerComposeUp": {
-          "label": "Compose up detached",
-          "description": "Start the Docker Compose project in the background."
+          "label": "Iniciar Compose em segundo plano",
+          "description": "Iniciar o projeto Docker Compose em segundo plano."
         },
         "containerComposeExec": {
-          "label": "Compose shell",
-          "description": "Open a shell in the web service container."
+          "label": "Shell do Compose",
+          "description": "Abrir um shell no container do serviço web."
         },
         "containerKubectlVersion": {
-          "label": "kubectl client version",
-          "description": "Show the installed kubectl client version."
+          "label": "Versão do cliente kubectl",
+          "description": "Exibir a versão do cliente kubectl instalado."
         },
         "containerKubectlPods": {
-          "label": "kubectl pods",
-          "description": "List pods across all namespaces."
+          "label": "Pods do kubectl",
+          "description": "Listar pods em todos os namespaces."
         },
         "containerKubectlLogs": {
-          "label": "kubectl follow logs",
-          "description": "Follow logs for a pod. Replace the placeholder before running."
+          "label": "Seguir logs do kubectl",
+          "description": "Seguir logs de um pod. Substitua o marcador antes de executar."
         },
         "containerKubectlExec": {
-          "label": "kubectl pod shell",
-          "description": "Open a shell in a pod. Replace the placeholder before running."
+          "label": "Shell do pod kubectl",
+          "description": "Abrir um shell em um pod. Substitua o marcador antes de executar."
         },
         "containerKubectlApply": {
           "label": "kubectl apply",
-          "description": "Apply Kubernetes resources from k8s.yaml."
+          "description": "Aplicar recursos do Kubernetes a partir de k8s.yaml."
         },
         "linuxSystemctlStatusSshd": {
-          "label": "SSH service status",
-          "description": "Check the status of the sshd systemd service."
+          "label": "Status do serviço SSH",
+          "description": "Verificar o status do serviço systemd sshd."
         },
         "linuxSystemctlRestartSshd": {
-          "label": "Restart SSH service",
-          "description": "Restart the sshd systemd service with sudo."
+          "label": "Reiniciar serviço SSH",
+          "description": "Reiniciar o serviço systemd sshd com sudo."
         },
         "linuxSystemctlEnableDocker": {
-          "label": "Enable Docker service",
-          "description": "Enable and start the Docker systemd service."
+          "label": "Habilitar serviço Docker",
+          "description": "Habilitar e iniciar o serviço systemd do Docker."
         },
         "linuxJournalctlSshd": {
-          "label": "SSH service logs",
-          "description": "Read journal logs for the sshd service."
+          "label": "Logs do serviço SSH",
+          "description": "Ler os logs de journal do serviço sshd."
         },
         "linuxAptUpgrade": {
-          "label": "APT update and upgrade",
-          "description": "Update package metadata and upgrade Debian packages."
+          "label": "Atualizar e melhorar APT",
+          "description": "Atualizar os metadados dos pacotes e melhorar os pacotes Debian."
         },
         "linuxAptInstallDocker": {
-          "label": "APT install Docker packages",
-          "description": "Install Docker Engine and the Compose plugin with apt."
+          "label": "Instalar pacotes Docker com APT",
+          "description": "Instalar o Docker Engine e o plugin Compose com apt."
         },
         "linuxDnfUpgrade": {
-          "label": "DNF upgrade",
-          "description": "Upgrade Fedora packages with dnf."
+          "label": "Atualização DNF",
+          "description": "Atualizar pacotes do Fedora com dnf."
         },
         "linuxDnfInstallCompose": {
-          "label": "DNF install Compose plugin",
-          "description": "Install the Docker Compose plugin with dnf."
+          "label": "Instalar plugin Compose com DNF",
+          "description": "Instalar o plugin Docker Compose com dnf."
         },
         "macosSoftwareupdateInstallers": {
-          "label": "List macOS installers",
-          "description": "List available full macOS installers."
+          "label": "Listar instaladores do macOS",
+          "description": "Listar os instaladores completos do macOS disponíveis."
         },
         "macosNetworksetupServices": {
-          "label": "List network services",
-          "description": "List macOS network services with networksetup."
+          "label": "Listar serviços de rede",
+          "description": "Listar os serviços de rede do macOS com networksetup."
         },
         "macosNetworksetupManual": {
-          "label": "Set manual Ethernet IP",
-          "description": "Set a manual IP configuration for Ethernet. Edit values before running."
+          "label": "Configurar IP Ethernet manual",
+          "description": "Definir uma configuração IP manual para Ethernet. Edite os valores antes de executar."
         },
         "macosScutilSmbProtocol": {
-          "label": "Edit SMB protocol map",
-          "description": "Open an advanced scutil preferences command for SMB protocol settings."
+          "label": "Editar mapa de protocolo SMB",
+          "description": "Abrir um comando de preferências avançado do scutil para configurações do protocolo SMB."
         },
         "macosLaunchctlUnloadNetbiosd": {
-          "label": "Unload netbiosd",
-          "description": "Unload the macOS netbiosd launch daemon."
+          "label": "Descarregar netbiosd",
+          "description": "Descarregar o daemon de inicialização netbiosd do macOS."
         },
         "macosLaunchctlLoadNetbiosd": {
-          "label": "Load netbiosd",
-          "description": "Load the macOS netbiosd launch daemon."
+          "label": "Carregar netbiosd",
+          "description": "Carregar o daemon de inicialização netbiosd do macOS."
         },
         "macosPmsetSchedule": {
-          "label": "Show power schedule",
-          "description": "Show scheduled macOS power events."
+          "label": "Mostrar agenda de energia",
+          "description": "Mostrar os eventos de energia agendados do macOS."
         },
         "macosPmsetRepeatWake": {
-          "label": "Schedule Monday wake",
-          "description": "Schedule a repeating Monday wake event."
+          "label": "Agendar ativação na segunda",
+          "description": "Agendar um evento de ativação repetitivo nas segundas-feiras."
         },
         "macosPmsetRepeatCancel": {
-          "label": "Cancel repeat power schedule",
-          "description": "Cancel repeating macOS power events."
+          "label": "Cancelar agenda de energia repetitiva",
+          "description": "Cancelar os eventos de energia repetitivos do macOS."
         },
         "macosDefaultsRead": {
-          "label": "Read defaults domain",
-          "description": "Read a macOS preferences domain. Replace the placeholder before running."
+          "label": "Ler domínio de defaults",
+          "description": "Ler um domínio de preferências do macOS. Substitua o marcador antes de executar."
         },
         "macosDefaultsWrite": {
-          "label": "Write defaults value",
-          "description": "Write a macOS preferences value. Replace placeholders before running."
+          "label": "Escrever valor de defaults",
+          "description": "Escrever um valor de preferências do macOS. Substitua os marcadores antes de executar."
         }
       }
     }
