@@ -8,6 +8,7 @@ import { WebViewWorkspace } from "../webview/WebViewWorkspace";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
@@ -2128,7 +2129,10 @@ function TerminalContextMenu({
     node.style.top = `${Math.max(8, top)}px`;
   }, [menu.x, menu.y]);
 
-  return (
+  // Portal to document.body so the menu escapes any ancestor CSS transform
+  // (eg. react-grid-layout's translated grid item when the terminal is
+  // embedded in a Dashboard connection widget) and any overflow:hidden clip.
+  return createPortal(
     <div
       className="terminal-context-menu"
       onContextMenu={(event) => event.preventDefault()}
@@ -2164,7 +2168,8 @@ function TerminalContextMenu({
           <span>{t("terminal.paste")}</span>
         </span>
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

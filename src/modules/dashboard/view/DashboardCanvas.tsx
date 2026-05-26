@@ -159,9 +159,6 @@ export function DashboardCanvas({
               isViewActive={isViewActive}
               onCustomize={onCustomize}
               onRequestDelete={onRequestWidgetDelete}
-              onOpenCatalog={onOpenCatalog}
-              onOpenBackground={onOpenBackground}
-              onToggleEditMode={onToggleEditMode}
             />
           </div>
         ))}

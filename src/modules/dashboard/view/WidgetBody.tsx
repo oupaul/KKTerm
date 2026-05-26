@@ -27,13 +27,7 @@ export function WidgetBody({
       );
     }
     const { Body } = entry;
-    return (
-      <Body
-        instance={instance}
-        isViewActive={isViewActive}
-        onWidgetContextMenu={onWidgetContextMenu}
-      />
-    );
+    return <Body instance={instance} isViewActive={isViewActive} />;
   }
   const cw = customWidgets.find((c) => c.id === instance.sourceId);
   if (!cw) {

@@ -123,11 +123,7 @@ function createConnectionWidgetPane(
   };
 }
 
-export function ConnectionWidgetBody({
-  instance,
-  isViewActive,
-  onWidgetContextMenu,
-}: BuiltInWidgetBodyProps) {
+export function ConnectionWidgetBody({ instance, isViewActive }: BuiltInWidgetBodyProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useWidgetConfig(
     storageKey(instance.id),
@@ -330,21 +326,9 @@ export function ConnectionWidgetBody({
     );
   }
 
-  // Embedded terminal/RDP/VNC surfaces normally stopPropagation on right-click
-  // to show their own copy/paste menu. Inside a Dashboard widget we want the
-  // widget context menu (Properties/Delete/canvas actions) instead, so we
-  // intercept the event in the capture phase before it reaches the embedded
-  // workspace handlers.
   return (
     <div className="dashboard-connection-widget">
-      <div
-        className="dashboard-connection-pane"
-        onContextMenuCapture={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void onWidgetContextMenu({ x: event.clientX, y: event.clientY });
-        }}
-      >
+      <div className="dashboard-connection-pane">
         {sessionConnection ? (
           <ConnectionWidgetSession
             connection={sessionConnection}
