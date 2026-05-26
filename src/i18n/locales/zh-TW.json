@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "強調色",
     "accentDefault": "預設",
-    "actionDirection": "版面方向",
-    "actionDirectionOptions": {
-      "horizontal": "水平",
-      "vertical": "垂直"
-    },
     "addAgentWidget": "新增代理小工具",
     "addView": "新增檢視",
     "addWidget": "新增 {{name}}",
@@ -1079,11 +1074,9 @@
     "playground": "遊樂場",
     "playgroundHint": "從目錄中新增小工具，然後根據工作流程變化移除或替換。",
     "preset": {
-      "action": "動作",
       "ambient": "氛圍",
       "hero": "主角",
-      "panel": "面板",
-      "tile": "磁磚"
+      "panel": "面板"
     },
     "presetLabel": "樣式預設",
     "quickInput": "輸入",

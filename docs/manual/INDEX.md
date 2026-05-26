@@ -32,7 +32,7 @@ When a doc says "right-click on X", the implementation is a Tauri native context
 | 11 | [11-app-launcher.md](11-app-launcher.md) | App Launcher widget — adding apps/files/folders, run modes | `appLauncher` |
 | 13 | [13-ai-assistant.md](13-ai-assistant.md) | AI Assistant panel, chats, tools, intents (Watchdog / Create Widget / Extension Draft), MCP | `ai` |
 | 14 | [14-screenshots.md](14-screenshots.md) | Region / window / full-screen capture, screenshot library | `screenshots`, `workspace` |
-| 15 | [15-settings.md](15-settings.md) | Every Settings section: General, Appearance, AI, SSH, Terminal, Screenshots, RDP, VNC, About | `settings` |
+| 15 | [15-settings.md](15-settings.md) | Every Settings section: General, Appearance, Dashboard, Credentials, AI, SSH, Terminal, URL, RDP, VNC, About | `settings` |
 | 16 | [16-localization.md](16-localization.md) | Switching language, supported locales | `settings`, `languages` |
 | 17 | [17-data-backup-secrets.md](17-data-backup-secrets.md) | SQLite store, OS keychain, settings import/export, backup ZIP | `settings`, `common` |
 

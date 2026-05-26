@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "สีเน้น",
     "accentDefault": "ค่าเริ่มต้น",
-    "actionDirection": "ทิศทางการจัดวาง",
-    "actionDirectionOptions": {
-      "horizontal": "แนวนอน",
-      "vertical": "แนวตั้ง"
-    },
     "addAgentWidget": "เพิ่มวิดเจ็ตเอเจนต์",
     "addView": "เพิ่มมุมมอง",
     "addWidget": "เพิ่ม {{name}}",
@@ -1079,11 +1074,9 @@
     "playground": "สนามเด็กเล่น",
     "playgroundHint": "เพิ่มวิดเจ็ตจากแคตตาล็อก แล้วลบหรือแทนที่เมื่อเวิร์กโฟลว์ของคุณเปลี่ยนไป",
     "preset": {
-      "action": "แอ็คชัน",
       "ambient": "บรรยากาศ",
       "hero": "ฮีโร่",
-      "panel": "แผง",
-      "tile": "ไทล์"
+      "panel": "แผง"
     },
     "presetLabel": "ค่าที่ตั้งไว้ล่วงหน้าสำหรับสไตล์",
     "quickInput": "อินพุต",

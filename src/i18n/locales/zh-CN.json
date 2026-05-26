@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "强调色",
     "accentDefault": "默认",
-    "actionDirection": "布局方向",
-    "actionDirectionOptions": {
-      "horizontal": "横向",
-      "vertical": "纵向"
-    },
     "addAgentWidget": "添加代理小部件",
     "addView": "添加视图",
     "addWidget": "添加 {{name}}",
@@ -1079,11 +1074,9 @@
     "playground": "游乐场",
     "playgroundHint": "从目录中添加小部件，然后根据工作流变化移除或替换。",
     "preset": {
-      "action": "动作",
       "ambient": "环境",
       "hero": "主角",
-      "panel": "面板",
-      "tile": "瓷砖"
+      "panel": "面板"
     },
     "presetLabel": "样式预设",
     "quickInput": "输入",

@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including General keys `settings.autoStartWithWindows`, `settings.minimizeToTray`, `settings.useDirectxScreenCapture`, `settings.statusBar`, `settings.statusBarMonitor`, `settings.statusBarMonitorInterval`, `settings.debug`, `settings.advancedDebugging`, Appearance title-bar keys `settings.titleBar`, `settings.useCustomTitleBar`, `settings.useCustomTitleBarHint`, and AI provider keys `settings.apiMode`, `settings.apiModeChatCompletions`, `settings.apiModeResponses`, `settings.extraHeaders`, `settings.extraHeadersPlaceholder`, and `settings.assistantSkills*`
-- Topics: General, Appearance, Dashboard, Credentials & MCP, AI Assistant, assistant tool defaults, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, SSH, Terminal, network troubleshooting, DNS, DHCP, firewall, TLS certificates, Screenshots, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all; Windows startup; launch minimized; DirectX screenshot capture; Status Bar CPU/RAM/Network monitor; custom title bar; native Windows title bar; Advanced Debugging; AI Assistant debug logs; MCP debug logs; built-in MCP config; random dynamic Dashboard backgrounds
+- Topics: General, Appearance, Dashboard, Credentials & MCP, AI Assistant, assistant tool defaults, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, SSH, Terminal, network troubleshooting, DNS, DHCP, firewall, TLS certificates, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all; Windows startup; launch minimized; DirectX screenshot capture; Status Bar CPU/RAM/Network monitor; custom title bar; native Windows title bar; Advanced Debugging; AI Assistant debug logs; MCP debug logs; built-in MCP config; random dynamic Dashboard backgrounds
 - Synonyms: "preferences", "options", "config", "theme", "dark mode", "color", "language", "API key", "import settings", "factory reset", "show me where", "start with Windows", "run at login", "launch minimized", "custom title bar", "titlebar", "window chrome", "native title bar", "Windows title bar", "DirectX", "DXGI", "screen capture", "screenshot acceleration", "status bar", "CPU monitor", "RAM monitor", "network monitor", "host usage", "performance overhead", "debug", "diagnostics", "AI debug log", "MCP debug log", "aiassistant.debug.log", "mcp.debug.log", "MCP config", "mcpServers", "mcp_servers", "TOML", "kkterm-cli", "Codex MCP", "Claude MCP", "expand tools", "collapse skills", "random wallpaper", "dynamic wallpaper", "dashboard background", "network-connectivity-troubleshooter", "dns-dhcp-troubleshooter", "firewall-port-troubleshooter", "tls-certificate-troubleshooter"
 
 > Settings page styling is consistent across sections. Related controls live inside the shared `settings-subsection settings-fieldset` group so the group title sits in the border. Editable controls look editable; disabled / readonly controls stay muted. Delete buttons inside Settings are icon-only red trash cans (no visible "Delete" text). Destructive Settings-wide actions live in **General → Settings data**, behind app-owned confirmation dialogs — not inside feature-specific sections.
@@ -37,7 +37,6 @@ Settings tutorial targets:
   - `settings.sectionAiAssistant`
   - `settings.sectionSsh`
   - `settings.sectionTerminal`
-  - `settings.sectionScreenshots`
   - `settings.sectionRdp`
   - `settings.sectionVnc`
   - `settings.sectionUrl`
@@ -116,14 +115,6 @@ Section header `settings.sectionSsh`. Default username, default identity file, a
 ## Terminal
 
 Section header `settings.sectionTerminal`. Font family + size, line height, cursor style, scrollback length, bell behaviour, default shell on Local.
-
-## Screenshots
-
-Section header `settings.sectionScreenshots`.
-
-- Folder picker: `settings.screenshotFolder` (path display `settings.screenshotFolderPath`, hint `settings.screenshotFolderHint`).
-- Choose folder: `settings.chooseFolder`. Open the folder: `settings.openScreenshotFolder`.
-- Save status: `settings.screenshotsSaved`.
 
 ## RDP and VNC
 

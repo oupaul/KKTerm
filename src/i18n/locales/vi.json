@@ -894,11 +894,6 @@
   "dashboard": {
     "accent": "Nhấn",
     "accentDefault": "Mặc định",
-    "actionDirection": "Hướng bố cục",
-    "actionDirectionOptions": {
-      "horizontal": "Ngang",
-      "vertical": "Dọc"
-    },
     "addAgentWidget": "Thêm Tiện ích Tác nhân",
     "addView": "Thêm góc nhìn",
     "addWidget": "Thêm {{name}}",
@@ -1080,11 +1075,9 @@
     "playground": "Sân chơi",
     "playgroundHint": "Thêm tiện ích từ danh mục, rồi xóa hoặc thay thế khi quy trình làm việc của bạn thay đổi.",
     "preset": {
-      "action": "Hành động",
       "ambient": "Không gian",
       "hero": "Nổi bật",
-      "panel": "Bảng",
-      "tile": "Gạch"
+      "panel": "Bảng"
     },
     "presetLabel": "Cài đặt sẵn kiểu",
     "quickInput": "Đầu vào",
