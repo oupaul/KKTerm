@@ -65,8 +65,6 @@ type VncSessionEvent =
   | { kind: "error"; sessionId: string; message: string }
   | { kind: "disconnected"; sessionId: string };
 
-type RdpSessionEvent = { kind: "disconnected"; sessionId: string; reason: number };
-
 const RDP_ESTABLISHING_STATE = 2;
 const RDP_PRE_CAPTURE_INTERVAL_MS = 800;
 
@@ -107,7 +105,6 @@ export function RemoteDesktopWorkspace({
     (state) => state.markConnectionSessionStarted,
   );
   const markConnectionSessionEnded = useWorkspaceStore((state) => state.markConnectionSessionEnded);
-  const closeTab = useWorkspaceStore((state) => state.closeTab);
   const setAssistantContextSnippet = useWorkspaceStore(
     (state) => state.setAssistantContextSnippet,
   );
@@ -172,11 +169,6 @@ export function RemoteDesktopWorkspace({
         ? t("remoteDesktop.connecting")
         : t("remoteDesktop.disconnected"),
     );
-  };
-
-  const closeRdpTabAfterRemoteDisconnect = () => {
-    handleRdpDisconnectedStatus(0);
-    closeTab(tab.id);
   };
 
   const readSettledBounds = () =>
@@ -985,37 +977,6 @@ export function RemoteDesktopWorkspace({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [canStartRdp]);
-
-  useEffect(() => {
-    if (!canStartRdp || !isTauriRuntime()) {
-      return;
-    }
-
-    let disposed = false;
-    let dispose: (() => void) | undefined;
-    void listen<RdpSessionEvent>("rdp-session-event", (event) => {
-      if (disposed) {
-        return;
-      }
-      if (event.payload.sessionId !== sessionIdRef.current) {
-        return;
-      }
-      if (event.payload.kind === "disconnected") {
-        closeRdpTabAfterRemoteDisconnect();
-      }
-    }).then((unlisten) => {
-      if (disposed) {
-        unlisten();
-        return;
-      }
-      dispose = unlisten;
-    });
-    return () => {
-      disposed = true;
-      dispose?.();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canStartRdp]);
 
   useEffect(() => {

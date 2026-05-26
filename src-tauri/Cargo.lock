@@ -3100,7 +3100,7 @@ dependencies = [
 
 [[package]]
 name = "kkterm"
-version = "0.1.37"
+version = "0.1.38"
 dependencies = [
  "anyhow",
  "async-native-tls",

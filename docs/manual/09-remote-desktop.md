@@ -23,9 +23,6 @@ Tutorial target: `remoteDesktop.surface`.
 - For VNC: while the first framebuffer is awaited, `remoteDesktop.waitingFramebuffer`.
 - `remoteDesktop.disconnected` after the session ends.
 - `remoteDesktop.reconnect` / `remoteDesktop.reconnecting` reissue the connect with the same Connection settings.
-- RDP Sessions close their owning Workspace Tab automatically when the Microsoft
-  RDP ActiveX `OnDisconnected` event fires, including user logoff or remote
-  machine shutdown.
 
 Runtime checks:
 
