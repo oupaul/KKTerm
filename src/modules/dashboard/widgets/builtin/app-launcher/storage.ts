@@ -141,6 +141,7 @@ function normalizeAppLauncherSettings(settings: Partial<AppLauncherSettings>): A
     viewMode: isAppLauncherViewMode(settings.viewMode) ? settings.viewMode : "icons",
     listSort: normalizeSortState(settings.listSort, DEFAULT_LIST_SORT),
     detailsSort: normalizeSortState(settings.detailsSort, DEFAULT_DETAILS_SORT),
+    showFileExtensions: settings.showFileExtensions === true,
   };
 }
 
@@ -197,6 +198,7 @@ function defaultAppLauncherSettings(): AppLauncherSettings {
     viewMode: "icons",
     listSort: DEFAULT_LIST_SORT,
     detailsSort: DEFAULT_DETAILS_SORT,
+    showFileExtensions: false,
   };
 }
 

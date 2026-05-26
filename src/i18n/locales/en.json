@@ -368,6 +368,7 @@
     "railShortcutsLabel": "Pinned App Launcher shortcuts",
     "entriesLabel": "Pinned applications",
     "viewModeLabel": "App Launcher view mode",
+    "showFileExtensions": "Show file extensions",
     "iconView": "Icons",
     "listView": "List",
     "detailsView": "Details",

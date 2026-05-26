@@ -745,6 +745,7 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
               onPointerUpEntry={finishPointerReorder}
               onRemove={removeEntry}
               prepared={preparedById[entry.id]}
+              showFileExtensions={settings.showFileExtensions}
               viewMode={settings.viewMode}
             />
           ))}
@@ -917,6 +918,7 @@ function AppLauncherTile({
   onPointerUpEntry,
   onRemove,
   prepared,
+  showFileExtensions,
   viewMode,
 }: {
   entry: AppLauncherEntry;
@@ -924,6 +926,7 @@ function AppLauncherTile({
   isDragging: boolean;
   reorderPlacement: ReorderPlacement | null;
   prepared?: PreparedAppLauncherEntry;
+  showFileExtensions: boolean;
   viewMode: AppLauncherViewMode;
   onLaunch: (entry: AppLauncherEntry, mode: AppLauncherLaunchMode) => Promise<void>;
   onMenu: (state: MenuState) => void;
@@ -990,6 +993,7 @@ function AppLauncherTile({
             entry={entry}
             iconDataUrl={iconDataUrl}
             prepared={prepared}
+            showFileExtensions={showFileExtensions}
             viewMode={viewMode}
           />
         </div>
@@ -1005,6 +1009,7 @@ function AppLauncherTile({
             entry={entry}
             iconDataUrl={iconDataUrl}
             prepared={prepared}
+            showFileExtensions={showFileExtensions}
             viewMode={viewMode}
           />
         </button>
@@ -1017,11 +1022,13 @@ function AppLauncherTileContent({
   entry,
   iconDataUrl,
   prepared,
+  showFileExtensions,
   viewMode,
 }: {
   entry: AppLauncherEntry;
   iconDataUrl: string | null | undefined;
   prepared?: PreparedAppLauncherEntry;
+  showFileExtensions: boolean;
   viewMode: AppLauncherViewMode;
 }) {
   const { t } = useTranslation();
@@ -1034,7 +1041,9 @@ function AppLauncherTileContent({
           <AppWindow size={20} />
         )}
       </span>
-      <span className="app-launcher-tile-label">{entry.name}</span>
+      <span className="app-launcher-tile-label">
+        {entryDisplayName(entry, prepared, showFileExtensions)}
+      </span>
       {viewMode === "details" ? (
         <>
           <span className="app-launcher-tile-type">{fileTypeLabel(t, entry, prepared)}</span>
@@ -1346,6 +1355,28 @@ function sortStringValue(
     return `${prepared?.fileKind ?? "missing"}:${prepared?.extension ?? ""}`;
   }
   return entry.name;
+}
+
+function entryDisplayName(
+  entry: AppLauncherEntry,
+  prepared: PreparedAppLauncherEntry | undefined,
+  showFileExtensions: boolean,
+) {
+  if (!showFileExtensions || prepared?.fileKind === "folder") {
+    return entry.name;
+  }
+  const filename = entry.path.trim().replace(/\\/g, "/").split("/").filter(Boolean).pop();
+  if (!filename || !filename.includes(".")) {
+    return entry.name;
+  }
+  const extension = extensionFromPath(entry.path);
+  if (!extension) {
+    return entry.name;
+  }
+  const filenameWithoutExtension = filename.slice(0, filename.length - (extension.length + 1));
+  return entry.name.localeCompare(filenameWithoutExtension, undefined, { sensitivity: "accent" }) === 0
+    ? filename
+    : entry.name;
 }
 
 function compareStrings(a: string, b: string) {

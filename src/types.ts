@@ -233,6 +233,7 @@ export interface AppLauncherSettings {
   viewMode: AppLauncherViewMode;
   listSort: AppLauncherSortState;
   detailsSort: AppLauncherSortState;
+  showFileExtensions: boolean;
 }
 
 export interface DashboardSettings {

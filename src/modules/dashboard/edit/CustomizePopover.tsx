@@ -35,6 +35,16 @@ type SectionKey = "common" | "widget" | "advanced";
 
 const POPOVER_MARGIN = 8;
 const POPOVER_WIDTH = 440;
+const APP_LAUNCHER_SETTINGS_SCHEMA: WidgetSettingsSchema = {
+  fields: [
+    {
+      key: "showFileExtensions",
+      type: "boolean",
+      label: "appLauncher.showFileExtensions",
+      defaultValue: false,
+    },
+  ],
+};
 
 export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePopoverProps) {
   const { t } = useTranslation();
@@ -49,11 +59,16 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
 
   const customSource =
     instance.kind !== "builtIn" ? customWidgets.find((c) => c.id === instance.sourceId) : undefined;
-  const settingsSchema = useMemo(
-    () => (customSource ? parseSettingsSchema(customSource.settingsSchemaJson) : null),
-    [customSource],
-  );
-  const hasWidgetSettings = Boolean(customSource);
+  const settingsSchema = useMemo(() => {
+    if (customSource) {
+      return parseSettingsSchema(customSource.settingsSchemaJson);
+    }
+    if (instance.kind === "builtIn" && instance.sourceId === "appLauncher") {
+      return APP_LAUNCHER_SETTINGS_SCHEMA;
+    }
+    return null;
+  }, [customSource, instance.kind, instance.sourceId]);
+  const hasWidgetSettings = settingsSchema !== null;
   const hasAdvanced = instance.kind !== "builtIn";
 
   const sections = useMemo(() => {
