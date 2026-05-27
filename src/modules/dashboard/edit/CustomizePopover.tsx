@@ -322,7 +322,9 @@ function WidgetSection({
           values={settingsValues}
           instanceId={instance.id}
           onChange={(key, value) => {
-            const next = { ...settingsValues, [key]: value };
+            const parsed = parseWidgetSettingsValuesJson(instance.settingsValuesJson);
+            const base = parsed.ok ? parsed.value : {};
+            const next = { ...base, [key]: value };
             void updateInstance(instance.id, { settingsValuesJson: JSON.stringify(next) });
           }}
         />
