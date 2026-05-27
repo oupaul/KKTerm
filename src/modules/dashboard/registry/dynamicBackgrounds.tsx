@@ -1,5 +1,9 @@
 import { useEffect, useRef, type ComponentType } from "react";
-import { DashboardAnimationGate, useDashboardAnimationActive } from "../view/animationGating";
+import {
+  DashboardAnimationGate,
+  useDashboardAnimationActive,
+  useElementOnScreen,
+} from "../view/animationGating";
 
 interface CanvasAnimLifecycle {
   onResize?: (width: number, height: number, ctx: CanvasRenderingContext2D) => void;
@@ -2232,11 +2236,13 @@ export function getDashboardDynamicBackgroundHostClassName() {
 }
 
 export function DashboardDynamicBackground({ id, active }: { id: string; active: boolean }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const onScreen = useElementOnScreen(hostRef);
   if (!isDynamicBackgroundId(id)) return null;
   const Component = DYNAMIC_BACKGROUND_COMPONENTS[id];
   return (
-    <div className={getDashboardDynamicBackgroundHostClassName()} aria-hidden="true">
-      <DashboardAnimationGate active={active}>
+    <div ref={hostRef} className={getDashboardDynamicBackgroundHostClassName()} aria-hidden="true">
+      <DashboardAnimationGate active={active && onScreen}>
         <Component />
       </DashboardAnimationGate>
     </div>

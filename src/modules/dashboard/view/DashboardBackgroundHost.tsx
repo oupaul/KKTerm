@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useDashboardStore } from "../state/dashboardStore";
 import type { BackgroundFit, DashboardView } from "../types";
+import { useElementOnScreen, useEnvironmentVisible } from "./animationGating";
 import { syncBackgroundVideoPlayback } from "./backgroundVideo";
 
 function videoFitStyle(fit: BackgroundFit): CSSProperties {
@@ -41,6 +42,10 @@ export function DashboardBackgroundHost({
   const backgroundImages = useDashboardStore((s) => s.backgroundImages);
   const loadBackgroundImage = useDashboardStore((s) => s.loadBackgroundImage);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const environmentVisible = useEnvironmentVisible();
+  const hostOnScreen = useElementOnScreen(hostRef);
+  const playbackEnabled = dashboardActive && environmentVisible && hostOnScreen;
   const [cachedVideoKeys, setCachedVideoKeys] = useState<string[]>([]);
 
   const activeVideo =
@@ -85,15 +90,15 @@ export function DashboardBackgroundHost({
     for (const entry of entries) {
       syncBackgroundVideoPlayback(
         videoRefs.current[entry.key] ?? null,
-        dashboardActive && entry.key === activeVideoKey,
+        playbackEnabled && entry.key === activeVideoKey,
       );
     }
-  }, [activeVideoKey, dashboardActive, entries]);
+  }, [activeVideoKey, playbackEnabled, entries]);
 
   return (
-    <div className={getDashboardBackgroundHostClassName()} aria-hidden="true">
+    <div ref={hostRef} className={getDashboardBackgroundHostClassName()} aria-hidden="true">
       {entries.map((entry) => {
-        const active = dashboardActive && entry.key === activeVideoKey;
+        const active = playbackEnabled && entry.key === activeVideoKey;
         return (
           <div
             key={entry.key}

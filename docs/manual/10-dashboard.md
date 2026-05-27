@@ -76,6 +76,8 @@ Presets are CSS wrappers that read the Instance's `--w-accent` / `--w-accent-sof
 - `dashboard.backgroundModeMedia` — video / animated source. Filter `dashboard.backgroundMediaFilter`. Hint `dashboard.backgroundMediaHint`. Source attribution `dashboard.backgroundMediaSourcePrefix` + link `dashboard.backgroundMediaSourceLink`.
 - `dashboard.backgroundModeDynamic` (`dashboard.backgroundDynamicHint`) — script-rendered animated backgrounds: `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns`, `starfield`, `nebula`, `embers`, `lava`, `matrix`, `topo`, `synthwave`, `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` (keys under `dashboard.dynamicBackgrounds.*`).
 
+Dynamic and video backgrounds keep playing on the active View while the Dashboard Module is selected and any portion of the background is on screen, even when another OS window has focus on top of KKTerm. Playback pauses when the app is minimized (the document becomes hidden), when the user switches to another Module (Workspace or Settings), when a different Dashboard View becomes active, or when the background host is fully off-screen.
+
 ## Built-in widgets
 
 Each built-in widget is a Body component under `src/modules/dashboard/widgets/`, registered in `src/modules/dashboard/registry/builtInRegistry.ts`. The current built-in widgets are:
