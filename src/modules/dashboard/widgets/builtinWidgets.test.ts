@@ -29,7 +29,11 @@ const connection: Connection = {
   status: "idle",
 };
 
-const bodyProps: BuiltInWidgetBodyProps = { instance, isViewActive: true };
+const bodyProps: BuiltInWidgetBodyProps = {
+  instance,
+  isViewActive: true,
+  suppressNativeWebviews: false,
+};
 const connectionTab: WorkspaceTab = createConnectionWidgetTab(instance.id, connection);
 const builtInIds = BUILT_IN_WIDGETS.map((entry) => entry.id);
 

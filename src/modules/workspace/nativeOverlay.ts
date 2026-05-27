@@ -13,7 +13,6 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
 
 const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
   ".connection-dialog-backdrop",
-  ".dw-bg-popover",
 ].join(", ");
 
 export function documentHasRdpBlockingOverlay(surface: Element | null) {

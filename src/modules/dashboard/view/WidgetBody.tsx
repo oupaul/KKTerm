@@ -9,10 +9,12 @@ export function WidgetBody({
   isViewActive,
   instance,
   onWidgetContextMenu,
+  suppressNativeWebviews,
 }: {
   isViewActive: boolean;
   instance: DashboardWidgetInstance;
   onWidgetContextMenu: (position: NativeContextMenuPosition) => void | Promise<void>;
+  suppressNativeWebviews: boolean;
 }) {
   const { t } = useTranslation();
   const customWidgets = useDashboardStore((s) => s.customWidgets);
@@ -27,7 +29,13 @@ export function WidgetBody({
       );
     }
     const { Body } = entry;
-    return <Body instance={instance} isViewActive={isViewActive} />;
+    return (
+      <Body
+        instance={instance}
+        isViewActive={isViewActive}
+        suppressNativeWebviews={suppressNativeWebviews}
+      />
+    );
   }
   const cw = customWidgets.find((c) => c.id === instance.sourceId);
   if (!cw) {

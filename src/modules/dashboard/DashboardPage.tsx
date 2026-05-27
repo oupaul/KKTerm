@@ -433,6 +433,7 @@ export function DashboardPage({
                 onOpenBackground={() => setBackgroundOpen(true)}
                 onToggleEditMode={toggleEditMode}
                 onRequestWidgetDelete={setDeleteWidgetTarget}
+                suppressNativeWebviews={backgroundOpen}
               />
             </div>
           );

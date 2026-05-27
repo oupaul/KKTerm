@@ -18,6 +18,7 @@ export interface WidgetFrameProps {
   isViewActive: boolean;
   onCustomize: (instance: DashboardWidgetInstance, anchor: HTMLElement) => void;
   onRequestDelete: (request: DashboardWidgetDeleteRequest) => void;
+  suppressNativeWebviews: boolean;
 }
 
 export interface DashboardWidgetDeleteRequest {
@@ -25,7 +26,13 @@ export interface DashboardWidgetDeleteRequest {
   title: string;
 }
 
-export function WidgetFrame({ instance, isViewActive, onCustomize, onRequestDelete }: WidgetFrameProps) {
+export function WidgetFrame({
+  instance,
+  isViewActive,
+  onCustomize,
+  onRequestDelete,
+  suppressNativeWebviews,
+}: WidgetFrameProps) {
   const { t } = useTranslation();
   const editMode = useDashboardStore((s) => s.editMode);
   const customWidgets = useDashboardStore((s) => s.customWidgets);
@@ -143,6 +150,7 @@ export function WidgetFrame({ instance, isViewActive, onCustomize, onRequestDele
             instance={instance}
             isViewActive={isViewActive}
             onWidgetContextMenu={openWidgetContextMenu}
+            suppressNativeWebviews={suppressNativeWebviews}
           />
         )}
         controls={controls}

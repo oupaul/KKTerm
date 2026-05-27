@@ -674,16 +674,19 @@ impl WebviewSessionManager {
         let session = sessions
             .get(&session_id)
             .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;
+        webview_debug_log(format!(
+            "update_bounds session={session_id} tracked_visible={} x={x} y={y} width={width} height={height}",
+            session.visible
+        ));
         if session.visible {
             show_webview(&session.webview, x, y, width, height)?;
         }
         Ok(())
     }
 
-    // Tauri 2's child webview has no native visibility toggle, so a "hidden"
-    // webview is moved offscreen with a 1x1 footprint. The frontend re-sends
-    // the placeholder rect when revealing again, so the size restore is
-    // authoritative rather than cached state.
+    // Child WebView2 surfaces can draw above DOM overlays. Hidden URL sessions
+    // are parked offscreen with a 1x1 footprint; the frontend sends the
+    // current placeholder rect again before revealing.
     pub fn set_visibility(&self, request: SetWebviewVisibilityRequest) -> Result<(), String> {
         let SetWebviewVisibilityRequest {
             session_id,
@@ -700,6 +703,9 @@ impl WebviewSessionManager {
         if visible {
             for (other_session_id, other_session) in sessions.iter_mut() {
                 if other_session_id != &session_id {
+                    webview_debug_log(format!(
+                        "set_visibility hide_other requested_session={session_id} other_session={other_session_id}"
+                    ));
                     hide_webview(&other_session.webview)?;
                     other_session.visible = false;
                 }
@@ -707,12 +713,18 @@ impl WebviewSessionManager {
             let session = sessions
                 .get_mut(&session_id)
                 .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;
+            webview_debug_log(format!(
+                "set_visibility session={session_id} visible=true x={x} y={y} width={width} height={height}"
+            ));
             show_webview(&session.webview, x, y, width, height)?;
             session.visible = true;
         } else {
             let session = sessions
                 .get_mut(&session_id)
                 .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;
+            webview_debug_log(format!(
+                "set_visibility session={session_id} visible=false x={x} y={y} width={width} height={height}"
+            ));
             hide_webview(&session.webview)?;
             session.visible = false;
         }
@@ -857,6 +869,12 @@ fn hide_webview(webview: &Webview) -> Result<(), String> {
     webview
         .set_size(LogicalSize::new(1.0, 1.0))
         .map_err(|error| format!("failed to hide webview: {error}"))
+}
+
+fn webview_debug_log(message: String) {
+    if std::env::var("KKTERM_WEBVIEW_DEBUG").ok().as_deref() == Some("1") {
+        eprintln!("[kkterm:webview] {message}");
+    }
 }
 
 fn configure_certificate_error_bypass(webview: &Webview, enabled: bool) -> Result<(), String> {
