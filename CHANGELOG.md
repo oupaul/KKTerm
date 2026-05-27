@@ -3,6 +3,29 @@
 All notable changes to KKTerm are documented here.
 
 ## Highlights
+- Fixed App Launcher behavior so toggling **Show file extensions** no longer wipes pinned shortcuts.
+- Improved Dashboard so dynamic content (including video backgrounds) continues playing when KKTerm loses OS window focus.
+- Added **child connection workspace mode** for Connection tabs/Panes within a Session workspace.
+
+## New
+- **Child connection workspace mode** for Connection tabs and Pane layouts by @ryantsai in https://github.com/ryantsai/KKTerm/pull/166
+
+## Improved
+- Kept Dashboard dynamic and video backgrounds playing when other OS windows take focus (animations don’t “freeze” just because you alt-tabbed) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/161
+- Fix App Launcher icon-mode grid trailing empty slot by @ryantsai in https://github.com/ryantsai/KKTerm/pull/162
+- Improved connections sidebar: fixed **folder drag reorder** and added **Show All** flat connections view by @ryantsai in https://github.com/ryantsai/KKTerm/pull/163
+- Localized UI text for **appLauncher.showFileExtensions** and **connections.showAll** across all 13 locales by @ryantsai in https://github.com/ryantsai/KKTerm/pull/164
+- Added an **AI Agent contribution section** to CONTRIBUTING.md by @ryantsai in https://github.com/ryantsai/KKTerm/pull/165
+
+## Fixed
+- App Launcher pinned shortcuts were wiped when toggling **Show file extensions** by @ryantsai in https://github.com/ryantsai/KKTerm/pull/160
+- (Docs/under-the-hood) Dashboard URL WebView background popover overlap fix by @ryantsai in commits around 92993fd and 8392a4a
+
+## Internal
+- Updated docs (architecture / dashboard manual) in commits around 1d78fe9
+- Added/updated regression coverage for WebView visibility lifecycle in tests/webview-visibility-lifecycle.test.mjs and wired into `npm run check` (as part of the Dashboard WebView fixes around 8392a4a)
+
+## Highlights
 - Dashboard: right-click menus should behave again when widgets overlap the canvas, and idle background animations now pause when the Dashboard isn’t actively visible (so your RTX workload can also take a nap).
 - App Launcher: you can show file extensions via a new widget setting.
 - RDP: Session display sync/disconnect handling was adjusted to avoid spurious “Remote desktop disconnected” states during resize/display sync.
