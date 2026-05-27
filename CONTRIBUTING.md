@@ -8,8 +8,21 @@ If you have not yet read [`CONTEXT.md`](CONTEXT.md) and [`AGENTS.md`](AGENTS.md)
 
 ---
 
+## Contributing with an AI Agent
+
+**The fastest way to contribute is to let your AI agent do the heavy lifting.** Point your agent at the project's AI instructions and it will orient itself — conventions, module boundaries, i18n rules, hard rules, all of it — before touching a single file.
+
+Just tell your agent:
+
+> Read the instructions at https://github.com/ryantsai/KKTerm/blob/main/docs/AIINSTRUCTIONS.md before making any changes to this project.
+
+That document is the single authoritative brief written for AI contributors. It covers everything an agent needs to contribute correctly without a round-trip to the maintainer.
+
+---
+
 ## Table of Contents
 
+- [Contributing with an AI Agent](#contributing-with-an-ai-agent)
 - [Quick Ways to Help](#quick-ways-to-help)
 - [Development Setup](#development-setup)
 - [Project Layout](#project-layout)
