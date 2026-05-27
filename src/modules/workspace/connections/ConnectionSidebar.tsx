@@ -12,7 +12,7 @@ import {
 import { confirmTrustedSshHostKey, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, createStoredSecretMask, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, flattenConnections, flattenFolders, upsertRootConnection, withLiveConnectionStatuses } from "./treeUtils";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
@@ -156,6 +156,7 @@ export function ConnectionSidebar({
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [showAllConnections, setShowAllConnections] = useState(false);
   const addConnectionRef = useRef<HTMLDivElement | null>(null);
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
   const draggedItemRef = useRef<DraggedTreeItem | null>(null);
@@ -852,7 +853,7 @@ export function ConnectionSidebar({
   // status change because `withLiveConnectionStatuses` shallow-clones every node.
   const trayMenuSignature = useMemo(
     () =>
-      recentConnections.map((connection) => `${connection.id} ${connection.name}`).join(""),
+      recentConnections.map((connection) => `${connection.id}\u0000${connection.name}`).join("\u0001"),
     [recentConnections],
   );
   useEffect(() => {
@@ -900,6 +901,16 @@ export function ConnectionSidebar({
   }, []);
 
   const isTreeFiltered = query.trim().length > 0;
+  const visibleFlatConnections = useMemo(() => {
+    if (!showAllConnections) {
+      return [];
+    }
+
+    return flattenConnections(filteredTree).slice().sort((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+    );
+  }, [filteredTree, showAllConnections]);
+
 
   function menuPositionFromElement(element: HTMLElement) {
     const bounds = element.getBoundingClientRect();
@@ -1407,7 +1418,7 @@ export function ConnectionSidebar({
     pointerDragListenersRef.current = null;
   }
 
-  function treeDropTargetFromElement(element: Element | null, item: DraggedTreeItem) {
+  function treeDropTargetFromElement(element: Element | null, item: DraggedTreeItem, pointerY: number) {
     const row = element?.closest<HTMLElement>("[data-tree-drop-kind]");
     if (!row) {
       return null;
@@ -1429,12 +1440,29 @@ export function ConnectionSidebar({
         return null;
       }
 
+      if (item.kind === "folder") {
+        const siblingParentFolderId = row.dataset.parentFolderId;
+        const siblingFolderIndex = Number(row.dataset.folderIndex ?? 0);
+        const bounds = row.getBoundingClientRect();
+        const insertAfter = pointerY > bounds.top + bounds.height / 2;
+        if (siblingParentFolderId) {
+          return {
+            kind: "folder",
+            folderId: siblingParentFolderId,
+            targetIndex: siblingFolderIndex + (insertAfter ? 1 : 0),
+          } satisfies TreeDropTarget;
+        }
+        return {
+          kind: "root",
+          targetIndex: siblingFolderIndex + (insertAfter ? 1 : 0),
+        } satisfies TreeDropTarget;
+      }
+
       const connectionCount = Number(row.dataset.connectionCount ?? 0);
-      const folderCount = Number(row.dataset.folderCount ?? 0);
       return {
         kind: "folder",
         folderId,
-        targetIndex: item.kind === "connection" ? connectionCount : folderCount,
+        targetIndex: connectionCount,
       } satisfies TreeDropTarget;
     }
 
@@ -1469,7 +1497,7 @@ export function ConnectionSidebar({
     item: DraggedTreeItem,
     preview: Omit<TreeDragPreview, "x" | "y" | "offsetX" | "offsetY" | "width">,
   ) {
-    if (isTreeFiltered || inlineRenameTarget || event.button !== 0) {
+    if (isTreeFiltered || showAllConnections || inlineRenameTarget || event.button !== 0) {
       return;
     }
 
@@ -1531,6 +1559,7 @@ export function ConnectionSidebar({
       const target = treeDropTargetFromElement(
         document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY),
         item,
+        pointerEvent.clientY,
       );
       pointerDragTargetRef.current = target;
       setDropTarget(target ? treeDropTargetId(target) : "");
@@ -1563,6 +1592,8 @@ export function ConnectionSidebar({
     window.addEventListener("pointerup", stop);
     window.addEventListener("pointercancel", stop);
   }
+
+  const dragDisabled = isTreeFiltered || showAllConnections || Boolean(inlineRenameTarget);
 
   return (
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
@@ -1668,6 +1699,16 @@ export function ConnectionSidebar({
         >
           <Maximize2 size={13} />
         </button>
+        <button
+          aria-pressed={showAllConnections}
+          aria-label={t("connections.showAll")}
+          className="tree-folder-control"
+          onClick={() => setShowAllConnections((current) => !current)}
+          title={t("connections.showAll")}
+          type="button"
+        >
+          <List size={13} />
+        </button>
       </div>
       {treeError ? <p className="form-error tree-error">{treeError}</p> : null}
 
@@ -1685,7 +1726,7 @@ export function ConnectionSidebar({
             connection={connection}
             key={connection.id}
             connectionIndex={connectionIndex}
-            dragDisabled={isTreeFiltered || Boolean(inlineRenameTarget)}
+            dragDisabled={dragDisabled}
             isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
             isDraggingSource={draggedSourceId === `connection-${connection.id}`}
             isDropTarget={dropTarget === `connection-${connection.id}`}
@@ -1722,37 +1763,63 @@ export function ConnectionSidebar({
             onCommit={(name) => void handleCommitPendingFolder(name)}
           />
         ) : null}
-        {filteredTree.folders.map((folder) => (
-          <ConnectionFolderNode
-            dragDisabled={isTreeFiltered || Boolean(inlineRenameTarget)}
-            draggedSourceId={draggedSourceId}
-            dropTarget={dropTarget}
-            folder={folder}
-            collapsedFolderIds={collapsedFolderIds}
-            key={folder.id}
-            level={0}
-            onClickCapture={handleTreeClickCapture}
-            pendingFolderDraft={pendingFolderDraft}
-            inlineRenameTarget={inlineRenameTarget}
-            onCancelPendingFolder={handleCancelPendingFolder}
-            onCommitPendingFolder={handleCommitPendingFolder}
-            onCancelRename={() => setInlineRenameTarget(null)}
-            onCommitConnectionRename={commitConnectionRename}
-            onCommitFolderRename={commitFolderRename}
-            onContextMenu={handleFolderContextMenu}
-            onConnectionContextMenu={handleConnectionContextMenu}
-            onCreateFolder={handleCreateFolder}
-            onOpenConnection={(connection, event) => {
-              if (event.ctrlKey) {
-                handleOpenConnection(connection, { forceNewTab: true });
-                return;
-              }
-              handleOpenConnection(connection);
-            }}
-            onPointerDragStart={handlePointerDragStart}
-            onToggleFolder={handleToggleFolder}
-          />
-        ))}
+        {showAllConnections
+          ? visibleFlatConnections.map((connection, connectionIndex) => (
+              <ConnectionRow
+                connection={connection}
+                key={connection.id}
+                connectionIndex={connectionIndex}
+                dragDisabled
+                isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
+                isDraggingSource={false}
+                isDropTarget={false}
+                onClickCapture={handleTreeClickCapture}
+                onCancelRename={() => setInlineRenameTarget(null)}
+                onCommitRename={(name) => commitConnectionRename(connection, name)}
+                onOpen={(event) => {
+                  if (event.ctrlKey) {
+                    handleOpenConnection(connection, { forceNewTab: true });
+                    return;
+                  }
+                  handleOpenConnection(connection);
+                }}
+                onContextMenu={(event) => handleConnectionContextMenu(connection, undefined, event)}
+                onPointerDragStart={() => {}}
+              />
+            ))
+          : filteredTree.folders.map((folder, folderIndex) => (
+              <ConnectionFolderNode
+                dragDisabled={dragDisabled}
+                draggedSourceId={draggedSourceId}
+                dropTarget={dropTarget}
+                folder={folder}
+                collapsedFolderIds={collapsedFolderIds}
+                key={folder.id}
+                level={0}
+                parentFolderId={undefined}
+                folderIndex={folderIndex}
+                onClickCapture={handleTreeClickCapture}
+                pendingFolderDraft={pendingFolderDraft}
+                inlineRenameTarget={inlineRenameTarget}
+                onCancelPendingFolder={handleCancelPendingFolder}
+                onCommitPendingFolder={handleCommitPendingFolder}
+                onCancelRename={() => setInlineRenameTarget(null)}
+                onCommitConnectionRename={commitConnectionRename}
+                onCommitFolderRename={commitFolderRename}
+                onContextMenu={handleFolderContextMenu}
+                onConnectionContextMenu={handleConnectionContextMenu}
+                onCreateFolder={handleCreateFolder}
+                onOpenConnection={(connection, event) => {
+                  if (event.ctrlKey) {
+                    handleOpenConnection(connection, { forceNewTab: true });
+                    return;
+                  }
+                  handleOpenConnection(connection);
+                }}
+                onPointerDragStart={handlePointerDragStart}
+                onToggleFolder={handleToggleFolder}
+              />
+            ))}
       </div>
 
       {treeContextMenu ? (
@@ -1885,6 +1952,8 @@ function ConnectionFolderNode({
   dropTarget,
   folder,
   level,
+  parentFolderId,
+  folderIndex,
   onClickCapture,
   onCreateFolder,
   onOpenConnection,
@@ -1906,6 +1975,8 @@ function ConnectionFolderNode({
   dropTarget: string;
   folder: ConnectionFolder;
   level: number;
+  parentFolderId?: string;
+  folderIndex: number;
   onClickCapture: (event: ReactMouseEvent) => void;
   onCreateFolder: (parentFolderId?: string) => void | Promise<void>;
   onOpenConnection: (connection: Connection, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -1949,6 +2020,8 @@ function ConnectionFolderNode({
         data-connection-count={folder.connections.length}
         data-folder-count={folder.folders.length}
         data-folder-id={folder.id}
+        data-parent-folder-id={parentFolderId ?? ""}
+        data-folder-index={folderIndex}
         data-tree-drop-kind="folder"
         onClickCapture={onClickCapture}
         onContextMenu={(event) => onContextMenu(folder, event)}
@@ -2046,7 +2119,7 @@ function ConnectionFolderNode({
               onCommit={(name) => void onCommitPendingFolder(name, folder.id)}
             />
           ) : null}
-          {folder.folders.map((childFolder) => (
+          {folder.folders.map((childFolder, childFolderIndex) => (
             <ConnectionFolderNode
               collapsedFolderIds={collapsedFolderIds}
               dragDisabled={dragDisabled}
@@ -2055,6 +2128,8 @@ function ConnectionFolderNode({
               folder={childFolder}
               key={childFolder.id}
               level={level + 1}
+              parentFolderId={folder.id}
+              folderIndex={childFolderIndex}
               onClickCapture={onClickCapture}
               pendingFolderDraft={pendingFolderDraft}
               inlineRenameTarget={inlineRenameTarget}
