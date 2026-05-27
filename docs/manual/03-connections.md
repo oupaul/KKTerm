@@ -32,6 +32,7 @@ Header row (top of the panel):
 - Quick Connect: `connections.quickConnect`
 - New Folder: `connections.newFolder`
 - Collapse / Expand all: `connections.collapseAll`, `connections.expandAll`
+- Show All: `connections.showAll`; flattens the Connection Tree across folders, shows the button in its pressed state while enabled, and persists the preference in the Settings database across app relaunches.
 - Search box: placeholder `connections.searchPlaceholder`
 - Column collapse: `connections.collapseColumn`
 

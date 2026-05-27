@@ -24,6 +24,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   autoBackupEnabled: true,
   autoUpdateChecksEnabled: true,
   showConnectedConnectionsInRail: true,
+  showAllConnectionsInTree: false,
   pinnedConnectionIds: [],
   allowClipboardRead: true,
   autoStartWithWindows: false,

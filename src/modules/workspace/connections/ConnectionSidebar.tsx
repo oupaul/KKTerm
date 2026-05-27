@@ -156,7 +156,7 @@ export function ConnectionSidebar({
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
-  const [showAllConnections, setShowAllConnections] = useState(false);
+  const showAllConnections = generalSettings.showAllConnectionsInTree;
   const addConnectionRef = useRef<HTMLDivElement | null>(null);
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
   const draggedItemRef = useRef<DraggedTreeItem | null>(null);
@@ -385,6 +385,24 @@ export function ConnectionSidebar({
       showStatusBarNotice(t("connections.pinRailError", { message }), {
         tone: "error",
       });
+    }
+  }
+
+  async function handleToggleShowAllConnections() {
+    const previousSettings = generalSettings;
+    const nextSettings = {
+      ...previousSettings,
+      showAllConnectionsInTree: !previousSettings.showAllConnectionsInTree,
+    };
+    setGeneralSettings(nextSettings);
+    try {
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_general_settings", { request: nextSettings })
+        : nextSettings;
+      setGeneralSettings(saved);
+    } catch (error) {
+      setGeneralSettings(previousSettings);
+      setTreeError(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -1702,8 +1720,8 @@ export function ConnectionSidebar({
         <button
           aria-pressed={showAllConnections}
           aria-label={t("connections.showAll")}
-          className="tree-folder-control"
-          onClick={() => setShowAllConnections((current) => !current)}
+          className={`tree-folder-control${showAllConnections ? " active" : ""}`}
+          onClick={() => void handleToggleShowAllConnections()}
           title={t("connections.showAll")}
           type="button"
         >

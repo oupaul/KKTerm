@@ -194,6 +194,7 @@ export interface GeneralSettings {
   autoBackupEnabled: boolean;
   autoUpdateChecksEnabled: boolean;
   showConnectedConnectionsInRail: boolean;
+  showAllConnectionsInTree: boolean;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
   autoStartWithWindows: boolean;
