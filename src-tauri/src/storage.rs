@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 16;
+const SCHEMA_USER_VERSION: i32 = 17;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -189,6 +189,17 @@ CREATE TABLE IF NOT EXISTS ai_coding_usage_snapshots (
     weekly_resets_at TEXT,
     raw_provider_json TEXT,
     captured_at TEXT NOT NULL
+);
+
+-- Installer Helper per-tool state (ADR 0007). Installed-version is NEVER
+-- persisted: detection is always re-derived from the OS on demand. This
+-- table only stores user preferences (pinned) and the latest-version cache
+-- driven by the manual / opt-in-daily update check.
+CREATE TABLE IF NOT EXISTS installer_tool_state (
+    tool_id TEXT PRIMARY KEY,
+    pinned INTEGER NOT NULL DEFAULT 0,
+    latest_version_seen TEXT,
+    last_check_at INTEGER
 );
 "#;
 

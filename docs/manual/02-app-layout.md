@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `app.dontSleepStatusEnabled`, `workspace.workspaceSurface`, `workspace.hostUsage`
-- Topics: Activity Rail, panel resize, pinned Connections on the rail, Connections panel collapse, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
+- Topics: Activity Rail, panel resize, pinned Connections on the rail, Connections panel collapse, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
 - Synonyms: "left bar", "sidebar", "right panel", "AI sidebar", "make panel wider", "hide the AI panel", "bottom bar", "coffee icon", "don't sleep indicator"
 
 ## Activity Rail (48 px, left edge)
@@ -15,11 +15,12 @@ Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
    Each icon's tooltip uses `app.openPinnedConnection` or `app.openConnectedConnection` with the Connection name interpolated as `{{name}}`.
-3. **Settings** — anchored to the bottom of the rail.
+3. **Installer Helper** (`app.activityRailInstaller`) — the Windows dev-tool installer Module. See [18-installer.md](18-installer.md).
+4. **Settings** — anchored to the bottom of the rail.
 
 The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). Native `title` tooltips are forbidden here.
 
-Tutorial targets: `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailSettings`.
+Tutorial targets: `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`. Inside the Installer Helper Module the targets are `installer.updateAll` and `installer.toolOptions` — see [18-installer.md](18-installer.md).
 
 Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active.
 

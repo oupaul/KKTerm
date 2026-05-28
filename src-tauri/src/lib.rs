@@ -14,6 +14,7 @@ mod favicon;
 mod ftp;
 mod github_copilot;
 mod import;
+mod installer;
 mod logging;
 mod manual;
 mod mcp;
@@ -2472,6 +2473,7 @@ pub fn run() {
             app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
+            app.manage(installer::InstallerRuntime::new());
             mcp_bridge::start_if_enabled(
                 app.handle().clone(),
                 mcp_bridge_dir,
@@ -2719,6 +2721,15 @@ pub fn run() {
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,
             dashboard_load_background_image,
+            installer::commands::installer_load_catalog,
+            installer::commands::installer_detect_all,
+            installer::commands::installer_redetect,
+            installer::commands::installer_check_latest_versions,
+            installer::commands::installer_install_recipe,
+            installer::commands::installer_uninstall_recipe,
+            installer::commands::installer_cancel,
+            installer::commands::installer_get_state,
+            installer::commands::installer_set_pinned,
             mcp::mcp_list_servers,
             mcp::mcp_create_server,
             mcp::mcp_update_server,

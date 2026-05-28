@@ -55,6 +55,10 @@ _Avoid_: Session, connection, backend tab
 A built-in Activity Rail Module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI Created Widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
 _Avoid_: landing page, overview
 
+**Installer Helper Module**:
+A built-in Activity Rail Module that manages a curated catalog of Windows developer tools (e.g. nvm, Node, uv, Python, VS Code, Docker, WSL, n8n, Claude Code CLI, Codex CLI, Notepad++, NSSM, OpenClaw, Hermes agent). For each catalog entry the Module detects local install state, fetches the latest available version, presents a per-tool install panel with tool-specific options, and supports check-for-update and apply-update actions. Lives above Settings on the Activity Rail. Not a Connection, not a Session, not a Dashboard Widget.
+_Avoid_: AI Installer, App Installer, package manager, store
+
 **Dashboard View**:
 A durable SQLite-backed tab in the Dashboard Module, stored in `dashboard_views`. Each View carries its own ordered set of Widget Instances and a `grid_density` (`compact` / `default` / `roomy`). The first View is named "Default" and is seeded on first run with one App Launcher Widget Instance. Views are not Sessions and not Connections.
 _Avoid_: dashboard page, tab, board

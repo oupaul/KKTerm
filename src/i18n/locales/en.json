@@ -458,6 +458,64 @@
     "copyError": "Could not copy screenshot: {{message}}",
     "deleteError": "Could not update screenshots: {{message}}"
   },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "Install and update Windows developer tools.",
+    "railLabel": "Installer Helper",
+    "refresh": "Refresh",
+    "checkUpdates": "Check for updates",
+    "updateAll": "Update all",
+    "section": {
+      "installed": "Installed",
+      "available": "Available",
+      "updates": "Updates available"
+    },
+    "actions": {
+      "install": "Install",
+      "update": "Update",
+      "uninstall": "Uninstall",
+      "cancel": "Cancel"
+    },
+    "options": {
+      "scope": "Scope",
+      "scopeUser": "Per-user",
+      "scopeMachine": "All users (UAC)",
+      "version": "Version",
+      "versionLatest": "Latest",
+      "location": "Install location",
+      "addToPath": "Add to PATH",
+      "pinVersion": "Pin version (skip from Update all)"
+    },
+    "status": {
+      "scanning": "Scanning installed tools…",
+      "installing": "Installing…",
+      "uninstalling": "Uninstalling…",
+      "completed": "Done",
+      "failed": "Failed: {{message}}",
+      "cancelled": "Cancelled",
+      "partial": "Partially installed ({{installed}}/{{total}})",
+      "noVersion": "(version unknown)"
+    },
+    "empty": {
+      "loading": "Loading catalog…"
+    },
+    "warningCacheFallback": "Could not refresh catalog ({{reason}}). Using cached copy.",
+    "confirm": {
+      "installTitle": "Install {{name}}?",
+      "installWithPrereqsBody": "This will also install the following prerequisite(s):",
+      "uacFooter": "May show up to {{count}} UAC prompt(s).",
+      "installConfirm": "Install",
+      "uninstallTitle": "Uninstall {{name}}?",
+      "uninstallSimpleBody": "This will remove {{name}} from your system.",
+      "uninstallDependentsBody": "Uninstalling {{name}} will leave these installed tools without a prerequisite:",
+      "uninstallDependentsFooter": "Uninstall anyway?",
+      "uninstallConfirm": "Uninstall",
+      "updateAllTitle": "Update all installed tools?",
+      "updateAllBody": "{{count}} update(s) will be installed.",
+      "updateAllConfirm": "Update all"
+    },
+    "wslReboot": "WSL was enabled this session. Reboot Windows before installing Docker Desktop."
+  },
   "settings": {
     "title": "Settings",
     "workspace": "Workspace",
