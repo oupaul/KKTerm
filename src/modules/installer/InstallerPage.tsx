@@ -18,6 +18,7 @@ import { useWorkspaceStore } from "../../store";
 import { useInstallerStore } from "./state";
 import { isWslFeature } from "./dag";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
+import { InstallerToolDialog } from "./InstallerToolDialog";
 import {
   PROGRESS_EVENT_NAME,
   type ProgressEvent,
@@ -36,6 +37,7 @@ export function InstallerPage({ active }: { active: boolean }) {
   const detected = useInstallerStore((s) => s.detected);
   const toolState = useInstallerStore((s) => s.toolState);
   const scanning = useInstallerStore((s) => s.scanning);
+  const checking = useInstallerStore((s) => s.checking);
   const hasInitialScanned = useInstallerStore((s) => s.hasInitialScanned);
   const setCatalog = useInstallerStore((s) => s.setCatalog);
   const setDetected = useInstallerStore((s) => s.setDetected);
@@ -171,11 +173,12 @@ export function InstallerPage({ active }: { active: boolean }) {
       .map((r) => r.id);
     if (installedIds.length === 0) return;
     try {
+      // Streaming: backend emits checkStarted → checkResult* → checkFinished.
+      // applyProgress writes each result into toolState as it lands, so rows
+      // light up incrementally and the UI stays responsive.
       await invokeCommand("installer_check_latest_versions", {
         toolIds: installedIds,
       });
-      const states = await invokeCommand("installer_get_state");
-      setToolStates(states);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(message, { tone: "error" });
@@ -256,9 +259,15 @@ export function InstallerPage({ active }: { active: boolean }) {
             type="button"
             className="installer-button"
             onClick={() => void handleCheckUpdates()}
-            disabled={scanning || !catalog || sections.installed.length === 0}
+            disabled={
+              scanning || checking || !catalog || sections.installed.length === 0
+            }
           >
-            {t("installer.checkUpdates")}
+            {checking
+              ? t("installer.checkingDots", {
+                  defaultValue: t("installer.checkUpdates") + "…",
+                })
+              : t("installer.checkUpdates")}
           </button>
           <button
             type="button"
@@ -294,6 +303,7 @@ export function InstallerPage({ active }: { active: boolean }) {
           />
         </>
       )}
+      <InstallerToolDialog />
       {updateAllConfirm ? (
         <InstallerConfirmDialog
           title={t("installer.confirm.updateAllTitle")}

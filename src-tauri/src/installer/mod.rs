@@ -11,6 +11,7 @@ pub mod events;
 pub mod install;
 pub mod latest_version;
 pub mod options;
+pub mod proc;
 pub mod schema;
 pub mod state;
 pub mod uninstall;
