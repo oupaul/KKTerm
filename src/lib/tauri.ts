@@ -1857,6 +1857,45 @@ type CommandMap = {
     args: { id: string; record: import("../watchdog/types").WatchdogInterventionRecord };
     result: void;
   };
+  installer_load_catalog: {
+    args: { forceRefresh?: boolean };
+    result: import("../modules/installer/types").CatalogLoadResponse;
+  };
+  installer_detect_all: {
+    args: undefined;
+    result: Record<string, import("../modules/installer/types").DetectedState>;
+  };
+  installer_redetect: {
+    args: { toolId: string };
+    result: import("../modules/installer/types").DetectedState;
+  };
+  installer_check_latest_versions: {
+    args: { toolIds: string[] };
+    result: Record<string, string | null>;
+  };
+  installer_install_recipe: {
+    args: {
+      toolId: string;
+      options?: import("../modules/installer/types").InstallOptions;
+    };
+    result: void;
+  };
+  installer_uninstall_recipe: {
+    args: { toolId: string };
+    result: void;
+  };
+  installer_cancel: {
+    args: { toolId: string };
+    result: void;
+  };
+  installer_get_state: {
+    args: undefined;
+    result: import("../modules/installer/types").ToolState[];
+  };
+  installer_set_pinned: {
+    args: { toolId: string; pinned: boolean };
+    result: void;
+  };
 };
 
 export interface ManualChapter {

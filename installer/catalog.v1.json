@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-28",
+  "recipes": [
+    {
+      "id": "git",
+      "name": "Git for Windows",
+      "descriptionEn": "Distributed version control. Implicit prerequisite for many AI coding tools.",
+      "category": "vcs",
+      "icon": "GitBranch",
+      "provider": { "kind": "winget", "id": "Git.Git" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "github-cli",
+      "name": "GitHub CLI",
+      "descriptionEn": "The `gh` command-line tool for GitHub: PRs, issues, repos, releases.",
+      "category": "vcs",
+      "icon": "Github",
+      "provider": { "kind": "winget", "id": "GitHub.cli" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "windows-terminal",
+      "name": "Windows Terminal",
+      "descriptionEn": "Modern terminal for Windows with tabs, panes, and themes.",
+      "category": "terminal",
+      "icon": "TerminalSquare",
+      "provider": { "kind": "winget", "id": "Microsoft.WindowsTerminal" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "vscode",
+      "name": "VS Code",
+      "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
+      "category": "editor",
+      "icon": "Code",
+      "provider": { "kind": "winget", "id": "Microsoft.VisualStudioCode" },
+      "options": ["scope", "version", "location"]
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "descriptionEn": "AI-first code editor built on VS Code.",
+      "category": "editor",
+      "icon": "MousePointerClick",
+      "provider": { "kind": "winget", "id": "Anysphere.Cursor" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "notepadpp",
+      "name": "Notepad++",
+      "descriptionEn": "Lightweight Windows text editor with syntax highlighting.",
+      "category": "editor",
+      "icon": "FileText",
+      "provider": { "kind": "winget", "id": "Notepad++.Notepad++" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "nvm-windows",
+      "name": "nvm-windows",
+      "descriptionEn": "Node Version Manager for Windows. Lets you switch between multiple Node versions.",
+      "category": "runtime",
+      "icon": "Layers",
+      "provider": { "kind": "winget", "id": "CoreyButler.NVMforWindows" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "nodejs-lts",
+      "name": "Node.js LTS",
+      "descriptionEn": "JavaScript runtime — the LTS release line.",
+      "category": "runtime",
+      "icon": "Box",
+      "provider": { "kind": "winget", "id": "OpenJS.NodeJS.LTS" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "node-bundle",
+      "name": "Node (recommended)",
+      "descriptionEn": "Installs nvm-windows and the current Node.js LTS. Recommended for most users; power users can install either piece individually.",
+      "category": "runtime",
+      "icon": "Boxes",
+      "provider": { "kind": "bundle", "steps": ["nvm-windows", "nodejs-lts"] }
+    },
+    {
+      "id": "uv",
+      "name": "uv",
+      "descriptionEn": "Fast Python package and project manager from Astral. Can install Python itself on demand.",
+      "category": "runtime",
+      "icon": "Wind",
+      "provider": { "kind": "winget", "id": "astral-sh.uv" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "python-3-12",
+      "name": "Python 3.12",
+      "descriptionEn": "CPython 3.12 from python.org. Use when you want a separate, system-wide Python install.",
+      "category": "runtime",
+      "icon": "Python",
+      "provider": { "kind": "winget", "id": "Python.Python.3.12" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "python-bundle",
+      "name": "Python (recommended)",
+      "descriptionEn": "Installs uv and Python 3.12 together. Recommended for most users.",
+      "category": "runtime",
+      "icon": "Boxes",
+      "provider": { "kind": "bundle", "steps": ["uv", "python-3-12"] }
+    },
+    {
+      "id": "wsl",
+      "name": "Windows Subsystem for Linux",
+      "descriptionEn": "Enables WSL on this Windows install. Requires a reboot before dependent tools (Docker) can run.",
+      "category": "infra",
+      "icon": "Server",
+      "provider": {
+        "kind": "windowsFeature",
+        "feature": "Microsoft-Windows-Subsystem-Linux",
+        "reboot": true
+      }
+    },
+    {
+      "id": "docker-desktop",
+      "name": "Docker Desktop",
+      "descriptionEn": "Docker Desktop for Windows. Uses the WSL2 backend.",
+      "category": "infra",
+      "icon": "Container",
+      "needs": ["wsl"],
+      "provider": { "kind": "winget", "id": "Docker.DockerDesktop" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "nssm",
+      "name": "NSSM",
+      "descriptionEn": "The Non-Sucking Service Manager — wrap any program as a Windows service.",
+      "category": "infra",
+      "icon": "Wrench",
+      "provider": { "kind": "winget", "id": "NSSM.NSSM" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "claude-code-cli",
+      "name": "Claude Code CLI",
+      "descriptionEn": "Anthropic's official CLI coding agent. Requires Node.",
+      "category": "ai",
+      "icon": "Bot",
+      "needs": ["node-bundle"],
+      "provider": { "kind": "npm", "pkg": "@anthropic-ai/claude-code" },
+      "options": ["version"]
+    },
+    {
+      "id": "codex-cli",
+      "name": "Codex CLI",
+      "descriptionEn": "OpenAI's official CLI coding agent. Requires Node.",
+      "category": "ai",
+      "icon": "Bot",
+      "needs": ["node-bundle"],
+      "provider": { "kind": "npm", "pkg": "@openai/codex" },
+      "options": ["version"]
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "descriptionEn": "Google's official Gemini CLI. Requires Node.",
+      "category": "ai",
+      "icon": "Bot",
+      "needs": ["node-bundle"],
+      "provider": { "kind": "npm", "pkg": "@google/gemini-cli" },
+      "options": ["version"]
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "descriptionEn": "Run local large language models on your machine.",
+      "category": "ai",
+      "icon": "Cpu",
+      "provider": { "kind": "winget", "id": "Ollama.Ollama" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "descriptionEn": "Workflow automation tool — self-hosted Zapier alternative. Installed as a global npm package.",
+      "category": "automation",
+      "icon": "Workflow",
+      "needs": ["node-bundle"],
+      "provider": { "kind": "npm", "pkg": "n8n" },
+      "options": ["version"]
+    },
+    {
+      "id": "bruno",
+      "name": "Bruno",
+      "descriptionEn": "Open-source API client. Postman alternative with git-friendly request files.",
+      "category": "tools",
+      "icon": "Boxes",
+      "provider": { "kind": "winget", "id": "Bruno.Bruno" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "ripgrep",
+      "name": "ripgrep",
+      "descriptionEn": "Recursive line-oriented search tool. AI coding agents lean on this heavily.",
+      "category": "cli",
+      "icon": "Search",
+      "provider": { "kind": "winget", "id": "BurntSushi.ripgrep.MSVC" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "jq",
+      "name": "jq",
+      "descriptionEn": "Command-line JSON processor.",
+      "category": "cli",
+      "icon": "Braces",
+      "provider": { "kind": "winget", "id": "jqlang.jq" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "fzf",
+      "name": "fzf",
+      "descriptionEn": "General-purpose fuzzy finder for the command line.",
+      "category": "cli",
+      "icon": "Filter",
+      "provider": { "kind": "winget", "id": "junegunn.fzf" },
+      "options": ["scope", "version"]
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "descriptionEn": "Open-source reimplementation of the 1997 game Captain Claw.",
+      "category": "games",
+      "icon": "Gamepad2",
+      "provider": {
+        "kind": "githubRelease",
+        "repo": "pjasicek/OpenClaw",
+        "assetPattern": "OpenClaw-*-win*.zip",
+        "layout": "zip"
+      },
+      "options": ["location", "addToPath"]
+    }
+  ]
+}

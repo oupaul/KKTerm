@@ -33,3 +33,13 @@ Use this skill when the user asks the AI Assistant to create, modify, fix, or im
 - Runtime CDN scripts are blocked; use curated local libraries when available.
 - Secret values are stored outside SQLite.
 - Generated widgets must fit inside their assigned Dashboard grid bounds.
+
+## File I/O
+
+Use these KK bridge methods for any widget that reads or writes local files:
+
+- **Drag-and-drop from Explorer**: `KK.onFileDrop(target, callback, options?)` — attach to a drop-zone element. Callback receives `(items, event)` where each item is `{ kind, name, path, bytes?, children? }`. Returns a cleanup function. Add a visual `hoverClass` via `options.hoverClass` (default `'is-drop-target'`).
+- **File picker (read)**: `KK.readLocalFile({ filters? })` — opens a native open dialog; resolves to `{ name, bytes, path }` or `null` on cancel.
+- **File picker (save)**: `KK.saveFile(filename, bytes, filters?)` — opens a native save dialog and writes bytes; resolves to the saved path or `null` on cancel.
+
+Do not use raw `dragover`/`drop` DOM events for OS file drops — always go through `KK.onFileDrop` so the widget code follows the established bridge pattern.

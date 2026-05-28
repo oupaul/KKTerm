@@ -4,6 +4,7 @@ import {
   Coffee,
   Gauge,
   LayoutDashboard,
+  Package,
   Pin,
   PinOff,
   Settings,
@@ -21,7 +22,7 @@ import { useWorkspaceStore } from "../store";
 import type { Connection } from "../types";
 import { RailTooltip } from "./RailTooltip";
 
-export type ActivePage = "workspace" | "dashboard" | "settings";
+export type ActivePage = "workspace" | "dashboard" | "installer" | "settings";
 
 type ConnectedRailItem = {
   connection: Connection;
@@ -568,6 +569,15 @@ export function ActivityRail({
       >
         <Gauge size={18} />
         <RailTooltip label={t("dashboard.title")} />
+      </button>
+      <button
+        className={`rail-button rail-button-installer ${activePage === "installer" ? "active" : ""}`}
+        aria-label={t("installer.railLabel")}
+        data-tutorial-id="app.activityRailInstaller"
+        onClick={() => onNavigate("installer")}
+      >
+        <Package size={18} />
+        <RailTooltip label={t("installer.railLabel")} />
       </button>
       {connectedRailItems.length > 0 ? (
         <div

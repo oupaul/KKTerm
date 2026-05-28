@@ -64,6 +64,7 @@ const WORKSPACE_TUTORIAL_TARGET_IDS = [
   "app.activityRailDashboard",
   "app.connectionRail",
   "app.activityRailDontSleep",
+  "app.activityRailInstaller",
   "app.activityRailSettings",
   "app.connectionsResize",
   "app.aiAssistantResize",
@@ -110,11 +111,22 @@ const WORKSPACE_TUTORIAL_TARGET_IDS = [
   "remoteDesktop.surface",
 ] as const;
 
+const INSTALLER_TUTORIAL_TARGET_IDS = [
+  "installer.updateAll",
+  "installer.toolOptions",
+] as const;
+
 const TUTORIAL_TARGET_NAVIGATION: Record<string, TutorialNavigationTarget> = {
   ...Object.fromEntries(
     WORKSPACE_TUTORIAL_TARGET_IDS.map((targetId) => [
       targetId,
       { page: "workspace" },
+    ]),
+  ),
+  ...Object.fromEntries(
+    INSTALLER_TUTORIAL_TARGET_IDS.map((targetId) => [
+      targetId,
+      { page: "installer" },
     ]),
   ),
   ...Object.fromEntries(
@@ -159,7 +171,12 @@ export function normalizeTutorialNavigationTarget(
 }
 
 function normalizeTutorialPage(value: unknown): ActivePage | undefined {
-  if (value === "workspace" || value === "dashboard" || value === "settings") {
+  if (
+    value === "workspace" ||
+    value === "dashboard" ||
+    value === "installer" ||
+    value === "settings"
+  ) {
     return value;
   }
   return undefined;

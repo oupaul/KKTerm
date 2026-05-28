@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 16;
+const SCHEMA_USER_VERSION: i32 = 17;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -189,6 +189,17 @@ CREATE TABLE IF NOT EXISTS ai_coding_usage_snapshots (
     weekly_resets_at TEXT,
     raw_provider_json TEXT,
     captured_at TEXT NOT NULL
+);
+
+-- Installer Helper per-tool state (ADR 0007). Installed-version is NEVER
+-- persisted: detection is always re-derived from the OS on demand. This
+-- table only stores user preferences (pinned) and the latest-version cache
+-- driven by the manual / opt-in-daily update check.
+CREATE TABLE IF NOT EXISTS installer_tool_state (
+    tool_id TEXT PRIMARY KEY,
+    pinned INTEGER NOT NULL DEFAULT 0,
+    latest_version_seen TEXT,
+    last_check_at INTEGER
 );
 "#;
 
@@ -1742,7 +1753,13 @@ impl Storage {
         let stored_version: i32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(to_storage_error)?;
-        if stored_version < SCHEMA_USER_VERSION {
+        // The Dashboard tables get rebuilt only when the user's stored
+        // version predates the last Dashboard-schema-changing migration
+        // (v16). Pure-additive schema bumps after v16 (v17 added
+        // `installer_tool_state`) must NOT drop these tables — that
+        // would wipe Dashboard Views and AI Created Widgets on every
+        // upgrade for users already on v16+.
+        if stored_version < 16 {
             connection
                 .execute_batch(
                     r#"
