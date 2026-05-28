@@ -15,7 +15,12 @@ use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread::JoinHandle;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
+
+/// How often to emit a "still running" heartbeat to the frontend while a
+/// child process is alive but silent. Set conservatively — winget can be
+/// genuinely quiet for 30–90s during MSIX staging.
+const HEARTBEAT_INTERVAL_SECS: u64 = 10;
 
 use super::detect::{
     github_release_install_dir, github_release_marker_path, GithubReleaseMarker,
@@ -460,6 +465,14 @@ fn run_streamed(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<(), String> {
+    // Surface the exact command we're about to run. Stalls show up as a
+    // long stretch with no further lines after this one — the heartbeat
+    // below makes the silence visible instead of looking frozen.
+    emit(ProgressEvent::Stdout {
+        tool_id: tool_id.into(),
+        line: format!("$ {program} {}", args.join(" ")),
+    });
+
     let mut child = Command::new(program)
         .args(args)
         .stdout(Stdio::piped())
@@ -471,9 +484,18 @@ fn run_streamed(
     let stdout_thread = forward_stream(child.stdout.take(), tx.clone(), true);
     let stderr_thread = forward_stream(child.stderr.take(), tx, false);
 
+    let started_at = Instant::now();
+    let mut last_output_at = Instant::now();
+    let mut next_heartbeat_at = started_at + std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS);
+
     loop {
+        let mut got_line = false;
         while let Ok(line) = rx.try_recv() {
             emit_stream_line(tool_id, emit, line);
+            got_line = true;
+        }
+        if got_line {
+            last_output_at = Instant::now();
         }
         if cancel.load(Ordering::Relaxed) {
             let _ = child.kill();
@@ -485,6 +507,24 @@ fn run_streamed(
             }
             return Err("cancelled".into());
         }
+        // Heartbeat: if the child is still alive and we've been silent for
+        // a while, emit a synthetic stderr line so the UI shows progress.
+        // Winget renders its progress bar with carriage returns rather than
+        // newlines, so BufReader::read_line stays blocked for tens of
+        // seconds at a time; without this the UI sat on "Installing..."
+        // with no log activity and looked stuck.
+        if Instant::now() >= next_heartbeat_at {
+            let elapsed = started_at.elapsed().as_secs();
+            let silent = last_output_at.elapsed().as_secs();
+            emit(ProgressEvent::Stderr {
+                tool_id: tool_id.into(),
+                line: format!(
+                    "[installer] still running: {elapsed}s elapsed, {silent}s since last output"
+                ),
+            });
+            next_heartbeat_at =
+                Instant::now() + std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS);
+        }
         match child.try_wait() {
             Ok(Some(status)) => {
                 join_stream(stdout_thread);
@@ -492,14 +532,30 @@ fn run_streamed(
                 while let Ok(line) = rx.try_recv() {
                     emit_stream_line(tool_id, emit, line);
                 }
+                let elapsed = started_at.elapsed().as_secs();
                 if status.success() {
+                    emit(ProgressEvent::Stdout {
+                        tool_id: tool_id.into(),
+                        line: format!(
+                            "[installer] `{program}` exited 0 after {elapsed}s"
+                        ),
+                    });
                     return Ok(());
                 }
                 let code = status.code().unwrap_or(-1);
+                emit(ProgressEvent::Stderr {
+                    tool_id: tool_id.into(),
+                    line: format!(
+                        "[installer] `{program}` exited {code} after {elapsed}s"
+                    ),
+                });
                 return Err(format!("`{program}` exited with status {code}"));
             }
             Ok(None) => match rx.recv_timeout(std::time::Duration::from_millis(100)) {
-                Ok(line) => emit_stream_line(tool_id, emit, line),
+                Ok(line) => {
+                    emit_stream_line(tool_id, emit, line);
+                    last_output_at = Instant::now();
+                }
                 Err(mpsc::RecvTimeoutError::Timeout) => {}
                 Err(mpsc::RecvTimeoutError::Disconnected) => {}
             },

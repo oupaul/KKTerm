@@ -329,7 +329,7 @@ function RecipeSection({
   return (
     <section className="installer-section">
       <h2 className="installer-section__title">{t(titleKey)}</h2>
-      <div className="installer-section__rows">
+      <div className="installer-section__grid">
         {recipes.map((recipe) => (
           <ToolRow key={recipe.id} recipe={recipe} />
         ))}

@@ -10,6 +10,7 @@ import {
   recipeNeedsWsl,
   resolveInstallPlan,
 } from "./dag";
+import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { installRecipeAndWait } from "./progress";
 import { useInstallerStore } from "./state";
@@ -141,15 +142,32 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     }
   }
 
+  const statusTone: "installed" | "update" | "busy" | "failed" | "partial" | "none" =
+    busy
+      ? "busy"
+      : lastStatus?.kind === "failed"
+        ? "failed"
+        : hasUpdate
+          ? "update"
+          : isInstalled
+            ? "installed"
+            : partial
+              ? "partial"
+              : "none";
+
+  const iconUrl = iconUrlForRecipe(recipe.id);
+
   return (
     <article
-      className={`installer-row ${expanded ? "expanded" : ""} ${busy ? "busy" : ""}`}
+      className={`installer-tile ${expanded ? "expanded" : ""} ${busy ? "busy" : ""}`}
+      data-status={statusTone}
     >
       <header
-        className="installer-row__head"
+        className="installer-tile__head"
         onClick={() => toggleExpanded(recipe.id)}
         role="button"
         tabIndex={0}
+        aria-expanded={expanded ? "true" : "false"}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -157,58 +175,66 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
           }
         }}
       >
-        <div className="installer-row__title">
-          <span className="installer-row__name">{recipe.name}</span>
-          <span className="installer-row__provider">{recipe.provider.kind}</span>
+        <div className="installer-tile__icon-wrap">
+          <img
+            className="installer-tile__icon"
+            src={iconUrl}
+            alt=""
+            draggable={false}
+            onError={(event) => {
+              const img = event.currentTarget;
+              if (img.src !== FALLBACK_ICON_URL) {
+                img.src = FALLBACK_ICON_URL;
+              }
+            }}
+          />
+          {statusTone !== "none" ? (
+            <span
+              className={`installer-tile__dot installer-tile__dot--${statusTone}`}
+              aria-hidden="true"
+            />
+          ) : null}
         </div>
-        <div className="installer-row__meta">
-          {isInstalled ? (
-            <span className="installer-pill installed">
-              {installedVersion ?? t("installer.status.noVersion")}
-            </span>
-          ) : partial ? (
-            <span className="installer-pill partial">
-              {t("installer.status.partial", {
-                installed: partial[0],
-                total: partial[1],
-              })}
-            </span>
-          ) : null}
-          {hasUpdate ? (
-            <span className="installer-pill update">→ {latestSeen}</span>
-          ) : null}
-          {busy ? (
-            <span className="installer-pill busy" aria-live="polite">
-              {inFlight.operation === "install"
+        <div className="installer-tile__label">
+          <span className="installer-tile__name" title={recipe.name}>
+            {recipe.name}
+          </span>
+          <span className="installer-tile__sub">
+            {busy
+              ? inFlight.operation === "install"
                 ? t("installer.status.installing")
-                : t("installer.status.uninstalling")}
-            </span>
-          ) : null}
-          {lastStatus?.kind === "completed" ? (
-            <span className="installer-pill done">
-              {t("installer.status.completed")}
-            </span>
-          ) : null}
-          {lastStatus?.kind === "failed" ? (
-            <span className="installer-pill failed">
-              {t("installer.status.failed", { message: lastStatus.message })}
-            </span>
-          ) : null}
-          {lastStatus?.kind === "cancelled" ? (
-            <span className="installer-pill cancelled">
-              {t("installer.status.cancelled")}
-            </span>
-          ) : null}
+                : t("installer.status.uninstalling")
+              : hasUpdate
+                ? `${installedVersion ?? ""} → ${latestSeen}`
+                : isInstalled
+                  ? (installedVersion ?? t("installer.status.noVersion"))
+                  : partial
+                    ? t("installer.status.partial", {
+                        installed: partial[0],
+                        total: partial[1],
+                      })
+                    : recipe.provider.kind}
+          </span>
         </div>
       </header>
       {expanded ? (
-        <div className="installer-row__body">
+        <div className="installer-tile__body">
           {description ? (
             <p className="installer-row__desc">{description}</p>
           ) : null}
           {wslBlocked ? (
             <p className="installer-row__hint" role="status">
               {t("installer.wslReboot")}
+            </p>
+          ) : null}
+          {!inFlight && lastStatus?.kind === "failed" ? (
+            <p className="installer-row__hint installer-row__hint--error" role="status">
+              {t("installer.status.failed", { message: lastStatus.message })}
+            </p>
+          ) : null}
+          {!inFlight && lastStatus?.kind === "cancelled" ? (
+            <p className="installer-row__hint" role="status">
+              {t("installer.status.cancelled")}
             </p>
           ) : null}
           {inFlight ? (
