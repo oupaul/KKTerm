@@ -32,6 +32,7 @@ export interface Connection {
   dataPartition?: string;
   useTmuxSessions?: boolean;
   tmuxConnectionId?: string;
+  passwordCredentialId?: string | null;
   urlCredentialUsername?: string;
   hasUrlCredential?: boolean;
   iconDataUrl?: string | null;
@@ -710,10 +711,23 @@ export interface StoredCredentialSummary {
   ownerId: string;
   label: string;
   detail?: string;
+  connectionType?: ConnectionType;
+  host?: string;
   username?: string;
   updatedAt?: string;
   metadataSource: string;
   exists: boolean;
+}
+
+export interface ConnectionPasswordCredentialSummary {
+  id: string;
+  connectionType: ConnectionType;
+  host: string;
+  username: string;
+  label: string;
+  createdFromConnectionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DeleteStoredCredentialRequest {

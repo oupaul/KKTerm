@@ -1,4 +1,4 @@
-import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
 import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
@@ -907,7 +907,7 @@ function tmuxConnectionRequest(connection: Connection) {
     keyPath: connection.keyPath,
     proxyJump: connection.proxyJump,
     authMethod: connection.authMethod,
-    secretOwnerId: connection.id,
+    secretOwnerId: connectionPasswordOwnerId(connection),
   };
 }
 
@@ -1531,7 +1531,7 @@ function TerminalPaneView({
             keyPath: connection.keyPath,
             proxyJump: connection.proxyJump,
             authMethod: connection.authMethod,
-            secretOwnerId: connection.id,
+            secretOwnerId: connectionPasswordOwnerId(connection),
             shell,
             serialLine: connection.type === "serial" ? connection.serialLine ?? connection.host : undefined,
             serialSpeed: connection.type === "serial" ? connection.serialSpeed ?? 9600 : undefined,

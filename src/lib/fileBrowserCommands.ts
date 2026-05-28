@@ -17,6 +17,7 @@ import {
   type SftpTransferResult,
 } from "./tauri";
 import type { Connection, FtpConnectionOptions, SftpSettings } from "../types";
+import { connectionPasswordOwnerId } from "../modules/workspace/connections/utils";
 
 export interface FileBrowserCapabilities {
   /** UI may surface a "Properties" dialog editor for owner/group/permissions */
@@ -100,7 +101,7 @@ export function sftpBrowserCommands(connection: Connection): FileBrowserCommands
           keyPath: connection.keyPath,
           proxyJump: connection.proxyJump,
           authMethod: connection.authMethod,
-          secretOwnerId: connection.id,
+          secretOwnerId: connectionPasswordOwnerId(connection),
           path,
         },
       }),
@@ -157,7 +158,7 @@ export function ftpBrowserCommands(
           host: connection.host,
           user: connection.user,
           port: connection.port,
-          secretOwnerId: connection.id,
+          secretOwnerId: connectionPasswordOwnerId(connection),
           path,
           options,
         },

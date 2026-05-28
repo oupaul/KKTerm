@@ -1173,6 +1173,8 @@
     "optionalUsername": "Optional username",
     "storedInKeychain": "Stored in OS keychain",
     "leaveBlankPassword": "Leave blank to keep stored password",
+    "savedPassword": "Saved password",
+    "typeNewPassword": "Type a new password",
     "host": "Host",
     "user": "User",
     "domainAdmin": "DOMAIN\\admin",

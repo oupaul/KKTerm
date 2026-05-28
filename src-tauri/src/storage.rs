@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 17;
+const SCHEMA_USER_VERSION: i32 = 18;
 
 const CURRENT_SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS connection_folders (
@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS connections (
     rdp_options TEXT,
     vnc_options TEXT,
     ftp_options TEXT,
+    password_credential_id TEXT REFERENCES connection_password_credentials(id) ON DELETE SET NULL,
     icon_data_url TEXT,
     icon_background_color TEXT,
     connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp')),
@@ -80,6 +81,20 @@ CREATE INDEX IF NOT EXISTS idx_connection_tags_connection_sort
 
 CREATE INDEX IF NOT EXISTS idx_url_credentials_connection
     ON url_credentials(connection_id);
+
+CREATE TABLE IF NOT EXISTS connection_password_credentials (
+    id TEXT PRIMARY KEY,
+    connection_type TEXT NOT NULL CHECK (connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')),
+    host TEXT NOT NULL,
+    username TEXT NOT NULL,
+    label TEXT NOT NULL,
+    created_from_connection_id TEXT REFERENCES connections(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_connection_password_credentials_type_host
+    ON connection_password_credentials(connection_type, host);
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -788,6 +803,7 @@ pub struct SavedConnection {
     vnc_options: Option<VncConnectionOptions>,
     #[serde(default)]
     ftp_options: Option<crate::ftp::FtpOptions>,
+    password_credential_id: Option<String>,
     icon_data_url: Option<String>,
     icon_background_color: Option<String>,
     #[serde(rename = "type")]
@@ -982,9 +998,24 @@ pub struct StoredCredentialCandidate {
     pub(crate) owner_id: String,
     pub(crate) label: String,
     pub(crate) detail: Option<String>,
+    pub(crate) connection_type: Option<String>,
+    pub(crate) host: Option<String>,
     pub(crate) username: Option<String>,
     pub(crate) updated_at: Option<String>,
     pub(crate) metadata_source: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionPasswordCredentialSummary {
+    pub(crate) id: String,
+    pub(crate) connection_type: String,
+    pub(crate) host: String,
+    pub(crate) username: String,
+    pub(crate) label: String,
+    pub(crate) created_from_connection_id: Option<String>,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
 }
 
 pub(crate) const LEGACY_AI_PROVIDER_SECRET_OWNER_ID: &str = "openai-compatible-provider";
@@ -1827,6 +1858,7 @@ impl Storage {
         ensure_column(&connection, "connections", "icon_data_url", "TEXT")?;
         ensure_column(&connection, "connections", "icon_background_color", "TEXT")?;
         ensure_column(&connection, "connections", "tab_title", "TEXT")?;
+        ensure_column(&connection, "connections", "password_credential_id", "TEXT")?;
         ensure_column(
             &connection,
             "connections",
@@ -2020,6 +2052,7 @@ impl Storage {
             rdp_options,
             vnc_options,
             ftp_options,
+            password_credential_id: None,
             icon_data_url: None,
             icon_background_color: None,
             connection_type,
@@ -2426,6 +2459,143 @@ impl Storage {
         &self,
     ) -> Result<Vec<StoredCredentialCandidate>, String> {
         self.with_connection(list_stored_credential_candidates)
+    }
+
+    pub fn list_connection_password_credentials(
+        &self,
+    ) -> Result<Vec<ConnectionPasswordCredentialSummary>, String> {
+        self.with_connection(list_connection_password_credentials)
+    }
+
+    pub fn create_connection_password_credential_metadata(
+        &self,
+        connection_id: String,
+    ) -> Result<ConnectionPasswordCredentialSummary, String> {
+        let connection_id = required_field("connection id", connection_id)?;
+        self.with_connection(|connection| {
+            let (connection_type, host, username) = connection
+                .query_row(
+                    "SELECT connection_type, host, username FROM connections WHERE id = ?1",
+                    params![&connection_id],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                        ))
+                    },
+                )
+                .optional()
+                .map_err(to_storage_error)?
+                .ok_or_else(|| "connection was not found".to_string())?;
+            ensure_connection_password_type(&connection_type)?;
+            let host = required_field("host", host)?;
+            let username = username.trim().to_string();
+            let existing_count = connection_password_credential_existing_count(
+                connection,
+                &connection_id,
+                &connection_type,
+                &host,
+            )?;
+            let label = connection_password_credential_label(&username, &host, existing_count + 1);
+            let id = make_connection_password_credential_id();
+            connection
+                .execute(
+                    "INSERT INTO connection_password_credentials
+                        (id, connection_type, host, username, label, created_from_connection_id)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![
+                        &id,
+                        &connection_type,
+                        &host,
+                        &username,
+                        &label,
+                        &connection_id
+                    ],
+                )
+                .map_err(to_storage_error)?;
+            get_connection_password_credential_by_id(connection, &id)
+        })
+    }
+
+    pub fn assign_connection_password_credential(
+        &self,
+        connection_id: String,
+        credential_id: String,
+    ) -> Result<SavedConnection, String> {
+        let connection_id = required_field("connection id", connection_id)?;
+        let credential_id = required_field("password credential id", credential_id)?;
+        self.with_connection(|connection| {
+            let connection_type = connection
+                .query_row(
+                    "SELECT connection_type FROM connections WHERE id = ?1",
+                    params![&connection_id],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .map_err(to_storage_error)?
+                .ok_or_else(|| "connection was not found".to_string())?;
+            ensure_connection_password_type(&connection_type)?;
+            if let Some(credential_type) = connection
+                .query_row(
+                    "SELECT connection_type FROM connection_password_credentials WHERE id = ?1",
+                    params![&credential_id],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .map_err(to_storage_error)?
+            {
+                if credential_type != connection_type {
+                    return Err(
+                        "password credential type must match the connection type".to_string()
+                    );
+                }
+            } else {
+                let legacy_type = connection
+                    .query_row(
+                        "SELECT connection_type FROM connections WHERE id = ?1",
+                        params![&credential_id],
+                        |row| row.get::<_, String>(0),
+                    )
+                    .optional()
+                    .map_err(to_storage_error)?
+                    .ok_or_else(|| "password credential was not found".to_string())?;
+                if legacy_type != connection_type {
+                    return Err(
+                        "password credential type must match the connection type".to_string()
+                    );
+                }
+            }
+            connection
+                .execute(
+                    "UPDATE connections SET password_credential_id = ?1 WHERE id = ?2",
+                    params![&credential_id, &connection_id],
+                )
+                .map_err(to_storage_error)?;
+            get_connection_by_id(connection, &connection_id)
+        })
+    }
+
+    pub fn delete_connection_password_credential_metadata(
+        &self,
+        credential_id: String,
+    ) -> Result<(), String> {
+        let credential_id = required_field("password credential id", credential_id)?;
+        self.with_connection(|connection| {
+            connection
+                .execute(
+                    "UPDATE connections SET password_credential_id = NULL WHERE password_credential_id = ?1",
+                    params![&credential_id],
+                )
+                .map_err(to_storage_error)?;
+            connection
+                .execute(
+                    "DELETE FROM connection_password_credentials WHERE id = ?1",
+                    params![&credential_id],
+                )
+                .map_err(to_storage_error)?;
+            Ok(())
+        })
     }
 
     pub fn list_assistant_chat_threads(&self) -> Result<Vec<AssistantChatThreadRecord>, String> {
@@ -3124,10 +3294,16 @@ fn list_stored_credential_candidates(
             owner_id: id,
             label: name,
             detail: Some(format!("{connection_type} - {host}")),
+            connection_type: Some(connection_type),
+            host: Some(host),
             username: (!username.trim().is_empty()).then_some(username),
             updated_at: None,
             metadata_source: "connections".to_string(),
         });
+    }
+
+    for credential in list_connection_password_credential_candidates(connection)? {
+        credentials.push(credential);
     }
 
     for credential in list_url_credential_candidates(connection)? {
@@ -3146,6 +3322,8 @@ fn list_stored_credential_candidates(
             owner_id,
             label: (*key_label).to_string(),
             detail: Some((*provider_label).to_string()),
+            connection_type: None,
+            host: None,
             username: None,
             updated_at: None,
             metadata_source: "settings".to_string(),
@@ -3158,6 +3336,8 @@ fn list_stored_credential_candidates(
         owner_id: LEGACY_AI_PROVIDER_SECRET_OWNER_ID.to_string(),
         label: "Legacy AI Assistant API key".to_string(),
         detail: Some("Shared AI provider key".to_string()),
+        connection_type: None,
+        host: None,
         username: None,
         updated_at: None,
         metadata_source: "settings".to_string(),
@@ -3169,6 +3349,8 @@ fn list_stored_credential_candidates(
         owner_id: EMAIL_API_SECRET_OWNER_ID.to_string(),
         label: "Email provider API key".to_string(),
         detail: Some("Send Email".to_string()),
+        connection_type: None,
+        host: None,
         username: None,
         updated_at: None,
         metadata_source: "settings".to_string(),
@@ -3180,12 +3362,57 @@ fn list_stored_credential_candidates(
         owner_id: EMAIL_SMTP_SECRET_OWNER_ID.to_string(),
         label: "SMTP password".to_string(),
         detail: Some("Send Email".to_string()),
+        connection_type: None,
+        host: None,
         username: None,
         updated_at: None,
         metadata_source: "settings".to_string(),
     });
 
     Ok(credentials)
+}
+
+fn list_connection_password_credential_candidates(
+    connection: &SqliteConnection,
+) -> Result<Vec<StoredCredentialCandidate>, String> {
+    let credentials = list_connection_password_credentials(connection)?;
+    Ok(credentials
+        .into_iter()
+        .map(|credential| StoredCredentialCandidate {
+            id: format!("connection-password:{}", credential.id),
+            kind: "connectionPassword".to_string(),
+            secret_kind: "connectionPassword".to_string(),
+            owner_id: credential.id,
+            label: credential.label,
+            detail: Some(format!(
+                "{} - {}",
+                credential.connection_type, credential.host
+            )),
+            connection_type: Some(credential.connection_type),
+            host: Some(credential.host),
+            username: (!credential.username.trim().is_empty()).then_some(credential.username),
+            updated_at: Some(credential.updated_at),
+            metadata_source: "connectionPasswordCredentials".to_string(),
+        })
+        .collect())
+}
+
+fn list_connection_password_credentials(
+    connection: &SqliteConnection,
+) -> Result<Vec<ConnectionPasswordCredentialSummary>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, connection_type, host, username, label, created_from_connection_id,
+                    created_at, updated_at
+             FROM connection_password_credentials
+             ORDER BY lower(connection_type), lower(host), lower(username), created_at",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map([], connection_password_credential_from_row)
+        .map_err(to_storage_error)?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
 }
 
 fn list_url_credential_candidates(
@@ -3215,6 +3442,8 @@ fn list_url_credential_candidates(
                 owner_id: connection_id,
                 label: connection_name,
                 detail: page_url.or(url),
+                connection_type: None,
+                host: None,
                 username: Some(username),
                 updated_at: Some(updated_at),
                 metadata_source: "urlCredentials".to_string(),
@@ -3290,6 +3519,8 @@ fn list_widget_secret_candidates(
                 owner_id,
                 label: widget_title.clone(),
                 detail: Some(format!("{view_title} - {key}")),
+                connection_type: None,
+                host: None,
                 username: None,
                 updated_at: value
                     .and_then(|object| object.get("updatedAt"))
@@ -3313,7 +3544,7 @@ fn list_connections_for_folder(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color,
+            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, password_credential_id,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
@@ -3575,14 +3806,15 @@ fn get_connection_by_id(
 ) -> Result<SavedConnection, String> {
     let saved_connection = connection
         .query_row(
-            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color,
+            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, password_credential_id,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
             params![connection_id],
             |row| {
-                let url_credential_username: Option<String> = row.get(24)?;
+                let password_credential_id: Option<String> = row.get(24)?;
+                let url_credential_username: Option<String> = row.get(25)?;
                 Ok(SavedConnection {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -3608,6 +3840,7 @@ fn get_connection_by_id(
                     ftp_options: parse_ftp_connection_options(row.get(21)?)?,
                     icon_data_url: row.get(22)?,
                     icon_background_color: row.get(23)?,
+                    password_credential_id,
                     url_credential_username: url_credential_username.clone(),
                     has_url_credential: url_credential_username.is_some(),
                     status: "idle".to_string(),
@@ -3626,7 +3859,8 @@ fn get_connection_by_id(
 }
 
 fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedConnection> {
-    let url_credential_username: Option<String> = row.get(24)?;
+    let password_credential_id: Option<String> = row.get(24)?;
+    let url_credential_username: Option<String> = row.get(25)?;
     Ok(SavedConnection {
         id: row.get(0)?,
         name: row.get(1)?,
@@ -3650,6 +3884,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         rdp_options: parse_rdp_connection_options(row.get(19)?)?,
         vnc_options: parse_vnc_connection_options(row.get(20)?)?,
         ftp_options: parse_ftp_connection_options(row.get(21)?)?,
+        password_credential_id,
         icon_data_url: row.get(22)?,
         icon_background_color: row.get(23)?,
         url_credential_username: url_credential_username.clone(),
@@ -3657,6 +3892,73 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         status: "idle".to_string(),
         tags: Vec::new(),
     })
+}
+
+fn connection_password_credential_from_row(
+    row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<ConnectionPasswordCredentialSummary> {
+    Ok(ConnectionPasswordCredentialSummary {
+        id: row.get(0)?,
+        connection_type: row.get(1)?,
+        host: row.get(2)?,
+        username: row.get(3)?,
+        label: row.get(4)?,
+        created_from_connection_id: row.get(5)?,
+        created_at: row.get(6)?,
+        updated_at: row.get(7)?,
+    })
+}
+
+fn get_connection_password_credential_by_id(
+    connection: &SqliteConnection,
+    credential_id: &str,
+) -> Result<ConnectionPasswordCredentialSummary, String> {
+    connection
+        .query_row(
+            "SELECT id, connection_type, host, username, label, created_from_connection_id,
+                    created_at, updated_at
+             FROM connection_password_credentials
+             WHERE id = ?1",
+            params![credential_id],
+            connection_password_credential_from_row,
+        )
+        .map_err(to_storage_error)
+}
+
+fn connection_password_credential_existing_count(
+    connection: &SqliteConnection,
+    _connection_id: &str,
+    connection_type: &str,
+    host: &str,
+) -> Result<i64, String> {
+    connection
+        .query_row(
+            "SELECT COUNT(*) FROM connection_password_credentials
+             WHERE connection_type = ?1 AND host = ?2",
+            params![connection_type, host],
+            |row| row.get(0),
+        )
+        .map_err(to_storage_error)
+}
+
+fn connection_password_credential_label(username: &str, host: &str, ordinal: i64) -> String {
+    let base = if username.trim().is_empty() {
+        host.to_string()
+    } else {
+        format!("{} @ {}", username.trim(), host)
+    };
+    if ordinal <= 1 {
+        base
+    } else {
+        format!("{base} #{ordinal}")
+    }
+}
+
+fn ensure_connection_password_type(connection_type: &str) -> Result<(), String> {
+    match connection_type {
+        "ssh" | "telnet" | "rdp" | "vnc" | "ftp" => Ok(()),
+        _ => Err("connection type does not support saved passwords".to_string()),
+    }
 }
 
 fn list_tags(connection: &SqliteConnection, connection_id: &str) -> Result<Vec<String>, String> {
@@ -5001,6 +5303,14 @@ fn make_tmux_connection_id(connection_id: &str) -> String {
     make_unique_id("kkterm", connection_id)
 }
 
+fn make_connection_password_credential_id() -> String {
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or_default();
+    format!("connection-password-credential-{unique}")
+}
+
 fn make_unique_id(fallback: &str, name: &str) -> String {
     let slug = name
         .chars()
@@ -5709,6 +6019,78 @@ mod tests {
             candidate.kind == "widgetSecret"
                 && candidate.owner_id == "dashboard-widget-secret:inst-1:apiKey"
         }));
+    }
+
+    #[test]
+    fn connection_password_credentials_use_type_host_metadata_and_suffixes() {
+        let storage =
+            Storage::open(temp_db_path("connection-password-credentials")).expect("storage opens");
+        let first = create_test_ssh_connection(&storage, "Bastion One", "bastion.internal", None);
+        let second = create_test_ssh_connection(&storage, "Bastion Two", "bastion.internal", None);
+
+        let first_credential = storage
+            .create_connection_password_credential_metadata(first.id.clone())
+            .expect("first credential metadata is created");
+        let second_credential = storage
+            .create_connection_password_credential_metadata(second.id.clone())
+            .expect("second credential metadata is created");
+
+        assert_eq!(first_credential.connection_type, "ssh");
+        assert_eq!(first_credential.host, "bastion.internal");
+        assert_eq!(first_credential.username, "admin");
+        assert_eq!(first_credential.label, "admin @ bastion.internal");
+        assert_eq!(second_credential.label, "admin @ bastion.internal #2");
+    }
+
+    #[test]
+    fn assigning_connection_password_credential_requires_matching_type() {
+        let storage = Storage::open(temp_db_path("connection-password-credential-assign"))
+            .expect("storage opens");
+        let ssh = create_test_ssh_connection(&storage, "SSH", "ssh.internal", None);
+        let rdp = storage
+            .create_connection(CreateConnectionRequest {
+                name: "RDP".to_string(),
+                host: "rdp.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "rdp".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("RDP connection is created");
+        let credential = storage
+            .create_connection_password_credential_metadata(ssh.id.clone())
+            .expect("SSH credential metadata is created");
+
+        let assigned = storage
+            .assign_connection_password_credential(ssh.id.clone(), credential.id.clone())
+            .expect("matching credential can be assigned");
+        assert_eq!(
+            assigned.password_credential_id.as_deref(),
+            Some(credential.id.as_str())
+        );
+
+        let error = match storage.assign_connection_password_credential(rdp.id, credential.id) {
+            Ok(_) => panic!("mismatched credential is rejected"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error,
+            "password credential type must match the connection type"
+        );
     }
 
     #[test]

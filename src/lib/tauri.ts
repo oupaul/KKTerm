@@ -17,6 +17,7 @@ import type {
   AppLauncherLaunchMode,
   AppLauncherSettings,
   Connection,
+  ConnectionPasswordCredentialSummary,
   ConnectionFolder,
   ConnectionTree,
   CustomFont,
@@ -1243,6 +1244,18 @@ type CommandMap = {
   list_stored_credentials: {
     args: undefined;
     result: StoredCredentialSummary[];
+  };
+  list_connection_password_credentials: {
+    args: undefined;
+    result: ConnectionPasswordCredentialSummary[];
+  };
+  create_connection_password_credential: {
+    args: { request: { connectionId: string; secret: string } };
+    result: Connection;
+  };
+  assign_connection_password_credential: {
+    args: { request: { connectionId: string; credentialId: string } };
+    result: Connection;
   };
   delete_stored_credential: {
     args: { request: DeleteStoredCredentialRequest };

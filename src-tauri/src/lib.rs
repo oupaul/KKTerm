@@ -97,6 +97,8 @@ struct StoredCredentialSummary {
     owner_id: String,
     label: String,
     detail: Option<String>,
+    connection_type: Option<String>,
+    host: Option<String>,
     username: Option<String>,
     updated_at: Option<String>,
     metadata_source: String,
@@ -108,6 +110,20 @@ struct StoredCredentialSummary {
 struct DeleteStoredCredentialRequest {
     kind: String,
     owner_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateConnectionPasswordCredentialRequest {
+    connection_id: String,
+    secret: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AssignConnectionPasswordCredentialRequest {
+    connection_id: String,
+    credential_id: String,
 }
 
 #[derive(Deserialize)]
@@ -241,7 +257,7 @@ async fn dashboard_load_background_image(
 fn dashboard_load_background_image_sync(
     file: String,
 ) -> Result<DashboardBackgroundImageData, String> {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
 
     if file.is_empty() || file.contains('/') || file.contains('\\') || file.contains("..") {
         return Err("invalid background image file name".to_string());
@@ -312,7 +328,7 @@ fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
 }
 
 fn load_custom_font_data_sync(path: String) -> Result<CustomFontData, String> {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
 
     let folder = custom_fonts_folder()?;
     fs::create_dir_all(&folder).map_err(|error| {
@@ -1048,8 +1064,8 @@ fn delete_assistant_chat_thread(
 }
 
 #[tauri::command]
-async fn start_github_copilot_device_flow(
-) -> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
+async fn start_github_copilot_device_flow()
+-> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
     github_copilot::start_device_flow().await
 }
 
@@ -1487,6 +1503,8 @@ fn list_stored_credentials(
                 owner_id: candidate.owner_id,
                 label: candidate.label,
                 detail: candidate.detail,
+                connection_type: candidate.connection_type,
+                host: candidate.host,
                 username: candidate.username,
                 updated_at: candidate.updated_at,
                 metadata_source: candidate.metadata_source,
@@ -1495,6 +1513,74 @@ fn list_stored_credentials(
         }
     }
     Ok(summaries)
+}
+
+#[tauri::command]
+fn list_connection_password_credentials(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+) -> Result<Vec<storage::ConnectionPasswordCredentialSummary>, String> {
+    let credentials = storage.list_connection_password_credentials()?;
+    let mut existing_credentials = Vec::new();
+    for credential in credentials {
+        let exists = secrets
+            .secret_exists(secrets::SecretReferenceRequest::connection_password(
+                credential.id.clone(),
+            ))?
+            .exists();
+        if exists {
+            existing_credentials.push(credential);
+        }
+    }
+    Ok(existing_credentials)
+}
+
+#[tauri::command]
+fn create_connection_password_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: CreateConnectionPasswordCredentialRequest,
+) -> Result<storage::SavedConnection, String> {
+    let secret = request.secret;
+    if secret.is_empty() {
+        return Err("secret value is required".to_string());
+    }
+    let credential =
+        storage.create_connection_password_credential_metadata(request.connection_id.clone())?;
+    if let Err(error) = secrets.store_secret(secrets::StoreSecretRequest::connection_password(
+        credential.id.clone(),
+        secret,
+    )) {
+        let _ = storage.delete_connection_password_credential_metadata(credential.id);
+        return Err(error);
+    }
+    match storage
+        .assign_connection_password_credential(request.connection_id, credential.id.clone())
+    {
+        Ok(connection) => Ok(connection),
+        Err(error) => {
+            let _ = secrets.delete_secret(secrets::SecretReferenceRequest::connection_password(
+                credential.id.clone(),
+            ));
+            let _ = storage.delete_connection_password_credential_metadata(credential.id);
+            Err(error)
+        }
+    }
+}
+
+#[tauri::command]
+fn assign_connection_password_credential(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: AssignConnectionPasswordCredentialRequest,
+) -> Result<storage::SavedConnection, String> {
+    let presence = secrets.secret_exists(secrets::SecretReferenceRequest::connection_password(
+        request.credential_id.clone(),
+    ))?;
+    if !presence.exists() {
+        return Err("stored password was not found".to_string());
+    }
+    storage.assign_connection_password_credential(request.connection_id, request.credential_id)
 }
 
 #[tauri::command]
@@ -1528,9 +1614,11 @@ fn delete_stored_credential(
         "emailSmtpPassword" => secrets.delete_secret(
             secrets::SecretReferenceRequest::email_smtp_password(owner_id),
         ),
-        "connectionPassword" => secrets.delete_secret(
-            secrets::SecretReferenceRequest::connection_password(owner_id),
-        ),
+        "connectionPassword" => secrets
+            .delete_secret(secrets::SecretReferenceRequest::connection_password(
+                owner_id.clone(),
+            ))
+            .and_then(|_| storage.delete_connection_password_credential_metadata(owner_id)),
         _ => Err("unsupported credential kind".to_string()),
     }
 }
@@ -2628,6 +2716,9 @@ pub fn run() {
             secret_exists,
             delete_secret,
             list_stored_credentials,
+            list_connection_password_credentials,
+            create_connection_password_credential,
+            assign_connection_password_credential,
             delete_stored_credential,
             start_terminal_session,
             write_terminal_input,

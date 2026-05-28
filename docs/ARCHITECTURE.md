@@ -100,6 +100,8 @@ Owns OS keychain integration:
 
 Secrets include passwords, SSH passphrases, and AI API keys.
 
+Reusable Connection password metadata lives in SQLite in `connection_password_credentials`; the password bytes still live only in the OS keychain under the credential id with secret kind `connectionPassword`. SSH, Telnet, RDP, VNC, and FTP Connections may point at one of these credential ids via `password_credential_id`, while legacy per-Connection passwords stored under the Connection id remain valid. Add/Edit Connection surfaces same-type saved password choices by metadata only; it must not read secret values into React.
+
 ### Connection Model
 
 Represents all openable resources as saved connections. Current connection types:

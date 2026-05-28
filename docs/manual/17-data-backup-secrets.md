@@ -39,7 +39,7 @@ Backups must **not** run from app-window close.
 
 Settings → Credentials (`settings.sectionCredentials`) lists every credential KKTerm has stored, grouped by kind:
 
-- `settings.credentialKindConnectionPassword` — SSH / RDP / VNC / Telnet passwords.
+- `settings.credentialKindConnectionPassword` — SSH / RDP / VNC / Telnet / FTP passwords, including reusable saved-password credentials selected from Add/Edit Connection.
 - `settings.credentialKindUrlPassword` — saved URL Connection credentials.
 - `settings.credentialKindAiApiKey` — AI provider keys (stored under `AI_PROVIDER_SECRET_OWNER_ID`).
 - `settings.credentialKindEmailApiKey` / `settings.credentialKindEmailSmtpPassword` — Email tool credentials.

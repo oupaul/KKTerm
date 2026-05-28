@@ -1,4 +1,4 @@
-import { connectionIconForType, connectionSubtitle, connectionToolbarTitle, connectionTypeLabel } from "../utils";
+import { connectionIconForType, connectionPasswordOwnerId, connectionSubtitle, connectionToolbarTitle, connectionTypeLabel } from "../utils";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { documentHasRdpBlockingOverlay } from "../../nativeOverlay";
@@ -720,7 +720,7 @@ export function RemoteDesktopWorkspace({
           host: connection.host,
           user: connection.user,
           port: connection.port,
-          secretOwnerId: connection.id,
+          secretOwnerId: connectionPasswordOwnerId(connection),
           options: resolveRdpOptions(rdpSettings, connection.rdpOptions),
           ...bounds,
         },
@@ -808,7 +808,7 @@ export function RemoteDesktopWorkspace({
           sessionId,
           host: connection.host,
           port: connection.port,
-          secretOwnerId: connection.id,
+          secretOwnerId: connectionPasswordOwnerId(connection),
           options: resolveVncOptions(vncSettings, connection.vncOptions),
         },
       })

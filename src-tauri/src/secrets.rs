@@ -26,6 +26,16 @@ pub struct StoreSecretRequest {
     secret: String,
 }
 
+impl StoreSecretRequest {
+    pub(crate) fn connection_password(owner_id: String, secret: String) -> Self {
+        Self {
+            kind: SecretKind::ConnectionPassword,
+            owner_id,
+            secret,
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SecretReferenceRequest {

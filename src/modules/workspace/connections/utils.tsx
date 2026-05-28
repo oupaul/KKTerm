@@ -225,10 +225,15 @@ export function usesNativeSshHostKeyVerification(connection: Connection) {
     connection.type === "ssh" &&
     (Boolean(connection.keyPath?.trim()) ||
       Boolean(connection.hasPassword) ||
+      Boolean(connection.passwordCredentialId) ||
       connection.authMethod === "password" ||
       connection.authMethod === "agent") &&
     !connection.proxyJump?.trim()
   );
+}
+
+export function connectionPasswordOwnerId(connection: Connection) {
+  return connection.passwordCredentialId || connection.id;
 }
 
 export async function confirmTrustedSshHostKey(preview: SshHostKeyPreview) {

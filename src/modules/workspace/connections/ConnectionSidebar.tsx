@@ -9,7 +9,7 @@ import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
 } from "./connectionTabContextMenu";
-import { confirmTrustedSshHostKey, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, createStoredSecretMask, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, flattenConnections, flattenFolders, upsertRootConnection, withLiveConnectionStatuses } from "./treeUtils";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
@@ -27,7 +27,7 @@ import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
-import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
+import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
 import { RDP_REMOTE_RESOLUTION_FIXED } from "../../../types";
 
 type DraggedTreeItem =
@@ -104,6 +104,7 @@ type ConnectionDialogRequest = CreateConnectionRequest & {
   iconDataUrl?: string | null;
   iconBackgroundColor?: string | null;
   password?: string;
+  passwordCredentialId?: string;
   urlCredentialUsername?: string;
   urlPassword?: string;
 };
@@ -586,7 +587,7 @@ export function ConnectionSidebar({
           keyPath: connection.keyPath,
           proxyJump: connection.proxyJump,
           authMethod: connection.authMethod,
-          secretOwnerId: connection.id,
+          secretOwnerId: connectionPasswordOwnerId(connection),
         },
       });
       return newestUnattachedTmuxSession(sessions, openSessionIds)?.id;
@@ -793,9 +794,27 @@ export function ConnectionSidebar({
     });
   }
 
+  async function createConnectionPasswordCredential(connectionId: string, password: string) {
+    return invokeCommand("create_connection_password_credential", {
+      request: {
+        connectionId,
+        secret: password,
+      },
+    });
+  }
+
+  async function assignConnectionPasswordCredential(connectionId: string, credentialId: string) {
+    return invokeCommand("assign_connection_password_credential", {
+      request: {
+        connectionId,
+        credentialId,
+      },
+    });
+  }
+
   async function handleConnectionSubmit(request: ConnectionDialogRequest) {
     setFormError("");
-    const { iconDataUrl, iconBackgroundColor, password, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
+    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
     if (formMode === "save") {
       try {
         let connection = await invokeCommand("create_connection", {
@@ -803,7 +822,9 @@ export function ConnectionSidebar({
         });
         connection = await saveConnectionIconPresentation(connection, iconDataUrl, iconBackgroundColor);
         if (password) {
-          await storeConnectionPassword(connection.id, password);
+          connection = await createConnectionPasswordCredential(connection.id, password);
+        } else if (passwordCredentialId) {
+          connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
         }
         if (connection.type === "url" && urlCredentialUsername && urlPassword) {
           await storeUrlPassword(connection.id, urlPassword);
@@ -827,6 +848,7 @@ export function ConnectionSidebar({
       proxyJump: connectionRequest.proxyJump,
       authMethod: connectionRequest.authMethod,
       hasPassword: Boolean(password),
+      passwordCredentialId: passwordCredentialId || undefined,
       type: connectionRequest.type,
       localShell: connectionRequest.localShell,
       localStartupDirectory: connectionRequest.localStartupDirectory,
@@ -867,7 +889,7 @@ export function ConnectionSidebar({
     }
 
     setFormError("");
-    const { iconDataUrl, iconBackgroundColor, password, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
+    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
     const updateRequest: UpdateConnectionRequest = {
       ...connectionRequest,
       id: editConnection.connection.id,
@@ -880,7 +902,9 @@ export function ConnectionSidebar({
       });
       connection = await saveConnectionIconPresentation(connection, iconDataUrl, iconBackgroundColor);
       if (password) {
-        await storeConnectionPassword(connection.id, password);
+        connection = await createConnectionPasswordCredential(connection.id, password);
+      } else if (passwordCredentialId) {
+        connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
       }
       if (connection.type === "url" && urlPassword) {
         await storeUrlPassword(connection.id, urlPassword);
@@ -890,7 +914,8 @@ export function ConnectionSidebar({
       }
       refreshOpenConnectionMetadata({
         ...connection,
-        hasPassword: connection.hasPassword || Boolean(password),
+        hasPassword: connection.hasPassword || Boolean(password) || Boolean(passwordCredentialId) || Boolean(connection.passwordCredentialId),
+        passwordCredentialId: connection.passwordCredentialId ?? passwordCredentialId ?? editConnection.connection.passwordCredentialId,
         urlCredentialUsername:
           connection.type === "url" && urlCredentialUsername
             ? urlCredentialUsername
@@ -2991,6 +3016,49 @@ function PasswordField({
   );
 }
 
+function supportsConnectionPasswordCredential(type: ConnectionType | "") {
+  return type === "ssh" || type === "telnet" || type === "rdp" || type === "vnc" || type === "ftp";
+}
+
+function passwordCredentialOptionLabel(credential: StoredCredentialSummary) {
+  const user = credential.username?.trim() || "-";
+  const host = credential.host?.trim() || credential.detail || credential.ownerId;
+  const suffix = credential.label.match(/\s(#[0-9]+)$/)?.[1] ?? "";
+  return `${user} @ ${host}${suffix ? ` ${suffix}` : ""}`;
+}
+
+function PasswordCredentialSelect({
+  credentials,
+  selectedCredentialId,
+  onChange,
+}: {
+  credentials: StoredCredentialSummary[];
+  selectedCredentialId: string;
+  onChange: (credentialId: string) => void;
+}) {
+  const { t } = useTranslation();
+  if (credentials.length === 0) {
+    return null;
+  }
+  return (
+    <label>
+      <span>{t("connections.savedPassword")}</span>
+      <select
+        name="passwordCredentialId"
+        onChange={(event) => onChange(event.currentTarget.value)}
+        value={selectedCredentialId}
+      >
+        <option value="">{t("connections.typeNewPassword")}</option>
+        {credentials.map((credential) => (
+          <option key={credential.ownerId} value={credential.ownerId}>
+            {passwordCredentialOptionLabel(credential)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function ConnectionDialog({
   error,
   initialConnection,
@@ -3034,13 +3102,17 @@ function ConnectionDialog({
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [keyGenerationError, setKeyGenerationError] = useState("");
   const [hasStoredConnectionPassword, setHasStoredConnectionPassword] = useState(
-    Boolean(initialConnection?.hasPassword),
+    Boolean(initialConnection?.hasPassword || initialConnection?.passwordCredentialId),
   );
   const [hasStoredUrlPassword, setHasStoredUrlPassword] = useState(
     Boolean(initialConnection?.hasUrlCredential),
   );
   const [portDraft, setPortDraft] = useState(
     String(initialConnection?.port ?? (connectionType ? defaultPortForConnectionType(connectionType, sshSettings) : "")),
+  );
+  const [passwordCredentials, setPasswordCredentials] = useState<StoredCredentialSummary[]>([]);
+  const [selectedPasswordCredentialId, setSelectedPasswordCredentialId] = useState(
+    initialConnection?.passwordCredentialId ?? "",
   );
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(initialConnection?.iconDataUrl ?? null);
   const [iconBackgroundColor, setIconBackgroundColor] = useState<string | null>(
@@ -3072,6 +3144,17 @@ function ConnectionDialog({
   const localShellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   const isEditMode = mode === "edit";
   const isUrlConnection = connectionType === "url";
+  const canUseSavedPasswordCredential = mode !== "quick" && supportsConnectionPasswordCredential(connectionType);
+  const matchingPasswordCredentials = useMemo(
+    () =>
+      passwordCredentials.filter(
+        (credential) =>
+          credential.kind === "connectionPassword" &&
+          credential.exists &&
+          credential.connectionType === connectionType,
+      ),
+    [connectionType, passwordCredentials],
+  );
   const usesTwoColumnOptions = connectionType === "rdp" || connectionType === "vnc" || connectionType === "ftp";
 
   useEffect(() => {
@@ -3081,11 +3164,14 @@ function ConnectionDialog({
 
     let disposed = false;
     const secretKind = initialConnection.type === "url" ? "urlPassword" : "connectionPassword";
+    const ownerId = initialConnection.type === "url"
+      ? initialConnection.id
+      : connectionPasswordOwnerId(initialConnection);
 
     void invokeCommand("secret_exists", {
       request: {
         kind: secretKind,
-        ownerId: initialConnection.id,
+        ownerId,
       },
     })
       .then((presence) => {
@@ -3104,6 +3190,30 @@ function ConnectionDialog({
       disposed = true;
     };
   }, [initialConnection, isEditMode]);
+
+  useEffect(() => {
+    if (!canUseSavedPasswordCredential || !isTauriRuntime()) {
+      setPasswordCredentials([]);
+      return;
+    }
+
+    let disposed = false;
+    void invokeCommand("list_stored_credentials", undefined)
+      .then((credentials) => {
+        if (!disposed) {
+          setPasswordCredentials(credentials);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setPasswordCredentials([]);
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [canUseSavedPasswordCredential, connectionType]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3145,6 +3255,7 @@ function ConnectionDialog({
         ? String(ftpPortForProtocolSelection(ftpProtocolSelection, rawPortValue, ftpTlsModeSelection))
         : rawPortValue;
     const password = String(form.get("password") ?? "");
+    const passwordCredentialId = password ? "" : String(form.get("passwordCredentialId") ?? "").trim();
     const keyPath = String(form.get("keyPath") ?? "").trim();
     const proxyJump = String(form.get("proxyJump") ?? "").trim();
     const useTmuxSessions = form.get("useTmuxSessions") === "on";
@@ -3267,6 +3378,7 @@ function ConnectionDialog({
             : isFtpConnection
               ? password || undefined
               : undefined,
+      passwordCredentialId: canUseSavedPasswordCredential ? passwordCredentialId || undefined : undefined,
       urlCredentialUsername:
         connectionType === "url"
           ? String(form.get("urlCredentialUsername") ?? "").trim() || undefined
@@ -3599,13 +3711,20 @@ function ConnectionDialog({
                       </select>
                     </label>
                     {authMethod === "password" ? (
-                      <PasswordField
-                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                        label={`${t("connections.passwordLabel")}*`}
-                        name="password"
-                        placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                        required={!isEditMode}
-                      />
+                      <>
+                        <PasswordField
+                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                          label={`${t("connections.passwordLabel")}*`}
+                          name="password"
+                          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                          required={!isEditMode && !selectedPasswordCredentialId}
+                        />
+                        <PasswordCredentialSelect
+                          credentials={matchingPasswordCredentials}
+                          onChange={setSelectedPasswordCredentialId}
+                          selectedCredentialId={selectedPasswordCredentialId}
+                        />
+                      </>
                     ) : authMethod === "keyFile" ? (
                       <label>
                         <span>{t("connections.keyPath")}</span>
@@ -3650,33 +3769,54 @@ function ConnectionDialog({
                     />
                     </label>
                     {usesRemoteDesktopFields ? (
-                      <PasswordField
-                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                        label={t("connections.password")}
-                        name="password"
-                        placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                      />
+                      <>
+                        <PasswordField
+                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                          label={t("connections.password")}
+                          name="password"
+                          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                        />
+                        <PasswordCredentialSelect
+                          credentials={matchingPasswordCredentials}
+                          onChange={setSelectedPasswordCredentialId}
+                          selectedCredentialId={selectedPasswordCredentialId}
+                        />
+                      </>
                     ) : null}
                     {isTelnetConnection ? (
-                      <PasswordField
-                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                        label={`${t("connections.passwordLabel")}*`}
-                        name="password"
-                        placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                        required={!isEditMode}
-                      />
+                      <>
+                        <PasswordField
+                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                          label={`${t("connections.passwordLabel")}*`}
+                          name="password"
+                          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
+                          required={!isEditMode && !selectedPasswordCredentialId}
+                        />
+                        <PasswordCredentialSelect
+                          credentials={matchingPasswordCredentials}
+                          onChange={setSelectedPasswordCredentialId}
+                          selectedCredentialId={selectedPasswordCredentialId}
+                        />
+                      </>
                     ) : null}
                     {isFtpConnection ? (
-                      <PasswordField
-                        hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                        label={t("connections.password")}
-                        name="password"
-                        placeholder={
-                          isEditMode
-                            ? t("connections.leaveBlankPassword")
-                            : t("connections.storedInKeychain")
-                        }
-                      />
+                      <>
+                        <PasswordField
+                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
+                          label={t("connections.password")}
+                          name="password"
+                          placeholder={
+                            isEditMode
+                              ? t("connections.leaveBlankPassword")
+                              : t("connections.storedInKeychain")
+                          }
+                        />
+                        <PasswordCredentialSelect
+                          credentials={matchingPasswordCredentials}
+                          onChange={setSelectedPasswordCredentialId}
+                          selectedCredentialId={selectedPasswordCredentialId}
+                        />
+                      </>
                     ) : null}
                   </div>
                 )}

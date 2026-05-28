@@ -88,6 +88,8 @@ path.
 
 **Add Connection** uses the same form shape but persists to SQLite. The Type selector label is `connections.type`.
 
+For SSH, Telnet, RDP, VNC, and FTP Connections, the password area can reuse saved Connection password credentials from the same Connection type. The dropdown label is `connections.savedPassword`; each option shows the saved credential's username and original host. Choosing `connections.typeNewPassword` and typing a password creates a new OS-keychain credential for the saved Connection. If another credential already exists for the exact same host and Connection type, the generated credential label appends `#2`, `#3`, and so on.
+
 For saved Connections, the properties/Add Connection header includes Connection icon presentation controls. `connections.editIcon` changes the icon image through default protocol icons, Lucide icon choices (`connections.lucideIcons` / `connections.selectLucideIcon`), saved images, or a newly chosen image. `connections.editIconBackground` opens the circular icon background picker; `connections.iconBackground` labels the picker, `connections.transparentIconBackground` clears the color back to the default transparent state, and `connections.selectIconBackground` applies a palette color. The chosen background is shown behind Connection icons in the Connection Tree and on pinned/connected Activity Rail Connection shortcuts. Workspace Tab rename is runtime-only Tab UI state and does not update the saved Connection `name`, icon, background, or `tabTitle`.
 
 ## Drag and drop

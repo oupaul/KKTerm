@@ -4,7 +4,7 @@ import {
   normalizeTutorialNavigationTarget,
   tutorialNavigationForTarget,
 } from "../app/tutorialNavigationModel";
-import { workspaceKindLabel } from "../modules/workspace/connections/utils";
+import { connectionPasswordOwnerId, workspaceKindLabel } from "../modules/workspace/connections/utils";
 import { inspectActiveSshSystemContext } from "../modules/workspace/connections/terminal/TerminalWorkspace";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
 import {
@@ -1939,7 +1939,7 @@ export function AssistantPanel({
             keyPath: pane.connection.keyPath,
             proxyJump: pane.connection.proxyJump,
             authMethod: pane.connection.authMethod,
-            secretOwnerId: pane.connection.id,
+            secretOwnerId: connectionPasswordOwnerId(pane.connection),
             tmuxSessionId: pane.tmuxSessionId,
             bufferLines: useWorkspaceStore.getState().sshSettings.bufferLines,
           },
