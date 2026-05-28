@@ -6,6 +6,7 @@ import { invokeCommand, isTauriRuntime } from "../../../lib/tauri";
 import { ToggleSwitch } from "../../settings/ToggleSwitch";
 import { useDashboardStore } from "../state/dashboardStore";
 import { ACCENT_PALETTE } from "../registry/palette";
+import { parseScriptBodyForEditor, updateScriptBodySourceJson } from "./scriptSourceEditor";
 import {
   dashboardWidgetSecretOwnerId,
   isWidgetSecretRef,
@@ -347,7 +348,16 @@ function AdvancedSection({ instance }: { instance: DashboardWidgetInstance }) {
     return (
       <ScriptAdvanced
         bodyJson={customSource.bodyJson}
-        onUpdate={(next) => updateCustomWidget(customSource.id, { bodyJson: next })}
+        onUpdate={async (next) => {
+          await updateCustomWidget(customSource.id, { bodyJson: next });
+          const saved = useDashboardStore
+            .getState()
+            .customWidgets
+            .find((widget) => widget.id === customSource.id);
+          if (saved?.bodyJson !== next) {
+            throw new Error(useDashboardStore.getState().lastError ?? "");
+          }
+        }}
       />
     );
   }
@@ -530,14 +540,48 @@ function WidgetSettingsFieldControl({
   );
 }
 
-function ScriptAdvanced({ bodyJson, onUpdate }: { bodyJson: string; onUpdate: (next: string) => void }) {
+function ScriptAdvanced({
+  bodyJson,
+  onUpdate,
+}: {
+  bodyJson: string;
+  onUpdate: (next: string) => Promise<void>;
+}) {
   const { t } = useTranslation();
-  let parsed: { source: string; permissions: { network: boolean; pollSeconds?: number } };
-  try {
-    parsed = JSON.parse(bodyJson) as { source: string; permissions: { network: boolean; pollSeconds?: number } };
-  } catch {
+  const parsed = useMemo(() => parseScriptBodyForEditor(bodyJson), [bodyJson]);
+  const [isEditingSource, setIsEditingSource] = useState(false);
+  const [sourceDraft, setSourceDraft] = useState("");
+  const [sourceSaveError, setSourceSaveError] = useState("");
+
+  useEffect(() => {
+    setIsEditingSource(false);
+    setSourceDraft(parsed?.source ?? "");
+    setSourceSaveError("");
+  }, [bodyJson, parsed?.source]);
+
+  if (!parsed) {
     return <p className="dw-muted">{t("dashboard.scriptInvalidBody")}</p>;
   }
+
+  async function saveSource() {
+    setSourceSaveError("");
+    try {
+      await onUpdate(updateScriptBodySourceJson(bodyJson, sourceDraft));
+      setIsEditingSource(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setSourceSaveError(message || t("dashboard.invalidScriptWidgetBody"));
+    }
+  }
+
+  function updateBodyJson(next: string) {
+    setSourceSaveError("");
+    void onUpdate(next).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      setSourceSaveError(message || t("dashboard.invalidScriptWidgetBody"));
+    });
+  }
+
   return (
     <div className="dw-stack-fields">
       <label className="dw-field dw-field-row">
@@ -546,7 +590,7 @@ function ScriptAdvanced({ bodyJson, onUpdate }: { bodyJson: string; onUpdate: (n
           checked={parsed.permissions.network}
           onChange={(checked) => {
             const next = { ...parsed, permissions: { ...parsed.permissions, network: checked } };
-            onUpdate(JSON.stringify(next));
+            updateBodyJson(JSON.stringify(next));
           }}
         />
       </label>
@@ -559,13 +603,59 @@ function ScriptAdvanced({ bodyJson, onUpdate }: { bodyJson: string; onUpdate: (n
           onChange={(e) => {
             const value = e.target.value === "" ? undefined : Number(e.target.value);
             const next = { ...parsed, permissions: { ...parsed.permissions, pollSeconds: value } };
-            onUpdate(JSON.stringify(next));
+            updateBodyJson(JSON.stringify(next));
           }}
         />
       </label>
       <details>
         <summary>{t("dashboard.scriptViewSource")}</summary>
-        <pre className="dw-source-view">{parsed.source}</pre>
+        <div className="dw-source-toolbar">
+          {isEditingSource ? (
+            <>
+              <button
+                type="button"
+                className="dw-secondary-button"
+                onClick={() => { void saveSource(); }}
+              >
+                {t("common.save")}
+              </button>
+              <button
+                type="button"
+                className="dw-secondary-button"
+                onClick={() => {
+                  setSourceDraft(parsed.source);
+                  setSourceSaveError("");
+                  setIsEditingSource(false);
+                }}
+              >
+                {t("common.cancel")}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="dw-secondary-button"
+              onClick={() => {
+                setSourceDraft(parsed.source);
+                setSourceSaveError("");
+                setIsEditingSource(true);
+              }}
+            >
+              {t("common.edit")}
+            </button>
+          )}
+        </div>
+        {isEditingSource ? (
+          <textarea
+            className="dw-source-editor"
+            value={sourceDraft}
+            spellCheck={false}
+            onChange={(event) => setSourceDraft(event.target.value)}
+          />
+        ) : (
+          <pre className="dw-source-view">{parsed.source}</pre>
+        )}
+        {sourceSaveError ? <p className="dw-muted">{sourceSaveError}</p> : null}
       </details>
     </div>
   );

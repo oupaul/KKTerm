@@ -100,6 +100,7 @@ Utility tools like hashing, CIDR/subnet math, URL/base64 encoding, and small rep
 Custom Widgets are authored by the AI Assistant (`ai.createWidget`), not by users directly in v1. AI-authored widgets are script widgets:
 
 - **`script`** — JavaScript hosted inside an isolated `iframe srcdoc` host with declared `dashboard.scriptNetwork` permissions and `dashboard.scriptPollSeconds`. Source viewable via `dashboard.scriptViewSource`. iframe accessible title: `dashboard.scriptWidgetFrameTitle`.
+- In the Advanced section, `dashboard.scriptViewSource` includes `common.edit`, `common.save`, and `common.cancel` actions for hand-editing the script source. Saving persists the edited source to the Dashboard Custom Widget definition and reloads the placed Widget Instance from the updated source.
 
 Widget source and settings schema payloads are UTF-8 JSON. When the assistant creates or updates a widget in a non-English output language, titles, summaries, labels, placeholders, setting options, `htmlShim`, and JavaScript string literals should stay as Unicode text; do not rewrite them as mojibake, percent-encoded strings, base64, HTML entities, or ASCII-only text.
 

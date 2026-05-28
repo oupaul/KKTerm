@@ -2072,6 +2072,34 @@ button.dashboard-pill-dot:focus-visible {
   font-size: 11px;
 }
 
+.dw-source-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.dw-source-editor {
+  width: 100%;
+  min-height: 260px;
+  margin: 0;
+  padding: 8px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dw-source-editor:focus {
+  border-color: var(--w-accent, var(--accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--w-accent, var(--accent)) 18%, transparent);
+  outline: 0;
+}
+
 .dw-catalog-backdrop {
   position: fixed;
   inset: 0;
