@@ -234,6 +234,35 @@ Current built-in widgets are App Launcher, Connection, Notes, and AI Coding Usag
 
 When `docs/ARCHITECTURE.md` and `docs/DASHBOARD.md` conflict on Dashboard-internal concerns, `docs/DASHBOARD.md` wins.
 
+### Installer Helper
+
+The Installer Helper Module is a built-in Activity Rail destination (rail icon `Package`, grouped with the other built-in Module buttons near the top of the rail) that manages a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. Users see Installed / Updates available / Available sections; per-row actions are Install / Update / Uninstall, plus a Pin checkbox that excludes the tool from "Update all".
+
+The catalog itself is a **remote, signed JSON document** fetched from `https://raw.githubusercontent.com/ryantsai/KKTerm/main/installer/catalog.v1.json` and verified against an Ed25519 public key compiled into the binary as `INSTALLER_CATALOG_PUBKEY` in `src-tauri/src/installer/trust.rs`. New tools can be added to the catalog without releasing a new KKTerm build. The full trust model — signing, schema versioning, cache fallback, structured-data-only recipes — lives in `docs/ADR/0007-installer-helper-remote-catalog.md`.
+
+Summary of the durable shape:
+
+- **Five recipe providers, all pure data.** `winget`, `npm`, `githubRelease`, `windowsFeature`, `bundle`. No `custom`, no script strings — a tool that does not fit one of these five shapes does not ship in the catalog.
+- **Bundles** are composite recipes whose detection is the AND of their steps' detections. Dependency edges (`needs`) point to bundle ids, never to steps inside.
+- **Dependency resolution** is frontend-side and lazy: when the user clicks Install, the transitive `needs` graph is walked, already-installed prerequisites are skipped, and a confirm dialog lists what will actually run. Cycle detection runs at catalog load in the Rust loader.
+- **Reverse-DAG check on uninstall** lists installed dependents that would be left without a prerequisite before proceeding.
+- **WSL reboot gating** sets a session-only flag when the WSL Windows feature is enabled this session; Docker Desktop (and any recipe transitively needing WSL) is disabled with an explanatory hint until KKTerm restarts.
+- **UAC handling is honest** — "Update all" warns up front with the estimated prompt count. We do not try to suppress or batch UAC.
+- **Cancellation** kills the child process for an in-flight install via a shared `AtomicBool` flag. For "Update all", cancel stops the queue but not the in-flight tool. Partial installs are not rolled back.
+- **Persistence** is split: SQLite table `installer_tool_state(tool_id PK, pinned, latest_version_seen, last_check_at)` (schema version 17) holds per-tool prefs and the latest-version cache; on-disk files under `%APPDATA%\KKTerm\installer\` hold the cached catalog blob + signature; detection results and the in-flight queue are **in-memory only** so detection is always re-derived from the OS on demand.
+- **Progress streaming** is via the Tauri event channel `installer://progress` carrying a discriminated `ProgressEvent` union (`step`, `stdout`, `stderr`, `progress`, `completed`, `failed`, `cancelled`). The frontend reduces these into per-tool log + current-step + ratio state in a Zustand store.
+- **AI Assistant integration is deferred.** No installer Tauri command is exposed to the assistant in v1.
+- **Tutorial-capable.** Targets: `app.activityRailInstaller` (rail), `installer.updateAll` (header button), `installer.toolOptions` (per-row options form).
+
+Source layout:
+
+- `src-tauri/src/installer/` — Rust backend: `trust.rs` (Ed25519 verify), `schema.rs` (Recipe / Provider / Catalog with validate + cycle check), `catalog.rs` (fetch + cache + TTL), `detect.rs`, `install.rs`, `uninstall.rs`, `latest_version.rs`, `state.rs` (SQLite), `events.rs`, `commands.rs` (Tauri commands + `InstallerRuntime` state).
+- `src/modules/installer/` — frontend: `InstallerPage.tsx`, `ToolRow.tsx`, `InstallerConfirmDialog.tsx`, `state.ts` (Zustand), `dag.ts` (pure DAG helpers), `types.ts`, `installer.css`.
+- `installer/catalog.v1.json` + `installer/catalog.v1.json.minisig` — the published catalog and its signature, served by raw.githubusercontent.com.
+- `scripts/installer/sign-catalog.ps1` — maintainer signing helper.
+
+When `docs/ARCHITECTURE.md` and `docs/ADR/0007-installer-helper-remote-catalog.md` conflict on installer concerns, the ADR wins.
+
 ### AI Assistant
 
 Owns provider adapters, prompt construction, command proposal, approval flow, assistant tool registration, command execution handoff, and output capture.
@@ -294,7 +323,7 @@ SQLite contains local, non-secret data only. OS keychain contains secrets. Termi
 
 The primary UI is a dense desktop workspace:
 
-- left activity rail with Workspace, Dashboard, and Settings entries
+- left activity rail with Workspace, Dashboard, Installer Helper, and Settings entries
 - left connection tree with root Connections and optional nested folders (inside the Workspace Module)
 - main Module content area (each Module owns its layout: Workspace has tabs/panes, Dashboard has widget grid, etc.)
 - terminal split panes inside terminal tabs

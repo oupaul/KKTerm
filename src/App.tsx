@@ -26,6 +26,7 @@ import { ConnectionSidebar } from "./modules/workspace/connections/ConnectionSid
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
+import { InstallerPage } from "./modules/installer/InstallerPage";
 import { ariaHidden } from "./lib/aria";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./modules/settings/SettingsPage";
@@ -41,9 +42,12 @@ function App() {
   const { t } = useTranslation();
   const [activePage, setActivePage] = useState<ActivePage>("workspace");
   const [dashboardMounted, setDashboardMounted] = useState(false);
+  const [installerMounted, setInstallerMounted] = useState(false);
   const [activeSettingsSectionId, setActiveSettingsSectionId] =
     useState<SettingsSectionId>("general-settings");
-  const previousBasePageRef = useRef<"workspace" | "dashboard">("workspace");
+  const previousBasePageRef = useRef<"workspace" | "dashboard" | "installer">(
+    "workspace",
+  );
 
   function isOverlayPage(page: ActivePage): page is "settings" {
     return page === "settings";
@@ -53,8 +57,14 @@ function App() {
     if (page === "dashboard") {
       setDashboardMounted(true);
     }
+    if (page === "installer") {
+      setInstallerMounted(true);
+    }
     if (isOverlayPage(page) && !isOverlayPage(activePage)) {
-      previousBasePageRef.current = activePage as "workspace" | "dashboard";
+      previousBasePageRef.current = activePage as
+        | "workspace"
+        | "dashboard"
+        | "installer";
     }
     setActivePage(page);
   }
@@ -229,6 +239,9 @@ function App() {
           dashboardActive={activePage === "dashboard"}
           onAssistantContextChange={setDashboardAssistantContext}
         />
+      ) : null}
+      {installerMounted ? (
+        <InstallerPage key="installer-page" active={activePage === "installer"} />
       ) : null}
       <TutorialOverlay
         key="tutorial-overlay"

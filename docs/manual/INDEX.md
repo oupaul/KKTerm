@@ -35,6 +35,7 @@ When a doc says "right-click on X", the implementation is a Tauri native context
 | 15 | [15-settings.md](15-settings.md) | Every Settings section: General, Appearance, Dashboard, Credentials, AI, SSH, Terminal, URL, RDP, VNC, About | `settings` |
 | 16 | [16-localization.md](16-localization.md) | Switching language, supported locales | `settings`, `languages` |
 | 17 | [17-data-backup-secrets.md](17-data-backup-secrets.md) | SQLite store, OS keychain, settings import/export, backup ZIP | `settings`, `common` |
+| 18 | [18-installer.md](18-installer.md) | Installer Helper Module — Windows dev-tool catalog, install/update/uninstall, signed remote catalog, UAC and WSL behaviour | `installer` |
 
 ## How this manual is maintained
 
