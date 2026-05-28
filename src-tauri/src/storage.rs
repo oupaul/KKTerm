@@ -4141,7 +4141,7 @@ fn default_use_directx_screen_capture() -> bool {
 }
 
 fn default_show_installer_on_rail() -> bool {
-    true
+    false
 }
 
 fn default_app_launcher_settings() -> AppLauncherSettings {
@@ -6125,7 +6125,7 @@ mod tests {
         assert!(defaults.show_connected_connections_in_rail);
         assert!(!defaults.show_all_connections_in_tree);
         assert!(!defaults.hide_top_tab_buttons);
-        assert!(defaults.show_installer_on_rail);
+        assert!(!defaults.show_installer_on_rail);
         assert!(defaults.pinned_connection_ids.is_empty());
         assert!(defaults.allow_clipboard_read);
         assert!(!defaults.auto_start_with_windows);

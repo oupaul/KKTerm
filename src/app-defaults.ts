@@ -26,7 +26,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   showConnectedConnectionsInRail: true,
   showAllConnectionsInTree: false,
   hideTopTabButtons: false,
-  showInstallerOnRail: true,
+  showInstallerOnRail: false,
   pinnedConnectionIds: [],
   allowClipboardRead: true,
   autoStartWithWindows: false,
