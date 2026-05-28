@@ -701,15 +701,6 @@ impl WebviewSessionManager {
             return Err(format!("webview session '{session_id}' was not found"));
         }
         if visible {
-            for (other_session_id, other_session) in sessions.iter_mut() {
-                if other_session_id != &session_id {
-                    webview_debug_log(format!(
-                        "set_visibility hide_other requested_session={session_id} other_session={other_session_id}"
-                    ));
-                    hide_webview(&other_session.webview)?;
-                    other_session.visible = false;
-                }
-            }
             let session = sessions
                 .get_mut(&session_id)
                 .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;

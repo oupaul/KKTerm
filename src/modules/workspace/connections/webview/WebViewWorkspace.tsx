@@ -134,6 +134,10 @@ function createCredentialCaptureNonce() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function createWebviewSessionId() {
+  return `webview-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function webviewBoundsClipElement(node: HTMLElement) {
   return node.closest(".dashboard-connection-pane, .embedded-workspace-pane, .workspace-canvas");
 }
@@ -174,7 +178,7 @@ export function WebViewWorkspace({
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const sessionStartedRef = useRef(false);
   const sessionStartingRef = useRef(false);
-  const sessionIdRef = useRef<string>(`webview-${tab.id}`);
+  const sessionIdRef = useRef<string>(createWebviewSessionId());
   const lastBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const rafRef = useRef<number | null>(null);
   const visibilityRef = useRef({ isActive, suppressed: false });

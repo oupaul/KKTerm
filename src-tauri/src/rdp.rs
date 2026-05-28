@@ -592,8 +592,10 @@ mod platform {
                 );
                 let connection_state = get_property_i32(&session.dispatch, "Connected")?;
                 let connected = is_rdp_active_state(connection_state);
-                let display_synced = is_rdp_displayable_state(connection_state)
+                let display_sync_completed = is_rdp_displayable_state(connection_state)
                     && sync_remote_desktop_size(session, display_settings, true);
+                let display_synced =
+                    rdp_display_ready_after_sync(connection_state, display_sync_completed);
                 Ok(RdpDisplaySizeSync {
                     session_id: request.session_id,
                     connection_state,
@@ -1958,6 +1960,16 @@ mod platform {
         connection_state == RDP_CONNECTED_STATE
     }
 
+    fn rdp_display_ready_after_sync(
+        connection_state: i32,
+        _display_sync_completed: bool,
+    ) -> bool {
+        // Some servers reject dynamic display updates after interactive credential
+        // prompts; once ActiveX reports connected, reveal the control at its
+        // current size instead of leaving the pane stuck preparing.
+        is_rdp_displayable_state(connection_state)
+    }
+
     fn is_rdp_active_state(connection_state: i32) -> bool {
         connection_state == RDP_CONNECTED_STATE || connection_state == RDP_ESTABLISHING_STATE
     }
@@ -2299,6 +2311,14 @@ mod platform {
             assert!(!is_rdp_displayable_state(0));
             assert!(is_rdp_displayable_state(1));
             assert!(!is_rdp_displayable_state(2));
+        }
+
+        #[test]
+        fn treats_connected_rdp_as_display_ready_when_dynamic_sync_fails() {
+            assert!(rdp_display_ready_after_sync(1, true));
+            assert!(rdp_display_ready_after_sync(1, false));
+            assert!(!rdp_display_ready_after_sync(2, true));
+            assert!(!rdp_display_ready_after_sync(0, true));
         }
 
         #[test]

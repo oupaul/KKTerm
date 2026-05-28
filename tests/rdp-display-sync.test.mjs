@@ -20,3 +20,19 @@ test("RDP dynamic display sync does not fall back to ActiveX Reconnect", async (
     "dynamic display sync must retry UpdateSessionDisplaySettings instead of reconnecting the ActiveX session",
   );
 });
+
+test("remote desktop runtime session ids stay within backend limits", async () => {
+  const remoteDesktopSource = await readFile(
+    new URL("../src/modules/workspace/connections/remote-desktop/RemoteDesktopWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(remoteDesktopSource, /function createRemoteDesktopSessionId/);
+  assert.match(remoteDesktopSource, /createRemoteDesktopSessionId\("rdp"\)/);
+  assert.match(remoteDesktopSource, /createRemoteDesktopSessionId\("vnc"\)/);
+  assert.doesNotMatch(
+    remoteDesktopSource,
+    /`(?:rdp|vnc)-\$\{tab\.id\}/,
+    "backend session ids should not include variable-length tab ids",
+  );
+});

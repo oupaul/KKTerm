@@ -68,6 +68,10 @@ type VncSessionEvent =
 const RDP_ESTABLISHING_STATE = 2;
 const RDP_PRE_CAPTURE_INTERVAL_MS = 800;
 
+function createRemoteDesktopSessionId(kind: "rdp" | "vnc") {
+  return `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export function RemoteDesktopWorkspace({
   isActive,
   tab,
@@ -701,7 +705,7 @@ export function RemoteDesktopWorkspace({
       if (disposed || !bounds) {
         return;
       }
-      sessionId = `rdp-${tab.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      sessionId = createRemoteDesktopSessionId("rdp");
       sessionIdRef.current = sessionId;
       sessionStartingRef.current = true;
       displayReadyRef.current = false;
@@ -792,7 +796,7 @@ export function RemoteDesktopWorkspace({
     }
     let disposed = false;
     let startTimer = 0;
-    const sessionId = `vnc-${tab.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const sessionId = createRemoteDesktopSessionId("vnc");
     sessionIdRef.current = sessionId;
     sessionStartingRef.current = true;
     setRdpStatus((current) => (current === t("remoteDesktop.reconnecting") ? current : t("remoteDesktop.connecting")));
