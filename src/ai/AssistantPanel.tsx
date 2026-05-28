@@ -19,7 +19,6 @@ import {
   Hand,
   KeyRound,
   LoaderCircle,
-  PanelRight,
   Plus,
   RefreshCw,
   ScrollText,
@@ -818,7 +817,6 @@ export function AssistantPanel({
   onOpenSettings,
   onOpenWorkspace,
   onTutorialRequest,
-  onToggleCollapsed,
   pageContext,
 }: {
   collapsed: boolean;
@@ -828,7 +826,6 @@ export function AssistantPanel({
   onTutorialRequest: (
     request: TutorialHighlightRequest,
   ) => Promise<{ ok: boolean; error?: string }>;
-  onToggleCollapsed: () => void;
   pageContext?: AssistantPageContext;
 }) {
   const { t } = useTranslation();
@@ -2611,15 +2608,6 @@ export function AssistantPanel({
           type="button"
         >
           <Plus size={16} />
-        </button>
-        <button
-          aria-label={t("ai.collapsePanel")}
-          className="assistant-toolbar-button"
-          onClick={onToggleCollapsed}
-          title={t("ai.collapsePanel")}
-          type="button"
-        >
-          <PanelRight size={17} />
         </button>
       </div>
 

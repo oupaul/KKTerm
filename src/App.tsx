@@ -159,14 +159,17 @@ function App() {
     return { ok: true };
   }
 
-  const useCustomTitleBar = appearanceSettings.useCustomTitleBar;
-
   return (
     <div
-      className={`app-root ${useCustomTitleBar ? "" : "app-root--no-titlebar"}`}
+      className="app-root"
       data-color-scheme={appearanceSettings.colorScheme}
     >
-      {useCustomTitleBar ? <TitleBar /> : null}
+      <TitleBar
+        aiPanelCollapsed={aiPanelLayout.collapsed}
+        connectionPanelCollapsed={connectionPanelLayout.collapsed}
+        onToggleAiPanel={toggleAiPanel}
+        onToggleConnectionPanel={toggleConnectionPanel}
+      />
       <div
         ref={appShellRef}
         className={`app-shell ${panelAnimating ? "panel-animating" : ""} ${
@@ -184,9 +187,7 @@ function App() {
       />
       <div key="workspace-page" className="workspace-page" {...ariaHidden(activePage !== "workspace")}>
         <ConnectionSidebar
-          collapsed={connectionPanelLayout.collapsed}
           onExternalOpenConnection={() => navigateToPage("workspace")}
-          onToggleCollapsed={toggleConnectionPanel}
         />
         {connectionPanelLayout.collapsed ? (
           <div className="connection-collapsed-separator" aria-hidden="true" />
@@ -220,7 +221,6 @@ function App() {
         onOpenSettings={() => navigateToPage("settings")}
         onOpenWorkspace={() => navigateToPage("workspace")}
         onTutorialRequest={handleTutorialRequest}
-        onToggleCollapsed={toggleAiPanel}
         pageContext={assistantPageContext()}
       />
       {activePage === "settings" ? (

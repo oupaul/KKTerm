@@ -8,11 +8,6 @@
   background: var(--app-bg);
 }
 
-.app-root.app-root--no-titlebar {
-  --app-titlebar-height: 0px;
-  grid-template-rows: minmax(0, 1fr);
-}
-
 .app-titlebar {
   box-sizing: border-box;
   position: relative;
@@ -20,7 +15,7 @@
   align-items: stretch;
   justify-content: space-between;
   height: var(--app-titlebar-height);
-  padding-right: 138px;
+  padding-right: 202px;
   background: var(--nav-toolbar-bg);
   color: var(--nav-toolbar-text);
   border-bottom: 1px solid var(--nav-toolbar-tooltip-border);
@@ -91,6 +86,16 @@
 
 .app-titlebar-button:hover {
   background: var(--nav-toolbar-hover-bg);
+}
+
+.app-titlebar-panel-button {
+  flex-basis: 32px;
+  width: 32px;
+  opacity: 0.58;
+}
+
+.app-titlebar-panel-button.active {
+  opacity: 0.9;
 }
 
 .app-titlebar-close:hover {

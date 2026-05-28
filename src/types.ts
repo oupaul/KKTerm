@@ -327,7 +327,6 @@ export interface AppearanceSettings {
   appFontFamily: string;
   colorScheme: ColorScheme;
   customFontPath?: string;
-  useCustomTitleBar: boolean;
 }
 
 export interface CustomFont {

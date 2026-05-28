@@ -1,3 +1,4 @@
+import { PanelLeft, PanelRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -101,7 +102,17 @@ function CloseIcon() {
   );
 }
 
-export function TitleBar() {
+export function TitleBar({
+  aiPanelCollapsed,
+  connectionPanelCollapsed,
+  onToggleAiPanel,
+  onToggleConnectionPanel,
+}: {
+  aiPanelCollapsed: boolean;
+  connectionPanelCollapsed: boolean;
+  onToggleAiPanel: () => void;
+  onToggleConnectionPanel: () => void;
+}) {
   const { t } = useTranslation();
   const [maximized, setMaximized] = useState(false);
   const [version, setVersion] = useState<string>("");
@@ -147,6 +158,30 @@ export function TitleBar() {
         </span>
       </div>
       <div className="app-titlebar-controls">
+        <button
+          type="button"
+          className={`app-titlebar-button app-titlebar-panel-button ${
+            connectionPanelCollapsed ? "" : "active"
+          }`}
+          onClick={onToggleConnectionPanel}
+          aria-label={t("app.connections")}
+          aria-pressed={!connectionPanelCollapsed}
+          title={t("app.connections")}
+        >
+          <PanelLeft size={15} strokeWidth={1.8} />
+        </button>
+        <button
+          type="button"
+          className={`app-titlebar-button app-titlebar-panel-button ${
+            aiPanelCollapsed ? "" : "active"
+          }`}
+          onClick={onToggleAiPanel}
+          aria-label={t("app.aiAssistant")}
+          aria-pressed={!aiPanelCollapsed}
+          title={t("app.aiAssistant")}
+        >
+          <PanelRight size={15} strokeWidth={1.8} />
+        </button>
         <button
           type="button"
           className="app-titlebar-button"

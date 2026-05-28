@@ -1,19 +1,13 @@
-//! Title-bar mode switching for the main window. When the user opts into the
-//! custom React-painted title bar, system decorations are removed and Win11
-//! rounded corners are reinstated via DwmSetWindowAttribute. When opting out,
-//! decorations are restored so the OS provides its native frame.
+//! Title-bar setup for the main window. KKTerm always uses the custom
+//! React-painted title bar, so system decorations are removed and Win11 rounded
+//! corners are reinstated via DwmSetWindowAttribute.
 
-pub fn apply_title_bar_mode<R: tauri::Runtime>(
-    window: &tauri::WebviewWindow<R>,
-    use_custom_title_bar: bool,
-) {
-    if let Err(error) = window.set_decorations(!use_custom_title_bar) {
+pub fn apply_title_bar_mode<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    if let Err(error) = window.set_decorations(false) {
         eprintln!("title-bar mode: set_decorations failed: {error}");
     }
 
-    if use_custom_title_bar {
-        apply_main_window_backdrop(window);
-    }
+    apply_main_window_backdrop(window);
 }
 
 #[cfg(target_os = "windows")]

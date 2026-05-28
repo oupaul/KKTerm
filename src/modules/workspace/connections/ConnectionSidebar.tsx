@@ -159,11 +159,8 @@ function isTerminalWorkspacePane(pane: WorkspacePane): pane is WorkspacePane & {
 
 export function ConnectionSidebar({
   onExternalOpenConnection,
-  onToggleCollapsed,
 }: {
-  collapsed: boolean;
   onExternalOpenConnection?: () => void;
-  onToggleCollapsed: () => void;
 }) {
   const { i18n, t } = useTranslation();
   const query = useWorkspaceStore((state) => state.query);
@@ -1926,15 +1923,6 @@ export function ConnectionSidebar({
               />
             ) : null}
           </div>
-          <button
-            className="icon-button"
-            aria-label={t("connections.collapseColumn")}
-            title={t("connections.collapseColumn")}
-            onClick={onToggleCollapsed}
-            type="button"
-          >
-            <PanelRight size={17} />
-          </button>
         </div>
       </div>
 

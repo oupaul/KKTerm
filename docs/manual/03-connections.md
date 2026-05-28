@@ -35,7 +35,7 @@ Header row (top of the panel):
 - Collapse / Expand all: `connections.collapseAll`, `connections.expandAll`
 - Show All: `connections.showAll`; flattens the Connection Tree across folders, shows the button in its pressed state while enabled, and persists the preference in the Settings database across app relaunches.
 - Search box: placeholder `connections.searchPlaceholder`
-- Column collapse: `connections.collapseColumn`
+- Column toggle: custom title-bar `app.connections` icon or Workspace icon on the Activity Rail
 
 Tree accessible label: `connections.connectionTree`. Expand/collapse chevrons use `connections.expand` / `connections.collapse`.
 
@@ -76,6 +76,8 @@ Both are app-owned DOM dialogs (not browser-native `prompt`).
 - Connect button (`connections.connect`), Cancel (`connections.cancel`)
 - Permission tier toggle: `connections.normal` / `connections.admin`
 - Recently used Connections list, empty state `connections.noRecent`
+
+Opening a saved Connection or Quick Connect starts the live Session asynchronously. If a remote host is unreachable, host-key verification or startup can fail in the target Tab, but the Activity Rail, Connection Tree, Settings, and other open Tabs should remain usable while the attempt is pending.
 
 For local Command Prompt and PowerShell Quick Connect entries, `connections.admin`
 depends on how KKTerm itself is running. If KKTerm is already elevated, the

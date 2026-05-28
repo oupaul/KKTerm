@@ -2,8 +2,8 @@
 
 ## AI grep hints
 
-- Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `app.dontSleepStatusEnabled`, `workspace.workspaceSurface`, `workspace.hostUsage`
-- Topics: Activity Rail, panel resize, pinned Connections on the rail, Connections panel collapse, Child Connection Tabs, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
+- Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.connections`, `app.aiAssistant`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `app.dontSleepStatusEnabled`, `workspace.workspaceSurface`, `workspace.hostUsage`
+- Topics: Activity Rail, custom title-bar panel toggles, panel resize, pinned Connections on the rail, Connections panel collapse, Child Connection Tabs, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
 - Synonyms: "left bar", "sidebar", "right panel", "AI sidebar", "make panel wider", "hide the AI panel", "bottom bar", "coffee icon", "don't sleep indicator", "connection tree tabs", "child tabs"
 
 ## Activity Rail (48 px, left edge)
@@ -28,7 +28,7 @@ Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so i
 
 Resizable. Collapsed/expanded state persists across launches. See [03-connections.md](03-connections.md) for the tree itself. When `settings.hideTopTabButtons` is enabled, this panel also becomes the primary Tab navigator by showing Child Connection Tabs under parent Connections.
 
-- Collapse: `connections.collapseColumn`
+- Toggle: custom title-bar `app.connections` icon or Workspace icon on the Activity Rail
 - Resize handle: `app.resizeConnections`
 
 Tutorial target: `app.connectionsResize`.
@@ -46,7 +46,7 @@ Accessibility label: `workspace.workspaceSurface`. Per-Connection-kind labels us
 Resizable, collapsible. State is app-wide — the same width and collapsed state apply across Workspace, Dashboard, Settings, and all Tabs.
 
 - Title: `ai.title`
-- Collapse: `ai.collapsePanel`
+- Toggle: custom title-bar `app.aiAssistant` icon
 - Resize handle: `app.resizeAiAssistant`
 
 Tutorial target: `app.aiAssistantResize`.
@@ -70,3 +70,5 @@ Tutorial targets: `workspace.statusBar`, `workspace.hostUsage`.
 ## Workspace chrome resize behaviour
 
 Both side panels can be dragged to any width within their minimum/maximum. The drag divider shows a thin blue full-height indicator after the pointer rests on it briefly, using resize handles `app.resizeConnections` and `app.resizeAiAssistant`. Widths persist immediately to settings. There is no "reset layout" affordance inside the chrome itself; resetting layout is a Settings action (`settings.resetLayout`, see [15-settings.md](15-settings.md) §Appearance).
+
+The custom title bar is always enabled. Two panel-toggle icons appear immediately before the window minimize/maximize/close controls. The left-panel icon toggles the Connections panel (`app.connections`), and the right-panel icon toggles the AI Assistant panel (`app.aiAssistant`).

@@ -1,15 +1,16 @@
 use russh::{
-    ChannelMsg, Disconnect, client,
+    client,
     keys::{
-        PrivateKeyWithHashAlg,
-        agent::{AgentIdentity, client::AgentClient},
-        load_secret_key,
+        agent::{client::AgentClient, AgentIdentity},
+        load_secret_key, PrivateKeyWithHashAlg,
     },
+    ChannelMsg, Disconnect,
 };
 use serde::{Deserialize, Serialize};
 use std::{
+    future::Future,
     path::PathBuf,
-    sync::{Arc, mpsc as std_mpsc},
+    sync::{mpsc as std_mpsc, Arc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
@@ -19,6 +20,7 @@ use tokio::sync::mpsc;
 const SSH_TMUX_RESUME_MAX_ATTEMPTS: usize = 2;
 const SSH_TMUX_RESUME_TIMEOUT: Duration = Duration::from_secs(10);
 const SSH_TMUX_RESUME_DELAY: Duration = Duration::from_millis(750);
+const SSH_STARTUP_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -311,27 +313,30 @@ pub fn inspect_host_key(
 
     let key = runtime.block_on(async {
         let config = Arc::new(client::Config {
-            inactivity_timeout: Some(Duration::from_secs(15)),
+            inactivity_timeout: Some(SSH_STARTUP_TIMEOUT),
             ..Default::default()
         });
         let capture = Arc::clone(&server_public_key);
-        let session = client::connect(
-            config,
-            (host.as_str(), port),
-            InspectingClient {
-                server_public_key: capture,
-            },
-        )
+        with_ssh_startup_timeout("inspecting SSH host key", async {
+            let session = client::connect(
+                config,
+                (host.as_str(), port),
+                InspectingClient {
+                    server_public_key: capture,
+                },
+            )
+            .await
+            .map_err(|error| format!("failed to inspect SSH host key: {error}"))?;
+            let _ = session
+                .disconnect(Disconnect::ByApplication, "host key inspected", "en")
+                .await;
+            server_public_key
+                .lock()
+                .map_err(|_| "SSH host-key capture lock is poisoned".to_string())?
+                .clone()
+                .ok_or_else(|| "SSH server did not present a host key".to_string())
+        })
         .await
-        .map_err(|error| format!("failed to inspect SSH host key: {error}"))?;
-        let _ = session
-            .disconnect(Disconnect::ByApplication, "host key inspected", "en")
-            .await;
-        server_public_key
-            .lock()
-            .map_err(|_| "SSH host-key capture lock is poisoned".to_string())?
-            .clone()
-            .ok_or_else(|| "SSH server did not present a host key".to_string())
     })?;
 
     let status = host_key_status(&host, port, &key, &known_hosts_path)?;
@@ -513,7 +518,7 @@ async fn run_native_terminal(
     loop {
         let is_initial_start = ready_tx.is_some();
         let timeout = if is_initial_start {
-            Duration::from_secs(15)
+            SSH_STARTUP_TIMEOUT
         } else {
             SSH_TMUX_RESUME_TIMEOUT
         };
@@ -835,24 +840,27 @@ pub(crate) async fn connect_verified_client(
     let auth = normalize_native_ssh_auth(request.auth)?;
     let config = Arc::new(native_ssh_client_config());
     let host_key_rejection = Arc::new(std::sync::Mutex::new(None));
-    let mut session = client::connect(
-        config,
-        (host, request.port),
-        VerifyingClient {
-            host: host.to_string(),
-            port: request.port,
-            known_hosts_path: request.known_hosts_path,
-            rejection: Arc::clone(&host_key_rejection),
-        },
-    )
-    .await
-    .map_err(|error| {
-        remembered_rejection(&host_key_rejection)
-            .unwrap_or_else(|| format!("failed to connect to SSH server: {error}"))
-    })?;
+    with_ssh_startup_timeout("connecting to SSH server", async {
+        let mut session = client::connect(
+            config,
+            (host, request.port),
+            VerifyingClient {
+                host: host.to_string(),
+                port: request.port,
+                known_hosts_path: request.known_hosts_path,
+                rejection: Arc::clone(&host_key_rejection),
+            },
+        )
+        .await
+        .map_err(|error| {
+            remembered_rejection(&host_key_rejection)
+                .unwrap_or_else(|| format!("failed to connect to SSH server: {error}"))
+        })?;
 
-    authenticate_native_ssh(&mut session, user, &auth).await?;
-    Ok(session)
+        authenticate_native_ssh(&mut session, user, &auth).await?;
+        Ok(session)
+    })
+    .await
 }
 
 fn native_ssh_client_config() -> client::Config {
@@ -860,6 +868,26 @@ fn native_ssh_client_config() -> client::Config {
         inactivity_timeout: None,
         ..Default::default()
     }
+}
+
+async fn with_ssh_startup_timeout<T, F>(operation: &'static str, future: F) -> Result<T, String>
+where
+    F: Future<Output = Result<T, String>>,
+{
+    with_ssh_startup_timeout_duration(operation, SSH_STARTUP_TIMEOUT, future).await
+}
+
+async fn with_ssh_startup_timeout_duration<T, F>(
+    operation: &'static str,
+    timeout: Duration,
+    future: F,
+) -> Result<T, String>
+where
+    F: Future<Output = Result<T, String>>,
+{
+    tokio::time::timeout(timeout, future)
+        .await
+        .map_err(|_| format!("timed out while {operation}"))?
 }
 
 pub(crate) async fn authenticate_native_ssh(
@@ -1094,6 +1122,24 @@ mod tests {
         let config = native_ssh_client_config();
 
         assert_eq!(config.inactivity_timeout, None);
+    }
+
+    #[test]
+    fn ssh_startup_timeout_bounds_stalled_preflight_work() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime is created");
+
+        let error = runtime
+            .block_on(with_ssh_startup_timeout_duration(
+                "testing stalled SSH startup",
+                Duration::from_millis(1),
+                std::future::pending::<Result<(), String>>(),
+            ))
+            .expect_err("stalled preflight times out");
+
+        assert_eq!(error, "timed out while testing stalled SSH startup");
     }
 
     #[test]

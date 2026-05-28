@@ -737,11 +737,7 @@ fn import_settings_database(
     }
     webviews.set_clipboard_read_allowed(general_settings.allow_clipboard_read());
     if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
-        let appearance = storage.appearance_settings()?;
-        window_effects::apply_title_bar_mode(
-            &main_webview,
-            appearance.use_custom_title_bar(),
-        );
+        window_effects::apply_title_bar_mode(&main_webview);
     }
     Ok(snapshot)
 }
@@ -792,7 +788,7 @@ fn update_appearance_settings(
 ) -> Result<storage::AppearanceSettings, String> {
     let saved = storage.update_appearance_settings(request)?;
     if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
-        window_effects::apply_title_bar_mode(&main_webview, saved.use_custom_title_bar());
+        window_effects::apply_title_bar_mode(&main_webview);
     }
     Ok(saved)
 }
@@ -1431,11 +1427,14 @@ fn scan_network_for_connections(
 }
 
 #[tauri::command]
-fn inspect_ssh_host_key(
+async fn inspect_ssh_host_key(
     app: tauri::AppHandle,
     request: ssh::InspectSshHostKeyRequest,
 ) -> Result<ssh::SshHostKeyPreview, String> {
-    ssh::inspect_host_key(ssh::app_known_hosts_path(&app)?, request)
+    run_blocking_command("SSH host-key inspection", move || {
+        ssh::inspect_host_key(ssh::app_known_hosts_path(&app)?, request)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -2423,11 +2422,7 @@ pub fn run() {
                     webview_sessions.clipboard_read_allowed_state(),
                 )
                 .map_err(setup_error)?;
-                let appearance = storage.appearance_settings().map_err(setup_error)?;
-                window_effects::apply_title_bar_mode(
-                    &main_webview,
-                    appearance.use_custom_title_bar(),
-                );
+                window_effects::apply_title_bar_mode(&main_webview);
             }
             if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
                 let title = format!("KKTerm v{}", env!("CARGO_PKG_VERSION"));

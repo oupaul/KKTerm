@@ -377,12 +377,6 @@ pub struct AppearanceSettings {
     use_custom_title_bar: bool,
 }
 
-impl AppearanceSettings {
-    pub fn use_custom_title_bar(&self) -> bool {
-        self.use_custom_title_bar
-    }
-}
-
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SshSettings {
@@ -4652,6 +4646,7 @@ fn validate_appearance_settings(
     settings.app_font_family = required_field("app font family", settings.app_font_family)?;
     settings.color_scheme = required_field("color scheme", settings.color_scheme)?;
     settings.custom_font_path = trim_optional(settings.custom_font_path);
+    settings.use_custom_title_bar = true;
     settings.color_scheme = match settings.color_scheme.to_lowercase().as_str() {
         "default" | "dark" | "light" | "mac" | "orange" | "purple" | "pink"
         | "green-kuai-kuai" | "blue-see" | "confetti" | "bubble-tea" => {
@@ -6576,7 +6571,7 @@ mod tests {
                 app_font_family: "  \"Custom UI Font\", \"Segoe UI\", sans-serif  ".to_string(),
                 color_scheme: "dark".to_string(),
                 custom_font_path: Some("  C:/KKTerm/fonts/custom.ttf  ".to_string()),
-                use_custom_title_bar: true,
+                use_custom_title_bar: false,
             })
             .expect("appearance settings update");
 
@@ -6588,6 +6583,7 @@ mod tests {
             updated.custom_font_path.as_deref(),
             Some("C:/KKTerm/fonts/custom.ttf")
         );
+        assert!(updated.use_custom_title_bar);
 
         drop(storage);
 

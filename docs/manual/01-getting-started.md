@@ -56,7 +56,7 @@ KKTerm registers a Windows tray icon with recent Connections plus two controls:
 
 ## Closing the window
 
-The title-bar close button is the standard close path. KKTerm uses its custom title bar by default, and the Settings toggle `settings.useCustomTitleBar` can restore the native Windows title bar. When "minimize to tray" is enabled in Settings, the close button hides the window to the tray instead of exiting; when disabled, it exits normally. There are no in-app close-confirmation dialogs.
+The title-bar close button is the standard close path. KKTerm always uses its custom title bar. When "minimize to tray" is enabled in Settings, the close button hides the window to the tray instead of exiting; when disabled, it exits normally. There are no in-app close-confirmation dialogs.
 
 ## "Don't Sleep" mode
 

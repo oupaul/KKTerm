@@ -20,6 +20,8 @@ export function buildReleaseNotesPrompt(context) {
     "- Prefer user-facing impact over implementation details.",
     "- Use light IT humor when it fits, such as small sysadmin, terminal, network, or release-engineering jokes.",
     "- Keep jokes brief and never let them replace factual release details.",
+    "- Write the English release notes first, then add a Traditional Chinese (Taiwan) version below them.",
+    "- Keep the Traditional Chinese (Taiwan) version factually equivalent to the English version, including the same light humor and tone.",
     "- Put purely internal build, tooling, test, or version changes under Internal.",
     "- Output Markdown only.",
     "",

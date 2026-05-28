@@ -25,13 +25,15 @@ test("custom titlebar inherits the same color scheme as the activity rail", asyn
   );
 });
 
-test("custom titlebar is the frontend default", async () => {
-  const appDefaultsSource = await readFile(
-    new URL("../src/app-defaults.ts", import.meta.url),
-    "utf8",
-  );
+test("custom titlebar is always rendered by the frontend shell", async () => {
+  const [appSource, appCssSource] = await Promise.all([
+    readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/app.css", import.meta.url), "utf8"),
+  ]);
 
-  assert.match(appDefaultsSource, /useCustomTitleBar:\s*true/);
+  assert.match(appSource, /<TitleBar\b/);
+  assert.doesNotMatch(appSource, /useCustomTitleBar/);
+  assert.doesNotMatch(appCssSource, /app-root--no-titlebar/);
 });
 
 test("main Tauri window starts without native decorations by default", async () => {

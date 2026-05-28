@@ -40,6 +40,9 @@ test("buildReleaseNotesPrompt feeds bounded release context and KKTerm terminolo
   assert.match(prompt, /GitHub generated notes/);
   assert.match(prompt, /Markdown only/);
   assert.match(prompt, /light IT humor/);
+  assert.match(prompt, /English release notes first/);
+  assert.match(prompt, /Traditional Chinese \(Taiwan\) version below/);
+  assert.match(prompt, /same light humor and tone/);
 });
 
 test("composeFallbackReleaseNotes creates a publishable markdown changelog without AI", () => {
