@@ -253,7 +253,13 @@ Declared permissions:
 
 External website links must leave the widget iframe. The host script intercepts absolute `http:` / `https:` anchor clicks and sends an `openExternalUrl` bridge message to the parent, where `ScriptWidgetHost.tsx` validates the URL and calls Tauri's opener plugin. Script widgets may also call `KK.openExternal(url)` directly. This avoids navigating third-party sites inside a sandboxed `srcdoc` iframe with an opaque origin, which can produce site errors such as unknown/null origin headers.
 
-The bridge exposes `KK.openExternal(url)`, `KK.getSettings()`, `KK.setSetting(key, value)`, `KK.setSettings(nextSettings)`, `KK.getViewport()`, `KK.onViewportResize(callback)`, `KK.getSecret(key)`, `KK.requestPermission(name)`, and `KK.postMessage(payload)` at the iframe globals. Future Tauri command access is added by extending this bridge with explicit handlers — not by widening the iframe surface.
+The bridge exposes `KK.openExternal(url)`, `KK.getSettings()`, `KK.setSetting(key, value)`, `KK.setSettings(nextSettings)`, `KK.getViewport()`, `KK.onViewportResize(callback)`, `KK.getSecret(key)`, `KK.requestPermission(name)`, `KK.postMessage(payload)`, `KK.readLocalFile(options?)`, `KK.saveFile(filename, bytes, filters?)`, and `KK.onFileDrop(target, callback, options?)` at the iframe globals. Future Tauri command access is added by extending this bridge with explicit handlers — not by widening the iframe surface.
+
+File I/O bridge methods:
+
+- `KK.readLocalFile({ filters? })` — opens a native file-picker dialog and resolves to `{ name, bytes: Uint8Array, path }`, or `null` if the user cancels. Rate-limited to one open dialog per second.
+- `KK.saveFile(filename, bytes, filters?)` — opens a native save dialog and writes `bytes` (Uint8Array or ArrayBuffer) to the chosen path. Resolves to the chosen path string or `null` on cancel. Rate-limited to one save dialog per second.
+- `KK.onFileDrop(target, callback, options?)` — registers HTML5 drag-and-drop listeners on `target` (a CSS selector string or DOM element inside the widget). When the user drops files or folders from Windows Explorer onto the target, `callback(items, event)` is called with an array of `{ kind: 'file'|'directory'|'unknown', name, path, bytes?, children? }` entries. Folders are walked recursively. Passes `options.hoverClass` (default `'is-drop-target'`) as the class toggled on the element during hover. Returns a cleanup function. Use this for widgets that accept file drag-and-drop from the OS.
 
 ### Script Widget Libraries
 
