@@ -1610,3 +1610,40 @@
   width: 0;
   height: 0;
 }
+
+.sftp-popup-dialog-backdrop {
+  padding: 24px;
+}
+
+.connection-dialog.sftp-popup-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, calc(100vw - 48px));
+  height: min(820px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.sftp-popup-dialog .connection-dialog-header {
+  flex: 0 0 auto;
+  padding: 16px 54px 12px 18px;
+}
+
+.sftp-popup-dialog .connection-dialog-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.sftp-popup-dialog-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 14px 14px;
+}
+
+.sftp-popup-dialog-body .sftp-workspace {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}

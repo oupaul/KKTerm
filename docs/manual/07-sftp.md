@@ -8,7 +8,9 @@
 
 ## Opening an SFTP browser
 
-SFTP is not a standalone Connection kind. Open an SFTP Pane from an SSH Pane's toolbar (`terminal.openSftp` / `terminal.sftp`) or from the SSH Connection's right-click menu in the Connection Tree.
+SFTP is not a standalone Connection kind. Open an SFTP browser popup from an SSH Pane's toolbar (`terminal.openSftp` / `terminal.sftp`) or open an SFTP Pane from the SSH Connection's right-click menu in the Connection Tree.
+
+The SSH Pane toolbar popup behaves the same whether the top Tab Strip is visible or hidden.
 
 Startup states:
 

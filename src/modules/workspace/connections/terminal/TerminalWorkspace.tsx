@@ -4,6 +4,7 @@ import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
+import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
@@ -86,11 +87,11 @@ export function TerminalWorkspace({
   const setQuickCommandBarVisible = useWorkspaceStore(
     (state) => state.setQuickCommandBarVisible,
   );
-  const openSftpBrowser = useWorkspaceStore((state) => state.openSftpBrowser);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setFocusedPane = useWorkspaceStore((state) => state.setFocusedPane);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
   const { t } = useTranslation();
   const defaultFontSize = defaultTerminalSettings.fontSize;
   const canSplit = allowPaneLayoutControls && tab.panes.some((pane) => pane.connection);
@@ -102,6 +103,36 @@ export function TerminalWorkspace({
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
   const canCloseSinglePane = tab.kind === "terminal" && generalSettings.hideTopTabButtons;
   const quickCommandBarVisible = Boolean(tab.quickCommandBarVisible) && !isSingleEmbeddedPane;
+  const sftpDialogTab = useMemo<WorkspaceTab | null>(() => {
+    if (!sftpDialogConnection) {
+      return null;
+    }
+
+    return {
+      id: `dialog-${tab.id}-${sftpDialogConnection.id}-sftp`,
+      title: `${sftpDialogConnection.name} SFTP`,
+      toolbarTitle: connectionToolbarTitle(sftpDialogConnection),
+      subtitle: `${sftpDialogConnection.user}@${sftpDialogConnection.host}`,
+      kind: "sftp",
+      panes: [],
+      connection: sftpDialogConnection,
+    };
+  }, [sftpDialogConnection, tab.id]);
+
+  useEffect(() => {
+    if (!sftpDialogConnection) {
+      return;
+    }
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSftpDialogConnection(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sftpDialogConnection]);
 
   function handleSplit(paneId: string, direction: "right" | "left" | "down" | "up") {
     setFocusedPane(tab.id, paneId);
@@ -188,7 +219,7 @@ export function TerminalWorkspace({
             onFocusPane={(paneId) => setFocusedPane(tab.id, paneId)}
             canSplit={canSplit}
             onFontChange={handleFontChange}
-            onOpenSftp={(connection) => openSftpBrowser(connection)}
+            onOpenSftp={(connection) => setSftpDialogConnection(connection)}
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
             showSftpButton={showSftpButton}
             onSplit={handleSplit}
@@ -198,6 +229,34 @@ export function TerminalWorkspace({
         ) : null}
       </div>
       {quickCommandBarVisible ? <QuickCommandBar tab={tab} /> : null}
+      {sftpDialogTab ? createPortal(
+        <div className="dialog-backdrop connection-dialog-backdrop sftp-popup-dialog-backdrop" role="presentation">
+          <section
+            aria-label={t("terminal.openSftp")}
+            aria-modal="true"
+            className="connection-dialog sftp-popup-dialog"
+            role="dialog"
+          >
+            <header className="connection-dialog-header compact">
+              <div>
+                <h2>{t("terminal.openSftp")}</h2>
+              </div>
+              <button
+                aria-label={t("common.close")}
+                className="connection-dialog-close"
+                onClick={() => setSftpDialogConnection(null)}
+                type="button"
+              >
+                <X size={15} />
+              </button>
+            </header>
+            <div className="sftp-popup-dialog-body">
+              <SftpWorkspace isActive={true} tab={sftpDialogTab} />
+            </div>
+          </section>
+        </div>,
+        document.body,
+      ) : null}
     </section>
   );
 }
