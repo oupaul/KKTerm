@@ -11,6 +11,7 @@ import {
   resolveInstallPlan,
 } from "./dag";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
+import { installRecipeAndWait } from "./progress";
 import { useInstallerStore } from "./state";
 import type { InstallOptions, Recipe } from "./types";
 
@@ -30,6 +31,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const [options, setOptions] = useState<InstallOptions>({});
   const [installConfirm, setInstallConfirm] = useState<null | {
     items: string[];
+    recipes: Recipe[];
     uacEstimate: number;
   }>(null);
   const [uninstallConfirm, setUninstallConfirm] = useState<null | {
@@ -67,24 +69,30 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     if (prereqActionable.length > 0 || plan.uacPromptEstimate > 0) {
       setInstallConfirm({
         items: prereqActionable.map((s) => s.recipe.name),
+        recipes: plan.actionable.map((s) => s.recipe),
         uacEstimate: plan.uacPromptEstimate,
       });
       return;
     }
-    void doInstall();
+    void doInstall(plan.actionable.map((s) => s.recipe));
   }
 
-  async function doInstall() {
+  async function doInstall(recipes: Recipe[]) {
     if (!isTauriRuntime()) return;
     setInstallConfirm(null);
-    beginInFlight(recipe.id, "install");
-    try {
-      await invokeCommand("installer_install_recipe", {
-        toolId: recipe.id,
-        options,
-      });
-    } catch {
-      // Backend will emit Failed event.
+    for (const queuedRecipe of recipes) {
+      beginInFlight(queuedRecipe.id, "install");
+      try {
+        const terminalEvent = await installRecipeAndWait(
+          queuedRecipe.id,
+          queuedRecipe.id === recipe.id ? options : {},
+        );
+        if (terminalEvent.kind !== "completed") {
+          break;
+        }
+      } catch {
+        break;
+      }
     }
   }
 
@@ -292,7 +300,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
               : undefined
           }
           confirmLabel={t("installer.confirm.installConfirm")}
-          onConfirm={() => void doInstall()}
+          onConfirm={() => void doInstall(installConfirm.recipes)}
           onCancel={() => setInstallConfirm(null)}
         />
       ) : null}

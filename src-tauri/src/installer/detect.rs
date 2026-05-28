@@ -56,26 +56,35 @@ pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
     // Bundles consult already-detected leaves.
     for bundle in bundles {
         if let Provider::Bundle { steps } = &bundle.provider {
-            let total = steps.len() as u32;
-            let installed_count = steps
-                .iter()
-                .filter(|step| out.get(step.as_str()).map(|s| s.installed).unwrap_or(false))
-                .count() as u32;
-            let state = if installed_count == 0 {
-                DetectedState::not_installed()
-            } else if installed_count == total {
-                DetectedState::installed(None)
-            } else {
-                DetectedState {
-                    installed: false,
-                    installed_version: None,
-                    partial_count: Some((installed_count, total)),
-                }
-            };
+            let state = bundle_detected_state(
+                steps
+                    .iter()
+                    .filter(|step| out.get(step.as_str()).map(|s| s.installed).unwrap_or(false))
+                    .count() as u32,
+                steps.len() as u32,
+            );
             out.insert(bundle.id.clone(), state);
         }
     }
     out
+}
+
+pub fn detect_one_in_catalog(recipe: &Recipe, catalog: &Catalog) -> DetectedState {
+    if let Provider::Bundle { steps } = &recipe.provider {
+        let recipes_by_id: HashMap<&str, &Recipe> =
+            catalog.recipes.iter().map(|r| (r.id.as_str(), r)).collect();
+        let installed_count = steps
+            .iter()
+            .filter(|step| {
+                recipes_by_id
+                    .get(step.as_str())
+                    .map(|r| detect_one(r).installed)
+                    .unwrap_or(false)
+            })
+            .count() as u32;
+        return bundle_detected_state(installed_count, steps.len() as u32);
+    }
+    detect_one(recipe)
 }
 
 pub fn detect_one(recipe: &Recipe) -> DetectedState {
@@ -85,6 +94,20 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
         Provider::GithubRelease { .. } => detect_github_release_marker(&recipe.id),
         Provider::WindowsFeature { feature, .. } => detect_windows_feature(feature),
         Provider::Bundle { .. } => DetectedState::not_installed(),
+    }
+}
+
+fn bundle_detected_state(installed_count: u32, total: u32) -> DetectedState {
+    if installed_count == 0 {
+        DetectedState::not_installed()
+    } else if installed_count == total {
+        DetectedState::installed(None)
+    } else {
+        DetectedState {
+            installed: false,
+            installed_version: None,
+            partial_count: Some((installed_count, total)),
+        }
     }
 }
 
@@ -232,4 +255,25 @@ pub struct GithubReleaseMarker {
     pub version: Option<String>,
     pub installed_at: i64,
     pub layout: GithubReleaseLayout,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bundle_state_reports_partial_counts() {
+        let state = bundle_detected_state(1, 3);
+
+        assert!(!state.installed);
+        assert_eq!(state.partial_count, Some((1, 3)));
+    }
+
+    #[test]
+    fn bundle_state_reports_installed_when_all_steps_are_installed() {
+        let state = bundle_detected_state(2, 2);
+
+        assert!(state.installed);
+        assert_eq!(state.partial_count, None);
+    }
 }

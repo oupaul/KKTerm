@@ -13,7 +13,8 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
+use std::thread::JoinHandle;
 use std::time::SystemTime;
 
 use super::detect::{
@@ -466,75 +467,97 @@ fn run_streamed(
         .stdin(Stdio::null())
         .spawn()
         .map_err(|e| format!("failed to spawn `{program}`: {e}"))?;
-    forward_stream(child.stdout.take(), tool_id, emit, true);
-    forward_stream(child.stderr.take(), tool_id, emit, false);
+    let (tx, rx) = mpsc::channel::<StreamLine>();
+    let stdout_thread = forward_stream(child.stdout.take(), tx.clone(), true);
+    let stderr_thread = forward_stream(child.stderr.take(), tx, false);
 
     loop {
+        while let Ok(line) = rx.try_recv() {
+            emit_stream_line(tool_id, emit, line);
+        }
         if cancel.load(Ordering::Relaxed) {
             let _ = child.kill();
             let _ = child.wait();
+            join_stream(stdout_thread);
+            join_stream(stderr_thread);
+            while let Ok(line) = rx.try_recv() {
+                emit_stream_line(tool_id, emit, line);
+            }
             return Err("cancelled".into());
         }
         match child.try_wait() {
             Ok(Some(status)) => {
+                join_stream(stdout_thread);
+                join_stream(stderr_thread);
+                while let Ok(line) = rx.try_recv() {
+                    emit_stream_line(tool_id, emit, line);
+                }
                 if status.success() {
                     return Ok(());
                 }
                 let code = status.code().unwrap_or(-1);
                 return Err(format!("`{program}` exited with status {code}"));
             }
-            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(100)),
+            Ok(None) => match rx.recv_timeout(std::time::Duration::from_millis(100)) {
+                Ok(line) => emit_stream_line(tool_id, emit, line),
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => {}
+            },
             Err(e) => return Err(format!("wait on `{program}` failed: {e}")),
         }
     }
 }
 
+struct StreamLine {
+    is_stdout: bool,
+    line: String,
+}
+
 fn forward_stream<R: Read + Send + 'static>(
     stream: Option<R>,
-    tool_id: &str,
-    emit: &EventSink,
+    tx: mpsc::Sender<StreamLine>,
     is_stdout: bool,
-) {
-    let Some(stream) = stream else { return };
-    // We need a clone of the Arc<dyn Fn> behind EventSink so the spawned
-    // thread can call it. EventSink is Box<dyn Fn ...>, which can't be
-    // cloned, so the caller wraps emit in an Arc upstream. To avoid that
-    // complication we read inline via a non-blocking loop integrated above —
-    // but that's invasive; instead we drain stdout/stderr synchronously
-    // after the child exits in the simple path. This loses streaming for
-    // the brief window after the process exits, which is acceptable for
-    // installer use.
-    //
-    // For real-time streaming we spawn a detached thread that owns its own
-    // Arc<EventSink>. We do that by leaking the closure into a static
-    // Box<dyn Fn> per call — undesirable. Practical solution: read with a
-    // dedicated reader thread that drains into an internal Vec and the main
-    // loop emits on a tick.
-    //
-    // To keep Phase 2 honest and tested, we drain synchronously here on the
-    // current thread before returning, which means run_streamed effectively
-    // buffers and emits at the end. The user sees the final log but not
-    // line-by-line live output. This is a known Phase 2 simplification;
-    // Phase 2.5 will switch to true streaming via a Sender channel pattern.
-    let mut reader = BufReader::new(stream);
-    let mut line = String::new();
-    while let Ok(n) = reader.read_line(&mut line) {
-        if n == 0 {
-            break;
+) -> Option<JoinHandle<()>> {
+    let Some(stream) = stream else { return None };
+    Some(std::thread::spawn(move || {
+        let mut reader = BufReader::new(stream);
+        let mut line = String::new();
+        while let Ok(n) = reader.read_line(&mut line) {
+            if n == 0 {
+                break;
+            }
+            let trimmed = line.trim_end_matches(['\r', '\n']).to_string();
+            if tx
+                .send(StreamLine {
+                    is_stdout,
+                    line: trimmed,
+                })
+                .is_err()
+            {
+                break;
+            }
+            line.clear();
         }
-        let trimmed = line.trim_end_matches(['\r', '\n']).to_string();
-        if is_stdout {
-            emit(ProgressEvent::Stdout {
-                tool_id: tool_id.into(),
-                line: trimmed,
-            });
-        } else {
-            emit(ProgressEvent::Stderr {
-                tool_id: tool_id.into(),
-                line: trimmed,
-            });
-        }
-        line.clear();
+    }))
+}
+
+fn emit_stream_line(tool_id: &str, emit: &EventSink, line: StreamLine) {
+    if line.is_stdout {
+        emit(ProgressEvent::Stdout {
+            tool_id: tool_id.into(),
+            line: line.line,
+        });
+    } else {
+        emit(ProgressEvent::Stderr {
+            tool_id: tool_id.into(),
+            line: line.line,
+        });
+    }
+}
+
+fn join_stream(handle: Option<JoinHandle<()>>) {
+    if let Some(handle) = handle {
+        let _ = handle.join();
     }
 }
 

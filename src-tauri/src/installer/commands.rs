@@ -14,7 +14,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::catalog::{load_catalog, CatalogSource};
-use super::detect::{detect_all, detect_one, DetectedState};
+use super::detect::{detect_all, detect_one, detect_one_in_catalog, DetectedState};
 use super::events::{ProgressEvent, PROGRESS_EVENT};
 use super::install::{install_recipe, EventSink};
 use super::latest_version::latest_version;
@@ -241,7 +241,7 @@ pub fn installer_redetect(
         .ok_or("catalog not loaded yet")?;
     let recipe = find_recipe(&catalog, &tool_id)
         .ok_or_else(|| format!("unknown tool id `{tool_id}`"))?;
-    Ok(detect_one(recipe))
+    Ok(detect_one_in_catalog(recipe, &catalog))
 }
 
 // ---- helpers -----------------------------------------------------------

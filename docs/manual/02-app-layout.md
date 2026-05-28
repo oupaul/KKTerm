@@ -10,12 +10,12 @@
 
 Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
 
-1. **Built-in Modules** — Workspace and Dashboard.
+1. **Built-in Modules** — Workspace, Dashboard, and Installer Helper.
 2. **Connection Rail** (`app.connectionRail`) — a divider group `app.connectedConnectionsRail` that shows:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
    Each icon's tooltip uses `app.openPinnedConnection` or `app.openConnectedConnection` with the Connection name interpolated as `{{name}}`.
-3. **Installer Helper** (`app.activityRailInstaller`) — the Windows dev-tool installer Module. See [18-installer.md](18-installer.md).
+3. **Don't Sleep** (`app.activityRailDontSleep`) — the keep-awake control.
 4. **Settings** — anchored to the bottom of the rail.
 
 The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). Native `title` tooltips are forbidden here.

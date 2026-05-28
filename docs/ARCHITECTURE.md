@@ -233,7 +233,7 @@ When `docs/ARCHITECTURE.md` and `docs/DASHBOARD.md` conflict on Dashboard-intern
 
 ### Installer Helper
 
-The Installer Helper Module is a built-in Activity Rail destination (rail icon `Package`, anchored above Settings) that manages a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. Users see Installed / Updates available / Available sections; per-row actions are Install / Update / Uninstall, plus a Pin checkbox that excludes the tool from "Update all".
+The Installer Helper Module is a built-in Activity Rail destination (rail icon `Package`, grouped with the other built-in Module buttons near the top of the rail) that manages a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. Users see Installed / Updates available / Available sections; per-row actions are Install / Update / Uninstall, plus a Pin checkbox that excludes the tool from "Update all".
 
 The catalog itself is a **remote, signed JSON document** fetched from `https://raw.githubusercontent.com/ryantsai/KKTerm/main/installer/catalog.v1.json` and verified against an Ed25519 public key compiled into the binary as `INSTALLER_CATALOG_PUBKEY` in `src-tauri/src/installer/trust.rs`. New tools can be added to the catalog without releasing a new KKTerm build. The full trust model — signing, schema versioning, cache fallback, structured-data-only recipes — lives in `docs/ADR/0007-installer-helper-remote-catalog.md`.
 

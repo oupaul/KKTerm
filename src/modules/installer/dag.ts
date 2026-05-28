@@ -64,11 +64,17 @@ export function resolveInstallPlan(
   }));
 
   const actionable = steps.filter(
-    (step) => !detected[step.recipe.id]?.installed,
+    (step) =>
+      step.recipe.id === targetRecipeId || !detected[step.recipe.id]?.installed,
   );
 
   const uacPromptEstimate = actionable.reduce(
-    (sum, step) => sum + estimateUacPromptsFor(step.recipe, options),
+    (sum, step) =>
+      sum +
+      estimateUacPromptsFor(
+        step.recipe,
+        step.recipe.id === targetRecipeId ? options : undefined,
+      ),
     0,
   );
 

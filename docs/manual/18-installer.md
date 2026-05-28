@@ -8,7 +8,7 @@
 
 ## What it is
 
-The **Installer Helper Module** is a built-in Activity Rail destination that installs, updates, and uninstalls a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. It lives above Settings on the rail, with its own icon (`Package`).
+The **Installer Helper Module** is a built-in Activity Rail destination that installs, updates, and uninstalls a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. It is grouped with the other built-in Module buttons near the top of the rail, with its own icon (`Package`).
 
 The catalog is **remote** and **signed**: the JSON list of supported tools is fetched from a fixed URL on GitHub, verified against a signing key compiled into the KKTerm binary, and cached locally. New tools can be added to the catalog without releasing a new KKTerm build. See `docs/ADR/0007-installer-helper-remote-catalog.md` for the trust model.
 

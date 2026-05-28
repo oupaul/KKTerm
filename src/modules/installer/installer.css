@@ -36,15 +36,15 @@
 
 .installer-page__subtitle {
   margin: 0;
-  color: var(--color-text-muted, #8a8a8a);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
 .installer-page__warning {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.75rem;
-  background: var(--color-warning-bg, rgba(255, 196, 0, 0.1));
-  border-left: 3px solid var(--color-warning, #ffc400);
+  background: var(--amber-soft);
+  border-left: 3px solid var(--amber);
   border-radius: 4px;
   font-size: 0.875rem;
 }
@@ -57,15 +57,15 @@
 .installer-button {
   padding: 0.4rem 0.85rem;
   border-radius: 6px;
-  border: 1px solid var(--color-border, #3a3a3a);
-  background: var(--color-surface, #2a2a2a);
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: inherit;
   font-size: 0.875rem;
   cursor: pointer;
 }
 
 .installer-button:hover:not(:disabled) {
-  background: var(--color-surface-hover, #353535);
+  background: var(--surface-muted);
 }
 
 .installer-button:disabled {
@@ -74,20 +74,20 @@
 }
 
 .installer-button.primary {
-  background: var(--color-accent, #4a8df5);
-  border-color: var(--color-accent, #4a8df5);
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 
 .installer-button.danger {
-  border-color: var(--color-danger, #d04040);
-  color: var(--color-danger, #d04040);
+  border-color: var(--red);
+  color: var(--red);
 }
 
 .installer-empty {
   padding: 2rem;
   text-align: center;
-  color: var(--color-text-muted, #8a8a8a);
+  color: var(--text-muted);
 }
 
 .installer-section + .installer-section {
@@ -98,7 +98,7 @@
   margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-text-muted, #b5b5b5);
+  color: var(--text-muted);
 }
 
 .installer-section__rows {
@@ -108,19 +108,19 @@
 }
 
 .installer-row {
-  border: 1px solid var(--color-border, #3a3a3a);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--color-surface, #1f1f1f);
+  background: var(--surface);
   overflow: hidden;
   transition: border-color 0.12s ease;
 }
 
 .installer-row.expanded {
-  border-color: var(--color-accent, #4a8df5);
+  border-color: var(--accent);
 }
 
 .installer-row.busy {
-  border-color: var(--color-warning, #ffc400);
+  border-color: var(--amber);
 }
 
 .installer-row__head {
@@ -134,7 +134,7 @@
 }
 
 .installer-row__head:hover {
-  background: var(--color-surface-hover, #2a2a2a);
+  background: var(--surface-muted);
 }
 
 .installer-row__title {
@@ -149,7 +149,7 @@
 
 .installer-row__provider {
   font-size: 0.75rem;
-  color: var(--color-text-muted, #8a8a8a);
+  color: var(--text-muted);
   text-transform: lowercase;
 }
 
@@ -163,47 +163,47 @@
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  background: var(--color-surface-hover, #2a2a2a);
+  background: var(--surface-muted);
 }
 
 .installer-pill.installed {
-  background: rgba(76, 175, 80, 0.15);
-  color: #6fcf97;
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .installer-pill.partial {
-  background: rgba(255, 196, 0, 0.15);
-  color: #ffc400;
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .installer-pill.update {
-  background: rgba(74, 141, 245, 0.15);
-  color: #6ea8ff;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .installer-pill.busy {
-  background: rgba(255, 196, 0, 0.15);
-  color: #ffc400;
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .installer-pill.done {
-  background: rgba(76, 175, 80, 0.15);
-  color: #6fcf97;
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .installer-pill.failed {
-  background: rgba(208, 64, 64, 0.15);
-  color: #ff7676;
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
 }
 
 .installer-pill.cancelled {
-  background: rgba(138, 138, 138, 0.15);
-  color: #b0b0b0;
+  background: var(--surface-muted);
+  color: var(--text-muted);
 }
 
 .installer-row__body {
   padding: 0.75rem 0.85rem 0.85rem;
-  border-top: 1px solid var(--color-border, #3a3a3a);
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -212,7 +212,7 @@
 .installer-row__desc {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--color-text-muted, #b5b5b5);
+  color: var(--text-muted);
 }
 
 .installer-row__progress {
@@ -234,7 +234,7 @@
 .installer-row__log {
   margin: 0;
   padding: 0.5rem;
-  background: var(--color-surface-deep, #161616);
+  background: var(--terminal);
   border-radius: 4px;
   font-size: 0.75rem;
   max-height: 12rem;
@@ -260,8 +260,8 @@
 .installer-row__options select {
   padding: 0.3rem 0.5rem;
   border-radius: 4px;
-  border: 1px solid var(--color-border, #3a3a3a);
-  background: var(--color-surface-deep, #161616);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
   color: inherit;
 }
 
@@ -283,13 +283,13 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.8rem;
-  color: var(--color-text-muted, #b5b5b5);
+  color: var(--text-muted);
 }
 
 .installer-row__hint {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--color-warning, #ffc400);
+  color: var(--amber);
 }
 
 .installer-confirm-items {

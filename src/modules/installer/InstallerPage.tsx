@@ -23,6 +23,7 @@ import {
   type ProgressEvent,
   type Recipe,
 } from "./types";
+import { installRecipeAndWait } from "./progress";
 import { ToolRow } from "./ToolRow";
 import "./installer.css";
 
@@ -45,6 +46,7 @@ export function InstallerPage({ active }: { active: boolean }) {
   const markInitialScanned = useInstallerStore((s) => s.markInitialScanned);
   const markWslJustEnabled = useInstallerStore((s) => s.markWslJustEnabled);
   const applyProgress = useInstallerStore((s) => s.applyProgress);
+  const beginInFlight = useInstallerStore((s) => s.beginInFlight);
 
   const [updateAllConfirm, setUpdateAllConfirm] = useState<null | {
     items: string[];
@@ -191,17 +193,20 @@ export function InstallerPage({ active }: { active: boolean }) {
   }
 
   const sections = groupRecipes(catalog?.recipes ?? [], detected, toolState);
+  const updateAllRecipes = sections.updates.filter(
+    (recipe) => !(toolState[recipe.id]?.pinned ?? false),
+  );
 
   function openUpdateAllConfirm() {
-    if (!catalog || sections.updates.length === 0) return;
-    const items = sections.updates.map((r) => r.name);
+    if (!catalog || updateAllRecipes.length === 0) return;
+    const items = updateAllRecipes.map((r) => r.name);
     // UAC heuristic for "Update all": each updateable recipe contributes
     // its own per-recipe UAC estimate (without pinned-version flags). We
     // import the heuristic from dag.ts indirectly by re-running the same
     // logic via resolveInstallPlan with no detected map — but here we
     // already know the recipes will all install fresh, so just count via
     // a small inline scan.
-    const uacEstimate = sections.updates.reduce((sum, r) => {
+    const uacEstimate = updateAllRecipes.reduce((sum, r) => {
       if (r.provider.kind === "windowsFeature") return sum + 1;
       if (r.provider.kind === "winget") {
         const id = r.provider.id.toLowerCase();
@@ -220,21 +225,19 @@ export function InstallerPage({ active }: { active: boolean }) {
       setUpdateAllConfirm(null);
       return;
     }
-    const queue = sections.updates.filter(
-      (r) => !(toolState[r.id]?.pinned ?? false),
-    );
+    const queue = updateAllRecipes;
     setUpdateAllConfirm(null);
     for (const recipe of queue) {
-      useInstallerStore.getState().beginInFlight(recipe.id, "install");
+      beginInFlight(recipe.id, "install");
       try {
-        await invokeCommand("installer_install_recipe", {
-          toolId: recipe.id,
-          options: {},
-        });
-      } catch {
-        // The backend will emit a Failed event for this recipe; the
-        // queue continues with the next tool. This matches the Q10
-        // decision: cancellation stops the queue, errors do not.
+        const terminalEvent = await installRecipeAndWait(recipe.id, {});
+        if (terminalEvent.kind === "cancelled") {
+          break;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showStatusBarNotice(message, { tone: "error" });
+        break;
       }
     }
   }
@@ -279,7 +282,7 @@ export function InstallerPage({ active }: { active: boolean }) {
             className="installer-button primary"
             data-tutorial-id="installer.updateAll"
             onClick={openUpdateAllConfirm}
-            disabled={scanning || !catalog || sections.updates.length === 0}
+            disabled={scanning || !catalog || updateAllRecipes.length === 0}
           >
             {t("installer.updateAll")}
           </button>

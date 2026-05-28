@@ -570,6 +570,15 @@ export function ActivityRail({
         <Gauge size={18} />
         <RailTooltip label={t("dashboard.title")} />
       </button>
+      <button
+        className={`rail-button rail-button-installer ${activePage === "installer" ? "active" : ""}`}
+        aria-label={t("installer.railLabel")}
+        data-tutorial-id="app.activityRailInstaller"
+        onClick={() => onNavigate("installer")}
+      >
+        <Package size={18} />
+        <RailTooltip label={t("installer.railLabel")} />
+      </button>
       {connectedRailItems.length > 0 ? (
         <div
           ref={connectionRailListRef}
@@ -684,15 +693,6 @@ export function ActivityRail({
       >
         {dontSleepEnabled ? <Coffee size={18} /> : <BedSingle size={18} />}
         <RailTooltip label={t("app.dontSleep")} />
-      </button>
-      <button
-        className={`rail-button rail-button-installer ${activePage === "installer" ? "active" : ""}`}
-        aria-label={t("installer.railLabel")}
-        data-tutorial-id="app.activityRailInstaller"
-        onClick={() => onNavigate("installer")}
-      >
-        <Package size={18} />
-        <RailTooltip label={t("installer.railLabel")} />
       </button>
       <button
         className={`rail-button rail-button-settings ${activePage === "settings" ? "active" : ""}`}
