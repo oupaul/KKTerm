@@ -1,46 +1,22 @@
-// One tool row — collapsed shows summary + primary action; expanded shows
-// progress, log, options form, and uninstall. Per ADR 0007 / Q10:
-// "Inline expanding detail panel per tool".
+// One tool tile in the Installer Helper catalog grid. Click opens the
+// app-owned `InstallerToolDialog` — info mode for already-installed and
+// not-installed tools, stepper mode while an install/uninstall is running
+// or just finished. Inline expansion was removed; the dialog owns the
+// detail surface.
 
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
-import {
-  findInstalledDependents,
-  recipeNeedsWsl,
-  resolveInstallPlan,
-} from "./dag";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
-import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
-import { installRecipeAndWait } from "./progress";
 import { useInstallerStore } from "./state";
-import type { InstallOptions, Recipe } from "./types";
+import type { Recipe } from "./types";
 
 export function ToolRow({ recipe }: { recipe: Recipe }) {
-  const { t, i18n } = useTranslation();
-  const catalog = useInstallerStore((s) => s.catalog);
+  const { t } = useTranslation();
   const detected = useInstallerStore((s) => s.detected[recipe.id]);
-  const allDetected = useInstallerStore((s) => s.detected);
   const toolState = useInstallerStore((s) => s.toolState[recipe.id]);
   const inFlight = useInstallerStore((s) => s.inFlight[recipe.id]);
   const lastStatus = useInstallerStore((s) => s.lastStatus[recipe.id]);
-  const expanded = useInstallerStore((s) => s.expanded[recipe.id]);
-  const wslJustEnabled = useInstallerStore((s) => s.wslJustEnabled);
-  const toggleExpanded = useInstallerStore((s) => s.toggleExpanded);
-  const beginInFlight = useInstallerStore((s) => s.beginInFlight);
-
-  const [options, setOptions] = useState<InstallOptions>({});
-  const [installConfirm, setInstallConfirm] = useState<null | {
-    items: string[];
-    recipes: Recipe[];
-    uacEstimate: number;
-  }>(null);
-  const [uninstallConfirm, setUninstallConfirm] = useState<null | {
-    dependents: string[];
-  }>(null);
-
-  const wslBlocked =
-    !!catalog && wslJustEnabled && recipeNeedsWsl(recipe, catalog);
+  const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
+  const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
 
   const isInstalled = detected?.installed ?? false;
   const installedVersion = detected?.installedVersion;
@@ -53,132 +29,55 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     latestSeen !== installedVersion;
   const busy = !!inFlight;
 
-  const description =
-    recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
+  const statusTone:
+    | "installed"
+    | "update"
+    | "busy"
+    | "failed"
+    | "partial"
+    | "none" = busy
+    ? "busy"
+    : lastStatus?.kind === "failed"
+      ? "failed"
+      : hasUpdate
+        ? "update"
+        : isInstalled
+          ? "installed"
+          : partial
+            ? "partial"
+            : "none";
 
-  function applyOption<K extends keyof InstallOptions>(
-    key: K,
-    value: InstallOptions[K],
-  ) {
-    setOptions((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function attemptInstall() {
-    if (!catalog || wslBlocked) return;
-    const plan = resolveInstallPlan(recipe.id, catalog, allDetected, options);
-    const prereqActionable = plan.actionable.filter((s) => s.isPrerequisite);
-    if (prereqActionable.length > 0 || plan.uacPromptEstimate > 0) {
-      setInstallConfirm({
-        items: prereqActionable.map((s) => s.recipe.name),
-        recipes: plan.actionable.map((s) => s.recipe),
-        uacEstimate: plan.uacPromptEstimate,
-      });
-      return;
-    }
-    void doInstall(plan.actionable.map((s) => s.recipe));
-  }
-
-  async function doInstall(recipes: Recipe[]) {
-    if (!isTauriRuntime()) return;
-    setInstallConfirm(null);
-    for (const queuedRecipe of recipes) {
-      beginInFlight(queuedRecipe.id, "install");
-      try {
-        const terminalEvent = await installRecipeAndWait(
-          queuedRecipe.id,
-          queuedRecipe.id === recipe.id ? options : {},
-        );
-        if (terminalEvent.kind !== "completed") {
-          break;
-        }
-      } catch {
-        break;
-      }
+  function handleOpen() {
+    // While an install/uninstall is in flight (or its terminal state is the
+    // most recent thing the user saw), open into the stepper view so they
+    // see live progress / the result. Otherwise show the info dialog.
+    if (busy) {
+      openStepperDialog(recipe.id);
+    } else {
+      openInfoDialog(recipe.id);
     }
   }
-
-  function attemptUninstall() {
-    if (!catalog) return;
-    const dependents = findInstalledDependents(recipe.id, catalog, allDetected);
-    if (dependents.length > 0) {
-      setUninstallConfirm({ dependents: dependents.map((d) => d.name) });
-      return;
-    }
-    setUninstallConfirm({ dependents: [] });
-  }
-
-  async function doUninstall() {
-    if (!isTauriRuntime()) return;
-    setUninstallConfirm(null);
-    beginInFlight(recipe.id, "uninstall");
-    try {
-      await invokeCommand("installer_uninstall_recipe", { toolId: recipe.id });
-    } catch {
-      // Backend will emit Failed event.
-    }
-  }
-
-  async function handleCancel() {
-    if (!isTauriRuntime()) return;
-    try {
-      await invokeCommand("installer_cancel", { toolId: recipe.id });
-    } catch {
-      // Best-effort.
-    }
-  }
-
-  async function handleTogglePin() {
-    if (!isTauriRuntime()) return;
-    const next = !(toolState?.pinned ?? false);
-    try {
-      await invokeCommand("installer_set_pinned", {
-        toolId: recipe.id,
-        pinned: next,
-      });
-      const states = await invokeCommand("installer_get_state");
-      useInstallerStore.getState().setToolStates(states);
-    } catch {
-      // ignore
-    }
-  }
-
-  const statusTone: "installed" | "update" | "busy" | "failed" | "partial" | "none" =
-    busy
-      ? "busy"
-      : lastStatus?.kind === "failed"
-        ? "failed"
-        : hasUpdate
-          ? "update"
-          : isInstalled
-            ? "installed"
-            : partial
-              ? "partial"
-              : "none";
-
-  const iconUrl = iconUrlForRecipe(recipe.id);
 
   return (
     <article
-      className={`installer-tile ${expanded ? "expanded" : ""} ${busy ? "busy" : ""}`}
+      className={`installer-tile ${busy ? "busy" : ""}`}
       data-status={statusTone}
+      onClick={handleOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleOpen();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={recipe.name}
     >
-      <header
-        className="installer-tile__head"
-        onClick={() => toggleExpanded(recipe.id)}
-        role="button"
-        tabIndex={0}
-        aria-expanded={expanded ? "true" : "false"}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            toggleExpanded(recipe.id);
-          }
-        }}
-      >
+      <div className="installer-tile__head">
         <div className="installer-tile__icon-wrap">
           <img
             className="installer-tile__icon"
-            src={iconUrl}
+            src={iconUrlForRecipe(recipe.id)}
             alt=""
             draggable={false}
             onError={(event) => {
@@ -216,219 +115,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
                     : recipe.provider.kind}
           </span>
         </div>
-      </header>
-      {expanded ? (
-        <div className="installer-tile__body">
-          {description ? (
-            <p className="installer-row__desc">{description}</p>
-          ) : null}
-          {wslBlocked ? (
-            <p className="installer-row__hint" role="status">
-              {t("installer.wslReboot")}
-            </p>
-          ) : null}
-          {!inFlight && lastStatus?.kind === "failed" ? (
-            <p className="installer-row__hint installer-row__hint--error" role="status">
-              {t("installer.status.failed", { message: lastStatus.message })}
-            </p>
-          ) : null}
-          {!inFlight && lastStatus?.kind === "cancelled" ? (
-            <p className="installer-row__hint" role="status">
-              {t("installer.status.cancelled")}
-            </p>
-          ) : null}
-          {inFlight ? (
-            <div className="installer-row__progress">
-              {inFlight.currentStep ? (
-                <div className="installer-row__step">{inFlight.currentStep}</div>
-              ) : null}
-              {inFlight.ratio != null ? (
-                <progress
-                  className="installer-row__bar"
-                  value={inFlight.ratio}
-                  max={1}
-                />
-              ) : null}
-              {inFlight.log.length > 0 ? (
-                <pre className="installer-row__log" aria-live="polite">
-                  {inFlight.log.slice(-30).join("\n")}
-                </pre>
-              ) : null}
-            </div>
-          ) : null}
-          <OptionsForm recipe={recipe} options={options} onChange={applyOption} />
-          <div className="installer-row__actions">
-            {busy ? (
-              <button
-                type="button"
-                className="installer-button danger"
-                onClick={() => void handleCancel()}
-              >
-                {t("installer.actions.cancel")}
-              </button>
-            ) : isInstalled ? (
-              <>
-                {hasUpdate ? (
-                  <button
-                    type="button"
-                    className="installer-button primary"
-                    onClick={attemptInstall}
-                    disabled={wslBlocked}
-                  >
-                    {t("installer.actions.update")}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="installer-button danger"
-                  onClick={attemptUninstall}
-                >
-                  {t("installer.actions.uninstall")}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="installer-button primary"
-                onClick={attemptInstall}
-                disabled={wslBlocked}
-              >
-                {t("installer.actions.install")}
-              </button>
-            )}
-            <label className="installer-row__pin">
-              <input
-                type="checkbox"
-                checked={toolState?.pinned ?? false}
-                onChange={() => void handleTogglePin()}
-              />
-              <span>{t("installer.options.pinVersion")}</span>
-            </label>
-          </div>
-        </div>
-      ) : null}
-      {installConfirm ? (
-        <InstallerConfirmDialog
-          title={t("installer.confirm.installTitle", { name: recipe.name })}
-          body={
-            installConfirm.items.length > 0
-              ? t("installer.confirm.installWithPrereqsBody")
-              : undefined
-          }
-          items={
-            installConfirm.items.length > 0 ? installConfirm.items : undefined
-          }
-          footer={
-            installConfirm.uacEstimate > 0
-              ? t("installer.confirm.uacFooter", {
-                  count: installConfirm.uacEstimate,
-                })
-              : undefined
-          }
-          confirmLabel={t("installer.confirm.installConfirm")}
-          onConfirm={() => void doInstall(installConfirm.recipes)}
-          onCancel={() => setInstallConfirm(null)}
-        />
-      ) : null}
-      {uninstallConfirm ? (
-        <InstallerConfirmDialog
-          title={t("installer.confirm.uninstallTitle", { name: recipe.name })}
-          body={
-            uninstallConfirm.dependents.length > 0
-              ? t("installer.confirm.uninstallDependentsBody", {
-                  name: recipe.name,
-                })
-              : t("installer.confirm.uninstallSimpleBody", {
-                  name: recipe.name,
-                })
-          }
-          items={
-            uninstallConfirm.dependents.length > 0
-              ? uninstallConfirm.dependents
-              : undefined
-          }
-          footer={
-            uninstallConfirm.dependents.length > 0
-              ? t("installer.confirm.uninstallDependentsFooter")
-              : undefined
-          }
-          confirmLabel={t("installer.confirm.uninstallConfirm")}
-          tone="danger"
-          onConfirm={() => void doUninstall()}
-          onCancel={() => setUninstallConfirm(null)}
-        />
-      ) : null}
+      </div>
     </article>
-  );
-}
-
-function OptionsForm({
-  recipe,
-  options,
-  onChange,
-}: {
-  recipe: Recipe;
-  options: InstallOptions;
-  onChange: <K extends keyof InstallOptions>(
-    key: K,
-    value: InstallOptions[K],
-  ) => void;
-}) {
-  const { t } = useTranslation();
-  const supported = new Set(recipe.options ?? []);
-  if (supported.size === 0) return null;
-  return (
-    <div className="installer-row__options" data-tutorial-id="installer.toolOptions">
-      {supported.has("scope") ? (
-        <label>
-          <span>{t("installer.options.scope")}</span>
-          <select
-            value={options.scope ?? "user"}
-            onChange={(event) =>
-              onChange(
-                "scope",
-                event.target.value as "user" | "machine",
-              )
-            }
-          >
-            <option value="user">{t("installer.options.scopeUser")}</option>
-            <option value="machine">
-              {t("installer.options.scopeMachine")}
-            </option>
-          </select>
-        </label>
-      ) : null}
-      {supported.has("version") ? (
-        <label>
-          <span>{t("installer.options.version")}</span>
-          <input
-            type="text"
-            placeholder={t("installer.options.versionLatest")}
-            value={options.version ?? ""}
-            onChange={(event) => onChange("version", event.target.value)}
-          />
-        </label>
-      ) : null}
-      {supported.has("location") ? (
-        <label>
-          <span>{t("installer.options.location")}</span>
-          <input
-            type="text"
-            value={options.location ?? ""}
-            onChange={(event) => onChange("location", event.target.value)}
-          />
-        </label>
-      ) : null}
-      {supported.has("addToPath") ? (
-        <label>
-          <input
-            type="checkbox"
-            checked={options.addToPath ?? false}
-            onChange={(event) => onChange("addToPath", event.target.checked)}
-          />
-          <span>{t("installer.options.addToPath")}</span>
-        </label>
-      ) : null}
-    </div>
   );
 }

@@ -53,6 +53,30 @@ pub struct Recipe {
     /// See `RecipeOptions` enum.
     #[serde(default)]
     pub options: Vec<RecipeOption>,
+    /// Optional official project website, surfaced in the not-installed
+    /// dialog. Free-form URL. Absent when the catalog entry has not yet
+    /// been backfilled.
+    #[serde(default)]
+    pub homepage: Option<String>,
+    /// Optional release-notes / changelog URL, surfaced in the
+    /// not-installed dialog and as a "Latest release" link in the
+    /// installed dialog. Frontend derives a fallback from the provider
+    /// when this is None.
+    #[serde(default)]
+    pub release_notes_url: Option<String>,
+}
+
+/// One declared step in an install plan, emitted via
+/// `ProgressEvent::Plan` before any work begins. `id` is stable per
+/// provider (`resolve`, `download`, `install`, …) and is echoed by
+/// `StepStarted` / `StepFinished` / stdout-routing. `label_key` is an
+/// i18n key under `installer.steps.*`; the frontend resolves it through
+/// `t()`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanStep {
+    pub id: String,
+    pub label_key: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -267,6 +291,8 @@ mod tests {
                 id: winget_id.into(),
             },
             options: vec![],
+            homepage: None,
+            release_notes_url: None,
         }
     }
 
@@ -335,6 +361,8 @@ mod tests {
                 steps: vec!["ghost".into()],
             },
             options: vec![],
+            homepage: None,
+            release_notes_url: None,
         };
         let catalog = Catalog {
             schema_version: 1,
@@ -408,6 +436,8 @@ mod tests {
                 steps: vec!["nvm".into(), "node".into()],
             },
             options: vec![],
+            homepage: None,
+            release_notes_url: None,
         };
         let catalog = Catalog {
             schema_version: 1,

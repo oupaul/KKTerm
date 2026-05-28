@@ -513,7 +513,42 @@
       "updateAllBody": "{{count}} update(s) will be installed.",
       "updateAllConfirm": "Update all"
     },
-    "wslReboot": "WSL was enabled this session. Reboot Windows before installing Docker Desktop."
+    "wslReboot": "WSL was enabled this session. Reboot Windows before installing Docker Desktop.",
+    "checkingDots": "Checking…",
+    "dialog": {
+      "installLocation": "Install location",
+      "provider": "Provider",
+      "installedVersion": "Installed version",
+      "latestVersion": "Latest version",
+      "lastChecked": "Last checked",
+      "homepage": "Website",
+      "releaseNotes": "Release notes",
+      "prerequisites": "Prerequisites",
+      "prereqInstalled": "Installed",
+      "prereqMissing": "Missing",
+      "checkNow": "Check now",
+      "checkingDots": "Checking…",
+      "updateAvailable": "Update available: {{from}} → {{to}}",
+      "installingTitle": "Installing {{name}}…",
+      "uninstallingTitle": "Uninstalling {{name}}…",
+      "installedTitle": "Installed {{name}}",
+      "failedTitle": "Install failed: {{name}}",
+      "cancelledTitle": "Install cancelled: {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "Failed"
+    },
+    "steps": {
+      "resolve": "Resolve version",
+      "download": "Download",
+      "verifyChecksum": "Verify checksum",
+      "extract": "Extract",
+      "placeFiles": "Place files",
+      "updatePath": "Update PATH",
+      "install": "Install",
+      "verify": "Verify",
+      "enable": "Enable feature"
+    }
   },
   "settings": {
     "title": "Settings",

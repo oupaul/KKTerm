@@ -6,9 +6,11 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
 
 use serde::Serialize;
 
+use super::proc::no_window;
 use super::schema::{Catalog, GithubReleaseLayout, Provider, Recipe};
 
 #[derive(Debug, Clone, Serialize)]
@@ -19,6 +21,13 @@ pub struct DetectedState {
     /// Only populated for bundles where some-but-not-all children are
     /// installed. Renders as "Partially installed (N/M)".
     pub partial_count: Option<(u32, u32)>,
+    /// Best-effort install directory for installed tools, surfaced in the
+    /// installed-tool info dialog. Currently populated for github-release
+    /// recipes (we own the install dir under %LOCALAPPDATA%) and left as
+    /// None elsewhere — winget/npm/dism install paths are not uniformly
+    /// recoverable from their detection output, and the dialog hides the
+    /// row when this is None.
+    pub install_location: Option<String>,
 }
 
 impl DetectedState {
@@ -27,6 +36,7 @@ impl DetectedState {
             installed: false,
             installed_version: None,
             partial_count: None,
+            install_location: None,
         }
     }
     pub fn installed(version: Option<String>) -> Self {
@@ -34,18 +44,25 @@ impl DetectedState {
             installed: true,
             installed_version: version,
             partial_count: None,
+            install_location: None,
         }
+    }
+    pub fn with_install_location(mut self, location: Option<String>) -> Self {
+        self.install_location = location;
+        self
     }
 }
 
 /// Detect every recipe in the catalog. Sequential — a 25-tool scan typically
 /// finishes in ~3–5 s on a warm host (winget is the slow leg). The frontend
 /// only runs this on first Module entry per session; subsequent visits use
-/// the in-memory cache.
+/// the in-memory cache. All winget recipes share a single `winget list` call;
+/// detect_winget consults the resulting map instead of spawning per recipe.
 pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
     let mut out: HashMap<String, DetectedState> = HashMap::new();
     // Detect leaves first so bundles can compose their result.
     let mut bundles: Vec<&Recipe> = Vec::new();
+    refresh_winget_snapshot();
     for recipe in &catalog.recipes {
         if let Provider::Bundle { .. } = recipe.provider {
             bundles.push(recipe);
@@ -107,54 +124,137 @@ fn bundle_detected_state(installed_count: u32, total: u32) -> DetectedState {
             installed: false,
             installed_version: None,
             partial_count: Some((installed_count, total)),
+            install_location: None,
         }
     }
 }
 
 // ---- winget ------------------------------------------------------------
+//
+// Per-recipe winget spawns were the dominant cost of `detect_all` and the
+// dominant cause of the Module-entry console-window flash storm. We now
+// take one snapshot of `winget list --source winget` per detection sweep
+// and look up each recipe's id in the parsed map.
 
-fn detect_winget(id: &str) -> DetectedState {
-    let output = match Command::new("winget")
+#[derive(Default)]
+struct WingetSnapshot {
+    /// Lower-cased package id → installed version (None when winget did not
+    /// surface a parseable version column).
+    by_id: HashMap<String, Option<String>>,
+}
+
+static WINGET_SNAPSHOT: OnceLock<std::sync::Mutex<Option<WingetSnapshot>>> =
+    OnceLock::new();
+
+fn winget_snapshot_cell() -> &'static std::sync::Mutex<Option<WingetSnapshot>> {
+    WINGET_SNAPSHOT.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+/// Take one batched `winget list` and cache its parsed map. Called by
+/// `detect_all` before iterating recipes. Safe to call repeatedly; later
+/// callers (e.g. `installer_redetect`) reuse the cached snapshot unless
+/// they explicitly clear it.
+pub fn refresh_winget_snapshot() {
+    let parsed = run_winget_list().unwrap_or_default();
+    *winget_snapshot_cell().lock().unwrap() = Some(parsed);
+}
+
+fn run_winget_list() -> Option<WingetSnapshot> {
+    let output = no_window(&mut Command::new("winget"))
         .args([
             "list",
-            "--id",
-            id,
-            "--exact",
             "--source",
             "winget",
             "--disable-interactivity",
         ])
         .output()
-    {
-        Ok(o) => o,
-        Err(_) => return DetectedState::not_installed(),
-    };
+        .ok()?;
     if !output.status.success() {
-        return DetectedState::not_installed();
+        return None;
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // The data row contains the id; the version is the 3rd whitespace-separated
-    // column on lines following the header. We look for a row containing the
-    // exact id, then take the next whitespace token after it as the version.
+    let mut by_id: HashMap<String, Option<String>> = HashMap::new();
+    // `winget list` emits a header band ("Name Id Version …"), a separator
+    // row of dashes, then one whitespace-separated data row per installed
+    // package. The Id column may itself contain dots; we extract the id
+    // and version using the column offsets discovered from the header row.
+    let mut header_offsets: Option<(usize, usize, usize)> = None;
     for line in stdout.lines() {
-        if let Some(after_id) = line.split(id).nth(1) {
-            let version = after_id
-                .split_whitespace()
-                .next()
-                .map(|s| s.to_string())
-                .filter(|s| !s.is_empty());
-            return DetectedState::installed(version);
+        if header_offsets.is_none() {
+            if let Some(o) = winget_header_offsets(line) {
+                header_offsets = Some(o);
+            }
+            continue;
         }
+        if line.trim_start().starts_with('-') {
+            continue;
+        }
+        let (id_start, version_start, version_end) = header_offsets.unwrap();
+        if line.len() < id_start {
+            continue;
+        }
+        let id_slice = if line.len() >= version_start {
+            &line[id_start..version_start]
+        } else {
+            &line[id_start..]
+        };
+        let id = id_slice.split_whitespace().next().unwrap_or("").to_string();
+        if id.is_empty() {
+            continue;
+        }
+        let version = if line.len() >= version_start {
+            let end = version_end.min(line.len());
+            let raw = &line[version_start..end];
+            raw.split_whitespace().next().map(|s| s.to_string())
+        } else {
+            None
+        };
+        by_id.insert(id.to_ascii_lowercase(), version);
     }
-    // Exit code said success but we couldn't parse — treat as installed,
-    // unknown version.
-    DetectedState::installed(None)
+    Some(WingetSnapshot { by_id })
+}
+
+fn winget_header_offsets(line: &str) -> Option<(usize, usize, usize)> {
+    let id_idx = line.find("Id")?;
+    let version_idx = line[id_idx..].find("Version").map(|o| id_idx + o)?;
+    let after_version = &line[version_idx + "Version".len()..];
+    let next_col = after_version
+        .char_indices()
+        .find(|(_, c)| !c.is_whitespace())
+        .map(|(i, _)| version_idx + "Version".len() + i)
+        .unwrap_or(line.len());
+    Some((id_idx, version_idx, next_col))
+}
+
+fn detect_winget(id: &str) -> DetectedState {
+    let cell = winget_snapshot_cell();
+    let mut guard = cell.lock().unwrap();
+    if guard.is_none() {
+        // Single-recipe path (installer_redetect) hits this; take a snapshot
+        // on demand so subsequent winget recipes in the same sweep are free.
+        drop(guard);
+        let parsed = run_winget_list().unwrap_or_default();
+        *cell.lock().unwrap() = Some(parsed);
+        guard = cell.lock().unwrap();
+    }
+    let snapshot = guard.as_ref().unwrap();
+    match snapshot.by_id.get(&id.to_ascii_lowercase()) {
+        Some(version) => DetectedState::installed(version.clone()),
+        None => DetectedState::not_installed(),
+    }
+}
+
+/// Discard the cached snapshot so the next `detect_winget`/`detect_all`
+/// call re-queries `winget list`. Used by post-install/uninstall redetect
+/// paths in commands.rs so an install that just landed is visible.
+pub fn invalidate_winget_snapshot() {
+    *winget_snapshot_cell().lock().unwrap() = None;
 }
 
 // ---- npm ---------------------------------------------------------------
 
 fn detect_npm(pkg: &str) -> DetectedState {
-    let output = match Command::new("npm")
+    let output = match no_window(&mut Command::new("npm"))
         .args(["ls", "-g", "--json", "--depth=0"])
         .output()
     {
@@ -194,13 +294,19 @@ fn detect_github_release_marker(tool_id: &str) -> DetectedState {
     };
     let parsed: serde_json::Value = match serde_json::from_str(&text) {
         Ok(v) => v,
-        Err(_) => return DetectedState::installed(None),
+        Err(_) => {
+            return DetectedState::installed(None).with_install_location(Some(
+                github_release_install_dir(tool_id).to_string_lossy().into_owned(),
+            ));
+        }
     };
     let version = parsed
         .get("version")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    DetectedState::installed(version)
+    DetectedState::installed(version).with_install_location(Some(
+        github_release_install_dir(tool_id).to_string_lossy().into_owned(),
+    ))
 }
 
 pub fn github_release_install_dir(tool_id: &str) -> PathBuf {
@@ -217,7 +323,7 @@ pub fn github_release_marker_path(tool_id: &str) -> PathBuf {
 // ---- windows-feature ---------------------------------------------------
 
 fn detect_windows_feature(feature: &str) -> DetectedState {
-    let output = match Command::new("dism")
+    let output = match no_window(&mut Command::new("dism"))
         .args([
             "/online",
             "/get-featureinfo",

@@ -12,7 +12,9 @@ use std::time::SystemTime;
 use tauri::{AppHandle, Emitter, State};
 
 use super::catalog::load_bundled_catalog;
-use super::detect::{detect_all, detect_one, detect_one_in_catalog, DetectedState};
+use super::detect::{
+    detect_all, detect_one, detect_one_in_catalog, invalidate_winget_snapshot, DetectedState,
+};
 use super::events::{ProgressEvent, PROGRESS_EVENT};
 use super::install::{install_recipe, EventSink};
 use super::latest_version::latest_version;
@@ -83,33 +85,87 @@ pub fn installer_detect_all(
     Ok(detect_all(&catalog))
 }
 
+/// Synthetic cancel-flag key used by the streaming check-for-updates sweep.
+/// Routes through the same cancel-flag map as installs so `installer_cancel`
+/// with this id aborts the sweep mid-list.
+pub const CHECK_UPDATES_CANCEL_ID: &str = "__check_updates__";
+
+/// Bounded parallelism for latest-version lookups. Most operations are
+/// network or CLI-bound; 4 in flight saturates a typical home connection
+/// without overwhelming winget's source backend.
+const CHECK_UPDATES_PARALLELISM: usize = 4;
+
+/// Streaming check-for-updates. Runs on Tauri's worker thread (the UI is
+/// never blocked), but emits one `CheckResult` per tool as its lookup
+/// lands so the frontend can light rows up incrementally. Lookups run in
+/// parallel via a scoped thread pool; the per-tool work is network/CLI
+/// bound, so a small pool (`CHECK_UPDATES_PARALLELISM`) is enough to hide
+/// the slow legs (winget) behind the fast ones (cached npm).
 #[tauri::command]
 pub fn installer_check_latest_versions(
+    app: AppHandle,
     storage: State<'_, Storage>,
     runtime: State<'_, InstallerRuntime>,
     tool_ids: Vec<String>,
-) -> Result<HashMap<String, Option<String>>, String> {
+) -> Result<(), String> {
     let catalog = runtime
         .catalog
         .lock()
         .unwrap()
         .clone()
         .ok_or("catalog not loaded yet")?;
+    let cancel = runtime.cancel_flag_for(CHECK_UPDATES_CANCEL_ID);
+    runtime.reset_cancel(CHECK_UPDATES_CANCEL_ID);
+
+    let emit: EventSink = make_emit_sink(app);
+    emit(ProgressEvent::CheckStarted {
+        tool_ids: tool_ids.clone(),
+    });
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
-    let mut out = HashMap::new();
-    for tool_id in tool_ids {
-        if let Some(recipe) = find_recipe(&catalog, &tool_id) {
-            let v = latest_version(recipe);
-            st::record_latest_version(&storage, &tool_id, v.as_deref(), now)?;
-            out.insert(tool_id, v);
-        } else {
-            out.insert(tool_id, None);
+    let storage_ref = &*storage;
+    let catalog_ref = &catalog;
+    let emit_ref = &emit;
+    let work: Mutex<Vec<String>> = Mutex::new(tool_ids);
+
+    std::thread::scope(|scope| {
+        for _ in 0..CHECK_UPDATES_PARALLELISM {
+            let cancel = cancel.clone();
+            let work = &work;
+            scope.spawn(move || loop {
+                if cancel.load(Ordering::Relaxed) {
+                    return;
+                }
+                let tool_id = {
+                    let mut q = work.lock().unwrap();
+                    match q.pop() {
+                        Some(id) => id,
+                        None => return,
+                    }
+                };
+                let (latest, error) = match find_recipe(catalog_ref, &tool_id) {
+                    Some(recipe) => (latest_version(recipe), None),
+                    None => (None, Some("unknown tool id".to_string())),
+                };
+                let _ = st::record_latest_version(
+                    storage_ref,
+                    &tool_id,
+                    latest.as_deref(),
+                    now,
+                );
+                emit_ref(ProgressEvent::CheckResult {
+                    tool_id,
+                    latest_version: latest,
+                    error,
+                });
+            });
         }
-    }
-    Ok(out)
+    });
+
+    emit(ProgressEvent::CheckFinished);
+    Ok(())
 }
 
 #[tauri::command]
@@ -213,6 +269,10 @@ pub fn installer_redetect(
         .ok_or("catalog not loaded yet")?;
     let recipe = find_recipe(&catalog, &tool_id)
         .ok_or_else(|| format!("unknown tool id `{tool_id}`"))?;
+    // A redetect is the user's signal that the world may have changed
+    // (install/uninstall just finished, or they hit Refresh on one row).
+    // Drop the cached winget snapshot so the next winget recipe re-queries.
+    invalidate_winget_snapshot();
     Ok(detect_one_in_catalog(recipe, &catalog))
 }
 
@@ -270,6 +330,7 @@ fn run_bundle_install(
         if detected.installed {
             emit(ProgressEvent::Stdout {
                 tool_id: bundle_id.into(),
+                step_id: None,
                 line: format!("Step `{step_id}` already installed, skipping"),
             });
             continue;

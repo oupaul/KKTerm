@@ -3,6 +3,7 @@
 
 use std::process::Command;
 
+use super::proc::no_window;
 use super::schema::{Provider, Recipe};
 
 pub fn latest_version(recipe: &Recipe) -> Option<String> {
@@ -16,7 +17,7 @@ pub fn latest_version(recipe: &Recipe) -> Option<String> {
 }
 
 fn winget_latest(id: &str) -> Option<String> {
-    let output = Command::new("winget")
+    let output = no_window(&mut Command::new("winget"))
         .args([
             "show",
             "--id",
@@ -45,7 +46,7 @@ fn winget_latest(id: &str) -> Option<String> {
 }
 
 fn npm_latest(pkg: &str) -> Option<String> {
-    let output = Command::new("npm")
+    let output = no_window(&mut Command::new("npm"))
         .args(["view", pkg, "version"])
         .output()
         .ok()?;

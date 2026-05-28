@@ -321,6 +321,7 @@ fn download_with_progress(
                 let ratio = (downloaded as f32 / t as f32).clamp(0.0, 1.0);
                 emit(ProgressEvent::Progress {
                     tool_id: tool_id.into(),
+                    step_id: None,
                     ratio,
                 });
             }
@@ -367,10 +368,12 @@ fn add_to_user_path(dir: &PathBuf, tool_id: &str, emit: &EventSink) {
     match result {
         Ok(o) if o.status.success() => emit(ProgressEvent::Stdout {
             tool_id: tool_id.into(),
+            step_id: None,
             line: format!("Added {dir_str} to user PATH (open a new shell to pick up)"),
         }),
         Ok(o) => emit(ProgressEvent::Stderr {
             tool_id: tool_id.into(),
+            step_id: None,
             line: format!(
                 "Could not add to PATH: {}",
                 String::from_utf8_lossy(&o.stderr).trim()
@@ -378,6 +381,7 @@ fn add_to_user_path(dir: &PathBuf, tool_id: &str, emit: &EventSink) {
         }),
         Err(e) => emit(ProgressEvent::Stderr {
             tool_id: tool_id.into(),
+            step_id: None,
             line: format!("Could not add to PATH: {e}"),
         }),
     }
@@ -470,6 +474,7 @@ fn run_streamed(
     // below makes the silence visible instead of looking frozen.
     emit(ProgressEvent::Stdout {
         tool_id: tool_id.into(),
+        step_id: None,
         line: format!("$ {program} {}", args.join(" ")),
     });
 
@@ -518,6 +523,7 @@ fn run_streamed(
             let silent = last_output_at.elapsed().as_secs();
             emit(ProgressEvent::Stderr {
                 tool_id: tool_id.into(),
+                step_id: None,
                 line: format!(
                     "[installer] still running: {elapsed}s elapsed, {silent}s since last output"
                 ),
@@ -536,6 +542,7 @@ fn run_streamed(
                 if status.success() {
                     emit(ProgressEvent::Stdout {
                         tool_id: tool_id.into(),
+                        step_id: None,
                         line: format!(
                             "[installer] `{program}` exited 0 after {elapsed}s"
                         ),
@@ -545,6 +552,7 @@ fn run_streamed(
                 let code = status.code().unwrap_or(-1);
                 emit(ProgressEvent::Stderr {
                     tool_id: tool_id.into(),
+                    step_id: None,
                     line: format!(
                         "[installer] `{program}` exited {code} after {elapsed}s"
                     ),
@@ -601,11 +609,13 @@ fn emit_stream_line(tool_id: &str, emit: &EventSink, line: StreamLine) {
     if line.is_stdout {
         emit(ProgressEvent::Stdout {
             tool_id: tool_id.into(),
+            step_id: None,
             line: line.line,
         });
     } else {
         emit(ProgressEvent::Stderr {
             tool_id: tool_id.into(),
+            step_id: None,
             line: line.line,
         });
     }

@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `installer.title`, `installer.subtitle`, `installer.railLabel`, `installer.refresh`, `installer.checkUpdates`, `installer.updateAll`, `installer.section.installed`, `installer.section.available`, `installer.section.updates`, `installer.actions.install`, `installer.actions.update`, `installer.actions.uninstall`, `installer.actions.cancel`, `installer.options.scope`, `installer.options.version`, `installer.options.location`, `installer.options.addToPath`, `installer.options.pinVersion`, `installer.status.installing`, `installer.status.uninstalling`, `installer.status.completed`, `installer.status.failed`, `installer.status.cancelled`, `installer.status.partial`, `installer.status.scanning`, `installer.empty.loading`, `installer.confirm.installTitle`, `installer.confirm.installWithPrereqsBody`, `installer.confirm.uacFooter`, `installer.confirm.uninstallTitle`, `installer.confirm.uninstallSimpleBody`, `installer.confirm.uninstallDependentsBody`, `installer.confirm.uninstallDependentsFooter`, `installer.confirm.updateAllTitle`, `installer.confirm.updateAllBody`, `installer.confirm.updateAllConfirm`, `installer.wslReboot`
+- Keys: `installer.title`, `installer.subtitle`, `installer.railLabel`, `installer.refresh`, `installer.checkUpdates`, `installer.checkingDots`, `installer.updateAll`, `installer.section.installed`, `installer.section.available`, `installer.section.updates`, `installer.actions.install`, `installer.actions.update`, `installer.actions.uninstall`, `installer.actions.cancel`, `installer.options.scope`, `installer.options.version`, `installer.options.location`, `installer.options.addToPath`, `installer.options.pinVersion`, `installer.status.installing`, `installer.status.uninstalling`, `installer.status.completed`, `installer.status.failed`, `installer.status.cancelled`, `installer.status.partial`, `installer.status.scanning`, `installer.empty.loading`, `installer.confirm.installTitle`, `installer.confirm.installWithPrereqsBody`, `installer.confirm.uacFooter`, `installer.confirm.uninstallTitle`, `installer.confirm.uninstallSimpleBody`, `installer.confirm.uninstallDependentsBody`, `installer.confirm.uninstallDependentsFooter`, `installer.confirm.updateAllTitle`, `installer.confirm.updateAllBody`, `installer.confirm.updateAllConfirm`, `installer.wslReboot`, `installer.dialog.installLocation`, `installer.dialog.provider`, `installer.dialog.installedVersion`, `installer.dialog.latestVersion`, `installer.dialog.lastChecked`, `installer.dialog.homepage`, `installer.dialog.releaseNotes`, `installer.dialog.prerequisites`, `installer.dialog.prereqInstalled`, `installer.dialog.prereqMissing`, `installer.dialog.checkNow`, `installer.dialog.checkingDots`, `installer.dialog.updateAvailable`, `installer.dialog.installingTitle`, `installer.dialog.uninstallingTitle`, `installer.dialog.installedTitle`, `installer.dialog.failedTitle`, `installer.dialog.cancelledTitle`, `installer.stepper.failedBadge`, `installer.steps.resolve`, `installer.steps.download`, `installer.steps.verifyChecksum`, `installer.steps.extract`, `installer.steps.placeFiles`, `installer.steps.updatePath`, `installer.steps.install`, `installer.steps.verify`, `installer.steps.enable`
 - Topics: Installer Helper Module, bundled catalog (compile-time embedded), ADR 0008 supersedes ADR 0007, winget recipes, npm recipes, github-release recipes, Windows feature recipes (DISM), bundles (node-bundle, python-bundle), dependency resolution, UAC prompts, WSL reboot gating, pin version, in-flight cancellation, tutorial targets `app.activityRailInstaller`, `installer.updateAll`, `installer.toolOptions`
 - Synonyms: "install nvm", "install Node", "install Python", "install Docker", "install Claude Code", "set up dev tools", "developer tools installer", "package manager"
 
@@ -24,7 +24,13 @@ The page has a header and three sections:
 - **Installed** (`installer.section.installed`) — tools currently present on the system.
 - **Available** (`installer.section.available`) — catalog tools not currently installed.
 
-Each tool row collapses by default and expands on click. The expanded body shows the description, the options form (only the options the recipe declares apply), an inline progress panel with the current step and a tail of the log, and the action buttons. Tutorial target: `installer.toolOptions`.
+Each tool surface is a **tile** in the section grid. Clicking a tile opens an app-owned popup dialog — `InstallerToolDialog` — that owns the detail surface (the previous inline expansion has been removed). Tutorial target on the options form inside the dialog: `installer.toolOptions`.
+
+The dialog has three rendering modes:
+
+- **Installed info** — version, install location (when known), provider summary, latest version + last checked timestamp, pin-version checkbox, and an Update banner when `latestVersionSeen` differs from `installedVersion`. Footer: `Uninstall` (danger) · `Update` (when available) · `Close`.
+- **Not-installed info** — official website (`recipe.homepage`), release notes (`recipe.releaseNotesUrl`, with a provider-derived fallback for github/npm/winget when absent), latest version (with an inline `installer.dialog.checkNow` action when no latest has been queried yet), provider summary, prerequisites list with installed/missing badges, and the options form. Footer: `Install` (primary) · `Cancel`.
+- **Stepper** — opened when the user presses Install/Update, or when reopening the dialog while an install/uninstall is in flight or has just terminated. The body renders the n8n-style step list with status dots (`pending`/`running`/`done`/`failed`), per-step duration / active-step ratio, and a click-to-expand per-step log panel. Terminal states swap the dialog title (`installer.dialog.installedTitle` / `installer.dialog.failedTitle` / `installer.dialog.cancelledTitle`).
 
 ## Tool detection
 
@@ -32,7 +38,7 @@ Detection runs once on the first Module entry per app session and is held in mem
 
 Per-provider detection methods:
 
-- **winget** — `winget list --id <id> --exact --source winget --disable-interactivity`. Exit 0 = installed; the version is parsed from the data row.
+- **winget** — `winget list --source winget --disable-interactivity` is run **once** per detection sweep; every winget recipe consults the parsed snapshot rather than spawning its own child process. The snapshot is cached until the next explicit `installer_detect_all` / `installer_redetect` call. All detection/check spawns set `CREATE_NO_WINDOW` so no `cmd.exe` window flashes on Module entry.
 - **npm** — `npm ls -g --json --depth=0`. Looks up the package in the top-level `dependencies`.
 - **github-release** — a marker file at `%LOCALAPPDATA%\KKTerm\installer\bin\<tool_id>\.kkterm-installer.json` written at install time. Only installs we performed count as "managed".
 - **windows-feature** — `dism /online /get-featureinfo /featurename:<X>`. Parses the `State :` line.
@@ -43,13 +49,13 @@ Per-provider detection methods:
 1. The user clicks `installer.actions.install` on a row.
 2. The frontend resolves the install plan: transitive `needs` are walked, and prerequisites already detected as installed are skipped.
 3. If the plan has unresolved prerequisites OR a non-zero UAC-prompt estimate, a confirm dialog (`installer.confirm.installTitle`) lists the prerequisites and a footer (`installer.confirm.uacFooter`) names the estimated prompt count.
-4. On confirm, the backend dispatches the install in a worker thread. Progress streams to the frontend on the `installer://progress` Tauri event channel as a discriminated union: `step`, `stdout`, `stderr`, `progress`, `completed`, `failed`, `cancelled`.
+4. On confirm, the backend dispatches the install in a worker thread. The dialog flips to stepper mode. Progress streams to the frontend on the `installer://progress` Tauri event channel as a discriminated union: `plan` (declared step list, emitted once before any work begins), `stepStarted` / `stepFinished` (per-step lifecycle), `stdout` / `stderr` / `progress` (each carrying an optional `stepId` so the UI can route lines and ratios to the active step row), `step` (legacy free-form label retained for unmigrated providers), `completed`, `failed`, `cancelled`.
 5. After a `completed` event, the row re-runs detection automatically and moves to the Installed section.
 
 ## Update flow
 
 1. The user clicks `installer.checkUpdates` (header).
-2. The backend calls each installed tool's latest-version query (`winget show`, `npm view <pkg> version`, GitHub releases API for `githubRelease`). Results are persisted in the `installer_tool_state` SQLite table.
+2. The backend launches a **streaming** sweep. It emits `checkStarted` with the id list, then per-tool `checkResult` events as each lookup lands (latest-version queries run in parallel — `winget show`, `npm view <pkg> version`, GitHub releases API — bounded to a small pool to hide slow legs behind fast ones), and finally `checkFinished`. The frontend writes each result into `toolState` as it arrives so rows light up incrementally instead of after one large blocking await. Results are persisted in the `installer_tool_state` SQLite table.
 3. Rows whose `latestVersionSeen ≠ installedVersion` move to the Updates section and show their per-row `installer.actions.update` button.
 4. Clicking `installer.updateAll` lists every pending update in a dialog (`installer.confirm.updateAllTitle`), warns about the likely UAC prompt count, and on confirm runs the queue sequentially. Pinned tools (see Pin version below) are skipped.
 

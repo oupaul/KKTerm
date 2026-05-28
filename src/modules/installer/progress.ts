@@ -44,9 +44,8 @@ function waitForTerminalProgress(toolId: string) {
   });
   const ready = listen<ProgressEvent>(PROGRESS_EVENT_NAME, (event) => {
     const payload = event.payload;
-    if (payload.toolId !== toolId || !isTerminalProgressEvent(payload)) {
-      return;
-    }
+    if (!isTerminalProgressEvent(payload)) return;
+    if (payload.toolId !== toolId) return;
     unlisten?.();
     resolveTerminalEvent(payload);
   }).then((u) => {
