@@ -1,6 +1,6 @@
 [package]
 name = "kkterm"
-version = "0.1.42"
+version = "0.1.43"
 description = "Fast local-first administration workspace for terminals, SSH, SFTP, and approval-based command assistance."
 authors = ["Ryan Tsai"]
 license = "MIT"
@@ -63,7 +63,7 @@ oxc_span = "0.132"
 oxc_ast = "0.132"
 oxc_ast_visit = "0.132"
 
-# Network admin tools ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â see docs/superpowers/specs/2026-05-17-network-tools-lego-blocks-design.md Ãƒâ€šÃ‚Â§10 (AV-friendly choices)
+# Network admin tools ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â see docs/superpowers/specs/2026-05-17-network-tools-lego-blocks-design.md ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§10 (AV-friendly choices)
 # MVP scope: DNS, ping, port scan/check, WoL, interfaces, WHOIS. SNMP + traceroute deferred.
 hickory-resolver = "0.26"
 if-addrs = "0.15"
@@ -80,7 +80,7 @@ tauri-plugin-single-instance = "2"
 winping = "0.10"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-# Unix ICMP via surge-ping (raw sockets ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Unix users typically have CAP_NET_RAW or root).
+# Unix ICMP via surge-ping (raw sockets ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Unix users typically have CAP_NET_RAW or root).
 # Windows uses winping instead (see Windows target block above).
 surge-ping = "0.8"
 

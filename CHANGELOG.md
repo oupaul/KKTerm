@@ -3,6 +3,58 @@
 All notable changes to KKTerm are documented here.
 
 ## Highlights
+- Redesigned **Installer Helper** with a popup dialog and streaming step events (less tile chaos, more terminal-friendly clarity).
+- DB write latency improvements via **WAL** + **busy_timeout** to keep your UI from waiting on the network gremlins.
+- Improved handling for ongoing UI flows: session teardown unblocks, and AI stream rendering is coalesced for smoother updates.
+
+## New
+- Installer Helper now uses a popup-driven dialog and stepper flow, including streaming progress and per-step expandable logs. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
+- Render installer/update release notes as Markdown. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/175)
+- Completed pending locale translations. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/176)
+
+## Improved
+- Storage/DB: enabled **WAL** + **busy_timeout** to shorten DB write latency. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/174)
+- AI UI responsiveness: coalesced streamed AI renders, improved connection-tree filtering behavior, and avoided no-op CWD updates in panes. (unblocked smoother tab/pane interactions; from https://github.com/ryantsai/KKTerm/pull/174)
+- Session handling improvements to avoid cross-session FTP/VNC shutdown blocking and to harden WebView start reservations. (from https://github.com/ryantsai/KKTerm/pull/174)
+
+## Fixed
+- Storage IDs: made generated IDs collision-proof using a process-wide monotonic counter (prevents UNIQUE constraint failures when IDs are generated within the same millisecond). (from https://github.com/ryantsai/KKTerm/pull/174)
+- Installer Helper console-flash storm: detection/version-check spawns now use `CREATE_NO_WINDOW`, and update checks stream incrementally so the UI doesn’t freeze on large update sets. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
+- Storage locking: recover uniformly from a poisoned mutex for better stability (instead of “lock is poisoned” until restart). (from https://github.com/ryantsai/KKTerm/pull/174)
+
+## Internal
+- perf/storage: recover poisoned lock uniformly; offload async-command DB work (WAL-safe import path and related storage updates). (from https://github.com/ryantsai/KKTerm/pull/174)
+- perf/ui: coalesce AI stream renders; defer connection search filtering updates; skip no-op cwd updates. (from https://github.com/ryantsai/KKTerm/pull/174)
+- perf(sessions): unblock cross-session FTP/VNC close; harden WebView start. (from https://github.com/ryantsai/KKTerm/pull/174)
+
+---
+
+## 重點摘要
+- **安裝器助手（Installer Helper）**改版：使用彈出式對話框與串流步驟事件（少一點磁磚地獄，多一點終端機式清楚）。
+- 透過 **WAL** + **busy_timeout** 改善資料庫寫入延遲，避免介面因等待而卡住（不再讓 UI 跟網路惡作劇硬碰硬）。
+- 強化持續進行中的流程：包含 session 關閉不卡住彼此、以及 AI 串流渲染更順暢。
+
+## 新增
+- 安裝器助手改為「彈出式對話框 + 分步步驟器（stepper）」流程，包含串流進度與每一步可展開的日誌。 (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
+- 將更新/安裝相關的 release notes 以 Markdown 方式渲染。 (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/175)
+- 完成所有未完成的語系翻譯。 (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/176)
+
+## 改善
+- Storage/DB：啟用 **WAL** + **busy_timeout** 以縮短 DB 寫入延遲。 (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/174)
+- AI 介面回應：合併 AI 串流渲染、改善連線樹（connection-tree）篩選行為、並在 Pane 中避免不必要的 CWD 無效更新（讓分頁/Pane 互動更順）。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+- Session 處理強化：避免 FTP/VNC 的跨 session 關閉互相阻塞，並強化 WebView 啟動保留（reservation）。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+
+## 修正
+- Storage ID：使用「程序級單調遞增計數器」使生成的 ID 不會碰撞（避免同一毫秒內生成造成 UNIQUE constraint 失敗）。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+- 安裝器助手：修正 console-flash 騷擾（偵測/版本檢查啟動改用 `CREATE_NO_WINDOW`），並讓更新檢查能逐步串流，避免一次性大型更新資料導致介面凍結。 (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
+- Storage locking：一致地從 poisoned mutex 恢復（不再出現直到重啟前都報「lock is poisoned」的狀況）。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+
+## Internal
+- perf/storage：一致地從 poisoned lock 恢復；將 async 指令的 DB 工作卸載（包含 WAL 安全的匯入路徑與相關 storage 更新）。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+- perf/ui：合併 AI 串流渲染；延後連線樹搜尋篩選更新；略過無效 cwd 更新。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+- perf(sessions)：解除跨 session FTP/VNC 關閉互相卡住；強化 WebView 啟動。 (自 https://github.com/ryantsai/KKTerm/pull/174)
+
+## Highlights
 - **Installer Helper (Windows):** New Settings control to hide the Installer Helper **icon on the Activity Rail**.
 - **Dashboard widgets:** Enable **widget file drag-and-drop** from Windows Explorer into AI Created Dashboard Widgets (and improved file bridge documentation).
 - **Dashboard AI Created Widgets:** Updated script editor flow for **Dashboard Widget Instance** script customization (view source now supports **Edit / Save / Cancel**).
