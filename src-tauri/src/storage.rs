@@ -5361,12 +5361,23 @@ fn make_tmux_connection_id(connection_id: &str) -> String {
     make_unique_id("kkterm", connection_id)
 }
 
+/// Process-wide monotonic counter appended to generated ids. The millisecond
+/// timestamp alone collides when two ids are generated within the same
+/// millisecond (e.g. two inserts in a tight loop), which produced duplicate
+/// primary keys; the counter makes ids unique regardless of insert speed.
+fn next_id_sequence() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
+
 fn make_connection_password_credential_id() -> String {
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis())
         .unwrap_or_default();
-    format!("connection-password-credential-{unique}")
+    let sequence = next_id_sequence();
+    format!("connection-password-credential-{unique}-{sequence}")
 }
 
 fn make_unique_id(fallback: &str, name: &str) -> String {
@@ -5388,8 +5399,9 @@ fn make_unique_id(fallback: &str, name: &str) -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis())
         .unwrap_or_default();
+    let sequence = next_id_sequence();
     format!(
-        "{}-{unique}",
+        "{}-{unique}-{sequence}",
         if slug.is_empty() { fallback } else { &slug }
     )
 }
