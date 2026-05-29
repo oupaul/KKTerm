@@ -26,8 +26,9 @@ mod prompt_contracts;
 mod providers;
 use prompt_contracts::{
     DASHBOARD_WIDGET_ANIMATION_CONTRACT, DASHBOARD_WIDGET_ARCHETYPE_CONTRACT,
-    DASHBOARD_WIDGET_COMPLETION_CONTRACT, DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT,
-    DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT, DASHBOARD_WIDGET_DOM_CONTRACT,
+    DASHBOARD_WIDGET_COMPLETION_CONTRACT, DASHBOARD_WIDGET_COPY_CONTRACT,
+    DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT, DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT,
+    DASHBOARD_WIDGET_DOM_CONTRACT, DASHBOARD_WIDGET_LAYOUT_CONTRACT,
     DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT, DASHBOARD_WIDGET_PHYSICS_CONTRACT,
     DASHBOARD_WIDGET_SURFACE_CONTRACT, DASHBOARD_WIDGET_UTF8_CONTRACT,
     DASHBOARD_WIDGET_VISUAL_CONTRACT,
@@ -3603,6 +3604,21 @@ fn ai_tool_definitions_with_skills(
         create_widget_tool
             .function
             .description
+            .push_str(DASHBOARD_WIDGET_LAYOUT_CONTRACT);
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
+            .push_str(DASHBOARD_WIDGET_COPY_CONTRACT);
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
+            .push_str(DASHBOARD_WIDGET_VISUAL_CONTRACT);
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
             .push_str(DASHBOARD_WIDGET_ANIMATION_CONTRACT);
         create_widget_tool.function.description.push(' ');
         create_widget_tool
@@ -6568,6 +6584,8 @@ fn build_agent_messages(
         DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT.to_string(),
         DASHBOARD_WIDGET_SURFACE_CONTRACT.to_string(),
+        DASHBOARD_WIDGET_LAYOUT_CONTRACT.to_string(),
+        DASHBOARD_WIDGET_COPY_CONTRACT.to_string(),
         DASHBOARD_WIDGET_ANIMATION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_PHYSICS_CONTRACT.to_string(),
         DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT.to_string(),
@@ -8731,6 +8749,36 @@ mod tests {
                 .function
                 .description
                 .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard widget layout contract")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("scattered absolute offsets")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard widget copy contract")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Enter text here to generate a QR code")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("never place accent-colored text on a --kk-accent-soft")
         );
         assert!(create_tool.function.description.contains("kk-shell"));
         assert!(
