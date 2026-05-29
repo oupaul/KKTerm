@@ -249,6 +249,8 @@ pub struct GeneralSettings {
     dont_sleep_enabled: bool,
     #[serde(default = "default_use_directx_screen_capture")]
     use_directx_screen_capture: bool,
+    #[serde(default = "default_status_bar_enabled")]
+    status_bar_enabled: bool,
     #[serde(default = "default_status_bar_monitor_enabled")]
     status_bar_monitor_enabled: bool,
     #[serde(default = "default_status_bar_monitor_interval_seconds")]
@@ -4483,6 +4485,7 @@ fn default_general_settings() -> GeneralSettings {
         minimize_to_tray: false,
         dont_sleep_enabled: false,
         use_directx_screen_capture: default_use_directx_screen_capture(),
+        status_bar_enabled: default_status_bar_enabled(),
         status_bar_monitor_enabled: default_status_bar_monitor_enabled(),
         status_bar_monitor_interval_seconds: default_status_bar_monitor_interval_seconds(),
         advanced_debugging_enabled: false,
@@ -4564,6 +4567,10 @@ fn default_auto_update_checks_enabled() -> bool {
 }
 
 fn default_allow_clipboard_read() -> bool {
+    true
+}
+
+fn default_status_bar_enabled() -> bool {
     true
 }
 
@@ -6579,6 +6586,7 @@ mod tests {
         assert!(!defaults.minimize_to_tray);
         assert!(!defaults.dont_sleep_enabled);
         assert!(defaults.use_directx_screen_capture);
+        assert!(defaults.status_bar_enabled);
         assert!(defaults.status_bar_monitor_enabled);
         assert_eq!(defaults.status_bar_monitor_interval_seconds, 5);
         assert!(!defaults.advanced_debugging_enabled);
@@ -6603,6 +6611,7 @@ mod tests {
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
                 use_directx_screen_capture: false,
+                status_bar_enabled: false,
                 status_bar_monitor_enabled: false,
                 status_bar_monitor_interval_seconds: 30,
                 advanced_debugging_enabled: true,
@@ -6624,6 +6633,7 @@ mod tests {
         assert!(updated.minimize_to_tray);
         assert!(updated.dont_sleep_enabled);
         assert!(!updated.use_directx_screen_capture);
+        assert!(!updated.status_bar_enabled);
         assert!(!updated.status_bar_monitor_enabled);
         assert_eq!(updated.status_bar_monitor_interval_seconds, 30);
         assert!(updated.advanced_debugging_enabled);
@@ -6642,6 +6652,7 @@ mod tests {
         assert!(reloaded.minimize_to_tray);
         assert!(reloaded.dont_sleep_enabled);
         assert!(!reloaded.use_directx_screen_capture);
+        assert!(!reloaded.status_bar_enabled);
         assert!(!reloaded.status_bar_monitor_enabled);
         assert_eq!(reloaded.status_bar_monitor_interval_seconds, 30);
         assert!(reloaded.advanced_debugging_enabled);
@@ -6882,6 +6893,7 @@ mod tests {
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
                 use_directx_screen_capture: false,
+                status_bar_enabled: false,
                 status_bar_monitor_enabled: false,
                 status_bar_monitor_interval_seconds: 15,
                 advanced_debugging_enabled: true,
@@ -6905,6 +6917,7 @@ mod tests {
                 minimize_to_tray: false,
                 dont_sleep_enabled: false,
                 use_directx_screen_capture: true,
+                status_bar_enabled: true,
                 status_bar_monitor_enabled: true,
                 status_bar_monitor_interval_seconds: 5,
                 advanced_debugging_enabled: false,
@@ -6931,6 +6944,7 @@ mod tests {
         assert!(imported.general_settings.minimize_to_tray);
         assert!(imported.general_settings.dont_sleep_enabled);
         assert!(!imported.general_settings.use_directx_screen_capture);
+        assert!(!imported.general_settings.status_bar_enabled);
         assert!(!imported.general_settings.status_bar_monitor_enabled);
         assert_eq!(
             imported

@@ -13,7 +13,9 @@ export function WorkspaceSettings() {
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
-  const hasChanges = draft.hideTopTabButtons !== generalSettings.hideTopTabButtons;
+  const hasChanges =
+    draft.hideTopTabButtons !== generalSettings.hideTopTabButtons ||
+    draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail;
 
   useEffect(() => {
     setDraft(generalSettings);
@@ -53,6 +55,24 @@ export function WorkspaceSettings() {
         label={t("settings.sectionWorkspace")}
         title={t("settings.sectionWorkspace")}
       />
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.activityRail")}</legend>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.showConnectedConnectionsInRail}
+              onChange={(checked) =>
+                setDraft((state) => ({ ...state, showConnectedConnectionsInRail: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.connectedConnectionsRail")}</strong>
+              <small>{t("settings.connectedConnectionsRailHint")}</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.workspaceTabs")}</legend>
         <div className="settings-toggle-list">

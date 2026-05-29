@@ -332,18 +332,6 @@ export function GeneralSettings() {
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
             <ToggleSwitch
-              checked={draft.showConnectedConnectionsInRail}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, showConnectedConnectionsInRail: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.connectedConnectionsRail")}</strong>
-              <small>{t("settings.connectedConnectionsRailHint")}</small>
-            </span>
-          </label>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
               checked={draft.allowClipboardRead}
               onChange={(checked) =>
                 setDraft((s) => ({ ...s, allowClipboardRead: checked }))
@@ -419,6 +407,18 @@ export function GeneralSettings() {
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
             <ToggleSwitch
+              checked={draft.statusBarEnabled}
+              onChange={(checked) =>
+                setDraft((state) => ({ ...state, statusBarEnabled: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.statusBarVisible")}</strong>
+              <small>{t("settings.statusBarVisibleHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
               checked={draft.statusBarMonitorEnabled}
               onChange={(checked) =>
                 setDraft((s) => ({ ...s, statusBarMonitorEnabled: checked }))
@@ -434,7 +434,7 @@ export function GeneralSettings() {
           <label>
             <span>{t("settings.statusBarMonitorInterval")}</span>
             <select
-              disabled={!draft.statusBarMonitorEnabled}
+              disabled={!draft.statusBarEnabled || !draft.statusBarMonitorEnabled}
               value={draft.statusBarMonitorIntervalSeconds}
               onChange={(event) =>
                 setDraft((s) => ({

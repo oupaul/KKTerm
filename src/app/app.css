@@ -124,6 +124,10 @@
   border-top: 1px solid var(--border);
 }
 
+.app-shell.status-bar-hidden {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .app-shell.panel-animating {
   transition: grid-template-columns 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }

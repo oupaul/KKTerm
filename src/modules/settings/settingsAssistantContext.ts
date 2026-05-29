@@ -53,7 +53,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       },
       {
         key: "settings.workspaceAccess",
-        description: "Workspace access and runtime toggles.",
+        description: "Local runtime permission and startup toggles.",
         tutorialTargetId: "settings.workspaceAccess",
       },
       {
@@ -63,7 +63,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       },
       {
         key: "settings.statusBar",
-        description: "Status Bar CPU/RAM/Network monitor visibility and polling interval.",
+        description: "Status Bar visibility, CPU/RAM/Network monitor visibility, and polling interval.",
         tutorialTargetId: "settings.statusBar",
       },
       { key: "settings.autoStartWithWindows", description: "Launch KKTerm minimized when the user signs in to Windows." },
@@ -125,6 +125,10 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
     labelKey: "settings.sectionWorkspace",
     fallbackLabel: "Workspace",
     controls: [
+      {
+        key: "settings.connectedConnectionsRail",
+        description: "Show or hide connected Connection icons on the Activity Rail.",
+      },
       {
         key: "settings.hideTopTabButtons",
         description: "Enable Child Connection Tabs: hides the top Tab Strip and shows saved Child Connection Tabs under their parent Connections in the Connection Tree.",

@@ -104,6 +104,7 @@ function App() {
     useState<TutorialHighlightRequest>();
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
+  const statusBarEnabled = useWorkspaceStore((state) => state.generalSettings.statusBarEnabled);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const {
@@ -176,7 +177,9 @@ function App() {
           activePage === "settings" ? "settings-mode" : ""
         } ${
           connectionPanelLayout.collapsed ? "connections-collapsed" : ""
-        } ${aiPanelLayout.collapsed ? "ai-assist-collapsed" : ""}`}
+        } ${aiPanelLayout.collapsed ? "ai-assist-collapsed" : ""} ${
+          statusBarEnabled ? "" : "status-bar-hidden"
+        }`}
       >
       <ActivityRail
         key="activity-rail"
@@ -248,11 +251,13 @@ function App() {
         onDismiss={() => setTutorialHighlightRequest(undefined)}
         request={tutorialHighlightRequest}
       />
-      <StatusBar
-        key="status-bar"
-        onOpenAssistant={openAssistantPanel}
-        onOpenDashboardView={openDashboardView}
-      />
+      {statusBarEnabled ? (
+        <StatusBar
+          key="status-bar"
+          onOpenAssistant={openAssistantPanel}
+          onOpenDashboardView={openDashboardView}
+        />
+      ) : null}
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
       </div>
     </div>

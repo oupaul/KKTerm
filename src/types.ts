@@ -207,6 +207,7 @@ export interface GeneralSettings {
   minimizeToTray: boolean;
   dontSleepEnabled: boolean;
   useDirectxScreenCapture: boolean;
+  statusBarEnabled: boolean;
   statusBarMonitorEnabled: boolean;
   statusBarMonitorIntervalSeconds: number;
   advancedDebuggingEnabled: boolean;
