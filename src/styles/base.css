@@ -530,7 +530,7 @@ h2 {
 .app-update-notes {
   max-height: 180px;
   overflow: auto;
-  white-space: pre-wrap;
+  white-space: normal;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
@@ -538,6 +538,59 @@ h2 {
   color: var(--text);
   font-size: 0.86rem;
   line-height: 1.45;
+}
+
+.app-update-notes h1,
+.app-update-notes h2,
+.app-update-notes h3,
+.app-update-notes h4,
+.app-update-notes h5,
+.app-update-notes h6,
+.app-update-notes p,
+.app-update-notes ul,
+.app-update-notes ol,
+.app-update-notes blockquote,
+.app-update-notes table {
+  margin: 0 0 0.65em;
+}
+
+.app-update-notes > :last-child {
+  margin-bottom: 0;
+}
+
+.app-update-notes h1,
+.app-update-notes h2,
+.app-update-notes h3,
+.app-update-notes h4,
+.app-update-notes h5,
+.app-update-notes h6 {
+  font-size: 0.95rem;
+}
+
+.app-update-notes ul,
+.app-update-notes ol {
+  padding-left: 1.25rem;
+}
+
+.app-update-notes :not(pre) > code {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 4px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.app-update-notes pre {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--surface);
+}
+
+.app-update-notes a {
+  color: var(--accent);
 }
 
 .settings-dialog {

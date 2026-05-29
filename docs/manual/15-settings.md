@@ -145,6 +145,8 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 
 `settings.sectionAbout`. Shows version (`settings.version`) and slogan (`settings.appSlogan`). The version value should match `package.json`'s `version` field. License info, GitHub link, and acknowledgements live here.
 
+`settings.autoUpdateChecks` controls startup update checks, and manual checks surface update state through `settings.checkingForUpdates`, `settings.updateNoUpdates`, and `settings.updateCheckFailed`. When an app update is available, the `settings.updatePromptLabel` dialog shows `settings.updateAvailableBody`, renders `settings.updateNotes` from the release markdown, and offers `settings.updateOpenDownloadPage` or `settings.updateLater`.
+
 
 ## Built-in MCP Server
 

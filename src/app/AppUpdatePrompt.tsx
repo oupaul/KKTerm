@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -9,7 +11,7 @@ import {
 } from "../lib/appUpdates";
 import { shouldRunStartupUpdateCheck } from "../lib/appUpdatesModel";
 import { recordUpdateCheckedNow } from "../lib/lastUpdateCheck";
-import { isTauriRuntime } from "../lib/tauri";
+import { isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 
 export const CHECK_FOR_APP_UPDATES_EVENT = "kkterm:check-for-updates";
@@ -106,6 +108,33 @@ export function AppUpdatePrompt({
     };
   });
 
+  const renderedUpdateBody = useMemo(() => {
+    if (!update?.body) {
+      return "";
+    }
+    try {
+      const html = marked.parse(update.body, { async: false }) as string;
+      return DOMPurify.sanitize(html);
+    } catch {
+      return "";
+    }
+  }, [update?.body]);
+
+  function handleUpdateNotesClick(event: MouseEvent<HTMLDivElement>) {
+    const link = (event.target as Element | null)?.closest("a");
+    if (!link) {
+      return;
+    }
+
+    const href = link.getAttribute("href");
+    const externalUrl = safeExternalUrl(href);
+    event.preventDefault();
+    event.stopPropagation();
+    if (externalUrl) {
+      void openExternalUrl(externalUrl);
+    }
+  }
+
   if (!update) {
     return null;
   }
@@ -138,10 +167,13 @@ export function AppUpdatePrompt({
             version: update.version,
           })}
         </p>
-        {update.body ? (
-          <div className="app-update-notes" aria-label={t("settings.updateNotes")}>
-            {update.body}
-          </div>
+        {renderedUpdateBody ? (
+          <div
+            className="app-update-notes"
+            aria-label={t("settings.updateNotes")}
+            dangerouslySetInnerHTML={{ __html: renderedUpdateBody }}
+            onClick={handleUpdateNotesClick}
+          />
         ) : null}
         <div className="dialog-actions">
           <button
@@ -166,4 +198,16 @@ export function AppUpdatePrompt({
       </div>
     </div>
   );
+}
+
+function safeExternalUrl(href: string | null) {
+  if (!href) {
+    return undefined;
+  }
+  try {
+    const url = new URL(href);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
