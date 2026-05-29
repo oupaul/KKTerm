@@ -1902,20 +1902,34 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!nextCwd) {
       return;
     }
-    set((state) => ({
-      tabs: state.tabs.map((tab) =>
-        tab.id !== tabId
-          ? tab
-          : {
-              ...tab,
-              panes: tab.panes.map((pane) =>
-                pane.id === paneId && isTerminalPane(pane) && pane.cwd !== nextCwd
-                  ? { ...pane, cwd: nextCwd }
-                  : pane,
-              ),
-            },
-      ),
-    }));
+    set((state) => {
+      // OSC7 fires this on (potentially) every shell prompt. Short-circuit
+      // when nothing actually changed so we return the same `tabs` reference
+      // and Zustand skips notifying subscribers (sidebar, canvas, rail).
+      let changed = false;
+      const tabs = state.tabs.map((tab) => {
+        if (tab.id !== tabId) {
+          return tab;
+        }
+        let paneChanged = false;
+        const panes = tab.panes.map((pane) => {
+          if (pane.id === paneId && isTerminalPane(pane) && pane.cwd !== nextCwd) {
+            paneChanged = true;
+            return { ...pane, cwd: nextCwd };
+          }
+          return pane;
+        });
+        if (!paneChanged) {
+          return tab;
+        }
+        changed = true;
+        return { ...tab, panes };
+      });
+      if (!changed) {
+        return state;
+      }
+      return { tabs };
+    });
   },
   setQuickCommandBarVisible: (tabId, visible) => {
     const tab = get().tabs.find((entry) => entry.id === tabId);

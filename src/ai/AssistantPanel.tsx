@@ -2094,6 +2094,15 @@ export function AssistantPanel({
     activeAssistantRequestIdRef.current = requestId;
     const workStartedAt = new Date().toISOString();
     let threadTitle = fallbackTitle;
+    // Hoisted so both the success and error paths can cancel a pending
+    // streaming-flush timer (declared/used inside the try below).
+    let streamingFlushTimer: ReturnType<typeof setTimeout> | null = null;
+    const cancelStreamingFlush = () => {
+      if (streamingFlushTimer !== null) {
+        clearTimeout(streamingFlushTimer);
+        streamingFlushTimer = null;
+      }
+    };
     try {
       if (isFirstThreadMessage) {
         const generatedTitle = await generateThreadTitleFromProvider(normalizedPrompt, requestIntent);
@@ -2124,6 +2133,20 @@ export function AssistantPanel({
       const messagesWithStreaming = [...nextMessages, streamingMessage];
       setMessages(messagesWithStreaming);
 
+      // Coalesce rapid token deltas into ~20fps UI updates. Re-rendering the
+      // message list (and re-parsing the growing markdown) on every delta
+      // scales poorly with reply length; flushing on a short timer keeps the
+      // stream visibly live while bounding render cost. The completion and
+      // error paths force-flush / cancel so the final snapshot always wins.
+      const flushStreamingSnapshot = () => {
+        streamingFlushTimer = null;
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === streamingMessage.id ? streamingMessageSnapshot : message,
+          ),
+        );
+      };
+
       const channel = new Channel<AiStreamEvent>();
       channel.onmessage = (event: AiStreamEvent) => {
         if (activeAssistantRequestIdRef.current !== requestId) {
@@ -2153,11 +2176,9 @@ export function AssistantPanel({
           requestIntent,
           streamingMessageSnapshot.toolCalls,
         );
-        setMessages((current) =>
-          current.map((message) =>
-            message.id === streamingMessage.id ? streamingMessageSnapshot : message,
-          ),
-        );
+        if (streamingFlushTimer === null) {
+          streamingFlushTimer = setTimeout(flushStreamingSnapshot, 50);
+        }
       };
 
       const response = await invokeCommand("run_ai_agent_streaming", {
@@ -2183,6 +2204,7 @@ export function AssistantPanel({
         },
       });
 
+      cancelStreamingFlush();
       if (activeAssistantRequestIdRef.current !== requestId) {
         return;
       }
@@ -2212,6 +2234,7 @@ export function AssistantPanel({
       );
       saveChatMessages([...nextMessages, streamingMessageSnapshot], threadTitle);
     } catch (error) {
+      cancelStreamingFlush();
       if (activeAssistantRequestIdRef.current !== requestId) {
         return;
       }

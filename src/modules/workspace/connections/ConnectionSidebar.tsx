@@ -14,7 +14,7 @@ import { RECENT_CONNECTION_LIMIT, createStoredSecretMask, loadCollapsedFolderIds
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, flattenConnections, flattenFolders, upsertRootConnection, withLiveConnectionStatuses } from "./treeUtils";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -166,6 +166,10 @@ export function ConnectionSidebar({
   const { i18n, t } = useTranslation();
   const query = useWorkspaceStore((state) => state.query);
   const setQuery = useWorkspaceStore((state) => state.setQuery);
+  // Keep the search input bound to `query` for instant typing, but drive the
+  // expensive full-tree filter off a deferred value so large trees don't
+  // re-filter on every keystroke.
+  const deferredQuery = useDeferredValue(query);
   const openConnection = useWorkspaceStore((state) => state.openConnection);
   const openConnectionInNewTab = useWorkspaceStore((state) => state.openConnectionInNewTab);
   const openChildConnectionInNewTab = useWorkspaceStore((state) => state.openChildConnectionInNewTab);
@@ -1122,13 +1126,13 @@ export function ConnectionSidebar({
   );
 
   const filteredTree = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
     if (!normalizedQuery) {
       return treeWithLiveStatuses;
     }
 
     return filterConnectionTree(treeWithLiveStatuses, normalizedQuery);
-  }, [query, treeWithLiveStatuses]);
+  }, [deferredQuery, treeWithLiveStatuses]);
   const quickConnectShellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   const recentConnections = useMemo(() => {
     const connectionsById = new Map(
@@ -1192,7 +1196,7 @@ export function ConnectionSidebar({
     };
   }, []);
 
-  const isTreeFiltered = query.trim().length > 0;
+  const isTreeFiltered = deferredQuery.trim().length > 0;
   const visibleFlatConnections = useMemo(() => {
     if (!showAllConnections) {
       return [];
