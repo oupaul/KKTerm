@@ -895,7 +895,9 @@
     "closeConnection": "关闭连接",
     "childConnectionProperties": "编辑子连接标签属性",
     "lucideIcons": "Lucide 图标",
-    "selectLucideIcon": "使用 Lucide {{icon}} 图标"
+    "selectLucideIcon": "使用 Lucide {{icon}} 图标",
+    "savedPassword": "已保存的密码",
+    "typeNewPassword": "输入新密码"
   },
   "dashboard": {
     "accent": "强调色",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "标签页",
     "hideTopTabButtons": "在连接树中使用子连接标签页",
     "hideTopTabButtonsDesc": "启用后会隐藏顶部标签栏，已保存的子连接标签页会以斜体行显示在其父连接下方。",
-    "workspaceSaved": "工作区设置已保存。"
+    "workspaceSaved": "工作区设置已保存。",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "活动栏",
+    "installerSaved": "Installer Helper 设置已保存。",
+    "installerShowOnRail": "在活动栏中显示",
+    "installerShowOnRailDesc": "启用后，Installer Helper 图标会显示在活动栏中。"
   },
   "sftp": {
     "accessed": "访问日期",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "工作区",
     "workspaceSurface": "工作区表面"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "安装和更新 Windows 开发工具。",
+    "railLabel": "Installer Helper",
+    "refresh": "刷新",
+    "checkUpdates": "检查更新",
+    "updateAll": "全部更新",
+    "section": {
+      "installed": "已安装",
+      "available": "可用",
+      "updates": "有可用更新"
+    },
+    "actions": {
+      "install": "安装",
+      "update": "更新",
+      "uninstall": "卸载",
+      "cancel": "取消"
+    },
+    "options": {
+      "scope": "范围",
+      "scopeUser": "当前用户",
+      "scopeMachine": "所有用户 (UAC)",
+      "version": "版本",
+      "versionLatest": "最新",
+      "location": "安装位置",
+      "addToPath": "添加到 PATH",
+      "pinVersion": "固定版本（从全部更新中跳过）"
+    },
+    "status": {
+      "scanning": "正在扫描已安装工具…",
+      "installing": "正在安装…",
+      "uninstalling": "正在卸载…",
+      "completed": "完成",
+      "failed": "失败：{{message}}",
+      "cancelled": "已取消",
+      "partial": "部分已安装 ({{installed}}/{{total}})",
+      "noVersion": "（版本未知）"
+    },
+    "empty": {
+      "loading": "正在加载目录…"
+    },
+    "confirm": {
+      "installTitle": "安装 {{name}}？",
+      "installWithPrereqsBody": "这也会安装以下先决条件：",
+      "uacFooter": "可能会显示最多 {{count}} 个 UAC 提示。",
+      "installConfirm": "安装",
+      "uninstallTitle": "卸载 {{name}}？",
+      "uninstallSimpleBody": "这会从系统中移除 {{name}}。",
+      "uninstallDependentsBody": "卸载 {{name}} 会让这些已安装工具缺少先决条件：",
+      "uninstallDependentsFooter": "仍要卸载？",
+      "uninstallConfirm": "卸载",
+      "updateAllTitle": "更新所有已安装工具？",
+      "updateAllBody": "将安装 {{count}} 个更新。",
+      "updateAllConfirm": "全部更新"
+    },
+    "wslReboot": "本次会话已启用 WSL。安装 Docker Desktop 前请重启 Windows。",
+    "checkingDots": "正在检查…",
+    "dialog": {
+      "installLocation": "安装位置",
+      "provider": "提供者",
+      "installedVersion": "已安装版本",
+      "latestVersion": "最新版本",
+      "lastChecked": "上次检查",
+      "homepage": "网站",
+      "releaseNotes": "发行说明",
+      "prerequisites": "先决条件",
+      "prereqInstalled": "已安装",
+      "prereqMissing": "缺失",
+      "checkNow": "立即检查",
+      "checkingDots": "正在检查…",
+      "updateAvailable": "有可用更新：{{from}} → {{to}}",
+      "installingTitle": "正在安装 {{name}}…",
+      "uninstallingTitle": "正在卸载 {{name}}…",
+      "installedTitle": "已安装 {{name}}",
+      "failedTitle": "安装失败：{{name}}",
+      "cancelledTitle": "安装已取消：{{name}}"
+    },
+    "stepper": {
+      "failedBadge": "失败"
+    },
+    "steps": {
+      "resolve": "解析版本",
+      "download": "下载",
+      "verifyChecksum": "验证校验和",
+      "extract": "解压",
+      "placeFiles": "放置文件",
+      "updatePath": "更新 PATH",
+      "install": "安装",
+      "verify": "验证",
+      "enable": "启用功能"
+    }
   }
 }

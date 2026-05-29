@@ -895,7 +895,9 @@
     "closeConnection": "Verbindung schließen",
     "childConnectionProperties": "Eigenschaften des untergeordneten Verbindungs-Tabs bearbeiten",
     "lucideIcons": "Lucide-Symbole",
-    "selectLucideIcon": "Lucide-Symbol {{icon}} verwenden"
+    "selectLucideIcon": "Lucide-Symbol {{icon}} verwenden",
+    "savedPassword": "Gespeichertes Passwort",
+    "typeNewPassword": "Neues Passwort eingeben"
   },
   "dashboard": {
     "accent": "Akzent",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "Tabs",
     "hideTopTabButtons": "Untergeordnete Verbindungs-Tabs im Verbindungsbaum verwenden",
     "hideTopTabButtonsDesc": "Wenn aktiviert, wird die obere Tab-Leiste ausgeblendet und gespeicherte untergeordnete Verbindungs-Tabs erscheinen kursiv unter ihrer übergeordneten Verbindung.",
-    "workspaceSaved": "Arbeitsbereichseinstellungen gespeichert."
+    "workspaceSaved": "Arbeitsbereichseinstellungen gespeichert.",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "Aktivitätsleiste",
+    "installerSaved": "Installer Helper-Einstellungen gespeichert.",
+    "installerShowOnRail": "In Aktivitätsleiste anzeigen",
+    "installerShowOnRailDesc": "Wenn aktiviert, erscheint das Installer Helper-Symbol in der Aktivitätsleiste."
   },
   "sftp": {
     "accessed": "Zugegriffen",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "Arbeitsbereich",
     "workspaceSurface": "Arbeitsbereich-Oberfläche"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "Windows-Entwicklertools installieren und aktualisieren.",
+    "railLabel": "Installer Helper",
+    "refresh": "Aktualisieren",
+    "checkUpdates": "Nach Updates suchen",
+    "updateAll": "Alle aktualisieren",
+    "section": {
+      "installed": "Installiert",
+      "available": "Verfügbar",
+      "updates": "Updates verfügbar"
+    },
+    "actions": {
+      "install": "Installieren",
+      "update": "Aktualisieren",
+      "uninstall": "Deinstallieren",
+      "cancel": "Abbrechen"
+    },
+    "options": {
+      "scope": "Bereich",
+      "scopeUser": "Pro Benutzer",
+      "scopeMachine": "Alle Benutzer (UAC)",
+      "version": "Version",
+      "versionLatest": "Neueste",
+      "location": "Installationsort",
+      "addToPath": "Zu PATH hinzufügen",
+      "pinVersion": "Version anheften (bei „Alle aktualisieren“ überspringen)"
+    },
+    "status": {
+      "scanning": "Installierte Tools werden gesucht…",
+      "installing": "Wird installiert…",
+      "uninstalling": "Wird deinstalliert…",
+      "completed": "Fertig",
+      "failed": "Fehlgeschlagen: {{message}}",
+      "cancelled": "Abgebrochen",
+      "partial": "Teilweise installiert ({{installed}}/{{total}})",
+      "noVersion": "(Version unbekannt)"
+    },
+    "empty": {
+      "loading": "Katalog wird geladen…"
+    },
+    "confirm": {
+      "installTitle": "{{name}} installieren?",
+      "installWithPrereqsBody": "Dadurch werden auch die folgenden Voraussetzung(en) installiert:",
+      "uacFooter": "Kann bis zu {{count}} UAC-Aufforderung(en) anzeigen.",
+      "installConfirm": "Installieren",
+      "uninstallTitle": "{{name}} deinstallieren?",
+      "uninstallSimpleBody": "Dadurch wird {{name}} von Ihrem System entfernt.",
+      "uninstallDependentsBody": "Wenn {{name}} deinstalliert wird, bleiben diese installierten Tools ohne Voraussetzung:",
+      "uninstallDependentsFooter": "Trotzdem deinstallieren?",
+      "uninstallConfirm": "Deinstallieren",
+      "updateAllTitle": "Alle installierten Tools aktualisieren?",
+      "updateAllBody": "{{count}} Update(s) werden installiert.",
+      "updateAllConfirm": "Alle aktualisieren"
+    },
+    "wslReboot": "WSL wurde in dieser Sitzung aktiviert. Starten Sie Windows neu, bevor Sie Docker Desktop installieren.",
+    "checkingDots": "Prüfung läuft…",
+    "dialog": {
+      "installLocation": "Installationsort",
+      "provider": "Anbieter",
+      "installedVersion": "Installierte Version",
+      "latestVersion": "Neueste Version",
+      "lastChecked": "Zuletzt geprüft",
+      "homepage": "Website",
+      "releaseNotes": "Versionshinweise",
+      "prerequisites": "Voraussetzungen",
+      "prereqInstalled": "Installiert",
+      "prereqMissing": "Fehlt",
+      "checkNow": "Jetzt prüfen",
+      "checkingDots": "Prüfung läuft…",
+      "updateAvailable": "Update verfügbar: {{from}} → {{to}}",
+      "installingTitle": "{{name}} wird installiert…",
+      "uninstallingTitle": "{{name}} wird deinstalliert…",
+      "installedTitle": "{{name}} installiert",
+      "failedTitle": "Installation fehlgeschlagen: {{name}}",
+      "cancelledTitle": "Installation abgebrochen: {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "Fehlgeschlagen"
+    },
+    "steps": {
+      "resolve": "Version ermitteln",
+      "download": "Herunterladen",
+      "verifyChecksum": "Prüfsumme verifizieren",
+      "extract": "Extrahieren",
+      "placeFiles": "Dateien platzieren",
+      "updatePath": "PATH aktualisieren",
+      "install": "Installieren",
+      "verify": "Verifizieren",
+      "enable": "Feature aktivieren"
+    }
   }
 }

@@ -895,7 +895,9 @@
     "closeConnection": "Fermer la connexion",
     "childConnectionProperties": "Modifier les propriétés de l’onglet de connexion enfant",
     "lucideIcons": "Icônes Lucide",
-    "selectLucideIcon": "Utiliser l’icône Lucide {{icon}}"
+    "selectLucideIcon": "Utiliser l’icône Lucide {{icon}}",
+    "savedPassword": "Mot de passe enregistré",
+    "typeNewPassword": "Saisir un nouveau mot de passe"
   },
   "dashboard": {
     "accent": "Accent",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "Onglets",
     "hideTopTabButtons": "Utiliser les onglets de connexion enfant dans l’arborescence des connexions",
     "hideTopTabButtonsDesc": "Lorsque cette option est activée, la bande d’onglets supérieure est masquée et les onglets de connexion enfant enregistrés apparaissent en lignes italiques sous leur connexion parente.",
-    "workspaceSaved": "Paramètres de l’espace de travail enregistrés."
+    "workspaceSaved": "Paramètres de l’espace de travail enregistrés.",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "Barre d’activité",
+    "installerSaved": "Paramètres d’Installer Helper enregistrés.",
+    "installerShowOnRail": "Afficher dans la barre d’activité",
+    "installerShowOnRailDesc": "Lorsque cette option est activée, l’icône Installer Helper apparaît dans la barre d’activité."
   },
   "sftp": {
     "accessed": "Accédé",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "Espace de travail",
     "workspaceSurface": "Surface de l'espace de travail"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "Installer et mettre à jour les outils de développement Windows.",
+    "railLabel": "Installer Helper",
+    "refresh": "Actualiser",
+    "checkUpdates": "Rechercher des mises à jour",
+    "updateAll": "Tout mettre à jour",
+    "section": {
+      "installed": "Installé",
+      "available": "Disponible",
+      "updates": "Mises à jour disponibles"
+    },
+    "actions": {
+      "install": "Installer",
+      "update": "Mettre à jour",
+      "uninstall": "Désinstaller",
+      "cancel": "Annuler"
+    },
+    "options": {
+      "scope": "Portée",
+      "scopeUser": "Par utilisateur",
+      "scopeMachine": "Tous les utilisateurs (UAC)",
+      "version": "Version",
+      "versionLatest": "Dernière",
+      "location": "Emplacement d’installation",
+      "addToPath": "Ajouter à PATH",
+      "pinVersion": "Épingler la version (ignorer dans Tout mettre à jour)"
+    },
+    "status": {
+      "scanning": "Recherche des outils installés…",
+      "installing": "Installation…",
+      "uninstalling": "Désinstallation…",
+      "completed": "Terminé",
+      "failed": "Échec : {{message}}",
+      "cancelled": "Annulé",
+      "partial": "Partiellement installé ({{installed}}/{{total}})",
+      "noVersion": "(version inconnue)"
+    },
+    "empty": {
+      "loading": "Chargement du catalogue…"
+    },
+    "confirm": {
+      "installTitle": "Installer {{name}} ?",
+      "installWithPrereqsBody": "Cela installera également les prérequis suivants :",
+      "uacFooter": "Peut afficher jusqu’à {{count}} invite(s) UAC.",
+      "installConfirm": "Installer",
+      "uninstallTitle": "Désinstaller {{name}} ?",
+      "uninstallSimpleBody": "Cela supprimera {{name}} de votre système.",
+      "uninstallDependentsBody": "La désinstallation de {{name}} laissera ces outils installés sans prérequis :",
+      "uninstallDependentsFooter": "Désinstaller quand même ?",
+      "uninstallConfirm": "Désinstaller",
+      "updateAllTitle": "Mettre à jour tous les outils installés ?",
+      "updateAllBody": "{{count}} mise(s) à jour seront installées.",
+      "updateAllConfirm": "Tout mettre à jour"
+    },
+    "wslReboot": "WSL a été activé pendant cette session. Redémarrez Windows avant d’installer Docker Desktop.",
+    "checkingDots": "Vérification…",
+    "dialog": {
+      "installLocation": "Emplacement d’installation",
+      "provider": "Fournisseur",
+      "installedVersion": "Version installée",
+      "latestVersion": "Dernière version",
+      "lastChecked": "Dernière vérification",
+      "homepage": "Site web",
+      "releaseNotes": "Notes de version",
+      "prerequisites": "Prérequis",
+      "prereqInstalled": "Installé",
+      "prereqMissing": "Manquant",
+      "checkNow": "Vérifier maintenant",
+      "checkingDots": "Vérification…",
+      "updateAvailable": "Mise à jour disponible : {{from}} → {{to}}",
+      "installingTitle": "Installation de {{name}}…",
+      "uninstallingTitle": "Désinstallation de {{name}}…",
+      "installedTitle": "{{name}} installé",
+      "failedTitle": "Échec de l’installation : {{name}}",
+      "cancelledTitle": "Installation annulée : {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "Échec"
+    },
+    "steps": {
+      "resolve": "Résoudre la version",
+      "download": "Télécharger",
+      "verifyChecksum": "Vérifier la somme de contrôle",
+      "extract": "Extraire",
+      "placeFiles": "Placer les fichiers",
+      "updatePath": "Mettre à jour PATH",
+      "install": "Installer",
+      "verify": "Vérifier",
+      "enable": "Activer la fonctionnalité"
+    }
   }
 }

@@ -895,7 +895,9 @@
     "closeConnection": "Đóng kết nối",
     "childConnectionProperties": "Sửa thuộc tính Tab kết nối con",
     "lucideIcons": "Biểu tượng Lucide",
-    "selectLucideIcon": "Dùng biểu tượng Lucide {{icon}}"
+    "selectLucideIcon": "Dùng biểu tượng Lucide {{icon}}",
+    "savedPassword": "Mật khẩu đã lưu",
+    "typeNewPassword": "Nhập mật khẩu mới"
   },
   "dashboard": {
     "accent": "Nhấn",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "Tab",
     "hideTopTabButtons": "Dùng Tab kết nối con trong cây kết nối",
     "hideTopTabButtonsDesc": "Khi bật, dải Tab phía trên sẽ bị ẩn và các Tab kết nối con đã lưu xuất hiện dưới dạng hàng chữ nghiêng bên dưới Kết nối cha.",
-    "workspaceSaved": "Đã lưu cài đặt không gian làm việc."
+    "workspaceSaved": "Đã lưu cài đặt không gian làm việc.",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "Thanh hoạt động",
+    "installerSaved": "Đã lưu cài đặt Installer Helper.",
+    "installerShowOnRail": "Hiển thị trên Thanh hoạt động",
+    "installerShowOnRailDesc": "Khi bật, biểu tượng Installer Helper xuất hiện trên Thanh hoạt động."
   },
   "sftp": {
     "accessed": "Accessed",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "Workspace",
     "workspaceSurface": "Workspace surface"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "Cài đặt và cập nhật công cụ phát triển Windows.",
+    "railLabel": "Installer Helper",
+    "refresh": "Làm mới",
+    "checkUpdates": "Kiểm tra cập nhật",
+    "updateAll": "Cập nhật tất cả",
+    "section": {
+      "installed": "Đã cài đặt",
+      "available": "Có sẵn",
+      "updates": "Có bản cập nhật"
+    },
+    "actions": {
+      "install": "Cài đặt",
+      "update": "Cập nhật",
+      "uninstall": "Gỡ cài đặt",
+      "cancel": "Hủy"
+    },
+    "options": {
+      "scope": "Phạm vi",
+      "scopeUser": "Theo người dùng",
+      "scopeMachine": "Tất cả người dùng (UAC)",
+      "version": "Phiên bản",
+      "versionLatest": "Mới nhất",
+      "location": "Vị trí cài đặt",
+      "addToPath": "Thêm vào PATH",
+      "pinVersion": "Ghim phiên bản (bỏ qua Cập nhật tất cả)"
+    },
+    "status": {
+      "scanning": "Đang quét công cụ đã cài đặt…",
+      "installing": "Đang cài đặt…",
+      "uninstalling": "Đang gỡ cài đặt…",
+      "completed": "Xong",
+      "failed": "Thất bại: {{message}}",
+      "cancelled": "Đã hủy",
+      "partial": "Đã cài đặt một phần ({{installed}}/{{total}})",
+      "noVersion": "(không rõ phiên bản)"
+    },
+    "empty": {
+      "loading": "Đang tải danh mục…"
+    },
+    "confirm": {
+      "installTitle": "Cài đặt {{name}}?",
+      "installWithPrereqsBody": "Thao tác này cũng sẽ cài đặt các điều kiện tiên quyết sau:",
+      "uacFooter": "Có thể hiển thị tối đa {{count}} lời nhắc UAC.",
+      "installConfirm": "Cài đặt",
+      "uninstallTitle": "Gỡ cài đặt {{name}}?",
+      "uninstallSimpleBody": "Thao tác này sẽ xóa {{name}} khỏi hệ thống của bạn.",
+      "uninstallDependentsBody": "Gỡ cài đặt {{name}} sẽ khiến các công cụ đã cài đặt này thiếu điều kiện tiên quyết:",
+      "uninstallDependentsFooter": "Vẫn gỡ cài đặt?",
+      "uninstallConfirm": "Gỡ cài đặt",
+      "updateAllTitle": "Cập nhật tất cả công cụ đã cài đặt?",
+      "updateAllBody": "{{count}} bản cập nhật sẽ được cài đặt.",
+      "updateAllConfirm": "Cập nhật tất cả"
+    },
+    "wslReboot": "WSL đã được bật trong phiên này. Khởi động lại Windows trước khi cài đặt Docker Desktop.",
+    "checkingDots": "Đang kiểm tra…",
+    "dialog": {
+      "installLocation": "Vị trí cài đặt",
+      "provider": "Nhà cung cấp",
+      "installedVersion": "Phiên bản đã cài đặt",
+      "latestVersion": "Phiên bản mới nhất",
+      "lastChecked": "Kiểm tra lần cuối",
+      "homepage": "Trang web",
+      "releaseNotes": "Ghi chú phát hành",
+      "prerequisites": "Điều kiện tiên quyết",
+      "prereqInstalled": "Đã cài đặt",
+      "prereqMissing": "Thiếu",
+      "checkNow": "Kiểm tra ngay",
+      "checkingDots": "Đang kiểm tra…",
+      "updateAvailable": "Có bản cập nhật: {{from}} → {{to}}",
+      "installingTitle": "Đang cài đặt {{name}}…",
+      "uninstallingTitle": "Đang gỡ cài đặt {{name}}…",
+      "installedTitle": "Đã cài đặt {{name}}",
+      "failedTitle": "Cài đặt thất bại: {{name}}",
+      "cancelledTitle": "Cài đặt đã hủy: {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "Thất bại"
+    },
+    "steps": {
+      "resolve": "Xác định phiên bản",
+      "download": "Tải xuống",
+      "verifyChecksum": "Xác minh checksum",
+      "extract": "Giải nén",
+      "placeFiles": "Đặt tệp",
+      "updatePath": "Cập nhật PATH",
+      "install": "Cài đặt",
+      "verify": "Xác minh",
+      "enable": "Bật tính năng"
+    }
   }
 }

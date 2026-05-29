@@ -895,7 +895,9 @@
     "closeConnection": "接続を閉じる",
     "childConnectionProperties": "子接続タブのプロパティを編集",
     "lucideIcons": "Lucide アイコン",
-    "selectLucideIcon": "Lucide {{icon}} アイコンを使用"
+    "selectLucideIcon": "Lucide {{icon}} アイコンを使用",
+    "savedPassword": "保存済みパスワード",
+    "typeNewPassword": "新しいパスワードを入力"
   },
   "dashboard": {
     "accent": "アクセント",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "タブ",
     "hideTopTabButtons": "接続ツリーで子接続タブを使用",
     "hideTopTabButtonsDesc": "有効にすると、上部のタブストリップが非表示になり、保存済みの子接続タブが親接続の下に斜体の行として表示されます。",
-    "workspaceSaved": "ワークスペース設定を保存しました。"
+    "workspaceSaved": "ワークスペース設定を保存しました。",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "アクティビティ レール",
+    "installerSaved": "Installer Helper 設定を保存しました。",
+    "installerShowOnRail": "アクティビティ レールに表示",
+    "installerShowOnRailDesc": "有効にすると、Installer Helper アイコンがアクティビティ レールに表示されます。"
   },
   "sftp": {
     "accessed": "アクセス日時",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "ワークスペース",
     "workspaceSurface": "ワークスペース面"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "Windows 開発ツールをインストールして更新します。",
+    "railLabel": "Installer Helper",
+    "refresh": "更新",
+    "checkUpdates": "更新を確認",
+    "updateAll": "すべて更新",
+    "section": {
+      "installed": "インストール済み",
+      "available": "利用可能",
+      "updates": "利用可能な更新"
+    },
+    "actions": {
+      "install": "インストール",
+      "update": "更新",
+      "uninstall": "アンインストール",
+      "cancel": "キャンセル"
+    },
+    "options": {
+      "scope": "スコープ",
+      "scopeUser": "ユーザー単位",
+      "scopeMachine": "すべてのユーザー (UAC)",
+      "version": "バージョン",
+      "versionLatest": "最新",
+      "location": "インストール先",
+      "addToPath": "PATH に追加",
+      "pinVersion": "バージョンを固定（すべて更新から除外）"
+    },
+    "status": {
+      "scanning": "インストール済みツールをスキャン中…",
+      "installing": "インストール中…",
+      "uninstalling": "アンインストール中…",
+      "completed": "完了",
+      "failed": "失敗: {{message}}",
+      "cancelled": "キャンセル済み",
+      "partial": "一部インストール済み ({{installed}}/{{total}})",
+      "noVersion": "(バージョン不明)"
+    },
+    "empty": {
+      "loading": "カタログを読み込み中…"
+    },
+    "confirm": {
+      "installTitle": "{{name}} をインストールしますか？",
+      "installWithPrereqsBody": "次の前提条件もインストールされます:",
+      "uacFooter": "最大 {{count}} 件の UAC プロンプトが表示される場合があります。",
+      "installConfirm": "インストール",
+      "uninstallTitle": "{{name}} をアンインストールしますか？",
+      "uninstallSimpleBody": "{{name}} をシステムから削除します。",
+      "uninstallDependentsBody": "{{name}} をアンインストールすると、次のインストール済みツールに前提条件がなくなります:",
+      "uninstallDependentsFooter": "それでもアンインストールしますか？",
+      "uninstallConfirm": "アンインストール",
+      "updateAllTitle": "インストール済みツールをすべて更新しますか？",
+      "updateAllBody": "{{count}} 件の更新がインストールされます。",
+      "updateAllConfirm": "すべて更新"
+    },
+    "wslReboot": "このセッションで WSL が有効になりました。Docker Desktop をインストールする前に Windows を再起動してください。",
+    "checkingDots": "確認中…",
+    "dialog": {
+      "installLocation": "インストール先",
+      "provider": "プロバイダー",
+      "installedVersion": "インストール済みバージョン",
+      "latestVersion": "最新バージョン",
+      "lastChecked": "最終確認",
+      "homepage": "Web サイト",
+      "releaseNotes": "リリースノート",
+      "prerequisites": "前提条件",
+      "prereqInstalled": "インストール済み",
+      "prereqMissing": "不足",
+      "checkNow": "今すぐ確認",
+      "checkingDots": "確認中…",
+      "updateAvailable": "更新があります: {{from}} → {{to}}",
+      "installingTitle": "{{name}} をインストール中…",
+      "uninstallingTitle": "{{name}} をアンインストール中…",
+      "installedTitle": "{{name}} をインストールしました",
+      "failedTitle": "インストール失敗: {{name}}",
+      "cancelledTitle": "インストールをキャンセル: {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "失敗"
+    },
+    "steps": {
+      "resolve": "バージョンを解決",
+      "download": "ダウンロード",
+      "verifyChecksum": "チェックサムを検証",
+      "extract": "展開",
+      "placeFiles": "ファイルを配置",
+      "updatePath": "PATH を更新",
+      "install": "インストール",
+      "verify": "検証",
+      "enable": "機能を有効化"
+    }
   }
 }

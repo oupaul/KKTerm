@@ -895,7 +895,9 @@
     "closeConnection": "Tutup koneksi",
     "childConnectionProperties": "Edit properti Tab Koneksi Anak",
     "lucideIcons": "Ikon Lucide",
-    "selectLucideIcon": "Gunakan ikon Lucide {{icon}}"
+    "selectLucideIcon": "Gunakan ikon Lucide {{icon}}",
+    "savedPassword": "Kata sandi tersimpan",
+    "typeNewPassword": "Ketik kata sandi baru"
   },
   "dashboard": {
     "accent": "Aksen",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "Tab",
     "hideTopTabButtons": "Gunakan Tab Koneksi Anak di Pohon Koneksi",
     "hideTopTabButtonsDesc": "Saat diaktifkan, Strip Tab atas disembunyikan dan Tab Koneksi Anak yang disimpan muncul sebagai baris miring di bawah Koneksi induknya.",
-    "workspaceSaved": "Pengaturan ruang kerja disimpan."
+    "workspaceSaved": "Pengaturan ruang kerja disimpan.",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "Rel Aktivitas",
+    "installerSaved": "Pengaturan Installer Helper disimpan.",
+    "installerShowOnRail": "Tampilkan di Rel Aktivitas",
+    "installerShowOnRailDesc": "Saat diaktifkan, ikon Installer Helper muncul di Rel Aktivitas."
   },
   "sftp": {
     "accessed": "Diakses",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "Ruang kerja",
     "workspaceSurface": "Permukaan ruang kerja"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "Instal dan perbarui alat pengembang Windows.",
+    "railLabel": "Installer Helper",
+    "refresh": "Segarkan",
+    "checkUpdates": "Periksa pembaruan",
+    "updateAll": "Perbarui semua",
+    "section": {
+      "installed": "Terpasang",
+      "available": "Tersedia",
+      "updates": "Pembaruan tersedia"
+    },
+    "actions": {
+      "install": "Instal",
+      "update": "Perbarui",
+      "uninstall": "Copot pemasangan",
+      "cancel": "Batal"
+    },
+    "options": {
+      "scope": "Cakupan",
+      "scopeUser": "Per pengguna",
+      "scopeMachine": "Semua pengguna (UAC)",
+      "version": "Versi",
+      "versionLatest": "Terbaru",
+      "location": "Lokasi instalasi",
+      "addToPath": "Tambahkan ke PATH",
+      "pinVersion": "Sematkan versi (lewati dari Perbarui semua)"
+    },
+    "status": {
+      "scanning": "Memindai alat terpasang…",
+      "installing": "Menginstal…",
+      "uninstalling": "Mencopot pemasangan…",
+      "completed": "Selesai",
+      "failed": "Gagal: {{message}}",
+      "cancelled": "Dibatalkan",
+      "partial": "Terpasang sebagian ({{installed}}/{{total}})",
+      "noVersion": "(versi tidak diketahui)"
+    },
+    "empty": {
+      "loading": "Memuat katalog…"
+    },
+    "confirm": {
+      "installTitle": "Instal {{name}}?",
+      "installWithPrereqsBody": "Ini juga akan menginstal prasyarat berikut:",
+      "uacFooter": "Dapat menampilkan hingga {{count}} prompt UAC.",
+      "installConfirm": "Instal",
+      "uninstallTitle": "Copot pemasangan {{name}}?",
+      "uninstallSimpleBody": "Ini akan menghapus {{name}} dari sistem Anda.",
+      "uninstallDependentsBody": "Mencopot {{name}} akan membuat alat terpasang ini tanpa prasyarat:",
+      "uninstallDependentsFooter": "Tetap copot pemasangan?",
+      "uninstallConfirm": "Copot pemasangan",
+      "updateAllTitle": "Perbarui semua alat terpasang?",
+      "updateAllBody": "{{count}} pembaruan akan diinstal.",
+      "updateAllConfirm": "Perbarui semua"
+    },
+    "wslReboot": "WSL diaktifkan dalam sesi ini. Mulai ulang Windows sebelum menginstal Docker Desktop.",
+    "checkingDots": "Memeriksa…",
+    "dialog": {
+      "installLocation": "Lokasi instalasi",
+      "provider": "Penyedia",
+      "installedVersion": "Versi terpasang",
+      "latestVersion": "Versi terbaru",
+      "lastChecked": "Terakhir diperiksa",
+      "homepage": "Situs web",
+      "releaseNotes": "Catatan rilis",
+      "prerequisites": "Prasyarat",
+      "prereqInstalled": "Terpasang",
+      "prereqMissing": "Hilang",
+      "checkNow": "Periksa sekarang",
+      "checkingDots": "Memeriksa…",
+      "updateAvailable": "Pembaruan tersedia: {{from}} → {{to}}",
+      "installingTitle": "Menginstal {{name}}…",
+      "uninstallingTitle": "Mencopot {{name}}…",
+      "installedTitle": "{{name}} terpasang",
+      "failedTitle": "Instalasi gagal: {{name}}",
+      "cancelledTitle": "Instalasi dibatalkan: {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "Gagal"
+    },
+    "steps": {
+      "resolve": "Tentukan versi",
+      "download": "Unduh",
+      "verifyChecksum": "Verifikasi checksum",
+      "extract": "Ekstrak",
+      "placeFiles": "Tempatkan file",
+      "updatePath": "Perbarui PATH",
+      "install": "Instal",
+      "verify": "Verifikasi",
+      "enable": "Aktifkan fitur"
+    }
   }
 }

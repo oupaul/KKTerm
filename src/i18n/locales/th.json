@@ -895,7 +895,9 @@
     "closeConnection": "ปิดการเชื่อมต่อ",
     "childConnectionProperties": "แก้ไขคุณสมบัติแท็บการเชื่อมต่อลูก",
     "lucideIcons": "ไอคอน Lucide",
-    "selectLucideIcon": "ใช้ไอคอน Lucide {{icon}}"
+    "selectLucideIcon": "ใช้ไอคอน Lucide {{icon}}",
+    "savedPassword": "รหัสผ่านที่บันทึกไว้",
+    "typeNewPassword": "พิมพ์รหัสผ่านใหม่"
   },
   "dashboard": {
     "accent": "สีเน้น",
@@ -1845,7 +1847,12 @@
     "workspaceTabs": "แท็บ",
     "hideTopTabButtons": "ใช้แท็บการเชื่อมต่อลูกในต้นไม้การเชื่อมต่อ",
     "hideTopTabButtonsDesc": "เมื่อเปิดใช้ แถบแท็บด้านบนจะถูกซ่อน และแท็บการเชื่อมต่อลูกที่บันทึกไว้จะแสดงเป็นแถวตัวเอียงใต้การเชื่อมต่อแม่",
-    "workspaceSaved": "บันทึกการตั้งค่าพื้นที่ทำงานแล้ว"
+    "workspaceSaved": "บันทึกการตั้งค่าพื้นที่ทำงานแล้ว",
+    "sectionInstaller": "Installer Helper",
+    "installerRail": "แถบกิจกรรม",
+    "installerSaved": "บันทึกการตั้งค่า Installer Helper แล้ว",
+    "installerShowOnRail": "แสดงในแถบกิจกรรม",
+    "installerShowOnRailDesc": "เมื่อเปิดใช้ ไอคอน Installer Helper จะปรากฏในแถบกิจกรรม"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",
@@ -2552,5 +2559,97 @@
     "webview": "Webview",
     "workspace": "พื้นที่ทำงาน",
     "workspaceSurface": "พื้นผิวพื้นที่ทำงาน"
+  },
+  "installer": {
+    "title": "Installer Helper",
+    "subtitle": "ติดตั้งและอัปเดตเครื่องมือนักพัฒนา Windows",
+    "railLabel": "Installer Helper",
+    "refresh": "รีเฟรช",
+    "checkUpdates": "ตรวจหาการอัปเดต",
+    "updateAll": "อัปเดตทั้งหมด",
+    "section": {
+      "installed": "ติดตั้งแล้ว",
+      "available": "พร้อมใช้งาน",
+      "updates": "มีการอัปเดต"
+    },
+    "actions": {
+      "install": "ติดตั้ง",
+      "update": "อัปเดต",
+      "uninstall": "ถอนการติดตั้ง",
+      "cancel": "ยกเลิก"
+    },
+    "options": {
+      "scope": "ขอบเขต",
+      "scopeUser": "ต่อผู้ใช้",
+      "scopeMachine": "ผู้ใช้ทั้งหมด (UAC)",
+      "version": "เวอร์ชัน",
+      "versionLatest": "ล่าสุด",
+      "location": "ตำแหน่งติดตั้ง",
+      "addToPath": "เพิ่มลงใน PATH",
+      "pinVersion": "ปักหมุดเวอร์ชัน (ข้ามจากอัปเดตทั้งหมด)"
+    },
+    "status": {
+      "scanning": "กำลังสแกนเครื่องมือที่ติดตั้ง…",
+      "installing": "กำลังติดตั้ง…",
+      "uninstalling": "กำลังถอนการติดตั้ง…",
+      "completed": "เสร็จสิ้น",
+      "failed": "ล้มเหลว: {{message}}",
+      "cancelled": "ยกเลิกแล้ว",
+      "partial": "ติดตั้งบางส่วน ({{installed}}/{{total}})",
+      "noVersion": "(ไม่ทราบเวอร์ชัน)"
+    },
+    "empty": {
+      "loading": "กำลังโหลดแค็ตตาล็อก…"
+    },
+    "confirm": {
+      "installTitle": "ติดตั้ง {{name}} หรือไม่?",
+      "installWithPrereqsBody": "การดำเนินการนี้จะติดตั้งข้อกำหนดเบื้องต้นต่อไปนี้ด้วย:",
+      "uacFooter": "อาจแสดงพรอมป์ UAC สูงสุด {{count}} รายการ",
+      "installConfirm": "ติดตั้ง",
+      "uninstallTitle": "ถอนการติดตั้ง {{name}} หรือไม่?",
+      "uninstallSimpleBody": "การดำเนินการนี้จะลบ {{name}} ออกจากระบบของคุณ",
+      "uninstallDependentsBody": "การถอนการติดตั้ง {{name}} จะทำให้เครื่องมือที่ติดตั้งเหล่านี้ไม่มีข้อกำหนดเบื้องต้น:",
+      "uninstallDependentsFooter": "ยังต้องการถอนการติดตั้งหรือไม่?",
+      "uninstallConfirm": "ถอนการติดตั้ง",
+      "updateAllTitle": "อัปเดตเครื่องมือที่ติดตั้งทั้งหมดหรือไม่?",
+      "updateAllBody": "จะติดตั้งการอัปเดต {{count}} รายการ",
+      "updateAllConfirm": "อัปเดตทั้งหมด"
+    },
+    "wslReboot": "เปิดใช้ WSL ในเซสชันนี้แล้ว รีบูต Windows ก่อนติดตั้ง Docker Desktop",
+    "checkingDots": "กำลังตรวจสอบ…",
+    "dialog": {
+      "installLocation": "ตำแหน่งติดตั้ง",
+      "provider": "ผู้ให้บริการ",
+      "installedVersion": "เวอร์ชันที่ติดตั้ง",
+      "latestVersion": "เวอร์ชันล่าสุด",
+      "lastChecked": "ตรวจสอบล่าสุด",
+      "homepage": "เว็บไซต์",
+      "releaseNotes": "บันทึกประจำรุ่น",
+      "prerequisites": "ข้อกำหนดเบื้องต้น",
+      "prereqInstalled": "ติดตั้งแล้ว",
+      "prereqMissing": "ขาดหาย",
+      "checkNow": "ตรวจสอบตอนนี้",
+      "checkingDots": "กำลังตรวจสอบ…",
+      "updateAvailable": "มีการอัปเดต: {{from}} → {{to}}",
+      "installingTitle": "กำลังติดตั้ง {{name}}…",
+      "uninstallingTitle": "กำลังถอนการติดตั้ง {{name}}…",
+      "installedTitle": "ติดตั้ง {{name}} แล้ว",
+      "failedTitle": "ติดตั้งล้มเหลว: {{name}}",
+      "cancelledTitle": "ยกเลิกการติดตั้ง: {{name}}"
+    },
+    "stepper": {
+      "failedBadge": "ล้มเหลว"
+    },
+    "steps": {
+      "resolve": "แก้ไขเวอร์ชัน",
+      "download": "ดาวน์โหลด",
+      "verifyChecksum": "ตรวจสอบ checksum",
+      "extract": "แตกไฟล์",
+      "placeFiles": "วางไฟล์",
+      "updatePath": "อัปเดต PATH",
+      "install": "ติดตั้ง",
+      "verify": "ตรวจสอบ",
+      "enable": "เปิดใช้คุณลักษณะ"
+    }
   }
 }
