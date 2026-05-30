@@ -4,8 +4,7 @@
 //   * Mount: load catalog (uses 1h disk cache), subscribe to progress events,
 //     load toolState. If hasInitialScanned is false, kick off detect_all and
 //     mark scanned. Subsequent visits use the in-memory cache.
-//   * "Refresh" button: re-run detect_all + reload toolState.
-//   * "Check for updates" button: call installer_check_latest_versions for
+//   * "Refresh" button: re-run detection, then check latest versions for
 //     every currently-installed tool.
 //   * Unmount: keep the in-memory store; do NOT reset detected state (so
 //     visiting the Module again is instant).
@@ -155,12 +154,23 @@ export function InstallerPage({ active }: { active: boolean }) {
   ]);
 
   async function handleRefresh() {
-    if (!isTauriRuntime()) return;
+    if (!isTauriRuntime() || !catalog) return;
     setScanning(true);
     try {
-      await invokeCommand("installer_detect_all_streaming");
+      const nextDetected = await invokeCommand("installer_detect_all");
+      setDetected(nextDetected);
       const states = await invokeCommand("installer_get_state");
       setToolStates(states);
+      const installedIds = catalog.recipes
+        .filter((r) => nextDetected[r.id]?.installed)
+        .map((r) => r.id);
+      if (installedIds.length > 0) {
+        await invokeCommand("installer_check_latest_versions", {
+          toolIds: installedIds,
+        });
+      }
+      setScanning(false);
+      markInitialScanned();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(message, { tone: "error" });
@@ -168,29 +178,19 @@ export function InstallerPage({ active }: { active: boolean }) {
     }
   }
 
-  async function handleCheckUpdates() {
-    if (!isTauriRuntime() || !catalog) return;
-    const installedIds = catalog.recipes
-      .filter((r) => detected[r.id]?.installed)
-      .map((r) => r.id);
-    if (installedIds.length === 0) return;
-    try {
-      // Streaming: backend emits checkStarted → checkResult* → checkFinished.
-      // applyProgress writes each result into toolState as it lands, so rows
-      // light up incrementally and the UI stays responsive.
-      await invokeCommand("installer_check_latest_versions", {
-        toolIds: installedIds,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showStatusBarNotice(message, { tone: "error" });
-    }
-  }
-
   const sections = groupRecipes(catalog?.recipes ?? [], detected, toolState);
   const updateAllRecipes = sections.updates.filter(
     (recipe) => !(toolState[recipe.id]?.pinned ?? false),
   );
+  const lastCheckedAt = latestTimestamp([
+    ...Object.values(detected).map((state) => state.lastCheckedAt ?? null),
+    ...Object.values(toolState).map((state) => state.lastCheckAt),
+  ]);
+  const lastCheckedText = t("installer.lastChecked", {
+    time: lastCheckedAt
+      ? formatHeaderTimestamp(lastCheckedAt)
+      : t("installer.status.neverChecked"),
+  });
 
   function openUpdateAllConfirm() {
     if (!catalog || updateAllRecipes.length === 0) return;
@@ -249,30 +249,18 @@ export function InstallerPage({ active }: { active: boolean }) {
           <p className="installer-page__subtitle">{t("installer.subtitle")}</p>
         </div>
         <div className="installer-page__actions">
+          <span className="installer-page__last-checked">
+            {lastCheckedText}
+          </span>
           <button
             type="button"
             className="installer-button"
             onClick={() => void handleRefresh()}
-            disabled={scanning || !catalog}
+            disabled={scanning || checking || !catalog}
           >
-            {t("installer.refresh")}
-          </button>
-          <button
-            type="button"
-            className="installer-button"
-            onClick={() => void handleCheckUpdates()}
-            disabled={
-              scanning ||
-              checking ||
-              !catalog ||
-              sections.installed.length === 0
-            }
-          >
-            {checking
-              ? t("installer.checkingDots", {
-                  defaultValue: t("installer.checkUpdates") + "…",
-                })
-              : t("installer.checkUpdates")}
+            {scanning || checking
+              ? t("installer.checkingDots")
+              : t("installer.refresh")}
           </button>
           <button
             type="button"
@@ -421,4 +409,18 @@ function groupRecipes(
       .filter((recipe): recipe is Recipe => !!recipe),
   })).filter((section) => section.recipes.length > 0);
   return { installed, updates, categories };
+}
+
+function latestTimestamp(
+  values: Array<number | null | undefined>,
+): number | null {
+  const numeric = values.filter(
+    (value): value is number => typeof value === "number",
+  );
+  if (numeric.length === 0) return null;
+  return Math.max(...numeric);
+}
+
+function formatHeaderTimestamp(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleString();
 }

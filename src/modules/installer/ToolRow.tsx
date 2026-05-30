@@ -69,9 +69,6 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     ? (installedVersion ?? t("installer.status.noVersion"))
     : t("installer.status.notInstalled");
   const latestVersionText = latestSeen ?? t("installer.status.noVersion");
-  const checkedText = detected?.lastCheckedAt
-    ? formatTileTimestamp(detected.lastCheckedAt)
-    : t("installer.status.neverChecked");
 
   return (
     <article
@@ -136,10 +133,6 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
                 <dt>{t("installer.tile.installed")}</dt>
                 <dd>{installedVersionText}</dd>
               </div>
-              <div>
-                <dt>{t("installer.tile.checked")}</dt>
-                <dd>{checkedText}</dd>
-              </div>
             </dl>
           )}
           <div className="installer-tile__meta">
@@ -162,8 +155,4 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
       </div>
     </article>
   );
-}
-
-function formatTileTimestamp(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleString();
 }

@@ -526,6 +526,7 @@
       "updateAllConfirm": "Update all"
     },
     "wslReboot": "WSL was enabled this session. Reboot Windows before installing Docker Desktop.",
+    "lastChecked": "Last checked: {{time}}",
     "checkingDots": "Checking…",
     "dialog": {
       "installLocation": "Install location",
