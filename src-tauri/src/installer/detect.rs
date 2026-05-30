@@ -28,6 +28,11 @@ pub struct DetectedState {
     /// recoverable from their detection output, and the dialog hides the
     /// row when this is None.
     pub install_location: Option<String>,
+    /// Extra runtime version for manager-backed bundles. For Node/Python
+    /// bundles, `installed_version` remains the manager version used for
+    /// update comparisons, while this carries the managed runtime version.
+    #[serde(default)]
+    pub runtime_version: Option<String>,
     /// Unix timestamp from the most recent detection pass. Cached registry
     /// results carry this so the UI can show how stale the snapshot is.
     pub last_checked_at: Option<i64>,
@@ -40,6 +45,7 @@ impl DetectedState {
             installed_version: None,
             partial_count: None,
             install_location: None,
+            runtime_version: None,
             last_checked_at: None,
         }
     }
@@ -49,6 +55,7 @@ impl DetectedState {
             installed_version: version,
             partial_count: None,
             install_location: None,
+            runtime_version: None,
             last_checked_at: None,
         }
     }
@@ -168,6 +175,7 @@ fn default_bundle_detected_state(child_states: &[&DetectedState], total: u32) ->
             installed_version: None,
             partial_count: Some((installed_count, total)),
             install_location: None,
+            runtime_version: None,
             last_checked_at: None,
         }
     }
@@ -182,12 +190,20 @@ fn runtime_bundle_detected_state(
         return default_bundle_detected_state(child_states, child_states.len() as u32);
     }
     match detect_runtime_version() {
-        Some(version) => DetectedState::installed(Some(version)),
+        Some(version) => {
+            let manager_version = child_states
+                .first()
+                .and_then(|state| state.installed_version.clone());
+            let mut state = DetectedState::installed(manager_version);
+            state.runtime_version = Some(version);
+            state
+        }
         None => DetectedState {
             installed: false,
             installed_version: None,
             partial_count: Some((child_states.len() as u32, child_states.len() as u32 + 1)),
             install_location: None,
+            runtime_version: None,
             last_checked_at: None,
         },
     }
@@ -724,7 +740,8 @@ mod tests {
         let state = runtime_bundle_detected_state(&[&manager], || Some("3.13.5".into()));
 
         assert!(state.installed);
-        assert_eq!(state.installed_version.as_deref(), Some("3.13.5"));
+        assert_eq!(state.installed_version.as_deref(), Some("1.0.0"));
+        assert_eq!(state.runtime_version.as_deref(), Some("3.13.5"));
     }
 
     #[test]

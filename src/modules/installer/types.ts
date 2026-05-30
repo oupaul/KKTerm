@@ -73,6 +73,10 @@ export interface DetectedState {
   /// Best-effort install directory. Populated for github-release recipes
   /// (we own the install dir); null elsewhere. UI hides the row when null.
   installLocation?: string | null;
+  /// Extra runtime version for manager-backed bundles. For Node/Python
+  /// bundles, installedVersion remains nvm/uv for update comparisons while
+  /// this carries the managed Node/Python runtime version.
+  runtimeVersion?: string | null;
   /// Unix timestamp from the last completed detection pass. Cached Windows
   /// registry snapshots use this so the tile can show how stale it is.
   lastCheckedAt?: number | null;

@@ -478,8 +478,8 @@
     "tile": {
       "latest": "Latest:",
       "installed": "Installed:",
-      "nodeVersion": "Node Version:",
-      "pythonVersion": "Python Version:",
+      "node": "Node:",
+      "python": "Python:",
       "checked": "Checked:"
     },
     "actions": {

@@ -69,12 +69,13 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     ? (installedVersion ?? t("installer.status.noVersion"))
     : t("installer.status.notInstalled");
   const latestVersionText = latestSeen ?? t("installer.status.noVersion");
-  const installedVersionLabel =
+  const runtimeVersionLabel =
     recipe.id === "node-bundle"
-      ? t("installer.tile.nodeVersion")
+      ? t("installer.tile.node")
       : recipe.id === "python-bundle"
-        ? t("installer.tile.pythonVersion")
-        : t("installer.tile.installed");
+        ? t("installer.tile.python")
+        : null;
+  const runtimeVersionText = detected?.runtimeVersion ?? t("installer.status.noVersion");
 
   return (
     <article
@@ -136,9 +137,15 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
                 <dd>{latestVersionText}</dd>
               </div>
               <div>
-                <dt>{installedVersionLabel}</dt>
+                <dt>{t("installer.tile.installed")}</dt>
                 <dd>{installedVersionText}</dd>
               </div>
+              {runtimeVersionLabel ? (
+                <div>
+                  <dt>{runtimeVersionLabel}</dt>
+                  <dd>{runtimeVersionText}</dd>
+                </div>
+              ) : null}
             </dl>
           )}
           <div className="installer-tile__meta">
