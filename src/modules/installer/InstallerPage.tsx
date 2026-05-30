@@ -21,8 +21,10 @@ import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { InstallerToolDialog } from "./InstallerToolDialog";
 import {
   PROGRESS_EVENT_NAME,
+  type DetectedState,
   type ProgressEvent,
   type Recipe,
+  type ToolState,
 } from "./types";
 import { installRecipeAndWait } from "./progress";
 import { ToolRow } from "./ToolRow";
@@ -129,12 +131,14 @@ export function InstallerPage({ active }: { active: boolean }) {
     setScanning(true);
     void (async () => {
       try {
-        const next = await invokeCommand("installer_detect_all");
-        setDetected(next);
+        const cached = await invokeCommand("installer_load_detection_cache");
+        if (Object.keys(cached).length > 0) {
+          setDetected(cached);
+        }
+        await invokeCommand("installer_detect_all_streaming");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         showStatusBarNotice(message, { tone: "error" });
-      } finally {
         setScanning(false);
         markInitialScanned();
       }
@@ -154,14 +158,12 @@ export function InstallerPage({ active }: { active: boolean }) {
     if (!isTauriRuntime()) return;
     setScanning(true);
     try {
-      const next = await invokeCommand("installer_detect_all");
-      setDetected(next);
+      await invokeCommand("installer_detect_all_streaming");
       const states = await invokeCommand("installer_get_state");
       setToolStates(states);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(message, { tone: "error" });
-    } finally {
       setScanning(false);
     }
   }
@@ -260,7 +262,10 @@ export function InstallerPage({ active }: { active: boolean }) {
             className="installer-button"
             onClick={() => void handleCheckUpdates()}
             disabled={
-              scanning || checking || !catalog || sections.installed.length === 0
+              scanning ||
+              checking ||
+              !catalog ||
+              sections.installed.length === 0
             }
           >
             {checking
@@ -293,14 +298,13 @@ export function InstallerPage({ active }: { active: boolean }) {
               recipes={sections.updates}
             />
           ) : null}
-          <RecipeSection
-            titleKey="installer.section.installed"
-            recipes={sections.installed}
-          />
-          <RecipeSection
-            titleKey="installer.section.available"
-            recipes={sections.available}
-          />
+          {sections.categories.map((section) => (
+            <RecipeSection
+              key={section.titleKey}
+              titleKey={section.titleKey}
+              recipes={section.recipes}
+            />
+          ))}
         </>
       )}
       <InstallerToolDialog />
@@ -350,22 +354,50 @@ function RecipeSection({
 
 interface GroupedRecipes {
   installed: Recipe[];
-  available: Recipe[];
   updates: Recipe[];
+  categories: Array<{ titleKey: string; recipes: Recipe[] }>;
 }
+
+const INSTALLER_CATEGORY_SECTIONS: Array<{
+  titleKey: string;
+  ids: string[];
+}> = [
+  {
+    titleKey: "installer.section.essentials",
+    ids: ["node-bundle", "python-bundle", "git"],
+  },
+  {
+    titleKey: "installer.section.aiAgents",
+    ids: ["claude-code-cli", "codex-cli", "gemini-cli", "openclaw"],
+  },
+  {
+    titleKey: "installer.section.aiPlatforms",
+    ids: ["ollama", "n8n"],
+  },
+  {
+    titleKey: "installer.section.development",
+    ids: ["vscode", "cursor", "docker-desktop", "bruno", "wsl"],
+  },
+  {
+    titleKey: "installer.section.utilities",
+    ids: ["notepadpp", "ripgrep", "jq", "fzf"],
+  },
+];
 
 function groupRecipes(
   recipes: Recipe[],
-  detected: Record<string, ReturnType<typeof Object>>,
-  toolState: Record<string, { latestVersionSeen: string | null }>,
+  detected: Record<string, DetectedState>,
+  toolState: Record<string, ToolState>,
 ): GroupedRecipes {
   const installed: Recipe[] = [];
-  const available: Recipe[] = [];
   const updates: Recipe[] = [];
+  const visibleIds = new Set(
+    INSTALLER_CATEGORY_SECTIONS.flatMap((section) => section.ids),
+  );
   for (const recipe of recipes) {
+    if (!visibleIds.has(recipe.id)) continue;
     const det = detected[recipe.id];
     if (!det) {
-      available.push(recipe);
       continue;
     }
     if (det.installed) {
@@ -379,9 +411,14 @@ function groupRecipes(
       } else {
         installed.push(recipe);
       }
-    } else {
-      available.push(recipe);
     }
   }
-  return { installed, available, updates };
+  const byId = new Map(recipes.map((recipe) => [recipe.id, recipe]));
+  const categories = INSTALLER_CATEGORY_SECTIONS.map((section) => ({
+    titleKey: section.titleKey,
+    recipes: section.ids
+      .map((id) => byId.get(id))
+      .filter((recipe): recipe is Recipe => !!recipe),
+  })).filter((section) => section.recipes.length > 0);
+  return { installed, updates, categories };
 }

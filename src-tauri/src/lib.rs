@@ -257,7 +257,7 @@ async fn dashboard_load_background_image(
 fn dashboard_load_background_image_sync(
     file: String,
 ) -> Result<DashboardBackgroundImageData, String> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     if file.is_empty() || file.contains('/') || file.contains('\\') || file.contains("..") {
         return Err("invalid background image file name".to_string());
@@ -328,7 +328,7 @@ fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
 }
 
 fn load_custom_font_data_sync(path: String) -> Result<CustomFontData, String> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     let folder = custom_fonts_folder()?;
     fs::create_dir_all(&folder).map_err(|error| {
@@ -1064,8 +1064,8 @@ fn delete_assistant_chat_thread(
 }
 
 #[tauri::command]
-async fn start_github_copilot_device_flow()
--> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
+async fn start_github_copilot_device_flow(
+) -> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
     github_copilot::start_device_flow().await
 }
 
@@ -2808,7 +2808,9 @@ pub fn run() {
             dashboard_import_background_image,
             dashboard_load_background_image,
             installer::commands::installer_load_catalog,
+            installer::commands::installer_load_detection_cache,
             installer::commands::installer_detect_all,
+            installer::commands::installer_detect_all_streaming,
             installer::commands::installer_redetect,
             installer::commands::installer_check_latest_versions,
             installer::commands::installer_install_recipe,

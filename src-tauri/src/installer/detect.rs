@@ -8,12 +8,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::proc::no_window;
 use super::schema::{Catalog, GithubReleaseLayout, Provider, Recipe};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectedState {
     pub installed: bool,
@@ -28,6 +28,9 @@ pub struct DetectedState {
     /// recoverable from their detection output, and the dialog hides the
     /// row when this is None.
     pub install_location: Option<String>,
+    /// Unix timestamp from the most recent detection pass. Cached registry
+    /// results carry this so the UI can show how stale the snapshot is.
+    pub last_checked_at: Option<i64>,
 }
 
 impl DetectedState {
@@ -37,6 +40,7 @@ impl DetectedState {
             installed_version: None,
             partial_count: None,
             install_location: None,
+            last_checked_at: None,
         }
     }
     pub fn installed(version: Option<String>) -> Self {
@@ -45,10 +49,15 @@ impl DetectedState {
             installed_version: version,
             partial_count: None,
             install_location: None,
+            last_checked_at: None,
         }
     }
     pub fn with_install_location(mut self, location: Option<String>) -> Self {
         self.install_location = location;
+        self
+    }
+    pub fn with_last_checked_at(mut self, checked_at: Option<i64>) -> Self {
+        self.last_checked_at = checked_at;
         self
     }
 }
@@ -73,13 +82,11 @@ pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
     // Bundles consult already-detected leaves.
     for bundle in bundles {
         if let Provider::Bundle { steps } = &bundle.provider {
-            let state = bundle_detected_state(
-                steps
-                    .iter()
-                    .filter(|step| out.get(step.as_str()).map(|s| s.installed).unwrap_or(false))
-                    .count() as u32,
-                steps.len() as u32,
-            );
+            let child_states: Vec<&DetectedState> = steps
+                .iter()
+                .filter_map(|step| out.get(step.as_str()))
+                .collect();
+            let state = bundle_detected_state(&child_states, steps.len() as u32);
             out.insert(bundle.id.clone(), state);
         }
     }
@@ -90,18 +97,28 @@ pub fn detect_one_in_catalog(recipe: &Recipe, catalog: &Catalog) -> DetectedStat
     if let Provider::Bundle { steps } = &recipe.provider {
         let recipes_by_id: HashMap<&str, &Recipe> =
             catalog.recipes.iter().map(|r| (r.id.as_str(), r)).collect();
-        let installed_count = steps
+        let child_states: Vec<DetectedState> = steps
             .iter()
-            .filter(|step| {
-                recipes_by_id
-                    .get(step.as_str())
-                    .map(|r| detect_one(r).installed)
-                    .unwrap_or(false)
-            })
-            .count() as u32;
-        return bundle_detected_state(installed_count, steps.len() as u32);
+            .filter_map(|step| recipes_by_id.get(step.as_str()).map(|r| detect_one(r)))
+            .collect();
+        let child_refs: Vec<&DetectedState> = child_states.iter().collect();
+        return bundle_detected_state(&child_refs, steps.len() as u32);
     }
     detect_one(recipe)
+}
+
+pub fn detect_bundle_from_states(
+    recipe: &Recipe,
+    detected: &HashMap<String, DetectedState>,
+) -> Option<DetectedState> {
+    if let Provider::Bundle { steps } = &recipe.provider {
+        let child_states: Vec<&DetectedState> = steps
+            .iter()
+            .filter_map(|step| detected.get(step.as_str()))
+            .collect();
+        return Some(bundle_detected_state(&child_states, steps.len() as u32));
+    }
+    None
 }
 
 pub fn detect_one(recipe: &Recipe) -> DetectedState {
@@ -114,17 +131,26 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
     }
 }
 
-fn bundle_detected_state(installed_count: u32, total: u32) -> DetectedState {
+fn bundle_detected_state(child_states: &[&DetectedState], total: u32) -> DetectedState {
+    let installed_count = child_states.iter().filter(|state| state.installed).count() as u32;
     if installed_count == 0 {
         DetectedState::not_installed()
     } else if installed_count == total {
-        DetectedState::installed(None)
+        let version = if total == 1 {
+            child_states
+                .first()
+                .and_then(|state| state.installed_version.clone())
+        } else {
+            None
+        };
+        DetectedState::installed(version)
     } else {
         DetectedState {
             installed: false,
             installed_version: None,
             partial_count: Some((installed_count, total)),
             install_location: None,
+            last_checked_at: None,
         }
     }
 }
@@ -143,8 +169,7 @@ struct WingetSnapshot {
     by_id: HashMap<String, Option<String>>,
 }
 
-static WINGET_SNAPSHOT: OnceLock<std::sync::Mutex<Option<WingetSnapshot>>> =
-    OnceLock::new();
+static WINGET_SNAPSHOT: OnceLock<std::sync::Mutex<Option<WingetSnapshot>>> = OnceLock::new();
 
 fn winget_snapshot_cell() -> &'static std::sync::Mutex<Option<WingetSnapshot>> {
     WINGET_SNAPSHOT.get_or_init(|| std::sync::Mutex::new(None))
@@ -161,12 +186,7 @@ pub fn refresh_winget_snapshot() {
 
 fn run_winget_list() -> Option<WingetSnapshot> {
     let output = no_window(&mut Command::new("winget"))
-        .args([
-            "list",
-            "--source",
-            "winget",
-            "--disable-interactivity",
-        ])
+        .args(["list", "--source", "winget", "--disable-interactivity"])
         .output()
         .ok()?;
     if !output.status.success() {
@@ -296,7 +316,9 @@ fn detect_github_release_marker(tool_id: &str) -> DetectedState {
         Ok(v) => v,
         Err(_) => {
             return DetectedState::installed(None).with_install_location(Some(
-                github_release_install_dir(tool_id).to_string_lossy().into_owned(),
+                github_release_install_dir(tool_id)
+                    .to_string_lossy()
+                    .into_owned(),
             ));
         }
     };
@@ -305,7 +327,9 @@ fn detect_github_release_marker(tool_id: &str) -> DetectedState {
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
     DetectedState::installed(version).with_install_location(Some(
-        github_release_install_dir(tool_id).to_string_lossy().into_owned(),
+        github_release_install_dir(tool_id)
+            .to_string_lossy()
+            .into_owned(),
     ))
 }
 
@@ -313,7 +337,10 @@ pub fn github_release_install_dir(tool_id: &str) -> PathBuf {
     let base = std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    base.join("KKTerm").join("installer").join("bin").join(tool_id)
+    base.join("KKTerm")
+        .join("installer")
+        .join("bin")
+        .join(tool_id)
 }
 
 pub fn github_release_marker_path(tool_id: &str) -> PathBuf {
@@ -369,7 +396,9 @@ mod tests {
 
     #[test]
     fn bundle_state_reports_partial_counts() {
-        let state = bundle_detected_state(1, 3);
+        let installed = DetectedState::installed(Some("1.0.0".into()));
+        let missing = DetectedState::not_installed();
+        let state = bundle_detected_state(&[&installed, &missing], 3);
 
         assert!(!state.installed);
         assert_eq!(state.partial_count, Some((1, 3)));
@@ -377,9 +406,21 @@ mod tests {
 
     #[test]
     fn bundle_state_reports_installed_when_all_steps_are_installed() {
-        let state = bundle_detected_state(2, 2);
+        let first = DetectedState::installed(Some("1.0.0".into()));
+        let second = DetectedState::installed(Some("2.0.0".into()));
+        let state = bundle_detected_state(&[&first, &second], 2);
 
         assert!(state.installed);
+        assert_eq!(state.installed_version, None);
         assert_eq!(state.partial_count, None);
+    }
+
+    #[test]
+    fn bundle_state_inherits_single_step_version() {
+        let child = DetectedState::installed(Some("1.0.0".into()));
+        let state = bundle_detected_state(&[&child], 1);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("1.0.0"));
     }
 }

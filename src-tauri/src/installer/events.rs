@@ -14,6 +14,10 @@
 // `CheckStarted` with the full id list, then one `CheckResult` per tool
 // as its lookup lands, then one `CheckFinished`. Errors are surfaced
 // per-tool — a single failed lookup does not abort the sweep.
+//
+// Detection protocol: Module entry can render cached registry state
+// immediately, then run a streaming revalidation sweep. The sweep emits
+// one `DetectResult` per tool as it lands so the grid updates tile-by-tile.
 
 use serde::Serialize;
 
@@ -87,7 +91,6 @@ pub enum ProgressEvent {
     },
 
     // ---- Check-for-updates streaming protocol -------------------------
-
     /// A check-for-updates sweep just started. UI shows a spinner and
     /// disables the Check button. `tool_ids` are the ids about to be
     /// queried, in submission order.
@@ -105,4 +108,14 @@ pub enum ProgressEvent {
     },
     /// All queued tools have produced a `CheckResult` (or were cancelled).
     CheckFinished,
+
+    // ---- Installed-tool detection streaming protocol -----------------
+    DetectStarted {
+        tool_ids: Vec<String>,
+    },
+    DetectResult {
+        tool_id: String,
+        state: super::detect::DetectedState,
+    },
+    DetectFinished,
 }

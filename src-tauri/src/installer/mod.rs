@@ -4,6 +4,7 @@
 // at build time; it ships with each KKTerm release. See ADR 0008 for the
 // supersession of the earlier remote-signed-catalog design (ADR 0007).
 
+pub mod cache;
 pub mod catalog;
 pub mod commands;
 pub mod detect;

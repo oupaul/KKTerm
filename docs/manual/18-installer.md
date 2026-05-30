@@ -2,29 +2,32 @@
 
 ## AI grep hints
 
-- Keys: `installer.title`, `installer.subtitle`, `installer.railLabel`, `installer.refresh`, `installer.checkUpdates`, `installer.checkingDots`, `installer.updateAll`, `installer.section.installed`, `installer.section.available`, `installer.section.updates`, `installer.actions.install`, `installer.actions.update`, `installer.actions.uninstall`, `installer.actions.cancel`, `installer.options.scope`, `installer.options.version`, `installer.options.location`, `installer.options.addToPath`, `installer.options.pinVersion`, `installer.status.installing`, `installer.status.uninstalling`, `installer.status.completed`, `installer.status.failed`, `installer.status.cancelled`, `installer.status.partial`, `installer.status.scanning`, `installer.empty.loading`, `installer.confirm.installTitle`, `installer.confirm.installWithPrereqsBody`, `installer.confirm.uacFooter`, `installer.confirm.uninstallTitle`, `installer.confirm.uninstallSimpleBody`, `installer.confirm.uninstallDependentsBody`, `installer.confirm.uninstallDependentsFooter`, `installer.confirm.updateAllTitle`, `installer.confirm.updateAllBody`, `installer.confirm.updateAllConfirm`, `installer.wslReboot`, `installer.dialog.installLocation`, `installer.dialog.provider`, `installer.dialog.installedVersion`, `installer.dialog.latestVersion`, `installer.dialog.lastChecked`, `installer.dialog.homepage`, `installer.dialog.releaseNotes`, `installer.dialog.prerequisites`, `installer.dialog.prereqInstalled`, `installer.dialog.prereqMissing`, `installer.dialog.checkNow`, `installer.dialog.checkingDots`, `installer.dialog.updateAvailable`, `installer.dialog.installingTitle`, `installer.dialog.uninstallingTitle`, `installer.dialog.installedTitle`, `installer.dialog.failedTitle`, `installer.dialog.cancelledTitle`, `installer.stepper.failedBadge`, `installer.steps.resolve`, `installer.steps.download`, `installer.steps.verifyChecksum`, `installer.steps.extract`, `installer.steps.placeFiles`, `installer.steps.updatePath`, `installer.steps.install`, `installer.steps.verify`, `installer.steps.enable`
+- Keys: `installer.title`, `installer.subtitle`, `installer.railLabel`, `installer.refresh`, `installer.checkUpdates`, `installer.checkingDots`, `installer.updateAll`, `installer.section.installed`, `installer.section.available`, `installer.section.updates`, `installer.section.essentials`, `installer.section.aiAgents`, `installer.section.aiPlatforms`, `installer.section.development`, `installer.section.utilities`, `installer.tile.latest`, `installer.tile.installed`, `installer.tile.checked`, `installer.actions.install`, `installer.actions.update`, `installer.actions.uninstall`, `installer.actions.cancel`, `installer.options.scope`, `installer.options.version`, `installer.options.location`, `installer.options.addToPath`, `installer.options.pinVersion`, `installer.status.installing`, `installer.status.uninstalling`, `installer.status.completed`, `installer.status.failed`, `installer.status.cancelled`, `installer.status.partial`, `installer.status.noVersion`, `installer.status.notInstalled`, `installer.status.neverChecked`, `installer.status.scanning`, `installer.empty.loading`, `installer.confirm.installTitle`, `installer.confirm.installWithPrereqsBody`, `installer.confirm.uacFooter`, `installer.confirm.uninstallTitle`, `installer.confirm.uninstallSimpleBody`, `installer.confirm.uninstallDependentsBody`, `installer.confirm.uninstallDependentsFooter`, `installer.confirm.updateAllTitle`, `installer.confirm.updateAllBody`, `installer.confirm.updateAllConfirm`, `installer.wslReboot`, `installer.dialog.installLocation`, `installer.dialog.provider`, `installer.dialog.installedVersion`, `installer.dialog.latestVersion`, `installer.dialog.lastChecked`, `installer.dialog.homepage`, `installer.dialog.releaseNotes`, `installer.dialog.prerequisites`, `installer.dialog.prereqInstalled`, `installer.dialog.prereqMissing`, `installer.dialog.checkNow`, `installer.dialog.checkingDots`, `installer.dialog.updateAvailable`, `installer.dialog.installingTitle`, `installer.dialog.uninstallingTitle`, `installer.dialog.installedTitle`, `installer.dialog.failedTitle`, `installer.dialog.cancelledTitle`, `installer.stepper.failedBadge`, `installer.steps.resolve`, `installer.steps.download`, `installer.steps.verifyChecksum`, `installer.steps.extract`, `installer.steps.placeFiles`, `installer.steps.updatePath`, `installer.steps.install`, `installer.steps.verify`, `installer.steps.enable`
 - Topics: Installer Helper Module, bundled catalog (compile-time embedded), ADR 0008 supersedes ADR 0007, winget recipes, npm recipes, github-release recipes, Windows feature recipes (DISM), bundles (node-bundle, python-bundle), dependency resolution, UAC prompts, WSL reboot gating, pin version, in-flight cancellation, tutorial targets `app.activityRailInstaller`, `installer.updateAll`, `installer.toolOptions`
 - Synonyms: "install nvm", "install Node", "install Python", "install Docker", "install Claude Code", "set up dev tools", "developer tools installer", "package manager"
 
 ## What it is
 
-The **Installer Helper Module** is a built-in Activity Rail destination that installs, updates, and uninstalls a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. It is grouped with the other built-in Module buttons near the top of the rail, with its own icon (`Package`).
+The **Installer Helper Module** is a built-in Activity Rail destination that installs, updates, and uninstalls a curated catalog of Windows AI tool stacks — git, node, python, docker, AI coding CLIs, local AI platforms, and supporting utilities. It is grouped with the other built-in Module buttons near the top of the rail, with its own icon (`Package`).
 
 The catalog **ships with the KKTerm release**: the JSON list of supported tools is compiled into the binary at build time. Updates to the catalog ride with each release. See `docs/ADR/0008-installer-helper-bundled-catalog.md` for the rationale and what it supersedes.
 
 ## Module layout
 
-The page has a header and three sections:
+The page has a header and categorized sections:
 
 - **Header.** Title (`installer.title`), subtitle (`installer.subtitle`), and three buttons:
   - `installer.refresh` — re-runs detection for every catalog tool.
   - `installer.checkUpdates` — queries the latest available version for every installed tool and caches the result.
   - `installer.updateAll` — installs every available update sequentially. Tutorial target: `installer.updateAll`.
 - **Updates available** (`installer.section.updates`) — installed tools whose cached latest version differs from the detected installed version.
-- **Installed** (`installer.section.installed`) — tools currently present on the system.
-- **Available** (`installer.section.available`) — catalog tools not currently installed.
+- **Essentials** (`installer.section.essentials`) — recommended Windows setup patterns for Node, Python, and Git. The visible Node entry installs nvm-windows only; the visible Python entry installs uv only. Power users who want direct Node.js or CPython installer packages can install those outside Installer Helper.
+- **AI Agents** (`installer.section.aiAgents`) — coding-agent CLIs such as Claude Code CLI, Codex CLI, Gemini CLI, and OpenClaw.
+- **AI Platforms** (`installer.section.aiPlatforms`) — local or self-hosted AI platforms such as Ollama and n8n.
+- **Development** (`installer.section.development`) — editors, containers, API tools, and WSL.
+- **Utilities** (`installer.section.utilities`) — Notepad++, ripgrep, jq, and fzf.
 
-Each tool surface is a **tile** in the section grid. Clicking a tile opens an app-owned popup dialog — `InstallerToolDialog` — that owns the detail surface (the previous inline expansion has been removed). Tutorial target on the options form inside the dialog: `installer.toolOptions`.
+Each tool surface is a **tile** in the section grid. Installed tools show an `installer.section.installed` badge. Tile version metadata is shown on separate `installer.tile.latest`, `installer.tile.installed`, and `installer.tile.checked` rows, rather than as provider kind text. One-step recommended bundles inherit latest/detected version metadata from their child recipe. The tile action button switches between `installer.actions.install` and `installer.actions.uninstall` based on detected install state, and opens the app-owned popup dialog — `InstallerToolDialog` — that owns the detail surface (the previous inline expansion has been removed). Tutorial target on the options form inside the dialog: `installer.toolOptions`.
 
 The dialog has three rendering modes:
 
@@ -34,15 +37,15 @@ The dialog has three rendering modes:
 
 ## Tool detection
 
-Detection runs once on the first Module entry per app session and is held in memory until the user clicks `installer.refresh` or quits the app. It is **never persisted across restarts** — re-running detection is the canonical truth about what is installed.
+Detection renders in two phases on Module entry. First, KKTerm loads the local Windows Registry detection cache from `HKCU\Software\Ryan Tsai\KKTerm\InstallerDetectionCache` and paints any remembered states immediately. Then the backend starts a bounded streaming revalidation sweep in the background. Each completed tool emits a `detectResult` event over `installer://progress`, updates the tile, and writes the fresh state back to the registry cache. `installer.refresh` starts the same streaming sweep on demand.
 
 Per-provider detection methods:
 
-- **winget** — `winget list --source winget --disable-interactivity` is run **once** per detection sweep; every winget recipe consults the parsed snapshot rather than spawning its own child process. The snapshot is cached until the next explicit `installer_detect_all` / `installer_redetect` call. All detection/check spawns set `CREATE_NO_WINDOW` so no `cmd.exe` window flashes on Module entry.
+- **winget** — `winget list --source winget --disable-interactivity` is run **once** per fresh detection sweep; every winget recipe consults the parsed snapshot rather than spawning its own child process. The snapshot is cached in memory until the next explicit detection call. Fresh results are persisted to the Installer Helper registry cache. All detection/check spawns set `CREATE_NO_WINDOW` so no `cmd.exe` window flashes on Module entry.
 - **npm** — `npm ls -g --json --depth=0`. Looks up the package in the top-level `dependencies`.
 - **github-release** — a marker file at `%LOCALAPPDATA%\KKTerm\installer\bin\<tool_id>\.kkterm-installer.json` written at install time. Only installs we performed count as "managed".
 - **windows-feature** — `dism /online /get-featureinfo /featurename:<X>`. Parses the `State :` line.
-- **bundle** — installed iff every step's detection is installed; otherwise the row shows `installer.status.partial` with an `installed/total` count.
+- **bundle** — installed iff every step's detection is installed; otherwise the row shows `installer.status.partial` with an `installed/total` count. One-step bundles inherit the child version.
 
 ## Install flow
 
@@ -92,8 +95,9 @@ When the user installs the WSL Windows feature in the current app session, the I
 
 ## Persistence
 
-- **SQLite** — table `installer_tool_state(tool_id PK, pinned, latest_version_seen, last_check_at)` (schema version 17). Pinning and the cached latest version survive restarts.
-- **In-memory only** — current detected state, the in-flight install queue, the WSL reboot flag, the per-tool log buffer.
+- **SQLite** — table `installer_tool_state(tool_id PK, pinned, latest_version_seen, last_check_at)` (schema version 17). Pinning and the cached latest available version survive restarts.
+- **Windows Registry** — per-tool detection cache under `HKCU\Software\Ryan Tsai\KKTerm\InstallerDetectionCache`. This cache is local Windows state, not portable settings data.
+- **In-memory only** — the active detection sweep, the in-flight install queue, the WSL reboot flag, and the per-tool log buffer.
 - **On-disk install dirs** — `%LOCALAPPDATA%\KKTerm\installer\bin\<tool_id>\` holds installed `githubRelease`-provider tools and their `.kkterm-installer.json` marker file. These are installed-tool state, not catalog cache.
 
 ## Catalog source
@@ -115,5 +119,5 @@ The Module is tutorial-capable in v1 via two targets:
 ## Limits
 
 - AI Assistant integration is deferred. The AI does **not** have a Tauri command to trigger installs in v1.
-- "Latest version" detection for `bundle` and `windowsFeature` recipes returns null — the rows do not surface update suggestions.
+- "Latest version" detection for multi-step `bundle` and `windowsFeature` recipes returns null — the rows do not surface update suggestions. One-step bundles inherit latest-version checks from their child recipe.
 - The UAC prompt count shown in confirm dialogs is a best-effort estimate; some installers (Docker Desktop, system MSIs) self-escalate even when `--scope user` is passed.
