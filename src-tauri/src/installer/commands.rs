@@ -15,7 +15,7 @@ use super::cache::{load_detection_cache, write_cached_state};
 use super::catalog::load_bundled_catalog;
 use super::detect::{
     detect_all, detect_bundle_from_states, detect_one, detect_one_in_catalog,
-    invalidate_winget_snapshot, refresh_winget_snapshot, DetectedState,
+    invalidate_installed_software_snapshot, refresh_installed_software_snapshot, DetectedState,
 };
 use super::events::{ProgressEvent, PROGRESS_EVENT};
 use super::install::{install_recipe, EventSink};
@@ -135,7 +135,7 @@ pub fn installer_detect_all_streaming(
             }
         }
 
-        refresh_winget_snapshot();
+        refresh_installed_software_snapshot();
         let detected = Mutex::new(HashMap::<String, DetectedState>::new());
         let work = Mutex::new(leaves);
         std::thread::scope(|scope| {
@@ -371,8 +371,9 @@ pub fn installer_redetect(
         find_recipe(&catalog, &tool_id).ok_or_else(|| format!("unknown tool id `{tool_id}`"))?;
     // A redetect is the user's signal that the world may have changed
     // (install/uninstall just finished, or they hit Refresh on one row).
-    // Drop the cached winget snapshot so the next winget recipe re-queries.
-    invalidate_winget_snapshot();
+    // Drop the cached installed-software snapshot so the next winget recipe
+    // re-scans the local uninstall registry.
+    invalidate_installed_software_snapshot();
     let state = detect_one_in_catalog(recipe, &catalog).with_last_checked_at(Some(unix_now_secs()));
     write_cached_state(&tool_id, &state);
     Ok(state)

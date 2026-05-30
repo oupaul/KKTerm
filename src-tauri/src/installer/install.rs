@@ -108,8 +108,8 @@ fn install_winget(
     }
     run_streamed("winget", &args, tool_id, cancel, emit)?;
     // We don't try to parse winget's silent stdout for the installed version;
-    // a subsequent detect_one() reading `winget list` is the canonical source
-    // of truth. Returning None lets the caller decide whether to re-detect.
+    // a subsequent detect_one() reads the local installed-software inventory.
+    // Returning None lets the caller decide whether to re-detect.
     Ok(None)
 }
 

@@ -64,6 +64,27 @@ pub struct Recipe {
     /// when this is None.
     #[serde(default)]
     pub release_notes_url: Option<String>,
+    /// Optional fast local detection hints. These are intentionally separate
+    /// from the provider: the provider says how KKTerm installs/updates a
+    /// tool; detection says how an existing local install may appear.
+    #[serde(default)]
+    pub detection: Detection,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Detection {
+    /// Exact subkey names under Windows Add/Remove Programs uninstall keys,
+    /// e.g. `Git_is1`.
+    #[serde(default)]
+    pub registry_keys: Vec<String>,
+    /// Exact Add/Remove Programs display names.
+    #[serde(default)]
+    pub display_names: Vec<String>,
+    /// Case-insensitive display-name prefixes for installers that embed the
+    /// version in the display name, e.g. `NVM for Windows 1.2.2`.
+    #[serde(default)]
+    pub display_name_prefixes: Vec<String>,
 }
 
 /// One declared step in an install plan, emitted via
@@ -293,6 +314,7 @@ mod tests {
             options: vec![],
             homepage: None,
             release_notes_url: None,
+            detection: Detection::default(),
         }
     }
 
@@ -363,6 +385,7 @@ mod tests {
             options: vec![],
             homepage: None,
             release_notes_url: None,
+            detection: Detection::default(),
         };
         let catalog = Catalog {
             schema_version: 1,
@@ -438,6 +461,7 @@ mod tests {
             options: vec![],
             homepage: None,
             release_notes_url: None,
+            detection: Detection::default(),
         };
         let catalog = Catalog {
             schema_version: 1,

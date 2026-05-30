@@ -12,6 +12,12 @@ export type GithubReleaseLayout = "zip" | "exeInstaller" | "msi";
 
 export type RecipeOption = "scope" | "version" | "location" | "addToPath";
 
+export interface Detection {
+  registryKeys?: string[];
+  displayNames?: string[];
+  displayNamePrefixes?: string[];
+}
+
 export type Provider =
   | { kind: "winget"; id: string }
   | { kind: "npm"; pkg: string }
@@ -39,6 +45,9 @@ export interface Recipe {
   /// Optional release-notes / changelog URL. UI derives a fallback from the
   /// provider when absent.
   releaseNotesUrl?: string;
+  /// Fast local detection hints for installs that may not report under the
+  /// same identifier used by the install/update provider.
+  detection?: Detection;
 }
 
 /// Stepper plan declared by a provider runner before any work begins. The

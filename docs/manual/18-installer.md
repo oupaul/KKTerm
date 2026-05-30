@@ -40,7 +40,7 @@ Detection renders in two phases on Module entry. First, KKTerm loads the local W
 
 Per-provider detection methods:
 
-- **winget** — `winget list --source winget --disable-interactivity` is run **once** per fresh detection sweep; every winget recipe consults the parsed snapshot rather than spawning its own child process. The snapshot is cached in memory until the next explicit detection call. Fresh results are persisted to the Installer Helper registry cache. All detection/check spawns set `CREATE_NO_WINDOW` so no `cmd.exe` window flashes on Module entry.
+- **winget** — detection reads a local Add/Remove Programs registry snapshot once per fresh detection sweep and matches catalog aliases (`registryKeys`, `displayNames`, `displayNamePrefixes`) so existing installs can be recognized even when winget would report an `ARP\...` identifier. The snapshot is cached in memory until the next explicit detection call. Fresh results are persisted to the Installer Helper registry cache. Latest-version checks still call winget and use `CREATE_NO_WINDOW` so no `cmd.exe` window flashes on Module entry.
 - **npm** — `npm ls -g --json --depth=0`. Looks up the package in the top-level `dependencies`.
 - **github-release** — a marker file at `%LOCALAPPDATA%\KKTerm\installer\bin\<tool_id>\.kkterm-installer.json` written at install time. Only installs we performed count as "managed".
 - **windows-feature** — `dism /online /get-featureinfo /featurename:<X>`. Parses the `State :` line.

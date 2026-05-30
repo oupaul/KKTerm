@@ -8,6 +8,11 @@
       "descriptionEn": "Distributed version control. Implicit prerequisite for many AI coding tools.",
       "category": "vcs",
       "icon": "GitBranch",
+      "detection": {
+        "registryKeys": ["Git_is1"],
+        "displayNames": ["Git"],
+        "displayNamePrefixes": ["Git version"]
+      },
       "provider": { "kind": "winget", "id": "Git.Git" },
       "options": ["scope", "version"]
     },
@@ -17,6 +22,9 @@
       "descriptionEn": "The `gh` command-line tool for GitHub: PRs, issues, repos, releases.",
       "category": "vcs",
       "icon": "Github",
+      "detection": {
+        "displayNames": ["GitHub CLI"]
+      },
       "provider": { "kind": "winget", "id": "GitHub.cli" },
       "options": ["scope", "version"]
     },
@@ -26,6 +34,9 @@
       "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
       "category": "editor",
       "icon": "Code",
+      "detection": {
+        "displayNames": ["Microsoft Visual Studio Code", "Visual Studio Code"]
+      },
       "provider": { "kind": "winget", "id": "Microsoft.VisualStudioCode" },
       "options": ["scope", "version", "location"]
     },
@@ -35,6 +46,9 @@
       "descriptionEn": "AI-first code editor built on VS Code.",
       "category": "editor",
       "icon": "MousePointerClick",
+      "detection": {
+        "displayNames": ["Cursor"]
+      },
       "provider": { "kind": "winget", "id": "Anysphere.Cursor" },
       "options": ["scope", "version"]
     },
@@ -44,6 +58,9 @@
       "descriptionEn": "Lightweight Windows text editor with syntax highlighting.",
       "category": "editor",
       "icon": "FileText",
+      "detection": {
+        "displayNames": ["Notepad++", "Notepad++ (64-bit x64)"]
+      },
       "provider": { "kind": "winget", "id": "Notepad++.Notepad++" },
       "options": ["scope", "version"]
     },
@@ -53,6 +70,9 @@
       "descriptionEn": "Node Version Manager for Windows. Lets you switch between multiple Node versions.",
       "category": "runtime",
       "icon": "Layers",
+      "detection": {
+        "displayNamePrefixes": ["NVM for Windows"]
+      },
       "provider": { "kind": "winget", "id": "CoreyButler.NVMforWindows" },
       "options": ["scope", "version"]
     },
@@ -70,6 +90,9 @@
       "descriptionEn": "Fast Python package and project manager from Astral. Can install Python itself on demand.",
       "category": "runtime",
       "icon": "Wind",
+      "detection": {
+        "displayNames": ["uv"]
+      },
       "provider": { "kind": "winget", "id": "astral-sh.uv" },
       "options": ["scope", "version"]
     },
@@ -100,6 +123,9 @@
       "category": "infra",
       "icon": "Container",
       "needs": ["wsl"],
+      "detection": {
+        "displayNames": ["Docker Desktop"]
+      },
       "provider": { "kind": "winget", "id": "Docker.DockerDesktop" },
       "options": ["scope", "version"]
     },
@@ -109,6 +135,10 @@
       "descriptionEn": "The Non-Sucking Service Manager — wrap any program as a Windows service.",
       "category": "infra",
       "icon": "Wrench",
+      "detection": {
+        "displayNames": ["NSSM"],
+        "displayNamePrefixes": ["NSSM "]
+      },
       "provider": { "kind": "winget", "id": "NSSM.NSSM" },
       "options": ["scope", "version"]
     },
@@ -148,6 +178,9 @@
       "descriptionEn": "Run local large language models on your machine.",
       "category": "ai",
       "icon": "Cpu",
+      "detection": {
+        "displayNames": ["Ollama"]
+      },
       "provider": { "kind": "winget", "id": "Ollama.Ollama" },
       "options": ["scope", "version"]
     },
@@ -167,6 +200,9 @@
       "descriptionEn": "Open-source API client. Postman alternative with git-friendly request files.",
       "category": "tools",
       "icon": "Boxes",
+      "detection": {
+        "displayNames": ["Bruno"]
+      },
       "provider": { "kind": "winget", "id": "Bruno.Bruno" },
       "options": ["scope", "version"]
     },
@@ -176,6 +212,9 @@
       "descriptionEn": "Recursive line-oriented search tool. AI coding agents lean on this heavily.",
       "category": "cli",
       "icon": "Search",
+      "detection": {
+        "displayNames": ["ripgrep"]
+      },
       "provider": { "kind": "winget", "id": "BurntSushi.ripgrep.MSVC" },
       "options": ["scope", "version"]
     },
@@ -185,6 +224,9 @@
       "descriptionEn": "Command-line JSON processor.",
       "category": "cli",
       "icon": "Braces",
+      "detection": {
+        "displayNames": ["jq"]
+      },
       "provider": { "kind": "winget", "id": "jqlang.jq" },
       "options": ["scope", "version"]
     },
@@ -194,6 +236,9 @@
       "descriptionEn": "General-purpose fuzzy finder for the command line.",
       "category": "cli",
       "icon": "Filter",
+      "detection": {
+        "displayNames": ["fzf"]
+      },
       "provider": { "kind": "winget", "id": "junegunn.fzf" },
       "options": ["scope", "version"]
     },

@@ -11,7 +11,7 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 
 use super::proc::no_window;
-use super::schema::{Catalog, GithubReleaseLayout, Provider, Recipe};
+use super::schema::{Catalog, Detection, GithubReleaseLayout, Provider, Recipe};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,16 +62,15 @@ impl DetectedState {
     }
 }
 
-/// Detect every recipe in the catalog. Sequential — a 25-tool scan typically
-/// finishes in ~3–5 s on a warm host (winget is the slow leg). The frontend
-/// only runs this on first Module entry per session; subsequent visits use
-/// the in-memory cache. All winget recipes share a single `winget list` call;
-/// detect_winget consults the resulting map instead of spawning per recipe.
+/// Detect every recipe in the catalog. The frontend only runs this on first
+/// Module entry per session; subsequent visits use the in-memory cache.
+/// Winget-provider recipes share one local Add/Remove Programs registry
+/// snapshot instead of spawning `winget list`.
 pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
     let mut out: HashMap<String, DetectedState> = HashMap::new();
     // Detect leaves first so bundles can compose their result.
     let mut bundles: Vec<&Recipe> = Vec::new();
-    refresh_winget_snapshot();
+    refresh_installed_software_snapshot();
     for recipe in &catalog.recipes {
         if let Provider::Bundle { .. } = recipe.provider {
             bundles.push(recipe);
@@ -123,7 +122,7 @@ pub fn detect_bundle_from_states(
 
 pub fn detect_one(recipe: &Recipe) -> DetectedState {
     match &recipe.provider {
-        Provider::Winget { id } => detect_winget(id),
+        Provider::Winget { .. } => detect_winget(recipe),
         Provider::Npm { pkg } => detect_npm(pkg),
         Provider::GithubRelease { .. } => detect_github_release_marker(&recipe.id),
         Provider::WindowsFeature { feature, .. } => detect_windows_feature(feature),
@@ -155,120 +154,296 @@ fn bundle_detected_state(child_states: &[&DetectedState], total: u32) -> Detecte
     }
 }
 
-// ---- winget ------------------------------------------------------------
+// ---- Windows installed software / winget -------------------------------
 //
-// Per-recipe winget spawns were the dominant cost of `detect_all` and the
-// dominant cause of the Module-entry console-window flash storm. We now
-// take one snapshot of `winget list --source winget` per detection sweep
-// and look up each recipe's id in the parsed map.
+// Detection is intentionally local-first and cheap: scan Windows Add/Remove
+// Programs registry entries once per sweep, then match each winget recipe
+// against catalog detection aliases. `winget` remains the install/update
+// provider, but detection does not shell out to `winget list`.
 
 #[derive(Default)]
-struct WingetSnapshot {
-    /// Lower-cased package id → installed version (None when winget did not
-    /// surface a parseable version column).
-    by_id: HashMap<String, Option<String>>,
+struct InstalledSoftwareSnapshot {
+    entries: Vec<InstalledSoftwareEntry>,
 }
 
-static WINGET_SNAPSHOT: OnceLock<std::sync::Mutex<Option<WingetSnapshot>>> = OnceLock::new();
-
-fn winget_snapshot_cell() -> &'static std::sync::Mutex<Option<WingetSnapshot>> {
-    WINGET_SNAPSHOT.get_or_init(|| std::sync::Mutex::new(None))
+#[derive(Debug, Clone)]
+struct InstalledSoftwareEntry {
+    registry_key: String,
+    display_name: Option<String>,
+    display_version: Option<String>,
+    install_location: Option<String>,
 }
 
-/// Take one batched `winget list` and cache its parsed map. Called by
-/// `detect_all` before iterating recipes. Safe to call repeatedly; later
-/// callers (e.g. `installer_redetect`) reuse the cached snapshot unless
-/// they explicitly clear it.
-pub fn refresh_winget_snapshot() {
-    let parsed = run_winget_list().unwrap_or_default();
-    *winget_snapshot_cell().lock().unwrap() = Some(parsed);
+static INSTALLED_SOFTWARE_SNAPSHOT: OnceLock<std::sync::Mutex<Option<InstalledSoftwareSnapshot>>> =
+    OnceLock::new();
+
+fn installed_software_snapshot_cell() -> &'static std::sync::Mutex<Option<InstalledSoftwareSnapshot>>
+{
+    INSTALLED_SOFTWARE_SNAPSHOT.get_or_init(|| std::sync::Mutex::new(None))
 }
 
-fn run_winget_list() -> Option<WingetSnapshot> {
-    let output = no_window(&mut Command::new("winget"))
-        .args(["list", "--source", "winget", "--disable-interactivity"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut by_id: HashMap<String, Option<String>> = HashMap::new();
-    // `winget list` emits a header band ("Name Id Version …"), a separator
-    // row of dashes, then one whitespace-separated data row per installed
-    // package. The Id column may itself contain dots; we extract the id
-    // and version using the column offsets discovered from the header row.
-    let mut header_offsets: Option<(usize, usize, usize)> = None;
-    for line in stdout.lines() {
-        if header_offsets.is_none() {
-            if let Some(o) = winget_header_offsets(line) {
-                header_offsets = Some(o);
-            }
-            continue;
-        }
-        if line.trim_start().starts_with('-') {
-            continue;
-        }
-        let (id_start, version_start, version_end) = header_offsets.unwrap();
-        if line.len() < id_start {
-            continue;
-        }
-        let id_slice = if line.len() >= version_start {
-            &line[id_start..version_start]
-        } else {
-            &line[id_start..]
-        };
-        let id = id_slice.split_whitespace().next().unwrap_or("").to_string();
-        if id.is_empty() {
-            continue;
-        }
-        let version = if line.len() >= version_start {
-            let end = version_end.min(line.len());
-            let raw = &line[version_start..end];
-            raw.split_whitespace().next().map(|s| s.to_string())
-        } else {
-            None
-        };
-        by_id.insert(id.to_ascii_lowercase(), version);
-    }
-    Some(WingetSnapshot { by_id })
+/// Take one installed-software snapshot and cache it for the current sweep.
+/// Called by `detect_all` before iterating recipes. Later callers reuse the
+/// cached snapshot unless they explicitly clear it.
+pub fn refresh_installed_software_snapshot() {
+    let parsed = load_installed_software_snapshot();
+    *installed_software_snapshot_cell().lock().unwrap() = Some(parsed);
 }
 
-fn winget_header_offsets(line: &str) -> Option<(usize, usize, usize)> {
-    let id_idx = line.find("Id")?;
-    let version_idx = line[id_idx..].find("Version").map(|o| id_idx + o)?;
-    let after_version = &line[version_idx + "Version".len()..];
-    let next_col = after_version
-        .char_indices()
-        .find(|(_, c)| !c.is_whitespace())
-        .map(|(i, _)| version_idx + "Version".len() + i)
-        .unwrap_or(line.len());
-    Some((id_idx, version_idx, next_col))
+#[cfg(target_os = "windows")]
+fn load_installed_software_snapshot() -> InstalledSoftwareSnapshot {
+    windows_installed_software::load()
 }
 
-fn detect_winget(id: &str) -> DetectedState {
-    let cell = winget_snapshot_cell();
+#[cfg(not(target_os = "windows"))]
+fn load_installed_software_snapshot() -> InstalledSoftwareSnapshot {
+    InstalledSoftwareSnapshot::default()
+}
+
+fn detect_winget(recipe: &Recipe) -> DetectedState {
+    let cell = installed_software_snapshot_cell();
     let mut guard = cell.lock().unwrap();
     if guard.is_none() {
-        // Single-recipe path (installer_redetect) hits this; take a snapshot
-        // on demand so subsequent winget recipes in the same sweep are free.
         drop(guard);
-        let parsed = run_winget_list().unwrap_or_default();
+        let parsed = load_installed_software_snapshot();
         *cell.lock().unwrap() = Some(parsed);
         guard = cell.lock().unwrap();
     }
     let snapshot = guard.as_ref().unwrap();
-    match snapshot.by_id.get(&id.to_ascii_lowercase()) {
-        Some(version) => DetectedState::installed(version.clone()),
-        None => DetectedState::not_installed(),
+    detect_installed_software(recipe, snapshot)
+}
+
+fn detect_installed_software(
+    recipe: &Recipe,
+    snapshot: &InstalledSoftwareSnapshot,
+) -> DetectedState {
+    let Provider::Winget { id } = &recipe.provider else {
+        return DetectedState::not_installed();
+    };
+    for entry in &snapshot.entries {
+        if installed_entry_matches(id, &recipe.detection, entry) {
+            return DetectedState::installed(entry.display_version.clone())
+                .with_install_location(entry.install_location.clone());
+        }
     }
+    DetectedState::not_installed()
+}
+
+fn installed_entry_matches(
+    winget_id: &str,
+    detection: &Detection,
+    entry: &InstalledSoftwareEntry,
+) -> bool {
+    let registry_key = normalize_detection_value(&entry.registry_key);
+    if registry_key == normalize_detection_value(winget_id) {
+        return true;
+    }
+    if detection
+        .registry_keys
+        .iter()
+        .any(|key| registry_key == normalize_detection_value(key))
+    {
+        return true;
+    }
+    let Some(display_name) = entry.display_name.as_deref() else {
+        return false;
+    };
+    let display_name = normalize_detection_value(display_name);
+    detection
+        .display_names
+        .iter()
+        .any(|name| display_name == normalize_detection_value(name))
+        || detection
+            .display_name_prefixes
+            .iter()
+            .any(|prefix| display_name.starts_with(&normalize_detection_value(prefix)))
+}
+
+fn normalize_detection_value(value: &str) -> String {
+    value.trim().to_ascii_lowercase()
 }
 
 /// Discard the cached snapshot so the next `detect_winget`/`detect_all`
-/// call re-queries `winget list`. Used by post-install/uninstall redetect
+/// call re-scans installed software. Used by post-install/uninstall redetect
 /// paths in commands.rs so an install that just landed is visible.
-pub fn invalidate_winget_snapshot() {
-    *winget_snapshot_cell().lock().unwrap() = None;
+pub fn invalidate_installed_software_snapshot() {
+    *installed_software_snapshot_cell().lock().unwrap() = None;
+}
+
+#[cfg(target_os = "windows")]
+mod windows_installed_software {
+    use std::ffi::{OsStr, OsString};
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    use windows_sys::Win32::Foundation::{ERROR_NO_MORE_ITEMS, ERROR_SUCCESS};
+    use windows_sys::Win32::System::Registry::{
+        RegCloseKey, RegEnumKeyExW, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_CURRENT_USER,
+        HKEY_LOCAL_MACHINE, KEY_READ, REG_EXPAND_SZ, REG_SZ,
+    };
+
+    use super::{InstalledSoftwareEntry, InstalledSoftwareSnapshot};
+
+    const UNINSTALL_SUBKEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+    const WOW64_UNINSTALL_SUBKEY: &str =
+        r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall";
+
+    struct RegistryKey(HKEY);
+
+    impl Drop for RegistryKey {
+        fn drop(&mut self) {
+            unsafe {
+                let _ = RegCloseKey(self.0);
+            }
+        }
+    }
+
+    pub fn load() -> InstalledSoftwareSnapshot {
+        let mut entries = Vec::new();
+        scan_uninstall_key(
+            HKEY_LOCAL_MACHINE,
+            UNINSTALL_SUBKEY,
+            "ARP\\Machine\\X64",
+            &mut entries,
+        );
+        scan_uninstall_key(
+            HKEY_LOCAL_MACHINE,
+            WOW64_UNINSTALL_SUBKEY,
+            "ARP\\Machine\\X86",
+            &mut entries,
+        );
+        scan_uninstall_key(
+            HKEY_CURRENT_USER,
+            UNINSTALL_SUBKEY,
+            "ARP\\User\\X64",
+            &mut entries,
+        );
+        scan_uninstall_key(
+            HKEY_CURRENT_USER,
+            WOW64_UNINSTALL_SUBKEY,
+            "ARP\\User\\X86",
+            &mut entries,
+        );
+        InstalledSoftwareSnapshot { entries }
+    }
+
+    fn scan_uninstall_key(
+        root: HKEY,
+        subkey: &str,
+        arp_prefix: &str,
+        entries: &mut Vec<InstalledSoftwareEntry>,
+    ) {
+        let Ok(key) = open_key(root, subkey) else {
+            return;
+        };
+        let mut index = 0;
+        loop {
+            let mut name_buf = vec![0u16; 512];
+            let mut name_len = name_buf.len() as u32;
+            let status = unsafe {
+                RegEnumKeyExW(
+                    key.0,
+                    index,
+                    name_buf.as_mut_ptr(),
+                    &mut name_len,
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                )
+            };
+            if status == ERROR_NO_MORE_ITEMS {
+                break;
+            }
+            index += 1;
+            if status != ERROR_SUCCESS {
+                continue;
+            }
+            let child = OsString::from_wide(&name_buf[..name_len as usize])
+                .to_string_lossy()
+                .into_owned();
+            let child_path = format!("{subkey}\\{child}");
+            let Ok(child_key) = open_key(root, &child_path) else {
+                continue;
+            };
+            let display_name = read_string_value(&child_key, "DisplayName");
+            if display_name.as_deref().unwrap_or("").trim().is_empty() {
+                continue;
+            }
+            let display_version = read_string_value(&child_key, "DisplayVersion");
+            let install_location = read_string_value(&child_key, "InstallLocation")
+                .filter(|value| !value.trim().is_empty());
+            entries.push(InstalledSoftwareEntry {
+                registry_key: child.clone(),
+                display_name: display_name.clone(),
+                display_version: display_version.clone(),
+                install_location: install_location.clone(),
+            });
+            entries.push(InstalledSoftwareEntry {
+                registry_key: format!("{arp_prefix}\\{child}"),
+                display_name,
+                display_version,
+                install_location,
+            });
+        }
+    }
+
+    fn open_key(root: HKEY, subkey: &str) -> Result<RegistryKey, String> {
+        let subkey = wide_null(subkey);
+        let mut key: HKEY = std::ptr::null_mut();
+        let status = unsafe { RegOpenKeyExW(root, subkey.as_ptr(), 0, KEY_READ, &mut key) };
+        if status != ERROR_SUCCESS {
+            return Err(format!(
+                "failed to open registry key: Windows error {status}"
+            ));
+        }
+        Ok(RegistryKey(key))
+    }
+
+    fn read_string_value(key: &RegistryKey, name: &str) -> Option<String> {
+        let value_name = wide_null(name);
+        let mut value_type = 0;
+        let mut byte_len = 0u32;
+        let status = unsafe {
+            RegQueryValueExW(
+                key.0,
+                value_name.as_ptr(),
+                std::ptr::null_mut(),
+                &mut value_type,
+                std::ptr::null_mut(),
+                &mut byte_len,
+            )
+        };
+        if status != ERROR_SUCCESS || byte_len == 0 {
+            return None;
+        }
+        if value_type != REG_SZ && value_type != REG_EXPAND_SZ {
+            return None;
+        }
+        let mut data = vec![0u16; (byte_len as usize + 1) / 2];
+        let status = unsafe {
+            RegQueryValueExW(
+                key.0,
+                value_name.as_ptr(),
+                std::ptr::null_mut(),
+                &mut value_type,
+                data.as_mut_ptr().cast::<u8>(),
+                &mut byte_len,
+            )
+        };
+        if status != ERROR_SUCCESS {
+            return None;
+        }
+        let len = data.iter().position(|ch| *ch == 0).unwrap_or(data.len());
+        Some(
+            OsString::from_wide(&data[..len])
+                .to_string_lossy()
+                .into_owned(),
+        )
+    }
+
+    fn wide_null(value: &str) -> Vec<u16> {
+        OsStr::new(value).encode_wide().chain(Some(0)).collect()
+    }
 }
 
 // ---- npm ---------------------------------------------------------------
@@ -394,6 +569,37 @@ pub struct GithubReleaseMarker {
 mod tests {
     use super::*;
 
+    fn winget_recipe_with_detection(
+        winget_id: &str,
+        registry_keys: &[&str],
+        display_names: &[&str],
+        display_name_prefixes: &[&str],
+    ) -> Recipe {
+        Recipe {
+            id: "test".into(),
+            name: "Test".into(),
+            description_en: String::new(),
+            description_locales: HashMap::new(),
+            needs: vec![],
+            icon: None,
+            category: None,
+            provider: Provider::Winget {
+                id: winget_id.into(),
+            },
+            options: vec![],
+            homepage: None,
+            release_notes_url: None,
+            detection: Detection {
+                registry_keys: registry_keys.iter().map(|value| (*value).into()).collect(),
+                display_names: display_names.iter().map(|value| (*value).into()).collect(),
+                display_name_prefixes: display_name_prefixes
+                    .iter()
+                    .map(|value| (*value).into())
+                    .collect(),
+            },
+        }
+    }
+
     #[test]
     fn bundle_state_reports_partial_counts() {
         let installed = DetectedState::installed(Some("1.0.0".into()));
@@ -422,5 +628,94 @@ mod tests {
 
         assert!(state.installed);
         assert_eq!(state.installed_version.as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn installed_software_match_uses_registry_key_alias() {
+        let recipe = winget_recipe_with_detection("Git.Git", &["Git_is1"], &[], &[]);
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "Git_is1".into(),
+                display_name: Some("Git".into()),
+                display_version: Some("2.53.0.2".into()),
+                install_location: None,
+            }],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("2.53.0.2"));
+    }
+
+    #[test]
+    fn installed_software_match_accepts_full_arp_registry_alias() {
+        let recipe =
+            winget_recipe_with_detection("Git.Git", &["ARP\\Machine\\X64\\Git_is1"], &[], &[]);
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "ARP\\Machine\\X64\\Git_is1".into(),
+                display_name: Some("Git".into()),
+                display_version: Some("2.53.0.2".into()),
+                install_location: None,
+            }],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("2.53.0.2"));
+    }
+
+    #[test]
+    fn installed_software_match_uses_exact_display_name_alias() {
+        let recipe = winget_recipe_with_detection(
+            "Microsoft.VisualStudioCode",
+            &[],
+            &["Microsoft Visual Studio Code"],
+            &[],
+        );
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "{ignored}".into(),
+                display_name: Some("Microsoft Visual Studio Code".into()),
+                display_version: Some("1.122.1".into()),
+                install_location: Some(
+                    "C:\\Users\\ryan\\AppData\\Local\\Programs\\Microsoft VS Code".into(),
+                ),
+            }],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("1.122.1"));
+        assert_eq!(
+            state.install_location.as_deref(),
+            Some("C:\\Users\\ryan\\AppData\\Local\\Programs\\Microsoft VS Code")
+        );
+    }
+
+    #[test]
+    fn installed_software_match_uses_display_name_prefix_alias() {
+        let recipe = winget_recipe_with_detection(
+            "CoreyButler.NVMforWindows",
+            &[],
+            &[],
+            &["NVM for Windows"],
+        );
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "nvm".into(),
+                display_name: Some("NVM for Windows 1.2.2".into()),
+                display_version: Some("1.2.2".into()),
+                install_location: None,
+            }],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("1.2.2"));
     }
 }
