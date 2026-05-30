@@ -27,7 +27,7 @@ use super::detect::{
 };
 use super::events::ProgressEvent;
 use super::options::InstallOptions;
-use super::proc::no_window;
+use super::proc::{no_window, npm_program};
 use super::schema::{GithubReleaseLayout, Provider, Recipe};
 
 pub type EventSink = Box<dyn Fn(ProgressEvent) + Send + Sync>;
@@ -132,8 +132,8 @@ fn install_npm(
         tool_id: tool_id.into(),
         message: format!("npm install -g {spec}"),
     });
-    run_streamed(
-        "npm",
+    run_streamed_with_refreshed_path_public(
+        npm_program(),
         &["install".into(), "-g".into(), spec.clone()],
         tool_id,
         cancel,
@@ -465,12 +465,36 @@ pub fn run_streamed_public(
     run_streamed(program, args, tool_id, cancel, emit)
 }
 
+/// Run a command after refreshing PATH from persisted Windows environment
+/// variables. Winget installers often update user or machine PATH, but the
+/// already-running Tauri process does not inherit that change.
+pub fn run_streamed_with_refreshed_path_public(
+    program: &str,
+    args: &[String],
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<(), String> {
+    run_streamed_with_path(program, args, tool_id, cancel, emit, refreshed_path())
+}
+
 fn run_streamed(
     program: &str,
     args: &[String],
     tool_id: &str,
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
+) -> Result<(), String> {
+    run_streamed_with_path(program, args, tool_id, cancel, emit, None)
+}
+
+fn run_streamed_with_path(
+    program: &str,
+    args: &[String],
+    tool_id: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+    path_override: Option<String>,
 ) -> Result<(), String> {
     // Surface the exact command we're about to run. Stalls show up as a
     // long stretch with no further lines after this one — the heartbeat
@@ -481,15 +505,19 @@ fn run_streamed(
         line: format!("$ {program} {}", args.join(" ")),
     });
 
-    let mut child = no_window(
-        Command::new(program)
-            .args(args)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .stdin(Stdio::null()),
-    )
-    .spawn()
-    .map_err(|e| format!("failed to spawn `{program}`: {e}"))?;
+    let mut command = Command::new(program);
+    command
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
+    if let Some(path) = path_override.filter(|path| !path.trim().is_empty()) {
+        command.env("PATH", path);
+    }
+
+    let mut child = no_window(&mut command)
+        .spawn()
+        .map_err(|e| format!("failed to spawn `{program}`: {e}"))?;
     let (tx, rx) = mpsc::channel::<StreamLine>();
     let stdout_thread = forward_stream(child.stdout.take(), tx.clone(), true);
     let stderr_thread = forward_stream(child.stderr.take(), tx, false);
@@ -577,6 +605,49 @@ fn run_streamed(
     }
 }
 
+#[cfg(target_os = "windows")]
+fn refreshed_path() -> Option<String> {
+    let script = r#"$machine = [Environment]::GetEnvironmentVariable('Path','Machine'); $user = [Environment]::GetEnvironmentVariable('Path','User'); (($machine, $user) -join ';')"#;
+    let output = no_window(
+        Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", script])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null()),
+    )
+    .output()
+    .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let persisted = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Some(merge_path_values(
+        std::env::var("PATH").ok().as_deref(),
+        Some(&persisted),
+    ))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn refreshed_path() -> Option<String> {
+    None
+}
+
+fn merge_path_values(current: Option<&str>, persisted: Option<&str>) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for value in [current, persisted].into_iter().flatten() {
+        for part in value.split(';') {
+            let trimmed = part.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if !parts.iter().any(|existing| existing.eq_ignore_ascii_case(trimmed)) {
+                parts.push(trimmed.to_string());
+            }
+        }
+    }
+    parts.join(";")
+}
+
 struct StreamLine {
     is_stdout: bool,
     line: String,
@@ -660,5 +731,18 @@ mod tests {
     #[test]
     fn glob_trailing_star() {
         assert!(glob_match("aider-*", "aider-1.0.0"));
+    }
+
+    #[test]
+    fn merge_path_values_preserves_order_and_deduplicates_case_insensitive() {
+        let merged = merge_path_values(
+            Some(r"C:\Windows;C:\Tools"),
+            Some(r"c:\tools;C:\Users\Ryan\AppData\Local\Microsoft\WinGet\Links"),
+        );
+
+        assert_eq!(
+            merged,
+            r"C:\Windows;C:\Tools;C:\Users\Ryan\AppData\Local\Microsoft\WinGet\Links"
+        );
     }
 }

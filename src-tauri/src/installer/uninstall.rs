@@ -9,6 +9,7 @@ use std::sync::Arc;
 use super::detect::github_release_install_dir;
 use super::events::ProgressEvent;
 use super::install::EventSink;
+use super::proc::npm_program;
 use super::schema::{Provider, Recipe};
 
 pub fn uninstall_recipe(
@@ -67,8 +68,8 @@ fn uninstall_npm(
         tool_id: tool_id.into(),
         message: format!("npm uninstall -g {pkg}"),
     });
-    super::install::run_streamed_public(
-        "npm",
+    super::install::run_streamed_with_refreshed_path_public(
+        npm_program(),
         &["uninstall".into(), "-g".into(), pkg.into()],
         tool_id,
         cancel,

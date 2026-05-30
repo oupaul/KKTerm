@@ -24,3 +24,25 @@ pub fn no_window(cmd: &mut Command) -> &mut Command {
     }
     cmd
 }
+
+pub fn npm_program() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "npm.cmd"
+    } else {
+        "npm"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn npm_program_uses_windows_cmd_shim() {
+        #[cfg(target_os = "windows")]
+        assert_eq!(npm_program(), "npm.cmd");
+
+        #[cfg(not(target_os = "windows"))]
+        assert_eq!(npm_program(), "npm");
+    }
+}

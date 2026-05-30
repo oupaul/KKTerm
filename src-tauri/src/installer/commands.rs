@@ -460,7 +460,13 @@ fn run_bundle_install(
             message: format!("{program} {}", args.join(" ")),
         });
         let args: Vec<String> = args.iter().map(|arg| (*arg).into()).collect();
-        super::install::run_streamed_public(program, &args, bundle_id, cancel.clone(), emit)?;
+        super::install::run_streamed_with_refreshed_path_public(
+            program,
+            &args,
+            bundle_id,
+            cancel.clone(),
+            emit,
+        )?;
     }
     Ok(None)
 }

@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
-use super::proc::no_window;
+use super::proc::{no_window, npm_program};
 use super::schema::{Catalog, Detection, GithubReleaseLayout, Provider, Recipe};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -544,7 +544,7 @@ mod windows_installed_software {
 // ---- npm ---------------------------------------------------------------
 
 fn detect_npm(pkg: &str) -> DetectedState {
-    let output = match no_window(&mut Command::new("npm"))
+    let output = match no_window(&mut Command::new(npm_program()))
         .args(["ls", "-g", "--json", "--depth=0"])
         .output()
     {

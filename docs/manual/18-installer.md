@@ -51,6 +51,7 @@ Per-provider detection methods:
 2. The frontend resolves the install plan: transitive `needs` are walked, and prerequisites already detected as installed are skipped.
 3. If the plan has unresolved prerequisites OR a non-zero UAC-prompt estimate, a confirm dialog (`installer.confirm.installTitle`) lists the prerequisites and a footer (`installer.confirm.uacFooter`) names the estimated prompt count.
 4. On confirm, the backend dispatches the install in a worker thread. The dialog flips to stepper mode. Progress streams to the frontend on the `installer://progress` Tauri event channel as a discriminated union: `plan` (declared step list, emitted once before any work begins), `stepStarted` / `stepFinished` (per-step lifecycle), `stdout` / `stderr` / `progress` (each carrying an optional `stepId` so the UI can route lines and ratios to the active step row), `step` (legacy free-form label retained for unmigrated providers), `completed`, `failed`, `cancelled`.
+   Runtime bundle follow-up commands and npm package installs refresh PATH from the persisted Windows user and machine environment before spawning. This lets freshly installed managers such as nvm-windows and uv run their immediate `nvm install lts`, `uv python install ...`, or npm-based AI-agent install steps without restarting KKTerm or Windows.
 5. After a `completed` event, the row re-runs detection automatically and moves to the Installed section.
 
 ## Update flow
