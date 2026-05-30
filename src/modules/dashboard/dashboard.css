@@ -611,6 +611,36 @@ main.dashboard-page.dashboard-page-hidden,
   padding-left: 14px;
 }
 
+.dashboard-view-pills.is-editing .dashboard-pill {
+  cursor: grab;
+}
+
+.dashboard-view-pills.is-editing .dashboard-pill.is-dragging {
+  cursor: grabbing;
+  opacity: 0.62;
+}
+
+.dashboard-pill.is-drop-before::before,
+.dashboard-pill.is-drop-after::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  z-index: 2;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.dashboard-pill.is-drop-before::before {
+  left: -3px;
+}
+
+.dashboard-pill.is-drop-after::before {
+  right: -3px;
+}
+
 .dashboard-pill-main {
   min-width: 0;
   padding: 0;
@@ -631,8 +661,22 @@ main.dashboard-page.dashboard-page-hidden,
   color: var(--text);
   background: var(--surface);
   border-color: var(--border);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 6%),
+    0 0 0 1px var(--accent),
+    0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
   font-weight: 650;
+}
+
+.dashboard-pill.active::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: inherit;
+  opacity: 0.45;
+  animation: dashboard-pill-selected-pulse 2.4s ease-in-out infinite;
 }
 
 .dashboard-pill.has-tab-color {
@@ -648,7 +692,9 @@ main.dashboard-page.dashboard-page-hidden,
   border-color: rgb(0 0 0 / 16%);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 10%),
-    inset 0 0 0 1px rgb(255 255 255 / 18%);
+    inset 0 0 0 1px rgb(255 255 255 / 18%),
+    0 0 0 2px color-mix(in srgb, var(--accent) 60%, white 20%),
+    0 0 0 5px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .dashboard-pill-dot {
@@ -711,6 +757,25 @@ button.dashboard-pill-dot:focus-visible {
 .dashboard-pill.has-tab-color .dashboard-pill-close:hover {
   color: var(--dashboard-pill-text);
   background: rgb(255 255 255 / 20%);
+}
+
+@keyframes dashboard-pill-selected-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.32;
+  }
+
+  50% {
+    transform: scale(1.045);
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-pill.active::after {
+    animation: none;
+  }
 }
 
 .dashboard-tab-gradient-popover {

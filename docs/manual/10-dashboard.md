@@ -21,6 +21,7 @@ A View is a Dashboard tab. The first View is named `dashboard.defaultView` and s
 - Rename: `dashboard.renameView`.
 - Remove: `dashboard.removeView`. Confirmation body `dashboard.deleteViewBody`.
 - Tab color styling: `dashboard.viewTabGradient`, theme/default swatch `dashboard.clearViewTabGradient`.
+- In edit layout mode, drag View tab buttons to reorder Dashboard Views.
 
 Each View has its own `grid_density` (`dashboard.density.compact`, `dashboard.density.default`, `dashboard.density.roomy`) and its own background.
 Previously opened Views remain mounted while hidden so switching between View tabs preserves Widget Instance state and keeps embedded Connection panes responsive; hidden Connection panes are marked inactive instead of being closed. Embedded URL Connection panes use a native WebView2 child surface in the desktop runtime, so KKTerm explicitly hides that native surface whenever its Dashboard View or the Dashboard Module is inactive.
@@ -28,7 +29,7 @@ Previously opened Views remain mounted while hidden so switching between View ta
 ## Edit layout mode
 
 `dashboard.editLayout` toggles drag/drop + resize on the 12-column grid. Done editing: `dashboard.editDone`. Empty Views show `dashboard.emptyTitle` and `dashboard.emptyHint`.
-Right-clicking empty Dashboard View canvas space opens a shortcut menu for `dashboard.addWidgetLabel`, `dashboard.editLayout`, and `dashboard.changeBackground`.
+Right-clicking empty Dashboard View canvas space opens a shortcut menu for `dashboard.addWidgetLabel`, `dashboard.editLayout`, and `dashboard.changeBackground`. While edit layout mode is active, the same empty-canvas menu remains available and the edit command uses `dashboard.editDone`.
 
 While editing:
 

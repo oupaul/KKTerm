@@ -93,14 +93,13 @@ export function DashboardCanvas({
   }
 
   async function onCanvasContextMenu(event: MouseEvent<HTMLDivElement>) {
-    // Only react on empty canvas space, and never while editing layout.
-    if (editMode) return;
+    // Only react on empty canvas space.
     if ((event.target as HTMLElement).closest(".react-grid-item")) return;
     event.preventDefault();
     await showNativeContextMenu(
       [
         { kind: "item", label: t("dashboard.addWidgetLabel"), action: onOpenCatalog },
-        { kind: "item", label: t("dashboard.editLayout"), action: onToggleEditMode },
+        { kind: "item", label: editMode ? t("dashboard.editDone") : t("dashboard.editLayout"), action: onToggleEditMode },
         { kind: "separator" },
         { kind: "item", label: t("dashboard.changeBackground"), action: onOpenBackground },
       ],

@@ -52,6 +52,7 @@ interface DashboardStoreState {
   setViewDensity: (id: string, density: GridDensity) => Promise<void>;
   setViewBackground: (id: string, background: DashboardBackground | null) => Promise<void>;
   setViewTabColor: (id: string, tabColor: string | null) => Promise<void>;
+  reorderViews: (orderedIds: string[]) => Promise<void>;
   backgroundImages: Record<string, string>;
   loadBackgroundImage: (file: string) => Promise<void>;
   removeView: (id: string) => Promise<void>;
@@ -204,6 +205,23 @@ export const useDashboardStore = create<DashboardStoreState>((set, get) => ({
     try {
       const updated = await persistence.updateView(id, { tabColor });
       set((s) => ({ views: s.views.map((v) => (v.id === id ? updated : v)) }));
+    } catch (e) { set({ lastError: String(e) }); }
+  },
+
+  reorderViews: async (orderedIds) => {
+    try {
+      await persistence.reorderViews(orderedIds);
+      set((s) => {
+        const byId = new Map(s.views.map((view) => [view.id, view]));
+        return {
+          views: orderedIds
+            .map((id, sortOrder) => {
+              const view = byId.get(id);
+              return view ? { ...view, sortOrder } : null;
+            })
+            .filter((view): view is DashboardView => view !== null),
+        };
+      });
     } catch (e) { set({ lastError: String(e) }); }
   },
 

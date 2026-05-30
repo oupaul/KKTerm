@@ -1,5 +1,5 @@
 import { Edit3, Plus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { AssistantPageContext } from "../../ai/AssistantPanel";
 import { DeleteConfirmationDialog } from "../../app/DeleteConfirmationDialog";
@@ -21,6 +21,7 @@ import type { DashboardView, DashboardWidgetInstance, GridDensity } from "./type
 import { dashboardVisualContextForView } from "./visualContext";
 import { DashboardBackgroundHost } from "./view/DashboardBackgroundHost";
 import { DashboardCanvas, DENSITY_SETTINGS } from "./view/DashboardCanvas";
+import { reorderDashboardViews, type DashboardViewReorderPlacement } from "./view/viewReorder";
 import type { DashboardWidgetDeleteRequest } from "./view/WidgetFrame";
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
@@ -96,6 +97,7 @@ export function DashboardPage({
   const removeView = useDashboardStore((s) => s.removeView);
   const removeInstance = useDashboardStore((s) => s.removeInstance);
   const setViewTabColor = useDashboardStore((s) => s.setViewTabColor);
+  const reorderViews = useDashboardStore((s) => s.reorderViews);
   const defaultLandingView = useWorkspaceStore((s) => s.dashboardSettings.defaultLandingView);
 
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -107,6 +109,20 @@ export function DashboardPage({
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const appliedLandingPref = useRef(false);
+  const viewDragRef = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    active: boolean;
+  } | null>(null);
+  const viewDragDropRef = useRef<{ targetId: string | null; placement: DashboardViewReorderPlacement } | null>(null);
+  const suppressViewClickRef = useRef(false);
+  const [viewDragState, setViewDragState] = useState<{
+    draggedId: string;
+    targetId: string | null;
+    placement: DashboardViewReorderPlacement;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,6 +183,66 @@ export function DashboardPage({
       "--dw-grid-gap-x": `${densitySettings.margin[0]}px`,
       "--dw-grid-gap-y": `${densitySettings.margin[1]}px`,
     } as CSSProperties;
+  }
+
+  function resetViewDrag() {
+    viewDragRef.current = null;
+    viewDragDropRef.current = null;
+    setViewDragState(null);
+  }
+
+  function onViewPillPointerDown(event: PointerEvent<HTMLDivElement>, viewId: string) {
+    if (!editMode || event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".dashboard-pill-dot, .dashboard-pill-close, .dashboard-pill-rename")) return;
+    viewDragRef.current = {
+      id: viewId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onViewPillPointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = viewDragRef.current;
+    if (!editMode || !drag || drag.pointerId !== event.pointerId) return;
+
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.active && distance < 4) return;
+    drag.active = true;
+    event.preventDefault();
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>(".dashboard-pill[data-view-id]");
+    const targetId = target?.dataset.viewId ?? null;
+    let placement: DashboardViewReorderPlacement = "before";
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      placement = event.clientX > rect.left + rect.width / 2 ? "after" : "before";
+    }
+    viewDragDropRef.current = { targetId, placement };
+    setViewDragState({ draggedId: drag.id, targetId, placement });
+  }
+
+  function onViewPillPointerUp(event: PointerEvent<HTMLDivElement>) {
+    const drag = viewDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const wasActive = drag.active;
+    const target = viewDragDropRef.current?.targetId;
+    const placement = viewDragDropRef.current?.placement ?? "before";
+    resetViewDrag();
+    if (!wasActive || !target) return;
+
+    suppressViewClickRef.current = true;
+    window.setTimeout(() => {
+      suppressViewClickRef.current = false;
+    }, 0);
+    const orderedIds = reorderDashboardViews(views, drag.id, target, placement);
+    if (orderedIds) void reorderViews(orderedIds);
   }
 
   useEffect(() => {
@@ -297,7 +373,7 @@ export function DashboardPage({
         <div className="dashboard-brand">
           <span className="crumb">{t("dashboard.title")}</span>
         </div>
-        <div className="dashboard-view-pills">
+        <div className={`dashboard-view-pills${editMode ? " is-editing" : ""}`}>
           {views.map((v) => {
             const isActiveView = v.id === activeView.id;
             const isEditingView = editingViewId === v.id;
@@ -306,10 +382,16 @@ export function DashboardPage({
             return (
               <div
                 key={v.id}
-                className={`dashboard-pill${isActiveView ? " active" : ""}${isEditingView ? " editing" : ""}${v.tabColor ? " has-tab-color" : ""}`}
+                className={`dashboard-pill${isActiveView ? " active" : ""}${isEditingView ? " editing" : ""}${v.tabColor ? " has-tab-color" : ""}${viewDragState?.draggedId === v.id ? " is-dragging" : ""}${viewDragState?.targetId === v.id ? ` is-drop-${viewDragState.placement}` : ""}`}
+                data-view-id={v.id}
                 onClick={() => {
+                  if (suppressViewClickRef.current) return;
                   if (!isEditingView) setActiveView(v.id);
                 }}
+                onPointerDown={(event) => onViewPillPointerDown(event, v.id)}
+                onPointerMove={onViewPillPointerMove}
+                onPointerUp={onViewPillPointerUp}
+                onPointerCancel={resetViewDrag}
                 style={dashboardTabColorStyle(v.tabColor)}
               >
                 {editMode ? (
