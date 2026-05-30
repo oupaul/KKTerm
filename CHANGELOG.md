@@ -3,6 +3,47 @@
 All notable changes to KKTerm are documented here.
 
 ## Highlights
+- **Dashboard Tab Reorder**: Reorder tabs in Dashboard view (so your Session can follow your brain, not the other way around).  
+- **Installer improvements for managed apps**: Enhanced support around installer managed app behavior and related documentation.
+
+## New
+- **Dashboard view tab reorder** (PR #183 by @ryantsai): Lets you change the order of tabs on the Dashboard view.
+
+## Improved
+- **Installer managed app support** (commit: 3cb61ad): Expanded/updated support for installer managed apps and their related catalogs/docs.
+- **Installer UI log behavior** (commit: 1489027): Installer progress now shows a single in-app command log instead of duplicate legacy rendering.
+- **Installer latest-version checks** (commit: 5b45dec, 1489027): Updated winget latest-version checks to pass `--accept-source-agreements`, helping fresh Windows machines return latest versions instead of “unknown” on first winget use.
+
+## Fixed
+- **Regression coverage added**: Added regression tests around installer behaviors (including dashboard/view reorder and installer log/latest-version behaviors).
+
+## Internal
+- **Installer helper catalog apps** (commit: 8903fe1): Added installer helper catalog apps and updated related architecture/docs and installer code paths.
+- Wired new/updated tests into `npm run check` (commits: 5b45dec, 1489027, 3cb61ad).
+
+
+---
+
+## 亮點
+- **Dashboard 分頁重排序**：在 Dashboard 視圖中重排分頁（讓你的 Session 跟著你的思路走，不必反過來）。  
+- **受管理應用程式安裝器更新**：強化安裝器受管理應用程式相關支援與文件。
+
+## 新增
+- **Dashboard 視圖分頁重排序**（PR #183 由 @ryantsai 提供）：可調整 Dashboard 視圖分頁的順序。
+
+## 改善
+- **受管理應用程式安裝器支援**（commit：3cb61ad）：擴充/更新受管理應用程式的支援，並同步更新相關 catalogs/文件。
+- **安裝器介面日誌顯示行為**（commit：1489027）：安裝進度現在只顯示一份內建的指令日誌，不再重複顯示舊版的重繪結果。
+- **安裝器最新版本檢查**（commit：5b45dec、1489027）：更新 winget 最新版本檢查，改為傳入 `--accept-source-agreements`，協助全新 Windows 裝置在第一次使用 winget 時能回傳最新版本而非顯示「unknown」。
+
+## 修正
+- **加入迴歸測試覆蓋**：新增針對安裝器行為的迴歸測試（包含 Dashboard/視圖重排、安裝器日誌與最新版本檢查等）。
+
+## Internal
+- **安裝器 Helper Catalog Apps**（commit：8903fe1）：新增安裝器 helper catalog apps，並更新相關架構/文件與安裝器程式流程。
+- 將新增/更新的測試接入 `npm run check`（commits：5b45dec、1489027、3cb61ad）。
+
+## Highlights
 - The Windows installer now correctly uses the right npm entrypoint (goodbye “program not found” when Node is actually there). ✅
 
 ## Fixed
