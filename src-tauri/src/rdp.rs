@@ -452,6 +452,8 @@ mod platform {
         dispatch: IDispatch,
         desktop_width: i32,
         desktop_height: i32,
+        desktop_scale_factor: i32,
+        device_scale_factor: i32,
         resolution_mode: RemoteResolutionMode,
     }
 
@@ -918,6 +920,8 @@ mod platform {
                 // startup bounds pushes retry the real remote desktop resize.
                 desktop_width: 0,
                 desktop_height: 0,
+                desktop_scale_factor: 0,
+                device_scale_factor: 0,
                 resolution_mode,
             },
         );
@@ -1787,8 +1791,12 @@ mod platform {
             && !should_resize_remote_desktop(
                 session.desktop_width,
                 session.desktop_height,
+                session.desktop_scale_factor,
+                session.device_scale_factor,
                 display_settings.desktop_width,
                 display_settings.desktop_height,
+                display_settings.desktop_scale_factor,
+                display_settings.device_scale_factor,
             )
         {
             return true;
@@ -1798,16 +1806,30 @@ mod platform {
         }
         session.desktop_width = display_settings.desktop_width;
         session.desktop_height = display_settings.desktop_height;
+        session.desktop_scale_factor = display_settings.desktop_scale_factor;
+        session.device_scale_factor = display_settings.device_scale_factor;
         true
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn should_resize_remote_desktop(
         current_width: i32,
         current_height: i32,
+        current_desktop_scale_factor: i32,
+        current_device_scale_factor: i32,
         desktop_width: i32,
         desktop_height: i32,
+        desktop_scale_factor: i32,
+        device_scale_factor: i32,
     ) -> bool {
-        current_width != desktop_width || current_height != desktop_height
+        // Compare the DPI scale factors alongside the pixel dimensions: the RDP
+        // ActiveX control can land at the right resolution but the wrong scale
+        // (the first UpdateSessionDisplaySettings after Connect is frequently
+        // ignored), and a scale-only correction must still re-issue the resize.
+        current_width != desktop_width
+            || current_height != desktop_height
+            || current_desktop_scale_factor != desktop_scale_factor
+            || current_device_scale_factor != device_scale_factor
     }
 
     fn resize_remote_desktop(
@@ -2282,9 +2304,31 @@ mod platform {
 
         #[test]
         fn treats_unknown_desktop_size_as_needing_resize() {
-            assert!(should_resize_remote_desktop(0, 0, 1920, 1080));
-            assert!(should_resize_remote_desktop(1920, 1080, 2048, 1080));
-            assert!(!should_resize_remote_desktop(1920, 1080, 1920, 1080));
+            // (current_w, current_h, current_desktop_scale, current_device_scale,
+            //  target_w, target_h, target_desktop_scale, target_device_scale)
+            assert!(should_resize_remote_desktop(0, 0, 0, 0, 1920, 1080, 100, 100));
+            assert!(should_resize_remote_desktop(
+                1920, 1080, 100, 100, 2048, 1080, 100, 100
+            ));
+            assert!(!should_resize_remote_desktop(
+                1920, 1080, 100, 100, 1920, 1080, 100, 100
+            ));
+        }
+
+        #[test]
+        fn treats_scale_factor_change_as_needing_resize() {
+            // Same pixel dimensions, but a corrected DPI scale still re-applies:
+            // the early post-Connect display sync often lands at 100% before the
+            // session is interactive enough to honor the host scale factor.
+            assert!(should_resize_remote_desktop(
+                1920, 1080, 100, 100, 1920, 1080, 150, 140
+            ));
+            assert!(should_resize_remote_desktop(
+                1920, 1080, 150, 100, 1920, 1080, 150, 140
+            ));
+            assert!(!should_resize_remote_desktop(
+                1920, 1080, 150, 140, 1920, 1080, 150, 140
+            ));
         }
 
         #[test]

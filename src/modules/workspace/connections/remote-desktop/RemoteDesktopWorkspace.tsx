@@ -67,6 +67,13 @@ type VncSessionEvent =
 
 const RDP_ESTABLISHING_STATE = 2;
 const RDP_PRE_CAPTURE_INTERVAL_MS = 800;
+// After the RDP control first reports a displayable session, re-issue the
+// display-size sync a few more times. The MsRdpClient ActiveX frequently
+// ignores the first UpdateSessionDisplaySettings (it fires at the pre-login
+// screen, before the Display Control channel is ready), which left "automatic"
+// resolution stuck small until a manual pane nudge forced another resize.
+const RDP_DISPLAY_SETTLE_INTERVAL_MS = 1200;
+const RDP_DISPLAY_SETTLE_PASSES = 2;
 
 function createRemoteDesktopSessionId(kind: "rdp" | "vnc") {
   return `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
@@ -95,6 +102,8 @@ export function RemoteDesktopWorkspace({
   const rafRef = useRef<number | null>(null);
   const displayReadyRef = useRef(false);
   const displaySyncInFlightRef = useRef(false);
+  const displaySettleTimerRef = useRef<number | null>(null);
+  const displaySettlePassesRef = useRef(0);
   const rdpVisibleRef = useRef(false);
   const rdpControlRef = useRef("");
   const rdpSuppressionCaptureInFlightRef = useRef(false);
@@ -493,6 +502,66 @@ export function RemoteDesktopWorkspace({
     }
   };
 
+  const cancelRdpDisplaySettle = () => {
+    if (displaySettleTimerRef.current !== null) {
+      window.clearTimeout(displaySettleTimerRef.current);
+      displaySettleTimerRef.current = null;
+    }
+    displaySettlePassesRef.current = 0;
+  };
+
+  // Re-apply the remote display size for a short window after the session first
+  // becomes displayable. The first resize commonly lands before the session is
+  // interactive enough to honor it (especially the host DPI scale factor), so
+  // we re-issue it a couple of times instead of waiting for a manual nudge.
+  const scheduleRdpDisplaySettle = () => {
+    if (displaySettleTimerRef.current !== null) {
+      return;
+    }
+    displaySettlePassesRef.current = 0;
+    const run = () => {
+      displaySettleTimerRef.current = null;
+      const sessionId = sessionIdRef.current;
+      if (
+        !sessionStartedRef.current ||
+        !sessionId ||
+        !visibilityRef.current.isActive ||
+        visibilityRef.current.suppressed
+      ) {
+        return;
+      }
+      const bounds = computeBounds() ?? lastBoundsRef.current;
+      if (!bounds) {
+        return;
+      }
+      void invokeCommand("sync_rdp_display_size", {
+        request: { sessionId, ...bounds },
+      })
+        .then((result) => {
+          if (sessionIdRef.current !== result.sessionId) {
+            return;
+          }
+          if (result.displaySynced) {
+            lastBoundsRef.current = bounds;
+          }
+        })
+        .catch(() => {
+          // Settle passes are best-effort; the ResizeObserver path still
+          // re-syncs on any subsequent real bounds change.
+        })
+        .finally(() => {
+          displaySettlePassesRef.current += 1;
+          if (displaySettlePassesRef.current < RDP_DISPLAY_SETTLE_PASSES) {
+            displaySettleTimerRef.current = window.setTimeout(
+              run,
+              RDP_DISPLAY_SETTLE_INTERVAL_MS,
+            );
+          }
+        });
+    };
+    displaySettleTimerRef.current = window.setTimeout(run, RDP_DISPLAY_SETTLE_INTERVAL_MS);
+  };
+
   const attemptRdpDisplaySync = () => {
     const sessionId = sessionIdRef.current;
     if (
@@ -527,6 +596,7 @@ export function RemoteDesktopWorkspace({
               : t("remoteDesktop.connected"),
           );
           pushRdpVisibility();
+          scheduleRdpDisplaySettle();
         } else if (result.connected) {
           markRdpConnectionStarted();
           setRdpStatus(t("remoteDesktop.preparingDisplay"));
@@ -547,6 +617,7 @@ export function RemoteDesktopWorkspace({
       window.cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    cancelRdpDisplaySettle();
     sessionStartedRef.current = false;
     sessionStartingRef.current = false;
     rdpConnectionCountedRef.current = false;
@@ -765,6 +836,7 @@ export function RemoteDesktopWorkspace({
         window.cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      cancelRdpDisplaySettle();
       const ownsSession = sessionStartingRef.current || sessionStartedRef.current;
       sessionStartingRef.current = false;
       const counted = rdpConnectionCountedRef.current;
