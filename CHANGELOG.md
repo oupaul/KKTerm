@@ -3,6 +3,46 @@
 All notable changes to KKTerm are documented here.
 
 ## Highlights
+- Improved RDP Connection Session resizing so **remote desktop no longer starts too small** and **doesn’t require a manual Tab/Pane nudge** to settle.
+- Fixed a regression where **the RDP desktop could never appear** after connect (even while the toolbar still showed **“Connected”**).  
+
+## New
+- (Docs) Documented the **RDP native-window lifecycle invariant** in `ARCHITECTURE.md` so the off-screen staging vs on-screen re-apply behavior doesn’t get re-broken. (Think of it as putting a “do not touch” label on the terminal’s network cable.)
+
+## Improved
+- RDP automatic resolution (`remoteResolution=automatic`) now performs additional settle passes after the Session becomes displayable, applying the correct size without waiting for a Pane resize.
+
+## Fixed
+- Fixed RDP automatic resolution rendering at the wrong (small) size until a pane resize nudges the Tab.
+- Hotfix: Fixed RDP desktop potentially never showing after the prior change (#180), caused by an off-screen settle path leaving the native window parked.
+  - PR #180: https://github.com/ryantsai/KKTerm/pull/180
+  - PR #181: https://github.com/ryantsai/KKTerm/pull/181
+
+## Internal
+- Split/organized connection dialog fields by type (including RDP) under `src/modules/workspace/connections/connection-dialog`.
+
+---
+
+## 重點摘要
+- 改善 RDP Connection Session 的縮放行為：**遠端桌面不再一開始就太小**，也**不再需要手動去推一下 Tab/Pane** 才會「正常 settle」。
+- 修正一個回歸問題：RDP 在連線後**可能永遠不會顯示桌面**（雖然工具列仍顯示 **「Connected」**）。  
+
+## 新增
+- （文件）在 `ARCHITECTURE.md` 補上 **RDP native-window lifecycle invariant** 的說明，避免再次把「離屏 staging」和「畫面上重套用」的流程搞混。（就像在終端機網路線上貼了「不要亂拔」標籤。）
+
+## 改善
+- RDP 自動解析度（`remoteResolution=automatic`）在 Session 變得可顯示後，會額外進行 settle passes，讓 Tab/Pane 不必先被調整也能套用正確大小。
+
+## 修正
+- 修正 RDP 自動解析度剛開始會以錯誤（偏小）的大小呈現，直到面板大小被調整才會變正確。
+- Hotfix：修正先前改動（#180）後，RDP 桌面可能**不會顯示**的問題；原因是某段 settle 路徑把原生視窗停放在離屏狀態。
+  - PR #180: https://github.com/ryantsai/KKTerm/pull/180
+  - PR #181: https://github.com/ryantsai/KKTerm/pull/181
+
+## Internal
+- 整理/拆分連線對話框的欄位，依連線類型放到 `src/modules/workspace/connections/connection-dialog`（包含 RDP）。
+
+## Highlights
 - **Status Bar visibility option**: You can now show or hide the Status Bar.
 - **Dashboard updates for watchdogs**: Watchdogs now appear in the bottom-right Status Bar as soon as they emit events, with richer detail when you click.
 
