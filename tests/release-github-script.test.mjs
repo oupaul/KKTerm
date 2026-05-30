@@ -29,3 +29,7 @@ test("release script writes version files as utf8 without bom", () => {
   assert.match(tauriMatch[0], /Set-TextFileUtf8NoBom/);
   assert.doesNotMatch(tauriMatch[0], /Set-Content[\s\S]*-Encoding UTF8/);
 });
+
+test("release script stages Cargo.lock with Rust version files", () => {
+  assert.match(script, /"src-tauri\/Cargo\.toml", "src-tauri\/Cargo\.lock"/);
+});

@@ -262,7 +262,7 @@ try {
     Invoke-Checked -FilePath "cargo" -ArgumentList @("check", "--manifest-path", "src-tauri/Cargo.toml") -Action "Rust check"
     Invoke-Checked -FilePath "cargo" -ArgumentList @("test", "--manifest-path", "src-tauri/Cargo.toml") -Action "Rust tests"
 
-    $AddResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("add", "package.json", "package-lock.json", "src-tauri/tauri.conf.json", "src-tauri/Cargo.toml", "CHANGELOG.md", $VersionReleaseNotesPath)
+    $AddResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("add", "package.json", "package-lock.json", "src-tauri/tauri.conf.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "CHANGELOG.md", $VersionReleaseNotesPath)
     if ($AddResult.ExitCode -ne 0) {
         throw "Unable to stage version files:`n$($AddResult.Output -join "`n")"
     }

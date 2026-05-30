@@ -9378,7 +9378,7 @@ mod tests {
             create_tool
                 .function
                 .description
-                .contains("contrast, hierarchy, density, responsiveness, and motion cost")
+                .contains("contrast, hierarchy, density, layout/alignment, copy economy, responsiveness, and motion cost")
         );
 
         let messages = build_agent_messages(
