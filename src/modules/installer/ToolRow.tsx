@@ -16,6 +16,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const toolState = useInstallerStore((s) => s.toolState[recipe.id]);
   const inFlight = useInstallerStore((s) => s.inFlight[recipe.id]);
   const lastStatus = useInstallerStore((s) => s.lastStatus[recipe.id]);
+  const latestError = useInstallerStore((s) => s.checkError[recipe.id]);
   const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
 
@@ -68,7 +69,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const installedVersionText = isInstalled
     ? (installedVersion ?? t("installer.status.noVersion"))
     : t("installer.status.notInstalled");
-  const latestVersionText = latestSeen ?? t("installer.status.noVersion");
+  const latestVersionText = latestError ?? latestSeen ?? t("installer.status.noVersion");
   const runtimeVersionLabel =
     recipe.id === "node-bundle"
       ? t("installer.tile.node")
@@ -134,7 +135,16 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
             <dl className="installer-tile__versions">
               <div>
                 <dt>{t("installer.tile.latest")}</dt>
-                <dd className={hasUpdate ? "installer-tile__version--update" : undefined}>
+                <dd
+                  className={
+                    latestError
+                      ? "installer-tile__version--error"
+                      : hasUpdate
+                        ? "installer-tile__version--update"
+                        : undefined
+                  }
+                  title={latestError ?? latestVersionText}
+                >
                   {latestVersionText}
                 </dd>
               </div>

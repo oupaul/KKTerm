@@ -229,7 +229,10 @@ dialog with JSON and TOML snippets whose `command` is the resolved
 copyable command examples for clients that support CLI MCP registration and
 config paths for clients that require manual editing.
 Debug builds write raw built-in and remote MCP request/response records to
-`mcp.debug.log` beside `kkterm.log`.
+`mcp.debug.log` beside `kkterm.log`. Release builds write the same log only
+when Settings → General → Debug → Advanced Debugging is enabled; enabling the
+setting writes an `advanced_debugging.enabled` marker so the release logging
+path is visible before the next MCP request.
 
 ## Platform support
 

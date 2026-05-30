@@ -540,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn shipped_desktop_agent_apps_use_vendor_downloads() {
+    fn shipped_desktop_agent_apps_use_stable_install_sources() {
         let json = include_str!("../../../installer/catalog.v1.json");
         let catalog: Catalog =
             serde_json::from_str(json).expect("shipped catalog JSON should parse");
@@ -562,7 +562,7 @@ mod tests {
             .expect("catalog should include Claude Desktop");
         assert!(matches!(
             &claude.provider,
-            Provider::DownloadInstaller { url, .. } if url == "https://claude.ai/api/desktop/win32/x64/setup/latest/redirect"
+            Provider::Winget { id } if id == "Anthropic.Claude"
         ));
     }
 

@@ -96,6 +96,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const { t, i18n } = useTranslation();
   const detected = useInstallerStore((s) => s.detected[recipe.id]);
   const toolState = useInstallerStore((s) => s.toolState[recipe.id]);
+  const latestError = useInstallerStore((s) => s.checkError[recipe.id]);
   const allDetected = useInstallerStore((s) => s.detected);
   const catalog = useInstallerStore((s) => s.catalog);
   const closeDialog = useInstallerStore((s) => s.closeDialog);
@@ -251,8 +252,14 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               {version}
             </Row>
           ) : null}
-          {latest ? (
-            <Row label={t("installer.dialog.latestVersion")}>{latest}</Row>
+          {latestError || latest ? (
+            <Row label={t("installer.dialog.latestVersion")}>
+              <span
+                className={latestError ? "installer-tool-dialog__value-error" : undefined}
+              >
+                {latestError ?? latest}
+              </span>
+            </Row>
           ) : null}
           {toolState?.lastCheckAt ? (
             <Row label={t("installer.dialog.lastChecked")}>
@@ -373,6 +380,7 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   );
   const detected = useInstallerStore((s) => s.detected);
   const toolState = useInstallerStore((s) => s.toolState[recipe.id]);
+  const latestError = useInstallerStore((s) => s.checkError[recipe.id]);
   const checking = useInstallerStore((s) => s.checking);
   const catalog = useInstallerStore((s) => s.catalog);
   const closeDialog = useInstallerStore((s) => s.closeDialog);
@@ -490,7 +498,11 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
             {providerSummary(recipe.provider)}
           </Row>
           <Row label={t("installer.dialog.latestVersion")}>
-            {toolState?.latestVersionSeen ?? (
+            {latestError ? (
+              <span className="installer-tool-dialog__value-error">
+                {latestError}
+              </span>
+            ) : toolState?.latestVersionSeen ?? (
               <button
                 type="button"
                 className="installer-tool-dialog__inline-action"

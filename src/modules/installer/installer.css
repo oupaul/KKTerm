@@ -320,6 +320,11 @@
   font-weight: 600;
 }
 
+.installer-tile__versions .installer-tile__version--error {
+  color: var(--red);
+  font-weight: 600;
+}
+
 .installer-tile__meta {
   position: absolute;
   bottom: 0.45rem;
@@ -489,6 +494,10 @@
   background: var(--surface-muted);
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
+}
+
+.installer-tool-dialog__value-error {
+  color: var(--red);
 }
 
 .installer-tool-dialog__inline-action {

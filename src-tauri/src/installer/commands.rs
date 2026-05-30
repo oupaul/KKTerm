@@ -248,10 +248,16 @@ pub fn installer_check_latest_versions(
                     }
                 };
                 let (latest, error) = match find_recipe(catalog_ref, &tool_id) {
-                    Some(recipe) => (latest_version_in_catalog(recipe, catalog_ref), None),
+                    Some(recipe) => match latest_version_in_catalog(recipe, catalog_ref) {
+                        Ok(latest) => (latest, None),
+                        Err(error) => (None, Some(error)),
+                    },
                     None => (None, Some("unknown tool id".to_string())),
                 };
-                let _ = st::record_latest_version(storage_ref, &tool_id, latest.as_deref(), now);
+                if error.is_none() {
+                    let _ =
+                        st::record_latest_version(storage_ref, &tool_id, latest.as_deref(), now);
+                }
                 emit_ref(ProgressEvent::CheckResult {
                     tool_id,
                     latest_version: latest,
@@ -445,6 +451,7 @@ struct WebUiAffordance {
     program: String,
     args: Vec<String>,
     env: Vec<(&'static str, String)>,
+    working_dir: String,
     url: &'static str,
 }
 
@@ -476,6 +483,9 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 "N8N_USER_FOLDER",
                 managed_app_data_dir("n8n").to_string_lossy().into_owned(),
             )],
+            working_dir: managed_app_install_dir("n8n")
+                .to_string_lossy()
+                .into_owned(),
             url: "http://localhost:5678",
         }),
         "ollama" => Some(WebUiAffordance {
@@ -488,6 +498,9 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                     .to_string_lossy()
                     .into_owned(),
             )],
+            working_dir: managed_app_install_dir("ollama")
+                .to_string_lossy()
+                .into_owned(),
             url: "http://localhost:11434",
         }),
         "flowise" => Some(WebUiAffordance {
@@ -503,6 +516,9 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 "start".into(),
             ],
             env: vec![],
+            working_dir: managed_app_install_dir("flowise")
+                .to_string_lossy()
+                .into_owned(),
             url: "http://localhost:3000",
         }),
         "open-webui" => Some(WebUiAffordance {
@@ -520,6 +536,9 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                     .to_string_lossy()
                     .into_owned(),
             )],
+            working_dir: managed_app_install_dir("open-webui")
+                .to_string_lossy()
+                .into_owned(),
             url: "http://localhost:8080",
         }),
         "langflow" => Some(WebUiAffordance {
@@ -537,6 +556,9 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                     .to_string_lossy()
                     .into_owned(),
             )],
+            working_dir: managed_app_install_dir("langflow")
+                .to_string_lossy()
+                .into_owned(),
             url: "http://localhost:7860",
         }),
         "excalidraw" => Some(WebUiAffordance {
@@ -555,6 +577,9 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 "3021".into(),
             ],
             env: vec![],
+            working_dir: managed_app_install_dir("excalidraw")
+                .to_string_lossy()
+                .into_owned(),
             url: "http://localhost:3021",
         }),
         _ => None,
@@ -734,9 +759,15 @@ fn ps_single_quote(value: &str) -> String {
 #[cfg(target_os = "windows")]
 fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
     let command_line = web_ui_command_line(affordance);
+    let script = format!(
+        "start \"KKTerm web tool\" /D {} cmd /K {}",
+        quote_cmd_arg(&affordance.working_dir),
+        command_line
+    );
     Command::new("cmd")
-        .args(["/C", "start", "KKTerm web tool", "cmd", "/K", &command_line])
+        .args(["/C", &script])
         .envs(affordance.env.iter().map(|(key, value)| (*key, value)))
+        .current_dir(&affordance.working_dir)
         .spawn()
         .map_err(|error| format!("failed to run `{command_line}`: {error}"))?;
     Ok(())
@@ -747,6 +778,7 @@ fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
     Command::new(&affordance.program)
         .args(&affordance.args)
         .envs(affordance.env.iter().map(|(key, value)| (*key, value)))
+        .current_dir(&affordance.working_dir)
         .spawn()
         .map_err(|error| {
             format!(
@@ -975,6 +1007,7 @@ mod tests {
                     .into(),
             args: vec!["serve".into()],
             env: vec![],
+            working_dir: r"C:\Users\Ryan User\AppData\Local\KKTerm\installer\apps\ollama".into(),
             url: "http://localhost:11434",
         };
 
@@ -982,6 +1015,21 @@ mod tests {
             web_ui_command_line(&affordance),
             r#""C:\Users\Ryan User\AppData\Local\KKTerm\installer\apps\ollama\app\ollama.exe" serve"#
         );
+    }
+
+    #[test]
+    fn managed_web_ui_affordances_run_from_app_local_working_dir() {
+        for tool_id in ["open-webui", "langflow", "excalidraw", "n8n", "flowise"] {
+            let affordance =
+                web_ui_affordance(tool_id).unwrap_or_else(|| panic!("{tool_id} should run"));
+
+            assert!(
+                affordance
+                    .working_dir
+                    .ends_with(&format!(r"installer\apps\{tool_id}")),
+                "{tool_id} should run from its managed app directory"
+            );
+        }
     }
 
     #[test]

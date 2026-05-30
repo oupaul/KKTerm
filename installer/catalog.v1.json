@@ -355,11 +355,7 @@
       "detection": {
         "displayNames": ["Claude"]
       },
-      "provider": {
-        "kind": "downloadInstaller",
-        "url": "https://claude.ai/api/desktop/win32/x64/setup/latest/redirect",
-        "fileName": "ClaudeSetup.exe"
-      }
+      "provider": { "kind": "winget", "id": "Anthropic.Claude" }
     },
     {
       "id": "hermes-agent",

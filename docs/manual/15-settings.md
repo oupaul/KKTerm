@@ -57,7 +57,7 @@ Settings tutorial targets:
   - Export: `settings.exportSettings` → `settings.exportSettingsComplete`. Export ZIP uses the same shape as importable KKTerm settings export.
   - Import: `settings.importSettings`, confirmation `settings.importSettingsConfirm`, success `settings.importSettingsComplete`.
   - Reset all: `settings.resetAllSettings`, confirmation `settings.resetAllSettingsConfirm`, success `settings.resetAllSettingsComplete`.
-- Debug subsection `settings.debug`: toggle `settings.advancedDebugging` (hint `settings.advancedDebuggingHint`) enables full AI Assistant debug log writing even in release builds. These local logs may include prompts, tool arguments, screenshots, and generated Dashboard AI Created Widget source.
+- Debug subsection `settings.debug`: toggle `settings.advancedDebugging` (hint `settings.advancedDebuggingHint`) enables full AI Assistant and MCP debug log writing even in release builds. Enabling it writes an `advanced_debugging.enabled` marker to `aiassistant.debug.log` and `mcp.debug.log` beside `kkterm.log`, so the release logging path is visible before the next assistant or MCP event. These local logs may include prompts, tool arguments, MCP arguments/results, screenshots, and generated Dashboard AI Created Widget source.
 
 > Automatic database backups do **not** run from app-window close. The supported shape is startup or manual backup ZIP creation.
 
@@ -157,4 +157,4 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 - Config dialog keys: `settings.builtInMcpShowConfig`, `settings.builtInMcpConfigTitle`, `settings.builtInMcpConfigIntro`, `settings.builtInMcpConfigFormatJson`, `settings.builtInMcpConfigFormatToml`, `settings.builtInMcpConfigCopy`, `settings.builtInMcpConfigCopied`, `settings.builtInMcpConfigLocationsTitle`, `settings.builtInMcpConfig*Header`, and `settings.builtInMcpConfigMethod*`.
 - Config dialog behavior: shows copyable JSON (`mcpServers.kkterm`) and TOML (`[mcp_servers.kkterm]`) snippets for stdio MCP clients using the resolved `kkterm-cli.exe` path beside the running `KKTerm.exe`. The setup table shows localized Agent/Method/Project/Global headings. Codex and Claude Code rows include documented CLI commands where supported; VS Code/GitHub Copilot, Antigravity, and OpenCode rows use `settings.builtInMcpConfigMethodManualEdit` and list config locations.
 - Purpose: enable/disable the local built-in MCP server surface and control whether dangerous built-in MCP tools (`kkterm.dangerous.*`) require confirmation prompts or run in allow-all mode.
-- Debug logging: debug builds write raw built-in and remote MCP request/response records to `mcp.debug.log` beside `kkterm.log`.
+- Debug logging: debug builds write raw built-in and remote MCP request/response records to `mcp.debug.log` beside `kkterm.log`; release builds write the same MCP log when `settings.advancedDebugging` is enabled.

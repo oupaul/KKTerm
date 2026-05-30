@@ -2,11 +2,11 @@ use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
-    sync::OnceLock,
     sync::atomic::{AtomicBool, Ordering},
+    sync::OnceLock,
 };
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 static LOG_STATUS: OnceLock<String> = OnceLock::new();
 static LOG_PATH: OnceLock<PathBuf> = OnceLock::new();
@@ -37,7 +37,7 @@ pub fn status() -> String {
 }
 
 pub fn ai_assistant_debug(event: &str, payload: &Value) {
-    if !cfg!(debug_assertions) && !advanced_debugging_enabled() {
+    if !sensitive_debug_log_enabled(cfg!(debug_assertions), advanced_debugging_enabled()) {
         return;
     }
     let Some(log_path) = LOG_PATH
@@ -53,7 +53,7 @@ pub fn ai_assistant_debug(event: &str, payload: &Value) {
 }
 
 pub fn mcp_debug(event: &str, payload: &Value) {
-    if !cfg!(debug_assertions) {
+    if !sensitive_debug_log_enabled(cfg!(debug_assertions), advanced_debugging_enabled()) {
         return;
     }
     let Some(log_path) = LOG_PATH.get().map(|path| mcp_debug_log_path_for(path)) else {
@@ -66,7 +66,10 @@ pub fn mcp_debug(event: &str, payload: &Value) {
 }
 
 pub fn set_advanced_debugging_enabled(enabled: bool) {
-    ADVANCED_DEBUGGING_ENABLED.store(enabled, Ordering::Relaxed);
+    let was_enabled = ADVANCED_DEBUGGING_ENABLED.swap(enabled, Ordering::Relaxed);
+    if enabled && !was_enabled {
+        write_advanced_debugging_enabled_markers();
+    }
 }
 
 pub fn advanced_debugging_enabled() -> bool {
@@ -85,6 +88,31 @@ fn write_startup_line() -> std::io::Result<PathBuf> {
 
     writeln!(file, "KKTerm runtime started")?;
     Ok(log_path)
+}
+
+fn sensitive_debug_log_enabled(debug_assertions: bool, advanced_debugging_enabled: bool) -> bool {
+    debug_assertions || advanced_debugging_enabled
+}
+
+fn write_advanced_debugging_enabled_markers() {
+    let Some(runtime_log_path) = LOG_PATH.get() else {
+        return;
+    };
+    let line = format_debug_log_entry(
+        "advanced_debugging.enabled",
+        &json!({
+            "debugBuild": cfg!(debug_assertions),
+        }),
+    );
+    let log_paths = [
+        ai_assistant_debug_log_path_for(runtime_log_path),
+        mcp_debug_log_path_for(runtime_log_path),
+    ];
+    for log_path in log_paths {
+        if let Err(error) = append_debug_line(&log_path, &line) {
+            eprintln!("failed to write advanced debugging marker: {error}");
+        }
+    }
 }
 
 fn ai_assistant_debug_log_path_for(runtime_log_path: &Path) -> PathBuf {
@@ -173,10 +201,31 @@ mod tests {
             parsed["payload"]["arguments"]["body"]["source"],
             "const chart = new uPlot(opts, data, root);"
         );
-        assert!(
-            parsed["timestamp"]
-                .as_str()
-                .is_some_and(|value| !value.is_empty())
+        assert!(parsed["timestamp"]
+            .as_str()
+            .is_some_and(|value| !value.is_empty()));
+    }
+
+    #[test]
+    fn sensitive_debug_logs_are_enabled_for_release_only_when_advanced_debugging_is_on() {
+        assert!(sensitive_debug_log_enabled(true, false));
+        assert!(sensitive_debug_log_enabled(true, true));
+        assert!(!sensitive_debug_log_enabled(false, false));
+        assert!(sensitive_debug_log_enabled(false, true));
+    }
+
+    #[test]
+    fn advanced_debugging_marker_is_json_line() {
+        let line = format_debug_log_entry(
+            "advanced_debugging.enabled",
+            &json!({
+                "debugBuild": false,
+            }),
         );
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(line.trim_end()).expect("marker should be valid JSON");
+        assert_eq!(parsed["event"], "advanced_debugging.enabled");
+        assert_eq!(parsed["payload"]["debugBuild"], false);
     }
 }

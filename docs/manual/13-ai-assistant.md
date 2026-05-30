@@ -120,7 +120,7 @@ Error prefix `ai.errorPrefix`. Provider-level errors include `ai.providerError`,
 
 ## Debug logging
 
-`aiassistant.debug.log` is a local troubleshooting log for AI Assistant interactions. Debug builds write it automatically; release builds write full AI Assistant debug logs only when Settings → General → Debug → `settings.advancedDebugging` is enabled. The log may include raw prompts, attached context, screenshots/data URLs, tool calls/results, and generated Dashboard widget source. Debug builds also write raw built-in and remote MCP request/response records to `mcp.debug.log`. Users should review these files before sharing.
+`aiassistant.debug.log` is a local troubleshooting log for AI Assistant interactions. Debug builds write it automatically; release builds write full AI Assistant debug logs only when Settings → General → Debug → `settings.advancedDebugging` is enabled. The log may include raw prompts, attached context, screenshots/data URLs, tool calls/results, and generated Dashboard widget source. Debug builds also write raw built-in and remote MCP request/response records to `mcp.debug.log`; release builds write the same MCP log when `settings.advancedDebugging` is enabled. Turning on Advanced Debugging writes an `advanced_debugging.enabled` marker to both debug logs so users can verify the option is active before the next assistant or MCP event. Users should review these files before sharing.
 
 ## Secret-request card
 

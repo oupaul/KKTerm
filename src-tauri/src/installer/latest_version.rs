@@ -6,37 +6,46 @@ use std::process::Command;
 use super::proc::no_window;
 use super::schema::{Catalog, Provider, Recipe};
 
-pub fn latest_version(recipe: &Recipe) -> Option<String> {
+pub type LatestVersionResult = Result<Option<String>, String>;
+
+pub fn latest_version(recipe: &Recipe) -> LatestVersionResult {
     match &recipe.provider {
         Provider::Winget { id } => winget_latest(id),
         Provider::Npm { pkg } => npm_latest(pkg),
         Provider::UvPip { package } => pypi_latest(package),
-        Provider::DownloadInstaller { .. } => None,
+        Provider::DownloadInstaller { .. } => Ok(None),
         Provider::GithubRelease { repo, .. } => github_latest(repo),
-        Provider::WindowsFeature { .. } => None,
-        Provider::WslDistro { .. } => None,
-        Provider::Bundle { .. } => None,
+        Provider::WindowsFeature { .. } => Ok(None),
+        Provider::WslDistro { .. } => Ok(None),
+        Provider::Bundle { .. } => Ok(None),
     }
 }
 
-pub fn latest_version_in_catalog(recipe: &Recipe, catalog: &Catalog) -> Option<String> {
+pub fn latest_version_in_catalog(recipe: &Recipe, catalog: &Catalog) -> LatestVersionResult {
     if let Provider::Bundle { steps } = &recipe.provider {
         if steps.len() == 1 {
-            let child = catalog.recipes.iter().find(|r| r.id == steps[0])?;
+            let child = catalog
+                .recipes
+                .iter()
+                .find(|r| r.id == steps[0])
+                .ok_or_else(|| format!("bundle step `{}` not found", steps[0]))?;
             return latest_version(child);
         }
-        return None;
+        return Ok(None);
     }
     latest_version(recipe)
 }
 
-fn winget_latest(id: &str) -> Option<String> {
+fn winget_latest(id: &str) -> LatestVersionResult {
     let output = no_window(&mut Command::new("winget"))
         .args(winget_show_args(id))
         .output()
-        .ok()?;
+        .map_err(|error| format!("failed to run winget show for `{id}`: {error}"))?;
     if !output.status.success() {
-        return None;
+        return Err(format!(
+            "winget show `{id}` failed: {}",
+            command_error_text(&output.stderr, &output.stdout)
+        ));
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     for line in stdout.lines() {
@@ -44,11 +53,11 @@ fn winget_latest(id: &str) -> Option<String> {
         if let Some(rest) = trimmed.strip_prefix("Version:") {
             let v = rest.trim();
             if !v.is_empty() {
-                return Some(v.to_string());
+                return Ok(Some(v.to_string()));
             }
         }
     }
-    None
+    Err(format!("winget show `{id}` did not report a Version line"))
 }
 
 fn winget_show_args(id: &str) -> Vec<&str> {
@@ -59,24 +68,30 @@ fn winget_show_args(id: &str) -> Vec<&str> {
         "--exact",
         "--source",
         "winget",
+        "--locale",
+        "en-US",
         "--accept-source-agreements",
         "--disable-interactivity",
     ]
 }
 
-fn npm_latest(pkg: &str) -> Option<String> {
+fn npm_latest(pkg: &str) -> LatestVersionResult {
     let client = reqwest::blocking::Client::builder()
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()
-        .ok()?;
+        .map_err(|error| format!("failed to create npm registry client: {error}"))?;
     let body = client
         .get(npm_registry_url(pkg))
         .send()
         .and_then(|r| r.error_for_status())
         .and_then(|r| r.text())
-        .ok()?;
+        .map_err(|error| format!("npm registry lookup for `{pkg}` failed: {error}"))?;
     npm_latest_from_registry_document(&body)
+        .ok_or_else(|| {
+            format!("npm registry response for `{pkg}` did not include dist-tags.latest")
+        })
+        .map(Some)
 }
 
 fn npm_latest_from_registry_document(json: &str) -> Option<String> {
@@ -95,24 +110,26 @@ fn npm_registry_url(pkg: &str) -> String {
     )
 }
 
-fn pypi_latest(package: &str) -> Option<String> {
+fn pypi_latest(package: &str) -> LatestVersionResult {
     let client = reqwest::blocking::Client::builder()
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()
-        .ok()?;
+        .map_err(|error| format!("failed to create PyPI client: {error}"))?;
     let url = format!("https://pypi.org/pypi/{package}/json");
     let json: serde_json::Value = client
         .get(url)
         .send()
         .and_then(|r| r.error_for_status())
         .and_then(|r| r.json())
-        .ok()?;
+        .map_err(|error| format!("PyPI lookup for `{package}` failed: {error}"))?;
     json.get("info")
         .and_then(|info| info.get("version"))
         .and_then(|v| v.as_str())
         .filter(|v| !v.trim().is_empty())
         .map(|s| s.to_string())
+        .ok_or_else(|| format!("PyPI response for `{package}` did not include info.version"))
+        .map(Some)
 }
 
 fn encode_npm_package_name(pkg: &str) -> String {
@@ -131,22 +148,36 @@ fn encode_npm_package_name(pkg: &str) -> String {
     encoded
 }
 
-fn github_latest(repo: &str) -> Option<String> {
+fn github_latest(repo: &str) -> LatestVersionResult {
     let client = reqwest::blocking::Client::builder()
         .user_agent("KKTerm-Installer/1")
         .timeout(std::time::Duration::from_secs(15))
         .build()
-        .ok()?;
+        .map_err(|error| format!("failed to create GitHub client: {error}"))?;
     let url = format!("https://api.github.com/repos/{repo}/releases/latest");
     let json: serde_json::Value = client
         .get(&url)
         .send()
         .and_then(|r| r.error_for_status())
         .and_then(|r| r.json())
-        .ok()?;
+        .map_err(|error| format!("GitHub release lookup for `{repo}` failed: {error}"))?;
     json.get("tag_name")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
+        .ok_or_else(|| format!("GitHub response for `{repo}` did not include tag_name"))
+        .map(Some)
+}
+
+fn command_error_text(stderr: &[u8], stdout: &[u8]) -> String {
+    let stderr = String::from_utf8_lossy(stderr).trim().to_string();
+    if !stderr.is_empty() {
+        return stderr;
+    }
+    let stdout = String::from_utf8_lossy(stdout).trim().to_string();
+    if !stdout.is_empty() {
+        return stdout;
+    }
+    "no output".into()
 }
 
 #[cfg(test)]
@@ -194,6 +225,16 @@ mod tests {
         assert!(
             winget_show_args("Git.Git").contains(&"--accept-source-agreements"),
             "fresh Windows installs can fail noninteractive winget show until source agreements are accepted"
+        );
+    }
+
+    #[test]
+    fn winget_latest_requests_english_output_for_version_parsing() {
+        assert!(
+            winget_show_args("Git.Git")
+                .windows(2)
+                .any(|args| args == ["--locale", "en-US"]),
+            "Version parsing depends on the English winget label"
         );
     }
 }

@@ -206,7 +206,7 @@ fn write_excalidraw_host_files(install_dir: &PathBuf) -> Result<(), String> {
     }
     std::fs::write(
         install_dir.join("index.html"),
-        "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Excalidraw</title>\n  </head>\n  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.jsx\"></script>\n  </body>\n</html>\n",
+        "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Excalidraw</title>\n    <script>window.EXCALIDRAW_ASSET_PATH = \"/\";</script>\n  </head>\n  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.jsx\"></script>\n  </body>\n</html>\n",
     )
     .map_err(|e| e.to_string())?;
     std::fs::write(
