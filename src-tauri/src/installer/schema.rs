@@ -463,6 +463,26 @@ mod tests {
     }
 
     #[test]
+    fn shipped_runtime_bundle_names_explain_selected_managers() {
+        let json = include_str!("../../../installer/catalog.v1.json");
+        let catalog: Catalog =
+            serde_json::from_str(json).expect("shipped catalog JSON should parse");
+        let node = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "node-bundle")
+            .expect("catalog should include Node bundle");
+        let python = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "python-bundle")
+            .expect("catalog should include Python bundle");
+
+        assert_eq!(node.name, "Node (nvm-windows)");
+        assert_eq!(python.name, "Python (uv)");
+    }
+
+    #[test]
     fn bundle_resolves_steps() {
         let leaf_a = mk_winget("nvm", "nvm", "X");
         let leaf_b = mk_winget("node", "Node", "Y");

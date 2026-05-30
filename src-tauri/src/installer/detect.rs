@@ -85,7 +85,7 @@ pub fn detect_all(catalog: &Catalog) -> HashMap<String, DetectedState> {
                 .iter()
                 .filter_map(|step| out.get(step.as_str()))
                 .collect();
-            let state = bundle_detected_state(&child_states, steps.len() as u32);
+            let state = bundle_detected_state(&bundle.id, &child_states, steps.len() as u32);
             out.insert(bundle.id.clone(), state);
         }
     }
@@ -101,7 +101,7 @@ pub fn detect_one_in_catalog(recipe: &Recipe, catalog: &Catalog) -> DetectedStat
             .filter_map(|step| recipes_by_id.get(step.as_str()).map(|r| detect_one(r)))
             .collect();
         let child_refs: Vec<&DetectedState> = child_states.iter().collect();
-        return bundle_detected_state(&child_refs, steps.len() as u32);
+        return bundle_detected_state(&recipe.id, &child_refs, steps.len() as u32);
     }
     detect_one(recipe)
 }
@@ -115,7 +115,11 @@ pub fn detect_bundle_from_states(
             .iter()
             .filter_map(|step| detected.get(step.as_str()))
             .collect();
-        return Some(bundle_detected_state(&child_states, steps.len() as u32));
+        return Some(bundle_detected_state(
+            &recipe.id,
+            &child_states,
+            steps.len() as u32,
+        ));
     }
     None
 }
@@ -130,7 +134,22 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
     }
 }
 
-fn bundle_detected_state(child_states: &[&DetectedState], total: u32) -> DetectedState {
+fn bundle_detected_state(
+    bundle_id: &str,
+    child_states: &[&DetectedState],
+    total: u32,
+) -> DetectedState {
+    match bundle_id {
+        "node-bundle" => return runtime_bundle_detected_state(child_states, detect_node_version),
+        "python-bundle" => {
+            return runtime_bundle_detected_state(child_states, detect_uv_python_313_version);
+        }
+        _ => {}
+    }
+    default_bundle_detected_state(child_states, total)
+}
+
+fn default_bundle_detected_state(child_states: &[&DetectedState], total: u32) -> DetectedState {
     let installed_count = child_states.iter().filter(|state| state.installed).count() as u32;
     if installed_count == 0 {
         DetectedState::not_installed()
@@ -152,6 +171,66 @@ fn bundle_detected_state(child_states: &[&DetectedState], total: u32) -> Detecte
             last_checked_at: None,
         }
     }
+}
+
+fn runtime_bundle_detected_state(
+    child_states: &[&DetectedState],
+    detect_runtime_version: fn() -> Option<String>,
+) -> DetectedState {
+    let manager_installed = child_states.iter().all(|state| state.installed);
+    if !manager_installed {
+        return default_bundle_detected_state(child_states, child_states.len() as u32);
+    }
+    match detect_runtime_version() {
+        Some(version) => DetectedState::installed(Some(version)),
+        None => DetectedState {
+            installed: false,
+            installed_version: None,
+            partial_count: Some((child_states.len() as u32, child_states.len() as u32 + 1)),
+            install_location: None,
+            last_checked_at: None,
+        },
+    }
+}
+
+fn detect_node_version() -> Option<String> {
+    command_version("node", &["--version"])
+}
+
+fn detect_uv_python_313_version() -> Option<String> {
+    let output = no_window(&mut Command::new("uv"))
+        .args(["python", "find", "3.13"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if path.is_empty() {
+        return None;
+    }
+    command_version(&path, &["--version"])
+}
+
+fn command_version(program: &str, args: &[&str]) -> Option<String> {
+    let output = no_window(&mut Command::new(program)).args(args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    parse_version_line(&stdout).or_else(|| parse_version_line(&stderr))
+}
+
+fn parse_version_line(text: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(|line| {
+            line.trim_start_matches("Python ")
+                .trim_start_matches('v')
+                .to_string()
+        })
 }
 
 // ---- Windows installed software / winget -------------------------------
@@ -604,7 +683,7 @@ mod tests {
     fn bundle_state_reports_partial_counts() {
         let installed = DetectedState::installed(Some("1.0.0".into()));
         let missing = DetectedState::not_installed();
-        let state = bundle_detected_state(&[&installed, &missing], 3);
+        let state = bundle_detected_state("test-bundle", &[&installed, &missing], 3);
 
         assert!(!state.installed);
         assert_eq!(state.partial_count, Some((1, 3)));
@@ -614,7 +693,7 @@ mod tests {
     fn bundle_state_reports_installed_when_all_steps_are_installed() {
         let first = DetectedState::installed(Some("1.0.0".into()));
         let second = DetectedState::installed(Some("2.0.0".into()));
-        let state = bundle_detected_state(&[&first, &second], 2);
+        let state = bundle_detected_state("test-bundle", &[&first, &second], 2);
 
         assert!(state.installed);
         assert_eq!(state.installed_version, None);
@@ -624,10 +703,37 @@ mod tests {
     #[test]
     fn bundle_state_inherits_single_step_version() {
         let child = DetectedState::installed(Some("1.0.0".into()));
-        let state = bundle_detected_state(&[&child], 1);
+        let state = bundle_detected_state("test-bundle", &[&child], 1);
 
         assert!(state.installed);
         assert_eq!(state.installed_version.as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn runtime_bundle_reports_partial_when_manager_exists_without_runtime() {
+        let manager = DetectedState::installed(Some("1.0.0".into()));
+        let state = runtime_bundle_detected_state(&[&manager], || None);
+
+        assert!(!state.installed);
+        assert_eq!(state.partial_count, Some((1, 2)));
+    }
+
+    #[test]
+    fn runtime_bundle_reports_runtime_version() {
+        let manager = DetectedState::installed(Some("1.0.0".into()));
+        let state = runtime_bundle_detected_state(&[&manager], || Some("3.13.5".into()));
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("3.13.5"));
+    }
+
+    #[test]
+    fn parse_version_line_trims_node_prefix() {
+        assert_eq!(parse_version_line("v24.11.1\n").as_deref(), Some("24.11.1"));
+        assert_eq!(
+            parse_version_line("Python 3.13.5\n").as_deref(),
+            Some("3.13.5")
+        );
     }
 
     #[test]

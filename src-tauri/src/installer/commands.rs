@@ -451,7 +451,63 @@ fn run_bundle_install(
         });
         install_recipe(step_recipe, options, cancel.clone(), emit)?;
     }
+    for (program, args) in bundle_followup_install_commands(bundle_id) {
+        if cancel.load(Ordering::Relaxed) {
+            return Err("cancelled".into());
+        }
+        emit(ProgressEvent::Step {
+            tool_id: bundle_id.into(),
+            message: format!("{program} {}", args.join(" ")),
+        });
+        let args: Vec<String> = args.iter().map(|arg| (*arg).into()).collect();
+        super::install::run_streamed_public(program, &args, bundle_id, cancel.clone(), emit)?;
+    }
     Ok(None)
+}
+
+fn bundle_followup_install_commands(bundle_id: &str) -> Vec<(&'static str, Vec<&'static str>)> {
+    match bundle_id {
+        "node-bundle" => vec![
+            ("nvm", vec!["install", "lts"]),
+            ("nvm", vec!["use", "lts"]),
+        ],
+        "python-bundle" => vec![
+            ("uv", vec!["python", "install", "3.13", "--default"]),
+            ("uv", vec!["python", "pin", "--global", "3.13"]),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn node_bundle_followup_installs_and_uses_lts() {
+        let commands = bundle_followup_install_commands("node-bundle");
+
+        assert_eq!(
+            commands,
+            vec![
+                ("nvm", vec!["install", "lts"]),
+                ("nvm", vec!["use", "lts"]),
+            ]
+        );
+    }
+
+    #[test]
+    fn python_bundle_followup_installs_default_python_313() {
+        let commands = bundle_followup_install_commands("python-bundle");
+
+        assert_eq!(
+            commands,
+            vec![
+                ("uv", vec!["python", "install", "3.13", "--default"]),
+                ("uv", vec!["python", "pin", "--global", "3.13"]),
+            ]
+        );
+    }
 }
 
 fn run_bundle_uninstall(

@@ -78,8 +78,8 @@
     },
     {
       "id": "node-bundle",
-      "name": "Node (recommended)",
-      "descriptionEn": "Installs nvm-windows so Windows users can choose and switch Node versions. Recommended for most users; power users can install Node directly themselves.",
+      "name": "Node (nvm-windows)",
+      "descriptionEn": "Installs nvm-windows, then installs and activates the latest Node LTS release through nvm-windows.",
       "category": "runtime",
       "icon": "Boxes",
       "provider": { "kind": "bundle", "steps": ["nvm-windows"] }
@@ -98,8 +98,8 @@
     },
     {
       "id": "python-bundle",
-      "name": "Python (recommended)",
-      "descriptionEn": "Installs uv so Windows users can manage Python projects and install Python versions on demand. Recommended for most users; power users can install Python directly themselves.",
+      "name": "Python (uv)",
+      "descriptionEn": "Installs uv, then installs the latest stable Python 3.13 patch release and pins Python 3.13 globally through uv.",
       "category": "runtime",
       "icon": "Boxes",
       "provider": { "kind": "bundle", "steps": ["uv"] }
