@@ -4,7 +4,7 @@
 use std::process::Command;
 
 use super::proc::no_window;
-use super::schema::{Provider, Recipe};
+use super::schema::{Catalog, Provider, Recipe};
 
 pub fn latest_version(recipe: &Recipe) -> Option<String> {
     match &recipe.provider {
@@ -14,6 +14,17 @@ pub fn latest_version(recipe: &Recipe) -> Option<String> {
         Provider::WindowsFeature { .. } => None,
         Provider::Bundle { .. } => None,
     }
+}
+
+pub fn latest_version_in_catalog(recipe: &Recipe, catalog: &Catalog) -> Option<String> {
+    if let Provider::Bundle { steps } = &recipe.provider {
+        if steps.len() == 1 {
+            let child = catalog.recipes.iter().find(|r| r.id == steps[0])?;
+            return latest_version(child);
+        }
+        return None;
+    }
+    latest_version(recipe)
 }
 
 fn winget_latest(id: &str) -> Option<String> {

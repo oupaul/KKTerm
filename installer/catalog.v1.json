@@ -21,15 +21,6 @@
       "options": ["scope", "version"]
     },
     {
-      "id": "windows-terminal",
-      "name": "Windows Terminal",
-      "descriptionEn": "Modern terminal for Windows with tabs, panes, and themes.",
-      "category": "terminal",
-      "icon": "TerminalSquare",
-      "provider": { "kind": "winget", "id": "Microsoft.WindowsTerminal" },
-      "options": ["scope", "version"]
-    },
-    {
       "id": "vscode",
       "name": "VS Code",
       "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
@@ -66,21 +57,12 @@
       "options": ["scope", "version"]
     },
     {
-      "id": "nodejs-lts",
-      "name": "Node.js LTS",
-      "descriptionEn": "JavaScript runtime — the LTS release line.",
-      "category": "runtime",
-      "icon": "Box",
-      "provider": { "kind": "winget", "id": "OpenJS.NodeJS.LTS" },
-      "options": ["scope", "version"]
-    },
-    {
       "id": "node-bundle",
       "name": "Node (recommended)",
-      "descriptionEn": "Installs nvm-windows and the current Node.js LTS. Recommended for most users; power users can install either piece individually.",
+      "descriptionEn": "Installs nvm-windows so Windows users can choose and switch Node versions. Recommended for most users; power users can install Node directly themselves.",
       "category": "runtime",
       "icon": "Boxes",
-      "provider": { "kind": "bundle", "steps": ["nvm-windows", "nodejs-lts"] }
+      "provider": { "kind": "bundle", "steps": ["nvm-windows"] }
     },
     {
       "id": "uv",
@@ -92,21 +74,12 @@
       "options": ["scope", "version"]
     },
     {
-      "id": "python-3-12",
-      "name": "Python 3.12",
-      "descriptionEn": "CPython 3.12 from python.org. Use when you want a separate, system-wide Python install.",
-      "category": "runtime",
-      "icon": "Python",
-      "provider": { "kind": "winget", "id": "Python.Python.3.12" },
-      "options": ["scope", "version"]
-    },
-    {
       "id": "python-bundle",
       "name": "Python (recommended)",
-      "descriptionEn": "Installs uv and Python 3.12 together. Recommended for most users.",
+      "descriptionEn": "Installs uv so Windows users can manage Python projects and install Python versions on demand. Recommended for most users; power users can install Python directly themselves.",
       "category": "runtime",
       "icon": "Boxes",
-      "provider": { "kind": "bundle", "steps": ["uv", "python-3-12"] }
+      "provider": { "kind": "bundle", "steps": ["uv"] }
     },
     {
       "id": "wsl",

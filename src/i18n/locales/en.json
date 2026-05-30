@@ -460,7 +460,7 @@
   },
   "installer": {
     "title": "Installer Helper",
-    "subtitle": "Install and update Windows developer tools.",
+    "subtitle": "Install and manage AI tool stacks on Windows",
     "railLabel": "Installer Helper",
     "refresh": "Refresh",
     "checkUpdates": "Check for updates",
@@ -468,7 +468,17 @@
     "section": {
       "installed": "Installed",
       "available": "Available",
-      "updates": "Updates available"
+      "updates": "Updates available",
+      "essentials": "Essentials",
+      "aiAgents": "AI Agents",
+      "aiPlatforms": "AI Platforms",
+      "development": "Development",
+      "utilities": "Utilities"
+    },
+    "tile": {
+      "latest": "Latest:",
+      "installed": "Installed:",
+      "checked": "Checked:"
     },
     "actions": {
       "install": "Install",
@@ -494,7 +504,9 @@
       "failed": "Failed: {{message}}",
       "cancelled": "Cancelled",
       "partial": "Partially installed ({{installed}}/{{total}})",
-      "noVersion": "(version unknown)"
+      "noVersion": "(version unknown)",
+      "notInstalled": "Not installed",
+      "neverChecked": "Never"
     },
     "empty": {
       "loading": "Loading catalog…"

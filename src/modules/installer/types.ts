@@ -64,6 +64,9 @@ export interface DetectedState {
   /// Best-effort install directory. Populated for github-release recipes
   /// (we own the install dir); null elsewhere. UI hides the row when null.
   installLocation?: string | null;
+  /// Unix timestamp from the last completed detection pass. Cached Windows
+  /// registry snapshots use this so the tile can show how stale it is.
+  lastCheckedAt?: number | null;
 }
 
 export interface ToolState {
@@ -108,7 +111,10 @@ export type ProgressEvent =
       latestVersion: string | null;
       error?: string;
     }
-  | { kind: "checkFinished" };
+  | { kind: "checkFinished" }
+  | { kind: "detectStarted"; toolIds: string[] }
+  | { kind: "detectResult"; toolId: string; state: DetectedState }
+  | { kind: "detectFinished" };
 
 export const PROGRESS_EVENT_NAME = "installer://progress";
 

@@ -11,13 +11,15 @@ use std::time::SystemTime;
 
 use tauri::{AppHandle, Emitter, State};
 
+use super::cache::{load_detection_cache, write_cached_state};
 use super::catalog::load_bundled_catalog;
 use super::detect::{
-    detect_all, detect_one, detect_one_in_catalog, invalidate_winget_snapshot, DetectedState,
+    detect_all, detect_bundle_from_states, detect_one, detect_one_in_catalog,
+    invalidate_winget_snapshot, refresh_winget_snapshot, DetectedState,
 };
 use super::events::{ProgressEvent, PROGRESS_EVENT};
 use super::install::{install_recipe, EventSink};
-use super::latest_version::latest_version;
+use super::latest_version::latest_version_in_catalog;
 use super::options::InstallOptions;
 use super::schema::{Catalog, Provider, Recipe};
 use super::state as st;
@@ -82,7 +84,103 @@ pub fn installer_detect_all(
         .unwrap()
         .clone()
         .ok_or("catalog not loaded yet — call installer_load_catalog first")?;
-    Ok(detect_all(&catalog))
+    let now = unix_now_secs();
+    let detected: HashMap<String, DetectedState> = detect_all(&catalog)
+        .into_iter()
+        .map(|(tool_id, state)| {
+            let state = state.with_last_checked_at(Some(now));
+            write_cached_state(&tool_id, &state);
+            (tool_id, state)
+        })
+        .collect();
+    Ok(detected)
+}
+
+#[tauri::command]
+pub fn installer_load_detection_cache(
+    runtime: State<'_, InstallerRuntime>,
+) -> Result<HashMap<String, DetectedState>, String> {
+    let catalog = runtime
+        .catalog
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("catalog not loaded yet — call installer_load_catalog first")?;
+    Ok(load_detection_cache(&catalog))
+}
+
+#[tauri::command]
+pub fn installer_detect_all_streaming(
+    app: AppHandle,
+    runtime: State<'_, InstallerRuntime>,
+) -> Result<(), String> {
+    let catalog = runtime
+        .catalog
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("catalog not loaded yet — call installer_load_catalog first")?;
+    std::thread::spawn(move || {
+        let emit = make_emit_sink(app);
+        let tool_ids: Vec<String> = catalog.recipes.iter().map(|r| r.id.clone()).collect();
+        emit(ProgressEvent::DetectStarted { tool_ids });
+
+        let mut leaves = Vec::new();
+        let mut bundles = Vec::new();
+        for recipe in &catalog.recipes {
+            if matches!(recipe.provider, Provider::Bundle { .. }) {
+                bundles.push(recipe.clone());
+            } else {
+                leaves.push(recipe.clone());
+            }
+        }
+
+        refresh_winget_snapshot();
+        let detected = Mutex::new(HashMap::<String, DetectedState>::new());
+        let work = Mutex::new(leaves);
+        std::thread::scope(|scope| {
+            for _ in 0..DETECT_PARALLELISM {
+                let work = &work;
+                let detected = &detected;
+                let emit = &emit;
+                scope.spawn(move || loop {
+                    let recipe = {
+                        let mut q = work.lock().unwrap();
+                        match q.pop() {
+                            Some(recipe) => recipe,
+                            None => return,
+                        }
+                    };
+                    let state = detect_one(&recipe).with_last_checked_at(Some(unix_now_secs()));
+                    write_cached_state(&recipe.id, &state);
+                    detected
+                        .lock()
+                        .unwrap()
+                        .insert(recipe.id.clone(), state.clone());
+                    emit(ProgressEvent::DetectResult {
+                        tool_id: recipe.id,
+                        state,
+                    });
+                });
+            }
+        });
+
+        let mut detected_guard = detected.lock().unwrap();
+        for bundle in bundles {
+            if let Some(state) = detect_bundle_from_states(&bundle, &detected_guard)
+                .map(|state| state.with_last_checked_at(Some(unix_now_secs())))
+            {
+                write_cached_state(&bundle.id, &state);
+                detected_guard.insert(bundle.id.clone(), state.clone());
+                emit(ProgressEvent::DetectResult {
+                    tool_id: bundle.id,
+                    state,
+                });
+            }
+        }
+        emit(ProgressEvent::DetectFinished);
+    });
+    Ok(())
 }
 
 /// Synthetic cancel-flag key used by the streaming check-for-updates sweep.
@@ -94,6 +192,7 @@ pub const CHECK_UPDATES_CANCEL_ID: &str = "__check_updates__";
 /// network or CLI-bound; 4 in flight saturates a typical home connection
 /// without overwhelming winget's source backend.
 const CHECK_UPDATES_PARALLELISM: usize = 4;
+const DETECT_PARALLELISM: usize = 4;
 
 /// Streaming check-for-updates. Runs on Tauri's worker thread (the UI is
 /// never blocked), but emits one `CheckResult` per tool as its lookup
@@ -146,15 +245,10 @@ pub fn installer_check_latest_versions(
                     }
                 };
                 let (latest, error) = match find_recipe(catalog_ref, &tool_id) {
-                    Some(recipe) => (latest_version(recipe), None),
+                    Some(recipe) => (latest_version_in_catalog(recipe, catalog_ref), None),
                     None => (None, Some("unknown tool id".to_string())),
                 };
-                let _ = st::record_latest_version(
-                    storage_ref,
-                    &tool_id,
-                    latest.as_deref(),
-                    now,
-                );
+                let _ = st::record_latest_version(storage_ref, &tool_id, latest.as_deref(), now);
                 emit_ref(ProgressEvent::CheckResult {
                     tool_id,
                     latest_version: latest,
@@ -169,9 +263,7 @@ pub fn installer_check_latest_versions(
 }
 
 #[tauri::command]
-pub fn installer_get_state(
-    storage: State<'_, Storage>,
-) -> Result<Vec<st::ToolState>, String> {
+pub fn installer_get_state(storage: State<'_, Storage>) -> Result<Vec<st::ToolState>, String> {
     st::list_all(&storage)
 }
 
@@ -208,7 +300,15 @@ pub fn installer_install_recipe(
     std::thread::spawn(move || {
         let emit: EventSink = make_emit_sink(app_clone.clone());
         let result = if let Provider::Bundle { steps } = &recipe.provider {
-            run_bundle_install(&app_clone, &catalog, &recipe.id, steps, &options, cancel.clone(), &emit)
+            run_bundle_install(
+                &app_clone,
+                &catalog,
+                &recipe.id,
+                steps,
+                &options,
+                cancel.clone(),
+                &emit,
+            )
         } else {
             install_recipe(&recipe, &options, cancel.clone(), &emit)
         };
@@ -267,13 +367,15 @@ pub fn installer_redetect(
         .unwrap()
         .clone()
         .ok_or("catalog not loaded yet")?;
-    let recipe = find_recipe(&catalog, &tool_id)
-        .ok_or_else(|| format!("unknown tool id `{tool_id}`"))?;
+    let recipe =
+        find_recipe(&catalog, &tool_id).ok_or_else(|| format!("unknown tool id `{tool_id}`"))?;
     // A redetect is the user's signal that the world may have changed
     // (install/uninstall just finished, or they hit Refresh on one row).
     // Drop the cached winget snapshot so the next winget recipe re-queries.
     invalidate_winget_snapshot();
-    Ok(detect_one_in_catalog(recipe, &catalog))
+    let state = detect_one_in_catalog(recipe, &catalog).with_last_checked_at(Some(unix_now_secs()));
+    write_cached_state(&tool_id, &state);
+    Ok(state)
 }
 
 // ---- helpers -----------------------------------------------------------
@@ -305,6 +407,13 @@ fn emit_terminal(
             message: msg.clone(),
         }),
     }
+}
+
+fn unix_now_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
 
 fn run_bundle_install(
@@ -374,4 +483,3 @@ fn run_bundle_uninstall(
     }
     Ok(None)
 }
-

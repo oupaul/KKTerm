@@ -5,6 +5,7 @@
 // detail surface.
 
 import { useTranslation } from "react-i18next";
+import type { MouseEvent } from "react";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { useInstallerStore } from "./state";
 import type { Recipe } from "./types";
@@ -22,11 +23,12 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const installedVersion = detected?.installedVersion;
   const partial = detected?.partialCount;
   const latestSeen = toolState?.latestVersionSeen;
-  const hasUpdate =
+  const hasUpdate = Boolean(
     isInstalled &&
     latestSeen &&
     installedVersion &&
-    latestSeen !== installedVersion;
+    latestSeen !== installedVersion,
+  );
   const busy = !!inFlight;
 
   const statusTone:
@@ -57,6 +59,19 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
       openInfoDialog(recipe.id);
     }
   }
+
+  function handleActionClick(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    handleOpen();
+  }
+
+  const installedVersionText = isInstalled
+    ? (installedVersion ?? t("installer.status.noVersion"))
+    : t("installer.status.notInstalled");
+  const latestVersionText = latestSeen ?? t("installer.status.noVersion");
+  const checkedText = detected?.lastCheckedAt
+    ? formatTileTimestamp(detected.lastCheckedAt)
+    : t("installer.status.neverChecked");
 
   return (
     <article
@@ -98,24 +113,57 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
           <span className="installer-tile__name" title={recipe.name}>
             {recipe.name}
           </span>
-          <span className="installer-tile__sub">
-            {busy
-              ? inFlight.operation === "install"
+          {busy ? (
+            <span className="installer-tile__sub">
+              {inFlight.operation === "install"
                 ? t("installer.status.installing")
-                : t("installer.status.uninstalling")
-              : hasUpdate
-                ? `${installedVersion ?? ""} → ${latestSeen}`
-                : isInstalled
-                  ? (installedVersion ?? t("installer.status.noVersion"))
-                  : partial
-                    ? t("installer.status.partial", {
-                        installed: partial[0],
-                        total: partial[1],
-                      })
-                    : recipe.provider.kind}
-          </span>
+                : t("installer.status.uninstalling")}
+            </span>
+          ) : partial ? (
+            <span className="installer-tile__sub">
+              {t("installer.status.partial", {
+                installed: partial[0],
+                total: partial[1],
+              })}
+            </span>
+          ) : (
+            <dl className="installer-tile__versions">
+              <div>
+                <dt>{t("installer.tile.latest")}</dt>
+                <dd>{latestVersionText}</dd>
+              </div>
+              <div>
+                <dt>{t("installer.tile.installed")}</dt>
+                <dd>{installedVersionText}</dd>
+              </div>
+              <div>
+                <dt>{t("installer.tile.checked")}</dt>
+                <dd>{checkedText}</dd>
+              </div>
+            </dl>
+          )}
+          <div className="installer-tile__meta">
+            {isInstalled ? (
+              <span className="installer-tile__badge">
+                {t("installer.section.installed")}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className={`installer-tile__action ${isInstalled ? "danger" : "primary"}`}
+              onClick={handleActionClick}
+            >
+              {isInstalled
+                ? t("installer.actions.uninstall")
+                : t("installer.actions.install")}
+            </button>
+          </div>
         </div>
       </div>
     </article>
   );
+}
+
+function formatTileTimestamp(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleString();
 }

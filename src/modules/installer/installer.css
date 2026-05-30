@@ -139,7 +139,7 @@
   padding: 0.85rem 0.6rem 0.7rem;
   user-select: none;
   text-align: center;
-  min-height: 7.5rem;
+  min-height: 10rem;
 }
 
 .installer-tile:hover .installer-tile__head {
@@ -205,8 +205,10 @@
 .installer-tile__label {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.35rem;
   min-width: 0;
+  width: 100%;
+  align-items: center;
 }
 
 .installer-tile__name {
@@ -223,9 +225,88 @@
 .installer-tile__sub {
   font-size: 0.72rem;
   color: var(--text-muted);
-  white-space: nowrap;
+  width: 100%;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.25;
+}
+
+.installer-tile__versions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.installer-tile__versions div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.installer-tile__versions dt {
+  font-weight: 500;
+}
+
+.installer-tile__versions dd {
+  margin: 0;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.installer-tile__meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-height: 1.65rem;
+}
+
+.installer-tile__badge {
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.installer-tile__action {
+  min-width: 4.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.installer-tile__action.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.installer-tile__action.danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.installer-tile__action:hover {
+  filter: brightness(1.04);
 }
 
 /* ---------- InstallerToolDialog ---------- */

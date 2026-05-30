@@ -1,9 +1,10 @@
 // In-memory session state for the Installer Helper Module.
 //
-// Per ADR 0007 / Q13b: detection is never persisted across restarts. The
-// store auto-scans on first Module entry per app session and holds results
-// until the user clicks Refresh or quits the app. Catalog is cached on
-// disk by the Rust side; the store just mirrors the last-loaded copy.
+// Detection streams from the Rust backend. On Module entry, the frontend
+// first renders any Windows Registry detection cache, then receives fresh
+// per-tool detection results over `installer://progress` as the background
+// sweep completes. The store remains in-memory; the registry cache is owned
+// by the Rust installer backend.
 //
 // This module owns two parallel transient slices:
 //   * inFlight — the legacy current-step + log view used by tile status
@@ -202,6 +203,20 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
       }
       if (event.kind === "checkFinished") {
         return { checking: false };
+      }
+      if (event.kind === "detectStarted") {
+        return { scanning: true };
+      }
+      if (event.kind === "detectResult") {
+        return {
+          detected: { ...s.detected, [event.toolId]: event.state },
+        };
+      }
+      if (event.kind === "detectFinished") {
+        return {
+          scanning: false,
+          hasInitialScanned: true,
+        };
       }
 
       // ---- install/uninstall events ---------------------------------

@@ -1878,6 +1878,14 @@ type CommandMap = {
     args: undefined;
     result: Record<string, import("../modules/installer/types").DetectedState>;
   };
+  installer_load_detection_cache: {
+    args: undefined;
+    result: Record<string, import("../modules/installer/types").DetectedState>;
+  };
+  installer_detect_all_streaming: {
+    args: undefined;
+    result: void;
+  };
   installer_redetect: {
     args: { toolId: string };
     result: import("../modules/installer/types").DetectedState;

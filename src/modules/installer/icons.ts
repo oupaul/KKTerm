@@ -29,15 +29,12 @@ import vscode from "../../assets/installer-icons/vscode.svg?url";
 const RECIPE_ICON_URLS: Record<string, string> = {
   git,
   "github-cli": github,
-  "windows-terminal": defaultIcon, // simple-icons no longer ships a Windows Terminal mark
   vscode,
   cursor,
   notepadpp,
   "nvm-windows": nodedotjs,
-  "nodejs-lts": nodedotjs,
   "node-bundle": nodedotjs,
   uv: astral,
-  "python-3-12": python,
   "python-bundle": python,
   wsl: linux,
   "docker-desktop": docker,
