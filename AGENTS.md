@@ -106,6 +106,12 @@ Strong success criteria let you loop independently.
 - RDP ActiveX overlay parking is RDP-only. Do not extend that workaround to
   WebView2, terminal, SFTP/FTP, or VNC surfaces without documenting and proving
   a separate runtime failure.
+- To re-apply RDP display size while the session must stay visible, use
+  `update_rdp_bounds` (pass `force: true` to bypass the unchanged-size gate),
+  never `sync_rdp_display_size`. `sync_rdp_display_size`/`stage_rdp` park the
+  ActiveX HWND off-screen and only work when immediately followed by a
+  `set_rdp_visibility` reveal; using them on their own blanks a "Connected"
+  pane. See the RDP command lifecycle note in `docs/ARCHITECTURE.md`.
 - Simple command menus in Workspace use Tauri native context menus through
   `src/lib/nativeContextMenu.ts`; do not replace them with DOM menus unless the
   menu needs forms or custom interactive content.
