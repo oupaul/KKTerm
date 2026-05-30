@@ -3,6 +3,14 @@ import { ConnectionIconBackgroundPicker } from "./ConnectionIconBackgroundPicker
 import { ConnectionIconPicker } from "./ConnectionIconPicker";
 import { connectionIconSrcForConnection } from "./ConnectionIcon";
 import { AddConnectionMenu, QuickConnectMenu } from "./ConnectionMenus";
+import { FtpConnectionFields, FtpConnectionOptions } from "./connection-dialog/FtpConnectionFields";
+import { LocalConnectionFields } from "./connection-dialog/LocalConnectionFields";
+import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
+import { SerialConnectionFields } from "./connection-dialog/SerialConnectionFields";
+import { SshConnectionFields } from "./connection-dialog/SshConnectionFields";
+import { TelnetConnectionFields } from "./connection-dialog/TelnetConnectionFields";
+import { UrlConnectionFields } from "./connection-dialog/UrlConnectionFields";
+import { VncConnectionFields, VncConnectionOptions } from "./connection-dialog/VncConnectionFields";
 import { ImportDialog } from "./ImportDialog";
 import { quickConnectRecentLabel } from "./quickConnectMenuModel";
 import {
@@ -10,7 +18,7 @@ import {
   type ConnectionTabContextMenuDetail,
 } from "./connectionTabContextMenu";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
-import { RECENT_CONNECTION_LIMIT, createStoredSecretMask, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
+import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, flattenConnections, flattenFolders, upsertRootConnection, withLiveConnectionStatuses } from "./treeUtils";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
@@ -28,7 +36,6 @@ import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog"
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspacePane, WorkspaceTab } from "../../../types";
-import { RDP_REMOTE_RESOLUTION_FIXED } from "../../../types";
 
 type DraggedTreeItem =
   | { kind: "folder"; folderId: string }
@@ -2976,91 +2983,8 @@ function TreeContextMenu({
   );
 }
 
-function PasswordField({
-  autoComplete = "current-password",
-  hasStoredSecret,
-  label,
-  name,
-  placeholder,
-  required,
-}: {
-  autoComplete?: string;
-  hasStoredSecret: boolean;
-  label: string;
-  name: string;
-  placeholder: string;
-  required?: boolean;
-}) {
-  const [value, setValue] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
-  const [storedSecretMask, setStoredSecretMask] = useState(createStoredSecretMask);
-  const shouldShowStoredSecretMask = hasStoredSecret && !isFocused && value.length === 0;
-
-  useEffect(() => {
-    if (hasStoredSecret) {
-      setStoredSecretMask(createStoredSecretMask());
-    }
-  }, [hasStoredSecret]);
-
-  return (
-    <label>
-      <span>{label}</span>
-      <input
-        autoComplete={autoComplete}
-        name={shouldShowStoredSecretMask ? undefined : name}
-        onBlur={() => setIsFocused(false)}
-        onChange={(event) => setValue(event.currentTarget.value)}
-        onFocus={() => setIsFocused(true)}
-        placeholder={placeholder}
-        required={shouldShowStoredSecretMask ? false : required}
-        type="password"
-        value={shouldShowStoredSecretMask ? storedSecretMask : value}
-      />
-    </label>
-  );
-}
-
 function supportsConnectionPasswordCredential(type: ConnectionType | "") {
   return type === "ssh" || type === "telnet" || type === "rdp" || type === "vnc" || type === "ftp";
-}
-
-function passwordCredentialOptionLabel(credential: StoredCredentialSummary) {
-  const user = credential.username?.trim() || "-";
-  const host = credential.host?.trim() || credential.detail || credential.ownerId;
-  const suffix = credential.label.match(/\s(#[0-9]+)$/)?.[1] ?? "";
-  return `${user} @ ${host}${suffix ? ` ${suffix}` : ""}`;
-}
-
-function PasswordCredentialSelect({
-  credentials,
-  selectedCredentialId,
-  onChange,
-}: {
-  credentials: StoredCredentialSummary[];
-  selectedCredentialId: string;
-  onChange: (credentialId: string) => void;
-}) {
-  const { t } = useTranslation();
-  if (credentials.length === 0) {
-    return null;
-  }
-  return (
-    <label>
-      <span>{t("connections.savedPassword")}</span>
-      <select
-        name="passwordCredentialId"
-        onChange={(event) => onChange(event.currentTarget.value)}
-        value={selectedCredentialId}
-      >
-        <option value="">{t("connections.typeNewPassword")}</option>
-        {credentials.map((credential) => (
-          <option key={credential.ownerId} value={credential.ownerId}>
-            {passwordCredentialOptionLabel(credential)}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
 }
 
 function ConnectionDialog({
@@ -3130,7 +3054,6 @@ function ConnectionDialog({
   );
   const usesSshDefaults = connectionType === "ssh";
   const isTelnetConnection = connectionType === "telnet";
-  const isSerialConnection = connectionType === "serial";
   const isFtpConnection = connectionType === "ftp";
   const usesRemoteDesktopFields = connectionType
     ? isRemoteDesktopConnectionType(connectionType)
@@ -3147,7 +3070,6 @@ function ConnectionDialog({
   }, [initialConnection?.iconDataUrl, tree]);
   const localShellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   const isEditMode = mode === "edit";
-  const isUrlConnection = connectionType === "url";
   const canUseSavedPasswordCredential = mode !== "quick" && supportsConnectionPasswordCredential(connectionType);
   const matchingPasswordCredentials = useMemo(
     () =>
@@ -3443,6 +3365,136 @@ function ConnectionDialog({
     }
   }
 
+  function renderConnectionTypeFields() {
+    switch (connectionType) {
+      case "local":
+        return (
+          <LocalConnectionFields
+            initialConnection={initialConnection}
+            localShellOptions={localShellOptions}
+            localStartupDirectory={localStartupDirectory}
+            onBrowseLocalStartupDirectory={() => void handleBrowseLocalStartupDirectory()}
+            onLocalStartupDirectoryChange={setLocalStartupDirectory}
+          />
+        );
+      case "serial":
+        return <SerialConnectionFields initialConnection={initialConnection} />;
+      case "url":
+        return (
+          <UrlConnectionFields
+            hasStoredUrlPassword={hasStoredUrlPassword}
+            initialConnection={initialConnection}
+            isEditMode={isEditMode}
+          />
+        );
+      case "ssh":
+        return (
+          <SshConnectionFields
+            authMethod={authMethod}
+            hasStoredConnectionPassword={hasStoredConnectionPassword}
+            initialConnection={initialConnection}
+            isEditMode={isEditMode}
+            keyPath={keyPath}
+            matchingPasswordCredentials={matchingPasswordCredentials}
+            onAuthMethodChange={setAuthMethod}
+            onBrowseKeyFile={() => void handleBrowseKeyFile()}
+            onKeyPathChange={setKeyPath}
+            onOpenKeyEmailDialog={handleOpenKeyEmailDialog}
+            onPortDraftChange={setPortDraft}
+            onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
+            portDraft={portDraft}
+            selectedPasswordCredentialId={selectedPasswordCredentialId}
+            sshSettings={sshSettings}
+          />
+        );
+      case "telnet":
+        return (
+          <TelnetConnectionFields
+            hasStoredConnectionPassword={hasStoredConnectionPassword}
+            initialConnection={initialConnection}
+            isEditMode={isEditMode}
+            matchingPasswordCredentials={matchingPasswordCredentials}
+            onPortDraftChange={setPortDraft}
+            onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
+            portDraft={portDraft}
+            selectedPasswordCredentialId={selectedPasswordCredentialId}
+            sshSettings={sshSettings}
+          />
+        );
+      case "rdp":
+        return (
+          <RdpConnectionFields
+            hasStoredConnectionPassword={hasStoredConnectionPassword}
+            initialConnection={initialConnection}
+            isEditMode={isEditMode}
+            matchingPasswordCredentials={matchingPasswordCredentials}
+            onPortDraftChange={setPortDraft}
+            onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
+            portDraft={portDraft}
+            selectedPasswordCredentialId={selectedPasswordCredentialId}
+            sshSettings={sshSettings}
+          />
+        );
+      case "vnc":
+        return (
+          <VncConnectionFields
+            hasStoredConnectionPassword={hasStoredConnectionPassword}
+            initialConnection={initialConnection}
+            isEditMode={isEditMode}
+            matchingPasswordCredentials={matchingPasswordCredentials}
+            onPortDraftChange={setPortDraft}
+            onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
+            portDraft={portDraft}
+            selectedPasswordCredentialId={selectedPasswordCredentialId}
+            sshSettings={sshSettings}
+          />
+        );
+      case "ftp":
+        return (
+          <FtpConnectionFields
+            hasStoredConnectionPassword={hasStoredConnectionPassword}
+            initialConnection={initialConnection}
+            isEditMode={isEditMode}
+            matchingPasswordCredentials={matchingPasswordCredentials}
+            onPortDraftChange={setPortDraft}
+            onSelectedPasswordCredentialIdChange={setSelectedPasswordCredentialId}
+            portDraft={portDraft}
+            selectedPasswordCredentialId={selectedPasswordCredentialId}
+            sshSettings={sshSettings}
+          />
+        );
+      default:
+        return null;
+    }
+  }
+
+  function renderConnectionTypeOptions() {
+    switch (connectionType) {
+      case "rdp":
+        return (
+          <RdpConnectionOptions
+            initialConnection={initialConnection}
+            onInheritsSettingsDefaultsChange={setRdpInheritsSettingsDefaults}
+            rdpInheritsSettingsDefaults={rdpInheritsSettingsDefaults}
+            rdpSettings={rdpSettings}
+          />
+        );
+      case "vnc":
+        return (
+          <VncConnectionOptions
+            initialConnection={initialConnection}
+            onInheritsSettingsDefaultsChange={setVncInheritsSettingsDefaults}
+            vncInheritsSettingsDefaults={vncInheritsSettingsDefaults}
+            vncSettings={vncSettings}
+          />
+        );
+      case "ftp":
+        return <FtpConnectionOptions initialConnection={initialConnection} onFtpProtocolChange={handleFtpProtocolChange} />;
+      default:
+        return null;
+    }
+  }
+
   return (
     <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
       <form
@@ -3530,568 +3582,9 @@ function ConnectionDialog({
               </label>
             ) : null}
 
-            {connectionType === "local" ? (
-              <>
-                <label>
-                  <span>{t("connections.nameOptional")}</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
-                </label>
-                <div className="connection-option-fields">
-                  <label className="option-mode-row">
-                    <span>{t("connections.shell")}</span>
-                    <select
-                      name="localShell"
-                      defaultValue={initialConnection?.localShell ?? localShellOptions[0]?.value ?? ""}
-                    >
-                      {localShellOptions.map((option) => (
-                        <option value={option.value ?? ""} key={option.value ?? option.label}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <label>
-                  <span>{t("connections.localStartupDirectory")}</span>
-                  <div className="input-with-button">
-                    <input
-                      name="localStartupDirectory"
-                      onChange={(event) => setLocalStartupDirectory(event.currentTarget.value)}
-                      placeholder={t("connections.localStartupDirectoryPlaceholder")}
-                      value={localStartupDirectory}
-                    />
-                    <button className="toolbar-button" onClick={handleBrowseLocalStartupDirectory} type="button">
-                      {t("connections.browse")}
-                    </button>
-                  </div>
-                </label>
-                <label>
-                  <span>{t("connections.localStartupScript")}</span>
-                  <textarea
-                    name="localStartupScript"
-                    defaultValue={initialConnection?.localStartupScript ?? ""}
-                    placeholder={t("connections.localStartupScriptPlaceholder")}
-                    rows={4}
-                  />
-                </label>
-              </>
-            ) : isSerialConnection ? (
-              <>
-                <label>
-                  <span>{t("connections.nameOptional")}</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
-                </label>
-                <div className="connection-endpoint-fields">
-                  <label className="endpoint-host-input">
-                    <span>{t("connections.line")}*</span>
-                    <input
-                      name="serialLine"
-                      defaultValue={initialConnection?.serialLine ?? initialConnection?.host ?? "COM1"}
-                      placeholder={t("connections.serialLinePlaceholder")}
-                      required
-                    />
-                  </label>
-                  <label className="endpoint-port-input">
-                    <span>{t("connections.speed")}*</span>
-                    <input
-                      name="serialSpeed"
-                      defaultValue={initialConnection?.serialSpeed ?? 9600}
-                      inputMode="numeric"
-                      min="1"
-                      type="number"
-                      placeholder="9600"
-                      required
-                    />
-                  </label>
-                </div>
-              </>
-            ) : isUrlConnection ? (
-              <>
-                <label>
-                  <span>{t("connections.nameOptional")}</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
-                </label>
-                <div className="connection-endpoint-fields">
-                  <label className="endpoint-wide-input">
-                    <span>{t("connections.url")}*</span>
-                    <input name="url" defaultValue={initialConnection?.url ?? ""} placeholder={t("connections.urlPlaceholder")} required />
-                  </label>
-                </div>
-                <div className="connection-auth-fields">
-                  <label>
-                    <span>{t("connections.credentialUser")}</span>
-                    <input
-                      name="urlCredentialUsername"
-                      defaultValue={initialConnection?.urlCredentialUsername ?? ""}
-                      placeholder={t("connections.optionalUsername")}
-                    />
-                  </label>
-                  <PasswordField
-                    hasStoredSecret={isEditMode && hasStoredUrlPassword}
-                    label={t("connections.password")}
-                    name="urlPassword"
-                    placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                  />
-                </div>
-                <div className="connection-option-fields">
-                  <label>
-                    <span>{t("connections.dataPartition")}</span>
-                    <input
-                      name="dataPartition"
-                      defaultValue={initialConnection?.dataPartition ?? ""}
-                      placeholder={t("connections.default")}
-                    />
-                  </label>
-                </div>
-              </>
-            ) : (
-              <>
-                <label>
-                  <span>{t("connections.nameOptional")}</span>
-                  <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
-                </label>
-
-                <div className="connection-endpoint-fields">
-                  <label className="endpoint-host-input">
-                    <span>{t("connections.host")}*</span>
-                    <input
-                      name="host"
-                      defaultValue={initialConnection?.host ?? ""}
-                      placeholder={t("connections.exampleHost")}
-                      required
-                    />
-                  </label>
-                  <label className="endpoint-port-input">
-                    <span>{t("connections.port")}</span>
-                    <input
-                      key={`port-${connectionType}`}
-                      name="port"
-                      onChange={(event) => setPortDraft(event.currentTarget.value)}
-                      value={portDraft}
-                      inputMode="numeric"
-                      min="1"
-                      max="65535"
-                      type="number"
-                      placeholder={String(defaultPortForConnectionType(connectionType, sshSettings))}
-                    />
-                  </label>
-                  {usesSshDefaults ? (
-                    <label className="proxy-jump-input">
-                      <span>{t("connections.proxyJumpOptional")}</span>
-                      <input
-                        name="proxyJump"
-                        defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
-                        placeholder={t("connections.jumpInternal")}
-                      />
-                    </label>
-                  ) : null}
-                </div>
-
-                {usesSshDefaults ? (
-                  <div className="connection-auth-fields">
-                    <label className="auth-user-input">
-                      <span>{`${t("connections.user")}*`}</span>
-                      <input
-                        key={`user-${connectionType}`}
-                        name="user"
-                        defaultValue={initialConnection?.user ?? sshSettings.defaultUser}
-                        placeholder={t("connections.admin")}
-                        required
-                      />
-                    </label>
-                    <label className="auth-mode-row">
-                      <span>{t("connections.auth")}*</span>
-                      <select
-                        name="authMethod"
-                        value={authMethod}
-                        required
-                        onChange={(event) =>
-                          setAuthMethod(event.currentTarget.value as "keyFile" | "password" | "agent")
-                        }
-                      >
-                        <option value="keyFile">{t("connections.keyFile")}</option>
-                        <option value="password">{t("connections.password")}</option>
-                        <option value="agent">{t("connections.sshAgent")}</option>
-                      </select>
-                    </label>
-                    {authMethod === "password" ? (
-                      <>
-                        <PasswordField
-                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                          label={`${t("connections.passwordLabel")}*`}
-                          name="password"
-                          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                          required={!isEditMode && !selectedPasswordCredentialId}
-                        />
-                        <PasswordCredentialSelect
-                          credentials={matchingPasswordCredentials}
-                          onChange={setSelectedPasswordCredentialId}
-                          selectedCredentialId={selectedPasswordCredentialId}
-                        />
-                      </>
-                    ) : authMethod === "keyFile" ? (
-                      <label>
-                        <span>{t("connections.keyPath")}</span>
-                        <div className="input-with-button ssh-key-input-actions">
-                          <input
-                            name="keyPath"
-                            onChange={(event) => setKeyPath(event.currentTarget.value)}
-                            placeholder={t("connections.keyPathExample")}
-                            value={keyPath}
-                          />
-                          <button className="toolbar-button" onClick={handleBrowseKeyFile} type="button">
-                            {t("connections.browse")}
-                          </button>
-                          <button
-                            className="toolbar-button"
-                            onClick={handleOpenKeyEmailDialog}
-                            type="button"
-                          >
-                            <KeyRound size={15} />
-                            {t("settings.generateSshKey")}
-                          </button>
-                        </div>
-                      </label>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="connection-auth-fields">
-                    <label>
-                    <span>{connectionType === "vnc" ? t("connections.user") : `${t("connections.user")}*`}</span>
-                    <input
-                      key={`user-${connectionType}`}
-                      name="user"
-                      defaultValue={initialConnection?.user ?? (connectionType === "telnet" ? sshSettings.defaultUser : "")}
-                      placeholder={
-                        connectionType === "rdp"
-                          ? t("connections.domainAdmin")
-                          : connectionType === "vnc"
-                            ? t("connections.optionalUsername")
-                            : t("connections.admin")
-                      }
-                      required={connectionType !== "vnc"}
-                    />
-                    </label>
-                    {usesRemoteDesktopFields ? (
-                      <>
-                        <PasswordField
-                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                          label={t("connections.password")}
-                          name="password"
-                          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                        />
-                        <PasswordCredentialSelect
-                          credentials={matchingPasswordCredentials}
-                          onChange={setSelectedPasswordCredentialId}
-                          selectedCredentialId={selectedPasswordCredentialId}
-                        />
-                      </>
-                    ) : null}
-                    {isTelnetConnection ? (
-                      <>
-                        <PasswordField
-                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                          label={`${t("connections.passwordLabel")}*`}
-                          name="password"
-                          placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-                          required={!isEditMode && !selectedPasswordCredentialId}
-                        />
-                        <PasswordCredentialSelect
-                          credentials={matchingPasswordCredentials}
-                          onChange={setSelectedPasswordCredentialId}
-                          selectedCredentialId={selectedPasswordCredentialId}
-                        />
-                      </>
-                    ) : null}
-                    {isFtpConnection ? (
-                      <>
-                        <PasswordField
-                          hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-                          label={t("connections.password")}
-                          name="password"
-                          placeholder={
-                            isEditMode
-                              ? t("connections.leaveBlankPassword")
-                              : t("connections.storedInKeychain")
-                          }
-                        />
-                        <PasswordCredentialSelect
-                          credentials={matchingPasswordCredentials}
-                          onChange={setSelectedPasswordCredentialId}
-                          selectedCredentialId={selectedPasswordCredentialId}
-                        />
-                      </>
-                    ) : null}
-                  </div>
-                )}
-              </>
-            )}
-
-            {usesSshDefaults ? (
-              <>
-                <div className="connection-session-fields">
-                  <label className="connection-session-toggle">
-                    <span>{t("connections.useTmux")}</span>
-                    <input
-                      name="useTmuxSessions"
-                      type="checkbox"
-                      defaultChecked={initialConnection?.useTmuxSessions ?? true}
-                    />
-                  </label>
-                </div>
-              </>
-            ) : null}
+            {renderConnectionTypeFields()}
             </div>
-            {connectionType === "rdp" ? (
-              <fieldset className="connection-session-fields connection-specific-options">
-                <legend>{t("connections.rdpOptions")}</legend>
-                <div className="connection-specific-options-panel">
-                  <label className="connection-session-toggle">
-                    <span>{t("connections.inheritSettingsDefaults")}</span>
-                    <input
-                      name="rdpInheritDefaults"
-                      type="checkbox"
-                      checked={rdpInheritsSettingsDefaults}
-                      onChange={(event) => setRdpInheritsSettingsDefaults(event.currentTarget.checked)}
-                    />
-                  </label>
-                  <div className="connection-option-fields">
-                    <label>
-                      <span>{t("settings.colorDepth")}</span>
-                      <select
-                        disabled={rdpInheritsSettingsDefaults}
-                        name="rdpColorDepth"
-                        defaultValue={initialConnection?.rdpOptions?.colorDepth ?? rdpSettings.colorDepth}
-                      >
-                        <option value={32}>{t("settings.rdpColorDepth32")}</option>
-                        <option value={24}>{t("settings.rdpColorDepth24")}</option>
-                        <option value={16}>{t("settings.rdpColorDepth16")}</option>
-                        <option value={15}>{t("settings.rdpColorDepth15")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("settings.performanceFlags")}</span>
-                      <select
-                        disabled={rdpInheritsSettingsDefaults}
-                        name="rdpPerformanceProfile"
-                        defaultValue={initialConnection?.rdpOptions?.performanceProfile ?? rdpSettings.performanceProfile}
-                      >
-                        <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
-                        <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
-                        <option value="speed">{t("settings.rdpPerformanceSpeed")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("settings.rdpRemoteResolution")}</span>
-                      <select
-                        disabled={rdpInheritsSettingsDefaults}
-                        name="rdpRemoteResolution"
-                        defaultValue={initialConnection?.rdpOptions?.remoteResolution ?? rdpSettings.remoteResolution}
-                      >
-                        <option value="automatic">{t("settings.rdpRemoteResolutionAutomatic")}</option>
-                        {RDP_REMOTE_RESOLUTION_FIXED.map((value) => (
-                          <option key={value} value={value}>
-                            {value.replace("x", "×")}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <div className="connection-session-fields">
-                    <label className="connection-session-toggle">
-                      <span>{t("settings.rdpRedirectClipboard")}</span>
-                      <input
-                        disabled={rdpInheritsSettingsDefaults}
-                        name="rdpRedirectClipboard"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.rdpOptions?.redirectClipboard ?? rdpSettings.redirectClipboard}
-                      />
-                    </label>
-                    <label className="connection-session-toggle">
-                      <span>{t("settings.rdpRedirectDrives")}</span>
-                      <input
-                        disabled={rdpInheritsSettingsDefaults}
-                        name="rdpRedirectDrives"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.rdpOptions?.redirectDrives ?? rdpSettings.redirectDrives}
-                      />
-                    </label>
-                    <label className="connection-session-toggle">
-                      <span>{t("settings.bitmapCache")}</span>
-                      <input
-                        disabled={rdpInheritsSettingsDefaults}
-                        name="rdpBitmapCache"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.rdpOptions?.bitmapCache ?? rdpSettings.bitmapCache}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </fieldset>
-            ) : null}
-            {connectionType === "vnc" ? (
-              <fieldset className="connection-session-fields connection-specific-options">
-                <legend>{t("connections.vncOptions")}</legend>
-                <div className="connection-specific-options-panel">
-                  <label className="connection-session-toggle">
-                    <span>{t("connections.inheritSettingsDefaults")}</span>
-                    <input
-                      name="vncInheritDefaults"
-                      type="checkbox"
-                      checked={vncInheritsSettingsDefaults}
-                      onChange={(event) => setVncInheritsSettingsDefaults(event.currentTarget.checked)}
-                    />
-                  </label>
-                  <div className="connection-option-fields">
-                    <label>
-                      <span>{t("settings.preferredEncoding")}</span>
-                      <select
-                        disabled={vncInheritsSettingsDefaults}
-                        name="vncPreferredEncoding"
-                        defaultValue={initialConnection?.vncOptions?.preferredEncoding ?? vncSettings.preferredEncoding}
-                      >
-                        <option value="tight">{t("settings.vncEncodingTight")}</option>
-                        <option value="zrle">{t("settings.vncEncodingZrle")}</option>
-                        <option value="raw">{t("settings.vncEncodingRaw")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("settings.colorLevel")}</span>
-                      <select
-                        disabled={vncInheritsSettingsDefaults}
-                        name="vncColorLevel"
-                        defaultValue={initialConnection?.vncOptions?.colorLevel ?? vncSettings.colorLevel}
-                      >
-                        <option value="full">{t("settings.vncColorFull")}</option>
-                        <option value="256">{t("settings.vncColor256")}</option>
-                        <option value="64">{t("settings.vncColor64")}</option>
-                        <option value="8">{t("settings.vncColor8")}</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div className="connection-session-fields">
-                    <label className="connection-session-toggle">
-                      <span>{t("settings.vncSharedSession")}</span>
-                      <input
-                        disabled={vncInheritsSettingsDefaults}
-                        name="vncSharedSession"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.vncOptions?.sharedSession ?? vncSettings.sharedSession}
-                      />
-                    </label>
-                    <label className="connection-session-toggle">
-                      <span>{t("settings.vncViewOnly")}</span>
-                      <input
-                        disabled={vncInheritsSettingsDefaults}
-                        name="vncViewOnly"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.vncOptions?.viewOnly ?? vncSettings.viewOnly}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </fieldset>
-            ) : null}
-            {isFtpConnection ? (
-              <fieldset className="connection-session-fields connection-specific-options">
-                <legend>{t("connections.ftpOptions")}</legend>
-                <div className="connection-specific-options-panel">
-                  <div className="connection-option-fields">
-                    <label>
-                      <span>{t("connections.ftpProtocol")}</span>
-                      <select
-                        name="ftpProtocol"
-                        defaultValue={initialConnection?.ftpOptions?.protocol ?? "ftp"}
-                        onChange={handleFtpProtocolChange}
-                      >
-                        <option value="ftp">{t("connections.ftpProtocolFtp")}</option>
-                        <option value="ftps">{t("connections.ftpProtocolFtps")}</option>
-                        <option value="sftp">{t("connections.ftpProtocolSftp")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("connections.ftpMode")}</span>
-                      <select
-                        name="ftpMode"
-                        defaultValue={initialConnection?.ftpOptions?.mode ?? "passive"}
-                      >
-                        <option value="passive">{t("connections.ftpModePassive")}</option>
-                        <option value="active">{t("connections.ftpModeActive")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("connections.ftpTlsMode")}</span>
-                      <select
-                        name="ftpTlsMode"
-                        defaultValue={initialConnection?.ftpOptions?.tlsMode ?? "explicit"}
-                      >
-                        <option value="explicit">{t("connections.ftpTlsExplicit")}</option>
-                        <option value="implicit">{t("connections.ftpTlsImplicit")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("connections.ftpTransferType")}</span>
-                      <select
-                        name="ftpTransferType"
-                        defaultValue={initialConnection?.ftpOptions?.transferType ?? "binary"}
-                      >
-                        <option value="binary">{t("connections.ftpTransferBinary")}</option>
-                        <option value="ascii">{t("connections.ftpTransferAscii")}</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{t("connections.ftpConnectTimeoutSecs")}</span>
-                      <input
-                        name="ftpConnectTimeoutSecs"
-                        defaultValue={initialConnection?.ftpOptions?.connectTimeoutSecs ?? 30}
-                        inputMode="numeric"
-                        min="1"
-                        max="600"
-                        type="number"
-                      />
-                    </label>
-                    <label>
-                      <span>{t("connections.ftpKeepaliveSecs")}</span>
-                      <input
-                        name="ftpKeepaliveSecs"
-                        defaultValue={initialConnection?.ftpOptions?.keepaliveSecs ?? 0}
-                        inputMode="numeric"
-                        min="0"
-                        max="3600"
-                        type="number"
-                        placeholder="0"
-                      />
-                    </label>
-                  </div>
-                  <div className="connection-session-fields">
-                    <label className="connection-session-toggle">
-                      <span>{t("connections.ftpUtf8")}</span>
-                      <input
-                        name="ftpUtf8"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.ftpOptions?.utf8 ?? true}
-                      />
-                    </label>
-                    <label className="connection-session-toggle">
-                      <span>{t("connections.ftpShowHidden")}</span>
-                      <input
-                        name="ftpShowHidden"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.ftpOptions?.showHidden ?? false}
-                      />
-                    </label>
-                    <label className="connection-session-toggle">
-                      <span>{t("connections.ftpIgnoreCertErrors")}</span>
-                      <input
-                        name="ftpIgnoreCertErrors"
-                        type="checkbox"
-                        defaultChecked={initialConnection?.ftpOptions?.ignoreCertErrors ?? false}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </fieldset>
-            ) : null}
+            {renderConnectionTypeOptions()}
           </div>
         ) : null}
 
