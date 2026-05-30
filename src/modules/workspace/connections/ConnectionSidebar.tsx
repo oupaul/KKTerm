@@ -3889,8 +3889,6 @@ function ConnectionDialog({
                         defaultValue={initialConnection?.rdpOptions?.remoteResolution ?? rdpSettings.remoteResolution}
                       >
                         <option value="automatic">{t("settings.rdpRemoteResolutionAutomatic")}</option>
-                        <option value="smartSizing">{t("settings.rdpRemoteResolutionSmartSizing")}</option>
-                        <option value="dpiZoom">{t("settings.rdpRemoteResolutionDpiZoom")}</option>
                         {RDP_REMOTE_RESOLUTION_FIXED.map((value) => (
                           <option key={value} value={value}>
                             {value.replace("x", "×")}

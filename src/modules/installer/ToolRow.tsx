@@ -134,7 +134,9 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
             <dl className="installer-tile__versions">
               <div>
                 <dt>{t("installer.tile.latest")}</dt>
-                <dd>{latestVersionText}</dd>
+                <dd className={hasUpdate ? "installer-tile__version--update" : undefined}>
+                  {latestVersionText}
+                </dd>
               </div>
               <div>
                 <dt>{t("installer.tile.installed")}</dt>
@@ -153,20 +155,22 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
               className={`installer-tile__badge ${
                 isInstalled ? "installer-tile__badge--installed" : "installer-tile__badge--missing"
               }`}
-              data-alone={isInstalled ? "true" : "false"}
+              data-alone={isInstalled && !hasUpdate ? "true" : "false"}
             >
               {isInstalled
                 ? t("installer.section.installed")
                 : t("installer.status.notInstalled")}
             </span>
           </div>
-          {!isInstalled ? (
+          {!isInstalled || hasUpdate ? (
             <button
               type="button"
               className="installer-tile__action primary"
               onClick={handleActionClick}
             >
-              {t("installer.actions.install")}
+              {hasUpdate
+                ? t("installer.actions.update")
+                : t("installer.actions.install")}
             </button>
           ) : null}
         </div>

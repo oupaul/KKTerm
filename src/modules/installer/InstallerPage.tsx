@@ -277,13 +277,7 @@ export function InstallerPage({ active }: { active: boolean }) {
       ) : scanning && !hasInitialScanned ? (
         <div className="installer-empty">{t("installer.status.scanning")}</div>
       ) : (
-        <>
-          {sections.updates.length > 0 ? (
-            <RecipeSection
-              titleKey="installer.section.updates"
-              recipes={sections.updates}
-            />
-          ) : null}
+        <div className="installer-page__sections">
           {sections.categories.map((section) => (
             <RecipeSection
               key={section.titleKey}
@@ -291,7 +285,7 @@ export function InstallerPage({ active }: { active: boolean }) {
               recipes={section.recipes}
             />
           ))}
-        </>
+        </div>
       )}
       <InstallerToolDialog />
       {updateAllConfirm ? (
@@ -339,7 +333,6 @@ function RecipeSection({
 }
 
 interface GroupedRecipes {
-  installed: Recipe[];
   updates: Recipe[];
   categories: Array<{ titleKey: string; recipes: Recipe[] }>;
 }
@@ -375,7 +368,6 @@ function groupRecipes(
   detected: Record<string, DetectedState>,
   toolState: Record<string, ToolState>,
 ): GroupedRecipes {
-  const installed: Recipe[] = [];
   const updates: Recipe[] = [];
   const visibleIds = new Set(
     INSTALLER_CATEGORY_SECTIONS.flatMap((section) => section.ids),
@@ -394,8 +386,6 @@ function groupRecipes(
         latest !== det.installedVersion
       ) {
         updates.push(recipe);
-      } else {
-        installed.push(recipe);
       }
     }
   }
@@ -406,7 +396,7 @@ function groupRecipes(
       .map((id) => byId.get(id))
       .filter((recipe): recipe is Recipe => !!recipe),
   })).filter((section) => section.recipes.length > 0);
-  return { installed, updates, categories };
+  return { updates, categories };
 }
 
 function latestTimestamp(

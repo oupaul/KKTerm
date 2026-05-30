@@ -241,7 +241,7 @@ When `docs/ARCHITECTURE.md` and `docs/DASHBOARD.md` conflict on Dashboard-intern
 
 ### Installer Helper
 
-The Installer Helper Module is a built-in Activity Rail destination (rail icon `Package`, grouped with the other built-in Module buttons near the top of the rail) that manages a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. Users see Installed / Updates available / Available sections; per-row actions are Install / Update / Uninstall, plus a Pin checkbox that excludes the tool from "Update all".
+The Installer Helper Module is a built-in Activity Rail destination (rail icon `Package`, grouped with the other built-in Module buttons near the top of the rail) that manages a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. Users see categorized section groupboxes; installed tools stay in their category, updateable tools highlight the latest-version value and expose Update, and unavailable tools expose Install. Pin excludes a tool from "Update all".
 
 The catalog itself is a **JSON file embedded into the KKTerm binary at compile time** via `include_str!("../../../installer/catalog.v1.json")`. Updates to the catalog ship with each KKTerm release. There is no network fetch, no on-disk cache, and no signature verification — the trust anchor is the app binary itself (eventually backed by Windows code-signing of the KKTerm installer). The design rationale and what it supersedes from the earlier remote-signed approach lives in `docs/ADR/0008-installer-helper-bundled-catalog.md` (see also the superseded `docs/ADR/0007-installer-helper-remote-catalog.md`).
 
