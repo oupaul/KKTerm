@@ -100,6 +100,9 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const closeDialog = useInstallerStore((s) => s.closeDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
   const beginInFlight = useInstallerStore((s) => s.beginInFlight);
+  const showStatusBarNotice = useWorkspaceStore(
+    (state) => state.showStatusBarNotice,
+  );
 
   const [uninstallConfirm, setUninstallConfirm] = useState<null | {
     dependents: string[];
@@ -110,6 +113,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const version = detected?.installedVersion ?? null;
   const latest = toolState?.latestVersionSeen ?? null;
   const hasUpdate = latest && version && latest !== version;
+  const webUi = webUiAffordanceForRecipe(recipe);
 
   async function handleTogglePin() {
     if (!isTauriRuntime()) return;
@@ -151,6 +155,28 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     } catch {
       // backend emits Failed
     }
+  }
+
+  async function handleRunWebUi() {
+    if (!webUi || !isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_run_web_ui", { toolId: recipe.id });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
+  function handleOpenWebUi() {
+    if (!webUi) return;
+    if (!isTauriRuntime()) {
+      window.open(webUi.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    void openExternalUrl(webUi.url).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    });
   }
 
   return (
@@ -209,6 +235,11 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               {formatTimestamp(toolState.lastCheckAt)}
             </Row>
           ) : null}
+          {webUi ? (
+            <Row label={t("installer.dialog.webUi")}>
+              <ExternalLink href={webUi.url} />
+            </Row>
+          ) : null}
         </dl>
         <label className="installer-tool-dialog__pin">
           <input
@@ -227,6 +258,24 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         >
           {t("installer.actions.uninstall")}
         </button>
+        {webUi ? (
+          <>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => void handleRunWebUi()}
+            >
+              {t("installer.actions.run")}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleOpenWebUi}
+            >
+              {t("installer.actions.openWebUi")}
+            </button>
+          </>
+        ) : null}
         {hasUpdate ? (
           <button
             type="button"
@@ -813,6 +862,15 @@ function deriveProviderUrl(provider: Provider): string | null {
       return `https://www.npmjs.com/package/${encodeURIComponent(provider.pkg)}`;
     case "winget":
       return `https://winstall.app/apps/${encodeURIComponent(provider.id)}`;
+    default:
+      return null;
+  }
+}
+
+function webUiAffordanceForRecipe(recipe: Recipe): { url: string } | null {
+  switch (recipe.id) {
+    case "n8n":
+      return { url: "http://localhost:5678" };
     default:
       return null;
   }

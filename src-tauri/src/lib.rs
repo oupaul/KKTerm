@@ -2816,6 +2816,7 @@ pub fn run() {
             installer::commands::installer_install_recipe,
             installer::commands::installer_uninstall_recipe,
             installer::commands::installer_cancel,
+            installer::commands::installer_run_web_ui,
             installer::commands::installer_get_state,
             installer::commands::installer_set_pinned,
             mcp::mcp_list_servers,

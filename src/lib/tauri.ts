@@ -1916,6 +1916,10 @@ type CommandMap = {
     args: { toolId: string };
     result: void;
   };
+  installer_run_web_ui: {
+    args: { toolId: string };
+    result: void;
+  };
   installer_get_state: {
     args: undefined;
     result: import("../modules/installer/types").ToolState[];

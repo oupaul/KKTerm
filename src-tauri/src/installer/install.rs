@@ -28,7 +28,7 @@ use super::detect::{
 use super::events::ProgressEvent;
 use super::options::InstallOptions;
 use super::proc::{no_window, npm_program};
-use super::schema::{GithubReleaseLayout, Provider, Recipe};
+use super::schema::{GithubReleaseLayout, Provider, Recipe, RecipeOption};
 
 pub type EventSink = Box<dyn Fn(ProgressEvent) + Send + Sync>;
 
@@ -38,9 +38,10 @@ pub fn install_recipe(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
+    let options = effective_install_options(recipe, options);
     match &recipe.provider {
-        Provider::Winget { id } => install_winget(&recipe.id, id, options, cancel, emit),
-        Provider::Npm { pkg } => install_npm(&recipe.id, pkg, options, cancel, emit),
+        Provider::Winget { id } => install_winget(&recipe.id, id, &options, cancel, emit),
+        Provider::Npm { pkg } => install_npm(&recipe.id, pkg, &options, cancel, emit),
         Provider::GithubRelease {
             repo,
             asset_pattern,
@@ -50,7 +51,7 @@ pub fn install_recipe(
             repo,
             asset_pattern,
             *layout,
-            options,
+            &options,
             cancel,
             emit,
         ),
@@ -62,6 +63,17 @@ pub fn install_recipe(
                 .into(),
         ),
     }
+}
+
+fn effective_install_options(recipe: &Recipe, options: &InstallOptions) -> InstallOptions {
+    let mut next = options.clone();
+    if matches!(recipe.provider, Provider::Winget { .. })
+        && recipe.options.contains(&RecipeOption::Scope)
+        && next.scope.as_deref().unwrap_or_default().trim().is_empty()
+    {
+        next.scope = Some("user".into());
+    }
+    next
 }
 
 // ---- winget ------------------------------------------------------------
@@ -744,5 +756,54 @@ mod tests {
             merged,
             r"C:\Windows;C:\Tools;C:\Users\Ryan\AppData\Local\Microsoft\WinGet\Links"
         );
+    }
+
+    fn winget_recipe_with_options(options: Vec<super::super::schema::RecipeOption>) -> Recipe {
+        Recipe {
+            id: "git".into(),
+            name: "Git for Windows".into(),
+            description_en: "Distributed version control.".into(),
+            description_locales: Default::default(),
+            needs: vec![],
+            icon: None,
+            category: None,
+            provider: Provider::Winget {
+                id: "Git.Git".into(),
+            },
+            options,
+            homepage: None,
+            release_notes_url: None,
+            detection: Default::default(),
+        }
+    }
+
+    #[test]
+    fn scoped_winget_recipe_defaults_to_user_scope() {
+        let recipe = winget_recipe_with_options(vec![super::super::schema::RecipeOption::Scope]);
+        let effective = effective_install_options(&recipe, &InstallOptions::default());
+
+        assert_eq!(effective.scope.as_deref(), Some("user"));
+    }
+
+    #[test]
+    fn explicit_machine_scope_is_preserved() {
+        let recipe = winget_recipe_with_options(vec![super::super::schema::RecipeOption::Scope]);
+        let effective = effective_install_options(
+            &recipe,
+            &InstallOptions {
+                scope: Some("machine".into()),
+                ..InstallOptions::default()
+            },
+        );
+
+        assert_eq!(effective.scope.as_deref(), Some("machine"));
+    }
+
+    #[test]
+    fn winget_recipe_without_scope_option_does_not_gain_scope() {
+        let recipe = winget_recipe_with_options(vec![super::super::schema::RecipeOption::Version]);
+        let effective = effective_install_options(&recipe, &InstallOptions::default());
+
+        assert_eq!(effective.scope, None);
     }
 }

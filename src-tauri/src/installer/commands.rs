@@ -5,6 +5,7 @@
 // thread per call; cancellation is cooperative via a shared AtomicBool.
 
 use std::collections::HashMap;
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -357,6 +358,13 @@ pub fn installer_cancel(
 }
 
 #[tauri::command]
+pub fn installer_run_web_ui(tool_id: String) -> Result<(), String> {
+    let affordance = web_ui_affordance(&tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+    spawn_web_ui_affordance(&affordance)
+}
+
+#[tauri::command]
 pub fn installer_redetect(
     runtime: State<'_, InstallerRuntime>,
     tool_id: String,
@@ -408,6 +416,54 @@ fn emit_terminal(
             message: msg.clone(),
         }),
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct WebUiAffordance {
+    program: &'static str,
+    args: Vec<&'static str>,
+    url: &'static str,
+}
+
+fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
+    match tool_id {
+        "n8n" => Some(WebUiAffordance {
+            program: "n8n",
+            args: vec!["start"],
+            url: "http://localhost:5678",
+        }),
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
+    let command_line = std::iter::once(affordance.program)
+        .chain(affordance.args.iter().copied())
+        .collect::<Vec<_>>()
+        .join(" ");
+    Command::new("cmd")
+        .args(["/C", "start", "KKTerm web tool", "cmd", "/K", &command_line])
+        .spawn()
+        .map_err(|error| format!("failed to run `{command_line}`: {error}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
+    Command::new(affordance.program)
+        .args(&affordance.args)
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "failed to run `{}`: {error}",
+                std::iter::once(affordance.program)
+                    .chain(affordance.args.iter().copied())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            )
+        })?;
+    Ok(())
 }
 
 fn unix_now_secs() -> i64 {
@@ -513,6 +569,20 @@ mod tests {
                 ("uv", vec!["python", "pin", "--global", "3.13"]),
             ]
         );
+    }
+
+    #[test]
+    fn n8n_web_ui_affordance_runs_start_and_opens_localhost() {
+        let affordance = web_ui_affordance("n8n").expect("n8n should expose a web UI");
+
+        assert_eq!(affordance.url, "http://localhost:5678");
+        assert_eq!(affordance.program, "n8n");
+        assert_eq!(affordance.args, vec!["start"]);
+    }
+
+    #[test]
+    fn unknown_tools_do_not_get_web_ui_affordances() {
+        assert!(web_ui_affordance("git").is_none());
     }
 }
 

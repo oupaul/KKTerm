@@ -486,6 +486,8 @@
       "install": "Install",
       "update": "Update",
       "uninstall": "Uninstall",
+      "run": "Run",
+      "openWebUi": "Open web UI",
       "cancel": "Cancel"
     },
     "options": {
@@ -538,6 +540,7 @@
       "lastChecked": "Last checked",
       "homepage": "Website",
       "releaseNotes": "Release notes",
+      "webUi": "Web UI",
       "prerequisites": "Prerequisites",
       "prereqInstalled": "Installed",
       "prereqMissing": "Missing",
