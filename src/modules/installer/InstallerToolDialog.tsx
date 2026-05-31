@@ -21,6 +21,7 @@ import { useWorkspaceStore } from "../../store";
 import {
   findInstalledDependents,
   isWslFeature,
+  isKnownSelfElevatingWingetRecipe,
   recipeNeedsWsl,
   resolveInstallPlan,
 } from "./dag";
@@ -844,6 +845,7 @@ function OptionsForm({
 }) {
   const { t } = useTranslation();
   const supported = new Set<RecipeOption>(recipe.options ?? []);
+  const showSelfElevatingScopeHint = isKnownSelfElevatingWingetRecipe(recipe);
   if (supported.size === 0) return null;
   return (
     <div
@@ -864,6 +866,11 @@ function OptionsForm({
               {t("installer.options.scopeMachine")}
             </option>
           </select>
+          {showSelfElevatingScopeHint ? (
+            <span className="installer-tool-dialog__option-hint">
+              {t("installer.options.scopeSelfElevatingHint")}
+            </span>
+          ) : null}
         </label>
       ) : null}
       {supported.has("version") ? (

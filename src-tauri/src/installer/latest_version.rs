@@ -3,6 +3,7 @@
 
 use std::process::Command;
 
+use serde::Deserialize;
 use serde_json::json;
 
 use super::proc::no_window;
@@ -71,6 +72,12 @@ fn provider_kind(provider: &Provider) -> &'static str {
 }
 
 fn winget_latest(id: &str) -> LatestVersionResult {
+    let manifest_latest_error = match winget_manifest_latest(id) {
+        Ok(Some(version)) => return Ok(Some(version)),
+        Ok(None) => None,
+        Err(error) => Some(error),
+    };
+
     let output = no_window(&mut Command::new("winget"))
         .args(winget_show_args(id))
         .output()
@@ -82,16 +89,134 @@ fn winget_latest(id: &str) -> LatestVersionResult {
         ));
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
-    for line in stdout.lines() {
-        let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix("Version:") {
-            let v = rest.trim();
-            if !v.is_empty() {
-                return Ok(Some(v.to_string()));
-            }
-        }
+    if let Some(version) = winget_show_version_from_output(&stdout) {
+        return Ok(Some(version));
+    }
+    if let Some(error) = manifest_latest_error {
+        return Err(format!(
+            "winget-pkgs lookup for `{id}` failed ({error}); winget show did not report a parseable Version line"
+        ));
     }
     Err(format!("winget show `{id}` did not report a Version line"))
+}
+
+#[derive(Deserialize)]
+struct GithubContentEntry {
+    name: String,
+    #[serde(rename = "type")]
+    kind: String,
+}
+
+fn winget_manifest_latest(id: &str) -> LatestVersionResult {
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("KKTerm-Installer/1")
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|error| format!("failed to create winget-pkgs client: {error}"))?;
+    let entries: Vec<GithubContentEntry> = client
+        .get(winget_manifest_versions_url(id)?)
+        .send()
+        .and_then(|r| r.error_for_status())
+        .and_then(|r| r.json())
+        .map_err(|error| format!("GitHub manifest lookup failed: {error}"))?;
+    Ok(latest_winget_manifest_version_from_entries(&entries))
+}
+
+fn winget_manifest_versions_url(id: &str) -> Result<String, String> {
+    let first = id
+        .chars()
+        .next()
+        .ok_or_else(|| "winget id is empty".to_string())?
+        .to_ascii_lowercase();
+    let path = id
+        .split('.')
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>()
+        .join("/");
+    if path.is_empty() {
+        return Err("winget id has no path segments".into());
+    }
+    Ok(format!(
+        "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/{first}/{path}?ref=master"
+    ))
+}
+
+fn latest_winget_manifest_version_from_entries(entries: &[GithubContentEntry]) -> Option<String> {
+    entries
+        .iter()
+        .filter(|entry| entry.kind == "dir")
+        .map(|entry| entry.name.trim())
+        .filter(|name| !name.is_empty() && !name.starts_with('.'))
+        .max_by(|a, b| compare_winget_versions(a, b))
+        .map(|version| version.to_string())
+}
+
+fn winget_show_version_from_output(stdout: &str) -> Option<String> {
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        let Some((label, value)) = trimmed.split_once(':') else {
+            continue;
+        };
+        let value = value.trim();
+        if value.is_empty() {
+            continue;
+        }
+        if label.trim().eq_ignore_ascii_case("version") || looks_like_winget_version_value(value) {
+            return Some(value.to_string());
+        }
+    }
+    None
+}
+
+fn looks_like_winget_version_value(value: &str) -> bool {
+    value
+        .chars()
+        .next()
+        .is_some_and(|first| first.is_ascii_digit())
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
+}
+
+fn compare_winget_versions(a: &str, b: &str) -> std::cmp::Ordering {
+    let mut a_parts = a.split(['.', '-', '_', '+']);
+    let mut b_parts = b.split(['.', '-', '_', '+']);
+    loop {
+        match (a_parts.next(), b_parts.next()) {
+            (Some(a_part), Some(b_part)) => {
+                let ordering = compare_winget_version_part(a_part, b_part);
+                if !ordering.is_eq() {
+                    return ordering;
+                }
+            }
+            (Some(a_part), None) => {
+                return if is_zero_version_remainder(a_part, a_parts) {
+                    std::cmp::Ordering::Equal
+                } else {
+                    std::cmp::Ordering::Greater
+                };
+            }
+            (None, Some(b_part)) => {
+                return if is_zero_version_remainder(b_part, b_parts) {
+                    std::cmp::Ordering::Equal
+                } else {
+                    std::cmp::Ordering::Less
+                };
+            }
+            (None, None) => return std::cmp::Ordering::Equal,
+        }
+    }
+}
+
+fn compare_winget_version_part(a: &str, b: &str) -> std::cmp::Ordering {
+    match (a.parse::<u64>(), b.parse::<u64>()) {
+        (Ok(a), Ok(b)) => a.cmp(&b),
+        _ => a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()),
+    }
+}
+
+fn is_zero_version_remainder<'a>(first: &str, mut rest: impl Iterator<Item = &'a str>) -> bool {
+    first == "0" && rest.all(|part| part == "0")
 }
 
 fn winget_show_args(id: &str) -> Vec<&str> {
@@ -268,7 +393,86 @@ mod tests {
             winget_show_args("Git.Git")
                 .windows(2)
                 .any(|args| args == ["--locale", "en-US"]),
-            "Version parsing depends on the English winget label"
+            "English output keeps winget parsing stable when the host honors it"
         );
+    }
+
+    #[test]
+    fn winget_manifest_versions_url_maps_id_to_repository_path() {
+        assert_eq!(
+            winget_manifest_versions_url("Notepad++.Notepad++").unwrap(),
+            "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/n/Notepad++/Notepad++?ref=master"
+        );
+        assert_eq!(
+            winget_manifest_versions_url("7zip.7zip").unwrap(),
+            "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/7/7zip/7zip?ref=master"
+        );
+    }
+
+    #[test]
+    fn latest_winget_manifest_version_uses_numeric_ordering() {
+        let entries = vec![
+            GithubContentEntry {
+                name: ".validation".into(),
+                kind: "dir".into(),
+            },
+            GithubContentEntry {
+                name: "1.9.0".into(),
+                kind: "dir".into(),
+            },
+            GithubContentEntry {
+                name: "1.10.0".into(),
+                kind: "dir".into(),
+            },
+            GithubContentEntry {
+                name: "2.0.0".into(),
+                kind: "file".into(),
+            },
+        ];
+
+        assert_eq!(
+            latest_winget_manifest_version_from_entries(&entries),
+            Some("1.10.0".into())
+        );
+    }
+
+    #[test]
+    fn winget_show_version_parses_english_output() {
+        let stdout = r#"Found uv [astral-sh.uv]
+Version: 0.11.17
+Publisher: Astral Software Inc.
+"#;
+
+        assert_eq!(
+            winget_show_version_from_output(stdout),
+            Some("0.11.17".to_string())
+        );
+    }
+
+    #[test]
+    fn winget_show_version_parses_traditional_chinese_output() {
+        let stdout = r#"`msstore` 來源要求您必須先檢視下列合約，再使用。
+Terms of Transaction: https://aka.ms/microsoft-store-terms-of-transaction
+是否同意所有來源合約條款？
+[Y] 是  [N] 否： y
+找到 uv [astral-sh.uv]
+版本: 0.11.17
+發行者: Astral Software Inc.
+"#;
+
+        assert_eq!(
+            winget_show_version_from_output(stdout),
+            Some("0.11.17".to_string())
+        );
+    }
+
+    #[test]
+    fn winget_show_version_skips_non_version_urls() {
+        let stdout = r#"Terms of Transaction: https://aka.ms/microsoft-store-terms-of-transaction
+Publisher Url: https://github.com/astral-sh/uv/issues
+Homepage: https://github.com/astral-sh/uv
+"#;
+
+        assert_eq!(winget_show_version_from_output(stdout), None);
     }
 }

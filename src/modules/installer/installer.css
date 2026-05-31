@@ -575,6 +575,12 @@
   align-items: center;
 }
 
+.installer-tool-dialog__option-hint {
+  color: var(--amber);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .installer-tool-dialog__hint {
   margin: 0;
   font-size: 0.85rem;

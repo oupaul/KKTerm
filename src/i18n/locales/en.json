@@ -498,6 +498,7 @@
       "scope": "Scope",
       "scopeUser": "Per-user",
       "scopeMachine": "All users (UAC)",
+      "scopeSelfElevatingHint": "This installer may still show UAC in per-user scope.",
       "version": "Version",
       "versionLatest": "Latest",
       "location": "Install location",

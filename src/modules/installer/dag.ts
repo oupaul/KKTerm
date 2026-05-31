@@ -68,12 +68,16 @@ export function resolveInstallPlan(
       step.recipe.id === targetRecipeId || !detected[step.recipe.id]?.installed,
   );
 
+  const actionableIds = new Set(actionable.map((step) => step.recipe.id));
   const uacPromptEstimate = actionable.reduce(
     (sum, step) =>
       sum +
       estimateUacPromptsFor(
         step.recipe,
         step.recipe.id === targetRecipeId ? options : undefined,
+        byId,
+        detected,
+        actionableIds,
       ),
     0,
   );
@@ -112,30 +116,25 @@ export function findInstalledDependents(
 ///
 ///   * winget with explicit scope=machine → 1
 ///   * winget with scope=user → 0 for most packages, but some installers
-///     (Docker Desktop, WSL feature, system MSIs) ignore --scope and
-///     self-escalate. We treat any recipe with a `requiresElevation`-shaped
-///     id as 1.
+///     (Git for Windows, nvm-windows, Docker Desktop, system MSIs) still
+///     self-elevate. Known self-elevating winget ids count as 1.
 ///   * windows-feature → 1 (DISM always requires admin)
 ///   * github-release MSI/EXE → 1 if the installer self-elevates; 0 for
 ///     zip-extract.
-///   * npm, bundle → 0 (bundles are summed by their steps elsewhere).
+///   * bundle → sum not-yet-installed bundle steps that are not already
+///     direct actionable plan steps.
+///   * npm → 0.
 function estimateUacPromptsFor(
   recipe: Recipe,
   options?: InstallOptions,
+  byId?: Map<string, Recipe>,
+  detected?: Record<string, DetectedState>,
+  directlyActionableIds?: Set<string>,
 ): number {
   switch (recipe.provider.kind) {
     case "winget": {
       if (options?.scope === "machine") return 1;
-      // Known winget ids that ignore --scope user and self-elevate. The
-      // list is conservative; an over-estimate is fine because the user-
-      // facing warning says "up to N prompts".
-      const id = recipe.provider.id.toLowerCase();
-      const selfElevating = [
-        "docker.dockerdesktop",
-        "oracle.virtualbox",
-        "vmware.workstationpro",
-      ];
-      return selfElevating.some((needle) => id.includes(needle)) ? 1 : 0;
+      return isKnownSelfElevatingWingetRecipe(recipe) ? 1 : 0;
     }
     case "windowsFeature":
       return 1;
@@ -150,11 +149,39 @@ function estimateUacPromptsFor(
     case "downloadInstaller":
       return 1;
     case "bundle":
-      // The plan walker doesn't recurse into bundle.steps because step
-      // recipes are independent catalog entries already in the plan via
-      // `needs`. So bundles themselves don't add UAC cost.
-      return 0;
+      return recipe.provider.steps.reduce((sum, stepId) => {
+        if (directlyActionableIds?.has(stepId)) return sum;
+        if (detected?.[stepId]?.installed) return sum;
+        const stepRecipe = byId?.get(stepId);
+        return stepRecipe
+          ? sum +
+              estimateUacPromptsFor(
+                stepRecipe,
+                undefined,
+                byId,
+                detected,
+                directlyActionableIds,
+              )
+          : sum;
+      }, 0);
   }
+}
+
+/// Known winget packages whose current upstream manifests declare a user
+/// scope but still self-elevate their installer. Keep this conservative:
+/// over-estimates are acceptable for the "up to N prompts" warning, while
+/// under-estimates make the per-user option look more UAC-free than it is.
+export function isKnownSelfElevatingWingetRecipe(recipe: Recipe): boolean {
+  if (recipe.provider.kind !== "winget") return false;
+  const id = recipe.provider.id.toLowerCase();
+  const selfElevating = [
+    "coreybutler.nvmforwindows",
+    "docker.dockerdesktop",
+    "git.git",
+    "oracle.virtualbox",
+    "vmware.workstationpro",
+  ];
+  return selfElevating.some((needle) => id.includes(needle));
 }
 
 /// Returns true iff the recipe represents WSL (the windows-feature whose

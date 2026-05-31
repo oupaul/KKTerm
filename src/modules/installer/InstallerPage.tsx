@@ -15,7 +15,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { useInstallerStore } from "./state";
-import { isWslFeature } from "./dag";
+import { isKnownSelfElevatingWingetRecipe, isWslFeature } from "./dag";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { InstallerToolDialog } from "./InstallerToolDialog";
 import {
@@ -203,8 +203,7 @@ export function InstallerPage({ active }: { active: boolean }) {
       if (r.provider.kind === "windowsFeature") return sum + 1;
       if (r.provider.kind === "wslDistro") return sum;
       if (r.provider.kind === "winget") {
-        const id = r.provider.id.toLowerCase();
-        return id.includes("docker.dockerdesktop") ? sum + 1 : sum;
+        return isKnownSelfElevatingWingetRecipe(r) ? sum + 1 : sum;
       }
       if (r.provider.kind === "githubRelease") {
         return r.provider.layout === "zip" ? sum : sum + 1;
