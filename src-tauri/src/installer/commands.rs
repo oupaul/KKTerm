@@ -929,7 +929,7 @@ fn service_install_script(service: &ManagedServiceAffordance) -> String {
         "nssm set {} Start SERVICE_AUTO_START",
         service_name
     ));
-    lines.push(format!("nssm start {}", service_name));
+    lines.push(format!("nssm set {} AppExit Default Exit", service_name));
     lines.join("\r\n")
 }
 
@@ -1483,6 +1483,26 @@ mod tests {
             r#"nssm set "KKTerm-Test" AppDirectory "C:\Users\Ryan User\AppData\Local\Test""#
         ));
         assert!(script.contains(r#"nssm set "KKTerm-Test" AppEnvironmentExtra "TEST_HOME=C:\Users\Ryan User\AppData\Local\Test""#));
+    }
+
+    #[test]
+    fn service_install_script_registers_auto_start_without_immediate_start() {
+        let service = ManagedServiceAffordance {
+            service_name: "KKTerm-Test".into(),
+            display_name: "KKTerm Test".into(),
+            program: "test.exe".into(),
+            args: vec![],
+            env: vec![],
+            working_dir: r"C:\Test".into(),
+        };
+        let script = service_install_script(&service);
+
+        assert!(script.contains(r#"nssm set "KKTerm-Test" Start SERVICE_AUTO_START"#));
+        assert!(script.contains(r#"nssm set "KKTerm-Test" AppExit Default Exit"#));
+        assert!(
+            !script.contains(r#"nssm start "KKTerm-Test""#),
+            "registration must not start the service while the normal run mode may already own the fixed localhost port"
+        );
     }
 }
 
