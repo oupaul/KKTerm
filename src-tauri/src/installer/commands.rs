@@ -773,10 +773,12 @@ fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance>
             Some(TerminalLaunchAffordance {
                 activate_ps1: Some(activate),
                 setup_lines: vec![],
-                prefill: "hermes".into(),
+                prefill: "hermes setup".into(),
                 hints: vec![
-                    "hermes postinstall  —  initial setup".into(),
-                    "hermes --tui  —  Terminal UI".into(),
+                    "hermes setup  —  configure providers and accounts".into(),
+                    "hermes postinstall  —  optional dependencies".into(),
+                    "hermes doctor  —  health check".into(),
+                    "hermes  —  start chatting".into(),
                 ],
             })
         }
@@ -790,8 +792,12 @@ fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance>
                 setup_lines: vec![format!(
                     "function openclaw {{ npm exec --prefix '{prefix}' -- openclaw @args }}"
                 )],
-                prefill: "openclaw".into(),
-                hints: vec!["openclaw --help  —  list available commands".into()],
+                prefill: "openclaw onboard --install-daemon".into(),
+                hints: vec![
+                    "openclaw onboard --install-daemon  —  setup and managed startup".into(),
+                    "openclaw doctor  —  check configuration".into(),
+                    "openclaw gateway status  —  verify gateway".into(),
+                ],
             })
         }
         _ => None,
@@ -1224,7 +1230,14 @@ fn ps_single_quote(value: &str) -> String {
 fn spawn_terminal_launcher(affordance: &TerminalLaunchAffordance) -> Result<(), String> {
     let ps_command = build_terminal_launcher_ps_command(affordance);
     let mut command = Command::new("powershell");
-    command.args(["-NoExit", "-NoLogo", "-Command", &ps_command]);
+    command.args([
+        "-NoExit",
+        "-NoLogo",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        &ps_command,
+    ]);
     use std::os::windows::process::CommandExt;
     const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
     command.creation_flags(CREATE_NEW_CONSOLE);
@@ -1245,6 +1258,7 @@ fn spawn_terminal_launcher(_affordance: &TerminalLaunchAffordance) -> Result<(),
 fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> String {
     let mut parts: Vec<String> = vec![
         "$host.UI.RawUI.WindowTitle = 'KKTerm terminal'".into(),
+        "Import-Module PSReadLine -ErrorAction SilentlyContinue".into(),
     ];
     if let Some(activate) = &affordance.activate_ps1 {
         let escaped = activate.replace('\'', "''");
@@ -1259,7 +1273,7 @@ fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> 
     parts.push("Write-Host ''".into());
     let prefill_escaped = affordance.prefill.replace('\'', "''");
     parts.push(format!(
-        "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; [Microsoft.PowerShell.PSReadLine.PSConsoleReadLine]::Insert('{prefill_escaped}') }}; 'PS ' + (Get-Location) + '> ' }}"
+        "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}; 'PS ' + (Get-Location) + '> ' }}"
     ));
     parts.join("; ")
 }
@@ -1546,6 +1560,47 @@ mod tests {
         assert!(
             !script.starts_with("start "),
             "Run should not depend on cmd start parsing a quoted title"
+        );
+    }
+
+    #[test]
+    fn terminal_launcher_prefill_uses_psreadline_type() {
+        let affordance = TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: "hermes setup".into(),
+            hints: vec![],
+        };
+
+        let command = build_terminal_launcher_ps_command(&affordance);
+
+        assert!(command.contains("Import-Module PSReadLine"));
+        assert!(command.contains("[Microsoft.PowerShell.PSConsoleReadLine]::Insert"));
+        assert!(!command.contains("PSReadLine.PSConsoleReadLine"));
+    }
+
+    #[test]
+    fn terminal_launch_affordances_match_upstream_setup_commands() {
+        let hermes = terminal_launch_affordance("hermes-agent")
+            .expect("Hermes should expose a terminal launcher");
+        assert_eq!(hermes.prefill, "hermes setup");
+        assert!(
+            hermes
+                .hints
+                .iter()
+                .any(|hint| hint.starts_with("hermes setup")),
+            "Hermes launcher should point users to the official setup wizard"
+        );
+
+        let openclaw =
+            terminal_launch_affordance("openclaw").expect("OpenClaw should expose a launcher");
+        assert_eq!(openclaw.prefill, "openclaw onboard --install-daemon");
+        assert!(
+            openclaw
+                .hints
+                .iter()
+                .any(|hint| hint.starts_with("openclaw onboard --install-daemon")),
+            "OpenClaw launcher should point users to onboarding"
         );
     }
 

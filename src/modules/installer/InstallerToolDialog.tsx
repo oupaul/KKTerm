@@ -1103,8 +1103,10 @@ function workspaceConnectionSpecForRecipe(
           localStartupScript: [
             '& "$env:LOCALAPPDATA\\KKTerm\\installer\\apps\\hermes-agent\\.venv\\Scripts\\Activate.ps1"',
             "Write-Host ''",
-            "Write-Host '  hermes postinstall  —  initial setup' -ForegroundColor Cyan",
-            "Write-Host '  hermes --tui  —  Terminal UI' -ForegroundColor Cyan",
+            "Write-Host '  hermes setup  —  configure providers and accounts' -ForegroundColor Cyan",
+            "Write-Host '  hermes postinstall  —  optional dependencies' -ForegroundColor Cyan",
+            "Write-Host '  hermes doctor  —  health check' -ForegroundColor Cyan",
+            "Write-Host '  hermes  —  start chatting' -ForegroundColor Cyan",
             "Write-Host ''",
           ].join("\n"),
         },
@@ -1119,7 +1121,9 @@ function workspaceConnectionSpecForRecipe(
           localStartupScript: [
             'function openclaw { npm exec --prefix (Join-Path $env:LOCALAPPDATA "KKTerm\\installer\\apps\\openclaw") -- openclaw @args }',
             "Write-Host ''",
-            "Write-Host '  openclaw --help  —  list available commands' -ForegroundColor Cyan",
+            "Write-Host '  openclaw onboard --install-daemon  —  setup and managed startup' -ForegroundColor Cyan",
+            "Write-Host '  openclaw doctor  —  check configuration' -ForegroundColor Cyan",
+            "Write-Host '  openclaw gateway status  —  verify gateway' -ForegroundColor Cyan",
             "Write-Host ''",
           ].join("\n"),
         },
@@ -1136,12 +1140,20 @@ function terminalLaunchAffordanceForRecipe(
     case "hermes-agent":
       return {
         hints: [
-          "hermes postinstall  —  initial setup",
-          "hermes --tui  —  Terminal UI",
+          "hermes setup  —  configure providers and accounts",
+          "hermes postinstall  —  optional dependencies",
+          "hermes doctor  —  health check",
+          "hermes  —  start chatting",
         ],
       };
     case "openclaw":
-      return { hints: ["openclaw --help  —  list available commands"] };
+      return {
+        hints: [
+          "openclaw onboard --install-daemon  —  setup and managed startup",
+          "openclaw doctor  —  check configuration",
+          "openclaw gateway status  —  verify gateway",
+        ],
+      };
     default:
       return null;
   }

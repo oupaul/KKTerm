@@ -480,6 +480,10 @@ mod tests {
             &recipe.provider,
             Provider::Npm { pkg } if pkg == "openclaw"
         ));
+        assert!(
+            recipe.needs.contains(&"node-bundle".to_string()),
+            "app-local OpenClaw install needs Node before npm can run"
+        );
     }
 
     #[test]

@@ -93,7 +93,7 @@ Settings tutorial targets:
 
 - Section header `settings.sectionInstaller`. Owned by `src/modules/settings/InstallerSettings.tsx`.
 - Activity Rail group `settings.installerRail`:
-  - Toggle `settings.installerShowOnRail` (hint `settings.installerShowOnRailDesc`). When on, the Installer Helper icon appears on the Activity Rail; when off (default while the Module is in progress), the icon is hidden.
+  - Toggle `settings.installerShowOnRail` (hint `settings.installerShowOnRailDesc`). When on (default), the Installer Helper icon appears on the Activity Rail; when off, the icon is hidden.
 - Save status: `settings.installerSaved`.
 
 ## Credentials & MCP
