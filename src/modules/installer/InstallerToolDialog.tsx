@@ -28,9 +28,11 @@ import {
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { installRecipeAndWait } from "./progress";
+import { ToggleSwitch } from "../settings/ToggleSwitch";
 import { useInstallerStore, type StepStatus } from "./state";
 import type {
   InstallOptions,
+  ManagedWebUiStatus,
   Provider,
   Recipe,
   RecipeOption,
@@ -118,6 +120,33 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const hasUpdate = latest && version && latest !== version;
   const webUi = webUiAffordanceForRecipe(recipe);
   const service = serviceAffordanceForRecipe(recipe);
+  const [webUiStatus, setWebUiStatus] = useState<ManagedWebUiStatus | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!webUi || !isTauriRuntime()) {
+      setWebUiStatus(null);
+      return;
+    }
+    let cancelled = false;
+    async function refresh() {
+      try {
+        const status = await invokeCommand("installer_get_web_ui_status", {
+          toolId: recipe.id,
+        });
+        if (!cancelled) setWebUiStatus(status);
+      } catch {
+        if (!cancelled) setWebUiStatus(null);
+      }
+    }
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [recipe.id, !!webUi]);
 
   async function handleTogglePin() {
     if (!isTauriRuntime()) return;
@@ -138,9 +167,11 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     if (!catalog) return;
     openStepperDialog(recipe.id);
     beginInFlight(recipe.id, "install");
-    void installRecipeAndWait(recipe.id, {}).catch(() => {
-      // failure surfaces via the failed terminal event into stepperState.
-    });
+    void installRecipeAndWait(recipe.id, {})
+      .then((event) => maybeStartManagedWebUiAfterInstall(recipe, event.kind))
+      .catch(() => {
+        // failure surfaces via the failed terminal event into stepperState.
+      });
   }
 
   function attemptUninstall() {
@@ -165,6 +196,18 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     if (!webUi || !isTauriRuntime()) return;
     try {
       await invokeCommand("installer_run_web_ui", { toolId: recipe.id });
+      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
+  async function handleStopWebUi() {
+    if (!webUi || !isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_stop_web_ui", { toolId: recipe.id });
+      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(message, { tone: "error" });
@@ -188,6 +231,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     try {
       await invokeCommand("installer_install_service", { toolId: recipe.id });
       showStatusBarNotice(t("installer.status.serviceInstalled"));
+      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(message, { tone: "error" });
@@ -199,6 +243,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     try {
       await invokeCommand("installer_remove_service", { toolId: recipe.id });
       showStatusBarNotice(t("installer.status.serviceRemoved"));
+      await refreshManagedWebUiStatus(recipe.id, setWebUiStatus);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(message, { tone: "error" });
@@ -277,14 +322,25 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               <code>{service.name}</code>
             </Row>
           ) : null}
+          {webUi ? (
+            <Row label={t("installer.dialog.runtimeStatus")}>
+              {webUiStatus?.running
+                ? t("installer.status.running")
+                : t("installer.status.stopped")}
+            </Row>
+          ) : null}
+          {service && webUiStatus?.serviceInstalled ? (
+            <Row label={t("installer.dialog.serviceStartup")}>
+              {webUiStatus.startup ?? t("installer.status.unknown")}
+            </Row>
+          ) : null}
         </dl>
         <label className="installer-tool-dialog__pin">
-          <input
-            type="checkbox"
+          <span>{t("installer.options.pinVersion")}</span>
+          <ToggleSwitch
             checked={toolState?.pinned ?? false}
             onChange={() => void handleTogglePin()}
           />
-          <span>{t("installer.options.pinVersion")}</span>
         </label>
       </div>
       <div className="dialog-actions installer-tool-dialog__actions">
@@ -300,9 +356,15 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             <button
               type="button"
               className="secondary-button"
-              onClick={() => void handleRunWebUi()}
+              onClick={() =>
+                webUiStatus?.running
+                  ? void handleStopWebUi()
+                  : void handleRunWebUi()
+              }
             >
-              {t("installer.actions.run")}
+              {webUiStatus?.running
+                ? t("installer.actions.stop")
+                : t("installer.actions.run")}
             </button>
             <button
               type="button"
@@ -315,20 +377,23 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         ) : null}
         {service ? (
           <>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => void handleInstallService()}
-            >
-              {t("installer.actions.installService")}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => void handleRemoveService()}
-            >
-              {t("installer.actions.removeService")}
-            </button>
+            {!webUiStatus?.serviceInstalled ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void handleInstallService()}
+              >
+                {t("installer.actions.registerService")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void handleRemoveService()}
+              >
+                {t("installer.actions.removeService")}
+              </button>
+            )}
           </>
         ) : null}
         {hasUpdate ? (
@@ -448,12 +513,16 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
           queuedRecipe.id,
           queuedRecipe.id === recipe.id ? options : {},
         );
-        if (terminalEvent.kind !== "completed") {
-          break;
-        }
-        if (isWslFeature(queuedRecipe) && queuedRecipe.id !== recipe.id) {
-          break;
-        }
+            if (terminalEvent.kind !== "completed") {
+              break;
+            }
+            await maybeStartManagedWebUiAfterInstall(
+              queuedRecipe,
+              terminalEvent.kind,
+            );
+            if (isWslFeature(queuedRecipe) && queuedRecipe.id !== recipe.id) {
+              break;
+            }
       } catch {
         break;
       }
@@ -971,9 +1040,39 @@ function serviceAffordanceForRecipe(recipe: Recipe): { name: string } | null {
       return { name: "KKTerm-n8n" };
     case "ollama":
       return { name: "KKTerm-Ollama" };
+    case "flowise":
+      return { name: "KKTerm-Flowise" };
+    case "open-webui":
+      return { name: "KKTerm-OpenWebUI" };
+    case "langflow":
+      return { name: "KKTerm-Langflow" };
+    case "excalidraw":
+      return { name: "KKTerm-Excalidraw" };
     default:
       return null;
   }
+}
+
+async function maybeStartManagedWebUiAfterInstall(
+  recipe: Recipe,
+  resultKind: "completed" | "failed" | "cancelled",
+) {
+  if (resultKind !== "completed") return;
+  if (!webUiAffordanceForRecipe(recipe) || !isTauriRuntime()) return;
+  try {
+    await invokeCommand("installer_run_web_ui", { toolId: recipe.id });
+  } catch {
+    // The install succeeded; status UI and manual Run can surface retry errors.
+  }
+}
+
+async function refreshManagedWebUiStatus(
+  toolId: string,
+  setStatus: (status: ManagedWebUiStatus | null) => void,
+) {
+  if (!isTauriRuntime()) return;
+  const status = await invokeCommand("installer_get_web_ui_status", { toolId });
+  setStatus(status);
 }
 
 function formatTimestamp(epochSeconds: number): string {

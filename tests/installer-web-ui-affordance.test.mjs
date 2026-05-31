@@ -71,12 +71,38 @@ test("managed web UI tools expose Windows service helper actions", async () => {
   );
   assert.match(
     source,
-    /installer\.actions\.installService/,
-    "Install service action label should be translated",
+    /installer\.actions\.registerService/,
+    "Register service action label should be translated",
   );
   assert.match(
     source,
     /installer\.actions\.removeService/,
     "Remove service action label should be translated",
+  );
+});
+
+test("installed dialog uses a switch for pin version", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /ToggleSwitch/,
+    "Pin version should use the shared switch control",
+  );
+});
+
+test("managed web UI install completion auto-starts the app", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /maybeStartManagedWebUiAfterInstall/,
+    "Install completion should start managed web UI apps automatically",
   );
 });

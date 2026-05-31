@@ -5,11 +5,13 @@
 // thread per call; cancellation is cooperative via a shared AtomicBool.
 
 use std::collections::HashMap;
+use std::net::{SocketAddr, TcpStream};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
+use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
@@ -482,6 +484,28 @@ pub fn installer_run_web_ui(tool_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn installer_get_web_ui_status(tool_id: String) -> Result<ManagedWebUiStatus, String> {
+    let affordance = web_ui_affordance(&tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+    Ok(web_ui_status(&tool_id, &affordance))
+}
+
+#[tauri::command]
+pub fn installer_stop_web_ui(tool_id: String) -> Result<(), String> {
+    let affordance = web_ui_affordance(&tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+    if let Some(service) = service_affordance(&tool_id).filter(|s| {
+        matches!(query_service_state(&s.service_name).as_deref(), Some("RUNNING"))
+    }) {
+        return run_elevated_cmd_script(
+            &service_control_script(&service.service_name, "stop"),
+            &format!("stop service {}", service.service_name),
+        );
+    }
+    stop_port_listener(affordance.port)
+}
+
+#[tauri::command]
 pub fn installer_install_service(tool_id: String) -> Result<(), String> {
     crate::logging::installer_helper_debug(
         "command.installer_install_service.start",
@@ -579,6 +603,7 @@ struct WebUiAffordance {
     env: Vec<(&'static str, String)>,
     working_dir: String,
     url: &'static str,
+    port: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -589,6 +614,15 @@ struct ManagedServiceAffordance {
     args: Vec<String>,
     env: Vec<(&'static str, String)>,
     working_dir: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedWebUiStatus {
+    running: bool,
+    service_installed: bool,
+    service_state: Option<String>,
+    startup: Option<String>,
 }
 
 fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
@@ -613,6 +647,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 .to_string_lossy()
                 .into_owned(),
             url: "http://localhost:5678",
+            port: 5678,
         }),
         "ollama" => Some(WebUiAffordance {
             program: managed_ollama_program(),
@@ -628,6 +663,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 .to_string_lossy()
                 .into_owned(),
             url: "http://localhost:11434",
+            port: 11434,
         }),
         "flowise" => Some(WebUiAffordance {
             program: npm_program().into(),
@@ -646,6 +682,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 .to_string_lossy()
                 .into_owned(),
             url: "http://localhost:3000",
+            port: 3000,
         }),
         "open-webui" => Some(WebUiAffordance {
             program: managed_uv_pip_script("open-webui", "open-webui"),
@@ -666,6 +703,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 .to_string_lossy()
                 .into_owned(),
             url: "http://localhost:8080",
+            port: 8080,
         }),
         "langflow" => Some(WebUiAffordance {
             program: managed_uv_pip_script("langflow", "langflow"),
@@ -686,6 +724,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 .to_string_lossy()
                 .into_owned(),
             url: "http://localhost:7860",
+            port: 7860,
         }),
         "excalidraw" => Some(WebUiAffordance {
             program: npm_program().into(),
@@ -707,6 +746,7 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                 .to_string_lossy()
                 .into_owned(),
             url: "http://localhost:3021",
+            port: 3021,
         }),
         _ => None,
     }
@@ -733,6 +773,89 @@ fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
                 managed_app_data_dir("n8n").to_string_lossy().into_owned(),
             )],
             working_dir: managed_app_install_dir("n8n")
+                .to_string_lossy()
+                .into_owned(),
+        }),
+        "flowise" => Some(ManagedServiceAffordance {
+            service_name: "KKTerm-Flowise".into(),
+            display_name: "KKTerm Flowise".into(),
+            program: npm_program().into(),
+            args: vec![
+                "exec".into(),
+                "--prefix".into(),
+                managed_app_install_dir("flowise")
+                    .to_string_lossy()
+                    .into_owned(),
+                "--".into(),
+                "flowise".into(),
+                "start".into(),
+            ],
+            env: vec![],
+            working_dir: managed_app_install_dir("flowise")
+                .to_string_lossy()
+                .into_owned(),
+        }),
+        "open-webui" => Some(ManagedServiceAffordance {
+            service_name: "KKTerm-OpenWebUI".into(),
+            display_name: "KKTerm Open WebUI".into(),
+            program: managed_uv_pip_script("open-webui", "open-webui"),
+            args: vec![
+                "serve".into(),
+                "--host".into(),
+                "127.0.0.1".into(),
+                "--port".into(),
+                "8080".into(),
+            ],
+            env: vec![(
+                "DATA_DIR",
+                managed_app_data_dir("open-webui")
+                    .to_string_lossy()
+                    .into_owned(),
+            )],
+            working_dir: managed_app_install_dir("open-webui")
+                .to_string_lossy()
+                .into_owned(),
+        }),
+        "langflow" => Some(ManagedServiceAffordance {
+            service_name: "KKTerm-Langflow".into(),
+            display_name: "KKTerm Langflow".into(),
+            program: managed_uv_pip_script("langflow", "langflow"),
+            args: vec![
+                "run".into(),
+                "--host".into(),
+                "127.0.0.1".into(),
+                "--port".into(),
+                "7860".into(),
+            ],
+            env: vec![(
+                "LANGFLOW_CONFIG_DIR",
+                managed_app_data_dir("langflow")
+                    .to_string_lossy()
+                    .into_owned(),
+            )],
+            working_dir: managed_app_install_dir("langflow")
+                .to_string_lossy()
+                .into_owned(),
+        }),
+        "excalidraw" => Some(ManagedServiceAffordance {
+            service_name: "KKTerm-Excalidraw".into(),
+            display_name: "KKTerm Excalidraw".into(),
+            program: npm_program().into(),
+            args: vec![
+                "exec".into(),
+                "--prefix".into(),
+                managed_app_install_dir("excalidraw")
+                    .to_string_lossy()
+                    .into_owned(),
+                "--".into(),
+                "vite".into(),
+                "--host".into(),
+                "127.0.0.1".into(),
+                "--port".into(),
+                "3021".into(),
+            ],
+            env: vec![],
+            working_dir: managed_app_install_dir("excalidraw")
                 .to_string_lossy()
                 .into_owned(),
         }),
@@ -824,6 +947,114 @@ fn service_remove_script(service_name: &str) -> String {
         format!("nssm remove {} confirm", service_name),
     ]
     .join("\r\n")
+}
+
+fn service_control_script(service_name: &str, action: &str) -> String {
+    let service_name = quote_cmd_always(service_name);
+    [
+        "@echo off".to_string(),
+        "setlocal".to_string(),
+        "where nssm >nul 2>nul".to_string(),
+        "if errorlevel 1 (".to_string(),
+        "  echo NSSM is required. Install NSSM from KKTerm Installer Helper first.".to_string(),
+        "  exit /b 2".to_string(),
+        ")".to_string(),
+        format!("nssm {action} {}", service_name),
+    ]
+    .join("\r\n")
+}
+
+fn web_ui_status(tool_id: &str, affordance: &WebUiAffordance) -> ManagedWebUiStatus {
+    let service = service_affordance(tool_id);
+    let service_state = service
+        .as_ref()
+        .and_then(|service| query_service_state(&service.service_name));
+    let service_installed = service_state.is_some();
+    let running = matches!(service_state.as_deref(), Some("RUNNING"))
+        || is_local_port_listening(affordance.port);
+    let startup = service
+        .as_ref()
+        .and_then(|service| query_service_startup(&service.service_name));
+    ManagedWebUiStatus {
+        running,
+        service_installed,
+        service_state,
+        startup,
+    }
+}
+
+fn is_local_port_listening(port: u16) -> bool {
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    TcpStream::connect_timeout(&addr, Duration::from_millis(250)).is_ok()
+}
+
+#[cfg(target_os = "windows")]
+fn query_service_state(service_name: &str) -> Option<String> {
+    let output = Command::new("sc")
+        .args(["query", service_name])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.starts_with("STATE") {
+            return line.split_whitespace().last().map(|s| s.to_string());
+        }
+    }
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+fn query_service_state(_service_name: &str) -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn query_service_startup(service_name: &str) -> Option<String> {
+    let output = Command::new("sc").args(["qc", service_name]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.starts_with("START_TYPE") {
+            return line
+                .split_once(':')
+                .map(|(_, value)| value.trim().to_string());
+        }
+    }
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+fn query_service_startup(_service_name: &str) -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn stop_port_listener(port: u16) -> Result<(), String> {
+    let command = format!(
+        "$ids = @(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique); foreach ($id in $ids) {{ Stop-Process -Id $id -Force -ErrorAction Stop }}"
+    );
+    let mut powershell = Command::new("powershell");
+    powershell.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &command]);
+    let status = powershell
+        .status()
+        .map_err(|error| format!("failed to stop localhost:{port}: {error}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("stop localhost:{port} exited with status {status}"))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn stop_port_listener(_port: u16) -> Result<(), String> {
+    Err("managed web UI stop is only available on Windows".into())
 }
 
 #[cfg(target_os = "windows")]
@@ -1143,6 +1374,7 @@ mod tests {
             env: vec![],
             working_dir: r"C:\Users\Ryan User\AppData\Local\KKTerm\installer\apps\ollama".into(),
             url: "http://localhost:11434",
+            port: 11434,
         };
 
         assert_eq!(
@@ -1211,6 +1443,23 @@ mod tests {
         assert!(service.env.iter().any(|(key, value)| {
             *key == "OLLAMA_MODELS" && value.ends_with(r"installer\apps\ollama\data\models")
         }));
+    }
+
+    #[test]
+    fn managed_web_ui_apps_expose_service_affordances() {
+        for tool_id in [
+            "ollama",
+            "n8n",
+            "open-webui",
+            "flowise",
+            "langflow",
+            "excalidraw",
+        ] {
+            assert!(
+                service_affordance(tool_id).is_some(),
+                "{tool_id} should expose a Windows service helper"
+            );
+        }
     }
 
     #[test]

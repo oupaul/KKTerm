@@ -1920,6 +1920,14 @@ type CommandMap = {
     args: { toolId: string };
     result: void;
   };
+  installer_get_web_ui_status: {
+    args: { toolId: string };
+    result: import("../modules/installer/types").ManagedWebUiStatus;
+  };
+  installer_stop_web_ui: {
+    args: { toolId: string };
+    result: void;
+  };
   installer_install_service: {
     args: { toolId: string };
     result: void;

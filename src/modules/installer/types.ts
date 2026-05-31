@@ -95,6 +95,13 @@ export interface ToolState {
   lastCheckAt: number | null;
 }
 
+export interface ManagedWebUiStatus {
+  running: boolean;
+  serviceInstalled: boolean;
+  serviceState: string | null;
+  startup: string | null;
+}
+
 export interface InstallOptions {
   scope?: "user" | "machine";
   version?: string;
