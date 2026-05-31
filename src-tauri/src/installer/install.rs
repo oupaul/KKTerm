@@ -500,15 +500,16 @@ fn write_managed_app_marker(tool_id: &str, version: Option<String>) -> Result<()
 }
 
 fn detect_managed_npm_version(pkg: &str, install_dir: &PathBuf) -> Option<String> {
-    let output = no_window(Command::new(npm_program()).args([
-        "ls",
-        "--prefix",
-        install_dir.to_string_lossy().as_ref(),
-        "--json",
-        "--depth=0",
-    ]))
-    .output()
-    .ok()?;
+    let output = command_output_with_refreshed_path(
+        npm_program(),
+        &[
+            "ls",
+            "--prefix",
+            install_dir.to_string_lossy().as_ref(),
+            "--json",
+            "--depth=0",
+        ],
+    )?;
     let parsed: serde_json::Value = serde_json::from_slice(&output.stdout).ok()?;
     parsed
         .get("dependencies")
@@ -519,9 +520,8 @@ fn detect_managed_npm_version(pkg: &str, install_dir: &PathBuf) -> Option<String
 }
 
 fn detect_uv_pip_version(package: &str, python: &str) -> Option<String> {
-    let output = no_window(Command::new("uv").args(["pip", "show", "--python", python, package]))
-        .output()
-        .ok()?;
+    let output =
+        command_output_with_refreshed_path("uv", &["pip", "show", "--python", python, package])?;
     if !output.status.success() {
         return None;
     }
@@ -535,9 +535,21 @@ fn detect_uv_pip_version(package: &str, python: &str) -> Option<String> {
 }
 
 fn detect_program_version(program: &str, args: &[&str]) -> Option<String> {
-    let output = no_window(Command::new(program).args(args)).output().ok()?;
+    let output = command_output_with_refreshed_path(program, args)?;
     let text = String::from_utf8_lossy(&output.stdout);
     parse_first_semver(&text)
+}
+
+fn command_output_with_refreshed_path(
+    program: &str,
+    args: &[&str],
+) -> Option<std::process::Output> {
+    let mut command = Command::new(program);
+    command.args(args);
+    if let Some(path) = refreshed_path().filter(|path| !path.trim().is_empty()) {
+        command.env("PATH", path);
+    }
+    no_window(&mut command).output().ok()
 }
 
 fn parse_first_semver(text: &str) -> Option<String> {

@@ -890,10 +890,15 @@ fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
         quote_cmd_arg(&affordance.working_dir),
         command_line
     );
-    Command::new("cmd")
+    let mut command = Command::new("cmd");
+    command
         .args(["/C", &script])
         .envs(affordance.env.iter().map(|(key, value)| (*key, value)))
-        .current_dir(&affordance.working_dir)
+        .current_dir(&affordance.working_dir);
+    if let Some(path) = super::install::refreshed_path_public() {
+        command.env("PATH", path);
+    }
+    command
         .spawn()
         .map_err(|error| format!("failed to run `{command_line}`: {error}"))?;
     Ok(())
