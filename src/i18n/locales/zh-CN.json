@@ -2598,6 +2598,7 @@
     "railLabel": "安装助手",
     "refresh": "刷新",
     "checkUpdates": "检查更新",
+    "checkingForUpdates": "正在检查更新",
     "updateAll": "全部更新",
     "section": {
       "installed": "已安装",
@@ -2619,7 +2620,9 @@
       "installService": "安装服务",
       "openWebUi": "打开 Web UI",
       "removeService": "移除服务",
-      "run": "运行"
+      "run": "运行",
+      "stop": "停止",
+      "registerService": "注册为服务"
     },
     "options": {
       "scope": "范围",
@@ -2644,7 +2647,11 @@
       "neverChecked": "从未",
       "notInstalled": "未安装",
       "serviceInstalled": "Windows 服务助手已完成。",
-      "serviceRemoved": "Windows 服务移除已完成。"
+      "serviceRemoved": "Windows 服务移除已完成。",
+      "running": "运行中",
+      "stopped": "已停止",
+      "unknown": "未知",
+      "retrieving": "正在获取..."
     },
     "empty": {
       "loading": "正在加载目录…"
@@ -2685,7 +2692,9 @@
       "failedTitle": "安装失败：{{name}}",
       "cancelledTitle": "安装已取消：{{name}}",
       "webUi": "Web UI",
-      "windowsService": "Windows 服务"
+      "windowsService": "Windows 服务",
+      "runtimeStatus": "状态",
+      "serviceStartup": "启动类型"
     },
     "stepper": {
       "failedBadge": "失败"

@@ -2598,6 +2598,7 @@
     "railLabel": "Assistente de instalação",
     "refresh": "Atualizar",
     "checkUpdates": "Verificar atualizações",
+    "checkingForUpdates": "Verificando atualizações",
     "updateAll": "Atualizar tudo",
     "section": {
       "installed": "Instalado",
@@ -2619,7 +2620,9 @@
       "installService": "Instalar serviço",
       "openWebUi": "Abrir interface web",
       "removeService": "Remover serviço",
-      "run": "Executar"
+      "run": "Executar",
+      "stop": "Parar",
+      "registerService": "Registrar como serviço"
     },
     "options": {
       "scope": "Escopo",
@@ -2644,7 +2647,11 @@
       "neverChecked": "Nunca",
       "notInstalled": "Não instalado",
       "serviceInstalled": "Auxiliar do serviço do Windows concluído.",
-      "serviceRemoved": "Remoção do serviço do Windows concluída."
+      "serviceRemoved": "Remoção do serviço do Windows concluída.",
+      "running": "Em execução",
+      "stopped": "Parado",
+      "unknown": "Desconhecido",
+      "retrieving": "Buscando..."
     },
     "empty": {
       "loading": "Carregando catálogo…"
@@ -2685,7 +2692,9 @@
       "failedTitle": "Instalação falhou: {{name}}",
       "cancelledTitle": "Instalação cancelada: {{name}}",
       "webUi": "Interface web",
-      "windowsService": "Serviço do Windows"
+      "windowsService": "Serviço do Windows",
+      "runtimeStatus": "Status",
+      "serviceStartup": "Inicialização"
     },
     "stepper": {
       "failedBadge": "Falhou"

@@ -2598,6 +2598,7 @@
     "railLabel": "Trợ lý cài đặt",
     "refresh": "Làm mới",
     "checkUpdates": "Kiểm tra cập nhật",
+    "checkingForUpdates": "Đang kiểm tra cập nhật",
     "updateAll": "Cập nhật tất cả",
     "section": {
       "installed": "Đã cài đặt",
@@ -2619,7 +2620,9 @@
       "installService": "Cài đặt dịch vụ",
       "openWebUi": "Mở giao diện web",
       "removeService": "Gỡ dịch vụ",
-      "run": "Chạy"
+      "run": "Chạy",
+      "stop": "Dừng",
+      "registerService": "Đăng ký dịch vụ"
     },
     "options": {
       "scope": "Phạm vi",
@@ -2644,7 +2647,11 @@
       "neverChecked": "Chưa bao giờ",
       "notInstalled": "Chưa cài đặt",
       "serviceInstalled": "Trợ lý dịch vụ Windows đã hoàn tất.",
-      "serviceRemoved": "Gỡ dịch vụ Windows đã hoàn tất."
+      "serviceRemoved": "Gỡ dịch vụ Windows đã hoàn tất.",
+      "running": "Đang chạy",
+      "stopped": "Đã dừng",
+      "unknown": "Không xác định",
+      "retrieving": "Đang lấy dữ liệu..."
     },
     "empty": {
       "loading": "Đang tải danh mục…"
@@ -2685,7 +2692,9 @@
       "failedTitle": "Cài đặt thất bại: {{name}}",
       "cancelledTitle": "Cài đặt đã hủy: {{name}}",
       "webUi": "Giao diện web",
-      "windowsService": "Dịch vụ Windows"
+      "windowsService": "Dịch vụ Windows",
+      "runtimeStatus": "Trạng thái",
+      "serviceStartup": "Khởi động"
     },
     "stepper": {
       "failedBadge": "Thất bại"

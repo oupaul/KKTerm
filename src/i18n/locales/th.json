@@ -2598,6 +2598,7 @@
     "railLabel": "ตัวช่วยติดตั้ง",
     "refresh": "รีเฟรช",
     "checkUpdates": "ตรวจหาการอัปเดต",
+    "checkingForUpdates": "กำลังตรวจสอบการอัปเดต",
     "updateAll": "อัปเดตทั้งหมด",
     "section": {
       "installed": "ติดตั้งแล้ว",
@@ -2619,7 +2620,9 @@
       "installService": "ติดตั้งบริการ",
       "openWebUi": "เปิด UI เว็บ",
       "removeService": "ลบบริการ",
-      "run": "เรียกใช้"
+      "run": "เรียกใช้",
+      "stop": "หยุด",
+      "registerService": "ลงทะเบียนเป็นบริการ"
     },
     "options": {
       "scope": "ขอบเขต",
@@ -2644,7 +2647,11 @@
       "neverChecked": "ไม่เคย",
       "notInstalled": "ยังไม่ได้ติดตั้ง",
       "serviceInstalled": "ตัวช่วยบริการ Windows เสร็จสมบูรณ์แล้ว",
-      "serviceRemoved": "ลบบริการ Windows เสร็จสมบูรณ์แล้ว"
+      "serviceRemoved": "ลบบริการ Windows เสร็จสมบูรณ์แล้ว",
+      "running": "กำลังทำงาน",
+      "stopped": "หยุดทำงาน",
+      "unknown": "ไม่ทราบ",
+      "retrieving": "กำลังดึงข้อมูล..."
     },
     "empty": {
       "loading": "กำลังโหลดแค็ตตาล็อก…"
@@ -2685,7 +2692,9 @@
       "failedTitle": "ติดตั้งล้มเหลว: {{name}}",
       "cancelledTitle": "ยกเลิกการติดตั้ง: {{name}}",
       "webUi": "UI เว็บ",
-      "windowsService": "บริการ Windows"
+      "windowsService": "บริการ Windows",
+      "runtimeStatus": "สถานะ",
+      "serviceStartup": "การเริ่มต้น"
     },
     "stepper": {
       "failedBadge": "ล้มเหลว"

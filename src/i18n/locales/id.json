@@ -2598,6 +2598,7 @@
     "railLabel": "Pembantu Instalasi",
     "refresh": "Segarkan",
     "checkUpdates": "Periksa pembaruan",
+    "checkingForUpdates": "Memeriksa pembaruan",
     "updateAll": "Perbarui semua",
     "section": {
       "installed": "Terpasang",
@@ -2619,7 +2620,9 @@
       "installService": "Instal layanan",
       "openWebUi": "Buka UI web",
       "removeService": "Hapus layanan",
-      "run": "Jalankan"
+      "run": "Jalankan",
+      "stop": "Hentikan",
+      "registerService": "Daftarkan sebagai layanan"
     },
     "options": {
       "scope": "Cakupan",
@@ -2644,7 +2647,11 @@
       "neverChecked": "Belum pernah",
       "notInstalled": "Belum terinstal",
       "serviceInstalled": "Pembantu layanan Windows selesai.",
-      "serviceRemoved": "Penghapusan layanan Windows selesai."
+      "serviceRemoved": "Penghapusan layanan Windows selesai.",
+      "running": "Berjalan",
+      "stopped": "Dihentikan",
+      "unknown": "Tidak diketahui",
+      "retrieving": "Mengambil..."
     },
     "empty": {
       "loading": "Memuat katalog…"
@@ -2685,7 +2692,9 @@
       "failedTitle": "Instalasi gagal: {{name}}",
       "cancelledTitle": "Instalasi dibatalkan: {{name}}",
       "webUi": "UI web",
-      "windowsService": "Layanan Windows"
+      "windowsService": "Layanan Windows",
+      "runtimeStatus": "Status",
+      "serviceStartup": "Startup"
     },
     "stepper": {
       "failedBadge": "Gagal"

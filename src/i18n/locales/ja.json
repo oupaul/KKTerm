@@ -2598,6 +2598,7 @@
     "railLabel": "インストールヘルパー",
     "refresh": "更新",
     "checkUpdates": "更新を確認",
+    "checkingForUpdates": "更新を確認中",
     "updateAll": "すべて更新",
     "section": {
       "installed": "インストール済み",
@@ -2619,7 +2620,9 @@
       "installService": "サービスをインストール",
       "openWebUi": "Web UI を開く",
       "removeService": "サービスを削除",
-      "run": "実行"
+      "run": "実行",
+      "stop": "停止",
+      "registerService": "サービスとして登録"
     },
     "options": {
       "scope": "スコープ",
@@ -2644,7 +2647,11 @@
       "neverChecked": "未確認",
       "notInstalled": "未インストール",
       "serviceInstalled": "Windows サービス ヘルパーが完了しました。",
-      "serviceRemoved": "Windows サービスの削除が完了しました。"
+      "serviceRemoved": "Windows サービスの削除が完了しました。",
+      "running": "実行中",
+      "stopped": "停止中",
+      "unknown": "不明",
+      "retrieving": "取得中..."
     },
     "empty": {
       "loading": "カタログを読み込み中…"
@@ -2685,7 +2692,9 @@
       "failedTitle": "インストール失敗: {{name}}",
       "cancelledTitle": "インストールをキャンセル: {{name}}",
       "webUi": "Web UI",
-      "windowsService": "Windows サービス"
+      "windowsService": "Windows サービス",
+      "runtimeStatus": "ステータス",
+      "serviceStartup": "スタートアップ"
     },
     "stepper": {
       "failedBadge": "失敗"
