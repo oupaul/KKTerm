@@ -143,6 +143,7 @@ test("installer command boundary keeps blocking work off the UI thread", async (
     "installer_stop_web_ui",
     "installer_install_service",
     "installer_remove_service",
+    "installer_open_terminal_launcher",
   ]) {
     assert.match(
       source,
@@ -155,6 +156,21 @@ test("installer command boundary keeps blocking work off the UI thread", async (
     source,
     /latest\.check\.worker\.start/,
     "latest-version sweeps should be dispatched to a background worker",
+  );
+  assert.match(
+    source,
+    /detect\.streaming\.worker\.start/,
+    "streaming detection should be dispatched to a background worker",
+  );
+  assert.match(
+    source,
+    /install\.worker\.start/,
+    "install commands should be dispatched to a background worker",
+  );
+  assert.match(
+    source,
+    /uninstall\.worker\.start/,
+    "uninstall commands should be dispatched to a background worker",
   );
   assert.match(
     source,

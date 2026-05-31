@@ -2617,6 +2617,7 @@
       "update": "Aggiorna",
       "uninstall": "Disinstalla",
       "cancel": "Annulla",
+      "addToWorkspace": "Aggiungi all'area di lavoro",
       "installService": "Installa servizio",
       "openWebUi": "Apri interfaccia web",
       "removeService": "Rimuovi servizio",
@@ -2647,6 +2648,7 @@
       "neverChecked": "Mai",
       "notInstalled": "Non installato",
       "serviceInstalled": "Helper del servizio Windows completato.",
+      "addedToWorkspace": "\"{{name}}\" aggiunto alle Connessioni.",
       "serviceRemoved": "Rimozione del servizio Windows completata.",
       "running": "In esecuzione",
       "stopped": "Interrotto",
@@ -2694,7 +2696,8 @@
       "webUi": "Interfaccia web",
       "windowsService": "Servizio Windows",
       "runtimeStatus": "Stato",
-      "serviceStartup": "Avvio"
+      "serviceStartup": "Avvio",
+      "runHints": "Suggerimenti di avvio"
     },
     "stepper": {
       "failedBadge": "Non riuscito"

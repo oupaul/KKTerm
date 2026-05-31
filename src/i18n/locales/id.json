@@ -2617,6 +2617,7 @@
       "update": "Perbarui",
       "uninstall": "Copot pemasangan",
       "cancel": "Batal",
+      "addToWorkspace": "Tambah ke ruang kerja",
       "installService": "Instal layanan",
       "openWebUi": "Buka UI web",
       "removeService": "Hapus layanan",
@@ -2647,6 +2648,7 @@
       "neverChecked": "Belum pernah",
       "notInstalled": "Belum terinstal",
       "serviceInstalled": "Pembantu layanan Windows selesai.",
+      "addedToWorkspace": "\"{{name}}\" ditambahkan ke Koneksi.",
       "serviceRemoved": "Penghapusan layanan Windows selesai.",
       "running": "Berjalan",
       "stopped": "Dihentikan",
@@ -2694,7 +2696,8 @@
       "webUi": "UI web",
       "windowsService": "Layanan Windows",
       "runtimeStatus": "Status",
-      "serviceStartup": "Startup"
+      "serviceStartup": "Startup",
+      "runHints": "Tips menjalankan"
     },
     "stepper": {
       "failedBadge": "Gagal"

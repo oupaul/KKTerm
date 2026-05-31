@@ -13,7 +13,14 @@ pub struct ManagedAppMarker {
 pub fn is_managed_app(tool_id: &str) -> bool {
     matches!(
         tool_id,
-        "n8n" | "ollama" | "flowise" | "open-webui" | "langflow" | "hermes-agent" | "excalidraw"
+        "n8n"
+            | "ollama"
+            | "flowise"
+            | "open-webui"
+            | "langflow"
+            | "hermes-agent"
+            | "excalidraw"
+            | "openclaw"
     )
 }
 
@@ -53,6 +60,7 @@ mod tests {
             "langflow",
             "hermes-agent",
             "excalidraw",
+            "openclaw",
         ] {
             assert!(
                 is_managed_app(tool_id),

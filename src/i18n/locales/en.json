@@ -495,7 +495,8 @@
       "installService": "Install service",
       "registerService": "Register as service",
       "removeService": "Remove service",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "addToWorkspace": "Add to workspace"
     },
     "options": {
       "scope": "Scope",
@@ -519,6 +520,7 @@
       "stopped": "Stopped",
       "unknown": "Unknown",
       "serviceInstalled": "Windows service helper completed.",
+      "addedToWorkspace": "Added \"{{name}}\" to Connections.",
       "serviceRemoved": "Windows service removal completed.",
       "partial": "Partially installed ({{installed}}/{{total}})",
       "noVersion": "(version unknown)",
@@ -558,6 +560,7 @@
       "windowsService": "Windows service",
       "runtimeStatus": "Status",
       "serviceStartup": "Startup",
+      "runHints": "Run tips",
       "prerequisites": "Prerequisites",
       "prereqInstalled": "Installed",
       "prereqMissing": "Missing",

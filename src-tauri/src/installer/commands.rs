@@ -799,6 +799,68 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
     }
 }
 
+struct TerminalLaunchAffordance {
+    activate_ps1: Option<String>,
+    /// Extra PowerShell lines run after activation and before hints (e.g. local function aliases).
+    setup_lines: Vec<String>,
+    prefill: String,
+    hints: Vec<String>,
+}
+
+fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance> {
+    match tool_id {
+        "hermes-agent" => {
+            let activate = managed_app_install_dir("hermes-agent")
+                .join(".venv")
+                .join("Scripts")
+                .join("Activate.ps1")
+                .to_string_lossy()
+                .into_owned();
+            Some(TerminalLaunchAffordance {
+                activate_ps1: Some(activate),
+                setup_lines: vec![],
+                prefill: "hermes setup".into(),
+                hints: vec![
+                    "hermes setup  —  configure providers and accounts".into(),
+                    "hermes postinstall  —  optional dependencies".into(),
+                    "hermes doctor  —  health check".into(),
+                    "hermes  —  start chatting".into(),
+                ],
+            })
+        }
+        "openclaw" => {
+            let prefix = managed_app_install_dir("openclaw")
+                .to_string_lossy()
+                .into_owned()
+                .replace('\'', "''");
+            Some(TerminalLaunchAffordance {
+                activate_ps1: None,
+                setup_lines: vec![format!(
+                    "function openclaw {{ npm exec --prefix '{prefix}' -- openclaw @args }}"
+                )],
+                prefill: "openclaw onboard --install-daemon".into(),
+                hints: vec![
+                    "openclaw onboard --install-daemon  —  setup and managed startup".into(),
+                    "openclaw doctor  —  check configuration".into(),
+                    "openclaw gateway status  —  verify gateway".into(),
+                ],
+            })
+        }
+        _ => None,
+    }
+}
+
+#[tauri::command]
+pub async fn installer_open_terminal_launcher(tool_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let affordance = terminal_launch_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not have a terminal launcher"))?;
+        spawn_terminal_launcher(&affordance)
+    })
+    .await
+    .map_err(|error| format!("failed to open terminal launcher: {error}"))?
+}
+
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
     match tool_id {
         "n8n" => Some(ManagedServiceAffordance {
@@ -1249,6 +1311,58 @@ fn ps_single_quote(value: &str) -> String {
 }
 
 #[cfg(target_os = "windows")]
+fn spawn_terminal_launcher(affordance: &TerminalLaunchAffordance) -> Result<(), String> {
+    let ps_command = build_terminal_launcher_ps_command(affordance);
+    let mut command = Command::new("powershell");
+    command.args([
+        "-NoExit",
+        "-NoLogo",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        &ps_command,
+    ]);
+    use std::os::windows::process::CommandExt;
+    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+    command.creation_flags(CREATE_NEW_CONSOLE);
+    if let Some(path) = super::install::refreshed_path_public() {
+        command.env("PATH", path);
+    }
+    command
+        .spawn()
+        .map_err(|e| format!("failed to spawn terminal: {e}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_terminal_launcher(_affordance: &TerminalLaunchAffordance) -> Result<(), String> {
+    Err("terminal launcher is only available on Windows".into())
+}
+
+fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> String {
+    let mut parts: Vec<String> = vec![
+        "$host.UI.RawUI.WindowTitle = 'KKTerm terminal'".into(),
+        "Import-Module PSReadLine -ErrorAction SilentlyContinue".into(),
+    ];
+    if let Some(activate) = &affordance.activate_ps1 {
+        let escaped = activate.replace('\'', "''");
+        parts.push(format!("& '{escaped}'"));
+    }
+    parts.extend(affordance.setup_lines.iter().cloned());
+    parts.push("Write-Host ''".into());
+    for hint in &affordance.hints {
+        let escaped = hint.replace('\'', "''");
+        parts.push(format!("Write-Host '  {escaped}' -ForegroundColor Cyan"));
+    }
+    parts.push("Write-Host ''".into());
+    let prefill_escaped = affordance.prefill.replace('\'', "''");
+    parts.push(format!(
+        "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; if (Get-Module PSReadLine) {{ [Microsoft.PowerShell.PSConsoleReadLine]::Insert('{prefill_escaped}') }} }}; 'PS ' + (Get-Location) + '> ' }}"
+    ));
+    parts.join("; ")
+}
+
+#[cfg(target_os = "windows")]
 fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
     let command_line = web_ui_command_line(affordance);
     let mut command = Command::new("cmd");
@@ -1530,6 +1644,47 @@ mod tests {
         assert!(
             !script.starts_with("start "),
             "Run should not depend on cmd start parsing a quoted title"
+        );
+    }
+
+    #[test]
+    fn terminal_launcher_prefill_uses_psreadline_type() {
+        let affordance = TerminalLaunchAffordance {
+            activate_ps1: None,
+            setup_lines: vec![],
+            prefill: "hermes setup".into(),
+            hints: vec![],
+        };
+
+        let command = build_terminal_launcher_ps_command(&affordance);
+
+        assert!(command.contains("Import-Module PSReadLine"));
+        assert!(command.contains("[Microsoft.PowerShell.PSConsoleReadLine]::Insert"));
+        assert!(!command.contains("PSReadLine.PSConsoleReadLine"));
+    }
+
+    #[test]
+    fn terminal_launch_affordances_match_upstream_setup_commands() {
+        let hermes = terminal_launch_affordance("hermes-agent")
+            .expect("Hermes should expose a terminal launcher");
+        assert_eq!(hermes.prefill, "hermes setup");
+        assert!(
+            hermes
+                .hints
+                .iter()
+                .any(|hint| hint.starts_with("hermes setup")),
+            "Hermes launcher should point users to the official setup wizard"
+        );
+
+        let openclaw =
+            terminal_launch_affordance("openclaw").expect("OpenClaw should expose a launcher");
+        assert_eq!(openclaw.prefill, "openclaw onboard --install-daemon");
+        assert!(
+            openclaw
+                .hints
+                .iter()
+                .any(|hint| hint.starts_with("openclaw onboard --install-daemon")),
+            "OpenClaw launcher should point users to onboarding"
         );
     }
 

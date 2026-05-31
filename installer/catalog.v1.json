@@ -504,6 +504,7 @@
       "descriptionEn": "Open-source AI coding agent CLI.",
       "category": "ai-agent",
       "icon": "Cloud",
+      "needs": ["node-bundle"],
       "homepage": "https://github.com/openclaw/openclaw",
       "releaseNotesUrl": "https://github.com/openclaw/openclaw/releases",
       "provider": { "kind": "npm", "pkg": "openclaw" },

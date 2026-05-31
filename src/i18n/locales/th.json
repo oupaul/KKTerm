@@ -2617,6 +2617,7 @@
       "update": "อัปเดต",
       "uninstall": "ถอนการติดตั้ง",
       "cancel": "ยกเลิก",
+      "addToWorkspace": "เพิ่มไปยังพื้นที่ทำงาน",
       "installService": "ติดตั้งบริการ",
       "openWebUi": "เปิด UI เว็บ",
       "removeService": "ลบบริการ",
@@ -2647,6 +2648,7 @@
       "neverChecked": "ไม่เคย",
       "notInstalled": "ยังไม่ได้ติดตั้ง",
       "serviceInstalled": "ตัวช่วยบริการ Windows เสร็จสมบูรณ์แล้ว",
+      "addedToWorkspace": "เพิ่ม \"{{name}}\" ไปยังการเชื่อมต่อแล้ว",
       "serviceRemoved": "ลบบริการ Windows เสร็จสมบูรณ์แล้ว",
       "running": "กำลังทำงาน",
       "stopped": "หยุดทำงาน",
@@ -2694,7 +2696,8 @@
       "webUi": "UI เว็บ",
       "windowsService": "บริการ Windows",
       "runtimeStatus": "สถานะ",
-      "serviceStartup": "การเริ่มต้น"
+      "serviceStartup": "การเริ่มต้น",
+      "runHints": "เคล็ดลับการใช้งาน"
     },
     "stepper": {
       "failedBadge": "ล้มเหลว"

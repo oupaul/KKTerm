@@ -2617,6 +2617,7 @@
       "update": "更新",
       "uninstall": "卸载",
       "cancel": "取消",
+      "addToWorkspace": "添加到工作区",
       "installService": "安装服务",
       "openWebUi": "打开 Web UI",
       "removeService": "移除服务",
@@ -2647,6 +2648,7 @@
       "neverChecked": "从未",
       "notInstalled": "未安装",
       "serviceInstalled": "Windows 服务助手已完成。",
+      "addedToWorkspace": "已将「{{name}}」添加到连接。",
       "serviceRemoved": "Windows 服务移除已完成。",
       "running": "运行中",
       "stopped": "已停止",
@@ -2694,7 +2696,8 @@
       "webUi": "Web UI",
       "windowsService": "Windows 服务",
       "runtimeStatus": "状态",
-      "serviceStartup": "启动类型"
+      "serviceStartup": "启动类型",
+      "runHints": "运行提示"
     },
     "stepper": {
       "failedBadge": "失败"

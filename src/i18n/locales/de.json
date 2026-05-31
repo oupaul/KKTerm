@@ -2617,6 +2617,7 @@
       "update": "Aktualisieren",
       "uninstall": "Deinstallieren",
       "cancel": "Abbrechen",
+      "addToWorkspace": "Zum Arbeitsbereich hinzufügen",
       "installService": "Dienst installieren",
       "openWebUi": "Weboberfläche öffnen",
       "removeService": "Dienst entfernen",
@@ -2647,6 +2648,7 @@
       "neverChecked": "Nie",
       "notInstalled": "Nicht installiert",
       "serviceInstalled": "Windows-Diensthelfer abgeschlossen.",
+      "addedToWorkspace": "\"{{name}}\" zu Verbindungen hinzugefügt.",
       "serviceRemoved": "Entfernen des Windows-Dienstes abgeschlossen.",
       "running": "Wird ausgeführt",
       "stopped": "Gestoppt",
@@ -2694,7 +2696,8 @@
       "webUi": "Weboberfläche",
       "windowsService": "Windows-Dienst",
       "runtimeStatus": "Status",
-      "serviceStartup": "Starttyp"
+      "serviceStartup": "Starttyp",
+      "runHints": "Ausführen-Tipps"
     },
     "stepper": {
       "failedBadge": "Fehlgeschlagen"

@@ -2617,6 +2617,7 @@
       "update": "更新",
       "uninstall": "アンインストール",
       "cancel": "キャンセル",
+      "addToWorkspace": "ワークスペースに追加",
       "installService": "サービスをインストール",
       "openWebUi": "Web UI を開く",
       "removeService": "サービスを削除",
@@ -2647,6 +2648,7 @@
       "neverChecked": "未確認",
       "notInstalled": "未インストール",
       "serviceInstalled": "Windows サービス ヘルパーが完了しました。",
+      "addedToWorkspace": "「{{name}}」を接続に追加しました。",
       "serviceRemoved": "Windows サービスの削除が完了しました。",
       "running": "実行中",
       "stopped": "停止中",
@@ -2694,7 +2696,8 @@
       "webUi": "Web UI",
       "windowsService": "Windows サービス",
       "runtimeStatus": "ステータス",
-      "serviceStartup": "スタートアップ"
+      "serviceStartup": "スタートアップ",
+      "runHints": "実行のヒント"
     },
     "stepper": {
       "failedBadge": "失敗"
