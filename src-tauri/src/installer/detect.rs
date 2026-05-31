@@ -481,15 +481,13 @@ mod windows_installed_software {
 
     use windows_sys::Win32::Foundation::{ERROR_NO_MORE_ITEMS, ERROR_SUCCESS};
     use windows_sys::Win32::System::Registry::{
-        HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, REG_EXPAND_SZ, REG_SZ, RegCloseKey,
-        RegEnumKeyExW, RegOpenKeyExW, RegQueryValueExW,
+        RegCloseKey, RegEnumKeyExW, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_CURRENT_USER,
+        HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY, REG_EXPAND_SZ, REG_SZ,
     };
 
     use super::{InstalledSoftwareEntry, InstalledSoftwareSnapshot};
 
     const UNINSTALL_SUBKEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall";
-    const WOW64_UNINSTALL_SUBKEY: &str =
-        r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall";
 
     struct RegistryKey(HKEY);
 
@@ -507,24 +505,28 @@ mod windows_installed_software {
             HKEY_LOCAL_MACHINE,
             UNINSTALL_SUBKEY,
             "ARP\\Machine\\X64",
+            KEY_WOW64_64KEY,
             &mut entries,
         );
         scan_uninstall_key(
             HKEY_LOCAL_MACHINE,
-            WOW64_UNINSTALL_SUBKEY,
+            UNINSTALL_SUBKEY,
             "ARP\\Machine\\X86",
+            KEY_WOW64_32KEY,
             &mut entries,
         );
         scan_uninstall_key(
             HKEY_CURRENT_USER,
             UNINSTALL_SUBKEY,
             "ARP\\User\\X64",
+            KEY_WOW64_64KEY,
             &mut entries,
         );
         scan_uninstall_key(
             HKEY_CURRENT_USER,
-            WOW64_UNINSTALL_SUBKEY,
+            UNINSTALL_SUBKEY,
             "ARP\\User\\X86",
+            KEY_WOW64_32KEY,
             &mut entries,
         );
         InstalledSoftwareSnapshot { entries }
@@ -534,9 +536,10 @@ mod windows_installed_software {
         root: HKEY,
         subkey: &str,
         arp_prefix: &str,
+        view_flag: u32,
         entries: &mut Vec<InstalledSoftwareEntry>,
     ) {
-        let Ok(key) = open_key(root, subkey) else {
+        let Ok(key) = open_key(root, subkey, view_flag) else {
             return;
         };
         let mut index = 0;
@@ -566,7 +569,7 @@ mod windows_installed_software {
                 .to_string_lossy()
                 .into_owned();
             let child_path = format!("{subkey}\\{child}");
-            let Ok(child_key) = open_key(root, &child_path) else {
+            let Ok(child_key) = open_key(root, &child_path, view_flag) else {
                 continue;
             };
             let display_name = read_string_value(&child_key, "DisplayName");
@@ -591,10 +594,11 @@ mod windows_installed_software {
         }
     }
 
-    fn open_key(root: HKEY, subkey: &str) -> Result<RegistryKey, String> {
+    fn open_key(root: HKEY, subkey: &str, view_flag: u32) -> Result<RegistryKey, String> {
         let subkey = wide_null(subkey);
         let mut key: HKEY = std::ptr::null_mut();
-        let status = unsafe { RegOpenKeyExW(root, subkey.as_ptr(), 0, KEY_READ, &mut key) };
+        let status =
+            unsafe { RegOpenKeyExW(root, subkey.as_ptr(), 0, KEY_READ | view_flag, &mut key) };
         if status != ERROR_SUCCESS {
             return Err(format!(
                 "failed to open registry key: Windows error {status}"
@@ -949,6 +953,35 @@ mod tests {
             entries: vec![InstalledSoftwareEntry {
                 registry_key: "{ignored}".into(),
                 display_name: Some("Microsoft Visual Studio Code".into()),
+                display_version: Some("1.122.1".into()),
+                install_location: Some(
+                    "C:\\Users\\ryan\\AppData\\Local\\Programs\\Microsoft VS Code".into(),
+                ),
+            }],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("1.122.1"));
+        assert_eq!(
+            state.install_location.as_deref(),
+            Some("C:\\Users\\ryan\\AppData\\Local\\Programs\\Microsoft VS Code")
+        );
+    }
+
+    #[test]
+    fn installed_software_match_accepts_vscode_user_display_name() {
+        let recipe = winget_recipe_with_detection(
+            "Microsoft.VisualStudioCode",
+            &["{EA457B21-F73E-494C-ACAB-524FDE069978}_is1"],
+            &["Microsoft Visual Studio Code"],
+            &["Microsoft Visual Studio Code"],
+        );
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "ARP\\User\\X64\\{EA457B21-F73E-494C-ACAB-524FDE069978}_is1".into(),
+                display_name: Some("Microsoft Visual Studio Code (User)".into()),
                 display_version: Some("1.122.1".into()),
                 install_location: Some(
                     "C:\\Users\\ryan\\AppData\\Local\\Programs\\Microsoft VS Code".into(),
