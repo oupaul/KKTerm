@@ -51,7 +51,7 @@ pub fn install_recipe(
             "options": options,
         }),
     );
-    let result = if recipe.id == "n8n" || recipe.id == "flowise" {
+    let result = if recipe.id == "n8n" || recipe.id == "flowise" || recipe.id == "openclaw" {
         if let Provider::Npm { pkg } = &recipe.provider {
             install_managed_npm_app(&recipe.id, pkg, options, cancel, emit)
         } else {

@@ -2617,6 +2617,7 @@
       "update": "Cập nhật",
       "uninstall": "Gỡ cài đặt",
       "cancel": "Hủy",
+      "addToWorkspace": "Thêm vào không gian làm việc",
       "installService": "Cài đặt dịch vụ",
       "openWebUi": "Mở giao diện web",
       "removeService": "Gỡ dịch vụ",
@@ -2647,6 +2648,7 @@
       "neverChecked": "Chưa bao giờ",
       "notInstalled": "Chưa cài đặt",
       "serviceInstalled": "Trợ lý dịch vụ Windows đã hoàn tất.",
+      "addedToWorkspace": "Đã thêm \"{{name}}\" vào Kết nối.",
       "serviceRemoved": "Gỡ dịch vụ Windows đã hoàn tất.",
       "running": "Đang chạy",
       "stopped": "Đã dừng",
@@ -2694,7 +2696,8 @@
       "webUi": "Giao diện web",
       "windowsService": "Dịch vụ Windows",
       "runtimeStatus": "Trạng thái",
-      "serviceStartup": "Khởi động"
+      "serviceStartup": "Khởi động",
+      "runHints": "Mẹo chạy"
     },
     "stepper": {
       "failedBadge": "Thất bại"

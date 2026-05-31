@@ -2617,6 +2617,7 @@
       "update": "업데이트",
       "uninstall": "제거",
       "cancel": "취소",
+      "addToWorkspace": "워크스페이스에 추가",
       "installService": "서비스 설치",
       "openWebUi": "웹 UI 열기",
       "removeService": "서비스 제거",
@@ -2647,6 +2648,7 @@
       "neverChecked": "없음",
       "notInstalled": "설치되지 않음",
       "serviceInstalled": "Windows 서비스 도우미가 완료되었습니다.",
+      "addedToWorkspace": "\"{{name}}\"이(가) 연결에 추가되었습니다.",
       "serviceRemoved": "Windows 서비스 제거가 완료되었습니다.",
       "running": "실행 중",
       "stopped": "중지됨",
@@ -2694,7 +2696,8 @@
       "webUi": "웹 UI",
       "windowsService": "Windows 서비스",
       "runtimeStatus": "상태",
-      "serviceStartup": "시작 유형"
+      "serviceStartup": "시작 유형",
+      "runHints": "실행 팁"
     },
     "stepper": {
       "failedBadge": "실패"

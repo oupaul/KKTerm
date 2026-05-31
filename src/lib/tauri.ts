@@ -1920,6 +1920,10 @@ type CommandMap = {
     args: { toolId: string };
     result: void;
   };
+  installer_open_terminal_launcher: {
+    args: { toolId: string };
+    result: void;
+  };
   installer_get_web_ui_status: {
     args: { toolId: string };
     result: import("../modules/installer/types").ManagedWebUiStatus;

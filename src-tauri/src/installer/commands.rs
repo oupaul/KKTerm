@@ -753,6 +753,58 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
     }
 }
 
+struct TerminalLaunchAffordance {
+    activate_ps1: Option<String>,
+    /// Extra PowerShell lines run after activation and before hints (e.g. local function aliases).
+    setup_lines: Vec<String>,
+    prefill: String,
+    hints: Vec<String>,
+}
+
+fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance> {
+    match tool_id {
+        "hermes-agent" => {
+            let activate = managed_app_install_dir("hermes-agent")
+                .join(".venv")
+                .join("Scripts")
+                .join("Activate.ps1")
+                .to_string_lossy()
+                .into_owned();
+            Some(TerminalLaunchAffordance {
+                activate_ps1: Some(activate),
+                setup_lines: vec![],
+                prefill: "hermes".into(),
+                hints: vec![
+                    "hermes postinstall  —  initial setup".into(),
+                    "hermes --tui  —  Terminal UI".into(),
+                ],
+            })
+        }
+        "openclaw" => {
+            let prefix = managed_app_install_dir("openclaw")
+                .to_string_lossy()
+                .into_owned()
+                .replace('\'', "''");
+            Some(TerminalLaunchAffordance {
+                activate_ps1: None,
+                setup_lines: vec![format!(
+                    "function openclaw {{ npm exec --prefix '{prefix}' -- openclaw @args }}"
+                )],
+                prefill: "openclaw".into(),
+                hints: vec!["openclaw --help  —  list available commands".into()],
+            })
+        }
+        _ => None,
+    }
+}
+
+#[tauri::command]
+pub fn installer_open_terminal_launcher(tool_id: String) -> Result<(), String> {
+    let affordance = terminal_launch_affordance(&tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not have a terminal launcher"))?;
+    spawn_terminal_launcher(&affordance)
+}
+
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
     match tool_id {
         "n8n" => Some(ManagedServiceAffordance {
@@ -1166,6 +1218,50 @@ fn sanitize_filename(value: &str) -> String {
 
 fn ps_single_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_terminal_launcher(affordance: &TerminalLaunchAffordance) -> Result<(), String> {
+    let ps_command = build_terminal_launcher_ps_command(affordance);
+    let mut command = Command::new("powershell");
+    command.args(["-NoExit", "-NoLogo", "-Command", &ps_command]);
+    use std::os::windows::process::CommandExt;
+    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+    command.creation_flags(CREATE_NEW_CONSOLE);
+    if let Some(path) = super::install::refreshed_path_public() {
+        command.env("PATH", path);
+    }
+    command
+        .spawn()
+        .map_err(|e| format!("failed to spawn terminal: {e}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_terminal_launcher(_affordance: &TerminalLaunchAffordance) -> Result<(), String> {
+    Err("terminal launcher is only available on Windows".into())
+}
+
+fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> String {
+    let mut parts: Vec<String> = vec![
+        "$host.UI.RawUI.WindowTitle = 'KKTerm terminal'".into(),
+    ];
+    if let Some(activate) = &affordance.activate_ps1 {
+        let escaped = activate.replace('\'', "''");
+        parts.push(format!("& '{escaped}'"));
+    }
+    parts.extend(affordance.setup_lines.iter().cloned());
+    parts.push("Write-Host ''".into());
+    for hint in &affordance.hints {
+        let escaped = hint.replace('\'', "''");
+        parts.push(format!("Write-Host '  {escaped}' -ForegroundColor Cyan"));
+    }
+    parts.push("Write-Host ''".into());
+    let prefill_escaped = affordance.prefill.replace('\'', "''");
+    parts.push(format!(
+        "function global:prompt {{ if (-not $global:__kkt_pf) {{ $global:__kkt_pf = $true; [Microsoft.PowerShell.PSReadLine.PSConsoleReadLine]::Insert('{prefill_escaped}') }}; 'PS ' + (Get-Location) + '> ' }}"
+    ));
+    parts.join("; ")
 }
 
 #[cfg(target_os = "windows")]

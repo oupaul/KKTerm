@@ -30,6 +30,7 @@ import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { installRecipeAndWait } from "./progress";
 import { ToggleSwitch } from "../settings/ToggleSwitch";
 import { useInstallerStore, type StepStatus } from "./state";
+import { notifyConnectionTreeInvalidated } from "../workspace/connections/connectionSidebarState";
 import type {
   InstallOptions,
   ManagedWebUiStatus,
@@ -37,6 +38,7 @@ import type {
   Recipe,
   RecipeOption,
 } from "./types";
+import type { CreateConnectionRequest } from "../../types";
 
 export function InstallerToolDialog() {
   const { t } = useTranslation();
@@ -120,6 +122,8 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const hasUpdate = latest && version && latest !== version;
   const webUi = webUiAffordanceForRecipe(recipe);
   const service = serviceAffordanceForRecipe(recipe);
+  const terminalLaunch = terminalLaunchAffordanceForRecipe(recipe);
+  const workspaceSpec = workspaceConnectionSpecForRecipe(recipe);
   const [webUiStatus, setWebUiStatus] = useState<ManagedWebUiStatus | null>(
     null,
   );
@@ -250,6 +254,30 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     }
   }
 
+  async function handleOpenTerminalLauncher() {
+    if (!isTauriRuntime()) return;
+    try {
+      await invokeCommand("installer_open_terminal_launcher", { toolId: recipe.id });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
+  async function handleAddToWorkspace() {
+    if (!workspaceSpec || !isTauriRuntime()) return;
+    try {
+      await invokeCommand("create_connection", { request: workspaceSpec.request });
+      notifyConnectionTreeInvalidated();
+      showStatusBarNotice(
+        t("installer.status.addedToWorkspace", { name: workspaceSpec.name }),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatusBarNotice(message, { tone: "error" });
+    }
+  }
+
   return (
     <>
       <header className="installer-tool-dialog__header">
@@ -334,6 +362,15 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               {webUiStatus.startup ?? t("installer.status.unknown")}
             </Row>
           ) : null}
+          {terminalLaunch ? (
+            <Row label={t("installer.dialog.runHints")}>
+              <span style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                {terminalLaunch.hints.map((hint, i) => (
+                  <code key={i}>{hint}</code>
+                ))}
+              </span>
+            </Row>
+          ) : null}
         </dl>
         <label className="installer-tool-dialog__pin">
           <span>{t("installer.options.pinVersion")}</span>
@@ -351,6 +388,24 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         >
           {t("installer.actions.uninstall")}
         </button>
+        {terminalLaunch ? (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void handleOpenTerminalLauncher()}
+          >
+            {t("installer.actions.run")}
+          </button>
+        ) : null}
+        {workspaceSpec ? (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void handleAddToWorkspace()}
+          >
+            {t("installer.actions.addToWorkspace")}
+          </button>
+        ) : null}
         {webUi ? (
           <>
             <button
@@ -1029,6 +1084,64 @@ function webUiAffordanceForRecipe(recipe: Recipe): { url: string } | null {
       return { url: "http://localhost:7860" };
     case "excalidraw":
       return { url: "http://localhost:3021" };
+    default:
+      return null;
+  }
+}
+
+function workspaceConnectionSpecForRecipe(
+  recipe: Recipe,
+): { name: string; request: CreateConnectionRequest } | null {
+  switch (recipe.id) {
+    case "hermes-agent":
+      return {
+        name: "Hermes Agent",
+        request: {
+          name: "Hermes Agent",
+          type: "local",
+          localShell: "powershell.exe",
+          localStartupScript: [
+            '& "$env:LOCALAPPDATA\\KKTerm\\installer\\apps\\hermes-agent\\.venv\\Scripts\\Activate.ps1"',
+            "Write-Host ''",
+            "Write-Host '  hermes postinstall  —  initial setup' -ForegroundColor Cyan",
+            "Write-Host '  hermes --tui  —  Terminal UI' -ForegroundColor Cyan",
+            "Write-Host ''",
+          ].join("\n"),
+        },
+      };
+    case "openclaw":
+      return {
+        name: "OpenClaw",
+        request: {
+          name: "OpenClaw",
+          type: "local",
+          localShell: "powershell.exe",
+          localStartupScript: [
+            'function openclaw { npm exec --prefix (Join-Path $env:LOCALAPPDATA "KKTerm\\installer\\apps\\openclaw") -- openclaw @args }',
+            "Write-Host ''",
+            "Write-Host '  openclaw --help  —  list available commands' -ForegroundColor Cyan",
+            "Write-Host ''",
+          ].join("\n"),
+        },
+      };
+    default:
+      return null;
+  }
+}
+
+function terminalLaunchAffordanceForRecipe(
+  recipe: Recipe,
+): { hints: string[] } | null {
+  switch (recipe.id) {
+    case "hermes-agent":
+      return {
+        hints: [
+          "hermes postinstall  —  initial setup",
+          "hermes --tui  —  Terminal UI",
+        ],
+      };
+    case "openclaw":
+      return { hints: ["openclaw --help  —  list available commands"] };
     default:
       return null;
   }
