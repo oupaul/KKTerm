@@ -19,7 +19,6 @@ import docker from "../../assets/installer-icons/docker.svg?url";
 import everything from "../../assets/installer-icons/everything.png?url";
 import excalidraw from "../../assets/installer-icons/excalidraw.svg?url";
 import flowise from "../../assets/installer-icons/flowise.png?url";
-import gemini from "../../assets/installer-icons/gemini.svg?url";
 import git from "../../assets/installer-icons/git.svg?url";
 import github from "../../assets/installer-icons/github.svg?url";
 import hermesAgent from "../../assets/installer-icons/hermes-agent.svg?url";
@@ -57,7 +56,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   nssm: defaultIcon,
   "claude-code-cli": anthropic,
   "codex-cli": openai,
-  "gemini-cli": gemini,
+  "antigravity-cli": defaultIcon,
   ollama,
   n8n,
   "open-webui": openWebui,

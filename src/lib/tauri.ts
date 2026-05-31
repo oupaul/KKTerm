@@ -1898,7 +1898,7 @@ type CommandMap = {
   installer_check_latest_versions: {
     args: { toolIds: string[] };
     /// Fire-and-forget: results stream as `checkResult` events on
-    /// installer://progress. Backend returns when the sweep finishes.
+    /// installer://progress. Backend returns after starting the worker.
     result: void;
   };
   installer_install_recipe: {

@@ -147,6 +147,7 @@ function estimateUacPromptsFor(
     case "uvPip":
       return 0;
     case "downloadInstaller":
+      if (recipe.id === "antigravity-cli") return 0;
       return 1;
     case "bundle":
       return recipe.provider.steps.reduce((sum, stepId) => {

@@ -10,7 +10,7 @@
 // subtitle), Windows-order footer buttons (primary immediately before Cancel
 // at bottom right).
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   invokeCommand,
@@ -127,6 +127,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const [webUiStatus, setWebUiStatus] = useState<ManagedWebUiStatus | null>(
     null,
   );
+  const statusRefreshInFlight = useRef(false);
 
   useEffect(() => {
     if (!webUi || !isTauriRuntime()) {
@@ -135,6 +136,8 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     }
     let cancelled = false;
     async function refresh() {
+      if (statusRefreshInFlight.current) return;
+      statusRefreshInFlight.current = true;
       try {
         const status = await invokeCommand("installer_get_web_ui_status", {
           toolId: recipe.id,
@@ -142,10 +145,12 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         if (!cancelled) setWebUiStatus(status);
       } catch {
         if (!cancelled) setWebUiStatus(null);
+      } finally {
+        statusRefreshInFlight.current = false;
       }
     }
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 3000);
+    const timer = window.setInterval(() => void refresh(), 10_000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);

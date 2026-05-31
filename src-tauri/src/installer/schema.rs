@@ -571,6 +571,36 @@ mod tests {
     }
 
     #[test]
+    fn shipped_cli_agent_entries_match_current_catalog_intent() {
+        let json = include_str!("../../../installer/catalog.v1.json");
+        let catalog: Catalog =
+            serde_json::from_str(json).expect("shipped catalog JSON should parse");
+
+        let antigravity = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "antigravity-cli")
+            .expect("catalog should include Antigravity CLI");
+        assert_eq!(antigravity.name, "Antigravity CLI");
+        assert_eq!(antigravity.category.as_deref(), Some("ai-agent"));
+        assert!(antigravity.needs.is_empty());
+        assert!(matches!(
+            &antigravity.provider,
+            Provider::DownloadInstaller { url, file_name }
+                if url == "https://antigravity.google/cli/install.cmd"
+                    && file_name == "antigravity-cli-install.cmd"
+        ));
+
+        let opencode = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "opencode")
+            .expect("catalog should include OpenCode CLI");
+        assert_eq!(opencode.name, "OpenCode CLI");
+        assert_eq!(opencode.category.as_deref(), Some("ai-agent"));
+    }
+
+    #[test]
     fn shipped_runtime_bundle_names_explain_selected_managers() {
         let json = include_str!("../../../installer/catalog.v1.json");
         let catalog: Catalog =

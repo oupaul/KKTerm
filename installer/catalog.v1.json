@@ -183,14 +183,18 @@
       "options": ["version"]
     },
     {
-      "id": "gemini-cli",
-      "name": "Gemini CLI",
-      "descriptionEn": "Google's official Gemini CLI. Requires Node.",
-      "category": "ai",
+      "id": "antigravity-cli",
+      "name": "Antigravity CLI",
+      "descriptionEn": "Google's Antigravity command-line agent, installed with the official Windows command installer.",
+      "category": "ai-agent",
       "icon": "Bot",
-      "needs": ["node-bundle"],
-      "provider": { "kind": "npm", "pkg": "@google/gemini-cli" },
-      "options": ["version"]
+      "homepage": "https://antigravity.google/",
+      "provider": {
+        "kind": "downloadInstaller",
+        "url": "https://antigravity.google/cli/install.cmd",
+        "fileName": "antigravity-cli-install.cmd"
+      },
+      "options": []
     },
     {
       "id": "ollama",
@@ -301,9 +305,9 @@
     },
     {
       "id": "opencode",
-      "name": "OpenCode",
+      "name": "OpenCode CLI",
       "descriptionEn": "Terminal coding agent that can work with multiple AI providers.",
-      "category": "development",
+      "category": "ai-agent",
       "icon": "Terminal",
       "homepage": "https://opencode.ai/",
       "releaseNotesUrl": "https://github.com/sst/opencode/releases",

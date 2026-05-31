@@ -28,6 +28,18 @@ const catalog: Catalog = {
       provider: { kind: "bundle", steps: ["nvm-windows"] },
     },
     wingetRecipe("ripgrep", "BurntSushi.ripgrep.MSVC"),
+    {
+      id: "antigravity-cli",
+      name: "Antigravity CLI",
+      descriptionEn: "Antigravity CLI",
+      category: "ai-agent",
+      icon: "Bot",
+      provider: {
+        kind: "downloadInstaller",
+        url: "https://antigravity.google/cli/install.cmd",
+        fileName: "antigravity-cli-install.cmd",
+      },
+    },
   ],
 };
 
@@ -56,5 +68,12 @@ const ripgrepPlan = resolveInstallPlan("ripgrep", catalog, {}, { scope: "user" }
 if (ripgrepPlan.uacPromptEstimate !== 0) {
   throw new Error(
     `Ordinary user-scope winget installs should not warn about UAC; got ${ripgrepPlan.uacPromptEstimate}`,
+  );
+}
+
+const antigravityPlan = resolveInstallPlan("antigravity-cli", catalog, {}, {});
+if (antigravityPlan.uacPromptEstimate !== 0) {
+  throw new Error(
+    `Antigravity CLI's user-local command installer should not warn about UAC; got ${antigravityPlan.uacPromptEstimate}`,
   );
 }

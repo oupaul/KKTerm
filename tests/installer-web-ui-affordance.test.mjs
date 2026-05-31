@@ -106,3 +106,59 @@ test("managed web UI install completion auto-starts the app", async () => {
     "Install completion should start managed web UI apps automatically",
   );
 });
+
+test("managed web UI status polling is throttled", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /statusRefreshInFlight/,
+    "Status polling should avoid overlapping backend status requests",
+  );
+  assert.match(
+    source,
+    /10_000/,
+    "Status polling should be slow enough not to make the properties dialog sluggish",
+  );
+});
+
+test("installer command boundary keeps blocking work off the UI thread", async () => {
+  const source = await readFile(
+    new URL("../src-tauri/src/installer/commands.rs", import.meta.url),
+    "utf8",
+  );
+
+  for (const command of [
+    "installer_load_catalog",
+    "installer_detect_all",
+    "installer_load_detection_cache",
+    "installer_redetect",
+    "installer_get_state",
+    "installer_set_pinned",
+    "installer_run_web_ui",
+    "installer_get_web_ui_status",
+    "installer_stop_web_ui",
+    "installer_install_service",
+    "installer_remove_service",
+  ]) {
+    assert.match(
+      source,
+      new RegExp(`pub async fn ${command}\\(`),
+      `${command} should be async so blocking work can leave the command path`,
+    );
+  }
+
+  assert.match(
+    source,
+    /latest\.check\.worker\.start/,
+    "latest-version sweeps should be dispatched to a background worker",
+  );
+  assert.match(
+    source,
+    /tauri::async_runtime::spawn_blocking/,
+    "blocking Installer Helper operations should use Tauri's blocking pool",
+  );
+});

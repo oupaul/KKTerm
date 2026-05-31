@@ -219,7 +219,9 @@ export function InstallerPage({ active }: { active: boolean }) {
       if (r.provider.kind === "githubRelease") {
         return r.provider.layout === "zip" ? sum : sum + 1;
       }
-      if (r.provider.kind === "downloadInstaller") return sum + 1;
+      if (r.provider.kind === "downloadInstaller") {
+        return r.id === "antigravity-cli" ? sum : sum + 1;
+      }
       return sum;
     }, 0);
     setUpdateAllConfirm({ items, uacEstimate });
@@ -371,7 +373,8 @@ const INSTALLER_CATEGORY_SECTIONS: Array<{
     ids: [
       "claude-code-cli",
       "codex-cli",
-      "gemini-cli",
+      "antigravity-cli",
+      "opencode",
       "openclaw",
       "codex-desktop",
       "claude-desktop",
@@ -390,7 +393,6 @@ const INSTALLER_CATEGORY_SECTIONS: Array<{
       "docker-desktop",
       "bruno",
       "wsl",
-      "opencode",
       "rustup",
     ],
   },

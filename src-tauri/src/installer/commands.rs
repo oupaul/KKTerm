@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime};
 
 use serde::Serialize;
 use serde_json::json;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::cache::{load_detection_cache, write_cached_state};
 use super::catalog::load_bundled_catalog;
@@ -27,7 +27,7 @@ use super::install::{EventSink, install_recipe};
 use super::latest_version::latest_version_in_catalog;
 use super::managed_app::{managed_app_data_dir, managed_app_install_dir};
 use super::options::InstallOptions;
-use super::proc::npm_program;
+use super::proc::{no_window, npm_program};
 use super::schema::{Catalog, Provider, Recipe};
 use super::state as st;
 use super::uninstall::uninstall_recipe;
@@ -85,7 +85,7 @@ fn provider_kind(provider: &Provider) -> &'static str {
 /// frontend API compatibility but has no effect — the catalog is embedded
 /// at compile time, so "refresh" is the same as "the build that's running".
 #[tauri::command]
-pub fn installer_load_catalog(
+pub async fn installer_load_catalog(
     runtime: State<'_, InstallerRuntime>,
     _force_refresh: Option<bool>,
 ) -> Result<Catalog, String> {
@@ -93,7 +93,11 @@ pub fn installer_load_catalog(
         "command.installer_load_catalog.start",
         &json!({ "forceRefresh": _force_refresh }),
     );
-    let catalog = load_bundled_catalog().map_err(|e| e.to_string())?;
+    let catalog = tauri::async_runtime::spawn_blocking(|| {
+        load_bundled_catalog().map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|error| format!("failed to load installer catalog: {error}"))??;
     *runtime.catalog.lock().unwrap() = Some(catalog.clone());
     crate::logging::installer_helper_debug(
         "command.installer_load_catalog.ok",
@@ -103,7 +107,7 @@ pub fn installer_load_catalog(
 }
 
 #[tauri::command]
-pub fn installer_detect_all(
+pub async fn installer_detect_all(
     runtime: State<'_, InstallerRuntime>,
 ) -> Result<HashMap<String, DetectedState>, String> {
     crate::logging::installer_helper_debug("command.installer_detect_all.start", &json!({}));
@@ -113,15 +117,20 @@ pub fn installer_detect_all(
         .unwrap()
         .clone()
         .ok_or("catalog not loaded yet — call installer_load_catalog first")?;
-    let now = unix_now_secs();
-    let detected: HashMap<String, DetectedState> = detect_all(&catalog)
-        .into_iter()
-        .map(|(tool_id, state)| {
-            let state = state.with_last_checked_at(Some(now));
-            write_cached_state(&tool_id, &state);
-            (tool_id, state)
+    let detected: HashMap<String, DetectedState> =
+        tauri::async_runtime::spawn_blocking(move || {
+            let now = unix_now_secs();
+            detect_all(&catalog)
+                .into_iter()
+                .map(|(tool_id, state)| {
+                    let state = state.with_last_checked_at(Some(now));
+                    write_cached_state(&tool_id, &state);
+                    (tool_id, state)
+                })
+                .collect()
         })
-        .collect();
+        .await
+        .map_err(|error| format!("failed to detect installer tools: {error}"))?;
     crate::logging::installer_helper_debug(
         "command.installer_detect_all.ok",
         &json!({ "resultCount": detected.len() }),
@@ -130,7 +139,7 @@ pub fn installer_detect_all(
 }
 
 #[tauri::command]
-pub fn installer_load_detection_cache(
+pub async fn installer_load_detection_cache(
     runtime: State<'_, InstallerRuntime>,
 ) -> Result<HashMap<String, DetectedState>, String> {
     crate::logging::installer_helper_debug(
@@ -143,7 +152,9 @@ pub fn installer_load_detection_cache(
         .unwrap()
         .clone()
         .ok_or("catalog not loaded yet — call installer_load_catalog first")?;
-    let cache = load_detection_cache(&catalog);
+    let cache = tauri::async_runtime::spawn_blocking(move || load_detection_cache(&catalog))
+        .await
+        .map_err(|error| format!("failed to load installer detection cache: {error}"))?;
     crate::logging::installer_helper_debug(
         "command.installer_load_detection_cache.ok",
         &json!({ "hitCount": cache.len() }),
@@ -256,7 +267,6 @@ const DETECT_PARALLELISM: usize = 4;
 #[tauri::command]
 pub fn installer_check_latest_versions(
     app: AppHandle,
-    storage: State<'_, Storage>,
     runtime: State<'_, InstallerRuntime>,
     tool_ids: Vec<String>,
 ) -> Result<(), String> {
@@ -273,76 +283,86 @@ pub fn installer_check_latest_versions(
     let cancel = runtime.cancel_flag_for(CHECK_UPDATES_CANCEL_ID);
     runtime.reset_cancel(CHECK_UPDATES_CANCEL_ID);
 
+    let app_for_worker = app.clone();
     let emit: EventSink = make_emit_sink(app);
     emit(ProgressEvent::CheckStarted {
         tool_ids: tool_ids.clone(),
     });
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
-    let storage_ref = &*storage;
-    let catalog_ref = &catalog;
-    let emit_ref = &emit;
-    let work: Mutex<Vec<String>> = Mutex::new(tool_ids);
+    std::thread::spawn(move || {
+        crate::logging::installer_helper_debug(
+            "latest.check.worker.start",
+            &json!({ "toolIds": &tool_ids }),
+        );
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        let work: Mutex<Vec<String>> = Mutex::new(tool_ids);
+        let catalog_ref = &catalog;
+        let emit_ref = &emit;
 
-    std::thread::scope(|scope| {
-        for _ in 0..CHECK_UPDATES_PARALLELISM {
-            let cancel = cancel.clone();
-            let work = &work;
-            scope.spawn(move || {
-                loop {
-                    if cancel.load(Ordering::Relaxed) {
-                        return;
-                    }
-                    let tool_id = {
-                        let mut q = work.lock().unwrap();
-                        match q.pop() {
-                            Some(id) => id,
-                            None => return,
+        std::thread::scope(|scope| {
+            for _ in 0..CHECK_UPDATES_PARALLELISM {
+                let cancel = cancel.clone();
+                let work = &work;
+                let app = app_for_worker.clone();
+                scope.spawn(move || {
+                    loop {
+                        if cancel.load(Ordering::Relaxed) {
+                            return;
                         }
-                    };
-                    let (latest, error) = match find_recipe(catalog_ref, &tool_id) {
-                        Some(recipe) => match latest_version_in_catalog(recipe, catalog_ref) {
-                            Ok(latest) => (latest, None),
-                            Err(error) => (None, Some(error)),
-                        },
-                        None => (None, Some("unknown tool id".to_string())),
-                    };
-                    if error.is_none() {
-                        let _ = st::record_latest_version(
-                            storage_ref,
-                            &tool_id,
-                            latest.as_deref(),
-                            now,
+                        let tool_id = {
+                            let mut q = work.lock().unwrap();
+                            match q.pop() {
+                                Some(id) => id,
+                                None => return,
+                            }
+                        };
+                        let (latest, error) = match find_recipe(catalog_ref, &tool_id) {
+                            Some(recipe) => match latest_version_in_catalog(recipe, catalog_ref) {
+                                Ok(latest) => (latest, None),
+                                Err(error) => (None, Some(error)),
+                            },
+                            None => (None, Some("unknown tool id".to_string())),
+                        };
+                        if error.is_none() {
+                            let storage = app.state::<Storage>();
+                            let _ = st::record_latest_version(
+                                &storage,
+                                &tool_id,
+                                latest.as_deref(),
+                                now,
+                            );
+                        }
+                        crate::logging::installer_helper_debug(
+                            "latest.check.result",
+                            &json!({ "toolId": &tool_id, "latestVersion": &latest, "error": &error }),
                         );
+                        emit_ref(ProgressEvent::CheckResult {
+                            tool_id,
+                            latest_version: latest,
+                            error,
+                        });
                     }
-                    crate::logging::installer_helper_debug(
-                        "latest.check.result",
-                        &json!({ "toolId": &tool_id, "latestVersion": &latest, "error": &error }),
-                    );
-                    emit_ref(ProgressEvent::CheckResult {
-                        tool_id,
-                        latest_version: latest,
-                        error,
-                    });
-                }
-            });
-        }
-    });
+                });
+            }
+        });
 
-    emit(ProgressEvent::CheckFinished);
-    crate::logging::installer_helper_debug(
-        "command.installer_check_latest_versions.ok",
-        &json!({}),
-    );
+        emit(ProgressEvent::CheckFinished);
+        crate::logging::installer_helper_debug("latest.check.worker.ok", &json!({}));
+    });
     Ok(())
 }
 
 #[tauri::command]
-pub fn installer_get_state(storage: State<'_, Storage>) -> Result<Vec<st::ToolState>, String> {
+pub async fn installer_get_state(app: AppHandle) -> Result<Vec<st::ToolState>, String> {
     crate::logging::installer_helper_debug("command.installer_get_state.start", &json!({}));
-    let state = st::list_all(&storage);
+    let state = tauri::async_runtime::spawn_blocking(move || {
+        let storage = app.state::<Storage>();
+        st::list_all(&storage)
+    })
+    .await
+    .map_err(|error| format!("failed to load installer state: {error}"))?;
     if let Ok(rows) = &state {
         crate::logging::installer_helper_debug(
             "command.installer_get_state.ok",
@@ -353,8 +373,8 @@ pub fn installer_get_state(storage: State<'_, Storage>) -> Result<Vec<st::ToolSt
 }
 
 #[tauri::command]
-pub fn installer_set_pinned(
-    storage: State<'_, Storage>,
+pub async fn installer_set_pinned(
+    app: AppHandle,
     tool_id: String,
     pinned: bool,
 ) -> Result<(), String> {
@@ -362,7 +382,12 @@ pub fn installer_set_pinned(
         "command.installer_set_pinned.start",
         &json!({ "toolId": &tool_id, "pinned": pinned }),
     );
-    st::set_pinned(&storage, &tool_id, pinned)
+    tauri::async_runtime::spawn_blocking(move || {
+        let storage = app.state::<Storage>();
+        st::set_pinned(&storage, &tool_id, pinned)
+    })
+    .await
+    .map_err(|error| format!("failed to update installer pin state: {error}"))?
 }
 
 #[tauri::command]
@@ -474,68 +499,79 @@ pub fn installer_cancel(
 }
 
 #[tauri::command]
-pub fn installer_run_web_ui(tool_id: String) -> Result<(), String> {
+pub async fn installer_run_web_ui(tool_id: String) -> Result<(), String> {
     crate::logging::installer_helper_debug(
         "command.installer_run_web_ui.start",
         &json!({ "toolId": &tool_id }),
     );
-    let affordance = web_ui_affordance(&tool_id)
-        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
-    spawn_web_ui_affordance(&affordance)
+    tauri::async_runtime::spawn_blocking(move || {
+        let affordance = web_ui_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+        spawn_web_ui_affordance(&affordance)
+    })
+    .await
+    .map_err(|error| format!("failed to start managed web UI: {error}"))?
 }
 
 #[tauri::command]
-pub fn installer_get_web_ui_status(tool_id: String) -> Result<ManagedWebUiStatus, String> {
-    let affordance = web_ui_affordance(&tool_id)
-        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
-    Ok(web_ui_status(&tool_id, &affordance))
+pub async fn installer_get_web_ui_status(tool_id: String) -> Result<ManagedWebUiStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let affordance = web_ui_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+        Ok(web_ui_status(&tool_id, &affordance))
+    })
+    .await
+    .map_err(|error| format!("failed to check managed web UI status: {error}"))?
 }
 
 #[tauri::command]
-pub fn installer_stop_web_ui(tool_id: String) -> Result<(), String> {
-    let affordance = web_ui_affordance(&tool_id)
-        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
-    if let Some(service) = service_affordance(&tool_id).filter(|s| {
-        matches!(query_service_state(&s.service_name).as_deref(), Some("RUNNING"))
-    }) {
-        return run_elevated_cmd_script(
-            &service_control_script(&service.service_name, "stop"),
-            &format!("stop service {}", service.service_name),
-        );
-    }
-    stop_port_listener(affordance.port)
+pub async fn installer_stop_web_ui(tool_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || stop_web_ui_for_tool(&tool_id))
+        .await
+        .map_err(|error| format!("failed to stop managed web UI: {error}"))?
 }
 
 #[tauri::command]
-pub fn installer_install_service(tool_id: String) -> Result<(), String> {
+pub async fn installer_install_service(tool_id: String) -> Result<(), String> {
     crate::logging::installer_helper_debug(
         "command.installer_install_service.start",
         &json!({ "toolId": &tool_id }),
     );
-    let service = service_affordance(&tool_id)
-        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed service helper"))?;
-    run_elevated_cmd_script(
-        &service_install_script(&service),
-        &format!("install service {}", service.service_name),
-    )
+    tauri::async_runtime::spawn_blocking(move || {
+        let affordance = web_ui_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+        let service = service_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed service helper"))?;
+        stop_port_listener(affordance.port)?;
+        run_elevated_cmd_script(
+            &service_install_script(&service),
+            &format!("install service {}", service.service_name),
+        )
+    })
+    .await
+    .map_err(|error| format!("failed to install managed service: {error}"))?
 }
 
 #[tauri::command]
-pub fn installer_remove_service(tool_id: String) -> Result<(), String> {
+pub async fn installer_remove_service(tool_id: String) -> Result<(), String> {
     crate::logging::installer_helper_debug(
         "command.installer_remove_service.start",
         &json!({ "toolId": &tool_id }),
     );
-    let service = service_affordance(&tool_id)
-        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed service helper"))?;
-    run_elevated_cmd_script(
-        &service_remove_script(&service.service_name),
-        &format!("remove service {}", service.service_name),
-    )
+    tauri::async_runtime::spawn_blocking(move || {
+        let service = service_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed service helper"))?;
+        run_elevated_cmd_script(
+            &service_remove_script(&service.service_name),
+            &format!("remove service {}", service.service_name),
+        )
+    })
+    .await
+    .map_err(|error| format!("failed to remove managed service: {error}"))?
 }
 
 #[tauri::command]
-pub fn installer_redetect(
+pub async fn installer_redetect(
     runtime: State<'_, InstallerRuntime>,
     tool_id: String,
 ) -> Result<DetectedState, String> {
@@ -549,15 +585,25 @@ pub fn installer_redetect(
         .unwrap()
         .clone()
         .ok_or("catalog not loaded yet")?;
-    let recipe =
-        find_recipe(&catalog, &tool_id).ok_or_else(|| format!("unknown tool id `{tool_id}`"))?;
-    // A redetect is the user's signal that the world may have changed
-    // (install/uninstall just finished, or they hit Refresh on one row).
-    // Drop the cached installed-software snapshot so the next winget recipe
-    // re-scans the local uninstall registry.
-    invalidate_installed_software_snapshot();
-    let state = detect_one_in_catalog(recipe, &catalog).with_last_checked_at(Some(unix_now_secs()));
-    write_cached_state(&tool_id, &state);
+    let recipe = find_recipe(&catalog, &tool_id)
+        .ok_or_else(|| format!("unknown tool id `{tool_id}`"))?
+        .clone();
+    let state = tauri::async_runtime::spawn_blocking({
+        let tool_id = tool_id.clone();
+        move || {
+            // A redetect is the user's signal that the world may have changed
+            // (install/uninstall just finished, or they hit Refresh on one row).
+            // Drop the cached installed-software snapshot so the next winget recipe
+            // re-scans the local uninstall registry.
+            invalidate_installed_software_snapshot();
+            let state = detect_one_in_catalog(&recipe, &catalog)
+                .with_last_checked_at(Some(unix_now_secs()));
+            write_cached_state(&tool_id, &state);
+            state
+        }
+    })
+    .await
+    .map_err(|error| format!("failed to redetect installer tool: {error}"))?;
     crate::logging::installer_helper_debug(
         "command.installer_redetect.ok",
         &json!({ "toolId": &tool_id, "state": &state }),
@@ -805,10 +851,14 @@ fn terminal_launch_affordance(tool_id: &str) -> Option<TerminalLaunchAffordance>
 }
 
 #[tauri::command]
-pub fn installer_open_terminal_launcher(tool_id: String) -> Result<(), String> {
-    let affordance = terminal_launch_affordance(&tool_id)
-        .ok_or_else(|| format!("tool `{tool_id}` does not have a terminal launcher"))?;
-    spawn_terminal_launcher(&affordance)
+pub async fn installer_open_terminal_launcher(tool_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let affordance = terminal_launch_affordance(&tool_id)
+            .ok_or_else(|| format!("tool `{tool_id}` does not have a terminal launcher"))?;
+        spawn_terminal_launcher(&affordance)
+    })
+    .await
+    .map_err(|error| format!("failed to open terminal launcher: {error}"))?
 }
 
 fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
@@ -940,12 +990,16 @@ fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
 
 fn service_install_script(service: &ManagedServiceAffordance) -> String {
     let service_name = quote_cmd_always(&service.service_name);
-    let (program_setup_lines, service_program) =
+    let (program_setup_lines, service_program, service_prefix_args) =
         service_program_for_install_script(&service.program);
     let log_dir = service_log_dir(service);
     let stdout_log = service_log_path(service, "stdout");
     let stderr_log = service_log_path(service, "stderr");
     let mut install_line = format!("nssm install {} {}", service_name, service_program);
+    for arg in &service_prefix_args {
+        install_line.push(' ');
+        install_line.push_str(arg);
+    }
     for arg in &service.args {
         install_line.push(' ');
         install_line.push_str(&quote_cmd_arg(arg));
@@ -1008,6 +1062,7 @@ fn service_install_script(service: &ManagedServiceAffordance) -> String {
         service_name
     ));
     lines.push(format!("nssm set {} AppExit Default Exit", service_name));
+    lines.push(format!("nssm start {}", service_name));
     lines.join("\r\n")
 }
 
@@ -1025,25 +1080,39 @@ fn service_log_path(service: &ManagedServiceAffordance, stream: &str) -> String 
         .into_owned()
 }
 
-fn service_program_for_install_script(program: &str) -> (Vec<String>, String) {
+fn service_program_for_install_script(program: &str) -> (Vec<String>, String, Vec<String>) {
     if cfg!(target_os = "windows") && program.eq_ignore_ascii_case(npm_program()) {
         return (
             vec![
-                "set \"KKTERM_SERVICE_APP=\"".to_string(),
+                "set \"KKTERM_SERVICE_NODE=\"".to_string(),
+                "set \"KKTERM_NPM_CMD=\"".to_string(),
+                "set \"KKTERM_NPM_CLI=\"".to_string(),
+                "for %%I in (node.exe) do set \"KKTERM_SERVICE_NODE=%%~$PATH:I\"".to_string(),
                 format!(
-                    "for %%I in ({}) do set \"KKTERM_SERVICE_APP=%%~$PATH:I\"",
+                    "for %%I in ({}) do set \"KKTERM_NPM_CMD=%%~$PATH:I\"",
                     npm_program()
                 ),
-                "if not defined KKTERM_SERVICE_APP (".to_string(),
+                "if not defined KKTERM_SERVICE_NODE (".to_string(),
+                "  echo node.exe is required. Install Node.js from KKTerm Installer Helper first."
+                    .to_string(),
+                "  exit /b 2".to_string(),
+                ")".to_string(),
+                "if not defined KKTERM_NPM_CMD (".to_string(),
                 "  echo npm.cmd is required. Install Node.js from KKTerm Installer Helper first."
                     .to_string(),
                 "  exit /b 2".to_string(),
                 ")".to_string(),
+                "for %%I in (\"%KKTERM_NPM_CMD%\") do set \"KKTERM_NPM_CLI=%%~dpInode_modules\\npm\\bin\\npm-cli.js\"".to_string(),
+                "if not exist \"%KKTERM_NPM_CLI%\" (".to_string(),
+                "  echo npm-cli.js was not found beside npm.cmd. Reinstall Node.js from KKTerm Installer Helper.".to_string(),
+                "  exit /b 2".to_string(),
+                ")".to_string(),
             ],
-            "\"%KKTERM_SERVICE_APP%\"".to_string(),
+            "\"%KKTERM_SERVICE_NODE%\"".to_string(),
+            vec!["\"%KKTERM_NPM_CLI%\"".to_string()],
         );
     }
-    (Vec::new(), quote_cmd_arg(program))
+    (Vec::new(), quote_cmd_arg(program), Vec::new())
 }
 
 fn service_remove_script(service_name: &str) -> String {
@@ -1096,6 +1165,20 @@ fn web_ui_status(tool_id: &str, affordance: &WebUiAffordance) -> ManagedWebUiSta
     }
 }
 
+fn stop_web_ui_for_tool(tool_id: &str) -> Result<(), String> {
+    let affordance = web_ui_affordance(tool_id)
+        .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
+    if let Some(service) = service_affordance(tool_id).filter(|s| {
+        matches!(query_service_state(&s.service_name).as_deref(), Some("RUNNING"))
+    }) {
+        return run_elevated_cmd_script(
+            &service_control_script(&service.service_name, "stop"),
+            &format!("stop service {}", service.service_name),
+        );
+    }
+    stop_port_listener(affordance.port)
+}
+
 fn is_local_port_listening(port: u16) -> bool {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     TcpStream::connect_timeout(&addr, Duration::from_millis(250)).is_ok()
@@ -1103,10 +1186,9 @@ fn is_local_port_listening(port: u16) -> bool {
 
 #[cfg(target_os = "windows")]
 fn query_service_state(service_name: &str) -> Option<String> {
-    let output = Command::new("sc")
-        .args(["query", service_name])
-        .output()
-        .ok()?;
+    let mut command = Command::new("sc");
+    command.args(["query", service_name]);
+    let output = no_window(&mut command).output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -1127,7 +1209,9 @@ fn query_service_state(_service_name: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn query_service_startup(service_name: &str) -> Option<String> {
-    let output = Command::new("sc").args(["qc", service_name]).output().ok()?;
+    let mut command = Command::new("sc");
+    command.args(["qc", service_name]);
+    let output = no_window(&mut command).output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -1155,7 +1239,7 @@ fn stop_port_listener(port: u16) -> Result<(), String> {
     );
     let mut powershell = Command::new("powershell");
     powershell.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &command]);
-    let status = powershell
+    let status = no_window(&mut powershell)
         .status()
         .map_err(|error| format!("failed to stop localhost:{port}: {error}"))?;
     if status.success() {
@@ -1702,7 +1786,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "windows")]
-    fn service_install_script_resolves_npm_cmd_before_registering_service() {
+    fn service_install_script_registers_node_instead_of_npm_cmd_shim() {
         let service = ManagedServiceAffordance {
             service_name: "KKTerm-Test".into(),
             display_name: "KKTerm Test".into(),
@@ -1713,15 +1797,24 @@ mod tests {
         };
         let script = service_install_script(&service);
 
-        assert!(script.contains(r#"for %%I in (npm.cmd) do set "KKTERM_SERVICE_APP=%%~$PATH:I""#));
+        assert!(script.contains(
+            r#"for %%I in (node.exe) do set "KKTERM_SERVICE_NODE=%%~$PATH:I""#
+        ));
         assert!(
-            script.contains(r#"nssm install "KKTerm-Test" "%KKTERM_SERVICE_APP%" exec -- vite"#)
+            script.contains(r#"for %%I in (npm.cmd) do set "KKTERM_NPM_CMD=%%~$PATH:I""#)
         );
+        assert!(script.contains(r#"node_modules\npm\bin\npm-cli.js"#));
+        assert!(
+            script.contains(
+                r#"nssm install "KKTerm-Test" "%KKTERM_SERVICE_NODE%" "%KKTERM_NPM_CLI%" exec -- vite"#
+            )
+        );
+        assert!(!script.contains(r#"nssm install "KKTerm-Test" "%KKTERM_SERVICE_APP%""#));
         assert!(!script.contains(r#"nssm install "KKTerm-Test" npm.cmd"#));
     }
 
     #[test]
-    fn service_install_script_registers_auto_start_without_immediate_start() {
+    fn service_install_script_registers_auto_start_and_starts_after_port_cleanup() {
         let service = ManagedServiceAffordance {
             service_name: "KKTerm-Test".into(),
             display_name: "KKTerm Test".into(),
@@ -1735,9 +1828,16 @@ mod tests {
         assert!(script.contains(r#"nssm set "KKTerm-Test" Start SERVICE_AUTO_START"#));
         assert!(script.contains(r#"nssm set "KKTerm-Test" AppExit Default Exit"#));
         assert!(
-            !script.contains(r#"nssm start "KKTerm-Test""#),
-            "registration must not start the service while the normal run mode may already own the fixed localhost port"
+            script.contains(r#"nssm start "KKTerm-Test""#),
+            "the command handler clears the normal localhost run before registration, so the service can start in the background"
         );
+    }
+
+    #[test]
+    fn stop_web_ui_for_tool_rejects_unknown_tool_ids() {
+        let error = stop_web_ui_for_tool("git").expect_err("git has no managed web UI");
+
+        assert!(error.contains("does not expose a managed web UI"));
     }
 }
 

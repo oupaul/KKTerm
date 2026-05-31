@@ -161,6 +161,9 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
             Provider::Winget { .. } => detect_winget(recipe),
             Provider::Npm { pkg } => detect_npm(pkg),
             Provider::UvPip { .. } => DetectedState::not_installed(),
+            Provider::DownloadInstaller { .. } if recipe.id == "antigravity-cli" => {
+                detect_antigravity_cli()
+            }
             Provider::DownloadInstaller { .. } => detect_installed_software_aliases(recipe),
             Provider::GithubRelease { .. } => detect_github_release_marker(&recipe.id),
             Provider::WindowsFeature { feature, .. } => detect_windows_feature(feature),
@@ -290,6 +293,30 @@ fn detect_uv_python_313_version() -> Option<String> {
         return None;
     }
     command_version(&path, &["--version"])
+}
+
+fn detect_antigravity_cli() -> DetectedState {
+    let local_data = std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let exe_path = antigravity_cli_exe_path_from_local_data(&local_data);
+    if !exe_path.exists() {
+        return DetectedState::not_installed();
+    }
+    let program = exe_path.to_string_lossy().into_owned();
+    DetectedState::installed(command_version(&program, &["--version"])).with_install_location(
+        Some(
+            exe_path
+                .parent()
+                .unwrap_or(&local_data)
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    )
+}
+
+fn antigravity_cli_exe_path_from_local_data(local_data: &std::path::Path) -> PathBuf {
+    local_data.join("agy").join("bin").join("agy.exe")
 }
 
 fn command_version(program: &str, args: &[&str]) -> Option<String> {
@@ -929,6 +956,14 @@ mod tests {
         let location = managed_app_install_dir("n8n");
 
         assert!(location.ends_with(r"installer\apps\n8n"));
+    }
+
+    #[test]
+    fn antigravity_cli_install_path_matches_google_installer_location() {
+        let base = PathBuf::from(r"C:\Users\Ryan\AppData\Local");
+        let path = antigravity_cli_exe_path_from_local_data(&base);
+
+        assert!(path.ends_with(r"agy\bin\agy.exe"));
     }
 
     #[test]
