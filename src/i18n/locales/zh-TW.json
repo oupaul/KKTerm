@@ -1803,7 +1803,7 @@
     "dashboardUseRandomDynamicBackground": "使用隨機動態背景",
     "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 檢視會自動以隨機動態背景開始。",
     "advancedDebugging": "進階偵錯",
-    "advancedDebuggingHint": "即使在發行版本中也會寫入完整的 AI Assistant 偵錯記錄。記錄可能包含提示詞、工具引數、螢幕截圖，以及產生的小工具原始碼。",
+    "advancedDebuggingHint": "即使在發行版本中，也會寫入 AI 助手、MCP、安裝小幫手和 heartbeat 的完整偵錯記錄。記錄可能包含提示詞、工具引數、安裝程式命令輸出、螢幕截圖和產生的小工具原始碼。",
     "debug": "偵錯",
     "debugHint": "控制詳細的本機診斷。",
     "performance": "效能",
@@ -1853,12 +1853,12 @@
     "hideTopTabButtons": "在連線樹使用子連線分頁",
     "hideTopTabButtonsDesc": "啟用後會隱藏上方分頁列，已儲存的子連線分頁會以斜體列顯示在父連線底下。",
     "workspaceSaved": "工作區設定已儲存。",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "安裝小幫手",
     "activityRail": "活動列",
     "installerRail": "活動列",
-    "installerSaved": "Installer Helper 設定已儲存。",
+    "installerSaved": "安裝小幫手設定已儲存。",
     "installerShowOnRail": "在活動列顯示",
-    "installerShowOnRailDesc": "啟用後，Installer Helper 圖示會顯示在活動列。"
+    "installerShowOnRailDesc": "啟用後，安裝小幫手圖示會顯示在活動列。"
   },
   "sftp": {
     "accessed": "存取日期",
@@ -2593,22 +2593,33 @@
     "workspaceSurface": "工作區表面"
   },
   "installer": {
-    "title": "Installer Helper",
-    "subtitle": "安裝並更新 Windows 開發工具。",
-    "railLabel": "Installer Helper",
+    "title": "安裝小幫手",
+    "subtitle": "在 Windows 上安裝與管理 AI 工具堆疊",
+    "railLabel": "安裝小幫手",
     "refresh": "重新整理",
     "checkUpdates": "檢查更新",
     "updateAll": "全部更新",
     "section": {
       "installed": "已安裝",
       "available": "可用",
-      "updates": "有可用更新"
+      "updates": "有可用更新",
+      "aiAgents": "AI 代理",
+      "aiPlatforms": "AI 平台",
+      "development": "開發",
+      "essentials": "必備工具",
+      "remoteAccess": "遠端存取",
+      "utilities": "公用程式",
+      "windowsPowerUser": "Windows 進階使用者"
     },
     "actions": {
       "install": "安裝",
       "update": "更新",
       "uninstall": "解除安裝",
-      "cancel": "取消"
+      "cancel": "取消",
+      "installService": "安裝服務",
+      "openWebUi": "開啟 Web UI",
+      "removeService": "移除服務",
+      "run": "執行"
     },
     "options": {
       "scope": "範圍",
@@ -2618,7 +2629,8 @@
       "versionLatest": "最新",
       "location": "安裝位置",
       "addToPath": "新增至 PATH",
-      "pinVersion": "釘選版本（從全部更新中略過）"
+      "pinVersion": "釘選版本（從全部更新中略過）",
+      "scopeSelfElevatingHint": "此安裝程式在依使用者範圍安裝時仍可能顯示 UAC。"
     },
     "status": {
       "scanning": "正在掃描已安裝工具…",
@@ -2628,7 +2640,11 @@
       "failed": "失敗：{{message}}",
       "cancelled": "已取消",
       "partial": "部分已安裝 ({{installed}}/{{total}})",
-      "noVersion": "（版本未知）"
+      "noVersion": "（版本未知）",
+      "neverChecked": "從未",
+      "notInstalled": "未安裝",
+      "serviceInstalled": "Windows 服務小幫手已完成。",
+      "serviceRemoved": "Windows 服務移除已完成。"
     },
     "empty": {
       "loading": "正在載入目錄…"
@@ -2667,7 +2683,9 @@
       "uninstallingTitle": "正在解除安裝 {{name}}…",
       "installedTitle": "已安裝 {{name}}",
       "failedTitle": "安裝失敗：{{name}}",
-      "cancelledTitle": "安裝已取消：{{name}}"
+      "cancelledTitle": "安裝已取消：{{name}}",
+      "webUi": "Web UI",
+      "windowsService": "Windows 服務"
     },
     "stepper": {
       "failedBadge": "失敗"
@@ -2682,6 +2700,14 @@
       "install": "安裝",
       "verify": "驗證",
       "enable": "啟用功能"
+    },
+    "lastChecked": "上次檢查：{{time}}",
+    "tile": {
+      "checked": "已檢查：",
+      "installed": "已安裝：",
+      "latest": "最新：",
+      "node": "Node：",
+      "python": "Python："
     }
   }
 }

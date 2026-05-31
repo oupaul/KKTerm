@@ -1803,7 +1803,7 @@
     "dashboardUseRandomDynamicBackground": "ใช้พื้นหลังไดนามิกแบบสุ่ม",
     "dashboardUseRandomDynamicBackgroundDesc": "มุมมอง Dashboard ใหม่จะเริ่มต้นโดยอัตโนมัติด้วยพื้นหลังไดนามิกแบบสุ่ม",
     "advancedDebugging": "การดีบักขั้นสูง",
-    "advancedDebuggingHint": "เขียนบันทึกดีบัก AI Assistant แบบเต็มแม้ในบิลด์ release บันทึกอาจมีพรอมป์ อาร์กิวเมนต์ของเครื่องมือ ภาพหน้าจอ และซอร์สของวิดเจ็ตที่สร้างขึ้น",
+    "advancedDebuggingHint": "เขียนบันทึกดีบักแบบเต็มของผู้ช่วย AI, MCP, ตัวช่วยติดตั้ง และ heartbeat แม้ในบิลด์เผยแพร่ บันทึกอาจมีพรอมป์ อาร์กิวเมนต์ของเครื่องมือ เอาต์พุตคำสั่งตัวติดตั้ง ภาพหน้าจอ และซอร์สของวิดเจ็ตที่สร้างขึ้น",
     "debug": "ดีบัก",
     "debugHint": "ควบคุมการวินิจฉัยในเครื่องแบบละเอียด",
     "performance": "ประสิทธิภาพ",
@@ -1853,12 +1853,12 @@
     "hideTopTabButtons": "ใช้แท็บการเชื่อมต่อลูกในต้นไม้การเชื่อมต่อ",
     "hideTopTabButtonsDesc": "เมื่อเปิดใช้ แถบแท็บด้านบนจะถูกซ่อน และแท็บการเชื่อมต่อลูกที่บันทึกไว้จะแสดงเป็นแถวตัวเอียงใต้การเชื่อมต่อแม่",
     "workspaceSaved": "บันทึกการตั้งค่าพื้นที่ทำงานแล้ว",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "ตัวช่วยติดตั้ง",
     "activityRail": "แถบกิจกรรม",
     "installerRail": "แถบกิจกรรม",
-    "installerSaved": "บันทึกการตั้งค่า Installer Helper แล้ว",
+    "installerSaved": "บันทึกการตั้งค่าตัวช่วยติดตั้งแล้ว",
     "installerShowOnRail": "แสดงในแถบกิจกรรม",
-    "installerShowOnRailDesc": "เมื่อเปิดใช้ ไอคอน Installer Helper จะปรากฏในแถบกิจกรรม"
+    "installerShowOnRailDesc": "เมื่อเปิดใช้ ไอคอนตัวช่วยติดตั้งจะปรากฏในแถบกิจกรรม"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",
@@ -2593,22 +2593,33 @@
     "workspaceSurface": "พื้นผิวพื้นที่ทำงาน"
   },
   "installer": {
-    "title": "Installer Helper",
-    "subtitle": "ติดตั้งและอัปเดตเครื่องมือนักพัฒนา Windows",
-    "railLabel": "Installer Helper",
+    "title": "ตัวช่วยติดตั้ง",
+    "subtitle": "ติดตั้งและจัดการชุดเครื่องมือ AI บน Windows",
+    "railLabel": "ตัวช่วยติดตั้ง",
     "refresh": "รีเฟรช",
     "checkUpdates": "ตรวจหาการอัปเดต",
     "updateAll": "อัปเดตทั้งหมด",
     "section": {
       "installed": "ติดตั้งแล้ว",
       "available": "พร้อมใช้งาน",
-      "updates": "มีการอัปเดต"
+      "updates": "มีการอัปเดต",
+      "aiAgents": "เอเจนต์ AI",
+      "aiPlatforms": "แพลตฟอร์ม AI",
+      "development": "การพัฒนา",
+      "essentials": "เครื่องมือจำเป็น",
+      "remoteAccess": "การเข้าถึงระยะไกล",
+      "utilities": "ยูทิลิตี",
+      "windowsPowerUser": "ผู้ใช้ Windows ขั้นสูง"
     },
     "actions": {
       "install": "ติดตั้ง",
       "update": "อัปเดต",
       "uninstall": "ถอนการติดตั้ง",
-      "cancel": "ยกเลิก"
+      "cancel": "ยกเลิก",
+      "installService": "ติดตั้งบริการ",
+      "openWebUi": "เปิด UI เว็บ",
+      "removeService": "ลบบริการ",
+      "run": "เรียกใช้"
     },
     "options": {
       "scope": "ขอบเขต",
@@ -2618,7 +2629,8 @@
       "versionLatest": "ล่าสุด",
       "location": "ตำแหน่งติดตั้ง",
       "addToPath": "เพิ่มลงใน PATH",
-      "pinVersion": "ปักหมุดเวอร์ชัน (ข้ามจากอัปเดตทั้งหมด)"
+      "pinVersion": "ปักหมุดเวอร์ชัน (ข้ามจากอัปเดตทั้งหมด)",
+      "scopeSelfElevatingHint": "ตัวติดตั้งนี้อาจยังแสดง UAC ในขอบเขตต่อผู้ใช้ได้"
     },
     "status": {
       "scanning": "กำลังสแกนเครื่องมือที่ติดตั้ง…",
@@ -2628,7 +2640,11 @@
       "failed": "ล้มเหลว: {{message}}",
       "cancelled": "ยกเลิกแล้ว",
       "partial": "ติดตั้งบางส่วน ({{installed}}/{{total}})",
-      "noVersion": "(ไม่ทราบเวอร์ชัน)"
+      "noVersion": "(ไม่ทราบเวอร์ชัน)",
+      "neverChecked": "ไม่เคย",
+      "notInstalled": "ยังไม่ได้ติดตั้ง",
+      "serviceInstalled": "ตัวช่วยบริการ Windows เสร็จสมบูรณ์แล้ว",
+      "serviceRemoved": "ลบบริการ Windows เสร็จสมบูรณ์แล้ว"
     },
     "empty": {
       "loading": "กำลังโหลดแค็ตตาล็อก…"
@@ -2667,7 +2683,9 @@
       "uninstallingTitle": "กำลังถอนการติดตั้ง {{name}}…",
       "installedTitle": "ติดตั้ง {{name}} แล้ว",
       "failedTitle": "ติดตั้งล้มเหลว: {{name}}",
-      "cancelledTitle": "ยกเลิกการติดตั้ง: {{name}}"
+      "cancelledTitle": "ยกเลิกการติดตั้ง: {{name}}",
+      "webUi": "UI เว็บ",
+      "windowsService": "บริการ Windows"
     },
     "stepper": {
       "failedBadge": "ล้มเหลว"
@@ -2682,6 +2700,14 @@
       "install": "ติดตั้ง",
       "verify": "ตรวจสอบ",
       "enable": "เปิดใช้คุณลักษณะ"
+    },
+    "lastChecked": "ตรวจสอบล่าสุด: {{time}}",
+    "tile": {
+      "checked": "ตรวจสอบแล้ว:",
+      "installed": "ติดตั้งแล้ว:",
+      "latest": "ล่าสุด:",
+      "node": "Node:",
+      "python": "Python:"
     }
   }
 }

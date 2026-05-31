@@ -1803,7 +1803,7 @@
     "dashboardUseRandomDynamicBackground": "Gunakan latar belakang dinamis acak",
     "dashboardUseRandomDynamicBackgroundDesc": "Tampilan Dashboard baru otomatis dimulai dengan latar belakang dinamis acak.",
     "advancedDebugging": "Debug Lanjutan",
-    "advancedDebuggingHint": "Menulis log debug AI Assistant lengkap bahkan pada build rilis. Log dapat menyertakan prompt, argumen alat, tangkapan layar, dan sumber widget yang dihasilkan.",
+    "advancedDebuggingHint": "Menulis log debug lengkap Asisten AI, MCP, Pembantu Instalasi, dan heartbeat bahkan dalam build rilis. Log dapat menyertakan prompt, argumen alat, output perintah penginstal, tangkapan layar, dan sumber widget yang dihasilkan.",
     "debug": "Debug",
     "debugHint": "Mengontrol diagnostik lokal yang terperinci.",
     "performance": "Performa",
@@ -1853,12 +1853,12 @@
     "hideTopTabButtons": "Gunakan Tab Koneksi Anak di Pohon Koneksi",
     "hideTopTabButtonsDesc": "Saat diaktifkan, Strip Tab atas disembunyikan dan Tab Koneksi Anak yang disimpan muncul sebagai baris miring di bawah Koneksi induknya.",
     "workspaceSaved": "Pengaturan ruang kerja disimpan.",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "Pembantu Instalasi",
     "activityRail": "Rel Aktivitas",
     "installerRail": "Rel Aktivitas",
-    "installerSaved": "Pengaturan Installer Helper disimpan.",
+    "installerSaved": "Pengaturan Pembantu Instalasi disimpan.",
     "installerShowOnRail": "Tampilkan di Rel Aktivitas",
-    "installerShowOnRailDesc": "Saat diaktifkan, ikon Installer Helper muncul di Rel Aktivitas."
+    "installerShowOnRailDesc": "Saat diaktifkan, ikon Pembantu Instalasi muncul di Rel Aktivitas."
   },
   "sftp": {
     "accessed": "Diakses",
@@ -2593,22 +2593,33 @@
     "workspaceSurface": "Permukaan ruang kerja"
   },
   "installer": {
-    "title": "Installer Helper",
-    "subtitle": "Instal dan perbarui alat pengembang Windows.",
-    "railLabel": "Installer Helper",
+    "title": "Pembantu Instalasi",
+    "subtitle": "Instal dan kelola tumpukan alat AI di Windows",
+    "railLabel": "Pembantu Instalasi",
     "refresh": "Segarkan",
     "checkUpdates": "Periksa pembaruan",
     "updateAll": "Perbarui semua",
     "section": {
       "installed": "Terpasang",
       "available": "Tersedia",
-      "updates": "Pembaruan tersedia"
+      "updates": "Pembaruan tersedia",
+      "aiAgents": "Agen AI",
+      "aiPlatforms": "Platform AI",
+      "development": "Pengembangan",
+      "essentials": "Esensial",
+      "remoteAccess": "Akses Jarak Jauh",
+      "utilities": "Utilitas",
+      "windowsPowerUser": "Pengguna Mahir Windows"
     },
     "actions": {
       "install": "Instal",
       "update": "Perbarui",
       "uninstall": "Copot pemasangan",
-      "cancel": "Batal"
+      "cancel": "Batal",
+      "installService": "Instal layanan",
+      "openWebUi": "Buka UI web",
+      "removeService": "Hapus layanan",
+      "run": "Jalankan"
     },
     "options": {
       "scope": "Cakupan",
@@ -2618,7 +2629,8 @@
       "versionLatest": "Terbaru",
       "location": "Lokasi instalasi",
       "addToPath": "Tambahkan ke PATH",
-      "pinVersion": "Sematkan versi (lewati dari Perbarui semua)"
+      "pinVersion": "Sematkan versi (lewati dari Perbarui semua)",
+      "scopeSelfElevatingHint": "Penginstal ini masih dapat menampilkan UAC dalam cakupan per pengguna."
     },
     "status": {
       "scanning": "Memindai alat terpasang…",
@@ -2628,7 +2640,11 @@
       "failed": "Gagal: {{message}}",
       "cancelled": "Dibatalkan",
       "partial": "Terpasang sebagian ({{installed}}/{{total}})",
-      "noVersion": "(versi tidak diketahui)"
+      "noVersion": "(versi tidak diketahui)",
+      "neverChecked": "Belum pernah",
+      "notInstalled": "Belum terinstal",
+      "serviceInstalled": "Pembantu layanan Windows selesai.",
+      "serviceRemoved": "Penghapusan layanan Windows selesai."
     },
     "empty": {
       "loading": "Memuat katalog…"
@@ -2667,7 +2683,9 @@
       "uninstallingTitle": "Mencopot {{name}}…",
       "installedTitle": "{{name}} terpasang",
       "failedTitle": "Instalasi gagal: {{name}}",
-      "cancelledTitle": "Instalasi dibatalkan: {{name}}"
+      "cancelledTitle": "Instalasi dibatalkan: {{name}}",
+      "webUi": "UI web",
+      "windowsService": "Layanan Windows"
     },
     "stepper": {
       "failedBadge": "Gagal"
@@ -2682,6 +2700,14 @@
       "install": "Instal",
       "verify": "Verifikasi",
       "enable": "Aktifkan fitur"
+    },
+    "lastChecked": "Terakhir diperiksa: {{time}}",
+    "tile": {
+      "checked": "Diperiksa:",
+      "installed": "Terinstal:",
+      "latest": "Terbaru:",
+      "node": "Node:",
+      "python": "Python:"
     }
   }
 }

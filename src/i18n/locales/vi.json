@@ -1803,7 +1803,7 @@
     "dashboardUseRandomDynamicBackground": "Dùng nền động ngẫu nhiên",
     "dashboardUseRandomDynamicBackgroundDesc": "Các chế độ xem Dashboard mới tự động bắt đầu với nền động ngẫu nhiên.",
     "advancedDebugging": "Gỡ lỗi nâng cao",
-    "advancedDebuggingHint": "Ghi đầy đủ nhật ký gỡ lỗi AI Assistant ngay cả trong bản dựng phát hành. Nhật ký có thể bao gồm lời nhắc, đối số công cụ, ảnh chụp màn hình và mã nguồn widget được tạo.",
+    "advancedDebuggingHint": "Ghi nhật ký gỡ lỗi đầy đủ của Trợ lý AI, MCP, Trợ lý cài đặt và heartbeat ngay cả trong bản dựng phát hành. Nhật ký có thể bao gồm prompt, đối số công cụ, đầu ra lệnh trình cài đặt, ảnh chụp màn hình và mã nguồn widget được tạo.",
     "debug": "Gỡ lỗi",
     "debugHint": "Điều khiển chẩn đoán cục bộ chi tiết.",
     "performance": "Hiệu năng",
@@ -1853,12 +1853,12 @@
     "hideTopTabButtons": "Dùng Tab kết nối con trong cây kết nối",
     "hideTopTabButtonsDesc": "Khi bật, dải Tab phía trên sẽ bị ẩn và các Tab kết nối con đã lưu xuất hiện dưới dạng hàng chữ nghiêng bên dưới Kết nối cha.",
     "workspaceSaved": "Đã lưu cài đặt không gian làm việc.",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "Trợ lý cài đặt",
     "activityRail": "Thanh hoạt động",
     "installerRail": "Thanh hoạt động",
-    "installerSaved": "Đã lưu cài đặt Installer Helper.",
+    "installerSaved": "Đã lưu cài đặt Trợ lý cài đặt.",
     "installerShowOnRail": "Hiển thị trên Thanh hoạt động",
-    "installerShowOnRailDesc": "Khi bật, biểu tượng Installer Helper xuất hiện trên Thanh hoạt động."
+    "installerShowOnRailDesc": "Khi bật, biểu tượng Trợ lý cài đặt xuất hiện trên Thanh hoạt động."
   },
   "sftp": {
     "accessed": "Accessed",
@@ -2593,22 +2593,33 @@
     "workspaceSurface": "Workspace surface"
   },
   "installer": {
-    "title": "Installer Helper",
-    "subtitle": "Cài đặt và cập nhật công cụ phát triển Windows.",
-    "railLabel": "Installer Helper",
+    "title": "Trợ lý cài đặt",
+    "subtitle": "Cài đặt và quản lý các bộ công cụ AI trên Windows",
+    "railLabel": "Trợ lý cài đặt",
     "refresh": "Làm mới",
     "checkUpdates": "Kiểm tra cập nhật",
     "updateAll": "Cập nhật tất cả",
     "section": {
       "installed": "Đã cài đặt",
       "available": "Có sẵn",
-      "updates": "Có bản cập nhật"
+      "updates": "Có bản cập nhật",
+      "aiAgents": "Tác nhân AI",
+      "aiPlatforms": "Nền tảng AI",
+      "development": "Phát triển",
+      "essentials": "Thiết yếu",
+      "remoteAccess": "Truy cập từ xa",
+      "utilities": "Tiện ích",
+      "windowsPowerUser": "Người dùng Windows nâng cao"
     },
     "actions": {
       "install": "Cài đặt",
       "update": "Cập nhật",
       "uninstall": "Gỡ cài đặt",
-      "cancel": "Hủy"
+      "cancel": "Hủy",
+      "installService": "Cài đặt dịch vụ",
+      "openWebUi": "Mở giao diện web",
+      "removeService": "Gỡ dịch vụ",
+      "run": "Chạy"
     },
     "options": {
       "scope": "Phạm vi",
@@ -2618,7 +2629,8 @@
       "versionLatest": "Mới nhất",
       "location": "Vị trí cài đặt",
       "addToPath": "Thêm vào PATH",
-      "pinVersion": "Ghim phiên bản (bỏ qua Cập nhật tất cả)"
+      "pinVersion": "Ghim phiên bản (bỏ qua Cập nhật tất cả)",
+      "scopeSelfElevatingHint": "Trình cài đặt này vẫn có thể hiển thị UAC trong phạm vi theo người dùng."
     },
     "status": {
       "scanning": "Đang quét công cụ đã cài đặt…",
@@ -2628,7 +2640,11 @@
       "failed": "Thất bại: {{message}}",
       "cancelled": "Đã hủy",
       "partial": "Đã cài đặt một phần ({{installed}}/{{total}})",
-      "noVersion": "(không rõ phiên bản)"
+      "noVersion": "(không rõ phiên bản)",
+      "neverChecked": "Chưa bao giờ",
+      "notInstalled": "Chưa cài đặt",
+      "serviceInstalled": "Trợ lý dịch vụ Windows đã hoàn tất.",
+      "serviceRemoved": "Gỡ dịch vụ Windows đã hoàn tất."
     },
     "empty": {
       "loading": "Đang tải danh mục…"
@@ -2667,7 +2683,9 @@
       "uninstallingTitle": "Đang gỡ cài đặt {{name}}…",
       "installedTitle": "Đã cài đặt {{name}}",
       "failedTitle": "Cài đặt thất bại: {{name}}",
-      "cancelledTitle": "Cài đặt đã hủy: {{name}}"
+      "cancelledTitle": "Cài đặt đã hủy: {{name}}",
+      "webUi": "Giao diện web",
+      "windowsService": "Dịch vụ Windows"
     },
     "stepper": {
       "failedBadge": "Thất bại"
@@ -2682,6 +2700,14 @@
       "install": "Cài đặt",
       "verify": "Xác minh",
       "enable": "Bật tính năng"
+    },
+    "lastChecked": "Kiểm tra lần cuối: {{time}}",
+    "tile": {
+      "checked": "Đã kiểm tra:",
+      "installed": "Đã cài:",
+      "latest": "Mới nhất:",
+      "node": "Node:",
+      "python": "Python:"
     }
   }
 }

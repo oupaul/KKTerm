@@ -1803,7 +1803,7 @@
     "dashboardUseRandomDynamicBackground": "Usa sfondo dinamico casuale",
     "dashboardUseRandomDynamicBackgroundDesc": "Le nuove viste del Dashboard si avviano automaticamente con uno sfondo dinamico casuale.",
     "advancedDebugging": "Debug avanzato",
-    "advancedDebuggingHint": "Scrive log di debug completi dell’Assistente IA anche nelle build di rilascio. I log possono includere prompt, argomenti degli strumenti, screenshot e sorgente dei widget generati.",
+    "advancedDebuggingHint": "Scrive log di debug completi per Assistente IA, MCP, Assistente installazione e heartbeat anche nelle build di rilascio. I log possono includere prompt, argomenti degli strumenti, output dei comandi dell’installer, screenshot e sorgente dei widget generati.",
     "debug": "Debug",
     "debugHint": "Controlla la diagnostica locale dettagliata.",
     "performance": "Prestazioni",
@@ -1853,12 +1853,12 @@
     "hideTopTabButtons": "Usa le schede connessione figlia nell’albero delle connessioni",
     "hideTopTabButtonsDesc": "Quando è attivo, la barra superiore delle schede viene nascosta e le schede connessione figlia salvate appaiono come righe in corsivo sotto la connessione padre.",
     "workspaceSaved": "Impostazioni dell’area di lavoro salvate.",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "Assistente installazione",
     "activityRail": "Barra attività",
     "installerRail": "Barra attività",
-    "installerSaved": "Impostazioni di Installer Helper salvate.",
+    "installerSaved": "Impostazioni dell’Assistente installazione salvate.",
     "installerShowOnRail": "Mostra nella barra attività",
-    "installerShowOnRailDesc": "Quando abilitato, l’icona di Installer Helper appare nella barra attività."
+    "installerShowOnRailDesc": "Quando abilitato, l’icona dell’Assistente installazione appare nella barra attività."
   },
   "sftp": {
     "accessed": "Accesso",
@@ -2593,22 +2593,33 @@
     "workspaceSurface": "Superficie area di lavoro"
   },
   "installer": {
-    "title": "Installer Helper",
-    "subtitle": "Installa e aggiorna strumenti di sviluppo per Windows.",
-    "railLabel": "Installer Helper",
+    "title": "Assistente installazione",
+    "subtitle": "Installa e gestisci stack di strumenti IA su Windows",
+    "railLabel": "Assistente installazione",
     "refresh": "Aggiorna",
     "checkUpdates": "Controlla aggiornamenti",
     "updateAll": "Aggiorna tutto",
     "section": {
       "installed": "Installato",
       "available": "Disponibile",
-      "updates": "Aggiornamenti disponibili"
+      "updates": "Aggiornamenti disponibili",
+      "aiAgents": "Agenti IA",
+      "aiPlatforms": "Piattaforme IA",
+      "development": "Sviluppo",
+      "essentials": "Essenziali",
+      "remoteAccess": "Accesso remoto",
+      "utilities": "Utilità",
+      "windowsPowerUser": "Utente avanzato Windows"
     },
     "actions": {
       "install": "Installa",
       "update": "Aggiorna",
       "uninstall": "Disinstalla",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "installService": "Installa servizio",
+      "openWebUi": "Apri interfaccia web",
+      "removeService": "Rimuovi servizio",
+      "run": "Esegui"
     },
     "options": {
       "scope": "Ambito",
@@ -2618,7 +2629,8 @@
       "versionLatest": "Più recente",
       "location": "Percorso di installazione",
       "addToPath": "Aggiungi a PATH",
-      "pinVersion": "Blocca versione (salta in Aggiorna tutto)"
+      "pinVersion": "Blocca versione (salta in Aggiorna tutto)",
+      "scopeSelfElevatingHint": "Questo installer può comunque mostrare UAC nell’ambito per utente."
     },
     "status": {
       "scanning": "Scansione degli strumenti installati…",
@@ -2628,7 +2640,11 @@
       "failed": "Non riuscito: {{message}}",
       "cancelled": "Annullato",
       "partial": "Installato parzialmente ({{installed}}/{{total}})",
-      "noVersion": "(versione sconosciuta)"
+      "noVersion": "(versione sconosciuta)",
+      "neverChecked": "Mai",
+      "notInstalled": "Non installato",
+      "serviceInstalled": "Helper del servizio Windows completato.",
+      "serviceRemoved": "Rimozione del servizio Windows completata."
     },
     "empty": {
       "loading": "Caricamento catalogo…"
@@ -2667,7 +2683,9 @@
       "uninstallingTitle": "Disinstallazione di {{name}}…",
       "installedTitle": "{{name}} installato",
       "failedTitle": "Installazione non riuscita: {{name}}",
-      "cancelledTitle": "Installazione annullata: {{name}}"
+      "cancelledTitle": "Installazione annullata: {{name}}",
+      "webUi": "Interfaccia web",
+      "windowsService": "Servizio Windows"
     },
     "stepper": {
       "failedBadge": "Non riuscito"
@@ -2682,6 +2700,14 @@
       "install": "Installa",
       "verify": "Verifica",
       "enable": "Abilita funzionalità"
+    },
+    "lastChecked": "Ultimo controllo: {{time}}",
+    "tile": {
+      "checked": "Controllato:",
+      "installed": "Installato:",
+      "latest": "Più recente:",
+      "node": "Node:",
+      "python": "Python:"
     }
   }
 }

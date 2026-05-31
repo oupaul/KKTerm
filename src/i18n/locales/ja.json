@@ -1803,7 +1803,7 @@
     "dashboardUseRandomDynamicBackground": "ランダムな動的背景を使用",
     "dashboardUseRandomDynamicBackgroundDesc": "新しいDashboardビューは、ランダムな動的背景で自動的に開始されます。",
     "advancedDebugging": "高度なデバッグ",
-    "advancedDebuggingHint": "リリースビルドでも AI Assistant の完全なデバッグログを書き込みます。ログにはプロンプト、ツール引数、スクリーンショット、生成されたウィジェットソースが含まれる場合があります。",
+    "advancedDebuggingHint": "リリース ビルドでも、AI アシスタント、MCP、インストールヘルパー、ハートビートの完全なデバッグ ログを書き込みます。ログにはプロンプト、ツール引数、インストーラー コマンド出力、スクリーンショット、生成されたウィジェット ソースが含まれる場合があります。",
     "debug": "デバッグ",
     "debugHint": "詳細なローカル診断を制御します。",
     "performance": "パフォーマンス",
@@ -1853,12 +1853,12 @@
     "hideTopTabButtons": "接続ツリーで子接続タブを使用",
     "hideTopTabButtonsDesc": "有効にすると、上部のタブストリップが非表示になり、保存済みの子接続タブが親接続の下に斜体の行として表示されます。",
     "workspaceSaved": "ワークスペース設定を保存しました。",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "インストールヘルパー",
     "activityRail": "アクティビティ レール",
     "installerRail": "アクティビティ レール",
-    "installerSaved": "Installer Helper 設定を保存しました。",
+    "installerSaved": "インストールヘルパー設定を保存しました。",
     "installerShowOnRail": "アクティビティ レールに表示",
-    "installerShowOnRailDesc": "有効にすると、Installer Helper アイコンがアクティビティ レールに表示されます。"
+    "installerShowOnRailDesc": "有効にすると、インストールヘルパー アイコンがアクティビティ レールに表示されます。"
   },
   "sftp": {
     "accessed": "アクセス日時",
@@ -2593,22 +2593,33 @@
     "workspaceSurface": "ワークスペース面"
   },
   "installer": {
-    "title": "Installer Helper",
-    "subtitle": "Windows 開発ツールをインストールして更新します。",
-    "railLabel": "Installer Helper",
+    "title": "インストールヘルパー",
+    "subtitle": "Windows で AI ツール スタックをインストールして管理",
+    "railLabel": "インストールヘルパー",
     "refresh": "更新",
     "checkUpdates": "更新を確認",
     "updateAll": "すべて更新",
     "section": {
       "installed": "インストール済み",
       "available": "利用可能",
-      "updates": "利用可能な更新"
+      "updates": "利用可能な更新",
+      "aiAgents": "AI エージェント",
+      "aiPlatforms": "AI プラットフォーム",
+      "development": "開発",
+      "essentials": "基本ツール",
+      "remoteAccess": "リモート アクセス",
+      "utilities": "ユーティリティ",
+      "windowsPowerUser": "Windows パワー ユーザー"
     },
     "actions": {
       "install": "インストール",
       "update": "更新",
       "uninstall": "アンインストール",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "installService": "サービスをインストール",
+      "openWebUi": "Web UI を開く",
+      "removeService": "サービスを削除",
+      "run": "実行"
     },
     "options": {
       "scope": "スコープ",
@@ -2618,7 +2629,8 @@
       "versionLatest": "最新",
       "location": "インストール先",
       "addToPath": "PATH に追加",
-      "pinVersion": "バージョンを固定（すべて更新から除外）"
+      "pinVersion": "バージョンを固定（すべて更新から除外）",
+      "scopeSelfElevatingHint": "このインストーラーはユーザー単位の範囲でも UAC を表示する場合があります。"
     },
     "status": {
       "scanning": "インストール済みツールをスキャン中…",
@@ -2628,7 +2640,11 @@
       "failed": "失敗: {{message}}",
       "cancelled": "キャンセル済み",
       "partial": "一部インストール済み ({{installed}}/{{total}})",
-      "noVersion": "(バージョン不明)"
+      "noVersion": "(バージョン不明)",
+      "neverChecked": "未確認",
+      "notInstalled": "未インストール",
+      "serviceInstalled": "Windows サービス ヘルパーが完了しました。",
+      "serviceRemoved": "Windows サービスの削除が完了しました。"
     },
     "empty": {
       "loading": "カタログを読み込み中…"
@@ -2667,7 +2683,9 @@
       "uninstallingTitle": "{{name}} をアンインストール中…",
       "installedTitle": "{{name}} をインストールしました",
       "failedTitle": "インストール失敗: {{name}}",
-      "cancelledTitle": "インストールをキャンセル: {{name}}"
+      "cancelledTitle": "インストールをキャンセル: {{name}}",
+      "webUi": "Web UI",
+      "windowsService": "Windows サービス"
     },
     "stepper": {
       "failedBadge": "失敗"
@@ -2682,6 +2700,14 @@
       "install": "インストール",
       "verify": "検証",
       "enable": "機能を有効化"
+    },
+    "lastChecked": "最終確認: {{time}}",
+    "tile": {
+      "checked": "確認:",
+      "installed": "インストール済み:",
+      "latest": "最新:",
+      "node": "Node:",
+      "python": "Python:"
     }
   }
 }
