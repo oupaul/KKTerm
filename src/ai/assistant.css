@@ -604,6 +604,7 @@
   display: grid;
   gap: 8px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .markdown-content h1,
