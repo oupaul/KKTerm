@@ -219,6 +219,7 @@ export function useAppShellAppearance({
     node.style.setProperty("--ai-resize-width", aiPanelLayout.collapsed ? "34px" : "1px");
     node.style.setProperty("--app-ui-font-family", appearanceSettings.appFontFamily);
     node.setAttribute("data-color-scheme", appearanceSettings.colorScheme);
+    document.documentElement.setAttribute("data-color-scheme", appearanceSettings.colorScheme);
   }, [
     aiPanelLayout.collapsed,
     aiPanelLayout.width,

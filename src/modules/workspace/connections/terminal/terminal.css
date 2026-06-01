@@ -1616,6 +1616,7 @@
 }
 
 .connection-dialog.sftp-popup-dialog {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: min(1180px, calc(100vw - 48px));
@@ -1633,6 +1634,13 @@
 .sftp-popup-dialog .connection-dialog-header h2 {
   margin: 0;
   font-size: 17px;
+}
+
+.sftp-popup-dialog .connection-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
 }
 
 .sftp-popup-dialog-body {

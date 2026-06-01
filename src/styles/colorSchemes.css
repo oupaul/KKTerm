@@ -349,7 +349,7 @@
 
 [data-color-scheme="semiconductor"] {
   --app-bg: #f4f4f4;
-  --chrome: #111111;
+  --chrome: #ffffff;
   --chrome-strong: #ffffff;
   --surface: #ffffff;
   --surface-muted: #f1f1f1;
@@ -357,8 +357,8 @@
   --terminal-2: #111111;
   --terminal-border: #3a3a3a;
   --text: #111111;
-  --text-muted: #5a5a5a;
-  --text-faint: #8a8a8a;
+  --text-muted: #2f2f2f;
+  --text-faint: #666666;
   --border: #d5d5d5;
   --border-strong: #a8a8a8;
   --accent: #e60012;

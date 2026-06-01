@@ -168,7 +168,7 @@
   height: 24px;
   padding: 0 5px;
   color: var(--text);
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--accent);
   border-radius: 3px;
   outline: none;
