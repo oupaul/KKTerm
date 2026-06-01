@@ -80,6 +80,24 @@ export function DashboardSettings() {
               ))}
             </select>
           </label>
+          <label>
+            <span>{t("settings.dashboardLayoutEnforcement")}</span>
+            <select
+              value={draft.widgetLayoutEnforcement}
+              onChange={(e) =>
+                setDraft((s) => ({
+                  ...s,
+                  widgetLayoutEnforcement: e.target
+                    .value as DashboardSettingsState["widgetLayoutEnforcement"],
+                }))
+              }
+            >
+              <option value="strict">{t("settings.dashboardLayoutEnforcementStrict")}</option>
+              <option value="moderate">{t("settings.dashboardLayoutEnforcementModerate")}</option>
+              <option value="low">{t("settings.dashboardLayoutEnforcementLow")}</option>
+            </select>
+            <small className="field-hint">{t("settings.dashboardLayoutEnforcementHint")}</small>
+          </label>
         </div>
         <div className="settings-toggle-list">
           <label

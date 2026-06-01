@@ -1,4 +1,4 @@
-import type { AccentName, IconName } from "./modules/dashboard/types";
+import type { AccentName, IconName, WidgetLayoutEnforcement } from "./modules/dashboard/types";
 
 export type ConnectionType =
   | "local"
@@ -265,6 +265,18 @@ export interface DashboardSettings {
    * local dynamic background. Existing Views are unchanged.
    */
   useRandomDynamicBackground: boolean;
+  /**
+   * How strictly the script-widget iframe forces AI-created layout to fill its
+   * frame. Applied live at render time inside the iframe (`buildSrcdoc`), so
+   * changing it re-lays-out existing widgets without regenerating them.
+   * - `strict`  — #root acts as the widget shell: its outermost content is
+   *   forced to fill the surface, neutralizing centered mini-cards and
+   *   shrink-to-content wrappers (the dominant "messy layout" failure mode).
+   * - `moderate` — the historical behavior; the widget owns its own fill.
+   * - `low`     — maximum authoring freedom; content may size to its natural
+   *   box and overflow the frame.
+   */
+  widgetLayoutEnforcement: WidgetLayoutEnforcement;
 }
 
 export interface PreparedAppLauncherEntry {

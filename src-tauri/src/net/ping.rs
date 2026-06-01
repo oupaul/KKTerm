@@ -164,7 +164,7 @@ mod backend {
         match pinger.ping(PingSequence(0), &payload).await {
             Ok((IcmpPacket::V4(p), rtt)) => IcmpOutcome::Ok {
                 rtt_ms: rtt.as_millis(),
-                ttl: Some(p.get_ttl()),
+                ttl: p.get_ttl(),
                 from_ip: Some(p.get_source().to_string()),
             },
             Ok((IcmpPacket::V6(p), rtt)) => IcmpOutcome::Ok {

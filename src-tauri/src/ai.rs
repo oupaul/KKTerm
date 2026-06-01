@@ -28,7 +28,8 @@ use prompt_contracts::{
     DASHBOARD_WIDGET_ANIMATION_CONTRACT, DASHBOARD_WIDGET_ARCHETYPE_CONTRACT,
     DASHBOARD_WIDGET_COMPLETION_CONTRACT, DASHBOARD_WIDGET_COPY_CONTRACT,
     DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT, DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT,
-    DASHBOARD_WIDGET_DOM_CONTRACT, DASHBOARD_WIDGET_LAYOUT_CONTRACT,
+    DASHBOARD_WIDGET_DOM_CONTRACT, DASHBOARD_WIDGET_HEALTH_CONTRACT,
+    DASHBOARD_WIDGET_LAYOUT_CONTRACT,
     DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT, DASHBOARD_WIDGET_PHYSICS_CONTRACT,
     DASHBOARD_WIDGET_SURFACE_CONTRACT, DASHBOARD_WIDGET_UTF8_CONTRACT,
     DASHBOARD_WIDGET_VISUAL_CONTRACT,
@@ -96,6 +97,58 @@ pub struct AssistantLiveToolBridge {
 
 pub struct AssistantToolApprovalBridge {
     pending: Mutex<HashMap<String, oneshot::Sender<bool>>>,
+}
+
+/// Latest runtime-health report for one script-widget instance, pushed from
+/// the frontend `ScriptWidgetHost` smoke test / watchdog. Lets the assistant
+/// close the create -> verify -> self-fix loop in the same turn instead of
+/// waiting for the next passive page-context refresh.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetHealthReport {
+    /// One of `pending`, `ready`, `error`, `timeout`, `stalled`.
+    pub state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    pub reported_at_ms: u128,
+}
+
+/// In-memory registry of the latest health report per widget instance id.
+/// Not persisted: it only mirrors live frontend mount state for the assistant
+/// tool loop, so a restart simply starts empty.
+#[derive(Default)]
+pub struct WidgetHealthRegistry {
+    inner: Mutex<HashMap<String, WidgetHealthReport>>,
+}
+
+impl WidgetHealthRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn report(&self, instance_id: String, state: String, error: Option<String>) {
+        let reported_at_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        if let Ok(mut map) = self.inner.lock() {
+            map.insert(
+                instance_id,
+                WidgetHealthReport {
+                    state,
+                    error,
+                    reported_at_ms,
+                },
+            );
+        }
+    }
+
+    pub fn get(&self, instance_id: &str) -> Option<WidgetHealthReport> {
+        self.inner
+            .lock()
+            .ok()
+            .and_then(|map| map.get(instance_id).cloned())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -3695,6 +3748,11 @@ fn ai_tool_definitions_with_skills(
             .function
             .description
             .push_str(DASHBOARD_WIDGET_DOM_CONTRACT);
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
+            .push_str(DASHBOARD_WIDGET_HEALTH_CONTRACT);
         tools.push(create_widget_tool.strict());
         tools.push(tool_definition(
             "dashboard_create_custom_widget",
@@ -3710,6 +3768,11 @@ fn ai_tool_definitions_with_skills(
             "dashboard_remove_custom_widget",
             "Remove an AI Created Widget definition. Set forceDeleteInstances to also remove all its placed instances.",
             json!({"type":"object","properties":{"id":{"type":"string"},"forceDeleteInstances":{"type":"boolean"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "dashboard_check_widget_health",
+            "Confirm a script widget actually mounted after you created or updated it. Returns state: ready (loaded with no top-level runtime error), error (threw at runtime; includes the error text and source line/column), timeout (never signaled ready within the smoke-test window), stalled (an animation-lifecycle loop stopped ticking), or pending (still mounting). After dashboard_create_widget or dashboard_update_custom_widget, call this once with the returned instanceId; if state is error, timeout, or stalled, read the error, fix the widget source, and call dashboard_update_custom_widget with a body patch. Make at most one automatic self-fix attempt, then re-check; if it still fails, tell the user what broke instead of looping. A pending result is not a failure - the widget was placed and may still be painting.",
+            json!({"type":"object","properties":{"instanceId":{"type":"string"}},"required":["instanceId"]}),
         ));
         tools.push(tool_definition(
             "dashboard_reset",
@@ -4485,6 +4548,9 @@ async fn run_ai_tool(
         "performance_counters" if tool_settings.performance_counters() => {
             performance_counters_tool(app)
         }
+        "dashboard_check_widget_health" if tool_settings.dashboard() => {
+            dashboard_check_widget_health_tool(app, args).await
+        }
         name if tool_settings.dashboard() && name.starts_with("dashboard_") => {
             dashboard_tool(app, name, args)
         }
@@ -4572,7 +4638,9 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
         || (tool_name.starts_with("dashboard_")
             && !matches!(
                 tool_name,
-                "dashboard_load_state" | "dashboard_read_widget_source"
+                "dashboard_load_state"
+                    | "dashboard_read_widget_source"
+                    | "dashboard_check_widget_health"
             ))
         || matches!(
             tool_name,
@@ -4671,6 +4739,63 @@ pub(crate) async fn live_session_tool(app: &tauri::AppHandle, name: &str, args: 
         Some(bridge) => bridge.request(app, name, args).await,
         None => json!({"ok": false, "error": "live session tools are unavailable"}).to_string(),
     }
+}
+
+/// Longest the health-check tool waits for the frontend to mount the widget
+/// and report a terminal state. Covers the dashboard-changed reload, library
+/// loading, iframe paint, and the 2 s smoke-test window with headroom.
+const WIDGET_HEALTH_WAIT_MS: u64 = 4000;
+/// Poll cadence while waiting for a terminal health report.
+const WIDGET_HEALTH_POLL_MS: u64 = 120;
+
+/// AI tool: confirm a just-created/updated script widget actually mounted.
+/// Waits (bounded) for the frontend smoke test to report a terminal state so
+/// the assistant can self-fix a silently-broken widget in the same turn. It
+/// does not touch SQLite, so it runs outside `with_connection_infallible` and
+/// never holds a DB connection while waiting.
+pub(crate) async fn dashboard_check_widget_health_tool(
+    app: &tauri::AppHandle,
+    args: Value,
+) -> String {
+    let instance_id = arg_string(&args, "instanceId");
+    if instance_id.is_empty() {
+        return json!({
+            "ok": false,
+            "reason": "dashboard_check_widget_health requires instanceId",
+        })
+        .to_string();
+    }
+    let registry = app.state::<WidgetHealthRegistry>();
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_millis(WIDGET_HEALTH_WAIT_MS);
+    loop {
+        if let Some(report) = registry.get(&instance_id) {
+            // `pending` means the iframe is still mounting; keep waiting for a
+            // terminal signal. Any other state is authoritative.
+            if report.state != "pending" {
+                return json!({
+                    "ok": true,
+                    "instanceId": instance_id,
+                    "state": report.state,
+                    "error": report.error,
+                    "healthy": report.state == "ready",
+                })
+                .to_string();
+            }
+        }
+        if std::time::Instant::now() >= deadline {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(WIDGET_HEALTH_POLL_MS)).await;
+    }
+    json!({
+        "ok": true,
+        "instanceId": instance_id,
+        "state": "pending",
+        "healthy": false,
+        "note": "No runtime health reported yet; the widget may still be mounting. If you just created it, the placement still succeeded.",
+    })
+    .to_string()
 }
 
 pub(crate) fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) -> String {
@@ -9471,6 +9596,56 @@ mod tests {
         assert!(system_content.contains("Widget design preflight"));
         assert!(system_content.contains("selected direction"));
         assert!(system_content.contains("self-critique"));
+    }
+
+    #[test]
+    fn widget_health_registry_round_trips_latest_report() {
+        let registry = WidgetHealthRegistry::new();
+        assert!(registry.get("inst-1").is_none());
+
+        registry.report("inst-1".to_string(), "pending".to_string(), None);
+        assert_eq!(registry.get("inst-1").unwrap().state, "pending");
+
+        // A later terminal report overwrites the pending one.
+        registry.report(
+            "inst-1".to_string(),
+            "error".to_string(),
+            Some("boom at line 3".to_string()),
+        );
+        let report = registry.get("inst-1").unwrap();
+        assert_eq!(report.state, "error");
+        assert_eq!(report.error.as_deref(), Some("boom at line 3"));
+    }
+
+    #[test]
+    fn check_widget_health_tool_is_read_only_and_exposed() {
+        // Read-only: must not demand allow-all approval, unlike mutating
+        // dashboard tools, so the create -> verify loop runs automatically.
+        assert!(!tool_requires_allow_all("dashboard_check_widget_health"));
+        assert!(tool_requires_allow_all("dashboard_create_widget"));
+
+        let settings: AiAssistantToolSettings = serde_json::from_value(json!({
+            "dashboard": true
+        }))
+        .expect("tool settings deserialize");
+        let tools = ai_tool_definitions(&settings);
+        assert!(
+            tools
+                .iter()
+                .any(|tool| tool.function.name == "dashboard_check_widget_health"),
+            "health-check tool is registered when dashboard tools are enabled"
+        );
+        let create_tool = tools
+            .iter()
+            .find(|tool| tool.function.name == "dashboard_create_widget")
+            .expect("dashboard create widget tool exists");
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("dashboard_check_widget_health"),
+            "create-widget contract points the model at the health check"
+        );
     }
 
     #[test]

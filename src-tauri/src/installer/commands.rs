@@ -1663,6 +1663,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn web_ui_command_line_quotes_windows_paths_with_spaces() {
         let affordance = WebUiAffordance {
             program:

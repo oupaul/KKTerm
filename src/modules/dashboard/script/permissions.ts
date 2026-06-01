@@ -1,4 +1,4 @@
-import type { ScriptBody } from "../types";
+import type { ScriptBody, WidgetLayoutEnforcement } from "../types";
 import type { DashboardVisualContext } from "../visualContext";
 
 export interface ResolvedWidgetLibrary {
@@ -41,6 +41,36 @@ export const DEFAULT_SCRIPT_WIDGET_THEME: ScriptWidgetTheme = {
   accentSoft: "rgba(37, 99, 235, 0.12)",
   visualContext: DEFAULT_VISUAL_CONTEXT,
 };
+
+/**
+ * Render-time layout enforcement applied to the script-widget `#root` element.
+ * This is the structural backstop behind the (static) AI surface/layout
+ * guidance: rather than trusting the model to fill the frame, the iframe CSS
+ * makes `#root` behave according to the user's chosen enforcement level.
+ *
+ * - `strict`   — `#root` acts as the widget shell. Its outermost content is
+ *   forced to fill the surface (flex column, children grow) and the common
+ *   shrink failures are neutralized on the outermost child (`max-width`,
+ *   auto-centering margins). Kills the "small centered card in a big empty
+ *   frame" look without needing to know the widget archetype.
+ * - `moderate` — historical behavior; `#root` is a 100% scroll box and the
+ *   widget is expected (via guidance) but not forced to fill it.
+ * - `low`      — maximum freedom; content may size to its natural box and
+ *   overflow the frame.
+ */
+export function layoutEnforcementCss(enforcement: WidgetLayoutEnforcement): string {
+  if (enforcement === "strict") {
+    return `
+    #root { display: flex; flex-direction: column; }
+    #root > * { flex: 1 1 auto; min-height: 0; min-width: 0; }
+    #root > * { max-width: none; margin-left: 0; margin-right: 0; }`;
+  }
+  if (enforcement === "low") {
+    return `
+    #root { height: auto; min-height: 100%; overflow: visible; }`;
+  }
+  return "";
+}
 
 export function buildCsp(perm: ScriptBody["permissions"]): string {
   const connect = perm.network ? "*" : "'none'";
@@ -169,6 +199,7 @@ export function buildSrcdoc(
   libraries: ResolvedWidgetLibrary[] = [],
   theme: ScriptWidgetTheme = DEFAULT_SCRIPT_WIDGET_THEME,
   allowNetworkTools = false,
+  enforcement: WidgetLayoutEnforcement = "moderate",
 ): string {
   const csp = buildCsp(body.permissions);
   const shim = body.htmlShim?.trim().length ? body.htmlShim : '<div id="root"></div>';
@@ -359,6 +390,7 @@ export function buildSrcdoc(
       font-weight: 700;
     }
     .kk-widget-error { color: #b00; white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; }
+${layoutEnforcementCss(enforcement)}
   </style>
 </head><body>
   ${shim}

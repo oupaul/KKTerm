@@ -721,6 +721,19 @@ fn update_dashboard_settings(
     storage.update_dashboard_settings(request)
 }
 
+/// Frontend -> backend push of a script widget's latest runtime-health state
+/// (from `ScriptWidgetHost`'s smoke test / watchdog) so the assistant's
+/// `dashboard_check_widget_health` tool can read it in the same turn.
+#[tauri::command]
+fn dashboard_report_widget_health(
+    registry: tauri::State<'_, ai::WidgetHealthRegistry>,
+    instance_id: String,
+    state: String,
+    error: Option<String>,
+) {
+    registry.report(instance_id, state, error);
+}
+
 #[tauri::command]
 fn prepare_app_launcher_entry(
     request: app_launcher::PrepareAppLauncherEntryRequest,
@@ -2626,6 +2639,7 @@ pub fn run() {
             app.manage(secrets::Secrets::new());
             app.manage(ai::AssistantLiveToolBridge::new());
             app.manage(ai::AssistantToolApprovalBridge::new());
+            app.manage(ai::WidgetHealthRegistry::new());
             app.manage(sessions::SessionManager::new());
             app.manage(sftp::SftpSessionManager::new());
             app.manage(ftp::FtpSessionManager::new());
@@ -2713,6 +2727,7 @@ pub fn run() {
             update_app_launcher_settings,
             get_dashboard_settings,
             update_dashboard_settings,
+            dashboard_report_widget_health,
             prepare_app_launcher_entry,
             launch_app_launcher_entry,
             import_settings_database,

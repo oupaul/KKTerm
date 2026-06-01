@@ -55,6 +55,7 @@ export const defaultDashboardSettings: DashboardSettings = {
   maxActiveScriptWidgets: MAX_ACTIVE_SCRIPT_WIDGETS_DEFAULT,
   allowWidgetNetworkTools: true,
   useRandomDynamicBackground: false,
+  widgetLayoutEnforcement: "strict",
 };
 
 export const defaultTerminalSettings: TerminalSettings = {

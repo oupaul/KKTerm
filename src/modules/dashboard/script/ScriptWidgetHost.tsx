@@ -183,12 +183,16 @@ export function ScriptWidgetHost({
   const visibleRef = useRef<boolean>(true);
   const updateInstance = useDashboardStore((s) => s.updateInstance);
   const setWidgetHealth = useDashboardStore((s) => s.setWidgetHealth);
+  const widgetHealth = useDashboardStore((s) => s.widgetHealth[instance.id]);
   const views = useDashboardStore((s) => s.views);
   const maxActiveScriptWidgets = useWorkspaceStore(
     (s) => s.dashboardSettings.maxActiveScriptWidgets,
   );
   const allowWidgetNetworkTools = useWorkspaceStore(
     (s) => s.dashboardSettings.allowWidgetNetworkTools,
+  );
+  const widgetLayoutEnforcement = useWorkspaceStore(
+    (s) => s.dashboardSettings.widgetLayoutEnforcement,
   );
   const { key: reloadKey } = useScriptReloadHandle();
   const [capped, setCapped] = useState(false);
@@ -337,12 +341,32 @@ export function ScriptWidgetHost({
     return () => window.clearInterval(interval);
   }, [instance.id, capped, libraries, parsed, reloadKey, setWidgetHealth]);
 
+  // Mirror this widget's latest runtime-health state to the backend so the
+  // assistant's dashboard_check_widget_health tool can read it in the same
+  // turn it created the widget. Best-effort: outside the Tauri runtime the
+  // invoke rejects and is swallowed.
+  useEffect(() => {
+    if (!widgetHealth) return;
+    void invokeCommand("dashboard_report_widget_health", {
+      instanceId: instance.id,
+      state: widgetHealth.state,
+      error: widgetHealth.state === "error" ? widgetHealth.error : null,
+    }).catch(() => {});
+  }, [instance.id, widgetHealth]);
+
   const srcdoc = useMemo(
     () =>
       parsed && libraries
-        ? buildSrcdoc(parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools)
+        ? buildSrcdoc(
+            parsed,
+            settingsValuesJson,
+            libraries,
+            scriptTheme,
+            allowWidgetNetworkTools,
+            widgetLayoutEnforcement,
+          )
         : "",
-    [parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools],
+    [parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools, widgetLayoutEnforcement],
   );
   const canUseNetworkTools = parsed?.permissions.networkTools === true && allowWidgetNetworkTools;
 
