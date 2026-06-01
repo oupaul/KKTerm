@@ -30,16 +30,19 @@ pub const PROGRESS_EVENT: &str = "installer://progress";
 pub enum ProgressEvent {
     /// Declared step list for the upcoming install/uninstall. Emitted once
     /// before any `StepStarted`. UI renders all steps as `pending`.
+    #[allow(dead_code)]
     Plan {
         tool_id: String,
         steps: Vec<PlanStep>,
     },
     /// Stepper transitions. The active step is the most recent
     /// `StepStarted` that has not been matched by a `StepFinished`.
+    #[allow(dead_code)]
     StepStarted {
         tool_id: String,
         step_id: String,
     },
+    #[allow(dead_code)]
     StepFinished {
         tool_id: String,
         step_id: String,

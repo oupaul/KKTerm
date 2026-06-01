@@ -74,14 +74,3 @@ pub fn record_latest_version(
         Ok(())
     })
 }
-
-pub fn delete(storage: &Storage, tool_id: &str) -> Result<(), String> {
-    storage.with_connection(|conn| {
-        conn.execute(
-            "DELETE FROM installer_tool_state WHERE tool_id = ?1",
-            params![tool_id],
-        )
-        .map_err(|e| e.to_string())?;
-        Ok(())
-    })
-}
