@@ -62,7 +62,7 @@ Fields:
 - **Canvas opacity**: `dashboard.canvasOpacity` — slider (0-100) that fades the Widget Instance body area only, leaving the title bar fully opaque. Default 70% for the built-in App Launcher and Connection widgets, 100% otherwise; visual effect is applied on the panel preset's `.dw-body`.
 - **Accent**: `dashboard.accent`, default `dashboard.accentDefault`.
 - **Icon**: `dashboard.icon`.
-- **Title**: `dashboard.titleLabel`, placeholder `dashboard.titlePlaceholder`. Untitled widgets show `dashboard.untitledWidget`.
+- **Title**: `dashboard.titleLabel`, placeholder `dashboard.titlePlaceholder`. Untitled widgets show `dashboard.untitledWidget`. On the panel and hero presets the title text in the Widget Instance title bar is also inline-editable: double-click it (tooltip `dashboard.renameTitleHint`) to edit, Enter or blur to commit, Escape to cancel; committing an empty value clears the custom title and reverts to the default. This sets the same `customTitle` field as this Title field.
 - **Advanced**: `dashboard.advanced`.
 
 Presets are CSS wrappers that read the Instance's `--w-accent` / `--w-accent-soft` variables — presets do not encode their own palette.

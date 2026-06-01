@@ -69,6 +69,7 @@
     "icon": "Icon",
     "titleLabel": "Title",
     "titlePlaceholder": "Custom title…",
+    "renameTitleHint": "Double-click to rename",
     "advanced": "Advanced",
     "changeBackground": "Change Background…",
     "backgroundModeDefault": "Theme Default",

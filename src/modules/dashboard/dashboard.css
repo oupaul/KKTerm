@@ -1506,6 +1506,20 @@ button.dashboard-pill-dot:focus-visible {
   text-shadow: 0 1px 1px rgb(0 0 0 / 22%);
 }
 
+/* Inline title editor opened by double-clicking a panel/hero title. Inherits the
+   title typography via the shared .dw-title / .dw-hero-title class. */
+.dw-title-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 1px 4px;
+  color: inherit;
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid color-mix(in srgb, var(--w-accent) 55%, transparent);
+  border-radius: 4px;
+  outline: none;
+  text-shadow: none;
+}
+
 .dw-icon {
   display: inline-flex;
   align-items: center;

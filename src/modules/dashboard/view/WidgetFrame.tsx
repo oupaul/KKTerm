@@ -35,6 +35,7 @@ export function WidgetFrame({
 }: WidgetFrameProps) {
   const { t } = useTranslation();
   const editMode = useDashboardStore((s) => s.editMode);
+  const updateInstance = useDashboardStore((s) => s.updateInstance);
   const customWidgets = useDashboardStore((s) => s.customWidgets);
   const agentCreatedRevealInstanceIds = useDashboardStore((s) => s.agentCreatedRevealInstanceIds);
   const clearAgentCreatedReveal = useDashboardStore((s) => s.clearAgentCreatedReveal);
@@ -157,6 +158,7 @@ export function WidgetFrame({
         editMode={editMode}
         glass={instance.glass}
         hideTitle={instance.hideTitle}
+        onTitleCommit={(next) => { void updateInstance(instance.id, { customTitle: next }); }}
       />
     </div>
   );
