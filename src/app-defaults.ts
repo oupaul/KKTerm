@@ -37,6 +37,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   statusBarMonitorEnabled: true,
   statusBarMonitorIntervalSeconds: 5,
   advancedDebuggingEnabled: false,
+  rdpWebviewStability: false,
   lastBackupAt: null,
 };
 

@@ -258,6 +258,8 @@ pub struct GeneralSettings {
     #[serde(default)]
     advanced_debugging_enabled: bool,
     #[serde(default)]
+    rdp_webview_stability: bool,
+    #[serde(default)]
     last_backup_at: Option<String>,
 }
 
@@ -284,6 +286,10 @@ impl GeneralSettings {
 
     pub(crate) fn advanced_debugging_enabled(&self) -> bool {
         self.advanced_debugging_enabled
+    }
+
+    pub(crate) fn rdp_webview_stability(&self) -> bool {
+        self.rdp_webview_stability
     }
 }
 
@@ -4489,6 +4495,7 @@ fn default_general_settings() -> GeneralSettings {
         status_bar_monitor_enabled: default_status_bar_monitor_enabled(),
         status_bar_monitor_interval_seconds: default_status_bar_monitor_interval_seconds(),
         advanced_debugging_enabled: false,
+        rdp_webview_stability: false,
         last_backup_at: None,
     }
 }
@@ -6590,6 +6597,7 @@ mod tests {
         assert!(defaults.status_bar_monitor_enabled);
         assert_eq!(defaults.status_bar_monitor_interval_seconds, 5);
         assert!(!defaults.advanced_debugging_enabled);
+        assert!(!defaults.rdp_webview_stability);
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
@@ -6615,6 +6623,7 @@ mod tests {
                 status_bar_monitor_enabled: false,
                 status_bar_monitor_interval_seconds: 30,
                 advanced_debugging_enabled: true,
+                rdp_webview_stability: true,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -6637,6 +6646,7 @@ mod tests {
         assert!(!updated.status_bar_monitor_enabled);
         assert_eq!(updated.status_bar_monitor_interval_seconds, 30);
         assert!(updated.advanced_debugging_enabled);
+        assert!(updated.rdp_webview_stability);
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
@@ -6656,6 +6666,7 @@ mod tests {
         assert!(!reloaded.status_bar_monitor_enabled);
         assert_eq!(reloaded.status_bar_monitor_interval_seconds, 30);
         assert!(reloaded.advanced_debugging_enabled);
+        assert!(reloaded.rdp_webview_stability);
         assert!(reloaded.last_backup_at.is_none());
     }
 
@@ -6897,6 +6908,7 @@ mod tests {
                 status_bar_monitor_enabled: false,
                 status_bar_monitor_interval_seconds: 15,
                 advanced_debugging_enabled: true,
+                rdp_webview_stability: false,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -6921,6 +6933,7 @@ mod tests {
                 status_bar_monitor_enabled: true,
                 status_bar_monitor_interval_seconds: 5,
                 advanced_debugging_enabled: false,
+                rdp_webview_stability: false,
                 last_backup_at: None,
             })
             .expect("general settings changes after export");

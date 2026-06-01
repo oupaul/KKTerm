@@ -551,6 +551,18 @@ export function GeneralSettings() {
               <small>{t("settings.advancedDebuggingHint")}</small>
             </span>
           </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.rdpWebviewStability}
+              onChange={(checked) =>
+                setDraft((s) => ({ ...s, rdpWebviewStability: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.rdpWebviewStability")}</strong>
+              <small>{t("settings.rdpWebviewStabilityHint")}</small>
+            </span>
+          </label>
         </div>
       </fieldset>
 

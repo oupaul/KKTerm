@@ -10,17 +10,7 @@
                   "frontendDist":  "../dist"
               },
     "app":  {
-                "windows":  [
-                                {
-                                    "title":  "KKTerm",
-                                    "width":  1360,
-                                    "height":  860,
-                                    "minWidth":  1120,
-                                    "minHeight":  720,
-                                    "decorations":  false,
-                                    "dragDropEnabled":  false
-                                }
-                            ],
+                "windows":  [],
                 "security":  {
                                  "csp":  null,
                                  "assetProtocol":  {
