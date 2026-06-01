@@ -1,11 +1,9 @@
 import {
   DYNAMIC_BACKGROUNDS,
+  type DynamicBackgroundId,
   getDashboardDynamicBackgroundHostClassName,
   isDynamicBackgroundId,
 } from "./dynamicBackgrounds";
-
-const dynamicBackgroundCount: 21 = DYNAMIC_BACKGROUNDS.length as 21;
-void dynamicBackgroundCount;
 
 const expectedIds = [
   "aurora",
@@ -29,7 +27,12 @@ const expectedIds = [
   "taipei101",
   "thunderstorm",
   "confetti",
-] as const;
+  "particleCursor",
+] as const satisfies readonly DynamicBackgroundId[];
+
+if (DYNAMIC_BACKGROUNDS.length !== expectedIds.length) {
+  throw new Error("Dynamic Dashboard background registry count should match the expected id list.");
+}
 
 for (const id of expectedIds) {
   if (!isDynamicBackgroundId(id)) {

@@ -2173,6 +2173,210 @@ function RicefieldBg() {
   return <canvas ref={ref} className="dw-dynamic-bg-canvas" />;
 }
 
+interface ParticleCursorPoint {
+  x: number;
+  y: number;
+  ox: number;
+  oy: number;
+  dist: number;
+  phase: number;
+  scale: number;
+  opacity: number;
+  lightness: number;
+}
+
+function useParticleCursorAnim() {
+  const active = useDashboardAnimationActive();
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  const activeRef = useRef(active);
+  const runtimeRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  useEffect(() => {
+    const canvasElement = ref.current;
+    const parentElement = canvasElement?.parentElement;
+    if (!canvasElement || !parentElement) return;
+    const context = canvasElement.getContext("2d");
+    if (!context) return;
+
+    const canvas = canvasElement;
+    const parent = parentElement;
+    const ctx = context;
+    const rows = 13;
+    const center = (rows - 1) / 2;
+    const maxGridDist = Math.hypot(center, center);
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    let raf = 0;
+    let width = 0;
+    let height = 0;
+    let targetX = 0;
+    let targetY = 0;
+    let cursorX = 0;
+    let cursorY = 0;
+    let elapsed = 0;
+    let lastNow = 0;
+    let idleUntil = 0;
+    let pulseStart = -10;
+    let points: ParticleCursorPoint[] = [];
+
+    function resize() {
+      const rect = parent.getBoundingClientRect();
+      width = Math.max(2, Math.floor(rect.width));
+      height = Math.max(2, Math.floor(rect.height));
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const spacing = Math.max(7, Math.min(16, Math.min(width, height) / 54));
+      targetX = cursorX = width / 2;
+      targetY = cursorY = height / 2;
+      points = [];
+      for (let row = 0; row < rows; row += 1) {
+        for (let col = 0; col < rows; col += 1) {
+          const gx = col - center;
+          const gy = row - center;
+          const dist = Math.hypot(gx, gy);
+          const k = 1 - dist / maxGridDist;
+          points.push({
+            x: cursorX + gx * spacing,
+            y: cursorY + gy * spacing,
+            ox: gx * spacing,
+            oy: gy * spacing,
+            dist,
+            phase: Math.random() * Math.PI * 2,
+            scale: 2 + k * 3,
+            opacity: 0.1 + k * 0.9,
+            lightness: 20 + k * 60,
+          });
+        }
+      }
+      points.sort((a, b) => b.dist - a.dist);
+      pulseStart = elapsed;
+    }
+
+    function nudgePulse() {
+      if (elapsed - pulseStart > 0.75) {
+        pulseStart = elapsed;
+      }
+    }
+
+    function followPointer(event: PointerEvent) {
+      const rect = parent.getBoundingClientRect();
+      targetX = Math.max(0, Math.min(width, event.clientX - rect.left));
+      targetY = Math.max(0, Math.min(height, event.clientY - rect.top));
+      idleUntil = performance.now() + 1500;
+      nudgePulse();
+    }
+
+    function draw(now: number) {
+      const dt = lastNow ? Math.min((now - lastNow) / 1000, 0.05) : 0;
+      lastNow = now;
+      elapsed += dt;
+
+      if (performance.now() > idleUntil) {
+        targetX = width * (0.5 + Math.sin(elapsed * 0.9) * 0.28 + Math.sin(elapsed * 0.17) * 0.12);
+        targetY = height * (0.5 + Math.cos(elapsed * 0.72) * 0.24 + Math.sin(elapsed * 0.31) * 0.10);
+        if (elapsed - pulseStart > 3.2) pulseStart = elapsed;
+      }
+
+      cursorX += (targetX - cursorX) * Math.min(1, dt * 4.8);
+      cursorY += (targetY - cursorY) * Math.min(1, dt * 4.8);
+
+      const bg = ctx.createRadialGradient(cursorX, cursorY, 0, cursorX, cursorY, Math.max(width, height) * 0.85);
+      bg.addColorStop(0, "rgba(126, 24, 18, 0.62)");
+      bg.addColorStop(0.38, "rgba(48, 12, 18, 0.86)");
+      bg.addColorStop(1, "rgba(8, 8, 14, 1)");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const vignette = ctx.createLinearGradient(0, 0, width, height);
+      vignette.addColorStop(0, "rgba(255, 160, 120, 0.12)");
+      vignette.addColorStop(0.5, "rgba(255, 80, 68, 0)");
+      vignette.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = "lighter";
+      const pulseAge = elapsed - pulseStart;
+      for (const point of points) {
+        const lag = 0.05 + point.dist * 0.018;
+        const follow = 1 - Math.exp(-dt / lag);
+        const wobble = Math.sin(elapsed * 1.8 + point.phase) * (1.4 + point.dist * 0.12);
+        const wantedX = cursorX + point.ox + Math.cos(point.phase) * wobble;
+        const wantedY = cursorY + point.oy + Math.sin(point.phase) * wobble;
+        point.x += (wantedX - point.x) * follow;
+        point.y += (wantedY - point.y) * follow;
+
+        const wave = Math.max(0, 1 - Math.abs(pulseAge - point.dist * 0.055) / 0.16);
+        const scale = point.scale + wave * 2.2;
+        const alpha = Math.min(1, point.opacity + wave * 0.65);
+        const radius = scale * 1.55;
+        const glow = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius * 4.6);
+        glow.addColorStop(0, `hsla(4, 78%, ${Math.min(86, point.lightness + wave * 18)}%, ${alpha})`);
+        glow.addColorStop(0.42, `hsla(4, 72%, ${point.lightness}%, ${alpha * 0.42})`);
+        glow.addColorStop(1, "hsla(4, 70%, 20%, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius * 4.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `hsla(4, 74%, ${Math.min(88, point.lightness + wave * 20)}%, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+
+      raf = activeRef.current ? requestAnimationFrame(draw) : 0;
+    }
+
+    function start() {
+      if (raf || !activeRef.current) return;
+      lastNow = 0;
+      raf = requestAnimationFrame(draw);
+    }
+
+    function stop() {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      lastNow = 0;
+    }
+
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(parent);
+    resize();
+    document.addEventListener("pointermove", followPointer, { passive: true });
+    runtimeRef.current = { start, stop };
+    if (activeRef.current) start();
+
+    return () => {
+      stop();
+      resizeObserver.disconnect();
+      document.removeEventListener("pointermove", followPointer);
+      runtimeRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    activeRef.current = active;
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    if (active) runtime.start();
+    else runtime.stop();
+  }, [active]);
+
+  return ref;
+}
+
+function ParticleCursorBg() {
+  const ref = useParticleCursorAnim();
+  return <canvas ref={ref} className="dw-dynamic-bg-canvas dw-dynamic-bg-canvas-particle-cursor" />;
+}
+
 const DYNAMIC_BACKGROUND_COMPONENTS = {
   aurora: AuroraBg,
   clouds: CloudsBg,
@@ -2195,6 +2399,7 @@ const DYNAMIC_BACKGROUND_COMPONENTS = {
   taipei101: Taipei101Bg,
   thunderstorm: ThunderstormBg,
   confetti: ConfettiBg,
+  particleCursor: ParticleCursorBg,
 } satisfies Record<string, ComponentType>;
 
 export type DynamicBackgroundId = keyof typeof DYNAMIC_BACKGROUND_COMPONENTS;
@@ -2225,6 +2430,7 @@ export const DYNAMIC_BACKGROUNDS: readonly {
   { id: "taipei101", labelKey: "dashboard.dynamicBackgrounds.taipei101", mood: "erratic" },
   { id: "thunderstorm", labelKey: "dashboard.dynamicBackgrounds.thunderstorm", mood: "erratic" },
   { id: "confetti", labelKey: "dashboard.dynamicBackgrounds.confetti", mood: "erratic" },
+  { id: "particleCursor", labelKey: "dashboard.dynamicBackgrounds.particleCursor", mood: "erratic" },
 ];
 
 export function isDynamicBackgroundId(value: string): value is DynamicBackgroundId {

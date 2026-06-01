@@ -1041,6 +1041,10 @@ button.dashboard-pill-dot:focus-visible {
   background: #050a08;
 }
 
+.dw-dynamic-bg-canvas-particle-cursor {
+  background: #08080e;
+}
+
 .dw-bg-aurora {
   overflow: hidden;
   background: linear-gradient(180deg, #0b1023 0%, #131a36 60%, #0a0f24 100%);

@@ -151,6 +151,7 @@ pub const DYNAMIC_BACKGROUND_IDS: &[&str] = &[
     "taipei101",
     "thunderstorm",
     "confetti",
+    "particleCursor",
 ];
 
 pub const BACKGROUND_FITS: &[&str] = &["fill", "fit", "stretch", "tile", "center"];

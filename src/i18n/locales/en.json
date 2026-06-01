@@ -152,7 +152,8 @@
       "cyberpunk": "Cyberpunk",
       "taipei101": "Taipei 101",
       "thunderstorm": "Thunderstorm",
-      "confetti": "Confetti"
+      "confetti": "Confetti",
+      "particleCursor": "Particle Cursor"
     },
     "scriptNetwork": "Allow network",
     "scriptPollSeconds": "Poll interval (seconds)",
