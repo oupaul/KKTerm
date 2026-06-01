@@ -883,6 +883,10 @@ type CommandMap = {
     args: { request: DashboardSettings };
     result: DashboardSettings;
   };
+  dashboard_report_widget_health: {
+    args: { instanceId: string; state: string; error: string | null };
+    result: void;
+  };
   prepare_app_launcher_entry: {
     args: { request: { path: string } };
     result: PreparedAppLauncherEntry;

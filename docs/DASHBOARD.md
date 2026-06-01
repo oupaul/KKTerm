@@ -140,6 +140,7 @@ Each command is a thin handler over the storage layer with up-front validation:
 | `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` against the script body schema and optional `settingsSchemaJson` but does not place an instance. Successful assistant tool results are redacted to metadata. |
 | `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind and patched `settingsSchemaJson`. Successful assistant tool results are redacted to metadata. |
 | `dashboard_remove_custom_widget` | Requires `forceDeleteInstances` if instances reference the widget. |
+| `dashboard_check_widget_health` | Read-only AI tool. Returns the live runtime health (`ready` / `error` / `timeout` / `stalled` / `pending`, with error text) for one instance id, waiting up to ~4 s for the frontend smoke test to report. Exempt from allow-all approval so the create → verify → self-fix loop runs automatically. Backed by `WidgetHealthRegistry`, populated by the `dashboard_report_widget_health` command (frontend → backend). |
 
 Rust validation invariants:
 
@@ -315,7 +316,9 @@ When the Dashboard page is active, `onAssistantContextChange` includes a compact
 }
 ```
 
-The AI sees the current dashboard without an extra tool call. `unhealthyInstances` carries any script widget whose runtime `state` is `error`, `timeout`, or `stalled` — surfaced by `ScriptWidgetHost`'s smoke-test + motion-watchdog signals (`kk.ready`, `kk.runtimeError`, `kk.motionTick`). This closes the feedback loop: the assistant notices a widget it just authored has silently failed to mount, thrown at runtime, or stalled its animation, and can offer to fix it inside the same turn rather than waiting for the user to scroll over.
+The AI sees the current dashboard without an extra tool call. `unhealthyInstances` carries any script widget whose runtime `state` is `error`, `timeout`, or `stalled` — surfaced by `ScriptWidgetHost`'s smoke-test + motion-watchdog signals (`kk.ready`, `kk.runtimeError`, `kk.motionTick`). This is the *passive* feedback path: it shows up on the next page-context refresh.
+
+For *same-turn* self-correction there is an active path. `ScriptWidgetHost` mirrors each health transition to the backend (`dashboard_report_widget_health` → `WidgetHealthRegistry`), and the assistant calls the read-only `dashboard_check_widget_health` tool right after `dashboard_create_widget` / `dashboard_update_custom_widget`. That tool waits up to ~4 s for a terminal state and returns it (with error text and source line/column), so the assistant can fix a silently-broken widget inside the same turn rather than waiting for the user to scroll over. The `DASHBOARD_WIDGET_HEALTH_CONTRACT` instructs exactly one automatic self-fix attempt before yielding, so a persistently broken widget does not loop.
 
 Validation errors from Rust come back as structured `{ ok: false, reason, details }` shapes so the AI can self-correct on retry. For script bodies, syntactic errors include the parser's line and column mapped back to widget-source coordinates (the synthetic `(function(){ ... })()` wrapper line is subtracted).
 

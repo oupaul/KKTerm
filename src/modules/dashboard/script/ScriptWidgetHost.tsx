@@ -183,6 +183,7 @@ export function ScriptWidgetHost({
   const visibleRef = useRef<boolean>(true);
   const updateInstance = useDashboardStore((s) => s.updateInstance);
   const setWidgetHealth = useDashboardStore((s) => s.setWidgetHealth);
+  const widgetHealth = useDashboardStore((s) => s.widgetHealth[instance.id]);
   const views = useDashboardStore((s) => s.views);
   const maxActiveScriptWidgets = useWorkspaceStore(
     (s) => s.dashboardSettings.maxActiveScriptWidgets,
@@ -339,6 +340,19 @@ export function ScriptWidgetHost({
     }, SCRIPT_WIDGET_MOTION_POLL_MS);
     return () => window.clearInterval(interval);
   }, [instance.id, capped, libraries, parsed, reloadKey, setWidgetHealth]);
+
+  // Mirror this widget's latest runtime-health state to the backend so the
+  // assistant's dashboard_check_widget_health tool can read it in the same
+  // turn it created the widget. Best-effort: outside the Tauri runtime the
+  // invoke rejects and is swallowed.
+  useEffect(() => {
+    if (!widgetHealth) return;
+    void invokeCommand("dashboard_report_widget_health", {
+      instanceId: instance.id,
+      state: widgetHealth.state,
+      error: widgetHealth.state === "error" ? widgetHealth.error : null,
+    }).catch(() => {});
+  }, [instance.id, widgetHealth]);
 
   const srcdoc = useMemo(
     () =>
