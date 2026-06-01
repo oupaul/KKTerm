@@ -257,6 +257,9 @@ pub struct WatchdogReport {
     pub triggers: Vec<WatchdogTriggerEvent>,
     pub interventions: Vec<WatchdogInterventionRecord>,
     pub created_at: u64,
+    /// Total polls taken across the watchdog's life. Authoritative count that
+    /// does not roll off, unlike `ticks` which is ring-capped.
+    pub poll_count: u32,
 }
 
 /// One AI intervention sub-turn. Recorded by the frontend after the sub-turn

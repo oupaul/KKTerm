@@ -122,6 +122,7 @@ export interface WatchdogReport {
   triggers: WatchdogTriggerEvent[];
   interventions: WatchdogInterventionRecord[];
   createdAt: number;
+  pollCount: number;
 }
 
 /// Event payload from Rust `watchdog://event` channel.

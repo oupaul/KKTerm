@@ -281,7 +281,9 @@ export const useWatchdogStore = create<WatchdogStoreState>((set, get) => ({
       createdAt: report.createdAt,
       pollMs: report.config.pollMs,
       triggerCount: report.triggers.length,
-      pollCount: Math.max(existing?.pollCount ?? 0, report.ticks.length),
+      // Authoritative count from the backend — `ticks` is ring-capped at 200,
+      // so deriving the count from it would understate long-running watchdogs.
+      pollCount: Math.max(existing?.pollCount ?? 0, report.pollCount),
       lastValue: report.ticks[report.ticks.length - 1]?.value ?? null,
     };
     set((s) => ({

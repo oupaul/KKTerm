@@ -5,10 +5,10 @@
 // AI request, awaits the response, and posts the outcome back to Rust via
 // `watchdog_record_intervention`.
 //
-// Scope v1: text-only sub-turn — the AI sees the snapshot + goal and writes
-// a brief recommendation. True tool-using sub-turns with allowedTools
-// enforcement at the provider edge are a follow-up; the runtime allow-list
-// primitive `check_allowed_tool` already lives in Rust ready for that wiring.
+// The sub-turn is tool-using: the AI sees the snapshot + goal and may call the
+// watchdog's allowedTools. The Rust agent loop executes those tools (restricted
+// to allowedTools and pre-approved via the sessionAllow policy approved at
+// watchdog creation), then returns the final assistant text.
 
 import { invoke } from "@tauri-apps/api/core";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
@@ -102,10 +102,12 @@ async function invokeAiTurn(
       // 'chat' intent — we deliberately do NOT use 'watchdog' here because
       // that mode is for *creating* watchdogs, not running interventions.
       intent: "chat",
-      // No tools in v1 — the sub-turn is text-only. Setting false also
-      // sidesteps the global tool catalog so we don't accidentally expose
-      // tools outside the watchdog's allowedTools.
-      allowTools: false,
+      // Enable tools, but restrict them to the watchdog's allowedTools. The
+      // backend narrows the tool catalog to exactly this list and treats the
+      // listed tools as pre-approved (approved once at watchdog creation), so
+      // the unattended sub-turn can act without an approval modal.
+      allowTools: true,
+      allowedTools: payload.allowedTools,
       messages: [],
       systemContext,
     },
@@ -129,12 +131,13 @@ function buildSystemContext(
   return [
     `WATCHDOG INTERVENTION SUB-TURN.`,
     `Watchdog: "${watchdogName}" (id: hidden).`,
-    `You are responding to a triggered watchdog. This is NOT a chat with the user — it is an automated intervention.`,
-    `Hard rules: write a brief response (1–3 sentences). Do not ask questions. Do not propose tools you weren't given.`,
-    `Available actions in this version: text only — describe what *should* happen. Tool execution lands in a later release.`,
-    `If the situation is resolved (job finished, error cleared), include the literal phrase "WATCHDOG_DONE" in your response.`,
+    `You are responding to a triggered watchdog. This is NOT a chat with the user — it is an automated, unattended intervention. Nobody is watching to answer questions.`,
+    `Hard rules: act, don't ask. Do the minimum needed to advance the goal, then stop. Use ONLY the allowed tools below — no others are available.`,
+    `If you need a target pane or session id, call session_state first to discover it, then act. Keep any text you send to a terminal minimal and safe.`,
+    `When you are done, write a brief (1–2 sentence) summary of what you did.`,
+    `If the situation is fully resolved (job finished, error cleared, nothing left to do), include the literal phrase "WATCHDOG_DONE" in your summary so the watchdog can stop.`,
     `Goal: ${payload.goal}`,
-    `Allowed tools (reserved for the runtime; not callable from this sub-turn yet): ${payload.allowedTools.join(", ") || "(none)"}.`,
+    `Allowed tools: ${payload.allowedTools.join(", ") || "(none)"}.`,
   ].join("\n");
 }
 

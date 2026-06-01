@@ -98,11 +98,10 @@ pub fn new_watchdog_id() -> String {
     format!("wd-{ts}-{seq}")
 }
 
-/// Runtime allow-list check. Step 6's intervention runner calls this before
-/// every tool invocation. Centralized here (not inline) so the policy is
-/// independently testable and the same rule applies whether the call comes
-/// from the intervention sub-turn or a future debug/replay code path.
-#[allow(dead_code)] // wired by step 6 intervention runner
+/// Runtime allow-list check. `run_ai_tool` calls this to decide both whether a
+/// tool is offered to an intervention sub-turn and whether it is pre-approved.
+/// Centralized here (not inline) so the policy is independently testable and the
+/// same rule applies wherever it is consumed.
 pub fn check_allowed_tool(allowed: &[String], tool_name: &str) -> bool {
     allowed.iter().any(|t| t == tool_name)
 }

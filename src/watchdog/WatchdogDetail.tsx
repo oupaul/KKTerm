@@ -78,7 +78,7 @@ export function WatchdogDetail({ id, onClose }: { id: string; onClose: () => voi
         <Sparkline ticks={ticks ?? []} />
         <dl className="watchdog-detail-stats">
           <Stat label={t("watchdog.detail.elapsed")} value={formatElapsed(summary.createdAt)} />
-          <Stat label={t("watchdog.detail.nextCheck")} value={formatNextCheck(summary.state, summary.pollMs)} />
+          <Stat label={t("watchdog.detail.nextCheck")} value={formatNextCheck(summary.state, summary.pollMs, ticks ?? [])} />
           <Stat label={t("watchdog.detail.lastValue")} value={formatLastValue(summary.lastValue)} />
           <Stat label={t("watchdog.detail.polls")} value={String(summary.pollCount)} />
           <Stat label={t("watchdog.detail.triggers")} value={String(summary.triggerCount)} />
@@ -139,11 +139,16 @@ function formatElapsed(createdAt: number) {
   return formatDuration(Date.now() - createdAt);
 }
 
-function formatNextCheck(state: WatchdogState, pollMs: number) {
+function formatNextCheck(state: WatchdogState, pollMs: number, ticks: WatchdogTick[]) {
   if (isTerminalState(state)) {
     return "—";
   }
-  const lastPollAt = "lastPollAt" in state ? state.lastPollAt : Date.now();
+  // The `Running` state's `lastPollAt` is only stamped once at startup, so the
+  // last observed tick is the accurate anchor for the next poll. Fall back to
+  // the state field (then now) before any tick has arrived.
+  const lastTickAt = ticks.length > 0 ? ticks[ticks.length - 1].at : undefined;
+  const lastPollAt =
+    lastTickAt ?? ("lastPollAt" in state ? state.lastPollAt : Date.now());
   return formatDuration(Math.max(0, lastPollAt + pollMs - Date.now()));
 }
 

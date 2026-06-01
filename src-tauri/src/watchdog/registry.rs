@@ -193,6 +193,7 @@ impl WatchdogRegistry {
             triggers: entry.triggers.clone(),
             interventions: entry.interventions.clone(),
             created_at: entry.created_at,
+            poll_count: entry.poll_count,
         })
     }
 
@@ -329,6 +330,12 @@ struct LoopState {
     /// predicate is met, we don't fire a trigger. Set after an intervention
     /// records; cleared when `now_ms() >= until`.
     suppression_until: Option<u64>,
+    /// Set when a `Notify` watchdog has latched into `Triggered`. Notify
+    /// watchdogs have no intervention/suppression path to move them onward,
+    /// so without this they'd display `Triggered` forever. Cleared (and the
+    /// state returned to `Running`) on the first tick where the predicate is
+    /// no longer met.
+    triggered_sticky: bool,
     /// Mock-target only: incremented each poll.
     mock_counter: f64,
 }
@@ -352,6 +359,7 @@ async fn run_poll_loop(
         trigger_count: 0,
         condition_true_since: None,
         suppression_until: None,
+        triggered_sticky: false,
         mock_counter: 0.0,
     };
 
@@ -395,6 +403,13 @@ async fn run_poll_loop(
                     state.suppression_until = None;
                     transition_to_running(&registry, &app, &id, &state);
                 }
+                // A Notify watchdog that latched into Triggered returns to
+                // Running once the condition clears, so its state doesn't stay
+                // stuck at Triggered after the metric recovers.
+                if !predicate_met && state.triggered_sticky {
+                    state.triggered_sticky = false;
+                    transition_to_running(&registry, &app, &id, &state);
+                }
                 let trigger_fired = !in_suppression
                     && update_sustained_window(
                         &mut state,
@@ -411,6 +426,13 @@ async fn run_poll_loop(
                     }));
                     apply_triggered_state(&registry, &app, &id, &state);
 
+                    if matches!(config.action, WatchdogAction::Notify) {
+                        // Notify watchdogs have no intervention path to move
+                        // them on; latch so the loop returns them to Running
+                        // once the predicate clears.
+                        state.triggered_sticky = true;
+                    }
+
                     if let WatchdogAction::AiIntervene {
                         goal,
                         context_sources,
@@ -421,22 +443,9 @@ async fn run_poll_loop(
                     } = &config.action
                     {
                         let intervention_id = format!("int-{}-{}", id, now_ms());
-                        // Cap check happens BEFORE intervening — if we're
-                        // already at the cap (which can only mean a previous
-                        // intervention recorded but the loop hasn't seen the
-                        // next trigger yet), finalize as Error here.
-                        let already_at_cap = current_intervention_count(&registry, &id)
-                            >= *max_interventions;
-                        if already_at_cap {
-                            finalize(&registry, &app, &id, WatchdogState::Error {
-                                message: format!(
-                                    "Intervention cap ({}) reached. Review log.",
-                                    max_interventions
-                                ),
-                                finished_at: now_ms(),
-                            });
-                            return;
-                        }
+                        // The intervention cap is enforced after each record
+                        // (below). The loop only re-enters this block when
+                        // under the cap, so no pre-check is needed here.
 
                         // Snapshot the context the frontend will hand to the
                         // AI sub-turn. Kept compact — last 8 ticks plus the
@@ -470,12 +479,23 @@ async fn run_poll_loop(
                             "snapshot": snapshot,
                         }));
 
-                        // Park here until the frontend records the outcome
-                        // (timeout protects against a dead frontend).
-                        let signal = tokio::time::timeout(
-                            Duration::from_millis(INTERVENTION_TIMEOUT_MS),
-                            rx.recv(),
-                        ).await;
+                        // Park here until the frontend records the outcome.
+                        // A cancel must stay responsive while parked, and the
+                        // timeout protects against a dead frontend.
+                        let signal = tokio::select! {
+                            biased;
+                            _ = cancel.cancelled() => {
+                                clear_intervention_sender(&registry, &id);
+                                finalize(&registry, &app, &id, WatchdogState::Canceled {
+                                    finished_at: now_ms(),
+                                });
+                                return;
+                            }
+                            outcome = tokio::time::timeout(
+                                Duration::from_millis(INTERVENTION_TIMEOUT_MS),
+                                rx.recv(),
+                            ) => outcome,
+                        };
                         // Clear the sender slot regardless of outcome.
                         clear_intervention_sender(&registry, &id);
                         match signal {
@@ -493,9 +513,11 @@ async fn run_poll_loop(
                                 if current_intervention_count(&registry, &id)
                                     >= *max_interventions
                                 {
-                                    finalize(&registry, &app, &id, WatchdogState::Error {
-                                        message: format!(
-                                            "Intervention cap ({}) reached. Review log.",
+                                    // Exhausting the allotted interventions is
+                                    // a normal terminal outcome, not an error.
+                                    finalize(&registry, &app, &id, WatchdogState::Completed {
+                                        reason: format!(
+                                            "Intervention cap ({}) reached.",
                                             max_interventions
                                         ),
                                         finished_at: now_ms(),
@@ -504,10 +526,13 @@ async fn run_poll_loop(
                                 }
                                 // Enter suppression window. The next interval
                                 // tick will sample but predicate-met evaluation
-                                // is gated by `suppression_until`.
-                                state.suppression_until = Some(now_ms() + suppression_ms);
+                                // is gated by `suppression_until`. Compute the
+                                // deadline once so the emitted `until` matches
+                                // the loop's internal gate exactly.
+                                let until = now_ms() + suppression_ms;
+                                state.suppression_until = Some(until);
                                 let suppressed = WatchdogState::Suppressed {
-                                    until: now_ms() + suppression_ms,
+                                    until,
                                     intervention_count: current_intervention_count(&registry, &id),
                                 };
                                 write_state(&registry, &id, suppressed.clone());
@@ -887,6 +912,7 @@ mod tests {
             trigger_count: 0,
             condition_true_since: None,
             suppression_until: None,
+            triggered_sticky: false,
             mock_counter: 0.0,
         };
         assert!(!update_sustained_window(&mut state, true, Some(1_000_000)));
@@ -903,6 +929,7 @@ mod tests {
             trigger_count: 0,
             condition_true_since: None,
             suppression_until: None,
+            triggered_sticky: false,
             mock_counter: 0.0,
         };
         // Without sustained_for_ms, the first true tick is the rising edge.
@@ -921,6 +948,7 @@ mod tests {
             trigger_count: 1,
             condition_true_since: None,
             suppression_until: None,
+            triggered_sticky: false,
             mock_counter: 0.0,
         };
         assert!(stop_reached(&WatchdogStop::AfterFirstTrigger, &state, true).is_some());
@@ -935,6 +963,7 @@ mod tests {
             trigger_count: 0,
             condition_true_since: None,
             suppression_until: None,
+            triggered_sticky: false,
             mock_counter: 0.0,
         };
         assert!(stop_reached(&WatchdogStop::AfterPollCount { n: 10 }, &state, false).is_some());

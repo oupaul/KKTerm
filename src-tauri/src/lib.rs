@@ -1691,9 +1691,18 @@ fn resize_terminal(
 
 #[tauri::command]
 fn close_terminal_session(
+    app: tauri::AppHandle,
     sessions: tauri::State<'_, sessions::SessionManager>,
     session_id: String,
 ) -> Result<(), String> {
+    // Drop the watchdog activity-tracker entry so the per-session tail buffer
+    // doesn't leak across the app lifetime and a silence watchdog stops
+    // measuring against a session that no longer exists.
+    if let Some(tracker) =
+        app.try_state::<std::sync::Arc<watchdog::SessionActivityTracker>>()
+    {
+        tracker.forget(&session_id);
+    }
     sessions.close_terminal_session(session_id)
 }
 

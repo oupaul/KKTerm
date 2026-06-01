@@ -76,7 +76,7 @@ fn watchdog_intent_contract() -> String {
 \n\nSupported target kinds (pick the one whose example most resembles the user's request):\n{catalog_section}\n\nUse session_state to discover live session ids before creating sshSessionOutputSilence watchdogs; if multiple sessions match the user's description, ask one narrow question to disambiguate. \
 Predicate ops are gt | lt | gte | lte | eq | ne with a numeric value, or silenceFor {{ ms: u64 }} for output-silence targets. Always set sustainedForMs on threshold-style triggers (cpu/ram/disk over X for Y minutes) so transient spikes don't trip a false alarm. SilenceFor triggers don't need sustainedForMs — the threshold is built into the predicate. pollMs must be 500–3_600_000; choose a poll interval at least 10x smaller than the threshold so the timer has multiple samples to confirm. \
 stop is one of {{ kind: 'untilCanceled' }} (default for ongoing watches), {{ kind: 'afterFirstTrigger' }} (one-shot alert), {{ kind: 'afterTriggerCount', n: <u32> }}, {{ kind: 'afterPollCount', n: <u32> }}, or {{ kind: 'afterDuration', ms: <u64> }}. \
-action is either {{ kind: 'notify' }} (passive: status-bar surface only) or {{ kind: 'aiIntervene', goal: <imperative instructions>, contextSources: <subset of sessionOutputTail | sessionMeta | tickHistory | performanceSnapshot>, allowedTools: <exact tool names>, approvalPolicy: 'sessionAllow', maxInterventions: <hard cap, typically 3–10>, suppressionMs: <cooldown after each action, typically 15_000–60_000> }}. For SSH-session watchdogs that should nudge stalled CLIs, set contextSources to ['sessionOutputTail', 'sessionMeta', 'tickHistory'] so the intervention sub-turn sees recent terminal output; the typical allowedTools is ['session_send_text', 'session_state']. Use aiIntervene only when the user explicitly asks for the AI to act when the trigger fires (e.g. 'tell the codex CLI to continue when it stalls'); otherwise default to notify. For aiIntervene watchdogs the runtime will show the user an approval modal listing every allowed tool — be conservative with allowedTools, list only what's needed. \
+action is either {{ kind: 'notify' }} (passive: status-bar surface only) or {{ kind: 'aiIntervene', goal: <imperative instructions>, contextSources: <subset of sessionOutputTail | sessionMeta | tickHistory | performanceSnapshot>, allowedTools: <exact tool names>, approvalPolicy: 'sessionAllow', maxInterventions: <hard cap, typically 3–10>, suppressionMs: <cooldown after each action, typically 15_000–60_000> }}. For SSH-session watchdogs that should nudge stalled CLIs, set contextSources to ['sessionOutputTail', 'sessionMeta', 'tickHistory'] so the intervention sub-turn sees recent terminal output; the typical allowedTools is ['session_terminal_send_text', 'session_state']. Use aiIntervene only when the user explicitly asks for the AI to act when the trigger fires (e.g. 'tell the codex CLI to continue when it stalls'); otherwise default to notify. For aiIntervene watchdogs the runtime will show the user an approval modal listing every allowed tool — be conservative with allowedTools, list only what's needed. \
 notification is one of inAppOnly | inAppPlusToast | inAppPlusSound — default inAppOnly. Generate a short human-readable name like 'CPU > 90% (5 min)' or 'codex CLI keepalive'. If the user's request maps to a target kind not in the catalog above (process exit, log file pattern, HTTP endpoint health, SSL cert expiry, etc.), explain that limitation in one sentence and offer the closest currently-supported alternative — most often a performanceCounter, ping, tcpReachable, or sshSessionOutputSilence variant — instead of creating a watchdog you know will fail validation."
     )
 }
@@ -602,6 +602,12 @@ pub struct AgentRunRequest {
     intent: Option<String>,
     #[serde(default = "default_agent_allow_tools")]
     allow_tools: bool,
+    /// When non-empty, the agent is restricted to exactly these tool names and
+    /// they are treated as pre-approved (no per-call approval modal). Used by
+    /// watchdog intervention sub-turns, which are scoped to the tools the user
+    /// approved at watchdog creation. Empty means "no restriction".
+    #[serde(default)]
+    allowed_tools: Vec<String>,
     selected_output: Option<String>,
     screenshot: Option<AgentScreenshotContext>,
     #[serde(default)]
@@ -1595,6 +1601,7 @@ impl OpenAiCompatibleProvider {
         request: AgentRunRequest,
     ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
+        let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
             enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
@@ -1617,11 +1624,12 @@ impl OpenAiCompatibleProvider {
             skill_summaries.clone(),
         );
         let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = if request.allow_tools {
-            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
-        } else {
-            Vec::new()
-        };
+        let tool_definitions = agent_tool_definitions(
+            request.allow_tools,
+            &allowed_tools,
+            settings.tools(),
+            &skill_summaries,
+        );
         let provider_tool_definitions = self.tool_definitions_for_provider(&tool_definitions);
         let app_data_dir = app
             .path()
@@ -1716,7 +1724,9 @@ impl OpenAiCompatibleProvider {
                 ),
             });
             for tool_call in tool_calls {
-                let result = run_ai_tool(&settings, &app_data_dir, &app, &tool_call, None).await;
+                let result =
+                    run_ai_tool(&settings, &app_data_dir, &app, &tool_call, None, &allowed_tools)
+                        .await;
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1799,6 +1809,7 @@ impl OpenAiCompatibleProvider {
         request: AgentRunRequest,
     ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
+        let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
             enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
@@ -1821,11 +1832,12 @@ impl OpenAiCompatibleProvider {
         );
         let mut input = responses_input_from_messages(messages, request.files);
         let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = if request.allow_tools {
-            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
-        } else {
-            Vec::new()
-        };
+        let tool_definitions = agent_tool_definitions(
+            request.allow_tools,
+            &allowed_tools,
+            settings.tools(),
+            &skill_summaries,
+        );
         let provider_tool_definitions =
             self.responses_tool_definitions_for_provider(&tool_definitions);
         let app_data_dir = app
@@ -1917,7 +1929,9 @@ impl OpenAiCompatibleProvider {
                 input.extend(output.iter().cloned());
             }
             for tool_call in tool_calls {
-                let result = run_ai_tool(&settings, &app_data_dir, &app, &tool_call, None).await;
+                let result =
+                    run_ai_tool(&settings, &app_data_dir, &app, &tool_call, None, &allowed_tools)
+                        .await;
                 input.push(json!({
                     "type": "function_call_output",
                     "call_id": tool_call.id,
@@ -2014,6 +2028,7 @@ impl OpenAiCompatibleProvider {
         channel: Channel<Value>,
     ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
+        let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
             enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
@@ -2036,11 +2051,12 @@ impl OpenAiCompatibleProvider {
             skill_summaries.clone(),
         );
         let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = if request.allow_tools {
-            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
-        } else {
-            Vec::new()
-        };
+        let tool_definitions = agent_tool_definitions(
+            request.allow_tools,
+            &allowed_tools,
+            settings.tools(),
+            &skill_summaries,
+        );
         let provider_tool_definitions = self.tool_definitions_for_provider(&tool_definitions);
         let app_data_dir = app
             .path()
@@ -2181,7 +2197,15 @@ impl OpenAiCompatibleProvider {
                     )?;
                 }
                 let result =
-                    run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
+                    run_ai_tool(
+                        &settings,
+                        &app_data_dir,
+                        &app,
+                        tool_call,
+                        Some(&channel),
+                        &allowed_tools,
+                    )
+                    .await;
                 ai_debug!(
                     "tool end provider={} model={} subturn={} id={} name={} result_len={}",
                     self.provider_kind,
@@ -2305,6 +2329,7 @@ impl OpenAiCompatibleProvider {
         channel: Channel<Value>,
     ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
+        let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
             enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
@@ -2326,11 +2351,12 @@ impl OpenAiCompatibleProvider {
             skill_summaries.clone(),
         );
         let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = if request.allow_tools {
-            ai_tool_definitions_with_skills(settings.tools(), &skill_summaries)
-        } else {
-            Vec::new()
-        };
+        let tool_definitions = agent_tool_definitions(
+            request.allow_tools,
+            &allowed_tools,
+            settings.tools(),
+            &skill_summaries,
+        );
         let app_data_dir = app
             .path()
             .app_data_dir()
@@ -2446,7 +2472,15 @@ impl OpenAiCompatibleProvider {
                     )?;
                 }
                 let result =
-                    run_ai_tool(&settings, &app_data_dir, &app, tool_call, Some(&channel)).await;
+                    run_ai_tool(
+                        &settings,
+                        &app_data_dir,
+                        &app,
+                        tool_call,
+                        Some(&channel),
+                        &allowed_tools,
+                    )
+                    .await;
                 let tool_error = tool_result_error(&result);
                 let abort_message = tool_error_tracker.note(&tool_call.function.name, &tool_error);
                 input.push(json!({
@@ -3439,6 +3473,27 @@ fn ai_tool_definitions(settings: &AiAssistantToolSettings) -> Vec<OpenAiToolDefi
     ai_tool_definitions_with_skills(settings, &[])
 }
 
+/// Build the agent's tool definitions, optionally narrowed to an explicit
+/// allow-list. An empty `allowed_tools` means "no restriction" (normal
+/// assistant turns); a non-empty list keeps only the named tools — used by
+/// watchdog intervention sub-turns, which are pre-scoped to the tools the user
+/// approved when the watchdog was created.
+fn agent_tool_definitions(
+    allow_tools: bool,
+    allowed_tools: &[String],
+    settings: &AiAssistantToolSettings,
+    skill_summaries: &[AssistantSkillSummary],
+) -> Vec<OpenAiToolDefinition> {
+    if !allow_tools {
+        return Vec::new();
+    }
+    let mut defs = ai_tool_definitions_with_skills(settings, skill_summaries);
+    if !allowed_tools.is_empty() {
+        defs.retain(|tool| crate::watchdog::check_allowed_tool(allowed_tools, tool.function.name));
+    }
+    defs
+}
+
 fn ai_tool_definitions_with_skills(
     settings: &AiAssistantToolSettings,
     skill_summaries: &[AssistantSkillSummary],
@@ -4355,6 +4410,7 @@ async fn run_ai_tool(
     app: &tauri::AppHandle,
     call: &OpenAiToolCall,
     stream_channel: Option<&Channel<Value>>,
+    allowed_tools: &[String],
 ) -> String {
     let args: Value = serde_json::from_str(&call.function.arguments).unwrap_or_else(|_| json!({}));
     let tool_settings = settings.tools();
@@ -4368,7 +4424,14 @@ async fn run_ai_tool(
             "permissionMode": settings.tool_permission_mode(),
         })
     );
-    if tool_requires_allow_all(&call.function.name) && settings.tool_permission_mode() != "allowAll"
+    // Tools the caller pre-approved (a watchdog intervention sub-turn scoped to
+    // the tools the user approved at watchdog creation — sessionAllow policy)
+    // skip the per-call approval modal; otherwise an unattended intervention
+    // would block here forever.
+    let pre_approved = crate::watchdog::check_allowed_tool(allowed_tools, &call.function.name);
+    if tool_requires_allow_all(&call.function.name)
+        && settings.tool_permission_mode() != "allowAll"
+        && !pre_approved
     {
         let approved = match app.try_state::<AssistantToolApprovalBridge>() {
             Some(bridge) => bridge.request(app, &call.function.name, &args).await,

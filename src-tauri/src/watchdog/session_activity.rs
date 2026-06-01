@@ -86,12 +86,10 @@ impl SessionActivityTracker {
         Some(String::from_utf8_lossy(&bytes).into_owned())
     }
 
-    /// Forget a session — should be called by the session manager when a
+    /// Forget a session. Called by the `close_terminal_session` command when a
     /// terminal closes so the map doesn't grow unboundedly across the app
-    /// lifetime. Not yet wired: `close_terminal_session` doesn't carry an
-    /// AppHandle. Each entry is small (~8KB), and sessions per process are
-    /// bounded, so cleanup is a polish task rather than a leak.
-    #[allow(dead_code)]
+    /// lifetime, and so a `sshSessionOutputSilence` watchdog stops measuring
+    /// silence against a session that no longer exists.
     pub fn forget(&self, session_id: &str) {
         if let Ok(mut guard) = self.inner.lock() {
             guard.remove(session_id);
