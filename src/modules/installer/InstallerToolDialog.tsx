@@ -32,6 +32,10 @@ import { ToggleSwitch } from "../settings/ToggleSwitch";
 import { useInstallerStore, type StepStatus } from "./state";
 import { notifyConnectionTreeInvalidated } from "../workspace/connections/connectionSidebarState";
 import { isInstallerUpdateAvailable } from "./versionCompare";
+import {
+  latestVersionWebUrlForRecipe,
+  recipeSupportsLatestVersion,
+} from "./latestSupport";
 import type {
   InstallOptions,
   ManagedWebUiStatus,
@@ -120,7 +124,10 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
     recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
   const version = detected?.installedVersion ?? null;
   const latest = toolState?.latestVersionSeen ?? null;
-  const hasUpdate = isInstallerUpdateAvailable(latest, version);
+  const supportsLatestVersion = recipeSupportsLatestVersion(recipe);
+  const latestWebUrl = latestVersionWebUrlForRecipe(recipe);
+  const hasUpdate =
+    supportsLatestVersion && isInstallerUpdateAvailable(latest, version);
   const webUi = webUiAffordanceForRecipe(recipe);
   const service = serviceAffordanceForRecipe(recipe);
   const terminalLaunch = terminalLaunchAffordanceForRecipe(recipe);
@@ -332,7 +339,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
               {version}
             </Row>
           ) : null}
-          {latestError || latest ? (
+          {supportsLatestVersion && (latestError || latest) ? (
             <Row label={t("installer.dialog.latestVersion")}>
               <span
                 className={latestError ? "installer-tool-dialog__value-error" : undefined}
@@ -340,8 +347,12 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
                 {latestError ?? latest}
               </span>
             </Row>
+          ) : latestWebUrl ? (
+            <Row label={t("installer.dialog.latestVersion")}>
+              <ExternalLink href={latestWebUrl}>{t("installer.status.web")}</ExternalLink>
+            </Row>
           ) : null}
-          {toolState?.lastCheckAt ? (
+          {supportsLatestVersion && toolState?.lastCheckAt ? (
             <Row label={t("installer.dialog.lastChecked")}>
               {formatTimestamp(toolState.lastCheckAt)}
             </Row>
@@ -378,13 +389,15 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             </Row>
           ) : null}
         </dl>
-        <label className="installer-tool-dialog__pin">
-          <span>{t("installer.options.pinVersion")}</span>
-          <ToggleSwitch
-            checked={toolState?.pinned ?? false}
-            onChange={() => void handleTogglePin()}
-          />
-        </label>
+        {supportsLatestVersion ? (
+          <label className="installer-tool-dialog__pin">
+            <span>{t("installer.options.pinVersion")}</span>
+            <ToggleSwitch
+              checked={toolState?.pinned ?? false}
+              onChange={() => void handleTogglePin()}
+            />
+          </label>
+        ) : null}
       </div>
       <div className="dialog-actions installer-tool-dialog__actions">
         <button
@@ -526,6 +539,8 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
     recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
   const wslBlocked =
     !!catalog && wslJustEnabled && recipeNeedsWsl(recipe, catalog);
+  const supportsLatestVersion = recipeSupportsLatestVersion(recipe);
+  const latestWebUrl = latestVersionWebUrlForRecipe(recipe);
   const homepage = recipe.homepage;
   const selectedProvider = selectedProviderForRecipe(recipe, options);
   const releaseUrl = recipe.releaseNotesUrl ?? deriveProviderUrl(selectedProvider);
@@ -629,24 +644,30 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
           <Row label={t("installer.dialog.provider")}>
             {providerSummary(selectedProvider)}
           </Row>
-          <Row label={t("installer.dialog.latestVersion")}>
-            {latestError ? (
-              <span className="installer-tool-dialog__value-error">
-                {latestError}
-              </span>
-            ) : toolState?.latestVersionSeen ?? (
-              <button
-                type="button"
-                className="installer-tool-dialog__inline-action"
-                onClick={() => void handleCheckNow()}
-                disabled={checking}
-              >
-                {checking
-                  ? t("installer.dialog.checkingDots")
-                  : t("installer.dialog.checkNow")}
-              </button>
-            )}
-          </Row>
+          {supportsLatestVersion ? (
+            <Row label={t("installer.dialog.latestVersion")}>
+              {latestError ? (
+                <span className="installer-tool-dialog__value-error">
+                  {latestError}
+                </span>
+              ) : toolState?.latestVersionSeen ?? (
+                <button
+                  type="button"
+                  className="installer-tool-dialog__inline-action"
+                  onClick={() => void handleCheckNow()}
+                  disabled={checking}
+                >
+                  {checking
+                    ? t("installer.dialog.checkingDots")
+                    : t("installer.dialog.checkNow")}
+                </button>
+              )}
+            </Row>
+          ) : latestWebUrl ? (
+            <Row label={t("installer.dialog.latestVersion")}>
+              <ExternalLink href={latestWebUrl}>{t("installer.status.web")}</ExternalLink>
+            </Row>
+          ) : null}
           {prereqs.length > 0 ? (
             <Row label={t("installer.dialog.prerequisites")}>
               <ul className="installer-tool-dialog__prereqs">
@@ -942,7 +963,13 @@ function Row({
   );
 }
 
-function ExternalLink({ href }: { href: string }) {
+function ExternalLink({
+  href,
+  children,
+}: {
+  href: string;
+  children?: React.ReactNode;
+}) {
   // Open via opener plugin so external URLs go to the system browser, not
   // an in-app webview that we don't intend to host arbitrary sites in.
   function handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
@@ -957,7 +984,7 @@ function ExternalLink({ href }: { href: string }) {
   }
   return (
     <a href={href} onClick={handleClick} rel="noopener noreferrer">
-      {href}
+      {children ?? href}
     </a>
   );
 }

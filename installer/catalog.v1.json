@@ -8,6 +8,7 @@
       "descriptionEn": "Distributed version control. Implicit prerequisite for many AI coding tools.",
       "category": "vcs",
       "icon": "GitBranch",
+      "needs": ["winget"],
       "detection": {
         "registryKeys": ["Git_is1"],
         "displayNames": ["Git"],
@@ -23,6 +24,7 @@
       "descriptionEn": "The `gh` command-line tool for GitHub: PRs, issues, repos, releases.",
       "category": "vcs",
       "icon": "Github",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["GitHub CLI"]
       },
@@ -31,11 +33,27 @@
       "options": ["provider", "scope", "version"]
     },
     {
+      "id": "winget",
+      "name": "winget",
+      "descriptionEn": "Microsoft's Windows Package Manager command-line client. Required before KKTerm can install winget-backed tools.",
+      "category": "essentials",
+      "icon": "Package",
+      "homepage": "https://github.com/microsoft/winget-cli",
+      "releaseNotesUrl": "https://github.com/microsoft/winget-cli/releases",
+      "provider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle",
+        "fileName": "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+      },
+      "options": []
+    },
+    {
       "id": "vscode",
       "name": "VS Code",
       "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
       "category": "editor",
       "icon": "Code",
+      "needs": ["winget"],
       "detection": {
         "registryKeys": ["{EA457B21-F73E-494C-ACAB-524FDE069978}_is1"],
         "displayNames": ["Microsoft Visual Studio Code", "Visual Studio Code"],
@@ -51,6 +69,7 @@
       "descriptionEn": "AI-first code editor built on VS Code.",
       "category": "editor",
       "icon": "MousePointerClick",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["Cursor"]
       },
@@ -64,6 +83,7 @@
       "descriptionEn": "Lightweight Windows text editor with syntax highlighting.",
       "category": "editor",
       "icon": "FileText",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["Notepad++", "Notepad++ (64-bit x64)"]
       },
@@ -77,6 +97,7 @@
       "descriptionEn": "Node Version Manager for Windows. Lets you switch between multiple Node versions.",
       "category": "runtime",
       "icon": "Layers",
+      "needs": ["winget"],
       "detection": {
         "displayNamePrefixes": ["NVM for Windows"]
       },
@@ -98,6 +119,7 @@
       "descriptionEn": "Fast Python package and project manager from Astral. Can install Python itself on demand.",
       "category": "runtime",
       "icon": "Wind",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["uv"]
       },
@@ -148,7 +170,7 @@
       "descriptionEn": "Docker Desktop for Windows. Uses the WSL2 backend.",
       "category": "infra",
       "icon": "Container",
-      "needs": ["wsl"],
+      "needs": ["winget", "wsl"],
       "detection": {
         "displayNames": ["Docker Desktop"]
       },
@@ -162,6 +184,7 @@
       "descriptionEn": "The Non-Sucking Service Manager — wrap any program as a Windows service.",
       "category": "utilities",
       "icon": "Wrench",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["NSSM"],
         "displayNamePrefixes": ["NSSM "]
@@ -209,7 +232,7 @@
       "descriptionEn": "Run local large language models on your machine. Managed under KKTerm app-local storage.",
       "category": "ai",
       "icon": "Cpu",
-      "needs": ["nssm"],
+      "needs": ["winget", "nssm"],
       "detection": {
         "displayNames": ["Ollama"]
       },
@@ -269,6 +292,7 @@
       "descriptionEn": "Open-source API client. Postman alternative with git-friendly request files.",
       "category": "utilities",
       "icon": "Boxes",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["Bruno"]
       },
@@ -282,6 +306,7 @@
       "descriptionEn": "Recursive line-oriented search tool. AI coding agents lean on this heavily.",
       "category": "cli",
       "icon": "Search",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["ripgrep"]
       },
@@ -294,6 +319,7 @@
       "descriptionEn": "Command-line JSON processor.",
       "category": "cli",
       "icon": "Braces",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["jq"]
       },
@@ -306,6 +332,7 @@
       "descriptionEn": "General-purpose fuzzy finder for the command line.",
       "category": "cli",
       "icon": "Filter",
+      "needs": ["winget"],
       "detection": {
         "displayNames": ["fzf"]
       },
@@ -318,6 +345,7 @@
       "descriptionEn": "Terminal coding agent that can work with multiple AI providers.",
       "category": "ai-agent",
       "icon": "Terminal",
+      "needs": ["winget"],
       "homepage": "https://opencode.ai/",
       "releaseNotesUrl": "https://github.com/sst/opencode/releases",
       "detection": {
@@ -332,6 +360,7 @@
       "descriptionEn": "Rust toolchain installer and version manager.",
       "category": "development",
       "icon": "Hammer",
+      "needs": ["winget"],
       "homepage": "https://rustup.rs/",
       "releaseNotesUrl": "https://github.com/rust-lang/rustup/releases",
       "detection": {
@@ -365,6 +394,7 @@
       "descriptionEn": "Anthropic's desktop app for Claude, including local MCP integrations.",
       "category": "ai-agent",
       "icon": "Bot",
+      "needs": ["winget"],
       "homepage": "https://claude.ai/download",
       "releaseNotesUrl": "https://support.claude.com/en/articles/10065433-install-claude-desktop",
       "detection": {
@@ -392,6 +422,7 @@
       "descriptionEn": "Microsoft's Windows productivity utilities, including launcher, window management, and file tools.",
       "category": "windows-power-user",
       "icon": "Sparkles",
+      "needs": ["winget"],
       "homepage": "https://learn.microsoft.com/windows/powertoys/",
       "releaseNotesUrl": "https://github.com/microsoft/PowerToys/releases",
       "detection": {
@@ -407,6 +438,7 @@
       "descriptionEn": "Microsoft Sysinternals troubleshooting and administration utilities.",
       "category": "windows-power-user",
       "icon": "BriefcaseMedical",
+      "needs": ["winget"],
       "homepage": "https://learn.microsoft.com/sysinternals/",
       "detection": {
         "displayNames": ["Sysinternals Suite"]
@@ -420,6 +452,7 @@
       "descriptionEn": "Fast local file-name search for Windows.",
       "category": "windows-power-user",
       "icon": "Search",
+      "needs": ["winget"],
       "homepage": "https://www.voidtools.com/",
       "detection": {
         "displayNames": ["Everything"],
@@ -435,6 +468,7 @@
       "descriptionEn": "Clipboard history manager for Windows.",
       "category": "windows-power-user",
       "icon": "Clipboard",
+      "needs": ["winget"],
       "homepage": "https://ditto-cp.sourceforge.io/",
       "detection": {
         "displayNames": ["Ditto"]
@@ -449,6 +483,7 @@
       "descriptionEn": "WireGuard-based mesh VPN for private network access.",
       "category": "remote-access",
       "icon": "Network",
+      "needs": ["winget"],
       "homepage": "https://tailscale.com/",
       "detection": {
         "displayNames": ["Tailscale"]
@@ -479,6 +514,7 @@
       "descriptionEn": "File archiver with broad compression-format support.",
       "category": "utilities",
       "icon": "Archive",
+      "needs": ["winget"],
       "homepage": "https://www.7-zip.org/",
       "detection": {
         "displayNames": ["7-Zip"],
@@ -494,6 +530,7 @@
       "descriptionEn": "Screenshot, screen recording, and upload workflow utility.",
       "category": "utilities",
       "icon": "Camera",
+      "needs": ["winget"],
       "homepage": "https://getsharex.com/",
       "releaseNotesUrl": "https://github.com/ShareX/ShareX/releases",
       "detection": {

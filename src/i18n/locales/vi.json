@@ -2650,6 +2650,7 @@
       "cancelled": "Đã hủy",
       "partial": "Đã cài đặt một phần ({{installed}}/{{total}})",
       "noVersion": "(không rõ phiên bản)",
+      "web": "Web",
       "neverChecked": "Chưa bao giờ",
       "notInstalled": "Chưa cài đặt",
       "serviceInstalled": "Trợ lý dịch vụ Windows đã hoàn tất.",

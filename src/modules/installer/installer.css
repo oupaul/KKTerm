@@ -344,6 +344,16 @@
   font-weight: 600;
 }
 
+.installer-tile__web-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.installer-tile__web-link:hover {
+  text-decoration: underline;
+}
+
 .installer-tile__meta {
   position: absolute;
   bottom: 0.45rem;

@@ -6,8 +6,13 @@
 
 import { useTranslation } from "react-i18next";
 import type { MouseEvent } from "react";
+import { isTauriRuntime, openExternalUrl } from "../../lib/tauri";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { useInstallerStore } from "./state";
+import {
+  latestVersionWebUrlForRecipe,
+  recipeSupportsLatestVersion,
+} from "./latestSupport";
 import type { Recipe } from "./types";
 import { isInstallerUpdateAvailable } from "./versionCompare";
 
@@ -27,8 +32,12 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   const installedVersion = detected?.installedVersion;
   const partial = detected?.partialCount;
   const latestSeen = toolState?.latestVersionSeen;
+  const supportsLatestVersion = recipeSupportsLatestVersion(recipe);
+  const latestWebUrl = latestVersionWebUrlForRecipe(recipe);
   const hasUpdate =
-    isInstalled && isInstallerUpdateAvailable(latestSeen, installedVersion);
+    supportsLatestVersion &&
+    isInstalled &&
+    isInstallerUpdateAvailable(latestSeen, installedVersion);
   const busy = !!inFlight;
   const retrieving = !busy && (scanning || checking);
 
@@ -64,6 +73,19 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
   function handleActionClick(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     handleOpen();
+  }
+
+  function handleWebLatestClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!latestWebUrl) return;
+    if (!isTauriRuntime()) {
+      window.open(latestWebUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    void openExternalUrl(latestWebUrl).catch(() => {
+      window.open(latestWebUrl, "_blank", "noopener,noreferrer");
+    });
   }
 
   const installedVersionText = isInstalled
@@ -140,21 +162,37 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
             </span>
           ) : (
             <dl className="installer-tile__versions">
-              <div>
-                <dt>{t("installer.tile.latest")}</dt>
-                <dd
-                  className={
-                    !retrieving && latestError
-                      ? "installer-tile__version--error"
-                      : !retrieving && hasUpdate
-                        ? "installer-tile__version--update"
-                        : undefined
-                  }
-                  title={retrieving ? latestVersionText : latestError ?? latestVersionText}
-                >
-                  {latestVersionText}
-                </dd>
-              </div>
+              {supportsLatestVersion ? (
+                <div>
+                  <dt>{t("installer.tile.latest")}</dt>
+                  <dd
+                    className={
+                      !retrieving && latestError
+                        ? "installer-tile__version--error"
+                        : !retrieving && hasUpdate
+                          ? "installer-tile__version--update"
+                          : undefined
+                    }
+                    title={retrieving ? latestVersionText : latestError ?? latestVersionText}
+                  >
+                    {latestVersionText}
+                  </dd>
+                </div>
+              ) : latestWebUrl ? (
+                <div>
+                  <dt>{t("installer.tile.latest")}</dt>
+                  <dd title={latestWebUrl}>
+                    <a
+                      className="installer-tile__web-link"
+                      href={latestWebUrl}
+                      onClick={handleWebLatestClick}
+                      rel="noopener noreferrer"
+                    >
+                      {t("installer.status.web")}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt>{t("installer.tile.installed")}</dt>
                 <dd>{installedDisplayText}</dd>

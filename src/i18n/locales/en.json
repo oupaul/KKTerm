@@ -526,6 +526,7 @@
       "serviceRemoved": "Windows service removal completed.",
       "partial": "Partially installed ({{installed}}/{{total}})",
       "noVersion": "(version unknown)",
+      "web": "Web",
       "notInstalled": "Not installed",
       "retrieving": "Retrieving...",
       "neverChecked": "Never"

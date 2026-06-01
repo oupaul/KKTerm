@@ -29,6 +29,7 @@ import {
 import { installRecipeAndWait } from "./progress";
 import { ToolRow } from "./ToolRow";
 import { isInstallerUpdateAvailable } from "./versionCompare";
+import { recipeSupportsLatestVersion } from "./latestSupport";
 import "./installer.css";
 
 export function InstallerPage({ active }: { active: boolean }) {
@@ -139,7 +140,9 @@ export function InstallerPage({ active }: { active: boolean }) {
         await invokeCommand("installer_detect_all_streaming");
         const states = await invokeCommand("installer_get_state");
         setToolStates(states);
-        const toolIds = catalog.recipes.map((r) => r.id);
+        const toolIds = catalog.recipes
+          .filter(recipeSupportsLatestVersion)
+          .map((r) => r.id);
         if (toolIds.length > 0) {
           await invokeCommand("installer_check_latest_versions", {
             toolIds,
@@ -172,7 +175,9 @@ export function InstallerPage({ active }: { active: boolean }) {
       setDetected(nextDetected);
       const states = await invokeCommand("installer_get_state");
       setToolStates(states);
-      const toolIds = catalog.recipes.map((r) => r.id);
+      const toolIds = catalog.recipes
+        .filter(recipeSupportsLatestVersion)
+        .map((r) => r.id);
       if (toolIds.length > 0) {
         await invokeCommand("installer_check_latest_versions", {
           toolIds,
@@ -367,7 +372,7 @@ const INSTALLER_CATEGORY_SECTIONS: Array<{
 }> = [
   {
     titleKey: "installer.section.essentials",
-    ids: ["node-bundle", "python-bundle", "git"],
+    ids: ["winget", "node-bundle", "python-bundle", "git"],
   },
   {
     titleKey: "installer.section.aiAgents",
@@ -426,7 +431,7 @@ function groupRecipes(
     if (!det) {
       continue;
     }
-    if (det.installed) {
+    if (det.installed && recipeSupportsLatestVersion(recipe)) {
       const latest = toolState[recipe.id]?.latestVersionSeen;
       if (isInstallerUpdateAvailable(latest, det.installedVersion)) {
         updates.push(recipe);

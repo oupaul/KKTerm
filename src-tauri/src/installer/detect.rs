@@ -161,6 +161,7 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
             Provider::Winget { .. } => detect_winget(recipe),
             Provider::Npm { pkg } => detect_npm(pkg),
             Provider::UvPip { .. } => DetectedState::not_installed(),
+            Provider::DownloadInstaller { .. } if recipe.id == "winget" => detect_winget_cli(),
             Provider::DownloadInstaller { .. } if recipe.id == "antigravity-cli" => {
                 detect_antigravity_cli()
             }
@@ -317,6 +318,13 @@ fn detect_antigravity_cli() -> DetectedState {
 
 fn antigravity_cli_exe_path_from_local_data(local_data: &std::path::Path) -> PathBuf {
     local_data.join("agy").join("bin").join("agy.exe")
+}
+
+fn detect_winget_cli() -> DetectedState {
+    match command_version("winget", &["--version"]) {
+        Some(version) => DetectedState::installed(Some(version)),
+        None => DetectedState::not_installed(),
+    }
 }
 
 fn command_version(program: &str, args: &[&str]) -> Option<String> {

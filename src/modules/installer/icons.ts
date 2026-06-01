@@ -11,6 +11,7 @@
 import defaultIcon from "../../assets/installer-icons/default.svg?url";
 import sevenZip from "../../assets/installer-icons/7zip.svg?url";
 import anthropic from "../../assets/installer-icons/anthropic.svg?url";
+import antigravity from "../../assets/installer-icons/antigravity.svg?url";
 import astral from "../../assets/installer-icons/astral.svg?url";
 import bruno from "../../assets/installer-icons/bruno.svg?url";
 import cursor from "../../assets/installer-icons/cursor.svg?url";
@@ -44,6 +45,7 @@ import vscode from "../../assets/installer-icons/vscode.png?url";
 const RECIPE_ICON_URLS: Record<string, string> = {
   git,
   "github-cli": github,
+  winget: defaultIcon,
   vscode,
   cursor,
   notepadpp,
@@ -56,7 +58,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   nssm: defaultIcon,
   "claude-code-cli": anthropic,
   "codex-cli": openai,
-  "antigravity-cli": defaultIcon,
+  "antigravity-cli": antigravity,
   ollama,
   n8n,
   "open-webui": openWebui,

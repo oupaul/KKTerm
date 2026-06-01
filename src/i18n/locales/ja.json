@@ -2650,6 +2650,7 @@
       "cancelled": "キャンセル済み",
       "partial": "一部インストール済み ({{installed}}/{{total}})",
       "noVersion": "(バージョン不明)",
+      "web": "Web",
       "neverChecked": "未確認",
       "notInstalled": "未インストール",
       "serviceInstalled": "Windows サービス ヘルパーが完了しました。",

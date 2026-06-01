@@ -2650,6 +2650,7 @@
       "cancelled": "Annulé",
       "partial": "Partiellement installé ({{installed}}/{{total}})",
       "noVersion": "(version inconnue)",
+      "web": "Web",
       "neverChecked": "Jamais",
       "notInstalled": "Non installé",
       "serviceInstalled": "Assistant de service Windows terminé.",

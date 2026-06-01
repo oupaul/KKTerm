@@ -2650,6 +2650,7 @@
       "cancelled": "Dibatalkan",
       "partial": "Terpasang sebagian ({{installed}}/{{total}})",
       "noVersion": "(versi tidak diketahui)",
+      "web": "Web",
       "neverChecked": "Belum pernah",
       "notInstalled": "Belum terinstal",
       "serviceInstalled": "Pembantu layanan Windows selesai.",

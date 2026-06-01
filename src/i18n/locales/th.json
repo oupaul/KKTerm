@@ -2650,6 +2650,7 @@
       "cancelled": "ยกเลิกแล้ว",
       "partial": "ติดตั้งบางส่วน ({{installed}}/{{total}})",
       "noVersion": "(ไม่ทราบเวอร์ชัน)",
+      "web": "Web",
       "neverChecked": "ไม่เคย",
       "notInstalled": "ยังไม่ได้ติดตั้ง",
       "serviceInstalled": "ตัวช่วยบริการ Windows เสร็จสมบูรณ์แล้ว",

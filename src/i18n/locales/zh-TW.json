@@ -2650,6 +2650,7 @@
       "cancelled": "已取消",
       "partial": "部分已安裝 ({{installed}}/{{total}})",
       "noVersion": "（版本未知）",
+      "web": "Web",
       "neverChecked": "從未",
       "notInstalled": "未安裝",
       "serviceInstalled": "Windows 服務小幫手已完成。",
