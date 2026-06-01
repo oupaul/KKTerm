@@ -16,6 +16,27 @@ use tauri::{
 const HOST_WINDOW_LABEL: &str = "main";
 const DEFAULT_PARTITION: &str = "shared";
 const HIDDEN_WEBVIEW_POSITION: f64 = -32_000.0;
+
+/// WebView2 browser arguments that keep the renderer alive across RDP session
+/// disconnect/reconnect. When KKTerm runs inside a remote session, ending the
+/// mstsc connection tears down the host's display/GPU device; WebView2's GPU
+/// process then loses its DirectComposition device and the renderer hangs on
+/// reconnect (the native heartbeat thread keeps logging while the frontend
+/// heartbeat ages out). `--disable-gpu` forces software compositing so there is
+/// no GPU device to lose, and disabling `CalculateNativeWinOcclusion` stops the
+/// hidden-window render throttle.
+///
+/// These are passed through `additional_browser_args` because wry always sets
+/// WebView2's `AdditionalBrowserArguments` itself (which makes the runtime
+/// ignore the `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` environment variable).
+/// Setting that option replaces wry's own default arguments, so wry's defaults
+/// (`--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection`) are
+/// re-included here, with `CalculateNativeWinOcclusion` merged into the same
+/// `--disable-features` switch. Every WebView2 surface sharing the default data
+/// directory must use the same arguments, so URL Connection child webviews
+/// receive this when the main window does.
+#[cfg(target_os = "windows")]
+pub(crate) const REMOTE_SESSION_WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu";
 const AUTOFILL_AGENT: &str = r#"
 (() => {
   const TITLE_CHANNEL = "__KKTERM_URL_CREDENTIAL__";
@@ -360,6 +381,7 @@ pub struct WebviewSessionManager {
     sessions: Mutex<HashMap<String, WebviewSession>>,
     starting_sessions: Mutex<HashSet<String>>,
     clipboard_read_allowed: Arc<AtomicBool>,
+    additional_browser_args: Option<&'static str>,
 }
 
 struct WebviewSession {
@@ -499,11 +521,12 @@ impl Drop for StartingReservation<'_> {
 }
 
 impl WebviewSessionManager {
-    pub fn new(allow_clipboard_read: bool) -> Self {
+    pub fn new(allow_clipboard_read: bool, additional_browser_args: Option<&'static str>) -> Self {
         Self {
             sessions: Mutex::new(HashMap::new()),
             starting_sessions: Mutex::new(HashSet::new()),
             clipboard_read_allowed: Arc::new(AtomicBool::new(allow_clipboard_read)),
+            additional_browser_args,
         }
     }
 
@@ -588,7 +611,7 @@ impl WebviewSessionManager {
             "{AUTOFILL_AGENT}\n{}",
             external_link_shortcut_agent(&external_link_token)?
         );
-        let builder = WebviewBuilder::new(&label, WebviewUrl::External(initial_webview_url))
+        let mut builder = WebviewBuilder::new(&label, WebviewUrl::External(initial_webview_url))
             .initialization_script(initialization_script)
             .on_navigation(move |url| {
                 let _ = navigation_app.emit(
@@ -651,6 +674,9 @@ impl WebviewSessionManager {
                 true
             })
             .auto_resize();
+        if let Some(additional_browser_args) = self.additional_browser_args {
+            builder = builder.additional_browser_args(additional_browser_args);
+        }
 
         let position = LogicalPosition::new(x.max(0.0), y.max(0.0));
         let size = LogicalSize::new(width.max(1.0), height.max(1.0));

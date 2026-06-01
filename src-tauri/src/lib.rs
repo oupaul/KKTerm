@@ -2485,25 +2485,6 @@ fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
-/// WebView2 browser arguments that keep the renderer alive across RDP session
-/// disconnect/reconnect. When KKTerm runs inside a remote session, ending the
-/// mstsc connection tears down the host's display/GPU device; WebView2's GPU
-/// process then loses its DirectComposition device and the renderer hangs on
-/// reconnect (the native heartbeat thread keeps logging while the frontend
-/// heartbeat ages out). `--disable-gpu` forces software compositing so there is
-/// no GPU device to lose, and disabling `CalculateNativeWinOcclusion` stops the
-/// hidden-window render throttle.
-///
-/// These are passed through `WebviewWindowBuilder::additional_browser_args`
-/// because wry always sets WebView2's `AdditionalBrowserArguments` itself (which
-/// makes the runtime ignore the `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
-/// environment variable). Setting that option replaces wry's own default
-/// arguments, so wry's defaults (`--disable-features=msWebOOUI,msPdfOOUI,
-/// msSmartScreenProtection`) are re-included here, with `CalculateNativeWinOcclusion`
-/// merged into the same `--disable-features` switch.
-#[cfg(target_os = "windows")]
-const REMOTE_SESSION_WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu";
-
 /// True when KKTerm is running inside a remote (RDP) session.
 fn is_remote_session() -> bool {
     #[cfg(target_os = "windows")]
@@ -2539,17 +2520,17 @@ pub fn run() {
             logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
             debug_heartbeat::start();
 
+            let apply_webview_stability =
+                general_settings.rdp_webview_stability() || is_remote_session();
             // The main window is created here in Rust rather than in
             // tauri.conf.json so the RDP/WebView2 stability flags can be applied
-            // per launch (see REMOTE_SESSION_WEBVIEW2_ARGS). The flags reliably
-            // apply only through WebviewWindowBuilder::additional_browser_args;
+            // per launch (see webview::REMOTE_SESSION_WEBVIEW2_ARGS). The flags
+            // reliably apply only through WebviewWindowBuilder::additional_browser_args;
             // they are enabled when the user opts in or when KKTerm detects it
             // launched inside a remote session, so local installs keep GPU
             // acceleration. This must run before any code looks up the main
             // window below.
             {
-                let apply_webview_stability =
-                    general_settings.rdp_webview_stability() || is_remote_session();
                 #[allow(unused_mut)]
                 let mut main_window_builder = tauri::WebviewWindowBuilder::new(
                     app,
@@ -2563,10 +2544,11 @@ pub fn run() {
                 .disable_drag_drop_handler();
                 #[cfg(target_os = "windows")]
                 if apply_webview_stability {
-                    main_window_builder =
-                        main_window_builder.additional_browser_args(REMOTE_SESSION_WEBVIEW2_ARGS);
+                    main_window_builder = main_window_builder
+                        .additional_browser_args(webview::REMOTE_SESSION_WEBVIEW2_ARGS);
                     eprintln!(
-                        "applying WebView2 RDP-stability flags to main window ({REMOTE_SESSION_WEBVIEW2_ARGS})"
+                        "applying WebView2 RDP-stability flags to main window ({})",
+                        webview::REMOTE_SESSION_WEBVIEW2_ARGS
                     );
                 }
                 #[cfg(not(target_os = "windows"))]
@@ -2585,8 +2567,22 @@ pub fn run() {
             {
                 eprintln!("{error}");
             }
-            let webview_sessions =
-                webview::WebviewSessionManager::new(general_settings.allow_clipboard_read());
+            let webview_additional_browser_args = if apply_webview_stability {
+                #[cfg(target_os = "windows")]
+                {
+                    Some(webview::REMOTE_SESSION_WEBVIEW2_ARGS)
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    None
+                }
+            } else {
+                None
+            };
+            let webview_sessions = webview::WebviewSessionManager::new(
+                general_settings.allow_clipboard_read(),
+                webview_additional_browser_args,
+            );
             if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
                 webview::configure_shell_clipboard_read_permission(
                     &main_webview,
