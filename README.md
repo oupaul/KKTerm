@@ -76,6 +76,7 @@ Plus a few things you didn't know you wanted:
 - A **Dashboard** where you tell an AI *"build me a widget that pings my router every 30 seconds"* and it appears, sandboxed, on your grid.
 - **SSH panes that auto-attach to named tmux sessions** so your remote `claude` / `codex` session survives every Wi-Fi tantrum your laptop throws.
 - An **AI Coding usage widget** that shows your Claude Code and Codex quotas — 5-hour window, weekly window, current plan, account email — on the **Dashboard** and in the status bar, so you stop being surprised by the rate-limit wall at 3 AM.
+- An **Installer Helper** Module that detects, installs, updates, uninstalls, and launches a curated Windows developer-tool catalog — Node, Python, Docker, WSL, AI coding CLIs, and the small utilities you usually end up chasing through browser tabs.
 - A **built-in MCP server** (`kkterm-cli`) that lets external coding agents (Claude Code, Codex, Copilot, Antigravity, OpenCode) drive your Workspace and Dashboard — list Connections, read terminal buffers, place widgets — over a curated, safety-gated tool surface. AI-to-AI, on your machine, no cloud relay.
 - Twenty-one **animated canvas backgrounds** (yes, including `matrix`) for the dashboard, because we are not above it.
 
@@ -271,6 +272,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -311,7 +313,8 @@ The shape that matters: durable saved data (**Connection**) is separate from liv
 | **AI Assistant** | Streaming chat, OpenAI-compatible runtime, provider registry, command proposal safety classification, screenshot/context attachments, **Dashboard widget authoring (content + sandboxed script)**, **tmux pane capture** as conversation context for remote sessions, **Connection** management tools, and live **Session** tools for terminal, RDP/VNC, and SFTP/FTP |
 | **AI Coding Usage** | **Dashboard widget + status-bar indicator** tracking **Claude Code** and **Codex** quota usage: connected account, plan tier, 5-hour and weekly window percentages, next reset time, auth state (`connected` / `expired` / `error`), rate-limit-aware refresh policy |
 | **Built-in MCP Server** | Stdio MCP server (`kkterm-cli`) exposing curated Workspace and Dashboard tools to external coding agents (Claude Code, Codex, Copilot, Antigravity, OpenCode); authenticated named-pipe bridge; per-Module `dangerous.*` namespaces gated behind a single safety toggle; Settings dialog with one-click JSON / TOML snippets and `claude mcp add` / `codex mcp add` commands |
-| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, About; custom UI fonts; minimize-to-tray; Don't Sleep; backup/import |
+| **Installer Helper** | Activity Rail Module for a bundled Windows developer-tool catalog: detect installed tools, compare latest versions, install/update/uninstall, pin tools out of Update all, stream command logs, and launch supported managed apps |
+| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, About; custom UI fonts; minimize-to-tray; Don't Sleep; backup/import |
 | **Localization** | i18next UI with English source and dynamic locale bundles: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### AI Providers

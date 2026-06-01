@@ -76,6 +76,7 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie willst:
 - Ein **Dashboard**, auf dem du einer KI sagst *„Bau mir ein Widget, das meinen Router alle 30 Sekunden anpingt"* — und es erscheint, sandboxed, in deinem Grid.
 - **SSH-Panes, die sich automatisch an benannte tmux-Sessions anhängen**, damit deine Remote-`claude`- / `codex`-Session jeden WLAN-Aussetzer deines Laptops übersteht.
 - Ein **AI-Coding-Nutzungs-Widget**, das deine Claude-Code- und Codex-Quoten zeigt — 5-Stunden-Fenster, Wochenfenster, aktueller Plan, Account-E-Mail — auf dem **Dashboard** und in der Statusleiste, damit du nicht mehr um 3 Uhr morgens überrascht gegen die Rate-Limit-Wand läufst.
+- Ein **Installer Helper**-Modul, das einen kuratierten Windows-Entwicklertool-Katalog erkennt, installiert, aktualisiert, deinstalliert und startet — Node, Python, Docker, WSL, KI-Coding-CLIs und die kleinen Utilities, die du sonst in Browser-Tabs zusammensuchst.
 - Ein **eingebauter MCP-Server** (`kkterm-cli`), der externe Coding-Agenten (Claude Code, Codex, Copilot, Antigravity, OpenCode) deinen Workspace und dein Dashboard steuern lässt — Connections auflisten, Terminal-Buffer lesen, Widgets platzieren — über eine kuratierte, sicherheits-gegate Tool-Oberfläche. KI-zu-KI, auf deiner Maschine, ohne Cloud-Relay.
 - Einundzwanzig **animierte Canvas-Hintergründe** (ja, inklusive `matrix`) für das Dashboard, weil wir uns für nichts zu schade sind.
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ Die wichtige Form: persistente gespeicherte Daten (**Connection**) sind getrennt
 | **AI Assistant** | Streaming-Chat, OpenAI-kompatibler Runtime, Provider-Registry, Sicherheitsklassifikation für Befehlsvorschläge, Screenshot-/Kontext-Anhänge, **Dashboard-Widget-Authoring (Content + sandboxed Script)**, **tmux-Pane-Capture** als Gesprächskontext für Remote-Sessions, **Connection**-Management-Tools und Live-**Session**-Tools für Terminal, RDP/VNC und SFTP/FTP |
 | **AI Coding Nutzung** | **Dashboard-Widget + Statusleisten-Anzeige**, die die Quoten-Nutzung von **Claude Code** und **Codex** verfolgen: verbundener Account, Plan-Stufe, Prozentwerte für 5-Stunden- und Wochen-Fenster, nächster Reset-Zeitpunkt, Auth-Status (`connected` / `expired` / `error`), Rate-Limit-bewusste Refresh-Policy |
 | **Eingebauter MCP-Server** | stdio-MCP-Server (`kkterm-cli`), der kuratierte Workspace- und Dashboard-Tools für externe Coding-Agenten (Claude Code, Codex, Copilot, Antigravity, OpenCode) freigibt; authentifizierte Named-Pipe-Brücke; per-Modul-`dangerous.*`-Namespaces hinter einem einzelnen Safety-Toggle; Einstellungs-Dialog mit Ein-Klick-JSON-/-TOML-Snippets und `claude mcp add` / `codex mcp add`-Befehlen |
-| **Settings** | Allgemein, Darstellung, Credentials, KI, SSH, Terminal, URL, RDP, VNC, Dashboard, Über; benutzerdefinierte UI-Schriften; Minimieren in Tray; Don't Sleep; Backup/Import |
+| **Installer Helper** | Activity-Rail-Modul für einen gebündelten Windows-Entwicklertool-Katalog: installierte Tools erkennen, neueste Versionen vergleichen, installieren/aktualisieren/deinstallieren, Tools aus Update all herauspinnen, Befehlslogs streamen und unterstützte verwaltete Apps starten |
+| **Settings** | Allgemein, Darstellung, Credentials, KI, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, Über; benutzerdefinierte UI-Schriften; Minimieren in Tray; Don't Sleep; Backup/Import |
 | **Localization** | i18next-UI mit englischer Quelle und dynamischen Locale-Bundles: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### KI-Provider

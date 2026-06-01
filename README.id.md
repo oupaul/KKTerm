@@ -76,6 +76,7 @@ Plus beberapa hal yang belum kamu tahu kamu inginkan:
 - Sebuah **Dashboard** tempat kamu bilang ke AI *"buatkan widget yang ping router saya setiap 30 detik"* dan langsung muncul, tersandbox, di gridmu.
 - **SSH pane yang otomatis attach ke sesi tmux bernama** supaya sesi remote `claude` / `codex` kamu bertahan dari setiap tantrum Wi-Fi yang dilempar laptopmu.
 - Sebuah **widget penggunaan AI Coding** yang menampilkan kuota Claude Code dan Codex kamu — jendela 5 jam, jendela mingguan, plan saat ini, email akun — di **Dashboard** dan di status bar, supaya kamu berhenti kaget kena tembok rate-limit jam 3 pagi.
+- Sebuah Module **Installer Helper** yang mendeteksi, memasang, memperbarui, menghapus, dan menjalankan katalog tool developer Windows yang dikurasi — Node, Python, Docker, WSL, CLI coding AI, dan utilitas kecil yang biasanya kamu buru lewat banyak tab browser.
 - Sebuah **server MCP built-in** (`kkterm-cli`) yang memungkinkan coding agent eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode) mengendalikan Workspace dan Dashboard kamu — list Connections, baca buffer terminal, place widget — lewat surface tool yang dikurasi dan di-gate dengan safety. AI-ke-AI, di mesin kamu, tanpa relay cloud.
 - Dua puluh satu **latar belakang canvas beranimasi** (iya, termasuk `matrix`) untuk dashboard, karena kami memang tidak malu-malu soal itu.
 
@@ -278,6 +279,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -318,7 +320,8 @@ Bentuk yang penting: data tersimpan yang tahan lama (**Connection**) terpisah da
 | **AI Assistant** | Chat streaming, runtime kompatibel OpenAI, registri provider, klasifikasi keamanan proposal perintah, lampiran screenshot/context, **pembuatan widget Dashboard (konten + skrip tersandbox)**, **penangkapan pane tmux** sebagai context percakapan untuk sesi remote, tools manajemen **Connection**, dan tools **Session** langsung untuk terminal, RDP/VNC, dan SFTP/FTP |
 | **Penggunaan AI Coding** | **Widget Dashboard + indikator status bar** yang melacak penggunaan kuota **Claude Code** dan **Codex**: akun terhubung, level plan, persen jendela 5 jam dan mingguan, waktu reset berikutnya, status auth (`connected` / `expired` / `error`), policy refresh yang sadar rate-limit |
 | **Server MCP Built-in** | Server MCP stdio (`kkterm-cli`) yang membuka tools Workspace dan Dashboard yang dikurasi ke agen coding eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge named pipe ter-authenticate; sub-namespace `dangerous.*` per-Modul di balik satu toggle safety; dialog Settings dengan snippet JSON / TOML satu klik dan command `claude mcp add` / `codex mcp add` |
-| **Settings** | Umum, Tampilan, Kredensial, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Tentang; font UI kustom; minimize-to-tray; Don't Sleep; backup/import |
+| **Installer Helper** | Module Activity Rail untuk katalog tool developer Windows yang dibundel: mendeteksi tool terpasang, membandingkan versi terbaru, install/update/uninstall, mengecualikan tool dari Update all, streaming log command, dan menjalankan managed app yang didukung |
+| **Settings** | Umum, Tampilan, Kredensial, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, Tentang; font UI kustom; minimize-to-tray; Don't Sleep; backup/import |
 | **Lokalisasi** | UI i18next dengan sumber bahasa Inggris dan bundel lokal dinamis: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### AI Providers

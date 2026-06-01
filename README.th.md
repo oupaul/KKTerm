@@ -76,6 +76,7 @@
 - **Dashboard** ที่คุณบอก AI ว่า *"สร้าง widget ping router ทุก 30 วินาทีให้หน่อย"* แล้วมันก็โผล่ขึ้น sandbox บน grid ของคุณเลย
 - **SSH pane ที่ auto-attach เข้า tmux session ที่ตั้งชื่อไว้** ให้ session remote `claude` / `codex` ของคุณรอดจากทุก Wi-Fi tantrum ที่แล็ปท็อปพ่น
 - **Widget แสดงการใช้งาน AI Coding** ที่โชว์โควต้า Claude Code และ Codex ของคุณ — หน้าต่าง 5 ชั่วโมง, หน้าต่างรายสัปดาห์, แผนปัจจุบัน, อีเมลบัญชี — บน **Dashboard** และในแถบสถานะ เพื่อให้คุณไม่ต้องตกใจกับกำแพง rate-limit ตอนตีสาม
+- **Installer Helper Module** ที่ตรวจจับ ติดตั้ง อัปเดต ถอนการติดตั้ง และเปิดใช้แคตตาล็อกเครื่องมือพัฒนา Windows ที่คัดสรรไว้ — Node, Python, Docker, WSL, AI coding CLI และยูทิลิตีเล็ก ๆ ที่ปกติคุณต้องไล่หาในแท็บเบราว์เซอร์
 - **MCP server แบบ built-in** (`kkterm-cli`) ที่ให้ coding agent ภายนอก (Claude Code, Codex, Copilot, Antigravity, OpenCode) ควบคุม Workspace และ Dashboard ของคุณ — list Connection, อ่าน terminal buffer, วาง widget — ผ่าน surface ของ tool ที่คัดสรรและมี safety gate AI ต่อ AI บนเครื่องของคุณ ไม่มี cloud relay
 - Nine **animated canvas background** (ใช่ รวม `matrix` ด้วย) สำหรับ dashboard เพราะเราไม่ได้ถือตัวเกินไปขนาดนั้น
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ flowchart LR
 | **AI Assistant** | Streaming chat, OpenAI-compatible runtime, provider registry, command proposal safety classification, screenshot/context attachment, **Dashboard widget authoring (content + sandboxed script)**, **tmux pane capture** เป็น conversation context สำหรับ remote session, **Connection** management tool, และ live **Session** tool สำหรับ terminal, RDP/VNC, และ SFTP/FTP |
 | **การใช้งาน AI Coding** | **Widget Dashboard + ตัวบ่งชี้แถบสถานะ** ที่ติดตามการใช้โควต้าของ **Claude Code** และ **Codex**: บัญชีที่เชื่อมต่อ, ระดับแผน, เปอร์เซ็นต์หน้าต่าง 5 ชั่วโมงและรายสัปดาห์, เวลา reset ครั้งถัดไป, สถานะ auth (`connected` / `expired` / `error`), นโยบาย refresh ที่ตระหนักถึง rate-limit |
 | **MCP Server แบบ Built-in** | stdio MCP server (`kkterm-cli`) ที่เปิดเผย tool Workspace และ Dashboard ที่คัดสรรให้ coding agent ภายนอก (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge named pipe ที่ authenticate; sub-namespace `dangerous.*` ต่อ Module ถูก gate ด้วย safety toggle เดียว; dialog ใน Settings พร้อม snippet JSON / TOML แบบคลิกเดียวและคำสั่ง `claude mcp add` / `codex mcp add` |
-| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, About; custom UI font; minimize-to-tray; Don't Sleep; backup/import |
+| **Installer Helper** | Activity Rail Module สำหรับแคตตาล็อกเครื่องมือพัฒนา Windows ที่ bundle มากับแอป: ตรวจจับ tool ที่ติดตั้งแล้ว, เทียบเวอร์ชันล่าสุด, install/update/uninstall, pin tool ออกจาก Update all, stream command log และเปิด managed app ที่รองรับ |
+| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, About; custom UI font; minimize-to-tray; Don't Sleep; backup/import |
 | **Localization** | i18next UI พร้อม English source และ dynamic locale bundle: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### AI Provider

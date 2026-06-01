@@ -76,6 +76,7 @@
 - 一個 **Dashboard**，你可以對 AI 說 *「幫我做一個每 30 秒 ping 一次路由器的 widget」*，它就會在你的網格上憑空出現，而且關在沙箱裡。
 - **可以自動 attach 到指定 tmux session 的 SSH pane**，這樣你那個跑在遠端的 `claude` / `codex` 就不會因為筆電每次鬧脾氣的 Wi-Fi 而陣亡。
 - 一個 **AI 編程用量 Widget**，在 **Dashboard** 和狀態列上秀出你的 Claude Code 與 Codex 配額——5 小時視窗、每週視窗、目前方案、帳號 Email——讓你不會凌晨三點才被 rate-limit 牆撞個正著。
+- 一個 **Installer Helper** 模組，幫你偵測、安裝、更新、解除安裝並啟動精選的 Windows 開發工具目錄——Node、Python、Docker、WSL、AI coding CLI，還有那些平常得翻好幾個瀏覽器分頁才找得到的小工具。
 - 一個**內建 MCP 伺服器**（`kkterm-cli`），讓外部編程 Agent（Claude Code、Codex、Copilot、Antigravity、OpenCode）能透過精選且有安全閘的工具表面操控你的 Workspace 與 Dashboard——列出 Connection、讀取終端機 buffer、放置 Widget。AI 對 AI，全在你機器上，沒有雲端中繼。
 - 二十一種 **canvas 動畫背景**（對，包括 `matrix`）給 Dashboard 用，因為我們也沒在客氣。
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ flowchart LR
 | **AI Assistant** | 串流聊天、OpenAI-compatible runtime、provider registry、指令提案安全分類、截圖/context 附件、**Dashboard widget 撰寫（content + 沙箱 script）**、把遠端 session 的 **tmux pane 捕捉**作為對話 context、**Connection** 管理工具，以及給終端、RDP/VNC、SFTP/FTP 的 live **Session** 工具 |
 | **AI 編程用量** | **Dashboard Widget + 狀態列指示器**，追蹤 **Claude Code** 與 **Codex** 的配額用量：已連結帳號、方案等級、5 小時與每週視窗百分比、下次 reset 時間、auth 狀態（`connected` / `expired` / `error`）、尊重 rate-limit 的 refresh 策略 |
 | **內建 MCP 伺服器** | stdio MCP 伺服器（`kkterm-cli`），對外部 coding agent（Claude Code、Codex、Copilot、Antigravity、OpenCode）開放精選的 Workspace 與 Dashboard 工具；經認證的 named pipe bridge；各模組的 `dangerous.*` 命名空間統一掛在單一安全切換之後；設定中的對話框提供一鍵 JSON / TOML 片段，以及 `claude mcp add` / `codex mcp add` 指令 |
-| **Settings** | General、Appearance、Credentials、AI、SSH、Terminal、URL、RDP、VNC、Dashboard、About；自訂 UI 字型；minimize-to-tray；Don't Sleep；備份/匯入 |
+| **Installer Helper** | 活動軌道模組，提供打包隨附的 Windows 開發工具目錄：偵測已安裝工具、比對最新版本、安裝/更新/解除安裝、將工具排除於 Update all、串流指令日誌，並啟動支援的受管理 app |
+| **Settings** | General、Appearance、Credentials、AI、SSH、Terminal、URL、RDP、VNC、Dashboard、Installer Helper、About；自訂 UI 字型；minimize-to-tray；Don't Sleep；備份/匯入 |
 | **Localization** | i18next UI，英文為來源並動態載入 locale bundle：zh-TW、zh-CN、ja、ko、fr、de、es、es-MX、it、pt-BR、th、id、vi |
 
 ### AI Provider

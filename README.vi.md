@@ -76,6 +76,7 @@ Cộng thêm vài thứ bạn còn không biết là mình muốn:
 - Một **Dashboard** nơi bạn bảo AI *"build cho tôi một widget ping router mỗi 30 giây"* và nó hiện ra ngay trên grid của bạn, chạy trong sandbox.
 - **SSH pane tự động attach vào tmux session có tên** để phiên `claude` / `codex` từ xa sống sót qua mọi cơn dỗi hờn của Wi-Fi laptop.
 - Một **widget theo dõi mức dùng AI Coding** hiển thị quota Claude Code và Codex của bạn — cửa sổ 5 giờ, cửa sổ tuần, gói hiện tại, email tài khoản — trên **Dashboard** và status bar, để bạn không còn bị đập vào tường rate-limit lúc 3 giờ sáng.
+- Một Module **Installer Helper** phát hiện, cài đặt, cập nhật, gỡ cài đặt và launch một catalog công cụ developer Windows được tuyển chọn — Node, Python, Docker, WSL, AI coding CLI và các tiện ích nhỏ mà bình thường bạn phải lục qua nhiều tab trình duyệt.
 - Một **MCP server tích hợp sẵn** (`kkterm-cli`) cho phép các coding agent bên ngoài (Claude Code, Codex, Copilot, Antigravity, OpenCode) điều khiển Workspace và Dashboard của bạn — list Connection, đọc buffer terminal, đặt widget — qua bề mặt tool được tuyển chọn và có safety gate. AI-tới-AI, trên máy bạn, không qua relay cloud.
 - Hai mươi mốt nền **canvas có animation** (vâng, gồm cả `matrix`) cho dashboard, vì chúng tôi không ngại làm chuyện đó.
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ Hình dạng quan trọng: dữ liệu lưu trữ bền vững (**Connection**) 
 | **AI Assistant** | Streaming chat, runtime OpenAI-compatible, provider registry, phân loại an toàn đề xuất lệnh, đính kèm screenshot/context, **viết widget cho Dashboard (content + script sandbox)**, **capture tmux pane** làm context hội thoại cho session từ xa, tool quản lý **Connection**, và tool live **Session** cho terminal, RDP/VNC, và SFTP/FTP |
 | **Mức dùng AI Coding** | **Widget Dashboard + chỉ báo status bar** theo dõi mức dùng quota của **Claude Code** và **Codex**: tài khoản đã kết nối, mức gói, phần trăm cửa sổ 5 giờ và tuần, thời gian reset kế tiếp, trạng thái auth (`connected` / `expired` / `error`), policy refresh nhận biết rate-limit |
 | **MCP Server tích hợp** | MCP server stdio (`kkterm-cli`) expose tool Workspace và Dashboard được tuyển chọn cho coding agent bên ngoài (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge named pipe có xác thực; sub-namespace `dangerous.*` theo Module được gate sau một safety toggle duy nhất; dialog Settings với snippet JSON / TOML một-click và command `claude mcp add` / `codex mcp add` |
-| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, About; font UI tùy chỉnh; minimize-to-tray; Don't Sleep; backup/import |
+| **Installer Helper** | Activity Rail Module cho catalog công cụ developer Windows được bundling: phát hiện tool đã cài, so sánh version mới nhất, install/update/uninstall, pin tool khỏi Update all, stream command log, và launch managed app được hỗ trợ |
+| **Settings** | General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, About; font UI tùy chỉnh; minimize-to-tray; Don't Sleep; backup/import |
 | **Localization** | UI i18next với nguồn tiếng Anh và bundle locale tải động: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### AI Providers

@@ -76,6 +76,7 @@
 - 一个 **Dashboard**，你只需告诉 AI *"给我建一个每 30 秒 ping 一次路由器的 Widget"*，它就出现在你的网格上，完全沙盒隔离。
 - **SSH Pane 自动挂载到命名 tmux Session**，让你远程跑的 `claude` / `codex` Session 扛得住笔记本每一次 Wi-Fi 发脾气。
 - 一个 **AI 编程用量 Widget**，在 **Dashboard** 和状态栏上展示你的 Claude Code 和 Codex 配额——5 小时窗口、每周窗口、当前套餐、账号邮箱——让你不会在凌晨 3 点撞上限速墙才一脸懵。
+- 一个 **Installer Helper** 模块，用来检测、安装、更新、卸载并启动精选的 Windows 开发工具目录——Node、Python、Docker、WSL、AI 编程 CLI，以及那些平时要翻好几个浏览器标签才找得到的小工具。
 - 一个**内置 MCP 服务器**（`kkterm-cli`），让外部编程 Agent（Claude Code、Codex、Copilot、Antigravity、OpenCode）能操控你的 Workspace 和 Dashboard——列出 Connection、读取终端缓冲区、放置 Widget——通过精选的、带安全门控的工具表面。AI 对 AI，全在你机器上，不走云端中转。
 - 二十一种 **动态 Canvas 背景**（是的，包括 `matrix`）可用于 Dashboard，因为我们就是有这个审美品位。
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ flowchart LR
 | **AI 助手** | 流式聊天、OpenAI 兼容运行时、提供商注册表、命令提案安全分级、截图/上下文附件、**Dashboard Widget 创作（Content + 沙盒 Script）**、将 **tmux Pane 捕获**作为远程 Session 的对话上下文、**Connection** 管理工具，以及终端、RDP/VNC 和 SFTP/FTP 的实时 **Session** 工具 |
 | **AI 编程用量** | **Dashboard Widget + 状态栏指示器**，追踪 **Claude Code** 和 **Codex** 的配额使用情况：已连接账号、套餐等级、5 小时和每周窗口百分比、下次重置时间、认证状态（`connected` / `expired` / `error`）、限速友好的刷新策略 |
 | **内置 MCP 服务器** | stdio MCP 服务器（`kkterm-cli`），向外部编程 Agent（Claude Code、Codex、Copilot、Antigravity、OpenCode）暴露精选的 Workspace 和 Dashboard 工具；带认证的命名管道桥接；每个模块的 `dangerous.*` 命名空间由单一安全开关门控；设置中的对话框提供一键 JSON / TOML 片段以及 `claude mcp add` / `codex mcp add` 命令 |
-| **Settings** | 通用、外观、凭据、AI、SSH、终端、URL、RDP、VNC、Dashboard、关于；自定义 UI 字体；最小化到托盘；阻止休眠；备份/导入 |
+| **Installer Helper** | 活动轨道模块，提供随应用打包的 Windows 开发工具目录：检测已安装工具、比较最新版本、安装/更新/卸载、将工具排除在 Update all 之外、流式显示命令日志，并启动支持的受管理应用 |
+| **Settings** | 通用、外观、凭据、AI、SSH、终端、URL、RDP、VNC、Dashboard、Installer Helper、关于；自定义 UI 字体；最小化到托盘；阻止休眠；备份/导入 |
 | **本地化** | 基于 i18next 的 UI，英文为源，动态语言包：zh-TW、zh-CN、ja、ko、fr、de、es、es-MX、it、pt-BR、th、id、vi |
 
 ### AI 提供商

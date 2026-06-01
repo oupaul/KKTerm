@@ -76,6 +76,7 @@
 - **Dashboard** でAIに *「ルーターを30秒おきにpingするWidget を作って」* と言えば、サンドボックス化されたグリッドの上にそれが現れる。
 - **SSHのPane が名前付きtmux Sessionに自動アタッチ**されるので、ラップトップのWi-Fiがどれだけ癇癪を起こしても、リモートの `claude` / `codex` のセッションは生き続ける。
 - **AIコーディング使用量Widget** が、Claude Code と Codex のクォータ（5時間ウィンドウ・週次ウィンドウ・現在のプラン・アカウントメール）を **Dashboard** とステータスバーに表示。深夜3時にレートリミットの壁に突き当たって驚かなくなる。
+- **Installer Helper Module**。Node、Python、Docker、WSL、AIコーディングCLI、そして普段ならブラウザータブを渡り歩いて探す小さなユーティリティまで、厳選されたWindows開発ツールカタログを検出・インストール・更新・アンインストール・起動できる。
 - **ビルトインMCPサーバー**（`kkterm-cli`）。外部コーディングエージェント（Claude Code、Codex、Copilot、Antigravity、OpenCode）が、キュレートされた安全ゲート付きツール経由で、あなたのWorkspaceとDashboardを操作できる——Connection一覧、ターミナルバッファ読み取り、Widget配置など。AIからAIへ、ローカルマシン上で、クラウドリレーなし。
 - Dashboard用のアニメーションキャンバス背景が21種類（そう、`matrix` もある）。やりすぎかもしれないが、後悔はしていない。
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ flowchart LR
 | **AI Assistant** | ストリーミングチャット、OpenAI互換ランタイム、プロバイダーレジストリ、コマンド提案の安全分類、スクリーンショット/コンテキスト添付、**Dashboard Widgetオーサリング（contentおよびサンドボックスscript）**、リモートSession用会話コンテキストとしての **tmux Paneキャプチャ**、**Connection** 管理ツール、ターミナル・RDP/VNC・SFTP/FTP用ライブ **Session** ツール |
 | **AIコーディング使用量** | **Claude Code** と **Codex** のクォータ使用量を追跡する **Dashboard Widget + ステータスバーインジケータ**：接続済みアカウント、プラン階層、5時間および週次ウィンドウの使用率、次回リセット時刻、認証状態（`connected` / `expired` / `error`）、レートリミットを意識したリフレッシュ方針 |
 | **ビルトインMCPサーバー** | 外部コーディングエージェント（Claude Code、Codex、Copilot、Antigravity、OpenCode）にキュレート版のWorkspaceおよびDashboardツールを公開するstdio MCPサーバー（`kkterm-cli`）；認証付き名前付きパイプブリッジ；モジュール毎の `dangerous.*` ネームスペースは単一の安全トグルの背後でゲート；解決済みバイナリパス入りJSON / TOMLスニペットと `claude mcp add` / `codex mcp add` コマンドのSettingsダイアログ |
-| **Settings** | 一般、外観、認証情報、AI、SSH、ターミナル、URL、RDP、VNC、Dashboard、About；カスタムUIフォント；最小化してトレイへ；Don't Sleep；バックアップ/インポート |
+| **Installer Helper** | バンドル済みWindows開発ツールカタログ用のActivity Rail Module。インストール済みツールの検出、最新版比較、インストール/更新/アンインストール、Update allからの除外、コマンドログのストリーミング、対応する管理対象アプリの起動を行う |
+| **Settings** | 一般、外観、認証情報、AI、SSH、ターミナル、URL、RDP、VNC、Dashboard、Installer Helper、About；カスタムUIフォント；最小化してトレイへ；Don't Sleep；バックアップ/インポート |
 | **ローカライゼーション** | i18next UIと英語ソース、動的ロケールバンドル：zh-TW、zh-CN、ja、ko、fr、de、es、es-MX、it、pt-BR、th、id、vi |
 
 ### AIプロバイダー

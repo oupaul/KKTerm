@@ -79,6 +79,7 @@
 - AI에게 *"30초마다 공유기에 핑을 보내는 Widget을 만들어 줘"* 라고 말하면 Dashboard 그리드 위에 샌드박스 환경으로 나타나는 **Dashboard**.
 - Wi-Fi가 몇 번을 끊겨도 원격 `claude` / `codex` Session이 살아남는, **named tmux session에 자동 연결되는 SSH 창**.
 - Claude Code와 Codex의 쿼터를 **Dashboard**와 상태 표시줄에 보여주는 **AI 코딩 사용량 Widget** — 5시간 윈도우, 주간 윈도우, 현재 플랜, 계정 이메일. 새벽 3시에 레이트 리밋 벽에 부딪히고 놀라는 일이 없어집니다.
+- Node, Python, Docker, WSL, AI 코딩 CLI와 평소 브라우저 탭을 뒤져 찾던 작은 유틸리티까지, 큐레이션된 Windows 개발 도구 카탈로그를 감지, 설치, 업데이트, 제거, 실행하는 **Installer Helper Module**.
 - 외부 코딩 에이전트(Claude Code, Codex, Copilot, Antigravity, OpenCode)가 큐레이션·안전 게이트 처리된 툴 표면을 통해 당신의 Workspace와 Dashboard를 조작할 수 있게 해주는 **내장 MCP 서버**(`kkterm-cli`) — Connection 목록 조회, 터미널 버퍼 읽기, Widget 배치 등. AI와 AI 간의 소통이, 당신의 머신 위에서, 클라우드 릴레이 없이.
 - 예, `matrix` 포함, 스물한 가지 **애니메이션 캔버스 배경**. 우리도 그 정도 취향은 있습니다.
 
@@ -271,6 +272,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -311,7 +313,8 @@ flowchart LR
 | **AI Assistant** | 스트리밍 채팅, OpenAI 호환 런타임, 공급자 레지스트리, 명령 제안 안전 분류, 스크린샷/컨텍스트 첨부, **Dashboard Widget 작성(콘텐츠 + 샌드박스 스크립트)**, 원격 Session의 대화 컨텍스트로서의 **tmux 창 캡처**, **Connection** 관리 도구, 터미널, RDP/VNC, SFTP/FTP를 위한 실시간 **Session** 도구 |
 | **AI 코딩 사용량** | **Claude Code**와 **Codex**의 쿼터 사용량을 추적하는 **Dashboard Widget + 상태 표시줄 인디케이터**: 연결된 계정, 플랜 등급, 5시간 및 주간 윈도우 사용률, 다음 리셋 시각, 인증 상태(`connected` / `expired` / `error`), 레이트 리밋을 의식한 리프레시 정책 |
 | **내장 MCP 서버** | 외부 코딩 에이전트(Claude Code, Codex, Copilot, Antigravity, OpenCode)에 큐레이션된 Workspace 및 Dashboard 도구를 노출하는 stdio MCP 서버(`kkterm-cli`); 인증된 명명 파이프 브리지; 모듈별 `dangerous.*` 네임스페이스가 단일 안전 토글 뒤에서 게이트됨; 해석된 바이너리 경로의 JSON / TOML 스니펫과 `claude mcp add` / `codex mcp add` 명령이 들어 있는 설정 다이얼로그 |
-| **Settings** | 일반, 외관, 자격 증명, AI, SSH, 터미널, URL, RDP, VNC, Dashboard, 정보; 사용자 정의 UI 폰트; 트레이로 최소화; 절전 방지; 백업/가져오기 |
+| **Installer Helper** | 번들된 Windows 개발 도구 카탈로그용 Activity Rail Module: 설치된 도구 감지, 최신 버전 비교, 설치/업데이트/제거, Update all에서 도구 제외, 명령 로그 스트리밍, 지원되는 관리 앱 실행 |
+| **Settings** | 일반, 외관, 자격 증명, AI, SSH, 터미널, URL, RDP, VNC, Dashboard, Installer Helper, 정보; 사용자 정의 UI 폰트; 트레이로 최소화; 절전 방지; 백업/가져오기 |
 | **Localization** | i18next UI, 영어 소스, 동적 로케일 번들: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### AI 공급자

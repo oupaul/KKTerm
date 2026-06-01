@@ -76,6 +76,7 @@ Et quelques trucs dont tu ne savais pas encore avoir besoin :
 - Un **Dashboard** où tu dis à une IA *"crée-moi un Widget qui pingue mon routeur toutes les 30 secondes"* et ça apparaît, sandboxé, sur ta grille.
 - **Des panes SSH qui s'attachent automatiquement à des Sessions tmux nommées** pour que ta session `claude` / `codex` distante survive à chaque caprice Wi-Fi de ton laptop.
 - Un **Widget de consommation d'IA de codage** qui affiche tes quotas Claude Code et Codex — fenêtre 5 heures, fenêtre hebdomadaire, plan en cours, e-mail du compte — sur le **Dashboard** et dans la barre d'état, pour ne plus te prendre le mur du rate-limit à 3 h du mat.
+- Un module **Installer Helper** qui détecte, installe, met à jour, désinstalle et lance un catalogue curaté d'outils de développement Windows — Node, Python, Docker, WSL, CLI de codage IA et les petits utilitaires qu'on finit d'habitude par traquer dans des onglets de navigateur.
 - Un **serveur MCP intégré** (`kkterm-cli`) qui permet aux agents de code externes (Claude Code, Codex, Copilot, Antigravity, OpenCode) de piloter ton Workspace et ton Dashboard — lister les Connections, lire des buffers de terminal, placer des Widgets — via une surface d'outils curatée et soumise à approbation. IA-vers-IA, sur ta machine, sans relais cloud.
 - Vingt et un **fonds animés** (oui, dont `matrix`) pour le Dashboard, parce qu'on n'est pas au-dessus de ça.
 
@@ -268,6 +269,7 @@ flowchart LR
     Shell --> Rail[Activity Rail]
     Rail --> WS[Workspace Module]
     Rail --> Dash[Dashboard Module]
+    Rail --> Inst[Installer Helper Module]
     Rail -.-> FE[File Explorer<br/>planned]
     Rail --> Set[Settings]
 
@@ -308,7 +310,8 @@ La forme qui compte : les données sauvegardées durables (**Connection**) sont 
 | **AI Assistant** | Chat en streaming, runtime compatible OpenAI, registre de fournisseurs, classification de sécurité des propositions de commandes, captures d'écran/pièces jointes contextuelles, **création de Widgets Dashboard (contenu + script sandboxé)**, **capture de pane tmux** comme contexte de conversation pour les Sessions distantes, outils de gestion des **Connections**, et outils de **Session** en direct pour terminal, RDP/VNC, et SFTP/FTP |
 | **Consommation d'IA de codage** | **Widget Dashboard + indicateur dans la barre d'état** suivant la consommation des quotas **Claude Code** et **Codex** : compte connecté, niveau du plan, pourcentages des fenêtres 5 heures et hebdomadaire, prochaine heure de reset, état d'auth (`connected` / `expired` / `error`), politique de rafraîchissement respectueuse des rate limits |
 | **Serveur MCP intégré** | Serveur MCP stdio (`kkterm-cli`) exposant des outils Workspace et Dashboard curatés aux agents de code externes (Claude Code, Codex, Copilot, Antigravity, OpenCode) ; bridge named pipe authentifié ; sous-espaces `dangerous.*` par Module verrouillés derrière un unique toggle de sécurité ; dialogue Settings avec snippets JSON / TOML en un clic et commandes `claude mcp add` / `codex mcp add` |
-| **Settings** | Général, Apparence, Identifiants, IA, SSH, Terminal, URL, RDP, VNC, Dashboard, À propos ; polices UI personnalisées ; minimiser dans la barre système ; Don't Sleep ; sauvegarde/import |
+| **Installer Helper** | Module Activity Rail pour un catalogue d'outils de développement Windows embarqué : détecter les outils installés, comparer les dernières versions, installer/mettre à jour/désinstaller, exclure des outils de Update all, diffuser les logs de commande et lancer les applis gérées prises en charge |
+| **Settings** | Général, Apparence, Identifiants, IA, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, À propos ; polices UI personnalisées ; minimiser dans la barre système ; Don't Sleep ; sauvegarde/import |
 | **Localisation** | UI i18next avec source anglaise et bundles de locale dynamiques : zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
 
 ### Fournisseurs IA
