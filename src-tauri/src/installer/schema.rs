@@ -49,6 +49,9 @@ pub struct Recipe {
     #[serde(default)]
     pub category: Option<String>,
     pub provider: Provider,
+    /// Optional direct-download installer fallback for winget recipes.
+    #[serde(default, rename = "downloadProvider")]
+    pub download_provider: Option<Provider>,
     /// Which options from the closed shared option set apply to this recipe.
     /// See `RecipeOptions` enum.
     #[serde(default)]
@@ -111,6 +114,8 @@ pub enum RecipeOption {
     Location,
     /// GitHub-release recipes only: add the extracted directory to PATH.
     AddToPath,
+    /// Allow switching a winget recipe to its direct download installer.
+    Provider,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -328,6 +333,7 @@ mod tests {
             provider: Provider::Winget {
                 id: winget_id.into(),
             },
+            download_provider: None,
             options: vec![],
             homepage: None,
             release_notes_url: None,
@@ -396,6 +402,7 @@ mod tests {
             needs: vec![],
             icon: None,
             category: None,
+            download_provider: None,
             provider: Provider::Bundle {
                 steps: vec!["ghost".into()],
             },
@@ -632,6 +639,7 @@ mod tests {
             needs: vec![],
             icon: None,
             category: None,
+            download_provider: None,
             provider: Provider::Bundle {
                 steps: vec!["nvm".into(), "node".into()],
             },

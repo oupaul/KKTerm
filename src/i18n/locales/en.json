@@ -508,7 +508,8 @@
       "versionLatest": "Latest",
       "location": "Install location",
       "addToPath": "Add to PATH",
-      "pinVersion": "Pin version (skip from Update all)"
+      "pinVersion": "Pin version (skip from Update all)",
+      "provider": "Provider"
     },
     "status": {
       "scanning": "Scanning installed tools…",

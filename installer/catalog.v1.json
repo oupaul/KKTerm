@@ -14,7 +14,8 @@
         "displayNamePrefixes": ["Git version"]
       },
       "provider": { "kind": "winget", "id": "Git.Git" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/Git-2.54.0-64-bit.exe", "fileName": "Git-2.54.0-64-bit.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "github-cli",
@@ -26,7 +27,8 @@
         "displayNames": ["GitHub CLI"]
       },
       "provider": { "kind": "winget", "id": "GitHub.cli" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_amd64.msi", "fileName": "gh_2.93.0_windows_amd64.msi" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "vscode",
@@ -40,7 +42,8 @@
         "displayNamePrefixes": ["Microsoft Visual Studio Code"]
       },
       "provider": { "kind": "winget", "id": "Microsoft.VisualStudioCode" },
-      "options": ["scope", "version", "location"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://update.code.visualstudio.com/latest/win32-x64-user/stable", "fileName": "VSCodeUserSetup-x64.exe" },
+      "options": ["provider", "scope", "version", "location"]
     },
     {
       "id": "cursor",
@@ -52,7 +55,8 @@
         "displayNames": ["Cursor"]
       },
       "provider": { "kind": "winget", "id": "Anysphere.Cursor" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://downloads.cursor.com/production/e7a7e93f4d75f8272503ecf33cedbaae10114a15/win32/x64/user-setup/CursorUserSetup-x64-3.6.21.exe", "fileName": "CursorUserSetup-x64-3.6.21.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "notepadpp",
@@ -64,7 +68,8 @@
         "displayNames": ["Notepad++", "Notepad++ (64-bit x64)"]
       },
       "provider": { "kind": "winget", "id": "Notepad++.Notepad++" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.2/npp.8.9.6.2.Installer.x64.exe", "fileName": "npp.8.9.6.2.Installer.x64.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "nvm-windows",
@@ -76,7 +81,8 @@
         "displayNamePrefixes": ["NVM for Windows"]
       },
       "provider": { "kind": "winget", "id": "CoreyButler.NVMforWindows" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe", "fileName": "nvm-setup.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "node-bundle",
@@ -147,7 +153,8 @@
         "displayNames": ["Docker Desktop"]
       },
       "provider": { "kind": "winget", "id": "Docker.DockerDesktop" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe", "fileName": "Docker Desktop Installer.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "nssm",
@@ -207,7 +214,8 @@
         "displayNames": ["Ollama"]
       },
       "provider": { "kind": "winget", "id": "Ollama.Ollama" },
-      "options": ["version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://ollama.com/download/OllamaSetup.exe", "fileName": "OllamaSetup.exe" },
+      "options": ["provider", "version"]
     },
     {
       "id": "n8n",
@@ -265,7 +273,8 @@
         "displayNames": ["Bruno"]
       },
       "provider": { "kind": "winget", "id": "Bruno.Bruno" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/usebruno/bruno/releases/download/v3.4.2/bruno_3.4.2_x64_win.exe", "fileName": "bruno_3.4.2_x64_win.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "ripgrep",
@@ -331,7 +340,8 @@
         "displayNamePrefixes": ["Rustup"]
       },
       "provider": { "kind": "winget", "id": "Rustlang.Rustup" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://win.rustup.rs/x86_64", "fileName": "rustup-init.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "codex-desktop",
@@ -361,7 +371,9 @@
       "detection": {
         "displayNames": ["Claude"]
       },
-      "provider": { "kind": "winget", "id": "Anthropic.Claude" }
+      "provider": { "kind": "winget", "id": "Anthropic.Claude" },
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://claude.ai/api/desktop/win32/x64/msix/latest/redirect", "fileName": "Claude.msix" },
+      "options": ["provider"]
     },
     {
       "id": "hermes-agent",
@@ -387,7 +399,8 @@
         "displayNames": ["PowerToys", "Microsoft PowerToys"]
       },
       "provider": { "kind": "winget", "id": "Microsoft.PowerToys" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/microsoft/PowerToys/releases/download/v0.99.1/PowerToysUserSetup-0.99.1-x64.exe", "fileName": "PowerToysUserSetup-0.99.1-x64.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "sysinternals-suite",
@@ -414,7 +427,8 @@
         "displayNamePrefixes": ["Everything "]
       },
       "provider": { "kind": "winget", "id": "voidtools.Everything" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://www.voidtools.com/Everything-1.4.1.1032.x64-Setup.exe", "fileName": "Everything-1.4.1.1032.x64-Setup.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "ditto",
@@ -427,7 +441,8 @@
         "displayNames": ["Ditto"]
       },
       "provider": { "kind": "winget", "id": "Ditto.Ditto" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/sabrogden/Ditto/releases/download/3.25.113.0/DittoSetup_3_25_113_0.exe", "fileName": "DittoSetup_3_25_113_0.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "tailscale",
@@ -440,7 +455,8 @@
         "displayNames": ["Tailscale"]
       },
       "provider": { "kind": "winget", "id": "Tailscale.Tailscale" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe", "fileName": "tailscale-setup-latest.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "rustdesk",
@@ -470,7 +486,8 @@
         "displayNamePrefixes": ["7-Zip "]
       },
       "provider": { "kind": "winget", "id": "7zip.7zip" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://www.7-zip.org/a/7z2601-x64.exe", "fileName": "7z2601-x64.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "sharex",
@@ -484,7 +501,8 @@
         "displayNames": ["ShareX"]
       },
       "provider": { "kind": "winget", "id": "ShareX.ShareX" },
-      "options": ["scope", "version"]
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe", "fileName": "ShareX-20.2.0-setup-x64.exe" },
+      "options": ["provider", "scope", "version"]
     },
     {
       "id": "excalidraw",

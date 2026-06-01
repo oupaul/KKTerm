@@ -888,6 +888,7 @@ mod tests {
             provider: Provider::Winget {
                 id: winget_id.into(),
             },
+            download_provider: None,
             options: vec![],
             homepage: None,
             release_notes_url: None,

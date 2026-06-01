@@ -526,7 +526,8 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const wslBlocked =
     !!catalog && wslJustEnabled && recipeNeedsWsl(recipe, catalog);
   const homepage = recipe.homepage;
-  const releaseUrl = recipe.releaseNotesUrl ?? deriveProviderUrl(recipe.provider);
+  const selectedProvider = selectedProviderForRecipe(recipe, options);
+  const releaseUrl = recipe.releaseNotesUrl ?? deriveProviderUrl(selectedProvider);
 
   function applyOption<K extends keyof InstallOptions>(
     key: K,
@@ -625,7 +626,7 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
             </Row>
           ) : null}
           <Row label={t("installer.dialog.provider")}>
-            {providerSummary(recipe.provider)}
+            {providerSummary(selectedProvider)}
           </Row>
           <Row label={t("installer.dialog.latestVersion")}>
             {latestError ? (
@@ -974,14 +975,36 @@ function OptionsForm({
 }) {
   const { t } = useTranslation();
   const supported = new Set<RecipeOption>(recipe.options ?? []);
-  const showSelfElevatingScopeHint = isKnownSelfElevatingWingetRecipe(recipe);
+  const canChooseDownload =
+    supported.has("provider") &&
+    recipe.downloadProvider?.kind === "downloadInstaller";
+  const usingDownloadProvider =
+    canChooseDownload && options.provider === "download";
+  const showSelfElevatingScopeHint =
+    !usingDownloadProvider && isKnownSelfElevatingWingetRecipe(recipe);
   if (supported.size === 0) return null;
   return (
     <div
       className="installer-tool-dialog__options"
       data-tutorial-id="installer.toolOptions"
     >
-      {supported.has("scope") ? (
+      {canChooseDownload ? (
+        <label>
+          <span>{t("installer.options.provider")}</span>
+          <select
+            value={options.provider ?? "default"}
+            onChange={(event) =>
+              onChange("provider", event.target.value as "default" | "download")
+            }
+          >
+            <option value="default">{providerSummary(recipe.provider)}</option>
+            <option value="download">
+              {providerSummary(recipe.downloadProvider!)}
+            </option>
+          </select>
+        </label>
+      ) : null}
+      {supported.has("scope") && !usingDownloadProvider ? (
         <label>
           <span>{t("installer.options.scope")}</span>
           <select
@@ -1002,7 +1025,7 @@ function OptionsForm({
           ) : null}
         </label>
       ) : null}
-      {supported.has("version") ? (
+      {supported.has("version") && !usingDownloadProvider ? (
         <label>
           <span>{t("installer.options.version")}</span>
           <input
@@ -1013,7 +1036,7 @@ function OptionsForm({
           />
         </label>
       ) : null}
-      {supported.has("location") ? (
+      {supported.has("location") && !usingDownloadProvider ? (
         <label>
           <span>{t("installer.options.location")}</span>
           <input
@@ -1023,7 +1046,7 @@ function OptionsForm({
           />
         </label>
       ) : null}
-      {supported.has("addToPath") ? (
+      {supported.has("addToPath") && !usingDownloadProvider ? (
         <label>
           <input
             type="checkbox"
@@ -1035,6 +1058,19 @@ function OptionsForm({
       ) : null}
     </div>
   );
+}
+
+function selectedProviderForRecipe(
+  recipe: Recipe,
+  options: InstallOptions,
+): Provider {
+  if (
+    options.provider === "download" &&
+    recipe.downloadProvider?.kind === "downloadInstaller"
+  ) {
+    return recipe.downloadProvider;
+  }
+  return recipe.provider;
 }
 
 function providerSummary(provider: Provider): string {

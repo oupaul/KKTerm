@@ -98,7 +98,8 @@ fn install_recipe_by_provider(
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
     let options = effective_install_options(recipe, options);
-    match &recipe.provider {
+    let provider = selected_install_provider(recipe, &options);
+    match provider {
         Provider::Winget { id } => install_winget(&recipe.id, id, &options, cancel, emit),
         Provider::Npm { pkg } => install_npm(&recipe.id, pkg, &options, cancel, emit),
         Provider::UvPip { package } => install_uv_pip(&recipe.id, package, &options, cancel, emit),
@@ -127,6 +128,17 @@ fn install_recipe_by_provider(
                 .into(),
         ),
     }
+}
+
+fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -> &'a Provider {
+    if options.provider.as_deref() == Some("download") {
+        if let Some(provider @ Provider::DownloadInstaller { .. }) =
+            recipe.download_provider.as_ref()
+        {
+            return provider;
+        }
+    }
+    &recipe.provider
 }
 
 fn provider_kind(provider: &Provider) -> &'static str {
@@ -1682,6 +1694,7 @@ mod tests {
             provider: Provider::Winget {
                 id: "Git.Git".into(),
             },
+            download_provider: None,
             options,
             homepage: None,
             release_notes_url: None,

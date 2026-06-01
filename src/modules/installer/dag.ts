@@ -131,7 +131,13 @@ function estimateUacPromptsFor(
   detected?: Record<string, DetectedState>,
   directlyActionableIds?: Set<string>,
 ): number {
-  switch (recipe.provider.kind) {
+  const provider =
+    options?.provider === "download" &&
+    recipe.downloadProvider?.kind === "downloadInstaller"
+      ? recipe.downloadProvider
+      : recipe.provider;
+
+  switch (provider.kind) {
     case "winget": {
       if (options?.scope === "machine") return 1;
       return isKnownSelfElevatingWingetRecipe(recipe) ? 1 : 0;
@@ -141,7 +147,7 @@ function estimateUacPromptsFor(
     case "wslDistro":
       return 0;
     case "githubRelease":
-      return recipe.provider.layout === "zip" ? 0 : 1;
+      return provider.layout === "zip" ? 0 : 1;
     case "npm":
       return 0;
     case "uvPip":
@@ -150,7 +156,7 @@ function estimateUacPromptsFor(
       if (recipe.id === "antigravity-cli") return 0;
       return 1;
     case "bundle":
-      return recipe.provider.steps.reduce((sum, stepId) => {
+      return provider.steps.reduce((sum, stepId) => {
         if (directlyActionableIds?.has(stepId)) return sum;
         if (detected?.[stepId]?.installed) return sum;
         const stepRecipe = byId?.get(stepId);

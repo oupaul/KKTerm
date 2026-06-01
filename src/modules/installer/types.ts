@@ -13,7 +13,7 @@ export type ProviderKind =
 
 export type GithubReleaseLayout = "zip" | "exeInstaller" | "msi";
 
-export type RecipeOption = "scope" | "version" | "location" | "addToPath";
+export type RecipeOption = "scope" | "version" | "location" | "addToPath" | "provider";
 
 export interface Detection {
   registryKeys?: string[];
@@ -45,6 +45,7 @@ export interface Recipe {
   icon?: string;
   category?: string;
   provider: Provider;
+  downloadProvider?: Provider;
   options?: RecipeOption[];
   /// Optional official project website, surfaced in the not-installed dialog.
   homepage?: string;
@@ -107,6 +108,7 @@ export interface InstallOptions {
   version?: string;
   location?: string;
   addToPath?: boolean;
+  provider?: "default" | "download";
 }
 
 export type ProgressEvent =

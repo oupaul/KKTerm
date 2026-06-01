@@ -19,4 +19,6 @@ pub struct InstallOptions {
     pub location: Option<String>,
     /// Github-release recipes only: add the extracted directory to user PATH.
     pub add_to_path: Option<bool>,
+    /// Optional provider override for recipes that declare a download installer fallback.
+    pub provider: Option<String>,
 }
