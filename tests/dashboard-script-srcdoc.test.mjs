@@ -251,6 +251,34 @@ test("script widget host exposes app-owned UI primitives", async () => {
   }
 });
 
+test("script widget layout enforcement varies #root CSS by level", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const body = { source: "document.getElementById('root');", permissions: { network: false } };
+  const theme = undefined;
+
+  // Strict: #root becomes a flex column that forces its outermost child to
+  // fill the surface and neutralizes shrink-to-content / centered-card CSS.
+  const strict = buildSrcdoc(body, "{}", [], theme, false, "strict");
+  assert.match(strict, /#root \{ display: flex; flex-direction: column; \}/);
+  assert.match(strict, /#root > \* \{ flex: 1 1 auto;/);
+  assert.match(strict, /max-width: none/);
+
+  // Moderate is the historical default: no extra #root enforcement rules.
+  const moderate = buildSrcdoc(body, "{}", [], theme, false, "moderate");
+  assert.doesNotMatch(moderate, /#root \{ display: flex; flex-direction: column; \}/);
+  assert.doesNotMatch(moderate, /overflow: visible/);
+
+  // Low relaxes even the historical clamp so content may size naturally.
+  const low = buildSrcdoc(body, "{}", [], theme, false, "low");
+  assert.match(low, /#root \{ height: auto; min-height: 100%; overflow: visible; \}/);
+
+  // The 6th argument defaults to moderate so existing callers are unchanged.
+  const defaulted = buildSrcdoc(body, "{}", [], theme, false);
+  assert.doesNotMatch(defaulted, /#root \{ display: flex; flex-direction: column; \}/);
+});
+
 test("script widget stage primitive does not impose a dark object background", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
     new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),

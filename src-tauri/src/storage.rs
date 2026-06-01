@@ -375,6 +375,13 @@ pub struct DashboardSettings {
     /// background. Existing views are unchanged.
     #[serde(default)]
     pub use_random_dynamic_background: bool,
+    /// How strictly the script-widget iframe forces AI-created layout to fill
+    /// its frame: `strict`, `moderate`, or `low`. Applied live at render time
+    /// in the frontend `buildSrcdoc`; persisted here so the choice survives
+    /// restarts. Rows without this field load with
+    /// [`default_widget_layout_enforcement`].
+    #[serde(default = "default_widget_layout_enforcement")]
+    pub widget_layout_enforcement: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -4542,7 +4549,15 @@ fn default_dashboard_settings() -> DashboardSettings {
         max_active_script_widgets: default_max_active_script_widgets(),
         allow_widget_network_tools: default_allow_widget_network_tools(),
         use_random_dynamic_background: false,
+        widget_layout_enforcement: default_widget_layout_enforcement(),
     }
+}
+
+/// Default script-widget layout enforcement level. `strict` makes generated
+/// widgets fill their frame by construction, which is the most consistent
+/// default; users can relax to `moderate` (historical) or `low` in Settings.
+fn default_widget_layout_enforcement() -> String {
+    "strict".to_string()
 }
 
 /// Default ceiling for simultaneously active script widgets on a Dashboard.
@@ -4987,6 +5002,13 @@ fn validate_dashboard_settings(
         settings.default_landing_view,
     )?;
     settings.allow_widget_network_tools = true;
+    settings.widget_layout_enforcement = match settings.widget_layout_enforcement.as_str() {
+        "strict" => "strict",
+        "moderate" => "moderate",
+        "low" => "low",
+        _ => "strict",
+    }
+    .to_string();
     if settings.max_active_script_widgets < 1
         || settings.max_active_script_widgets > MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT
     {
@@ -6790,6 +6812,7 @@ mod tests {
         assert_eq!(defaults.max_active_script_widgets, 8);
         assert!(defaults.allow_widget_network_tools);
         assert!(!defaults.use_random_dynamic_background);
+        assert_eq!(defaults.widget_layout_enforcement, "strict");
 
         let updated = storage
             .update_dashboard_settings(DashboardSettings {
@@ -6798,6 +6821,7 @@ mod tests {
                 max_active_script_widgets: 20,
                 allow_widget_network_tools: false,
                 use_random_dynamic_background: true,
+                widget_layout_enforcement: "low".to_string(),
             })
             .expect("dashboard settings update");
         assert!(!updated.confirm_remove);
@@ -6805,6 +6829,7 @@ mod tests {
         assert_eq!(updated.max_active_script_widgets, 20);
         assert!(updated.allow_widget_network_tools);
         assert!(updated.use_random_dynamic_background);
+        assert_eq!(updated.widget_layout_enforcement, "low");
 
         let reloaded = storage
             .dashboard_settings()
@@ -6814,6 +6839,20 @@ mod tests {
         assert_eq!(reloaded.max_active_script_widgets, 20);
         assert!(reloaded.allow_widget_network_tools);
         assert!(reloaded.use_random_dynamic_background);
+        assert_eq!(reloaded.widget_layout_enforcement, "low");
+
+        // Unknown enforcement levels normalize back to the strict default.
+        let normalized = storage
+            .update_dashboard_settings(DashboardSettings {
+                confirm_remove: true,
+                default_landing_view: "lastActive".to_string(),
+                max_active_script_widgets: 8,
+                allow_widget_network_tools: true,
+                use_random_dynamic_background: false,
+                widget_layout_enforcement: "bogus".to_string(),
+            })
+            .expect("dashboard settings update normalizes enforcement");
+        assert_eq!(normalized.widget_layout_enforcement, "strict");
 
         // Out-of-range values are rejected at the storage boundary.
         let too_low = storage.update_dashboard_settings(DashboardSettings {
@@ -6822,6 +6861,7 @@ mod tests {
             max_active_script_widgets: 0,
             allow_widget_network_tools: true,
             use_random_dynamic_background: false,
+            widget_layout_enforcement: "strict".to_string(),
         });
         assert!(too_low.is_err(), "0 must be rejected");
         let too_high = storage.update_dashboard_settings(DashboardSettings {
@@ -6830,6 +6870,7 @@ mod tests {
             max_active_script_widgets: 101,
             allow_widget_network_tools: true,
             use_random_dynamic_background: false,
+            widget_layout_enforcement: "strict".to_string(),
         });
         assert!(too_high.is_err(), "101 must be rejected");
     }

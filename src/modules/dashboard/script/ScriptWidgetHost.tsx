@@ -190,6 +190,9 @@ export function ScriptWidgetHost({
   const allowWidgetNetworkTools = useWorkspaceStore(
     (s) => s.dashboardSettings.allowWidgetNetworkTools,
   );
+  const widgetLayoutEnforcement = useWorkspaceStore(
+    (s) => s.dashboardSettings.widgetLayoutEnforcement,
+  );
   const { key: reloadKey } = useScriptReloadHandle();
   const [capped, setCapped] = useState(false);
   const parsed = useMemo<ScriptBody | null>(() => {
@@ -340,9 +343,16 @@ export function ScriptWidgetHost({
   const srcdoc = useMemo(
     () =>
       parsed && libraries
-        ? buildSrcdoc(parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools)
+        ? buildSrcdoc(
+            parsed,
+            settingsValuesJson,
+            libraries,
+            scriptTheme,
+            allowWidgetNetworkTools,
+            widgetLayoutEnforcement,
+          )
         : "",
-    [parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools],
+    [parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools, widgetLayoutEnforcement],
   );
   const canUseNetworkTools = parsed?.permissions.networkTools === true && allowWidgetNetworkTools;
 

@@ -1,5 +1,12 @@
 export type WidgetKind = "builtIn" | "script";
 
+/**
+ * Render-time strictness for AI-created script-widget layout. See
+ * `docs/DASHBOARD.md` → "Layout Enforcement" and `permissions.ts`
+ * (`layoutEnforcementCss`).
+ */
+export type WidgetLayoutEnforcement = "strict" | "moderate" | "low";
+
 export const WIDGET_PRESETS = [
   "panel", "ambient", "hero",
 ] as const;

@@ -348,8 +348,21 @@ A `dashboard-settings` section under Settings holds cross-widget app preferences
 
 - Confirm before removing a widget (default on; persisted under `dashboard.confirmRemove`).
 - Default landing view (default `lastActive`; persisted under `dashboard.defaultLandingView`).
+- Generated widget layout enforcement (`widget_layout_enforcement`; default `strict`). See "Layout Enforcement" below.
 
 Grid density and View tab gradient are **not** in Settings — they are per-view settings edited from the edit-mode topbar.
+
+### Layout Enforcement
+
+Script-widget layout consistency is enforced at **render time** inside the iframe (`buildSrcdoc` → `layoutEnforcementCss`), driven by the global `widget_layout_enforcement` setting. It is intentionally *not* a per-archetype skeleton materialized into the stored `htmlShim`: the Widget Archetype is not persisted and is unavailable at render, and no archetype-agnostic CSS can infer "toolbar vs. fill region" from arbitrary generated DOM — that intent signal is the `kk-shell` / `kk-stage` class the model applies. A render-time rule is also reversible and back-compatible: toggling the level re-lays-out existing widgets without regenerating them.
+
+| Level | `#root` behavior |
+| --- | --- |
+| `strict` (default) | `#root` acts as the widget shell: it becomes a flex column whose outermost child is forced to fill the surface, with `max-width` and auto-centering margins neutralized on that child. Kills the dominant "small centered card in a big empty frame" failure without knowing the archetype. |
+| `moderate` | Historical behavior; `#root` is a 100% scroll box and the widget is expected (via the static AI surface/layout contracts) but not forced to fill it. |
+| `low` | Maximum freedom; content may size to its natural box and overflow the frame (`height: auto; overflow: visible`). |
+
+The AI surface/layout guidance (`DASHBOARD_WIDGET_SURFACE_CONTRACT` / `DASHBOARD_WIDGET_LAYOUT_CONTRACT`) already targets the `strict` ideal — "fill the surface, no `max-width`/shrink-to-content, do not duplicate the host frame" — so the setting changes how strictly the host *enforces* that ideal, not what the model is asked to produce.
 
 ## i18n
 
