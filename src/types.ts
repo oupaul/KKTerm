@@ -211,6 +211,7 @@ export interface GeneralSettings {
   statusBarMonitorEnabled: boolean;
   statusBarMonitorIntervalSeconds: number;
   advancedDebuggingEnabled: boolean;
+  rdpWebviewStability: boolean;
   lastBackupAt?: string | null;
 }
 

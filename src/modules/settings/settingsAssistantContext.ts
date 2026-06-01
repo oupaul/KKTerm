@@ -77,6 +77,12 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         description: "Advanced Debugging log toggle for full AI Assistant debug logs.",
         tutorialTargetId: "settings.debug",
       },
+      {
+        key: "settings.rdpWebviewStability",
+        description:
+          "Forces WebView2 software compositing and disabled occlusion throttling so KKTerm stays responsive when run inside an RDP host; auto-applied in remote sessions.",
+        tutorialTargetId: "settings.debug",
+      },
     ],
   },
   "appearance-settings": {

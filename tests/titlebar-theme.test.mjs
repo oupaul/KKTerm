@@ -37,13 +37,25 @@ test("custom titlebar is always rendered by the frontend shell", async () => {
 });
 
 test("main Tauri window starts without native decorations by default", async () => {
-  const tauriConfigSource = await readFile(
-    new URL("../src-tauri/tauri.conf.json", import.meta.url),
-    "utf8",
-  );
+  // The main window is created in Rust (so RDP/WebView2 stability browser args
+  // can be applied per launch), not declared in tauri.conf.json. Verify the
+  // config no longer declares a window and the Rust builder removes decorations.
+  const [tauriConfigSource, libSource] = await Promise.all([
+    readFile(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8"),
+  ]);
   const tauriConfig = JSON.parse(tauriConfigSource);
 
-  assert.equal(tauriConfig.app.windows[0].decorations, false);
+  assert.deepEqual(
+    tauriConfig.app.windows,
+    [],
+    "the main window is built in Rust, so config should not declare one",
+  );
+  assert.match(
+    libSource,
+    /WebviewWindowBuilder::new\([\s\S]*?\.decorations\(false\)/,
+    "the Rust-built main window should start without native decorations",
+  );
 });
 
 test("custom titlebar matches the native Windows title height", async () => {

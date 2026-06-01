@@ -757,6 +757,8 @@
     "debugHint": "Controls verbose local diagnostics.",
     "advancedDebugging": "Advanced Debugging",
     "advancedDebuggingHint": "Writes full AI Assistant, MCP, Installer Helper, and heartbeat debug logs even in release builds. Logs may include prompts, tool arguments, installer command output, screenshots, and generated widget source.",
+    "rdpWebviewStability": "RDP session stability (WebView2)",
+    "rdpWebviewStabilityHint": "Forces software rendering and disables window occlusion throttling so KKTerm stays responsive when it runs inside a Remote Desktop (RDP) host and the client disconnects and reconnects. Applied automatically when KKTerm detects it is running in a remote session; turn this on to force it. Disables GPU acceleration, so leave it off for local installs. Takes effect after restarting KKTerm.",
     "settingsExportFilter": "KKTerm settings export",
     "defaultFontHint": "Default uses src/assets/fonts/inter/web/InterVariable.woff2.",
     "aiProvider": "AI provider",

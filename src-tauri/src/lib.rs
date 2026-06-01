@@ -2485,50 +2485,42 @@ fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
-/// WebView2 browser flags that keep the renderer alive across RDP session
+/// WebView2 browser arguments that keep the renderer alive across RDP session
 /// disconnect/reconnect. When KKTerm runs inside a remote session, ending the
 /// mstsc connection tears down the host's display/GPU device; WebView2's GPU
 /// process then loses its DirectComposition device and the renderer hangs on
-/// reconnect (native heartbeat keeps logging while the frontend stops). Forcing
-/// software compositing removes the GPU device that gets lost, and disabling
-/// native window occlusion stops the hidden-window render throttle.
+/// reconnect (the native heartbeat thread keeps logging while the frontend
+/// heartbeat ages out). `--disable-gpu` forces software compositing so there is
+/// no GPU device to lose, and disabling `CalculateNativeWinOcclusion` stops the
+/// hidden-window render throttle.
+///
+/// These are passed through `WebviewWindowBuilder::additional_browser_args`
+/// because wry always sets WebView2's `AdditionalBrowserArguments` itself (which
+/// makes the runtime ignore the `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
+/// environment variable). Setting that option replaces wry's own default
+/// arguments, so wry's defaults (`--disable-features=msWebOOUI,msPdfOOUI,
+/// msSmartScreenProtection`) are re-included here, with `CalculateNativeWinOcclusion`
+/// merged into the same `--disable-features` switch.
 #[cfg(target_os = "windows")]
-const REMOTE_SESSION_WEBVIEW2_ARGS: &str =
-    "--disable-gpu --disable-features=CalculateNativeWinOcclusion";
+const REMOTE_SESSION_WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu";
 
-/// Apply [`REMOTE_SESSION_WEBVIEW2_ARGS`] when launched inside an RDP session so
-/// local installs keep full GPU acceleration. Must run before any WebView2
-/// environment is created (i.e. before the Tauri window is built).
-#[cfg(target_os = "windows")]
-fn configure_webview2_for_remote_session() {
-    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_REMOTESESSION};
-
-    // SAFETY: GetSystemMetrics is a pure read of a Windows session metric.
-    let in_remote_session = unsafe { GetSystemMetrics(SM_REMOTESESSION) } != 0;
-    if !in_remote_session {
-        return;
+/// True when KKTerm is running inside a remote (RDP) session.
+fn is_remote_session() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_REMOTESESSION};
+        // SAFETY: GetSystemMetrics is a pure read of a Windows session metric.
+        unsafe { GetSystemMetrics(SM_REMOTESESSION) != 0 }
     }
-
-    const VAR: &str = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
-    let value = match std::env::var(VAR) {
-        Ok(existing) if !existing.trim().is_empty() => {
-            format!("{existing} {REMOTE_SESSION_WEBVIEW2_ARGS}")
-        }
-        _ => REMOTE_SESSION_WEBVIEW2_ARGS.to_string(),
-    };
-    std::env::set_var(VAR, value);
-    eprintln!(
-        "remote session detected: applied WebView2 RDP-stability flags ({REMOTE_SESSION_WEBVIEW2_ARGS})"
-    );
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
 }
-
-#[cfg(not(target_os = "windows"))]
-fn configure_webview2_for_remote_session() {}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
-    configure_webview2_for_remote_session();
     debug_heartbeat::start();
 
     configure_single_instance(tauri::Builder::default())
@@ -2546,6 +2538,44 @@ pub fn run() {
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
             logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
             debug_heartbeat::start();
+
+            // The main window is created here in Rust rather than in
+            // tauri.conf.json so the RDP/WebView2 stability flags can be applied
+            // per launch (see REMOTE_SESSION_WEBVIEW2_ARGS). The flags reliably
+            // apply only through WebviewWindowBuilder::additional_browser_args;
+            // they are enabled when the user opts in or when KKTerm detects it
+            // launched inside a remote session, so local installs keep GPU
+            // acceleration. This must run before any code looks up the main
+            // window below.
+            {
+                let apply_webview_stability =
+                    general_settings.rdp_webview_stability() || is_remote_session();
+                #[allow(unused_mut)]
+                let mut main_window_builder = tauri::WebviewWindowBuilder::new(
+                    app,
+                    window_state::MAIN_WINDOW_LABEL,
+                    tauri::WebviewUrl::default(),
+                )
+                .title("KKTerm")
+                .inner_size(1360.0, 860.0)
+                .min_inner_size(1120.0, 720.0)
+                .decorations(false)
+                .disable_drag_drop_handler();
+                #[cfg(target_os = "windows")]
+                if apply_webview_stability {
+                    main_window_builder =
+                        main_window_builder.additional_browser_args(REMOTE_SESSION_WEBVIEW2_ARGS);
+                    eprintln!(
+                        "applying WebView2 RDP-stability flags to main window ({REMOTE_SESSION_WEBVIEW2_ARGS})"
+                    );
+                }
+                #[cfg(not(target_os = "windows"))]
+                let _ = apply_webview_stability;
+                main_window_builder
+                    .build()
+                    .map_err(|error| setup_error(error.to_string()))?;
+            }
+
             let main_window_settings = storage.main_window_settings().map_err(setup_error)?;
             if let Err(error) = storage.backup_if_enabled_for_startup() {
                 eprintln!("failed to create automatic database backup at startup: {error}");
