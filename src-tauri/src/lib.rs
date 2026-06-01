@@ -2476,9 +2476,50 @@ fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
+/// WebView2 browser flags that keep the renderer alive across RDP session
+/// disconnect/reconnect. When KKTerm runs inside a remote session, ending the
+/// mstsc connection tears down the host's display/GPU device; WebView2's GPU
+/// process then loses its DirectComposition device and the renderer hangs on
+/// reconnect (native heartbeat keeps logging while the frontend stops). Forcing
+/// software compositing removes the GPU device that gets lost, and disabling
+/// native window occlusion stops the hidden-window render throttle.
+#[cfg(target_os = "windows")]
+const REMOTE_SESSION_WEBVIEW2_ARGS: &str =
+    "--disable-gpu --disable-features=CalculateNativeWinOcclusion";
+
+/// Apply [`REMOTE_SESSION_WEBVIEW2_ARGS`] when launched inside an RDP session so
+/// local installs keep full GPU acceleration. Must run before any WebView2
+/// environment is created (i.e. before the Tauri window is built).
+#[cfg(target_os = "windows")]
+fn configure_webview2_for_remote_session() {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_REMOTESESSION};
+
+    // SAFETY: GetSystemMetrics is a pure read of a Windows session metric.
+    let in_remote_session = unsafe { GetSystemMetrics(SM_REMOTESESSION) } != 0;
+    if !in_remote_session {
+        return;
+    }
+
+    const VAR: &str = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+    let value = match std::env::var(VAR) {
+        Ok(existing) if !existing.trim().is_empty() => {
+            format!("{existing} {REMOTE_SESSION_WEBVIEW2_ARGS}")
+        }
+        _ => REMOTE_SESSION_WEBVIEW2_ARGS.to_string(),
+    };
+    std::env::set_var(VAR, value);
+    eprintln!(
+        "remote session detected: applied WebView2 RDP-stability flags ({REMOTE_SESSION_WEBVIEW2_ARGS})"
+    );
+}
+
+#[cfg(not(target_os = "windows"))]
+fn configure_webview2_for_remote_session() {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
+    configure_webview2_for_remote_session();
     debug_heartbeat::start();
 
     configure_single_instance(tauri::Builder::default())
