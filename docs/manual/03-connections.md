@@ -34,7 +34,7 @@ Header row (top of the panel):
 - New Folder: `connections.newFolder`
 - Collapse / Expand all: `connections.collapseAll`, `connections.expandAll`
 - Show All: `connections.showAll`; flattens the Connection Tree across folders, shows the button in its pressed state while enabled, and persists the preference in the Settings database across app relaunches.
-- Search box: placeholder `connections.searchPlaceholder`
+- Search box: placeholder `connections.searchPlaceholder`. While a search is active, matching folders are shown expanded so nested result rows are immediately visible; clearing search restores the folder collapse/expand state from before the search.
 - Column toggle: custom title-bar `app.connections` icon or Workspace icon on the Activity Rail
 
 Tree accessible label: `connections.connectionTree`. Expand/collapse chevrons use `connections.expand` / `connections.collapse`.

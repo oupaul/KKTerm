@@ -1204,6 +1204,10 @@ export function ConnectionSidebar({
   }, []);
 
   const isTreeFiltered = deferredQuery.trim().length > 0;
+  const visibleCollapsedFolderIds = useMemo(
+    () => (isTreeFiltered ? new Set<string>() : collapsedFolderIds),
+    [collapsedFolderIds, isTreeFiltered],
+  );
   const visibleFlatConnections = useMemo(() => {
     if (!showAllConnections) {
       return [];
@@ -2143,7 +2147,7 @@ export function ConnectionSidebar({
                 draggedSourceId={draggedSourceId}
                 dropTarget={dropTarget}
                 folder={folder}
-                collapsedFolderIds={collapsedFolderIds}
+                collapsedFolderIds={visibleCollapsedFolderIds}
                 key={folder.id}
                 level={0}
                 parentFolderId={undefined}
@@ -2177,7 +2181,7 @@ export function ConnectionSidebar({
                   handleOpenConnection(connection);
                 }}
                 onPointerDragStart={handlePointerDragStart}
-                onToggleFolder={handleToggleFolder}
+                onToggleFolder={isTreeFiltered ? undefined : handleToggleFolder}
               />
             ))}
       </div>
@@ -2461,7 +2465,7 @@ function ConnectionFolderNode({
     item: DraggedTreeItem,
     preview: Omit<TreeDragPreview, "x" | "y" | "offsetX" | "offsetY" | "width">,
   ) => void;
-  onToggleFolder: (folderId: string) => void;
+  onToggleFolder?: (folderId: string) => void;
   onCancelPendingFolder: () => void;
   onCommitPendingFolder: (name: string, parentFolderId?: string) => void | Promise<void>;
   inlineRenameTarget: InlineRenameTarget | null;
@@ -2532,7 +2536,7 @@ function ConnectionFolderNode({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onToggleFolder(folder.id);
+              onToggleFolder?.(folder.id);
             }}
             onPointerDown={(event) => event.stopPropagation()}
             title={isCollapsed ? t("connections.expandFolder") : t("connections.collapseFolder")}
