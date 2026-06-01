@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "队列中的提示",
     "queuedPromptIndex": "下一个 {{index}}",
-    "deleteQueuedPrompt": "删除队列提示：{{prompt}}"
+    "deleteQueuedPrompt": "删除队列提示：{{prompt}}",
+    "tutorialSurfaceNotOpen": "该控件位于当前未打开的标签页中。"
   },
   "app": {
     "aiAssistant": "AI 助手",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "AI 编程使用量",
     "aiCodingUsageUnknownUsage": "未知",
     "aiCodingUsageWeekly": "每周",
-    "aiCodingUsageReconnectProvider": "重新连接/刷新 {{provider}}"
+    "aiCodingUsageReconnectProvider": "重新连接/刷新 {{provider}}",
+    "renameTitleHint": "双击以重命名"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "活动栏",
     "installerSaved": "安装助手设置已保存。",
     "installerShowOnRail": "在活动栏中显示",
-    "installerShowOnRailDesc": "启用后，安装助手图标会显示在活动栏中。"
+    "installerShowOnRailDesc": "启用后，安装助手图标会显示在活动栏中。",
+    "rdpWebviewStability": "RDP 会话稳定性 (WebView2)",
+    "rdpWebviewStabilityHint": "强制使用软件渲染并禁用窗口遮挡限流，以便 KKTerm 在 Remote Desktop (RDP) 主机内运行且客户端断开并重新连接时仍保持响应。KKTerm 检测到正在远程会话中运行时会自动应用；开启此选项可强制应用。此设置会禁用 GPU 加速，因此本地安装请保持关闭。重启 KKTerm 后生效。"
   },
   "sftp": {
     "accessed": "访问日期",
@@ -2634,7 +2638,8 @@
       "location": "安装位置",
       "addToPath": "添加到 PATH",
       "pinVersion": "固定版本（从全部更新中跳过）",
-      "scopeSelfElevatingHint": "此安装程序在按用户范围安装时仍可能显示 UAC。"
+      "scopeSelfElevatingHint": "此安装程序在按用户范围安装时仍可能显示 UAC。",
+      "provider": "提供程序"
     },
     "status": {
       "scanning": "正在扫描已安装工具…",

@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "キュー内のプロンプト",
     "queuedPromptIndex": "次 {{index}}",
-    "deleteQueuedPrompt": "キュー内プロンプトを削除: {{prompt}}"
+    "deleteQueuedPrompt": "キュー内プロンプトを削除: {{prompt}}",
+    "tutorialSurfaceNotOpen": "そのコントロールは、現在開いていないタブ内にあります。"
   },
   "app": {
     "aiAssistant": "AIアシスタント",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "AIコーディング使用量",
     "aiCodingUsageUnknownUsage": "不明",
     "aiCodingUsageWeekly": "毎週",
-    "aiCodingUsageReconnectProvider": "{{provider}} を再接続/更新"
+    "aiCodingUsageReconnectProvider": "{{provider}} を再接続/更新",
+    "renameTitleHint": "ダブルクリックして名前を変更"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "アクティビティ レール",
     "installerSaved": "インストールヘルパー設定を保存しました。",
     "installerShowOnRail": "アクティビティ レールに表示",
-    "installerShowOnRailDesc": "有効にすると、インストールヘルパー アイコンがアクティビティ レールに表示されます。"
+    "installerShowOnRailDesc": "有効にすると、インストールヘルパー アイコンがアクティビティ レールに表示されます。",
+    "rdpWebviewStability": "RDP セッションの安定性 (WebView2)",
+    "rdpWebviewStabilityHint": "ソフトウェア レンダリングを強制し、ウィンドウ オクルージョンによるスロットリングを無効にして、Remote Desktop (RDP) ホスト内で KKTerm を実行しているときにクライアントが切断および再接続されても KKTerm の応答性を維持します。KKTerm がリモート セッションで実行されていることを検出すると自動的に適用されます。強制するにはこの設定をオンにしてください。GPU アクセラレーションが無効になるため、ローカル インストールではオフのままにしてください。KKTerm の再起動後に有効になります。"
   },
   "sftp": {
     "accessed": "アクセス日時",
@@ -2634,7 +2638,8 @@
       "location": "インストール先",
       "addToPath": "PATH に追加",
       "pinVersion": "バージョンを固定（すべて更新から除外）",
-      "scopeSelfElevatingHint": "このインストーラーはユーザー単位の範囲でも UAC を表示する場合があります。"
+      "scopeSelfElevatingHint": "このインストーラーはユーザー単位の範囲でも UAC を表示する場合があります。",
+      "provider": "プロバイダー"
     },
     "status": {
       "scanning": "インストール済みツールをスキャン中…",

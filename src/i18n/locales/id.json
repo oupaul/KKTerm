@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "Prompt antrean",
     "queuedPromptIndex": "Berikutnya {{index}}",
-    "deleteQueuedPrompt": "Hapus prompt antrean: {{prompt}}"
+    "deleteQueuedPrompt": "Hapus prompt antrean: {{prompt}}",
+    "tutorialSurfaceNotOpen": "Kontrol itu berada di dalam tab yang saat ini tidak terbuka."
   },
   "app": {
     "aiAssistant": "AI Assistant",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "Penggunaan coding AI",
     "aiCodingUsageUnknownUsage": "Tidak diketahui",
     "aiCodingUsageWeekly": "Mingguan",
-    "aiCodingUsageReconnectProvider": "Sambungkan ulang/segarkan {{provider}}"
+    "aiCodingUsageReconnectProvider": "Sambungkan ulang/segarkan {{provider}}",
+    "renameTitleHint": "Klik dua kali untuk mengganti nama"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "Rel Aktivitas",
     "installerSaved": "Pengaturan Pembantu Instalasi disimpan.",
     "installerShowOnRail": "Tampilkan di Rel Aktivitas",
-    "installerShowOnRailDesc": "Saat diaktifkan, ikon Pembantu Instalasi muncul di Rel Aktivitas."
+    "installerShowOnRailDesc": "Saat diaktifkan, ikon Pembantu Instalasi muncul di Rel Aktivitas.",
+    "rdpWebviewStability": "Stabilitas sesi RDP (WebView2)",
+    "rdpWebviewStabilityHint": "Memaksa rendering perangkat lunak dan menonaktifkan pembatasan oklusi jendela agar KKTerm tetap responsif saat berjalan di dalam host Remote Desktop (RDP) dan klien terputus lalu tersambung kembali. Diterapkan otomatis saat KKTerm mendeteksi bahwa aplikasi berjalan dalam sesi jarak jauh; aktifkan opsi ini untuk memaksanya. Menonaktifkan akselerasi GPU, jadi biarkan nonaktif untuk instalasi lokal. Berlaku setelah KKTerm dimulai ulang."
   },
   "sftp": {
     "accessed": "Diakses",
@@ -2634,7 +2638,8 @@
       "location": "Lokasi instalasi",
       "addToPath": "Tambahkan ke PATH",
       "pinVersion": "Sematkan versi (lewati dari Perbarui semua)",
-      "scopeSelfElevatingHint": "Penginstal ini masih dapat menampilkan UAC dalam cakupan per pengguna."
+      "scopeSelfElevatingHint": "Penginstal ini masih dapat menampilkan UAC dalam cakupan per pengguna.",
+      "provider": "Penyedia"
     },
     "status": {
       "scanning": "Memindai alat terpasang…",

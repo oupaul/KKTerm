@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "Prompts en file",
     "queuedPromptIndex": "Suivant {{index}}",
-    "deleteQueuedPrompt": "Supprimer le prompt en file : {{prompt}}"
+    "deleteQueuedPrompt": "Supprimer le prompt en file : {{prompt}}",
+    "tutorialSurfaceNotOpen": "Cette commande se trouve dans un onglet qui n’est pas ouvert pour le moment."
   },
   "app": {
     "aiAssistant": "Assistant IA",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "Utilisation du codage IA",
     "aiCodingUsageUnknownUsage": "Inconnu",
     "aiCodingUsageWeekly": "Hebdomadaire",
-    "aiCodingUsageReconnectProvider": "Reconnecter/actualiser {{provider}}"
+    "aiCodingUsageReconnectProvider": "Reconnecter/actualiser {{provider}}",
+    "renameTitleHint": "Double-cliquez pour renommer"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "Barre d’activité",
     "installerSaved": "Paramètres de l’Assistant d’installation enregistrés.",
     "installerShowOnRail": "Afficher dans la barre d’activité",
-    "installerShowOnRailDesc": "Lorsque cette option est activée, l’icône de l’Assistant d’installation apparaît dans la barre d’activité."
+    "installerShowOnRailDesc": "Lorsque cette option est activée, l’icône de l’Assistant d’installation apparaît dans la barre d’activité.",
+    "rdpWebviewStability": "Stabilité de session RDP (WebView2)",
+    "rdpWebviewStabilityHint": "Force le rendu logiciel et désactive la limitation liée à l’occlusion des fenêtres afin que KKTerm reste réactif lorsqu’il s’exécute dans un hôte Remote Desktop (RDP) et que le client se déconnecte puis se reconnecte. S’applique automatiquement lorsque KKTerm détecte qu’il s’exécute dans une session distante ; activez cette option pour le forcer. Désactive l’accélération GPU ; laissez-la donc désactivée pour les installations locales. Prend effet après le redémarrage de KKTerm."
   },
   "sftp": {
     "accessed": "Accédé",
@@ -2634,7 +2638,8 @@
       "location": "Emplacement d’installation",
       "addToPath": "Ajouter à PATH",
       "pinVersion": "Épingler la version (ignorer dans Tout mettre à jour)",
-      "scopeSelfElevatingHint": "Cet installateur peut encore afficher l’UAC dans le périmètre utilisateur."
+      "scopeSelfElevatingHint": "Cet installateur peut encore afficher l’UAC dans le périmètre utilisateur.",
+      "provider": "Fournisseur"
     },
     "status": {
       "scanning": "Recherche des outils installés…",

@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "대기 중인 프롬프트",
     "queuedPromptIndex": "다음 {{index}}",
-    "deleteQueuedPrompt": "대기 중인 프롬프트 삭제: {{prompt}}"
+    "deleteQueuedPrompt": "대기 중인 프롬프트 삭제: {{prompt}}",
+    "tutorialSurfaceNotOpen": "해당 컨트롤은 지금 열려 있지 않은 탭 안에 있습니다."
   },
   "app": {
     "aiAssistant": "AI 어시스턴트",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "AI 코딩 사용량",
     "aiCodingUsageUnknownUsage": "알 수 없음",
     "aiCodingUsageWeekly": "주간",
-    "aiCodingUsageReconnectProvider": "{{provider}} 다시 연결/새로 고침"
+    "aiCodingUsageReconnectProvider": "{{provider}} 다시 연결/새로 고침",
+    "renameTitleHint": "두 번 클릭하여 이름 변경"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "활동 레일",
     "installerSaved": "설치 도우미 설정이 저장되었습니다.",
     "installerShowOnRail": "활동 레일에 표시",
-    "installerShowOnRailDesc": "활성화하면 설치 도우미 아이콘이 활동 레일에 표시됩니다."
+    "installerShowOnRailDesc": "활성화하면 설치 도우미 아이콘이 활동 레일에 표시됩니다.",
+    "rdpWebviewStability": "RDP 세션 안정성(WebView2)",
+    "rdpWebviewStabilityHint": "KKTerm이 Remote Desktop(RDP) 호스트 안에서 실행되고 클라이언트가 연결을 끊었다가 다시 연결할 때도 응답성을 유지하도록 소프트웨어 렌더링을 강제하고 창 가림 스로틀링을 비활성화합니다. KKTerm이 원격 세션에서 실행 중임을 감지하면 자동으로 적용됩니다. 강제로 적용하려면 이 옵션을 켜세요. GPU 가속을 비활성화하므로 로컬 설치에서는 꺼 두세요. KKTerm을 다시 시작한 후 적용됩니다."
   },
   "sftp": {
     "accessed": "접근일",
@@ -2634,7 +2638,8 @@
       "location": "설치 위치",
       "addToPath": "PATH에 추가",
       "pinVersion": "버전 고정 (모두 업데이트에서 제외)",
-      "scopeSelfElevatingHint": "이 설치 관리자는 사용자 범위에서도 UAC를 표시할 수 있습니다."
+      "scopeSelfElevatingHint": "이 설치 관리자는 사용자 범위에서도 UAC를 표시할 수 있습니다.",
+      "provider": "공급자"
     },
     "status": {
       "scanning": "설치된 도구 검색 중…",

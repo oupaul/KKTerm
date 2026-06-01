@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "Prompts in Warteschlange",
     "queuedPromptIndex": "Nächste {{index}}",
-    "deleteQueuedPrompt": "Prompt aus Warteschlange löschen: {{prompt}}"
+    "deleteQueuedPrompt": "Prompt aus Warteschlange löschen: {{prompt}}",
+    "tutorialSurfaceNotOpen": "Dieses Steuerelement befindet sich in einem Tab, der gerade nicht geöffnet ist."
   },
   "app": {
     "aiAssistant": "KI-Assistent",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "AI-Coding-Nutzung",
     "aiCodingUsageUnknownUsage": "Unbekannt",
     "aiCodingUsageWeekly": "Wöchentlich",
-    "aiCodingUsageReconnectProvider": "{{provider}} neu verbinden/aktualisieren"
+    "aiCodingUsageReconnectProvider": "{{provider}} neu verbinden/aktualisieren",
+    "renameTitleHint": "Doppelklicken zum Umbenennen"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "Aktivitätsleiste",
     "installerSaved": "Installationshelfer-Einstellungen gespeichert.",
     "installerShowOnRail": "In Aktivitätsleiste anzeigen",
-    "installerShowOnRailDesc": "Wenn aktiviert, erscheint das Installationshelfer-Symbol in der Aktivitätsleiste."
+    "installerShowOnRailDesc": "Wenn aktiviert, erscheint das Installationshelfer-Symbol in der Aktivitätsleiste.",
+    "rdpWebviewStability": "RDP-Sitzungsstabilität (WebView2)",
+    "rdpWebviewStabilityHint": "Erzwingt Software-Rendering und deaktiviert die Drosselung bei Fensterverdeckung, damit KKTerm reaktionsfähig bleibt, wenn es in einem Remote Desktop (RDP)-Host ausgeführt wird und der Client die Verbindung trennt und erneut herstellt. Wird automatisch angewendet, wenn KKTerm erkennt, dass es in einer Remotesitzung läuft; aktivieren Sie diese Option, um es zu erzwingen. Deaktiviert die GPU-Beschleunigung; lassen Sie die Option daher bei lokalen Installationen deaktiviert. Wird nach einem Neustart von KKTerm wirksam."
   },
   "sftp": {
     "accessed": "Zugegriffen",
@@ -2634,7 +2638,8 @@
       "location": "Installationsort",
       "addToPath": "Zu PATH hinzufügen",
       "pinVersion": "Version anheften (bei „Alle aktualisieren“ überspringen)",
-      "scopeSelfElevatingHint": "Dieser Installer kann auch bei Installation nur für den Benutzer UAC anzeigen."
+      "scopeSelfElevatingHint": "Dieser Installer kann auch bei Installation nur für den Benutzer UAC anzeigen.",
+      "provider": "Anbieter"
     },
     "status": {
       "scanning": "Installierte Tools werden gesucht…",
