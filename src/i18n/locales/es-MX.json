@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "Prompts en cola",
     "queuedPromptIndex": "Siguiente {{index}}",
-    "deleteQueuedPrompt": "Eliminar prompt en cola: {{prompt}}"
+    "deleteQueuedPrompt": "Eliminar prompt en cola: {{prompt}}",
+    "tutorialSurfaceNotOpen": "Ese control está dentro de una pestaña que no está abierta en este momento."
   },
   "app": {
     "aiAssistant": "Asistente IA",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "Uso de codificación con IA",
     "aiCodingUsageUnknownUsage": "Desconocido",
     "aiCodingUsageWeekly": "Semanal",
-    "aiCodingUsageReconnectProvider": "Reconectar/actualizar {{provider}}"
+    "aiCodingUsageReconnectProvider": "Reconectar/actualizar {{provider}}",
+    "renameTitleHint": "Haz doble clic para cambiar el nombre"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "Barra de actividad",
     "installerSaved": "Configuración del Asistente de instalación guardada.",
     "installerShowOnRail": "Mostrar en la barra de actividad",
-    "installerShowOnRailDesc": "Cuando se activa, el ícono del Asistente de instalación aparece en la barra de actividad."
+    "installerShowOnRailDesc": "Cuando se activa, el ícono del Asistente de instalación aparece en la barra de actividad.",
+    "rdpWebviewStability": "Estabilidad de sesión RDP (WebView2)",
+    "rdpWebviewStabilityHint": "Fuerza el renderizado por software y desactiva la limitación por oclusión de ventanas para que KKTerm siga respondiendo cuando se ejecuta dentro de un host de Remote Desktop (RDP) y el cliente se desconecta y vuelve a conectarse. Se aplica automáticamente cuando KKTerm detecta que se está ejecutando en una sesión remota; activa esta opción para forzarlo. Desactiva la aceleración de GPU, así que déjalo desactivado en instalaciones locales. Surte efecto después de reiniciar KKTerm."
   },
   "sftp": {
     "accessed": "Accedido",
@@ -2634,7 +2638,8 @@
       "location": "Ubicación de instalación",
       "addToPath": "Añadir a PATH",
       "pinVersion": "Fijar versión (omitir en Actualizar todo)",
-      "scopeSelfElevatingHint": "Este instalador aún puede mostrar UAC en el alcance por usuario."
+      "scopeSelfElevatingHint": "Este instalador aún puede mostrar UAC en el alcance por usuario.",
+      "provider": "Proveedor"
     },
     "status": {
       "scanning": "Buscando herramientas instaladas…",

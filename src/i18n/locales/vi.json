@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "Prompt trong hàng đợi",
     "queuedPromptIndex": "Tiếp theo {{index}}",
-    "deleteQueuedPrompt": "Xóa prompt trong hàng đợi: {{prompt}}"
+    "deleteQueuedPrompt": "Xóa prompt trong hàng đợi: {{prompt}}",
+    "tutorialSurfaceNotOpen": "Điều khiển đó nằm trong một thẻ hiện chưa mở."
   },
   "app": {
     "aiAssistant": "Trợ lý AI",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "Mức sử dụng lập trình AI",
     "aiCodingUsageUnknownUsage": "Không rõ",
     "aiCodingUsageWeekly": "Hàng tuần",
-    "aiCodingUsageReconnectProvider": "Kết nối lại/làm mới {{provider}}"
+    "aiCodingUsageReconnectProvider": "Kết nối lại/làm mới {{provider}}",
+    "renameTitleHint": "Nhấp đúp để đổi tên"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "Thanh hoạt động",
     "installerSaved": "Đã lưu cài đặt Trợ lý cài đặt.",
     "installerShowOnRail": "Hiển thị trên Thanh hoạt động",
-    "installerShowOnRailDesc": "Khi bật, biểu tượng Trợ lý cài đặt xuất hiện trên Thanh hoạt động."
+    "installerShowOnRailDesc": "Khi bật, biểu tượng Trợ lý cài đặt xuất hiện trên Thanh hoạt động.",
+    "rdpWebviewStability": "Độ ổn định phiên RDP (WebView2)",
+    "rdpWebviewStabilityHint": "Buộc kết xuất bằng phần mềm và tắt điều tiết khi cửa sổ bị che khuất để KKTerm vẫn phản hồi khi chạy trong máy chủ Remote Desktop (RDP) và máy khách ngắt kết nối rồi kết nối lại. Tự động áp dụng khi KKTerm phát hiện đang chạy trong phiên từ xa; bật tùy chọn này để buộc áp dụng. Tắt tăng tốc GPU, vì vậy hãy để tắt đối với các bản cài đặt cục bộ. Có hiệu lực sau khi khởi động lại KKTerm."
   },
   "sftp": {
     "accessed": "Accessed",
@@ -2634,7 +2638,8 @@
       "location": "Vị trí cài đặt",
       "addToPath": "Thêm vào PATH",
       "pinVersion": "Ghim phiên bản (bỏ qua Cập nhật tất cả)",
-      "scopeSelfElevatingHint": "Trình cài đặt này vẫn có thể hiển thị UAC trong phạm vi theo người dùng."
+      "scopeSelfElevatingHint": "Trình cài đặt này vẫn có thể hiển thị UAC trong phạm vi theo người dùng.",
+      "provider": "Nhà cung cấp"
     },
     "status": {
       "scanning": "Đang quét công cụ đã cài đặt…",

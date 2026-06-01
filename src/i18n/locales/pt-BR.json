@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "Prompts na fila",
     "queuedPromptIndex": "Próximo {{index}}",
-    "deleteQueuedPrompt": "Excluir prompt na fila: {{prompt}}"
+    "deleteQueuedPrompt": "Excluir prompt na fila: {{prompt}}",
+    "tutorialSurfaceNotOpen": "Esse controle fica dentro de uma aba que não está aberta agora."
   },
   "app": {
     "aiAssistant": "Assistente IA",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "Uso de codificação com IA",
     "aiCodingUsageUnknownUsage": "Desconhecido",
     "aiCodingUsageWeekly": "Semanal",
-    "aiCodingUsageReconnectProvider": "Reconectar/atualizar {{provider}}"
+    "aiCodingUsageReconnectProvider": "Reconectar/atualizar {{provider}}",
+    "renameTitleHint": "Clique duas vezes para renomear"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "Barra de atividades",
     "installerSaved": "Configurações do Assistente de instalação salvas.",
     "installerShowOnRail": "Mostrar na barra de atividades",
-    "installerShowOnRailDesc": "Quando ativado, o ícone do Assistente de instalação aparece na barra de atividades."
+    "installerShowOnRailDesc": "Quando ativado, o ícone do Assistente de instalação aparece na barra de atividades.",
+    "rdpWebviewStability": "Estabilidade da sessão RDP (WebView2)",
+    "rdpWebviewStabilityHint": "Força a renderização por software e desativa a limitação por oclusão de janelas para que o KKTerm continue responsivo quando executado dentro de um host Remote Desktop (RDP) e o cliente se desconectar e reconectar. Aplicado automaticamente quando o KKTerm detecta que está em execução em uma sessão remota; ative esta opção para forçar. Desativa a aceleração de GPU, portanto deixe desativado em instalações locais. Entra em vigor após reiniciar o KKTerm."
   },
   "sftp": {
     "accessed": "Acessado",
@@ -2634,7 +2638,8 @@
       "location": "Local de instalação",
       "addToPath": "Adicionar ao PATH",
       "pinVersion": "Fixar versão (ignorar em Atualizar tudo)",
-      "scopeSelfElevatingHint": "Este instalador ainda pode mostrar o UAC no escopo por usuário."
+      "scopeSelfElevatingHint": "Este instalador ainda pode mostrar o UAC no escopo por usuário.",
+      "provider": "Provedor"
     },
     "status": {
       "scanning": "Verificando ferramentas instaladas…",

@@ -528,7 +528,8 @@
     },
     "queuedPrompts": "พรอมป์ในคิว",
     "queuedPromptIndex": "ถัดไป {{index}}",
-    "deleteQueuedPrompt": "ลบพรอมป์ในคิว: {{prompt}}"
+    "deleteQueuedPrompt": "ลบพรอมป์ในคิว: {{prompt}}",
+    "tutorialSurfaceNotOpen": "ตัวควบคุมนั้นอยู่ในแท็บที่ยังไม่ได้เปิดอยู่ในตอนนี้"
   },
   "app": {
     "aiAssistant": "ผู้ช่วย AI",
@@ -1230,7 +1231,8 @@
     "aiCodingUsageTitle": "การใช้งานการเขียนโค้ด AI",
     "aiCodingUsageUnknownUsage": "ไม่ทราบ",
     "aiCodingUsageWeekly": "รายสัปดาห์",
-    "aiCodingUsageReconnectProvider": "เชื่อมต่อใหม่/รีเฟรช {{provider}}"
+    "aiCodingUsageReconnectProvider": "เชื่อมต่อใหม่/รีเฟรช {{provider}}",
+    "renameTitleHint": "ดับเบิลคลิกเพื่อเปลี่ยนชื่อ"
   },
   "languages": {
     "de": "Deutsch",
@@ -1858,7 +1860,9 @@
     "installerRail": "แถบกิจกรรม",
     "installerSaved": "บันทึกการตั้งค่าตัวช่วยติดตั้งแล้ว",
     "installerShowOnRail": "แสดงในแถบกิจกรรม",
-    "installerShowOnRailDesc": "เมื่อเปิดใช้ ไอคอนตัวช่วยติดตั้งจะปรากฏในแถบกิจกรรม"
+    "installerShowOnRailDesc": "เมื่อเปิดใช้ ไอคอนตัวช่วยติดตั้งจะปรากฏในแถบกิจกรรม",
+    "rdpWebviewStability": "ความเสถียรของเซสชัน RDP (WebView2)",
+    "rdpWebviewStabilityHint": "บังคับใช้การเรนเดอร์ด้วยซอฟต์แวร์และปิดการลดความเร็วจากการถูกหน้าต่างอื่นบดบัง เพื่อให้ KKTerm ยังตอบสนองได้เมื่อทำงานอยู่ภายในโฮสต์ Remote Desktop (RDP) แล้วไคลเอนต์ตัดการเชื่อมต่อและเชื่อมต่อใหม่ ระบบจะใช้โดยอัตโนมัติเมื่อ KKTerm ตรวจพบว่ากำลังทำงานในเซสชันระยะไกล เปิดตัวเลือกนี้เพื่อบังคับใช้ ปิดใช้งานการเร่งความเร็วด้วย GPU ดังนั้นให้ปิดไว้สำหรับการติดตั้งในเครื่อง มีผลหลังจากรีสตาร์ท KKTerm"
   },
   "sftp": {
     "accessed": "เข้าถึงเมื่อ",
@@ -2634,7 +2638,8 @@
       "location": "ตำแหน่งติดตั้ง",
       "addToPath": "เพิ่มลงใน PATH",
       "pinVersion": "ปักหมุดเวอร์ชัน (ข้ามจากอัปเดตทั้งหมด)",
-      "scopeSelfElevatingHint": "ตัวติดตั้งนี้อาจยังแสดง UAC ในขอบเขตต่อผู้ใช้ได้"
+      "scopeSelfElevatingHint": "ตัวติดตั้งนี้อาจยังแสดง UAC ในขอบเขตต่อผู้ใช้ได้",
+      "provider": "ผู้ให้บริการ"
     },
     "status": {
       "scanning": "กำลังสแกนเครื่องมือที่ติดตั้ง…",
