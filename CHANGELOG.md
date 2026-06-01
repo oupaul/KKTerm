@@ -2,6 +2,25 @@
 
 All notable changes to KKTerm are documented here.
 
+## v0.1.49
+
+## Highlights
+
+* Fix AI assistant text clipping by wrapping long inline tokens by @ryantsai in https://github.com/ryantsai/KKTerm/pull/186
+* Harden WebView2 against RDP session disconnect hangs by @ryantsai in https://github.com/ryantsai/KKTerm/pull/187
+
+
+**Full Changelog**: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
+
+## Changes
+
+- Merge pull request #187 from ryantsai/claude/kkterm-rdp-unresponsive-pAhXJ (ff72c34)
+- Harden WebView2 against RDP session disconnect hangs (d7bbf16)
+- Merge pull request #186 from ryantsai/claude/ai-pane-text-truncation-nMil4 (d3c0c76)
+- Fix AI assistant text clipping by wrapping long inline tokens (1fad4a2)
+
+Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
+
 ## Highlights
 - Hermes Agent 與 OpenClaw 在 Installer Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：用起來像把「開終端機」與「把 Session 存成預設」一起打包了——系統也比較不會睡過頭。
 - 安裝流程的 i18n：將 Installer 相關的 **9 個待翻譯 key** 完整翻到 **13 個非英文 locale**。
