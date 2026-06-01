@@ -92,6 +92,10 @@ Names shown during a tool call (`ai.toolCallRunning` → `ai.toolCallComplete`):
 
 The Tutorial tool is enabled by `settings.aiTools.tutorial.label`. For UI "how do I..." questions, the assistant should answer with concise steps first and offer to navigate to the relevant UI when a known target exists. If the user accepts that offer, the assistant calls `tutorial_highlight` for an app-owned target listed in the current page context or documented by the tool. The assistant can include navigation to a known app page or Settings section before the UI dims the window, scrolls the target into view, highlights the target control, and shows a short balloon beside it. The overlay dismisses on the next click or key press.
 
+`terminal.*`, `sftp.*`, `webview.*`, and `remoteDesktop.*` targets live inside a Workspace Tab surface. The overlay first activates an open Tab of the matching kind (preferring the already-active Tab) before highlighting. When no Tab of that kind is open it reports `ai.tutorialSurfaceNotOpen` instead of highlighting a control that is not on screen, so the assistant tells the user the surface isn't open rather than inventing steps.
+
+Switching Tabs is also available to the Sessions tool directly: when the Sessions tool is enabled the assistant can call `session_activate_tab` with a `tabId` (and optional `paneId`) from `session_state` to bring a Tab into view and focus a Pane. Like the tutorial navigation, this only changes which Tab/Pane is shown and never opens, closes, or ends a Session, so it runs without an approval prompt.
+
 Known tutorial targets:
 
 - `connections.addConnection` in Workspace.

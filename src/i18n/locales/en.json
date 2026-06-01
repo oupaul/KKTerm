@@ -2040,6 +2040,7 @@
     "dashboardToolsDisabledHint": "Turn on Settings > AI Assistant > Assistant tools > Dashboard before the Assistant can create or change widgets.",
     "tutorialInvalidRequest": "Tutorial requests need a target, title, and help text.",
     "tutorialTargetNotFound": "That tutorial target is not visible right now.",
+    "tutorialSurfaceNotOpen": "That control lives inside a Tab that is not open right now.",
     "chats": "Chats",
     "viewAll": "View All",
     "noChatsYet": "No chats yet.",

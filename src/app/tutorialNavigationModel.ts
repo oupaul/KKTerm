@@ -145,6 +145,34 @@ export function tutorialNavigationForTarget(
   return TUTORIAL_TARGET_NAVIGATION[targetId.trim()];
 }
 
+// Tutorial targets that live inside an open Workspace Tab surface can only be
+// highlighted when a Tab of the matching kind is active. The prefix of the
+// targetId identifies which surface the control belongs to.
+export type TutorialSurfaceKind =
+  | "terminal"
+  | "sftp"
+  | "webview"
+  | "remoteDesktop";
+
+export function tutorialSurfaceKindForTarget(
+  targetId: string,
+): TutorialSurfaceKind | undefined {
+  const trimmed = targetId.trim();
+  if (trimmed.startsWith("terminal.")) {
+    return "terminal";
+  }
+  if (trimmed.startsWith("sftp.")) {
+    return "sftp";
+  }
+  if (trimmed.startsWith("webview.")) {
+    return "webview";
+  }
+  if (trimmed.startsWith("remoteDesktop.")) {
+    return "remoteDesktop";
+  }
+  return undefined;
+}
+
 export function normalizeTutorialNavigationTarget(
   value: unknown,
 ): TutorialNavigationTarget | undefined {

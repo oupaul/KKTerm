@@ -27,12 +27,17 @@ import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
 import { InstallerPage } from "./modules/installer/InstallerPage";
+import {
+  tutorialSurfaceKindForTarget,
+  type TutorialSurfaceKind,
+} from "./app/tutorialNavigationModel";
 import { ariaHidden } from "./lib/aria";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
 import type { SettingsSectionId } from "./modules/settings/settingsAssistantContext";
 import { useWorkspaceStore } from "./store";
+import type { WorkspaceTab } from "./types";
 import { StatusBar } from "./modules/workspace/StatusBar";
 import { TabStrip, WorkspaceCanvas } from "./modules/workspace/WorkspaceCanvas";
 import "@xterm/xterm/css/xterm.css";
@@ -96,6 +101,26 @@ function App() {
     navigateToPage(navigation.page);
   }
 
+  // A tutorial target inside a Tab surface (terminal/SFTP/webview/remote desktop)
+  // is only in the DOM when a Tab of that kind is active. Activate a matching
+  // open Tab if needed; return false when no such Tab is open so the assistant
+  // can say so instead of highlighting a control that isn't there.
+  function activateWorkspaceTabForSurface(surfaceKind: TutorialSurfaceKind) {
+    const store = useWorkspaceStore.getState();
+    const matchesSurface = (kind: WorkspaceTab["kind"]) =>
+      surfaceKind === "sftp" ? kind === "sftp" || kind === "ftp" : kind === surfaceKind;
+    const active = store.tabs.find((tab) => tab.id === store.activeTabId);
+    if (active && matchesSurface(active.kind)) {
+      return true;
+    }
+    const match = store.tabs.find((tab) => matchesSurface(tab.kind));
+    if (!match) {
+      return false;
+    }
+    store.activateTab(match.id);
+    return true;
+  }
+
   const [dashboardAssistantContext, setDashboardAssistantContext] =
     useState<AssistantPageContext>();
   const [settingsAssistantContext, setSettingsAssistantContext] =
@@ -151,6 +176,10 @@ function App() {
     navigateForTutorial(request);
     if (shouldRevealConnectionPanelForTutorial(request.targetId)) {
       expandConnectionPanel();
+    }
+    const surfaceKind = tutorialSurfaceKindForTarget(request.targetId);
+    if (surfaceKind && !activateWorkspaceTabForSurface(surfaceKind)) {
+      return { ok: false, error: t("ai.tutorialSurfaceNotOpen") };
     }
     const target = await waitForTutorialTarget(request.targetId);
     if (!target) {

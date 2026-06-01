@@ -1482,6 +1482,8 @@ export function AssistantPanel({
         return assistantTutorialHighlight(args);
       case "session_state":
         return assistantSessionState();
+      case "session_activate_tab":
+        return assistantActivateTab(args);
       case "session_terminal_read_buffer":
         return assistantTerminalReadBuffer(args);
       case "session_terminal_send_text":
@@ -1672,6 +1674,31 @@ export function AssistantPanel({
           ? getFileBrowserController(tab.id)?.snapshot() ?? null
           : null,
       })),
+    };
+  }
+
+  function assistantActivateTab(args: Record<string, unknown>) {
+    const tabId = typeof args.tabId === "string" ? args.tabId.trim() : "";
+    if (!tabId) {
+      return { ok: false, error: "tabId is required." };
+    }
+    const store = useWorkspaceStore.getState();
+    const tab = store.tabs.find((entry) => entry.id === tabId);
+    if (!tab) {
+      return { ok: false, error: `No open Tab with id ${tabId}.` };
+    }
+    store.activateTab(tabId);
+    const paneId = typeof args.paneId === "string" ? args.paneId.trim() : "";
+    if (paneId) {
+      if (!tab.panes.some((pane) => pane.id === paneId)) {
+        return { ok: false, error: `Tab ${tabId} has no Pane ${paneId}.` };
+      }
+      store.setFocusedPane(tabId, paneId);
+    }
+    return {
+      ok: true,
+      activeTabId: tabId,
+      focusedPaneId: paneId || tab.focusedPaneId || null,
     };
   }
 
