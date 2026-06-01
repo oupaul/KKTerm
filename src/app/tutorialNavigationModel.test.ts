@@ -1,6 +1,7 @@
 import {
   normalizeTutorialNavigationTarget,
   tutorialNavigationForTarget,
+  tutorialSurfaceKindForTarget,
 } from "./tutorialNavigationModel.ts";
 
 const appearanceNavigation = tutorialNavigationForTarget("settings.appearance.colorScheme");
@@ -165,4 +166,32 @@ const missingTargetNavigation = tutorialNavigationForTarget("settings.missing.ta
 
 if (missingTargetNavigation) {
   throw new Error("Unknown tutorial targets should not infer navigation.");
+}
+
+const surfaceTargets = [
+  ["terminal.surface", "terminal"],
+  ["terminal.openSftp", "terminal"],
+  ["sftp.upload", "sftp"],
+  ["webview.address", "webview"],
+  ["remoteDesktop.reconnect", "remoteDesktop"],
+] as const;
+
+for (const [targetId, surfaceKind] of surfaceTargets) {
+  if (tutorialSurfaceKindForTarget(targetId) !== surfaceKind) {
+    throw new Error(`${targetId} should map to the ${surfaceKind} Tab surface.`);
+  }
+}
+
+const chromeTargets = [
+  "workspace.tabStrip",
+  "workspace.statusBar",
+  "connections.tree",
+  "app.activityRailWorkspace",
+  "settings.language",
+];
+
+for (const targetId of chromeTargets) {
+  if (tutorialSurfaceKindForTarget(targetId) !== undefined) {
+    throw new Error(`${targetId} is app chrome and should not require a Tab surface.`);
+  }
 }
