@@ -10,7 +10,7 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Webview, WebviewBuilder, WebviewUrl,
-    webview::{DownloadEvent, PageLoadEvent},
+    webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
 };
 
 const HOST_WINDOW_LABEL: &str = "main";
@@ -495,6 +495,13 @@ struct WebviewDownloadPayload {
     success: Option<bool>,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WebviewNewWindowPayload {
+    session_id: String,
+    url: String,
+}
+
 /// RAII reservation for the `starting_sessions` set. Clears the reservation on
 /// drop — including any early `?` return or panic during startup — unless
 /// `commit()` is called on success. Without this, an error after the
@@ -601,6 +608,8 @@ impl WebviewSessionManager {
         let title_session_id = session_id.clone();
         let download_app = app.clone();
         let download_session_id = session_id.clone();
+        let new_window_app = app.clone();
+        let new_window_session_id = session_id.clone();
         let initial_webview_url = if ignore_certificate_errors && cfg!(windows) {
             parse_webview_blank_url()?
         } else {
@@ -645,6 +654,18 @@ impl WebviewSessionManager {
                         title,
                     },
                 );
+            })
+            .on_new_window(move |url, _features| {
+                if matches!(url.scheme(), "http" | "https") {
+                    let _ = new_window_app.emit(
+                        "webview-new-window",
+                        WebviewNewWindowPayload {
+                            session_id: new_window_session_id.clone(),
+                            url: url.to_string(),
+                        },
+                    );
+                }
+                NewWindowResponse::Deny
             })
             .on_download(move |_webview, event| {
                 let payload = match event {

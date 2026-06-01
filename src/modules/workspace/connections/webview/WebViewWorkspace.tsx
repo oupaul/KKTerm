@@ -27,6 +27,11 @@ type WebviewTitleChangedEvent = {
   title: string;
 };
 
+type WebviewNewWindowEvent = {
+  sessionId: string;
+  url: string;
+};
+
 type WebviewDownloadEvent = {
   sessionId: string;
   url: string;
@@ -452,6 +457,16 @@ export function WebViewWorkspace({
           void maybeUpdateConnectionIcon(event.payload.url);
           void fillCredential({ automatic: true, showStatus: false });
         }
+      }),
+      listen<WebviewNewWindowEvent>("webview-new-window", (event) => {
+        if (event.payload.sessionId !== sessionIdRef.current) {
+          return;
+        }
+        void invokeCommand("webview_navigate", {
+          request: { sessionId: sessionIdRef.current, url: event.payload.url },
+        }).catch((error) => {
+          setNavError(error instanceof Error ? error.message : String(error));
+        });
       }),
       listen<WebviewTitleChangedEvent>("webview-title-changed", (event) => {
         if (event.payload.sessionId !== sessionIdRef.current) {

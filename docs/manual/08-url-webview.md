@@ -22,7 +22,7 @@ Tutorial target: `webview.surface`.
 - Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present.
 - Auto-refresh: `webview.autoRefresh` / `webview.autoRefreshOff`. Interval label `webview.autoRefreshSeconds`.
 - Open externally: toolbar button `webview.openExternally` (opens the current URL in the OS default browser).
-- In-page link shortcut: Shift-click an http(s) link in the embedded page to open it in the OS default browser instead of navigating the URL Pane.
+- In-page links: normal http(s) link clicks navigate inside the URL Pane, including links that ask for a new browser window. Shift-click an http(s) link in the embedded page to open it in the OS default browser instead of navigating the URL Pane.
 - Fill saved credential: `webview.fill` / `webview.fillCredential` / `webview.fillSavedCredential`.
 - Save password: `webview.savePassword`, dialog title `webview.savePasswordTitle`.
 - Save/reset split Pane layout for this URL Connection: `terminal.saveLayout` / `terminal.resetLayout`. Status Bar confirmations: `terminal.layoutSaved` / `terminal.layoutReset`.
