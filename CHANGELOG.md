@@ -2,6 +2,34 @@
 
 All notable changes to KKTerm are documented here.
 
+## v0.1.50
+
+## Highlights
+
+* Add inline title rename for panel and hero widget presets by @ryantsai in https://github.com/ryantsai/KKTerm/pull/188
+* Fix watchdog lifecycle wonkiness and wire real tool-using interventions by @ryantsai in https://github.com/ryantsai/KKTerm/pull/189
+* Apply RDP/WebView2 stability flags reliably via additional_browser_args by @ryantsai in https://github.com/ryantsai/KKTerm/pull/190
+* Let AI assistant actually switch Tabs and stop tutorial hallucination by @ryantsai in https://github.com/ryantsai/KKTerm/pull/191
+* Expand connection folders while searching by @ryantsai in https://github.com/ryantsai/KKTerm/pull/192
+
+
+**Full Changelog**: https://github.com/ryantsai/KKTerm/compare/v0.1.49...v0.1.50
+
+## Changes
+
+- Merge pull request #192 from ryantsai/codex/expand-folder-by-default-on-search (be91af1)
+- Expand connection folders during search (8659694)
+- Merge pull request #191 from ryantsai/claude/ai-tutorial-ui-navigation-iD3BN (9bf3fc4)
+- Let AI assistant actually switch Tabs and stop tutorial hallucination (c98e699)
+- Merge pull request #190 from ryantsai/claude/kkterm-rdp-webview-stability-flags (1572aba)
+- Apply RDP/WebView2 stability flags reliably via additional_browser_args (506b43d)
+- Merge pull request #189 from ryantsai/claude/watchdog-functionality-review-QuHPA (1b3d193)
+- Fix watchdog lifecycle wonkiness and wire real tool-using interventions (a134487)
+- Merge pull request #188 from ryantsai/claude/translatable-widget-titles-8vDzj (5fa8698)
+- Add inline title rename for panel and hero widget presets (9412ffa)
+
+Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.49...v0.1.50
+
 ## v0.1.49
 
 ## Highlights
