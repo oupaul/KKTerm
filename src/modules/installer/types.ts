@@ -31,6 +31,7 @@ export type Provider =
       repo: string;
       assetPattern: string;
       layout: GithubReleaseLayout;
+      pathSubdir?: string;
     }
   | { kind: "windowsFeature"; feature: string; reboot?: boolean }
   | { kind: "wslDistro"; distro: string }

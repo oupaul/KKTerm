@@ -110,11 +110,13 @@ fn install_recipe_by_provider(
             repo,
             asset_pattern,
             layout,
+            path_subdir,
         } => install_github_release(
             &recipe.id,
             repo,
             asset_pattern,
             *layout,
+            path_subdir.as_deref(),
             &options,
             cancel,
             emit,
@@ -132,10 +134,10 @@ fn install_recipe_by_provider(
 
 fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -> &'a Provider {
     if options.provider.as_deref() == Some("download") {
-        if let Some(provider @ Provider::DownloadInstaller { .. }) =
-            recipe.download_provider.as_ref()
-        {
-            return provider;
+        match recipe.download_provider.as_ref() {
+            Some(provider @ Provider::DownloadInstaller { .. })
+            | Some(provider @ Provider::GithubRelease { .. }) => return provider,
+            _ => {}
         }
     }
     &recipe.provider
@@ -688,6 +690,7 @@ fn install_github_release(
     repo: &str,
     asset_pattern: &str,
     layout: GithubReleaseLayout,
+    path_subdir: Option<&str>,
     options: &InstallOptions,
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
@@ -775,7 +778,9 @@ fn install_github_release(
             extract_zip(&download_path, &install_dir)?;
             std::fs::remove_file(&download_path).ok();
             if options.add_to_path.unwrap_or(false) {
-                add_to_user_path(&install_dir, tool_id, emit);
+                let path_dir =
+                    github_release_path_dir(&install_dir, path_subdir, tag_name.as_deref());
+                add_to_user_path(&path_dir, tool_id, emit);
             }
         }
         GithubReleaseLayout::ExeInstaller => {
@@ -874,6 +879,25 @@ fn download_with_progress(
         &json!({ "toolId": tool_id, "dest": dest, "bytes": downloaded, "totalBytes": total }),
     );
     Ok(())
+}
+
+fn github_release_path_dir(
+    install_dir: &PathBuf,
+    path_subdir: Option<&str>,
+    tag_name: Option<&str>,
+) -> PathBuf {
+    let Some(path_subdir) = path_subdir else {
+        return install_dir.clone();
+    };
+    let resolved = match tag_name {
+        Some(tag) => path_subdir.replace("{tag}", tag),
+        None => path_subdir.replace("{tag}", ""),
+    };
+    if resolved.trim().is_empty() {
+        install_dir.clone()
+    } else {
+        install_dir.join(resolved)
+    }
 }
 
 fn extract_zip(zip_path: &PathBuf, dest: &PathBuf) -> Result<(), String> {
@@ -1730,6 +1754,32 @@ mod tests {
         let effective = effective_install_options(&recipe, &InstallOptions::default());
 
         assert_eq!(effective.scope, None);
+    }
+
+    #[test]
+    fn github_release_path_subdir_supports_release_tag_placeholder() {
+        let dir = github_release_path_dir(
+            &PathBuf::from(r"C:\Users\Ryan\AppData\Local\KKTerm\installer\bin\ffmpeg"),
+            Some("ffmpeg-{tag}-full_build/bin"),
+            Some("8.1.1"),
+        );
+
+        assert_eq!(
+            dir,
+            PathBuf::from(
+                r"C:\Users\Ryan\AppData\Local\KKTerm\installer\bin\ffmpeg\ffmpeg-8.1.1-full_build\bin"
+            )
+        );
+    }
+
+    #[test]
+    fn github_release_path_subdir_defaults_to_install_dir() {
+        let install_dir = PathBuf::from(r"C:\Tools\ffmpeg");
+
+        assert_eq!(
+            github_release_path_dir(&install_dir, None, Some("8.1.1")),
+            install_dir
+        );
     }
 
     #[test]

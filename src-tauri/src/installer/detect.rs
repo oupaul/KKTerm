@@ -158,7 +158,19 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
         detect_managed_app_marker(&recipe.id)
     } else {
         match &recipe.provider {
-            Provider::Winget { .. } => detect_winget(recipe),
+            Provider::Winget { .. } => {
+                let state = detect_winget(recipe);
+                if !state.installed
+                    && matches!(
+                        &recipe.download_provider,
+                        Some(Provider::GithubRelease { .. })
+                    )
+                {
+                    detect_github_release_marker(&recipe.id)
+                } else {
+                    state
+                }
+            }
             Provider::Npm { pkg } => detect_npm(pkg),
             Provider::UvPip { .. } => DetectedState::not_installed(),
             Provider::DownloadInstaller { .. } if recipe.id == "winget" => detect_winget_cli(),
