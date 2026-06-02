@@ -95,6 +95,8 @@ Settings tutorial targets:
 - Section header `settings.sectionInstaller`. Owned by `src/modules/settings/InstallerSettings.tsx`.
 - Activity Rail group `settings.installerRail`:
   - Toggle `settings.installerShowOnRail` (hint `settings.installerShowOnRailDesc`). When on (default), the Installer Helper icon appears on the Activity Rail; when off, the icon is hidden.
+- Update checks group `settings.installerUpdateChecks`:
+  - Interval dropdown `settings.installerCheckInterval` (hint `settings.installerCheckIntervalDesc`) with options `settings.installerCheckInterval3600` (hour), `settings.installerCheckInterval86400` (day, default), `settings.installerCheckInterval604800` (week), `settings.installerCheckInterval2592000` (month). Controls how often the Installer Helper auto-checks for the latest tool versions when you switch to the Module; the in-Module Refresh button always checks immediately.
 - Save status: `settings.installerSaved`.
 
 ## Credentials & MCP

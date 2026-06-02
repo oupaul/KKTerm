@@ -39,7 +39,7 @@ The dialog has three rendering modes:
 
 ## Tool detection
 
-Detection renders in two phases on Module entry. First, KKTerm loads the local Windows Registry detection cache from `HKCU\Software\Ryan Tsai\KKTerm\InstallerDetectionCache` on a worker and paints any remembered states immediately. Then the backend starts a bounded streaming revalidation sweep in the background without blocking the Module. Each completed tool emits a `detectResult` event over `installer://progress`, updates the tile, and writes the fresh state back to the registry cache. After startup detection finishes, KKTerm automatically queries latest versions for every catalog tool whose provider can report one. `installer.refresh` re-runs the same detection and latest-version check on demand.
+Detection renders in two phases on Module entry. First, KKTerm loads the local Windows Registry detection cache from `HKCU\Software\Ryan Tsai\KKTerm\InstallerDetectionCache` on a worker and paints any remembered states immediately. Then the backend starts a bounded streaming revalidation sweep in the background without blocking the Module. Each completed tool emits a `detectResult` event over `installer://progress`, updates the tile, and writes the fresh state back to the registry cache. After detection finishes, KKTerm runs an interval-gated latest-version check: it queries latest versions for every catalog tool whose provider can report one only when the configured interval has elapsed since the last successful check (see Update flow). `installer.refresh` re-runs the same detection and forces a latest-version check on demand regardless of the interval.
 
 Per-provider detection methods:
 
@@ -66,12 +66,12 @@ Runtime command probes such as `node --version`, `uv python find 3.13`, global n
 
 ## Update flow
 
-1. KKTerm runs the update sweep automatically after the first Module-entry detection pass, or the user clicks `installer.refresh` (header) / `installer.dialog.checkNow` for one tool inside the detail dialog.
+1. KKTerm evaluates the update sweep each time the user switches to the Installer Helper Module from another Module. The automatic sweep runs only when the configured check interval (Settings → Installer Helper → `settings.installerCheckInterval`; one of hour / day / week / month, default daily) has elapsed since the last successful check; otherwise the persisted check state is reused without a network fetch. The user can also force a check by clicking `installer.refresh` (header) / `installer.dialog.checkNow` for one tool inside the detail dialog.
 2. The backend launches a **streaming** worker and returns after the worker starts. It emits `checkStarted` with the id list, then per-tool `checkResult` events as each lookup lands (latest-version queries run in parallel — `winget show`, npm registry, PyPI, GitHub releases API — bounded to a small pool to hide slow legs behind fast ones), and finally `checkFinished`. The frontend only sends recipes whose providers can report a structured latest version. It writes each successful result into `toolState` as it arrives so rows light up incrementally instead of after one large blocking await. Per-tool lookup errors stay in frontend session state and render in the `installer.tile.latest` / `installer.dialog.latestVersion` row; they do not overwrite the persisted latest-version cache. Results are persisted in the `installer_tool_state` SQLite table.
 3. Rows whose `latestVersionSeen` compares newer than `installedVersion` stay in their normal category section, highlight the latest version value, and show their per-row `installer.actions.update` button.
 4. Clicking `installer.updateAll` lists every pending update in a dialog (`installer.confirm.updateAllTitle`), warns about the likely UAC prompt count, and on confirm runs the queue sequentially. Pinned tools (see Pin version below) are skipped.
 
-The startup sweep is a one-shot background check for the current app session; there is no recurring automatic update polling in v1.
+The automatic sweep is triggered only by switching to the Installer Helper Module, and at most once per configured interval; there is no background timer polling while the Module is inactive. The last-check timestamp is persisted per tool in `installer_tool_state` (`last_check_at`) so the interval is honored across app launches.
 
 ## Uninstall flow
 

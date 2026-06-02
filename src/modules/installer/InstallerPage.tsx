@@ -2,15 +2,21 @@
 //
 // Lifecycle:
 //   * Mount: load catalog (uses 1h disk cache), subscribe to progress events,
-//     load toolState. If hasInitialScanned is false, kick off detect_all and
-//     check latest versions in the background. Subsequent visits use the
-//     in-memory cache.
-//   * "Refresh" button: re-run detection, then check latest versions for
-//     every catalog tool.
+//     load toolState. If hasInitialScanned is false, kick off detect_all in
+//     the background. Subsequent visits use the in-memory cache.
+//   * Activation (switching to the Module from another Module): run an
+//     interval-gated latest-version check. The check only fetches when the
+//     configured interval (General Settings → Installer Helper, default once
+//     per day) has elapsed since the last successful check; the last-check
+//     timestamp is persisted per tool in SQLite and survives app launches.
+//     Otherwise the persisted check state is reused without a network fetch.
+//   * "Refresh" button (manual check): re-run detection, then check latest
+//     versions for every catalog tool regardless of the interval, updating the
+//     last-check timestamp.
 //   * Unmount: keep the in-memory store; do NOT reset detected state (so
 //     visiting the Module again is instant).
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
@@ -30,6 +36,7 @@ import { installRecipeAndWait } from "./progress";
 import { ToolRow } from "./ToolRow";
 import { isInstallerUpdateAvailable } from "./versionCompare";
 import { recipeSupportsLatestVersion } from "./latestSupport";
+import { resolveInstallerCheckIntervalSeconds } from "./checkInterval";
 import "./installer.css";
 
 export function InstallerPage({ active }: { active: boolean }) {
@@ -37,12 +44,12 @@ export function InstallerPage({ active }: { active: boolean }) {
   const showStatusBarNotice = useWorkspaceStore(
     (state) => state.showStatusBarNotice,
   );
+  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const catalog = useInstallerStore((s) => s.catalog);
   const detected = useInstallerStore((s) => s.detected);
   const toolState = useInstallerStore((s) => s.toolState);
   const scanning = useInstallerStore((s) => s.scanning);
   const checking = useInstallerStore((s) => s.checking);
-  const hasInitialScanned = useInstallerStore((s) => s.hasInitialScanned);
   const setCatalog = useInstallerStore((s) => s.setCatalog);
   const setDetected = useInstallerStore((s) => s.setDetected);
   const setToolStates = useInstallerStore((s) => s.setToolStates);
@@ -127,40 +134,73 @@ export function InstallerPage({ active }: { active: boolean }) {
     })();
   }, [active, catalog, setCatalog, setToolStates, showStatusBarNotice, t]);
 
+  // Drive detection + interval-gated auto-check once per activation. The ref
+  // resets whenever the Module goes inactive, so switching back to the Module
+  // re-evaluates the interval (but the work itself is skipped when still
+  // fresh). catalog is a trigger because it loads asynchronously after the
+  // Module first becomes active.
+  const activationHandled = useRef(false);
   useEffect(() => {
-    if (!active || !catalog || hasInitialScanned || scanning) return;
-    if (!isTauriRuntime()) return;
-    setScanning(true);
+    if (!active) {
+      activationHandled.current = false;
+      return;
+    }
+    if (!catalog || !isTauriRuntime()) return;
+    if (activationHandled.current) return;
+    activationHandled.current = true;
     void (async () => {
+      // Detection sweep runs once per app session.
+      const store = useInstallerStore.getState();
+      if (!store.hasInitialScanned && !store.scanning) {
+        setScanning(true);
+        try {
+          const cached = await invokeCommand("installer_load_detection_cache");
+          if (Object.keys(cached).length > 0) {
+            setDetected(cached);
+          }
+          await invokeCommand("installer_detect_all_streaming");
+          const states = await invokeCommand("installer_get_state");
+          setToolStates(states);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          showStatusBarNotice(message, { tone: "error" });
+          setScanning(false);
+          markInitialScanned();
+          return;
+        }
+      }
+
+      // Interval-gated latest-version check: skip the network fetch when the
+      // last successful check is still within the configured interval.
+      const latest = useInstallerStore.getState();
+      if (latest.checking) return;
+      const lastCheck = latestTimestamp(
+        Object.values(latest.toolState).map((s) => s.lastCheckAt),
+      );
+      const intervalSeconds = resolveInstallerCheckIntervalSeconds(
+        generalSettings.installerCheckIntervalSeconds,
+      );
+      const nowSeconds = Date.now() / 1000;
+      if (lastCheck !== null && nowSeconds - lastCheck < intervalSeconds) {
+        return;
+      }
+      const toolIds = catalog.recipes
+        .filter(recipeSupportsLatestVersion)
+        .map((r) => r.id);
+      if (toolIds.length === 0) return;
       try {
-        const cached = await invokeCommand("installer_load_detection_cache");
-        if (Object.keys(cached).length > 0) {
-          setDetected(cached);
-        }
-        await invokeCommand("installer_detect_all_streaming");
-        const states = await invokeCommand("installer_get_state");
-        setToolStates(states);
-        const toolIds = catalog.recipes
-          .filter(recipeSupportsLatestVersion)
-          .map((r) => r.id);
-        if (toolIds.length > 0) {
-          await invokeCommand("installer_check_latest_versions", {
-            toolIds,
-          });
-        }
+        await invokeCommand("installer_check_latest_versions", { toolIds });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         showStatusBarNotice(message, { tone: "error" });
-        setScanning(false);
-        markInitialScanned();
       }
     })();
   }, [
     active,
     catalog,
-    hasInitialScanned,
+    generalSettings.installerCheckIntervalSeconds,
     markInitialScanned,
-    scanning,
     setDetected,
     setScanning,
     setToolStates,

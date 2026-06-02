@@ -201,6 +201,7 @@ export interface GeneralSettings {
   showAllConnectionsInTree: boolean;
   hideTopTabButtons: boolean;
   showInstallerOnRail: boolean;
+  installerCheckIntervalSeconds: number;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
   autoStartWithWindows: boolean;

@@ -149,6 +149,11 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.installerShowOnRail",
         description: "Show or hide the Installer Helper icon on the Activity Rail.",
       },
+      {
+        key: "settings.installerCheckInterval",
+        description:
+          "How often the Installer Helper auto-checks for the latest tool versions when opened (hour/day/week/month; default daily).",
+      },
     ],
   },
   "credentials-settings": {

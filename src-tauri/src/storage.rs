@@ -237,6 +237,8 @@ pub struct GeneralSettings {
     hide_top_tab_buttons: bool,
     #[serde(default = "default_show_installer_on_rail")]
     show_installer_on_rail: bool,
+    #[serde(default = "default_installer_check_interval_seconds")]
+    installer_check_interval_seconds: u32,
     #[serde(default)]
     pinned_connection_ids: Vec<String>,
     #[serde(default = "default_allow_clipboard_read")]
@@ -4492,6 +4494,7 @@ fn default_general_settings() -> GeneralSettings {
         show_all_connections_in_tree: false,
         hide_top_tab_buttons: false,
         show_installer_on_rail: default_show_installer_on_rail(),
+        installer_check_interval_seconds: default_installer_check_interval_seconds(),
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
         auto_start_with_windows: false,
@@ -4513,6 +4516,10 @@ fn default_use_directx_screen_capture() -> bool {
 
 fn default_show_installer_on_rail() -> bool {
     true
+}
+
+fn default_installer_check_interval_seconds() -> u32 {
+    86_400
 }
 
 fn default_app_launcher_settings() -> AppLauncherSettings {
@@ -4927,6 +4934,10 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
             5 | 15 | 30 | 60 | 300 => settings.status_bar_monitor_interval_seconds,
             _ => default_status_bar_monitor_interval_seconds(),
         };
+    settings.installer_check_interval_seconds = match settings.installer_check_interval_seconds {
+        3_600 | 86_400 | 604_800 | 2_592_000 => settings.installer_check_interval_seconds,
+        _ => default_installer_check_interval_seconds(),
+    };
     Ok(settings)
 }
 
@@ -6609,6 +6620,7 @@ mod tests {
         assert!(!defaults.show_all_connections_in_tree);
         assert!(!defaults.hide_top_tab_buttons);
         assert!(defaults.show_installer_on_rail);
+        assert_eq!(defaults.installer_check_interval_seconds, 86_400);
         assert!(defaults.pinned_connection_ids.is_empty());
         assert!(defaults.allow_clipboard_read);
         assert!(!defaults.auto_start_with_windows);
@@ -6630,6 +6642,7 @@ mod tests {
                 show_all_connections_in_tree: true,
                 hide_top_tab_buttons: true,
                 show_installer_on_rail: false,
+                installer_check_interval_seconds: 604_800,
                 pinned_connection_ids: vec![
                     " connection-a ".to_string(),
                     "connection-a".to_string(),
@@ -6655,6 +6668,7 @@ mod tests {
         assert!(updated.show_all_connections_in_tree);
         assert!(updated.hide_top_tab_buttons);
         assert!(!updated.show_installer_on_rail);
+        assert_eq!(updated.installer_check_interval_seconds, 604_800);
         assert_eq!(
             updated.pinned_connection_ids,
             vec!["connection-a".to_string(), "connection-b".to_string()]
@@ -6939,6 +6953,7 @@ mod tests {
                 show_all_connections_in_tree: true,
                 hide_top_tab_buttons: true,
                 show_installer_on_rail: false,
+                installer_check_interval_seconds: 86_400,
                 pinned_connection_ids: vec!["connection-pinned".to_string()],
                 allow_clipboard_read: true,
                 auto_start_with_windows: true,
@@ -6964,6 +6979,7 @@ mod tests {
                 show_all_connections_in_tree: false,
                 hide_top_tab_buttons: false,
                 show_installer_on_rail: true,
+                installer_check_interval_seconds: 86_400,
                 pinned_connection_ids: Vec::new(),
                 allow_clipboard_read: false,
                 auto_start_with_windows: false,

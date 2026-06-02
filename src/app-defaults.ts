@@ -27,6 +27,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   showAllConnectionsInTree: false,
   hideTopTabButtons: false,
   showInstallerOnRail: true,
+  installerCheckIntervalSeconds: 86400,
   pinnedConnectionIds: [],
   allowClipboardRead: true,
   autoStartWithWindows: false,

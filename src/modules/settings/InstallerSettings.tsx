@@ -4,6 +4,10 @@ import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { GeneralSettings } from "../../types";
+import {
+  INSTALLER_CHECK_INTERVAL_OPTIONS,
+  resolveInstallerCheckIntervalSeconds,
+} from "../installer/checkInterval";
 import { SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -13,7 +17,10 @@ export function InstallerSettings() {
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
-  const hasChanges = draft.showInstallerOnRail !== generalSettings.showInstallerOnRail;
+  const hasChanges =
+    draft.showInstallerOnRail !== generalSettings.showInstallerOnRail ||
+    draft.installerCheckIntervalSeconds !==
+      generalSettings.installerCheckIntervalSeconds;
 
   useEffect(() => {
     setDraft(generalSettings);
@@ -67,6 +74,34 @@ export function InstallerSettings() {
               <strong>{t("settings.installerShowOnRail")}</strong>
               <small>{t("settings.installerShowOnRailDesc")}</small>
             </span>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.installerUpdateChecks")}</legend>
+        <div className="form-grid">
+          <label>
+            <span>{t("settings.installerCheckInterval")}</span>
+            <select
+              value={resolveInstallerCheckIntervalSeconds(
+                draft.installerCheckIntervalSeconds,
+              )}
+              onChange={(event) =>
+                setDraft((state) => ({
+                  ...state,
+                  installerCheckIntervalSeconds: Number(event.currentTarget.value),
+                }))
+              }
+            >
+              {INSTALLER_CHECK_INTERVAL_OPTIONS.map((seconds) => (
+                <option key={seconds} value={seconds}>
+                  {t(`settings.installerCheckInterval${seconds}`)}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">
+              {t("settings.installerCheckIntervalDesc")}
+            </small>
           </label>
         </div>
       </fieldset>
