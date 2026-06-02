@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildReleaseNotesPrompt,
   composeFallbackReleaseNotes,
+  extractPrNumbers,
   prependChangelogEntry,
 } from "../scripts/generate-release-notes.mjs";
 
@@ -29,6 +30,29 @@ const sampleContext = {
     },
   ],
 };
+
+test("extractPrNumbers collects PR numbers from commit text and GitHub generated notes", () => {
+  const commits = [
+    { subject: "fix(terminal): handle disconnect (#42)", body: "" },
+    { subject: "Merge pull request #57 from branch", body: "closes #100" },
+  ];
+  const notes = "* Some change by @user in https://github.com/ryantsai/KKTerm/pull/99\n* Another in #57";
+  const prNumbers = extractPrNumbers(commits, notes);
+  assert.ok(prNumbers.includes(42));
+  assert.ok(prNumbers.includes(57));
+  assert.ok(prNumbers.includes(99));
+  assert.equal(prNumbers.filter((n) => n === 57).length, 1, "deduplicates PR numbers");
+});
+
+test("buildReleaseNotesPrompt instructs AI to credit linked issue reporters", () => {
+  const contextWithReporters = {
+    ...sampleContext,
+    linkedIssueReporters: [{ number: 130, title: "Terminal flickers", reporter: "alice", prNumber: 132 }],
+  };
+  const prompt = buildReleaseNotesPrompt(contextWithReporters);
+  assert.match(prompt, /linkedIssueReporters/);
+  assert.match(prompt, /alice/);
+});
 
 test("buildReleaseNotesPrompt feeds bounded release context and KKTerm terminology to AI", () => {
   const prompt = buildReleaseNotesPrompt(sampleContext);
