@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `ai.*` (full namespace), `app.aiAssistant`, `settings.mcp*`, `settings.assistantSkills*`, `settings.aiToolsTitle`, `settings.sectionAiAssistant`, `settings.credentialKindAiApiKey`, `settings.aiTools.tutorial.*`, `common.expand`, `common.collapse`
+- Keys: `ai.*` (full namespace), `app.aiAssistant`, `settings.mcp*`, `settings.assistantSkills*`, `settings.aiToolsTitle`, `settings.sectionAiAssistant`, `settings.credentialKindAiApiKey`, `settings.aiTools.tutorial.*`, `common.expand`, `common.collapse`, `common.copy`
 - Topics: AI panel, chats, new chat, history, SQLite, tool permission modes, tool defaults, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, Tutorial overlay, tutorial navigation, `connections.addConnection`, intents (Watchdog / Create Widget / Extension Draft), MCP servers, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal, compact page context, UTF-8 widget updates, non-English assistant output, Advanced Debugging, AI Assistant debug logs, MCP debug logs, Installer Helper debug logs, heartbeat debug logs
 - Synonyms: "chat", "copilot", "AI bot", "tools", "approval", "MCP", "agent", "skill", "skills", "SKILL.md", "workflow", "ssh-troubleshooter", "dashboard-widget-builder", "terminal-command-planner", "sftp-transfer-helper", "remote-desktop-helper", "network-connectivity-troubleshooter", "dns-dhcp-troubleshooter", "firewall-port-troubleshooter", "tls-certificate-troubleshooter", "network troubleshooting", "DNS", "DHCP", "firewall", "port check", "TLS", "certificate", "watchdog", "highlight this", "show me where", "where are chats stored", "clear chat storage", "expand tools", "collapse skills", "garbled text", "mojibake", "encoding", "UTF8", "UTF-8", "debug log", "AI debug log", "MCP debug log", "Installer Helper debug log", "heartbeat debug log", "aiassistant.debug.log", "mcp.debug.log", "installer.helper.debug.log", "kkterm-heartbeat.debug.log", "context too large"
 
@@ -22,7 +22,7 @@ Chat history is stored in SQLite table `assistant_chat_threads`, indexed for rec
 
 ## Composer
 
-Default placeholder `ai.composerPlaceholder`. Send `ai.sendMessage` / `ai.send`. Stop in-flight `ai.stopMessage`. Copy `ai.copy` / `ai.copyMessage`. Code label `ai.code`. Show-less / more `ai.showLess` / `ai.more`.
+Default placeholder `ai.composerPlaceholder`. Send `ai.sendMessage` / `ai.send`. Stop in-flight `ai.stopMessage`. Copy `ai.copy` / `ai.copyMessage`. Highlighted Assistant Panel text can also be copied from the right-click native context menu item `common.copy`. Code label `ai.code`. Show-less / more `ai.showLess` / `ai.more`.
 
 ### Attachments
 
