@@ -296,7 +296,7 @@
   transition-delay: 650ms;
 }
 
-.rail-tooltip.native-active {
+.rail-tooltip.native-suppressed {
   opacity: 0;
 }
 

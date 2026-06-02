@@ -9,7 +9,7 @@ export function RailTooltip({ label }: { label: string }) {
   const labelRef = useRef(label);
   const showTimerRef = useRef<number | null>(null);
   const hoverTokenRef = useRef(0);
-  const [nativeActive, setNativeActive] = useState(false);
+  const [nativeTooltipSuppressed, setNativeTooltipSuppressed] = useState(false);
 
   useEffect(() => {
     labelRef.current = label;
@@ -33,7 +33,7 @@ export function RailTooltip({ label }: { label: string }) {
     function hideNativeTooltip() {
       clearShowTimer();
       hoverTokenRef.current += 1;
-      setNativeActive(false);
+      setNativeTooltipSuppressed(false);
       void invokeCommand("hide_native_tooltip").catch(() => {
         // CSS tooltips remain the fallback if the native helper is unavailable.
       });
@@ -43,6 +43,7 @@ export function RailTooltip({ label }: { label: string }) {
       clearShowTimer();
       const hoverToken = hoverTokenRef.current + 1;
       hoverTokenRef.current = hoverToken;
+      setNativeTooltipSuppressed(true);
       showTimerRef.current = window.setTimeout(() => {
         const bounds = tooltipOwner.getBoundingClientRect();
         const x = bounds.right + RAIL_TOOLTIP_OFFSET_PX;
@@ -59,11 +60,11 @@ export function RailTooltip({ label }: { label: string }) {
               void invokeCommand("hide_native_tooltip");
               return;
             }
-            setNativeActive(shown);
+            setNativeTooltipSuppressed(shown);
           })
           .catch(() => {
             if (hoverTokenRef.current === hoverToken) {
-              setNativeActive(false);
+              setNativeTooltipSuppressed(false);
             }
           });
       }, RAIL_TOOLTIP_DELAY_MS);
@@ -86,7 +87,7 @@ export function RailTooltip({ label }: { label: string }) {
   return (
     <span
       ref={tooltipRef}
-      className={`rail-tooltip ${nativeActive ? "native-active" : ""}`}
+      className={`rail-tooltip ${nativeTooltipSuppressed ? "native-suppressed" : ""}`}
       role="tooltip"
     >
       {label}
