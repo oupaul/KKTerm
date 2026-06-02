@@ -28,6 +28,19 @@ test("NSSM is visible in the Installer Helper Utilities section", async () => {
   );
 });
 
+test("FFmpeg is visible in the Installer Helper Utilities section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"ffmpeg"/,
+    "FFmpeg should be listed in the visible Utilities section",
+  );
+});
+
 test("managed server apps depend on NSSM for service registration", () => {
   for (const id of ["n8n", "ollama"]) {
     const recipe = byId.get(id);
