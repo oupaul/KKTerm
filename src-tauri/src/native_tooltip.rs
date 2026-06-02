@@ -11,16 +11,16 @@ mod platform {
     use super::NativeTooltipRequest;
     use std::sync::Mutex;
     use tauri::Manager;
+    use windows::core::PWSTR;
     use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
     use windows::Win32::UI::Controls::{
         TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW, TTM_SETMAXTIPWIDTH,
         TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTS_ALWAYSTIP, TTS_NOPREFIX, TTTOOLINFOW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        CreateWindowExW, DestroyWindow, SendMessageW, CW_USEDEFAULT, WINDOW_STYLE,
-        WS_EX_TOPMOST, WS_POPUP,
+        CreateWindowExW, DestroyWindow, SendMessageW, CW_USEDEFAULT, WINDOW_STYLE, WS_EX_TOPMOST,
+        WS_POPUP,
     };
-    use windows_core::PWSTR;
 
     #[derive(Default)]
     pub struct NativeTooltipState {
