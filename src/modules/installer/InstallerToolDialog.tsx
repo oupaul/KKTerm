@@ -606,9 +606,11 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
     }
   }
 
-  const prereqs = (recipe.needs ?? [])
-    .map((id) => catalog?.recipes.find((r) => r.id === id))
-    .filter((r): r is Recipe => !!r);
+  const prereqs = catalog
+    ? resolveInstallPlan(recipe.id, catalog, detected, options)
+        .steps.filter((step) => step.isPrerequisite)
+        .map((step) => step.recipe)
+    : [];
 
   return (
     <>
@@ -1005,11 +1007,16 @@ function OptionsForm({
   const supported = new Set<RecipeOption>(recipe.options ?? []);
   const canChooseDownload =
     supported.has("provider") &&
-    recipe.downloadProvider?.kind === "downloadInstaller";
+    (recipe.downloadProvider?.kind === "downloadInstaller" ||
+      recipe.downloadProvider?.kind === "githubRelease");
   const usingDownloadProvider =
     canChooseDownload && options.provider === "download";
+  const selectedProvider = usingDownloadProvider
+    ? recipe.downloadProvider
+    : recipe.provider;
+  const selectedProviderKind = selectedProvider?.kind;
   const showSelfElevatingScopeHint =
-    !usingDownloadProvider && isKnownSelfElevatingWingetRecipe(recipe);
+    selectedProviderKind === "winget" && isKnownSelfElevatingWingetRecipe(recipe);
   if (supported.size === 0) return null;
   return (
     <div
@@ -1032,7 +1039,7 @@ function OptionsForm({
           </select>
         </label>
       ) : null}
-      {supported.has("scope") && !usingDownloadProvider ? (
+      {supported.has("scope") && selectedProviderKind === "winget" ? (
         <label>
           <span>{t("installer.options.scope")}</span>
           <select
@@ -1064,7 +1071,7 @@ function OptionsForm({
           />
         </label>
       ) : null}
-      {supported.has("location") && !usingDownloadProvider ? (
+      {supported.has("location") && selectedProviderKind === "githubRelease" ? (
         <label>
           <span>{t("installer.options.location")}</span>
           <input
@@ -1074,7 +1081,7 @@ function OptionsForm({
           />
         </label>
       ) : null}
-      {supported.has("addToPath") && !usingDownloadProvider ? (
+      {supported.has("addToPath") && selectedProviderKind === "githubRelease" ? (
         <label>
           <input
             type="checkbox"
@@ -1094,7 +1101,8 @@ function selectedProviderForRecipe(
 ): Provider {
   if (
     options.provider === "download" &&
-    recipe.downloadProvider?.kind === "downloadInstaller"
+    (recipe.downloadProvider?.kind === "downloadInstaller" ||
+      recipe.downloadProvider?.kind === "githubRelease")
   ) {
     return recipe.downloadProvider;
   }

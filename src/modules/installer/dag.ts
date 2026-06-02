@@ -50,7 +50,8 @@ export function resolveInstallPlan(
     seen.add(id);
     const recipe = byId.get(id);
     if (!recipe) return;
-    for (const need of recipe.needs ?? []) {
+    const recipeOptions = id === targetRecipeId ? options : undefined;
+    for (const need of effectiveNeedsFor(recipe, recipeOptions)) {
       visit(need);
     }
     order.push(recipe);
@@ -83,6 +84,28 @@ export function resolveInstallPlan(
   );
 
   return { steps, actionable, uacPromptEstimate };
+}
+
+function effectiveNeedsFor(recipe: Recipe, options?: InstallOptions): string[] {
+  const needs = recipe.needs ?? [];
+  if (
+    recipe.provider.kind === "winget" &&
+    selectedProviderForOptions(recipe, options) !== recipe.provider
+  ) {
+    return needs.filter((need) => need !== "winget");
+  }
+  return needs;
+}
+
+function selectedProviderForOptions(recipe: Recipe, options?: InstallOptions): Recipe["provider"] {
+  if (
+    options?.provider === "download" &&
+    (recipe.downloadProvider?.kind === "downloadInstaller" ||
+      recipe.downloadProvider?.kind === "githubRelease")
+  ) {
+    return recipe.downloadProvider;
+  }
+  return recipe.provider;
 }
 
 /// Reverse-DAG: for `targetRecipeId`, find every catalog recipe whose
@@ -131,11 +154,7 @@ function estimateUacPromptsFor(
   detected?: Record<string, DetectedState>,
   directlyActionableIds?: Set<string>,
 ): number {
-  const provider =
-    options?.provider === "download" &&
-    recipe.downloadProvider?.kind === "downloadInstaller"
-      ? recipe.downloadProvider
-      : recipe.provider;
+  const provider = selectedProviderForOptions(recipe, options);
 
   switch (provider.kind) {
     case "winget": {

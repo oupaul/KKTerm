@@ -110,11 +110,13 @@ fn install_recipe_by_provider(
             repo,
             asset_pattern,
             layout,
+            path_subdir,
         } => install_github_release(
             &recipe.id,
             repo,
             asset_pattern,
             *layout,
+            path_subdir.as_deref(),
             &options,
             cancel,
             emit,
@@ -132,10 +134,10 @@ fn install_recipe_by_provider(
 
 fn selected_install_provider<'a>(recipe: &'a Recipe, options: &InstallOptions) -> &'a Provider {
     if options.provider.as_deref() == Some("download") {
-        if let Some(provider @ Provider::DownloadInstaller { .. }) =
-            recipe.download_provider.as_ref()
-        {
-            return provider;
+        match recipe.download_provider.as_ref() {
+            Some(provider @ Provider::DownloadInstaller { .. })
+            | Some(provider @ Provider::GithubRelease { .. }) => return provider,
+            _ => {}
         }
     }
     &recipe.provider
@@ -421,10 +423,6 @@ fn run_downloaded_installer(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<(), String> {
-    let script = format!(
-        "$p = Start-Process -FilePath {} -Wait -PassThru; exit $p.ExitCode",
-        powershell_single_quote(&download_path.to_string_lossy())
-    );
     run_streamed_public(
         "powershell",
         &[
@@ -432,11 +430,53 @@ fn run_downloaded_installer(
             "-ExecutionPolicy".into(),
             "Bypass".into(),
             "-Command".into(),
-            script,
+            downloaded_installer_powershell_script(download_path, tool_id),
         ],
         tool_id,
         cancel,
         emit,
+    )
+}
+
+fn downloaded_installer_powershell_script(download_path: &PathBuf, tool_id: &str) -> String {
+    if tool_id == "winget" && is_appx_package_path(download_path) {
+        return winget_app_installer_powershell_script(download_path);
+    }
+
+    if is_appx_package_path(download_path) {
+        return format!(
+            "$ErrorActionPreference = 'Stop'; Add-AppxPackage -Path {}; exit 0",
+            powershell_single_quote(&download_path.to_string_lossy())
+        );
+    }
+
+    format!(
+        "$p = Start-Process -FilePath {} -Wait -PassThru; exit $p.ExitCode",
+        powershell_single_quote(&download_path.to_string_lossy())
+    )
+}
+
+fn winget_app_installer_powershell_script(download_path: &PathBuf) -> String {
+    let package_path = powershell_single_quote(&download_path.to_string_lossy());
+    format!(
+        concat!(
+            "$ErrorActionPreference = 'Stop'; ",
+            "$family = 'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'; ",
+            "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
+            "Add-AppxPackage -Path {package_path}; ",
+            "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
+            "exit 0"
+        )
+    )
+}
+
+fn is_appx_package_path(download_path: &PathBuf) -> bool {
+    let Some(extension) = download_path.extension().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    matches!(
+        extension.to_ascii_lowercase().as_str(),
+        "appx" | "appxbundle" | "msix" | "msixbundle"
     )
 }
 
@@ -688,6 +728,7 @@ fn install_github_release(
     repo: &str,
     asset_pattern: &str,
     layout: GithubReleaseLayout,
+    path_subdir: Option<&str>,
     options: &InstallOptions,
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
@@ -775,7 +816,9 @@ fn install_github_release(
             extract_zip(&download_path, &install_dir)?;
             std::fs::remove_file(&download_path).ok();
             if options.add_to_path.unwrap_or(false) {
-                add_to_user_path(&install_dir, tool_id, emit);
+                let path_dir =
+                    github_release_path_dir(&install_dir, path_subdir, tag_name.as_deref());
+                add_to_user_path(&path_dir, tool_id, emit);
             }
         }
         GithubReleaseLayout::ExeInstaller => {
@@ -874,6 +917,25 @@ fn download_with_progress(
         &json!({ "toolId": tool_id, "dest": dest, "bytes": downloaded, "totalBytes": total }),
     );
     Ok(())
+}
+
+fn github_release_path_dir(
+    install_dir: &PathBuf,
+    path_subdir: Option<&str>,
+    tag_name: Option<&str>,
+) -> PathBuf {
+    let Some(path_subdir) = path_subdir else {
+        return install_dir.clone();
+    };
+    let resolved = match tag_name {
+        Some(tag) => path_subdir.replace("{tag}", tag),
+        None => path_subdir.replace("{tag}", ""),
+    };
+    if resolved.trim().is_empty() {
+        install_dir.clone()
+    } else {
+        install_dir.join(resolved)
+    }
 }
 
 fn extract_zip(zip_path: &PathBuf, dest: &PathBuf) -> Result<(), String> {
@@ -1703,6 +1765,38 @@ mod tests {
     }
 
     #[test]
+    fn appx_package_downloads_install_with_add_appxpackage() {
+        let script = downloaded_installer_powershell_script(
+            &PathBuf::from(r"C:\Temp\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"),
+            "claude-desktop",
+        );
+
+        assert!(script.contains("Add-AppxPackage -Path"));
+        assert!(!script.contains("Start-Process"));
+    }
+
+    #[test]
+    fn winget_app_installer_download_requests_family_registration() {
+        let script = downloaded_installer_powershell_script(
+            &PathBuf::from(r"C:\Temp\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"),
+            "winget",
+        );
+
+        assert!(script.contains("Add-AppxPackage -RegisterByFamilyName -MainPackage"));
+        assert!(script.contains("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe"));
+        assert!(script.contains("Add-AppxPackage -Path"));
+    }
+
+    #[test]
+    fn exe_downloads_still_launch_with_start_process() {
+        let script =
+            downloaded_installer_powershell_script(&PathBuf::from(r"C:\Temp\setup.exe"), "7zip");
+
+        assert!(script.contains("Start-Process -FilePath"));
+        assert!(!script.contains("Add-AppxPackage"));
+    }
+
+    #[test]
     fn scoped_winget_recipe_defaults_to_user_scope() {
         let recipe = winget_recipe_with_options(vec![super::super::schema::RecipeOption::Scope]);
         let effective = effective_install_options(&recipe, &InstallOptions::default());
@@ -1730,6 +1824,32 @@ mod tests {
         let effective = effective_install_options(&recipe, &InstallOptions::default());
 
         assert_eq!(effective.scope, None);
+    }
+
+    #[test]
+    fn github_release_path_subdir_supports_release_tag_placeholder() {
+        let dir = github_release_path_dir(
+            &PathBuf::from(r"C:\Users\Ryan\AppData\Local\KKTerm\installer\bin\ffmpeg"),
+            Some("ffmpeg-{tag}-full_build/bin"),
+            Some("8.1.1"),
+        );
+
+        assert_eq!(
+            dir,
+            PathBuf::from(
+                r"C:\Users\Ryan\AppData\Local\KKTerm\installer\bin\ffmpeg\ffmpeg-8.1.1-full_build\bin"
+            )
+        );
+    }
+
+    #[test]
+    fn github_release_path_subdir_defaults_to_install_dir() {
+        let install_dir = PathBuf::from(r"C:\Tools\ffmpeg");
+
+        assert_eq!(
+            github_release_path_dir(&install_dir, None, Some("8.1.1")),
+            install_dir
+        );
     }
 
     #[test]

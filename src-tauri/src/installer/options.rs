@@ -17,8 +17,8 @@ pub struct InstallOptions {
     /// Override install location. Winget: --location. Github-release:
     /// extraction target.
     pub location: Option<String>,
-    /// Github-release recipes only: add the extracted directory to user PATH.
+    /// Github-release recipes only: add the executable directory to user PATH.
     pub add_to_path: Option<bool>,
-    /// Optional provider override for recipes that declare a download installer fallback.
+    /// Optional provider override for recipes that declare a download fallback.
     pub provider: Option<String>,
 }
