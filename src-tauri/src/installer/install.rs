@@ -423,10 +423,6 @@ fn run_downloaded_installer(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<(), String> {
-    let script = format!(
-        "$p = Start-Process -FilePath {} -Wait -PassThru; exit $p.ExitCode",
-        powershell_single_quote(&download_path.to_string_lossy())
-    );
     run_streamed_public(
         "powershell",
         &[
@@ -434,11 +430,53 @@ fn run_downloaded_installer(
             "-ExecutionPolicy".into(),
             "Bypass".into(),
             "-Command".into(),
-            script,
+            downloaded_installer_powershell_script(download_path, tool_id),
         ],
         tool_id,
         cancel,
         emit,
+    )
+}
+
+fn downloaded_installer_powershell_script(download_path: &PathBuf, tool_id: &str) -> String {
+    if tool_id == "winget" && is_appx_package_path(download_path) {
+        return winget_app_installer_powershell_script(download_path);
+    }
+
+    if is_appx_package_path(download_path) {
+        return format!(
+            "$ErrorActionPreference = 'Stop'; Add-AppxPackage -Path {}; exit 0",
+            powershell_single_quote(&download_path.to_string_lossy())
+        );
+    }
+
+    format!(
+        "$p = Start-Process -FilePath {} -Wait -PassThru; exit $p.ExitCode",
+        powershell_single_quote(&download_path.to_string_lossy())
+    )
+}
+
+fn winget_app_installer_powershell_script(download_path: &PathBuf) -> String {
+    let package_path = powershell_single_quote(&download_path.to_string_lossy());
+    format!(
+        concat!(
+            "$ErrorActionPreference = 'Stop'; ",
+            "$family = 'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'; ",
+            "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
+            "Add-AppxPackage -Path {package_path}; ",
+            "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
+            "exit 0"
+        )
+    )
+}
+
+fn is_appx_package_path(download_path: &PathBuf) -> bool {
+    let Some(extension) = download_path.extension().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    matches!(
+        extension.to_ascii_lowercase().as_str(),
+        "appx" | "appxbundle" | "msix" | "msixbundle"
     )
 }
 
@@ -1724,6 +1762,38 @@ mod tests {
             release_notes_url: None,
             detection: Default::default(),
         }
+    }
+
+    #[test]
+    fn appx_package_downloads_install_with_add_appxpackage() {
+        let script = downloaded_installer_powershell_script(
+            &PathBuf::from(r"C:\Temp\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"),
+            "claude-desktop",
+        );
+
+        assert!(script.contains("Add-AppxPackage -Path"));
+        assert!(!script.contains("Start-Process"));
+    }
+
+    #[test]
+    fn winget_app_installer_download_requests_family_registration() {
+        let script = downloaded_installer_powershell_script(
+            &PathBuf::from(r"C:\Temp\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"),
+            "winget",
+        );
+
+        assert!(script.contains("Add-AppxPackage -RegisterByFamilyName -MainPackage"));
+        assert!(script.contains("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe"));
+        assert!(script.contains("Add-AppxPackage -Path"));
+    }
+
+    #[test]
+    fn exe_downloads_still_launch_with_start_process() {
+        let script =
+            downloaded_installer_powershell_script(&PathBuf::from(r"C:\Temp\setup.exe"), "7zip");
+
+        assert!(script.contains("Start-Process -FilePath"));
+        assert!(!script.contains("Add-AppxPackage"));
     }
 
     #[test]
