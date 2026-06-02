@@ -23,7 +23,7 @@ const anchorIds = new Set(
     [
       ...source.matchAll(/data-tutorial-id=["']([^"']+)["']/g),
       ...source.matchAll(/dataTutorialId=["']([^"']+)["']/g),
-      ...source.matchAll(/data-tutorial-id=\{([^}]+)\}/g).flatMap((match) =>
+      ...Array.from(source.matchAll(/data-tutorial-id=\{([^}]+)\}/g)).flatMap((match) =>
         [...match[1].matchAll(/["']([a-z][a-zA-Z0-9]*\.[a-zA-Z0-9.-]+)["']/g)],
       ),
     ].map((match) => match[1]),
