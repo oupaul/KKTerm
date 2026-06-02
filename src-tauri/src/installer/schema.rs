@@ -134,11 +134,25 @@ pub enum Provider {
         package: String,
     },
     DownloadInstaller {
-        /// Canonical vendor URL for a desktop installer.
+        /// Canonical vendor URL for a desktop installer (x64 by default).
         url: String,
         /// Stable local filename used for the temp download.
         #[serde(rename = "fileName")]
         file_name: String,
+        /// Optional native ARM64 (`aarch64-pc-windows-msvc`) installer URL.
+        /// When present and KKTerm is running on Windows on Arm, this is
+        /// preferred over `url`, which otherwise installs an x64 build that runs
+        /// under emulation. Requires `arm64FileName` to be set as well.
+        #[serde(default, rename = "arm64Url", skip_serializing_if = "Option::is_none")]
+        arm64_url: Option<String>,
+        /// Local filename for the ARM64 download. Ignored unless `arm64Url` is
+        /// also set.
+        #[serde(
+            default,
+            rename = "arm64FileName",
+            skip_serializing_if = "Option::is_none"
+        )]
+        arm64_file_name: Option<String>,
     },
     GithubRelease {
         /// "owner/repo".
@@ -169,6 +183,40 @@ pub enum Provider {
         /// Ordered recipe ids. Already-installed steps are skipped.
         steps: Vec<String>,
     },
+}
+
+impl Provider {
+    /// For a [`Provider::DownloadInstaller`], return the architecture-appropriate
+    /// `(url, file_name)`. When `prefer_arm64` is set and the recipe carries a
+    /// native ARM64 asset, that asset wins; otherwise the default (x64) asset is
+    /// used, which runs under emulation on Windows on Arm. Returns `None` for
+    /// non-download providers.
+    pub fn download_target(&self, prefer_arm64: bool) -> Option<(&str, &str)> {
+        match self {
+            Provider::DownloadInstaller {
+                url,
+                file_name,
+                arm64_url,
+                arm64_file_name,
+            } => {
+                if prefer_arm64 {
+                    if let (Some(arm_url), Some(arm_file)) =
+                        (arm64_url.as_deref(), arm64_file_name.as_deref())
+                    {
+                        return Some((arm_url, arm_file));
+                    }
+                }
+                Some((url.as_str(), file_name.as_str()))
+            }
+            _ => None,
+        }
+    }
+}
+
+/// Whether the running build is native Windows on Arm (`aarch64`). Used to pick
+/// ARM64 installer assets when the catalog offers them.
+pub const fn prefer_native_arm64() -> bool {
+    cfg!(target_arch = "aarch64")
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -598,7 +646,7 @@ mod tests {
         assert!(antigravity.needs.is_empty());
         assert!(matches!(
             &antigravity.provider,
-            Provider::DownloadInstaller { url, file_name }
+            Provider::DownloadInstaller { url, file_name, .. }
                 if url == "https://antigravity.google/cli/install.cmd"
                     && file_name == "antigravity-cli-install.cmd"
         ));
@@ -659,5 +707,96 @@ mod tests {
             recipes: vec![leaf_a, leaf_b, bundle],
         };
         assert!(catalog.validate().is_ok());
+    }
+
+    #[test]
+    fn download_target_prefers_arm64_asset_when_offered() {
+        let provider = Provider::DownloadInstaller {
+            url: "https://example.com/app-x64.exe".into(),
+            file_name: "app-x64.exe".into(),
+            arm64_url: Some("https://example.com/app-arm64.exe".into()),
+            arm64_file_name: Some("app-arm64.exe".into()),
+        };
+
+        assert_eq!(
+            provider.download_target(true),
+            Some(("https://example.com/app-arm64.exe", "app-arm64.exe"))
+        );
+        assert_eq!(
+            provider.download_target(false),
+            Some(("https://example.com/app-x64.exe", "app-x64.exe"))
+        );
+    }
+
+    #[test]
+    fn download_target_falls_back_to_default_without_arm64_asset() {
+        let provider = Provider::DownloadInstaller {
+            url: "https://example.com/app-x64.exe".into(),
+            file_name: "app-x64.exe".into(),
+            arm64_url: None,
+            arm64_file_name: None,
+        };
+
+        assert_eq!(
+            provider.download_target(true),
+            Some(("https://example.com/app-x64.exe", "app-x64.exe"))
+        );
+        // A bare arm64Url without a matching file name is ignored.
+        let provider = Provider::DownloadInstaller {
+            url: "https://example.com/app-x64.exe".into(),
+            file_name: "app-x64.exe".into(),
+            arm64_url: Some("https://example.com/app-arm64.exe".into()),
+            arm64_file_name: None,
+        };
+        assert_eq!(
+            provider.download_target(true),
+            Some(("https://example.com/app-x64.exe", "app-x64.exe"))
+        );
+    }
+
+    #[test]
+    fn download_target_is_none_for_non_download_providers() {
+        assert_eq!(
+            Provider::Winget { id: "X".into() }.download_target(true),
+            None
+        );
+    }
+
+    #[test]
+    fn shipped_catalog_offers_native_arm64_downloads() {
+        let json = include_str!("../../../installer/catalog.v1.json");
+        let catalog: Catalog =
+            serde_json::from_str(json).expect("shipped catalog JSON should parse");
+
+        // Recipes whose download fallback has a deterministic native ARM64 asset.
+        let arm64_ready = [
+            ("github-cli", "gh_2.93.0_windows_arm64.msi"),
+            ("vscode", "win32-arm64-user"),
+            ("rustup", "aarch64"),
+        ];
+        for (id, marker) in arm64_ready {
+            let recipe = catalog
+                .recipes
+                .iter()
+                .find(|recipe| recipe.id == id)
+                .unwrap_or_else(|| panic!("catalog should include {id}"));
+            let provider = recipe
+                .download_provider
+                .as_ref()
+                .unwrap_or_else(|| panic!("{id} should have a download provider"));
+            let (url, _) = provider
+                .download_target(true)
+                .unwrap_or_else(|| panic!("{id} download provider should resolve"));
+            assert!(
+                url.contains(marker),
+                "{id} ARM64 download URL should contain {marker}, got {url}"
+            );
+            // The x64 path must not regress to the ARM64 asset.
+            let (x64_url, _) = provider.download_target(false).unwrap();
+            assert!(
+                !x64_url.contains(marker),
+                "{id} x64 download URL should not contain {marker}, got {x64_url}"
+            );
+        }
     }
 }

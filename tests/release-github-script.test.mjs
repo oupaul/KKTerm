@@ -33,3 +33,20 @@ test("release script writes version files as utf8 without bom", () => {
 test("release script stages Cargo.lock with Rust version files", () => {
   assert.match(script, /"src-tauri\/Cargo\.toml", "src-tauri\/Cargo\.lock"/);
 });
+
+test("release script can also build and publish the ARM64 installer", () => {
+  // Opt-in switch keeps the default x64-only release unchanged.
+  assert.match(script, /\[switch\]\$IncludeArm64/);
+  // ARM64 build provisions its toolchain via the dedicated packaging script.
+  assert.match(
+    script,
+    /"run", "package:installer:arm64", "--", "-InstallMissing"/,
+  );
+  // ARM64 assets follow the windows-arm64 naming convention and are appended
+  // to the release asset list only when requested.
+  assert.match(script, /kkterm-\$NextVersion-\$Arm64Triple-setup\.exe/);
+  assert.match(script, /if \(\$IncludeArm64\) \{\s*\$ReleaseAssets \+= /);
+  // The GitHub upload args are built from the asset list, not hardcoded, so the
+  // ARM64 artifacts ride along when present.
+  assert.match(script, /\$GhArgs \+= \$ReleaseAssets/);
+});

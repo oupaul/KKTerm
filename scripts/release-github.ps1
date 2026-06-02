@@ -8,7 +8,8 @@ param(
     [switch]$SkipBuild,
     [switch]$SkipSmoke,
     [switch]$SkipAiReleaseNotes,
-    [switch]$AllowDirty
+    [switch]$AllowDirty,
+    [switch]$IncludeArm64
 )
 
 $ErrorActionPreference = "Stop"
@@ -158,6 +159,14 @@ try {
     # $LatestJson = Join-Path $ResolvedOutputDir "latest.json"
     $ReleaseAssets = @($InstallerExe, $InstallerSha)
 
+    # Optional native Windows on Arm (ARM64) installer, published alongside x64.
+    $Arm64Triple = "windows-arm64"
+    $Arm64InstallerExe = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-$Arm64Triple-setup.exe"
+    $Arm64InstallerSha = "$Arm64InstallerExe.sha256"
+    if ($IncludeArm64) {
+        $ReleaseAssets += @($Arm64InstallerExe, $Arm64InstallerSha)
+    }
+
     Write-Host "Current version: $CurrentVersion"
     Write-Host "Next version:    $NextVersion"
     Write-Host "Release tag:     $TagName"
@@ -223,6 +232,12 @@ try {
 
     if (-not $SkipBuild) {
         Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer") -Action "Build installer package"
+        if ($IncludeArm64) {
+            # `--` forwards -InstallMissing to the ARM64 packaging script so the
+            # cross-build toolchain (aarch64 Rust target, ARM64 MSVC tools, CMake,
+            # NASM) is provisioned on the runner before building.
+            Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer:arm64", "--", "-InstallMissing") -Action "Build ARM64 installer package"
+        }
     }
 
     # TODO(updates): Restore latest.json generation when the Tauri updater is
@@ -327,9 +342,10 @@ try {
     $GhArgs = @(
         "release",
         "create",
-        $TagName,
-        $InstallerExe,
-        $InstallerSha,
+        $TagName
+    )
+    $GhArgs += $ReleaseAssets
+    $GhArgs += @(
         "--title",
         "KKTerm $TagName",
         "--notes-file",

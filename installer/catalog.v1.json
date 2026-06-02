@@ -29,7 +29,7 @@
         "displayNames": ["GitHub CLI"]
       },
       "provider": { "kind": "winget", "id": "GitHub.cli" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_amd64.msi", "fileName": "gh_2.93.0_windows_amd64.msi" },
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_amd64.msi", "fileName": "gh_2.93.0_windows_amd64.msi", "arm64Url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_arm64.msi", "arm64FileName": "gh_2.93.0_windows_arm64.msi" },
       "options": ["provider", "scope", "version"]
     },
     {
@@ -60,7 +60,7 @@
         "displayNamePrefixes": ["Microsoft Visual Studio Code"]
       },
       "provider": { "kind": "winget", "id": "Microsoft.VisualStudioCode" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://update.code.visualstudio.com/latest/win32-x64-user/stable", "fileName": "VSCodeUserSetup-x64.exe" },
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://update.code.visualstudio.com/latest/win32-x64-user/stable", "fileName": "VSCodeUserSetup-x64.exe", "arm64Url": "https://update.code.visualstudio.com/latest/win32-arm64-user/stable", "arm64FileName": "VSCodeUserSetup-arm64.exe" },
       "options": ["provider", "scope", "version", "location"]
     },
     {
@@ -368,7 +368,7 @@
         "displayNamePrefixes": ["Rustup"]
       },
       "provider": { "kind": "winget", "id": "Rustlang.Rustup" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://win.rustup.rs/x86_64", "fileName": "rustup-init.exe" },
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://win.rustup.rs/x86_64", "fileName": "rustup-init.exe", "arm64Url": "https://win.rustup.rs/aarch64", "arm64FileName": "rustup-init.exe" },
       "options": ["provider", "scope", "version"]
     },
     {

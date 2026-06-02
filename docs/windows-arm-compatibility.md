@@ -20,6 +20,22 @@ npm run package:installer:arm64 -- -ToolchainOnly    # just check/install toolch
 The output is `artifacts/kkterm-<version>-windows-arm64-setup.exe` plus a
 `.sha256` checksum, matching the x64 packaging script's conventions.
 
+## Releasing an ARM64 build
+
+The release pipeline publishes x64 by default. To also build and attach the
+native ARM64 installer to the GitHub release, opt in:
+
+- **Workflow:** run the **Release** workflow with the `include_arm64` input set
+  to `true`.
+- **Local:** `pwsh scripts/release-github.ps1 -IncludeArm64` (combine with the
+  usual `-Draft` / `-Prerelease` / `-DryRun` switches as needed).
+
+When enabled, the release builds the ARM64 installer with
+`package:installer:arm64 -InstallMissing` (which provisions the cross-build
+toolchain on the runner) and appends
+`kkterm-<version>-windows-arm64-setup.exe` plus its `.sha256` to the release
+assets next to the x64 artifacts.
+
 ## Required toolchain (detected & optionally downloaded by the script)
 
 `scripts/package-installer-arm64.ps1` detects each piece and, with
@@ -70,34 +86,42 @@ All of these use OS-provided APIs that exist natively on ARM64 Windows:
   template). It runs fine under x86 emulation on ARM64 and installs the native
   ARM64 binaries. This is expected and not a defect.
 
-## Features that are NOT fully ARM64-aware (gaps to be aware of)
+## Per-feature ARM64 awareness in feature code
 
-These do not block a build but degrade on ARM64 and are worth a follow-up. They
-are **data/path** issues, not architectural blockers:
+The packaging work above makes a native build; the following data/path paths
+make that build behave natively rather than under emulation.
 
-1. **Installer Helper catalog is x64-pinned.** `installer/catalog.v1.json` has
-   ~20 `downloadInstaller` URLs hardcoded to x64 builds (VS Code `win32-x64`,
-   Cursor `x64`, 7-Zip `x64`, Notepad++ `x64`, PowerToys `x64`, Everything
-   `x64`, ShareX `x64`, Bruno `x64`, Claude `win32/x64`, `rustup` `x86_64`,
-   …). On ARM64 these install x64 apps that run under emulation; several
-   (PowerToys, Everything, VS Code, 7-Zip) have native ARM64 builds that aren't
-   offered. The `winget` providers (52 entries) generally auto-select the ARM64
-   build, so winget-backed entries are fine — the gap is the
-   `downloadInstaller` fallbacks.
+### Addressed
 
-2. **AI coding-usage detection misses ARM64 Codex.**
-   `src-tauri/src/ai_coding_usage.rs` hardcodes the Codex CLI path segment
-   `bin/windows-x86_64/codex.exe`; on ARM64 the binary lives under
-   `windows-arm64`, so usage detection would not find it.
+1. **Installer Helper `downloadInstaller` fallbacks are now arch-aware.** The
+   `downloadInstaller` provider schema accepts optional `arm64Url` /
+   `arm64FileName` fields. On a native ARM64 build (`cfg!(target_arch =
+   "aarch64")`), `Provider::download_target` prefers the ARM64 asset and
+   otherwise falls back to the default x64 asset (which still runs under
+   emulation). `installer/catalog.v1.json` populates native ARM64 downloads for
+   the entries with deterministic vendor URL schemes: **GitHub CLI**
+   (`gh_*_windows_arm64.msi`), **VS Code** (`win32-arm64-user`), and **rustup**
+   (`win.rustup.rs/aarch64`). The `winget` providers (52 entries) already
+   auto-select the ARM64 build. Remaining x64-only `downloadInstaller` entries
+   (Cursor, 7-Zip, Notepad++, PowerToys, Everything, ShareX, Bruno, Claude, …)
+   keep working under emulation and can adopt the same two fields when a native
+   ARM64 URL is confirmed.
 
-3. **App-detection registry roots are x64-only.**
-   `src-tauri/src/installer/detect.rs` scans `ARP\Machine\X64` /
-   `ARP\User\X64`; ARM64-native installs that register under an `ARM64` ARP
-   root may not be detected.
+2. **AI coding-usage detection finds ARM64 Codex.**
+   `src-tauri/src/ai_coding_usage.rs` probes the Codex VS Code extension's
+   per-arch `bin/` folder, preferring `windows-arm64` on an ARM64 build and
+   falling back to `windows-x86_64` (and vice versa on x64).
 
-These are intentionally left out of the build-enablement change so the
-packaging work stays surgical; they can be addressed when ARM64 becomes a
-shipped target.
+### Remaining (non-blocking)
+
+3. **App-detection registry views.**
+   `src-tauri/src/installer/detect.rs` enumerates the native 64-bit registry
+   view via `KEY_WOW64_64KEY` (which resolves to the ARM64 view on Windows on
+   Arm) plus the 32-bit WOW view, and matches catalog entries on the bare
+   uninstall subkey, so native ARM64 installs are still detected. The synthetic
+   `ARP\Machine\X64` / `ARP\User\X64` labels are cosmetic; x64 apps installed
+   under emulation that register in a separate emulated view are the only
+   edge case left to verify on real ARM64 hardware.
 
 ## Diagnostics
 
