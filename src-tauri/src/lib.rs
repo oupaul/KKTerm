@@ -19,6 +19,7 @@ mod logging;
 mod manual;
 mod mcp;
 mod mcp_bridge;
+mod native_tooltip;
 mod net;
 mod performance;
 mod power;
@@ -2499,6 +2500,22 @@ fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
+#[tauri::command]
+fn show_native_tooltip(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, native_tooltip::SharedNativeTooltipState>,
+    request: native_tooltip::NativeTooltipRequest,
+) -> Result<bool, String> {
+    native_tooltip::show(app, state, request)
+}
+
+#[tauri::command]
+fn hide_native_tooltip(
+    state: tauri::State<'_, native_tooltip::SharedNativeTooltipState>,
+) -> Result<(), String> {
+    native_tooltip::hide(state)
+}
+
 /// True when KKTerm is running inside a remote (RDP) session.
 fn is_remote_session() -> bool {
     #[cfg(target_os = "windows")]
@@ -2642,6 +2659,7 @@ pub fn run() {
             app.manage(ai::AssistantLiveToolBridge::new());
             app.manage(ai::AssistantToolApprovalBridge::new());
             app.manage(ai::WidgetHealthRegistry::new());
+            app.manage(native_tooltip::new_state());
             app.manage(sessions::SessionManager::new());
             app.manage(sftp::SftpSessionManager::new());
             app.manage(ftp::FtpSessionManager::new());
@@ -2712,6 +2730,8 @@ pub fn run() {
             app_bootstrap,
             is_debug_build,
             debug_frontend_heartbeat,
+            show_native_tooltip,
+            hide_native_tooltip,
             list_connection_tree,
             create_connection,
             create_connection_folder,

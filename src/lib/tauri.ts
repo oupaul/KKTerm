@@ -770,6 +770,20 @@ type CommandMap = {
     };
     result: void;
   };
+  show_native_tooltip: {
+    args: {
+      request: {
+        label: string;
+        x: number;
+        y: number;
+      };
+    };
+    result: boolean;
+  };
+  hide_native_tooltip: {
+    args: undefined;
+    result: void;
+  };
   list_connection_tree: {
     args: undefined;
     result: ConnectionTree;
