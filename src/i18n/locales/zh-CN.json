@@ -1977,7 +1977,8 @@
     "uploadConflict": "上传冲突",
     "verifyingHost": "正在验证主机",
     "waiting": "等待中",
-    "waitingToOverwrite": "等待覆盖"
+    "waitingToOverwrite": "等待覆盖",
+    "windowsDrives": "此电脑"
   },
   "terminal": {
     "actions": "终端操作",

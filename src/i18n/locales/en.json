@@ -1984,7 +1984,8 @@
     "deleteRemoteItemsMultiple": "Delete {{count}} remote items?",
     "renameFileAria": "Rename {{name}}",
     "fileTypeLabel": "{{ext}} file",
-    "targetExistsDetail": "The target {{kind}} already exists. Choose whether to overwrite {{name}}."
+    "targetExistsDetail": "The target {{kind}} already exists. Choose whether to overwrite {{name}}.",
+    "windowsDrives": "This PC"
   },
   "webview": {
     "goBack": "Go back",

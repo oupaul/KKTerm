@@ -1977,7 +1977,8 @@
     "uploadConflict": "ข้อขัดแย้งการอัปโหลด",
     "verifyingHost": "กำลังตรวจสอบโฮสต์",
     "waiting": "กำลังรอ",
-    "waitingToOverwrite": "กำลังรอเขียนทับ"
+    "waitingToOverwrite": "กำลังรอเขียนทับ",
+    "windowsDrives": "พีซีเครื่องนี้"
   },
   "terminal": {
     "actions": "การทำงานเทอร์มินัล",

@@ -39,6 +39,7 @@ import type {
 } from "./types";
 
 const TRANSFER_HISTORY_STATES: TransferRecord["state"][] = ["canceled", "done", "failed"];
+const WINDOWS_DRIVES_PATH = "__KKTERM_WINDOWS_DRIVES__";
 
 export function SftpWorkspace({
   isActive,
@@ -275,16 +276,24 @@ export function SftpWorkspace({
     await loadRemoteDirectory(joinRemotePath(remotePath, ".."));
   };
 
+  const isLocalDrivePicker = localPath === WINDOWS_DRIVES_PATH;
+
   const refreshLocalDirectory = async () => {
     await loadLocalDirectory(localPath || undefined);
   };
 
   const openLocalFolder = async (folderName: string) => {
-    await loadLocalDirectory(joinLocalPath(localPath, folderName));
+    await loadLocalDirectory(
+      isLocalDrivePicker ? folderName : joinLocalPath(localPath, folderName),
+    );
   };
 
   const openLocalParent = async () => {
-    await loadLocalDirectory(joinLocalPath(localPath, ".."));
+    await loadLocalDirectory(
+      isLocalDrivePicker || isWindowsDriveRoot(localPath)
+        ? WINDOWS_DRIVES_PATH
+        : joinLocalPath(localPath, ".."),
+    );
   };
 
   const setTransferState = (id: string, patch: Partial<TransferRecord>) => {
@@ -480,6 +489,9 @@ export function SftpWorkspace({
         ? localFiles.filter((file) => names.includes(file.name))
         : remoteFiles.filter((file) => names.includes(file.name));
     if (!sessionId || selected.length === 0 || !localPath || !isTauriRuntime()) {
+      return;
+    }
+    if (direction === "upload" && isLocalDrivePicker) {
       return;
     }
 
@@ -695,7 +707,9 @@ export function SftpWorkspace({
       return;
     }
 
-    handleDownload(names);
+    if (!isLocalDrivePicker) {
+      handleDownload(names);
+    }
   };
 
   const handleOpenContextMenu = (
@@ -764,7 +778,11 @@ export function SftpWorkspace({
     }
 
     const path =
-      side === "local" ? joinLocalPath(localPath, entry.name) : joinRemotePath(remotePath, entry.name);
+      side === "local"
+        ? isLocalDrivePicker
+          ? entry.name
+          : joinLocalPath(localPath, entry.name)
+        : joinRemotePath(remotePath, entry.name);
     let remoteProperties: SftpPathProperties | undefined;
     if (side === "remote") {
       const sessionId = sessionIdRef.current;
@@ -897,7 +915,7 @@ export function SftpWorkspace({
           <button
             className="toolbar-button"
             data-tutorial-id="sftp.upload"
-            disabled={!isConnected || selectedLocalFiles.length === 0}
+            disabled={!isConnected || isLocalDrivePicker || selectedLocalFiles.length === 0}
             onClick={() => handleUpload()}
             type="button"
           >
@@ -907,7 +925,9 @@ export function SftpWorkspace({
           <button
             className="toolbar-button"
             data-tutorial-id="sftp.download"
-            disabled={!isConnected || selectedRemoteFiles.length === 0 || !localPath}
+            disabled={
+              !isConnected || selectedRemoteFiles.length === 0 || !localPath || isLocalDrivePicker
+            }
             onClick={() => handleDownload()}
             type="button"
           >
@@ -937,7 +957,7 @@ export function SftpWorkspace({
         <FilePane
           side="local"
           title={t("sftp.local")}
-          path={localPath || localStatus || t("sftp.localFiles")}
+          path={isLocalDrivePicker ? t("sftp.windowsDrives") : localPath || localStatus || t("sftp.localFiles")}
           files={localFiles}
           isLoading={isLocalLoading}
           status={localStatus}
@@ -947,7 +967,9 @@ export function SftpWorkspace({
           onOpenFolder={openLocalFolder}
           onSelectionChange={setSelectedLocalNames}
           onContextMenuRequest={handleOpenContextMenu}
-          onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
+          onDropTransfer={
+            isConnected && !isTransferring && !isLocalDrivePicker ? handleDropTransfer : undefined
+          }
         />
         <FilePane
           side="remote"
@@ -1054,6 +1076,10 @@ export function SftpWorkspace({
       ) : null}
     </section>
   );
+}
+
+function isWindowsDriveRoot(path: string) {
+  return /^[A-Za-z]:[\\/]?$/.test(path.trim());
 }
 
 function localEntryToFileEntry(entry: LocalDirectoryEntry): FileEntry {

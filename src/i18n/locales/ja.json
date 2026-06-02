@@ -1977,7 +1977,8 @@
     "uploadConflict": "アップロードの競合",
     "verifyingHost": "ホストを確認中",
     "waiting": "待機中",
-    "waitingToOverwrite": "上書き待ち"
+    "waitingToOverwrite": "上書き待ち",
+    "windowsDrives": "PC"
   },
   "terminal": {
     "actions": "ターミナル操作",
