@@ -157,6 +157,66 @@ fn static_tool_descriptors() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "kkterm.workspace.quick_commands.list",
+            "description": "List saved Quick Commands for one Connection's Quick Command Bar.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"connectionId": {"type": "string"}},
+                "required": ["connectionId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.quick_commands.read",
+            "description": "Read one saved Quick Command from a Connection's Quick Command Bar by id.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "connectionId": {"type": "string"},
+                    "id": {"type": "string"},
+                },
+                "required": ["connectionId", "id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.quick_commands.dangerous.create",
+            "description": "DANGEROUS: create a saved Quick Command for one Connection's Quick Command Bar. This saves a runnable shortcut but does not execute it. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "connectionId": {"type": "string"},
+                    "label": {"type": "string"},
+                    "command": {"type": "string"},
+                    "iconName": {"type": "string"},
+                    "accentName": {"type": "string"},
+                    "sendEnter": {"type": "boolean"},
+                    "confirm": {"type": "boolean"},
+                },
+                "required": ["connectionId", "label", "command"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.quick_commands.dangerous.edit",
+            "description": "DANGEROUS: edit one saved Quick Command for a Connection's Quick Command Bar. This updates a runnable shortcut but does not execute it. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "connectionId": {"type": "string"},
+                    "id": {"type": "string"},
+                    "label": {"type": "string"},
+                    "command": {"type": "string"},
+                    "iconName": {"type": "string"},
+                    "accentName": {"type": "string"},
+                    "sendEnter": {"type": "boolean"},
+                    "confirm": {"type": "boolean"},
+                },
+                "required": ["connectionId", "id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "kkterm.workspace.dangerous.pointer_click",
             "description": "DANGEROUS: send a mouse click to a live RDP/VNC remote desktop surface. Requires built_in_mcp_allow_all_dangerous = true.",
             "inputSchema": {

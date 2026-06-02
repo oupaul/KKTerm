@@ -92,12 +92,21 @@ The Workspace Module owns saved Connections and live Sessions
 | `kkterm.workspace.sessions.list` | List live Sessions (terminal Panes, remote desktop targets, file browsers). Backed by `session_state`. |
 | `kkterm.workspace.sessions.send_input` | Send text/keystrokes to a live terminal Pane. `submit: true` appends a terminal Enter key as carriage return (`\r`) after the text. Backed by `session_terminal_send_text`. |
 | `kkterm.workspace.sessions.read_buffer` | Read a snapshot of the visible terminal buffer for a live Pane. Backed by `session_terminal_read_buffer`. |
+| `kkterm.workspace.quick_commands.list` | List saved Quick Commands for a Connection's Quick Command Bar. Backed by `quick_command_list` through the frontend live-tool bridge because Quick Commands live in workspace storage. |
+| `kkterm.workspace.quick_commands.read` | Read one saved Quick Command for a Connection by Quick Command id. Backed by `quick_command_read`. |
 
 ### Workspace Module — dangerous (`kkterm.workspace.dangerous.*`)
 
 | Name | Description |
 |---|---|
 | `kkterm.workspace.dangerous.pointer_click` | Send a mouse click to a live RDP/VNC remote desktop surface. Requires `built_in_mcp_allow_all_dangerous = true`. Backed by `session_remote_desktop_mouse_click`. |
+
+### Workspace Module — Quick Commands dangerous (`kkterm.workspace.quick_commands.dangerous.*`)
+
+| Name | Description |
+|---|---|
+| `kkterm.workspace.quick_commands.dangerous.create` | Create a saved Quick Command for a Connection's Quick Command Bar. Requires `built_in_mcp_allow_all_dangerous = true`. Backed by `quick_command_create`; it saves a runnable shortcut but does not execute the command. |
+| `kkterm.workspace.quick_commands.dangerous.edit` | Edit one saved Quick Command for a Connection's Quick Command Bar. Requires `built_in_mcp_allow_all_dangerous = true`. Backed by `quick_command_edit`; it updates a runnable shortcut but does not execute the command. |
 
 ### Dashboard Module (`kkterm.dashboard.*`)
 

@@ -88,6 +88,8 @@ Names shown during a tool call (`ai.toolCallRunning` → `ai.toolCallComplete`):
 | Sessions | `ai.toolSessions` | `ai.toolSessionsDone` |
 | Tutorial | `ai.toolTutorial` | `ai.toolTutorialDone` |
 
+Session tools include Quick Command helpers for the terminal Quick Command Bar: `quick_command_list`, `quick_command_read`, `quick_command_create`, and `quick_command_edit`. List/read calls inspect saved per-Connection shortcuts. Create/edit save a Quick Command to the target Connection but do not run it, and they use the normal in-chat approval card in Prompt permission mode.
+
 ### Tutorial overlay
 
 The Tutorial tool is enabled by `settings.aiTools.tutorial.label`. For UI "how do I..." questions, the assistant should answer with concise steps first and offer to navigate to the relevant UI when a known target exists. If the user accepts that offer, the assistant calls `tutorial_highlight` for an app-owned target listed in the current page context or documented by the tool. The assistant can include navigation to a known app page or Settings section before the UI dims the window, scrolls the target into view, highlights the target control, and shows a short balloon beside it. The overlay dismisses on the next click or key press.

@@ -348,6 +348,66 @@ fn tool_descriptors() -> Vec<Value> {
             },
         }),
         json!({
+            "name": "kkterm.workspace.quick_commands.list",
+            "description": "List saved Quick Commands for one Connection's Quick Command Bar.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"connectionId": {"type": "string"}},
+                "required": ["connectionId"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.quick_commands.read",
+            "description": "Read one saved Quick Command from a Connection's Quick Command Bar by id.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "connectionId": {"type": "string"},
+                    "id": {"type": "string"},
+                },
+                "required": ["connectionId", "id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.quick_commands.dangerous.create",
+            "description": "DANGEROUS: create a saved Quick Command for one Connection's Quick Command Bar. This saves a runnable shortcut but does not execute it. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "connectionId": {"type": "string"},
+                    "label": {"type": "string"},
+                    "command": {"type": "string"},
+                    "iconName": {"type": "string"},
+                    "accentName": {"type": "string"},
+                    "sendEnter": {"type": "boolean"},
+                    "confirm": {"type": "boolean"},
+                },
+                "required": ["connectionId", "label", "command"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "kkterm.workspace.quick_commands.dangerous.edit",
+            "description": "DANGEROUS: edit one saved Quick Command for a Connection's Quick Command Bar. This updates a runnable shortcut but does not execute it. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "connectionId": {"type": "string"},
+                    "id": {"type": "string"},
+                    "label": {"type": "string"},
+                    "command": {"type": "string"},
+                    "iconName": {"type": "string"},
+                    "accentName": {"type": "string"},
+                    "sendEnter": {"type": "boolean"},
+                    "confirm": {"type": "boolean"},
+                },
+                "required": ["connectionId", "id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "kkterm.workspace.dangerous.pointer_click",
             "description": "DANGEROUS: send a mouse click to a live RDP/VNC remote desktop surface. Requires built_in_mcp_allow_all_dangerous = true.",
             "inputSchema": {
@@ -733,6 +793,91 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
             .await;
             parse_tool_json(&raw)
         }
+        "kkterm.workspace.quick_commands.list" => {
+            let connection_id = args
+                .get("connectionId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "connectionId is required".to_string())?;
+            let raw = crate::ai::live_session_tool(
+                app,
+                "quick_command_list",
+                json!({"connectionId": connection_id}),
+            )
+            .await;
+            parse_tool_json(&raw)
+        }
+        "kkterm.workspace.quick_commands.read" => {
+            let connection_id = args
+                .get("connectionId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "connectionId is required".to_string())?;
+            let id = args
+                .get("id")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "id is required".to_string())?;
+            let raw = crate::ai::live_session_tool(
+                app,
+                "quick_command_read",
+                json!({"connectionId": connection_id, "id": id}),
+            )
+            .await;
+            parse_tool_json(&raw)
+        }
+        "kkterm.workspace.quick_commands.dangerous.create" => {
+            let connection_id = args
+                .get("connectionId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "connectionId is required".to_string())?;
+            let label = args
+                .get("label")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "label is required".to_string())?;
+            let command = args
+                .get("command")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "command is required".to_string())?;
+            let raw = crate::ai::live_session_tool(
+                app,
+                "quick_command_create",
+                json!({
+                    "connectionId": connection_id,
+                    "label": label,
+                    "command": command,
+                    "iconName": args.get("iconName").and_then(Value::as_str),
+                    "accentName": args.get("accentName").and_then(Value::as_str),
+                    "sendEnter": args.get("sendEnter").and_then(Value::as_bool),
+                    "confirm": args.get("confirm").and_then(Value::as_bool),
+                }),
+            )
+            .await;
+            parse_tool_json(&raw)
+        }
+        "kkterm.workspace.quick_commands.dangerous.edit" => {
+            let connection_id = args
+                .get("connectionId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "connectionId is required".to_string())?;
+            let id = args
+                .get("id")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "id is required".to_string())?;
+            let raw = crate::ai::live_session_tool(
+                app,
+                "quick_command_edit",
+                json!({
+                    "connectionId": connection_id,
+                    "id": id,
+                    "label": args.get("label").and_then(Value::as_str),
+                    "command": args.get("command").and_then(Value::as_str),
+                    "iconName": args.get("iconName").and_then(Value::as_str),
+                    "accentName": args.get("accentName").and_then(Value::as_str),
+                    "sendEnter": args.get("sendEnter").and_then(Value::as_bool),
+                    "confirm": args.get("confirm").and_then(Value::as_bool),
+                }),
+            )
+            .await;
+            parse_tool_json(&raw)
+        }
         "kkterm.workspace.dangerous.pointer_click" => {
             let pane_id = args
                 .get("paneId")
@@ -990,9 +1135,17 @@ mod tests {
     #[test]
     fn dangerous_tool_detection() {
         assert!(dangerous_tool("kkterm.workspace.dangerous.pointer_click"));
+        assert!(dangerous_tool(
+            "kkterm.workspace.quick_commands.dangerous.create"
+        ));
+        assert!(dangerous_tool(
+            "kkterm.workspace.quick_commands.dangerous.edit"
+        ));
         assert!(dangerous_tool("kkterm.dashboard.dangerous.create_widget"));
         assert!(dangerous_tool("kkterm.dashboard.dangerous.reset"));
         assert!(!dangerous_tool("kkterm.workspace.sessions.send_input"));
+        assert!(!dangerous_tool("kkterm.workspace.quick_commands.list"));
+        assert!(!dangerous_tool("kkterm.workspace.quick_commands.read"));
         assert!(!dangerous_tool("kkterm.dashboard.add_instance"));
         assert!(!dangerous_tool("kkterm.dashboard.update_view"));
     }
@@ -1007,6 +1160,10 @@ mod tests {
         assert!(names.contains(&"kkterm.workspace.connections.screenshot".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.send_input".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.read_buffer".to_string()));
+        assert!(names.contains(&"kkterm.workspace.quick_commands.list".to_string()));
+        assert!(names.contains(&"kkterm.workspace.quick_commands.read".to_string()));
+        assert!(names.contains(&"kkterm.workspace.quick_commands.dangerous.create".to_string()));
+        assert!(names.contains(&"kkterm.workspace.quick_commands.dangerous.edit".to_string()));
         assert!(names.contains(&"kkterm.workspace.dangerous.pointer_click".to_string()));
         // Dashboard surface
         assert!(names.contains(&"kkterm.dashboard.load_state".to_string()));

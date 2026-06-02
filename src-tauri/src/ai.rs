@@ -3868,6 +3868,26 @@ fn ai_tool_definitions_with_skills(
             "Delete a path in an active SFTP/FTP file browser Session.",
             json!({"type":"object","properties":{"tabId":{"type":["string","null"]},"path":{"type":"string"}},"required":["tabId","path"]}),
         ));
+        tools.push(tool_definition(
+            "quick_command_list",
+            "List saved Quick Commands for one Connection's Quick Command Bar. Use connection_list or session_state first to discover the Connection id.",
+            json!({"type":"object","properties":{"connectionId":{"type":"string"}},"required":["connectionId"]}),
+        ));
+        tools.push(tool_definition(
+            "quick_command_read",
+            "Read one saved Quick Command from a Connection's Quick Command Bar by id.",
+            json!({"type":"object","properties":{"connectionId":{"type":"string"},"id":{"type":"string"}},"required":["connectionId","id"]}),
+        ));
+        tools.push(tool_definition(
+            "quick_command_create",
+            "Create a saved Quick Command for one Connection's Quick Command Bar. This only saves a shortcut; it does not run the command. Prefer confirm=true for risky or state-changing commands.",
+            json!({"type":"object","properties":{"connectionId":{"type":"string"},"label":{"type":"string","maxLength":80},"command":{"type":"string","maxLength":4000},"iconName":{"type":"string"},"accentName":{"type":"string"},"sendEnter":{"type":"boolean"},"confirm":{"type":"boolean"}},"required":["connectionId","label","command"]}),
+        ));
+        tools.push(tool_definition(
+            "quick_command_edit",
+            "Edit one saved Quick Command for a Connection's Quick Command Bar. This only updates the shortcut; it does not run the command. Pass id plus the fields to change.",
+            json!({"type":"object","properties":{"connectionId":{"type":"string"},"id":{"type":"string"},"label":{"type":"string","maxLength":80},"command":{"type":"string","maxLength":4000},"iconName":{"type":"string"},"accentName":{"type":"string"},"sendEnter":{"type":"boolean"},"confirm":{"type":"boolean"}},"required":["connectionId","id"]}),
+        ));
     }
     if settings.tutorial() {
         tools.push(tool_definition(
@@ -4560,6 +4580,9 @@ async fn run_ai_tool(
         name if tool_settings.sessions() && name.starts_with("session_") => {
             live_session_tool(app, name, args).await
         }
+        name if tool_settings.sessions() && name.starts_with("quick_command_") => {
+            live_session_tool(app, name, args).await
+        }
         "tutorial_highlight" if tool_settings.tutorial() => {
             live_session_tool(app, "tutorial_highlight", args).await
         }
@@ -4655,6 +4678,8 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
                 | "session_file_browser_create_folder"
                 | "session_file_browser_rename"
                 | "session_file_browser_delete"
+                | "quick_command_create"
+                | "quick_command_edit"
         )
 }
 
@@ -9671,6 +9696,8 @@ mod tests {
             "session_remote_desktop_mouse_click"
         ));
         assert!(tool_requires_allow_all("session_file_browser_delete"));
+        assert!(tool_requires_allow_all("quick_command_create"));
+        assert!(tool_requires_allow_all("quick_command_edit"));
         assert!(tool_requires_allow_all("send_email"));
         assert!(!tool_requires_allow_all("dashboard_load_state"));
         assert!(!tool_requires_allow_all("dashboard_read_widget_source"));
@@ -9678,6 +9705,8 @@ mod tests {
         assert!(!tool_requires_allow_all("session_state"));
         assert!(!tool_requires_allow_all("session_activate_tab"));
         assert!(!tool_requires_allow_all("session_terminal_read_buffer"));
+        assert!(!tool_requires_allow_all("quick_command_list"));
+        assert!(!tool_requires_allow_all("quick_command_read"));
         assert!(!tool_requires_allow_all(
             "session_remote_desktop_screenshot"
         ));
@@ -9808,6 +9837,10 @@ mod tests {
         assert!(names.contains(&"session_file_browser_create_folder"));
         assert!(names.contains(&"session_file_browser_rename"));
         assert!(names.contains(&"session_file_browser_delete"));
+        assert!(names.contains(&"quick_command_list"));
+        assert!(names.contains(&"quick_command_read"));
+        assert!(names.contains(&"quick_command_create"));
+        assert!(names.contains(&"quick_command_edit"));
         assert!(names.contains(&"tutorial_highlight"));
     }
 

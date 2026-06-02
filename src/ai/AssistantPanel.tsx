@@ -65,6 +65,7 @@ import {
   type AssistantToolCallStatus,
 } from "./streamMessage";
 import { useWorkspaceStore } from "../store";
+import { isAccentName, isIconName } from "../modules/dashboard/registry/palette";
 import { useDashboardStore } from "../modules/dashboard/state/dashboardStore";
 import {
   getFileBrowserController,
@@ -84,7 +85,7 @@ import {
   type AssistantSecretRequest,
 } from "./secretRequest";
 import { scrollAssistantChatToBottom } from "./assistantScroll";
-import type { AiToolPermissionMode } from "../types";
+import type { AiToolPermissionMode, QuickCommand } from "../types";
 import { resolveCreateWidgetFollowupPrompt } from "./widgetFollowupPrompt";
 import { MarkdownContent } from "./AssistantMarkdownContent";
 import { AssistantToolApprovalCards } from "./AssistantToolApprovalCards";
@@ -136,6 +137,12 @@ function resolveAssistantOutputLanguage(outputLanguage: string): string | undefi
 const ASSISTANT_IMAGE_MAX_EDGE = 1280;
 const ASSISTANT_IMAGE_JPEG_QUALITY = 0.72;
 const ASSISTANT_FILE_MAX_BYTES = 10 * 1024 * 1024;
+
+function assistantQuickCommandId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? `quick-${crypto.randomUUID()}`
+    : `quick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function maxMeasuredTextWidth(node: HTMLDivElement | null) {
   if (!node) {
@@ -1511,6 +1518,14 @@ export function AssistantPanel({
         return assistantFileBrowserRename(args);
       case "session_file_browser_delete":
         return assistantFileBrowserDelete(args);
+      case "quick_command_list":
+        return assistantQuickCommandList(args);
+      case "quick_command_read":
+        return assistantQuickCommandRead(args);
+      case "quick_command_create":
+        return assistantQuickCommandCreate(args);
+      case "quick_command_edit":
+        return assistantQuickCommandEdit(args);
       default:
         return { ok: false, error: `Unknown live Session tool: ${toolName}` };
     }
@@ -1858,6 +1873,95 @@ export function AssistantPanel({
     }
     const result = await controller.deletePath(path);
     return { ok: true, tabId, kind: controller.kind, result };
+  }
+
+  function quickCommandsForConnection(connectionId: string) {
+    const store = useWorkspaceStore.getState();
+    store.ensureQuickCommandsLoaded(connectionId);
+    return useWorkspaceStore.getState().quickCommandsByConnection[connectionId] ?? [];
+  }
+
+  function assistantQuickCommandList(args: Record<string, unknown>) {
+    const connectionId = typeof args.connectionId === "string" ? args.connectionId.trim() : "";
+    if (!connectionId) {
+      return { ok: false, error: "connectionId is required." };
+    }
+    return {
+      ok: true,
+      connectionId,
+      quickCommands: quickCommandsForConnection(connectionId),
+    };
+  }
+
+  function assistantQuickCommandRead(args: Record<string, unknown>) {
+    const connectionId = typeof args.connectionId === "string" ? args.connectionId.trim() : "";
+    const id = typeof args.id === "string" ? args.id.trim() : "";
+    if (!connectionId || !id) {
+      return { ok: false, error: "connectionId and id are required." };
+    }
+    const command = quickCommandsForConnection(connectionId).find((entry) => entry.id === id);
+    if (!command) {
+      return { ok: false, error: "Quick Command was not found.", connectionId, id };
+    }
+    return { ok: true, connectionId, quickCommand: command };
+  }
+
+  function assistantQuickCommandCreate(args: Record<string, unknown>) {
+    const connectionId = typeof args.connectionId === "string" ? args.connectionId.trim() : "";
+    const label = typeof args.label === "string" ? args.label.trim() : "";
+    const commandText = typeof args.command === "string" ? args.command.trim() : "";
+    if (!connectionId || !label || !commandText) {
+      return { ok: false, error: "connectionId, label, and command are required." };
+    }
+    const iconName = typeof args.iconName === "string" && isIconName(args.iconName)
+      ? args.iconName
+      : "Terminal";
+    const accentName = typeof args.accentName === "string" && isAccentName(args.accentName)
+      ? args.accentName
+      : "default";
+    const quickCommand: QuickCommand = {
+      id: assistantQuickCommandId(),
+      label,
+      command: commandText,
+      iconName,
+      accentName,
+      sendEnter: args.sendEnter === true,
+      confirm: args.confirm === true,
+    };
+    useWorkspaceStore.getState().addQuickCommand(connectionId, quickCommand);
+    return { ok: true, connectionId, quickCommand };
+  }
+
+  function assistantQuickCommandEdit(args: Record<string, unknown>) {
+    const connectionId = typeof args.connectionId === "string" ? args.connectionId.trim() : "";
+    const id = typeof args.id === "string" ? args.id.trim() : "";
+    if (!connectionId || !id) {
+      return { ok: false, error: "connectionId and id are required." };
+    }
+    const existing = quickCommandsForConnection(connectionId).find((entry) => entry.id === id);
+    if (!existing) {
+      return { ok: false, error: "Quick Command was not found.", connectionId, id };
+    }
+    const nextLabel = typeof args.label === "string" ? args.label.trim() : existing.label;
+    const nextCommand = typeof args.command === "string" ? args.command.trim() : existing.command;
+    if (!nextLabel || !nextCommand) {
+      return { ok: false, error: "label and command cannot be empty.", connectionId, id };
+    }
+    const quickCommand: QuickCommand = {
+      ...existing,
+      label: nextLabel,
+      command: nextCommand,
+      iconName: typeof args.iconName === "string" && isIconName(args.iconName)
+        ? args.iconName
+        : existing.iconName,
+      accentName: typeof args.accentName === "string" && isAccentName(args.accentName)
+        ? args.accentName
+        : existing.accentName,
+      sendEnter: typeof args.sendEnter === "boolean" ? args.sendEnter : existing.sendEnter,
+      confirm: typeof args.confirm === "boolean" ? args.confirm : existing.confirm,
+    };
+    useWorkspaceStore.getState().updateQuickCommand(connectionId, quickCommand);
+    return { ok: true, connectionId, quickCommand };
   }
 
   async function handleToolPermissionModeChange(toolPermissionMode: AiToolPermissionMode) {
