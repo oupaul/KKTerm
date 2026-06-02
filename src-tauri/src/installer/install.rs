@@ -103,7 +103,10 @@ fn install_recipe_by_provider(
         Provider::Winget { id } => install_winget(&recipe.id, id, &options, cancel, emit),
         Provider::Npm { pkg } => install_npm(&recipe.id, pkg, &options, cancel, emit),
         Provider::UvPip { package } => install_uv_pip(&recipe.id, package, &options, cancel, emit),
-        Provider::DownloadInstaller { url, file_name } => {
+        provider @ Provider::DownloadInstaller { .. } => {
+            let (url, file_name) = provider
+                .download_target(super::schema::prefer_native_arm64())
+                .expect("DownloadInstaller provider resolves a download target");
             install_download_installer(&recipe.id, url, file_name, cancel, emit)
         }
         Provider::GithubRelease {

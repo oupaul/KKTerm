@@ -1132,7 +1132,7 @@ fn codex_vscode_extension_candidates() -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(extensions) else {
         return Vec::new();
     };
-    let mut paths = entries
+    let mut extension_dirs = entries
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| {
@@ -1140,11 +1140,34 @@ fn codex_vscode_extension_candidates() -> Vec<PathBuf> {
                 .and_then(OsStr::to_str)
                 .is_some_and(|name| name.starts_with("openai.chatgpt-"))
         })
-        .map(|path| path.join("bin").join("windows-x86_64").join("codex.exe"))
         .collect::<Vec<_>>();
-    paths.sort();
-    paths.reverse();
-    paths
+    // Newest extension version first.
+    extension_dirs.sort();
+    extension_dirs.reverse();
+    // The VS Code Codex extension ships a per-architecture binary. Probe the
+    // native-arch folder first so a Windows on Arm host finds windows-arm64,
+    // then fall back to the x64 build (which runs under emulation).
+    extension_dirs
+        .into_iter()
+        .flat_map(|path| {
+            codex_extension_arch_dirs()
+                .iter()
+                .map(move |arch| path.join("bin").join(arch).join("codex.exe"))
+        })
+        .collect()
+}
+
+/// Architecture subfolders under the Codex VS Code extension's `bin/`, ordered
+/// by preference for the running build's native architecture.
+fn codex_extension_arch_dirs() -> &'static [&'static str] {
+    #[cfg(target_arch = "aarch64")]
+    {
+        &["windows-arm64", "windows-x86_64"]
+    }
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        &["windows-x86_64", "windows-arm64"]
+    }
 }
 
 fn run_command(
@@ -1521,6 +1544,17 @@ mod tests {
     fn provider_labels_are_stable() {
         assert_eq!(AiCodingUsageProvider::Codex.label(), "Codex");
         assert_eq!(AiCodingUsageProvider::ClaudeCode.label(), "Claude Code");
+    }
+
+    #[test]
+    fn codex_extension_arch_dirs_cover_both_targets_native_first() {
+        let dirs = codex_extension_arch_dirs();
+        assert!(dirs.contains(&"windows-x86_64"));
+        assert!(dirs.contains(&"windows-arm64"));
+        #[cfg(target_arch = "aarch64")]
+        assert_eq!(dirs.first(), Some(&"windows-arm64"));
+        #[cfg(not(target_arch = "aarch64"))]
+        assert_eq!(dirs.first(), Some(&"windows-x86_64"));
     }
 
     #[test]
