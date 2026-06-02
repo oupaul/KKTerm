@@ -133,7 +133,8 @@ function estimateUacPromptsFor(
 ): number {
   const provider =
     options?.provider === "download" &&
-    recipe.downloadProvider?.kind === "downloadInstaller"
+    (recipe.downloadProvider?.kind === "downloadInstaller" ||
+      recipe.downloadProvider?.kind === "githubRelease")
       ? recipe.downloadProvider
       : recipe.provider;
 

@@ -147,6 +147,10 @@ pub enum Provider {
         #[serde(rename = "assetPattern")]
         asset_pattern: String,
         layout: GithubReleaseLayout,
+        /// Optional PATH entry below the extracted install dir. Supports a
+        /// `{tag}` placeholder for release tags such as `8.1.1`.
+        #[serde(default, rename = "pathSubdir")]
+        path_subdir: Option<String>,
     },
     WindowsFeature {
         /// DISM optional-feature name, e.g.
