@@ -17,6 +17,7 @@ const AI_PANEL_MAX_WIDTH = 1860;
 
 const CONNECTION_PANEL_LAYOUT_KEY = "kkterm.layout.connectionsPanel.v1";
 const AI_PANEL_LAYOUT_KEY = "kkterm.layout.aiAssistPanel.v2";
+const PANEL_ANIMATION_MS = 180;
 
 const defaultConnectionPanelLayout: PanelLayoutState = {
   collapsed: false,
@@ -140,7 +141,7 @@ export function useWorkspaceChromeLayout(resetAllLayouts: () => void) {
     if (!panelAnimating) {
       return;
     }
-    const timer = setTimeout(() => setPanelAnimating(false), 500);
+    const timer = setTimeout(() => setPanelAnimating(false), PANEL_ANIMATION_MS);
     return () => clearTimeout(timer);
   }, [panelAnimating]);
 

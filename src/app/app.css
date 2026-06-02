@@ -129,7 +129,7 @@
 }
 
 .app-shell.panel-animating {
-  transition: grid-template-columns 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: grid-template-columns 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .workspace-page {
@@ -311,7 +311,8 @@
   background: var(--chrome);
   border-right: 1px solid var(--border);
   opacity: 1;
-  transition: opacity 300ms ease-out;
+  contain: layout style;
+  transition: opacity 120ms ease-out;
 }
 
 .connection-sidebar {
@@ -342,7 +343,7 @@
   opacity: 0;
   border-right: 0;
   pointer-events: none;
-  transition: opacity 150ms ease-in;
+  transition: opacity 90ms ease-in;
 }
 
 .panel-resize-handle {
