@@ -16,6 +16,7 @@ export function buildReleaseNotesPrompt(context) {
     "- Use only the supplied release context.",
     "- Do not invent features, fixes, platforms, performance claims, or compatibility changes.",
     "- Preserve PR numbers, contributor mentions, links, and short SHAs when present.",
+    "- Credit issue reporters from linkedIssueReporters: mention them alongside the fix even when the reporter and PR author are the same person.",
     "- Use KKTerm domain language where relevant: Connection, Session, Tab, Pane, Dashboard Widget Instance.",
     "- Prefer user-facing impact over implementation details.",
     "- Use light IT humor when it fits, such as small sysadmin, terminal, network, or release-engineering jokes.",
@@ -128,6 +129,7 @@ async function main() {
 
   const commits = previousTag ? await collectCommits(previousTag, target) : await collectRecentCommits(target);
   const githubGeneratedNotes = repo && previousTag ? await generateGitHubNotes(repo, version, previousTag, target) : "";
+  const linkedIssueReporters = await collectLinkedIssueReporters(repo, commits, githubGeneratedNotes);
   const context = {
     project: "KKTerm",
     version,
@@ -135,6 +137,7 @@ async function main() {
     target,
     compareUrl,
     githubGeneratedNotes,
+    linkedIssueReporters,
     commits,
   };
 
@@ -230,6 +233,62 @@ async function filesForCommit(sha) {
   } catch {
     return [];
   }
+}
+
+export function extractPrNumbers(commits, githubGeneratedNotes) {
+  const prNumbers = new Set();
+  for (const commit of commits) {
+    for (const match of `${commit.subject}\n${commit.body}`.matchAll(/#(\d+)/g)) {
+      prNumbers.add(Number(match[1]));
+    }
+  }
+  for (const match of githubGeneratedNotes.matchAll(/\/pull\/(\d+)| in #(\d+)/g)) {
+    prNumbers.add(Number(match[1] ?? match[2]));
+  }
+  return [...prNumbers];
+}
+
+async function fetchPrLinkedIssues(repo, prNumber) {
+  try {
+    const { stdout } = await execFile("gh", ["api", `repos/${repo}/pulls/${prNumber}`, "--jq", ".body"]);
+    const body = stdout.trim();
+    const issues = new Set();
+    for (const match of body.matchAll(/(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/gi)) {
+      issues.add(Number(match[1]));
+    }
+    return [...issues];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchIssueReporter(repo, issueNumber) {
+  try {
+    const { stdout } = await execFile("gh", [
+      "api", `repos/${repo}/issues/${issueNumber}`,
+      "--jq", `{number: .number, title: .title, reporter: .user.login}`,
+    ]);
+    return JSON.parse(stdout.trim());
+  } catch {
+    return null;
+  }
+}
+
+export async function collectLinkedIssueReporters(repo, commits, githubGeneratedNotes) {
+  if (!repo) return [];
+  const prNumbers = extractPrNumbers(commits, githubGeneratedNotes);
+  const seen = new Set();
+  const reporters = [];
+  for (const prNumber of prNumbers) {
+    const issueNumbers = await fetchPrLinkedIssues(repo, prNumber);
+    for (const issueNumber of issueNumbers) {
+      if (seen.has(issueNumber)) continue;
+      seen.add(issueNumber);
+      const info = await fetchIssueReporter(repo, issueNumber);
+      if (info) reporters.push({ ...info, prNumber });
+    }
+  }
+  return reporters;
 }
 
 async function generateGitHubNotes(repo, version, previousTag, target) {
