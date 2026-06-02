@@ -1977,7 +1977,8 @@
     "uploadConflict": "Upload conflict",
     "verifyingHost": "Verifying host",
     "waiting": "Waiting",
-    "waitingToOverwrite": "Đang chờ ghi đè"
+    "waitingToOverwrite": "Đang chờ ghi đè",
+    "windowsDrives": "PC này"
   },
   "terminal": {
     "actions": "Terminal actions",

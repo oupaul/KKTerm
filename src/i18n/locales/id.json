@@ -1977,7 +1977,8 @@
     "uploadConflict": "Konflik unggah",
     "verifyingHost": "Memverifikasi host",
     "waiting": "Menunggu",
-    "waitingToOverwrite": "Menunggu untuk menimpa"
+    "waitingToOverwrite": "Menunggu untuk menimpa",
+    "windowsDrives": "PC ini"
   },
   "terminal": {
     "actions": "Aksi terminal",

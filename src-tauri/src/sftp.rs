@@ -1,7 +1,7 @@
 use crate::{secrets, ssh};
-use russh::{Disconnect, client};
+use russh::{client, Disconnect};
 use russh_sftp::{
-    client::{SftpSession, fs::Metadata},
+    client::{fs::Metadata, SftpSession},
     protocol::{FileAttributes, FileType, OpenFlags},
 };
 use serde::{Deserialize, Serialize};
@@ -13,8 +13,8 @@ use std::{
     path::{Path, PathBuf},
     pin::Pin,
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     },
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,6 +24,7 @@ use tokio::runtime::Runtime;
 
 const TRANSFER_CHUNK_SIZE: usize = 64 * 1024;
 const TRANSFER_CANCELED: &str = "transfer canceled";
+const WINDOWS_DRIVES_PATH: &str = "__KKTERM_WINDOWS_DRIVES__";
 
 pub struct SftpSessionManager {
     sessions: std::sync::Mutex<HashMap<String, SftpConnection>>,
@@ -867,7 +868,15 @@ async fn download_file_chunks(
 pub fn list_local_directory(
     request: ListLocalDirectoryRequest,
 ) -> Result<LocalDirectoryListing, String> {
-    let directory = resolve_local_directory(request.path.as_deref())?;
+    let requested_path = request.path.as_deref();
+    if requested_path == Some(WINDOWS_DRIVES_PATH) {
+        return list_windows_drives();
+    }
+
+    let directory = resolve_local_directory(requested_path)?;
+    if requested_path.is_some_and(requests_parent_directory) && is_windows_drive_root(&directory) {
+        return list_windows_drives();
+    }
     let mut entries = fs::read_dir(&directory)
         .map_err(|error| format!("failed to list local directory: {error}"))?
         .filter_map(|entry| entry.ok())
@@ -912,32 +921,35 @@ async fn read_directory(
         .canonicalize(path)
         .await
         .map_err(|error| format!("failed to resolve SFTP directory: {error}"))?;
-    let mut entries = sftp
+    let dir_entries = sftp
         .read_dir(canonical_path.clone())
         .await
         .map_err(|error| format!("failed to list SFTP directory: {error}"))?
-        .map(|entry| {
-            let metadata = entry.metadata();
-            SftpDirectoryEntry {
-                name: entry.file_name(),
-                kind: file_kind(metadata.file_type()).to_string(),
-                size: metadata.size,
-                modified: metadata
-                    .modified()
-                    .ok()
-                    .and_then(|time| unix_timestamp(time).ok()),
-                accessed: metadata
-                    .accessed()
-                    .ok()
-                    .and_then(|time| unix_timestamp(time).ok()),
-                permissions: metadata.permissions.map(sftp_file_mode),
-                uid: metadata.uid,
-                user: metadata.user,
-                gid: metadata.gid,
-                group: metadata.group,
-            }
-        })
         .collect::<Vec<_>>();
+    let mut entries = Vec::with_capacity(dir_entries.len());
+    for entry in dir_entries {
+        let metadata = entry.metadata();
+        let name = entry.file_name();
+        let kind = remote_listing_kind(sftp, &canonical_path, &name, metadata.file_type()).await;
+        entries.push(SftpDirectoryEntry {
+            name,
+            kind: kind.to_string(),
+            size: metadata.size,
+            modified: metadata
+                .modified()
+                .ok()
+                .and_then(|time| unix_timestamp(time).ok()),
+            accessed: metadata
+                .accessed()
+                .ok()
+                .and_then(|time| unix_timestamp(time).ok()),
+            permissions: metadata.permissions.map(sftp_file_mode),
+            uid: metadata.uid,
+            user: metadata.user,
+            gid: metadata.gid,
+            group: metadata.group,
+        });
+    }
     entries.sort_by(|left, right| {
         file_kind_rank(&left.kind)
             .cmp(&file_kind_rank(&right.kind))
@@ -949,6 +961,23 @@ async fn read_directory(
         path: canonical_path,
         entries,
     })
+}
+
+async fn remote_listing_kind(
+    sftp: &SftpSession,
+    parent_path: &str,
+    name: &str,
+    file_type: FileType,
+) -> &'static str {
+    if file_type != FileType::Symlink {
+        return file_kind(file_type);
+    }
+
+    let path = join_remote_path(parent_path, name);
+    match sftp.metadata(path).await {
+        Ok(metadata) if metadata.file_type() == FileType::Dir => "folder",
+        _ => file_kind(file_type),
+    }
 }
 
 async fn path_properties(sftp: &SftpSession, path: &str) -> Result<SftpPathProperties, String> {
@@ -1374,6 +1403,50 @@ fn resolve_local_directory(path: Option<&str>) -> Result<PathBuf, String> {
         return Err("local path is not a directory".to_string());
     }
     Ok(directory)
+}
+
+fn list_windows_drives() -> Result<LocalDirectoryListing, String> {
+    #[cfg(windows)]
+    {
+        let mut entries = Vec::new();
+        for letter in b'A'..=b'Z' {
+            let path = format!("{}:\\", letter as char);
+            if Path::new(&path).is_dir() {
+                entries.push(LocalDirectoryEntry {
+                    name: path,
+                    kind: "folder".to_string(),
+                    size: None,
+                    modified: None,
+                });
+            }
+        }
+
+        return Ok(LocalDirectoryListing {
+            path: WINDOWS_DRIVES_PATH.to_string(),
+            entries,
+        });
+    }
+
+    #[cfg(not(windows))]
+    {
+        Err("Windows drive navigation is only available on Windows".to_string())
+    }
+}
+
+fn requests_parent_directory(path: &str) -> bool {
+    Path::new(path)
+        .components()
+        .any(|component| component == std::path::Component::ParentDir)
+}
+
+fn is_windows_drive_root(path: &Path) -> bool {
+    let value = display_local_path(path);
+    let mut chars = value.chars();
+    matches!(
+        (chars.next(), chars.next(), chars.next(), chars.next()),
+        (Some(letter), Some(':'), Some(separator), None)
+            if letter.is_ascii_alphabetic() && (separator == '\\' || separator == '/')
+    )
 }
 
 fn default_local_directory() -> PathBuf {

@@ -1977,7 +1977,8 @@
     "uploadConflict": "Conflit de téléversement",
     "verifyingHost": "Vérification de l'hôte",
     "waiting": "En attente",
-    "waitingToOverwrite": "En attente d'écrasement"
+    "waitingToOverwrite": "En attente d'écrasement",
+    "windowsDrives": "Ce PC"
   },
   "terminal": {
     "actions": "Actions du terminal",

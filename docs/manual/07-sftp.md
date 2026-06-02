@@ -28,7 +28,7 @@ Startup states:
 
 Two columns:
 
-- **Local** (`sftp.local`, `sftp.localFiles`) — loading state `sftp.loadingLocal`.
+- **Local** (`sftp.local`, `sftp.localFiles`) — loading state `sftp.loadingLocal`. On Windows, opening the parent of a drive root shows the drive picker path label `sftp.windowsDrives`, where double-clicking a drive opens that drive root.
 - **Remote** (`sftp.remote`) — empty state `sftp.noFiles`, loading `sftp.loading`.
 
 A bottom strip shows the **Transfer Activity** queue (`sftp.transferActivity`):
@@ -50,7 +50,7 @@ Both panes share the same set of actions (with `Aria` siblings for accessibility
 - Refresh files: `sftp.refreshFiles` (`sftp.refreshFilesAria`)
 - Sort: `sftp.sortBy` (`sftp.sortByAria`, title `sftp.sortByTitle`). Modes: `sftp.name`, `sftp.date`.
 
-Double-click affordance hint: `sftp.doubleClickToOpen`, `sftp.doubleClickToOpenFile`.
+Double-click affordance hint: `sftp.doubleClickToOpen`, `sftp.doubleClickToOpenFile`. Remote symbolic links that resolve to directories are listed as openable folder entries so double-clicking enters the resolved target directory.
 
 ## Transferring files
 

@@ -1977,7 +1977,8 @@
     "uploadConflict": "Conflito de envio",
     "verifyingHost": "Verificando host",
     "waiting": "Aguardando",
-    "waitingToOverwrite": "Aguardando para sobrescrever"
+    "waitingToOverwrite": "Aguardando para sobrescrever",
+    "windowsDrives": "Este computador"
   },
   "terminal": {
     "actions": "Ações do terminal",

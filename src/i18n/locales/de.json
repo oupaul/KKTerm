@@ -1977,7 +1977,8 @@
     "uploadConflict": "Upload-Konflikt",
     "verifyingHost": "Host überprüfen",
     "waiting": "Warten",
-    "waitingToOverwrite": "Warten auf Überschreiben"
+    "waitingToOverwrite": "Warten auf Überschreiben",
+    "windowsDrives": "Dieser PC"
   },
   "terminal": {
     "actions": "Terminalaktionen",

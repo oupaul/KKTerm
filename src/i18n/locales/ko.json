@@ -1977,7 +1977,8 @@
     "uploadConflict": "업로드 충돌",
     "verifyingHost": "호스트 확인 중",
     "waiting": "대기 중",
-    "waitingToOverwrite": "덮어쓰기 대기 중"
+    "waitingToOverwrite": "덮어쓰기 대기 중",
+    "windowsDrives": "내 PC"
   },
   "terminal": {
     "actions": "터미널 작업",
