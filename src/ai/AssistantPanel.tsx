@@ -2510,6 +2510,47 @@ export function AssistantPanel({
     insertTextIntoComposer(textarea, "");
   }
 
+  function selectedAssistantPanelText(panel: HTMLElement) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return "";
+    }
+
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    if (
+      (!anchorNode || !panel.contains(anchorNode)) &&
+      (!focusNode || !panel.contains(focusNode))
+    ) {
+      return "";
+    }
+
+    return selection.toString();
+  }
+
+  async function handleAssistantPanelContextMenu(event: MouseEvent<HTMLElement>) {
+    const selectedText = selectedAssistantPanelText(event.currentTarget);
+    if (!selectedText || !isTauriRuntime()) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("common.copy"),
+          action: () => {
+            void writeToClipboard(selectedText);
+          },
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
+  }
+
   async function handleComposerContextMenu(event: MouseEvent<HTMLTextAreaElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -2729,7 +2770,10 @@ export function AssistantPanel({
   }, [screenshotRegionState]);
 
   return (
-    <aside className="assistant-panel">
+    <aside
+      className="assistant-panel"
+      onContextMenu={(event) => void handleAssistantPanelContextMenu(event)}
+    >
       <div className="assistant-topbar">
         <h2>{t("ai.title")}</h2>
         <button
