@@ -296,6 +296,10 @@
   transition-delay: 650ms;
 }
 
+.rail-tooltip.native-active {
+  opacity: 0;
+}
+
 .rail-context-menu {
   position: fixed;
   right: auto;

@@ -18,11 +18,11 @@ Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
 3. **Don't Sleep** (`app.activityRailDontSleep`) — the keep-awake control.
 4. **Settings** — anchored to the bottom of the rail.
 
-The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). Native `title` tooltips are forbidden here.
+The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). In the Windows Tauri runtime, the same helper uses a native topmost tooltip so rail labels can appear above RDP ActiveX and URL WebView2 surfaces. Native browser `title` tooltips are forbidden here.
 
 Tutorial targets: `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`. Inside the Installer Helper Module the targets are `installer.updateAll` and `installer.toolOptions` — see [18-installer.md](18-installer.md).
 
-Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active.
+Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active. Workspace-native child surfaces may overlap the rail tooltip layer, so the native tooltip bridge is the supported rail-label path in the desktop runtime.
 
 ## Connections Panel (left, inside Workspace Module)
 
