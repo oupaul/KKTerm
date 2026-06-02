@@ -270,9 +270,8 @@ mod debug_impl {
     fn process_gui_resources() -> (Option<u32>, Option<u32>) {
         #[cfg(target_os = "windows")]
         {
-            use windows_sys::Win32::System::Threading::GetCurrentProcess;
-            use windows_sys::Win32::UI::WindowsAndMessaging::{
-                GR_GDIOBJECTS, GR_USEROBJECTS, GetGuiResources,
+            use windows_sys::Win32::System::Threading::{
+                GR_GDIOBJECTS, GR_USEROBJECTS, GetCurrentProcess, GetGuiResources,
             };
             // SAFETY: GetCurrentProcess returns a pseudo-handle; GetGuiResources
             // only reads this process's GDI/USER object counts. A zero return

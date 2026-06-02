@@ -466,7 +466,8 @@ fn winget_app_installer_powershell_script(download_path: &PathBuf) -> String {
             "Add-AppxPackage -Path {package_path}; ",
             "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
             "exit 0"
-        )
+        ),
+        package_path = package_path
     )
 }
 
