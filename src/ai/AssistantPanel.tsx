@@ -30,6 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   ChangeEvent,
   ClipboardEvent,
@@ -3338,23 +3339,26 @@ export function AssistantPanel({
           </button>
         </div>
       </form>
-      {screenshotRegionState ? (
-        <div
-          aria-label={t("workspace.selectRegion")}
-          className="screenshot-region-overlay"
-          onKeyDown={handleScreenshotRegionKeyDown}
-          onPointerDown={handleScreenshotRegionPointerDown}
-          onPointerMove={handleScreenshotRegionPointerMove}
-          onPointerUp={handleScreenshotRegionPointerUp}
-          role="application"
-          tabIndex={-1}
-        >
-          <div className="screenshot-region-target" ref={regionTargetRef} />
-          {screenshotSelectionRect ? (
-            <div className="screenshot-region-selection" ref={regionSelectionRef} />
-          ) : null}
-        </div>
-      ) : null}
+      {screenshotRegionState
+        ? createPortal(
+            <div
+              aria-label={t("workspace.selectRegion")}
+              className="screenshot-region-overlay"
+              onKeyDown={handleScreenshotRegionKeyDown}
+              onPointerDown={handleScreenshotRegionPointerDown}
+              onPointerMove={handleScreenshotRegionPointerMove}
+              onPointerUp={handleScreenshotRegionPointerUp}
+              role="application"
+              tabIndex={-1}
+            >
+              <div className="screenshot-region-target" ref={regionTargetRef} />
+              {screenshotSelectionRect ? (
+                <div className="screenshot-region-selection" ref={regionSelectionRef} />
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </aside>
   );
 }
