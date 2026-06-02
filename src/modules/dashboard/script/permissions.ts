@@ -28,6 +28,14 @@ const DEFAULT_VISUAL_CONTEXT: DashboardVisualContext = {
   requiresOpaqueTextSurface: false,
 };
 
+/**
+ * Script widgets use their own fixed light/dark palette rather than the live
+ * app color-scheme tokens, so a widget body stays readable and visually stable
+ * when the user switches color schemes (a scheme change only repaints chrome).
+ * `DEFAULT_SCRIPT_WIDGET_THEME` is the light palette; `DARK_SCRIPT_WIDGET_THEME`
+ * is its dark counterpart. The instance accent is layered on top at render
+ * time; only the backdrop tone selects between these two palettes.
+ */
 export const DEFAULT_SCRIPT_WIDGET_THEME: ScriptWidgetTheme = {
   colorScheme: "light",
   text: "#111827",
@@ -40,6 +48,20 @@ export const DEFAULT_SCRIPT_WIDGET_THEME: ScriptWidgetTheme = {
   accent: "#2563eb",
   accentSoft: "rgba(37, 99, 235, 0.12)",
   visualContext: DEFAULT_VISUAL_CONTEXT,
+};
+
+export const DARK_SCRIPT_WIDGET_THEME: ScriptWidgetTheme = {
+  colorScheme: "dark",
+  text: "#e8edf5",
+  muted: "#97a3b6",
+  border: "#333c4d",
+  surface: "#1f2530",
+  surfaceMuted: "#171c25",
+  readableSurface: "#1f2530",
+  readableSurfaceText: "#e8edf5",
+  accent: "#3b82f6",
+  accentSoft: "rgba(59, 130, 246, 0.18)",
+  visualContext: { ...DEFAULT_VISUAL_CONTEXT, colorScheme: "dark", backgroundTone: "dark" },
 };
 
 /**

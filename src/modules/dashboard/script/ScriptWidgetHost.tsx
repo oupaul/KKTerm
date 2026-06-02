@@ -21,13 +21,14 @@ import {
 } from "../schema";
 import {
   buildSrcdoc,
+  DARK_SCRIPT_WIDGET_THEME,
   DEFAULT_SCRIPT_WIDGET_THEME,
   type ResolvedWidgetLibrary,
   type ScriptWidgetTheme,
 } from "./permissions";
 import { loadWidgetLibraries, resolveWidgetLibraryKeys } from "./widgetLibraries";
 import type { NativeContextMenuPosition } from "../../../lib/nativeContextMenu";
-import { dashboardVisualContextForView } from "../visualContext";
+import { dashboardVisualContextForView, isDarkCssColor } from "../visualContext";
 import { resolveAccent } from "../registry/palette";
 
 // Harden 3: cap the number of concurrently active script widgets to prevent
@@ -226,8 +227,8 @@ export function ScriptWidgetHost({
     [activeView?.background],
   );
   const scriptTheme = useMemo(
-    () => readScriptWidgetTheme(instance.accentName, visualContext),
-    [instance.accentName, visualContext],
+    () => readScriptWidgetTheme(instance.accentName, instance.preset, visualContext),
+    [instance.accentName, instance.preset, visualContext],
   );
 
   // Harden 3: register this widget in the active set. If the cap is exceeded,
@@ -961,36 +962,53 @@ function isScriptWidgetCallMcpToolMessage(value: unknown): value is {
   );
 }
 
+/**
+ * Build the script-widget theme. Widget bodies use a fixed self-contained
+ * light/dark palette instead of the live app color-scheme tokens, so a widget
+ * stays readable and visually stable when the user switches color schemes — a
+ * scheme change repaints only the surrounding chrome, not the widget body. Only
+ * the backdrop tone behind the iframe selects between the two palettes:
+ *
+ * - `panel` bodies sit on the app `--surface`, so they follow the app surface
+ *   tone (a dark scheme keeps a dark widget panel readable).
+ * - `hero` bodies sit on an accent gradient with white text, so they are always
+ *   treated as dark.
+ * - `ambient` bodies float on the per-view background, so they follow
+ *   `visualContext.colorScheme` (which already reflects the app-bg tone for the
+ *   theme-default background).
+ *
+ * The instance accent is layered on top of whichever palette is chosen.
+ */
 function readScriptWidgetTheme(
   accentName: DashboardWidgetInstance["accentName"],
+  preset: DashboardWidgetInstance["preset"],
   visualContext: ScriptWidgetTheme["visualContext"],
 ): ScriptWidgetTheme {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    return { ...DEFAULT_SCRIPT_WIDGET_THEME, visualContext };
-  }
-  const style = window.getComputedStyle(document.documentElement);
+  const tone = backdropToneForPreset(preset, visualContext);
+  const base = tone === "dark" ? DARK_SCRIPT_WIDGET_THEME : DEFAULT_SCRIPT_WIDGET_THEME;
   const accent = resolveAccent(accentName);
-  const text = cssVar(style, "--text", DEFAULT_SCRIPT_WIDGET_THEME.text);
-  const surface = cssVar(style, "--surface", DEFAULT_SCRIPT_WIDGET_THEME.surface);
   return {
-    colorScheme: visualContext.colorScheme,
-    text,
-    muted: cssVar(style, "--text-muted", DEFAULT_SCRIPT_WIDGET_THEME.muted),
-    border: cssVar(style, "--border", DEFAULT_SCRIPT_WIDGET_THEME.border),
-    surface,
-    surfaceMuted: cssVar(style, "--surface-muted", DEFAULT_SCRIPT_WIDGET_THEME.surfaceMuted),
-    readableSurface: visualContext.requiresOpaqueTextSurface
-      ? surface
-      : cssVar(style, "--surface", DEFAULT_SCRIPT_WIDGET_THEME.readableSurface),
-    readableSurfaceText: text,
+    ...base,
+    colorScheme: tone,
     accent: accent.color,
     accentSoft: accent.soft,
     visualContext,
   };
 }
 
-function cssVar(style: CSSStyleDeclaration, name: string, fallback: string): string {
-  return style.getPropertyValue(name).trim() || fallback;
+function backdropToneForPreset(
+  preset: DashboardWidgetInstance["preset"],
+  visualContext: ScriptWidgetTheme["visualContext"],
+): "light" | "dark" {
+  if (preset === "hero") return "dark";
+  if (preset === "panel") return appSurfaceTone();
+  return visualContext.colorScheme === "dark" ? "dark" : "light";
+}
+
+function appSurfaceTone(): "light" | "dark" {
+  if (typeof window === "undefined" || typeof document === "undefined") return "light";
+  const surface = window.getComputedStyle(document.documentElement).getPropertyValue("--surface");
+  return isDarkCssColor(surface) ? "dark" : "light";
 }
 
 function isScriptWidgetPerformanceCountersMessage(value: unknown): value is {
