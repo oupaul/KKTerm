@@ -73,6 +73,44 @@ function Assert-Version {
     }
 }
 
+function Import-LocalEnvFiles {
+    param([string]$RootPath)
+
+    foreach ($EnvFileName in @(".env.local", ".env")) {
+        $EnvFile = Join-Path $RootPath $EnvFileName
+        if (-not (Test-Path $EnvFile)) {
+            continue
+        }
+
+        foreach ($Line in Get-Content -Path $EnvFile) {
+            $Trimmed = $Line.Trim()
+            if (-not $Trimmed -or $Trimmed.StartsWith("#")) {
+                continue
+            }
+
+            $Match = [regex]::Match($Trimmed, '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$')
+            if (-not $Match.Success) {
+                continue
+            }
+
+            $Name = $Match.Groups[1].Value
+            if (Test-Path "Env:$Name") {
+                continue
+            }
+
+            $Value = $Match.Groups[2].Value.Trim()
+            if (
+                ($Value.StartsWith('"') -and $Value.EndsWith('"')) -or
+                ($Value.StartsWith("'") -and $Value.EndsWith("'"))
+            ) {
+                $Value = $Value.Substring(1, $Value.Length - 2)
+            }
+
+            Set-Item -Path "Env:$Name" -Value $Value
+        }
+    }
+}
+
 function Set-TextFileUtf8NoBom {
     param(
         [string]$Path,
@@ -133,6 +171,8 @@ function Set-TauriConfigVersion {
 
 Push-Location $RepoRoot
 try {
+    Import-LocalEnvFiles -RootPath $RepoRoot
+
     Assert-Command "git"
     Assert-Command "gh"
     Assert-Command "npm"

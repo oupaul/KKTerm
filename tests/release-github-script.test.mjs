@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const script = await readFile(new URL("../scripts/release-github.ps1", import.meta.url), "utf8");
+const packageJson = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+);
 
 test("release script lists version tags instead of treating v-star as a tag name", () => {
   assert.match(script, /git tag --list "v\*" --sort=-v:refname/);
@@ -49,4 +52,53 @@ test("release script can also build and publish the ARM64 installer", () => {
   // The GitHub upload args are built from the asset list, not hardcoded, so the
   // ARM64 artifacts ride along when present.
   assert.match(script, /\$GhArgs \+= \$ReleaseAssets/);
+});
+
+test("release script imports local env files without overriding existing environment", () => {
+  assert.match(script, /function Import-LocalEnvFiles \{/);
+  assert.match(script, /@\(.*"\.env\.local".*"\.env".*\)/s);
+  assert.match(script, /Test-Path "Env:\$Name"/);
+  assert.match(script, /Set-Item -Path "Env:\$Name" -Value \$Value/);
+  assert.match(script, /Import-LocalEnvFiles -RootPath \$RepoRoot/);
+});
+
+test("both-arch release script delegates to release-github with IncludeArm64", async () => {
+  const wrapper = await readFile(
+    new URL("../scripts/release-github-both-arch.ps1", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(wrapper, /release-github\.ps1/);
+  assert.match(wrapper, /IncludeArm64\s*=\s*\$true/);
+  assert.doesNotMatch(wrapper, /package:installer:arm64/);
+  assert.doesNotMatch(wrapper, /gh\s+release\s+create/);
+  assert.doesNotMatch(wrapper, /git\s+push/);
+  assert.equal(
+    packageJson.scripts["release:github:both-arch"],
+    "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github-both-arch.ps1",
+  );
+});
+
+test("both-arch release script forwards release switches explicitly", async () => {
+  const wrapper = await readFile(
+    new URL("../scripts/release-github-both-arch.ps1", import.meta.url),
+    "utf8",
+  );
+
+  for (const switchName of [
+    "Draft",
+    "Prerelease",
+    "DryRun",
+    "SkipBuild",
+    "SkipSmoke",
+    "SkipAiReleaseNotes",
+    "AllowDirty",
+  ]) {
+    assert.match(wrapper, new RegExp(`\\[switch\\]\\$${switchName}`));
+    assert.match(wrapper, new RegExp(`if \\(\\$${switchName}\\)`));
+    assert.match(
+      wrapper,
+      new RegExp(`\\$ForwardParams\\["${switchName}"\\] = \\$true`),
+    );
+  }
 });
