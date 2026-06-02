@@ -673,6 +673,7 @@ fn get_general_settings(
 
 #[tauri::command]
 fn update_general_settings(
+    app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
     tray_state: tauri::State<'_, app_tray::TrayState>,
     power: tauri::State<'_, power::DontSleepManager>,
@@ -682,7 +683,7 @@ fn update_general_settings(
     auto_start::sync_auto_start_with_windows(request.auto_start_with_windows())?;
     let saved = storage.update_general_settings(request)?;
     logging::set_advanced_debugging_enabled(saved.advanced_debugging_enabled());
-    debug_heartbeat::start();
+    debug_heartbeat::start(app);
     tray_state.set_minimize_to_tray(saved.minimize_to_tray());
     if let Err(error) = power.set_enabled(saved.dont_sleep_enabled()) {
         eprintln!("failed to apply saved Don't Sleep setting: {error}");
@@ -761,7 +762,7 @@ fn import_settings_database(
     let snapshot = storage.import_database_zip(path.into())?;
     let general_settings = storage.general_settings()?;
     logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
-    debug_heartbeat::start();
+    debug_heartbeat::start(app.clone());
     tray_state.set_minimize_to_tray(general_settings.minimize_to_tray());
     if let Err(error) = power.set_enabled(general_settings.dont_sleep_enabled()) {
         eprintln!("failed to apply imported Don't Sleep setting: {error}");
@@ -2515,7 +2516,8 @@ fn is_remote_session() -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
-    debug_heartbeat::start();
+    // The heartbeat is started from `setup` once the main window's AppHandle
+    // exists, so the native UI-thread liveness probe has a window to ping.
 
     configure_single_instance(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
@@ -2531,7 +2533,7 @@ pub fn run() {
             let general_settings = storage.general_settings().map_err(setup_error)?;
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
             logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
-            debug_heartbeat::start();
+            debug_heartbeat::start(app.handle().clone());
 
             let apply_webview_stability =
                 general_settings.rdp_webview_stability() || is_remote_session();
@@ -2692,6 +2694,15 @@ pub fn run() {
                         if !focused {
                             app_tray::hide_minimized_window_if_enabled(window);
                         }
+                    }
+                    tauri::WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                        // A DPI change on RDP reconnect is a leading suspect for
+                        // the WebView2 freeze; record it so the heartbeat shows
+                        // whether one preceded the hang.
+                        debug_heartbeat::record_scale_factor(*scale_factor);
+                        debug_heartbeat::record_window_event(format!(
+                            "scale-factor:{scale_factor}"
+                        ));
                     }
                     _ => {}
                 }

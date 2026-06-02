@@ -16,6 +16,7 @@ mod debug_impl {
     static STARTED: AtomicBool = AtomicBool::new(false);
     static START: OnceLock<Instant> = OnceLock::new();
     static FRONTEND_HEARTBEAT_MS: AtomicU64 = AtomicU64::new(0);
+    static MAIN_THREAD_PONG_MS: AtomicU64 = AtomicU64::new(0);
     static FRONTEND_STATE: OnceLock<Mutex<Option<FrontendHeartbeat>>> = OnceLock::new();
     static NATIVE_STATE: OnceLock<Mutex<NativeDebugState>> = OnceLock::new();
 
@@ -37,9 +38,11 @@ mod debug_impl {
         last_window_event_ms: u64,
         last_tray_event: Option<String>,
         last_tray_event_ms: u64,
+        last_scale_factor: Option<f64>,
+        last_scale_factor_ms: u64,
     }
 
-    pub fn start() {
+    pub fn start(app: tauri::AppHandle) {
         if !heartbeat_enabled() {
             return;
         }
@@ -48,6 +51,9 @@ mod debug_impl {
         }
 
         let start = *START.get_or_init(Instant::now);
+        // Seed the main-thread pong so the first lines read near zero instead of
+        // looking like an immediate stall before the first probe lands.
+        MAIN_THREAD_PONG_MS.store(elapsed_ms(start), Ordering::Relaxed);
         thread::spawn(move || {
             let mut sequence = 0_u64;
             loop {
@@ -57,6 +63,15 @@ mod debug_impl {
                 }
                 sequence = sequence.saturating_add(1);
                 write_heartbeat_line(sequence, start);
+                // Probe the native UI/event-loop thread. This closure only runs
+                // when tao's main thread is pumping messages, so the recorded
+                // pong ages out only when the main thread itself is blocked. If
+                // the main thread keeps pumping while the frontend heartbeat
+                // ages out, the freeze is inside the WebView2 renderer; if both
+                // age out together, the native UI thread is blocked (e.g. a
+                // native overlay / message-pump stall). That split is what
+                // localizes the RDP-reconnect hang instead of guessing.
+                let _ = app.run_on_main_thread(record_main_thread_pong);
                 thread::sleep(Duration::from_secs(2));
             }
         });
@@ -70,6 +85,22 @@ mod debug_impl {
         FRONTEND_HEARTBEAT_MS.store(elapsed_ms(start), Ordering::Relaxed);
         if let Ok(mut guard) = frontend_state().lock() {
             *guard = Some(heartbeat);
+        }
+    }
+
+    fn record_main_thread_pong() {
+        let start = *START.get_or_init(Instant::now);
+        MAIN_THREAD_PONG_MS.store(elapsed_ms(start), Ordering::Relaxed);
+    }
+
+    pub fn record_scale_factor(scale_factor: f64) {
+        if !heartbeat_enabled() {
+            return;
+        }
+        let runtime_ms = elapsed_ms(*START.get_or_init(Instant::now));
+        if let Ok(mut guard) = native_state().lock() {
+            guard.last_scale_factor = Some(scale_factor);
+            guard.last_scale_factor_ms = runtime_ms;
         }
     }
 
@@ -106,19 +137,37 @@ mod debug_impl {
         let timestamp = time::OffsetDateTime::now_utc()
             .format(&time::format_description::well_known::Rfc3339)
             .unwrap_or_else(|_| time::OffsetDateTime::now_utc().unix_timestamp().to_string());
+        let runtime_details = runtime_details(runtime_ms);
         let frontend_details = frontend_details();
         let native_details = native_details(runtime_ms);
         let line = match frontend_age_ms {
             Some(age) => format!(
-                "{timestamp} debug_heartbeat sequence={sequence} runtimeMs={runtime_ms} frontendAgeMs={age}{frontend_details}{native_details}\n"
+                "{timestamp} debug_heartbeat sequence={sequence} runtimeMs={runtime_ms} frontendAgeMs={age}{runtime_details}{frontend_details}{native_details}\n"
             ),
             None => format!(
-                "{timestamp} debug_heartbeat sequence={sequence} runtimeMs={runtime_ms} frontendAgeMs=none{frontend_details}{native_details}\n"
+                "{timestamp} debug_heartbeat sequence={sequence} runtimeMs={runtime_ms} frontendAgeMs=none{runtime_details}{frontend_details}{native_details}\n"
             ),
         };
         if let Err(error) = append_line(&line) {
             eprintln!("failed to write debug heartbeat: {error}");
         }
+    }
+
+    fn runtime_details(runtime_ms: u64) -> String {
+        let pong_ms = MAIN_THREAD_PONG_MS.load(Ordering::Relaxed);
+        let pong_age = if pong_ms == 0 {
+            "none".to_string()
+        } else {
+            runtime_ms.saturating_sub(pong_ms).to_string()
+        };
+        let (gdi_objects, user_objects) = process_gui_resources();
+        format!(
+            " mainThreadPongAgeMs={} remoteSession={} gdiObjects={} userObjects={}",
+            pong_age,
+            remote_session(),
+            option_u32(gdi_objects),
+            option_u32(user_objects),
+        )
     }
 
     fn frontend_details() -> String {
@@ -144,7 +193,7 @@ mod debug_impl {
         };
 
         format!(
-            " lastWindowEvent={} lastWindowEventAgeMs={} lastTrayEvent={} lastTrayEventAgeMs={}",
+            " lastWindowEvent={} lastWindowEventAgeMs={} lastTrayEvent={} lastTrayEventAgeMs={} lastScaleFactor={} scaleFactorAgeMs={}",
             guard
                 .last_window_event
                 .as_deref()
@@ -165,6 +214,15 @@ mod debug_impl {
                 guard.last_tray_event_ms,
                 guard.last_tray_event.is_some()
             ),
+            guard
+                .last_scale_factor
+                .map(|value| format!("{value:.3}"))
+                .unwrap_or_else(|| "none".to_string()),
+            age_or_none(
+                runtime_ms,
+                guard.last_scale_factor_ms,
+                guard.last_scale_factor.is_some()
+            ),
         )
     }
 
@@ -180,6 +238,59 @@ mod debug_impl {
         value
             .map(|value| value.to_string())
             .unwrap_or_else(|| "none".to_string())
+    }
+
+    fn option_u32(value: Option<u32>) -> String {
+        value
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "none".to_string())
+    }
+
+    /// True when KKTerm is running inside a remote (RDP) session. Logged each
+    /// line so the connect/disconnect transition that precedes a hang is visible
+    /// without registering for `WM_WTSSESSION_CHANGE`.
+    fn remote_session() -> bool {
+        #[cfg(target_os = "windows")]
+        {
+            use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_REMOTESESSION};
+            // SAFETY: GetSystemMetrics is a pure read of a Windows session metric.
+            unsafe { GetSystemMetrics(SM_REMOTESESSION) != 0 }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            false
+        }
+    }
+
+    /// This process's GDI and USER object counts. WebView2 has a documented GDI
+    /// region-handle leak around RDP redraws; a count climbing toward the ~10k
+    /// per-process ceiling alongside a hang points at handle exhaustion rather
+    /// than a GPU/DPI cause. (Note: the WebView2 renderer runs out-of-process, so
+    /// this measures KKTerm's own process only.)
+    fn process_gui_resources() -> (Option<u32>, Option<u32>) {
+        #[cfg(target_os = "windows")]
+        {
+            use windows_sys::Win32::System::Threading::GetCurrentProcess;
+            use windows_sys::Win32::UI::WindowsAndMessaging::{
+                GR_GDIOBJECTS, GR_USEROBJECTS, GetGuiResources,
+            };
+            // SAFETY: GetCurrentProcess returns a pseudo-handle; GetGuiResources
+            // only reads this process's GDI/USER object counts. A zero return
+            // means the query failed, which we report as "none".
+            unsafe {
+                let process = GetCurrentProcess();
+                let gdi = GetGuiResources(process, GR_GDIOBJECTS);
+                let user = GetGuiResources(process, GR_USEROBJECTS);
+                (
+                    if gdi == 0 { None } else { Some(gdi) },
+                    if user == 0 { None } else { Some(user) },
+                )
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            (None, None)
+        }
     }
 
     fn age_or_none(runtime_ms: u64, event_ms: u64, has_event: bool) -> String {
@@ -259,5 +370,6 @@ mod debug_impl {
 }
 
 pub(crate) use debug_impl::{
-    FrontendHeartbeat, record_frontend_heartbeat, record_tray_event, record_window_event, start,
+    FrontendHeartbeat, record_frontend_heartbeat, record_scale_factor, record_tray_event,
+    record_window_event, start,
 };
