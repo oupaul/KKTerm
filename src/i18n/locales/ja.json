@@ -1869,6 +1869,13 @@
     "installerSaved": "インストールヘルパー設定を保存しました。",
     "installerShowOnRail": "アクティビティ レールに表示",
     "installerShowOnRailDesc": "有効にすると、インストールヘルパー アイコンがアクティビティ レールに表示されます。",
+    "installerUpdateChecks": "更新チェック",
+    "installerCheckInterval": "最新バージョンを確認",
+    "installerCheckIntervalDesc": "インストールヘルパーを開いたときに、利用可能な最新バージョンを自動確認する頻度です。すぐに確認するには更新を使用します。",
+    "installerCheckInterval3600": "毎時",
+    "installerCheckInterval86400": "毎日",
+    "installerCheckInterval604800": "毎週",
+    "installerCheckInterval2592000": "毎月",
     "rdpWebviewStability": "RDP セッションの安定性 (WebView2)",
     "rdpWebviewStabilityHint": "ソフトウェア レンダリングを強制し、ウィンドウ オクルージョンによるスロットリングを無効にして、Remote Desktop (RDP) ホスト内で KKTerm を実行しているときにクライアントが切断および再接続されても KKTerm の応答性を維持します。KKTerm がリモート セッションで実行されていることを検出すると自動的に適用されます。強制するにはこの設定をオンにしてください。GPU アクセラレーションが無効になるため、ローカル インストールではオフのままにしてください。KKTerm の再起動後に有効になります。"
   },

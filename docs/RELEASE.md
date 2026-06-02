@@ -37,7 +37,7 @@ Users should review the generated files before sharing them. Future diagnostics 
 
 ## Bundled Operation Manual
 
-The user-facing operation manual under `docs/manual/` ships with every installer build. Tauri copies each chapter declared in `src-tauri/tauri.conf.json` → `bundle.resources` (mapped to `manual/<filename>.md` in the resource directory). The built-in AI Assistant uses these files as its help/search reference. When a chapter is added or removed, update three places in the same PR: the new/removed `docs/manual/*.md` file, the `bundle.resources` map in `tauri.conf.json`, and the `CHAPTERS` list in `src-tauri/src/manual.rs`. `npm run build` + `cargo check` is sufficient to catch mismatched entries.
+The user-facing operation manual under `docs/manual/` ships with every installer build. Tauri copies each chapter declared in `src-tauri/tauri.conf.json` → `bundle.resources` (mapped to `manual/<filename>.md` in the resource directory). The built-in AI Assistant uses these files as its help/search reference. When a chapter is added or removed, update three places in the same PR: the new/removed `docs/manual/*.md` file, the `bundle.resources` map in `src-tauri/tauri.conf.json`, and the `CHAPTERS` list in `src-tauri/src/manual.rs`. `npm run build` + `cargo check` is sufficient to catch mismatched entries.
 
 ## Windows Installer
 
@@ -100,5 +100,5 @@ GitHub Actions uses the same script through the manual **Release** workflow. Sto
 - Screenshot capture is available from terminal Pane toolbars and non-terminal workspace top toolbars. Region and Entire Window/Panel captures can be copied to the system clipboard or attached transiently to the AI Assistant through explicit user action.
 - RDP uses the Windows ActiveX host and VNC uses a canvas-rendered `vnc-rs` framebuffer path; advanced VNC options, richer clipboard handling, sync, and team sharing remain deferred.
 - AI command assistance and app tool use are bounded by assistant tool settings. Prompt mode is the default and blocks mutating tools with a permission-required result; Allow All is an explicit setting that lets enabled tools execute automatically. The Assistant can use typed tools for Dashboard changes, saved Connection management, and active Session interaction, but it should not be treated as an unattended autonomous operator.
-- Settings exposes Color Scheme, Language (i18n), editable Terminal behavior, AI provider, App UI font, and layout reset controls. Update checks, editable SSH/SFTP defaults, SSH config import, and keybinding controls are not yet exposed.
+- Settings exposes General, Appearance, Dashboard, Workspace, Installer Helper, Credentials/MCP, AI Assistant, SSH, Terminal, URL, RDP, VNC, and About sections. SSH config import, editable keybindings, and packaged-app self-update controls are not yet exposed.
 - Diagnostics bundles are folders, not compressed archives.

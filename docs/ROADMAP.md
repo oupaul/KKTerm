@@ -2,11 +2,11 @@
 
 ## Current Status
 
-Quick snapshot as of May 15, 2026:
+Quick snapshot as of June 2, 2026:
 
-All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, and UI customization are implemented and shipping. The app is currently at v0.1.37 and releasing continuously.
+All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Installer Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.52 and releasing continuously.
 
-Latest validation: `npm run check`, `npm run build`, `cargo check --manifest-path src-tauri/Cargo.toml`, and `cargo test --manifest-path src-tauri/Cargo.toml` (215 passed, 1 ignored) all clean. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
+Release validation gates are documented in `AGENTS.md` and `docs/RELEASE.md`; run the full suite before significant code changes or release publication. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
 
 For operational measurement records see `docs/PERFORMANCE.md`. For packaging and release artifacts see `docs/RELEASE.md`.
 

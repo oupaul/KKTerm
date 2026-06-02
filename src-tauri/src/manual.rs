@@ -115,6 +115,12 @@ const CHAPTERS: &[ManualChapter] = &[
         filename: "17-data-backup-secrets.md",
         title: "Data, backup, secrets",
     },
+    ManualChapter {
+        slug: "installer",
+        order: 18,
+        filename: "18-installer.md",
+        title: "Installer Helper",
+    },
 ];
 
 fn resolve_chapter_path(app: &AppHandle, filename: &str) -> Result<std::path::PathBuf, String> {

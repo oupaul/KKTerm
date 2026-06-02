@@ -2,7 +2,7 @@
 
 The Dashboard is a built-in Activity Rail Module that presents a dynamic widget grid. Users select from prebuilt widgets, customize them visually, and arrange them on a 12-column drag-and-drop canvas. The AI Assistant can read the current dashboard and create, customize, or remove widgets through atomic Tauri commands.
 
-This document describes the durable architecture. The design decision record for the redesign that introduced this architecture is at `docs/superpowers/specs/2026-05-11-dashboard-redesign-design.md`. When this doc conflicts with `docs/ARCHITECTURE.md`, this doc wins for Dashboard-internal concerns.
+This document describes the durable architecture. Related Dashboard design notes live under `docs/superpowers/specs/`, including the script-only AI Created Widgets and AI Coding Usage widget specs. When this doc conflicts with `docs/ARCHITECTURE.md`, this doc wins for Dashboard-internal concerns.
 
 ## Scope
 

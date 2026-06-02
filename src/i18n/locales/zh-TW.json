@@ -1869,6 +1869,13 @@
     "installerSaved": "安裝小幫手設定已儲存。",
     "installerShowOnRail": "在活動列顯示",
     "installerShowOnRailDesc": "啟用後，安裝小幫手圖示會顯示在活動列。",
+    "installerUpdateChecks": "更新檢查",
+    "installerCheckInterval": "檢查最新版本",
+    "installerCheckIntervalDesc": "開啟安裝小幫手時，自動檢查最新可用版本的頻率。使用重新整理可立即檢查。",
+    "installerCheckInterval3600": "每小時",
+    "installerCheckInterval86400": "每天",
+    "installerCheckInterval604800": "每週",
+    "installerCheckInterval2592000": "每月",
     "rdpWebviewStability": "RDP 工作階段穩定性 (WebView2)",
     "rdpWebviewStabilityHint": "強制使用軟體轉譯並停用視窗遮蔽節流，讓 KKTerm 在 Remote Desktop (RDP) 主機內執行且用戶端中斷連線再重新連線時仍保持回應。當 KKTerm 偵測到正在遠端工作階段中執行時會自動套用；開啟此選項即可強制套用。此設定會停用 GPU 加速，因此本機安裝請保持關閉。重新啟動 KKTerm 後生效。"
   },

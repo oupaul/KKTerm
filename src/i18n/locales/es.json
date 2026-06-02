@@ -1869,6 +1869,13 @@
     "installerSaved": "Ajustes del Asistente de instalación guardados.",
     "installerShowOnRail": "Mostrar en la barra de actividad",
     "installerShowOnRailDesc": "Cuando está activado, el icono del Asistente de instalación aparece en la barra de actividad.",
+    "installerUpdateChecks": "Comprobaciones de actualización",
+    "installerCheckInterval": "Buscar versiones más recientes",
+    "installerCheckIntervalDesc": "Con qué frecuencia el Asistente de instalación busca automáticamente las versiones más recientes disponibles al abrirlo. Usa Actualizar para comprobar de inmediato.",
+    "installerCheckInterval3600": "Cada hora",
+    "installerCheckInterval86400": "Cada día",
+    "installerCheckInterval604800": "Cada semana",
+    "installerCheckInterval2592000": "Cada mes",
     "rdpWebviewStability": "Estabilidad de la sesión RDP (WebView2)",
     "rdpWebviewStabilityHint": "Fuerza el renderizado por software y desactiva la limitación por oclusión de ventanas para que KKTerm siga respondiendo cuando se ejecuta dentro de un host de Remote Desktop (RDP) y el cliente se desconecta y vuelve a conectarse. Se aplica automáticamente cuando KKTerm detecta que se ejecuta en una sesión remota; activa esta opción para forzarlo. Desactiva la aceleración de GPU, así que déjalo desactivado en instalaciones locales. Surte efecto después de reiniciar KKTerm."
   },

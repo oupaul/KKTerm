@@ -12,7 +12,7 @@ KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and
 
 Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, OS keychain secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 
-The product will be light chrome with dark terminal panes by default, optimized for dense professional workflows and fast launch. macOS and Linux will follow using the same architecture. RDP, VNC, and URL surfaces are v0.2 expansion work; mobile, team vaults, and sync remain later-stage scope.
+The product will be light chrome with dark terminal panes by default, optimized for dense professional workflows and fast launch. macOS and Linux will follow using the same architecture. Mobile, team vaults, and sync remain later-stage scope.
 
 ## User Stories
 
@@ -87,7 +87,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 High-level product decisions that are not duplicated elsewhere:
 
 - Product name: **KKTerm**. Primary acceptance platform: Windows. Follow-on: macOS and Linux on the same architecture.
-- v0.1 protocols: local terminal, SSH terminal, SFTP launched from SSH. v0.2 protocols in progress: URL (WebView2), RDP (ActiveX), VNC (`vnc-rs`).
+- Current protocols: local terminal, SSH terminal, Telnet terminal, Serial terminal, SFTP launched from SSH, FTP/FTPS, URL (WebView2), RDP (ActiveX), and VNC (`vnc-rs`).
 - License: MIT. Dependencies should be MIT/Apache-2.0/BSD/MPL-style; avoid GPL in the core runtime.
 - Privacy: no telemetry or automatic crash upload in v0.1. Update checks (v0.2) are described separately from telemetry.
 - AI model: typed assistant tool calling with permission boundaries. Prompt is the default mode for mutating tools; Allow All is an explicit user setting for automatic execution of enabled tools. CLI agent integrations remain suggest-only/ask-before-execute where possible.

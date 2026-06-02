@@ -79,7 +79,7 @@ All of these use OS-provided APIs that exist natively on ARM64 Windows:
 
 ### Notes
 
-- **WebView2:** `tauri.conf.json` uses `webviewInstallMode.downloadBootstrapper`,
+- **WebView2:** `src-tauri/tauri.conf.json` uses `webviewInstallMode.downloadBootstrapper`,
   which downloads the correct ARM64 Evergreen runtime automatically. No change
   needed.
 - **NSIS:** the installer executable itself is a 32-bit x86 stub (Tauri's NSIS

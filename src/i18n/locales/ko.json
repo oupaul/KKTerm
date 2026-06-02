@@ -1869,6 +1869,13 @@
     "installerSaved": "설치 도우미 설정이 저장되었습니다.",
     "installerShowOnRail": "활동 레일에 표시",
     "installerShowOnRailDesc": "활성화하면 설치 도우미 아이콘이 활동 레일에 표시됩니다.",
+    "installerUpdateChecks": "업데이트 확인",
+    "installerCheckInterval": "최신 버전 확인",
+    "installerCheckIntervalDesc": "설치 도우미를 열 때 사용 가능한 최신 버전을 자동으로 확인하는 빈도입니다. 즉시 확인하려면 새로 고침을 사용하세요.",
+    "installerCheckInterval3600": "매시간",
+    "installerCheckInterval86400": "매일",
+    "installerCheckInterval604800": "매주",
+    "installerCheckInterval2592000": "매월",
     "rdpWebviewStability": "RDP 세션 안정성(WebView2)",
     "rdpWebviewStabilityHint": "KKTerm이 Remote Desktop(RDP) 호스트 안에서 실행되고 클라이언트가 연결을 끊었다가 다시 연결할 때도 응답성을 유지하도록 소프트웨어 렌더링을 강제하고 창 가림 스로틀링을 비활성화합니다. KKTerm이 원격 세션에서 실행 중임을 감지하면 자동으로 적용됩니다. 강제로 적용하려면 이 옵션을 켜세요. GPU 가속을 비활성화하므로 로컬 설치에서는 꺼 두세요. KKTerm을 다시 시작한 후 적용됩니다."
   },

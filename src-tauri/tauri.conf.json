@@ -59,6 +59,7 @@
                                      "../docs/manual/15-settings.md":  "manual/15-settings.md",
                                      "../docs/manual/16-localization.md":  "manual/16-localization.md",
                                      "../docs/manual/17-data-backup-secrets.md":  "manual/17-data-backup-secrets.md",
+                                     "../docs/manual/18-installer.md":  "manual/18-installer.md",
                                      "../assistant-skills/dashboard-widget-builder/SKILL.md":  "assistant-skills/dashboard-widget-builder/SKILL.md",
                                      "../assistant-skills/dns-dhcp-troubleshooter/SKILL.md":  "assistant-skills/dns-dhcp-troubleshooter/SKILL.md",
                                      "../assistant-skills/firewall-port-troubleshooter/SKILL.md":  "assistant-skills/firewall-port-troubleshooter/SKILL.md",

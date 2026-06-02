@@ -269,8 +269,8 @@ The constants live in two places that must stay in sync:
   `src/app-defaults.ts`.
 
 Bumping the upper bound requires changing both files, the
-`validate_dashboard_settings` clamp, and the localization_todo hint copy
-in `docs/localization_todo/settings.dashboardMaxActiveScriptWidgetsHint.md`.
+`validate_dashboard_settings` clamp, and the translated
+`settings.dashboardMaxActiveScriptWidgetsHint` value in every locale file.
 
 ### 7. Visibility-aware throttling via IntersectionObserver
 

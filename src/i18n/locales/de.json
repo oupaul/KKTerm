@@ -1869,6 +1869,13 @@
     "installerSaved": "Installationshelfer-Einstellungen gespeichert.",
     "installerShowOnRail": "In Aktivitätsleiste anzeigen",
     "installerShowOnRailDesc": "Wenn aktiviert, erscheint das Installationshelfer-Symbol in der Aktivitätsleiste.",
+    "installerUpdateChecks": "Update-Prüfungen",
+    "installerCheckInterval": "Nach neuesten Versionen suchen",
+    "installerCheckIntervalDesc": "Wie oft der Installationshelfer beim Öffnen automatisch nach den neuesten verfügbaren Versionen sucht. Verwenden Sie Aktualisieren, um sofort zu prüfen.",
+    "installerCheckInterval3600": "Jede Stunde",
+    "installerCheckInterval86400": "Jeden Tag",
+    "installerCheckInterval604800": "Jede Woche",
+    "installerCheckInterval2592000": "Jeden Monat",
     "rdpWebviewStability": "RDP-Sitzungsstabilität (WebView2)",
     "rdpWebviewStabilityHint": "Erzwingt Software-Rendering und deaktiviert die Drosselung bei Fensterverdeckung, damit KKTerm reaktionsfähig bleibt, wenn es in einem Remote Desktop (RDP)-Host ausgeführt wird und der Client die Verbindung trennt und erneut herstellt. Wird automatisch angewendet, wenn KKTerm erkennt, dass es in einer Remotesitzung läuft; aktivieren Sie diese Option, um es zu erzwingen. Deaktiviert die GPU-Beschleunigung; lassen Sie die Option daher bei lokalen Installationen deaktiviert. Wird nach einem Neustart von KKTerm wirksam."
   },

@@ -1869,6 +1869,13 @@
     "installerSaved": "安装助手设置已保存。",
     "installerShowOnRail": "在活动栏中显示",
     "installerShowOnRailDesc": "启用后，安装助手图标会显示在活动栏中。",
+    "installerUpdateChecks": "更新检查",
+    "installerCheckInterval": "检查最新版本",
+    "installerCheckIntervalDesc": "打开安装助手时，自动检查最新可用版本的频率。使用刷新可立即检查。",
+    "installerCheckInterval3600": "每小时",
+    "installerCheckInterval86400": "每天",
+    "installerCheckInterval604800": "每周",
+    "installerCheckInterval2592000": "每月",
     "rdpWebviewStability": "RDP 会话稳定性 (WebView2)",
     "rdpWebviewStabilityHint": "强制使用软件渲染并禁用窗口遮挡限流，以便 KKTerm 在 Remote Desktop (RDP) 主机内运行且客户端断开并重新连接时仍保持响应。KKTerm 检测到正在远程会话中运行时会自动应用；开启此选项可强制应用。此设置会禁用 GPU 加速，因此本地安装请保持关闭。重启 KKTerm 后生效。"
   },

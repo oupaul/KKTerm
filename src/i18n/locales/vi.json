@@ -1869,6 +1869,13 @@
     "installerSaved": "Đã lưu cài đặt Trợ lý cài đặt.",
     "installerShowOnRail": "Hiển thị trên Thanh hoạt động",
     "installerShowOnRailDesc": "Khi bật, biểu tượng Trợ lý cài đặt xuất hiện trên Thanh hoạt động.",
+    "installerUpdateChecks": "Kiểm tra cập nhật",
+    "installerCheckInterval": "Kiểm tra phiên bản mới nhất",
+    "installerCheckIntervalDesc": "Tần suất Trợ lý cài đặt tự động kiểm tra các phiên bản mới nhất hiện có khi bạn mở. Dùng Làm mới để kiểm tra ngay.",
+    "installerCheckInterval3600": "Mỗi giờ",
+    "installerCheckInterval86400": "Mỗi ngày",
+    "installerCheckInterval604800": "Mỗi tuần",
+    "installerCheckInterval2592000": "Mỗi tháng",
     "rdpWebviewStability": "Độ ổn định phiên RDP (WebView2)",
     "rdpWebviewStabilityHint": "Buộc kết xuất bằng phần mềm và tắt điều tiết khi cửa sổ bị che khuất để KKTerm vẫn phản hồi khi chạy trong máy chủ Remote Desktop (RDP) và máy khách ngắt kết nối rồi kết nối lại. Tự động áp dụng khi KKTerm phát hiện đang chạy trong phiên từ xa; bật tùy chọn này để buộc áp dụng. Tắt tăng tốc GPU, vì vậy hãy để tắt đối với các bản cài đặt cục bộ. Có hiệu lực sau khi khởi động lại KKTerm."
   },

@@ -51,4 +51,4 @@ Technical terms (SSH, SFTP, RDP, VNC, tmux, ProxyJump, PowerShell, WSL, API, URL
 
 ## Typed key autocomplete
 
-In TypeScript code, `useT()` from `src/i18n/useT.ts` autocompletes keys from the English JSON shape. Outside React, import `i18next` from `src/i18n/config` and call `i18next.t(key)` directly.
+In TypeScript code, `useT()` from `src/i18n/useT.ts` autocompletes keys from the English JSON shape. Outside React, import `i18next` from `src/i18n/config.ts` and call `i18next.t(key)` directly.
