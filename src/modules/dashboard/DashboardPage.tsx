@@ -108,6 +108,7 @@ export function DashboardPage({
   const [tabGradientPicker, setTabGradientPicker] = useState<{ viewId: string; rect: DOMRect } | null>(null);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
+  const [mountedViewIds, setMountedViewIds] = useState<Set<string>>(() => new Set());
   const appliedLandingPref = useRef(false);
   const viewDragRef = useRef<{
     id: string;
@@ -162,6 +163,15 @@ export function DashboardPage({
   }, [editMode, toggleEditMode]);
 
   const activeView = views.find((v) => v.id === activeViewId) ?? views[0];
+
+  useEffect(() => {
+    if (!activeView) return;
+    setMountedViewIds((current) => {
+      if (current.has(activeView.id)) return current;
+      return new Set(current).add(activeView.id);
+    });
+  }, [activeView]);
+
   const customizeInstance =
     customize ? instances.find((instance) => instance.id === customize.instance.id) : null;
   const viewInstances = useMemo(
@@ -489,6 +499,8 @@ export function DashboardPage({
       <div className="dw-canvas-stack">
         {views.map((view) => {
           const isActiveView = view.id === activeView.id;
+          const shouldMountView = isActiveView || mountedViewIds.has(view.id);
+          if (!shouldMountView) return null;
           const cachedViewInstances = instances.filter((instance) => instance.viewId === view.id);
           return (
             <div
