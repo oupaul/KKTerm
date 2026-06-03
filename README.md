@@ -209,15 +209,15 @@ Every widget you keep is yours. They persist in SQLite next to your **Connection
 
 #### Animated dashboard backgrounds (because we wanted to)
 
-The dashboard has twenty-one canvas-animated backgrounds you can pick per **Dashboard View**:
+The dashboard has twenty-three canvas-animated backgrounds you can pick per **Dashboard View**:
 
 | Mood | Backgrounds |
 | --- | --- |
-| Calm | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
+| Calm | `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
 | Spacey | `starfield`, `nebula` |
 | Warm | `embers`, `lava` |
 | Geeky | `matrix`, `topo`, `synthwave` |
-| Erratic | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
+| Erratic | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
 They run on a single shared `requestAnimationFrame` and respect window focus, so they cost roughly nothing when you're elsewhere. Pair `matrix` with your AI assistant for a vibe that says "I am extremely productive and also possibly in a Wachowski film." Or pick `ocean` and look like a serious person. We do not judge either choice.
 
@@ -313,7 +313,7 @@ The shape that matters: durable saved data (**Connection**) is separate from liv
 | **SFTP / FTP** | SSH-launched SFTP plus FTP/FTPS **Connections**, dual-pane browser, recursive transfers, queue/cancel/clear history, conflicts, properties, chmod/chown where supported |
 | **URL WebView** | Embedded WebView2 URL **Sessions**, navigation toolbar, favicon capture, stored website credential metadata/fill, data partition metadata |
 | **Remote Desktop** | RDP through Windows ActiveX with geometry-scoped overlay parking; VNC through `vnc-rs` framebuffer rendered in the workspace canvas |
-| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, **AI-authored content/script widgets** (declarative JSON or sandboxed iframe JS with permissions), per-widget presets / accent / icon / title, **21 animated canvas backgrounds** (aurora, clouds, ocean, raindrops, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti) |
+| **Dashboard** | Durable views, widget instances, edit mode, drag/resize, App Launcher, **AI-authored content/script widgets** (declarative JSON or sandboxed iframe JS with permissions), per-widget presets / accent / icon / title, **23 animated canvas backgrounds** (aurora, clouds, ocean, raindrops, rainywindow, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti, particleCursor) |
 | **AI Assistant** | Streaming chat, OpenAI-compatible runtime, provider registry, command proposal safety classification, screenshot/context attachments, **Dashboard widget authoring (content + sandboxed script)**, **tmux pane capture** as conversation context for remote sessions, **Connection** management tools, and live **Session** tools for terminal, RDP/VNC, and SFTP/FTP |
 | **AI Coding Usage** | **Dashboard widget + status-bar indicator** tracking **Claude Code** and **Codex** quota usage: connected account, plan tier, 5-hour and weekly window percentages, next reset time, auth state (`connected` / `expired` / `error`), rate-limit-aware refresh policy |
 | **Built-in MCP Server** | Stdio MCP server (`kkterm-cli`) exposing curated Workspace and Dashboard tools to external coding agents (Claude Code, Codex, Copilot, Antigravity, OpenCode); authenticated named-pipe bridge; per-Module `dangerous.*` namespaces gated behind a single safety toggle; Settings dialog with one-click JSON / TOML snippets and `claude mcp add` / `codex mcp add` commands |

@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.trayExit`, `app.trayWallpaper`
-- Topics: first launch, what KKTerm is, system tray, "Don't Sleep" mode, desktop wallpaper, primary navigation
-- Synonyms users may type: "open the app", "left bar icons", "tray icon", "keep awake", "prevent sleep", "wallpaper", "live wallpaper"
+- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.trayExit`, `app.trayWallpaper`, `app.trayWallpaperSet`, `app.trayWallpaperClear`, `app.wallpaperPickerTitle`, `app.wallpaperPickerDefaultHint`
+- Topics: first launch, what KKTerm is, system tray, "Don't Sleep" mode, desktop wallpaper, live wallpaper, wallpaper picker, primary navigation, restoring the last Module
+- Synonyms users may type: "open the app", "left bar icons", "tray icon", "keep awake", "prevent sleep", "wallpaper", "live wallpaper", "desktop background", "animated wallpaper", "why did it open dashboard", "last page", "remember module"
 
 ## What KKTerm is
 
@@ -54,6 +54,14 @@ KKTerm registers a Windows tray icon with recent Connections plus app controls:
 - `app.trayDontSleep` — toggles the same state as the in-app "Don't Sleep" mode (see below).
 - `app.trayWallpaper` — `app.trayWallpaperSet` opens a small wallpaper picker above the tray icon without restoring the main window; `app.trayWallpaperClear` destroys the wallpaper window and returns wallpaper handling to Windows.
 - `app.trayExit` — exits the app unconditionally. This path bypasses the close-to-tray diversion.
+
+### Desktop wallpaper
+
+The tray wallpaper picker title is `app.wallpaperPickerTitle`. It reuses the same shared background picker as Dashboard Views and terminal Connection backgrounds: preset, image, media/video, fit, dim, and dynamic background choices come from the same registry. The default mode hint is `app.wallpaperPickerDefaultHint`, which clears KKTerm's live wallpaper and returns control to the Windows wallpaper.
+
+`app.trayWallpaperSet` persists the selected wallpaper background and enables the hidden WorkerW-hosted wallpaper WebView behind desktop icons. The action does not restore or focus the main KKTerm window. `app.trayWallpaperClear` disables and destroys that wallpaper WebView, but keeps the last selected background in Settings storage so the next Set action can start from it.
+
+Dynamic and video desktop wallpapers pause when a maximized/fullscreen foreground window covers a monitor, so KKTerm does not keep rendering animated wallpaper under fullscreen work. They resume when the desktop wallpaper is visible again.
 
 ## Closing the window
 
