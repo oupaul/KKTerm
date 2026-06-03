@@ -14,6 +14,7 @@
 }
 
 .terminal-workspace {
+  position: relative;
   grid-template-rows: minmax(0, 1fr);
   gap: 0;
 }
@@ -53,6 +54,7 @@
 .terminal-grid {
   display: flex;
   position: relative;
+  z-index: 1;
   min-height: 0;
   min-width: 0;
   gap: 10px;
@@ -1606,6 +1608,10 @@
   padding: 8px;
 }
 
+.xterm-host .xterm .xterm-viewport {
+  background-color: transparent;
+}
+
 .xterm-host .xterm .xterm-viewport::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -1658,10 +1664,14 @@
 
 .terminal-connection-background {
   position: absolute;
-  inset: 34px 0 0;
+  inset: 14px;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+}
+
+.terminal-pane > .terminal-connection-background {
+  inset: 34px 0 0;
 }
 
 .terminal-pane-search-open .terminal-connection-background {

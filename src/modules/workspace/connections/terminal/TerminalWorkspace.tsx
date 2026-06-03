@@ -92,6 +92,9 @@ export function TerminalWorkspace({
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setFocusedPane = useWorkspaceStore((state) => state.setFocusedPane);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const usePaneTerminalBackgrounds =
+    generalSettings.separateSplitTerminalBackgrounds &&
+    tab.panes.filter(isTerminalPane).length > 1;
   const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
   const { t } = useTranslation();
   const defaultFontSize = defaultTerminalSettings.fontSize;
@@ -104,6 +107,18 @@ export function TerminalWorkspace({
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
   const canCloseSinglePane = tab.kind === "terminal" && generalSettings.hideTopTabButtons;
   const quickCommandBarVisible = Boolean(tab.quickCommandBarVisible) && !isSingleEmbeddedPane;
+  const focusedTerminalPane = tab.panes.find((pane): pane is TerminalPane => (
+    isTerminalPane(pane) && pane.id === focusedPaneId
+  ));
+  const firstTerminalPane = tab.panes.find(isTerminalPane);
+  const workspaceTerminalBackground = usePaneTerminalBackgrounds
+    ? null
+    : (
+        focusedTerminalPane?.connection?.terminalBackground ??
+        firstTerminalPane?.connection?.terminalBackground ??
+        tab.connection?.terminalBackground ??
+        null
+      );
   const sftpDialogTab = useMemo<WorkspaceTab | null>(() => {
     if (!sftpDialogConnection) {
       return null;
@@ -207,6 +222,7 @@ export function TerminalWorkspace({
         .filter(Boolean)
         .join(" ")}
     >
+      <TerminalBackgroundLayer active={isActive} background={workspaceTerminalBackground} />
       <div className="terminal-grid">
         {layout ? (
           <TerminalLayoutView
@@ -219,6 +235,7 @@ export function TerminalWorkspace({
             canCloseSinglePane={canCloseSinglePane}
             onFocusPane={(paneId) => setFocusedPane(tab.id, paneId)}
             canSplit={canSplit}
+            usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
             onFontChange={handleFontChange}
             onOpenSftp={(connection) => setSftpDialogConnection(connection)}
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
@@ -272,6 +289,7 @@ function TerminalLayoutView({
   canCloseSinglePane,
   onFocusPane,
   canSplit,
+  usePaneTerminalBackgrounds,
   onFontChange,
   onOpenSftp,
   onSaveBuffer,
@@ -289,6 +307,7 @@ function TerminalLayoutView({
   canCloseSinglePane: boolean;
   onFocusPane: (paneId: string) => void;
   canSplit: boolean;
+  usePaneTerminalBackgrounds: boolean;
   onFontChange: (delta: number | "reset") => void;
   onOpenSftp: (connection: Connection) => void;
   onSaveBuffer: (paneId: string) => void;
@@ -324,6 +343,7 @@ function TerminalLayoutView({
             canSplit={canSplit}
             canClosePane={panes.length > 1 || canCloseSinglePane}
             onFontChange={onFontChange}
+            usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
             onOpenSftp={onOpenSftp}
             onSaveBuffer={onSaveBuffer}
             showSftpButton={showSftpButton}
@@ -366,6 +386,7 @@ function TerminalLayoutView({
           canCloseSinglePane={canCloseSinglePane}
           onFocusPane={onFocusPane}
           canSplit={canSplit}
+          usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
           onFontChange={onFontChange}
           onOpenSftp={onOpenSftp}
           onSaveBuffer={onSaveBuffer}
@@ -1101,6 +1122,7 @@ function TerminalPaneView({
   canSplit,
   canClosePane,
   onFontChange,
+  usePaneTerminalBackgrounds,
   onOpenSftp,
   onSaveBuffer,
   showSftpButton,
@@ -1116,6 +1138,7 @@ function TerminalPaneView({
   canSplit: boolean;
   canClosePane: boolean;
   onFontChange: (delta: number | "reset") => void;
+  usePaneTerminalBackgrounds: boolean;
   onOpenSftp: (connection: Connection) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
@@ -1177,10 +1200,13 @@ function TerminalPaneView({
   const closePane = useWorkspaceStore((state) => state.closePane);
   const updatePaneCwd = useWorkspaceStore((state) => state.updatePaneCwd);
   const updateOpenConnectionTerminalAppearance = useWorkspaceStore((state) => state.updateOpenConnectionTerminalAppearance);
+  const updateOpenTerminalPaneBackground = useWorkspaceStore((state) => state.updateOpenTerminalPaneBackground);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const { t } = useTranslation();
   const terminalOpacity = pane.connection?.terminalOpacity ?? 95;
-  const terminalBackground = pane.connection?.terminalBackground ?? null;
+  const terminalBackground = usePaneTerminalBackgrounds
+    ? (pane.terminalBackground ?? pane.connection?.terminalBackground ?? null)
+    : (pane.connection?.terminalBackground ?? null);
 
   useEffect(() => {
     return () => {
@@ -1751,6 +1777,10 @@ function TerminalPaneView({
   }
 
   function handleBackgroundChange(nextBackground: typeof terminalBackground) {
+    if (usePaneTerminalBackgrounds) {
+      updateOpenTerminalPaneBackground(tabId, pane.id, nextBackground);
+      return;
+    }
     void saveTerminalAppearance(terminalOpacity, nextBackground);
   }
 
@@ -2278,7 +2308,7 @@ function TerminalPaneView({
       ) : null}
       {pane.connection ? (
         <>
-          <TerminalBackgroundLayer active={isActive} background={terminalBackground} />
+          <TerminalBackgroundLayer active={isActive} background={usePaneTerminalBackgrounds ? terminalBackground : null} />
           <div
             className="xterm-host"
             data-tutorial-id="terminal.surface"

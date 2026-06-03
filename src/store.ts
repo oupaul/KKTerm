@@ -506,6 +506,7 @@ function buildPaneFromStoredLayoutPane(
     cwd: storedPane.cwd?.trim() || defaultTerminalCwdForConnection(connection),
     buffer: "",
     connection,
+    terminalBackground: storedPane.terminalBackground,
     tmuxSessionId: storedPane.tmuxSessionId,
   };
 }
@@ -888,6 +889,7 @@ interface WorkspaceState {
   ) => void;
   refreshOpenConnectionMetadata: (connection: Connection) => void;
   updateOpenConnectionTerminalAppearance: (connectionId: string, appearance: Pick<Connection, "terminalOpacity" | "terminalBackground">) => void;
+  updateOpenTerminalPaneBackground: (tabId: string, paneId: string, terminalBackground: TerminalPane["terminalBackground"]) => void;
   markConnectionSessionStarted: (connectionId: string) => void;
   markConnectionSessionEnded: (connectionId: string) => void;
   closeAllTabs: () => void;
@@ -2258,6 +2260,34 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   updateOpenConnectionTerminalAppearance: (connectionId, appearance) => {
     set((state) => ({
       tabs: state.tabs.map((tab) => updateTabTerminalAppearance(tab, connectionId, appearance)),
+    }));
+  },
+  updateOpenTerminalPaneBackground: (tabId, paneId, terminalBackground) => {
+    set((state) => ({
+      tabs: state.tabs.map((tab) => {
+        if (tab.id !== tabId || tab.kind !== "terminal") {
+          return tab;
+        }
+        let changed = false;
+        const panes = tab.panes.map((pane) => {
+          if (!isTerminalPane(pane) || pane.id !== paneId) {
+            return pane;
+          }
+          changed = true;
+          return { ...pane, terminalBackground };
+        });
+        if (!changed) {
+          return tab;
+        }
+        const nextTab = { ...tab, panes };
+        if (nextTab.connection) {
+          const layout = ensureLayout(nextTab.layout, nextTab.panes);
+          if (layout) {
+            persistLayout(nextTab.connection.id, serializeLayout(layout, nextTab.panes));
+          }
+        }
+        return nextTab;
+      }),
     }));
   },
   markConnectionSessionStarted: (connectionId) => {

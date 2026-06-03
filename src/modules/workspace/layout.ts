@@ -204,6 +204,7 @@ export function serializeLayout(
       connection,
       title: pane.title,
       cwd: "cwd" in pane ? pane.cwd : undefined,
+      terminalBackground: "terminalBackground" in pane ? pane.terminalBackground : undefined,
       tmuxSessionId: "tmuxSessionId" in pane ? pane.tmuxSessionId : undefined,
       url: pane.kind === "webview" ? pane.url : undefined,
       dataPartition: pane.kind === "webview" ? pane.dataPartition : undefined,

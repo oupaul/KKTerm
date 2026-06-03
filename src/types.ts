@@ -126,6 +126,7 @@ export interface TerminalPane {
   cwd: string;
   buffer: string;
   connection?: Connection;
+  terminalBackground?: DashboardBackground | null;
   tmuxSessionId?: string;
 }
 
@@ -189,6 +190,7 @@ export interface StoredLayoutPane {
   connection: Connection;
   title?: string;
   cwd?: string;
+  terminalBackground?: DashboardBackground | null;
   tmuxSessionId?: string;
   url?: string;
   dataPartition?: string;
@@ -202,6 +204,7 @@ export interface GeneralSettings {
   showConnectedConnectionsInRail: boolean;
   showAllConnectionsInTree: boolean;
   hideTopTabButtons: boolean;
+  separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
   installerCheckIntervalSeconds: number;
   pinnedConnectionIds: string[];

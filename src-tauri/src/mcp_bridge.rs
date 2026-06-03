@@ -173,18 +173,18 @@ pub fn start_if_enabled(
 
     #[cfg(target_os = "windows")]
     {
-        std::thread::Builder::new()
+        if let Err(error) = std::thread::Builder::new()
             .name("kkterm-mcp-bridge-startup".to_string())
             .spawn(move || {
                 start_windows_bridge(app, info_path, allow_all_dangerous);
             })
-            .unwrap_or_else(|error| {
-                crate::logging::mcp_debug(
-                    "bridge.startup_thread_failed",
-                    &json!({"error": error.to_string()}),
-                );
-                eprintln!("kkterm built-in MCP server: failed to spawn startup thread: {error}");
-            });
+        {
+            crate::logging::mcp_debug(
+                "bridge.startup_thread_failed",
+                &json!({"error": error.to_string()}),
+            );
+            eprintln!("kkterm built-in MCP server: failed to spawn startup thread: {error}");
+        }
     }
 }
 

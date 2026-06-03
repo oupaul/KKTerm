@@ -60,9 +60,9 @@ Font family, default size, ligature settings, and cursor style are configured gl
 The Pane hamburger menu (`terminal.actions`) includes per-Connection appearance controls for local, SSH, WSL/PowerShell, Telnet, and other xterm-backed terminal Connections:
 
 - `terminal.opacity` opens a slider labelled by `terminal.opacityValue`. The default opacity is 95%, so a custom background or the terminal's default Pane backdrop can subtly show through while text stays readable.
-- `terminal.background` opens the same style of background picker used by Dashboard Views. It reuses the Dashboard background modes, media picker, fit, and dim labels, and `terminal.backgroundDefaultHint` describes returning to the default terminal background.
+- `terminal.background` opens the same shared background picker used by Dashboard Views. It reuses the Dashboard background modes, shared background picker datasource, media picker, fit, dim labels, and dynamic-background registry, and `terminal.backgroundDefaultHint` describes returning to the default terminal background.
 
-Opacity and background are saved on the durable Connection record and are restored when that Connection opens again. Save failures are reported through the Status Bar with `terminal.appearanceSaveFailed`.
+Opacity and the default shared background are saved on the durable Connection record and are restored when that Connection opens again. By default, one background is painted once behind the terminal workspace content area for the active Connection Tab, so split terminal Panes share a continuous backdrop. In Settings > Workspace, `settings.separateSplitTerminalBackgrounds` enables per-Pane terminal backgrounds for split layouts; single-terminal Tabs behave the same as the default shared mode. Per-Pane terminal backgrounds are stored with the saved terminal layout and are restored with that layout after app launch. Save failures are reported through the Status Bar with `terminal.appearanceSaveFailed`.
 
 ## Quick Command Bar
 

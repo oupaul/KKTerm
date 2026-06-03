@@ -26,6 +26,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   showConnectedConnectionsInRail: true,
   showAllConnectionsInTree: false,
   hideTopTabButtons: false,
+  separateSplitTerminalBackgrounds: false,
   showInstallerOnRail: true,
   installerCheckIntervalSeconds: 86400,
   pinnedConnectionIds: [],

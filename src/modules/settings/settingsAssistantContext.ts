@@ -139,6 +139,10 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.hideTopTabButtons",
         description: "Enable Child Connection Tabs: hides the top Tab Strip and shows saved Child Connection Tabs under their parent Connections in the Connection Tree.",
       },
+      {
+        key: "settings.separateSplitTerminalBackgrounds",
+        description: "Allow split terminal Panes to keep separate backgrounds instead of sharing one terminal workspace background.",
+      },
     ],
   },
   "installer-settings": {

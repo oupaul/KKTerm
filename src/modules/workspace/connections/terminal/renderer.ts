@@ -441,6 +441,7 @@ function terminalBackgroundColor(opacity: number) {
 function terminalOptionsFor(settings: TerminalSettings, backgroundOpacity: number): ITerminalOptions {
   return {
     altClickMovesCursor: false,
+    allowTransparency: true,
     convertEol: false,
     customGlyphs: true,
     cursorBlink: true,

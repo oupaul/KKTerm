@@ -15,6 +15,7 @@ export function WorkspaceSettings() {
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
   const hasChanges =
     draft.hideTopTabButtons !== generalSettings.hideTopTabButtons ||
+    draft.separateSplitTerminalBackgrounds !== generalSettings.separateSplitTerminalBackgrounds ||
     draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail;
 
   useEffect(() => {
@@ -84,6 +85,24 @@ export function WorkspaceSettings() {
             <span>
               <strong>{t("settings.hideTopTabButtons")}</strong>
               <small>{t("settings.hideTopTabButtonsDesc")}</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.terminalBackgrounds")}</legend>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.separateSplitTerminalBackgrounds}
+              onChange={(checked) =>
+                setDraft((state) => ({ ...state, separateSplitTerminalBackgrounds: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.separateSplitTerminalBackgrounds")}</strong>
+              <small>{t("settings.separateSplitTerminalBackgroundsDesc")}</small>
             </span>
           </label>
         </div>
