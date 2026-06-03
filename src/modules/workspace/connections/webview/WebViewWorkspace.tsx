@@ -134,6 +134,10 @@ const CREDENTIAL_TITLE_PREFIX = "__KKTERM_URL_CREDENTIAL__";
 const EXTERNAL_LINK_TITLE_PREFIX = "__KKTERM_URL_EXTERNAL_LINK__";
 const AUTO_REFRESH_INTERVALS_SECONDS = [0, 5, 15, 30, 60, 120] as const;
 const WEBVIEW_PRE_CAPTURE_INTERVAL_MS = 1200;
+// A speculative pre-capture is only a faithful stand-in for the live surface for a short
+// window. Beyond this, fall back to capturing on-open so an unrelated overlay (e.g. a
+// connection dialog) never parks the WebView behind a stale frame from an idle hover.
+const WEBVIEW_PRE_CAPTURE_MAX_AGE_MS = 1500;
 type AutoRefreshIntervalSeconds = (typeof AUTO_REFRESH_INTERVALS_SECONDS)[number];
 
 function createCredentialCaptureNonce() {
@@ -190,6 +194,7 @@ export function WebViewWorkspace({
   const suppressionCaptureInFlightRef = useRef(false);
   const preCaptureInFlightRef = useRef(false);
   const preCachedSnapshotRef = useRef<AssistantScreenshot | null>(null);
+  const preCachedAtRef = useRef(0);
   const preCaptureLastRef = useRef(0);
   const visibilityRef = useRef({ isActive, suppressed: false });
   const pendingCaptureNonceRef = useRef<string | null>(null);
@@ -289,6 +294,7 @@ export function WebViewWorkspace({
       .then((snapshot) => {
         if (snapshot) {
           preCachedSnapshotRef.current = snapshot;
+          preCachedAtRef.current = Date.now();
         }
       })
       .catch(() => {
@@ -475,10 +481,12 @@ export function WebViewWorkspace({
       const cached = preCachedSnapshotRef.current;
       if (cached) {
         preCachedSnapshotRef.current = null;
-        if (documentHasWebviewBlockingOverlay(placeholderRef.current)) {
+        const fresh = Date.now() - preCachedAtRef.current < WEBVIEW_PRE_CAPTURE_MAX_AGE_MS;
+        if (fresh && documentHasWebviewBlockingOverlay(placeholderRef.current)) {
           suppressWebviewWithSnapshot(cached);
+          return;
         }
-        return;
+        // Stale cache: fall through to capture the live surface on-open.
       }
       suppressionCaptureInFlightRef.current = true;
       void captureVisibleWebviewSnapshot()

@@ -118,11 +118,15 @@
 }
 
 .webview-placeholder-message {
+  position: relative;
+  z-index: 1;
   padding: 24px;
   text-align: center;
 }
 
 .webview-placeholder-error {
+  position: relative;
+  z-index: 1;
   justify-self: stretch;
   padding: 12px;
 }
