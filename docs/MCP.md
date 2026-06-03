@@ -59,7 +59,9 @@ Module namespaces in this build:
 - **Bridge descriptor file:** `%APPDATA%\com.kkterm.app\mcp-bridge.json`.
   Written when KKTerm.exe starts with the bridge enabled, removed on the
   next start before a new descriptor is written. Stale files cause clients
-  to fail with `app_not_running`.
+  to fail with `app_not_running`. On Windows, KKTerm removes inherited ACLs
+  and grants only the current user SID full control before publishing the
+  descriptor; if that hardening fails, the bridge does not start.
 - **Auth:** the first framed line `kkterm-cli` sends on the pipe is the
   bearer token from the descriptor file. KKTerm.exe responds with
   `{"ok":true}` on success and closes the connection on mismatch.

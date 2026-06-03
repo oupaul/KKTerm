@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use tauri::AppHandle;
 
 #[cfg(target_os = "windows")]
@@ -62,9 +62,70 @@ fn write_bridge_info(path: &Path, info: &BridgeInfo) -> std::io::Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
     }
+    #[cfg(target_os = "windows")]
+    restrict_file_to_current_user(path)?;
     Ok(())
+}
+
+/// Tighten the DACL on the bridge-info file so only the current Windows user
+/// can read or write it. Uses `icacls` with the user's SID to avoid ambiguous
+/// local/domain account names. Failing closed prevents publishing a readable
+/// bridge token when Windows ACL hardening is unavailable.
+#[cfg(target_os = "windows")]
+fn restrict_file_to_current_user(path: &Path) -> std::io::Result<()> {
+    let sid = current_windows_user_sid()?;
+    let grant_arg = format!("*{sid}:(F)");
+    let output = std::process::Command::new("icacls")
+        .arg(path)
+        .args(["/inheritance:r", "/grant:r", &grant_arg])
+        .output()?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!(
+                "icacls failed while restricting MCP bridge descriptor: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+        ))
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn current_windows_user_sid() -> std::io::Result<String> {
+    let output = std::process::Command::new("whoami")
+        .args(["/user", "/fo", "csv", "/nh"])
+        .output()?;
+    if !output.status.success() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!(
+                "whoami failed while resolving current user SID: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+        ));
+    }
+    let line = String::from_utf8_lossy(&output.stdout);
+    parse_windows_user_sid_output(&line).map(str::to_string)
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn parse_windows_user_sid_output(output: &str) -> std::io::Result<&str> {
+    output
+        .trim()
+        .rsplit(',')
+        .next()
+        .map(|value| value.trim().trim_matches('"'))
+        .filter(|value| value.starts_with("S-1-"))
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "whoami did not return a usable current user SID",
+            )
+        })
 }
 
 fn remove_bridge_info(path: &Path) {
@@ -1108,6 +1169,19 @@ mod tests {
             args,
             json!({"paneId": "pane-1", "text": "hello\r", "pressEnter": false})
         );
+    }
+
+    #[test]
+    fn parse_windows_user_sid_output_reads_csv_sid() {
+        let sid =
+            parse_windows_user_sid_output("\"DESKTOP-1\\alice\",\"S-1-5-21-111-222-333-1001\"\r\n")
+                .unwrap();
+        assert_eq!(sid, "S-1-5-21-111-222-333-1001");
+    }
+
+    #[test]
+    fn parse_windows_user_sid_output_rejects_invalid_data() {
+        assert!(parse_windows_user_sid_output("User Name,SID\r\n").is_err());
     }
 
     #[test]
