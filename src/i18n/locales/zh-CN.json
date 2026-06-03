@@ -549,7 +549,12 @@
     "resizeConnections": "调整连接列宽度",
     "settings": "设置",
     "trayDontSleep": "禁止休眠",
+    "trayWallpaper": "壁纸",
+    "trayWallpaperSet": "设置",
+    "trayWallpaperClear": "清除",
     "trayExit": "退出",
+    "wallpaperPickerTitle": "设置壁纸",
+    "wallpaperPickerDefaultHint": "清除动态壁纸，并交还给 Windows 处理壁纸。",
     "manual": "手册",
     "dontSleepStatusEnabled": "防止睡眠已启用",
     "titlebar": {

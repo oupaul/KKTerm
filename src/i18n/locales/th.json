@@ -549,7 +549,12 @@
     "resizeConnections": "ปรับขนาดคอลัมน์การเชื่อมต่อ",
     "settings": "การตั้งค่า",
     "trayDontSleep": "ไม่พักเครื่อง",
+    "trayWallpaper": "วอลเปเปอร์",
+    "trayWallpaperSet": "ตั้งค่า",
+    "trayWallpaperClear": "ล้าง",
     "trayExit": "ออก",
+    "wallpaperPickerTitle": "ตั้งค่าวอลเปเปอร์",
+    "wallpaperPickerDefaultHint": "ล้างวอลเปเปอร์สดและกลับไปให้ Windows จัดการวอลเปเปอร์",
     "manual": "คู่มือ",
     "dontSleepStatusEnabled": "เปิดใช้งานไม่ให้พักเครื่อง",
     "titlebar": {

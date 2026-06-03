@@ -40,6 +40,8 @@ export const defaultGeneralSettings: GeneralSettings = {
   statusBarMonitorIntervalSeconds: 5,
   advancedDebuggingEnabled: false,
   rdpWebviewStability: false,
+  desktopWallpaperEnabled: false,
+  desktopWallpaperBackground: null,
   lastBackupAt: null,
 };
 

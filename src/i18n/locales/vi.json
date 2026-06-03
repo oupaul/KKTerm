@@ -549,7 +549,12 @@
     "resizeConnections": "Đổi kích thước cột Kết nối",
     "settings": "Settings",
     "trayDontSleep": "Không ngủ",
+    "trayWallpaper": "Hình nền",
+    "trayWallpaperSet": "Đặt",
+    "trayWallpaperClear": "Xóa",
     "trayExit": "Thoát",
+    "wallpaperPickerTitle": "Đặt hình nền",
+    "wallpaperPickerDefaultHint": "Xóa hình nền động và trả lại việc xử lý hình nền cho Windows.",
     "manual": "Hướng dẫn",
     "dontSleepStatusEnabled": "Đã bật Không ngủ",
     "titlebar": {

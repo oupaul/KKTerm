@@ -549,7 +549,12 @@
     "resizeConnections": "Redimensionar coluna de Conexões",
     "settings": "Configurações",
     "trayDontSleep": "Não suspender",
+    "trayWallpaper": "Papel de parede",
+    "trayWallpaperSet": "Definir",
+    "trayWallpaperClear": "Limpar",
     "trayExit": "Sair",
+    "wallpaperPickerTitle": "Definir papel de parede",
+    "wallpaperPickerDefaultHint": "Limpa o papel de parede animado e volta para o gerenciamento de papel de parede do Windows.",
     "manual": "Manual",
     "dontSleepStatusEnabled": "Não suspender ativado",
     "titlebar": {

@@ -10,7 +10,6 @@ mod dashboard_ids;
 mod dashboard_storage;
 mod dashboard_validation;
 mod debug_heartbeat;
-#[cfg(debug_assertions)]
 mod desktop_wallpaper;
 mod diagnostics;
 mod favicon;
@@ -48,7 +47,7 @@ mod windows_local_pty;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
 
 #[derive(Deserialize)]
@@ -703,6 +702,35 @@ fn update_general_settings(
         eprintln!("failed to apply saved Don't Sleep setting: {error}");
     }
     webviews.set_clipboard_read_allowed(saved.allow_clipboard_read());
+    Ok(saved)
+}
+
+#[tauri::command]
+fn set_desktop_wallpaper(
+    app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
+    background: dashboard_storage::DashboardBackground,
+) -> Result<storage::GeneralSettings, String> {
+    background
+        .validate()
+        .map_err(|error| format!("desktop wallpaper background is invalid: {error:?}"))?;
+    let saved = storage.update_desktop_wallpaper_settings(true, Some(background))?;
+    if let Err(error) = desktop_wallpaper::set_wallpaper(&app) {
+        let _ = storage.update_desktop_wallpaper_enabled(false);
+        return Err(error);
+    }
+    let _ = app.emit(desktop_wallpaper::WALLPAPER_SETTINGS_EVENT, saved.clone());
+    Ok(saved)
+}
+
+#[tauri::command]
+fn clear_desktop_wallpaper(
+    app: tauri::AppHandle,
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<storage::GeneralSettings, String> {
+    desktop_wallpaper::clear_wallpaper(&app)?;
+    let saved = storage.update_desktop_wallpaper_enabled(false)?;
+    let _ = app.emit(desktop_wallpaper::WALLPAPER_SETTINGS_EVENT, saved.clone());
     Ok(saved)
 }
 
@@ -2683,6 +2711,14 @@ pub fn run() {
             app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
             app.manage(installer::InstallerRuntime::new());
+            desktop_wallpaper::start_pause_monitor(app.handle().clone());
+            if general_settings.desktop_wallpaper_enabled()
+                && general_settings.desktop_wallpaper_background().is_some()
+            {
+                if let Err(error) = desktop_wallpaper::set_wallpaper(app.handle()) {
+                    eprintln!("failed to restore desktop wallpaper: {error}");
+                }
+            }
             mcp_bridge::start_if_enabled(
                 app.handle().clone(),
                 mcp_bridge_dir,
@@ -2770,6 +2806,8 @@ pub fn run() {
             clear_url_data_partition,
             get_general_settings,
             update_general_settings,
+            set_desktop_wallpaper,
+            clear_desktop_wallpaper,
             get_app_launcher_settings,
             update_app_launcher_settings,
             get_dashboard_settings,

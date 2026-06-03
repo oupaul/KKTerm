@@ -1144,6 +1144,9 @@ export function ConnectionSidebar({
   useEffect(() => {
     void pushTrayMenu(recentConnections, {
       dontSleep: t("app.trayDontSleep"),
+      wallpaper: t("app.trayWallpaper"),
+      wallpaperSet: t("app.trayWallpaperSet"),
+      wallpaperClear: t("app.trayWallpaperClear"),
       exit: t("app.trayExit"),
     });
     // recentConnections is intentionally read fresh; we only resync when the

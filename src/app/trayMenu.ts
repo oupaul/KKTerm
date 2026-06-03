@@ -10,7 +10,13 @@ const TRAY_RECENT_LIMIT = 3;
  */
 export async function pushTrayMenu(
   recentConnections: Connection[],
-  labels: { dontSleep: string; exit: string },
+  labels: {
+    dontSleep: string;
+    wallpaper: string;
+    wallpaperSet: string;
+    wallpaperClear: string;
+    exit: string;
+  },
 ) {
   if (!isTauriRuntime()) {
     return;
@@ -23,6 +29,9 @@ export async function pushTrayMenu(
           .slice(0, TRAY_RECENT_LIMIT)
           .map((connection) => ({ id: connection.id, label: connection.name })),
         dontSleepLabel: labels.dontSleep,
+        wallpaperLabel: labels.wallpaper,
+        wallpaperSetLabel: labels.wallpaperSet,
+        wallpaperClearLabel: labels.wallpaperClear,
         exitLabel: labels.exit,
       },
     });

@@ -549,7 +549,12 @@
     "resizeConnections": "Ubah ukuran kolom Koneksi",
     "settings": "Pengaturan",
     "trayDontSleep": "Jangan Tidur",
+    "trayWallpaper": "Wallpaper",
+    "trayWallpaperSet": "Atur",
+    "trayWallpaperClear": "Hapus",
     "trayExit": "Keluar",
+    "wallpaperPickerTitle": "Atur Wallpaper",
+    "wallpaperPickerDefaultHint": "Hapus wallpaper live dan kembalikan penanganan wallpaper ke Windows.",
     "manual": "Panduan",
     "dontSleepStatusEnabled": "Jangan Tidur Aktif",
     "titlebar": {

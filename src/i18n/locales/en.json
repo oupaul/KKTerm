@@ -19,7 +19,12 @@
     "openConnectedConnection": "Open {{name}}",
     "openPinnedConnection": "Open pinned Connection {{name}}",
     "trayDontSleep": "Don't Sleep",
+    "trayWallpaper": "Wallpaper",
+    "trayWallpaperSet": "Set",
+    "trayWallpaperClear": "Clear",
     "trayExit": "Exit",
+    "wallpaperPickerTitle": "Set Wallpaper",
+    "wallpaperPickerDefaultHint": "Clear the live wallpaper and return to Windows wallpaper handling.",
     "titlebar": {
       "minimize": "Minimize",
       "maximize": "Maximize",

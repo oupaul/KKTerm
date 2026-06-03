@@ -549,7 +549,12 @@
     "resizeConnections": "Redimensionner la colonne Connexions",
     "settings": "Paramètres",
     "trayDontSleep": "Ne pas mettre en veille",
+    "trayWallpaper": "Fond d’écran",
+    "trayWallpaperSet": "Définir",
+    "trayWallpaperClear": "Effacer",
     "trayExit": "Quitter",
+    "wallpaperPickerTitle": "Définir le fond d’écran",
+    "wallpaperPickerDefaultHint": "Efface le fond d’écran animé et revient à la gestion du fond d’écran par Windows.",
     "manual": "Manuel",
     "dontSleepStatusEnabled": "Mode Ne pas dormir activé",
     "titlebar": {

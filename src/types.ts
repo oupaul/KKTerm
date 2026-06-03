@@ -218,6 +218,8 @@ export interface GeneralSettings {
   statusBarMonitorIntervalSeconds: number;
   advancedDebuggingEnabled: boolean;
   rdpWebviewStability: boolean;
+  desktopWallpaperEnabled: boolean;
+  desktopWallpaperBackground?: DashboardBackground | null;
   lastBackupAt?: string | null;
 }
 

@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.trayExit`
-- Topics: first launch, what KKTerm is, system tray, "Don't Sleep" mode, primary navigation
-- Synonyms users may type: "open the app", "left bar icons", "tray icon", "keep awake", "prevent sleep"
+- Keys: `app.connections`, `app.settings`, `app.aiAssistant`, `app.dontSleep`, `app.trayExit`, `app.trayWallpaper`
+- Topics: first launch, what KKTerm is, system tray, "Don't Sleep" mode, desktop wallpaper, primary navigation
+- Synonyms users may type: "open the app", "left bar icons", "tray icon", "keep awake", "prevent sleep", "wallpaper", "live wallpaper"
 
 ## What KKTerm is
 
@@ -48,10 +48,11 @@ Hover tooltips on rail icons are rendered by the shared `RailTooltip` (`src/app/
 
 ## System tray
 
-KKTerm registers a Windows tray icon with recent Connections plus two controls:
+KKTerm registers a Windows tray icon with recent Connections plus app controls:
 
 - Recent Connections — selecting a Connection restores the window, switches to the Workspace Module, and opens or focuses that Connection's Tab.
 - `app.trayDontSleep` — toggles the same state as the in-app "Don't Sleep" mode (see below).
+- `app.trayWallpaper` — `app.trayWallpaperSet` opens the shared background picker for the Windows desktop wallpaper host; `app.trayWallpaperClear` destroys the wallpaper window and returns wallpaper handling to Windows.
 - `app.trayExit` — exits the app unconditionally. This path bypasses the close-to-tray diversion.
 
 ## Closing the window

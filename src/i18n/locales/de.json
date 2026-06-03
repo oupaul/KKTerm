@@ -549,7 +549,12 @@
     "resizeConnections": "Verbindungen-Spalte skalieren",
     "settings": "Einstellungen",
     "trayDontSleep": "Nicht schlafen",
+    "trayWallpaper": "Hintergrundbild",
+    "trayWallpaperSet": "Festlegen",
+    "trayWallpaperClear": "Löschen",
     "trayExit": "Beenden",
+    "wallpaperPickerTitle": "Hintergrundbild festlegen",
+    "wallpaperPickerDefaultHint": "Live-Hintergrundbild löschen und wieder die Windows-Hintergrundverwaltung verwenden.",
     "manual": "Handbuch",
     "dontSleepStatusEnabled": "Nicht schlafen aktiviert",
     "titlebar": {

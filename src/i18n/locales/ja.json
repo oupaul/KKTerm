@@ -549,7 +549,12 @@
     "resizeConnections": "接続列のサイズを変更",
     "settings": "設定",
     "trayDontSleep": "スリープしない",
+    "trayWallpaper": "壁紙",
+    "trayWallpaperSet": "設定",
+    "trayWallpaperClear": "クリア",
     "trayExit": "終了",
+    "wallpaperPickerTitle": "壁紙を設定",
+    "wallpaperPickerDefaultHint": "ライブ壁紙をクリアして、Windows の壁紙管理に戻します。",
     "manual": "マニュアル",
     "dontSleepStatusEnabled": "スリープ防止が有効",
     "titlebar": {

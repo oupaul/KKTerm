@@ -28,6 +28,8 @@ The main app window close path stays native and free of frontend hooks. Do not a
 
 The single sanctioned exception is the minimize-to-tray diversion in `app_tray.rs`: a native, synchronous Rust-side `WindowEvent::CloseRequested` arm inside the existing `on_window_event` handler. It calls `api.prevent_close()` and hides the window **only when minimize-to-tray is enabled**; when disabled the close request is untouched and quits natively. The handler does no async work, and the tray "Exit" item (`app.exit(0)`) bypasses `CloseRequested` so a guaranteed quit path always exists.
 
+The tray `app.trayWallpaper` submenu is a Windows desktop integration surface, not a Dashboard Module. `app.trayWallpaperSet` restores the main window and opens the app-owned `DesktopWallpaperPicker`, which reuses `SharedBackgroundPopover` so Dashboard Views, terminal Connection backgrounds, and desktop wallpaper share the same presets, media import path, fit/dim controls, and dynamic background registry. `app.trayWallpaperClear` destroys the WorkerW-hosted wallpaper WebView and persists `desktopWallpaperEnabled=false` while preserving the last selected `desktopWallpaperBackground` for the next Set action. The native host lives in `src-tauri/src/desktop_wallpaper.rs`; it creates a frameless WebView behind desktop icons via the Windows WorkerW/Progman path, overscans the virtual screen bounds to avoid edge leakage, restores persisted wallpaper state on app startup, and emits pause state when a foreground window is maximized or covers a monitor so animated/video backgrounds can stop rendering under fullscreen work.
+
 Automatic database backups follow the same rule: they run during startup or explicit Settings actions, never during app-window close. Backup files are KKTerm settings ZIPs with the same structure as manual exports, so Import Settings can restore them directly.
 
 ### Command Boundary
@@ -381,6 +383,8 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/app/app.css` — app shell, Activity Rail, rail tooltips, panel resize chrome, and Tutorial overlay styling.
 - `src/app/ActivityRail.tsx` — Activity Rail rendering, connected Connection shortcuts, pinned Connection actions, native rail Connection context menu, connected Connection drag ordering, and Don't Sleep control.
 - `src/app/RailTooltip.tsx` — shared app-owned Activity Rail tooltip surface, including the Windows native tooltip bridge that can draw over HWND-backed RDP ActiveX and WebView2 surfaces; use this instead of browser-native `title` tooltips for rail icon labels.
+- `src/app/DesktopWallpaperPicker.tsx` — app-owned tray-launched wallpaper picker. Reuses `SharedBackgroundPopover` and persists through the desktop wallpaper Tauri commands.
+- `src/app/WallpaperHost.tsx` — renderer for the hidden desktop wallpaper WebView. Loads persisted `desktopWallpaperBackground`, renders preset/media/dynamic backgrounds, and pauses dynamic/video motion from native pause events.
 - `src/app/workspaceChromeLayout.tsx` — global Workspace chrome panel widths/collapse state, panel resize handles, layout reset, and localStorage persistence for the Connection panel and AI Assistant Panel.
 - `src/app/appShellEffects.ts` — app-shell effects for frontend launch timing, host usage polling, global context-menu suppression, and app-shell CSS variables/color scheme.
 - `src/modules/workspace/connections/ConnectionSidebar.tsx` — connection tree orchestration: search, drag/drop, CRUD command handlers, folder rows, native Quick Connect/Add Connection/tree/Tab context menus, Connection dialog request assembly, and modal wiring.
@@ -417,6 +421,7 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/modules/dashboard/edit/CatalogOverlay.tsx` — "Add widget" modal with search, Built-in/AI Created source tabs, and thumbnail cards.
 - `src/modules/dashboard/edit/CustomizePopover.tsx` — per-instance editor: preset row, accent palette, icon picker, title input, collapsible Advanced section per kind.
 - `src/modules/dashboard/edit/SharedBackgroundPopover.tsx` — shared background picker datasource and UI for Dashboard Views and terminal Connection backgrounds. Keep background preset/dynamic/media/fit/dim additions here or in the registries it consumes so both surfaces show the same list.
+- `src-tauri/src/desktop_wallpaper.rs` — Windows WorkerW desktop wallpaper host, startup restore, edge-overscanned wallpaper window placement, Clear handling, and pause-state monitoring for maximized/fullscreen foreground windows.
 - `src/modules/dashboard/motion.tsx` — centralized motion wrappers for Dashboard surfaces; per the motion rule above.
 - `src/modules/workspace/connections/terminal/TerminalWorkspace.tsx` — terminal workspace, split layout view, pane host, tmux session tag/popover, terminal context menu, SSH tmux inspection helpers.
 - `src/modules/workspace/connections/terminal/renderer.ts` — renderer abstraction and xterm/WebGL renderer implementation.

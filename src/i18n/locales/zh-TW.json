@@ -549,7 +549,12 @@
     "resizeConnections": "調整連線欄寬度",
     "settings": "設定",
     "trayDontSleep": "禁止休眠",
+    "trayWallpaper": "桌布",
+    "trayWallpaperSet": "設定",
+    "trayWallpaperClear": "清除",
     "trayExit": "結束",
+    "wallpaperPickerTitle": "設定桌布",
+    "wallpaperPickerDefaultHint": "清除動態桌布，並交還給 Windows 處理桌布。",
     "manual": "手冊",
     "dontSleepStatusEnabled": "防止睡眠已啟用",
     "titlebar": {

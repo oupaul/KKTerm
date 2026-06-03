@@ -33,3 +33,68 @@
   bottom: 0;
   left: 0;
 }
+
+.kk-wallpaper-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.kk-wallpaper-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--kk-wallpaper-dim-color, transparent);
+}
+
+.kk-wallpaper-media video {
+  width: 100%;
+  height: 100%;
+}
+
+.desktop-wallpaper-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(6, 8, 12, 0.42);
+}
+
+.desktop-wallpaper-picker-panel {
+  position: relative;
+  width: min(680px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+}
+
+.desktop-wallpaper-picker-popover {
+  position: static;
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.desktop-wallpaper-picker-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.desktop-wallpaper-picker-error {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-danger, #f87171) 48%, transparent);
+  border-radius: 6px;
+  color: var(--color-danger, #f87171);
+  background: color-mix(in srgb, var(--color-danger, #f87171) 12%, transparent);
+}

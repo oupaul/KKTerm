@@ -549,7 +549,12 @@
     "resizeConnections": "연결 열 크기 조정",
     "settings": "설정",
     "trayDontSleep": "절전 해제",
+    "trayWallpaper": "배경 화면",
+    "trayWallpaperSet": "설정",
+    "trayWallpaperClear": "지우기",
     "trayExit": "종료",
+    "wallpaperPickerTitle": "배경 화면 설정",
+    "wallpaperPickerDefaultHint": "라이브 배경 화면을 지우고 Windows 배경 화면 관리로 되돌립니다.",
     "manual": "매뉴얼",
     "dontSleepStatusEnabled": "절전 방지 활성화됨",
     "titlebar": {

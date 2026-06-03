@@ -549,7 +549,12 @@
     "resizeConnections": "Ridimensiona colonna Connessioni",
     "settings": "Impostazioni",
     "trayDontSleep": "Non sospendere",
+    "trayWallpaper": "Sfondo",
+    "trayWallpaperSet": "Imposta",
+    "trayWallpaperClear": "Cancella",
     "trayExit": "Esci",
+    "wallpaperPickerTitle": "Imposta sfondo",
+    "wallpaperPickerDefaultHint": "Cancella lo sfondo animato e torna alla gestione dello sfondo di Windows.",
     "manual": "Manuale",
     "dontSleepStatusEnabled": "Non sospendere attivo",
     "titlebar": {

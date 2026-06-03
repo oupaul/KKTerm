@@ -5,6 +5,7 @@ import type { AssistantPageContext } from "./ai/AssistantPanel";
 import { ActivityRail } from "./app/ActivityRail";
 import type { ActivePage } from "./app/ActivityRail";
 import { AppUpdatePrompt } from "./app/AppUpdatePrompt";
+import { DesktopWallpaperPicker } from "./app/DesktopWallpaperPicker";
 import { TitleBar } from "./app/TitleBar";
 import {
   findTutorialTargetElement,
@@ -292,6 +293,7 @@ function App() {
         />
       ) : null}
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />
+      <DesktopWallpaperPicker key="desktop-wallpaper-picker" />
       </div>
     </div>
   );

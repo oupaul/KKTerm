@@ -268,6 +268,10 @@ pub struct GeneralSettings {
     #[serde(default)]
     rdp_webview_stability: bool,
     #[serde(default)]
+    desktop_wallpaper_enabled: bool,
+    #[serde(default)]
+    desktop_wallpaper_background: Option<crate::dashboard_storage::DashboardBackground>,
+    #[serde(default)]
     last_backup_at: Option<String>,
 }
 
@@ -298,6 +302,16 @@ impl GeneralSettings {
 
     pub(crate) fn rdp_webview_stability(&self) -> bool {
         self.rdp_webview_stability
+    }
+
+    pub(crate) fn desktop_wallpaper_enabled(&self) -> bool {
+        self.desktop_wallpaper_enabled
+    }
+
+    pub(crate) fn desktop_wallpaper_background(
+        &self,
+    ) -> Option<crate::dashboard_storage::DashboardBackground> {
+        self.desktop_wallpaper_background.clone()
     }
 }
 
@@ -1347,6 +1361,26 @@ impl Storage {
     pub fn update_dont_sleep_enabled(&self, enabled: bool) -> Result<GeneralSettings, String> {
         let mut settings = self.general_settings()?;
         settings.dont_sleep_enabled = enabled;
+        self.update_general_settings(settings)
+    }
+
+    pub fn update_desktop_wallpaper_settings(
+        &self,
+        enabled: bool,
+        background: Option<crate::dashboard_storage::DashboardBackground>,
+    ) -> Result<GeneralSettings, String> {
+        let mut settings = self.general_settings()?;
+        settings.desktop_wallpaper_enabled = enabled;
+        settings.desktop_wallpaper_background = background;
+        self.update_general_settings(settings)
+    }
+
+    pub fn update_desktop_wallpaper_enabled(
+        &self,
+        enabled: bool,
+    ) -> Result<GeneralSettings, String> {
+        let mut settings = self.general_settings()?;
+        settings.desktop_wallpaper_enabled = enabled;
         self.update_general_settings(settings)
     }
 
@@ -4609,6 +4643,8 @@ fn default_general_settings() -> GeneralSettings {
         status_bar_monitor_interval_seconds: default_status_bar_monitor_interval_seconds(),
         advanced_debugging_enabled: false,
         rdp_webview_stability: false,
+        desktop_wallpaper_enabled: false,
+        desktop_wallpaper_background: None,
         last_backup_at: None,
     }
 }
@@ -5049,6 +5085,11 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
         3_600 | 86_400 | 604_800 | 2_592_000 => settings.installer_check_interval_seconds,
         _ => default_installer_check_interval_seconds(),
     };
+    if let Some(background) = &settings.desktop_wallpaper_background {
+        background
+            .validate()
+            .map_err(|error| format!("desktop wallpaper background is invalid: {error:?}"))?;
+    }
     Ok(settings)
 }
 
@@ -6796,6 +6837,8 @@ mod tests {
         assert_eq!(defaults.status_bar_monitor_interval_seconds, 5);
         assert!(!defaults.advanced_debugging_enabled);
         assert!(!defaults.rdp_webview_stability);
+        assert!(!defaults.desktop_wallpaper_enabled);
+        assert!(defaults.desktop_wallpaper_background.is_none());
         assert!(defaults.last_backup_at.is_none());
 
         let updated = storage
@@ -6824,6 +6867,12 @@ mod tests {
                 status_bar_monitor_interval_seconds: 30,
                 advanced_debugging_enabled: true,
                 rdp_webview_stability: true,
+                desktop_wallpaper_enabled: true,
+                desktop_wallpaper_background: Some(
+                    crate::dashboard_storage::DashboardBackground::Dynamic {
+                        dynamic: "aurora".to_string(),
+                    },
+                ),
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -6849,6 +6898,13 @@ mod tests {
         assert_eq!(updated.status_bar_monitor_interval_seconds, 30);
         assert!(updated.advanced_debugging_enabled);
         assert!(updated.rdp_webview_stability);
+        assert!(updated.desktop_wallpaper_enabled);
+        assert_eq!(
+            updated.desktop_wallpaper_background,
+            Some(crate::dashboard_storage::DashboardBackground::Dynamic {
+                dynamic: "aurora".to_string(),
+            })
+        );
 
         let reloaded = storage.general_settings().expect("general settings reload");
         assert!(!reloaded.auto_backup_enabled);
@@ -6869,7 +6925,41 @@ mod tests {
         assert_eq!(reloaded.status_bar_monitor_interval_seconds, 30);
         assert!(reloaded.advanced_debugging_enabled);
         assert!(reloaded.rdp_webview_stability);
+        assert!(reloaded.desktop_wallpaper_enabled);
+        assert_eq!(
+            reloaded.desktop_wallpaper_background,
+            Some(crate::dashboard_storage::DashboardBackground::Dynamic {
+                dynamic: "aurora".to_string(),
+            })
+        );
         assert!(reloaded.last_backup_at.is_none());
+    }
+
+    #[test]
+    fn desktop_wallpaper_settings_preserve_selection_when_disabled() {
+        let storage = Storage::open(temp_db_path("desktop-wallpaper-settings"))
+            .expect("storage opens");
+
+        let background = crate::dashboard_storage::DashboardBackground::Dynamic {
+            dynamic: "aurora".to_string(),
+        };
+        let enabled = storage
+            .update_desktop_wallpaper_settings(true, Some(background.clone()))
+            .expect("desktop wallpaper enables");
+        assert!(enabled.desktop_wallpaper_enabled);
+        assert_eq!(enabled.desktop_wallpaper_background, Some(background.clone()));
+
+        let disabled = storage
+            .update_desktop_wallpaper_enabled(false)
+            .expect("desktop wallpaper disables");
+        assert!(!disabled.desktop_wallpaper_enabled);
+        assert_eq!(disabled.desktop_wallpaper_background, Some(background.clone()));
+
+        let reloaded = storage
+            .general_settings()
+            .expect("desktop wallpaper settings reload");
+        assert!(!reloaded.desktop_wallpaper_enabled);
+        assert_eq!(reloaded.desktop_wallpaper_background, Some(background));
     }
 
     #[test]
@@ -7132,6 +7222,8 @@ mod tests {
                 status_bar_monitor_interval_seconds: 15,
                 advanced_debugging_enabled: true,
                 rdp_webview_stability: false,
+                desktop_wallpaper_enabled: false,
+                desktop_wallpaper_background: None,
                 last_backup_at: None,
             })
             .expect("general settings update");
@@ -7159,6 +7251,8 @@ mod tests {
                 status_bar_monitor_interval_seconds: 5,
                 advanced_debugging_enabled: false,
                 rdp_webview_stability: false,
+                desktop_wallpaper_enabled: false,
+                desktop_wallpaper_background: None,
                 last_backup_at: None,
             })
             .expect("general settings changes after export");
