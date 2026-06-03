@@ -831,6 +831,7 @@ export function AssistantPanel({
   onOpenDashboard,
   onOpenSettings,
   onOpenWorkspace,
+  onTogglePanel,
   onTutorialRequest,
   pageContext,
 }: {
@@ -838,6 +839,7 @@ export function AssistantPanel({
   onOpenDashboard: (viewId?: string) => void;
   onOpenSettings: () => void;
   onOpenWorkspace: () => void;
+  onTogglePanel?: () => void;
   onTutorialRequest: (
     request: TutorialHighlightRequest,
   ) => Promise<{ ok: boolean; error?: string }>;
@@ -2615,6 +2617,13 @@ export function AssistantPanel({
     insertTextIntoComposer(textarea, "");
   }
 
+  function handleTopbarDoubleClick(event: MouseEvent<HTMLElement>) {
+    if ((event.target as HTMLElement).closest("button, a, input, textarea, select")) {
+      return;
+    }
+    onTogglePanel?.();
+  }
+
   function selectedAssistantPanelText(panel: HTMLElement) {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
@@ -2879,7 +2888,7 @@ export function AssistantPanel({
       className="assistant-panel"
       onContextMenu={(event) => void handleAssistantPanelContextMenu(event)}
     >
-      <div className="assistant-topbar">
+      <div className="assistant-topbar" onDoubleClick={handleTopbarDoubleClick}>
         <h2>{t("ai.title")}</h2>
         <button
           aria-label={t("ai.refresh")}

@@ -168,8 +168,10 @@ function isTerminalWorkspacePane(pane: WorkspacePane): pane is WorkspacePane & {
 
 export function ConnectionSidebar({
   onExternalOpenConnection,
+  onTogglePanel,
 }: {
   onExternalOpenConnection?: () => void;
+  onTogglePanel?: () => void;
 }) {
   const { i18n, t } = useTranslation();
   const query = useWorkspaceStore((state) => state.query);
@@ -1938,9 +1940,16 @@ export function ConnectionSidebar({
 
   const dragDisabled = isTreeFiltered || showAllConnections || Boolean(inlineRenameTarget);
 
+  function handleHeaderDoubleClick(event: ReactMouseEvent<HTMLElement>) {
+    if ((event.target as HTMLElement).closest("button, a, input, textarea, select")) {
+      return;
+    }
+    onTogglePanel?.();
+  }
+
   return (
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
-      <div className="sidebar-header">
+      <div className="sidebar-header" onDoubleClick={handleHeaderDoubleClick}>
         <div>
           <h1>{t("connections.title")}</h1>
         </div>

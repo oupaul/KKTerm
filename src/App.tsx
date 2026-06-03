@@ -220,6 +220,7 @@ function App() {
       <div key="workspace-page" className="workspace-page" {...ariaHidden(activePage !== "workspace")}>
         <ConnectionSidebar
           onExternalOpenConnection={() => navigateToPage("workspace")}
+          onTogglePanel={toggleConnectionPanel}
         />
         {connectionPanelLayout.collapsed ? (
           <div className="connection-collapsed-separator" aria-hidden="true" />
@@ -252,6 +253,7 @@ function App() {
         onOpenDashboard={openDashboardPage}
         onOpenSettings={() => navigateToPage("settings")}
         onOpenWorkspace={() => navigateToPage("workspace")}
+        onTogglePanel={toggleAiPanel}
         onTutorialRequest={handleTutorialRequest}
         pageContext={assistantPageContext()}
       />

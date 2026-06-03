@@ -28,7 +28,7 @@ Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so i
 
 Resizable. Collapsed/expanded state persists across launches. See [03-connections.md](03-connections.md) for the tree itself. When `settings.hideTopTabButtons` is enabled, this panel also becomes the primary Tab navigator by showing Child Connection Tabs under parent Connections.
 
-- Toggle: custom title-bar `app.connections` icon or Workspace icon on the Activity Rail
+- Toggle: custom title-bar `app.connections` icon or Workspace icon on the Activity Rail. Double-clicking the panel title row, including the blank space beside `connections.title`, performs the same hide/show action.
 - Resize handle: `app.resizeConnections`
 
 Tutorial target: `app.connectionsResize`.
@@ -46,7 +46,7 @@ Accessibility label: `workspace.workspaceSurface`. Per-Connection-kind labels us
 Resizable, collapsible. State is app-wide — the same width and collapsed state apply across Workspace, Dashboard, Settings, and all Tabs.
 
 - Title: `ai.title`
-- Toggle: custom title-bar `app.aiAssistant` icon
+- Toggle: custom title-bar `app.aiAssistant` icon. Double-clicking the panel title row, including the blank space beside `ai.title`, performs the same hide/show action.
 - Resize handle: `app.resizeAiAssistant`
 
 Tutorial target: `app.aiAssistantResize`.
