@@ -52,7 +52,7 @@ KKTerm registers a Windows tray icon with recent Connections plus app controls:
 
 - Recent Connections — selecting a Connection restores the window, switches to the Workspace Module, and opens or focuses that Connection's Tab.
 - `app.trayDontSleep` — toggles the same state as the in-app "Don't Sleep" mode (see below).
-- `app.trayWallpaper` — `app.trayWallpaperSet` opens the shared background picker for the Windows desktop wallpaper host; `app.trayWallpaperClear` destroys the wallpaper window and returns wallpaper handling to Windows.
+- `app.trayWallpaper` — `app.trayWallpaperSet` opens a small wallpaper picker above the tray icon without restoring the main window; `app.trayWallpaperClear` destroys the wallpaper window and returns wallpaper handling to Windows.
 - `app.trayExit` — exits the app unconditionally. This path bypasses the close-to-tray diversion.
 
 ## Closing the window

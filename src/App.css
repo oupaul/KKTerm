@@ -56,23 +56,31 @@
   position: fixed;
   inset: 0;
   z-index: 9000;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(6, 8, 12, 0.42);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
 }
 
 .desktop-wallpaper-picker-panel {
   position: relative;
-  width: min(680px, calc(100vw - 48px));
-  max-height: calc(100vh - 48px);
+  width: 100vw;
+  height: 100vh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .desktop-wallpaper-picker-popover {
   position: static;
   width: 100%;
-  max-height: calc(100vh - 48px);
+  height: 100%;
+  box-sizing: border-box;
+  max-height: 100vh;
+  border-radius: 0;
   overflow: auto;
+  transform: none;
 }
 
 .desktop-wallpaper-picker-close {

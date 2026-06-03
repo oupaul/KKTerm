@@ -213,8 +213,12 @@ fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &str) {
     }
 
     if id == WALLPAPER_SET_ITEM_ID {
-        restore_main_window(app);
-        let _ = app.emit(crate::desktop_wallpaper::WALLPAPER_PICKER_EVENT, ());
+        if let Err(error) = crate::desktop_wallpaper::open_wallpaper_picker(
+            app,
+            wallpaper_picker_anchor(app),
+        ) {
+            eprintln!("failed to open wallpaper picker: {error}");
+        }
         return;
     }
 
@@ -229,6 +233,14 @@ fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &str) {
         restore_main_window(app);
         let _ = app.emit("kkterm://tray-open-connection", connection_id.to_string());
     }
+}
+
+fn wallpaper_picker_anchor<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Option<crate::desktop_wallpaper::WallpaperPickerAnchor> {
+    app.tray_by_id(TRAY_ID)
+        .and_then(|tray| tray.rect().ok().flatten())
+        .map(crate::desktop_wallpaper::wallpaper_picker_anchor_from_rect)
 }
 
 fn clear_desktop_wallpaper<R: tauri::Runtime>(

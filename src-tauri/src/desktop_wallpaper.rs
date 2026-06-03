@@ -1,16 +1,40 @@
 use std::sync::Once;
 
-pub(crate) const WALLPAPER_PICKER_EVENT: &str = "kkterm://desktop-wallpaper-pick";
 pub(crate) const WALLPAPER_SETTINGS_EVENT: &str = "kkterm://desktop-wallpaper-settings";
 pub(crate) const WALLPAPER_PAUSED_EVENT: &str = "kkterm://desktop-wallpaper-paused";
 
 static PAUSE_MONITOR: Once = Once::new();
 
+#[derive(Clone, Copy)]
+pub(crate) struct WallpaperPickerAnchor {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+pub(crate) fn wallpaper_picker_anchor_from_rect(rect: tauri::Rect) -> WallpaperPickerAnchor {
+    let position = match rect.position {
+        tauri::Position::Physical(position) => (position.x as f64, position.y as f64),
+        tauri::Position::Logical(position) => (position.x, position.y),
+    };
+    let size = match rect.size {
+        tauri::Size::Physical(size) => (size.width as f64, size.height as f64),
+        tauri::Size::Logical(size) => (size.width, size.height),
+    };
+    WallpaperPickerAnchor {
+        x: position.0,
+        y: position.1,
+        width: size.0,
+        height: size.1,
+    }
+}
+
 #[cfg(target_os = "windows")]
 mod platform {
     use std::{mem, thread, time::Duration};
 
-    use tauri::{Emitter, Manager, Runtime, WebviewWindowBuilder};
+    use tauri::{Emitter, LogicalPosition, Manager, Runtime, WebviewWindowBuilder};
     use windows::{
         Win32::{
             Foundation::{HWND, LPARAM, POINT, RECT, WPARAM},
@@ -20,20 +44,27 @@ mod platform {
             },
             UI::WindowsAndMessaging::{
                 EnumWindows, FindWindowExW, FindWindowW, GetClassNameW, GetForegroundWindow,
-                GetSystemMetrics, GetWindowRect, IsZoomed, SendMessageTimeoutW, SetParent,
-                SetWindowPos, ShowWindow, SMTO_NORMAL, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
-                SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_NOACTIVATE, SWP_NOZORDER,
-                SW_SHOWNOACTIVATE,
+                GetSystemMetrics, GetWindowLongPtrW, GetWindowRect, IsZoomed,
+                SendMessageTimeoutW, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+                GWL_EXSTYLE, SMTO_NORMAL, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+                SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_NOACTIVATE,
+                SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNOACTIVATE,
+                WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
             },
         },
         core::{w, BOOL, PCWSTR},
     };
 
-    use super::{WALLPAPER_PAUSED_EVENT, WALLPAPER_SETTINGS_EVENT};
+    use super::{WallpaperPickerAnchor, WALLPAPER_PAUSED_EVENT, WALLPAPER_SETTINGS_EVENT};
 
     const WALLPAPER_WINDOW_LABEL: &str = "kkterm-wallpaper";
     const WALLPAPER_ROUTE: &str = "index.html#/wallpaper";
+    const WALLPAPER_PICKER_WINDOW_LABEL: &str = "kkterm-wallpaper-picker";
+    const WALLPAPER_PICKER_ROUTE: &str = "index.html#/wallpaper-picker";
     const WALLPAPER_OVERSCAN_PX: i32 = 4;
+    const WALLPAPER_PICKER_WIDTH: f64 = 360.0;
+    const WALLPAPER_PICKER_HEIGHT: f64 = 540.0;
+    const WALLPAPER_PICKER_GAP: f64 = 8.0;
     const PAUSE_POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
     struct WorkerSearch {
@@ -59,6 +90,8 @@ mod platform {
         .resizable(false)
         .visible(false)
         .skip_taskbar(true)
+        .focusable(false)
+        .focused(false)
         .disable_drag_drop_handler()
         .build()
         .map_err(|error| format!("failed to create wallpaper window: {error}"))?;
@@ -67,9 +100,53 @@ mod platform {
             .hwnd()
             .map_err(|error| format!("failed to read wallpaper window handle: {error}"))?;
         let hwnd = HWND(handle.0);
+        configure_wallpaper_window(hwnd);
         attach_wallpaper_window(hwnd, bounds)?;
-        let _ = window.show();
         let _ = app.emit(WALLPAPER_SETTINGS_EVENT, ());
+        Ok(())
+    }
+
+    pub fn open_picker<R: Runtime>(
+        app: &tauri::AppHandle<R>,
+        anchor: Option<WallpaperPickerAnchor>,
+    ) -> Result<(), String> {
+        let (x, y) = picker_position(anchor);
+        if let Some(window) = app.get_webview_window(WALLPAPER_PICKER_WINDOW_LABEL) {
+            window
+                .set_position(LogicalPosition::new(x, y))
+                .map_err(|error| format!("failed to position wallpaper picker: {error}"))?;
+            window
+                .show()
+                .map_err(|error| format!("failed to show wallpaper picker: {error}"))?;
+            window
+                .set_focus()
+                .map_err(|error| format!("failed to focus wallpaper picker: {error}"))?;
+            return Ok(());
+        }
+
+        let window = WebviewWindowBuilder::new(
+            app,
+            WALLPAPER_PICKER_WINDOW_LABEL,
+            tauri::WebviewUrl::App(WALLPAPER_PICKER_ROUTE.into()),
+        )
+        .title("KKTerm Wallpaper")
+        .position(x, y)
+        .inner_size(WALLPAPER_PICKER_WIDTH, WALLPAPER_PICKER_HEIGHT)
+        .decorations(false)
+        .resizable(false)
+        .visible(false)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .focused(true)
+        .disable_drag_drop_handler()
+        .build()
+        .map_err(|error| format!("failed to create wallpaper picker: {error}"))?;
+        window
+            .show()
+            .map_err(|error| format!("failed to show wallpaper picker: {error}"))?;
+        window
+            .set_focus()
+            .map_err(|error| format!("failed to focus wallpaper picker: {error}"))?;
         Ok(())
     }
 
@@ -96,6 +173,24 @@ mod platform {
                 }
             }
         });
+    }
+
+    fn configure_wallpaper_window(hwnd: HWND) {
+        unsafe {
+            let current = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            let next = (current | WS_EX_NOACTIVATE.0 as isize | WS_EX_TOOLWINDOW.0 as isize)
+                & !(WS_EX_APPWINDOW.0 as isize);
+            let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next);
+            let _ = SetWindowPos(
+                hwnd,
+                None,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+            );
+        }
     }
 
     fn attach_wallpaper_window(hwnd: HWND, bounds: RECT) -> Result<(), String> {
@@ -133,7 +228,7 @@ mod platform {
                 points[0].y,
                 (points[1].x - points[0].x).max(1),
                 (points[1].y - points[0].y).max(1),
-                SWP_NOACTIVATE | SWP_NOZORDER,
+                SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER,
             )
             .map_err(|error| format!("failed to resize attached wallpaper window: {error}"))?;
             let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
@@ -188,6 +283,26 @@ mod platform {
         } else {
             Some(search.workerw)
         }
+    }
+
+    fn picker_position(anchor: Option<WallpaperPickerAnchor>) -> (f64, f64) {
+        let bounds = virtual_screen_bounds();
+        let min_x = bounds.left as f64 + WALLPAPER_PICKER_GAP;
+        let max_x = bounds.right as f64 - WALLPAPER_PICKER_WIDTH - WALLPAPER_PICKER_GAP;
+        let min_y = bounds.top as f64 + WALLPAPER_PICKER_GAP;
+        let max_y = bounds.bottom as f64 - WALLPAPER_PICKER_HEIGHT - WALLPAPER_PICKER_GAP;
+        let default_x = max_x.max(min_x);
+        let default_y = max_y.max(min_y);
+
+        let Some(anchor) = anchor else {
+            return (default_x, default_y);
+        };
+
+        let x = (anchor.x + anchor.width - WALLPAPER_PICKER_WIDTH).clamp(min_x, default_x);
+        let above = anchor.y - WALLPAPER_PICKER_HEIGHT - WALLPAPER_PICKER_GAP;
+        let below = anchor.y + anchor.height + WALLPAPER_PICKER_GAP;
+        let y = if above >= min_y { above } else { below }.clamp(min_y, default_y);
+        (x, y)
     }
 
     unsafe extern "system" fn enum_windows_for_workerw(hwnd: HWND, lparam: LPARAM) -> BOOL {
@@ -293,6 +408,15 @@ mod platform {
 
 #[cfg(not(target_os = "windows"))]
 mod platform {
+    use super::WallpaperPickerAnchor;
+
+    pub fn open_picker<R: tauri::Runtime>(
+        _app: &tauri::AppHandle<R>,
+        _anchor: Option<WallpaperPickerAnchor>,
+    ) -> Result<(), String> {
+        Err("desktop wallpaper picker is only available on Windows".to_string())
+    }
+
     pub fn set<R: tauri::Runtime>(_app: &tauri::AppHandle<R>) -> Result<(), String> {
         Err("desktop wallpaper hosting is only available on Windows".to_string())
     }
@@ -306,6 +430,13 @@ mod platform {
 
 pub(crate) fn set_wallpaper<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
     platform::set(app)
+}
+
+pub(crate) fn open_wallpaper_picker<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    anchor: Option<WallpaperPickerAnchor>,
+) -> Result<(), String> {
+    platform::open_picker(app, anchor)
 }
 
 pub(crate) fn clear_wallpaper<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
