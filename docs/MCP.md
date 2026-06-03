@@ -57,12 +57,12 @@ Module namespaces in this build:
   `\\.\pipe\kkterm-mcp-<token-prefix>`. The pipe name is published in the
   bridge descriptor file (see below) along with a per-launch bearer token.
 - **Bridge descriptor file:** `%APPDATA%\com.kkterm.app\mcp-bridge.json`.
-  Written when KKTerm.exe starts with the bridge enabled, removed on the
-  next start before a new descriptor is written. Stale files cause clients
-  to fail with `app_not_running`. On Windows, KKTerm uses `whoami` to resolve
-  the current user SID, then `icacls` to remove inherited ACLs and grant only
-  that SID full control before publishing the descriptor; if that hardening
-  fails, the bridge does not start.
+  Written in a background startup thread when KKTerm.exe starts with the bridge
+  enabled, removed on the next start before a new descriptor is written. Stale
+  files cause clients to fail with `app_not_running`. On Windows, KKTerm uses
+  hidden `whoami` and `icacls` child processes to resolve the current user SID,
+  remove inherited ACLs, and grant only that SID full control before publishing
+  the descriptor; if that hardening fails, the bridge does not start.
 - **Auth:** the first framed line `kkterm-cli` sends on the pipe is the
   bearer token from the descriptor file. KKTerm.exe responds with
   `{"ok":true}` on success and closes the connection on mismatch.
@@ -74,9 +74,11 @@ the descriptor ACL step: `whoami /user /fo csv /nh` provides the current
 process user SID, and `icacls <path> /inheritance:r /grant:r *<SID>:(F)`
 replaces inherited grants with full control for that SID only. `icacls.exe`
 and `whoami.exe` are present on supported Windows installations, this keeps
-the Rust code small, and the hardening runs once at bridge startup rather
-than on a hot path. The bridge fails closed and deletes the descriptor if
-these tools cannot be run or return an error.
+the Rust code small, and the hardening runs once in a background bridge startup
+thread rather than blocking the app startup path or a hot path. Both child
+processes are launched with `CREATE_NO_WINDOW` so they do not flash console
+windows. The bridge fails closed and deletes the descriptor if these tools
+cannot be run or return an error.
 
 A direct Win32 API implementation was considered for this hardening. It would
 avoid spawning `whoami` and `icacls`, but it requires enabling additional
