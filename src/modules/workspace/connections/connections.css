@@ -300,10 +300,34 @@
 
 .tree-list.drop-target,
 .tree-folder-row.drop-target,
-.connection-row.drop-target {
+.connection-row.drop-target,
+.tree-root-drop-target.drop-target {
   background: var(--accent-soft);
   outline: 1px solid #8db5ff;
   outline-offset: -1px;
+}
+
+.tree-root-drop-target {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+}
+
+.tree-root-drop-target.drop-target {
+  color: var(--accent);
+  border-color: #8db5ff;
 }
 
 .tree-folder-row.dragging-source,

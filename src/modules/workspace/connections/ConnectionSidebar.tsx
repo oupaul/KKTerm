@@ -1789,7 +1789,17 @@ export function ConnectionSidebar({
         const siblingParentFolderId = row.dataset.parentFolderId;
         const siblingFolderIndex = Number(row.dataset.folderIndex ?? 0);
         const bounds = row.getBoundingClientRect();
-        const insertAfter = pointerY > bounds.top + bounds.height / 2;
+        const offsetY = pointerY - bounds.top;
+        const edgeDropHeight = Math.min(8, bounds.height * 0.28);
+        if (offsetY >= edgeDropHeight && offsetY <= bounds.height - edgeDropHeight) {
+          return {
+            kind: "folder",
+            folderId,
+            targetIndex: Number(row.dataset.folderCount ?? 0),
+          } satisfies TreeDropTarget;
+        }
+
+        const insertAfter = offsetY > bounds.height / 2;
         if (siblingParentFolderId) {
           return {
             kind: "folder",
@@ -2194,6 +2204,17 @@ export function ConnectionSidebar({
                 onToggleFolder={isTreeFiltered ? undefined : handleToggleFolder}
               />
             ))}
+        {dragPreview ? (
+          <div
+            className={`tree-root-drop-target${dropTarget === "root" ? " drop-target" : ""}`}
+            data-connection-count={filteredTree.connections.length}
+            data-folder-count={filteredTree.folders.length}
+            data-tree-drop-kind="root"
+            role="presentation"
+          >
+            {t("connections.root")}
+          </div>
+        ) : null}
       </div>
 
       {treeContextMenu ? (

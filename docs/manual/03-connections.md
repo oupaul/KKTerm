@@ -94,7 +94,7 @@ For saved Connections, the properties/Add Connection header includes Connection 
 
 ## Drag and drop
 
-Drag a Connection onto a folder to move it; drag onto another Connection to reorder. Folders can be nested. Order is persisted.
+Drag a Connection onto a folder to move it; drag onto another Connection to reorder. Folders can be nested: when dragging a folder over another folder, drop on the center of the row to make it a subfolder, or drop near the row edge to reorder it beside that folder. While a tree drag is active, a temporary `connections.root` drop target appears so Connections or folders can be moved back to the root even when the visible tree has no blank space. Order is persisted.
 
 ## Status badges
 
