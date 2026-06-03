@@ -1178,6 +1178,11 @@
     "notesPlaceholder": "Viết ghi chú…",
     "notesAriaLabel": "Văn bản ghi chú",
     "notesToolbarLabel": "Giao diện ghi chú",
+    "notesPagesToolbarLabel": "Trang ghi chú",
+    "notesAddPage": "Thêm trang ghi chú",
+    "notesDeletePage": "Xóa trang ghi chú",
+    "notesPageIndicator": "Trang {{page}} / {{total}}",
+    "notesRotationDegrees": "Độ xoay",
     "notesBackgroundColor": "Màu nền",
     "notesFont": "Phông chữ",
     "notesColor": {

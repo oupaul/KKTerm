@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "จดบันทึก…",
     "notesAriaLabel": "ข้อความบันทึก",
     "notesToolbarLabel": "ลักษณะบันทึก",
+    "notesPagesToolbarLabel": "หน้าบันทึก",
+    "notesAddPage": "เพิ่มหน้าบันทึก",
+    "notesDeletePage": "ลบหน้าบันทึก",
+    "notesPageIndicator": "หน้า {{page}} จาก {{total}}",
+    "notesRotationDegrees": "องศาการหมุน",
     "notesBackgroundColor": "สีพื้นหลัง",
     "notesFont": "แบบอักษร",
     "notesColor": {

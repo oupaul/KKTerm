@@ -269,6 +269,11 @@
     "notesPlaceholder": "Jot a note…",
     "notesAriaLabel": "Note text",
     "notesToolbarLabel": "Note appearance",
+    "notesPagesToolbarLabel": "Note pages",
+    "notesAddPage": "Add note page",
+    "notesDeletePage": "Delete note page",
+    "notesPageIndicator": "Page {{page}} of {{total}}",
+    "notesRotationDegrees": "Rotation degrees",
     "notesBackgroundColor": "Background color",
     "notesFont": "Font",
     "notesColor": {

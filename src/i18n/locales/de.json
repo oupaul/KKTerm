@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "Notiz notieren…",
     "notesAriaLabel": "Notiztext",
     "notesToolbarLabel": "Notizaussehen",
+    "notesPagesToolbarLabel": "Notizseiten",
+    "notesAddPage": "Notizseite hinzufügen",
+    "notesDeletePage": "Notizseite löschen",
+    "notesPageIndicator": "Seite {{page}} von {{total}}",
+    "notesRotationDegrees": "Drehung in Grad",
     "notesBackgroundColor": "Hintergrundfarbe",
     "notesFont": "Schriftart",
     "notesColor": {

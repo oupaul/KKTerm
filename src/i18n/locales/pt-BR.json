@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "Escreva uma nota…",
     "notesAriaLabel": "Texto da nota",
     "notesToolbarLabel": "Aparência da nota",
+    "notesPagesToolbarLabel": "Páginas da nota",
+    "notesAddPage": "Adicionar página da nota",
+    "notesDeletePage": "Excluir página da nota",
+    "notesPageIndicator": "Página {{page}} de {{total}}",
+    "notesRotationDegrees": "Graus de rotação",
     "notesBackgroundColor": "Cor de fundo",
     "notesFont": "Fonte",
     "notesColor": {

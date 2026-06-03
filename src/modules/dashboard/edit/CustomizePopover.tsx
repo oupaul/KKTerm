@@ -5,6 +5,7 @@ import { ariaSelected } from "../../../lib/aria";
 import { invokeCommand, isTauriRuntime } from "../../../lib/tauri";
 import { ToggleSwitch } from "../../settings/ToggleSwitch";
 import { useDashboardStore } from "../state/dashboardStore";
+import { parseNotesSettingsJson } from "../widgets/builtin/notes/NotesWidget";
 import { ACCENT_PALETTE } from "../registry/palette";
 import { parseScriptBodyForEditor, updateScriptBodySourceJson } from "./scriptSourceEditor";
 import {
@@ -47,6 +48,20 @@ const APP_LAUNCHER_SETTINGS_SCHEMA: WidgetSettingsSchema = {
   ],
 };
 
+const NOTES_SETTINGS_SCHEMA: WidgetSettingsSchema = {
+  fields: [
+    {
+      key: "rotationDegrees",
+      type: "number",
+      label: "dashboard.notesRotationDegrees",
+      min: -3,
+      max: 3,
+      step: 0.1,
+      defaultValue: -0.6,
+    },
+  ],
+};
+
 export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePopoverProps) {
   const { t } = useTranslation();
   const customWidgets = useDashboardStore((s) => s.customWidgets);
@@ -66,6 +81,9 @@ export function CustomizePopover({ instance, anchorRect, onClose }: CustomizePop
     }
     if (instance.kind === "builtIn" && instance.sourceId === "appLauncher") {
       return APP_LAUNCHER_SETTINGS_SCHEMA;
+    }
+    if (instance.kind === "builtIn" && instance.sourceId === "notes") {
+      return NOTES_SETTINGS_SCHEMA;
     }
     return null;
   }, [customSource, instance.kind, instance.sourceId]);
@@ -326,7 +344,10 @@ function WidgetSection({
             const parsed = parseWidgetSettingsValuesJson(instance.settingsValuesJson);
             const base = parsed.ok ? parsed.value : {};
             const next = { ...base, [key]: value };
-            void updateInstance(instance.id, { settingsValuesJson: JSON.stringify(next) });
+            const normalized = instance.kind === "builtIn" && instance.sourceId === "notes"
+              ? parseNotesSettingsJson(JSON.stringify(next))
+              : next;
+            void updateInstance(instance.id, { settingsValuesJson: JSON.stringify(normalized) });
           }}
         />
       ) : (
@@ -418,10 +439,12 @@ function WidgetSettingsFieldControl({
   const [secretDraft, setSecretDraft] = useState("");
   const [secretError, setSecretError] = useState("");
 
+  const label = field.label.includes(".") ? t(field.label) : field.label;
+
   if (field.type === "boolean") {
     return (
       <label className="dw-field dw-field-row">
-        <span>{field.label}</span>
+        <span>{label}</span>
         <ToggleSwitch
           checked={value === true}
           onChange={(checked) => onChange(checked)}
@@ -433,7 +456,7 @@ function WidgetSettingsFieldControl({
   if (field.type === "select") {
     return (
       <label className="dw-field">
-        <span>{field.label}</span>
+        <span>{label}</span>
         <select value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)}>
           {field.options.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
@@ -446,7 +469,7 @@ function WidgetSettingsFieldControl({
   if (field.type === "number") {
     return (
       <label className="dw-field">
-        <span>{field.label}</span>
+        <span>{label}</span>
         <input
           type="number"
           min={field.min}
@@ -502,7 +525,7 @@ function WidgetSettingsFieldControl({
 
     return (
       <label className="dw-field">
-        <span>{field.label}</span>
+        <span>{label}</span>
         {secretRef ? <small className="dw-muted">{t("dashboard.secretStored")}</small> : null}
         <input
           type="password"
@@ -529,7 +552,7 @@ function WidgetSettingsFieldControl({
 
   return (
     <label className="dw-field">
-      <span>{field.label}</span>
+      <span>{label}</span>
       <input
         type="text"
         placeholder={field.placeholder}

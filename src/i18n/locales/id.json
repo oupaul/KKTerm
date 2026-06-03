@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "Tulis catatan…",
     "notesAriaLabel": "Teks catatan",
     "notesToolbarLabel": "Tampilan catatan",
+    "notesPagesToolbarLabel": "Halaman catatan",
+    "notesAddPage": "Tambah halaman catatan",
+    "notesDeletePage": "Hapus halaman catatan",
+    "notesPageIndicator": "Halaman {{page}} dari {{total}}",
+    "notesRotationDegrees": "Derajat rotasi",
     "notesBackgroundColor": "Warna latar",
     "notesFont": "Font",
     "notesColor": {

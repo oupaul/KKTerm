@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "メモを書く…",
     "notesAriaLabel": "メモのテキスト",
     "notesToolbarLabel": "メモの外観",
+    "notesPagesToolbarLabel": "メモページ",
+    "notesAddPage": "メモページを追加",
+    "notesDeletePage": "メモページを削除",
+    "notesPageIndicator": "{{total}} ページ中 {{page}} ページ",
+    "notesRotationDegrees": "回転角度",
     "notesBackgroundColor": "背景色",
     "notesFont": "フォント",
     "notesColor": {

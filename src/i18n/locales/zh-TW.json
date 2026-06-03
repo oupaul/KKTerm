@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "隨手記下…",
     "notesAriaLabel": "筆記文字",
     "notesToolbarLabel": "筆記外觀",
+    "notesPagesToolbarLabel": "筆記頁",
+    "notesAddPage": "新增筆記頁",
+    "notesDeletePage": "刪除筆記頁",
+    "notesPageIndicator": "第 {{page}} 頁，共 {{total}} 頁",
+    "notesRotationDegrees": "旋轉角度",
     "notesBackgroundColor": "背景顏色",
     "notesFont": "字型",
     "notesColor": {

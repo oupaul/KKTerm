@@ -1177,6 +1177,11 @@
     "notesPlaceholder": "메모를 작성하세요…",
     "notesAriaLabel": "메모 텍스트",
     "notesToolbarLabel": "메모 모양",
+    "notesPagesToolbarLabel": "메모 페이지",
+    "notesAddPage": "메모 페이지 추가",
+    "notesDeletePage": "메모 페이지 삭제",
+    "notesPageIndicator": "{{total}}페이지 중 {{page}}페이지",
+    "notesRotationDegrees": "회전 각도",
     "notesBackgroundColor": "배경색",
     "notesFont": "글꼴",
     "notesColor": {
