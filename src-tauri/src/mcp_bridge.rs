@@ -59,6 +59,15 @@ fn write_bridge_info(path: &Path, info: &BridgeInfo) -> std::io::Result<()> {
     }
     let body = serde_json::to_vec_pretty(info).unwrap_or_else(|_| b"{}".to_vec());
     std::fs::write(path, body)?;
+    let permission_result = restrict_bridge_info_permissions(path);
+    if let Err(error) = permission_result {
+        let _ = std::fs::remove_file(path);
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn restrict_bridge_info_permissions(path: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -70,62 +79,135 @@ fn write_bridge_info(path: &Path, info: &BridgeInfo) -> std::io::Result<()> {
 }
 
 /// Tighten the DACL on the bridge-info file so only the current Windows user
-/// can read or write it. Uses `icacls` with the user's SID to avoid ambiguous
-/// local/domain account names. Failing closed prevents publishing a readable
-/// bridge token when Windows ACL hardening is unavailable.
+/// can read or write it. The descriptor is written before the bridge starts,
+/// so failing here prevents publishing a readable bearer token.
 #[cfg(target_os = "windows")]
 fn restrict_file_to_current_user(path: &Path) -> std::io::Result<()> {
+    use std::iter;
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::Security::Authorization::{
+        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
+    use windows_sys::Win32::Security::{
+        SetFileSecurityW, DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION,
+        PSECURITY_DESCRIPTOR,
+    };
+
     let sid = current_windows_user_sid()?;
-    let grant_arg = format!("*{sid}:(F)");
-    let output = std::process::Command::new("icacls")
-        .arg(path)
-        .args(["/inheritance:r", "/grant:r", &grant_arg])
-        .output()?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            format!(
-                "icacls failed while restricting MCP bridge descriptor: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ),
-        ))
+    let sddl = bridge_descriptor_sddl_for_user_sid(&sid);
+    let sddl_wide: Vec<u16> = sddl.encode_utf16().chain(iter::once(0)).collect();
+    let path_wide: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .chain(iter::once(0))
+        .collect();
+    let mut security_descriptor: PSECURITY_DESCRIPTOR = null_mut();
+
+    let converted = unsafe {
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl_wide.as_ptr(),
+            SDDL_REVISION_1,
+            &mut security_descriptor,
+            null_mut(),
+        )
+    };
+    if converted == 0 {
+        return Err(std::io::Error::last_os_error());
     }
+
+    let result = unsafe {
+        SetFileSecurityW(
+            path_wide.as_ptr(),
+            DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
+            security_descriptor,
+        )
+    };
+    let error = if result == 0 {
+        Some(std::io::Error::last_os_error())
+    } else {
+        None
+    };
+    unsafe {
+        LocalFree(security_descriptor.cast());
+    }
+    if let Some(error) = error {
+        return Err(error);
+    }
+    Ok(())
 }
 
 #[cfg(target_os = "windows")]
 fn current_windows_user_sid() -> std::io::Result<String> {
-    let output = std::process::Command::new("whoami")
-        .args(["/user", "/fo", "csv", "/nh"])
-        .output()?;
-    if !output.status.success() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            format!(
-                "whoami failed while resolving current user SID: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ),
-        ));
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, GetLastError, LocalFree, ERROR_INSUFFICIENT_BUFFER,
+    };
+    use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
+    use windows_sys::Win32::Security::{GetTokenInformation, TokenUser, TOKEN_QUERY, TOKEN_USER};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+    let mut token = null_mut();
+    let opened = unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) };
+    if opened == 0 {
+        return Err(std::io::Error::last_os_error());
     }
-    let line = String::from_utf8_lossy(&output.stdout);
-    parse_windows_user_sid_output(&line).map(str::to_string)
+
+    let mut return_len = 0;
+    unsafe {
+        GetTokenInformation(token, TokenUser, null_mut(), 0, &mut return_len);
+    }
+    if return_len == 0 || unsafe { GetLastError() } != ERROR_INSUFFICIENT_BUFFER {
+        let error = std::io::Error::last_os_error();
+        unsafe {
+            CloseHandle(token);
+        }
+        return Err(error);
+    }
+
+    let mut token_info = vec![0u8; return_len as usize];
+    let queried = unsafe {
+        GetTokenInformation(
+            token,
+            TokenUser,
+            token_info.as_mut_ptr().cast(),
+            return_len,
+            &mut return_len,
+        )
+    };
+    unsafe {
+        CloseHandle(token);
+    }
+    if queried == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    let token_user = unsafe { &*(token_info.as_ptr().cast::<TOKEN_USER>()) };
+    let mut sid_string = null_mut();
+    let converted = unsafe { ConvertSidToStringSidW(token_user.User.Sid, &mut sid_string) };
+    if converted == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    let sid = unsafe {
+        let mut len = 0;
+        while *sid_string.add(len) != 0 {
+            len += 1;
+        }
+        String::from_utf16_lossy(std::slice::from_raw_parts(sid_string, len))
+    };
+    unsafe {
+        LocalFree(sid_string.cast());
+    }
+    Ok(sid)
 }
 
 #[cfg(any(target_os = "windows", test))]
-fn parse_windows_user_sid_output(output: &str) -> std::io::Result<&str> {
-    output
-        .trim()
-        .rsplit(',')
-        .next()
-        .map(|value| value.trim().trim_matches('"'))
-        .filter(|value| value.starts_with("S-1-"))
-        .ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "whoami did not return a usable current user SID",
-            )
-        })
+fn bridge_descriptor_sddl_for_user_sid(sid: &str) -> String {
+    // D:P creates a protected DACL (no inherited ACEs). FA grants full control
+    // only to the current user SID returned by the process token.
+    format!("D:P(A;;FA;;;{sid})")
 }
 
 fn remove_bridge_info(path: &Path) {
@@ -1172,16 +1254,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_windows_user_sid_output_reads_csv_sid() {
-        let sid =
-            parse_windows_user_sid_output("\"DESKTOP-1\\alice\",\"S-1-5-21-111-222-333-1001\"\r\n")
-                .unwrap();
-        assert_eq!(sid, "S-1-5-21-111-222-333-1001");
-    }
-
-    #[test]
-    fn parse_windows_user_sid_output_rejects_invalid_data() {
-        assert!(parse_windows_user_sid_output("User Name,SID\r\n").is_err());
+    fn bridge_descriptor_sddl_grants_only_user_sid() {
+        let sddl = bridge_descriptor_sddl_for_user_sid("S-1-5-21-111-222-333-1001");
+        assert_eq!(sddl, "D:P(A;;FA;;;S-1-5-21-111-222-333-1001)");
     }
 
     #[test]
