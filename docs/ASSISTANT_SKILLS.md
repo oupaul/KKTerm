@@ -41,6 +41,9 @@ Validation rules:
 ## Bundled starter skills
 
 - `dashboard-widget-builder`: Dashboard AI Created Widget creation, repair, layout, data, secrets, and visual polish.
+- `dashboard-widget-designer`: Dashboard AI Created Widget visual design, hierarchy, polish, states, and redesign critique.
+- `dashboard-data-visualization`: Dashboard metrics, charts, health states, trends, timelines, logs, and data integrity.
+- `desktop-accessibility-ui`: Accessible desktop UI and widget review for readability, focus, contrast, motion, and non-color status cues.
 - `dns-dhcp-troubleshooter`: DNS lookup, split DNS, stale cache, DHCP lease, gateway, and resolver diagnosis.
 - `firewall-port-troubleshooter`: Firewall, NAT, listener, blocked port, and service binding diagnosis.
 - `network-connectivity-troubleshooter`: General reachability, routing, gateway, VPN, proxy, packet loss, latency, and MTU diagnosis.
