@@ -14,6 +14,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+#[cfg(target_os = "windows")]
+use std::process::Command;
+
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -85,10 +88,12 @@ fn restrict_bridge_info_permissions(path: &Path) -> std::io::Result<()> {
 fn restrict_file_to_current_user(path: &Path) -> std::io::Result<()> {
     let sid = current_windows_user_sid()?;
     let grant_arg = format!("*{sid}:(F)");
-    let output = std::process::Command::new("icacls")
-        .arg(path)
-        .args(["/inheritance:r", "/grant:r", &grant_arg])
-        .output()?;
+    let output = no_window(Command::new("icacls").arg(path).args([
+        "/inheritance:r",
+        "/grant:r",
+        &grant_arg,
+    ]))
+    .output()?;
     if output.status.success() {
         Ok(())
     } else {
@@ -104,9 +109,7 @@ fn restrict_file_to_current_user(path: &Path) -> std::io::Result<()> {
 
 #[cfg(target_os = "windows")]
 fn current_windows_user_sid() -> std::io::Result<String> {
-    let output = std::process::Command::new("whoami")
-        .args(["/user", "/fo", "csv", "/nh"])
-        .output()?;
+    let output = no_window(Command::new("whoami").args(["/user", "/fo", "csv", "/nh"])).output()?;
     if !output.status.success() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::PermissionDenied,
@@ -170,48 +173,75 @@ pub fn start_if_enabled(
 
     #[cfg(target_os = "windows")]
     {
-        let token = random_token();
-        let pipe_name = format!(r"\\.\pipe\kkterm-mcp-{}", &token[..16]);
-        let pid = std::process::id();
-        let info = BridgeInfo {
-            version: BRIDGE_INFO_VERSION,
-            pipe_name: pipe_name.clone(),
-            token: token.clone(),
-            pid,
-        };
-        if let Err(error) = write_bridge_info(&info_path, &info) {
-            crate::logging::mcp_debug(
-                "bridge.info_write_failed",
-                &json!({"error": error.to_string()}),
-            );
-            eprintln!("kkterm built-in MCP server: failed to write bridge info: {error}");
-            return;
-        }
-        crate::logging::mcp_debug(
-            "bridge.started",
-            &json!({
-                "pipeName": pipe_name.clone(),
-                "pid": pid,
-                "allowAllDangerous": allow_all_dangerous,
-                "bridgeInfoPath": info_path,
-            }),
-        );
-
-        let ctx = Arc::new(BridgeContext {
-            app,
-            token,
-            allow_all_dangerous,
-        });
-        tauri::async_runtime::spawn(async move {
-            if let Err(error) = run_named_pipe_server(ctx, pipe_name).await {
+        std::thread::Builder::new()
+            .name("kkterm-mcp-bridge-startup".to_string())
+            .spawn(move || {
+                start_windows_bridge(app, info_path, allow_all_dangerous);
+            })
+            .unwrap_or_else(|error| {
                 crate::logging::mcp_debug(
-                    "bridge.server_stopped",
+                    "bridge.startup_thread_failed",
                     &json!({"error": error.to_string()}),
                 );
-                eprintln!("kkterm built-in MCP server stopped: {error}");
-            }
-        });
+                eprintln!("kkterm built-in MCP server: failed to spawn startup thread: {error}");
+            });
     }
+}
+
+#[cfg(target_os = "windows")]
+fn start_windows_bridge(app: AppHandle, info_path: PathBuf, allow_all_dangerous: bool) {
+    let token = random_token();
+    let pipe_name = format!(r"\\.\pipe\kkterm-mcp-{}", &token[..16]);
+    let pid = std::process::id();
+    let info = BridgeInfo {
+        version: BRIDGE_INFO_VERSION,
+        pipe_name: pipe_name.clone(),
+        token: token.clone(),
+        pid,
+    };
+    if let Err(error) = write_bridge_info(&info_path, &info) {
+        crate::logging::mcp_debug(
+            "bridge.info_write_failed",
+            &json!({"error": error.to_string()}),
+        );
+        eprintln!("kkterm built-in MCP server: failed to write bridge info: {error}");
+        return;
+    }
+    crate::logging::mcp_debug(
+        "bridge.started",
+        &json!({
+            "pipeName": pipe_name.clone(),
+            "pid": pid,
+            "allowAllDangerous": allow_all_dangerous,
+            "bridgeInfoPath": info_path,
+        }),
+    );
+
+    let ctx = Arc::new(BridgeContext {
+        app,
+        token,
+        allow_all_dangerous,
+    });
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = run_named_pipe_server(ctx, pipe_name).await {
+            crate::logging::mcp_debug(
+                "bridge.server_stopped",
+                &json!({"error": error.to_string()}),
+            );
+            eprintln!("kkterm built-in MCP server stopped: {error}");
+        }
+    });
+}
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+#[cfg(target_os = "windows")]
+fn no_window(command: &mut Command) -> &mut Command {
+    use std::os::windows::process::CommandExt;
+
+    command.creation_flags(CREATE_NO_WINDOW);
+    command
 }
 
 struct BridgeContext {
