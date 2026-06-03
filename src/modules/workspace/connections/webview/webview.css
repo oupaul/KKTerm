@@ -107,6 +107,7 @@
 }
 
 .webview-placeholder {
+  position: relative;
   display: grid;
   width: 100%;
   height: 100%;
@@ -117,11 +118,26 @@
 }
 
 .webview-placeholder-message {
+  position: relative;
+  z-index: 1;
   padding: 24px;
   text-align: center;
 }
 
 .webview-placeholder-error {
+  position: relative;
+  z-index: 1;
   justify-self: stretch;
   padding: 12px;
+}
+
+.webview-suppression-snapshot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
