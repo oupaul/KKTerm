@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Deserialize;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
+#[cfg(debug_assertions)]
+use tauri::menu::Submenu;
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
 
@@ -13,6 +15,10 @@ const TRAY_ID: &str = "kkterm-main";
 const DONT_SLEEP_ITEM_ID: &str = "kkterm-tray-dont-sleep";
 const EXIT_ITEM_ID: &str = "kkterm-tray-exit";
 const RECENT_ITEM_PREFIX: &str = "kkterm-tray-recent:";
+#[cfg(debug_assertions)]
+const WALLPAPER_SET_ITEM_ID: &str = "kkterm-tray-wallpaper-set";
+#[cfg(debug_assertions)]
+const WALLPAPER_CLEAR_ITEM_ID: &str = "kkterm-tray-wallpaper-clear";
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -156,6 +162,24 @@ fn build_menu<R: tauri::Runtime>(
     menu.append(&dont_sleep)
         .map_err(|error| error.to_string())?;
 
+    #[cfg(debug_assertions)]
+    {
+        menu.append(&PredefinedMenuItem::separator(app).map_err(|error| error.to_string())?)
+            .map_err(|error| error.to_string())?;
+
+        let wallpaper = Submenu::new(app, "Wallpaper", true).map_err(|error| error.to_string())?;
+        let set = MenuItem::with_id(app, WALLPAPER_SET_ITEM_ID, "Set", true, None::<&str>)
+            .map_err(|error| error.to_string())?;
+        let clear = MenuItem::with_id(app, WALLPAPER_CLEAR_ITEM_ID, "Clear", true, None::<&str>)
+            .map_err(|error| error.to_string())?;
+        wallpaper.append(&set).map_err(|error| error.to_string())?;
+        wallpaper
+            .append(&clear)
+            .map_err(|error| error.to_string())?;
+        menu.append(&wallpaper)
+            .map_err(|error| error.to_string())?;
+    }
+
     menu.append(&PredefinedMenuItem::separator(app).map_err(|error| error.to_string())?)
         .map_err(|error| error.to_string())?;
 
@@ -177,6 +201,23 @@ fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &str) {
     if id == DONT_SLEEP_ITEM_ID {
         toggle_dont_sleep(app);
         return;
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        if id == WALLPAPER_SET_ITEM_ID {
+            if let Err(error) = crate::desktop_wallpaper::set_debug_wallpaper(app) {
+                eprintln!("failed to set debug wallpaper: {error}");
+            }
+            return;
+        }
+
+        if id == WALLPAPER_CLEAR_ITEM_ID {
+            if let Err(error) = crate::desktop_wallpaper::clear_debug_wallpaper(app) {
+                eprintln!("failed to clear debug wallpaper: {error}");
+            }
+            return;
+        }
     }
 
     if let Some(connection_id) = id.strip_prefix(RECENT_ITEM_PREFIX) {

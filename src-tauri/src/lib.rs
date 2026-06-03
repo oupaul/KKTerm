@@ -10,6 +10,8 @@ mod dashboard_ids;
 mod dashboard_storage;
 mod dashboard_validation;
 mod debug_heartbeat;
+#[cfg(debug_assertions)]
+mod desktop_wallpaper;
 mod diagnostics;
 mod favicon;
 mod ftp;
