@@ -58,6 +58,7 @@ export function InstallerPage({ active }: { active: boolean }) {
   const markWslJustEnabled = useInstallerStore((s) => s.markWslJustEnabled);
   const applyProgress = useInstallerStore((s) => s.applyProgress);
   const beginInFlight = useInstallerStore((s) => s.beginInFlight);
+  const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
 
   const [updateAllConfirm, setUpdateAllConfirm] = useState<null | {
     items: string[];
@@ -281,13 +282,16 @@ export function InstallerPage({ active }: { active: boolean }) {
     const queue = updateAllRecipes;
     setUpdateAllConfirm(null);
     for (const recipe of queue) {
+      openStepperDialog(recipe.id);
       beginInFlight(recipe.id, "install");
       try {
         const terminalEvent = await installRecipeAndWait(recipe.id, {});
-        if (terminalEvent.kind === "cancelled") {
+        if (terminalEvent.kind !== "completed") {
+          openStepperDialog(recipe.id);
           break;
         }
       } catch (error) {
+        openStepperDialog(recipe.id);
         const message = error instanceof Error ? error.message : String(error);
         showStatusBarNotice(message, { tone: "error" });
         break;

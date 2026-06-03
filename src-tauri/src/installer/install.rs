@@ -461,17 +461,37 @@ fn downloaded_installer_powershell_script(download_path: &PathBuf, tool_id: &str
 
 fn winget_app_installer_powershell_script(download_path: &PathBuf) -> String {
     let package_path = powershell_single_quote(&download_path.to_string_lossy());
-    format!(
-        concat!(
-            "$ErrorActionPreference = 'Stop'; ",
-            "$family = 'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'; ",
-            "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
-            "Add-AppxPackage -Path {package_path}; ",
-            "try {{ Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop }} catch {{ }}; ",
-            "exit 0"
-        ),
-        package_path = package_path
-    )
+    const SCRIPT_TEMPLATE: &str = r#"
+$ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$root = Join-Path ([System.IO.Path]::GetTempPath()) 'kkterm-winget-dependencies'
+New-Item -ItemType Directory -Force -Path $root | Out-Null
+$arch = if ([Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString() -eq 'Arm64') { 'arm64' } else { 'x64' }
+$vclibsUrl = if ($arch -eq 'arm64') { 'https://aka.ms/Microsoft.VCLibs.arm64.14.00.Desktop.appx' } else { 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx' }
+$vclibsPath = Join-Path $root ("Microsoft.VCLibs.{0}.14.00.Desktop.appx" -f $arch)
+Write-Host ("Installing WinGet dependency: Microsoft.VCLibs ({0})" -f $arch)
+Invoke-WebRequest -Uri $vclibsUrl -OutFile $vclibsPath -UseBasicParsing
+Add-AppxPackage -Path $vclibsPath
+$nugetUrl = 'https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/2.8.6'
+$nupkgPath = Join-Path $root 'Microsoft.UI.Xaml.2.8.6.nupkg'
+$zipPath = Join-Path $root 'Microsoft.UI.Xaml.2.8.6.zip'
+$xamlRoot = Join-Path $root 'Microsoft.UI.Xaml.2.8.6'
+Write-Host 'Installing WinGet dependency: Microsoft.UI.Xaml 2.8'
+Invoke-WebRequest -Uri $nugetUrl -OutFile $nupkgPath -UseBasicParsing
+Copy-Item -Path $nupkgPath -Destination $zipPath -Force
+Remove-Item -Path $xamlRoot -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive -Path $zipPath -DestinationPath $xamlRoot -Force
+$xamlPath = Join-Path $xamlRoot ("tools\AppX\{0}\Release\Microsoft.UI.Xaml.2.8.appx" -f $arch)
+if (!(Test-Path $xamlPath)) { throw "Microsoft.UI.Xaml 2.8 package did not contain $xamlPath" }
+Add-AppxPackage -Path $xamlPath
+$family = 'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'
+try { Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop } catch { }
+Write-Host 'Installing Microsoft Desktop App Installer / WinGet'
+Add-AppxPackage -Path __PACKAGE_PATH__
+try { Add-AppxPackage -RegisterByFamilyName -MainPackage $family -ErrorAction Stop } catch { }
+exit 0
+"#;
+    SCRIPT_TEMPLATE.replace("__PACKAGE_PATH__", &package_path)
 }
 
 fn is_appx_package_path(download_path: &PathBuf) -> bool {

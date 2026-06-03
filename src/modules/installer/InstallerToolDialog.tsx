@@ -582,25 +582,28 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   async function doInstall(recipes: Recipe[]) {
     if (!isTauriRuntime()) return;
     setInstallConfirm(null);
-    openStepperDialog(recipe.id);
     for (const queuedRecipe of recipes) {
+      openStepperDialog(queuedRecipe.id);
       beginInFlight(queuedRecipe.id, "install");
       try {
         const terminalEvent = await installRecipeAndWait(
           queuedRecipe.id,
           queuedRecipe.id === recipe.id ? options : {},
         );
-            if (terminalEvent.kind !== "completed") {
-              break;
-            }
-            await maybeStartManagedWebUiAfterInstall(
-              queuedRecipe,
-              terminalEvent.kind,
-            );
-            if (isWslFeature(queuedRecipe) && queuedRecipe.id !== recipe.id) {
-              break;
-            }
+        if (terminalEvent.kind !== "completed") {
+          openStepperDialog(queuedRecipe.id);
+          break;
+        }
+        await maybeStartManagedWebUiAfterInstall(
+          queuedRecipe,
+          terminalEvent.kind,
+        );
+        if (isWslFeature(queuedRecipe) && queuedRecipe.id !== recipe.id) {
+          openStepperDialog(queuedRecipe.id);
+          break;
+        }
       } catch {
+        openStepperDialog(queuedRecipe.id);
         break;
       }
     }

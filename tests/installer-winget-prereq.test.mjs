@@ -24,6 +24,20 @@ test("every winget-provider recipe depends on the winget prerequisite", () => {
   assert.deepEqual(missing, []);
 });
 
+test("winget installer bootstraps documented AppX dependencies", async () => {
+  const installSource = await readFile(
+    new URL("../src-tauri/src/installer/install.rs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(installSource, /Microsoft\.VCLibs\.x64\.14\.00\.Desktop\.appx/);
+  assert.match(installSource, /Microsoft\.VCLibs\.arm64\.14\.00\.Desktop\.appx/);
+  assert.match(installSource, /Microsoft\.UI\.Xaml\/2\.8\.6/);
+  assert.match(installSource, /Add-AppxPackage -Path \$vclibsPath/);
+  assert.match(installSource, /Add-AppxPackage -Path \$xamlPath/);
+  assert.match(installSource, /Add-AppxPackage -Path __PACKAGE_PATH__/);
+});
+
 test("Antigravity CLI uses a bundled Antigravity icon", async () => {
   const iconsSource = await readFile(
     new URL("../src/modules/installer/icons.ts", import.meta.url),
