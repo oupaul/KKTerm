@@ -73,7 +73,7 @@ The i18n layer lives in `src/i18n/` and uses **i18next** with **react-i18next**.
 
 - **`src/i18n/config.ts`** owns the i18next instance, language detection (`localStorage` key `kkterm.language`), dynamic locale chunk loading, the `switchLanguage()` API, and the `ensureI18nReady()` startup guard.
 - **`src/i18n/useT.ts`** provides a typed `useT()` hook with full key autocompletion from the English locale shape.
-- **`src/i18n/locales/en.json`** is the source-of-truth translation file (16 namespaces, ~2,200 keys). English is bundled with the app; the 13 other locales (`fr`, `it`, `de`, `es`, `es-MX`, `pt-BR`, `zh-TW`, `zh-CN`, `ja`, `ko`, `th`, `id`, `vi`) load on demand via dynamic `import()` and are automatically code-split by Vite.
+- **`src/i18n/locales/en.json`** is the source-of-truth translation file (17 namespaces, ~2,500 keys). English is bundled with the app; the 13 other locales (`fr`, `it`, `de`, `es`, `es-MX`, `pt-BR`, `zh-TW`, `zh-CN`, `ja`, `ko`, `th`, `id`, `vi`) load on demand via dynamic `import()` and are automatically code-split by Vite.
 - **Settings → General → Language** exposes a dropdown that calls `switchLanguage()`, which hot-swaps the locale bundle and persists the choice.
 - **All user-visible strings must go through `t()` or `useTranslation()`**. Hardcoded English text in JSX is forbidden. New keys go into `en.json` first, then are propagated to all 13 other locale files or tracked under `docs/localization_todo/`. Renamed or removed keys must be updated in every file. Pure helper functions that cannot use React hooks import `i18next` from `src/i18n/config.ts` and call `i18next.t(key)`.
 
