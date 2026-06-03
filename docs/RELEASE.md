@@ -82,6 +82,12 @@ Release notes are generated before the version-bump commit so the summary covers
 - `docs/releases/v<version>.md` as the per-version release note
 - `CHANGELOG.md` with the newest version prepended
 
+Generated release notes start with a `Direct Downloads` section that links to
+the exact GitHub release assets for the generated tag:
+
+- `kkterm-<version>-windows-x64-setup.exe`
+- `kkterm-<version>-windows-arm64-setup.exe`
+
 When `OPENAI_API_KEY` is available, `scripts/generate-release-notes.mjs` asks OpenAI to summarize the GitHub-generated notes and commit context using `gpt-5.4-nano` by default. AI-generated notes are written in English first, followed by a Traditional Chinese (Taiwan) version with the same facts, light humor, and tone. If the key is missing or the API call fails, the script falls back to deterministic notes from GitHub generated notes and commit subjects. Local runs may set secrets in the process environment or in an uncommitted `.env.local` file:
 
 ```powershell

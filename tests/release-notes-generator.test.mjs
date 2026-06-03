@@ -5,12 +5,14 @@ import {
   buildReleaseNotesPrompt,
   composeFallbackReleaseNotes,
   extractPrNumbers,
+  prependDirectDownloads,
   prependChangelogEntry,
 } from "../scripts/generate-release-notes.mjs";
 
 const sampleContext = {
   project: "KKTerm",
   version: "v0.1.32",
+  repo: "ryantsai/KKTerm",
   previousTag: "v0.1.31",
   target: "HEAD",
   compareUrl: "https://github.com/ryantsai/KKTerm/compare/v0.1.31...v0.1.32",
@@ -80,6 +82,21 @@ test("composeFallbackReleaseNotes creates a publishable markdown changelog witho
   assert.match(notes, /Compare: https:\/\/github\.com\/ryantsai\/KKTerm\/compare\/v0\.1\.31\.\.\.v0\.1\.32/);
 });
 
+test("prependDirectDownloads places Windows release links before generated notes", () => {
+  const notes = prependDirectDownloads(sampleContext, "# KKTerm v0.1.32\n\n## Highlights\n\n- New release.\n");
+
+  assert.match(notes, /^## Direct Downloads\n\* 💻 \[Download for Windows \(64-bit\)\]/);
+  assert.match(
+    notes,
+    /https:\/\/github\.com\/ryantsai\/KKTerm\/releases\/download\/v0\.1\.32\/kkterm-0\.1\.32-windows-x64-setup\.exe/,
+  );
+  assert.match(
+    notes,
+    /https:\/\/github\.com\/ryantsai\/KKTerm\/releases\/download\/v0\.1\.32\/kkterm-0\.1\.32-windows-arm64-setup\.exe/,
+  );
+  assert.ok(notes.indexOf("## Direct Downloads") < notes.indexOf("# KKTerm v0.1.32"));
+});
+
 test("prependChangelogEntry inserts newest release below the changelog header", () => {
   const current = "# Changelog\n\nAll notable changes to KKTerm are documented here.\n\n## v0.1.31\n\n- Previous.\n";
   const entry = "# KKTerm v0.1.32\n\n## Highlights\n\n- New release.\n";
@@ -88,5 +105,16 @@ test("prependChangelogEntry inserts newest release below the changelog header", 
 
   assert.match(updated, /^# Changelog\n\nAll notable changes to KKTerm are documented here\.\n\n## v0\.1\.32/m);
   assert.ok(updated.indexOf("## v0.1.32") < updated.indexOf("## v0.1.31"));
+  assert.doesNotMatch(updated, /# KKTerm v0\.1\.32/);
+});
+
+test("prependChangelogEntry normalizes release heading after direct downloads", () => {
+  const current = "# Changelog\n\nAll notable changes to KKTerm are documented here.\n\n## v0.1.31\n\n- Previous.\n";
+  const entry = prependDirectDownloads(sampleContext, "# KKTerm v0.1.32\n\n## Highlights\n\n- New release.\n");
+
+  const updated = prependChangelogEntry(current, entry);
+
+  assert.match(updated, /^# Changelog\n\nAll notable changes to KKTerm are documented here\.\n\n## Direct Downloads/m);
+  assert.match(updated, /## v0\.1\.32/);
   assert.doesNotMatch(updated, /# KKTerm v0\.1\.32/);
 });

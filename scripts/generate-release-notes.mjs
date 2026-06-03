@@ -77,9 +77,30 @@ export function composeFallbackReleaseNotes(context) {
   return `${lines.join("\n").trim()}\n`;
 }
 
+export function prependDirectDownloads(context, releaseNotes) {
+  const repo = context.repo?.trim();
+  if (!repo) {
+    return releaseNotes;
+  }
+
+  const tagName = context.version;
+  const assetVersion = tagName.replace(/^v/i, "");
+  const releaseBaseUrl = `https://github.com/${repo}/releases/download/${tagName}`;
+  const downloads = [
+    "## Direct Downloads",
+    `* 💻 [Download for Windows (64-bit)](${releaseBaseUrl}/kkterm-${assetVersion}-windows-x64-setup.exe)`,
+    `* 💻 [Download for Windows (ARM64)](${releaseBaseUrl}/kkterm-${assetVersion}-windows-arm64-setup.exe)`,
+    "",
+    releaseNotes.trim(),
+    "",
+  ];
+
+  return downloads.join("\n");
+}
+
 export function prependChangelogEntry(currentChangelog, releaseNotes) {
   const entry = releaseNotes
-    .replace(/^# KKTerm ([^\n]+)\n+/, "## $1\n\n")
+    .replace(/^# KKTerm ([^\n]+)\n+/m, "## $1\n\n")
     .trim();
 
   if (!currentChangelog.trim()) {
@@ -133,6 +154,7 @@ async function main() {
   const context = {
     project: "KKTerm",
     version,
+    repo,
     previousTag,
     target,
     compareUrl,
@@ -153,6 +175,7 @@ async function main() {
   if (!releaseNotes.trim()) {
     releaseNotes = composeFallbackReleaseNotes(context);
   }
+  releaseNotes = prependDirectDownloads(context, releaseNotes);
 
   await writeTextFile(outputPath, releaseNotes);
   await writeTextFile(releaseFilePath, releaseNotes);
