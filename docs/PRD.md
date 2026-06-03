@@ -4,7 +4,7 @@
 
 Administrators, developers, and operators often juggle separate tools for local terminals, SSH sessions, SFTP transfers, saved host lists, and AI-assisted command work. Existing tools either feel dated and Windows-only, focus narrowly on terminal emulation, or carry heavyweight runtime and UI costs that make them feel slow.
 
-KKTerm is intended to be a fast, professional desktop workspace for personal/local infrastructure administration. The first version should provide the core experience users expect from a modern MobaXterm/RDCMan/VSCode-inspired tool without taking on team sync, RDP, VNC, or cloud services too early.
+KKTerm is intended to be a fast, professional desktop workspace for personal/local infrastructure administration. The first version provides the core experience users expect from a modern MobaXterm/RDCMan/VSCode-inspired tool, including terminal, file-transfer, URL, RDP, and VNC workflows, while keeping team sync and managed cloud services out of scope.
 
 ## Solution
 
@@ -89,10 +89,10 @@ High-level product decisions that are not duplicated elsewhere:
 - Product name: **KKTerm**. Primary acceptance platform: Windows. Follow-on: macOS and Linux on the same architecture.
 - Current protocols: local terminal, SSH terminal, Telnet terminal, Serial terminal, SFTP launched from SSH, FTP/FTPS, URL (WebView2), RDP (ActiveX), and VNC (`vnc-rs`).
 - License: MIT. Dependencies should be MIT/Apache-2.0/BSD/MPL-style; avoid GPL in the core runtime.
-- Privacy: no telemetry or automatic crash upload in v0.1. Update checks (v0.2) are described separately from telemetry.
+- Privacy: no telemetry or automatic crash upload in v0.1. Update checks and user-mediated installer handoff are described separately from telemetry.
 - AI model: typed assistant tool calling with permission boundaries. Prompt is the default mode for mutating tools; Allow All is an explicit user setting for automatic execution of enabled tools. CLI agent integrations remain suggest-only/ask-before-execute where possible.
 
-The full stack, frontend source map, storage/secrets boundaries, command-runtime rules, RDP overlay model, Settings layout, and Activity Rail layout live in `docs/ARCHITECTURE.md`. Standalone decision records (SSH transport, security/privacy, extension platform, etc.) live in `docs/ADR/`. Performance budgets and the measurement runbook live in `docs/PERFORMANCE.md`. Distribution, packaging scripts, and the v0.2 updater scope live in `docs/RELEASE.md`.
+The full stack, frontend source map, storage/secrets boundaries, command-runtime rules, RDP overlay model, Settings layout, and Activity Rail layout live in `docs/ARCHITECTURE.md`. Standalone decision records (SSH transport, security/privacy, extension platform, etc.) live in `docs/ADR/`. Performance budgets and the measurement runbook live in `docs/PERFORMANCE.md`. Distribution, packaging scripts, update checks, and the installer download/install flow live in `docs/RELEASE.md`.
 
 ## Testing Decisions
 

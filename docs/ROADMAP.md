@@ -4,7 +4,7 @@
 
 Quick snapshot as of June 2, 2026:
 
-All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Installer Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.52 and releasing continuously.
+All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Installer Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.54 and releasing continuously.
 
 Release validation gates are documented in `AGENTS.md` and `docs/RELEASE.md`; run the full suite before significant code changes or release publication. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
 
@@ -88,6 +88,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Saved Connection tools: list/create/open/update/delete.
 - [x] Live Session tools: terminal buffer reads, terminal input, RDP/VNC screenshots and input, SFTP/FTP browser list/create-folder/rename/delete actions.
 - [x] Review-only extension draft mode.
+- [x] MCP (Model Context Protocol) server support for external agent integration.
 - [x] Language output setting: follow UI language or a specific language.
 - [x] Claude Code CLI and Codex CLI path configuration (constrained to suggest-only/ask-before-execute where possible).
 - [x] Command planning safety tests.
@@ -138,7 +139,6 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [ ] Expanded AI orchestration: import Connection entries from multiple formats, monitor Connections, rename/reorganize layouts, optionally relay interactions through Telegram/WhatsApp/LINE integrations.
 - [ ] AI reference to previous session text buffers via RAG/agentic search.
 - [ ] Voice input for AI Assistant with local model support.
-- [x] MCP (Model Context Protocol) server support for external agent integration.
 
 ### Dashboard & Modules
 

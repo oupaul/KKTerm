@@ -2,6 +2,8 @@
 
 All notable changes to KKTerm are documented here.
 
+## v0.1.54
+
 ## Highlights
 - App update download & installation is now supported in KKTerm (with user-facing update status prompts). Like a good terminal session, it tells you what’s happening—before it happens.
 
