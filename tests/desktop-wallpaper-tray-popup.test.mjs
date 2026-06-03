@@ -31,15 +31,20 @@ if (!desktopWallpaper.includes("WALLPAPER_PICKER_WINDOW_LABEL")) {
   throw new Error("The standalone wallpaper picker window label should live with desktop wallpaper hosting.");
 }
 
-if (!desktopWallpaper.includes(".focusable(false)") || !desktopWallpaper.includes(".focused(false)")) {
-  throw new Error("The wallpaper host window should be non-focusable and non-focused.");
+if (!desktopWallpaper.includes(".focused(false)") || !desktopWallpaper.includes("window.set_focusable(false)")) {
+  throw new Error("The wallpaper host window should start non-focused and become non-focusable after WebView2 is created.");
+}
+
+const setFunction = desktopWallpaper.match(/pub fn set<R: Runtime>[\s\S]*?\n    \}/)?.[0] ?? "";
+const setBuilder = setFunction.match(/WebviewWindowBuilder::new\([\s\S]*?\.build\(\)/)?.[0] ?? "";
+if (setBuilder.includes(".focusable(false)")) {
+  throw new Error("The wallpaper host must not build WebView2 inside a non-focusable parent window.");
 }
 
 if (!desktopWallpaper.includes("WS_EX_NOACTIVATE") || !desktopWallpaper.includes("WS_EX_TOOLWINDOW")) {
   throw new Error("The wallpaper HWND should use no-activate tool-window extended styles.");
 }
 
-const setFunction = desktopWallpaper.match(/pub fn set<R: Runtime>[\s\S]*?\n    \}/)?.[0] ?? "";
 if (setFunction.includes("window.show()")) {
   throw new Error("The wallpaper host should avoid Tauri's normal show path after WorkerW attachment.");
 }
