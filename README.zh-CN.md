@@ -310,7 +310,7 @@ flowchart LR
 | **SFTP / FTP** | SSH 启动的 SFTP 加上 FTP/FTPS **Connection**、双栏浏览器、递归传输、队列/取消/清除历史、冲突处理、属性、chmod/chown（支持时） |
 | **URL WebView** | 嵌入式 WebView2 URL **Session**、导航工具栏、favicon 捕获、存储的网站凭据元数据/填充、数据分区元数据 |
 | **远程桌面** | 通过 Windows ActiveX 实现的 RDP，含几何范围遮罩停靠；通过 `vnc-rs` framebuffer 在工作台 Canvas 中渲染的 VNC |
-| **Dashboard** | 持久化视图、Widget 实例、编辑模式、拖拽/调整大小、App Launcher、**AI 创作的 Content/Script Widget**（声明式 JSON 或带权限的沙盒 iframe JS）、按 Widget 的预设/强调色/图标/标题、**21 种动态 Canvas 背景**（aurora、clouds、ocean、raindrops、snow、sakura、fireflies、bubbles、ricefield、lanterns、starfield、nebula、embers、lava、matrix、topo、synthwave、cyberpunk、taipei101、thunderstorm、confetti） |
+| **Dashboard** | 持久化视图、Widget 实例、编辑模式、拖拽/调整大小、App Launcher、**AI 创作的 Content/Script Widget**（声明式 JSON 或带权限的沙盒 iframe JS）、按 Widget 的预设/强调色/图标/标题、**23 种动态 Canvas 背景**（aurora、clouds、ocean、raindrops、rainywindow、snow、sakura、fireflies、bubbles、ricefield、lanterns、starfield、nebula、embers、lava、matrix、topo、synthwave、cyberpunk、taipei101、thunderstorm、confetti、particleCursor） |
 | **AI 助手** | 流式聊天、OpenAI 兼容运行时、提供商注册表、命令提案安全分级、截图/上下文附件、**Dashboard Widget 创作（Content + 沙盒 Script）**、将 **tmux Pane 捕获**作为远程 Session 的对话上下文、**Connection** 管理工具，以及终端、RDP/VNC 和 SFTP/FTP 的实时 **Session** 工具 |
 | **AI 编程用量** | **Dashboard Widget + 状态栏指示器**，追踪 **Claude Code** 和 **Codex** 的配额使用情况：已连接账号、套餐等级、5 小时和每周窗口百分比、下次重置时间、认证状态（`connected` / `expired` / `error`）、限速友好的刷新策略 |
 | **内置 MCP 服务器** | stdio MCP 服务器（`kkterm-cli`），向外部编程 Agent（Claude Code、Codex、Copilot、Antigravity、OpenCode）暴露精选的 Workspace 和 Dashboard 工具；带认证的命名管道桥接；每个模块的 `dangerous.*` 命名空间由单一安全开关门控；设置中的对话框提供一键 JSON / TOML 片段以及 `claude mcp add` / `codex mcp add` 命令 |

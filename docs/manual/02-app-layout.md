@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.connections`, `app.aiAssistant`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `app.dontSleepStatusEnabled`, `workspace.workspaceSurface`, `workspace.hostUsage`, `watchdog.statusBarLabel`, `watchdog.detail.*`
-- Topics: Activity Rail, custom title-bar panel toggles, panel resize, pinned Connections on the rail, Connections panel collapse, Child Connection Tabs, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, Watchdog Status Bar indicator and detail panel, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
-- Synonyms: "left bar", "sidebar", "right panel", "AI sidebar", "make panel wider", "hide the AI panel", "bottom bar", "coffee icon", "don't sleep indicator", "watchdog icon", "running watchdogs", "watchdog status", "connection tree tabs", "child tabs"
+- Topics: Activity Rail, custom title-bar panel toggles, panel resize, pinned Connections on the rail, Connections panel collapse, Child Connection Tabs, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, Watchdog Status Bar indicator and detail panel, restored last Module on launch, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
+- Synonyms: "left bar", "sidebar", "right panel", "AI sidebar", "make panel wider", "hide the AI panel", "bottom bar", "coffee icon", "don't sleep indicator", "watchdog icon", "running watchdogs", "watchdog status", "connection tree tabs", "child tabs", "remember dashboard", "remember installer", "restore last page", "last module"
 
 ## Activity Rail (48 px, left edge)
 
@@ -40,6 +40,8 @@ The panel only appears inside the Workspace Module. Switching to Dashboard or Se
 The active Module owns this area. Each Module renders its own layout inside it. For the Workspace Module specifically, the Canvas contains the Tab Strip and active Tab content (terminal, SFTP, WebView, RDP, VNC, Pane splits). If Child Connection Tabs are enabled, the top Tab Strip is hidden and Tab navigation moves into the Connections Panel. See [04-workspace-tabs-panes.md](04-workspace-tabs-panes.md).
 
 Accessibility label: `workspace.workspaceSurface`. Per-Connection-kind labels use `workspace.connectionKind` with the kind interpolated.
+
+KKTerm persists the last active base Module (`workspace`, `dashboard`, or `installer`) in local storage and restores it on the next launch. Opening Settings does not replace that remembered base Module; if the user opens Settings from Dashboard, the remembered base Module remains Dashboard. On launch, the Connections Panel auto-expands only when the restored Module is Workspace.
 
 ## AI Assistant Panel (right)
 
