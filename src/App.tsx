@@ -4,6 +4,13 @@ import { AssistantPanel } from "./ai/AssistantPanel";
 import type { AssistantPageContext } from "./ai/AssistantPanel";
 import { ActivityRail } from "./app/ActivityRail";
 import type { ActivePage } from "./app/ActivityRail";
+import {
+  baseModulePageForPersistence,
+  loadStoredActivePage,
+  persistActivePage,
+  shouldExpandConnectionPanelOnLaunch,
+  type BaseModulePage,
+} from "./app/appNavigationPersistence";
 import { AppUpdatePrompt } from "./app/AppUpdatePrompt";
 import { DesktopWallpaperPicker } from "./app/DesktopWallpaperPicker";
 import { TitleBar } from "./app/TitleBar";
@@ -46,13 +53,21 @@ import "./App.css";
 
 function App() {
   const { t } = useTranslation();
-  const [activePage, setActivePage] = useState<ActivePage>("workspace");
-  const [dashboardMounted, setDashboardMounted] = useState(false);
-  const [installerMounted, setInstallerMounted] = useState(false);
+  const launchPageRef = useRef<BaseModulePage | null>(null);
+  if (launchPageRef.current === null) {
+    launchPageRef.current = loadStoredActivePage();
+  }
+  const [activePage, setActivePage] = useState<ActivePage>(launchPageRef.current);
+  const [dashboardMounted, setDashboardMounted] = useState(
+    () => activePage === "dashboard",
+  );
+  const [installerMounted, setInstallerMounted] = useState(
+    () => activePage === "installer",
+  );
   const [activeSettingsSectionId, setActiveSettingsSectionId] =
     useState<SettingsSectionId>("general-settings");
   const previousBasePageRef = useRef<"workspace" | "dashboard" | "installer">(
-    "workspace",
+    launchPageRef.current,
   );
 
   function isOverlayPage(page: ActivePage): page is "settings" {
@@ -60,6 +75,13 @@ function App() {
   }
 
   function navigateToPage(page: ActivePage) {
+    const currentBasePage: BaseModulePage = isOverlayPage(activePage)
+      ? previousBasePageRef.current
+      : activePage;
+    const basePage = baseModulePageForPersistence(
+      page,
+      currentBasePage,
+    );
     if (page === "dashboard") {
       setDashboardMounted(true);
     }
@@ -67,11 +89,9 @@ function App() {
       setInstallerMounted(true);
     }
     if (isOverlayPage(page) && !isOverlayPage(activePage)) {
-      previousBasePageRef.current = activePage as
-        | "workspace"
-        | "dashboard"
-        | "installer";
+      previousBasePageRef.current = activePage;
     }
+    persistActivePage(basePage);
     setActivePage(page);
   }
 
@@ -144,7 +164,10 @@ function App() {
     resetWorkspaceChromeLayout,
     toggleAiPanel,
     toggleConnectionPanel,
-  } = useWorkspaceChromeLayout(resetAllLayouts);
+  } = useWorkspaceChromeLayout(
+    resetAllLayouts,
+    shouldExpandConnectionPanelOnLaunch(launchPageRef.current),
+  );
 
   const { generalSettingsReady } = useBootstrapSettings();
   useDashboardBackendInvalidation();

@@ -106,15 +106,24 @@ function beginDragResize(
   window.addEventListener("pointercancel", stop);
 }
 
-export function useWorkspaceChromeLayout(resetAllLayouts: () => void) {
-  const [connectionPanelLayout, setConnectionPanelLayout] = useState(() =>
-    loadPanelLayout(
+export function useWorkspaceChromeLayout(
+  resetAllLayouts: () => void,
+  forceConnectionPanelExpandedOnInitialLoad = false,
+) {
+  const [connectionPanelLayout, setConnectionPanelLayout] = useState(() => {
+    const storedLayout = loadPanelLayout(
       CONNECTION_PANEL_LAYOUT_KEY,
       defaultConnectionPanelLayout,
       CONNECTION_PANEL_MIN_WIDTH,
       CONNECTION_PANEL_MAX_WIDTH,
-    ),
-  );
+    );
+    return {
+      ...storedLayout,
+      collapsed: forceConnectionPanelExpandedOnInitialLoad
+        ? false
+        : storedLayout.collapsed,
+    };
+  });
   const [aiPanelLayout, setAiPanelLayout] = useState(() =>
     loadPanelLayout(
       AI_PANEL_LAYOUT_KEY,
