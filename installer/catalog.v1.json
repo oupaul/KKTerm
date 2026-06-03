@@ -340,6 +340,23 @@
       "options": ["scope", "version"]
     },
     {
+      "id": "coreutils",
+      "name": "Coreutils for Windows",
+      "descriptionEn": "Microsoft-maintained native Windows build of Unix-style core utilities.",
+      "category": "cli",
+      "icon": "Terminal",
+      "needs": ["winget"],
+      "homepage": "https://github.com/microsoft/coreutils",
+      "releaseNotesUrl": "https://github.com/microsoft/coreutils/releases",
+      "detection": {
+        "displayNames": ["Coreutils for Windows"],
+        "displayNamePrefixes": ["Coreutils for Windows "]
+      },
+      "provider": { "kind": "winget", "id": "Microsoft.Coreutils" },
+      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-x64.exe", "fileName": "coreutils-2026.5.29-x64.exe", "arm64Url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-arm64.exe", "arm64FileName": "coreutils-2026.5.29-arm64.exe" },
+      "options": ["provider", "version"]
+    },
+    {
       "id": "opencode",
       "name": "OpenCode CLI",
       "descriptionEn": "Terminal coding agent that can work with multiple AI providers.",

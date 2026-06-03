@@ -204,6 +204,7 @@ export function isKnownSelfElevatingWingetRecipe(recipe: Recipe): boolean {
     "coreybutler.nvmforwindows",
     "docker.dockerdesktop",
     "git.git",
+    "microsoft.coreutils",
     "oracle.virtualbox",
     "vmware.workstationpro",
   ];

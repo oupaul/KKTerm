@@ -28,6 +28,33 @@ test("NSSM is visible in the Installer Helper Utilities section", async () => {
   );
 });
 
+test("Coreutils is a Utilities tool with winget and download providers", () => {
+  const coreutils = byId.get("coreutils");
+
+  assert.ok(coreutils, "Coreutils should be present in the installer catalog");
+  assert.equal(coreutils.category, "cli");
+  assert.deepEqual(coreutils.provider, { kind: "winget", id: "Microsoft.Coreutils" });
+  assert.equal(coreutils.downloadProvider?.kind, "downloadInstaller");
+  assert.match(coreutils.downloadProvider?.url, /github\.com\/microsoft\/coreutils/);
+  assert.ok(
+    coreutils.options?.includes("provider"),
+    "Coreutils should expose the provider selector",
+  );
+});
+
+test("Coreutils is visible in the Installer Helper Utilities section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"coreutils"/,
+    "Coreutils should be listed in the visible Utilities section",
+  );
+});
+
 test("FFmpeg is visible in the Installer Helper Utilities section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),

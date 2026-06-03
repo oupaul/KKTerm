@@ -594,6 +594,7 @@ mod tests {
             "ditto",
             "tailscale",
             "rustdesk",
+            "coreutils",
             "7zip",
             "sharex",
             "ffmpeg",

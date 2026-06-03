@@ -68,6 +68,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   ripgrep: defaultIcon,
   jq: defaultIcon,
   fzf: defaultIcon,
+  coreutils: defaultIcon,
   opencode,
   rustup: rust,
   "codex-desktop": openai,

@@ -452,7 +452,7 @@ const INSTALLER_CATEGORY_SECTIONS: Array<{
   },
   {
     titleKey: "installer.section.utilities",
-    ids: ["notepadpp", "nssm", "ripgrep", "jq", "fzf", "7zip", "sharex", "ffmpeg", "excalidraw"],
+    ids: ["notepadpp", "nssm", "ripgrep", "jq", "fzf", "coreutils", "7zip", "sharex", "ffmpeg", "excalidraw"],
   },
 ];
 
