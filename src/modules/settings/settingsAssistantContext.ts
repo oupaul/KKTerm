@@ -239,6 +239,10 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.randomDynamicBackgroundOnCreate",
         description: "Random dynamic terminal backgrounds for new SSH Connections, new tabs, and Child Connection Tabs.",
       },
+      {
+        key: "settings.xServer",
+        description: "Managed VcXsrv launcher for SSH Sessions that need local X11 windows.",
+      },
     ],
   },
   "terminal-settings": {

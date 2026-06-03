@@ -16,6 +16,8 @@ interface NotesConfig {
 
 interface NotesWidgetSettings {
   rotationDegrees: number;
+  foldSizePx: number;
+  foldDepth: number;
 }
 
 const DEFAULT_CONFIG: NotesConfig = {
@@ -26,6 +28,8 @@ const DEFAULT_CONFIG: NotesConfig = {
 
 const DEFAULT_SETTINGS: NotesWidgetSettings = {
   rotationDegrees: -0.6,
+  foldSizePx: 22,
+  foldDepth: 0.5,
 };
 
 const DELETE_ANIMATION_MS = 220;
@@ -62,13 +66,27 @@ export function randomNotesRotationDegrees() {
   return Math.round(((Math.random() * 2.4) - 1.2) * 10) / 10;
 }
 
+export function randomNotesSettings(): NotesWidgetSettings {
+  return {
+    rotationDegrees: randomNotesRotationDegrees(),
+    foldSizePx: Math.round(18 + Math.random() * 16),
+    foldDepth: Math.round((0.3 + Math.random() * 0.5) * 100) / 100,
+  };
+}
+
 export function parseNotesSettingsJson(settingsValuesJson: string): NotesWidgetSettings {
   try {
     const parsed = JSON.parse(settingsValuesJson) as Partial<NotesWidgetSettings>;
     const rotationDegrees = typeof parsed.rotationDegrees === "number"
       ? Math.max(-3, Math.min(3, parsed.rotationDegrees))
       : DEFAULT_SETTINGS.rotationDegrees;
-    return { rotationDegrees };
+    const foldSizePx = typeof parsed.foldSizePx === "number"
+      ? Math.max(14, Math.min(42, parsed.foldSizePx))
+      : DEFAULT_SETTINGS.foldSizePx;
+    const foldDepth = typeof parsed.foldDepth === "number"
+      ? Math.max(0, Math.min(1, parsed.foldDepth))
+      : DEFAULT_SETTINGS.foldDepth;
+    return { rotationDegrees, foldSizePx, foldDepth };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -126,7 +144,14 @@ export function NotesBody({ instance }: BuiltInWidgetBodyProps) {
   return (
     <div
       className={`dw-notes dw-notes--color-${config.color} dw-notes--font-${config.font}${tearingPageIndex === activePageIndex ? " is-tearing" : ""}`}
-      style={{ "--note-rotation": `${settings.rotationDegrees}deg` } as CSSProperties}
+      style={{
+        "--note-rotation": `${settings.rotationDegrees}deg`,
+        "--note-fold-size": `${settings.foldSizePx}px`,
+        "--note-fold-depth": settings.foldDepth,
+        "--note-fold-depth-alpha": String(0.08 + settings.foldDepth * 0.18),
+        "--note-fold-shadow-offset": `${settings.foldDepth * 5}px`,
+        "--note-fold-shadow-blur": `${settings.foldDepth * 7}px`,
+      } as CSSProperties}
     >
       <div className="dw-notes-page-actions" role="toolbar" aria-label={t("dashboard.notesPagesToolbarLabel")}>
         <button

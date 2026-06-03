@@ -1187,6 +1187,7 @@
     "notesDeletePage": "ลบหน้าบันทึก",
     "notesPageIndicator": "หน้า {{page}} จาก {{total}}",
     "notesRotationDegrees": "องศาการหมุน",
+    "notesFoldDepth": "ความลึกของรอยพับ",
     "notesBackgroundColor": "สีพื้นหลัง",
     "notesFont": "แบบอักษร",
     "notesColor": {

@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { FolderOpen, KeyRound, Save, Server } from "lucide-react";
+import { FolderOpen, KeyRound, Play, Save, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";
@@ -15,6 +15,8 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
   const defaultPort = Math.round(settings.defaultPort);
   const bufferLines = Math.round(settings.bufferLines ?? 5000);
   const defaultTransparency = Math.round(settings.defaultTransparency ?? 50);
+  const xServerDisplay = Math.round(settings.xServerDisplay ?? 0);
+  const xServerArgs = settings.xServerArgs?.trim() || "-multiwindow -clipboard -wgl";
 
   if (!defaultUser) {
     throw new Error(t("settings.defaultSshUserRequired"));
@@ -28,6 +30,9 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
   if (!Number.isFinite(defaultTransparency) || defaultTransparency < 0 || defaultTransparency > 100) {
     throw new Error(t("settings.defaultTransparencyRange"));
   }
+  if (!Number.isFinite(xServerDisplay) || xServerDisplay < 0 || xServerDisplay > 99) {
+    throw new Error(t("settings.xServerDisplayRange"));
+  }
 
   return {
     defaultUser,
@@ -39,6 +44,10 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     useRandomDynamicBackground: settings.useRandomDynamicBackground ?? false,
     hideCommonPortRedirects: settings.hideCommonPortRedirects ?? true,
     allowOsc52Clipboard: settings.allowOsc52Clipboard ?? true,
+    managedXServerEnabled: settings.managedXServerEnabled ?? false,
+    xServerPath: settings.xServerPath?.trim() || undefined,
+    xServerDisplay,
+    xServerArgs,
   };
 }
 
@@ -127,6 +136,30 @@ export function SshSettings() {
       showStatusBarNotice(t("settings.sshDefaultsSaved"), { tone: "success" });
     } catch (saveError) {
       showStatusBarNotice(saveError instanceof Error ? saveError.message : String(saveError), { tone: "error" });
+    }
+  }
+
+  async function handleLaunchXServer() {
+    try {
+      const nextSshSettings = normalizeSshSettingsDraft(sshDraft, t);
+      const savedSshSettings = isTauriRuntime()
+        ? await invokeCommand("update_ssh_settings", { request: nextSshSettings })
+        : nextSshSettings;
+      setSshSettings(savedSshSettings);
+      setSshDraft(savedSshSettings);
+      if (!isTauriRuntime()) {
+        showStatusBarNotice(t("settings.xServerLaunchStarted"), { tone: "success" });
+        return;
+      }
+      const result = await invokeCommand("launch_ssh_x_server");
+      showStatusBarNotice(
+        result.alreadyRunning
+          ? t("settings.xServerAlreadyRunning")
+          : t("settings.xServerLaunchStarted"),
+        { tone: "success" },
+      );
+    } catch (launchError) {
+      showStatusBarNotice(launchError instanceof Error ? launchError.message : String(launchError), { tone: "error" });
     }
   }
 
@@ -340,6 +373,73 @@ export function SshSettings() {
               <strong>{t("settings.hideCommonPortRedirects")}</strong>
               <small>{t("settings.hideCommonPortRedirectsHint")}</small>
             </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.xServer")}</legend>
+        <div className="settings-section-title">
+          <div>
+            <p className="field-hint">{t("settings.xServerHint")}</p>
+          </div>
+          <button className="toolbar-button" onClick={() => void handleLaunchXServer()} type="button">
+            <Play size={15} />
+            {t("settings.xServerLaunch")}
+          </button>
+        </div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={sshDraft.managedXServerEnabled ?? false}
+              onChange={(checked) =>
+                setSshDraft((settings) => ({ ...settings, managedXServerEnabled: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.xServerManaged")}</strong>
+              <small>{t("settings.xServerManagedHint")}</small>
+            </span>
+          </label>
+        </div>
+        <div className="form-grid ssh-default-basic-grid">
+          <label>
+            <span>{t("settings.xServerPath")}</span>
+            <input
+              onChange={(event) => {
+                const xServerPath = event.currentTarget.value;
+                setSshDraft((settings) => ({ ...settings, xServerPath }));
+              }}
+              placeholder={t("settings.xServerPathPlaceholder")}
+              value={sshDraft.xServerPath ?? ""}
+            />
+            <small className="field-hint">{t("settings.xServerPathHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.xServerDisplay")}</span>
+            <input
+              inputMode="numeric"
+              max={99}
+              min={0}
+              onChange={(event) => {
+                const xServerDisplay = Number(event.currentTarget.value);
+                setSshDraft((settings) => ({ ...settings, xServerDisplay }));
+              }}
+              type="number"
+              value={sshDraft.xServerDisplay ?? 0}
+            />
+            <small className="field-hint">{t("settings.xServerDisplayHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.xServerArgs")}</span>
+            <input
+              onChange={(event) => {
+                const xServerArgs = event.currentTarget.value;
+                setSshDraft((settings) => ({ ...settings, xServerArgs }));
+              }}
+              value={sshDraft.xServerArgs ?? "-multiwindow -clipboard -wgl"}
+            />
+            <small className="field-hint">{t("settings.xServerArgsHint")}</small>
           </label>
         </div>
       </fieldset>

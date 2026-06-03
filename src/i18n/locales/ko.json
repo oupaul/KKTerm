@@ -1187,6 +1187,7 @@
     "notesDeletePage": "메모 페이지 삭제",
     "notesPageIndicator": "{{total}}페이지 중 {{page}}페이지",
     "notesRotationDegrees": "회전 각도",
+    "notesFoldDepth": "접힌 모서리 깊이",
     "notesBackgroundColor": "배경색",
     "notesFont": "글꼴",
     "notesColor": {

@@ -372,6 +372,10 @@ export interface SshSettings {
   useRandomDynamicBackground: boolean;
   hideCommonPortRedirects: boolean;
   allowOsc52Clipboard: boolean;
+  managedXServerEnabled: boolean;
+  xServerPath?: string;
+  xServerDisplay: number;
+  xServerArgs: string;
 }
 
 export type SftpOverwriteBehavior = "fail" | "overwrite";

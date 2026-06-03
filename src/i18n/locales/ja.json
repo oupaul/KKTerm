@@ -1187,6 +1187,7 @@
     "notesDeletePage": "メモページを削除",
     "notesPageIndicator": "{{total}} ページ中 {{page}} ページ",
     "notesRotationDegrees": "回転角度",
+    "notesFoldDepth": "折り目の深さ",
     "notesBackgroundColor": "背景色",
     "notesFont": "フォント",
     "notesColor": {

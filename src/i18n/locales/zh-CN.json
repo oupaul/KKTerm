@@ -1187,6 +1187,7 @@
     "notesDeletePage": "删除笔记页",
     "notesPageIndicator": "第 {{page}} 页，共 {{total}} 页",
     "notesRotationDegrees": "旋转角度",
+    "notesFoldDepth": "折角深度",
     "notesBackgroundColor": "背景颜色",
     "notesFont": "字体",
     "notesColor": {

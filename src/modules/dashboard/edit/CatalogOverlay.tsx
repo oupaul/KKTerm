@@ -8,7 +8,7 @@ import { useDashboardStore } from "../state/dashboardStore";
 import { nextDashboardAppendGridY } from "../grid";
 import { BUILT_IN_WIDGETS } from "../registry/builtInRegistry";
 import { resolveAccent } from "../registry/palette";
-import { randomNotesRotationDegrees } from "../widgets/builtin/notes/NotesWidget";
+import { randomNotesSettings } from "../widgets/builtin/notes/NotesWidget";
 import type { AccentName, IconName, WidgetKind, WidgetPreset } from "../types";
 import { CATALOG_GROUPS, getCatalogGroup } from "./catalogModel";
 
@@ -96,7 +96,7 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
     });
     if (instance && entry.kind === "builtIn" && entry.id === "notes") {
       await useDashboardStore.getState().updateInstance(instance.id, {
-        settingsValuesJson: JSON.stringify({ rotationDegrees: randomNotesRotationDegrees() }),
+        settingsValuesJson: JSON.stringify(randomNotesSettings()),
       });
     }
     onClose();

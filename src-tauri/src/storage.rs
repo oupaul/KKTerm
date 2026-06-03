@@ -452,11 +452,35 @@ pub struct SshSettings {
     hide_common_port_redirects: bool,
     #[serde(default = "default_allow_osc52_clipboard")]
     allow_osc52_clipboard: bool,
+    #[serde(default)]
+    managed_x_server_enabled: bool,
+    #[serde(default)]
+    x_server_path: Option<String>,
+    #[serde(default = "default_x_server_display")]
+    x_server_display: u16,
+    #[serde(default = "default_x_server_args")]
+    x_server_args: String,
 }
 
 impl SshSettings {
     pub(crate) fn hide_common_port_redirects(&self) -> bool {
         self.hide_common_port_redirects
+    }
+
+    pub(crate) fn managed_x_server_enabled(&self) -> bool {
+        self.managed_x_server_enabled
+    }
+
+    pub(crate) fn x_server_path(&self) -> Option<&str> {
+        self.x_server_path.as_deref()
+    }
+
+    pub(crate) fn x_server_display(&self) -> u16 {
+        self.x_server_display
+    }
+
+    pub(crate) fn x_server_args(&self) -> &str {
+        &self.x_server_args
     }
 }
 
@@ -4794,6 +4818,10 @@ fn default_ssh_settings() -> SshSettings {
         use_random_dynamic_background: false,
         hide_common_port_redirects: default_hide_common_port_redirects(),
         allow_osc52_clipboard: default_allow_osc52_clipboard(),
+        managed_x_server_enabled: false,
+        x_server_path: None,
+        x_server_display: default_x_server_display(),
+        x_server_args: default_x_server_args(),
     }
 }
 
@@ -4807,6 +4835,14 @@ fn default_terminal_transparency() -> u8 {
 
 fn default_hide_common_port_redirects() -> bool {
     true
+}
+
+fn default_x_server_display() -> u16 {
+    0
+}
+
+fn default_x_server_args() -> String {
+    "-multiwindow -clipboard -wgl".to_string()
 }
 
 fn default_sftp_settings() -> SftpSettings {
@@ -5245,6 +5281,12 @@ fn validate_ssh_settings(mut settings: SshSettings) -> Result<SshSettings, Strin
     }
     if settings.default_transparency > 100 {
         return Err("SSH default transparency must be between 0 and 100".to_string());
+    }
+    settings.x_server_path = trim_optional(settings.x_server_path);
+    settings.x_server_display = settings.x_server_display.min(99);
+    settings.x_server_args = settings.x_server_args.trim().to_string();
+    if settings.x_server_args.is_empty() {
+        settings.x_server_args = default_x_server_args();
     }
     Ok(settings)
 }
@@ -7423,6 +7465,9 @@ mod tests {
         assert!(!defaults.use_random_dynamic_background);
         assert!(defaults.hide_common_port_redirects);
         assert!(defaults.allow_osc52_clipboard);
+        assert!(!defaults.managed_x_server_enabled);
+        assert_eq!(defaults.x_server_display, 0);
+        assert_eq!(defaults.x_server_args, "-multiwindow -clipboard -wgl");
         assert!(defaults.default_key_path.is_some());
 
         let updated = storage
@@ -7436,6 +7481,10 @@ mod tests {
                 use_random_dynamic_background: true,
                 hide_common_port_redirects: false,
                 allow_osc52_clipboard: false,
+                managed_x_server_enabled: true,
+                x_server_path: Some("  C:\\Program Files\\VcXsrv\\vcxsrv.exe  ".to_string()),
+                x_server_display: 120,
+                x_server_args: "  -multiwindow -clipboard -nowgl  ".to_string(),
             })
             .expect("SSH settings update");
 
@@ -7452,6 +7501,13 @@ mod tests {
         assert!(reloaded.use_random_dynamic_background);
         assert!(!reloaded.hide_common_port_redirects);
         assert!(!reloaded.allow_osc52_clipboard);
+        assert!(reloaded.managed_x_server_enabled);
+        assert_eq!(
+            reloaded.x_server_path.as_deref(),
+            Some("C:\\Program Files\\VcXsrv\\vcxsrv.exe")
+        );
+        assert_eq!(reloaded.x_server_display, 99);
+        assert_eq!(reloaded.x_server_args, "-multiwindow -clipboard -nowgl");
         assert_eq!(
             reloaded.default_proxy_jump.as_deref(),
             Some("bastion.internal")

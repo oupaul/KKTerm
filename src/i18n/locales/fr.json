@@ -1187,6 +1187,7 @@
     "notesDeletePage": "Supprimer la page de note",
     "notesPageIndicator": "Page {{page}} sur {{total}}",
     "notesRotationDegrees": "Degrés de rotation",
+    "notesFoldDepth": "Profondeur du pli",
     "notesBackgroundColor": "Couleur de fond",
     "notesFont": "Police",
     "notesColor": {

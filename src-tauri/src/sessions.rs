@@ -1,6 +1,6 @@
 #[cfg(target_os = "windows")]
 use crate::windows_local_pty;
-use crate::{secrets, serial, ssh, telnet};
+use crate::{secrets, serial, ssh, storage, telnet, x_server};
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -696,6 +696,16 @@ impl SessionManager {
             .unwrap_or_else(|| make_session_id(&request.title));
         let is_local_start = request.connection_type.trim().eq_ignore_ascii_case("local");
         let password = connection_password_for(secrets, &request);
+        if request.connection_type.trim().eq_ignore_ascii_case("ssh") {
+            let settings = app.state::<storage::Storage>().ssh_settings()?;
+            if settings.managed_x_server_enabled() {
+                x_server::launch_vcxsrv_if_needed(
+                    settings.x_server_path(),
+                    settings.x_server_display(),
+                    Some(settings.x_server_args()),
+                )?;
+            }
+        }
         if request
             .connection_type
             .trim()

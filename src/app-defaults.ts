@@ -92,6 +92,10 @@ export const defaultSshSettings: SshSettings = {
   useRandomDynamicBackground: false,
   hideCommonPortRedirects: true,
   allowOsc52Clipboard: true,
+  managedXServerEnabled: false,
+  xServerPath: "",
+  xServerDisplay: 0,
+  xServerArgs: "-multiwindow -clipboard -wgl",
 };
 
 export const defaultSftpSettings: SftpSettings = {

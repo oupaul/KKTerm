@@ -1187,6 +1187,7 @@
     "notesDeletePage": "Hapus halaman catatan",
     "notesPageIndicator": "Halaman {{page}} dari {{total}}",
     "notesRotationDegrees": "Derajat rotasi",
+    "notesFoldDepth": "Kedalaman lipatan",
     "notesBackgroundColor": "Warna latar",
     "notesFont": "Font",
     "notesColor": {

@@ -1187,6 +1187,7 @@
     "notesDeletePage": "Notizseite löschen",
     "notesPageIndicator": "Seite {{page}} von {{total}}",
     "notesRotationDegrees": "Drehung in Grad",
+    "notesFoldDepth": "Falztiefe",
     "notesBackgroundColor": "Hintergrundfarbe",
     "notesFont": "Schriftart",
     "notesColor": {

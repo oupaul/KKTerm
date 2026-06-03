@@ -28,6 +28,27 @@ test("NSSM is visible in the Installer Helper Utilities section", async () => {
   );
 });
 
+test("VcXsrv is a Utilities tool for SSH X11 forwarding", () => {
+  const vcxsrv = byId.get("vcxsrv");
+
+  assert.ok(vcxsrv, "VcXsrv should be present in the installer catalog");
+  assert.equal(vcxsrv.category, "utilities");
+  assert.deepEqual(vcxsrv.provider, { kind: "winget", id: "marha.VcXsrv" });
+});
+
+test("VcXsrv is visible in the Installer Helper Utilities section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"vcxsrv"/,
+    "VcXsrv should be listed in the visible Utilities section",
+  );
+});
+
 test("Coreutils is a Utilities tool with winget and download providers", () => {
   const coreutils = byId.get("coreutils");
 

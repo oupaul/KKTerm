@@ -1187,6 +1187,7 @@
     "notesDeletePage": "Elimina pagina nota",
     "notesPageIndicator": "Pagina {{page}} di {{total}}",
     "notesRotationDegrees": "Gradi di rotazione",
+    "notesFoldDepth": "Profondità piega",
     "notesBackgroundColor": "Colore di sfondo",
     "notesFont": "Carattere",
     "notesColor": {

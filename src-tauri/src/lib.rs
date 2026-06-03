@@ -43,6 +43,7 @@ mod window_effects;
 mod window_state;
 #[cfg(target_os = "windows")]
 mod windows_local_pty;
+mod x_server;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -880,6 +881,18 @@ fn update_ssh_settings(
     request: storage::SshSettings,
 ) -> Result<storage::SshSettings, String> {
     storage.update_ssh_settings(request)
+}
+
+#[tauri::command]
+fn launch_ssh_x_server(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<x_server::XServerLaunchResult, String> {
+    let settings = storage.ssh_settings()?;
+    x_server::launch_vcxsrv_if_needed(
+        settings.x_server_path(),
+        settings.x_server_display(),
+        Some(settings.x_server_args()),
+    )
 }
 
 #[tauri::command]
@@ -2828,6 +2841,7 @@ pub fn run() {
             load_custom_font_data,
             get_ssh_settings,
             update_ssh_settings,
+            launch_ssh_x_server,
             generate_ssh_key_pair,
             transfer_ssh_public_key,
             get_sftp_settings,

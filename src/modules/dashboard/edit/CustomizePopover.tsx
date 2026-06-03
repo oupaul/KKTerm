@@ -59,6 +59,15 @@ const NOTES_SETTINGS_SCHEMA: WidgetSettingsSchema = {
       step: 0.1,
       defaultValue: -0.6,
     },
+    {
+      key: "foldDepth",
+      type: "number",
+      label: "dashboard.notesFoldDepth",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      defaultValue: 0.5,
+    },
   ],
 };
 

@@ -999,6 +999,15 @@ type CommandMap = {
     args: { request: SshSettings };
     result: SshSettings;
   };
+  launch_ssh_x_server: {
+    args: undefined;
+    result: {
+      started: boolean;
+      alreadyRunning: boolean;
+      executablePath?: string;
+      display: number;
+    };
+  };
   generate_ssh_key_pair: {
     args: { request: { email: string } };
     result: GeneratedSshKeyPair;

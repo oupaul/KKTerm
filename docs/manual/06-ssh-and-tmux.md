@@ -2,9 +2,9 @@
 
 ## AI grep hints
 
-- Keys: `terminal.verifyingHostKey`, `terminal.sshHostKeyChanged`, `terminal.sshHostKeyChangedDetail`, `terminal.sshHostKeyChangeDetail`, `terminal.trustHostKey`, `terminal.hostKeyNotTrusted`, `terminal.selectKeyFile`, `terminal.sshContextUnavailable`, `terminal.showTmux`, `terminal.editTmuxSession`, `terminal.tmuxSessionName`, `terminal.tmuxSessionNameRequired`, `terminal.tmuxSessionNameInvalid`, `terminal.tmuxSessionRenamed`, `terminal.tmuxSessions`, `terminal.refreshTmux`, `terminal.noTmuxSessions`, `terminal.attached`, `terminal.detached`, `terminal.detachTmux`, `terminal.closeTmux`, `terminal.openInPane`, `terminal.openLeft`, `terminal.openRight`, `terminal.openAbove`, `terminal.openBelow`, `terminal.mouseOn`, `terminal.mouseOff`, `terminal.sshPortRedirect`, `terminal.remoteLoopbackPorts`, `terminal.refreshPorts`, `terminal.scanningPorts`, `terminal.noRemoteLoopbackPorts`, `terminal.remoteLoopbackPort`, `terminal.openPortInBrowser`, `terminal.sshPortForwardOpened`
-- Topics: SSH host key trust, tmux session list, attach / detach / rename tmux, Child Connection Tab tmux resume, SSH local port forward for remote loopback services, tutorial targets `terminal.tmuxSessions`, `terminal.sshPortRedirect`
-- Synonyms: "trust this host", "key fingerprint changed", "MITM warning", "tmux session", "screen", "child tmux tab", "saved tmux tab", "port forward", "tunnel"
+- Keys: `terminal.verifyingHostKey`, `terminal.sshHostKeyChanged`, `terminal.sshHostKeyChangedDetail`, `terminal.sshHostKeyChangeDetail`, `terminal.trustHostKey`, `terminal.hostKeyNotTrusted`, `terminal.selectKeyFile`, `terminal.sshContextUnavailable`, `terminal.showTmux`, `terminal.editTmuxSession`, `terminal.tmuxSessionName`, `terminal.tmuxSessionNameRequired`, `terminal.tmuxSessionNameInvalid`, `terminal.tmuxSessionRenamed`, `terminal.tmuxSessions`, `terminal.refreshTmux`, `terminal.noTmuxSessions`, `terminal.attached`, `terminal.detached`, `terminal.detachTmux`, `terminal.closeTmux`, `terminal.openInPane`, `terminal.openLeft`, `terminal.openRight`, `terminal.openAbove`, `terminal.openBelow`, `terminal.mouseOn`, `terminal.mouseOff`, `terminal.sshPortRedirect`, `terminal.remoteLoopbackPorts`, `terminal.refreshPorts`, `terminal.scanningPorts`, `terminal.noRemoteLoopbackPorts`, `terminal.remoteLoopbackPort`, `terminal.openPortInBrowser`, `terminal.sshPortForwardOpened`, `settings.xServer`, `settings.xServerManaged`, `settings.xServerLaunch`
+- Topics: SSH host key trust, tmux session list, attach / detach / rename tmux, Child Connection Tab tmux resume, SSH local port forward for remote loopback services, managed VcXsrv launch for local X11 windows, tutorial targets `terminal.tmuxSessions`, `terminal.sshPortRedirect`
+- Synonyms: "trust this host", "key fingerprint changed", "MITM warning", "tmux session", "screen", "child tmux tab", "saved tmux tab", "port forward", "tunnel", "X11", "X forwarding", "X server", "VcXsrv"
 
 ## Host key trust
 
@@ -71,3 +71,9 @@ For probing a remote service exposed on the remote's loopback interface:
 Tutorial target: `terminal.sshPortRedirect`.
 
 This path uses the existing SSH channel for the tunnel — it does not create a second SSH login.
+
+## Local X server launcher
+
+Settings - SSH exposes `settings.xServer` for a managed VcXsrv launcher. When `settings.xServerManaged` is enabled, KKTerm checks for a running `vcxsrv.exe` process before opening an SSH Session and starts VcXsrv with the configured display number and launch arguments when needed. `settings.xServerLaunch` saves the current SSH settings draft and launches VcXsrv immediately so users can verify the local X server outside an SSH Session.
+
+The launcher manages only the local Windows X server process. It does not create a durable Connection and does not store live process state in the Connection model.

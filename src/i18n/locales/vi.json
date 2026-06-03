@@ -1188,6 +1188,7 @@
     "notesDeletePage": "Xóa trang ghi chú",
     "notesPageIndicator": "Trang {{page}} / {{total}}",
     "notesRotationDegrees": "Độ xoay",
+    "notesFoldDepth": "Độ sâu nếp gấp",
     "notesBackgroundColor": "Màu nền",
     "notesFont": "Phông chữ",
     "notesColor": {

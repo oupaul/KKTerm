@@ -193,6 +193,22 @@
       "options": ["scope", "version"]
     },
     {
+      "id": "vcxsrv",
+      "name": "VcXsrv",
+      "descriptionEn": "Lightweight Windows X server for SSH X11 forwarding and remote Linux GUI apps.",
+      "category": "utilities",
+      "icon": "Monitor",
+      "needs": ["winget"],
+      "homepage": "https://github.com/marchaesen/vcxsrv",
+      "releaseNotesUrl": "https://github.com/marchaesen/vcxsrv/releases",
+      "detection": {
+        "displayNames": ["VcXsrv"],
+        "displayNamePrefixes": ["VcXsrv"]
+      },
+      "provider": { "kind": "winget", "id": "marha.VcXsrv" },
+      "options": ["scope", "version"]
+    },
+    {
       "id": "claude-code-cli",
       "name": "Claude Code CLI",
       "descriptionEn": "Anthropic's official CLI coding agent. Requires Node.",
