@@ -8,7 +8,7 @@ const dialogPath = path.join(
   "installer",
   "InstallerToolDialog.tsx",
 );
-const source = fs.readFileSync(dialogPath, "utf8");
+const source = fs.readFileSync(dialogPath, "utf8").replace(/\r\n/g, "\n");
 
 const fallbackStart = source.indexOf("if (!hasPlan) {");
 const fallbackEnd = source.indexOf("const active = stepper!.activeStepId;", fallbackStart);
@@ -54,7 +54,9 @@ const updateAllPath = path.join(
   "installer",
   "InstallerPage.tsx",
 );
-const updateAllSource = fs.readFileSync(updateAllPath, "utf8");
+const updateAllSource = fs
+  .readFileSync(updateAllPath, "utf8")
+  .replace(/\r\n/g, "\n");
 const updateAllStart = updateAllSource.indexOf("async function confirmUpdateAll()");
 if (updateAllStart === -1) {
   throw new Error("Could not locate confirmUpdateAll.");
