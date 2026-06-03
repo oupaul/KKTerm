@@ -385,7 +385,10 @@ Follow a cautious read-before-write flow.
         assert_eq!(
             names,
             vec![
+                "dashboard-data-visualization",
                 "dashboard-widget-builder",
+                "dashboard-widget-designer",
+                "desktop-accessibility-ui",
                 "dns-dhcp-troubleshooter",
                 "firewall-port-troubleshooter",
                 "network-connectivity-troubleshooter",
