@@ -90,12 +90,12 @@ mod platform {
         .resizable(false)
         .visible(false)
         .skip_taskbar(true)
-        .focusable(false)
         .focused(false)
         .disable_drag_drop_handler()
         .build()
         .map_err(|error| format!("failed to create wallpaper window: {error}"))?;
 
+        let _ = window.set_focusable(false);
         let handle = window
             .hwnd()
             .map_err(|error| format!("failed to read wallpaper window handle: {error}"))?;
