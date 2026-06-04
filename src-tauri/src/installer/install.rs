@@ -541,6 +541,7 @@ fn managed_ollama_winget_args_for(winget_id: &str, options: &InstallOptions) -> 
         "--accept-package-agreements".into(),
         "--accept-source-agreements".into(),
         "--disable-interactivity".into(),
+        "--verbose-logs".into(),
         "--source".into(),
         "winget".into(),
         "--scope".into(),
@@ -658,6 +659,20 @@ fn install_winget(
         tool_id: tool_id.into(),
         message: format!("winget install --id {winget_id}"),
     });
+    let args = winget_install_args(winget_id, options);
+    run_streamed("winget", &args, tool_id, cancel, emit)?;
+    if winget_tool_should_add_links_to_path(tool_id) {
+        if let Some(dir) = winget_links_dir() {
+            add_to_user_path(&dir, tool_id, emit);
+        }
+    }
+    // We don't try to parse winget's silent stdout for the installed version;
+    // a subsequent detect_one() reads the local installed-software inventory.
+    // Returning None lets the caller decide whether to re-detect.
+    Ok(None)
+}
+
+fn winget_install_args(winget_id: &str, options: &InstallOptions) -> Vec<String> {
     let mut args: Vec<String> = vec![
         "install".into(),
         "--id".into(),
@@ -667,6 +682,10 @@ fn install_winget(
         "--accept-package-agreements".into(),
         "--accept-source-agreements".into(),
         "--disable-interactivity".into(),
+        // Verbose logging makes winget write a detailed diagnostic log; we
+        // surface its directory on failure so an obscure exit code can be
+        // traced to a concrete cause.
+        "--verbose-logs".into(),
         "--source".into(),
         "winget".into(),
     ];
@@ -688,16 +707,7 @@ fn install_winget(
             args.push(location.into());
         }
     }
-    run_streamed("winget", &args, tool_id, cancel, emit)?;
-    if winget_tool_should_add_links_to_path(tool_id) {
-        if let Some(dir) = winget_links_dir() {
-            add_to_user_path(&dir, tool_id, emit);
-        }
-    }
-    // We don't try to parse winget's silent stdout for the installed version;
-    // a subsequent detect_one() reads the local installed-software inventory.
-    // Returning None lets the caller decide whether to re-detect.
-    Ok(None)
+    args
 }
 
 fn winget_tool_should_add_links_to_path(tool_id: &str) -> bool {
@@ -715,6 +725,211 @@ fn winget_links_dir_from_local_app_data(local_app_data: PathBuf) -> PathBuf {
         .join("Microsoft")
         .join("WinGet")
         .join("Links")
+}
+
+/// Directory where winget writes its per-run diagnostic logs. Surfaced on a
+/// non-zero exit so the user can open the detailed `--verbose-logs` output
+/// when the decoded exit code is too generic to explain the failure.
+fn winget_log_dir() -> Option<PathBuf> {
+    std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .map(winget_log_dir_from_local_app_data)
+}
+
+fn winget_log_dir_from_local_app_data(local_app_data: PathBuf) -> PathBuf {
+    local_app_data
+        .join("Packages")
+        .join("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe")
+        .join("LocalState")
+        .join("DiagOutputDir")
+}
+
+/// Build the human-readable suffix appended to a non-zero exit message.
+/// Only winget exit codes are decoded — its failures are reported as raw
+/// `HRESULT` values (e.g. `-1978335150`) that mean nothing without the hex
+/// form and the documented `APPINSTALLER_CLI_ERROR_*` description.
+fn exit_status_detail(program: &str, code: i32) -> String {
+    if !program.eq_ignore_ascii_case("winget") {
+        return String::new();
+    }
+    let hex = format!("0x{:08X}", code as u32);
+    match winget_error_text(code as u32) {
+        Some(text) => format!(" ({hex}: {text})"),
+        None => format!(" ({hex})"),
+    }
+}
+
+/// Documented winget (`AppInstaller`) return codes mapped to their official
+/// descriptions. Source: microsoft/winget-cli `doc/.../winget/returnCodes.md`.
+/// Keyed by the unsigned `HRESULT` so a caller can pass `code as u32`.
+fn winget_error_text(code: u32) -> Option<&'static str> {
+    let text = match code {
+        0x8A150001 => "Internal error",
+        0x8A150002 => "Invalid command line arguments",
+        0x8A150003 => "Executing command failed",
+        0x8A150004 => "Opening manifest failed",
+        0x8A150005 => "Cancellation signal received",
+        0x8A150006 => "Running ShellExecute failed",
+        0x8A150007 => "Cannot process manifest. The manifest version is higher than supported. Please update the client.",
+        0x8A150008 => "Downloading installer failed",
+        0x8A150009 => "Cannot write to index; it is a higher schema version",
+        0x8A15000A => "The index is corrupt",
+        0x8A15000B => "The configured source information is corrupt",
+        0x8A15000C => "The source name is already configured",
+        0x8A15000D => "The source type is invalid",
+        0x8A15000E => "The MSIX file is a bundle, not a package",
+        0x8A15000F => "Data required by the source is missing",
+        0x8A150010 => "None of the installers are applicable for the current system",
+        0x8A150011 => "The installer file's hash does not match the manifest",
+        0x8A150012 => "The source name does not exist",
+        0x8A150013 => "The source location is already configured under another name",
+        0x8A150014 => "No packages found",
+        0x8A150015 => "No sources are configured",
+        0x8A150016 => "Multiple packages found matching the criteria",
+        0x8A150017 => "No manifest found matching the criteria",
+        0x8A150018 => "Failed to get Public folder from source package",
+        0x8A150019 => "Command requires administrator privileges to run",
+        0x8A15001A => "The source location is not secure",
+        0x8A15001B => "The Microsoft Store client is blocked by policy",
+        0x8A15001C => "The Microsoft Store app is blocked by policy",
+        0x8A15001D => "The feature is currently under development. It can be enabled using winget settings.",
+        0x8A15001E => "Failed to install the Microsoft Store app",
+        0x8A15001F => "Failed to perform auto complete",
+        0x8A150020 => "Failed to initialize YAML parser",
+        0x8A150021 => "Encountered an invalid YAML key",
+        0x8A150022 => "Encountered a duplicate YAML key",
+        0x8A150023 => "Invalid YAML operation",
+        0x8A150024 => "Failed to build YAML doc",
+        0x8A150025 => "Invalid YAML emitter state",
+        0x8A150026 => "Invalid YAML data",
+        0x8A150027 => "LibYAML error",
+        0x8A150028 => "Manifest validation succeeded with warning",
+        0x8A150029 => "Manifest validation failed",
+        0x8A15002A => "Manifest is invalid",
+        0x8A15002B => "No applicable update found",
+        0x8A15002C => "winget upgrade --all completed with failures",
+        0x8A15002D => "Installer failed security check",
+        0x8A15002E => "Download size does not match expected content length",
+        0x8A15002F => "Uninstall command not found",
+        0x8A150030 => "Running uninstall command failed",
+        0x8A150031 => "ICU break iterator error",
+        0x8A150032 => "ICU casemap error",
+        0x8A150033 => "ICU regex error",
+        0x8A150034 => "Failed to install one or more imported packages",
+        0x8A150035 => "Could not find one or more requested packages",
+        0x8A150036 => "Json file is invalid",
+        0x8A150037 => "The source location is not remote",
+        0x8A150038 => "The configured rest source is not supported",
+        0x8A150039 => "Invalid data returned by rest source",
+        0x8A15003A => "Operation is blocked by Group Policy",
+        0x8A15003B => "Rest API internal error",
+        0x8A15003C => "Invalid rest source url",
+        0x8A15003D => "Unsupported MIME type returned by rest API",
+        0x8A15003E => "Invalid rest source contract version",
+        0x8A15003F => "The source data is corrupted or tampered",
+        0x8A150040 => "Error reading from the stream",
+        0x8A150041 => "Package agreements were not agreed to",
+        0x8A150042 => "Error reading input in prompt",
+        0x8A150043 => "The search request is not supported by one or more sources",
+        0x8A150044 => "The rest API endpoint is not found",
+        0x8A150045 => "Failed to open the source",
+        0x8A150046 => "Source agreements were not agreed to",
+        0x8A150047 => "Header size exceeds the allowable limit of 1024 characters. Please reduce the size and try again.",
+        0x8A150048 => "Missing resource file",
+        0x8A150049 => "Running MSI install failed",
+        0x8A15004A => "Arguments for msiexec are invalid",
+        0x8A15004B => "Failed to open one or more sources",
+        0x8A15004C => "Failed to validate dependencies",
+        0x8A15004D => "One or more package is missing",
+        0x8A15004E => "Invalid table column",
+        0x8A15004F => "The upgrade version is not newer than the installed version",
+        0x8A150050 => "Upgrade version is unknown and override is not specified",
+        0x8A150051 => "ICU conversion error",
+        0x8A150052 => "Failed to install portable package",
+        0x8A150053 => "Volume does not support reparse points",
+        0x8A150054 => "Portable package from a different source already exists",
+        0x8A150055 => "Unable to create symlink, path points to a directory",
+        0x8A150056 => "The installer cannot be run from an administrator context",
+        0x8A150057 => "Failed to uninstall portable package",
+        0x8A150058 => "Failed to validate DisplayVersion values against index",
+        0x8A150059 => "One or more arguments are not supported",
+        0x8A15005A => "Embedded null characters are disallowed for SQLite",
+        0x8A15005B => "Failed to find the nested installer in the archive",
+        0x8A15005C => "Failed to extract archive",
+        0x8A15005D => "Invalid relative file path to nested installer provided",
+        0x8A15005E => "The server certificate did not match any of the expected values",
+        0x8A15005F => "Install location must be provided",
+        0x8A150060 => "Archive malware scan failed",
+        0x8A150061 => "Found at least one version of the package installed",
+        0x8A150062 => "A pin already exists for the package",
+        0x8A150063 => "There is no pin for the package",
+        0x8A150064 => "Unable to open the pin database",
+        0x8A150065 => "One or more applications failed to install",
+        0x8A150066 => "One or more applications failed to uninstall",
+        0x8A150067 => "One or more queries did not return exactly one match",
+        0x8A150068 => "The package has a pin that prevents upgrade",
+        0x8A150069 => "The package currently installed is the stub package",
+        0x8A15006A => "Application shutdown signal received",
+        0x8A15006B => "Failed to download package dependencies",
+        0x8A15006C => "Failed to download package. Download for offline installation is prohibited.",
+        0x8A15006D => "A required service is busy or unavailable. Try again later.",
+        0x8A15006E => "The guid provided does not correspond to a valid resume state",
+        0x8A15006F => "The current client version did not match the client version of the saved state",
+        0x8A150070 => "The resume state data is invalid",
+        0x8A150071 => "Unable to open the checkpoint database",
+        0x8A150072 => "Exceeded max resume limit",
+        0x8A150073 => "Invalid authentication info",
+        0x8A150074 => "Authentication method not supported",
+        0x8A150075 => "Authentication failed",
+        0x8A150076 => "Authentication failed. Interactive authentication required.",
+        0x8A150077 => "Authentication failed. User cancelled.",
+        0x8A150078 => "Authentication failed. Authenticated account is not the desired account.",
+        0x8A150079 => "Repair command not found",
+        0x8A15007A => "Repair operation is not applicable",
+        0x8A15007B => "Repair operation failed",
+        0x8A15007C => "The installer technology in use doesn't support repair",
+        0x8A15007D => "Repair operations involving administrator privileges are not permitted on packages installed within the user scope",
+        0x8A15007E => "The SQLite connection was terminated to prevent corruption",
+        0x8A15007F => "Failed to get Microsoft Store package catalog",
+        0x8A150080 => "No applicable Microsoft Store package found from Microsoft Store package catalog",
+        0x8A150081 => "Failed to get Microsoft Store package download information",
+        0x8A150082 => "No applicable Microsoft Store package download information found",
+        0x8A150083 => "Failed to retrieve Microsoft Store package license",
+        0x8A150084 => "The Microsoft Store package does not support download",
+        0x8A150085 => "Failed to retrieve Microsoft Store package license. The Microsoft Entra Id account does not have the required privilege.",
+        0x8A150086 => "Downloaded zero byte installer; ensure that your network connection is working properly",
+        0x8A150087 => "Failed installing one or more fonts",
+        0x8A150088 => "Font file is not supported and cannot be installed",
+        0x8A150089 => "Font package is already installed",
+        0x8A15008A => "Font file not found",
+        0x8A15008B => "Font uninstall failed. The font may not be in a good state. Try uninstalling after a restart.",
+        0x8A15008C => "Font validation failed",
+        0x8A15008D => "Font rollback failed. The font may not be in a good state. Try uninstalling after a restart.",
+        0x8A15008E => "An upgrade is available but uses a different install technology than the current installation",
+        0x8A150101 => "Application is currently running. Exit the application then try again.",
+        0x8A150102 => "Another installation is already in progress. Try again later.",
+        0x8A150103 => "One or more file is being used. Exit the application then try again.",
+        0x8A150104 => "This package has a dependency missing from your system",
+        0x8A150105 => "There's no more space on your PC. Make space, then try again.",
+        0x8A150106 => "There's not enough memory available to install. Close other applications then try again.",
+        0x8A150107 => "This application requires internet connectivity. Connect to a network then try again.",
+        0x8A150108 => "This application encountered an error during installation. Contact support.",
+        0x8A150109 => "Restart your PC to finish installation",
+        0x8A15010A => "Installation failed. Restart your PC then try again.",
+        0x8A15010B => "Your PC will restart to finish installation",
+        0x8A15010C => "You cancelled the installation",
+        0x8A15010D => "Another version of this application is already installed",
+        0x8A15010E => "A higher version of this application is already installed",
+        0x8A15010F => "Organization policies are preventing installation. Contact your admin.",
+        0x8A150110 => "Failed to install package dependencies",
+        0x8A150111 => "Application is currently in use by another application",
+        0x8A150112 => "Invalid parameter",
+        0x8A150113 => "Package not supported by the system",
+        0x8A150114 => "The installer does not support upgrading an existing package",
+        0x8A150115 => "Installation failed with a custom installer error",
+        _ => return None,
+    };
+    Some(text)
 }
 
 // ---- npm ---------------------------------------------------------------
@@ -1319,11 +1534,21 @@ fn run_streamed_with_environment(
                     return Ok(());
                 }
                 let code = status.code().unwrap_or(-1);
+                let detail = exit_status_detail(program, code);
                 emit(ProgressEvent::Stderr {
                     tool_id: tool_id.into(),
                     step_id: None,
-                    line: format!("[installer] `{program}` exited {code} after {elapsed}s"),
+                    line: format!("[installer] `{program}` exited {code}{detail} after {elapsed}s"),
                 });
+                if program.eq_ignore_ascii_case("winget") {
+                    if let Some(dir) = winget_log_dir() {
+                        emit(ProgressEvent::Stderr {
+                            tool_id: tool_id.into(),
+                            step_id: None,
+                            line: format!("[installer] winget diagnostic logs: {}", dir.display()),
+                        });
+                    }
+                }
                 crate::logging::installer_helper_debug(
                     "process.exit.error",
                     &json!({
@@ -1331,9 +1556,10 @@ fn run_streamed_with_environment(
                         "program": program,
                         "elapsedMs": started_at_log.elapsed().as_millis(),
                         "code": code,
+                        "detail": detail,
                     }),
                 );
-                return Err(format!("`{program}` exited with status {code}"));
+                return Err(format!("`{program}` exited with status {code}{detail}"));
             }
             Ok(None) => match rx.recv_timeout(std::time::Duration::from_millis(100)) {
                 Ok(line) => {
@@ -1992,6 +2218,78 @@ mod tests {
             }
             other => panic!("expected progress event, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn winget_install_requests_verbose_logs() {
+        let args = winget_install_args("Git.Git", &InstallOptions::default());
+        assert!(args.contains(&"--verbose-logs".to_string()));
+        assert!(args.contains(&"Git.Git".to_string()));
+    }
+
+    #[test]
+    fn winget_install_args_append_optional_scope_version_location() {
+        let args = winget_install_args(
+            "Git.Git",
+            &InstallOptions {
+                scope: Some("machine".into()),
+                version: Some("2.50.0".into()),
+                location: Some(r"C:\Tools\Git".into()),
+                ..InstallOptions::default()
+            },
+        );
+        let joined = args.join(" ");
+        assert!(joined.contains("--scope machine"));
+        assert!(joined.contains("--version 2.50.0"));
+        assert!(joined.contains(r"--location C:\Tools\Git"));
+    }
+
+    #[test]
+    fn managed_ollama_install_requests_verbose_logs() {
+        let args = managed_ollama_winget_args(&InstallOptions::default());
+        assert!(args.contains(&"--verbose-logs".to_string()));
+    }
+
+    #[test]
+    fn decodes_documented_winget_exit_code() {
+        // 0x8A150052 printed as a signed i32 is the cryptic -1978335150.
+        let detail = exit_status_detail("winget", -1978335150);
+        assert_eq!(
+            detail,
+            " (0x8A150052: Failed to install portable package)"
+        );
+    }
+
+    #[test]
+    fn decodes_install_already_running_winget_exit_code() {
+        let detail = exit_status_detail("winget", 0x8A150101u32 as i32);
+        assert_eq!(
+            detail,
+            " (0x8A150101: Application is currently running. Exit the application then try again.)"
+        );
+    }
+
+    #[test]
+    fn unknown_winget_exit_code_still_shows_hex() {
+        let detail = exit_status_detail("winget", 0x8A15FFFFu32 as i32);
+        assert_eq!(detail, " (0x8A15FFFF)");
+    }
+
+    #[test]
+    fn non_winget_programs_are_not_decoded() {
+        assert_eq!(exit_status_detail("msiexec", 1603), "");
+        assert_eq!(exit_status_detail("npm", -1978335150), "");
+    }
+
+    #[test]
+    fn winget_log_dir_points_at_diag_output_dir() {
+        let dir = winget_log_dir_from_local_app_data(PathBuf::from(r"C:\Users\Ryan\AppData\Local"));
+        assert_eq!(
+            dir,
+            PathBuf::from(
+                r"C:\Users\Ryan\AppData\Local\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\DiagOutputDir"
+            )
+        );
     }
 
     #[test]

@@ -146,6 +146,7 @@ fn uninstall_winget(
             "--silent".into(),
             "--accept-source-agreements".into(),
             "--disable-interactivity".into(),
+            "--verbose-logs".into(),
         ],
         tool_id,
         cancel,
