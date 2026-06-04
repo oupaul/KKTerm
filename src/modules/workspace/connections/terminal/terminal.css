@@ -300,6 +300,9 @@
 }
 
 .tmux-session-tag {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
   max-width: 220px;
   height: 24px;
   padding: 0 8px;
@@ -313,6 +316,31 @@
   border: 1px solid rgba(86, 166, 255, 0.28);
   border-radius: 5px;
   cursor: pointer;
+}
+
+.tmux-session-tag span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tmux-x11-indicator {
+  flex: 0 0 auto;
+}
+
+.tmux-x11-indicator.disabled {
+  color: #7f8a98;
+  opacity: 0.45;
+}
+
+.tmux-x11-indicator.enabled {
+  color: #5ee787;
+  opacity: 0.62;
+}
+
+.tmux-x11-indicator.rejected {
+  color: #ff6b6b;
+  opacity: 0.72;
 }
 
 .tmux-session-edit-button {

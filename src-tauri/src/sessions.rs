@@ -195,6 +195,8 @@ pub struct TerminalSessionStarted {
     session_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     terminal_ready_ms: Option<u128>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    x11_forwarding_status: Option<ssh::NativeSshX11ForwardingStatus>,
 }
 
 impl TerminalSessionStarted {
@@ -737,6 +739,7 @@ impl SessionManager {
             return Ok(TerminalSessionStarted {
                 session_id,
                 terminal_ready_ms: None,
+                x11_forwarding_status: None,
             });
         }
 
@@ -772,6 +775,7 @@ impl SessionManager {
             return Ok(TerminalSessionStarted {
                 session_id,
                 terminal_ready_ms: None,
+                x11_forwarding_status: None,
             });
         }
 
@@ -802,6 +806,7 @@ impl SessionManager {
             ) {
                 Ok(session) => {
                     let terminal_ready_ms = session.terminal_ready_ms();
+                    let x11_forwarding_status = session.x11_forwarding_status();
                     self.sessions
                         .lock()
                         .map_err(|_| "terminal session lock is poisoned".to_string())?
@@ -814,6 +819,7 @@ impl SessionManager {
                     return Ok(TerminalSessionStarted {
                         session_id,
                         terminal_ready_ms: Some(terminal_ready_ms),
+                        x11_forwarding_status,
                     });
                 }
                 Err(error) if should_fallback_to_interactive_ssh(&error) => {
@@ -871,6 +877,7 @@ impl SessionManager {
             return Ok(TerminalSessionStarted {
                 session_id,
                 terminal_ready_ms: None,
+                x11_forwarding_status: None,
             });
         }
 
@@ -931,6 +938,7 @@ impl SessionManager {
         Ok(TerminalSessionStarted {
             session_id,
             terminal_ready_ms: None,
+            x11_forwarding_status: None,
         })
     }
 

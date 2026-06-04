@@ -44,11 +44,16 @@ pub struct NativeSshTerminal {
     control: mpsc::UnboundedSender<SshTerminalControl>,
     worker: Option<JoinHandle<()>>,
     terminal_ready_ms: u128,
+    x11_forwarding_status: Option<NativeSshX11ForwardingStatus>,
 }
 
 impl NativeSshTerminal {
     pub fn terminal_ready_ms(&self) -> u128 {
         self.terminal_ready_ms
+    }
+
+    pub fn x11_forwarding_status(&self) -> Option<NativeSshX11ForwardingStatus> {
+        self.x11_forwarding_status
     }
 }
 
@@ -75,6 +80,15 @@ pub struct NativeSshTerminalRequest {
 pub struct NativeSshX11Forwarding {
     pub display: u16,
 }
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NativeSshX11ForwardingStatus {
+    Enabled,
+    Rejected,
+}
+
+type NativeSshReadyResult = (u128, Option<NativeSshX11ForwardingStatus>);
 
 #[derive(Clone)]
 pub(crate) struct NativeSshConnectionRequest {
@@ -310,10 +324,11 @@ pub fn start_native_terminal(
         .recv_timeout(Duration::from_secs(15))
         .map_err(|_| "timed out while starting native SSH session".to_string())?
     {
-        Ok(terminal_ready_ms) => Ok(NativeSshTerminal {
+        Ok((terminal_ready_ms, x11_forwarding_status)) => Ok(NativeSshTerminal {
             control: control_tx,
             worker: Some(worker),
             terminal_ready_ms,
+            x11_forwarding_status,
         }),
         Err(error) => {
             let _ = worker.join();
@@ -558,7 +573,7 @@ fn run_native_terminal_thread(
     app: AppHandle,
     request: NativeSshTerminalRequest,
     control_rx: mpsc::UnboundedReceiver<SshTerminalControl>,
-    ready_tx: std_mpsc::SyncSender<Result<u128, String>>,
+    ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -577,7 +592,7 @@ async fn run_native_terminal(
     app: AppHandle,
     request: NativeSshTerminalRequest,
     mut control_rx: mpsc::UnboundedReceiver<SshTerminalControl>,
-    ready_tx: std_mpsc::SyncSender<Result<u128, String>>,
+    ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
     let current_request = request;
     let mut ready_tx = Some(ready_tx);
@@ -624,7 +639,7 @@ async fn run_native_terminal_once(
     app: &AppHandle,
     request: &NativeSshTerminalRequest,
     control_rx: &mut mpsc::UnboundedReceiver<SshTerminalControl>,
-    ready_tx: Option<std_mpsc::SyncSender<Result<u128, String>>>,
+    ready_tx: Option<std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>>,
     startup_timeout: Duration,
 ) -> Result<TerminalRunOutcome, String> {
     let startup = async {
@@ -655,12 +670,21 @@ async fn run_native_terminal_once(
             )
             .await
             .map_err(|error| format!("failed to allocate SSH PTY: {error}"))?;
-        if request.x11_forwarding.is_some() {
-            channel
+        let x11_forwarding_status = if request.x11_forwarding.is_some() {
+            let status = match channel
                 .request_x11(false, false, "MIT-MAGIC-COOKIE-1", x11_auth_cookie(), 0)
                 .await
-                .map_err(|error| format!("failed to request SSH X11 forwarding: {error}"))?;
-        }
+            {
+                Ok(()) => NativeSshX11ForwardingStatus::Enabled,
+                Err(error) => {
+                    eprintln!("SSH X11 forwarding request rejected: {error}");
+                    NativeSshX11ForwardingStatus::Rejected
+                }
+            };
+            Some(status)
+        } else {
+            None
+        };
         channel
             .request_shell(false)
             .await
@@ -672,15 +696,15 @@ async fn run_native_terminal_once(
                 .map_err(|error| format!("failed to initialize SSH shell: {error}"))?;
         }
 
-        Ok::<_, String>((session, channel, ready_start.elapsed().as_millis()))
+        Ok::<_, String>((session, channel, ready_start.elapsed().as_millis(), x11_forwarding_status))
     };
 
-    let (session, mut channel, terminal_ready_ms) = tokio::time::timeout(startup_timeout, startup)
+    let (session, mut channel, terminal_ready_ms, x11_forwarding_status) = tokio::time::timeout(startup_timeout, startup)
         .await
         .map_err(|_| "timed out while starting native SSH session".to_string())??;
 
     if let Some(ready_tx) = ready_tx {
-        let _ = ready_tx.send(Ok(terminal_ready_ms));
+        let _ = ready_tx.send(Ok((terminal_ready_ms, x11_forwarding_status)));
     }
 
     loop {

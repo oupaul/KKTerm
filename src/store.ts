@@ -913,6 +913,11 @@ interface WorkspaceState {
   updateOpenConnectionTerminalAppearance: (connectionId: string, appearance: Pick<Connection, "terminalOpacity" | "terminalBackground">) => void;
   updateOpenTerminalPaneAppearance: (tabId: string, paneId: string, appearance: Pick<Connection, "terminalOpacity" | "terminalBackground">) => void;
   updateOpenTerminalPaneBackground: (tabId: string, paneId: string, terminalBackground: TerminalPane["terminalBackground"]) => void;
+  updateOpenTerminalPaneX11ForwardingStatus: (
+    tabId: string,
+    paneId: string,
+    status: TerminalPane["x11ForwardingStatus"],
+  ) => void;
   markConnectionSessionStarted: (connectionId: string) => void;
   markConnectionSessionEnded: (connectionId: string) => void;
   closeAllTabs: () => void;
@@ -2356,6 +2361,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           }
         }
         return nextTab;
+      }),
+    }));
+  },
+  updateOpenTerminalPaneX11ForwardingStatus: (tabId, paneId, status) => {
+    set((state) => ({
+      tabs: state.tabs.map((tab) => {
+        if (tab.id !== tabId || tab.kind !== "terminal") {
+          return tab;
+        }
+        let changed = false;
+        const panes = tab.panes.map((pane) => {
+          if (!isTerminalPane(pane) || pane.id !== paneId || pane.x11ForwardingStatus === status) {
+            return pane;
+          }
+          changed = true;
+          return { ...pane, x11ForwardingStatus: status };
+        });
+        return changed ? { ...tab, panes } : tab;
       }),
     }));
   },

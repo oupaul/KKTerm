@@ -40,6 +40,29 @@ test("SSH pane toolbar SFTP button opens an in-place popup instead of a workspac
   );
 });
 
+test("SSH pane toolbar SFTP action is icon-only with a native SFTP tooltip", async () => {
+  const terminalSource = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    terminalSource,
+    /import \{[^}]*Folder[^}]*\} from "lucide-react";/,
+    "the SSH toolbar SFTP action should use the folder icon",
+  );
+  assert.match(
+    terminalSource,
+    /title=\{t\("terminal\.sftp"\)\}[\s\S]*?<Folder size=\{13\} \/>/,
+    "the native browser tooltip should read SFTP while the button body stays icon-only",
+  );
+  assert.doesNotMatch(
+    terminalSource,
+    /<Folder size=\{13\} \/>\s*<span>\{t\("terminal\.sftp"\)\}<\/span>/,
+    "the SSH toolbar should not render visible SFTP text beside the folder icon",
+  );
+});
+
 test("SFTP popup uses the selected app color scheme outside the app shell", async () => {
   const shellEffectsSource = await readFile(
     new URL("../src/app/appShellEffects.ts", import.meta.url),

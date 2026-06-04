@@ -123,6 +123,7 @@ export interface StartTerminalSessionRequest {
 export interface TerminalSessionStarted {
   sessionId: string;
   terminalReadyMs?: number;
+  x11ForwardingStatus?: "enabled" | "rejected";
 }
 
 export interface TerminalOutput {
