@@ -19,7 +19,7 @@ use std::process::Command;
 
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tauri::AppHandle;
 
 #[cfg(target_os = "windows")]
@@ -330,10 +330,10 @@ async fn serve_client(ctx: Arc<BridgeContext>, stream: NamedPipeServer) -> std::
                 continue;
             }
         };
-        crate::logging::mcp_debug("bridge.request", &request);
+        crate::logging::mcp_debug("bridge.request", &redact_bridge_request(&request));
         let response = handle_request(&ctx, request).await;
         if let Some(response) = response {
-            crate::logging::mcp_debug("bridge.response", &response);
+            crate::logging::mcp_debug("bridge.response", &redact_bridge_response(&response));
             write_response(&mut writer, &response).await?;
         }
     }
@@ -768,7 +768,7 @@ async fn handle_tool_call(ctx: &BridgeContext, id: Value, params: Value) -> Valu
     let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
     crate::logging::mcp_debug(
         "bridge.tool_call",
-        &json!({"name": name.clone(), "arguments": arguments.clone()}),
+        &json!({"name": name.clone(), "arguments": redact_tool_arguments(&name, &arguments)}),
     );
 
     if dangerous_tool(&name) && !ctx.allow_all_dangerous {
@@ -788,7 +788,7 @@ async fn handle_tool_call(ctx: &BridgeContext, id: Value, params: Value) -> Valu
         Ok(value) => {
             crate::logging::mcp_debug(
                 "bridge.tool_result",
-                &json!({"name": name.clone(), "result": value.clone()}),
+                &json!({"name": name.clone(), "result": redact_tool_result(&name, &value)}),
             );
             json!({
                 "jsonrpc": "2.0",
@@ -826,6 +826,124 @@ fn value_to_text(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
         other => other.to_string(),
+    }
+}
+
+fn redact_bridge_request(request: &Value) -> Value {
+    if request.get("method").and_then(Value::as_str) != Some("tools/call") {
+        return request.clone();
+    }
+    let mut redacted = request.clone();
+    if let Some(params) = redacted.get_mut("params").and_then(Value::as_object_mut) {
+        let name = params
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        if let Some(arguments) = params.get_mut("arguments") {
+            *arguments = redact_tool_arguments(&name, arguments);
+        }
+    }
+    redacted
+}
+
+fn redact_bridge_response(response: &Value) -> Value {
+    let mut redacted = response.clone();
+    let Some(result) = redacted.get_mut("result").and_then(Value::as_object_mut) else {
+        return redacted;
+    };
+    if let Some(structured) = result.get_mut("structuredContent") {
+        *structured = redact_sensitive_debug_value(structured);
+        if result.contains_key("content") {
+            result.insert(
+                "content".to_string(),
+                json!([{"type": "text", "text": "[REDACTED: see bridge.tool_result]"}]),
+            );
+        }
+    }
+    redacted
+}
+
+fn redact_tool_arguments(name: &str, arguments: &Value) -> Value {
+    let mut redacted = redact_sensitive_debug_value(arguments);
+    match name {
+        "kkterm.workspace.sessions.send_input" => {
+            redact_object_key(&mut redacted, "text");
+        }
+        "kkterm.dashboard.dangerous.create_widget" => {
+            if let Some(body) = redacted.get_mut("body") {
+                redact_object_key(body, "source");
+            }
+            redact_object_key(&mut redacted, "bodyJson");
+        }
+        "kkterm.dashboard.dangerous.create_custom_widget" => {
+            redact_object_key(&mut redacted, "bodyJson");
+        }
+        "kkterm.dashboard.dangerous.update_custom_widget" => {
+            if let Some(patch) = redacted.get_mut("patch") {
+                redact_object_key(patch, "bodyJson");
+                if let Some(body) = patch.get_mut("body") {
+                    redact_object_key(body, "source");
+                }
+            }
+        }
+        _ => {}
+    }
+    redacted
+}
+
+fn redact_tool_result(name: &str, result: &Value) -> Value {
+    match name {
+        "kkterm.workspace.sessions.read_buffer" | "kkterm.dashboard.read_widget_source" => {
+            Value::String("[REDACTED]".to_string())
+        }
+        _ => redact_sensitive_debug_value(result),
+    }
+}
+
+fn redact_sensitive_debug_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, nested)| {
+                    let value = if debug_json_key_is_sensitive(key) {
+                        Value::String("[REDACTED]".to_string())
+                    } else {
+                        redact_sensitive_debug_value(nested)
+                    };
+                    (key.clone(), value)
+                })
+                .collect(),
+        ),
+        Value::Array(items) => {
+            Value::Array(items.iter().map(redact_sensitive_debug_value).collect())
+        }
+        other => other.clone(),
+    }
+}
+
+fn debug_json_key_is_sensitive(key: &str) -> bool {
+    let normalized = key.to_ascii_lowercase().replace(['-', ' '], "_");
+    normalized == "body_json"
+        || normalized == "bodyjson"
+        || normalized == "token"
+        || normalized.ends_with("_token")
+        || normalized.contains("access_token")
+        || normalized.contains("accesstoken")
+        || normalized.contains("refresh_token")
+        || normalized.contains("refreshtoken")
+        || normalized.contains("api_key")
+        || normalized.contains("apikey")
+        || normalized.contains("secret")
+        || normalized.contains("password")
+        || normalized.contains("authorization")
+}
+
+fn redact_object_key(value: &mut Value, key: &str) {
+    if let Some(object) = value.as_object_mut() {
+        if object.contains_key(key) {
+            object.insert(key.to_string(), Value::String("[REDACTED]".to_string()));
+        }
     }
 }
 
@@ -1242,6 +1360,101 @@ mod tests {
         assert_eq!(value, json!({"foo": 1}));
         let value = parse_tool_json(r#"{"ok": true, "data": 2}"#).unwrap();
         assert_eq!(value, json!({"ok": true, "data": 2}));
+    }
+
+    #[test]
+    fn redact_tool_arguments_hides_terminal_input_and_widget_source() {
+        let send_input = redact_tool_arguments(
+            "kkterm.workspace.sessions.send_input",
+            &json!({"paneId": "pane-1", "text": "password", "submit": true}),
+        );
+        assert_eq!(send_input["text"], "[REDACTED]");
+        assert_eq!(send_input["paneId"], "pane-1");
+
+        let create_widget = redact_tool_arguments(
+            "kkterm.dashboard.dangerous.create_widget",
+            &json!({
+                "body": {"source": "const secret = true;", "permissions": {"network": false}},
+                "bodyJson": "{\"source\":\"fallback\"}",
+                "apiKey": "key-1"
+            }),
+        );
+        assert_eq!(create_widget["body"]["source"], "[REDACTED]");
+        assert_eq!(create_widget["bodyJson"], "[REDACTED]");
+        assert_eq!(create_widget["apiKey"], "[REDACTED]");
+
+        let update_widget = redact_tool_arguments(
+            "kkterm.dashboard.dangerous.update_custom_widget",
+            &json!({
+                "id": "cw_1",
+                "patch": {
+                    "body": {"source": "const next = true;"},
+                    "bodyJson": "{\"source\":\"legacy\"}"
+                }
+            }),
+        );
+        assert_eq!(update_widget["patch"]["body"]["source"], "[REDACTED]");
+        assert_eq!(update_widget["patch"]["bodyJson"], "[REDACTED]");
+    }
+
+    #[test]
+    fn redact_bridge_request_hides_tool_arguments() {
+        let request = json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "kkterm.workspace.sessions.send_input",
+                "arguments": {"paneId": "pane-1", "text": "secret"}
+            }
+        });
+
+        let redacted = redact_bridge_request(&request);
+
+        assert_eq!(redacted["params"]["arguments"]["text"], "[REDACTED]");
+        assert_eq!(request["params"]["arguments"]["text"], "secret");
+    }
+
+    #[test]
+    fn redact_tool_result_hides_terminal_buffer_and_widget_source_reads() {
+        assert_eq!(
+            redact_tool_result(
+                "kkterm.workspace.sessions.read_buffer",
+                &json!({"text": "terminal output"})
+            ),
+            json!("[REDACTED]")
+        );
+        assert_eq!(
+            redact_tool_result(
+                "kkterm.dashboard.read_widget_source",
+                &json!({"bodyJson": "{\"source\":\"secret\"}"})
+            ),
+            json!("[REDACTED]")
+        );
+    }
+
+    #[test]
+    fn redact_bridge_response_hides_structured_content_copy() {
+        let response = json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "content": [{"type": "text", "text": "{\"bodyJson\":\"secret\"}"}],
+                "structuredContent": {"bodyJson": "{\"source\":\"secret\"}"},
+                "isError": false
+            }
+        });
+
+        let redacted = redact_bridge_response(&response);
+
+        assert_eq!(
+            redacted["result"]["content"][0]["text"],
+            "[REDACTED: see bridge.tool_result]"
+        );
+        assert_eq!(
+            redacted["result"]["structuredContent"]["bodyJson"],
+            "[REDACTED]"
+        );
     }
 
     #[test]

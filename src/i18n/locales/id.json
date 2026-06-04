@@ -1883,6 +1883,8 @@
     "builtInMcpServerEnabledHint": "Ekspos kkterm-cli sebagai stdio MCP server untuk alat eksternal.",
     "builtInMcpAllowAllDangerous": "Alat MCP berbahaya bawaan: izinkan semua",
     "builtInMcpAllowAllDangerousHint": "Saat diaktifkan, alat MCP berbahaya kkterm.dangerous.* berjalan tanpa prompt konfirmasi.",
+    "allowInsecureMcpHttp": "Allow insecure Remote MCP HTTP servers",
+    "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "rdpRemoteResolution": "Resolusi jarak jauh",
     "rdpRemoteResolutionAutomatic": "Otomatis",
     "builtInMcpShowConfig": "Tampilkan config",

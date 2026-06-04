@@ -535,6 +535,7 @@ export interface AiProviderSettings {
   apiMode: AiOpenAiApiMode;
   extraHeaders: string;
   allowInsecureTls: boolean;
+  allowInsecureMcpHttp: boolean;
   showAllModels: boolean;
   cliExecutionPolicy: "suggestOnly";
   toolPermissionMode: AiToolPermissionMode;

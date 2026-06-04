@@ -1883,6 +1883,8 @@
     "builtInMcpServerEnabledHint": "Cung cấp kkterm-cli như một stdio MCP server cho công cụ bên ngoài.",
     "builtInMcpAllowAllDangerous": "Công cụ MCP nguy hiểm tích hợp: cho phép tất cả",
     "builtInMcpAllowAllDangerousHint": "Khi bật, các công cụ MCP nguy hiểm kkterm.dangerous.* chạy mà không có lời nhắc xác nhận.",
+    "allowInsecureMcpHttp": "Allow insecure Remote MCP HTTP servers",
+    "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "rdpRemoteResolution": "Độ phân giải từ xa",
     "rdpRemoteResolutionAutomatic": "Tự động",
     "builtInMcpShowConfig": "Hiện config",

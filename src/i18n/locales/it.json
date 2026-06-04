@@ -1883,6 +1883,8 @@
     "builtInMcpServerEnabledHint": "Espone kkterm-cli come server MCP stdio per strumenti esterni.",
     "builtInMcpAllowAllDangerous": "Strumenti MCP pericolosi integrati: consenti tutto",
     "builtInMcpAllowAllDangerousHint": "Quando abilitato, gli strumenti MCP pericolosi kkterm.dangerous.* vengono eseguiti senza richieste di conferma.",
+    "allowInsecureMcpHttp": "Allow insecure Remote MCP HTTP servers",
+    "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "rdpRemoteResolution": "Risoluzione remota",
     "rdpRemoteResolutionAutomatic": "Automatica",
     "builtInMcpShowConfig": "Mostra config",

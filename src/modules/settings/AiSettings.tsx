@@ -1465,6 +1465,21 @@ export function AiSettings() {
           </label>
           <label className="settings-toggle-row">
             <ToggleSwitch
+              checked={Boolean(draft.allowInsecureMcpHttp)}
+              onChange={(checked) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  allowInsecureMcpHttp: checked,
+                }))
+              }
+            />
+            <span>
+              <strong>{t("settings.allowInsecureMcpHttp")}</strong>
+              <small>{t("settings.allowInsecureMcpHttpHint")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
               checked={draft.allowInsecureTls}
               onChange={(checked) =>
                 setDraft((settings) => ({

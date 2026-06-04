@@ -101,6 +101,11 @@ Two settings live in `AiProviderSettings` and are surfaced under
 | `built_in_mcp_server_enabled` | `true` | KKTerm.exe starts the named-pipe bridge on launch. When `false`, the descriptor file is deleted and no bridge is created. |
 | `built_in_mcp_allow_all_dangerous` | `false` | When `true`, tools in any `kkterm.<module>.dangerous.*` namespace execute through the bridge. When `false`, the bridge returns a `permissionRequired` tool error for any dangerous call. The gate matches the literal segment `dangerous` anywhere in the dotted tool name, so new Modules can adopt the same convention without touching the gate. |
 
+Remote MCP HTTP servers use HTTPS by default. Plain `http://` is accepted for
+loopback hosts (`localhost`, `127.0.0.1`, and `::1`); other local/network HTTP
+servers require the separate Settings → AI Assistant insecure Remote MCP HTTP
+toggle.
+
 The bridge reads both settings at startup. Toggling either takes effect on
 the next KKTerm.exe launch.
 
@@ -264,11 +269,13 @@ dialog with JSON and TOML snippets whose `command` is the resolved
 `kkterm-cli` path beside the running `KKTerm.exe`. Its setup table shows
 copyable command examples for clients that support CLI MCP registration and
 config paths for clients that require manual editing.
-Debug builds write raw built-in and remote MCP request/response records to
+Debug builds write built-in and remote MCP request/response records to
 `mcp.debug.log` beside `kkterm.log`. Release builds write the same log only
 when Settings → General → Debug → Advanced Debugging is enabled; enabling the
 setting writes an `advanced_debugging.enabled` marker so the release logging
-path is visible before the next MCP request.
+path is visible before the next MCP request. Built-in MCP debug records redact
+terminal send input, terminal buffer reads, Dashboard widget source/body JSON,
+and secret-looking argument fields before writing.
 
 ## Platform support
 

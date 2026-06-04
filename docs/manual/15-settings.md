@@ -18,7 +18,7 @@ Settings tutorial targets:
 - Appearance: `settings.appUiFontFamily`, `settings.appearance.colorScheme`, `settings.resetLayout`.
 - Dashboard: `settings.dashboardDefaultLanding`, `settings.dashboardUseRandomDynamicBackground`, `settings.dashboardMaxActiveScriptWidgets`.
 - Credentials: `settings.credentialsStored`, `settings.widgetCredentialsStored`.
-- AI Assistant: `settings.aiProvider`, `settings.aiToolsTitle`, `settings.aiCustomInstructions`, `settings.assistantSkillsTitle`, `settings.mcpServersTitle`.
+- AI Assistant: `settings.aiProvider`, `settings.aiToolsTitle`, `settings.aiCustomInstructions`, `settings.assistantSkillsTitle`, `settings.mcpServersTitle`, `settings.allowInsecureMcpHttp`.
 - SSH: `settings.defaultUser`, `settings.defaultPort`, `settings.defaultKey`, `settings.sshBufferLines`.
 - Terminal: `settings.terminalFontFamily`, `settings.terminalFontSize`, `settings.defaultShell`, `settings.scrollbackLines`.
 - URL: `settings.ignoreCertificateErrors`, `settings.urlSavedPasswords`, `settings.urlDataShards`.
@@ -117,6 +117,7 @@ This is the central manager for OS-keychain-backed secrets.
   - Errors: `settings.mcpErrorNotFound`, `…ErrorDuplicateName`, `…ErrorKeychain`.
   - Status badges: `settings.mcpStatusOk`, `…Unreachable`, `…AuthError`, `…ProtocolError`, `…Unknown`. Tools count `settings.mcpToolsCount` / `…_one`. Auth badge `…AuthBadge`.
   - Refresh tools: `settings.mcpRefreshTools`. Delete: `settings.mcpDeleteServer`, body `…DeleteConfirmBody`.
+  - Security policy: Remote MCP server URLs use HTTPS by default; `http://localhost`, `http://127.0.0.1`, and `http://[::1]` remain allowed. Toggle `settings.allowInsecureMcpHttp` (`settings.allowInsecureMcpHttpHint`) permits other local/network `http://` Remote MCP servers.
 
 ## AI Assistant
 
@@ -166,4 +167,4 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 - Config dialog keys: `settings.builtInMcpShowConfig`, `settings.builtInMcpConfigTitle`, `settings.builtInMcpConfigIntro`, `settings.builtInMcpConfigFormatJson`, `settings.builtInMcpConfigFormatToml`, `settings.builtInMcpConfigCopy`, `settings.builtInMcpConfigCopied`, `settings.builtInMcpConfigLocationsTitle`, `settings.builtInMcpConfig*Header`, and `settings.builtInMcpConfigMethod*`.
 - Config dialog behavior: shows copyable JSON (`mcpServers.kkterm`) and TOML (`[mcp_servers.kkterm]`) snippets for stdio MCP clients using the resolved `kkterm-cli.exe` path beside the running `KKTerm.exe`. The setup table shows localized Agent/Method/Project/Global headings. Codex and Claude Code rows include documented CLI commands where supported; VS Code/GitHub Copilot, Antigravity, and OpenCode rows use `settings.builtInMcpConfigMethodManualEdit` and list config locations.
 - Purpose: enable/disable the local built-in MCP server surface and control whether built-in MCP tools with a `dangerous` namespace segment, such as `kkterm.workspace.quick_commands.dangerous.create`, require confirmation prompts or run in allow-all mode.
-- Debug logging: debug builds write raw built-in and remote MCP request/response records to `mcp.debug.log` beside `kkterm.log`; release builds write the same MCP log when `settings.advancedDebugging` is enabled.
+- Debug logging: debug builds write built-in and remote MCP request/response records to `mcp.debug.log` beside `kkterm.log`; release builds write the same MCP log when `settings.advancedDebugging` is enabled. Built-in MCP logging redacts terminal send input, terminal buffer reads, Dashboard widget source/body JSON, and secret-looking argument fields before writing debug records.

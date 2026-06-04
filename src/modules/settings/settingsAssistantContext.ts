@@ -205,6 +205,10 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         description: "MCP server management.",
         tutorialTargetId: "settings.mcpServersTitle",
       },
+      {
+        key: "settings.allowInsecureMcpHttp",
+        description: "Remote MCP plain HTTP exception toggle for trusted local or network servers.",
+      },
     ],
   },
   "ssh-settings": {

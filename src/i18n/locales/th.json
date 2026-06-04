@@ -1883,6 +1883,8 @@
     "builtInMcpServerEnabledHint": "เปิดเผย kkterm-cli เป็น stdio MCP server สำหรับเครื่องมือภายนอก",
     "builtInMcpAllowAllDangerous": "เครื่องมือ MCP อันตรายในตัว: อนุญาตทั้งหมด",
     "builtInMcpAllowAllDangerousHint": "เมื่อเปิดใช้ เครื่องมือ MCP อันตราย kkterm.dangerous.* จะทำงานโดยไม่แสดงพร้อมท์ยืนยัน",
+    "allowInsecureMcpHttp": "Allow insecure Remote MCP HTTP servers",
+    "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "rdpRemoteResolution": "ความละเอียดระยะไกล",
     "rdpRemoteResolutionAutomatic": "อัตโนมัติ",
     "builtInMcpShowConfig": "แสดง config",

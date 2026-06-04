@@ -662,6 +662,8 @@ pub struct AiProviderSettings {
     #[serde(default)]
     allow_insecure_tls: bool,
     #[serde(default)]
+    allow_insecure_mcp_http: bool,
+    #[serde(default)]
     show_all_models: bool,
     #[serde(default = "default_ai_cli_execution_policy")]
     cli_execution_policy: String,
@@ -724,6 +726,10 @@ impl AiProviderSettings {
 
     pub(crate) fn allow_insecure_tls(&self) -> bool {
         self.allow_insecure_tls
+    }
+
+    pub(crate) fn allow_insecure_mcp_http(&self) -> bool {
+        self.allow_insecure_mcp_http
     }
 
     pub(crate) fn custom_instructions(&self) -> &str {
@@ -1964,7 +1970,12 @@ impl Storage {
         ensure_column(&connection, "connections", "icon_data_url", "TEXT")?;
         ensure_column(&connection, "connections", "icon_background_color", "TEXT")?;
         ensure_column(&connection, "connections", "terminal_opacity", "INTEGER")?;
-        ensure_column(&connection, "connections", "terminal_background_json", "TEXT")?;
+        ensure_column(
+            &connection,
+            "connections",
+            "terminal_background_json",
+            "TEXT",
+        )?;
         ensure_column(&connection, "connections", "tab_title", "TEXT")?;
         ensure_column(&connection, "connections", "password_credential_id", "TEXT")?;
         ensure_column(
@@ -2421,7 +2432,12 @@ impl Storage {
             .query_row(
                 "SELECT terminal_opacity, terminal_background_json FROM connections WHERE id = ?1",
                 params![&connection_id],
-                |row| Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, Option<String>>(1)?)),
+                |row| {
+                    Ok((
+                        row.get::<_, Option<i64>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                    ))
+                },
             )
             .optional()
             .map_err(to_storage_error)?
@@ -4639,7 +4655,9 @@ fn terminal_background_to_json(
     match background {
         None => Ok(None),
         Some(background) => {
-            background.validate().map_err(|error| format!("{error:?}"))?;
+            background
+                .validate()
+                .map_err(|error| format!("{error:?}"))?;
             serde_json::to_string(background)
                 .map(Some)
                 .map_err(|_| "terminal background is invalid".to_string())
@@ -4997,6 +5015,7 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         api_mode: default_ai_api_mode(),
         extra_headers: String::new(),
         allow_insecure_tls: false,
+        allow_insecure_mcp_http: false,
         show_all_models: false,
         cli_execution_policy: default_ai_cli_execution_policy(),
         tool_permission_mode: default_ai_tool_permission_mode(),
@@ -6994,8 +7013,8 @@ mod tests {
 
     #[test]
     fn desktop_wallpaper_settings_preserve_selection_when_disabled() {
-        let storage = Storage::open(temp_db_path("desktop-wallpaper-settings"))
-            .expect("storage opens");
+        let storage =
+            Storage::open(temp_db_path("desktop-wallpaper-settings")).expect("storage opens");
 
         let background = crate::dashboard_storage::DashboardBackground::Dynamic {
             dynamic: "aurora".to_string(),
@@ -7004,13 +7023,19 @@ mod tests {
             .update_desktop_wallpaper_settings(true, Some(background.clone()))
             .expect("desktop wallpaper enables");
         assert!(enabled.desktop_wallpaper_enabled);
-        assert_eq!(enabled.desktop_wallpaper_background, Some(background.clone()));
+        assert_eq!(
+            enabled.desktop_wallpaper_background,
+            Some(background.clone())
+        );
 
         let disabled = storage
             .update_desktop_wallpaper_enabled(false)
             .expect("desktop wallpaper disables");
         assert!(!disabled.desktop_wallpaper_enabled);
-        assert_eq!(disabled.desktop_wallpaper_background, Some(background.clone()));
+        assert_eq!(
+            disabled.desktop_wallpaper_background,
+            Some(background.clone())
+        );
 
         let reloaded = storage
             .general_settings()
@@ -7325,7 +7350,11 @@ mod tests {
         assert!(imported.general_settings.show_connected_connections_in_rail);
         assert!(imported.general_settings.show_all_connections_in_tree);
         assert!(imported.general_settings.hide_top_tab_buttons);
-        assert!(imported.general_settings.separate_split_terminal_backgrounds);
+        assert!(
+            imported
+                .general_settings
+                .separate_split_terminal_backgrounds
+        );
         assert!(!imported.general_settings.show_installer_on_rail);
         assert_eq!(
             imported.general_settings.pinned_connection_ids,
@@ -7766,6 +7795,7 @@ mod tests {
                 api_mode: " responses ".to_string(),
                 extra_headers: "  sid=1, \"env\"=\"3\"  ".to_string(),
                 allow_insecure_tls: true,
+                allow_insecure_mcp_http: true,
                 show_all_models: true,
                 cli_execution_policy: "suggest-only".to_string(),
                 tool_permission_mode: " Allow All ".to_string(),
@@ -7800,6 +7830,7 @@ mod tests {
         assert_eq!(updated.cli_execution_policy, "suggestOnly");
         assert_eq!(updated.tool_permission_mode, "allowAll");
         assert!(updated.allow_insecure_tls);
+        assert!(updated.allow_insecure_mcp_http);
         assert!(updated.show_all_models);
         assert_eq!(
             updated.claude_cli_path.as_deref(),
@@ -7818,6 +7849,7 @@ mod tests {
         assert_eq!(reloaded.extra_headers, "sid=1, \"env\"=\"3\"");
         assert_eq!(reloaded.tool_permission_mode, "allowAll");
         assert!(reloaded.allow_insecure_tls);
+        assert!(reloaded.allow_insecure_mcp_http);
         assert!(reloaded.show_all_models);
     }
 
@@ -7864,6 +7896,7 @@ mod tests {
                 api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "autoDeleteEverything".to_string(),
@@ -7907,6 +7940,7 @@ mod tests {
                 api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
@@ -7954,6 +7988,7 @@ mod tests {
                 api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
@@ -7998,6 +8033,7 @@ mod tests {
                 api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
                 show_all_models: false,
                 cli_execution_policy: "suggestOnly".to_string(),
                 tool_permission_mode: "prompt".to_string(),
@@ -8056,6 +8092,7 @@ mod tests {
                 api_mode: default_ai_api_mode(),
                 extra_headers: String::new(),
                 allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
                 show_all_models: false,
                 cli_execution_policy: "executeAutomatically".to_string(),
                 tool_permission_mode: "prompt".to_string(),

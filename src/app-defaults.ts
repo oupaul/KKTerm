@@ -150,6 +150,7 @@ export const defaultAiProviderSettings: AiProviderSettings = {
   apiMode: "chatCompletions",
   extraHeaders: "",
   allowInsecureTls: false,
+  allowInsecureMcpHttp: false,
   showAllModels: false,
   cliExecutionPolicy: "suggestOnly",
   toolPermissionMode: "prompt",

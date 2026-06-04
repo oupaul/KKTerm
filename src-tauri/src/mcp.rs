@@ -266,17 +266,35 @@ fn validate_name(value: &str) -> Result<String, McpCommandError> {
     Ok(trimmed.to_string())
 }
 
-fn validate_url(value: &str) -> Result<String, McpCommandError> {
+fn validate_url(value: &str, allow_insecure_mcp_http: bool) -> Result<String, McpCommandError> {
     let trimmed = value.trim();
     let parsed = url::Url::parse(trimmed).map_err(|e| McpCommandError::Validation {
         reason: format!("invalid url: {e}"),
     })?;
-    if parsed.scheme() != "https" && parsed.scheme() != "http" {
-        return Err(McpCommandError::Validation {
-            reason: "url must use http or https scheme".to_string(),
-        });
+    match parsed.scheme() {
+        "https" => {}
+        "http" if allow_insecure_mcp_http || is_loopback_url_host(&parsed) => {}
+        "http" => {
+            return Err(McpCommandError::Validation {
+                reason: "http:// Remote MCP servers are allowed only for localhost unless Settings enables insecure local/network MCP HTTP servers".to_string(),
+            });
+        }
+        _ => {
+            return Err(McpCommandError::Validation {
+                reason: "url must use http or https scheme".to_string(),
+            });
+        }
     }
     Ok(parsed.to_string())
+}
+
+fn is_loopback_url_host(parsed: &url::Url) -> bool {
+    match parsed.host() {
+        Some(url::Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Ipv4(addr)) => addr.is_loopback(),
+        Some(url::Host::Ipv6(addr)) => addr.is_loopback(),
+        None => false,
+    }
 }
 
 fn validate_headers(headers: &HashMap<String, String>) -> Result<(), McpCommandError> {
@@ -654,6 +672,13 @@ fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
     app.state::<crate::storage::Storage>()
 }
 
+fn remote_mcp_allows_insecure_http(app: &AppHandle) -> Result<bool, McpCommandError> {
+    storage(app)
+        .ai_provider_settings()
+        .map(|settings| settings.allow_insecure_mcp_http())
+        .map_err(|message| McpCommandError::Internal { message })
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMcpServerRequest {
@@ -689,7 +714,8 @@ pub async fn mcp_create_server(
     request: CreateMcpServerRequest,
 ) -> Result<McpServer, McpCommandError> {
     let name = validate_name(&request.name)?;
-    let url = validate_url(&request.url)?;
+    let allow_insecure_mcp_http = remote_mcp_allows_insecure_http(&app)?;
+    let url = validate_url(&request.url, allow_insecure_mcp_http)?;
     let headers = request.headers.unwrap_or_default();
     validate_headers(&headers)?;
     if request.secret_header_name.is_some() != request.secret_value_template.is_some() {
@@ -780,12 +806,13 @@ pub async fn mcp_update_server(
     let existing = storage(&app)
         .with_connection_infallible(|conn| get_server_by_id(conn, &id))?
         .ok_or(McpCommandError::NotFound)?;
+    let allow_insecure_mcp_http = remote_mcp_allows_insecure_http(&app)?;
     let new_name = match request.name {
         Some(value) => validate_name(&value)?,
         None => existing.name.clone(),
     };
     let new_url = match request.url {
-        Some(value) => validate_url(&value)?,
+        Some(value) => validate_url(&value, allow_insecure_mcp_http)?,
         None => existing.url.clone(),
     };
     let new_headers = match request.headers {
@@ -885,6 +912,7 @@ pub async fn mcp_refresh_tools(
     let server = storage(&app)
         .with_connection_infallible(|conn| get_server_by_id(conn, &id))?
         .ok_or(McpCommandError::NotFound)?;
+    validate_url(&server.url, remote_mcp_allows_insecure_http(&app)?)?;
     let secret = if server.has_secret {
         secrets
             .read_mcp_server_secret(mcp_secret_owner_id(&server.id))
@@ -935,6 +963,7 @@ pub async fn mcp_call_tool(
         }
     })?;
     let server = server.ok_or(McpCommandError::NotFound)?;
+    validate_url(&server.url, remote_mcp_allows_insecure_http(&app)?)?;
     let secret = if server.has_secret {
         secrets
             .read_mcp_server_secret(mcp_secret_owner_id(&server.id))
@@ -1024,6 +1053,29 @@ mod tests {
             created_at: chrono_now(),
             updated_at: chrono_now(),
         }
+    }
+
+    #[test]
+    fn validate_url_allows_https_and_loopback_http_by_default() {
+        assert!(validate_url("https://example.com/mcp", false).is_ok());
+        assert!(validate_url("http://localhost:8000/mcp", false).is_ok());
+        assert!(validate_url("http://127.0.0.1:8000/mcp", false).is_ok());
+        assert!(validate_url("http://[::1]:8000/mcp", false).is_ok());
+    }
+
+    #[test]
+    fn validate_url_rejects_external_http_without_insecure_setting() {
+        let error = validate_url("http://192.168.1.10:8000/mcp", false)
+            .expect_err("network HTTP is blocked by default");
+
+        assert!(
+            matches!(error, McpCommandError::Validation { reason } if reason.contains("insecure local/network MCP HTTP"))
+        );
+    }
+
+    #[test]
+    fn validate_url_allows_network_http_with_insecure_setting() {
+        assert!(validate_url("http://192.168.1.10:8000/mcp", true).is_ok());
     }
 
     #[test]

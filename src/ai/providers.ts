@@ -49,6 +49,7 @@ export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
     apiMode: "chatCompletions",
     extraHeaders: "",
     allowInsecureTls: false,
+    allowInsecureMcpHttp: false,
     showAllModels: false,
     cliExecutionPolicy: "suggestOnly",
     toolPermissionMode: "prompt",
@@ -107,6 +108,7 @@ export function normalizeAiProviderDraft(draft: AiProviderSettings): AiProviderS
     extraHeaders:
       definition.kind === "openai-compatible" ? (draft.extraHeaders ?? "").trim() : "",
     allowInsecureTls: Boolean(draft.allowInsecureTls),
+    allowInsecureMcpHttp: Boolean(draft.allowInsecureMcpHttp),
     showAllModels: Boolean(draft.showAllModels),
     cliExecutionPolicy: "suggestOnly",
     toolPermissionMode: draft.toolPermissionMode === "allowAll" ? "allowAll" : "prompt",

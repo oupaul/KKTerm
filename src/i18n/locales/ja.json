@@ -1883,6 +1883,8 @@
     "builtInMcpServerEnabledHint": "外部ツール向けに kkterm-cli を stdio MCP server として公開します。",
     "builtInMcpAllowAllDangerous": "組み込みの危険な MCP ツール: すべて許可",
     "builtInMcpAllowAllDangerousHint": "有効にすると、危険な kkterm.dangerous.* MCP ツールが確認プロンプトなしで実行されます。",
+    "allowInsecureMcpHttp": "Allow insecure Remote MCP HTTP servers",
+    "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "rdpRemoteResolution": "リモート解像度",
     "rdpRemoteResolutionAutomatic": "自動",
     "builtInMcpShowConfig": "設定を表示",

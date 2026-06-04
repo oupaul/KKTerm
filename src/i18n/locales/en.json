@@ -1196,6 +1196,8 @@
     "builtInMcpServerEnabledHint": "Expose kkterm-cli as a stdio MCP server for external tools.",
     "builtInMcpAllowAllDangerous": "Built-in MCP dangerous tools: Allow all",
     "builtInMcpAllowAllDangerousHint": "When enabled, dangerous kkterm.dangerous.* MCP tools execute without confirmation prompts.",
+    "allowInsecureMcpHttp": "Allow insecure Remote MCP HTTP servers",
+    "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "builtInMcpShowConfig": "Show config",
     "builtInMcpConfigTitle": "Built-in MCP config",
     "builtInMcpConfigIntro": "Paste one of these snippets into an MCP-capable tool, or use a setup command below. The command path uses the kkterm-cli.exe beside your running KKTerm.exe.",

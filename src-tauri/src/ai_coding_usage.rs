@@ -441,6 +441,7 @@ fn save_provider_update(
     if let Some(snapshot) = update.snapshot {
         let raw_json = update
             .raw_provider_json
+            .map(|value| scrub_sensitive_provider_json(&value))
             .and_then(|value| serde_json::to_string(&value).ok());
         connection
             .execute(
@@ -1395,6 +1396,42 @@ fn scrub_provider_error(error: &str) -> String {
     scrubbed
 }
 
+fn scrub_sensitive_provider_json(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, nested)| {
+                    let value = if provider_json_key_is_sensitive(key) {
+                        Value::String("[REDACTED]".to_string())
+                    } else {
+                        scrub_sensitive_provider_json(nested)
+                    };
+                    (key.clone(), value)
+                })
+                .collect(),
+        ),
+        Value::Array(items) => {
+            Value::Array(items.iter().map(scrub_sensitive_provider_json).collect())
+        }
+        other => other.clone(),
+    }
+}
+
+fn provider_json_key_is_sensitive(key: &str) -> bool {
+    let normalized = key.to_ascii_lowercase().replace(['-', ' '], "_");
+    normalized == "token"
+        || normalized.ends_with("_token")
+        || normalized.contains("access_token")
+        || normalized.contains("accesstoken")
+        || normalized.contains("refresh_token")
+        || normalized.contains("refreshtoken")
+        || normalized.contains("api_key")
+        || normalized.contains("apikey")
+        || normalized.contains("secret")
+        || normalized.contains("password")
+        || normalized.contains("authorization")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1457,6 +1494,31 @@ mod tests {
         assert_eq!(update.subscription_plan.as_deref(), Some("pro"));
         assert_eq!(update.last_error, None);
         assert!(update.snapshot.is_none());
+    }
+
+    #[test]
+    fn scrub_sensitive_provider_json_redacts_nested_secrets() {
+        let value = serde_json::json!({
+            "usage": { "used_percent": 42.0 },
+            "access_token": "tok-1",
+            "nested": {
+                "refreshToken": "tok-2",
+                "api_key": "key-1",
+                "items": [
+                    { "clientSecret": "secret-1" },
+                    { "label": "safe" }
+                ]
+            }
+        });
+
+        let scrubbed = scrub_sensitive_provider_json(&value);
+
+        assert_eq!(scrubbed["usage"]["used_percent"], 42.0);
+        assert_eq!(scrubbed["access_token"], "[REDACTED]");
+        assert_eq!(scrubbed["nested"]["refreshToken"], "[REDACTED]");
+        assert_eq!(scrubbed["nested"]["api_key"], "[REDACTED]");
+        assert_eq!(scrubbed["nested"]["items"][0]["clientSecret"], "[REDACTED]");
+        assert_eq!(scrubbed["nested"]["items"][1]["label"], "safe");
     }
 
     #[test]
