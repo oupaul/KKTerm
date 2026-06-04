@@ -1657,7 +1657,11 @@ impl OpenAiCompatibleProvider {
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
-            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
+            enabled_skill_summaries_for_request(
+                &app,
+                settings.disabled_skill_names(),
+                settings.custom_skills_enabled(),
+            )?;
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let mut messages = build_agent_messages(
@@ -1865,7 +1869,11 @@ impl OpenAiCompatibleProvider {
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
-            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
+            enabled_skill_summaries_for_request(
+                &app,
+                settings.disabled_skill_names(),
+                settings.custom_skills_enabled(),
+            )?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
@@ -2084,7 +2092,11 @@ impl OpenAiCompatibleProvider {
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
-            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
+            enabled_skill_summaries_for_request(
+                &app,
+                settings.disabled_skill_names(),
+                settings.custom_skills_enabled(),
+            )?;
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let mut messages = build_agent_messages(
@@ -2385,7 +2397,11 @@ impl OpenAiCompatibleProvider {
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
         let skill_summaries =
-            enabled_skill_summaries_for_request(&app, settings.disabled_skill_names())?;
+            enabled_skill_summaries_for_request(
+                &app,
+                settings.disabled_skill_names(),
+                settings.custom_skills_enabled(),
+            )?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
@@ -4541,7 +4557,13 @@ async fn run_ai_tool(
     }
     let result = match call.function.name.as_str() {
         "assistant_use_skill" => {
-            assistant_use_skill_tool(app, settings.disabled_skill_names(), args, stream_channel)
+            assistant_use_skill_tool(
+                app,
+                settings.disabled_skill_names(),
+                settings.custom_skills_enabled(),
+                args,
+                stream_channel,
+            )
         }
         "request_secret_entry" => {
             request_secret_entry_tool(args, settings.provider_kind(), stream_channel)
@@ -4608,6 +4630,7 @@ async fn run_ai_tool(
 fn assistant_use_skill_tool(
     app: &tauri::AppHandle,
     disabled_names: &[String],
+    include_custom: bool,
     args: Value,
     stream_channel: Option<&Channel<Value>>,
 ) -> String {
@@ -4622,7 +4645,8 @@ fn assistant_use_skill_tool(
     let result = (|| -> Result<String, String> {
         assistant_skills::ensure_bundled_skills_installed(app)?;
         let root = assistant_skills::assistant_skills_root(app)?;
-        let summaries = assistant_skills::list_skill_summaries(&root, disabled_names)?;
+        let summaries =
+            assistant_skills::list_skill_summaries(&root, disabled_names, include_custom)?;
         let summary = summaries
             .iter()
             .find(|summary| summary.name == name)
@@ -6983,15 +7007,18 @@ fn normalize_custom_instructions(instructions: Option<String>) -> Option<String>
 fn enabled_skill_summaries_for_request(
     app: &tauri::AppHandle,
     disabled_names: &[String],
+    include_custom: bool,
 ) -> Result<Vec<AssistantSkillSummary>, String> {
     assistant_skills::ensure_bundled_skills_installed(app)?;
     let root = assistant_skills::assistant_skills_root(app)?;
-    assistant_skills::list_skill_summaries(&root, disabled_names).map(|summaries| {
-        summaries
-            .into_iter()
-            .filter(|summary| summary.enabled && summary.invalid_reason.is_none())
-            .collect()
-    })
+    assistant_skills::list_skill_summaries(&root, disabled_names, include_custom).map(
+        |summaries| {
+            summaries
+                .into_iter()
+                .filter(|summary| summary.enabled && summary.invalid_reason.is_none())
+                .collect()
+        },
+    )
 }
 
 fn normalize_screenshot_context(
