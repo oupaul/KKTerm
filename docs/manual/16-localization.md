@@ -42,6 +42,8 @@ Detailed rules are in `docs/ARCHITECTURE.md` §Internationalization. Summary:
 3. Pending translations are tracked one-key-per-file under `docs/localization_todo/` (copy `_TEMPLATE.md`). Delete the corresponding file when a translation lands.
 4. Only update non-English locale files when intentionally translating; keep all 14 locale JSON files structurally aligned. Always run `npm run i18n:check` during translation runs to compare every locale against `en.json` for missing and redundant keys.
 5. Renames must update every locale file plus the matching `docs/localization_todo/` filename.
+6. Prefer context-specific keys over reusing one key. When a single English word covers meanings that other languages translate differently — e.g. "Play" for start-media vs. run vs. a theatrical play — add a separate key per context and name it after the meaning, not the spelling. Reuse a key only when the meaning is identical everywhere it appears.
+7. Keep placeholders translation-safe. Use named i18next placeholders (`{{count}}`, `{{host}}`) so translators can reorder them, keep one full sentence per key (never concatenate keys or fragments around a variable), and confirm every `{{…}}` token survives unchanged in each locale. Prefer i18next plural/context features over English-shaped string assembly.
 
 Technical terms (SSH, SFTP, RDP, VNC, tmux, ProxyJump, PowerShell, WSL, API, URL) typically stay English across languages.
 

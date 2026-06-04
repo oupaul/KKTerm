@@ -75,7 +75,13 @@ Strong success criteria let you loop independently.
   `src/i18n/locales/en.json`; whenever new UI strings are created or changed,
   follow `docs/localization_todo/README.md` exactly. If translations are not
   completed in the same change, add one pending file per key under
-  `docs/localization_todo/` using that README's flow and template. See
+  `docs/localization_todo/` using that README's flow and template. When the
+  meaning of an English word shifts by context (e.g. "Play" starts media, runs
+  something, or names a theatrical play — each translates differently), create a
+  separate key per context instead of reusing one; reuse a key only when the
+  meaning is identical everywhere. Keep interpolation placeholders
+  translation-safe: use named `{{…}}` placeholders, one full sentence per key,
+  no concatenated fragments around a variable. See
   `docs/manual/16-localization.md` and `docs/ARCHITECTURE.md`.
 - App-owned popup dialogs use a single concise title by default. Do not add a
   subtitle or explanatory header copy unless the flow truly needs it; put
