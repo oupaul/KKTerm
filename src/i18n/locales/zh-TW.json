@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "清除動態桌布，並交還給 Windows 處理桌布。",
     "manual": "手冊",
     "dontSleepStatusEnabled": "防止睡眠已啟用",
+    "xServer": "X Server",
+    "xServerRestart": "重新啟動",
+    "xServerStop": "停止",
+    "xServerStopped": "VcXsrv 已停止。",
     "titlebar": {
       "minimize": "最小化",
       "maximize": "最大化",
@@ -1050,11 +1054,11 @@
       "nebula": "星雲",
       "raindrops": "雨滴",
       "rainyWindow": "雨窗",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "霜花窗",
       "starfield": "星空",
       "synthwave": "合成波",
       "bubbles": "氣泡",
-      "aquarium": "Aquarium",
+      "aquarium": "水族箱",
       "clouds": "雲朵",
       "cyberpunk": "賽博龐克",
       "fireflies": "螢火蟲",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "網路管理工具",
-        "description": "ping 主機、檢查 TCP 連接埠、解析 DNS、執行 WHOIS、列出網路介面並傳送網路喚醒。預設停用。"
+        "description": "ping 主機、檢查 TCP 連接埠、解析 DNS、執行 WHOIS、列出網路介面並傳送網路喚醒。"
       }
     },
     "aiToolsDescription": "選擇 AI 助理在回答時可呼叫的內建工具。除非需要，否則請勿開啟高風險工具。",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "找不到助理技能。",
     "assistantSkillsEnabled": "已啟用",
     "assistantSkillsHint": "本機 SKILL.md 資料夾，教 AI 助理特定工作流程。內建的入門技能會自動複製到這裡。本版本不會執行指令碼；請使用資料夾按鈕新增或編輯技能。",
+    "assistantCustomSkillsTitle": "自訂技能",
+    "assistantCustomSkillsHint": "當 AI 助理開始請求或重新整理此清單時，從 assistant-skills\\custom 載入額外的 SKILL.md 資料夾。",
     "assistantSkillsOpen": "開啟 {{name}}",
     "assistantSkillsOpenFolder": "開啟技能資料夾",
+    "assistantCustomSkillsOpenFolder": "開啟自訂資料夾",
     "assistantSkillsTitle": "助理技能",
     "dashboardUseRandomDynamicBackground": "使用隨機動態背景",
     "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 檢視會自動以隨機動態背景開始。",
@@ -2026,7 +2033,8 @@
     "waiting": "等待中",
     "waitingToOverwrite": "等待覆寫",
     "windowsDrives": "本機",
-    "pathInputAria": "輸入{{pane}}路徑"
+    "pathInputAria": "輸入{{pane}}路徑",
+    "recentPathsAria": "開啟最近的{{pane}}路徑"
   },
   "terminal": {
     "actions": "終端機動作",

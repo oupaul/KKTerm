@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "Xóa hình nền động và trả lại việc xử lý hình nền cho Windows.",
     "manual": "Hướng dẫn",
     "dontSleepStatusEnabled": "Đã bật Không ngủ",
+    "xServer": "X Server",
+    "xServerRestart": "Khởi động lại",
+    "xServerStop": "Dừng",
+    "xServerStopped": "VcXsrv đã dừng.",
     "titlebar": {
       "minimize": "Thu nhỏ",
       "maximize": "Phóng to",
@@ -1051,11 +1055,11 @@
       "nebula": "Tinh vân",
       "raindrops": "Giọt mưa",
       "rainyWindow": "Cửa sổ mưa",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "Cửa sổ phủ sương giá",
       "starfield": "Bầu trời đêm",
       "synthwave": "Synthwave",
       "bubbles": "Bong bóng",
-      "aquarium": "Aquarium",
+      "aquarium": "Bể cá",
       "clouds": "Mây",
       "cyberpunk": "Cyberpunk",
       "fireflies": "Đom đóm",
@@ -1361,7 +1365,7 @@
       },
       "network": {
         "label": "Công cụ quản trị mạng",
-        "description": "Ping các host, kiểm tra cổng TCP, phân giải DNS, chạy WHOIS, liệt kê giao diện và gửi Wake-on-LAN. Tắt theo mặc định."
+        "description": "Ping các host, kiểm tra cổng TCP, phân giải DNS, chạy WHOIS, liệt kê giao diện và gửi Wake-on-LAN."
       },
       "shellCommand": {
         "description": "Chạy lệnh PowerShell hoặc batch không phá hủy từ dữ liệu ứng dụng KKTerm.",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "Không tìm thấy Kỹ năng Trợ lý nào.",
     "assistantSkillsEnabled": "Đã bật",
     "assistantSkillsHint": "Các thư mục SKILL.md cục bộ dạy cho Trợ lý AI những quy trình làm việc tập trung. Các kỹ năng khởi đầu đi kèm được tự động sao chép vào đây. Tập lệnh không được thực thi trong phiên bản này; hãy dùng nút thư mục để thêm hoặc chỉnh sửa kỹ năng.",
+    "assistantCustomSkillsTitle": "Kỹ năng tùy chỉnh",
+    "assistantCustomSkillsHint": "Tải thêm các thư mục SKILL.md từ assistant-skills\\custom khi Trợ lý AI bắt đầu một yêu cầu hoặc khi bạn làm mới danh sách này.",
     "assistantSkillsOpen": "Mở {{name}}",
     "assistantSkillsOpenFolder": "Mở thư mục kỹ năng",
+    "assistantCustomSkillsOpenFolder": "Mở thư mục tùy chỉnh",
     "assistantSkillsTitle": "Kỹ năng Trợ lý",
     "dashboardUseRandomDynamicBackground": "Dùng nền động ngẫu nhiên",
     "dashboardUseRandomDynamicBackgroundDesc": "Các chế độ xem Dashboard mới tự động bắt đầu với nền động ngẫu nhiên.",
@@ -2026,7 +2033,8 @@
     "waiting": "Waiting",
     "waitingToOverwrite": "Đang chờ ghi đè",
     "windowsDrives": "PC này",
-    "pathInputAria": "Nhập đường dẫn {{pane}}"
+    "pathInputAria": "Nhập đường dẫn {{pane}}",
+    "recentPathsAria": "Mở các đường dẫn {{pane}} gần đây"
   },
   "terminal": {
     "actions": "Terminal actions",

@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "Live-Hintergrundbild löschen und wieder die Windows-Hintergrundverwaltung verwenden.",
     "manual": "Handbuch",
     "dontSleepStatusEnabled": "Nicht schlafen aktiviert",
+    "xServer": "X Server",
+    "xServerRestart": "Neu starten",
+    "xServerStop": "Stoppen",
+    "xServerStopped": "VcXsrv gestoppt.",
     "titlebar": {
       "minimize": "Minimieren",
       "maximize": "Maximieren",
@@ -1050,7 +1054,7 @@
       "nebula": "Nebel",
       "raindrops": "Regentropfen",
       "rainyWindow": "Regenfenster",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "Vereistes Fenster",
       "starfield": "Nachthimmel",
       "synthwave": "Synthwave",
       "bubbles": "Blasen",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "Netzwerk-Verwaltungstools",
-        "description": "Hosts anpingen, TCP-Ports prüfen, DNS auflösen, WHOIS ausführen, Schnittstellen auflisten und Wake-on-LAN senden. Standardmäßig deaktiviert."
+        "description": "Hosts anpingen, TCP-Ports prüfen, DNS auflösen, WHOIS ausführen, Schnittstellen auflisten und Wake-on-LAN senden."
       }
     },
     "aiToolsDescription": "Wählen Sie, welche integrierten Werkzeuge der KI-Assistent beim Antworten verwenden darf. Lassen Sie riskante Werkzeuge deaktiviert, es sei denn, Sie benötigen sie.",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "Keine Assistenten-Skills gefunden.",
     "assistantSkillsEnabled": "Aktiviert",
     "assistantSkillsHint": "Lokale SKILL.md-Ordner, die dem KI-Assistenten fokussierte Workflows beibringen. Mitgelieferte Starter-Skills werden automatisch hierher kopiert. Skripte werden in dieser Version nicht ausgeführt; verwende die Ordnerschaltfläche, um Skills hinzuzufügen oder zu bearbeiten.",
+    "assistantCustomSkillsTitle": "Benutzerdefinierte Skills",
+    "assistantCustomSkillsHint": "Zusätzliche SKILL.md-Ordner aus assistant-skills\\custom laden, wenn der KI-Assistent eine Anfrage startet oder wenn Sie diese Liste aktualisieren.",
     "assistantSkillsOpen": "{{name}} öffnen",
     "assistantSkillsOpenFolder": "Skills-Ordner öffnen",
+    "assistantCustomSkillsOpenFolder": "Benutzerdefinierten Ordner öffnen",
     "assistantSkillsTitle": "Assistenten-Skills",
     "dashboardUseRandomDynamicBackground": "Zufälligen dynamischen Hintergrund verwenden",
     "dashboardUseRandomDynamicBackgroundDesc": "Neue Dashboard-Ansichten starten automatisch mit einem zufälligen dynamischen Hintergrund.",
@@ -2026,7 +2033,8 @@
     "waiting": "Warten",
     "waitingToOverwrite": "Warten auf Überschreiben",
     "windowsDrives": "Dieser PC",
-    "pathInputAria": "{{pane}}-Pfad eingeben"
+    "pathInputAria": "{{pane}}-Pfad eingeben",
+    "recentPathsAria": "Letzte {{pane}}-Pfade öffnen"
   },
   "terminal": {
     "actions": "Terminalaktionen",

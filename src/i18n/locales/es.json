@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "Borra el fondo animado y vuelve a la gestión de fondos de Windows.",
     "manual": "Manual",
     "dontSleepStatusEnabled": "No suspender activado",
+    "xServer": "X Server",
+    "xServerRestart": "Reiniciar",
+    "xServerStop": "Detener",
+    "xServerStopped": "VcXsrv detenido.",
     "titlebar": {
       "minimize": "Minimizar",
       "maximize": "Maximizar",
@@ -1050,11 +1054,11 @@
       "nebula": "Nebulosa",
       "raindrops": "Gotas de lluvia",
       "rainyWindow": "Ventana lluviosa",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "Ventana escarchada",
       "starfield": "Cielo nocturno",
       "synthwave": "Synthwave",
       "bubbles": "Burbujas",
-      "aquarium": "Aquarium",
+      "aquarium": "Acuario",
       "clouds": "Nubes",
       "cyberpunk": "Cyberpunk",
       "fireflies": "Luciérnagas",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "Herramientas de administración de red",
-        "description": "Hacer ping a hosts, verificar puertos TCP, resolver DNS, ejecutar WHOIS, listar interfaces y enviar Wake-on-LAN. Desactivado por defecto."
+        "description": "Hacer ping a hosts, comprobar puertos TCP, resolver DNS, ejecutar WHOIS, listar interfaces y enviar Wake-on-LAN."
       }
     },
     "aiToolsDescription": "Elija qué herramientas integradas puede usar el Asistente IA al responder. Mantenga las herramientas riesgosas desactivadas a menos que las necesite.",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "No se encontraron Skills del asistente.",
     "assistantSkillsEnabled": "Habilitado",
     "assistantSkillsHint": "Carpetas SKILL.md locales que enseñan flujos de trabajo enfocados al asistente de IA. Las skills iniciales incluidas se copian aquí automáticamente. Los scripts no se ejecutan en esta versión; usa el botón de carpeta para añadir o editar skills.",
+    "assistantCustomSkillsTitle": "Skills personalizados",
+    "assistantCustomSkillsHint": "Carga carpetas SKILL.md adicionales desde assistant-skills\\custom cuando el asistente de IA inicia una solicitud o cuando actualizas esta lista.",
     "assistantSkillsOpen": "Abrir {{name}}",
     "assistantSkillsOpenFolder": "Abrir carpeta de skills",
+    "assistantCustomSkillsOpenFolder": "Abrir carpeta personalizada",
     "assistantSkillsTitle": "Skills del asistente",
     "dashboardUseRandomDynamicBackground": "Usar fondo dinámico aleatorio",
     "dashboardUseRandomDynamicBackgroundDesc": "Las nuevas vistas del Dashboard se inician automáticamente con un fondo dinámico aleatorio.",
@@ -2026,7 +2033,8 @@
     "waiting": "Esperando",
     "waitingToOverwrite": "Esperando para sobrescribir",
     "windowsDrives": "Este equipo",
-    "pathInputAria": "Introduce la ruta de {{pane}}"
+    "pathInputAria": "Introduce la ruta de {{pane}}",
+    "recentPathsAria": "Abrir rutas recientes de {{pane}}"
   },
   "terminal": {
     "actions": "Acciones del terminal",

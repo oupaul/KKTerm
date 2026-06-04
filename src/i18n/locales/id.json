@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "Hapus wallpaper live dan kembalikan penanganan wallpaper ke Windows.",
     "manual": "Panduan",
     "dontSleepStatusEnabled": "Jangan Tidur Aktif",
+    "xServer": "X Server",
+    "xServerRestart": "Mulai ulang",
+    "xServerStop": "Hentikan",
+    "xServerStopped": "VcXsrv dihentikan.",
     "titlebar": {
       "minimize": "Minimalkan",
       "maximize": "Maksimalkan",
@@ -1050,11 +1054,11 @@
       "nebula": "Nebula",
       "raindrops": "Tetes Hujan",
       "rainyWindow": "Jendela hujan",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "Jendela berlapis es",
       "starfield": "Langit Malam",
       "synthwave": "Synthwave",
       "bubbles": "Gelembung",
-      "aquarium": "Aquarium",
+      "aquarium": "Akuarium",
       "clouds": "Awan",
       "cyberpunk": "Cyberpunk",
       "fireflies": "Kunang-kunang",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "Alat admin jaringan",
-        "description": "Ping host, periksa port TCP, resolusi DNS, jalankan WHOIS, daftar antarmuka, dan kirim Wake-on-LAN. Dinonaktifkan secara default."
+        "description": "Ping host, periksa port TCP, resolusi DNS, jalankan WHOIS, daftar antarmuka, dan kirim Wake-on-LAN."
       }
     },
     "aiToolsDescription": "Pilih alat bawaan mana yang dapat dipanggil AI Assistant saat menjawab. Matikan alat berisiko kecuali Anda membutuhkannya.",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "Tidak ada Skill Asisten yang ditemukan.",
     "assistantSkillsEnabled": "Diaktifkan",
     "assistantSkillsHint": "Folder SKILL.md lokal yang mengajarkan alur kerja terfokus kepada Asisten AI. Skill awal bawaan disalin ke sini secara otomatis. Skrip tidak dijalankan dalam versi ini; gunakan tombol folder untuk menambah atau mengedit skill.",
+    "assistantCustomSkillsTitle": "Skill Kustom",
+    "assistantCustomSkillsHint": "Muat folder SKILL.md tambahan dari assistant-skills\\custom saat Asisten AI memulai permintaan atau saat Anda menyegarkan daftar ini.",
     "assistantSkillsOpen": "Buka {{name}}",
     "assistantSkillsOpenFolder": "Buka folder skill",
+    "assistantCustomSkillsOpenFolder": "Buka folder kustom",
     "assistantSkillsTitle": "Skill Asisten",
     "dashboardUseRandomDynamicBackground": "Gunakan latar belakang dinamis acak",
     "dashboardUseRandomDynamicBackgroundDesc": "Tampilan Dashboard baru otomatis dimulai dengan latar belakang dinamis acak.",
@@ -2026,7 +2033,8 @@
     "waiting": "Menunggu",
     "waitingToOverwrite": "Menunggu untuk menimpa",
     "windowsDrives": "PC ini",
-    "pathInputAria": "Masukkan jalur {{pane}}"
+    "pathInputAria": "Masukkan jalur {{pane}}",
+    "recentPathsAria": "Buka jalur {{pane}} terbaru"
   },
   "terminal": {
     "actions": "Aksi terminal",

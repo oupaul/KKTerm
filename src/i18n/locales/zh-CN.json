@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "清除动态壁纸，并交还给 Windows 处理壁纸。",
     "manual": "手册",
     "dontSleepStatusEnabled": "防止睡眠已启用",
+    "xServer": "X Server",
+    "xServerRestart": "重启",
+    "xServerStop": "停止",
+    "xServerStopped": "VcXsrv 已停止。",
     "titlebar": {
       "minimize": "最小化",
       "maximize": "最大化",
@@ -1050,11 +1054,11 @@
       "nebula": "星云",
       "raindrops": "雨滴",
       "rainyWindow": "雨窗",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "霜花窗",
       "starfield": "夜空",
       "synthwave": "合成波",
       "bubbles": "气泡",
-      "aquarium": "Aquarium",
+      "aquarium": "水族箱",
       "clouds": "云朵",
       "cyberpunk": "赛博朋克",
       "fireflies": "萤火虫",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "网络管理工具",
-        "description": "ping 主机、检查 TCP 端口、解析 DNS、运行 WHOIS、列出网络接口并发送网络唤醒。默认禁用。"
+        "description": "ping 主机、检查 TCP 端口、解析 DNS、运行 WHOIS、列出网络接口并发送网络唤醒。"
       }
     },
     "aiToolsDescription": "选择 AI 助手在回答时可以调用的内置工具。除非需要，否则请保持有风险的工具关闭。",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "未找到助手技能。",
     "assistantSkillsEnabled": "已启用",
     "assistantSkillsHint": "本地 SKILL.md 文件夹，用于教 AI 助手执行专注的工作流。内置的入门技能会自动复制到这里。此版本不会执行脚本；请使用文件夹按钮添加或编辑技能。",
+    "assistantCustomSkillsTitle": "自定义技能",
+    "assistantCustomSkillsHint": "当 AI 助手开始请求或刷新此列表时，从 assistant-skills\\custom 加载额外的 SKILL.md 文件夹。",
     "assistantSkillsOpen": "打开 {{name}}",
     "assistantSkillsOpenFolder": "打开技能文件夹",
+    "assistantCustomSkillsOpenFolder": "打开自定义文件夹",
     "assistantSkillsTitle": "助手技能",
     "dashboardUseRandomDynamicBackground": "使用随机动态背景",
     "dashboardUseRandomDynamicBackgroundDesc": "新的 Dashboard 视图会自动以随机动态背景开始。",
@@ -2026,7 +2033,8 @@
     "waiting": "等待中",
     "waitingToOverwrite": "等待覆盖",
     "windowsDrives": "此电脑",
-    "pathInputAria": "输入{{pane}}路径"
+    "pathInputAria": "输入{{pane}}路径",
+    "recentPathsAria": "打开最近的{{pane}}路径"
   },
   "terminal": {
     "actions": "终端操作",

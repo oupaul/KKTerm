@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "ล้างวอลเปเปอร์สดและกลับไปให้ Windows จัดการวอลเปเปอร์",
     "manual": "คู่มือ",
     "dontSleepStatusEnabled": "เปิดใช้งานไม่ให้พักเครื่อง",
+    "xServer": "X Server",
+    "xServerRestart": "รีสตาร์ท",
+    "xServerStop": "หยุด",
+    "xServerStopped": "หยุด VcXsrv แล้ว",
     "titlebar": {
       "minimize": "ย่อ",
       "maximize": "ขยาย",
@@ -1050,11 +1054,11 @@
       "nebula": "เนบิวลา",
       "raindrops": "หยาดฝน",
       "rainyWindow": "หน้าต่างกลางฝน",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "หน้าต่างน้ำค้างแข็ง",
       "starfield": "ท้องฟ้ายามค่ำคืน",
       "synthwave": "ซินธ์เวฟ",
       "bubbles": "ฟองอากาศ",
-      "aquarium": "Aquarium",
+      "aquarium": "ตู้ปลา",
       "clouds": "เมฆ",
       "cyberpunk": "ไซเบอร์พังก์",
       "fireflies": "หิ่งห้อย",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "เครื่องมือจัดการเครือข่าย",
-        "description": "Ping โฮสต์ ตรวจสอบพอร์ต TCP แก้ไข DNS รัน WHOIS รายการอินเทอร์เฟซ และส่ง Wake-on-LAN ปิดใช้งานโดยค่าเริ่มต้น"
+        "description": "Ping โฮสต์ ตรวจสอบพอร์ต TCP แก้ไข DNS รัน WHOIS แสดงรายการอินเทอร์เฟซ และส่ง Wake-on-LAN"
       }
     },
     "aiToolsDescription": "เลือกเครื่องมือในตัวที่ผู้ช่วย AI สามารถเรียกใช้ขณะตอบคำถาม ปิดเครื่องมือที่มีความเสี่ยงไว้ยกเว้นคุณจำเป็นต้องใช้",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "ไม่พบสกิลผู้ช่วย",
     "assistantSkillsEnabled": "เปิดใช้งาน",
     "assistantSkillsHint": "โฟลเดอร์ SKILL.md ในเครื่องที่สอนเวิร์กโฟลว์เฉพาะให้ผู้ช่วย AI สกิลเริ่มต้นที่มาพร้อมกันจะถูกคัดลอกมาที่นี่โดยอัตโนมัติ เวอร์ชันนี้ไม่เรียกใช้สคริปต์ ใช้ปุ่มโฟลเดอร์เพื่อเพิ่มหรือแก้ไขสกิล",
+    "assistantCustomSkillsTitle": "สกิลกำหนดเอง",
+    "assistantCustomSkillsHint": "โหลดโฟลเดอร์ SKILL.md เพิ่มเติมจาก assistant-skills\\custom เมื่อผู้ช่วย AI เริ่มคำขอหรือเมื่อคุณรีเฟรชรายการนี้",
     "assistantSkillsOpen": "เปิด {{name}}",
     "assistantSkillsOpenFolder": "เปิดโฟลเดอร์สกิล",
+    "assistantCustomSkillsOpenFolder": "เปิดโฟลเดอร์กำหนดเอง",
     "assistantSkillsTitle": "สกิลผู้ช่วย",
     "dashboardUseRandomDynamicBackground": "ใช้พื้นหลังไดนามิกแบบสุ่ม",
     "dashboardUseRandomDynamicBackgroundDesc": "มุมมอง Dashboard ใหม่จะเริ่มต้นโดยอัตโนมัติด้วยพื้นหลังไดนามิกแบบสุ่ม",
@@ -2026,7 +2033,8 @@
     "waiting": "กำลังรอ",
     "waitingToOverwrite": "กำลังรอเขียนทับ",
     "windowsDrives": "พีซีเครื่องนี้",
-    "pathInputAria": "ป้อนเส้นทาง {{pane}}"
+    "pathInputAria": "ป้อนเส้นทาง {{pane}}",
+    "recentPathsAria": "เปิดเส้นทาง {{pane}} ล่าสุด"
   },
   "terminal": {
     "actions": "การทำงานเทอร์มินัล",

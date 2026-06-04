@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "라이브 배경 화면을 지우고 Windows 배경 화면 관리로 되돌립니다.",
     "manual": "매뉴얼",
     "dontSleepStatusEnabled": "절전 방지 활성화됨",
+    "xServer": "X Server",
+    "xServerRestart": "다시 시작",
+    "xServerStop": "중지",
+    "xServerStopped": "VcXsrv가 중지되었습니다.",
     "titlebar": {
       "minimize": "최소화",
       "maximize": "최대화",
@@ -1050,11 +1054,11 @@
       "nebula": "성운",
       "raindrops": "빗방울",
       "rainyWindow": "비 오는 창",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "성에 낀 창문",
       "starfield": "밤하늘",
       "synthwave": "신스웨이브",
       "bubbles": "거품",
-      "aquarium": "Aquarium",
+      "aquarium": "어항",
       "clouds": "구름",
       "cyberpunk": "사이버펑크",
       "fireflies": "반딧불이",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "네트워크 관리 도구",
-        "description": "호스트 ping, TCP 포트 확인, DNS 확인, WHOIS 실행, 인터페이스 목록, Wake-on-LAN 전송. 기본적으로 비활성화됩니다."
+        "description": "호스트 ping, TCP 포트 확인, DNS 조회, WHOIS 실행, 인터페이스 목록 표시, Wake-on-LAN 전송을 수행합니다."
       }
     },
     "aiToolsDescription": "AI 어시스턴트가 응답 중에 호출할 수 있는 내장 도구를 선택합니다. 필요한 경우가 아니면 위험한 도구는 끄십시오.",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "어시스턴트 스킬을 찾을 수 없습니다.",
     "assistantSkillsEnabled": "활성화됨",
     "assistantSkillsHint": "AI 어시스턴트에게 집중된 워크플로를 가르치는 로컬 SKILL.md 폴더입니다. 포함된 시작 스킬은 여기에 자동으로 복사됩니다. 이 버전에서는 스크립트가 실행되지 않습니다. 폴더 버튼을 사용해 스킬을 추가하거나 편집하세요.",
+    "assistantCustomSkillsTitle": "사용자 지정 스킬",
+    "assistantCustomSkillsHint": "AI 어시스턴트가 요청을 시작하거나 이 목록을 새로 고칠 때 assistant-skills\\custom에서 추가 SKILL.md 폴더를 불러옵니다.",
     "assistantSkillsOpen": "{{name}} 열기",
     "assistantSkillsOpenFolder": "스킬 폴더 열기",
+    "assistantCustomSkillsOpenFolder": "사용자 지정 폴더 열기",
     "assistantSkillsTitle": "어시스턴트 스킬",
     "dashboardUseRandomDynamicBackground": "무작위 동적 배경 사용",
     "dashboardUseRandomDynamicBackgroundDesc": "새 Dashboard 보기는 자동으로 무작위 동적 배경으로 시작됩니다.",
@@ -2026,7 +2033,8 @@
     "waiting": "대기 중",
     "waitingToOverwrite": "덮어쓰기 대기 중",
     "windowsDrives": "내 PC",
-    "pathInputAria": "{{pane}} 경로 입력"
+    "pathInputAria": "{{pane}} 경로 입력",
+    "recentPathsAria": "최근 {{pane}} 경로 열기"
   },
   "terminal": {
     "actions": "터미널 작업",

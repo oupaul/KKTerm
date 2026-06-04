@@ -557,6 +557,10 @@
     "wallpaperPickerDefaultHint": "ライブ壁紙をクリアして、Windows の壁紙管理に戻します。",
     "manual": "マニュアル",
     "dontSleepStatusEnabled": "スリープ防止が有効",
+    "xServer": "X Server",
+    "xServerRestart": "再起動",
+    "xServerStop": "停止",
+    "xServerStopped": "VcXsrv を停止しました。",
     "titlebar": {
       "minimize": "最小化",
       "maximize": "最大化",
@@ -1050,11 +1054,11 @@
       "nebula": "星雲",
       "raindrops": "雨滴",
       "rainyWindow": "雨の窓",
-      "frostedWindow": "Frosted Window",
+      "frostedWindow": "霜の窓",
       "starfield": "夜空",
       "synthwave": "シンセウェーブ",
       "bubbles": "泡",
-      "aquarium": "Aquarium",
+      "aquarium": "水槽",
       "clouds": "雲",
       "cyberpunk": "サイバーパンク",
       "fireflies": "ホタル",
@@ -1385,7 +1389,7 @@
       },
       "network": {
         "label": "ネットワーク管理ツール",
-        "description": "ホストへの ping、TCP ポートの確認、DNS 解決、WHOIS の実行、インターフェースの一覧、Wake-on-LAN の送信。デフォルトでは無効。"
+        "description": "ホストへの ping、TCP ポートの確認、DNS 解決、WHOIS の実行、インターフェイスの一覧表示、Wake-on-LAN の送信を行います。"
       }
     },
     "aiToolsDescription": "AI アシスタントが応答中に呼び出せる組み込みツールを選択します。必要な場合を除き、リスクのあるツールはオフにしてください。",
@@ -1844,8 +1848,11 @@
     "assistantSkillsEmpty": "アシスタントスキルが見つかりません。",
     "assistantSkillsEnabled": "有効",
     "assistantSkillsHint": "AI アシスタントに特定のワークフローを教えるローカルの SKILL.md フォルダーです。同梱のスタータースキルはここに自動的にコピーされます。このバージョンではスクリプトは実行されません。スキルを追加または編集するにはフォルダーボタンを使用してください。",
+    "assistantCustomSkillsTitle": "カスタムスキル",
+    "assistantCustomSkillsHint": "AI アシスタントがリクエストを開始したとき、またはこの一覧を更新したときに、assistant-skills\\custom から追加の SKILL.md フォルダーを読み込みます。",
     "assistantSkillsOpen": "{{name}} を開く",
     "assistantSkillsOpenFolder": "スキルフォルダーを開く",
+    "assistantCustomSkillsOpenFolder": "カスタムフォルダーを開く",
     "assistantSkillsTitle": "アシスタントスキル",
     "dashboardUseRandomDynamicBackground": "ランダムな動的背景を使用",
     "dashboardUseRandomDynamicBackgroundDesc": "新しいDashboardビューは、ランダムな動的背景で自動的に開始されます。",
@@ -2026,7 +2033,8 @@
     "waiting": "待機中",
     "waitingToOverwrite": "上書き待ち",
     "windowsDrives": "PC",
-    "pathInputAria": "{{pane}}のパスを入力"
+    "pathInputAria": "{{pane}}のパスを入力",
+    "recentPathsAria": "最近の{{pane}}パスを開く"
   },
   "terminal": {
     "actions": "ターミナル操作",
