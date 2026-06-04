@@ -13,6 +13,7 @@ use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -920,9 +921,7 @@ impl CliAgentProvider {
             backend: AiCliBackendKind::Codex,
             provider_kind: "openai",
             label: "Codex CLI",
-            command: command
-                .filter(|value| !value.trim().is_empty())
-                .unwrap_or_else(|| "codex".to_string()),
+            command: resolve_cli_backend_command(AiCliBackendKind::Codex, command),
         }
     }
 
@@ -931,9 +930,7 @@ impl CliAgentProvider {
             backend: AiCliBackendKind::ClaudeCode,
             provider_kind: "anthropic",
             label: "Claude Code CLI",
-            command: command
-                .filter(|value| !value.trim().is_empty())
-                .unwrap_or_else(|| "claude".to_string()),
+            command: resolve_cli_backend_command(AiCliBackendKind::ClaudeCode, command),
         }
     }
 }
@@ -1399,10 +1396,7 @@ pub async fn ai_cli_backend_status(
     provider: AiCliBackendKind,
     configured_path: Option<String>,
 ) -> AiCliBackendStatus {
-    let command = configured_path
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| default_cli_command(provider).to_string());
+    let command = resolve_cli_backend_command(provider, configured_path);
     let command_for_worker = command.clone();
     tauri::async_runtime::spawn_blocking(move || cli_backend_status(provider, command_for_worker))
         .await
@@ -1420,10 +1414,7 @@ pub fn open_ai_cli_backend_auth(
     provider: AiCliBackendKind,
     configured_path: Option<String>,
 ) -> Result<(), String> {
-    let command = configured_path
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| default_cli_command(provider).to_string());
+    let command = resolve_cli_backend_command(provider, configured_path);
     let auth_command = match provider {
         AiCliBackendKind::Codex => format!("{} login", shell_quote(&command)),
         AiCliBackendKind::ClaudeCode => format!("{} auth login", shell_quote(&command)),
@@ -1435,6 +1426,115 @@ fn default_cli_command(provider: AiCliBackendKind) -> &'static str {
     match provider {
         AiCliBackendKind::Codex => "codex",
         AiCliBackendKind::ClaudeCode => "claude",
+    }
+}
+
+fn resolve_cli_backend_command(provider: AiCliBackendKind, configured: Option<String>) -> String {
+    if let Some(path) = configured
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    {
+        return path;
+    }
+
+    common_cli_backend_command_path(provider)
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| default_cli_command(provider).to_string())
+}
+
+fn common_cli_backend_command_path(provider: AiCliBackendKind) -> Option<PathBuf> {
+    common_user_bin_candidates(cli_backend_command_names(provider))
+        .into_iter()
+        .chain(path_cli_backend_candidates(provider))
+        .chain(match provider {
+            AiCliBackendKind::Codex => codex_vscode_extension_candidates(),
+            AiCliBackendKind::ClaudeCode => Vec::new(),
+        })
+        .find(|path| path.is_file())
+}
+
+fn cli_backend_command_names(provider: AiCliBackendKind) -> &'static [&'static str] {
+    match provider {
+        #[cfg(target_os = "windows")]
+        AiCliBackendKind::Codex => &["codex.exe", "codex.cmd"],
+        #[cfg(not(target_os = "windows"))]
+        AiCliBackendKind::Codex => &["codex"],
+        #[cfg(target_os = "windows")]
+        AiCliBackendKind::ClaudeCode => &["claude.exe", "claude.cmd"],
+        #[cfg(not(target_os = "windows"))]
+        AiCliBackendKind::ClaudeCode => &["claude"],
+    }
+}
+
+fn common_user_bin_candidates(names: &[&str]) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if let Some(profile) = std::env::var_os("USERPROFILE") {
+        roots.push(PathBuf::from(&profile).join(".local").join("bin"));
+    }
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        roots.push(PathBuf::from(appdata).join("npm"));
+    }
+    if let Some(nvm_symlink) = std::env::var_os("NVM_SYMLINK") {
+        roots.push(PathBuf::from(nvm_symlink));
+    }
+
+    bin_candidates_from_roots(roots, names)
+}
+
+fn path_cli_backend_candidates(provider: AiCliBackendKind) -> Vec<PathBuf> {
+    let Some(path) = std::env::var_os("PATH") else {
+        return Vec::new();
+    };
+    bin_candidates_from_roots(
+        std::env::split_paths(&path).collect(),
+        cli_backend_command_names(provider),
+    )
+}
+
+fn bin_candidates_from_roots(roots: Vec<PathBuf>, names: &[&str]) -> Vec<PathBuf> {
+    roots
+        .into_iter()
+        .flat_map(|root| names.iter().map(move |name| root.join(name)))
+        .collect()
+}
+
+fn codex_vscode_extension_candidates() -> Vec<PathBuf> {
+    let Some(profile) = std::env::var_os("USERPROFILE") else {
+        return Vec::new();
+    };
+    let extensions = PathBuf::from(profile).join(".vscode").join("extensions");
+    let Ok(entries) = std::fs::read_dir(extensions) else {
+        return Vec::new();
+    };
+    let mut extension_dirs = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(OsStr::to_str)
+                .is_some_and(|name| name.starts_with("openai.chatgpt-"))
+        })
+        .collect::<Vec<_>>();
+    extension_dirs.sort();
+    extension_dirs.reverse();
+    extension_dirs
+        .into_iter()
+        .flat_map(|path| {
+            codex_extension_arch_dirs()
+                .iter()
+                .map(move |arch| path.join("bin").join(arch).join("codex.exe"))
+        })
+        .collect()
+}
+
+fn codex_extension_arch_dirs() -> &'static [&'static str] {
+    #[cfg(target_arch = "aarch64")]
+    {
+        &["windows-arm64", "windows-x86_64"]
+    }
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        &["windows-x86_64", "windows-arm64"]
     }
 }
 
@@ -8349,6 +8449,45 @@ mod tests {
                 .iter()
                 .any(|arg| arg.contains("claude-agent-acp"))
         );
+    }
+
+    #[test]
+    fn configured_cli_backend_command_wins_over_discovery() {
+        let command = resolve_cli_backend_command(
+            AiCliBackendKind::Codex,
+            Some("C:\\Tools\\codex.exe".to_string()),
+        );
+
+        assert_eq!(command, "C:\\Tools\\codex.exe");
+    }
+
+    #[test]
+    fn cli_backend_command_names_include_windows_npm_shims() {
+        let codex_names = cli_backend_command_names(AiCliBackendKind::Codex);
+        let claude_names = cli_backend_command_names(AiCliBackendKind::ClaudeCode);
+
+        #[cfg(target_os = "windows")]
+        {
+            assert!(codex_names.contains(&"codex.cmd"));
+            assert!(claude_names.contains(&"claude.cmd"));
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(codex_names, &["codex"]);
+            assert_eq!(claude_names, &["claude"]);
+        }
+    }
+
+    #[test]
+    fn bin_candidates_expand_roots_in_name_order() {
+        let candidates = bin_candidates_from_roots(
+            vec![PathBuf::from("C:\\Users\\Tester\\AppData\\Roaming\\npm")],
+            &["codex.exe", "codex.cmd"],
+        );
+
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates[0].ends_with("codex.exe"));
+        assert!(candidates[1].ends_with("codex.cmd"));
     }
 
     #[test]
