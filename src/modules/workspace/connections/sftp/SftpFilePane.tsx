@@ -1,5 +1,5 @@
-import { ArrowDown, ChevronDown, FolderPlus, Pencil, RefreshCw, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ChevronDown, FolderPlus, History, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
@@ -22,6 +22,7 @@ export function FilePane({
   onDeleteSelected,
   onOpenFolder,
   onPathSubmit,
+  recentPaths = [],
   onSelectionChange,
   onContextMenuRequest,
   onDropTransfer,
@@ -41,6 +42,7 @@ export function FilePane({
   onDeleteSelected?: () => void;
   onOpenFolder?: (folderName: string) => void;
   onPathSubmit?: (path: string) => void | Promise<void>;
+  recentPaths?: string[];
   onSelectionChange?: (fileNames: string[]) => void;
   onContextMenuRequest?: (
     side: FilePaneSide,
@@ -51,12 +53,14 @@ export function FilePane({
   renameRequest?: { side: FilePaneSide; name: string; requestId: number };
 }) {
   const { t } = useTranslation();
+  const pathSuggestionsId = useId();
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const renameCanceledRef = useRef(false);
   const lastSelectedNameRef = useRef<string | null>(null);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [pathDraft, setPathDraft] = useState(path);
+  const [recentMenuOpen, setRecentMenuOpen] = useState(false);
   const [sortKey, setSortKey] = useState<FileSortKey>("name");
   const [isDropTarget, setIsDropTarget] = useState(false);
   const hasMutationActions = Boolean(onCreateFolder || onRenameSelected || onDeleteSelected);
@@ -66,6 +70,10 @@ export function FilePane({
   );
   const sortedFiles = useMemo(() => sortFileEntries(files, sortKey), [files, sortKey]);
   const nextSortKey: FileSortKey = sortKey === "name" ? "date" : "name";
+  const pathSuggestions = useMemo(
+    () => buildFolderPathSuggestions({ side, currentPath: path, draft: pathDraft, files }),
+    [files, path, pathDraft, side],
+  );
 
   useEffect(() => {
     setPathDraft(path);
@@ -180,6 +188,7 @@ export function FilePane({
       return;
     }
 
+    setRecentMenuOpen(false);
     await onPathSubmit?.(nextPath);
   }
 
@@ -231,33 +240,75 @@ export function FilePane({
   return (
     <article
       className="file-pane"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setRecentMenuOpen(false);
+        }
+      }}
       data-tutorial-id={side === "local" ? "sftp.localPane" : "sftp.remotePane"}
     >
       <header>
-        <div>
+        <div className="file-pane-path-row">
           <strong>{title}</strong>
-          <input
-            aria-label={t("sftp.pathInputAria", { pane: title.toLowerCase() })}
-            className="file-pane-path-input"
-            disabled={!onPathSubmit || isLoading}
-            onBlur={() => setPathDraft(path)}
-            onChange={(event) => setPathDraft(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                const nextPath = event.currentTarget.value;
-                void commitPathDraft(nextPath);
-                event.currentTarget.blur();
-              }
-              if (event.key === "Escape") {
-                event.preventDefault();
-                setPathDraft(path);
-                event.currentTarget.blur();
-              }
-            }}
-            spellCheck={false}
-            value={pathDraft}
-          />
+          <div className="file-pane-path-control">
+            <input
+              aria-label={t("sftp.pathInputAria", { pane: title.toLowerCase() })}
+              className="file-pane-path-input"
+              disabled={!onPathSubmit || isLoading}
+              list={pathSuggestions.length > 0 ? pathSuggestionsId : undefined}
+              onBlur={() => setPathDraft(path)}
+              onChange={(event) => setPathDraft(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  const nextPath = event.currentTarget.value;
+                  void commitPathDraft(nextPath);
+                  event.currentTarget.blur();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setPathDraft(path);
+                  setRecentMenuOpen(false);
+                  event.currentTarget.blur();
+                }
+              }}
+              spellCheck={false}
+              value={pathDraft}
+            />
+            {pathSuggestions.length > 0 ? (
+              <datalist id={pathSuggestionsId}>
+                {pathSuggestions.map((suggestion) => (
+                  <option key={suggestion} value={suggestion} />
+                ))}
+              </datalist>
+            ) : null}
+            <button
+              aria-expanded={recentMenuOpen}
+              aria-label={t("sftp.recentPathsAria", { pane: title.toLowerCase() })}
+              className="icon-button file-pane-recent-button"
+              disabled={recentPaths.length === 0 || isLoading || !onPathSubmit}
+              onClick={() => setRecentMenuOpen((open) => !open)}
+              title={t("sftp.recentPathsAria", { pane: title.toLowerCase() })}
+              type="button"
+            >
+              <History size={14} />
+            </button>
+            {recentMenuOpen && recentPaths.length > 0 ? (
+              <div className="file-pane-recent-menu" role="menu">
+                {recentPaths.map((recentPath) => (
+                  <button
+                    key={recentPath}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => void commitPathDraft(recentPath)}
+                    role="menuitem"
+                    type="button"
+                  >
+                    {recentPath}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="file-pane-actions">
           <button
@@ -460,4 +511,49 @@ function sortFileEntries(files: FileEntry[], sortKey: FileSortKey) {
 
 function fileSortLabel(sortKey: FileSortKey) {
   return sortKey === "name" ? i18next.t("sftp.name") : i18next.t("sftp.date");
+}
+
+
+function buildFolderPathSuggestions({
+  side,
+  currentPath,
+  draft,
+  files,
+}: {
+  side: FilePaneSide;
+  currentPath: string;
+  draft: string;
+  files: FileEntry[];
+}) {
+  const folders = files.filter((file) => file.kind === "folder");
+  if (folders.length === 0 || (side === "local" && !/[\\/]/.test(currentPath))) {
+    return [];
+  }
+
+  const separator = pathSeparatorFor(side, currentPath || draft);
+  const splitPattern = side === "local" ? /[\\/]/ : /\//;
+  const parts = draft.split(splitPattern);
+  const typedName = parts[parts.length - 1] ?? "";
+  const typedParent = parts.length > 1 ? draft.slice(0, draft.length - typedName.length) : "";
+  const parentPath = typedParent || appendPathSeparator(currentPath, separator);
+  const normalizedTypedName = typedName.toLocaleLowerCase();
+
+  return folders
+    .filter((folder) => folder.name.toLocaleLowerCase().startsWith(normalizedTypedName))
+    .slice(0, 8)
+    .map((folder) => `${parentPath}${folder.name}${separator}`);
+}
+
+function pathSeparatorFor(side: FilePaneSide, path: string) {
+  return side === "local" && path.includes("\\") ? "\\" : "/";
+}
+
+function appendPathSeparator(path: string, separator: string) {
+  if (!path) {
+    return "";
+  }
+  if (path.endsWith("/") || path.endsWith("\\")) {
+    return path;
+  }
+  return `${path}${separator}`;
 }
