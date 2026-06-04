@@ -41,11 +41,12 @@ Test: would a senior engineer say this is overcomplicated? If yes, simplify.
 Touch only what you must. Clean up only your own mess.
 Don't "improve" adjacent code, comments, or formatting.
 Don't refactor what isn't broken. Match existing style.
-`cargo fmt` is optional in this repo. If formatting is useful, run it only on the
-smallest practical Rust scope you intentionally touched, such as a single file
-or single Rust source file. Do not run broad `cargo fmt` over the whole
-workspace unless the user explicitly asks for global formatting; it can rewrite
-unrelated Rust sources and create noisy file-format churn.
+`cargo fmt` is optional in this repo. Rust formatting must use the Rust 2024
+edition, as configured by `rustfmt.toml`. If formatting is useful, run it only
+on the smallest practical Rust scope you intentionally touched, such as a
+single file or single Rust source file. Do not run broad `cargo fmt` over the
+whole workspace unless the user explicitly asks for global formatting; it can
+rewrite unrelated Rust sources and create noisy file-format churn.
 
 ## Rule 4 — Goal-Driven Execution
 

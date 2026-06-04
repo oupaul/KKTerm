@@ -4,8 +4,8 @@ version = "0.1.57"
 description = "Fast local-first administration workspace for terminals, SSH, SFTP, and approval-based command assistance."
 authors = ["Ryan Tsai"]
 license = "MIT"
-edition = "2021"
-rust-version = "1.95"
+edition = "2024"
+rust-version = "1.96"
 default-run = "kkterm"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

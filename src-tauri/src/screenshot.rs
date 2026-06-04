@@ -651,7 +651,7 @@ mod platform {
     }
 
     pub fn enumerate_window_rects(screen: &ScreenRect) -> Vec<ScreenRect> {
-        unsafe extern "system" fn enum_window(hwnd: HWND, lparam: LPARAM) -> i32 {
+        unsafe extern "system" fn enum_window(hwnd: HWND, lparam: LPARAM) -> i32 { unsafe {
             let state = &mut *(lparam as *mut WindowEnumeration);
             if IsWindowVisible(hwnd) == 0 {
                 return 1;
@@ -673,7 +673,7 @@ mod platform {
                 .windows
                 .push(clamp_rect_to_screen(&rect, state.screen));
             1
-        }
+        }}
 
         let mut state = WindowEnumeration {
             screen,
@@ -934,7 +934,7 @@ mod platform {
             y: i32,
             width: i32,
             height: i32,
-        ) -> Result<DxgiOutputTarget, String> {
+        ) -> Result<DxgiOutputTarget, String> { unsafe {
             let right = x
                 .checked_add(width)
                 .ok_or_else(|| "screenshot region is too wide".to_string())?;
@@ -973,7 +973,7 @@ mod platform {
                 "screenshot region spans multiple outputs or no matching DXGI output was found"
                     .to_string(),
             )
-        }
+        }}
 
         unsafe fn capture_output_rect(
             target: DxgiOutputTarget,
@@ -981,7 +981,7 @@ mod platform {
             y: i32,
             width: i32,
             height: i32,
-        ) -> Result<Vec<u8>, String> {
+        ) -> Result<Vec<u8>, String> { unsafe {
             let adapter: IDXGIAdapter = target
                 .adapter
                 .cast()
@@ -1038,7 +1038,7 @@ mod platform {
             Err(format!(
                 "DXGI did not acquire a desktop image update after {DXGI_FRAME_ATTEMPTS} attempts"
             ))
-        }
+        }}
 
         unsafe fn copy_desktop_texture_to_dib(
             device: &ID3D11Device,
@@ -1049,7 +1049,7 @@ mod platform {
             y: i32,
             width: i32,
             height: i32,
-        ) -> Result<Vec<u8>, String> {
+        ) -> Result<Vec<u8>, String> { unsafe {
             let mut texture_desc = D3D11_TEXTURE2D_DESC::default();
             desktop_texture.GetDesc(&mut texture_desc);
             log_dxgi(&format!(
@@ -1122,22 +1122,22 @@ mod platform {
             ));
 
             bgra_pixels_to_dib(&pixels, width, height)
-        }
+        }}
 
         unsafe fn create_device(
             adapter: &IDXGIAdapter,
-        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
+        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> { unsafe {
             let preferred = [D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0];
             create_device_with_feature_levels(adapter, &preferred).or_else(|_| {
                 let fallback = [D3D_FEATURE_LEVEL_11_0];
                 create_device_with_feature_levels(adapter, &fallback)
             })
-        }
+        }}
 
         unsafe fn create_device_with_feature_levels(
             adapter: &IDXGIAdapter,
             feature_levels: &[windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL],
-        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> {
+        ) -> Result<(ID3D11Device, ID3D11DeviceContext), String> { unsafe {
             let mut device = None;
             let mut context = None;
             D3D11CreateDevice(
@@ -1157,13 +1157,13 @@ mod platform {
                 device.ok_or_else(|| "D3D11 device is empty".to_string())?,
                 context.ok_or_else(|| "D3D11 device context is empty".to_string())?,
             ))
-        }
+        }}
 
         unsafe fn create_staging_texture(
             device: &ID3D11Device,
             width: u32,
             height: u32,
-        ) -> Result<ID3D11Texture2D, String> {
+        ) -> Result<ID3D11Texture2D, String> { unsafe {
             let desc = D3D11_TEXTURE2D_DESC {
                 Width: width.max(1),
                 Height: height.max(1),
@@ -1184,7 +1184,7 @@ mod platform {
                 .CreateTexture2D(&desc, None, Some(&mut texture))
                 .map_err(|error| format!("failed to create D3D11 staging texture: {error}"))?;
             texture.ok_or_else(|| "D3D11 staging texture is empty".to_string())
-        }
+        }}
 
         #[derive(Clone, Copy, Debug, Eq, PartialEq)]
         struct DxgiFrameStats {
@@ -1455,7 +1455,7 @@ mod platform {
         bitmap: HBITMAP,
         width: i32,
         height: i32,
-    ) -> Result<Vec<u8>, String> {
+    ) -> Result<Vec<u8>, String> { unsafe {
         let stride = ((width * 32 + 31) / 32) * 4;
         let image_size = (stride * height) as usize;
         let header_size = mem::size_of::<BITMAPINFOHEADER>();
@@ -1486,9 +1486,9 @@ mod platform {
         }
 
         Ok(dib)
-    }
+    }}
 
-    unsafe fn write_dib_to_clipboard(owner: HWND, dib: &[u8]) -> Result<(), String> {
+    unsafe fn write_dib_to_clipboard(owner: HWND, dib: &[u8]) -> Result<(), String> { unsafe {
         let handle = GlobalAlloc(GMEM_MOVEABLE, dib.len());
         if handle.is_null() {
             return Err("failed to allocate clipboard image memory".to_string());
@@ -1520,7 +1520,7 @@ mod platform {
         mem::forget(clipboard);
         let _ = CloseClipboard();
         Ok(())
-    }
+    }}
 
     enum SelectionMode {
         Window { windows: Vec<ScreenRect> },
@@ -1611,7 +1611,7 @@ mod platform {
         message: u32,
         wparam: WPARAM,
         lparam: LPARAM,
-    ) -> LRESULT {
+    ) -> LRESULT { unsafe {
         if message == WM_NCCREATE {
             let create = lparam as *const CREATESTRUCTW;
             let overlay = (*create).lpCreateParams as *mut SelectionOverlay;
@@ -1693,9 +1693,9 @@ mod platform {
             }
             _ => DefWindowProcW(hwnd, message, wparam, lparam),
         }
-    }
+    }}
 
-    unsafe fn paint_selection_overlay(hwnd: HWND, overlay: &SelectionOverlay<'_>) {
+    unsafe fn paint_selection_overlay(hwnd: HWND, overlay: &SelectionOverlay<'_>) { unsafe {
         let mut paint: PAINTSTRUCT = mem::zeroed();
         let hdc = BeginPaint(hwnd, &mut paint);
         if hdc.is_null() {
@@ -1744,9 +1744,9 @@ mod platform {
         }
 
         EndPaint(hwnd, &paint);
-    }
+    }}
 
-    unsafe fn dim_outside_rect(hdc: HDC, screen: &ScreenRect, selected: Option<&ScreenRect>) {
+    unsafe fn dim_outside_rect(hdc: HDC, screen: &ScreenRect, selected: Option<&ScreenRect>) { unsafe {
         let brush = Brush::new(0x0000_0000);
         let Some(selected) = selected else {
             return;
@@ -1756,12 +1756,12 @@ mod platform {
         for rect in outside_rects(screen.width, screen.height, &selected) {
             let _ = FillRect(hdc, &rect, brush.0);
         }
-    }
+    }}
 
-    unsafe fn frame_rect(hdc: HDC, rect: &RECT, color: u32) {
+    unsafe fn frame_rect(hdc: HDC, rect: &RECT, color: u32) { unsafe {
         let brush = Brush::new(color);
         let _ = FrameRect(hdc, rect, brush.0);
-    }
+    }}
 
     fn outside_rects(width: i32, height: i32, selected: &RECT) -> [RECT; 4] {
         [
@@ -1881,9 +1881,9 @@ mod platform {
     struct Brush(HBRUSH);
 
     impl Brush {
-        unsafe fn new(color: u32) -> Self {
+        unsafe fn new(color: u32) -> Self { unsafe {
             Self(CreateSolidBrush(color))
-        }
+        }}
     }
 
     impl Drop for Brush {
@@ -1897,13 +1897,13 @@ mod platform {
     struct ScreenDc(HDC);
 
     impl ScreenDc {
-        unsafe fn new() -> Result<Self, String> {
+        unsafe fn new() -> Result<Self, String> { unsafe {
             let hdc = GetDC(ptr::null_mut());
             if hdc.is_null() {
                 return Err("failed to get screen device context".to_string());
             }
             Ok(Self(hdc))
-        }
+        }}
     }
 
     impl Drop for ScreenDc {
@@ -1917,13 +1917,13 @@ mod platform {
     struct MemoryDc(HDC);
 
     impl MemoryDc {
-        unsafe fn new(screen_dc: HDC) -> Result<Self, String> {
+        unsafe fn new(screen_dc: HDC) -> Result<Self, String> { unsafe {
             let hdc = CreateCompatibleDC(screen_dc);
             if hdc.is_null() {
                 return Err("failed to create screenshot device context".to_string());
             }
             Ok(Self(hdc))
-        }
+        }}
     }
 
     impl Drop for MemoryDc {
@@ -1937,13 +1937,13 @@ mod platform {
     struct Bitmap(HBITMAP);
 
     impl Bitmap {
-        unsafe fn new(screen_dc: HDC, width: i32, height: i32) -> Result<Self, String> {
+        unsafe fn new(screen_dc: HDC, width: i32, height: i32) -> Result<Self, String> { unsafe {
             let bitmap = CreateCompatibleBitmap(screen_dc, width, height);
             if bitmap.is_null() {
                 return Err("failed to create screenshot bitmap".to_string());
             }
             Ok(Self(bitmap))
-        }
+        }}
     }
 
     impl Drop for Bitmap {
