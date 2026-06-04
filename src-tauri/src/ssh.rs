@@ -1255,9 +1255,12 @@ mod tests {
             host_key_status("localhost", 2222, &rotated_key, &path).expect("status loads"),
             HostKeyTrustStatus::Trusted
         );
+        // `learn_known_hosts_path` always emits a leading newline when the file
+        // does not already end in one (an empty file included), so the rotated
+        // key lands on line 2. The original key now reports as changed there.
         assert_eq!(
             host_key_status("localhost", 2222, &original, &path).expect("status loads"),
-            HostKeyTrustStatus::Changed { line: 1 }
+            HostKeyTrustStatus::Changed { line: 2 }
         );
     }
 
