@@ -2246,7 +2246,10 @@ interface AquariumFishPalette {
   stripe: string | null;
 }
 
+type AquariumCreatureKind = "fish" | "stingray" | "octopus" | "squid";
+
 interface AquariumFish {
+  kind: AquariumCreatureKind;
   x: number;
   baseY: number;
   size: number;
@@ -2340,6 +2343,7 @@ function AquariumBg() {
         const dir: -1 | 1 = Math.random() < 0.5 ? -1 : 1;
         const baseSpeed = 26 + Math.random() * 40;
         return {
+          kind: "fish",
           x: Math.random() * nextWidth,
           baseY: minY + Math.random() * range,
           size: 16 + Math.random() * 26,
@@ -2355,6 +2359,64 @@ function AquariumBg() {
           baseSpeed,
         };
       });
+      if (range > 120) {
+        const stingrayDir: -1 | 1 = Math.random() < 0.5 ? -1 : 1;
+        const stingraySpeed = 16 + Math.random() * 12;
+        state.fish.push({
+          kind: "stingray",
+          x: Math.random() * nextWidth,
+          baseY: minY + range * (0.5 + Math.random() * 0.3),
+          size: 170 + Math.random() * 70,
+          vx: stingraySpeed * stingrayDir,
+          dir: stingrayDir,
+          pal: { body: "#6f829a", belly: "#d8e2e8", fin: "#56697f", stripe: null },
+          bobAmp: 5 + Math.random() * 6,
+          bobSp: 0.4 + Math.random() * 0.4,
+          bobPh: Math.random() * Math.PI * 2,
+          tailSp: 1.5 + Math.random(),
+          tailPh: Math.random() * Math.PI * 2,
+          turnAt: time + 5 + Math.random() * 8,
+          baseSpeed: stingraySpeed,
+        });
+
+        const octopusDir: -1 | 1 = Math.random() < 0.5 ? -1 : 1;
+        const octopusSpeed = 9 + Math.random() * 7;
+        state.fish.push({
+          kind: "octopus",
+          x: Math.random() * nextWidth,
+          baseY: maxY - 6,
+          size: 78 + Math.random() * 30,
+          vx: octopusSpeed * octopusDir,
+          dir: octopusDir,
+          pal: { body: Math.random() < 0.5 ? "#b9536a" : "#9a5fb0", belly: "#ffd2e2", fin: "#8c405d", stripe: null },
+          bobAmp: 4 + Math.random() * 4,
+          bobSp: 0.4 + Math.random() * 0.4,
+          bobPh: Math.random() * Math.PI * 2,
+          tailSp: 1.5 + Math.random(),
+          tailPh: Math.random() * Math.PI * 2,
+          turnAt: time + 5 + Math.random() * 8,
+          baseSpeed: octopusSpeed,
+        });
+
+        const squidDir: -1 | 1 = Math.random() < 0.5 ? -1 : 1;
+        const squidSpeed = 30 + Math.random() * 20;
+        state.fish.push({
+          kind: "squid",
+          x: Math.random() * nextWidth,
+          baseY: minY + range * (0.2 + Math.random() * 0.35),
+          size: 96 + Math.random() * 40,
+          vx: squidSpeed * squidDir,
+          dir: squidDir,
+          pal: { body: Math.random() < 0.5 ? "#e08aa0" : "#cf7d92", belly: "#ffd9e2", fin: "#bd6378", stripe: null },
+          bobAmp: 3 + Math.random() * 4,
+          bobSp: 0.4 + Math.random() * 0.4,
+          bobPh: Math.random() * Math.PI * 2,
+          tailSp: 1.5 + Math.random(),
+          tailPh: Math.random() * Math.PI * 2,
+          turnAt: time + 5 + Math.random() * 8,
+          baseSpeed: squidSpeed,
+        });
+      }
 
       const plantColors = ["#2f7d4f", "#3f9b5c", "#5aa84a", "#2c8b6e", "#46925a"];
       state.plants = Array.from({ length: Math.max(5, Math.min(14, Math.floor(nextWidth / 130))) }, () => {
@@ -2496,6 +2558,149 @@ function AquariumBg() {
     };
     for (const plant of state.plants) drawPlant(plant);
 
+    const drawStingray = (fish: AquariumFish, size: number) => {
+      const flap = Math.sin(time * 1.5 + fish.tailPh);
+      ctx.beginPath();
+      ctx.moveTo(size * 1.05, 0);
+      ctx.quadraticCurveTo(size * 0.1, -size * (0.78 + 0.22 * flap), -size * 0.55, -size * 0.12);
+      ctx.quadraticCurveTo(-size * 0.35, 0, -size * 0.55, size * 0.12);
+      ctx.quadraticCurveTo(size * 0.1, size * (0.78 + 0.22 * flap), size * 1.05, 0);
+      ctx.closePath();
+      const body = ctx.createLinearGradient(0, -size, 0, size);
+      body.addColorStop(0, "#6f829a");
+      body.addColorStop(0.5, "#56697f");
+      body.addColorStop(1, "#3f5167");
+      ctx.fillStyle = body;
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(208,224,240,0.5)";
+      for (const [spotX, spotY] of [[-0.05, -0.2], [0.28, 0.08], [-0.2, 0.22], [0.08, -0.05]]) {
+        ctx.beginPath();
+        ctx.ellipse(size * spotX, size * spotY + flap * size * 0.08, size * 0.07, size * 0.05, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = "#46586d";
+      ctx.lineWidth = size * 0.06;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.5, 0);
+      ctx.quadraticCurveTo(-size * 1.3, flap * size * 0.22, -size * 2.1, flap * size * 0.45);
+      ctx.stroke();
+
+      ctx.fillStyle = "#1a232c";
+      for (const [eyeX, eyeY] of [[0.52, -0.13], [0.52, 0.13]]) {
+        ctx.beginPath();
+        ctx.arc(size * eyeX, size * eyeY, size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    const drawOctopus = (fish: AquariumFish, size: number) => {
+      const color = fish.pal.body;
+      ctx.strokeStyle = color;
+      ctx.lineCap = "round";
+      for (let index = 0; index < 8; index += 1) {
+        const offset = index / 7 - 0.5;
+        const phase = index * 0.8 + time * 3;
+        ctx.lineWidth = size * 0.13 * (1 - Math.abs(offset) * 0.3);
+        ctx.beginPath();
+        ctx.moveTo(offset * size * 0.7, size * 0.18);
+        ctx.quadraticCurveTo(
+          offset * size * 0.7 - size * 0.2 + Math.sin(phase) * size * 0.12,
+          size * 0.62,
+          offset * size * 0.7 - size * 0.42 + Math.sin(phase + 1) * size * 0.18,
+          size * 0.96 + Math.sin(phase) * size * 0.08,
+        );
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.ellipse(0, -size * 0.12, size * 0.6, size * 0.72, 0, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.16)";
+      ctx.beginPath();
+      ctx.ellipse(-size * 0.16, -size * 0.4, size * 0.24, size * 0.16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      for (const [eyeX, eyeY] of [[-0.22, -0.08], [0.22, -0.08]]) {
+        ctx.beginPath();
+        ctx.ellipse(size * eyeX, size * eyeY, size * 0.15, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#1a232c";
+      for (const [eyeX, eyeY] of [[-0.19, -0.06], [0.25, -0.06]]) {
+        ctx.beginPath();
+        ctx.ellipse(size * eyeX, size * eyeY, size * 0.06, size * 0.085, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    const drawSquid = (fish: AquariumFish, size: number) => {
+      const color = fish.pal.body;
+      const wave = Math.sin(time * 4 + fish.tailPh);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.95, -size * 0.16);
+      ctx.lineTo(-size * 1.5, -size * 0.5 + wave * size * 0.08);
+      ctx.lineTo(-size * 1.12, -size * 0.02);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.95, size * 0.16);
+      ctx.lineTo(-size * 1.5, size * 0.5 + wave * size * 0.08);
+      ctx.lineTo(-size * 1.12, size * 0.02);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(size * 0.45, -size * 0.28);
+      ctx.quadraticCurveTo(size * 0.78, 0, size * 0.45, size * 0.28);
+      ctx.quadraticCurveTo(-size * 0.4, size * 0.22, -size * 1.35, size * 0.05);
+      ctx.quadraticCurveTo(-size * 1.5, 0, -size * 1.35, -size * 0.05);
+      ctx.quadraticCurveTo(-size * 0.4, -size * 0.22, size * 0.45, -size * 0.28);
+      ctx.closePath();
+      const body = ctx.createLinearGradient(0, -size * 0.3, 0, size * 0.3);
+      body.addColorStop(0, color);
+      body.addColorStop(1, "rgba(255,255,255,0.55)");
+      ctx.fillStyle = body;
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineCap = "round";
+      for (let index = 0; index < 6; index += 1) {
+        const offset = index / 5 - 0.5;
+        const phase = index * 0.9 + time * 5;
+        ctx.lineWidth = size * 0.055;
+        ctx.beginPath();
+        ctx.moveTo(size * 0.5, size * offset * 0.4);
+        ctx.quadraticCurveTo(
+          size * 0.92,
+          size * offset * 0.5 + Math.sin(phase) * size * 0.06,
+          size * 1.15 + Math.sin(phase) * size * 0.05,
+          size * offset * 0.62 + Math.sin(phase + 1) * size * 0.05,
+        );
+        ctx.stroke();
+      }
+
+      ctx.lineWidth = size * 0.045;
+      for (const offset of [-0.18, 0.18]) {
+        ctx.beginPath();
+        ctx.moveTo(size * 0.5, size * offset);
+        ctx.quadraticCurveTo(size * 1.2, size * offset + Math.sin(time * 5) * size * 0.06, size * 1.55, size * offset * 1.4 + Math.sin(time * 5 + 1) * size * 0.08);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(size * 0.28, -size * 0.05, size * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1a232c";
+      ctx.beginPath();
+      ctx.arc(size * 0.3, -size * 0.05, size * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
     const drawFish = (fish: AquariumFish) => {
       if (time >= fish.turnAt) {
         fish.dir = fish.dir === 1 ? -1 : 1;
@@ -2521,6 +2726,27 @@ function AquariumBg() {
       ctx.translate(fish.x, y);
       ctx.scale(fish.dir, 1);
       ctx.rotate(Math.sin(time * fish.bobSp + fish.bobPh) * 0.04);
+
+      ctx.fillStyle = "rgba(0,20,30,0.16)";
+      ctx.beginPath();
+      ctx.ellipse(0, fish.size * 0.55, fish.size * 1.05, fish.size * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (fish.kind === "stingray") {
+        drawStingray(fish, fish.size);
+        ctx.restore();
+        return;
+      }
+      if (fish.kind === "octopus") {
+        drawOctopus(fish, fish.size);
+        ctx.restore();
+        return;
+      }
+      if (fish.kind === "squid") {
+        drawSquid(fish, fish.size);
+        ctx.restore();
+        return;
+      }
 
       ctx.fillStyle = fish.pal.fin;
       ctx.beginPath();
