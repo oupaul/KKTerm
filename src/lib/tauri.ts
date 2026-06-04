@@ -1190,6 +1190,10 @@ type CommandMap = {
     args: undefined;
     result: SystemPerformanceCountersSnapshot;
   };
+  open_windows_task_manager: {
+    args: undefined;
+    result: void;
+  };
   create_diagnostics_bundle: {
     args: undefined;
     result: DiagnosticsBundle;

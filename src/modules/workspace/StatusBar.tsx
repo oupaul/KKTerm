@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-usage/AiCodingUsageStatusBar";
+import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { WatchdogStatusBar } from "../../watchdog/WatchdogStatusBar";
 
@@ -145,8 +146,20 @@ function AssistantWorkingStatusButton({
 function WorkspaceHostMetrics({ t }: { t: (key: string) => string }) {
   const hostUsage = useWorkspaceStore((state) => state.performanceMetrics.hostUsage);
 
+  function openTaskManager() {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    void invokeCommand("open_windows_task_manager").catch(() => undefined);
+  }
+
   return (
-    <div className="host-metrics" aria-label={t("workspace.hostUsage")} data-tutorial-id="workspace.hostUsage">
+    <div
+      className="host-metrics"
+      aria-label={t("workspace.hostUsage")}
+      data-tutorial-id="workspace.hostUsage"
+      onDoubleClick={openTaskManager}
+    >
       <Metric
         icon={<Cpu size={13} />}
         label={t("workspace.cpu")}

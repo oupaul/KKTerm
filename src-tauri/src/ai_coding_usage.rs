@@ -476,20 +476,22 @@ fn save_provider_error(
     provider: AiCodingUsageProvider,
     error: &str,
 ) -> Result<(), String> {
+    let now = now_rfc3339()?;
     let scrubbed = scrub_provider_error(error);
     connection
         .execute(
             "INSERT INTO ai_coding_usage_accounts
-                (provider, account_label, account_email, auth_state, last_error, created_at, updated_at)
-             VALUES (?1, NULL, NULL, 'error', ?2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (provider, account_label, account_email, auth_state, last_refresh_at, last_error, created_at, updated_at)
+             VALUES (?1, NULL, NULL, 'error', ?2, ?3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
              ON CONFLICT(provider) DO UPDATE SET
                 auth_state = CASE
                     WHEN auth_state = 'connected' THEN auth_state
                     ELSE 'error'
                 END,
+                last_refresh_at = excluded.last_refresh_at,
                 last_error = excluded.last_error,
                 updated_at = CURRENT_TIMESTAMP",
-            params![provider.as_str(), scrubbed],
+            params![provider.as_str(), now, scrubbed],
         )
         .map_err(|error| format!("failed to save usage error: {error}"))?;
     Ok(())
