@@ -2023,7 +2023,8 @@
     "verifyingHost": "正在验证主机",
     "waiting": "等待中",
     "waitingToOverwrite": "等待覆盖",
-    "windowsDrives": "此电脑"
+    "windowsDrives": "此电脑",
+    "pathInputAria": "输入{{pane}}路径"
   },
   "terminal": {
     "actions": "终端操作",

@@ -965,6 +965,7 @@ export function SftpWorkspace({
           onRefresh={refreshLocalDirectory}
           onGoUp={openLocalParent}
           onOpenFolder={openLocalFolder}
+          onPathSubmit={(path) => void loadLocalDirectory(path)}
           onSelectionChange={setSelectedLocalNames}
           onContextMenuRequest={handleOpenContextMenu}
           onDropTransfer={
@@ -985,6 +986,7 @@ export function SftpWorkspace({
           onRenameSelected={isConnected && !isTransferring ? handleRenameRemotePath : undefined}
           onDeleteSelected={isConnected && !isTransferring ? handleDeleteRemotePath : undefined}
           onOpenFolder={openRemoteFolder}
+          onPathSubmit={(path) => void loadRemoteDirectory(path)}
           onSelectionChange={setSelectedRemoteNames}
           onContextMenuRequest={handleOpenContextMenu}
           onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}

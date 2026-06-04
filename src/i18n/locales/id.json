@@ -2023,7 +2023,8 @@
     "verifyingHost": "Memverifikasi host",
     "waiting": "Menunggu",
     "waitingToOverwrite": "Menunggu untuk menimpa",
-    "windowsDrives": "PC ini"
+    "windowsDrives": "PC ini",
+    "pathInputAria": "Masukkan jalur {{pane}}"
   },
   "terminal": {
     "actions": "Aksi terminal",

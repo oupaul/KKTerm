@@ -2023,7 +2023,8 @@
     "verifyingHost": "正在驗證主機",
     "waiting": "等待中",
     "waitingToOverwrite": "等待覆寫",
-    "windowsDrives": "本機"
+    "windowsDrives": "本機",
+    "pathInputAria": "輸入{{pane}}路徑"
   },
   "terminal": {
     "actions": "終端機動作",

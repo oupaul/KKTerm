@@ -2023,7 +2023,8 @@
     "verifyingHost": "กำลังตรวจสอบโฮสต์",
     "waiting": "กำลังรอ",
     "waitingToOverwrite": "กำลังรอเขียนทับ",
-    "windowsDrives": "พีซีเครื่องนี้"
+    "windowsDrives": "พีซีเครื่องนี้",
+    "pathInputAria": "ป้อนเส้นทาง {{pane}}"
   },
   "terminal": {
     "actions": "การทำงานเทอร์มินัล",

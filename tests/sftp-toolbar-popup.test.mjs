@@ -20,8 +20,13 @@ test("SSH pane toolbar SFTP button opens an in-place popup instead of a workspac
   );
   assert.match(
     terminalSource,
-    /onOpenSftp=\{\(connection\) => setSftpDialogConnection\(connection\)\}/,
-    "clicking the SSH toolbar SFTP action should open the popup, not dispatch to a tab opener",
+    /onOpenSftp=\{openSftpDialog\}/,
+    "clicking the SSH toolbar SFTP action should open the popup through TerminalWorkspace, not dispatch to a tab opener",
+  );
+  assert.match(
+    terminalSource,
+    /sftpFocusRestorePaneIdRef/,
+    "the SFTP popup should remember the originating terminal pane for focus restore",
   );
   assert.match(
     terminalSource,

@@ -2028,7 +2028,8 @@
     "renameFileAria": "Rename {{name}}",
     "fileTypeLabel": "{{ext}} file",
     "targetExistsDetail": "The target {{kind}} already exists. Choose whether to overwrite {{name}}.",
-    "windowsDrives": "This PC"
+    "windowsDrives": "This PC",
+    "pathInputAria": "Enter {{pane}} path"
   },
   "webview": {
     "goBack": "Go back",

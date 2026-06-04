@@ -2023,7 +2023,8 @@
     "verifyingHost": "Vérification de l'hôte",
     "waiting": "En attente",
     "waitingToOverwrite": "En attente d'écrasement",
-    "windowsDrives": "Ce PC"
+    "windowsDrives": "Ce PC",
+    "pathInputAria": "Saisir le chemin {{pane}}"
   },
   "terminal": {
     "actions": "Actions du terminal",

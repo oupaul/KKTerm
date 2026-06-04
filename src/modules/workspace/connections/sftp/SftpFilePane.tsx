@@ -21,6 +21,7 @@ export function FilePane({
   onRenameSelected,
   onDeleteSelected,
   onOpenFolder,
+  onPathSubmit,
   onSelectionChange,
   onContextMenuRequest,
   onDropTransfer,
@@ -39,6 +40,7 @@ export function FilePane({
   onRenameSelected?: (currentName: string, newName: string) => void | Promise<void>;
   onDeleteSelected?: () => void;
   onOpenFolder?: (folderName: string) => void;
+  onPathSubmit?: (path: string) => void | Promise<void>;
   onSelectionChange?: (fileNames: string[]) => void;
   onContextMenuRequest?: (
     side: FilePaneSide,
@@ -54,6 +56,7 @@ export function FilePane({
   const lastSelectedNameRef = useRef<string | null>(null);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [pathDraft, setPathDraft] = useState(path);
   const [sortKey, setSortKey] = useState<FileSortKey>("name");
   const [isDropTarget, setIsDropTarget] = useState(false);
   const hasMutationActions = Boolean(onCreateFolder || onRenameSelected || onDeleteSelected);
@@ -63,6 +66,10 @@ export function FilePane({
   );
   const sortedFiles = useMemo(() => sortFileEntries(files, sortKey), [files, sortKey]);
   const nextSortKey: FileSortKey = sortKey === "name" ? "date" : "name";
+
+  useEffect(() => {
+    setPathDraft(path);
+  }, [path]);
 
   useEffect(() => {
     if (!editingName) {
@@ -166,6 +173,16 @@ export function FilePane({
     setRenameDraft("");
   }
 
+  async function commitPathDraft(value = pathDraft) {
+    const nextPath = value.trim();
+    if (!nextPath || nextPath === path || isLoading) {
+      setPathDraft(path);
+      return;
+    }
+
+    await onPathSubmit?.(nextPath);
+  }
+
   function dragPayloadFor(fileName: string) {
     return selectedNames.includes(fileName) ? selectedNames : [fileName];
   }
@@ -219,7 +236,28 @@ export function FilePane({
       <header>
         <div>
           <strong>{title}</strong>
-          <span>{path}</span>
+          <input
+            aria-label={t("sftp.pathInputAria", { pane: title.toLowerCase() })}
+            className="file-pane-path-input"
+            disabled={!onPathSubmit || isLoading}
+            onBlur={() => setPathDraft(path)}
+            onChange={(event) => setPathDraft(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                const nextPath = event.currentTarget.value;
+                void commitPathDraft(nextPath);
+                event.currentTarget.blur();
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setPathDraft(path);
+                event.currentTarget.blur();
+              }
+            }}
+            spellCheck={false}
+            value={pathDraft}
+          />
         </div>
         <div className="file-pane-actions">
           <button

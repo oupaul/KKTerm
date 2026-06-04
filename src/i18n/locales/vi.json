@@ -2023,7 +2023,8 @@
     "verifyingHost": "Verifying host",
     "waiting": "Waiting",
     "waitingToOverwrite": "Đang chờ ghi đè",
-    "windowsDrives": "PC này"
+    "windowsDrives": "PC này",
+    "pathInputAria": "Nhập đường dẫn {{pane}}"
   },
   "terminal": {
     "actions": "Terminal actions",

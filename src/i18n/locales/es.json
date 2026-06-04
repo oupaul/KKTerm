@@ -2023,7 +2023,8 @@
     "verifyingHost": "Verificando host",
     "waiting": "Esperando",
     "waitingToOverwrite": "Esperando para sobrescribir",
-    "windowsDrives": "Este equipo"
+    "windowsDrives": "Este equipo",
+    "pathInputAria": "Introduce la ruta de {{pane}}"
   },
   "terminal": {
     "actions": "Acciones del terminal",

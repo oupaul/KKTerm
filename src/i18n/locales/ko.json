@@ -2023,7 +2023,8 @@
     "verifyingHost": "호스트 확인 중",
     "waiting": "대기 중",
     "waitingToOverwrite": "덮어쓰기 대기 중",
-    "windowsDrives": "내 PC"
+    "windowsDrives": "내 PC",
+    "pathInputAria": "{{pane}} 경로 입력"
   },
   "terminal": {
     "actions": "터미널 작업",

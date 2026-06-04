@@ -96,6 +96,7 @@ export function TerminalWorkspace({
     generalSettings.separateSplitTerminalBackgrounds &&
     tab.panes.filter(isTerminalPane).length > 1;
   const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
+  const sftpFocusRestorePaneIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
   const defaultFontSize = defaultTerminalSettings.fontSize;
   const canSplit = allowPaneLayoutControls && tab.panes.some((pane) => pane.connection);
@@ -142,13 +143,33 @@ export function TerminalWorkspace({
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSftpDialogConnection(null);
+        closeSftpDialog();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [sftpDialogConnection]);
+
+  function focusTerminalPaneAfterDialogClose(paneId: string) {
+    const focus = () => getPaneRenderer(paneId)?.focus();
+    queueMicrotask(focus);
+    window.requestAnimationFrame(focus);
+  }
+
+  function closeSftpDialog() {
+    const restorePaneId = sftpFocusRestorePaneIdRef.current;
+    sftpFocusRestorePaneIdRef.current = null;
+    setSftpDialogConnection(null);
+    if (restorePaneId) {
+      focusTerminalPaneAfterDialogClose(restorePaneId);
+    }
+  }
+
+  function openSftpDialog(connection: Connection, paneId: string) {
+    sftpFocusRestorePaneIdRef.current = paneId === focusedPaneId ? paneId : null;
+    setSftpDialogConnection(connection);
+  }
 
   function handleSplit(paneId: string, direction: "right" | "left" | "down" | "up") {
     setFocusedPane(tab.id, paneId);
@@ -238,7 +259,7 @@ export function TerminalWorkspace({
             canSplit={canSplit}
             usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
             onFontChange={handleFontChange}
-            onOpenSftp={(connection) => setSftpDialogConnection(connection)}
+            onOpenSftp={openSftpDialog}
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
             showSftpButton={showSftpButton}
             onSplit={handleSplit}
@@ -263,7 +284,7 @@ export function TerminalWorkspace({
               <button
                 aria-label={t("common.close")}
                 className="connection-dialog-close"
-                onClick={() => setSftpDialogConnection(null)}
+                onClick={closeSftpDialog}
                 type="button"
               >
                 <X size={15} />
@@ -310,7 +331,7 @@ function TerminalLayoutView({
   canSplit: boolean;
   usePaneTerminalBackgrounds: boolean;
   onFontChange: (delta: number | "reset") => void;
-  onOpenSftp: (connection: Connection) => void;
+  onOpenSftp: (connection: Connection, paneId: string) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
@@ -1140,7 +1161,7 @@ function TerminalPaneView({
   canClosePane: boolean;
   onFontChange: (delta: number | "reset") => void;
   usePaneTerminalBackgrounds: boolean;
-  onOpenSftp: (connection: Connection) => void;
+  onOpenSftp: (connection: Connection, paneId: string) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
@@ -1153,6 +1174,7 @@ function TerminalPaneView({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const lastResizeDimensionsRef = useRef<TerminalDimensions | null>(null);
+  const restoreFocusOnWindowFocusRef = useRef(false);
   const resizeFrameRef = useRef<number | null>(null);
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
@@ -1716,6 +1738,38 @@ function TerminalPaneView({
     return () => window.cancelAnimationFrame(frame);
   }, [isActive]);
 
+  useEffect(() => {
+    if (!isActive || !isFocused) {
+      restoreFocusOnWindowFocusRef.current = false;
+      return;
+    }
+
+    const handleWindowBlur = () => {
+      restoreFocusOnWindowFocusRef.current = !shouldPreserveExternalFocus(paneRef.current);
+    };
+    const handleWindowFocus = () => {
+      if (!restoreFocusOnWindowFocusRef.current) {
+        return;
+      }
+      restoreFocusOnWindowFocusRef.current = false;
+      const focus = () => {
+        const renderer = terminalRendererRef.current;
+        if (renderer) {
+          focusTerminalUnlessExternalInputIsActive(renderer, paneRef.current);
+        }
+      };
+      queueMicrotask(focus);
+      window.requestAnimationFrame(focus);
+    };
+
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
+    return () => {
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [isActive, isFocused]);
+
 
   useEffect(() => {
     if (searchOpen) {
@@ -1942,7 +1996,7 @@ function TerminalPaneView({
     if (pane.connection?.type !== "ssh") {
       return;
     }
-    onOpenSftp(pane.connection);
+    onOpenSftp(pane.connection, pane.id);
   }
 
   function handleSplit(direction: "right" | "left" | "down" | "up") {

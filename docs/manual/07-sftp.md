@@ -28,6 +28,8 @@ Startup states:
 
 Two columns:
 
+Each pane path is editable: type a local or remote path into the path field and press Enter to navigate. Press Escape or leave the field without Enter to keep the current path. The path input accessibility label is `sftp.pathInputAria`.
+
 - **Local** (`sftp.local`, `sftp.localFiles`) — loading state `sftp.loadingLocal`. On Windows, opening the parent of a drive root shows the drive picker path label `sftp.windowsDrives`, where double-clicking a drive opens that drive root.
 - **Remote** (`sftp.remote`) — empty state `sftp.noFiles`, loading `sftp.loading`.
 

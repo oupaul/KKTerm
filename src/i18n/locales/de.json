@@ -2023,7 +2023,8 @@
     "verifyingHost": "Host überprüfen",
     "waiting": "Warten",
     "waitingToOverwrite": "Warten auf Überschreiben",
-    "windowsDrives": "Dieser PC"
+    "windowsDrives": "Dieser PC",
+    "pathInputAria": "{{pane}}-Pfad eingeben"
   },
   "terminal": {
     "actions": "Terminalaktionen",

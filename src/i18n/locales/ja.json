@@ -2023,7 +2023,8 @@
     "verifyingHost": "ホストを確認中",
     "waiting": "待機中",
     "waitingToOverwrite": "上書き待ち",
-    "windowsDrives": "PC"
+    "windowsDrives": "PC",
+    "pathInputAria": "{{pane}}のパスを入力"
   },
   "terminal": {
     "actions": "ターミナル操作",
