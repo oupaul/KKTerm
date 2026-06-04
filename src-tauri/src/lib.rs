@@ -1318,6 +1318,25 @@ fn get_system_performance_counters(
 }
 
 #[tauri::command]
+fn open_windows_task_manager() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("taskmgr.exe")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| format!("failed to open Windows Task Manager: {error}"))
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Windows Task Manager is only available on Windows.".to_string())
+    }
+}
+
+#[tauri::command]
 fn create_diagnostics_bundle(
     app: tauri::AppHandle,
     performance: tauri::State<'_, performance::PerformanceMonitor>,
@@ -2883,6 +2902,7 @@ pub fn run() {
             get_performance_snapshot,
             get_host_usage_snapshot,
             get_system_performance_counters,
+            open_windows_task_manager,
             create_diagnostics_bundle,
             get_dont_sleep_enabled,
             set_dont_sleep_enabled,
