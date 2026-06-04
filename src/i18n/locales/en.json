@@ -1150,7 +1150,7 @@
       },
       "network": {
         "label": "Network admin tools",
-        "description": "Ping hosts, check TCP ports, resolve DNS, run WHOIS, list interfaces, and send Wake-on-LAN. Disabled by default."
+        "description": "Ping hosts, check TCP ports, resolve DNS, run WHOIS, list interfaces, and send Wake-on-LAN."
       }
     },
     "searchProvider": "Search provider",

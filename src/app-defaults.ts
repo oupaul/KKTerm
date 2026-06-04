@@ -136,7 +136,7 @@ export const defaultAiAssistantToolSettings = {
   sessions: true,
   tutorial: true,
   manual: true,
-  network: false,
+  network: true,
   watchdog: true,
 };
 

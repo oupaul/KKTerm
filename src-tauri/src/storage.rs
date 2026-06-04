@@ -5025,7 +5025,7 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         tutorial: default_ai_tutorial_tool_enabled(),
         email: false,
         manual: default_ai_manual_tool_enabled(),
-        network: false,
+        network: true,
         watchdog: default_ai_watchdog_tool_enabled(),
     }
 }
@@ -7737,6 +7737,7 @@ mod tests {
         assert!(defaults.tools.tutorial());
         assert!(defaults.tools.manual());
         assert!(!defaults.tools.email());
+        assert!(defaults.tools.network());
 
         let updated = storage
             .update_ai_provider_settings(AiProviderSettings {
