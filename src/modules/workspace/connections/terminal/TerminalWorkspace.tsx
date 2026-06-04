@@ -6,7 +6,7 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Columns2, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -504,11 +504,13 @@ function TmuxSessionTag({
   onMouseModeChange,
   sessionId,
   tabId,
+  x11ForwardingStatus,
 }: {
   connection: Connection;
   onMouseModeChange: (enabled: boolean) => void;
   sessionId?: string;
   tabId: string;
+  x11ForwardingStatus: "disabled" | "enabled" | "rejected";
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -773,7 +775,12 @@ function TmuxSessionTag({
           title={t("terminal.showTmux")}
           type="button"
         >
-          tmux {sessionId}
+          <X
+            aria-hidden="true"
+            className={`tmux-x11-indicator ${x11ForwardingStatus}`}
+            size={12}
+          />
+          <span>tmux {sessionId}</span>
         </button>
       </div>
       {open ? (
@@ -1205,6 +1212,9 @@ function TerminalPaneView({
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
+  const x11ForwardingStatus = pane.x11ForwardingStatus ?? (
+    pane.connection?.type === "ssh" && sshSettings.managedXServerEnabled ? "enabled" : "disabled"
+  );
   const setAssistantContextSnippet = useWorkspaceStore(
     (state) => state.setAssistantContextSnippet,
   );
@@ -1225,6 +1235,7 @@ function TerminalPaneView({
   const updateOpenConnectionTerminalAppearance = useWorkspaceStore((state) => state.updateOpenConnectionTerminalAppearance);
   const updateOpenTerminalPaneAppearance = useWorkspaceStore((state) => state.updateOpenTerminalPaneAppearance);
   const updateOpenTerminalPaneBackground = useWorkspaceStore((state) => state.updateOpenTerminalPaneBackground);
+  const updateOpenTerminalPaneX11ForwardingStatus = useWorkspaceStore((state) => state.updateOpenTerminalPaneX11ForwardingStatus);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const { t } = useTranslation();
   const terminalOpacity =
@@ -1623,6 +1634,13 @@ function TerminalPaneView({
           });
         }
         sessionIdRef.current = result.sessionId;
+        if (connection.type === "ssh") {
+          updateOpenTerminalPaneX11ForwardingStatus(
+            tabId,
+            pane.id,
+            result.x11ForwardingStatus ?? x11ForwardingStatus,
+          );
+        }
         sessionStarted = true;
         const startupInput = localStartupInputFor(connection);
         if (startupInput) {
@@ -2071,6 +2089,7 @@ function TerminalPaneView({
               onMouseModeChange={setTmuxMouseEnabled}
               sessionId={pane.tmuxSessionId}
               tabId={tabId}
+              x11ForwardingStatus={x11ForwardingStatus}
             />
           ) : null}
           {recordingInfo ? <span className="terminal-recording-status">{t("terminal.recording")}</span> : null}
@@ -2087,15 +2106,14 @@ function TerminalPaneView({
           </button>
           {isSshPane && showSftpButton ? (
             <button
-              className="terminal-pane-action terminal-pane-action-text"
+              className="terminal-pane-action"
               aria-label={t("terminal.openSftp")}
               data-tutorial-id="terminal.openSftp"
               onClick={handleOpenSftp}
-              title={t("terminal.openSftp")}
+              title={t("terminal.sftp")}
               type="button"
             >
-              <Columns2 size={13} />
-              <span>{t("terminal.sftp")}</span>
+              <Folder size={13} />
             </button>
           ) : null}
           <button
