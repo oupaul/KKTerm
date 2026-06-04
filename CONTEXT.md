@@ -14,7 +14,7 @@ A language-region bundle stored as a JSON file under `src/i18n/locales/`. Englis
 A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend source layout. New UI strings require a new key in all 14 locale files.
 
 **Namespace**:
-A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `workspace`, `common`, `languages`, `manual`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
+A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `installer`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
 
 
 **Connection**:
@@ -97,6 +97,10 @@ _Avoid_: Session, split
 
 Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly tmux session id, such as `kkterm-cockpit001`, used to resume that Pane's remote tmux session when the Pane is recreated. Current Pane tmux ids use the `kkterm-<sci-fi-name><number>` shape and are remembered in frontend workspace storage. That id belongs to the frontend workspace/Pane layer, not the backend Connection model.
 
+**Watchdog**:
+A live runtime monitor that watches a target (performance counter, SSH Session output silence, ping, or TCP reachability) against a predicate and, on trigger, can notify and run AI interventions. Watchdogs are in-memory only and do not persist across app restart; they are surfaced through the **Watchdog Status Bar** indicator and a detail panel, not as a Connection, Session, or Module. See `src-tauri/src/watchdog/` and `src/watchdog/`.
+_Avoid_: monitor profile, saved alert, durable watcher
+
 ## UI Layout
 
 **Activity Rail (Left Rail)**:
@@ -131,7 +135,7 @@ _Avoid_: tab bar, tab row
 A subdivision within a Tab that presents one terminal surface or view. Pane toolbars carry terminal/connection controls.
 
 **Status Bar**:
-The bottom workspace bar showing left-aligned host usage metrics and transient workspace notifications.
+The bottom workspace bar showing left-aligned host usage metrics and transient workspace notifications. Its right side carries app-wide status indicators: the **Watchdog Status Bar** indicator, an AI Assistant working indicator, and the Don't Sleep (coffee) indicator.
 _Avoid_: footer bar, bottom bar
 
 **Settings Sidebar**:

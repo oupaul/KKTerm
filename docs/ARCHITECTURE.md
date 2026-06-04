@@ -73,7 +73,7 @@ The i18n layer lives in `src/i18n/` and uses **i18next** with **react-i18next**.
 
 - **`src/i18n/config.ts`** owns the i18next instance, language detection (`localStorage` key `kkterm.language`), dynamic locale chunk loading, the `switchLanguage()` API, and the `ensureI18nReady()` startup guard.
 - **`src/i18n/useT.ts`** provides a typed `useT()` hook with full key autocompletion from the English locale shape.
-- **`src/i18n/locales/en.json`** is the source-of-truth translation file (16 namespaces, ~2,200 keys). English is bundled with the app; the 13 other locales (`fr`, `it`, `de`, `es`, `es-MX`, `pt-BR`, `zh-TW`, `zh-CN`, `ja`, `ko`, `th`, `id`, `vi`) load on demand via dynamic `import()` and are automatically code-split by Vite.
+- **`src/i18n/locales/en.json`** is the source-of-truth translation file (17 namespaces, ~2,500 keys). English is bundled with the app; the 13 other locales (`fr`, `it`, `de`, `es`, `es-MX`, `pt-BR`, `zh-TW`, `zh-CN`, `ja`, `ko`, `th`, `id`, `vi`) load on demand via dynamic `import()` and are automatically code-split by Vite.
 - **Settings → General → Language** exposes a dropdown that calls `switchLanguage()`, which hot-swaps the locale bundle and persists the choice.
 - **All user-visible strings must go through `t()` or `useTranslation()`**. Hardcoded English text in JSX is forbidden. New keys go into `en.json` first, then are propagated to all 13 other locale files or tracked under `docs/localization_todo/`. Renamed or removed keys must be updated in every file. Pure helper functions that cannot use React hooks import `i18next` from `src/i18n/config.ts` and call `i18next.t(key)`.
 
@@ -324,6 +324,14 @@ Screenshot context is user-attached and transient. The Assistant sends it throug
 
 Extension creation is currently an Assistant draft mode, not a general extension runtime. The frontend can mark a chat request as `extensionCreation`, and the backend prompt builder adds guardrails requiring reviewable designs, manifests, permission requests, and source files only. KKTerm must not claim that generated extension code was installed, enabled, executed, loaded, written to disk, or verified unless a future explicit approval flow and extension platform provide that behavior. The platform shape is defined in `docs/ADR/0005-extension-platform-architecture.md`.
 
+### Watchdog
+
+Owns AI-driven, session-scoped, multi-instance monitors that pair a sensor loop with an AI actor loop. A Watchdog watches one target against a predicate and, when the condition is met, can notify and run an AI intervention. Watchdogs are runtime state, not durable data: the registry is in-memory only and nothing persists across app restart. A Watchdog is not a Connection, Session, or Module.
+
+Backend and frontend split the loop. Rust (`src-tauri/src/watchdog/`) owns the registry, polling task, predicate evaluation, sustained-window tracking, stop-condition arbitration, and event emission; the frontend (`src/watchdog/`) owns the **Watchdog Status Bar** indicator, the detail panel, and the AI intervention sub-turn (model inference and tool calls), reporting results back through the `watchdog_record_intervention` command. All backend events flow over a single `watchdog://event` channel so the frontend has one subscription point, mirroring `net::commands::EVENT_CHANNEL`. The Tauri command surface is `watchdog_create`, `watchdog_list`, `watchdog_cancel`, `watchdog_get_report`, and `watchdog_record_intervention`; the registry (`WatchdogRegistry`) and SSH-silence `SessionActivityTracker` are managed Tauri state.
+
+Target kinds are `mock`, `performanceCounter`, `sshSessionOutputSilence`, `ping`, and `tcpReachable`. The registry enforces hard limits so a runaway AI cannot exhaust resources: at most 16 concurrent Watchdogs, poll intervals bounded between 500ms and 1 hour, and a per-Watchdog tick ring capped at 200 samples. Anything needing a longer cadence is a scheduled job, not a Watchdog.
+
 ### Extensions
 
 Owns user-installed extension manifests, permissions, install/update lifecycle, isolated storage, and runtime boundaries. Extension execution is deferred until this platform exists in code. The accepted direction is manifest-first, permissioned, user-mediated, and isolated from secrets and raw live session contents by default.
@@ -461,6 +469,67 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/modules/workspace/connections/terminal/quickCommandLibrary.ts` — curated Quick Command library entries and executable snippets.
 
 New feature code should land in the owning source area above. New feature CSS should live beside that source area and be imported from `src/App.css` in a deliberate cascade order. Shared selectors such as `.status-bar`, `.terminal-menu`, `.dialog-backdrop`, `.icon-button`, form basics, and generic context-menu rules belong in `src/styles/base.css` unless they are truly area-specific. Keep `src/App.tsx` limited to app chrome and cross-cutting bootstrap. Workspace state, settings I/O, layout serialization, terminal rendering, pane input routing, and the Tauri command boundary remain separated under `src/store.ts`, `src/lib/`, `src/modules/workspace/`, `src/modules/workspace/connections/terminal/`, and `src/lib/tauri.ts`.
+
+## Backend Source Map
+
+Rust backend modules live flat under `src-tauri/src/`, with multi-file features grouped into subdirectories. `lib.rs` wires the Tauri builder: it registers commands, manages shared state (registries, managers, trackers), and owns the app-shell/native integration glue. New backend work should land in the owning module below rather than growing `lib.rs`.
+
+Connections, Sessions, and transports:
+
+- `sessions.rs` — central Session manager: spawns and tracks PTY, SSH, Telnet, Serial, and X-server Sessions; emits terminal output; owns SSH port forwarding and tmux session tracking.
+- `windows_local_pty.rs` — Windows ConPTY abstraction: process spawn with attribute lists, handle inheritance, resize, and reader/writer I/O for local terminals.
+- `ssh.rs` — native SSH terminal over `russh`: key/password/agent auth, host-key verification, tmux resume, configurable buffering.
+- `ssh_config.rs` — parses `~/.ssh/config` into Connection drafts (host, user, port, key path, ProxyJump).
+- `ssh_keys.rs` — generates Ed25519 key pairs via `ssh-keygen`, copies public keys to remote hosts, and secures private-key permissions.
+- `x_server.rs` — launches the VcXsrv X11 server when needed for SSH X forwarding and returns the display number.
+- `sftp.rs` — SFTP client: directory listing, upload/download with progress events, transfer cancellation, and Windows-drive virtual paths.
+- `telnet.rs` — Telnet client with IAC negotiation, login-prompt detection, and optional automatic credential submission.
+- `serial.rs` — native serial terminal with configurable speed and DTR/RTS, emitting raw bytes to the Session.
+- `ftp.rs` — FTP/FTPS client with async transfers, listing parse, progress events, and configurable TLS/connection modes.
+- `rdp.rs` — RDP client over the Windows `MsRdpClient` ActiveX control: connect, keyboard/mouse input, clipboard, Ctrl+Alt+Del, scaling, and the staged-bounds visibility lifecycle.
+- `vnc.rs` — VNC/RFB client: pixel-format/encoding negotiation, mouse/keyboard input, clipboard paste, shared and view-only modes.
+- `webview.rs` — URL Connection WebView2 child-window management: shared data partition, GPU workaround flags, and autofill credential agent injection.
+- `import.rs` — parses Connection import formats (RDCMan XML, MobaXterm, PuTTY registry, CSV/TSV) into Connection drafts with warnings.
+
+AI, Dashboard, Installer, and Network tools:
+
+- `ai.rs` — assistant runtime: provider chat/Responses streaming, tool registration and execution, approval gating, and the live-tool bridge. See the AI Assistant area for the full contract. `ai/` holds provider adapters and `prompt_contracts.rs`.
+- `ai_coding_usage.rs` — tracks and syncs coding-CLI usage/quota (Codex, Claude Code) and persists auth state.
+- `github_copilot.rs` — GitHub Copilot OAuth device-flow sign-in and token polling.
+- `mcp.rs` — remote MCP HTTP client: server CRUD, schema caching, tool calls, and keychain-stored auth headers.
+- `mcp_bridge.rs` — local MCP bridge: a Windows named-pipe server that dispatches external JSON-RPC `tools/call` requests to in-process assistant tools.
+- `assistant_skills.rs` — loads assistant skill directories from disk, validates their YAML, and tracks enabled/disabled state.
+- `dashboard_commands.rs` — Tauri commands for Dashboard View/Widget lifecycle (create, update, remove, load state).
+- `dashboard_storage.rs` — SQLite-backed Dashboard persistence: Views, Widget Instances, AI Created Widgets, backgrounds, and grid settings.
+- `dashboard_validation.rs` — validates Widget presets, accents, icons, grid bounds, script body JSON, and background types against fixed enums.
+- `dashboard_ids.rs` — generates monotonic Dashboard element ids.
+- `app_launcher.rs` — App Launcher Widget backend: launches apps/folders with normal/admin/different-user modes and prepares entry metadata (icon, extension, size).
+- `net/` — network admin tools exposed to Dashboard script widgets: DNS lookup, TCP reachability, interfaces, Wake-on-LAN, WHOIS, ping, and port scan, with a cancellable stream registry over a single `net::commands::EVENT_CHANNEL`.
+
+Watchdog, secrets, storage, and diagnostics:
+
+- `watchdog/` — AI Watchdog backend (registry, polling, predicate evaluation, targets, SSH session-activity tracking); see the Watchdog area.
+- `secrets.rs` — OS keychain wrapper (Connection passwords, API keys, MCP auth, widget secrets).
+- `storage.rs` — SQLite schema, migrations, and validation for Connections, folders, tags, per-type options, credentials, and Dashboard state.
+- `diagnostics.rs` — builds local-only diagnostic bundles (logs, performance snapshots, manifest) while excluding secrets, the database, and terminal output.
+- `logging.rs` — initializes local log files and the Advanced-Debugging-gated AI/MCP/Installer debug logs.
+- `debug_heartbeat.rs` — polls main-thread and frontend liveness, logging stalls for freeze diagnostics.
+- `performance.rs` — host CPU/RAM/network and app uptime/working-set counters feeding the Status Bar metrics.
+
+App shell, window, and OS integration:
+
+- `app_tray.rs` — system tray icon, context menu (recent Connections, wallpaper, exit), and minimize-to-tray routing.
+- `app_updates.rs` — downloads, SHA256-validates, and installs app updates (currently gated; see the Updates area).
+- `auto_start.rs` — toggles Windows `Run`-key auto-start on login.
+- `power.rs` — Don't Sleep mode via `SetThreadExecutionState` plus shutdown-block registration; exposes the `DontSleepManager` state.
+- `window_effects.rs` — Windows 11 rounded corners and custom-title-bar window styling.
+- `window_state.rs` — persists/restores main-window size, maximized state, and multi-monitor bounds.
+- `desktop_wallpaper.rs` — desktop wallpaper window/picker management via WebView child windows.
+- `native_tooltip.rs` — Win32 topmost tracking-tooltip bridge used by `RailTooltip` to layer over RDP ActiveX and WebView2 surfaces.
+- `favicon.rs` — fetches and parses HTML for favicon links and returns validated base64 icon data URLs for URL Connections.
+- `screenshot.rs` — captures screen rectangles (DirectX or GDI) to clipboard or base64 JPEG for assistant context.
+- `manual.rs` — bundled manual chapter metadata (slug, order, filename, title).
+- `bin/` — the `kkterm-cli` binary: an external stdio MCP client that bridges to the `mcp_bridge` named pipe.
 
 ## Color Scheme CSS Variables
 
