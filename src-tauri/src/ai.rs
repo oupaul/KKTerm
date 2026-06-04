@@ -50,6 +50,9 @@ use crate::storage::{
 
 static LIVE_TOOL_REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 const COPILOT_SDK_RESPONSE_TIMEOUT: Duration = Duration::from_secs(300);
+const CODEX_CLI_APPROVAL_FLAG: &str = "--ask-for-approval";
+const CODEX_CLI_APPROVAL_NEVER: &str = "never";
+const CODEX_CLI_IGNORE_USER_CONFIG_FLAG: &str = "--ignore-user-config";
 const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "app.activityRailWorkspace, app.activityRailDashboard, app.connectionRail, app.activityRailDontSleep, app.activityRailInstaller, app.activityRailSettings, app.connectionsResize, app.aiAssistantResize with navigation page=workspace; ",
     "connections.panel, connections.search, connections.quickConnect, connections.addConnection, connections.folderControls, connections.tree with navigation page=workspace; ",
@@ -1471,11 +1474,11 @@ fn common_user_bin_candidates(names: &[&str]) -> Vec<PathBuf> {
     if let Some(profile) = std::env::var_os("USERPROFILE") {
         roots.push(PathBuf::from(&profile).join(".local").join("bin"));
     }
-    if let Some(appdata) = std::env::var_os("APPDATA") {
-        roots.push(PathBuf::from(appdata).join("npm"));
-    }
     if let Some(nvm_symlink) = std::env::var_os("NVM_SYMLINK") {
         roots.push(PathBuf::from(nvm_symlink));
+    }
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        roots.push(PathBuf::from(appdata).join("npm"));
     }
 
     bin_candidates_from_roots(roots, names)
@@ -1553,12 +1556,13 @@ fn cli_backend_status(provider: AiCliBackendKind, command: String) -> AiCliBacke
             AiCliBackendKind::Codex => run_cli_capture(
                 &command,
                 &[
+                    CODEX_CLI_APPROVAL_FLAG,
+                    CODEX_CLI_APPROVAL_NEVER,
                     "exec",
+                    CODEX_CLI_IGNORE_USER_CONFIG_FLAG,
                     "--ephemeral",
                     "--sandbox",
                     "read-only",
-                    "--ask-for-approval",
-                    "never",
                     "--skip-git-repo-check",
                     "Reply with exactly OK.",
                 ],
@@ -1601,12 +1605,13 @@ fn run_cli_agent_command(
         AiCliBackendKind::Codex => run_cli_capture(
             command,
             &[
+                CODEX_CLI_APPROVAL_FLAG,
+                CODEX_CLI_APPROVAL_NEVER,
                 "exec",
+                CODEX_CLI_IGNORE_USER_CONFIG_FLAG,
                 "--ephemeral",
                 "--sandbox",
                 "read-only",
-                "--ask-for-approval",
-                "never",
                 "--skip-git-repo-check",
                 "--model",
                 model,
@@ -8479,6 +8484,13 @@ mod tests {
     }
 
     #[test]
+    fn codex_cli_uses_documented_global_approval_flag() {
+        assert_eq!(CODEX_CLI_APPROVAL_FLAG, "--ask-for-approval");
+        assert_eq!(CODEX_CLI_APPROVAL_NEVER, "never");
+        assert_eq!(CODEX_CLI_IGNORE_USER_CONFIG_FLAG, "--ignore-user-config");
+    }
+
+    #[test]
     fn bin_candidates_expand_roots_in_name_order() {
         let candidates = bin_candidates_from_roots(
             vec![PathBuf::from("C:\\Users\\Tester\\AppData\\Roaming\\npm")],
@@ -8488,6 +8500,22 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert!(candidates[0].ends_with("codex.exe"));
         assert!(candidates[1].ends_with("codex.cmd"));
+    }
+
+    #[test]
+    fn common_cli_candidates_prefer_active_nvm_before_roaming_npm() {
+        let candidates = bin_candidates_from_roots(
+            vec![
+                PathBuf::from("C:\\Users\\Tester\\.local\\bin"),
+                PathBuf::from("C:\\nvm4w\\nodejs"),
+                PathBuf::from("C:\\Users\\Tester\\AppData\\Roaming\\npm"),
+            ],
+            &["codex.exe", "codex.cmd"],
+        );
+
+        assert!(candidates[0].ends_with(".local\\bin\\codex.exe"));
+        assert!(candidates[2].ends_with("nvm4w\\nodejs\\codex.exe"));
+        assert!(candidates[4].ends_with("Roaming\\npm\\codex.exe"));
     }
 
     #[test]

@@ -1114,11 +1114,11 @@ fn common_user_bin_candidates(names: &[&str]) -> Vec<PathBuf> {
     if let Some(profile) = std::env::var_os("USERPROFILE") {
         roots.push(PathBuf::from(&profile).join(".local").join("bin"));
     }
-    if let Some(appdata) = std::env::var_os("APPDATA") {
-        roots.push(PathBuf::from(appdata).join("npm"));
-    }
     if let Some(nvm_symlink) = std::env::var_os("NVM_SYMLINK") {
         roots.push(PathBuf::from(nvm_symlink));
+    }
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        roots.push(PathBuf::from(appdata).join("npm"));
     }
 
     roots
