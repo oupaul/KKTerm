@@ -3,6 +3,72 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.57/kkterm-0.1.57-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.57/kkterm-0.1.57-windows-arm64-setup.exe)
+
+## Highlights
+- Fix wallpaper tray popup hosting and smooth out the wallpaper Connection behavior (no more “why is this popup hosting like that?” moments).
+- Improve SSH “changed host key” handling with a clear warning and an explicit opt-in replacement flow.
+- Better SFTP path input and restore terminal focus after popup interactions.
+
+## New
+- Dashboard design, visualization, and accessibility Assistant Skills.
+- Custom assistant skills folder toggle, including optional custom skills folder + settings UI.
+- Enable AI assistant network tools by default.
+- Add fallback flow to replace a changed SSH host key (with explicit confirmation).
+
+## Improved
+- Reduce workspace connection frame padding (for all connection types).
+- Open Windows Task Manager from status metrics.
+- Reduce/troubleshoot popup dialog dismissal control inconsistencies across dialogs.
+- SFTP: make the path input editable (and restore terminal focus after popup).
+- Documentation updates for terminal backgrounds and UI behavior.
+- CI release workflow alignment for both-arch installer publishing.
+- Localization documentation: align i18n namespace docs and add Watchdog vocabulary; plus guidelines for context-specific keys and placeholder safety.
+
+## Fixed
+- Fix tray wallpaper popup hosting by @ryantsai in https://github.com/ryantsai/KKTerm/pull/233 (short SHA: a9b9521).
+- Avoid no-activate parent during wallpaper WebView creation by @ryantsai in https://github.com/ryantsai/KKTerm/pull/234 (short SHA: 3d5335b).
+- Align “changed SSH host key” replacement/rotation expectations in host-key replace tests by @ryantsai in https://github.com/ryantsai/KKTerm/pull/251 (short SHA: 66ce06e).
+
+## Internal
+- Derive `Debug` for `SshHostKeyPreview` so host-key tests compile by @ryantsai in https://github.com/ryantsai/KKTerm/pull/249 (short SHA: 62c93b7).
+- Derive `Debug` for SSH host key preview (test compilation unblock) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/249 (short SHA: 71fbcfc).
+- Docs / architecture / i18n alignment work items (including Watchdog terminology and source map documentation) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/237 (short SHA: c61a740), https://github.com/ryantsai/KKTerm/pull/240 (short SHA: 539cf03), and https://github.com/ryantsai/KKTerm/pull/235 (short SHA: d04aed7).  
+
+---
+
+## 精選重點
+- 修正來自工作列/托盤的桌布彈出視窗託管問題，並調整桌布相關的 Connection 行為（不再讓 popup 行為像網路問題一樣「玄學」）。
+- 強化 SSH「主機金鑰已變更」處理：提供清楚警告，並且需要使用者明確確認後才會替換。
+- 改善 SFTP 路徑輸入，並在彈出視窗互動後恢復終端機焦點。
+
+## 新功能
+- Dashboard 設計、視覺化與無障礙 Assistant Skills。
+- 自訂 assistant skills 資料夾切換：包含選用自訂 skills 資料夾與設定 UI。
+- 預設啟用 AI assistant 網路工具（network tools）。
+- 新增「變更後 SSH 主機金鑰替換」的備援流程（需要明確確認）。
+
+## 改善
+- 減少所有連線類型（workspace connection）的框架內距。
+- 在 Windows 狀態指標中直接開啟工作管理員（Task Manager）。
+- 統一/對齊多個彈出對話框的關閉控制行為。
+- SFTP：讓路徑輸入可編輯（並在彈出視窗後恢復終端機焦點）。
+- 補充並整理終端機背景與 UI 行為的文件。
+- CI 發佈流程對齊雙架構（both-arch）安裝程式的發佈。
+- 本地化文件更新：對齊 i18n namespace 文件並加入 Watchdog 詞彙；同時補上情境式 key 與 placeholder 安全性的規範。
+
+## 修正
+- 修正托盤桌布彈出視窗託管問題：@ryantsai，https://github.com/ryantsai/KKTerm/pull/233（短 SHA: a9b9521）。
+- 建立桌布 WebView 時避免使用 no-activate parent：@ryantsai，https://github.com/ryantsai/KKTerm/pull/234（短 SHA: 3d5335b）。
+- 調整 SSH 主機金鑰替換/輪替後的測試預期（host-key replace 測試）：@ryantsai，https://github.com/ryantsai/KKTerm/pull/251（短 SHA: 66ce06e）。
+
+## Internal
+- 為 `SshHostKeyPreview` 衍生 `Debug`，以讓 host-key 測試能編譯通過：@ryantsai，https://github.com/ryantsai/KKTerm/pull/249（短 SHA: 62c93b7）。
+- 衍生 SSH 主機金鑰預覽的 `Debug`（用於測試編譯修正）：@ryantsai，https://github.com/ryantsai/KKTerm/pull/249（短 SHA: 71fbcfc）。
+- 文件 / 架構 / i18n 的對齊工作項目（包含 Watchdog 用語與 source map 文件）：@ryantsai，https://github.com/ryantsai/KKTerm/pull/237（短 SHA: c61a740）、https://github.com/ryantsai/KKTerm/pull/240（短 SHA: 539cf03）、以及 https://github.com/ryantsai/KKTerm/pull/235（短 SHA: d04aed7）。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.56/kkterm-0.1.56-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.56/kkterm-0.1.56-windows-arm64-setup.exe)
 
