@@ -2373,14 +2373,6 @@ function ChildConnectionPropertiesDialog({
           <div>
             <p className="panel-label">{t("connections.childConnectionProperties")}</p>
           </div>
-          <button
-            aria-label={t("connections.close")}
-            className="icon-button"
-            onClick={onCancel}
-            type="button"
-          >
-            <X size={15} />
-          </button>
         </header>
         <div className="connection-type-summary">
           <div className="connection-appearance-controls">
@@ -3534,11 +3526,6 @@ function ConnectionDialog({
             </p>
             {mode === "quick" ? <h2>{t("connections.openOneOffSession")}</h2> : null}
           </div>
-          {mode === "quick" ? (
-            <button className="icon-button" type="button" aria-label={t("connections.close")} onClick={onCancel}>
-              <X size={15} />
-            </button>
-          ) : null}
         </header>
 
         {connectionType ? (
@@ -3791,9 +3778,6 @@ function TransferSshPublicKeyDialog({
             <p className="panel-label">{t("connections.transferSshPublicKey")}</p>
             <h2>{connection.name}</h2>
           </div>
-          <button className="icon-button" type="button" aria-label={t("connections.close")} onClick={onCancel}>
-            <X size={15} />
-          </button>
         </header>
         <p className="field-hint">{t("connections.transferSshPublicKeyHint")}</p>
         {error ? <p className="form-error">{error}</p> : null}

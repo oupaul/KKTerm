@@ -681,17 +681,6 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.quick-command-dialog .connection-dialog-header {
-  padding-right: 56px;
-}
-
-.quick-command-dialog .connection-dialog-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
-}
-
 .quick-command-manager-dialog {
   width: min(1800px, calc(100vw - 48px));
 }
@@ -1647,13 +1636,6 @@
 .sftp-popup-dialog .connection-dialog-header h2 {
   margin: 0;
   font-size: 17px;
-}
-
-.sftp-popup-dialog .connection-dialog-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
 }
 
 .sftp-popup-dialog-body {

@@ -509,9 +509,6 @@ function CustomCommandDialog({
           <div>
             <h2>{existingCommand ? t("common.edit") : `${t("common.add")} ${t("terminal.quickCommandsCustomCommand")}`}</h2>
           </div>
-          <button className="connection-dialog-close" onClick={onClose} type="button" aria-label={t("common.close")}>
-            <Icons.X size={16} />
-          </button>
         </header>
 
         <form className="quick-command-custom-form" onSubmit={saveDraft}>

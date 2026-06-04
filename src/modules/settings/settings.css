@@ -1619,15 +1619,7 @@
   width: 100%;
 }
 
-.settings-mcp-dialog .connection-dialog-header.compact {
-  position: relative;
-  padding-right: 44px;
-}
-
 .mcp-dialog-close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

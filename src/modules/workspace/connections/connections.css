@@ -667,24 +667,47 @@
   justify-content: flex-start;
 }
 
-.child-connection-properties-dialog .connection-dialog-header {
-  position: relative;
-  padding-right: 34px;
-}
-
 .connection-dialog-backdrop .child-connection-properties-dialog {
   overflow: visible;
 }
 
-.child-connection-properties-dialog .connection-dialog-header .icon-button {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-}
-
 .connection-dialog-header {
+  position: relative;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
+}
+
+.connection-dialog-header:has(.connection-dialog-close),
+.connection-dialog-header:has(.mcp-dialog-close-button) {
+  padding-right: 44px;
+}
+
+.connection-dialog-header .connection-dialog-close,
+.connection-dialog-header .mcp-dialog-close-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+}
+
+.connection-dialog-header .connection-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.connection-dialog-header .connection-dialog-close:hover,
+.connection-dialog-header .connection-dialog-close:focus-visible {
+  color: var(--text);
+  background: var(--surface-muted);
 }
 
 .connection-dialog-header .panel-label {

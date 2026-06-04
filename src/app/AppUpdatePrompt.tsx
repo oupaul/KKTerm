@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { Download, ExternalLink, X } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   checkForAppUpdate,
@@ -172,14 +172,6 @@ export function AppUpdatePrompt({
             <p className="panel-label">{t("settings.softwareUpdates")}</p>
             <h2>{t("settings.updateAvailableTitle")}</h2>
           </div>
-          <button
-            aria-label={t("settings.updateLater")}
-            className="icon-button"
-            onClick={() => setUpdate(null)}
-            type="button"
-          >
-            <X size={15} />
-          </button>
         </header>
         <p className="field-hint">
           {t("settings.updateAvailableBody", {

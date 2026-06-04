@@ -89,9 +89,14 @@ Strong success criteria let you loop independently.
 - Dialog footers follow Windows button order: the primary/confirm action comes
   immediately before Cancel, and the action group anchors to the bottom right
   unless an existing platform pattern in the same dialog family differs.
-- App-owned popup dialogs must anchor their close button to the dialog's top
-  right corner, independent of header text flow; pad header/content so titles
-  and actions cannot overlap the close control.
+- App-owned popup dialogs must not show a title-bar close X when the footer
+  already has a bottom-right dismiss action such as Cancel, Skip, Later, or
+  Close. Keep one obvious dismiss path instead of duplicating the same action.
+- App-owned popup dialogs that do not have a footer dismiss action may keep a
+  title-bar close X, but it must use the shared `connection-dialog-close` (or
+  `mcp-dialog-close-button` where already established) header placement so the
+  control is anchored to the dialog's top right, independent of title text flow.
+  Pad header/content so titles and actions cannot overlap the close control.
 - Built-in MCP tool changes must update `docs/MCP.md`; if Settings AI
   behavior/safety text changes, also update `docs/manual/15-settings.md`.
 

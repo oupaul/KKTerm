@@ -121,14 +121,6 @@ export function TransferConflictDialog({
             <strong>{isFolder ? t("sftp.folderExists") : t("sftp.fileExists")}</strong>
             <span>{conflict.direction === "upload" ? t("sftp.uploadConflict") : t("sftp.downloadConflict")}</span>
           </div>
-          <button
-            className="icon-button"
-            aria-label={t("sftp.cancelTransferConflict")}
-            onClick={() => onDecision("cancel")}
-            type="button"
-          >
-            <X size={15} />
-          </button>
         </header>
         <p>
           {t("sftp.targetExistsDetail", { kind: isFolder ? t("sftp.folder").toLowerCase() : t("sftp.file").toLowerCase(), name: conflict.name })}

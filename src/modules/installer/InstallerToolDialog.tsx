@@ -6,9 +6,9 @@
 //                 step list with per-step logs. Pressing Install from "info"
 //                 mode flips the dialog to "stepper".
 //
-// Honors AGENTS.md dialog rules: top-right close, concise title (no
-// subtitle), Windows-order footer buttons (primary immediately before Cancel
-// at bottom right).
+// Honors AGENTS.md dialog rules: concise title, a single footer dismiss path,
+// and Windows-order footer buttons (primary immediately before Cancel at
+// bottom right).
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -46,7 +46,6 @@ import type {
 import type { CreateConnectionRequest } from "../../types";
 
 export function InstallerToolDialog() {
-  const { t } = useTranslation();
   const open = useInstallerStore((s) => s.openDialog);
   const catalog = useInstallerStore((s) => s.catalog);
   const closeDialog = useInstallerStore((s) => s.closeDialog);
@@ -72,14 +71,6 @@ export function InstallerToolDialog() {
         className="connection-dialog installer-tool-dialog"
         role="dialog"
       >
-        <button
-          type="button"
-          className="installer-tool-dialog__close"
-          aria-label={t("common.close")}
-          onClick={closeDialog}
-        >
-          ×
-        </button>
         {open.mode === "stepper" ? (
           <StepperBody recipe={recipe} />
         ) : (

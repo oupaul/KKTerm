@@ -53,6 +53,10 @@ test("SFTP popup close button is anchored to the dialog top right", async () => 
     new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url),
     "utf8",
   );
+  const connectionStyles = await readFile(
+    new URL("../src/modules/workspace/connections/connections.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(
     terminalStyles,
@@ -60,8 +64,8 @@ test("SFTP popup close button is anchored to the dialog top right", async () => 
     "the SFTP popup dialog should establish a positioning context for its close button",
   );
   assert.match(
-    terminalStyles,
-    /\.sftp-popup-dialog\s+\.connection-dialog-close\s*\{[^}]*position:\s*absolute;[^}]*top:\s*16px;[^}]*right:\s*16px;/s,
-    "the SFTP popup close button should be fixed to the top-right corner",
+    connectionStyles,
+    /\.connection-dialog-header\s+\.connection-dialog-close,\s*\.connection-dialog-header\s+\.mcp-dialog-close-button\s*\{[^}]*position:\s*absolute;[^}]*top:\s*0;[^}]*right:\s*0;/s,
+    "the shared dialog close button should be fixed to the top-right corner",
   );
 });

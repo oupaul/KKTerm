@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
 import {
   describeMcpError,
   invokeCommand,
@@ -104,14 +103,6 @@ export function AddMcpServerDialog({
             <p className="panel-label">{t("settings.mcpServersTitle")}</p>
             <h2>{t("settings.mcpAddServer")}</h2>
           </div>
-          <button
-            aria-label={t("common.close")}
-            className="icon-button"
-            onClick={onClose}
-            type="button"
-          >
-            <X size={14} />
-          </button>
         </header>
 
         {stage === "paste" && (
@@ -127,9 +118,6 @@ export function AddMcpServerDialog({
             />
             {parseError && <div className="settings-error">{parseError}</div>}
             <div className="dialog-actions">
-              <button className="toolbar-button" onClick={onClose} type="button">
-                {t("common.cancel")}
-              </button>
               <button
                 className="toolbar-button primary"
                 disabled={jsonText.trim().length === 0}
@@ -137,6 +125,9 @@ export function AddMcpServerDialog({
                 type="button"
               >
                 {t("settings.mcpPasteContinue")}
+              </button>
+              <button className="toolbar-button" onClick={onClose} type="button">
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -204,6 +195,9 @@ export function AddMcpServerDialog({
               >
                 {t("settings.mcpCreateServer")}
               </button>
+              <button className="toolbar-button" disabled={submitting} onClick={onClose} type="button">
+                {t("common.cancel")}
+              </button>
             </div>
           </div>
         )}
@@ -249,6 +243,9 @@ export function AddMcpServerDialog({
                 type="button"
               >
                 {t("settings.mcpCreateServer")}
+              </button>
+              <button className="toolbar-button" disabled={submitting} onClick={onClose} type="button">
+                {t("common.cancel")}
               </button>
             </div>
           </div>
