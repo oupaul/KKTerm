@@ -18,12 +18,14 @@ type ScreenshotRegionState = {
 };
 
 export function ScreenshotMenu({
+  buttonLabel,
   buttonClassName = "icon-button",
   dataTutorialId = "workspace.screenshotMenu",
   targetRef,
   targetLabel: _targetLabel,
   onPreCapture,
 }: {
+  buttonLabel?: string;
   buttonClassName?: string;
   dataTutorialId?: string;
   targetRef: RefObject<HTMLElement | null>;
@@ -227,6 +229,7 @@ export function ScreenshotMenu({
           type="button"
         >
           <Camera size={13} />
+          {buttonLabel ? <span>{buttonLabel}</span> : null}
         </button>
         {menuOpen ? (
           <div className="terminal-menu screenshot-menu" role="menu">

@@ -15,6 +15,7 @@ export function WorkspaceSettings() {
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
   const hasChanges =
     draft.hideTopTabButtons !== generalSettings.hideTopTabButtons ||
+    draft.submitAiAttachmentsDirectly !== generalSettings.submitAiAttachmentsDirectly ||
     draft.separateSplitTerminalBackgrounds !== generalSettings.separateSplitTerminalBackgrounds ||
     draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail;
 
@@ -85,6 +86,24 @@ export function WorkspaceSettings() {
             <span>
               <strong>{t("settings.hideTopTabButtons")}</strong>
               <small>{t("settings.hideTopTabButtonsDesc")}</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.sectionAiAssistant")}</legend>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.submitAiAttachmentsDirectly}
+              onChange={(checked) =>
+                setDraft((state) => ({ ...state, submitAiAttachmentsDirectly: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.submitAiAttachmentsDirectly")}</strong>
+              <small>{t("settings.submitAiAttachmentsDirectlyDesc")}</small>
             </span>
           </label>
         </div>

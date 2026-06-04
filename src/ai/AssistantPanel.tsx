@@ -85,7 +85,7 @@ import {
   type AssistantSecretRequest,
 } from "./secretRequest";
 import { scrollAssistantChatToBottom } from "./assistantScroll";
-import type { AiToolPermissionMode, QuickCommand } from "../types";
+import type { AiToolPermissionMode, AssistantContextSnippet, QuickCommand } from "../types";
 import { resolveCreateWidgetFollowupPrompt } from "./widgetFollowupPrompt";
 import { MarkdownContent } from "./AssistantMarkdownContent";
 import { AssistantToolApprovalCards } from "./AssistantToolApprovalCards";
@@ -123,6 +123,7 @@ type AssistantQueuedPrompt = {
   id: string;
   intent: AssistantPromptIntent;
   prompt: string;
+  contextSnippet?: AssistantContextSnippet;
 };
 
 function resolveAssistantOutputLanguage(outputLanguage: string): string | undefined {
@@ -851,11 +852,15 @@ export function AssistantPanel({
   );
   const requestRdpPreCapture = useWorkspaceStore((state) => state.requestRdpPreCapture);
   const assistantContextSnippet = useWorkspaceStore((state) => state.assistantContextSnippet);
+  const assistantDirectSubmitRequest = useWorkspaceStore((state) => state.assistantDirectSubmitRequest);
   const setAssistantContextSnippet = useWorkspaceStore(
     (state) => state.setAssistantContextSnippet,
   );
   const clearAssistantContextSnippet = useWorkspaceStore(
     (state) => state.clearAssistantContextSnippet,
+  );
+  const clearAssistantDirectSubmitRequest = useWorkspaceStore(
+    (state) => state.clearAssistantDirectSubmitRequest,
   );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
@@ -2161,11 +2166,16 @@ export function AssistantPanel({
     });
   }
 
-  function queueAssistantPrompt(normalizedPrompt: string, requestIntent: AssistantPromptIntent) {
+  function queueAssistantPrompt(
+    normalizedPrompt: string,
+    requestIntent: AssistantPromptIntent,
+    contextSnippet?: AssistantContextSnippet,
+  ) {
     const queuedPrompt: AssistantQueuedPrompt = {
       id: `assistant-queued-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       intent: requestIntent,
       prompt: normalizedPrompt,
+      contextSnippet,
     };
     setAssistantPromptQueueState((current) => [...current, queuedPrompt]);
     setPrompt("");
@@ -2188,9 +2198,40 @@ export function AssistantPanel({
     }
     setAssistantPromptQueueState(remaining);
     window.setTimeout(() => {
-      void runAssistantPrompt(nextPrompt.prompt, nextPrompt.intent, false);
+      void runAssistantPrompt(
+        nextPrompt.prompt,
+        nextPrompt.intent,
+        Boolean(nextPrompt.contextSnippet),
+        nextPrompt.contextSnippet,
+      );
     }, 0);
   }
+
+  useEffect(() => {
+    if (!assistantDirectSubmitRequest) {
+      return;
+    }
+    clearAssistantDirectSubmitRequest(assistantDirectSubmitRequest.id);
+    const normalizedPrompt = assistantDirectSubmitRequest.prompt.trim();
+    if (!normalizedPrompt) {
+      return;
+    }
+    const requestIntent = assistantIntentForPrompt("chat", normalizedPrompt);
+    if (isSendingPrompt) {
+      queueAssistantPrompt(
+        normalizedPrompt,
+        requestIntent,
+        assistantDirectSubmitRequest.snippet,
+      );
+      return;
+    }
+    void runAssistantPrompt(
+      normalizedPrompt,
+      "chat",
+      true,
+      assistantDirectSubmitRequest.snippet,
+    );
+  }, [assistantDirectSubmitRequest]);
 
   async function submitAssistantPrompt() {
     const normalizedPrompt = prompt.trim();
@@ -2210,30 +2251,39 @@ export function AssistantPanel({
     normalizedPrompt: string,
     selectedAssistantIntent: AssistantPromptIntent,
     includeComposerContext: boolean,
+    contextSnippetOverride?: AssistantContextSnippet,
   ) {
     const requestIntent = assistantIntentForPrompt(selectedAssistantIntent, normalizedPrompt);
     setAssistantIntent(requestIntent);
+    const contextSnippet = contextSnippetOverride ?? assistantContextSnippet;
     const textAttachments: AssistantTextAttachment[] =
-      includeComposerContext && assistantContextSnippet?.kind === "text"
+      includeComposerContext && contextSnippet?.kind === "text"
         ? [
             {
-              id: assistantContextSnippet.id,
-              sourceLabel: assistantContextSnippet.sourceLabel,
-              text: assistantContextSnippet.text,
-              capturedAt: assistantContextSnippet.capturedAt,
+              id: contextSnippet.id,
+              sourceLabel: contextSnippet.sourceLabel,
+              text: contextSnippet.text,
+              capturedAt: contextSnippet.capturedAt,
             },
           ]
         : [];
     let imageAttachments: AssistantImageAttachment[] = [];
     if (includeComposerContext && currentModelSupportsImageInput) {
       imageAttachments = [...pastedImageContexts];
-      if (assistantScreenshotContext) {
+      const screenshotContext =
+        contextSnippet?.kind === "screenshot"
+          ? {
+              sourceLabel: contextSnippet.sourceLabel,
+              dataUrl: contextSnippet.imageDataUrl,
+            }
+          : undefined;
+      if (screenshotContext) {
         try {
           imageAttachments = [
             ...imageAttachments,
             await createImageAttachment(
-              assistantScreenshotContext.sourceLabel,
-              assistantScreenshotContext.dataUrl,
+              screenshotContext.sourceLabel,
+              screenshotContext.dataUrl,
             ),
           ];
         } catch (error) {
@@ -2289,7 +2339,7 @@ export function AssistantPanel({
         setFileContexts([]);
       }
       setImagePasteRejected(false);
-      if (includeComposerContext && assistantContextSnippet) {
+      if (includeComposerContext && assistantContextSnippet && !contextSnippetOverride) {
         clearAssistantContextSnippet();
       }
       setChatError("");
@@ -2312,7 +2362,7 @@ export function AssistantPanel({
       setFileContexts([]);
     }
     setImagePasteRejected(false);
-    if (includeComposerContext && assistantContextSnippet) {
+    if (includeComposerContext && assistantContextSnippet && !contextSnippetOverride) {
       clearAssistantContextSnippet();
     }
     setChatError("");

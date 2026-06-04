@@ -239,6 +239,8 @@ pub struct GeneralSettings {
     show_all_connections_in_tree: bool,
     #[serde(default)]
     hide_top_tab_buttons: bool,
+    #[serde(default = "default_submit_ai_attachments_directly")]
+    submit_ai_attachments_directly: bool,
     #[serde(default)]
     separate_split_terminal_backgrounds: bool,
     #[serde(default = "default_show_installer_on_rail")]
@@ -4693,6 +4695,7 @@ fn default_general_settings() -> GeneralSettings {
         show_connected_connections_in_rail: true,
         show_all_connections_in_tree: false,
         hide_top_tab_buttons: false,
+        submit_ai_attachments_directly: default_submit_ai_attachments_directly(),
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
@@ -4714,6 +4717,10 @@ fn default_general_settings() -> GeneralSettings {
 }
 
 fn default_use_directx_screen_capture() -> bool {
+    true
+}
+
+fn default_submit_ai_attachments_directly() -> bool {
     true
 }
 
@@ -6915,6 +6922,7 @@ mod tests {
         assert!(defaults.show_connected_connections_in_rail);
         assert!(!defaults.show_all_connections_in_tree);
         assert!(!defaults.hide_top_tab_buttons);
+        assert!(defaults.submit_ai_attachments_directly);
         assert!(!defaults.separate_split_terminal_backgrounds);
         assert!(defaults.show_installer_on_rail);
         assert_eq!(defaults.installer_check_interval_seconds, 86_400);
@@ -6940,6 +6948,7 @@ mod tests {
                 show_connected_connections_in_rail: true,
                 show_all_connections_in_tree: true,
                 hide_top_tab_buttons: true,
+                submit_ai_attachments_directly: false,
                 separate_split_terminal_backgrounds: true,
                 show_installer_on_rail: false,
                 installer_check_interval_seconds: 604_800,
@@ -6973,6 +6982,7 @@ mod tests {
         assert!(updated.show_connected_connections_in_rail);
         assert!(updated.show_all_connections_in_tree);
         assert!(updated.hide_top_tab_buttons);
+        assert!(!updated.submit_ai_attachments_directly);
         assert!(updated.separate_split_terminal_backgrounds);
         assert!(!updated.show_installer_on_rail);
         assert_eq!(updated.installer_check_interval_seconds, 604_800);
@@ -7306,6 +7316,7 @@ mod tests {
                 show_connected_connections_in_rail: true,
                 show_all_connections_in_tree: true,
                 hide_top_tab_buttons: true,
+                submit_ai_attachments_directly: true,
                 separate_split_terminal_backgrounds: true,
                 show_installer_on_rail: false,
                 installer_check_interval_seconds: 86_400,
@@ -7335,6 +7346,7 @@ mod tests {
                 show_connected_connections_in_rail: false,
                 show_all_connections_in_tree: false,
                 hide_top_tab_buttons: false,
+                submit_ai_attachments_directly: false,
                 separate_split_terminal_backgrounds: false,
                 show_installer_on_rail: true,
                 installer_check_interval_seconds: 86_400,
@@ -7366,6 +7378,7 @@ mod tests {
         assert!(imported.general_settings.show_connected_connections_in_rail);
         assert!(imported.general_settings.show_all_connections_in_tree);
         assert!(imported.general_settings.hide_top_tab_buttons);
+        assert!(imported.general_settings.submit_ai_attachments_directly);
         assert!(
             imported
                 .general_settings

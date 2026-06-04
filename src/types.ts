@@ -205,6 +205,7 @@ export interface GeneralSettings {
   showConnectedConnectionsInRail: boolean;
   showAllConnectionsInTree: boolean;
   hideTopTabButtons: boolean;
+  submitAiAttachmentsDirectly: boolean;
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
   installerCheckIntervalSeconds: number;
@@ -790,5 +791,11 @@ export type AssistantContextSnippet =
       height: number;
       capturedAt: string;
     };
+
+export interface AssistantDirectSubmitRequest {
+  id: string;
+  prompt: string;
+  snippet: AssistantContextSnippet;
+}
 
 

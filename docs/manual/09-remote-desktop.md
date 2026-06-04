@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`
+- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
 - Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
 - Synonyms: "remote desktop", "screen sharing", "mstsc", "VNC viewer", "send three-finger salute", "high DPI scaling", "remote screen size"
 
@@ -38,6 +38,7 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
   - **RDP**: clicking opens a native context menu with the hint `remoteDesktop.sendCtrlAltDelHint` ("Press CTRL+ALT+END to Send CTRL+ALT+DEL"). The embedded Microsoft RDP ActiveX control cannot reliably synthesize the Secure Attention Sequence from outside its own keyboard hook, so the local Ctrl+Alt+End hotkey (set via `HotKeyCtrlAltDel = VK_END`) is the supported path.
   - **VNC**: the same button still calls `send_vnc_ctrl_alt_delete` directly.
 - `remoteDesktop.reconnect` — explicit reconnect button.
+- `workspace.sendEntirePanelToAi` — captures the visible remote desktop Pane for AI Assistant. By default `settings.submitAiAttachmentsDirectly` submits the screenshot with `ai.directAttachmentPrompt`; when disabled, the button only attaches the screenshot to the composer.
 
 Tutorial targets: `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`.
 

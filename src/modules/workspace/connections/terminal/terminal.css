@@ -343,6 +343,32 @@
   opacity: 0.72;
 }
 
+.tmux-x11-button {
+  flex: 0 0 auto;
+}
+
+.tmux-x11-button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.tmux-x11-button.disabled {
+  color: #7f8a98;
+  opacity: 0.45;
+}
+
+.tmux-x11-button.enabled {
+  color: #5ee787;
+  background: rgba(94, 231, 135, 0.08);
+  border-color: rgba(94, 231, 135, 0.2);
+}
+
+.tmux-x11-button.rejected {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.08);
+  border-color: rgba(255, 107, 107, 0.22);
+}
+
 .tmux-session-edit-button {
   display: inline-flex;
   align-items: center;

@@ -6,7 +6,7 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Globe2, Menu, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Globe2, Menu, Monitor, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -504,13 +504,11 @@ function TmuxSessionTag({
   onMouseModeChange,
   sessionId,
   tabId,
-  x11ForwardingStatus,
 }: {
   connection: Connection;
   onMouseModeChange: (enabled: boolean) => void;
   sessionId?: string;
   tabId: string;
-  x11ForwardingStatus: "disabled" | "enabled" | "rejected";
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -775,11 +773,6 @@ function TmuxSessionTag({
           title={t("terminal.showTmux")}
           type="button"
         >
-          <X
-            aria-hidden="true"
-            className={`tmux-x11-indicator ${x11ForwardingStatus}`}
-            size={12}
-          />
           <span>tmux {sessionId}</span>
         </button>
       </div>
@@ -960,6 +953,25 @@ function tmuxConnectionRequest(connection: Connection) {
     authMethod: connection.authMethod,
     secretOwnerId: connectionPasswordOwnerId(connection),
   };
+}
+
+function XServerToolbarIndicator({
+  status,
+}: {
+  status: "disabled" | "enabled" | "rejected";
+}) {
+  const { t } = useTranslation();
+  return (
+    <button
+      aria-label={t("settings.xServer")}
+      className={`terminal-pane-action tmux-x11-button ${status}`}
+      disabled
+      title={t("settings.xServer")}
+      type="button"
+    >
+      <Monitor size={13} />
+    </button>
+  );
 }
 
 function SshPortForwardMenu({
@@ -1212,11 +1224,15 @@ function TerminalPaneView({
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
+  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const x11ForwardingStatus = pane.x11ForwardingStatus ?? (
     pane.connection?.type === "ssh" && sshSettings.managedXServerEnabled ? "enabled" : "disabled"
   );
   const setAssistantContextSnippet = useWorkspaceStore(
     (state) => state.setAssistantContextSnippet,
+  );
+  const submitAssistantContextSnippet = useWorkspaceStore(
+    (state) => state.submitAssistantContextSnippet,
   );
   const markConnectionSessionStarted = useWorkspaceStore(
     (state) => state.markConnectionSessionStarted,
@@ -1973,13 +1989,18 @@ function TerminalPaneView({
     const sourceLabel = pane.connection
       ? `${pane.connection.name} ${t("terminal.terminalBuffer")}`
       : `${pane.title} ${t("terminal.terminalBuffer")}`;
-    setAssistantContextSnippet({
+    const snippet = {
       id: `terminal-buffer-${Date.now()}`,
       kind: "text",
       sourceLabel,
       text,
       capturedAt: new Date().toISOString(),
-    });
+    } as const;
+    if (generalSettings.submitAiAttachmentsDirectly) {
+      submitAssistantContextSnippet(snippet, t("ai.directAttachmentPrompt"));
+      return;
+    }
+    setAssistantContextSnippet(snippet);
   }
 
   function handleSearchNext() {
@@ -2089,9 +2110,9 @@ function TerminalPaneView({
               onMouseModeChange={setTmuxMouseEnabled}
               sessionId={pane.tmuxSessionId}
               tabId={tabId}
-              x11ForwardingStatus={x11ForwardingStatus}
             />
           ) : null}
+          {isSshPane ? <XServerToolbarIndicator status={x11ForwardingStatus} /> : null}
           {recordingInfo ? <span className="terminal-recording-status">{t("terminal.recording")}</span> : null}
           <button
             className={`terminal-pane-action terminal-recording-button${recordingInfo ? " active" : ""}`}
@@ -2138,12 +2159,6 @@ function TerminalPaneView({
           >
             <Copy size={13} />
           </button>
-          <ScreenshotMenu
-            buttonClassName="terminal-pane-action"
-            dataTutorialId="workspace.screenshotMenu"
-            targetLabel={`${pane.connection?.name ?? pane.title} ${t("workspace.terminalPane")}`}
-            targetRef={paneRef}
-          />
           <button
             className="terminal-pane-action"
             aria-label={t("terminal.sendToAi")}
@@ -2249,6 +2264,13 @@ function TerminalPaneView({
                   <Save size={13} />
                   {t("terminal.saveBuffer")}
                 </button>
+                <ScreenshotMenu
+                  buttonClassName="terminal-menu-item"
+                  buttonLabel={t("workspace.takeScreenshot")}
+                  dataTutorialId="workspace.screenshotMenu"
+                  targetLabel={`${pane.connection?.name ?? pane.title} ${t("workspace.terminalPane")}`}
+                  targetRef={paneRef}
+                />
                 <button
                   className="terminal-menu-item"
                   onClick={handleOpenRecordings}

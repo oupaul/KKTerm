@@ -121,8 +121,12 @@ export function RemoteDesktopWorkspace({
   const setAssistantContextSnippet = useWorkspaceStore(
     (state) => state.setAssistantContextSnippet,
   );
+  const submitAssistantContextSnippet = useWorkspaceStore(
+    (state) => state.submitAssistantContextSnippet,
+  );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const rdpPreCaptureSignal = useWorkspaceStore((state) => state.rdpPreCaptureSignal);
+  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
   const vncSettings = useWorkspaceStore((state) => state.vncSettings);
   const [suppressed, setSuppressed] = useState(false);
@@ -257,7 +261,7 @@ export function RemoteDesktopWorkspace({
           height: Math.max(1, Math.round(bounds.height)),
         },
       });
-      setAssistantContextSnippet({
+      const snippet = {
         id: `remote-desktop-screenshot-${Date.now()}`,
         kind: "screenshot",
         sourceLabel: `${tab.title} ${typeLabel} ${t("workspace.screenshot")}`,
@@ -265,7 +269,12 @@ export function RemoteDesktopWorkspace({
         width: screenshot.width,
         height: screenshot.height,
         capturedAt: new Date().toISOString(),
-      });
+      } as const;
+      if (generalSettings.submitAiAttachmentsDirectly) {
+        submitAssistantContextSnippet(snippet, t("ai.directAttachmentPrompt"));
+      } else {
+        setAssistantContextSnippet(snippet);
+      }
       showStatusBarNotice(t("workspace.sentToAi"), { tone: "success" });
     } catch (error) {
       showStatusBarNotice(

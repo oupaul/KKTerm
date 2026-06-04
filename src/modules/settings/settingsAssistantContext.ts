@@ -140,6 +140,10 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         description: "Enable Child Connection Tabs: hides the top Tab Strip and shows saved Child Connection Tabs under their parent Connections in the Connection Tree.",
       },
       {
+        key: "settings.submitAiAttachmentsDirectly",
+        description: "Choose whether Workspace Send to AI Assistant actions submit captured context immediately or only attach it to the composer.",
+      },
+      {
         key: "settings.separateSplitTerminalBackgrounds",
         description: "Allow split terminal Panes to keep separate backgrounds instead of sharing one terminal workspace background.",
       },

@@ -67,7 +67,7 @@ test("remote X11 forwarding rejection keeps SSH shell open and reports rejected 
   );
 });
 
-test("SSH tmux toolbar tag shows dim X11 forwarding state", async () => {
+test("SSH terminal toolbar shows separate X server forwarding state", async () => {
   const terminalSource = await readFile(
     new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
     "utf8",
@@ -84,27 +84,27 @@ test("SSH tmux toolbar tag shows dim X11 forwarding state", async () => {
   );
   assert.match(
     terminalSource,
-    /className=\{`tmux-x11-indicator \$\{x11ForwardingStatus\}`\}/,
-    "the tmux tag should render a conditional X11 indicator before its label",
+    /<XServerToolbarIndicator status=\{x11ForwardingStatus\} \/>/,
+    "the SSH toolbar should render X11 forwarding state outside the tmux tag",
   );
   assert.match(
     terminalSource,
     /<span>tmux \{sessionId\}<\/span>/,
-    "the X11 indicator should sit to the left of the tmux session label",
+    "the tmux session label should not own the X11 indicator",
   );
   assert.match(
     terminalStyles,
-    /\.tmux-x11-indicator\.disabled\s*\{[^}]*color:\s*#7f8a98;[^}]*opacity:\s*0\.45;/s,
+    /\.tmux-x11-button\.disabled\s*\{[^}]*color:\s*#7f8a98;[^}]*opacity:\s*0\.45;/s,
     "disabled X11 forwarding should render as dim grey",
   );
   assert.match(
     terminalStyles,
-    /\.tmux-x11-indicator\.enabled\s*\{[^}]*color:\s*#5ee787;[^}]*opacity:\s*0\.62;/s,
-    "enabled X11 forwarding should render as a subtle dim green",
+    /\.tmux-x11-button\.enabled\s*\{[^}]*color:\s*#5ee787;[^}]*background:\s*rgba\(94,\s*231,\s*135,\s*0\.08\);/s,
+    "enabled X11 forwarding should render as a subtle green button",
   );
   assert.match(
     terminalStyles,
-    /\.tmux-x11-indicator\.rejected\s*\{[^}]*color:\s*#ff6b6b;[^}]*opacity:\s*0\.72;/s,
-    "rejected X11 forwarding should render as dim red",
+    /\.tmux-x11-button\.rejected\s*\{[^}]*color:\s*#ff6b6b;[^}]*background:\s*rgba\(255,\s*107,\s*107,\s*0\.08\);/s,
+    "rejected X11 forwarding should render as a subtle red button",
   );
 });

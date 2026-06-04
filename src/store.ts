@@ -23,6 +23,7 @@ import {
 import type {
   AppearanceSettings,
   AiProviderSettings,
+  AssistantDirectSubmitRequest,
   AssistantContextSnippet,
   Connection,
   PerformanceMetrics,
@@ -796,6 +797,7 @@ interface WorkspaceState {
   aiProviderHasApiKey: boolean;
   assistantWorking: boolean;
   assistantContextSnippet?: AssistantContextSnippet;
+  assistantDirectSubmitRequest?: AssistantDirectSubmitRequest;
   rdpPreCaptureSignal: number;
   activeSessionCounts: Record<string, number>;
   performanceMetrics: PerformanceMetrics;
@@ -815,7 +817,9 @@ interface WorkspaceState {
   setAiProviderHasApiKey: (hasApiKey: boolean) => void;
   setAssistantWorking: (assistantWorking: boolean) => void;
   setAssistantContextSnippet: (snippet: AssistantContextSnippet) => void;
+  submitAssistantContextSnippet: (snippet: AssistantContextSnippet, prompt: string) => void;
   clearAssistantContextSnippet: () => void;
+  clearAssistantDirectSubmitRequest: (id: string) => void;
   requestRdpPreCapture: () => void;
   setFrontendLaunchMs: (frontendLaunchMs: number) => void;
   setPerformanceSnapshot: (snapshot: PerformanceSnapshot) => void;
@@ -940,6 +944,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   aiProviderHasApiKey: false,
   assistantWorking: false,
   assistantContextSnippet: undefined,
+  assistantDirectSubmitRequest: undefined,
   rdpPreCaptureSignal: 0,
   activeSessionCounts: {},
   performanceMetrics: {},
@@ -960,8 +965,22 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setAssistantWorking: (assistantWorking) => set({ assistantWorking }),
   setAssistantContextSnippet: (assistantContextSnippet) =>
     set({ assistantContextSnippet }),
+  submitAssistantContextSnippet: (snippet, prompt) =>
+    set({
+      assistantDirectSubmitRequest: {
+        id: `assistant-direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        prompt,
+        snippet,
+      },
+    }),
   clearAssistantContextSnippet: () =>
     set({ assistantContextSnippet: undefined }),
+  clearAssistantDirectSubmitRequest: (id) =>
+    set((state) =>
+      state.assistantDirectSubmitRequest?.id === id
+        ? { assistantDirectSubmitRequest: undefined }
+        : {},
+    ),
   requestRdpPreCapture: () =>
     set((state) => ({ rdpPreCaptureSignal: state.rdpPreCaptureSignal + 1 })),
   setFrontendLaunchMs: (frontendLaunchMs) =>
