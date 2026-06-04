@@ -34,6 +34,10 @@ pub fn assistant_skills_root(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir.join("assistant-skills"))
 }
 
+pub fn custom_assistant_skills_root(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(assistant_skills_root(app)?.join("custom"))
+}
+
 pub fn ensure_bundled_skills_installed(app: &AppHandle) -> Result<(), String> {
     let user_root = assistant_skills_root(app)?;
     fs::create_dir_all(&user_root)
@@ -47,17 +51,38 @@ pub fn ensure_bundled_skills_installed(app: &AppHandle) -> Result<(), String> {
 pub fn list_skill_summaries(
     root: &Path,
     disabled_names: &[String],
+    include_custom: bool,
 ) -> Result<Vec<AssistantSkillSummary>, String> {
     fs::create_dir_all(root)
         .map_err(|error| format!("failed to create assistant skills folder: {error}"))?;
     let disabled = disabled_names.iter().cloned().collect::<HashSet<_>>();
     let mut summaries = Vec::new();
+    read_skill_summaries(root, Some("custom"), &disabled, &mut summaries)?;
+    if include_custom {
+        let custom_root = root.join("custom");
+        fs::create_dir_all(&custom_root)
+            .map_err(|error| format!("failed to create custom assistant skills folder: {error}"))?;
+        read_skill_summaries(&custom_root, None, &disabled, &mut summaries)?;
+    }
+    summaries.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(summaries)
+}
+
+fn read_skill_summaries(
+    root: &Path,
+    skip_dir_name: Option<&str>,
+    disabled: &HashSet<String>,
+    summaries: &mut Vec<AssistantSkillSummary>,
+) -> Result<(), String> {
     for entry in fs::read_dir(root)
         .map_err(|error| format!("failed to read assistant skills folder: {error}"))?
     {
         let entry = entry.map_err(|error| format!("failed to read skill entry: {error}"))?;
         let path = entry.path();
         if !path.is_dir() {
+            continue;
+        }
+        if skip_dir_name.is_some_and(|name| entry.file_name().to_string_lossy() == name) {
             continue;
         }
         match parse_skill_dir(&path) {
@@ -84,8 +109,7 @@ pub fn list_skill_summaries(
             }
         }
     }
-    summaries.sort_by(|a, b| a.name.cmp(&b.name));
-    Ok(summaries)
+    Ok(())
 }
 
 pub fn open_skills_folder(app: &AppHandle) -> Result<(), String> {
@@ -98,12 +122,28 @@ pub fn open_skills_folder(app: &AppHandle) -> Result<(), String> {
         .map_err(|error| format!("failed to open assistant skills folder: {error}"))
 }
 
+pub fn open_custom_skills_folder(app: &AppHandle) -> Result<(), String> {
+    ensure_bundled_skills_installed(app)?;
+    let root = custom_assistant_skills_root(app)?;
+    fs::create_dir_all(&root)
+        .map_err(|error| format!("failed to create custom assistant skills folder: {error}"))?;
+    app.opener()
+        .open_path(root.to_string_lossy(), None::<&str>)
+        .map_err(|error| format!("failed to open custom assistant skills folder: {error}"))
+}
+
 pub fn open_skill_folder(app: &AppHandle, name: &str) -> Result<(), String> {
     ensure_bundled_skills_installed(app)?;
     validate_skill_name(name)?;
     let root = assistant_skills_root(app)?;
     let path = root.join(name);
-    parse_skill_dir(&path)?;
+    let custom_path = root.join("custom").join(name);
+    let path = if parse_skill_dir(&path).is_ok() {
+        path
+    } else {
+        parse_skill_dir(&custom_path)?;
+        custom_path
+    };
     app.opener()
         .open_path(path.to_string_lossy(), None::<&str>)
         .map_err(|error| format!("failed to open assistant skill folder: {error}"))
@@ -364,6 +404,52 @@ Follow a cautious read-before-write flow.
         let error = parse_skill_dir(&dir).expect_err("mismatched skill is rejected");
 
         assert!(error.contains("must match"));
+    }
+
+    #[test]
+    fn list_skill_summaries_includes_custom_folder_only_when_enabled() {
+        let root = temp_skill_root("custom-list");
+        let bundled_dir = root.join("ssh-troubleshooter");
+        let custom_dir = root.join("custom").join("custom-helper");
+        fs::create_dir_all(&bundled_dir).expect("create bundled skill");
+        fs::create_dir_all(&custom_dir).expect("create custom skill");
+        fs::write(
+            bundled_dir.join("SKILL.md"),
+            "---
+name: ssh-troubleshooter
+description: Help with SSH.
+---
+Bundled
+",
+        )
+        .expect("write bundled skill");
+        fs::write(
+            custom_dir.join("SKILL.md"),
+            "---
+name: custom-helper
+description: Help with custom workflows.
+---
+Custom
+",
+        )
+        .expect("write custom skill");
+
+        let without_custom = list_skill_summaries(&root, &[], false)
+            .expect("summaries without custom load")
+            .into_iter()
+            .map(|summary| summary.name)
+            .collect::<Vec<_>>();
+        let with_custom = list_skill_summaries(&root, &[], true)
+            .expect("summaries with custom load")
+            .into_iter()
+            .map(|summary| summary.name)
+            .collect::<Vec<_>>();
+
+        assert_eq!(without_custom, vec!["ssh-troubleshooter".to_string()]);
+        assert_eq!(
+            with_custom,
+            vec!["custom-helper".to_string(), "ssh-troubleshooter".to_string()]
+        );
     }
 
     #[test]
