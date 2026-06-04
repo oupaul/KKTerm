@@ -23,11 +23,6 @@ on:
         required: false
         default: false
         type: boolean
-      include_arm64:
-        description: "Also build and publish the native Windows on Arm (ARM64) installer"
-        required: false
-        default: false
-        type: boolean
       skip_ai_release_notes:
         description: "Use deterministic release notes without OpenAI"
         required: false
@@ -77,12 +72,14 @@ jobs:
       - name: Publish release
         shell: pwsh
         run: |
-          $releaseArgs = @("-File", "scripts/release-github.ps1")
+          # Use the both-arch wrapper so CI/CD always builds and publishes the
+          # x64 and ARM64 installers together, matching the local
+          # `npm run release:github:both-arch` path.
+          $releaseArgs = @("-File", "scripts/release-github-both-arch.ps1")
           if ("${{ inputs.draft }}" -eq "true") { $releaseArgs += "-Draft" }
           if ("${{ inputs.prerelease }}" -eq "true") { $releaseArgs += "-Prerelease" }
           if ("${{ inputs.skip_build }}" -eq "true") { $releaseArgs += "-SkipBuild" }
           if ("${{ inputs.skip_smoke }}" -eq "true") { $releaseArgs += "-SkipSmoke" }
           if ("${{ inputs.skip_ai_release_notes }}" -eq "true") { $releaseArgs += "-SkipAiReleaseNotes" }
-          if ("${{ inputs.include_arm64 }}" -eq "true") { $releaseArgs += "-IncludeArm64" }
           if ("${{ inputs.dry_run }}" -eq "true") { $releaseArgs += "-DryRun" }
           powershell -NoProfile -ExecutionPolicy Bypass @releaseArgs

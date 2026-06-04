@@ -95,7 +95,7 @@ $env:OPENAI_API_KEY = "sk-..."
 npm run release:github
 ```
 
-GitHub Actions uses the same script through the manual **Release** workflow. Store the API key as the repository secret `OPENAI_API_KEY`; the workflow exposes it to the script as the same environment variable. Use the workflow inputs to mark a release as draft/prerelease, skip the installer build or smoke test, disable AI notes, or run a dry preview.
+GitHub Actions uses the same scripts through the manual **Release** workflow. The workflow invokes `scripts/release-github-both-arch.ps1` so a CI/CD release always builds and publishes the x64 **and** ARM64 installers together, matching the local `npm run release:github:both-arch` path (and the `Direct Downloads` section, which links both architecture assets). Store the API key as the repository secret `OPENAI_API_KEY`; the workflow exposes it to the script as the same environment variable. Use the workflow inputs to mark a release as draft/prerelease, skip the installer build or smoke test, disable AI notes, or run a dry preview.
 
 ## Known Limitations
 
