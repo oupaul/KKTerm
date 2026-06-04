@@ -255,8 +255,10 @@ export function TabStrip() {
 }
 
 export function WorkspaceCanvas({
+  onOpenAssistant = () => undefined,
   workspaceActive = true,
 }: {
+  onOpenAssistant?: () => void;
   workspaceActive?: boolean;
 } = {}) {
   const { t } = useTranslation();
@@ -327,6 +329,7 @@ export function WorkspaceCanvas({
             <RemoteDesktopWorkspace
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onOpenAssistant={onOpenAssistant}
               tab={tab}
             />
           );
@@ -335,6 +338,7 @@ export function WorkspaceCanvas({
           <TerminalWorkspace
             isActive={workspaceActive && tab.id === activeTabId}
             key={tab.id}
+            onOpenAssistant={onOpenAssistant}
             tab={tab}
           />
         );

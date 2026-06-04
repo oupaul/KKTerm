@@ -81,9 +81,11 @@ function createRemoteDesktopSessionId(kind: "rdp" | "vnc") {
 
 export function RemoteDesktopWorkspace({
   isActive,
+  onOpenAssistant = () => undefined,
   tab,
 }: {
   isActive: boolean;
+  onOpenAssistant?: () => void;
   tab: WorkspaceTab;
 }) {
   const { t } = useTranslation();
@@ -275,6 +277,7 @@ export function RemoteDesktopWorkspace({
       } else {
         setAssistantContextSnippet(snippet);
       }
+      onOpenAssistant();
       showStatusBarNotice(t("workspace.sentToAi"), { tone: "success" });
     } catch (error) {
       showStatusBarNotice(

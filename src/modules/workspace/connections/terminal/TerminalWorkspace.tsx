@@ -74,11 +74,13 @@ function terminalBufferSnapshotForWrite(bufferText: string) {
 export function TerminalWorkspace({
   allowPaneLayoutControls = true,
   isActive,
+  onOpenAssistant = () => undefined,
   showSftpButton = true,
   tab,
 }: {
   allowPaneLayoutControls?: boolean;
   isActive: boolean;
+  onOpenAssistant?: () => void;
   showSftpButton?: boolean;
   tab: WorkspaceTab;
 }) {
@@ -259,6 +261,7 @@ export function TerminalWorkspace({
             canSplit={canSplit}
             usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
             onFontChange={handleFontChange}
+            onOpenAssistant={onOpenAssistant}
             onOpenSftp={openSftpDialog}
             onSaveBuffer={(paneId) => void handleSaveBuffer(paneId)}
             showSftpButton={showSftpButton}
@@ -313,6 +316,7 @@ function TerminalLayoutView({
   canSplit,
   usePaneTerminalBackgrounds,
   onFontChange,
+  onOpenAssistant,
   onOpenSftp,
   onSaveBuffer,
   showSftpButton,
@@ -331,6 +335,7 @@ function TerminalLayoutView({
   canSplit: boolean;
   usePaneTerminalBackgrounds: boolean;
   onFontChange: (delta: number | "reset") => void;
+  onOpenAssistant: () => void;
   onOpenSftp: (connection: Connection, paneId: string) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
@@ -366,6 +371,7 @@ function TerminalLayoutView({
             canClosePane={panes.length > 1 || canCloseSinglePane}
             onFontChange={onFontChange}
             usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
+            onOpenAssistant={onOpenAssistant}
             onOpenSftp={onOpenSftp}
             onSaveBuffer={onSaveBuffer}
             showSftpButton={showSftpButton}
@@ -379,6 +385,7 @@ function TerminalLayoutView({
             pane={pane}
             tabId={tabId}
             canClosePane={panes.length > 1 || canCloseSinglePane}
+            onOpenAssistant={onOpenAssistant}
             onFocus={() => onFocusPane(pane.id)}
           />
         )}
@@ -410,6 +417,7 @@ function TerminalLayoutView({
           canSplit={canSplit}
           usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
           onFontChange={onFontChange}
+          onOpenAssistant={onOpenAssistant}
           onOpenSftp={onOpenSftp}
           onSaveBuffer={onSaveBuffer}
           showSftpButton={showSftpButton}
@@ -438,12 +446,14 @@ function EmbeddedConnectionPane({
   pane,
   tabId,
   canClosePane,
+  onOpenAssistant,
   onFocus,
 }: {
   isActive: boolean;
   pane: Exclude<WorkspacePane, TerminalPane>;
   tabId: string;
   canClosePane: boolean;
+  onOpenAssistant: () => void;
   onFocus: () => void;
 }) {
   const closePane = useWorkspaceStore((state) => state.closePane);
@@ -481,7 +491,11 @@ function EmbeddedConnectionPane({
       {pane.kind === "webview" ? (
         <WebViewWorkspace isActive={isActive} layoutTabId={tabId} tab={embeddedTab} />
       ) : (
-        <RemoteDesktopWorkspace isActive={isActive} tab={embeddedTab} />
+        <RemoteDesktopWorkspace
+          isActive={isActive}
+          onOpenAssistant={onOpenAssistant}
+          tab={embeddedTab}
+        />
       )}
     </article>
   );
@@ -1164,6 +1178,7 @@ function TerminalPaneView({
   canClosePane,
   onFontChange,
   usePaneTerminalBackgrounds,
+  onOpenAssistant,
   onOpenSftp,
   onSaveBuffer,
   showSftpButton,
@@ -1180,6 +1195,7 @@ function TerminalPaneView({
   canClosePane: boolean;
   onFontChange: (delta: number | "reset") => void;
   usePaneTerminalBackgrounds: boolean;
+  onOpenAssistant: () => void;
   onOpenSftp: (connection: Connection, paneId: string) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
@@ -1998,9 +2014,11 @@ function TerminalPaneView({
     } as const;
     if (generalSettings.submitAiAttachmentsDirectly) {
       submitAssistantContextSnippet(snippet, t("ai.directAttachmentPrompt"));
+      onOpenAssistant();
       return;
     }
     setAssistantContextSnippet(snippet);
+    onOpenAssistant();
   }
 
   function handleSearchNext() {

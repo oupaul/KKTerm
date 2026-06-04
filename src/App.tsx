@@ -258,7 +258,10 @@ function App() {
         )}
         <main className={`workspace${hideTopTabButtons ? " workspace-tabs-hidden" : ""}`}>
           {hideTopTabButtons ? null : <TabStrip />}
-          <WorkspaceCanvas workspaceActive={activePage === "workspace"} />
+          <WorkspaceCanvas
+            onOpenAssistant={openAssistantPanel}
+            workspaceActive={activePage === "workspace"}
+          />
         </main>
       </div>
       <PanelResizeHandle
