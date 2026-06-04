@@ -138,6 +138,7 @@ export function findInstalledDependents(
 /// install of this recipe is expected to trigger.
 ///
 ///   * winget with explicit scope=machine → 1
+///   * winget with a known machine-only manifest → 1
 ///   * winget with scope=user → 0 for most packages, but some installers
 ///     (Git for Windows, nvm-windows, Docker Desktop, system MSIs) still
 ///     self-elevate. Known self-elevating winget ids count as 1.
@@ -159,6 +160,7 @@ function estimateUacPromptsFor(
   switch (provider.kind) {
     case "winget": {
       if (options?.scope === "machine") return 1;
+      if (isKnownMachineOnlyWingetRecipe(recipe)) return 1;
       return isKnownSelfElevatingWingetRecipe(recipe) ? 1 : 0;
     }
     case "windowsFeature":
@@ -191,6 +193,13 @@ function estimateUacPromptsFor(
           : sum;
       }, 0);
   }
+}
+
+function isKnownMachineOnlyWingetRecipe(recipe: Recipe): boolean {
+  if (recipe.provider.kind !== "winget") return false;
+  const id = recipe.provider.id.toLowerCase();
+  const machineOnly = ["marha.vcxsrv"];
+  return machineOnly.some((needle) => id.includes(needle));
 }
 
 /// Known winget packages whose current upstream manifests declare a user

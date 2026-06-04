@@ -20,7 +20,7 @@ pub fn launch_vcxsrv_if_needed(
     extra_args: Option<&str>,
 ) -> Result<XServerLaunchResult, String> {
     let display = display.min(99);
-    if vcxsrv_is_running() {
+    if is_vcxsrv_running() {
         return Ok(XServerLaunchResult {
             started: false,
             already_running: true,
@@ -54,7 +54,40 @@ pub fn launch_vcxsrv_if_needed(
     })
 }
 
-fn vcxsrv_is_running() -> bool {
+pub fn restart_vcxsrv(
+    path_override: Option<&str>,
+    display: u16,
+    extra_args: Option<&str>,
+) -> Result<XServerLaunchResult, String> {
+    stop_vcxsrv()?;
+    launch_vcxsrv(path_override, display, extra_args)
+}
+
+pub fn stop_vcxsrv() -> Result<(), String> {
+    if !is_vcxsrv_running() {
+        return Ok(());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let status = Command::new("taskkill")
+            .args(["/IM", VCXSRV_EXE, "/T"])
+            .status()
+            .map_err(|error| format!("failed to stop VcXsrv: {error}"))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "failed to stop VcXsrv: taskkill exited with status {status}"
+            ))
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(())
+    }
+}
+
+pub fn is_vcxsrv_running() -> bool {
     #[cfg(target_os = "windows")]
     {
         let Ok(output) = Command::new("tasklist")
@@ -73,6 +106,37 @@ fn vcxsrv_is_running() -> bool {
     {
         false
     }
+}
+
+fn launch_vcxsrv(
+    path_override: Option<&str>,
+    display: u16,
+    extra_args: Option<&str>,
+) -> Result<XServerLaunchResult, String> {
+    let display = display.min(99);
+    let path_override = path_override
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from);
+    let exe = resolve_vcxsrv_path(path_override)?;
+    let args = vcxsrv_launch_args(display, extra_args);
+    let mut command = Command::new(&exe);
+    command.args(args);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    command
+        .spawn()
+        .map_err(|error| format!("failed to launch VcXsrv: {error}"))?;
+
+    Ok(XServerLaunchResult {
+        started: true,
+        already_running: false,
+        executable_path: Some(exe.to_string_lossy().into_owned()),
+        display,
+    })
 }
 
 fn resolve_vcxsrv_path(path_override: Option<PathBuf>) -> Result<PathBuf, String> {
@@ -144,8 +208,6 @@ mod tests {
 
         assert_eq!(candidates.first(), Some(&user_path));
         assert!(candidates.contains(&PathBuf::from(r"C:\Program Files\VcXsrv\vcxsrv.exe")));
-        assert!(candidates.contains(&PathBuf::from(
-            r"C:\Program Files (x86)\VcXsrv\vcxsrv.exe"
-        )));
+        assert!(candidates.contains(&PathBuf::from(r"C:\Program Files (x86)\VcXsrv\vcxsrv.exe")));
     }
 }

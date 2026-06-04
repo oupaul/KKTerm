@@ -1,10 +1,10 @@
 use russh::{
-    client,
+    client::{self, Msg, Session},
     keys::{
         agent::{client::AgentClient, AgentIdentity},
         load_secret_key, PrivateKeyWithHashAlg,
     },
-    ChannelMsg, Disconnect,
+    Channel, ChannelMsg, Disconnect,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -15,7 +15,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Manager};
-use tokio::sync::mpsc;
+use tokio::{io::copy_bidirectional, net::TcpStream, sync::mpsc};
 
 const SSH_TMUX_RESUME_MAX_ATTEMPTS: usize = 2;
 const SSH_TMUX_RESUME_TIMEOUT: Duration = Duration::from_secs(10);
@@ -68,6 +68,12 @@ pub struct NativeSshTerminalRequest {
     pub use_tmux: bool,
     pub tmux_session_id: Option<String>,
     pub tmux_history_limit: u32,
+    pub x11_forwarding: Option<NativeSshX11Forwarding>,
+}
+
+#[derive(Clone)]
+pub struct NativeSshX11Forwarding {
+    pub display: u16,
 }
 
 #[derive(Clone)]
@@ -77,6 +83,7 @@ pub(crate) struct NativeSshConnectionRequest {
     pub port: u16,
     pub auth: NativeSshAuth,
     pub known_hosts_path: PathBuf,
+    pub x11_forwarding: Option<NativeSshX11Forwarding>,
 }
 
 #[derive(Clone)]
@@ -147,6 +154,7 @@ pub(crate) struct VerifyingClient {
     port: u16,
     known_hosts_path: PathBuf,
     rejection: Arc<std::sync::Mutex<Option<String>>>,
+    x11_forwarding: Option<NativeSshX11Forwarding>,
 }
 
 impl client::Handler for VerifyingClient {
@@ -192,6 +200,26 @@ impl client::Handler for VerifyingClient {
                 remember_rejection(&self.rejection, error);
                 Ok(false)
             }
+        }
+    }
+
+    fn server_channel_open_x11(
+        &mut self,
+        channel: Channel<Msg>,
+        _originator_address: &str,
+        _originator_port: u32,
+        _session: &mut Session,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        let x11_forwarding = self.x11_forwarding.clone();
+        async move {
+            if let Some(x11_forwarding) = x11_forwarding {
+                tokio::spawn(async move {
+                    if let Err(error) = bridge_x11_channel(channel, x11_forwarding.display).await {
+                        eprintln!("failed to bridge SSH X11 channel: {error}");
+                    }
+                });
+            }
+            Ok(())
         }
     }
 }
@@ -263,6 +291,7 @@ pub fn start_native_terminal(
         use_tmux: request.use_tmux,
         tmux_session_id: request.tmux_session_id,
         tmux_history_limit: clamp_tmux_history_limit(request.tmux_history_limit),
+        x11_forwarding: request.x11_forwarding,
     };
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let (ready_tx, ready_rx) = std_mpsc::sync_channel(1);
@@ -451,6 +480,7 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
         port: request.port,
         auth: request.auth,
         known_hosts_path: request.known_hosts_path,
+        x11_forwarding: None,
     })
     .await?;
 
@@ -604,6 +634,7 @@ async fn run_native_terminal_once(
             port: request.port,
             auth: request.auth.clone(),
             known_hosts_path: request.known_hosts_path.clone(),
+            x11_forwarding: request.x11_forwarding.clone(),
         })
         .await?;
 
@@ -624,6 +655,12 @@ async fn run_native_terminal_once(
             )
             .await
             .map_err(|error| format!("failed to allocate SSH PTY: {error}"))?;
+        if request.x11_forwarding.is_some() {
+            channel
+                .request_x11(false, false, "MIT-MAGIC-COOKIE-1", x11_auth_cookie(), 0)
+                .await
+                .map_err(|error| format!("failed to request SSH X11 forwarding: {error}"))?;
+        }
         channel
             .request_shell(false)
             .await
@@ -887,6 +924,7 @@ pub(crate) async fn connect_verified_client(
                 port: request.port,
                 known_hosts_path: request.known_hosts_path,
                 rejection: Arc::clone(&host_key_rejection),
+                x11_forwarding: request.x11_forwarding,
             },
         )
         .await
@@ -899,6 +937,28 @@ pub(crate) async fn connect_verified_client(
         Ok(session)
     })
     .await
+}
+
+fn x11_port(display: u16) -> u16 {
+    6000 + display.min(99)
+}
+
+async fn bridge_x11_channel(channel: Channel<Msg>, display: u16) -> Result<(), String> {
+    let mut remote = channel.into_stream();
+    let mut local = TcpStream::connect(("127.0.0.1", x11_port(display)))
+        .await
+        .map_err(|error| format!("failed to connect to local X server: {error}"))?;
+    copy_bidirectional(&mut remote, &mut local)
+        .await
+        .map_err(|error| format!("failed to proxy X11 data: {error}"))?;
+    Ok(())
+}
+
+fn x11_auth_cookie() -> String {
+    rand::random::<[u8; 16]>()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn native_ssh_client_config() -> client::Config {
@@ -1236,7 +1296,8 @@ mod tests {
         russh::keys::known_hosts::learn_known_hosts_path("localhost", 2222, &original, &path)
             .expect("original host key is trusted");
 
-        let rotated = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6rWI3G1sz07DnfFlrouTcysQlj2P+jpNSOEWD9OJ3X";
+        let rotated =
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6rWI3G1sz07DnfFlrouTcysQlj2P+jpNSOEWD9OJ3X";
         let preview = trust_host_key(
             path.clone(),
             TrustSshHostKeyRequest {
@@ -1249,8 +1310,8 @@ mod tests {
         .expect("changed host key is replaced when replace is requested");
         assert_eq!(preview.status, "trusted");
 
-        let rotated_key =
-            russh::keys::ssh_key::PublicKey::from_openssh(rotated).expect("rotated host key parses");
+        let rotated_key = russh::keys::ssh_key::PublicKey::from_openssh(rotated)
+            .expect("rotated host key parses");
         assert_eq!(
             host_key_status("localhost", 2222, &rotated_key, &path).expect("status loads"),
             HostKeyTrustStatus::Trusted
@@ -1490,6 +1551,7 @@ mod tests {
             port: config.port,
             auth: config.auth,
             known_hosts_path: config.known_hosts_path,
+            x11_forwarding: None,
         })
         .await?;
 
@@ -1611,6 +1673,14 @@ mod tests {
             use_tmux: false,
             tmux_session_id: None,
             tmux_history_limit: 5_000,
+            x11_forwarding: None,
         }
+    }
+
+    #[test]
+    fn x11_port_maps_display_to_local_tcp_port() {
+        assert_eq!(x11_port(0), 6000);
+        assert_eq!(x11_port(7), 6007);
+        assert_eq!(x11_port(100), 6099);
     }
 }

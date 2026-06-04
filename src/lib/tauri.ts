@@ -1202,6 +1202,18 @@ type CommandMap = {
     args: undefined;
     result: void;
   };
+  is_ssh_x_server_running: {
+    args: undefined;
+    result: boolean;
+  };
+  restart_ssh_x_server: {
+    args: undefined;
+    result: unknown;
+  };
+  stop_ssh_x_server: {
+    args: undefined;
+    result: void;
+  };
   create_diagnostics_bundle: {
     args: undefined;
     result: DiagnosticsBundle;

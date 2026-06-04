@@ -696,14 +696,16 @@ impl SessionManager {
             .unwrap_or_else(|| make_session_id(&request.title));
         let is_local_start = request.connection_type.trim().eq_ignore_ascii_case("local");
         let password = connection_password_for(secrets, &request);
+        let mut managed_x_server_display = None;
         if request.connection_type.trim().eq_ignore_ascii_case("ssh") {
             let settings = app.state::<storage::Storage>().ssh_settings()?;
             if settings.managed_x_server_enabled() {
-                x_server::launch_vcxsrv_if_needed(
+                let launch_result = x_server::launch_vcxsrv_if_needed(
                     settings.x_server_path(),
                     settings.x_server_display(),
                     Some(settings.x_server_args()),
                 )?;
+                managed_x_server_display = Some(launch_result.display);
             }
         }
         if request
@@ -794,6 +796,8 @@ impl SessionManager {
                     use_tmux: request.use_tmux.unwrap_or(false),
                     tmux_session_id: request.tmux_session_id.clone(),
                     tmux_history_limit: ssh_buffer_lines_for(request.ssh_buffer_lines),
+                    x11_forwarding: managed_x_server_display
+                        .map(|display| ssh::NativeSshX11Forwarding { display }),
                 },
             ) {
                 Ok(session) => {
@@ -1107,6 +1111,7 @@ impl SessionManager {
             port: terminal_request.port.unwrap_or(22),
             auth: native_ssh_auth_for(&terminal_request, password, &auth_method)?,
             known_hosts_path: ssh::app_known_hosts_path(&app)?,
+            x11_forwarding: None,
         };
         let listener = StdTcpListener::bind((Ipv4Addr::LOCALHOST, 0))
             .map_err(|error| format!("failed to bind local port forward listener: {error}"))?;

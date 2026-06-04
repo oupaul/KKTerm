@@ -83,4 +83,6 @@ This path uses the existing SSH channel for the tunnel — it does not create a 
 
 Settings - SSH exposes `settings.xServer` for a managed VcXsrv launcher. When `settings.xServerManaged` is enabled, KKTerm checks for a running `vcxsrv.exe` process before opening an SSH Session and starts VcXsrv with the configured display number and launch arguments when needed. `settings.xServerLaunch` saves the current SSH settings draft and launches VcXsrv immediately so users can verify the local X server outside an SSH Session.
 
+X11 forwarding is negotiated while a new native SSH Session starts, before the remote shell opens. SSH Sessions that were already open before enabling or restarting VcXsrv need to be reconnected or opened again before remote X11 apps receive `DISPLAY`. If the Session attaches to an existing tmux pane, that pane's already-running shell may still have the old environment; open a new tmux pane/window or export the new `DISPLAY` inside that shell.
+
 The launcher manages only the local Windows X server process. It does not create a durable Connection and does not store live process state in the Connection model.

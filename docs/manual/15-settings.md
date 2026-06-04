@@ -137,6 +137,8 @@ Section header `settings.sectionSsh`. Default username, default identity file, a
 
 The `settings.xServer` group controls the managed VcXsrv launcher. `settings.xServerManaged` starts VcXsrv before opening SSH Sessions when `vcxsrv.exe` is not already running. `settings.xServerPath` can override the executable path; blank uses standard VcXsrv install locations. `settings.xServerDisplay` chooses the local X display number, and `settings.xServerArgs` passes command-line flags. `settings.xServerLaunch` saves the current SSH Settings draft and starts VcXsrv immediately.
 
+X11 forwarding is negotiated when a new native SSH Session starts. SSH Sessions that were already open before enabling or restarting VcXsrv need to be reconnected or opened again before remote X11 apps receive `DISPLAY`. Existing tmux panes can also keep an old shell environment; open a new tmux pane/window or export the new `DISPLAY` inside that shell.
+
 ## Terminal
 
 Section header `settings.sectionTerminal`. Font family + size, line height, cursor style, scrollback length, bell behaviour, default shell on Local. `settings.defaultTransparency` sets the starting local/Telnet/Serial terminal transparency for new terminal Connections and Child Connection Tabs; the default is 50. `settings.randomDynamicBackgroundOnCreate` assigns a random dynamic terminal background only when creating new local/Telnet/Serial Connections, new top-strip Tabs, or new Child Connection Tabs.

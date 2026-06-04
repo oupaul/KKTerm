@@ -282,6 +282,7 @@ impl SftpSessionManager {
                 port,
                 auth,
                 known_hosts_path,
+                x11_forwarding: None,
             })
             .await?;
 

@@ -7,14 +7,17 @@ import {
   MemoryStick,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { RailTooltip } from "../../app/RailTooltip";
+import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-usage/AiCodingUsageStatusBar";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { WatchdogStatusBar } from "../../watchdog/WatchdogStatusBar";
 
 const NOTIFICATION_FADE_MS = 220;
+const X_SERVER_STATUS_POLL_MS = 5000;
 
 export function StatusBar({
   onOpenAssistant,
@@ -84,9 +87,113 @@ export function StatusBar({
       <div className="status-bar-actions">
         <WatchdogStatusBar />
         <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />
+        <XServerStatusIcon />
         <DontSleepStatusIcon />
       </div>
     </footer>
+  );
+}
+
+function XServerStatusIcon() {
+  const { t } = useTranslation();
+  const [isRunning, setIsRunning] = useState(false);
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let active = true;
+
+    async function refresh() {
+      try {
+        const running = await invokeCommand("is_ssh_x_server_running");
+        if (active) {
+          setIsRunning(running);
+        }
+      } catch {
+        if (active) {
+          setIsRunning(false);
+        }
+      }
+    }
+
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), X_SERVER_STATUS_POLL_MS);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  async function refreshStatus() {
+    if (!isTauriRuntime()) {
+      setIsRunning(false);
+      return;
+    }
+    try {
+      setIsRunning(await invokeCommand("is_ssh_x_server_running"));
+    } catch {
+      setIsRunning(false);
+    }
+  }
+
+  async function restartXServer() {
+    try {
+      await invokeCommand("restart_ssh_x_server");
+      await refreshStatus();
+      showStatusBarNotice(t("settings.xServerLaunchStarted"), { tone: "success" });
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+    }
+  }
+
+  async function stopXServer() {
+    try {
+      await invokeCommand("stop_ssh_x_server");
+      await refreshStatus();
+      showStatusBarNotice(t("app.xServerStopped"), { tone: "success" });
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+    }
+  }
+
+  async function handleContextMenu(event: MouseEvent<HTMLElement>) {
+    event.preventDefault();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("app.xServerRestart"),
+          action: () => void restartXServer(),
+        },
+        {
+          kind: "item",
+          label: t("app.xServerStop"),
+          action: () => void stopXServer(),
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
+  }
+
+  if (!isRunning) {
+    return null;
+  }
+
+  return (
+    <span
+      className="status-bar-action status-bar-x-server-running"
+      aria-label={t("app.xServer")}
+      onContextMenu={(event) => void handleContextMenu(event)}
+      role="status"
+    >
+      <span className="status-bar-x-server-glyph" aria-hidden="true">
+        X
+      </span>
+      <RailTooltip label={t("app.xServer")} />
+    </span>
   );
 }
 
@@ -103,14 +210,11 @@ function DontSleepStatusIcon() {
   return (
     <span
       className="status-bar-action status-bar-dont-sleep-enabled"
-      aria-label={t("app.dontSleepStatusEnabled")}
-      aria-describedby="dont-sleep-status-tooltip"
+      aria-label={t("app.dontSleep")}
       role="status"
     >
       <Coffee size={14} />
-      <span className="status-bar-tooltip" id="dont-sleep-status-tooltip" role="tooltip">
-        {t("app.dontSleepStatusEnabled")}
-      </span>
+      <RailTooltip label={t("app.dontSleep")} />
     </span>
   );
 }

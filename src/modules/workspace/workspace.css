@@ -315,6 +315,21 @@
   color: var(--amber);
 }
 
+.status-bar-x-server-running {
+  color: var(--accent);
+}
+
+.status-bar-x-server-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .status-bar-assistant-working svg {
   animation: status-bar-spin 900ms linear infinite;
 }
@@ -351,6 +366,13 @@
 .status-bar-action:focus-visible .status-bar-tooltip {
   opacity: 1;
   transform: translateY(0);
+  transition-delay: 3000ms;
+}
+
+.status-bar-action:hover .rail-tooltip:not(.native-suppressed),
+.status-bar-action:focus-visible .rail-tooltip:not(.native-suppressed) {
+  opacity: 1;
+  transform: translate(0, -50%);
   transition-delay: 3000ms;
 }
 

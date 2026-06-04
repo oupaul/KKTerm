@@ -206,7 +206,7 @@
         "displayNamePrefixes": ["VcXsrv"]
       },
       "provider": { "kind": "winget", "id": "marha.VcXsrv" },
-      "options": ["scope", "version"]
+      "options": ["version"]
     },
     {
       "id": "claude-code-cli",

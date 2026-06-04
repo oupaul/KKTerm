@@ -1,8 +1,8 @@
 mod ai;
 mod ai_coding_usage;
-mod app_updates;
 mod app_launcher;
 mod app_tray;
+mod app_updates;
 mod assistant_skills;
 mod auto_start;
 mod dashboard_commands;
@@ -577,7 +577,11 @@ fn update_connection_terminal_appearance(
     terminal_opacity: Option<u8>,
     terminal_background: Option<dashboard_storage::DashboardBackground>,
 ) -> Result<Option<storage::SavedConnection>, String> {
-    storage.update_connection_terminal_appearance(connection_id, terminal_opacity, terminal_background)
+    storage.update_connection_terminal_appearance(
+        connection_id,
+        terminal_opacity,
+        terminal_background,
+    )
 }
 
 #[tauri::command]
@@ -893,6 +897,30 @@ fn launch_ssh_x_server(
         settings.x_server_display(),
         Some(settings.x_server_args()),
     )
+}
+
+#[tauri::command]
+async fn restart_ssh_x_server(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<x_server::XServerLaunchResult, String> {
+    let settings = storage.ssh_settings()?;
+    let path = settings.x_server_path().map(str::to_string);
+    let display = settings.x_server_display();
+    let args = settings.x_server_args().to_string();
+    run_blocking_command("X server restart", move || {
+        x_server::restart_vcxsrv(path.as_deref(), display, Some(args.as_str()))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn stop_ssh_x_server() -> Result<(), String> {
+    run_blocking_command("X server stop", x_server::stop_vcxsrv).await
+}
+
+#[tauri::command]
+async fn is_ssh_x_server_running() -> Result<bool, String> {
+    run_blocking_command("X server status", || Ok(x_server::is_vcxsrv_running())).await
 }
 
 #[tauri::command]
@@ -1805,9 +1833,7 @@ fn close_terminal_session(
     // Drop the watchdog activity-tracker entry so the per-session tail buffer
     // doesn't leak across the app lifetime and a silence watchdog stops
     // measuring against a session that no longer exists.
-    if let Some(tracker) =
-        app.try_state::<std::sync::Arc<watchdog::SessionActivityTracker>>()
-    {
+    if let Some(tracker) = app.try_state::<std::sync::Arc<watchdog::SessionActivityTracker>>() {
         tracker.forget(&session_id);
     }
     sessions.close_terminal_session(session_id)
@@ -2880,6 +2906,9 @@ pub fn run() {
             get_ssh_settings,
             update_ssh_settings,
             launch_ssh_x_server,
+            restart_ssh_x_server,
+            stop_ssh_x_server,
+            is_ssh_x_server_running,
             generate_ssh_key_pair,
             transfer_ssh_public_key,
             get_sftp_settings,
