@@ -1069,6 +1069,10 @@ type CommandMap = {
     args: undefined;
     result: AssistantSkillSummary[];
   };
+  set_custom_assistant_skills_enabled: {
+    args: { enabled: boolean };
+    result: AiProviderSettings;
+  };
   set_assistant_skill_enabled: {
     args: { name: string; enabled: boolean };
     result: AiProviderSettings;
@@ -1079,6 +1083,10 @@ type CommandMap = {
   };
   open_assistant_skill: {
     args: { name: string };
+    result: null;
+  };
+  open_custom_assistant_skills_folder: {
+    args: undefined;
     result: null;
   };
   get_built_in_mcp_command_path: {

@@ -542,6 +542,7 @@ export interface AiProviderSettings {
   claudeCliPath?: string;
   codexCliPath?: string;
   disabledSkillNames: string[];
+  customSkillsEnabled: boolean;
   tools: AiAssistantToolSettings;
   searchProvider: SearchProvider;
   searxngUrl: string;

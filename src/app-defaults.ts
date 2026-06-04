@@ -158,6 +158,7 @@ export const defaultAiProviderSettings: AiProviderSettings = {
   claudeCliPath: "",
   codexCliPath: "",
   disabledSkillNames: [],
+  customSkillsEnabled: true,
   tools: defaultAiAssistantToolSettings,
   searchProvider: "scraper",
   searxngUrl: "",

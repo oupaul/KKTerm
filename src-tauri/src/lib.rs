@@ -1011,7 +1011,21 @@ fn list_assistant_skills(
     let settings = storage.ai_provider_settings()?;
     assistant_skills::ensure_bundled_skills_installed(&app)?;
     let root = assistant_skills::assistant_skills_root(&app)?;
-    assistant_skills::list_skill_summaries(&root, settings.disabled_skill_names())
+    assistant_skills::list_skill_summaries(
+        &root,
+        settings.disabled_skill_names(),
+        settings.custom_skills_enabled(),
+    )
+}
+
+#[tauri::command]
+fn set_custom_assistant_skills_enabled(
+    storage: tauri::State<'_, storage::Storage>,
+    enabled: bool,
+) -> Result<storage::AiProviderSettings, String> {
+    let mut settings = storage.ai_provider_settings()?;
+    settings.set_custom_skills_enabled(enabled);
+    storage.update_ai_provider_settings(settings)
 }
 
 #[tauri::command]
@@ -1033,6 +1047,11 @@ fn open_assistant_skills_folder(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn open_assistant_skill(app: tauri::AppHandle, name: String) -> Result<(), String> {
     assistant_skills::open_skill_folder(&app, &name)
+}
+
+#[tauri::command]
+fn open_custom_assistant_skills_folder(app: tauri::AppHandle) -> Result<(), String> {
+    assistant_skills::open_custom_skills_folder(&app)
 }
 
 #[tauri::command]
@@ -2876,8 +2895,10 @@ pub fn run() {
             get_ai_provider_settings,
             update_ai_provider_settings,
             list_assistant_skills,
+            set_custom_assistant_skills_enabled,
             set_assistant_skill_enabled,
             open_assistant_skills_folder,
+            open_custom_assistant_skills_folder,
             open_assistant_skill,
             get_built_in_mcp_command_path,
             open_built_in_mcp_config_location,

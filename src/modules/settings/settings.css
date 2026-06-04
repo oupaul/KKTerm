@@ -1552,6 +1552,36 @@
 }
 
 /* Assistant Skills management (Settings -> AI -> Assistant Skills) */
+
+.assistant-custom-skills-control {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.assistant-custom-skills-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-custom-skills-title {
+  font-weight: 650;
+  font-size: 13px;
+}
+
+.assistant-custom-skills-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .assistant-skills-list {
   display: flex;
   flex-direction: column;
