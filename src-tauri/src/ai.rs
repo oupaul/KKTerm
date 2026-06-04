@@ -14,11 +14,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::mpsc;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::oneshot;
 use tokio::time::timeout;
 
@@ -29,10 +31,9 @@ use prompt_contracts::{
     DASHBOARD_WIDGET_COMPLETION_CONTRACT, DASHBOARD_WIDGET_COPY_CONTRACT,
     DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT, DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT,
     DASHBOARD_WIDGET_DOM_CONTRACT, DASHBOARD_WIDGET_HEALTH_CONTRACT,
-    DASHBOARD_WIDGET_LAYOUT_CONTRACT,
-    DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT, DASHBOARD_WIDGET_PHYSICS_CONTRACT,
-    DASHBOARD_WIDGET_SURFACE_CONTRACT, DASHBOARD_WIDGET_UTF8_CONTRACT,
-    DASHBOARD_WIDGET_VISUAL_CONTRACT,
+    DASHBOARD_WIDGET_LAYOUT_CONTRACT, DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT,
+    DASHBOARD_WIDGET_PHYSICS_CONTRACT, DASHBOARD_WIDGET_SURFACE_CONTRACT,
+    DASHBOARD_WIDGET_UTF8_CONTRACT, DASHBOARD_WIDGET_VISUAL_CONTRACT,
 };
 use providers::provider_for;
 use tauri::ipc::Channel;
@@ -160,6 +161,24 @@ pub struct CopilotModelOption {
 }
 
 pub type AiProviderModelOption = CopilotModelOption;
+
+#[derive(Clone, Copy, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AiCliBackendKind {
+    Codex,
+    ClaudeCode,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiCliBackendStatus {
+    provider: AiCliBackendKind,
+    command: String,
+    installed: bool,
+    authenticated: bool,
+    version: Option<String>,
+    error: Option<String>,
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -733,7 +752,7 @@ pub async fn run_agent(
             "request": &request,
         })
     );
-    let provider = provider_for(settings.provider_kind())?;
+    let provider = provider_for_settings(&settings)?;
     let result = provider.run(app, settings, api_key, request).await;
     match &result {
         Ok(response) => {
@@ -762,7 +781,7 @@ pub async fn run_agent_streaming(
             "request": &request,
         })
     );
-    let provider = provider_for(settings.provider_kind())?;
+    let provider = provider_for_settings(&settings)?;
     let result = provider
         .run_streaming(app, settings, api_key, request, channel)
         .await;
@@ -799,6 +818,7 @@ trait AgentProvider {
 enum AgentProviderAdapter {
     OpenAi(OpenAiCompatibleProvider),
     GitHubCopilot(GitHubCopilotProvider),
+    Cli(CliAgentProvider),
 }
 
 impl AgentProviderAdapter {
@@ -807,6 +827,7 @@ impl AgentProviderAdapter {
         match self {
             AgentProviderAdapter::OpenAi(provider) => provider.provider_kind,
             AgentProviderAdapter::GitHubCopilot(provider) => provider.provider_kind(),
+            AgentProviderAdapter::Cli(provider) => provider.provider_kind,
         }
     }
 }
@@ -824,6 +845,9 @@ impl AgentProvider for AgentProviderAdapter {
                 provider.run(app, settings, api_key, request).await
             }
             AgentProviderAdapter::GitHubCopilot(provider) => {
+                provider.run(app, settings, api_key, request).await
+            }
+            AgentProviderAdapter::Cli(provider) => {
                 provider.run(app, settings, api_key, request).await
             }
         }
@@ -848,8 +872,27 @@ impl AgentProvider for AgentProviderAdapter {
                     .run_streaming(app, settings, api_key, request, channel)
                     .await
             }
+            AgentProviderAdapter::Cli(provider) => {
+                provider
+                    .run_streaming(app, settings, api_key, request, channel)
+                    .await
+            }
         }
     }
+}
+
+fn provider_for_settings(settings: &AiProviderSettings) -> Result<AgentProviderAdapter, String> {
+    if settings.use_codex_cli() {
+        return Ok(AgentProviderAdapter::Cli(CliAgentProvider::codex(
+            settings.codex_cli_path().map(str::to_string),
+        )));
+    }
+    if settings.use_claude_cli() {
+        return Ok(AgentProviderAdapter::Cli(CliAgentProvider::claude_code(
+            settings.claude_cli_path().map(str::to_string),
+        )));
+    }
+    provider_for(settings.provider_kind())
 }
 
 struct OpenAiCompatibleProvider {
@@ -862,6 +905,38 @@ struct OpenAiCompatibleProvider {
 }
 
 struct GitHubCopilotProvider;
+
+#[derive(Clone)]
+struct CliAgentProvider {
+    backend: AiCliBackendKind,
+    provider_kind: &'static str,
+    label: &'static str,
+    command: String,
+}
+
+impl CliAgentProvider {
+    fn codex(command: Option<String>) -> Self {
+        Self {
+            backend: AiCliBackendKind::Codex,
+            provider_kind: "openai",
+            label: "Codex CLI",
+            command: command
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or_else(|| "codex".to_string()),
+        }
+    }
+
+    fn claude_code(command: Option<String>) -> Self {
+        Self {
+            backend: AiCliBackendKind::ClaudeCode,
+            provider_kind: "anthropic",
+            label: "Claude Code CLI",
+            command: command
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or_else(|| "claude".to_string()),
+        }
+    }
+}
 
 impl GitHubCopilotProvider {
     fn provider_kind(&self) -> &'static str {
@@ -906,6 +981,712 @@ impl AgentProvider for GitHubCopilotProvider {
         }));
         Ok(response)
     }
+}
+
+impl AgentProvider for CliAgentProvider {
+    async fn run(
+        &self,
+        _app: tauri::AppHandle,
+        settings: AiProviderSettings,
+        _api_key: Option<String>,
+        request: AgentRunRequest,
+    ) -> Result<AgentRunResponse, String> {
+        let prompt = build_cli_agent_prompt(&settings, request)?;
+        let command = self.command.clone();
+        let backend = self.backend;
+        let model = settings.model().to_string();
+        let label = self.label;
+        let output = tauri::async_runtime::spawn_blocking(move || {
+            run_acp_agent_command(backend, &model, &prompt).or_else(|acp_error| {
+                ai_interaction_debug!(
+                    "agent.cli_acp_fallback",
+                    json!({
+                        "backend": backend,
+                        "error": acp_error,
+                    })
+                );
+                run_cli_agent_command(backend, &command, &model, &prompt)
+            })
+        })
+        .await
+        .map_err(|error| format!("failed to run {label}: {error}"))??;
+
+        Ok(AgentRunResponse {
+            provider_kind: self.provider_kind.to_string(),
+            model: settings.model().to_string(),
+            content: output,
+            reasoning_content: None,
+        })
+    }
+
+    async fn run_streaming(
+        &self,
+        _app: tauri::AppHandle,
+        settings: AiProviderSettings,
+        _api_key: Option<String>,
+        request: AgentRunRequest,
+        channel: Channel<Value>,
+    ) -> Result<AgentRunResponse, String> {
+        let prompt = build_cli_agent_prompt(&settings, request)?;
+        let command = self.command.clone();
+        let backend = self.backend;
+        let model = settings.model().to_string();
+        let label = self.label;
+        let provider_kind = self.provider_kind.to_string();
+        let output = tauri::async_runtime::spawn_blocking({
+            let channel = channel.clone();
+            let model = model.clone();
+            move || {
+                run_acp_agent_command_streaming(backend, &model, &prompt, Some(&channel)).or_else(
+                    |acp_error| {
+                        ai_interaction_debug!(
+                            "agent.cli_acp_streaming_fallback",
+                            json!({
+                                "backend": backend,
+                                "error": acp_error,
+                            })
+                        );
+                        let output = run_cli_agent_command(backend, &command, &model, &prompt)?;
+                        emit_stream(
+                            &channel,
+                            &AiStreamEvent::ContentDelta {
+                                delta: output.clone(),
+                            },
+                        )?;
+                        Ok::<String, String>(output)
+                    },
+                )
+            }
+        })
+        .await
+        .map_err(|error| format!("failed to run {label}: {error}"))??;
+        let response = AgentRunResponse {
+            provider_kind,
+            model: settings.model().to_string(),
+            content: output,
+            reasoning_content: None,
+        };
+        emit_stream(
+            &channel,
+            &AiStreamEvent::Done {
+                model: response.model.clone(),
+                provider_kind: response.provider_kind.clone(),
+            },
+        )?;
+        Ok(response)
+    }
+}
+
+struct AcpCommandSpec {
+    program: String,
+    args: Vec<String>,
+    label: &'static str,
+}
+
+struct AcpStdioSession {
+    child: std::process::Child,
+    stdin: std::process::ChildStdin,
+    rx: mpsc::Receiver<String>,
+}
+
+impl AcpStdioSession {
+    fn start(spec: &AcpCommandSpec) -> Result<Self, String> {
+        let mut child = Command::new(&spec.program);
+        child
+            .args(&spec.args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        crate::installer::proc::no_window(&mut child);
+        let mut child = child.spawn().map_err(|error| {
+            format!(
+                "failed to start {} ACP backend with `{}`: {error}",
+                spec.label, spec.program
+            )
+        })?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| format!("failed to open {} ACP stdin", spec.label))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| format!("failed to open {} ACP stdout", spec.label))?;
+        if let Some(stderr) = child.stderr.take() {
+            std::thread::spawn(move || {
+                let reader = BufReader::new(stderr);
+                for line in reader.lines().map_while(Result::ok) {
+                    ai_interaction_debug!("agent.acp_stderr", json!({ "line": line }));
+                }
+            });
+        }
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().map_while(Result::ok) {
+                let _ = tx.send(line);
+            }
+        });
+        Ok(Self { child, stdin, rx })
+    }
+
+    fn request(
+        &mut self,
+        id: u64,
+        method: &str,
+        params: Value,
+        timeout_duration: Duration,
+        mut notification_handler: impl FnMut(&mut Self, Value) -> Result<(), String>,
+    ) -> Result<Value, String> {
+        self.write_json(json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": method,
+            "params": params,
+        }))?;
+        self.wait_for_id(id, timeout_duration, &mut notification_handler)
+    }
+
+    fn wait_for_id(
+        &mut self,
+        id: u64,
+        timeout_duration: Duration,
+        notification_handler: &mut impl FnMut(&mut Self, Value) -> Result<(), String>,
+    ) -> Result<Value, String> {
+        let deadline = Instant::now() + timeout_duration;
+        while Instant::now() < deadline {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            let Ok(line) = self
+                .rx
+                .recv_timeout(remaining.min(Duration::from_millis(250)))
+            else {
+                continue;
+            };
+            let value = serde_json::from_str::<Value>(&line)
+                .map_err(|error| format!("ACP backend returned invalid JSON-RPC: {error}"))?;
+            ai_interaction_debug!("agent.acp_recv", value.clone());
+            if value.get("id").and_then(Value::as_u64) == Some(id) {
+                if let Some(error) = value.get("error") {
+                    return Err(format!("ACP backend returned an error: {error}"));
+                }
+                return value
+                    .get("result")
+                    .cloned()
+                    .ok_or_else(|| "ACP backend response did not include result".to_string());
+            }
+            if value.get("method").is_some() {
+                notification_handler(self, value)?;
+            }
+        }
+        Err(format!("timed out waiting for ACP response id {id}"))
+    }
+
+    fn write_json(&mut self, value: Value) -> Result<(), String> {
+        ai_interaction_debug!("agent.acp_send", value.clone());
+        let line = serde_json::to_string(&value)
+            .map_err(|error| format!("failed to serialize ACP JSON-RPC: {error}"))?;
+        writeln!(self.stdin, "{line}")
+            .and_then(|_| self.stdin.flush())
+            .map_err(|error| format!("failed to write ACP JSON-RPC: {error}"))
+    }
+}
+
+impl Drop for AcpStdioSession {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+fn run_acp_agent_command(
+    backend: AiCliBackendKind,
+    model: &str,
+    prompt: &str,
+) -> Result<String, String> {
+    run_acp_agent_command_streaming(backend, model, prompt, None)
+}
+
+fn run_acp_agent_command_streaming(
+    backend: AiCliBackendKind,
+    model: &str,
+    prompt: &str,
+    channel: Option<&Channel<Value>>,
+) -> Result<String, String> {
+    let spec = acp_command_spec(backend);
+    let cwd = std::env::current_dir()
+        .map_err(|error| format!("failed to resolve ACP working directory: {error}"))?;
+    let cwd = cwd
+        .to_str()
+        .ok_or_else(|| "ACP working directory is not valid UTF-8".to_string())?
+        .to_string();
+    let mut session = AcpStdioSession::start(&spec)?;
+    let mut content = String::new();
+    session.request(
+        1,
+        "initialize",
+        json!({
+            "protocolVersion": 1,
+            "clientCapabilities": {},
+            "clientInfo": {
+                "name": "kkterm",
+                "title": "KKTerm",
+                "version": env!("CARGO_PKG_VERSION")
+            }
+        }),
+        Duration::from_secs(30),
+        |session, message| handle_acp_backend_message(session, message, &mut content, channel),
+    )?;
+    let new_session = session.request(
+        2,
+        "session/new",
+        json!({
+            "cwd": cwd,
+            "mcpServers": []
+        }),
+        Duration::from_secs(60),
+        |session, message| handle_acp_backend_message(session, message, &mut content, channel),
+    )?;
+    let session_id = new_session
+        .get("sessionId")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "ACP session/new response did not include sessionId".to_string())?
+        .to_string();
+    let prompt = format!("Requested model: {model}\n\n{prompt}");
+    session.request(
+        3,
+        "session/prompt",
+        json!({
+            "sessionId": session_id,
+            "prompt": [
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ]
+        }),
+        COPILOT_SDK_RESPONSE_TIMEOUT,
+        |session, message| handle_acp_backend_message(session, message, &mut content, channel),
+    )?;
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        return Err(format!(
+            "{} ACP backend did not return assistant text",
+            spec.label
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn handle_acp_backend_message(
+    session: &mut AcpStdioSession,
+    message: Value,
+    content: &mut String,
+    channel: Option<&Channel<Value>>,
+) -> Result<(), String> {
+    let method = message.get("method").and_then(Value::as_str).unwrap_or("");
+    match method {
+        "session/update" => {
+            if let Some(delta) = acp_agent_message_delta_text(&message) {
+                content.push_str(&delta);
+                if let Some(channel) = channel {
+                    emit_stream(channel, &AiStreamEvent::ContentDelta { delta })?;
+                }
+            }
+        }
+        "session/request_permission" => {
+            if let Some(id) = message.get("id").and_then(Value::as_u64) {
+                let outcome = acp_permission_rejection(&message);
+                session.write_json(json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "outcome": outcome
+                    }
+                }))?;
+            }
+        }
+        _ => {
+            if let Some(id) = message.get("id").and_then(Value::as_u64) {
+                session.write_json(json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": {
+                        "code": -32601,
+                        "message": format!("KKTerm does not expose `{method}` to ACP CLI backends yet")
+                    }
+                }))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn acp_permission_rejection(message: &Value) -> Value {
+    let reject_option = message
+        .pointer("/params/options")
+        .and_then(Value::as_array)
+        .and_then(|options| {
+            options.iter().find_map(|option| {
+                let kind = option.get("kind").and_then(Value::as_str).unwrap_or("");
+                let id = option.get("optionId").and_then(Value::as_str)?;
+                if kind.starts_with("reject") {
+                    Some(id.to_string())
+                } else {
+                    None
+                }
+            })
+        });
+    match reject_option {
+        Some(option_id) => json!({
+            "outcome": "selected",
+            "optionId": option_id,
+        }),
+        None => json!({
+            "outcome": "cancelled",
+        }),
+    }
+}
+
+fn acp_agent_message_delta_text(message: &Value) -> Option<String> {
+    let update = message.pointer("/params/update")?;
+    let kind = update.get("sessionUpdate").and_then(Value::as_str)?;
+    if kind != "agent_message_chunk" {
+        return None;
+    }
+    acp_content_text(update.get("content")?)
+}
+
+fn acp_content_text(content: &Value) -> Option<String> {
+    if content.get("type").and_then(Value::as_str) == Some("text") {
+        return content
+            .get("text")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+    }
+    None
+}
+
+fn acp_command_spec(backend: AiCliBackendKind) -> AcpCommandSpec {
+    match backend {
+        AiCliBackendKind::Codex => AcpCommandSpec {
+            program: npx_command(),
+            args: vec![
+                "-y".to_string(),
+                "@zed-industries/codex-acp@0.15.0".to_string(),
+            ],
+            label: "Codex ACP",
+        },
+        AiCliBackendKind::ClaudeCode => AcpCommandSpec {
+            program: npx_command(),
+            args: vec![
+                "-y".to_string(),
+                "@agentclientprotocol/claude-agent-acp@0.40.0".to_string(),
+            ],
+            label: "Claude ACP",
+        },
+    }
+}
+
+fn npx_command() -> String {
+    if cfg!(target_os = "windows") {
+        "npx.cmd".to_string()
+    } else {
+        "npx".to_string()
+    }
+}
+
+pub async fn ai_cli_backend_status(
+    provider: AiCliBackendKind,
+    configured_path: Option<String>,
+) -> AiCliBackendStatus {
+    let command = configured_path
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| default_cli_command(provider).to_string());
+    let command_for_worker = command.clone();
+    tauri::async_runtime::spawn_blocking(move || cli_backend_status(provider, command_for_worker))
+        .await
+        .unwrap_or_else(|error| AiCliBackendStatus {
+            provider,
+            command,
+            installed: false,
+            authenticated: false,
+            version: None,
+            error: Some(format!("failed to check CLI status: {error}")),
+        })
+}
+
+pub fn open_ai_cli_backend_auth(
+    provider: AiCliBackendKind,
+    configured_path: Option<String>,
+) -> Result<(), String> {
+    let command = configured_path
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| default_cli_command(provider).to_string());
+    let auth_command = match provider {
+        AiCliBackendKind::Codex => format!("{} login", shell_quote(&command)),
+        AiCliBackendKind::ClaudeCode => format!("{} auth login", shell_quote(&command)),
+    };
+    spawn_external_terminal(&auth_command)
+}
+
+fn default_cli_command(provider: AiCliBackendKind) -> &'static str {
+    match provider {
+        AiCliBackendKind::Codex => "codex",
+        AiCliBackendKind::ClaudeCode => "claude",
+    }
+}
+
+fn cli_backend_status(provider: AiCliBackendKind, command: String) -> AiCliBackendStatus {
+    let version_result = run_cli_capture(&command, &["--version"], None);
+    let (installed, version, mut error) = match version_result {
+        Ok(output) => (
+            true,
+            Some(output.trim().to_string()).filter(|v| !v.is_empty()),
+            None,
+        ),
+        Err(message) => (false, None, Some(message)),
+    };
+    let authenticated = if installed {
+        match provider {
+            AiCliBackendKind::Codex => run_cli_capture(
+                &command,
+                &[
+                    "exec",
+                    "--ephemeral",
+                    "--sandbox",
+                    "read-only",
+                    "--ask-for-approval",
+                    "never",
+                    "--skip-git-repo-check",
+                    "Reply with exactly OK.",
+                ],
+                Some(Duration::from_secs(45)),
+            )
+            .map(|output| output.contains("OK"))
+            .unwrap_or_else(|message| {
+                error = Some(message);
+                false
+            }),
+            AiCliBackendKind::ClaudeCode => {
+                run_cli_capture(&command, &["auth", "status"], Some(Duration::from_secs(20)))
+                    .map(|_| true)
+                    .unwrap_or_else(|message| {
+                        error = Some(message);
+                        false
+                    })
+            }
+        }
+    } else {
+        false
+    };
+    AiCliBackendStatus {
+        provider,
+        command,
+        installed,
+        authenticated,
+        version,
+        error,
+    }
+}
+
+fn run_cli_agent_command(
+    backend: AiCliBackendKind,
+    command: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<String, String> {
+    let output = match backend {
+        AiCliBackendKind::Codex => run_cli_capture(
+            command,
+            &[
+                "exec",
+                "--ephemeral",
+                "--sandbox",
+                "read-only",
+                "--ask-for-approval",
+                "never",
+                "--skip-git-repo-check",
+                "--model",
+                model,
+                prompt,
+            ],
+            Some(COPILOT_SDK_RESPONSE_TIMEOUT),
+        ),
+        AiCliBackendKind::ClaudeCode => run_cli_capture(
+            command,
+            &[
+                "-p",
+                "--output-format",
+                "text",
+                "--tools",
+                "",
+                "--permission-mode",
+                "plan",
+                "--no-session-persistence",
+                "--model",
+                model,
+                prompt,
+            ],
+            Some(COPILOT_SDK_RESPONSE_TIMEOUT),
+        ),
+    }?;
+    let trimmed = output.trim();
+    if trimmed.is_empty() {
+        return Err(format!(
+            "{} did not return assistant text",
+            match backend {
+                AiCliBackendKind::Codex => "Codex CLI",
+                AiCliBackendKind::ClaudeCode => "Claude Code CLI",
+            }
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn run_cli_capture(
+    command: &str,
+    args: &[&str],
+    _timeout: Option<Duration>,
+) -> Result<String, String> {
+    let mut cmd = Command::new(command);
+    cmd.args(args).stdin(Stdio::null());
+    crate::installer::proc::no_window(&mut cmd);
+    let output = cmd
+        .output()
+        .map_err(|error| format!("failed to start `{command}`: {error}"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    if !output.status.success() {
+        let detail = if stderr.trim().is_empty() {
+            stdout.trim().to_string()
+        } else {
+            stderr.trim().to_string()
+        };
+        return Err(format!(
+            "`{command}` exited with {}{}",
+            output.status,
+            if detail.is_empty() {
+                String::new()
+            } else {
+                format!(": {}", truncate_error_body(&detail))
+            }
+        ));
+    }
+    if stdout.trim().is_empty() {
+        Ok(stderr)
+    } else {
+        Ok(stdout)
+    }
+}
+
+fn spawn_external_terminal(command: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = Command::new("cmd.exe");
+        cmd.args([
+            "/C",
+            "start",
+            "KKTerm AI CLI Auth",
+            "cmd.exe",
+            "/K",
+            command,
+        ]);
+        cmd.spawn()
+            .map_err(|error| format!("failed to open external terminal: {error}"))?;
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-lc", command]);
+        cmd.spawn()
+            .map_err(|error| format!("failed to start CLI auth command: {error}"))?;
+        Ok(())
+    }
+}
+
+fn shell_quote(value: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("\"{}\"", value.replace('"', "\\\""))
+    } else {
+        format!("'{}'", value.replace('\'', "'\\''"))
+    }
+}
+
+fn build_cli_agent_prompt(
+    settings: &AiProviderSettings,
+    request: AgentRunRequest,
+) -> Result<String, String> {
+    let prompt = trim_required("assistant prompt", request.prompt)?;
+    let context_label = trim_required("assistant context", request.context_label)?;
+    let mut out = String::new();
+    out.push_str("You are KKTerm's AI Assistant for local-first administration workflows. ");
+    out.push_str("Answer concisely. Do not claim to have used KKTerm tools or observed live state unless it appears in the context. ");
+    out.push_str("You are running through an external CLI backend with KKTerm tool calling disabled for this turn; suggest commands for user review instead of executing them.\n\n");
+    if let Some(custom) =
+        normalize_custom_instructions(Some(settings.custom_instructions().to_string()))
+    {
+        out.push_str(&custom);
+        out.push_str("\n\n");
+    }
+    if let Some(language) = normalize_output_language(request.output_language) {
+        out.push_str(&language);
+        out.push_str("\n\n");
+    }
+    out.push_str(&format!(
+        "Active context: {context_label}\nAssistant intent: {}\nReasoning effort: {}\n\n",
+        normalize_agent_intent(request.intent).as_str(),
+        settings.reasoning_effort()
+    ));
+    if !request.messages.is_empty() {
+        out.push_str("Recent chat history:\n");
+        for message in request.messages {
+            let role = message.role.trim();
+            let content = message.content.trim();
+            if !role.is_empty() && !content.is_empty() {
+                out.push_str(role);
+                out.push_str(": ");
+                out.push_str(content);
+                out.push('\n');
+            }
+        }
+        out.push('\n');
+    }
+    if let Some(system_context) = request
+        .system_context
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    {
+        out.push_str("SSH target system context:\n```text\n");
+        out.push_str(&system_context);
+        out.push_str("\n```\n\n");
+    }
+    if let Some(selected_output) = request
+        .selected_output
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    {
+        out.push_str("Selected terminal output:\n```text\n");
+        out.push_str(&selected_output);
+        out.push_str("\n```\n\n");
+    }
+    if let Some(page_context) = normalize_page_context(request.page_context) {
+        out.push_str("Active page context: ");
+        out.push_str(&page_context.source_label);
+        out.push_str("\n```text\n");
+        out.push_str(&page_context.text);
+        out.push_str("\n```\n\n");
+    }
+    if !request.files.is_empty() || request.screenshot.is_some() || !request.screenshots.is_empty()
+    {
+        out.push_str("Note: file and screenshot attachments are not passed to the CLI backend in this version.\n\n");
+    }
+    out.push_str("User request:\n");
+    out.push_str(&prompt);
+    Ok(out)
 }
 
 #[derive(Clone, Copy)]
@@ -1656,12 +2437,11 @@ impl OpenAiCompatibleProvider {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries =
-            enabled_skill_summaries_for_request(
-                &app,
-                settings.disabled_skill_names(),
-                settings.custom_skills_enabled(),
-            )?;
+        let skill_summaries = enabled_skill_summaries_for_request(
+            &app,
+            settings.disabled_skill_names(),
+            settings.custom_skills_enabled(),
+        )?;
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let mut messages = build_agent_messages(
@@ -1781,9 +2561,15 @@ impl OpenAiCompatibleProvider {
                 ),
             });
             for tool_call in tool_calls {
-                let result =
-                    run_ai_tool(&settings, &app_data_dir, &app, &tool_call, None, &allowed_tools)
-                        .await;
+                let result = run_ai_tool(
+                    &settings,
+                    &app_data_dir,
+                    &app,
+                    &tool_call,
+                    None,
+                    &allowed_tools,
+                )
+                .await;
                 messages.push(OpenAiCompatibleMessage {
                     role: "tool".to_string(),
                     content: OpenAiCompatibleContent::Text(result),
@@ -1868,12 +2654,11 @@ impl OpenAiCompatibleProvider {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries =
-            enabled_skill_summaries_for_request(
-                &app,
-                settings.disabled_skill_names(),
-                settings.custom_skills_enabled(),
-            )?;
+        let skill_summaries = enabled_skill_summaries_for_request(
+            &app,
+            settings.disabled_skill_names(),
+            settings.custom_skills_enabled(),
+        )?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
@@ -1990,9 +2775,15 @@ impl OpenAiCompatibleProvider {
                 input.extend(output.iter().cloned());
             }
             for tool_call in tool_calls {
-                let result =
-                    run_ai_tool(&settings, &app_data_dir, &app, &tool_call, None, &allowed_tools)
-                        .await;
+                let result = run_ai_tool(
+                    &settings,
+                    &app_data_dir,
+                    &app,
+                    &tool_call,
+                    None,
+                    &allowed_tools,
+                )
+                .await;
                 input.push(json!({
                     "type": "function_call_output",
                     "call_id": tool_call.id,
@@ -2091,12 +2882,11 @@ impl OpenAiCompatibleProvider {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries =
-            enabled_skill_summaries_for_request(
-                &app,
-                settings.disabled_skill_names(),
-                settings.custom_skills_enabled(),
-            )?;
+        let skill_summaries = enabled_skill_summaries_for_request(
+            &app,
+            settings.disabled_skill_names(),
+            settings.custom_skills_enabled(),
+        )?;
         let endpoint =
             chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
         let mut messages = build_agent_messages(
@@ -2261,16 +3051,15 @@ impl OpenAiCompatibleProvider {
                         },
                     )?;
                 }
-                let result =
-                    run_ai_tool(
-                        &settings,
-                        &app_data_dir,
-                        &app,
-                        tool_call,
-                        Some(&channel),
-                        &allowed_tools,
-                    )
-                    .await;
+                let result = run_ai_tool(
+                    &settings,
+                    &app_data_dir,
+                    &app,
+                    tool_call,
+                    Some(&channel),
+                    &allowed_tools,
+                )
+                .await;
                 ai_debug!(
                     "tool end provider={} model={} subturn={} id={} name={} result_len={}",
                     self.provider_kind,
@@ -2396,12 +3185,11 @@ impl OpenAiCompatibleProvider {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries =
-            enabled_skill_summaries_for_request(
-                &app,
-                settings.disabled_skill_names(),
-                settings.custom_skills_enabled(),
-            )?;
+        let skill_summaries = enabled_skill_summaries_for_request(
+            &app,
+            settings.disabled_skill_names(),
+            settings.custom_skills_enabled(),
+        )?;
         let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
@@ -2540,16 +3328,15 @@ impl OpenAiCompatibleProvider {
                         },
                     )?;
                 }
-                let result =
-                    run_ai_tool(
-                        &settings,
-                        &app_data_dir,
-                        &app,
-                        tool_call,
-                        Some(&channel),
-                        &allowed_tools,
-                    )
-                    .await;
+                let result = run_ai_tool(
+                    &settings,
+                    &app_data_dir,
+                    &app,
+                    tool_call,
+                    Some(&channel),
+                    &allowed_tools,
+                )
+                .await;
                 let tool_error = tool_result_error(&result);
                 let abort_message = tool_error_tracker.note(&tool_call.function.name, &tool_error);
                 input.push(json!({
@@ -4556,15 +5343,13 @@ async fn run_ai_tool(
         }
     }
     let result = match call.function.name.as_str() {
-        "assistant_use_skill" => {
-            assistant_use_skill_tool(
-                app,
-                settings.disabled_skill_names(),
-                settings.custom_skills_enabled(),
-                args,
-                stream_channel,
-            )
-        }
+        "assistant_use_skill" => assistant_use_skill_tool(
+            app,
+            settings.disabled_skill_names(),
+            settings.custom_skills_enabled(),
+            args,
+            stream_channel,
+        ),
         "request_secret_entry" => {
             request_secret_entry_tool(args, settings.provider_kind(), stream_channel)
         }
@@ -7011,14 +7796,12 @@ fn enabled_skill_summaries_for_request(
 ) -> Result<Vec<AssistantSkillSummary>, String> {
     assistant_skills::ensure_bundled_skills_installed(app)?;
     let root = assistant_skills::assistant_skills_root(app)?;
-    assistant_skills::list_skill_summaries(&root, disabled_names, include_custom).map(
-        |summaries| {
-            summaries
-                .into_iter()
-                .filter(|summary| summary.enabled && summary.invalid_reason.is_none())
-                .collect()
-        },
-    )
+    assistant_skills::list_skill_summaries(&root, disabled_names, include_custom).map(|summaries| {
+        summaries
+            .into_iter()
+            .filter(|summary| summary.enabled && summary.invalid_reason.is_none())
+            .collect()
+    })
 }
 
 fn normalize_screenshot_context(
@@ -7506,6 +8289,66 @@ mod tests {
             Some("dashboard-widget-builder")
         );
         assert!(event.get("skill_name").is_none());
+    }
+
+    #[test]
+    fn acp_agent_message_delta_extracts_text_chunks() {
+        let message = json!({
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": {
+                "sessionId": "sess_1",
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {
+                        "type": "text",
+                        "text": "Hello from ACP"
+                    }
+                }
+            }
+        });
+
+        assert_eq!(
+            acp_agent_message_delta_text(&message).as_deref(),
+            Some("Hello from ACP")
+        );
+    }
+
+    #[test]
+    fn acp_permission_rejection_selects_reject_option() {
+        let message = json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "session/request_permission",
+            "params": {
+                "options": [
+                    { "optionId": "allow-once", "name": "Allow once", "kind": "allow_once" },
+                    { "optionId": "reject-once", "name": "Reject", "kind": "reject_once" }
+                ]
+            }
+        });
+
+        assert_eq!(
+            acp_permission_rejection(&message),
+            json!({
+                "outcome": "selected",
+                "optionId": "reject-once"
+            })
+        );
+    }
+
+    #[test]
+    fn acp_command_specs_use_registry_adapters() {
+        let codex = acp_command_spec(AiCliBackendKind::Codex);
+        assert!(codex.args.iter().any(|arg| arg.contains("codex-acp")));
+
+        let claude = acp_command_spec(AiCliBackendKind::ClaudeCode);
+        assert!(
+            claude
+                .args
+                .iter()
+                .any(|arg| arg.contains("claude-agent-acp"))
+        );
     }
 
     #[test]
@@ -8462,6 +9305,7 @@ mod tests {
         let provider = match provider {
             AgentProviderAdapter::OpenAi(provider) => provider,
             AgentProviderAdapter::GitHubCopilot(_) => panic!("DeepSeek should use OpenAI adapter"),
+            AgentProviderAdapter::Cli(_) => panic!("DeepSeek should use OpenAI adapter"),
         };
 
         let error = require_streamed_assistant_content(&provider, "   ")
@@ -9120,6 +9964,9 @@ mod tests {
         match providers::provider_for(provider_kind).expect("provider should exist") {
             AgentProviderAdapter::OpenAi(provider) => provider,
             AgentProviderAdapter::GitHubCopilot(_) => {
+                panic!("{provider_kind} is not an OpenAI-compatible provider")
+            }
+            AgentProviderAdapter::Cli(_) => {
                 panic!("{provider_kind} is not an OpenAI-compatible provider")
             }
         }
@@ -9899,6 +10746,7 @@ mod tests {
                 assert!(provider.requires_api_key);
             }
             AgentProviderAdapter::GitHubCopilot(_) => panic!("DeepSeek should use OpenAI adapter"),
+            AgentProviderAdapter::Cli(_) => panic!("DeepSeek should use OpenAI adapter"),
         }
     }
 

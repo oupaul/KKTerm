@@ -55,6 +55,8 @@ export function providerDefaultsFor(kind: AiProviderKind): AiProviderSettings {
     toolPermissionMode: "prompt",
     builtInMcpServerEnabled: true,
     builtInMcpAllowAllDangerous: false,
+    useCodexCli: false,
+    useClaudeCli: false,
     claudeCliPath: "",
     codexCliPath: "",
     disabledSkillNames: [],
@@ -114,6 +116,8 @@ export function normalizeAiProviderDraft(draft: AiProviderSettings): AiProviderS
     toolPermissionMode: draft.toolPermissionMode === "allowAll" ? "allowAll" : "prompt",
     builtInMcpServerEnabled: Boolean(draft.builtInMcpServerEnabled ?? true),
     builtInMcpAllowAllDangerous: Boolean(draft.builtInMcpAllowAllDangerous),
+    useCodexCli: definition.kind === "openai" ? Boolean(draft.useCodexCli) : false,
+    useClaudeCli: definition.kind === "anthropic" ? Boolean(draft.useClaudeCli) : false,
     claudeCliPath: draft.claudeCliPath?.trim() ?? "",
     codexCliPath: draft.codexCliPath?.trim() ?? "",
     disabledSkillNames: normalizeDisabledSkillNames(draft.disabledSkillNames),
@@ -192,6 +196,12 @@ function normalizeSmtpPort(value: number | undefined): number {
 }
 
 export function providerNeedsApiKey(settings: AiProviderSettings) {
+  if (
+    (settings.providerKind === "openai" && settings.useCodexCli) ||
+    (settings.providerKind === "anthropic" && settings.useClaudeCli)
+  ) {
+    return false;
+  }
   return getAiProviderDefinition(settings.providerKind).requiresApiKey;
 }
 
@@ -201,6 +211,12 @@ export function validateAiProviderForChat(
 ): AiProviderSettings {
   const normalized = normalizeAiProviderDraft(settings);
   const definition = getAiProviderDefinition(normalized.providerKind);
+  if (
+    (normalized.providerKind === "openai" && normalized.useCodexCli) ||
+    (normalized.providerKind === "anthropic" && normalized.useClaudeCli)
+  ) {
+    return normalized;
+  }
   if (definition.kind === "github-copilot" && !hasApiKey) {
     throw new Error(i18next.t("ai.copilotConnectRequired"));
   }

@@ -61,6 +61,8 @@ export type AiProviderDefaults = Pick<
   | "extraHeaders"
   | "allowInsecureTls"
   | "cliExecutionPolicy"
+  | "useCodexCli"
+  | "useClaudeCli"
   | "claudeCliPath"
   | "codexCliPath"
 >;

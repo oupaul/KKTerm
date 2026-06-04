@@ -17,6 +17,19 @@ or streaming format, do **not** force it into the OpenAI-compatible adapter. Add
 proper `AgentProvider` implementation in Rust and document the new runtime shape.
 That is intentionally more than a one-file provider addition.
 
+OpenAI and Anthropic can also be routed through their local coding CLIs when the
+user enables the Settings toggles `settings.useCodexCli` or
+`settings.useClaudeCli`. This is not the same runtime as the HTTP provider
+adapters: KKTerm first tries an Agent Client Protocol (ACP) stdio backend using
+the registry adapters for Codex and Claude Agent. If the ACP adapter is not
+available or fails to initialize, KKTerm falls back to the documented one-shot
+vendor CLI commands (`codex exec` or `claude -p`) using the vendor CLI's own
+cached authentication. The API key field is disabled in these modes. Keep this
+bridge conservative: use documented ACP or non-interactive CLI modes, avoid
+passing KKTerm secrets through environment variables or prompt text, and do not
+claim parity with KKTerm's native tool-calling loop unless ACP tool/client
+capabilities have been explicitly implemented.
+
 ## Rust provider structure
 
 Rust provider metadata lives under `src-tauri/src/ai/providers/` with one file per
@@ -95,6 +108,11 @@ keychain under provider-specific AI API key owners. When adding settings:
 3. Keep secrets out of SQLite. Do not add provider-specific API-key fields to the
    durable settings table unless the storage model is redesigned.
 4. Add or update storage tests that round-trip the new persisted setting.
+
+`useCodexCli` and `useClaudeCli` are non-secret booleans. They are only honored
+for `openai` and `anthropic` respectively; validation clears them for other
+providers. CLI paths remain optional non-secret overrides, while CLI auth
+material stays owned by the vendor CLI.
 
 The generic `openai-compatible` provider exposes `apiMode` so users can choose
 Chat Completions or Responses request mode for custom endpoints. The backend

@@ -20,6 +20,8 @@ import {
   invokeCommand,
   isTauriRuntime,
   openExternalUrl,
+  type AiCliBackendKind,
+  type AiCliBackendStatus,
   type AiProviderModelOption,
   type GitHubCopilotDeviceFlow,
 } from "../../lib/tauri";
@@ -44,6 +46,8 @@ import { SettingsCollapsibleFieldset, SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../../i18n/config";
+import { resolveInstallPlan } from "../installer/dag";
+import { installRecipeAndWait } from "../installer/progress";
 
 const GITHUB_COPILOT_CLI_INSTALL_URL =
   "https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli";
@@ -303,6 +307,7 @@ function AiProviderSettingsFieldControl({
   hasApiKey,
   isRefreshingModels,
   modelOptions,
+  useCliBackend,
   onApiKeyDraftChange,
   onDraftChange,
   onRefreshModels,
@@ -315,6 +320,7 @@ function AiProviderSettingsFieldControl({
   hasApiKey: boolean;
   isRefreshingModels: boolean;
   modelOptions?: AiProviderModelOption[];
+  useCliBackend: boolean;
   onApiKeyDraftChange: (value: string) => void;
   onDraftChange: (patch: Partial<AiProviderSettingsType>) => void;
   onRefreshModels: () => void;
@@ -361,6 +367,7 @@ function AiProviderSettingsFieldControl({
                   disabled={
                     isRefreshingModels ||
                     !isTauriRuntime() ||
+                    useCliBackend ||
                     (definition.requiresApiKey && !hasApiKey)
                   }
                   onClick={onRefreshModels}
@@ -432,7 +439,7 @@ function AiProviderSettingsFieldControl({
           </span>
           <input
             autoComplete="off"
-            disabled={!definition.requiresApiKey}
+            disabled={!definition.requiresApiKey || useCliBackend}
             onBlur={() => setIsApiKeyInputFocused(false)}
             onChange={(event) => onApiKeyDraftChange(event.currentTarget.value)}
             onFocus={() => setIsApiKeyInputFocused(true)}
@@ -471,6 +478,155 @@ function AiProviderSettingsFieldControl({
     default:
       return null;
   }
+}
+
+function providerCliBackend(providerKind: AiProviderKind): {
+  backend: AiCliBackendKind;
+  installToolId: string;
+  labelKey: string;
+  hintKey: string;
+  enabled: (draft: AiProviderSettingsType) => boolean;
+  patch: (checked: boolean) => Partial<AiProviderSettingsType>;
+} | null {
+  if (providerKind === "openai") {
+    return {
+      backend: "codex",
+      installToolId: "codex-cli",
+      labelKey: "settings.useCodexCli",
+      hintKey: "settings.useCodexCliHint",
+      enabled: (draft) => draft.useCodexCli,
+      patch: (checked) => ({ useCodexCli: checked }),
+    };
+  }
+  if (providerKind === "anthropic") {
+    return {
+      backend: "claudeCode",
+      installToolId: "claude-code-cli",
+      labelKey: "settings.useClaudeCli",
+      hintKey: "settings.useClaudeCliHint",
+      enabled: (draft) => draft.useClaudeCli,
+      patch: (checked) => ({ useClaudeCli: checked }),
+    };
+  }
+  return null;
+}
+
+function AiCliBackendControl({
+  draft,
+  onDraftChange,
+}: {
+  draft: AiProviderSettingsType;
+  onDraftChange: (patch: Partial<AiProviderSettingsType>) => void;
+}) {
+  const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const cli = providerCliBackend(draft.providerKind);
+  const [status, setStatus] = useState<AiCliBackendStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function refreshStatus() {
+    if (!cli || !isTauriRuntime()) return;
+    setBusy(true);
+    try {
+      const next = await invokeCommand("get_ai_cli_backend_status", {
+        provider: cli.backend,
+      });
+      setStatus(next);
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function installCli() {
+    if (!cli || !isTauriRuntime()) return;
+    setBusy(true);
+    try {
+      const catalog = await invokeCommand("installer_load_catalog", {});
+      const detected = await invokeCommand("installer_detect_all");
+      const plan = resolveInstallPlan(cli.installToolId, catalog, detected);
+      for (const step of plan.actionable) {
+        const event = await installRecipeAndWait(step.recipe.id);
+        if (event.kind !== "completed") {
+          throw new Error(
+            event.kind === "failed" ? event.message : t("settings.aiCliInstallFailed"),
+          );
+        }
+      }
+      showStatusBarNotice(t("settings.aiCliInstallStarted"), { tone: "success" });
+      await refreshStatus();
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openAuth() {
+    if (!cli || !isTauriRuntime()) return;
+    try {
+      await invokeCommand("open_ai_cli_backend_auth", { provider: cli.backend });
+      showStatusBarNotice(t("settings.aiCliAuthStarted"), { tone: "info" });
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+        tone: "error",
+      });
+    }
+  }
+
+  useEffect(() => {
+    setStatus(null);
+  }, [draft.providerKind]);
+
+  if (!cli) return null;
+  const enabled = cli.enabled(draft);
+  const statusText = !status
+    ? t("settings.aiCliStatusUnknown")
+    : !status.installed
+      ? t("settings.aiCliStatusMissing")
+      : status.authenticated
+        ? t("settings.aiCliStatusReady")
+        : t("settings.aiCliStatusAuthRequired");
+
+  return (
+    <div className="settings-toggle-list ai-cli-backend-control">
+      <label className="settings-toggle-row">
+        <ToggleSwitch
+          checked={enabled}
+          onChange={(checked) => onDraftChange(cli.patch(checked))}
+        />
+        <span>
+          <strong>{t(cli.labelKey)}</strong>
+          <small>{t(cli.hintKey)}</small>
+        </span>
+      </label>
+      {enabled ? (
+        <div className="settings-cli-backend-status">
+          <span className="field-hint">
+            {statusText}
+            {status?.version ? ` (${status.version})` : ""}
+          </span>
+          <div className="settings-copilot-actions">
+            <button className="toolbar-button" disabled={busy || !isTauriRuntime()} onClick={() => void refreshStatus()} type="button">
+              {t("settings.aiCliRefreshStatus")}
+            </button>
+            <button className="toolbar-button" disabled={busy || !isTauriRuntime()} onClick={() => void installCli()} type="button">
+              {t("settings.aiCliInstall")}
+            </button>
+            <button className="toolbar-button" disabled={busy || !status?.installed || !isTauriRuntime()} onClick={() => void openAuth()} type="button">
+              {t("settings.aiCliAuthenticate")}
+            </button>
+          </div>
+          {status?.error ? <small className="field-hint">{status.error}</small> : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function AiOutputLanguageControl({
@@ -950,6 +1106,10 @@ export function AiSettings() {
     searchApiKeyDraft.trim().length > 0 ||
     emailSecretDraft.trim().length > 0;
   const aiProviderDefinition = getAiProviderDefinition(draft.providerKind);
+  const useCliBackend = Boolean(
+    (draft.providerKind === "openai" && draft.useCodexCli) ||
+      (draft.providerKind === "anthropic" && draft.useClaudeCli),
+  );
 
   useEffect(() => {
     setDraft(aiProviderSettings);
@@ -1082,6 +1242,7 @@ export function AiSettings() {
   useEffect(() => {
     if (
       !isTauriRuntime() ||
+      useCliBackend ||
       !aiProviderDefinition.modelListStrategy ||
       (aiProviderDefinition.requiresApiKey && !selectedProviderHasApiKey)
     ) {
@@ -1143,11 +1304,13 @@ export function AiSettings() {
     draft.extraHeaders,
     draft.providerKind,
     selectedProviderHasApiKey,
+    useCliBackend,
   ]);
 
   async function handleRefreshModels() {
     if (
       !isTauriRuntime() ||
+      useCliBackend ||
       !aiProviderDefinition.modelListStrategy ||
       (aiProviderDefinition.requiresApiKey && !selectedProviderHasApiKey)
     ) {
@@ -1268,6 +1431,8 @@ export function AiSettings() {
       reasoningEffort: defaults.reasoningEffort,
       apiMode: defaults.apiMode,
       extraHeaders: defaults.extraHeaders,
+      useCodexCli: defaults.useCodexCli,
+      useClaudeCli: defaults.useClaudeCli,
     }));
     setApiKeyDraft("");
     setSelectedProviderHasApiKey(false);
@@ -1390,6 +1555,7 @@ export function AiSettings() {
                   ? refreshedModelOptions
                   : undefined
               }
+              useCliBackend={useCliBackend}
               onApiKeyDraftChange={setApiKeyDraft}
               onDraftChange={(patch) =>
                 setDraft((settings) => ({
@@ -1402,6 +1568,15 @@ export function AiSettings() {
             />
           ))}
         </div>
+        <AiCliBackendControl
+          draft={draft}
+          onDraftChange={(patch) =>
+            setDraft((settings) => ({
+              ...settings,
+              ...patch,
+            }))
+          }
+        />
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
             <ToggleSwitch

@@ -541,6 +541,8 @@ export interface AiProviderSettings {
   toolPermissionMode: AiToolPermissionMode;
   builtInMcpServerEnabled: boolean;
   builtInMcpAllowAllDangerous: boolean;
+  useCodexCli: boolean;
+  useClaudeCli: boolean;
   claudeCliPath?: string;
   codexCliPath?: string;
   disabledSkillNames: string[];

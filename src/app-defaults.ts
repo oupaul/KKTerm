@@ -156,6 +156,8 @@ export const defaultAiProviderSettings: AiProviderSettings = {
   toolPermissionMode: "prompt",
   builtInMcpServerEnabled: true,
   builtInMcpAllowAllDangerous: false,
+  useCodexCli: false,
+  useClaudeCli: false,
   claudeCliPath: "",
   codexCliPath: "",
   disabledSkillNames: [],

@@ -49,7 +49,7 @@ AI Assistant context is also a command-boundary concern. Any frontend page conte
 - `src/modules/settings/AppearanceSettings.tsx` — App UI font family, layout reset, Color Scheme selection and preview, including tutorial target `settings.appearance.colorScheme`.
 - `src/modules/settings/DashboardSettings.tsx` — Dashboard-wide preferences: default landing view, widget network-tools permission, and the active script widget cap. Per-view grid density is owned by the view row and edited from the Dashboard topbar in edit mode only.
 - `src/modules/settings/WorkspaceSettings.tsx` — Workspace display preferences, including whether the top Tab Strip is hidden in favor of Child Connection Tabs under parent Connections in the Connection Tree.
-- `src/modules/settings/AiSettings.tsx` — AI provider kind, dynamic provider fields, provider-specific model selector, custom model ID input, API key, output language, and insecure TLS provider toggle. Provider addition rules live in `docs/AI_PROVIDERS.md`.
+- `src/modules/settings/AiSettings.tsx` — AI provider kind, dynamic provider fields, provider-specific model selector, custom model ID input, API key, OpenAI/Anthropic CLI backend toggles, output language, and insecure TLS provider toggle. Provider addition rules live in `docs/AI_PROVIDERS.md`.
 - `src/modules/settings/SshSettings.tsx` — SSH defaults, SSH terminal buffer behavior, SSH port redirect visibility, SSH OSC 52 clipboard policy, managed VcXsrv launcher defaults for local X11 windows, and SFTP transfer defaults summary.
 - `src/modules/settings/TerminalSettings.tsx` — Local terminal font, size, line height, scrollback, cursor, default shell, and local terminal toggles. Do not put SSH-only terminal behavior here; SSH terminal behavior belongs in `SshSettings.tsx`.
 - `src/modules/settings/UrlSettings.tsx` — URL Connection security defaults, saved website password metadata, and URL data shard management.
@@ -307,6 +307,7 @@ Assistant input construction follows a minimum-context rule:
 v0.1 providers:
 
 - OpenAI-compatible endpoint with BYO API key.
+- Anthropic and OpenAI can optionally delegate assistant turns to local Claude Code CLI / Codex CLI backends when the matching Settings toggle is enabled. These modes prefer an Agent Client Protocol stdio adapter for the selected vendor CLI and fall back to documented one-shot CLI command mode if ACP is unavailable. They use the vendor CLI's own cached authentication, disable the API key entry, and are intentionally not full parity with KKTerm's native HTTP/tool-calling loop.
 - Claude Code CLI path.
 - Codex CLI path.
 

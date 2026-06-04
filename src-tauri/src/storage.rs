@@ -674,6 +674,10 @@ pub struct AiProviderSettings {
     #[serde(default)]
     built_in_mcp_allow_all_dangerous: bool,
     #[serde(default)]
+    use_codex_cli: bool,
+    #[serde(default)]
+    use_claude_cli: bool,
+    #[serde(default)]
     claude_cli_path: Option<String>,
     #[serde(default)]
     codex_cli_path: Option<String>,
@@ -758,6 +762,14 @@ impl AiProviderSettings {
 
     pub(crate) fn built_in_mcp_allow_all_dangerous(&self) -> bool {
         self.built_in_mcp_allow_all_dangerous
+    }
+
+    pub(crate) fn use_codex_cli(&self) -> bool {
+        self.provider_kind == "openai" && self.use_codex_cli
+    }
+
+    pub(crate) fn use_claude_cli(&self) -> bool {
+        self.provider_kind == "anthropic" && self.use_claude_cli
     }
 
     pub(crate) fn claude_cli_path(&self) -> Option<&str> {
@@ -5021,6 +5033,8 @@ fn default_ai_provider_settings() -> AiProviderSettings {
         tool_permission_mode: default_ai_tool_permission_mode(),
         built_in_mcp_server_enabled: default_built_in_mcp_server_enabled(),
         built_in_mcp_allow_all_dangerous: false,
+        use_codex_cli: false,
+        use_claude_cli: false,
         claude_cli_path: None,
         codex_cli_path: None,
         disabled_skill_names: Vec::new(),
@@ -5495,6 +5509,8 @@ fn validate_ai_provider_settings(
         );
     }
     settings.extra_headers = settings.extra_headers.trim().to_string();
+    settings.use_codex_cli = settings.provider_kind == "openai" && settings.use_codex_cli;
+    settings.use_claude_cli = settings.provider_kind == "anthropic" && settings.use_claude_cli;
     settings.claude_cli_path = trim_optional(settings.claude_cli_path);
     settings.codex_cli_path = trim_optional(settings.codex_cli_path);
     settings.disabled_skill_names =
@@ -7801,6 +7817,8 @@ mod tests {
                 tool_permission_mode: " Allow All ".to_string(),
                 built_in_mcp_server_enabled: true,
                 built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
                 claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
                 codex_cli_path: Some("  codex  ".to_string()),
                 disabled_skill_names: vec!["ssh-helper".to_string(), "bad name".to_string()],
@@ -7902,6 +7920,8 @@ mod tests {
                 tool_permission_mode: "autoDeleteEverything".to_string(),
                 built_in_mcp_server_enabled: true,
                 built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -7946,6 +7966,8 @@ mod tests {
                 tool_permission_mode: "prompt".to_string(),
                 built_in_mcp_server_enabled: true,
                 built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -7994,6 +8016,8 @@ mod tests {
                 tool_permission_mode: "prompt".to_string(),
                 built_in_mcp_server_enabled: true,
                 built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -8039,6 +8063,8 @@ mod tests {
                 tool_permission_mode: "prompt".to_string(),
                 built_in_mcp_server_enabled: true,
                 built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
                 claude_cli_path: None,
                 codex_cli_path: None,
                 disabled_skill_names: Vec::new(),
@@ -8098,6 +8124,8 @@ mod tests {
                 tool_permission_mode: "prompt".to_string(),
                 built_in_mcp_server_enabled: true,
                 built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
                 claude_cli_path: Some("claude".to_string()),
                 codex_cli_path: Some("codex".to_string()),
                 disabled_skill_names: Vec::new(),

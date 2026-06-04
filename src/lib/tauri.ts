@@ -741,6 +741,17 @@ export interface AiProviderModelOption {
   supportsImageInput?: boolean | null;
 }
 
+export type AiCliBackendKind = "codex" | "claudeCode";
+
+export interface AiCliBackendStatus {
+  provider: AiCliBackendKind;
+  command: string;
+  installed: boolean;
+  authenticated: boolean;
+  version?: string | null;
+  error?: string | null;
+}
+
 export interface AssistantChatThreadRecord {
   id: string;
   title: string;
@@ -1134,6 +1145,14 @@ type CommandMap = {
       };
     };
     result: AiProviderModelOption[];
+  };
+  get_ai_cli_backend_status: {
+    args: { provider: AiCliBackendKind };
+    result: AiCliBackendStatus;
+  };
+  open_ai_cli_backend_auth: {
+    args: { provider: AiCliBackendKind };
+    result: null;
   };
   plan_command_proposal: {
     args: {

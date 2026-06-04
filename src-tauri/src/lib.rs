@@ -261,7 +261,7 @@ async fn dashboard_load_background_image(
 fn dashboard_load_background_image_sync(
     file: String,
 ) -> Result<DashboardBackgroundImageData, String> {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
 
     if file.is_empty() || file.contains('/') || file.contains('\\') || file.contains("..") {
         return Err("invalid background image file name".to_string());
@@ -332,7 +332,7 @@ fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
 }
 
 fn load_custom_font_data_sync(path: String) -> Result<CustomFontData, String> {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
 
     let folder = custom_fonts_folder()?;
     fs::create_dir_all(&folder).map_err(|error| {
@@ -1182,8 +1182,8 @@ fn delete_assistant_chat_thread(
 }
 
 #[tauri::command]
-async fn start_github_copilot_device_flow(
-) -> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
+async fn start_github_copilot_device_flow()
+-> Result<github_copilot::GitHubCopilotDeviceFlow, String> {
     github_copilot::start_device_flow().await
 }
 
@@ -1234,6 +1234,32 @@ async fn list_ai_provider_models(
         request.allow_insecure_tls(),
     )
     .await
+}
+
+#[tauri::command]
+async fn get_ai_cli_backend_status(
+    storage: tauri::State<'_, storage::Storage>,
+    provider: ai::AiCliBackendKind,
+) -> Result<ai::AiCliBackendStatus, String> {
+    let settings = storage.ai_provider_settings()?;
+    let configured_path = match provider {
+        ai::AiCliBackendKind::Codex => settings.codex_cli_path().map(str::to_string),
+        ai::AiCliBackendKind::ClaudeCode => settings.claude_cli_path().map(str::to_string),
+    };
+    Ok(ai::ai_cli_backend_status(provider, configured_path).await)
+}
+
+#[tauri::command]
+fn open_ai_cli_backend_auth(
+    storage: tauri::State<'_, storage::Storage>,
+    provider: ai::AiCliBackendKind,
+) -> Result<(), String> {
+    let settings = storage.ai_provider_settings()?;
+    let configured_path = match provider {
+        ai::AiCliBackendKind::Codex => settings.codex_cli_path().map(str::to_string),
+        ai::AiCliBackendKind::ClaudeCode => settings.claude_cli_path().map(str::to_string),
+    };
+    ai::open_ai_cli_backend_auth(provider, configured_path)
 }
 
 #[tauri::command]
@@ -2938,6 +2964,8 @@ pub fn run() {
             poll_github_copilot_device_flow,
             list_github_copilot_models,
             list_ai_provider_models,
+            get_ai_cli_backend_status,
+            open_ai_cli_backend_auth,
             plan_command_proposal,
             complete_assistant_live_tool_request,
             complete_assistant_tool_approval_request,
