@@ -28,7 +28,7 @@ Startup states:
 
 Two columns:
 
-Each pane path is editable: type a local or remote path into the path field and press Enter to navigate. Press Escape or leave the field without Enter to keep the current path. The path input accessibility label is `sftp.pathInputAria`.
+Each pane header keeps the pane label and editable path field on one row. Type a local or remote path into the expanding path field and press Enter to navigate. Press Escape or leave the field without Enter to keep the current path. Folder-name autocomplete suggests folders from the current listing and inserts the selected folder path with a trailing slash. The recent-path icon (`sftp.recentPathsAria`) opens up to the last five visited paths for that local or remote pane. The path input accessibility label is `sftp.pathInputAria`.
 
 - **Local** (`sftp.local`, `sftp.localFiles`) — loading state `sftp.loadingLocal`. On Windows, opening the parent of a drive root shows the drive picker path label `sftp.windowsDrives`, where double-clicking a drive opens that drive root.
 - **Remote** (`sftp.remote`) — empty state `sftp.noFiles`, loading `sftp.loading`.
@@ -56,7 +56,7 @@ Double-click affordance hint: `sftp.doubleClickToOpen`, `sftp.doubleClickToOpenF
 
 ## Transferring files
 
-Use drag/drop between panes or the explicit toolbar buttons `sftp.upload` and `sftp.download`. The terminal column also exposes a `sftp.terminal` action that reopens the parent SSH terminal in the originating Pane.
+Use drag/drop between panes or the explicit toolbar buttons `sftp.upload` and `sftp.download`. Standalone SFTP panes expose a `sftp.terminal` action that reopens the parent SSH terminal in the originating Pane; SFTP popups opened from an active SSH terminal omit that action because closing the popup returns to the parent terminal. Inline SFTP popups also omit the screenshot toolbar action, while standalone SFTP panes keep the screenshot target `sftp.screenshotTarget`.
 
 Tutorial targets: `sftp.upload`, `sftp.download`, `sftp.terminal`.
 

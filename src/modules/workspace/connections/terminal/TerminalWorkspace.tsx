@@ -291,7 +291,7 @@ export function TerminalWorkspace({
               </button>
             </header>
             <div className="sftp-popup-dialog-body">
-              <SftpWorkspace isActive={true} tab={sftpDialogTab} />
+              <SftpWorkspace isActive={true} tab={sftpDialogTab} inline />
             </div>
           </section>
         </div>,

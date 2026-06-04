@@ -2034,7 +2034,8 @@
     "fileTypeLabel": "{{ext}} file",
     "targetExistsDetail": "The target {{kind}} already exists. Choose whether to overwrite {{name}}.",
     "windowsDrives": "This PC",
-    "pathInputAria": "Enter {{pane}} path"
+    "pathInputAria": "Enter {{pane}} path",
+    "recentPathsAria": "Open recent {{pane}} paths"
   },
   "webview": {
     "goBack": "Go back",

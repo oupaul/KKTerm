@@ -40,15 +40,19 @@ import type {
 
 const TRANSFER_HISTORY_STATES: TransferRecord["state"][] = ["canceled", "done", "failed"];
 const WINDOWS_DRIVES_PATH = "__KKTERM_WINDOWS_DRIVES__";
+const FILE_BROWSER_RECENT_PATHS_STORAGE_KEY = "kkterm.fileBrowserRecentPaths.v1";
+const RECENT_PATH_LIMIT = 5;
 
 export function SftpWorkspace({
   isActive,
   tab,
   commands: commandsProp,
+  inline = false,
 }: {
   isActive: boolean;
   tab: WorkspaceTab;
   commands?: FileBrowserCommands;
+  inline?: boolean;
 }) {
   const { t } = useTranslation();
   const openTerminalHere = useWorkspaceStore((state) => state.openTerminalHere);
@@ -62,6 +66,10 @@ export function SftpWorkspace({
   const [localFiles, setLocalFiles] = useState<FileEntry[]>([]);
   const [remotePath, setRemotePath] = useState(".");
   const [remoteFiles, setRemoteFiles] = useState<FileEntry[]>([]);
+  const [recentLocalPaths, setRecentLocalPaths] = useState<string[]>(() => readRecentPaths("local"));
+  const [recentRemotePaths, setRecentRemotePaths] = useState<string[]>(() =>
+    readRecentPaths("remote", connection?.id),
+  );
   const [status, setStatus] = useState(t("sftp.connecting"));
   const [localStatus, setLocalStatus] = useState("");
   const [isLocalLoading, setIsLocalLoading] = useState(false);
@@ -139,6 +147,20 @@ export function SftpWorkspace({
     };
   }, [commands]);
 
+  useEffect(() => {
+    setRecentRemotePaths(readRecentPaths("remote", connection?.id));
+  }, [connection?.id]);
+
+  const rememberLocalPath = (path: string) => {
+    const nextPaths = writeRecentPaths("local", path);
+    setRecentLocalPaths(nextPaths);
+  };
+
+  const rememberRemotePath = (path: string) => {
+    const nextPaths = writeRecentPaths("remote", path, connection?.id);
+    setRecentRemotePaths(nextPaths);
+  };
+
   const loadLocalDirectory = async (path?: string) => {
     if (!isTauriRuntime()) {
       setLocalStatus(t("sftp.tauriUnavailable"));
@@ -154,6 +176,7 @@ export function SftpWorkspace({
       });
       setLocalPath(result.path);
       setLocalFiles(result.entries.map(localEntryToFileEntry));
+      rememberLocalPath(result.path);
       setSelectedLocalNames([]);
       setLocalStatus("");
     } catch (error) {
@@ -213,6 +236,7 @@ export function SftpWorkspace({
         markConnectionSessionStarted(connection.id);
         setRemotePath(result.path);
         setRemoteFiles(result.entries.map(remoteEntryToFileEntry));
+        rememberRemotePath(result.path);
         setSelectedRemoteNames([]);
         setStatus(t("sftp.connected"));
       } catch (error) {
@@ -259,6 +283,7 @@ export function SftpWorkspace({
       const result = await commands.listDirectory({ sessionId, path });
       setRemotePath(result.path);
       setRemoteFiles(result.entries.map(remoteEntryToFileEntry));
+      rememberRemotePath(result.path);
       setSelectedRemoteNames([]);
       setStatus(t("sftp.connected"));
     } catch (error) {
@@ -934,21 +959,25 @@ export function SftpWorkspace({
             <Download size={15} />
             {t("sftp.download")}
           </button>
-          <button
-            className="toolbar-button"
-            data-tutorial-id="sftp.terminal"
-            disabled={!isConnected}
-            onClick={handleOpenTerminalHere}
-            type="button"
-          >
-            <Terminal size={15} />
-            {t("sftp.terminal")}
-          </button>
-          <ScreenshotMenu
-            dataTutorialId="workspace.screenshotMenu"
-            targetLabel={t("sftp.screenshotTarget", { title: tab.title })}
-            targetRef={workspaceRef}
-          />
+          {!inline && commands?.capabilities.openTerminalHere ? (
+            <button
+              className="toolbar-button"
+              data-tutorial-id="sftp.terminal"
+              disabled={!isConnected}
+              onClick={handleOpenTerminalHere}
+              type="button"
+            >
+              <Terminal size={15} />
+              {t("sftp.terminal")}
+            </button>
+          ) : null}
+          {!inline ? (
+            <ScreenshotMenu
+              dataTutorialId="workspace.screenshotMenu"
+              targetLabel={t("sftp.screenshotTarget", { title: tab.title })}
+              targetRef={workspaceRef}
+            />
+          ) : null}
         
         </div>
       </div>
@@ -966,6 +995,7 @@ export function SftpWorkspace({
           onGoUp={openLocalParent}
           onOpenFolder={openLocalFolder}
           onPathSubmit={(path) => void loadLocalDirectory(path)}
+          recentPaths={recentLocalPaths}
           onSelectionChange={setSelectedLocalNames}
           onContextMenuRequest={handleOpenContextMenu}
           onDropTransfer={
@@ -987,6 +1017,7 @@ export function SftpWorkspace({
           onDeleteSelected={isConnected && !isTransferring ? handleDeleteRemotePath : undefined}
           onOpenFolder={openRemoteFolder}
           onPathSubmit={(path) => void loadRemoteDirectory(path)}
+          recentPaths={recentRemotePaths}
           onSelectionChange={setSelectedRemoteNames}
           onContextMenuRequest={handleOpenContextMenu}
           onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
@@ -1083,6 +1114,80 @@ export function SftpWorkspace({
 function isWindowsDriveRoot(path: string) {
   return /^[A-Za-z]:[\\/]?$/.test(path.trim());
 }
+
+
+function readRecentPaths(side: FilePaneSide, connectionId?: string) {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const state = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_RECENT_PATHS_STORAGE_KEY) || "{}",
+    ) as RecentFileBrowserPaths;
+    if (side === "local") {
+      return normalizeRecentPaths(state.local);
+    }
+
+    return normalizeRecentPaths(state.remote?.[remoteRecentPathKey(connectionId)]);
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentPaths(side: FilePaneSide, path: string, connectionId?: string) {
+  const trimmedPath = path.trim();
+  if (!trimmedPath || trimmedPath === WINDOWS_DRIVES_PATH || typeof window === "undefined") {
+    return readRecentPaths(side, connectionId);
+  }
+
+  let state: RecentFileBrowserPaths = {};
+  try {
+    state = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_RECENT_PATHS_STORAGE_KEY) || "{}",
+    ) as RecentFileBrowserPaths;
+  } catch {
+    state = {};
+  }
+
+  const currentPaths = side === "local"
+    ? normalizeRecentPaths(state.local)
+    : normalizeRecentPaths(state.remote?.[remoteRecentPathKey(connectionId)]);
+  const nextPaths = [
+    trimmedPath,
+    ...currentPaths.filter((entry) => entry !== trimmedPath),
+  ].slice(0, RECENT_PATH_LIMIT);
+
+  if (side === "local") {
+    state = { ...state, local: nextPaths };
+  } else {
+    state = {
+      ...state,
+      remote: {
+        ...(state.remote ?? {}),
+        [remoteRecentPathKey(connectionId)]: nextPaths,
+      },
+    };
+  }
+
+  window.localStorage.setItem(FILE_BROWSER_RECENT_PATHS_STORAGE_KEY, JSON.stringify(state));
+  return nextPaths;
+}
+
+function normalizeRecentPaths(paths: unknown) {
+  return Array.isArray(paths)
+    ? paths.filter((path): path is string => typeof path === "string" && path.length > 0).slice(0, RECENT_PATH_LIMIT)
+    : [];
+}
+
+function remoteRecentPathKey(connectionId?: string) {
+  return connectionId || "default";
+}
+
+type RecentFileBrowserPaths = {
+  local?: string[];
+  remote?: Record<string, string[]>;
+};
 
 function localEntryToFileEntry(entry: LocalDirectoryEntry): FileEntry {
   return {
