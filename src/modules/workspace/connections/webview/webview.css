@@ -2,7 +2,6 @@
   box-sizing: border-box;
   min-width: 0;
   overflow: hidden;
-  padding: 14px;
 }
 
 .webview-pane {

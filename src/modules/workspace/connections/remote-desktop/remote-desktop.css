@@ -8,10 +8,6 @@
   background: #111318;
 }
 
-.remote-desktop-shell {
-  padding: 14px;
-}
-
 .remote-desktop-pane {
   grid-template-rows: 34px minmax(0, 1fr);
   width: 100%;
