@@ -227,33 +227,33 @@ export function TerminalWorkspace({
     return defaultFontSize;
   }
 
-  function restoreFocusedTerminalPane() {
-    const renderer = focusedPaneId ? getPaneRenderer(focusedPaneId) : undefined;
-    if (!renderer || shouldPreserveTerminalWorkspaceFocus()) {
+  const lastFocusRestoreRef = useRef(0);
+  function restoreFocusedTerminalPane(reason: string) {
+    logTerminalFocusDiagnostic(`restore:${reason}`);
+    if (shouldPreserveTerminalWorkspaceFocus()) {
       return;
     }
-    logTerminalFocusDiagnostic("restore:before");
-    // On Windows/WebView2 the xterm textarea usually stays as
-    // document.activeElement while KKTerm is in the background, so a bare
-    // terminal.focus() short-circuits (the element is "already focused") and
-    // the native input chain is never re-established when we return. Re-assert
-    // focus at the OS webview level first, then force the textarea to actually
-    // re-acquire focus by blurring before focusing.
-    const reassert = () => {
-      if (shouldPreserveTerminalWorkspaceFocus()) {
-        return;
-      }
-      renderer.blur();
-      renderer.focus();
-      logTerminalFocusDiagnostic("restore:after");
-    };
+    // Re-entrancy guard: a single activation must not be able to spin. Native
+    // focus calls below can re-emit focus signals on some WebView2 builds.
+    const now = Date.now();
+    if (now - lastFocusRestoreRef.current < 300) {
+      return;
+    }
+    lastFocusRestoreRef.current = now;
+    // The diagnostic showed the xterm textarea keeps DOM focus across an OS
+    // window switch (document.activeElement never leaves it), so a JS
+    // terminal.focus() is a no-op. What is missing is OS-level keyboard focus
+    // on the WebView2 content, which only a native webview focus restores.
     if (isTauriRuntime()) {
       void focusCurrentWebview()
         .catch(() => undefined)
-        .finally(() => window.requestAnimationFrame(reassert));
-      return;
+        .finally(() => logTerminalFocusDiagnostic(`restored:${reason}`));
     }
-    reassert();
+    // Cover the case where DOM focus did leave the terminal (e.g. a title-bar
+    // drag parked it on <body>): re-focus the pane's textarea. This is a no-op
+    // when it already holds focus, so it cannot re-enter the native path.
+    const renderer = focusedPaneId ? getPaneRenderer(focusedPaneId) : undefined;
+    renderer?.focus();
   }
 
   useEffect(() => {
@@ -261,26 +261,26 @@ export function TerminalWorkspace({
       return;
     }
 
-    const scheduleRestore = () => {
-      window.setTimeout(restoreFocusedTerminalPane, 80);
-      window.setTimeout(restoreFocusedTerminalPane, 180);
-    };
+    // Restore terminal input focus when the OS hands the window back to us, or
+    // after a title-bar drag. We deliberately do NOT listen to the DOM window
+    // "focus" event: focusing the webview natively re-fires it, which would
+    // spin the restore into a feedback loop.
     const handleTitlebarPointerUp = (event: PointerEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (!target?.closest(".app-titlebar") || target.closest("button")) {
         return;
       }
-      scheduleRestore();
+      restoreFocusedTerminalPane("titlebar");
     };
+    const handleWindowFocus = () => restoreFocusedTerminalPane("window-focus");
     let disposed = false;
     let removeNativeFocusListener: (() => void) | undefined;
 
-    window.addEventListener("focus", scheduleRestore);
     document.addEventListener("pointerup", handleTitlebarPointerUp, true);
     if (isTauriRuntime()) {
       void listenMainWindowFocusChanged((focused) => {
         if (focused) {
-          scheduleRestore();
+          restoreFocusedTerminalPane("window-activated");
         }
       }).then((unlisten) => {
         if (disposed) {
@@ -289,12 +289,14 @@ export function TerminalWorkspace({
           removeNativeFocusListener = unlisten;
         }
       });
+    } else {
+      window.addEventListener("focus", handleWindowFocus);
     }
 
     return () => {
       disposed = true;
-      window.removeEventListener("focus", scheduleRestore);
       document.removeEventListener("pointerup", handleTitlebarPointerUp, true);
+      window.removeEventListener("focus", handleWindowFocus);
       removeNativeFocusListener?.();
     };
   }, [focusedPaneId, isActive]);
@@ -1510,6 +1512,14 @@ function TerminalPaneView({
     terminal.open(element);
     terminal.fit();
     focusTerminalUnlessExternalInputIsActive(terminal, paneRef.current);
+    // A freshly opened terminal holds DOM focus on its textarea but the
+    // WebView2 content does not yet own OS keyboard focus (especially right
+    // after a connection dialog closes), so the first keystroke is otherwise
+    // dropped until the user clicks. Route native focus into the webview once
+    // when this pane is the active, focused one.
+    if (isActive && isFocused && isTauriRuntime()) {
+      void focusCurrentWebview().catch(() => undefined);
+    }
     terminal.attachCustomKeyEventHandler((event) => {
       // xterm.js emits a bare CR for Shift+Enter, indistinguishable from a
       // plain Enter, so Node.js TUIs running inside local PowerShell/cmd/WSL
