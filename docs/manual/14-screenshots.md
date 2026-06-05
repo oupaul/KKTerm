@@ -22,7 +22,7 @@ Region selection overlay accessible label: `workspace.selectRegion`. Generic nou
 Per-surface "screenshot target" labels used in dialog headings:
 
 - SFTP: `sftp.screenshotTarget`
-- WebView (URL Connections): `webview.screenshotTarget`
+- WebView (URL Connections): `webview.screenshotTarget`; direct toolbar send uses tutorial target `webview.sendToAi`.
 
 Failure: `workspace.screenshotCaptureError`. Outside the Tauri runtime: `workspace.screenshotsRequireRuntime`.
 

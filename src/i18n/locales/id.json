@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "Koneksi URL ini tidak memiliki URL yang dikonfigurasi.",
     "onlyDesktopRuntime": "Browser tersemat hanya tersedia di runtime desktop.",
     "openExternally": "Buka secara eksternal",
+    "actions": "Tindakan URL",
     "savePassword": "Simpan kata sandi",
     "savePasswordTitle": "Simpan nama pengguna dan kata sandi yang sedang diketik di halaman ini",
     "fillSavedCredential": "Isi otomatis kredensial tersimpan",

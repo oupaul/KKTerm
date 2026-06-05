@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "Esta conexión URL no tiene URL configurada.",
     "onlyDesktopRuntime": "El navegador integrado solo está disponible en el entorno de escritorio.",
     "openExternally": "Abrir externamente",
+    "actions": "Acciones de URL",
     "savePassword": "Guardar contraseña",
     "savePasswordTitle": "Guardar el usuario y la contraseña escritos actualmente en esta página",
     "fillSavedCredential": "Autocompletar credencial guardada",

@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `webview.*` (full namespace), `connections.embeddedWebApp`
-- Topics: URL Connection, address bar, back/forward/reload, auto-refresh, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.surface`
+- Topics: URL Connection, address bar, back/forward/reload, auto-refresh, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
 - Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "open link in browser", "external browser"
 
 > **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL plus an optional `dataPartition` label. The `dataPartition` field is persisted but currently a no-op — Phase 1 WebView2 shares one user-data folder across all URL Connections. Real per-Connection isolation is deferred to Phase 2.
@@ -25,9 +25,10 @@ Tutorial target: `webview.surface`.
 - In-page links: normal http(s) link clicks navigate inside the URL Pane, including links that ask for a new browser window. Shift-click an http(s) link in the embedded page to open it in the OS default browser instead of navigating the URL Pane.
 - Fill saved credential: `webview.fill` / `webview.fillCredential` / `webview.fillSavedCredential`.
 - Save password: `webview.savePassword`, dialog title `webview.savePasswordTitle`.
-- Save/reset split Pane layout for this URL Connection: `terminal.saveLayout` / `terminal.resetLayout`. Status Bar confirmations: `terminal.layoutSaved` / `terminal.layoutReset`.
+- Send current URL Pane screenshot to AI Assistant: `workspace.sendEntirePanelToAi` (tutorial target `webview.sendToAi`). Status Bar confirmation: `workspace.sentToAi`.
+- URL actions menu: `webview.actions`. Save/reset split Pane layout for this URL Connection from the menu with `terminal.saveLayout` / `terminal.resetLayout`. Status Bar confirmations: `terminal.layoutSaved` / `terminal.layoutReset`.
 
-Tutorial targets: `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`.
+Tutorial targets: `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`.
 
 ## Credential fill
 

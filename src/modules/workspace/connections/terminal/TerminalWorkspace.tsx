@@ -490,7 +490,12 @@ function EmbeddedConnectionPane({
         </button>
       ) : null}
       {pane.kind === "webview" ? (
-        <WebViewWorkspace isActive={isActive} layoutTabId={tabId} tab={embeddedTab} />
+        <WebViewWorkspace
+          isActive={isActive}
+          layoutTabId={tabId}
+          onOpenAssistant={onOpenAssistant}
+          tab={embeddedTab}
+        />
       ) : (
         <RemoteDesktopWorkspace
           isActive={isActive}

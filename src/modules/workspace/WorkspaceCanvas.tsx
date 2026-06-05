@@ -320,6 +320,7 @@ export function WorkspaceCanvas({
             <WebViewWorkspace
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onOpenAssistant={onOpenAssistant}
               tab={tab}
             />
           );

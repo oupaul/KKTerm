@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "此 URL 连接未配置 URL。",
     "onlyDesktopRuntime": "嵌入式浏览器仅在桌面运行环境中可用。",
     "openExternally": "从外部打开",
+    "actions": "URL 操作",
     "savePassword": "保存密码",
     "savePasswordTitle": "保存当前在此页面输入的用户名与密码",
     "fillSavedCredential": "自动填充已保存的凭据",
