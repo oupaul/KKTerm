@@ -30,6 +30,7 @@ The checklist passes when:
 
 - Full-screen terminal apps use the alternate screen cleanly and restore the prompt after exit.
 - Keyboard input, paste, Ctrl+C, Escape, arrows, function keys, and common modifier shortcuts are delivered correctly.
+- Returning to KKTerm from another Windows app restores keyboard input to the focused visible terminal Pane without an extra click.
 - Mouse interactions work in apps that enable mouse support.
 - Terminal resizes propagate to running apps without corrupted layout.
 - Long command output remains responsive and searchable in the correct Pane.
@@ -47,6 +48,7 @@ The checklist passes when:
 | Open SSH terminal without remote tmux | Open a tmux-enabled SSH Connection to a host where `tmux` is not installed, or temporarily make `tmux` unavailable on a test host. | KKTerm falls back to the normal remote shell and the terminal remains usable. | |
 | Switch tabs without disconnecting | Open two terminal tabs. Run a long-lived safe command or leave a prompt active in the first tab, switch to the second tab, then switch back. Repeat with native SSH when available. | The first Session remains connected and usable after tab switches. No disconnect occurs unless the tab-strip close `X` is explicitly pressed or the process/remote host ends the Session. | |
 | Minimize/background idle SSH | Open a native SSH terminal and leave it idle at a prompt. Minimize KKTerm or switch to another app for at least 2 minutes, then return. | The SSH Session remains connected and usable. For tmux-enabled Panes, the Pane should still be attached to the same locale-generated tmux session id. | |
+| Restore focus after app switch | Open a single native SSH terminal Tab and leave it at a prompt. Switch to Chrome or another Windows app, then switch back to KKTerm without clicking inside the terminal. Type a harmless character or command such as `echo focus-check`. | Keyboard input goes to the focused visible terminal Pane immediately. No click inside the Pane is required after returning to KKTerm. | |
 | Split terminal panes | Split the terminal tab into at least two Panes. Run a different command in each Pane. | Focus, typing, and output stay isolated to the active Pane. | |
 | Resize app window | Resize the KKTerm window while a prompt is visible. | Prompt redraws cleanly, with no duplicated prompt fragments or stale rows. | |
 

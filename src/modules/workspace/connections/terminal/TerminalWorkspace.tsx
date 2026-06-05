@@ -2150,7 +2150,9 @@ function TerminalPaneView({
               tabId={tabId}
             />
           ) : null}
-          {isSshPane ? <XServerToolbarIndicator status={x11ForwardingStatus} /> : null}
+          {isSshPane && sshSettings.managedXServerEnabled ? (
+            <XServerToolbarIndicator status={x11ForwardingStatus} />
+          ) : null}
           {recordingInfo ? <span className="terminal-recording-status">{t("terminal.recording")}</span> : null}
           <button
             className={`terminal-pane-action terminal-recording-button${recordingInfo ? " active" : ""}`}

@@ -383,6 +383,8 @@ KKTerm does not include a global command palette in the current product scope; n
 
 The main workspace treats Tabs as frontend containers over live Sessions. Selecting another Tab changes visibility and focus only; it must not run backend Session close commands. Closing a Tab via the tab-strip close control removes that container and tears down the live Session resources it owns.
 
+Terminal Pane focus is part of the Workspace visibility contract. When the main Tauri window loses and regains native focus, the focused visible terminal Pane must restore input focus to xterm's hidden textarea unless an app-owned editable surface such as terminal search, a dialog field, or the AI Assistant composer deliberately owns focus. Do not rely only on browser `window.focus` for this path in the desktop runtime; native `WindowEvent::Focused` changes can be the reliable signal after switching away to another Windows app and back. A single visible SSH terminal Tab returning from Chrome or another foreground app must still accept keyboard input without requiring a click.
+
 Workspace chrome layout is global state. Connection-specific live context may change assistant copy, selected terminal context, or prompt construction, but should not change the left/right panel widths or collapsed state when the active Tab changes. Native HWND-backed surfaces such as WebView2 and RDP depend on stable host bounds; changing chrome dimensions as a side effect of Tab activation creates visible native resize artifacts.
 
 ## Frontend Source Map
