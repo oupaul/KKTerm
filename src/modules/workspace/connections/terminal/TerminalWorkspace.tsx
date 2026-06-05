@@ -40,6 +40,7 @@ type TerminalContextMenuState = {
 };
 
 const TMUX_MOUSE_MODE_EVENT = "kkterm:tmux-mouse-mode";
+const MAIN_WINDOW_FOCUS_CHANGED_EVENT = "kkterm://main-window-focus-changed";
 const terminalInputEncoder = new TextEncoder();
 
 function normalizeFilenamePart(value: string) {
@@ -1811,12 +1812,31 @@ function TerminalPaneView({
       queueMicrotask(focus);
       window.requestAnimationFrame(focus);
     };
+    let disposed = false;
+    let removeNativeFocusListener: (() => void) | undefined;
 
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
+    if (isTauriRuntime()) {
+      void listen<boolean>(MAIN_WINDOW_FOCUS_CHANGED_EVENT, (event) => {
+        if (event.payload) {
+          handleWindowFocus();
+        } else {
+          handleWindowBlur();
+        }
+      }).then((unlisten) => {
+        if (disposed) {
+          unlisten();
+        } else {
+          removeNativeFocusListener = unlisten;
+        }
+      });
+    }
     return () => {
+      disposed = true;
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
+      removeNativeFocusListener?.();
     };
   }, [isActive, isFocused]);
 

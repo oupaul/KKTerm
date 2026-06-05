@@ -47,7 +47,7 @@ mod x_server;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
 
 #[derive(Deserialize)]
@@ -2818,6 +2818,7 @@ pub fn run() {
                     }
                     tauri::WindowEvent::Focused(focused) => {
                         debug_heartbeat::record_window_event(format!("focused:{focused}"));
+                        let _ = window.emit("kkterm://main-window-focus-changed", *focused);
                         if !focused {
                             app_tray::hide_minimized_window_if_enabled(window);
                         }
