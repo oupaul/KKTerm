@@ -3,6 +3,50 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.62/kkterm-0.1.62-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.62/kkterm-0.1.62-windows-arm64-setup.exe)
+
+## Highlights
+- URL layout controls moved to the **Connection** context menu, and terminal focus restore is improved (PR [#261](https://github.com/ryantsai/KKTerm/pull/261) by @ryantsai).
+- Script-widget iframe startup is deferred/staggered so Dashboard UI stalls are reduced (PR [#262](https://github.com/ryantsai/KKTerm/pull/262) by @ryantsai). Your Dashboard gets to breathe—like a terminal waiting for the prompt.
+
+## New
+- None.
+
+## Improved
+- URL layout controls are now in the **Connection** context menu (PR [#261](https://github.com/ryantsai/KKTerm/pull/261)).
+- Better terminal focus restore using WebView focus (PR [#261](https://github.com/ryantsai/KKTerm/pull/261)).
+
+## Fixed
+- None.
+
+## Internal
+- Reduced Dashboard **Dashboard Widget Instance** stalls by deferring and staggering script-widget iframe startup (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
+- Script widgets are gated by viewport intersection so off-screen script-widget iframes run less JavaScript until scrolled into view (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
+- Monitoring widgets are exempt from viewport gating so periodic/realtime widgets keep updating while off-screen (PR [#262](https://github.com/ryantsai/KKTerm/pull/262)).
+
+---
+
+## 亮點
+- 已將 **URL 佈局**控制項移到 **Connection（連線）**的內容選單，同時也強化了終端機（terminal）回復焦點的體驗（PR [#261](https://github.com/ryantsai/KKTerm/pull/261) 由 @ryantsai 貢獻）。
+- Script-widget 的 iframe 啟動改為延後/分批，降低 Dashboard UI 卡頓（PR [#262](https://github.com/ryantsai/KKTerm/pull/262) 由 @ryantsai 貢獻）。Dashboard 終於能喘口氣——就像終端機在等提示字元。
+
+## 新增
+- 無。
+
+## 改善
+- **URL 佈局**控制項改放到 **Connection** 的內容選單（PR [#261](https://github.com/ryantsai/KKTerm/pull/261)）。
+- 終端機焦點回復改用 WebView focus，體驗更穩定（PR [#261](https://github.com/ryantsai/KKTerm/pull/261)）。
+
+## 修正
+- 無。
+
+## Internal
+- 透過延後與分批啟動 script-widget iframe，降低 Dashboard 的 **Dashboard Widget Instance** 卡頓（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
+- 依視窗交會（viewport intersection）對 script-widget iframe 進行上屏/延後處理：離屏時先不必啟動過多 JavaScript，直到使用者捲入（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
+- 偵測用（monitoring）widgets 不套用離屏閘門：定期（periodic）/即時（realtime）widgets 即使離屏也能持續更新（PR [#262](https://github.com/ryantsai/KKTerm/pull/262)）。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.61/kkterm-0.1.61-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.61/kkterm-0.1.61-windows-arm64-setup.exe)
 
