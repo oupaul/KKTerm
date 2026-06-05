@@ -3,6 +3,46 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.63/kkterm-0.1.63-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.63/kkterm-0.1.63-windows-arm64-setup.exe)
+
+## Highlights
+- Fixed a keyboard focus issue for **Terminal** Sessions after app/window activation: keystrokes now reach the right **Pane** without an extra click.
+- Improved **RDP** debug logging so sensitive fields are redacted while keeping useful diagnostics, and surfaced **RDP** errors in the **Status Bar** regardless of debug settings.
+
+## New
+- Added **ui.debug.log** support for Terminal focus tracing (records focus restore stages and related document state when enabled).  
+  PR #9481b70
+
+## Improved
+- Enhanced **RDP** debug logging details while keeping sensitive values out of logs.  
+  PR #1994e86
+- Updated documentation/manifests for the above debug logging and related settings language entries.  
+  PR #8c90114, #1994e86
+
+## Fixed
+- **Terminal** keyboard focus restoration:
+  - Stopped the focus-restore loop and ensured native OS-level focus is routed into the WebView content when the Terminal **Session** becomes active.  
+    PR #265 (commit(s): `9769472`, `9e37a0a`)
+  - Re-established input focus after app switch by restoring focus at the OS webview level (and re-acquiring the textarea focus path).  
+    PR #266 (commit(s): `a2bb052`)
+  - Added a window-level focus command and wired it into Terminal focus restore and Session start (scoped so URL-pane child webviews are unaffected).  
+    PR #267 (commit(s): `060719c`, `98ecdd7`)  
+  - Renamed `focus_main_window` to `restore_main_window` for clarity.  
+    PR #? (`3857b77`)
+- **RDP** error visibility:
+  - **Status Bar** now shows `remoteDesktop.rdpErrorStatus` for RDP errors regardless of debug settings.  
+    PR #1994e86
+- Sensitive field redaction in **RDP** debug logs.  
+  PR #1994e86
+
+## Internal
+- Refreshed architecture/release docs and manual pages for the improved debug logging and settings behavior.  
+  PR #8c90114, #1994e86
+- Continued locale/i18n updates for the new/changed strings and debug UI support.  
+  PR #1994e86
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.62/kkterm-0.1.62-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.62/kkterm-0.1.62-windows-arm64-setup.exe)
 
