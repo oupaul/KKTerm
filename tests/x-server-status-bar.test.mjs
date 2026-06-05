@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("X server status renders before Don't Sleep in the status bar", async () => {
+test("X server status indicator is settings-derived and renders before Don't Sleep", async () => {
   const statusBarSource = await readFile(
     new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url),
     "utf8",
@@ -11,7 +11,9 @@ test("X server status renders before Don't Sleep in the status bar", async () =>
   const rustSource = await readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
 
   assert.match(statusBarSource, /function XServerStatusIcon\(\)/);
-  assert.match(statusBarSource, /invokeCommand\("is_ssh_x_server_running"\)/);
+  assert.match(statusBarSource, /state\.sshSettings\.managedXServerEnabled/);
+  assert.doesNotMatch(statusBarSource, /is_ssh_x_server_running/);
+  assert.doesNotMatch(statusBarSource, /X_SERVER_STATUS_POLL_MS/);
 
   const actions = statusBarSource.match(/<div className="status-bar-actions">(?<body>[\s\S]*?)<\/div>/)
     ?.groups?.body;
@@ -21,9 +23,9 @@ test("X server status renders before Don't Sleep in the status bar", async () =>
     "X server status should render before Don't Sleep",
   );
 
-  assert.match(tauriSource, /is_ssh_x_server_running: \{\s*args: undefined;\s*result: boolean;/);
-  assert.match(rustSource, /async fn is_ssh_x_server_running\(\) -> Result<bool, String>/);
-  assert.match(rustSource, /is_ssh_x_server_running,/);
+  assert.doesNotMatch(tauriSource, /is_ssh_x_server_running/);
+  assert.doesNotMatch(rustSource, /is_ssh_x_server_running/);
+  assert.doesNotMatch(rustSource, /X server status/);
 });
 
 test("VcXsrv is listed as an Installer Helper utility", async () => {
