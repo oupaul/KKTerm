@@ -135,7 +135,7 @@ _Avoid_: tab bar, tab row
 A subdivision within a Tab that presents one terminal surface or view. Pane toolbars carry terminal/connection controls.
 
 **Status Bar**:
-The bottom workspace bar showing left-aligned host usage metrics and transient workspace notifications. Its right side carries app-wide status indicators: the **Watchdog Status Bar** indicator, an AI Assistant working indicator, and the Don't Sleep (coffee) indicator.
+The bottom workspace bar showing left-aligned host usage metrics and transient workspace notifications. Its right side carries app-wide status indicators: the **Watchdog Status Bar** indicator, an AI Assistant working indicator, a managed X server setting indicator, and the Don't Sleep (coffee) indicator.
 _Avoid_: footer bar, bottom bar
 
 **Settings Sidebar**:

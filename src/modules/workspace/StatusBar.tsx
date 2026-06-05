@@ -17,7 +17,6 @@ import { useWorkspaceStore } from "../../store";
 import { WatchdogStatusBar } from "../../watchdog/WatchdogStatusBar";
 
 const NOTIFICATION_FADE_MS = 220;
-const X_SERVER_STATUS_POLL_MS = 5000;
 
 export function StatusBar({
   onOpenAssistant,
@@ -96,53 +95,14 @@ export function StatusBar({
 
 function XServerStatusIcon() {
   const { t } = useTranslation();
-  const [isRunning, setIsRunning] = useState(false);
+  const managedXServerEnabled = useWorkspaceStore(
+    (state) => state.sshSettings.managedXServerEnabled,
+  );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    let active = true;
-
-    async function refresh() {
-      try {
-        const running = await invokeCommand("is_ssh_x_server_running");
-        if (active) {
-          setIsRunning(running);
-        }
-      } catch {
-        if (active) {
-          setIsRunning(false);
-        }
-      }
-    }
-
-    void refresh();
-    const interval = window.setInterval(() => void refresh(), X_SERVER_STATUS_POLL_MS);
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-    };
-  }, []);
-
-  async function refreshStatus() {
-    if (!isTauriRuntime()) {
-      setIsRunning(false);
-      return;
-    }
-    try {
-      setIsRunning(await invokeCommand("is_ssh_x_server_running"));
-    } catch {
-      setIsRunning(false);
-    }
-  }
 
   async function restartXServer() {
     try {
       await invokeCommand("restart_ssh_x_server");
-      await refreshStatus();
       showStatusBarNotice(t("settings.xServerLaunchStarted"), { tone: "success" });
     } catch (error) {
       showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
@@ -152,7 +112,6 @@ function XServerStatusIcon() {
   async function stopXServer() {
     try {
       await invokeCommand("stop_ssh_x_server");
-      await refreshStatus();
       showStatusBarNotice(t("app.xServerStopped"), { tone: "success" });
     } catch (error) {
       showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
@@ -178,7 +137,7 @@ function XServerStatusIcon() {
     );
   }
 
-  if (!isRunning) {
+  if (!managedXServerEnabled) {
     return null;
   }
 

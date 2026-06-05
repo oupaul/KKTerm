@@ -889,11 +889,6 @@ async fn stop_ssh_x_server() -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn is_ssh_x_server_running() -> Result<bool, String> {
-    run_blocking_command("X server status", || Ok(x_server::is_vcxsrv_running())).await
-}
-
-#[tauri::command]
 fn generate_ssh_key_pair(
     request: ssh_keys::GenerateSshKeyPairRequest,
 ) -> Result<ssh_keys::GeneratedSshKeyPair, String> {
@@ -2894,7 +2889,6 @@ pub fn run() {
             launch_ssh_x_server,
             restart_ssh_x_server,
             stop_ssh_x_server,
-            is_ssh_x_server_running,
             generate_ssh_key_pair,
             transfer_ssh_public_key,
             get_sftp_settings,
