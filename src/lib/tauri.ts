@@ -803,6 +803,10 @@ type CommandMap = {
     args: { event: string; payload: Record<string, unknown> };
     result: void;
   };
+  focus_main_window: {
+    args: undefined;
+    result: void;
+  };
   show_native_tooltip: {
     args: {
       request: {
@@ -2392,6 +2396,17 @@ export async function focusCurrentWebview() {
     return;
   }
   await getCurrentWebview().setFocus();
+}
+
+// Window-level native focus. Unlike focusCurrentWebview (WebView2 MoveFocus),
+// this routes Win32 keyboard focus back onto the webview content HWND, which is
+// what a physical click does and what the WebView2 MoveFocus call fails to do
+// after the OS reactivates the window.
+export async function focusMainWindow() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invokeCommand("focus_main_window");
 }
 
 export async function listenMainWindowResized(handler: () => void) {

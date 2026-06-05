@@ -166,6 +166,20 @@ fn ui_debug_log(event: String, payload: serde_json::Value) {
     logging::ui_debug(&event, &payload);
 }
 
+// Restore native keyboard focus to the main window after the OS hands it back.
+// Diagnostics proved the WebView2 content keeps DOM focus (document.hasFocus()
+// is true, the xterm textarea is active) yet keyboard input is dropped until a
+// physical click — i.e. the Win32 keyboard focus is not on the webview content
+// HWND. The JS webview MoveFocus (getCurrentWebview().setFocus) runs but does
+// not fix it; the window-level set_focus used by the tray-restore path does
+// route keyboard focus into the content, so reuse it here.
+#[tauri::command]
+fn focus_main_window(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+        let _ = window.set_focus();
+    }
+}
+
 #[tauri::command]
 fn get_custom_fonts_folder() -> Result<String, String> {
     let folder = custom_fonts_folder()?;
@@ -2856,6 +2870,7 @@ pub fn run() {
             app_updates::download_and_install_app_update,
             debug_frontend_heartbeat,
             ui_debug_log,
+            focus_main_window,
             show_native_tooltip,
             hide_native_tooltip,
             list_connection_tree,
