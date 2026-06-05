@@ -52,7 +52,7 @@ Driven by `src/lib/nativeContextMenu.ts`. On a Connection or folder node:
 - Pin to rail: `connections.pinToRail` / `connections.unpinFromRail`. Status: `connections.pinnedToRailStatus`, `connections.unpinnedFromRailStatus`. Error: `connections.pinRailError`.
 - Top-level `workspace.newTab` on Connection rows. This opens the same new Tab flow as the Add-to-folder `workspace.newTab` entry and remains available in both places.
 - Add to folder: `connections.addTo`, including `workspace.newTab` with shortcut hint `connections.newTabShortcut`, then pane placement directions `connections.left`, `connections.right`, `connections.lower`, `connections.upper`.
-- Layout (Pane placement when opening): `connections.layout` with directions `connections.left`, `connections.right`, `connections.lower`, `connections.upper`
+- Layout for terminal and URL Connections: `connections.layout` with `common.save` / `common.reset` to persist or clear saved split Pane layout for that Connection.
 - `connections.properties`
 
 Icons are rasterized to 16 px PNG bytes via `src/lib/nativeContextMenu.ts`. Do not pass raw SVG paths to Tauri menu APIs.

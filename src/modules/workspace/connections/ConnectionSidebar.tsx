@@ -1512,7 +1512,7 @@ export function ConnectionSidebar({
       ],
     });
 
-    if (isTerminalConnectionType(menu.connection.type)) {
+    if (supportsSavedConnectionLayout(menu.connection.type)) {
       items.push({
         kind: "submenu",
         label: t("connections.layout"),
@@ -2736,6 +2736,10 @@ function isTerminalConnectionType(type: ConnectionType) {
   return type === "local" || type === "ssh" || type === "telnet" || type === "serial";
 }
 
+function supportsSavedConnectionLayout(type: ConnectionType) {
+  return isTerminalConnectionType(type) || type === "url";
+}
+
 function InlineTreeRenameInput({
   ariaLabel,
   initialName,
@@ -2956,7 +2960,7 @@ function TreeContextMenu({
               ) : null}
             </div>
           </div>
-          {isTerminalConnectionType(menu.connection.type) ? (
+          {supportsSavedConnectionLayout(menu.connection.type) ? (
             <div className="tree-context-submenu" role="none">
               <button aria-haspopup="menu" className="tree-submenu-trigger" role="menuitem" type="button">
                 <LayoutDashboard className="menu-item-icon" size={15} />

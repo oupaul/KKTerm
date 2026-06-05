@@ -26,7 +26,7 @@ Tutorial target: `webview.surface`.
 - Fill saved credential: `webview.fill` / `webview.fillCredential` / `webview.fillSavedCredential`.
 - Save password: `webview.savePassword`, dialog title `webview.savePasswordTitle`.
 - Send current URL Pane screenshot to AI Assistant: `workspace.sendEntirePanelToAi` (tutorial target `webview.sendToAi`). Status Bar confirmation: `workspace.sentToAi`.
-- URL actions menu: `webview.actions`. Save/reset split Pane layout for this URL Connection from the menu with `terminal.saveLayout` / `terminal.resetLayout`. Status Bar confirmations: `terminal.layoutSaved` / `terminal.layoutReset`.
+- Save/reset split Pane layout for a saved URL Connection from the Connection Tree right-click submenu `connections.layout` with `common.save` / `common.reset`.
 
 Tutorial targets: `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`.
 

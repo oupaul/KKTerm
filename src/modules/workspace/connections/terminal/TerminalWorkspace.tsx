@@ -14,7 +14,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "re
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
-import { invokeCommand, isTauriRuntime, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -492,7 +492,6 @@ function EmbeddedConnectionPane({
       {pane.kind === "webview" ? (
         <WebViewWorkspace
           isActive={isActive}
-          layoutTabId={tabId}
           onOpenAssistant={onOpenAssistant}
           tab={embeddedTab}
         />
@@ -1243,6 +1242,24 @@ function TerminalPaneView({
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [recordingsOpen, setRecordingsOpen] = useState(false);
   const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(true);
+  function focusTerminalRenderer() {
+    const renderer = terminalRendererRef.current;
+    if (renderer) {
+      focusTerminalUnlessExternalInputIsActive(renderer, paneRef.current);
+    }
+  }
+
+  function restoreTerminalFocusAfterWindowActivation() {
+    if (isTauriRuntime()) {
+      void focusCurrentWebview()
+        .catch(() => undefined)
+        .finally(() => window.requestAnimationFrame(focusTerminalRenderer));
+      return;
+    }
+
+    window.requestAnimationFrame(focusTerminalRenderer);
+  }
+
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
@@ -1808,14 +1825,7 @@ function TerminalPaneView({
         return;
       }
       restoreFocusOnWindowFocusRef.current = false;
-      const focus = () => {
-        const renderer = terminalRendererRef.current;
-        if (renderer) {
-          focusTerminalUnlessExternalInputIsActive(renderer, paneRef.current);
-        }
-      };
-      queueMicrotask(focus);
-      window.requestAnimationFrame(focus);
+      restoreTerminalFocusAfterWindowActivation();
     };
     let disposed = false;
     let removeNativeFocusListener: (() => void) | undefined;

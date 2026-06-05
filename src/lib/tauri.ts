@@ -1,6 +1,7 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { getVersion as getTauriAppVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   confirm as confirmDialog,
   open as openDialog,
@@ -2369,6 +2370,13 @@ export async function closeMainWindow() {
     return;
   }
   await getCurrentWindow().close();
+}
+
+export async function focusCurrentWebview() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWebview().setFocus();
 }
 
 export async function listenMainWindowResized(handler: () => void) {

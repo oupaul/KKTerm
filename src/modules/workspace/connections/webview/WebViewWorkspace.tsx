@@ -1,14 +1,11 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Menu, RefreshCw, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, RefreshCw, Save } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { FormEvent, MouseEvent as ReactMouseEvent } from "react";
-import { menuButtonAria } from "../../../../lib/aria";
-import { nativeMenuIcons } from "../../../../lib/nativeMenuIcons";
-import { showNativeContextMenu } from "../../../../lib/nativeContextMenu";
+import type { FormEvent } from "react";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "../../../../lib/tauri";
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
@@ -173,12 +170,10 @@ function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly) 
 
 export function WebViewWorkspace({
   isActive,
-  layoutTabId,
   onOpenAssistant = () => undefined,
   tab,
 }: {
   isActive: boolean;
-  layoutTabId?: string;
   onOpenAssistant?: () => void;
   tab: WorkspaceTab;
 }) {
@@ -186,8 +181,6 @@ export function WebViewWorkspace({
   const updateWebviewTabMetadata = useWorkspaceStore((state) => state.updateWebviewTabMetadata);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const ignoreCertificateErrors = useWorkspaceStore((state) => state.urlSettings.ignoreCertificateErrors);
-  const saveTabLayout = useWorkspaceStore((state) => state.saveTabLayout);
-  const resetTabLayout = useWorkspaceStore((state) => state.resetTabLayout);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const setAssistantContextSnippet = useWorkspaceStore((state) => state.setAssistantContextSnippet);
   const submitAssistantContextSnippet = useWorkspaceStore((state) => state.submitAssistantContextSnippet);
@@ -791,40 +784,6 @@ export function WebViewWorkspace({
     }
   }
 
-  function handleSaveLayout() {
-    saveTabLayout(layoutTabId ?? tab.id);
-    showStatusBarNotice(t("terminal.layoutSaved"), { tone: "success" });
-  }
-
-  function handleResetLayout() {
-    resetTabLayout(layoutTabId ?? tab.id);
-    showStatusBarNotice(t("terminal.layoutReset"), { tone: "success" });
-  }
-
-  async function handleLayoutMenu(event: ReactMouseEvent<HTMLButtonElement>) {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    await showNativeContextMenu(
-      [
-        {
-          kind: "item",
-          label: t("terminal.saveLayout"),
-          iconSvg: nativeMenuIcons.save,
-          action: handleSaveLayout,
-        },
-        {
-          kind: "item",
-          label: t("terminal.resetLayout"),
-          iconSvg: nativeMenuIcons.rotateCcw,
-          action: handleResetLayout,
-        },
-      ],
-      {
-        x: bounds.left,
-        y: bounds.bottom,
-      },
-    );
-  }
-
   async function captureWebviewScreenshotForAssistant() {
     if (!isTauriRuntime()) {
       showStatusBarNotice(t("workspace.screenshotsRequireRuntime"), { tone: "warning" });
@@ -994,18 +953,6 @@ export function WebViewWorkspace({
             >
               <Bot size={13} />
             </button>
-            {tab.connection ? (
-              <button
-                aria-label={t("webview.actions")}
-                className="terminal-pane-action"
-                {...menuButtonAria(false)}
-                onClick={(event) => void handleLayoutMenu(event)}
-                title={t("webview.actions")}
-                type="button"
-              >
-                <Menu size={13} />
-              </button>
-            ) : null}
           </div>
         </header>
         <div ref={placeholderRef} className="webview-placeholder" data-tutorial-id="webview.surface">
