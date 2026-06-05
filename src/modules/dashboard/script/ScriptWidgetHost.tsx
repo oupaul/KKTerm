@@ -334,6 +334,13 @@ export function ScriptWidgetHost({
   // user scrolls to them. Latched per View activation: reset when the View
   // is left so each entry re-gates against what is actually visible.
   const [inViewport, setInViewport] = useState(false);
+  // Monitoring widgets must keep running while off-screen or they would miss
+  // data: `periodic` polls on an interval and `realtime` is driven by external
+  // events/streams. They are exempt from the viewport gate and mount eagerly.
+  // `static` (the default) and `animation` carry no cross-time state — a fresh
+  // mount when scrolled into view loses nothing — so they stay gated.
+  const lifecycleKind = parsed?.lifecycle?.kind ?? "static";
+  const viewportGated = lifecycleKind === "static" || lifecycleKind === "animation";
   const syncVisibility = useCallback(() => {
     const el = iframeRef.current;
     if (!el || capped || !libraries || !iframeMountReady) return;
@@ -426,15 +433,15 @@ export function ScriptWidgetHost({
     if (!isViewActive) setInViewport(false);
   }, [isViewActive]);
 
-  // Viewport gate observer: while the widget is eligible to mount but has not
-  // yet entered the viewport, watch the placeholder. The first intersection
+  // Viewport gate observer: while a gated widget is eligible to mount but has
+  // not yet entered the viewport, watch the placeholder. The first intersection
   // (widened by SCRIPT_WIDGET_MOUNT_ROOT_MARGIN) latches `inViewport`, which
-  // lets the deferred mount below proceed. Skipped when IntersectionObserver
-  // is unavailable, so those hosts mount eagerly as before.
+  // lets the deferred mount below proceed. Exempt monitoring widgets, and hosts
+  // without IntersectionObserver, skip the gate and mount eagerly.
   useEffect(() => {
-    if (capped || !parsed || !libraries || !isViewActive) return;
-    if (inViewport || typeof IntersectionObserver === "undefined") {
-      if (typeof IntersectionObserver === "undefined") setInViewport(true);
+    if (capped || !parsed || !libraries || !isViewActive || inViewport) return;
+    if (!viewportGated || typeof IntersectionObserver === "undefined") {
+      setInViewport(true);
       return;
     }
     const el = placeholderRef.current;
@@ -450,7 +457,7 @@ export function ScriptWidgetHost({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [capped, parsed, libraries, isViewActive, inViewport]);
+  }, [capped, parsed, libraries, isViewActive, inViewport, viewportGated]);
 
   useEffect(() => {
     setIframeMountReady(false);

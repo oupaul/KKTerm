@@ -239,19 +239,34 @@ Dashboard chrome has actually painted), then reserves a small file-scope
 stagger slot (`SCRIPT_WIDGET_MOUNT_STAGGER_MS`, 120 ms) before setting
 `srcDoc`.
 
-**Viewport gating.** Even on the active View, the iframe is not built until
-the widget's placeholder scrolls within `SCRIPT_WIDGET_MOUNT_ROOT_MARGIN`
-(256 px) of the viewport, measured by an `IntersectionObserver` on the
-placeholder. A widget below the fold therefore runs **zero** top-level
-JavaScript until the user scrolls toward it, so a tall Dashboard with many
-script widgets only pays for the ones actually on screen. The 256 px margin
-mounts each widget slightly ahead of the scroll so it is already painted by
-the time it is fully visible. The gate is latched per View activation: it is
-reset when the View is left, so re-entering a View re-gates against what is
-actually visible instead of re-mounting every off-screen widget at once. The
-placeholder fills the widget's grid cell (`.dw-script-loading`) so the
-observer measures the widget's real area rather than a single line of text.
+**Viewport gating.** Even on the active View, a gated widget's iframe is not
+built until the widget's placeholder scrolls within
+`SCRIPT_WIDGET_MOUNT_ROOT_MARGIN` (256 px) of the viewport, measured by an
+`IntersectionObserver` on the placeholder. A widget below the fold therefore
+runs **zero** top-level JavaScript until the user scrolls toward it, so a tall
+Dashboard with many script widgets only pays for the ones actually on screen.
+The 256 px margin mounts each widget slightly ahead of the scroll so it is
+already painted by the time it is fully visible. The gate is latched per View
+activation: it is reset when the View is left, so re-entering a View re-gates
+against what is actually visible instead of re-mounting every off-screen widget
+at once. The placeholder fills the widget's grid cell (`.dw-script-loading`) so
+the observer measures the widget's real area rather than a single line of text.
 Hosts without `IntersectionObserver` mount eagerly, preserving prior behavior.
+
+**Monitoring widgets are exempt.** Viewport gating only applies to `static`
+(the default) and `animation` lifecycle kinds, which hold no cross-time state —
+re-mounting one when it scrolls into view loses nothing, and an off-screen
+animation has nothing useful to show anyway. Widgets declared `periodic`
+(interval polling, e.g. an AI-coding-usage or system-stats monitor) or
+`realtime` (event/stream-driven) are exempt: they mount eagerly so they keep
+polling and accumulating data while scrolled off-screen, exactly as they did
+before viewport gating. This is the same lifecycle taxonomy the AI uses when it
+authors a widget (`dashboard_create_widget` requires `body.lifecycle.kind`), so
+a monitor the assistant creates is gated correctly without any extra signal.
+Gating is therefore a within-active-View optimization for display widgets, not
+a change to monitoring semantics. (Off-screen monitors still cooperate with the
+visibility throttle in §8 — they can cheapen rendering via `KK.isVisible()` —
+they simply are not torn down.)
 
 The deferred mount runs as a `background`-priority task via the Prioritized
 Task Scheduling API (`scheduler.postTask`) when the host supports it. A
