@@ -10,11 +10,11 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
+import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
-import { focusCurrentWebview, invokeCommand, isTauriRuntime, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { invokeCommand, isTauriRuntime, listenMainWindowFocusChanged, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -40,7 +40,6 @@ type TerminalContextMenuState = {
 };
 
 const TMUX_MOUSE_MODE_EVENT = "kkterm:tmux-mouse-mode";
-const MAIN_WINDOW_FOCUS_CHANGED_EVENT = "kkterm://main-window-focus-changed";
 const terminalInputEncoder = new TextEncoder();
 
 function normalizeFilenamePart(value: string) {
@@ -227,6 +226,57 @@ export function TerminalWorkspace({
     }
     return defaultFontSize;
   }
+
+  function restoreFocusedTerminalPane() {
+    const renderer = focusedPaneId ? getPaneRenderer(focusedPaneId) : undefined;
+    if (!renderer || shouldPreserveTerminalWorkspaceFocus()) {
+      return;
+    }
+    renderer.focus();
+  }
+
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    const scheduleRestore = () => {
+      window.setTimeout(restoreFocusedTerminalPane, 80);
+      window.setTimeout(restoreFocusedTerminalPane, 180);
+    };
+    const handleTitlebarPointerUp = (event: PointerEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target?.closest(".app-titlebar") || target.closest("button")) {
+        return;
+      }
+      scheduleRestore();
+    };
+    let disposed = false;
+    let removeNativeFocusListener: (() => void) | undefined;
+
+    window.addEventListener("focus", scheduleRestore);
+    document.addEventListener("pointerup", handleTitlebarPointerUp, true);
+    if (isTauriRuntime()) {
+      void listenMainWindowFocusChanged((focused) => {
+        if (focused) {
+          scheduleRestore();
+        }
+      }).then((unlisten) => {
+        if (disposed) {
+          unlisten();
+        } else {
+          removeNativeFocusListener = unlisten;
+        }
+      });
+    }
+
+    return () => {
+      disposed = true;
+      window.removeEventListener("focus", scheduleRestore);
+      document.removeEventListener("pointerup", handleTitlebarPointerUp, true);
+      removeNativeFocusListener?.();
+    };
+  }, [focusedPaneId, isActive]);
 
   function handleFontChange(delta: number | "reset") {
     const next = delta === "reset" ? defaultFontSize : currentFontSize() + delta;
@@ -1214,7 +1264,6 @@ function TerminalPaneView({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const lastResizeDimensionsRef = useRef<TerminalDimensions | null>(null);
-  const restoreFocusOnWindowFocusRef = useRef(false);
   const resizeFrameRef = useRef<number | null>(null);
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
@@ -1249,15 +1298,16 @@ function TerminalPaneView({
     }
   }
 
-  function restoreTerminalFocusAfterWindowActivation() {
-    if (isTauriRuntime()) {
-      void focusCurrentWebview()
-        .catch(() => undefined)
-        .finally(() => window.requestAnimationFrame(focusTerminalRenderer));
+  function focusTerminalRendererFromSurface() {
+    onFocus();
+    focusTerminalRenderer();
+  }
+
+  function handleTerminalSurfacePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) {
       return;
     }
-
-    window.requestAnimationFrame(focusTerminalRenderer);
+    focusTerminalRendererFromSurface();
   }
 
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1812,51 +1862,6 @@ function TerminalPaneView({
   }, [isActive]);
 
   useEffect(() => {
-    if (!isActive || !isFocused) {
-      restoreFocusOnWindowFocusRef.current = false;
-      return;
-    }
-
-    const handleWindowBlur = () => {
-      restoreFocusOnWindowFocusRef.current = !shouldPreserveExternalFocus(paneRef.current);
-    };
-    const handleWindowFocus = () => {
-      if (!restoreFocusOnWindowFocusRef.current) {
-        return;
-      }
-      restoreFocusOnWindowFocusRef.current = false;
-      restoreTerminalFocusAfterWindowActivation();
-    };
-    let disposed = false;
-    let removeNativeFocusListener: (() => void) | undefined;
-
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-    if (isTauriRuntime()) {
-      void listen<boolean>(MAIN_WINDOW_FOCUS_CHANGED_EVENT, (event) => {
-        if (event.payload) {
-          handleWindowFocus();
-        } else {
-          handleWindowBlur();
-        }
-      }).then((unlisten) => {
-        if (disposed) {
-          unlisten();
-        } else {
-          removeNativeFocusListener = unlisten;
-        }
-      });
-    }
-    return () => {
-      disposed = true;
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-      removeNativeFocusListener?.();
-    };
-  }, [isActive, isFocused]);
-
-
-  useEffect(() => {
     if (searchOpen) {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
@@ -2148,7 +2153,10 @@ function TerminalPaneView({
         .filter(Boolean)
         .join(" ")}
       data-tutorial-id="terminal.pane"
-      onMouseDown={() => onFocus()}
+      onMouseDown={() => {
+        onFocus();
+        focusTerminalRenderer();
+      }}
       ref={paneRef}
     >
       <header>
@@ -2477,6 +2485,7 @@ function TerminalPaneView({
             className="xterm-host"
             data-tutorial-id="terminal.surface"
             onContextMenu={handleTerminalContextMenu}
+            onPointerDown={handleTerminalSurfacePointerDown}
             ref={terminalElementRef}
           />
         </>
@@ -2867,7 +2876,26 @@ function shouldPreserveExternalFocus(paneElement: HTMLElement | null) {
     return true;
   }
 
-  return isEditableElement(activeElement);
+  return isEditableElement(activeElement) || isFocusableElement(activeElement);
+}
+
+function shouldPreserveTerminalWorkspaceFocus() {
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (activeElement === document.body || activeElement === document.documentElement) {
+    return false;
+  }
+
+  if (activeElement.closest(".terminal-pane")) {
+    return false;
+  }
+
+  return activeElement.closest(".assistant-panel") !== null ||
+    isEditableElement(activeElement) ||
+    isFocusableElement(activeElement);
 }
 
 function isEditableElement(element: HTMLElement) {

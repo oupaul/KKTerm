@@ -2390,6 +2390,13 @@ export async function listenMainWindowResized(handler: () => void) {
   return getCurrentWindow().onResized(handler);
 }
 
+export async function listenMainWindowFocusChanged(handler: (focused: boolean) => void) {
+  if (!isTauriRuntime()) {
+    return () => undefined;
+  }
+  return getCurrentWindow().onFocusChanged((event) => handler(event.payload));
+}
+
 export interface WidgetFilePickFilter {
   name: string;
   extensions: string[];
