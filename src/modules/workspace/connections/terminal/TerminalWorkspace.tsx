@@ -228,6 +228,7 @@ export function TerminalWorkspace({
   }
 
   const lastFocusRestoreRef = useRef(0);
+  const inputProbeArmedRef = useRef(false);
   function restoreFocusedTerminalPane(reason: string) {
     logTerminalFocusDiagnostic(`restore:${reason}`);
     if (shouldPreserveTerminalWorkspaceFocus()) {
@@ -240,6 +241,13 @@ export function TerminalWorkspace({
       return;
     }
     lastFocusRestoreRef.current = now;
+    // Arm the input probe: the diagnostic shows the document already reports
+    // focused (hasFocus=true) with the xterm textarea active here, yet input
+    // reportedly still needs a click. The probe records whether the next user
+    // input after activation is a keystroke (focus really works) or a click
+    // (the WebView2 input routing was dead until the click), which the
+    // hasFocus/activeElement signals cannot distinguish.
+    inputProbeArmedRef.current = true;
     // The diagnostic showed the xterm textarea keeps DOM focus across an OS
     // window switch (document.activeElement never leaves it), so a JS
     // terminal.focus() is a no-op. What is missing is OS-level keyboard focus
@@ -254,6 +262,13 @@ export function TerminalWorkspace({
     // when it already holds focus, so it cannot re-enter the native path.
     const renderer = focusedPaneId ? getPaneRenderer(focusedPaneId) : undefined;
     renderer?.focus();
+  }
+
+  function describeProbeTarget(target: EventTarget | null) {
+    if (!(target instanceof HTMLElement)) {
+      return String(target);
+    }
+    return `${target.tagName.toLowerCase()}${target.className ? `.${target.className.split(/\s+/).join(".")}` : ""}`;
   }
 
   useEffect(() => {
@@ -273,10 +288,29 @@ export function TerminalWorkspace({
       restoreFocusedTerminalPane("titlebar");
     };
     const handleWindowFocus = () => restoreFocusedTerminalPane("window-focus");
+    // Probe: log the first user input after a focus restore. "keydown-first"
+    // means keyboard focus actually worked; "pointerdown-first" means the user
+    // had to click before input was accepted (native WebView2 focus issue).
+    const handleProbeKeydown = (event: Event) => {
+      if (!inputProbeArmedRef.current) {
+        return;
+      }
+      inputProbeArmedRef.current = false;
+      logTerminalFocusDiagnostic(`input-after-activation:keydown:${describeProbeTarget(event.target)}`);
+    };
+    const handleProbePointerdown = (event: Event) => {
+      if (!inputProbeArmedRef.current) {
+        return;
+      }
+      inputProbeArmedRef.current = false;
+      logTerminalFocusDiagnostic(`input-after-activation:pointerdown:${describeProbeTarget(event.target)}`);
+    };
     let disposed = false;
     let removeNativeFocusListener: (() => void) | undefined;
 
     document.addEventListener("pointerup", handleTitlebarPointerUp, true);
+    document.addEventListener("keydown", handleProbeKeydown, true);
+    document.addEventListener("pointerdown", handleProbePointerdown, true);
     if (isTauriRuntime()) {
       void listenMainWindowFocusChanged((focused) => {
         if (focused) {
@@ -296,6 +330,8 @@ export function TerminalWorkspace({
     return () => {
       disposed = true;
       document.removeEventListener("pointerup", handleTitlebarPointerUp, true);
+      document.removeEventListener("keydown", handleProbeKeydown, true);
+      document.removeEventListener("pointerdown", handleProbePointerdown, true);
       window.removeEventListener("focus", handleWindowFocus);
       removeNativeFocusListener?.();
     };
