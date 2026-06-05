@@ -14,7 +14,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "re
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
-import { invokeCommand, isTauriRuntime, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -1215,8 +1215,6 @@ function TerminalPaneView({
   const sessionIdRef = useRef<string | null>(null);
   const lastResizeDimensionsRef = useRef<TerminalDimensions | null>(null);
   const restoreFocusOnWindowFocusRef = useRef(false);
-  const focusRestoreRafRef = useRef<number | null>(null);
-  const focusRestoreTimerRefs = useRef<number[]>([]);
   const resizeFrameRef = useRef<number | null>(null);
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
@@ -1244,17 +1242,6 @@ function TerminalPaneView({
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [recordingsOpen, setRecordingsOpen] = useState(false);
   const [tmuxMouseEnabled, setTmuxMouseEnabled] = useState(true);
-  function clearScheduledFocusRestore() {
-    if (focusRestoreRafRef.current !== null) {
-      window.cancelAnimationFrame(focusRestoreRafRef.current);
-      focusRestoreRafRef.current = null;
-    }
-    for (const timerId of focusRestoreTimerRefs.current) {
-      window.clearTimeout(timerId);
-    }
-    focusRestoreTimerRefs.current = [];
-  }
-
   function focusTerminalRenderer() {
     const renderer = terminalRendererRef.current;
     if (renderer) {
@@ -1262,20 +1249,15 @@ function TerminalPaneView({
     }
   }
 
-  function scheduleFocusRestore() {
-    clearScheduledFocusRestore();
-    queueMicrotask(focusTerminalRenderer);
-    focusRestoreRafRef.current = window.requestAnimationFrame(() => {
-      focusRestoreRafRef.current = null;
-      focusTerminalRenderer();
-    });
-    focusRestoreTimerRefs.current = [0, 50, 150].map((delay) => {
-      const timerId = window.setTimeout(() => {
-        focusRestoreTimerRefs.current = focusRestoreTimerRefs.current.filter((id) => id !== timerId);
-        focusTerminalRenderer();
-      }, delay);
-      return timerId;
-    });
+  function restoreTerminalFocusAfterWindowActivation() {
+    if (isTauriRuntime()) {
+      void focusCurrentWebview()
+        .catch(() => undefined)
+        .finally(() => window.requestAnimationFrame(focusTerminalRenderer));
+      return;
+    }
+
+    window.requestAnimationFrame(focusTerminalRenderer);
   }
 
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1843,7 +1825,7 @@ function TerminalPaneView({
         return;
       }
       restoreFocusOnWindowFocusRef.current = false;
-      scheduleFocusRestore();
+      restoreTerminalFocusAfterWindowActivation();
     };
     let disposed = false;
     let removeNativeFocusListener: (() => void) | undefined;
@@ -1870,7 +1852,6 @@ function TerminalPaneView({
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
       removeNativeFocusListener?.();
-      clearScheduledFocusRestore();
     };
   }, [isActive, isFocused]);
 

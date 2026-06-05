@@ -11,6 +11,7 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-is-maximized",
+    "core:webview:allow-set-webview-focus",
     "dialog:allow-message",
     "dialog:allow-open",
     "dialog:allow-save",
