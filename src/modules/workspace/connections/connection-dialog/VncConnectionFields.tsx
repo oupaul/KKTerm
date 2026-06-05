@@ -111,6 +111,20 @@ export function VncConnectionOptions({
           </label>
           <div className="connection-option-fields">
             <label>
+              <span>{t("settings.remoteDesktopViewMode")}</span>
+              <select
+                disabled={vncInheritsSettingsDefaults}
+                name="vncViewMode"
+                defaultValue={initialConnection?.vncOptions?.viewMode ?? vncSettings.viewMode}
+              >
+                <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
+                <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>
+                <option value="actualSize">{t("settings.remoteDesktopViewModeActualSize")}</option>
+                <option value="fitWidth">{t("settings.remoteDesktopViewModeFitWidth")}</option>
+                <option value="fitHeight">{t("settings.remoteDesktopViewModeFitHeight")}</option>
+              </select>
+            </label>
+            <label>
               <span>{t("settings.preferredEncoding")}</span>
               <select
                 disabled={vncInheritsSettingsDefaults}

@@ -60,7 +60,7 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "terminal.pane, terminal.tmuxSessions, terminal.sshPortRedirect, terminal.startRecording, terminal.openSftp, terminal.copySelection, terminal.sendToAi, terminal.actions, terminal.searchBar, terminal.surface with navigation page=workspace; ",
     "sftp.toolbar, sftp.upload, sftp.download, sftp.terminal, sftp.localPane, sftp.remotePane, sftp.transferQueue with navigation page=workspace; ",
     "webview.toolbar, webview.address, webview.openExternally, webview.autoRefresh, webview.savePassword, webview.fillCredential, webview.surface with navigation page=workspace; ",
-    "remoteDesktop.toolbar, remoteDesktop.sendCtrlAltDel, remoteDesktop.reconnect, remoteDesktop.sendToAi, remoteDesktop.surface with navigation page=workspace; ",
+    "remoteDesktop.toolbar, remoteDesktop.viewMode, remoteDesktop.sendCtrlAltDel, remoteDesktop.reconnect, remoteDesktop.sendToAi, remoteDesktop.surface with navigation page=workspace; ",
     "installer.updateAll, installer.toolOptions with navigation page=installer; ",
     "settings.language, settings.workspaceAccess, settings.useDirectxScreenCapture, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
     "settings.appUiFontFamily, settings.appearance.colorScheme, settings.resetLayout with navigation page=settings settingsSectionId=appearance-settings; ",

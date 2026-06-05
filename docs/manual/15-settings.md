@@ -149,8 +149,8 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 
 ## RDP and VNC
 
-- `settings.sectionRdp` — RDP defaults: resolution, colour depth, redirection toggles.
-- `settings.sectionVnc` — VNC defaults: colour depth, view-only, encoding preferences.
+- `settings.sectionRdp` — RDP defaults: `settings.remoteDesktopViewMode`, resolution, colour depth, redirection toggles.
+- `settings.sectionVnc` — VNC defaults: `settings.remoteDesktopViewMode`, colour depth, view-only, encoding preferences. The view-mode default controls how new or inheriting VNC Connections display large or multi-monitor framebuffers before a per-Connection override is selected from the remote desktop toolbar.
 
 ## URL
 

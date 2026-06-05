@@ -391,7 +391,9 @@ export interface UrlSettings {
 export type RdpPerformanceProfile = "balanced" | "quality" | "speed";
 export type RdpColorDepth = 15 | 16 | 24 | 32;
 
-export type RdpRemoteResolutionMode = "automatic";
+export type RemoteDesktopViewMode = "fit" | "stretch" | "actualSize" | "fitWidth" | "fitHeight";
+
+export type RdpRemoteResolutionMode = "automatic" | "smartSizing" | "dpiZoom";
 export type RdpRemoteResolutionFixed =
   | "1440x900"
   | "1400x1050"
@@ -431,6 +433,7 @@ export interface RdpSettings {
   bitmapCache: boolean;
   performanceProfile: RdpPerformanceProfile;
   remoteResolution: RdpRemoteResolution;
+  viewMode: RemoteDesktopViewMode;
 }
 
 export interface RdpConnectionOptions {
@@ -441,6 +444,7 @@ export interface RdpConnectionOptions {
   bitmapCache?: boolean;
   performanceProfile?: RdpPerformanceProfile;
   remoteResolution?: RdpRemoteResolution;
+  viewMode?: RemoteDesktopViewMode;
 }
 
 export type VncColorLevel = "full" | "256" | "64" | "8";
@@ -451,6 +455,7 @@ export interface VncSettings {
   viewOnly: boolean;
   colorLevel: VncColorLevel;
   preferredEncoding: VncPreferredEncoding;
+  viewMode: RemoteDesktopViewMode;
 }
 
 export interface VncConnectionOptions {
@@ -459,6 +464,7 @@ export interface VncConnectionOptions {
   viewOnly?: boolean;
   colorLevel?: VncColorLevel;
   preferredEncoding?: VncPreferredEncoding;
+  viewMode?: RemoteDesktopViewMode;
 }
 
 export type FtpProtocol = "sftp" | "ftp" | "ftps";

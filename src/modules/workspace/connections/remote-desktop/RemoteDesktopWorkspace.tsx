@@ -3,10 +3,11 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { documentHasRdpBlockingOverlay } from "../../nativeOverlay";
 import { showNativeContextMenu } from "../../../../lib/nativeContextMenu";
-import { Bot, Keyboard, Monitor, RotateCcw } from "lucide-react";
+import { Bot, Keyboard, Monitor, RotateCcw, Scaling } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
@@ -15,6 +16,8 @@ import type {
 import { invokeCommand, isTauriRuntime, type AssistantScreenshot } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import type {
+  Connection,
+  RemoteDesktopViewMode,
   RdpConnectionOptions,
   RdpSettings,
   VncConnectionOptions,
@@ -127,6 +130,7 @@ export function RemoteDesktopWorkspace({
     (state) => state.submitAssistantContextSnippet,
   );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const rdpPreCaptureSignal = useWorkspaceStore((state) => state.rdpPreCaptureSignal);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
@@ -139,6 +143,7 @@ export function RemoteDesktopWorkspace({
   const [vncHasDisplay, setVncHasDisplay] = useState(false);
   const canStartRdp = connection?.type === "rdp";
   const canStartVnc = connection?.type === "vnc";
+  const viewMode = resolveRemoteDesktopViewMode(connection, rdpSettings, vncSettings);
 
   const computeBounds = () => {
     const node = hostRef.current;
@@ -714,6 +719,69 @@ export function RemoteDesktopWorkspace({
     });
   };
 
+  const handleViewModeMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!connection || (!canStartRdp && !canStartVnc)) {
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const options = remoteDesktopViewModeOptions(t);
+    void showNativeContextMenu(
+      options.map((option) => ({
+        kind: "item" as const,
+        label: option.value === viewMode ? `✓ ${option.label}` : option.label,
+        disabled: option.value === viewMode,
+        action: () => void saveViewMode(option.value),
+      })),
+      { x: rect.left, y: rect.bottom },
+    );
+  };
+
+  const saveViewMode = async (nextViewMode: RemoteDesktopViewMode) => {
+    if (!connection || nextViewMode === viewMode) {
+      return;
+    }
+    const updated = connection.type === "rdp"
+      ? {
+          ...connection,
+          rdpOptions: {
+            ...resolveRdpOptions(rdpSettings, connection.rdpOptions),
+            inheritDefaults: false,
+            remoteResolution: rdpResolutionForViewMode(
+              nextViewMode,
+              resolveRdpOptions(rdpSettings, connection.rdpOptions).remoteResolution,
+            ),
+            viewMode: nextViewMode,
+          },
+        }
+      : {
+          ...connection,
+          vncOptions: {
+            ...resolveVncOptions(vncSettings, connection.vncOptions),
+            inheritDefaults: false,
+            viewMode: nextViewMode,
+          },
+        };
+    refreshOpenConnectionMetadata(updated);
+    if (isTauriRuntime() && !connection.id.startsWith("quick-")) {
+      try {
+        const saved = await invokeCommand("update_connection", {
+          request: connectionUpdateRequest(updated),
+        });
+        refreshOpenConnectionMetadata(saved);
+      } catch (error) {
+        refreshOpenConnectionMetadata(connection);
+        showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+        return;
+      }
+    }
+    showStatusBarNotice(t("remoteDesktop.viewModeSaved", { mode: viewModeLabel(t, nextViewMode) }), {
+      tone: "success",
+    });
+    if (connection.type === "rdp") {
+      handleReconnect();
+    }
+  };
+
   const scheduleBoundsPush = () => {
     if (!sessionStartedRef.current) {
       return;
@@ -1227,7 +1295,7 @@ export function RemoteDesktopWorkspace({
       return { x: 0, y: 0 };
     }
     const rect = canvas.getBoundingClientRect();
-    const content = vncRenderedContentRect(rect, canvas.width, canvas.height);
+    const content = vncRenderedContentRect(rect, canvas.width, canvas.height, viewMode);
     const scaleX = canvas.width / Math.max(1, content.width);
     const scaleY = canvas.height / Math.max(1, content.height);
     return {
@@ -1331,6 +1399,19 @@ export function RemoteDesktopWorkspace({
           {rdpStatus ? <span className="webview-toolbar-status">{rdpStatus}</span> : null}
           {canStartRdp || canStartVnc ? (
             <button
+              aria-label={t("remoteDesktop.viewModeButton", { mode: viewModeLabel(t, viewMode) })}
+              className="terminal-pane-action"
+              data-tutorial-id="remoteDesktop.viewMode"
+              disabled={!isTauriRuntime()}
+              onClick={handleViewModeMenu}
+              title={t("remoteDesktop.viewModeButton", { mode: viewModeLabel(t, viewMode) })}
+              type="button"
+            >
+              <Scaling size={13} />
+            </button>
+          ) : null}
+          {canStartRdp || canStartVnc ? (
+            <button
               aria-label={`${t("remoteDesktop.sendCtrlAltDel")} ${typeLabel} ${t("remoteDesktop.session")}`}
               className="terminal-pane-action"
               data-tutorial-id="remoteDesktop.sendCtrlAltDel"
@@ -1377,7 +1458,7 @@ export function RemoteDesktopWorkspace({
         </div>
         </header>
       <div
-        className="remote-desktop-workspace"
+        className={`remote-desktop-workspace remote-desktop-view-mode-${viewMode}`}
         data-tutorial-id="remoteDesktop.surface"
         ref={hostRef}
       >
@@ -1435,7 +1516,15 @@ export function RemoteDesktopWorkspace({
   );
 }
 
-function vncRenderedContentRect(rect: DOMRect, intrinsicWidth: number, intrinsicHeight: number) {
+function vncRenderedContentRect(
+  rect: DOMRect,
+  intrinsicWidth: number,
+  intrinsicHeight: number,
+  viewMode: RemoteDesktopViewMode,
+) {
+  if (viewMode !== "fit") {
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  }
   const width = Math.max(1, intrinsicWidth);
   const height = Math.max(1, intrinsicHeight);
   const boxAspect = rect.width / Math.max(1, rect.height);
@@ -1491,6 +1580,7 @@ function resolveRdpOptions(
     bitmapCache: overrides.bitmapCache ?? defaults.bitmapCache,
     performanceProfile: overrides.performanceProfile ?? defaults.performanceProfile,
     remoteResolution: overrides.remoteResolution ?? defaults.remoteResolution,
+    viewMode: overrides.viewMode ?? defaults.viewMode,
   };
 }
 
@@ -1506,6 +1596,77 @@ function resolveVncOptions(
     viewOnly: overrides.viewOnly ?? defaults.viewOnly,
     colorLevel: overrides.colorLevel ?? defaults.colorLevel,
     preferredEncoding: overrides.preferredEncoding ?? defaults.preferredEncoding,
+    viewMode: overrides.viewMode ?? defaults.viewMode,
+  };
+}
+
+function resolveRemoteDesktopViewMode(
+  connection: Connection | undefined,
+  rdpSettings: RdpSettings,
+  vncSettings: VncSettings,
+): RemoteDesktopViewMode {
+  if (connection?.type === "rdp") {
+    return resolveRdpOptions(rdpSettings, connection.rdpOptions).viewMode;
+  }
+  if (connection?.type === "vnc") {
+    return resolveVncOptions(vncSettings, connection.vncOptions).viewMode;
+  }
+  return "fit";
+}
+
+function remoteDesktopViewModeOptions(t: TFunction) {
+  return [
+    { value: "fit" as const, label: t("settings.remoteDesktopViewModeFit") },
+    { value: "stretch" as const, label: t("settings.remoteDesktopViewModeStretch") },
+    { value: "actualSize" as const, label: t("settings.remoteDesktopViewModeActualSize") },
+    { value: "fitWidth" as const, label: t("settings.remoteDesktopViewModeFitWidth") },
+    { value: "fitHeight" as const, label: t("settings.remoteDesktopViewModeFitHeight") },
+  ];
+}
+
+function viewModeLabel(t: TFunction, viewMode: RemoteDesktopViewMode) {
+  return remoteDesktopViewModeOptions(t).find((option) => option.value === viewMode)?.label ??
+    t("settings.remoteDesktopViewModeFit");
+}
+
+function rdpResolutionForViewMode(
+  viewMode: RemoteDesktopViewMode,
+  currentResolution: RdpSettings["remoteResolution"],
+): RdpSettings["remoteResolution"] {
+  if (viewMode === "fit") {
+    return "automatic";
+  }
+  if (viewMode === "stretch") {
+    return "smartSizing";
+  }
+  if (viewMode === "actualSize") {
+    return "dpiZoom";
+  }
+  return currentResolution;
+}
+
+function connectionUpdateRequest(connection: Connection) {
+  return {
+    id: connection.id,
+    name: connection.name,
+    host: connection.host,
+    user: connection.user,
+    type: connection.type,
+    port: connection.port,
+    keyPath: connection.keyPath,
+    proxyJump: connection.proxyJump,
+    authMethod: connection.authMethod,
+    localShell: connection.localShell,
+    localStartupDirectory: connection.localStartupDirectory,
+    localStartupScript: connection.localStartupScript,
+    serialLine: connection.serialLine,
+    serialSpeed: connection.serialSpeed,
+    url: connection.url,
+    dataPartition: connection.dataPartition,
+    useTmuxSessions: connection.useTmuxSessions,
+    rdpOptions: connection.rdpOptions,
+    vncOptions: connection.vncOptions,
+    ftpOptions: connection.ftpOptions,
   };
 }
 

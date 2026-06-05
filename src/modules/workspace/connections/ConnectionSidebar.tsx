@@ -3259,6 +3259,11 @@ function ConnectionDialog({
                   ? rdpSettings.remoteResolution
                   : form.get("rdpRemoteResolution") ?? rdpSettings.remoteResolution,
               ) as RdpSettings["remoteResolution"],
+              viewMode: String(
+                inheritRdpDefaults
+                  ? rdpSettings.viewMode
+                  : form.get("rdpViewMode") ?? rdpSettings.viewMode,
+              ) as RdpSettings["viewMode"],
             }
           : undefined,
       vncOptions:
@@ -3279,6 +3284,9 @@ function ConnectionDialog({
                   ? vncSettings.preferredEncoding
                   : form.get("vncPreferredEncoding") ?? vncSettings.preferredEncoding,
               ) as VncSettings["preferredEncoding"],
+              viewMode: String(
+                inheritVncDefaults ? vncSettings.viewMode : form.get("vncViewMode") ?? vncSettings.viewMode,
+              ) as VncSettings["viewMode"],
             }
           : undefined,
       ftpOptions:

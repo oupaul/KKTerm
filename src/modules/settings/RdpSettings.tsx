@@ -7,6 +7,7 @@ import {
   RDP_REMOTE_RESOLUTION_FIXED,
   type RdpColorDepth,
   type RdpPerformanceProfile,
+  type RemoteDesktopViewMode,
   type RdpRemoteResolution,
   type RdpSettings as RdpSettingsModel,
 } from "../../types";
@@ -87,6 +88,24 @@ export function RdpSettings() {
               <option value="balanced">{t("settings.rdpPerformanceBalanced")}</option>
               <option value="quality">{t("settings.rdpPerformanceQuality")}</option>
               <option value="speed">{t("settings.rdpPerformanceSpeed")}</option>
+            </select>
+          </label>
+          <label>
+            <span>{t("settings.remoteDesktopViewMode")}</span>
+            <select
+              value={draft.viewMode}
+              onChange={(event) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  viewMode: event.currentTarget.value as RemoteDesktopViewMode,
+                }))
+              }
+            >
+              <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
+              <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>
+              <option value="actualSize">{t("settings.remoteDesktopViewModeActualSize")}</option>
+              <option value="fitWidth">{t("settings.remoteDesktopViewModeFitWidth")}</option>
+              <option value="fitHeight">{t("settings.remoteDesktopViewModeFitHeight")}</option>
             </select>
           </label>
           <label data-tutorial-id="settings.rdpRemoteResolution">

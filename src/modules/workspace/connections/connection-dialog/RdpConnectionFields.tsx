@@ -143,6 +143,20 @@ export function RdpConnectionOptions({
               </select>
             </label>
             <label>
+              <span>{t("settings.remoteDesktopViewMode")}</span>
+              <select
+                disabled={rdpInheritsSettingsDefaults}
+                name="rdpViewMode"
+                defaultValue={initialConnection?.rdpOptions?.viewMode ?? rdpSettings.viewMode}
+              >
+                <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
+                <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>
+                <option value="actualSize">{t("settings.remoteDesktopViewModeActualSize")}</option>
+                <option value="fitWidth">{t("settings.remoteDesktopViewModeFitWidth")}</option>
+                <option value="fitHeight">{t("settings.remoteDesktopViewModeFitHeight")}</option>
+              </select>
+            </label>
+            <label>
               <span>{t("settings.rdpRemoteResolution")}</span>
               <select
                 disabled={rdpInheritsSettingsDefaults}

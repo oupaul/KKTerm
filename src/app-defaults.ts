@@ -112,6 +112,7 @@ export const defaultRdpSettings: RdpSettings = {
   bitmapCache: true,
   performanceProfile: "balanced",
   remoteResolution: "automatic",
+  viewMode: "fit",
 };
 
 export const defaultVncSettings: VncSettings = {
@@ -119,6 +120,7 @@ export const defaultVncSettings: VncSettings = {
   viewOnly: false,
   colorLevel: "full",
   preferredEncoding: "tight",
+  viewMode: "fit",
 };
 
 export const defaultAiAssistantToolSettings = {

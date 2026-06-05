@@ -501,6 +501,8 @@ pub struct RdpSettings {
     performance_profile: String,
     #[serde(default = "default_remote_desktop_resolution")]
     remote_resolution: String,
+    #[serde(default = "default_remote_desktop_view_mode")]
+    view_mode: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -514,6 +516,8 @@ pub struct VncSettings {
     color_level: String,
     #[serde(default = "default_vnc_preferred_encoding")]
     preferred_encoding: String,
+    #[serde(default = "default_remote_desktop_view_mode")]
+    view_mode: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -980,6 +984,8 @@ pub struct RdpConnectionOptions {
     performance_profile: Option<String>,
     #[serde(default)]
     remote_resolution: Option<String>,
+    #[serde(default)]
+    view_mode: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -995,6 +1001,8 @@ pub struct VncConnectionOptions {
     color_level: Option<String>,
     #[serde(default)]
     preferred_encoding: Option<String>,
+    #[serde(default)]
+    view_mode: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -4477,6 +4485,7 @@ fn normalize_rdp_connection_options(
             bitmap_cache: None,
             performance_profile: None,
             remote_resolution: None,
+            view_mode: None,
         }));
     }
     if let Some(color_depth) = options.color_depth {
@@ -4487,6 +4496,9 @@ fn normalize_rdp_connection_options(
     }
     if let Some(resolution) = options.remote_resolution {
         options.remote_resolution = Some(validate_remote_desktop_resolution(resolution)?);
+    }
+    if let Some(view_mode) = options.view_mode {
+        options.view_mode = Some(validate_remote_desktop_view_mode(view_mode)?);
     }
     Ok(Some(options))
 }
@@ -4508,6 +4520,7 @@ fn normalize_vnc_connection_options(
             view_only: None,
             color_level: None,
             preferred_encoding: None,
+            view_mode: None,
         }));
     }
     if let Some(color_level) = options.color_level {
@@ -4515,6 +4528,9 @@ fn normalize_vnc_connection_options(
     }
     if let Some(encoding) = options.preferred_encoding {
         options.preferred_encoding = Some(validate_vnc_preferred_encoding(encoding)?);
+    }
+    if let Some(view_mode) = options.view_mode {
+        options.view_mode = Some(validate_remote_desktop_view_mode(view_mode)?);
     }
     Ok(Some(options))
 }
@@ -4877,11 +4893,16 @@ fn default_rdp_settings() -> RdpSettings {
         bitmap_cache: true,
         performance_profile: default_remote_desktop_performance_profile(),
         remote_resolution: default_remote_desktop_resolution(),
+        view_mode: default_remote_desktop_view_mode(),
     }
 }
 
 fn default_remote_desktop_resolution() -> String {
     "automatic".to_string()
+}
+
+fn default_remote_desktop_view_mode() -> String {
+    "fit".to_string()
 }
 
 fn default_rdp_color_depth() -> u16 {
@@ -4902,6 +4923,7 @@ fn default_vnc_settings() -> VncSettings {
         view_only: false,
         color_level: default_vnc_color_level(),
         preferred_encoding: default_vnc_preferred_encoding(),
+        view_mode: default_remote_desktop_view_mode(),
     }
 }
 
@@ -5324,6 +5346,7 @@ fn validate_rdp_settings(mut settings: RdpSettings) -> Result<RdpSettings, Strin
     settings.performance_profile =
         validate_remote_desktop_performance_profile(settings.performance_profile)?;
     settings.remote_resolution = validate_remote_desktop_resolution(settings.remote_resolution)?;
+    settings.view_mode = validate_remote_desktop_view_mode(settings.view_mode)?;
     Ok(settings)
 }
 
@@ -5346,9 +5369,20 @@ fn validate_remote_desktop_resolution(value: String) -> Result<String, String> {
     Err(format!("RDP remote resolution '{value}' is not recognized"))
 }
 
+fn validate_remote_desktop_view_mode(value: String) -> Result<String, String> {
+    match value.trim() {
+        "fit" | "stretch" | "actualSize" | "fitWidth" | "fitHeight" => Ok(value.trim().to_string()),
+        _ => Err(
+            "Remote desktop view mode must be fit, stretch, actualSize, fitWidth, or fitHeight"
+                .to_string(),
+        ),
+    }
+}
+
 fn validate_vnc_settings(mut settings: VncSettings) -> Result<VncSettings, String> {
     settings.color_level = validate_vnc_color_level(settings.color_level)?;
     settings.preferred_encoding = validate_vnc_preferred_encoding(settings.preferred_encoding)?;
+    settings.view_mode = validate_remote_desktop_view_mode(settings.view_mode)?;
     Ok(settings)
 }
 
@@ -7544,6 +7578,7 @@ mod tests {
                 bitmap_cache: true,
                 performance_profile: "quality".to_string(),
                 remote_resolution: "automatic".to_string(),
+                view_mode: "actualSize".to_string(),
             })
             .expect("RDP settings update");
 
@@ -7552,6 +7587,7 @@ mod tests {
         assert!(!rdp_reloaded.redirect_clipboard);
         assert!(rdp_reloaded.redirect_drives);
         assert_eq!(rdp_reloaded.performance_profile, "quality");
+        assert_eq!(rdp_reloaded.view_mode, "actualSize");
 
         let vnc_defaults = storage.vnc_settings().expect("default VNC settings load");
         assert!(vnc_defaults.shared_session);
@@ -7563,6 +7599,7 @@ mod tests {
                 view_only: true,
                 color_level: "256".to_string(),
                 preferred_encoding: "raw".to_string(),
+                view_mode: "fitWidth".to_string(),
             })
             .expect("VNC settings update");
 
@@ -7571,6 +7608,7 @@ mod tests {
         assert!(vnc_reloaded.view_only);
         assert_eq!(vnc_reloaded.color_level, "256");
         assert_eq!(vnc_reloaded.preferred_encoding, "raw");
+        assert_eq!(vnc_reloaded.view_mode, "fitWidth");
     }
 
     #[test]
@@ -7605,6 +7643,7 @@ mod tests {
                     bitmap_cache: Some(true),
                     performance_profile: Some("quality".to_string()),
                     remote_resolution: None,
+                    view_mode: Some("actualSize".to_string()),
                 }),
                 vnc_options: Some(VncConnectionOptions {
                     inherit_defaults: false,
@@ -7612,6 +7651,7 @@ mod tests {
                     view_only: Some(true),
                     color_level: Some("256".to_string()),
                     preferred_encoding: Some("raw".to_string()),
+                    view_mode: Some("fitWidth".to_string()),
                 }),
                 ftp_options: None,
             })
@@ -7648,6 +7688,7 @@ mod tests {
                     bitmap_cache: Some(true),
                     performance_profile: Some("quality".to_string()),
                     remote_resolution: None,
+                    view_mode: Some("actualSize".to_string()),
                 }),
                 vnc_options: Some(VncConnectionOptions {
                     inherit_defaults: false,
@@ -7655,6 +7696,7 @@ mod tests {
                     view_only: Some(true),
                     color_level: Some("256".to_string()),
                     preferred_encoding: Some("raw".to_string()),
+                    view_mode: Some("fitWidth".to_string()),
                 }),
                 ftp_options: None,
             })
@@ -7676,6 +7718,13 @@ mod tests {
                 .as_ref()
                 .and_then(|options| options.color_depth),
             Some(24)
+        );
+        assert_eq!(
+            saved_rdp
+                .rdp_options
+                .as_ref()
+                .and_then(|options| options.view_mode.as_deref()),
+            Some("actualSize")
         );
     }
 

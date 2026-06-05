@@ -882,6 +882,12 @@
     "enhancedGraphics": "Enhanced graphics",
     "rdpResolutionValue": "Fit workspace bounds",
     "display": "Display",
+    "remoteDesktopViewMode": "View mode",
+    "remoteDesktopViewModeFit": "Fit to workspace",
+    "remoteDesktopViewModeStretch": "Stretch to fill",
+    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
+    "remoteDesktopViewModeFitWidth": "Fit width",
+    "remoteDesktopViewModeFitHeight": "Fit height",
     "networkPerformance": "Network and performance",
     "encoding": "Encoding",
     "rdpDisplayHint": "Planned display defaults for new RDP Connections.",
@@ -2109,7 +2115,9 @@
     "vncFramebuffer": "VNC framebuffer is running in this workspace.",
     "transportUnavailable": "Remote desktop transport unavailable.",
     "session": "session",
-    "displayAria": "VNC display"
+    "displayAria": "VNC display",
+    "viewModeButton": "View mode: {{mode}}",
+    "viewModeSaved": "View mode saved: {{mode}}"
   },
   "ai": {
     "title": "AI Assistant",

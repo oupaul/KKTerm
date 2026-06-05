@@ -105,6 +105,7 @@ const WORKSPACE_TUTORIAL_TARGET_IDS = [
   "webview.fillCredential",
   "webview.surface",
   "remoteDesktop.toolbar",
+  "remoteDesktop.viewMode",
   "remoteDesktop.sendCtrlAltDel",
   "remoteDesktop.reconnect",
   "remoteDesktop.sendToAi",

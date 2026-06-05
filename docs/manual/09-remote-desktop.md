@@ -2,8 +2,8 @@
 
 ## AI grep hints
 
-- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
-- Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
+- Keys: `remoteDesktop.*` (full namespace), `connections.windowsRdp`, `connections.screenControl`, `settings.rdpRemoteResolution*`, `settings.remoteDesktopViewMode*`, `settings.submitAiAttachmentsDirectly`, `workspace.sendEntirePanelToAi`, `ai.directAttachmentPrompt`
+- Topics: RDP via mstscax ActiveX, VNC via vnc-rs, Ctrl+Alt+Del, Ctrl+Alt+End hotkey hint, remote resolution (Automatic / fixed `WxH`), view mode scaling, reconnect, framebuffer waiting, tutorial targets `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`, `remoteDesktop.surface`, `settings.rdpRemoteResolution`
 - Synonyms: "remote desktop", "screen sharing", "mstsc", "VNC viewer", "send three-finger salute", "high DPI scaling", "remote screen size"
 
 ## Connection kinds
@@ -34,13 +34,15 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
 
 ## Toolbar actions
 
+- `remoteDesktop.viewModeButton` — scaling icon in the toolbar. Opens a native menu with common viewer modes: `settings.remoteDesktopViewModeFit`, `settings.remoteDesktopViewModeStretch`, `settings.remoteDesktopViewModeActualSize`, `settings.remoteDesktopViewModeFitWidth`, and `settings.remoteDesktopViewModeFitHeight`. The selected mode is saved as a per-Connection override and uses the Settings default until changed from the toolbar or Connection options. For VNC, `settings.remoteDesktopViewModeActualSize` keeps the remote framebuffer at 1:1 size and enables workspace scrollbars, which is useful for dual-monitor servers that would otherwise be squeezed into one Pane. For RDP, changing the mode saves the Connection and reconnects so the native ActiveX display settings are re-created cleanly.
+
 - `remoteDesktop.sendCtrlAltDel` — keyboard icon in the toolbar.
   - **RDP**: clicking opens a native context menu with the hint `remoteDesktop.sendCtrlAltDelHint` ("Press CTRL+ALT+END to Send CTRL+ALT+DEL"). The embedded Microsoft RDP ActiveX control cannot reliably synthesize the Secure Attention Sequence from outside its own keyboard hook, so the local Ctrl+Alt+End hotkey (set via `HotKeyCtrlAltDel = VK_END`) is the supported path.
   - **VNC**: the same button still calls `send_vnc_ctrl_alt_delete` directly.
 - `remoteDesktop.reconnect` — explicit reconnect button.
 - `workspace.sendEntirePanelToAi` — captures the visible remote desktop Pane for AI Assistant. By default `settings.submitAiAttachmentsDirectly` submits the screenshot with `ai.directAttachmentPrompt`; when disabled, the button only attaches the screenshot to the composer.
 
-Tutorial targets: `remoteDesktop.toolbar`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`.
+Tutorial targets: `remoteDesktop.toolbar`, `remoteDesktop.viewMode`, `remoteDesktop.sendCtrlAltDel`, `remoteDesktop.reconnect`, `remoteDesktop.sendToAi`.
 
 ## RDP overlay parking (implementation note)
 
@@ -54,7 +56,11 @@ This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never
 
 ## RDP / VNC settings
 
-Per-kind defaults (resolution, colour depth, etc.) live in Settings → RDP (`settings.sectionRdp`) and Settings → VNC (`settings.sectionVnc`). See [15-settings.md](15-settings.md).
+Per-kind defaults (resolution, view mode, colour depth, etc.) live in Settings → RDP (`settings.sectionRdp`) and Settings → VNC (`settings.sectionVnc`). See [15-settings.md](15-settings.md).
+
+### View mode (`settings.remoteDesktopViewMode`)
+
+Controls how the remote screen is fitted into a workspace Pane. Available both as a global default (Settings → RDP / VNC) and as a per-Connection override. Toolbar changes save the selected Connection-specific mode. VNC supports visible scrollbars in `settings.remoteDesktopViewModeActualSize`; this is the recommended mode when a remote dual-monitor framebuffer is too wide to read after being scaled down.
 
 ### Remote resolution (`settings.rdpRemoteResolution`)
 

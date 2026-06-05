@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { VncColorLevel, VncPreferredEncoding } from "../../types";
+import type { RemoteDesktopViewMode, VncColorLevel, VncPreferredEncoding } from "../../types";
 import { SettingsSectionHeader } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -85,6 +85,26 @@ export function VncSettings() {
       </fieldset>
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.display")}</legend>
+        <div className="form-grid two-columns">
+          <label>
+            <span>{t("settings.remoteDesktopViewMode")}</span>
+            <select
+              value={draft.viewMode}
+              onChange={(event) =>
+                setDraft((settings) => ({
+                  ...settings,
+                  viewMode: event.currentTarget.value as RemoteDesktopViewMode,
+                }))
+              }
+            >
+              <option value="fit">{t("settings.remoteDesktopViewModeFit")}</option>
+              <option value="stretch">{t("settings.remoteDesktopViewModeStretch")}</option>
+              <option value="actualSize">{t("settings.remoteDesktopViewModeActualSize")}</option>
+              <option value="fitWidth">{t("settings.remoteDesktopViewModeFitWidth")}</option>
+              <option value="fitHeight">{t("settings.remoteDesktopViewModeFitHeight")}</option>
+            </select>
+          </label>
+        </div>
         <div className="settings-toggle-list">
           <label className="settings-toggle-row">
             <ToggleSwitch
