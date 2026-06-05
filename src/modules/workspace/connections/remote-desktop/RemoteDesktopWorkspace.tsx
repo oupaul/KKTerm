@@ -71,12 +71,12 @@ type VncSessionEvent =
 const RDP_ESTABLISHING_STATE = 2;
 const RDP_PRE_CAPTURE_INTERVAL_MS = 800;
 // After the RDP control first reports a displayable session, re-issue the
-// display-size sync a few more times. The MsRdpClient ActiveX frequently
-// ignores the first UpdateSessionDisplaySettings (it fires at the pre-login
-// screen, before the Display Control channel is ready), which left "automatic"
-// resolution stuck small until a manual pane nudge forced another resize.
-const RDP_DISPLAY_SETTLE_INTERVAL_MS = 1200;
-const RDP_DISPLAY_SETTLE_PASSES = 2;
+// display-size sync a couple of times. MsRdpClient can report Connected while
+// a policy-driven credential prompt is still on-screen, but repeated successful
+// nudges mean the session has accepted the size and more passes just flicker.
+const RDP_DISPLAY_SETTLE_INTERVAL_MS = 2000;
+const RDP_DISPLAY_SETTLE_PASSES = 6;
+const RDP_DISPLAY_SETTLE_SUCCESS_PASSES = 2;
 
 function createRemoteDesktopSessionId(kind: "rdp" | "vnc") {
   return `${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
@@ -545,6 +545,7 @@ export function RemoteDesktopWorkspace({
       return;
     }
     displaySettlePassesRef.current = 0;
+    let successfulPasses = 0;
     const run = () => {
       displaySettleTimerRef.current = null;
       const sessionId = sessionIdRef.current;
@@ -566,13 +567,19 @@ export function RemoteDesktopWorkspace({
       void invokeCommand("update_rdp_bounds", {
         request: { sessionId, ...bounds, force: true },
       })
+        .then(() => {
+          successfulPasses += 1;
+        })
         .catch(() => {
-          // Settle passes are best-effort; the ResizeObserver path still
-          // re-syncs on any subsequent real bounds change.
+          // A forced settle failure usually means the RDP control is no longer
+          // accepting dynamic display updates. Stop instead of flickering a
+          // fully established desktop; real bounds changes still re-sync later.
+          displaySettlePassesRef.current = RDP_DISPLAY_SETTLE_PASSES;
         })
         .finally(() => {
           displaySettlePassesRef.current += 1;
           if (
+            successfulPasses < RDP_DISPLAY_SETTLE_SUCCESS_PASSES &&
             displaySettlePassesRef.current < RDP_DISPLAY_SETTLE_PASSES &&
             sessionStartedRef.current
           ) {

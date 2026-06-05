@@ -852,7 +852,7 @@ mod platform {
         request: StartRdpSessionRequest,
     ) -> Result<RdpSessionStarted, String> {
         let password_supplied = request.password().is_some();
-        let secret_owner_id = request.secret_owner_id().map(str::to_string);
+        let secret_owner_id_present = request.secret_owner_id().is_some();
         let session_id = required_id(request.session_id)?;
         let host = required_field("RDP host", request.host)?;
         let user = request.user.trim().to_string();
@@ -881,7 +881,7 @@ mod platform {
                 "host": &host,
                 "user": &user,
                 "port": port,
-                "secretOwnerId": secret_owner_id,
+                "keychainOwnerPresent": secret_owner_id_present,
                 "passwordSupplied": password_supplied,
                 "bounds": requested_bounds,
                 "options": &request.options,
@@ -1912,7 +1912,12 @@ mod platform {
             session
                 .resolution_mode
                 .display_settings(width, height, rect.2, rect.3, scale_factor);
-        let _ = sync_remote_desktop_size(session, display_settings, force);
+        if !sync_remote_desktop_size(session, display_settings, force) && force {
+            return Err(
+                "failed to update RDP remote display size; the remote desktop may already be past the dynamic resize window"
+                    .to_string(),
+            );
+        }
         Ok(())
     }
 

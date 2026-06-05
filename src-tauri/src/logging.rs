@@ -85,7 +85,8 @@ pub fn rdp_debug(event: &str, payload: &Value) {
     let Some(log_path) = LOG_PATH.get().map(|path| rdp_debug_log_path_for(path)) else {
         return;
     };
-    let line = format_debug_log_entry(event, payload);
+    let redacted = redact_rdp_debug_payload(payload);
+    let line = format_debug_log_entry(event, &redacted);
     if let Err(error) = append_debug_line(&log_path, &line) {
         eprintln!("failed to write RDP debug log: {error}");
     }
@@ -134,6 +135,37 @@ fn write_startup_line() -> std::io::Result<PathBuf> {
 
 fn sensitive_debug_log_enabled(debug_assertions: bool, advanced_debugging_enabled: bool) -> bool {
     debug_assertions || advanced_debugging_enabled
+}
+
+fn redact_rdp_debug_payload(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, value)| {
+                    if is_sensitive_rdp_debug_key(key) {
+                        (key.clone(), Value::String("[redacted]".to_string()))
+                    } else {
+                        (key.clone(), redact_rdp_debug_payload(value))
+                    }
+                })
+                .collect(),
+        ),
+        Value::Array(values) => Value::Array(values.iter().map(redact_rdp_debug_payload).collect()),
+        _ => value.clone(),
+    }
+}
+
+fn is_sensitive_rdp_debug_key(key: &str) -> bool {
+    let normalized: String = key
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect();
+    normalized.contains("password")
+        || normalized.contains("secret")
+        || normalized.contains("token")
+        || normalized.contains("credential")
+        || normalized.contains("passphrase")
 }
 
 fn write_advanced_debugging_enabled_markers() {
@@ -319,5 +351,34 @@ mod tests {
             serde_json::from_str(line.trim_end()).expect("marker should be valid JSON");
         assert_eq!(parsed["event"], "advanced_debugging.enabled");
         assert_eq!(parsed["payload"]["debugBuild"], false);
+    }
+
+    #[test]
+    fn rdp_debug_payload_redacts_secret_like_keys_recursively() {
+        let redacted = redact_rdp_debug_payload(&json!({
+            "host": "rdp.example",
+            "password": "secret-password",
+            "clearTextPassword": "clear-secret",
+            "secretOwnerId": "connection-password-owner",
+            "options": {
+                "redirectClipboard": true,
+                "api_token": "token-value",
+                "nested": [
+                    {
+                        "passphrase": "phrase-value",
+                        "username": "alice"
+                    }
+                ]
+            }
+        }));
+
+        assert_eq!(redacted["host"], "rdp.example");
+        assert_eq!(redacted["password"], "[redacted]");
+        assert_eq!(redacted["clearTextPassword"], "[redacted]");
+        assert_eq!(redacted["secretOwnerId"], "[redacted]");
+        assert_eq!(redacted["options"]["redirectClipboard"], true);
+        assert_eq!(redacted["options"]["api_token"], "[redacted]");
+        assert_eq!(redacted["options"]["nested"][0]["passphrase"], "[redacted]");
+        assert_eq!(redacted["options"]["nested"][0]["username"], "alice");
     }
 }
