@@ -64,6 +64,42 @@ const SCRIPT_WIDGET_MOTION_STALL_MS = 8000;
 // of the boundary.
 const SCRIPT_WIDGET_MOTION_POLL_MS = 3000;
 
+// Script widgets execute inside sandboxed iframes, but WebView2 can still run
+// iframe JavaScript on the same renderer thread as the app UI. Defer iframe
+// creation until after the Dashboard has had a chance to paint, then stagger
+// mounts so one expensive AI-created widget does not block the whole view
+// switch before any chrome or lightweight widgets are visible.
+const SCRIPT_WIDGET_MOUNT_STAGGER_MS = 120;
+// Fallback idle budget for hosts without the Prioritized Task Scheduling API:
+// requestIdleCallback may never see a truly idle frame, so we cap the wait so
+// the iframe still mounts within half a second.
+const SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS = 500;
+// Viewport gate: only mount a widget's iframe once its placeholder is within
+// this margin of the viewport, so the mount runs slightly ahead of the
+// scroll and the widget is already painted by the time it is fully visible.
+const SCRIPT_WIDGET_MOUNT_ROOT_MARGIN = "256px";
+let nextScriptWidgetMountAt = 0;
+
+// Minimal shape of the Prioritized Task Scheduling API (`scheduler.postTask`).
+// Typed locally because lib.dom does not yet ship it. WebView2 is Chromium and
+// supports this in production; the requestIdleCallback / setTimeout fallbacks
+// below cover older or non-Chromium environments (and the Node test harness).
+type SchedulerPostTask = (
+  callback: () => void,
+  options?: {
+    priority?: "user-blocking" | "user-visible" | "background";
+    delay?: number;
+    signal?: AbortSignal;
+  },
+) => Promise<unknown>;
+
+function getSchedulerPostTask(): SchedulerPostTask | null {
+  const scheduler = (globalThis as { scheduler?: { postTask?: SchedulerPostTask } }).scheduler;
+  return scheduler && typeof scheduler.postTask === "function"
+    ? scheduler.postTask.bind(scheduler)
+    : null;
+}
+
 const BRIDGE_RATE_LIMITS_MS = {
   setSettings: 500,
   getSecret: 500,
@@ -95,6 +131,84 @@ function postIframeVisibility(el: HTMLIFrameElement, visible: boolean) {
     { kk: true, type: "setVisible", visible },
     "*",
   );
+}
+
+type CancelScheduledScriptWidgetMount = () => void;
+
+function scheduleScriptWidgetMount(onMount: () => void): CancelScheduledScriptWidgetMount {
+  let cancelled = false;
+  let frameA = 0;
+  let frameB = 0;
+  let timeout = 0;
+  let idleHandle = 0;
+  // Cancellation token for the scheduler.postTask path; cheaper paths use the
+  // raf/timeout/idle handles tracked above.
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const cancel = () => {
+    cancelled = true;
+    controller?.abort();
+    if (frameA) window.cancelAnimationFrame(frameA);
+    if (frameB) window.cancelAnimationFrame(frameB);
+    if (timeout) window.clearTimeout(timeout);
+    if (idleHandle && "cancelIdleCallback" in window) {
+      window.cancelIdleCallback(idleHandle);
+    }
+  };
+  const run = () => {
+    if (cancelled) return;
+    onMount();
+  };
+
+  // Two animation frames guarantee the Dashboard chrome, grid, and lightweight
+  // placeholders have painted before we even reserve a mount slot, so the
+  // iframe never competes with the view-switch frame itself.
+  frameA = window.requestAnimationFrame(() => {
+    frameA = 0;
+    frameB = window.requestAnimationFrame(() => {
+      frameB = 0;
+      if (cancelled) return;
+      const now = performance.now();
+      const delay = Math.max(0, nextScriptWidgetMountAt - now);
+      nextScriptWidgetMountAt = Math.max(now, nextScriptWidgetMountAt) + SCRIPT_WIDGET_MOUNT_STAGGER_MS;
+
+      // Preferred path: a `background` task in the Prioritized Task Scheduling
+      // API runs only when the main thread is otherwise free and yields to
+      // user input and rendering, which is exactly what a non-urgent iframe
+      // mount wants. The native `delay` carries the stagger and the
+      // AbortSignal handles cancellation, so we avoid the manual
+      // setTimeout + requestIdleCallback bookkeeping below.
+      const postTask = getSchedulerPostTask();
+      if (postTask) {
+        postTask(run, {
+          priority: "background",
+          delay,
+          signal: controller?.signal,
+        }).catch(() => {
+          // An aborted task rejects; cancellation is already handled above.
+        });
+        return;
+      }
+
+      // Fallback for hosts without scheduler.postTask: stagger with setTimeout,
+      // then wait for an idle frame (bounded by SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS).
+      timeout = window.setTimeout(() => {
+        timeout = 0;
+        if ("requestIdleCallback" in window) {
+          idleHandle = window.requestIdleCallback(
+            () => {
+              idleHandle = 0;
+              run();
+            },
+            { timeout: SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS },
+          );
+        } else {
+          run();
+        }
+      }, delay);
+    });
+  });
+
+  return cancel;
 }
 
 function normalizeScriptWidgetCap(cap: number): number {
@@ -173,6 +287,9 @@ export function ScriptWidgetHost({
 }) {
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  // The placeholder shown before the iframe mounts. We observe it so the
+  // deferred mount can wait until the widget's grid cell nears the viewport.
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
   const bridgeLastAcceptedRef = useRef(new Map<RateLimitedBridgeMessage, number>());
   const activeSubscriptionsRef = useRef<Set<string>>(new Set());
   // Last `kk.motionTick` timestamp from the iframe rAF wrapper. Reset to
@@ -209,13 +326,28 @@ export function ScriptWidgetHost({
   );
   const [libraries, setLibraries] = useState<ResolvedWidgetLibrary[] | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [iframeMountReady, setIframeMountReady] = useState(false);
+  // Viewport gate: a script widget on the active View does not build its
+  // iframe (and therefore does not run any top-level widget JS) until its
+  // placeholder scrolls within SCRIPT_WIDGET_MOUNT_ROOT_MARGIN of the
+  // viewport. Off-screen widgets on a tall Dashboard cost nothing until the
+  // user scrolls to them. Latched per View activation: reset when the View
+  // is left so each entry re-gates against what is actually visible.
+  const [inViewport, setInViewport] = useState(false);
+  // Monitoring widgets must keep running while off-screen or they would miss
+  // data: `periodic` polls on an interval and `realtime` is driven by external
+  // events/streams. They are exempt from the viewport gate and mount eagerly.
+  // `static` (the default) and `animation` carry no cross-time state — a fresh
+  // mount when scrolled into view loses nothing — so they stay gated.
+  const lifecycleKind = parsed?.lifecycle?.kind ?? "static";
+  const viewportGated = lifecycleKind === "static" || lifecycleKind === "animation";
   const syncVisibility = useCallback(() => {
     const el = iframeRef.current;
-    if (!el || capped || !libraries) return;
+    if (!el || capped || !libraries || !iframeMountReady) return;
     const visible = isViewActive && iframeRectIsVisible(el);
     visibleRef.current = visible;
     postIframeVisibility(el, visible);
-  }, [capped, isViewActive, libraries]);
+  }, [capped, isViewActive, libraries, iframeMountReady]);
   const requestedLibraries = useMemo(
     () => (parsed ? resolveWidgetLibraryKeys(parsed.libraries, parsed.source) : []),
     [parsed],
@@ -294,6 +426,45 @@ export function ScriptWidgetHost({
     };
   }, [parsed, capped, requestedLibraries, requestedLibKey]);
 
+  // Reset the viewport gate whenever the widget leaves the active View so that
+  // re-entering the View re-gates against what is actually on screen instead
+  // of immediately re-mounting every off-screen widget.
+  useEffect(() => {
+    if (!isViewActive) setInViewport(false);
+  }, [isViewActive]);
+
+  // Viewport gate observer: while a gated widget is eligible to mount but has
+  // not yet entered the viewport, watch the placeholder. The first intersection
+  // (widened by SCRIPT_WIDGET_MOUNT_ROOT_MARGIN) latches `inViewport`, which
+  // lets the deferred mount below proceed. Exempt monitoring widgets, and hosts
+  // without IntersectionObserver, skip the gate and mount eagerly.
+  useEffect(() => {
+    if (capped || !parsed || !libraries || !isViewActive || inViewport) return;
+    if (!viewportGated || typeof IntersectionObserver === "undefined") {
+      setInViewport(true);
+      return;
+    }
+    const el = placeholderRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setInViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: SCRIPT_WIDGET_MOUNT_ROOT_MARGIN },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [capped, parsed, libraries, isViewActive, inViewport, viewportGated]);
+
+  useEffect(() => {
+    setIframeMountReady(false);
+    if (!parsed || capped || !libraries || !isViewActive || !inViewport) return;
+    return scheduleScriptWidgetMount(() => setIframeMountReady(true));
+  }, [parsed, capped, libraries, isViewActive, inViewport, reloadKey]);
+
   // Harden 5 (A2/A3 smoke test + health bubbling): when the iframe is
   // about to mount, register the widget as `pending` and arm a 2 s
   // watchdog. The message listener below transitions to `ready` or
@@ -302,7 +473,7 @@ export function ScriptWidgetHost({
   // shows up in the AI context payload as unhealthy. Cleared on unmount
   // or reload.
   useEffect(() => {
-    if (capped || !libraries) return;
+    if (capped || !libraries || !iframeMountReady) return;
     motionTickRef.current = Date.now();
     setWidgetHealth(instance.id, { state: "pending", since: Date.now() });
     const timer = window.setTimeout(() => {
@@ -317,7 +488,7 @@ export function ScriptWidgetHost({
       window.clearTimeout(timer);
       setWidgetHealth(instance.id, null);
     };
-  }, [instance.id, capped, libraries, reloadKey, setWidgetHealth]);
+  }, [instance.id, capped, libraries, iframeMountReady, reloadKey, setWidgetHealth]);
 
   // Harden 6 (B1 motion watchdog): only enabled for widgets that declared
   // `lifecycle.kind: "animation"`. Polls the last-motion-tick ref; if the
@@ -326,7 +497,7 @@ export function ScriptWidgetHost({
   // observable, so the AI sees the regression in the next context payload
   // and can offer to fix it.
   useEffect(() => {
-    if (capped || !libraries || parsed?.lifecycle?.kind !== "animation") return;
+    if (capped || !libraries || !iframeMountReady || parsed?.lifecycle?.kind !== "animation") return;
     const interval = window.setInterval(() => {
       if (!visibleRef.current) return;
       const lastTick = motionTickRef.current;
@@ -340,7 +511,7 @@ export function ScriptWidgetHost({
       }
     }, SCRIPT_WIDGET_MOTION_POLL_MS);
     return () => window.clearInterval(interval);
-  }, [instance.id, capped, libraries, parsed, reloadKey, setWidgetHealth]);
+  }, [instance.id, capped, libraries, iframeMountReady, parsed, reloadKey, setWidgetHealth]);
 
   // Mirror this widget's latest runtime-health state to the backend so the
   // assistant's dashboard_check_widget_health tool can read it in the same
@@ -357,7 +528,7 @@ export function ScriptWidgetHost({
 
   const srcdoc = useMemo(
     () =>
-      parsed && libraries
+      parsed && libraries && iframeMountReady
         ? buildSrcdoc(
             parsed,
             settingsValuesJson,
@@ -367,7 +538,7 @@ export function ScriptWidgetHost({
             widgetLayoutEnforcement,
           )
         : "",
-    [parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools, widgetLayoutEnforcement],
+    [parsed, settingsValuesJson, libraries, iframeMountReady, scriptTheme, allowWidgetNetworkTools, widgetLayoutEnforcement],
   );
   const canUseNetworkTools = parsed?.permissions.networkTools === true && allowWidgetNetworkTools;
 
@@ -376,7 +547,7 @@ export function ScriptWidgetHost({
   // to pause expensive rAF/animation loops.
   useEffect(() => {
     const el = iframeRef.current;
-    if (!el || capped || !libraries) return;
+    if (!el || capped || !libraries || !iframeMountReady) return;
     const syncSoon = () => {
       window.requestAnimationFrame(() => {
         syncVisibility();
@@ -404,7 +575,7 @@ export function ScriptWidgetHost({
       observer.disconnect();
       window.removeEventListener("resize", syncVisibility);
     };
-  }, [capped, isViewActive, libraries, syncVisibility]);
+  }, [capped, isViewActive, libraries, iframeMountReady, syncVisibility]);
 
   // Forward net://event Tauri events to this widget's iframe subscribers.
   useEffect(() => {
@@ -786,8 +957,12 @@ export function ScriptWidgetHost({
     );
   }
 
-  if (!libraries) {
-    return <div className="dw-script-loading">{t("common.loading")}</div>;
+  if (!libraries || !iframeMountReady) {
+    return (
+      <div ref={placeholderRef} className="dw-script-loading">
+        {t("common.loading")}
+      </div>
+    );
   }
 
   return (

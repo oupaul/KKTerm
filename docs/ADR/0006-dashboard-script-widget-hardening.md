@@ -85,7 +85,7 @@ every other grammar violation.
 **Heuristic limitation that remains.** Stage 1a treats `${expr}` interpolation
 inside template literals as part of the opaque string, so a `while(true)`
 written *inside* an interpolation expression slips through the infinite-loop
-scan. The active-widget cap (§6) and visibility throttle (§7) bound the
+scan. The active-widget cap (§7) and visibility throttle (§8) bound the
 blast radius if anything slips through. Stage 1b does walk into interpolation
 expressions for the unused-library cross-reference (§2), so a library
 referenced *only* inside `${...}` still counts as used.
@@ -230,7 +230,74 @@ Health state is **in-memory only**. It is not persisted in SQLite — the
 2 s smoke window and the live iframe both restart on every app launch
 or reload anyway, so the only meaningful state is the current one.
 
-### 6. Active-widget cap with eviction notification
+### 6. Deferred, viewport-gated, and staggered iframe startup
+
+`ScriptWidgetHost` does not attach the iframe immediately after the React
+host is rendered. Once the widget body is valid and any declared bundled
+libraries are resolved, the host waits for two animation frames (so the
+Dashboard chrome has actually painted), then reserves a small file-scope
+stagger slot (`SCRIPT_WIDGET_MOUNT_STAGGER_MS`, 120 ms) before setting
+`srcDoc`.
+
+**Viewport gating.** Even on the active View, a gated widget's iframe is not
+built until the widget's placeholder scrolls within
+`SCRIPT_WIDGET_MOUNT_ROOT_MARGIN` (256 px) of the viewport, measured by an
+`IntersectionObserver` on the placeholder. A widget below the fold therefore
+runs **zero** top-level JavaScript until the user scrolls toward it, so a tall
+Dashboard with many script widgets only pays for the ones actually on screen.
+The 256 px margin mounts each widget slightly ahead of the scroll so it is
+already painted by the time it is fully visible. The gate is latched per View
+activation: it is reset when the View is left, so re-entering a View re-gates
+against what is actually visible instead of re-mounting every off-screen widget
+at once. The placeholder fills the widget's grid cell (`.dw-script-loading`) so
+the observer measures the widget's real area rather than a single line of text.
+Hosts without `IntersectionObserver` mount eagerly, preserving prior behavior.
+
+**Monitoring widgets are exempt.** Viewport gating only applies to `static`
+(the default) and `animation` lifecycle kinds, which hold no cross-time state —
+re-mounting one when it scrolls into view loses nothing, and an off-screen
+animation has nothing useful to show anyway. Widgets declared `periodic`
+(interval polling, e.g. an AI-coding-usage or system-stats monitor) or
+`realtime` (event/stream-driven) are exempt: they mount eagerly so they keep
+polling and accumulating data while scrolled off-screen, exactly as they did
+before viewport gating. This is the same lifecycle taxonomy the AI uses when it
+authors a widget (`dashboard_create_widget` requires `body.lifecycle.kind`), so
+a monitor the assistant creates is gated correctly without any extra signal.
+Gating is therefore a within-active-View optimization for display widgets, not
+a change to monitoring semantics. (Off-screen monitors still cooperate with the
+visibility throttle in §8 — they can cheapen rendering via `KK.isVisible()` —
+they simply are not torn down.)
+
+The deferred mount runs as a `background`-priority task via the Prioritized
+Task Scheduling API (`scheduler.postTask`) when the host supports it. A
+`background` task only runs when the main thread is otherwise free and yields
+to user input and rendering, so the mount cannot stall an in-flight
+interaction; the stagger is carried by the task's native `delay` and
+cancellation by an `AbortSignal`. WebView2 is Chromium-based, so this is the
+production path. Hosts without `scheduler.postTask` (older/non-Chromium
+engines, the Node test harness) fall back to `setTimeout` for the stagger plus
+`requestIdleCallback` with a bounded timeout
+(`SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS`, 500 ms). `requestIdleCallback` is only
+a fallback because its idle deadline is heuristic and can be starved on a busy
+renderer, whereas `postTask` integrates with the browser's unified scheduler.
+
+This does **not** make arbitrary widget JavaScript safe or preemptible:
+WebView2 may still execute iframe JavaScript on the same renderer thread as
+the app UI. The purpose is narrower and user-visible: switching to a
+Dashboard View should paint the Dashboard chrome, grid, and lightweight
+placeholders before an expensive AI-authored widget gets a chance to run a
+large synchronous top-level script. Multiple script widgets on the same View
+start one at a time instead of all evaluating during the same view-switch
+frame.
+
+The smoke-test `pending` state and motion watchdog start only after the
+deferred iframe mount is ready. Otherwise a deliberately delayed mount could
+be misreported as a timeout before the iframe exists. A consequence of
+viewport gating is that a widget which never enters the viewport never
+registers a health state — which is correct, since it is doing no work and
+cannot be stalled or broken until it actually runs.
+
+### 7. Active-widget cap with eviction notification
 
 `ScriptWidgetHost` tracks active script widgets in a file-scope
 `Map<id, setCapped>`. When a new widget tries to mount past the cap it is
@@ -272,7 +339,7 @@ Bumping the upper bound requires changing both files, the
 `validate_dashboard_settings` clamp, and the translated
 `settings.dashboardMaxActiveScriptWidgetsHint` value in every locale file.
 
-### 7. Visibility-aware throttling via IntersectionObserver
+### 8. Visibility-aware throttling via IntersectionObserver
 
 The host posts `{ kk: true, type: "setVisible", visible: bool }` to each
 iframe whenever the iframe scrolls off-screen or back on-screen. The iframe
@@ -282,10 +349,10 @@ Widgets that opt in can short-circuit expensive work — typically by checking
 their rAF callback.
 
 This is cooperative throttling, not enforcement: a widget that ignores
-`KK.isVisible()` keeps burning frames. The AI prompt change in §9 nudges
+`KK.isVisible()` keeps burning frames. The AI prompt change in §10 nudges
 toward the cooperative path.
 
-### 8. Mutex poison recovery with defensive rollback
+### 9. Mutex poison recovery with defensive rollback
 
 `storage::Storage::with_connection_infallible` recovers from poisoned mutexes
 by calling `poison.into_inner()` and issuing a best-effort `ROLLBACK` on the
@@ -303,7 +370,7 @@ trade favors keeping the app responsive. The dashboard tables are
 recoverable from settings export; the connections table is the only critical
 data, and panicking dashboard commands cannot reach it.
 
-### 9. AI prompt guardrails
+### 10. AI prompt guardrails
 
 The `dashboard_create_widget` tool description now contains explicit
 guidance:
@@ -345,8 +412,8 @@ the prompt missed.
 
 - The semantic prefilter is a heuristic. `${expr}` interpolation inside
   template literals is treated as part of the string, so a `while(true)`
-  hidden there slips past the infinite-loop scan. The cap (§6) and
-  visibility throttle (§7) bound the blast radius. Note that AST-based
+  hidden there slips past the infinite-loop scan. The cap (§7) and
+  visibility throttle (§8) bound the blast radius. Note that AST-based
   identifier collection (§2) *does* walk into interpolation expressions,
   so this limitation is specific to the infinite-loop pattern check.
 - `KNOWN_LIBRARY_GLOBALS` must be kept in sync with the TypeScript catalog.

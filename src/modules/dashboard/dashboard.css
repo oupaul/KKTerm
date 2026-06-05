@@ -301,6 +301,19 @@
   border: 0;
 }
 
+/* Fills the widget's grid cell so the viewport-gated mount observer measures
+   the widget's real area, not just a line of placeholder text. */
+.dw-script-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-muted);
+  user-select: none;
+  font-size: 12px;
+}
+
 .dw-script-capped {
   display: flex;
   align-items: center;
