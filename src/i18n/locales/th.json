@@ -281,15 +281,17 @@
     "notesPageIndicator": "หน้า {{page}} จาก {{total}}",
     "notesRotationDegrees": "องศาการหมุน",
     "notesFoldDepth": "ความลึกของรอยพับ",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "สีพื้นหลัง",
+    "notesFoldCorner": "มุมพับ",
+    "notesMarkdownEnabled": "แสดงผล Markdown",
+    "notesBackgroundColor": "สีพื้นหลัง",
     "notesFont": "แบบอักษร",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "ขวาบน",
+      "topLeft": "ซ้ายบน",
+      "bottomRight": "ขวาล่าง",
+      "bottomLeft": "ซ้ายล่าง"
+    },
+    "notesColor": {
       "yellow": "สีเหลือง",
       "pink": "สีชมพู",
       "blue": "สีฟ้า",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "กราฟิกขั้นสูง",
     "rdpResolutionValue": "พอดีกับขอบเขตพื้นที่ทำงาน",
     "display": "การแสดงผล",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "เครือข่ายและประสิทธิภาพ",
+    "remoteDesktopViewMode": "โหมดมุมมอง",
+    "remoteDesktopViewModeFit": "พอดีกับพื้นที่ทำงาน",
+    "remoteDesktopViewModeStretch": "ยืดให้เต็ม",
+    "remoteDesktopViewModeActualSize": "ขนาดจริงพร้อมแถบเลื่อน",
+    "remoteDesktopViewModeFitWidth": "พอดีกับความกว้าง",
+    "remoteDesktopViewModeFitHeight": "พอดีกับความสูง",
+    "networkPerformance": "เครือข่ายและประสิทธิภาพ",
     "encoding": "การเข้ารหัส",
     "rdpDisplayHint": "ค่าเริ่มต้นการแสดงผลที่วางแผนไว้สำหรับการเชื่อมต่อ RDP ใหม่",
     "rdpNetworkHint": "การปรับแต่งเครือข่ายที่วางแผนไว้สำหรับการเชื่อมต่อ RDP ใหม่",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "การขนส่งเดสก์ท็อประยะไกลไม่พร้อมใช้งาน",
     "session": "เซสชัน",
     "displayAria": "การแสดงผล VNC",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "โหมดมุมมอง: {{mode}}",
+    "viewModeSaved": "บันทึกโหมดมุมมองแล้ว: {{mode}}"
   },
   "ai": {
     "title": "ผู้ช่วย AI",

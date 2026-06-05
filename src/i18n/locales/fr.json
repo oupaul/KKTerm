@@ -281,15 +281,17 @@
     "notesPageIndicator": "Page {{page}} sur {{total}}",
     "notesRotationDegrees": "Degrés de rotation",
     "notesFoldDepth": "Profondeur du pli",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "Couleur de fond",
+    "notesFoldCorner": "Coin plié",
+    "notesMarkdownEnabled": "Rendre le Markdown",
+    "notesBackgroundColor": "Couleur de fond",
     "notesFont": "Police",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "En haut à droite",
+      "topLeft": "En haut à gauche",
+      "bottomRight": "En bas à droite",
+      "bottomLeft": "En bas à gauche"
+    },
+    "notesColor": {
       "yellow": "Jaune",
       "pink": "Rose",
       "blue": "Bleu",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "Graphismes améliorés",
     "rdpResolutionValue": "Ajuster aux limites de l'espace de travail",
     "display": "Affichage",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "Réseau et performance",
+    "remoteDesktopViewMode": "Mode d’affichage",
+    "remoteDesktopViewModeFit": "Adapter à l’espace de travail",
+    "remoteDesktopViewModeStretch": "Étirer pour remplir",
+    "remoteDesktopViewModeActualSize": "Taille réelle avec barres de défilement",
+    "remoteDesktopViewModeFitWidth": "Adapter à la largeur",
+    "remoteDesktopViewModeFitHeight": "Adapter à la hauteur",
+    "networkPerformance": "Réseau et performance",
     "encoding": "Encodage",
     "rdpDisplayHint": "Valeurs par défaut d'affichage planifiées pour les nouvelles connexions RDP.",
     "rdpNetworkHint": "Paramètres réseau planifiés pour les nouvelles connexions RDP.",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "Transport de bureau à distance indisponible.",
     "session": "session",
     "displayAria": "Affichage VNC",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "Mode d’affichage : {{mode}}",
+    "viewModeSaved": "Mode d’affichage enregistré : {{mode}}"
   },
   "ai": {
     "title": "Assistant IA",

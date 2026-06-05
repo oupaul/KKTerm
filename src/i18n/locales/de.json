@@ -281,15 +281,17 @@
     "notesPageIndicator": "Seite {{page}} von {{total}}",
     "notesRotationDegrees": "Drehung in Grad",
     "notesFoldDepth": "Falztiefe",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "Hintergrundfarbe",
+    "notesFoldCorner": "Faltecke",
+    "notesMarkdownEnabled": "Markdown rendern",
+    "notesBackgroundColor": "Hintergrundfarbe",
     "notesFont": "Schriftart",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "Oben rechts",
+      "topLeft": "Oben links",
+      "bottomRight": "Unten rechts",
+      "bottomLeft": "Unten links"
+    },
+    "notesColor": {
       "yellow": "Gelb",
       "pink": "Rosa",
       "blue": "Blau",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "Erweiterte Grafik",
     "rdpResolutionValue": "An Arbeitsbereichsgrenzen anpassen",
     "display": "Anzeige",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "Netzwerk und Leistung",
+    "remoteDesktopViewMode": "Ansichtsmodus",
+    "remoteDesktopViewModeFit": "An Arbeitsbereich anpassen",
+    "remoteDesktopViewModeStretch": "Strecken zum Ausfüllen",
+    "remoteDesktopViewModeActualSize": "Originalgröße mit Bildlaufleisten",
+    "remoteDesktopViewModeFitWidth": "Breite anpassen",
+    "remoteDesktopViewModeFitHeight": "Höhe anpassen",
+    "networkPerformance": "Netzwerk und Leistung",
     "encoding": "Kodierung",
     "rdpDisplayHint": "Geplante Anzeige-Standards für neue RDP-Verbindungen.",
     "rdpNetworkHint": "Geplante Netzwerkabstimmung für neue RDP-Verbindungen.",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "Remotedesktop-Transport nicht verfügbar.",
     "session": "Sitzung",
     "displayAria": "VNC-Anzeige",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "Ansichtsmodus: {{mode}}",
+    "viewModeSaved": "Ansichtsmodus gespeichert: {{mode}}"
   },
   "ai": {
     "title": "KI-Assistent",

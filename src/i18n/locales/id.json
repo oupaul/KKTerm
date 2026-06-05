@@ -281,15 +281,17 @@
     "notesPageIndicator": "Halaman {{page}} dari {{total}}",
     "notesRotationDegrees": "Derajat rotasi",
     "notesFoldDepth": "Kedalaman lipatan",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "Warna latar",
+    "notesFoldCorner": "Sudut lipatan",
+    "notesMarkdownEnabled": "Render Markdown",
+    "notesBackgroundColor": "Warna latar",
     "notesFont": "Font",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "Kanan atas",
+      "topLeft": "Kiri atas",
+      "bottomRight": "Kanan bawah",
+      "bottomLeft": "Kiri bawah"
+    },
+    "notesColor": {
       "yellow": "Kuning",
       "pink": "Merah muda",
       "blue": "Biru",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "Grafis tingkat lanjut",
     "rdpResolutionValue": "Sesuaikan batas ruang kerja",
     "display": "Tampilan",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "Jaringan dan performa",
+    "remoteDesktopViewMode": "Mode tampilan",
+    "remoteDesktopViewModeFit": "Sesuaikan ke ruang kerja",
+    "remoteDesktopViewModeStretch": "Rentangkan hingga penuh",
+    "remoteDesktopViewModeActualSize": "Ukuran sebenarnya dengan bilah gulir",
+    "remoteDesktopViewModeFitWidth": "Sesuaikan lebar",
+    "remoteDesktopViewModeFitHeight": "Sesuaikan tinggi",
+    "networkPerformance": "Jaringan dan performa",
     "encoding": "Encoding",
     "rdpDisplayHint": "Default tampilan yang direncanakan untuk Koneksi RDP baru.",
     "rdpNetworkHint": "Penyetelan jaringan yang direncanakan untuk Koneksi RDP baru.",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "Transport desktop jarak jauh tidak tersedia.",
     "session": "sesi",
     "displayAria": "Tampilan VNC",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "Mode tampilan: {{mode}}",
+    "viewModeSaved": "Mode tampilan disimpan: {{mode}}"
   },
   "ai": {
     "title": "AI Assistant",

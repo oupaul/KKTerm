@@ -281,15 +281,17 @@
     "notesPageIndicator": "{{total}} ページ中 {{page}} ページ",
     "notesRotationDegrees": "回転角度",
     "notesFoldDepth": "折り目の深さ",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "背景色",
+    "notesFoldCorner": "折り返し角",
+    "notesMarkdownEnabled": "Markdown をレンダリング",
+    "notesBackgroundColor": "背景色",
     "notesFont": "フォント",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "右上",
+      "topLeft": "左上",
+      "bottomRight": "右下",
+      "bottomLeft": "左下"
+    },
+    "notesColor": {
       "yellow": "黄色",
       "pink": "ピンク",
       "blue": "青",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "拡張グラフィックス",
     "rdpResolutionValue": "ワークスペース領域に合わせる",
     "display": "ディスプレイ",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "ネットワークとパフォーマンス",
+    "remoteDesktopViewMode": "表示モード",
+    "remoteDesktopViewModeFit": "ワークスペースに合わせる",
+    "remoteDesktopViewModeStretch": "全体に引き伸ばす",
+    "remoteDesktopViewModeActualSize": "スクロールバー付きの実寸表示",
+    "remoteDesktopViewModeFitWidth": "幅に合わせる",
+    "remoteDesktopViewModeFitHeight": "高さに合わせる",
+    "networkPerformance": "ネットワークとパフォーマンス",
     "encoding": "エンコーディング",
     "rdpDisplayHint": "新しいRDP接続の計画されたディスプレイのデフォルト。",
     "rdpNetworkHint": "新しいRDP接続の計画されたネットワークチューニング。",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "リモートデスクトップトランスポートが利用できません。",
     "session": "セッション",
     "displayAria": "VNCディスプレイ",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "表示モード: {{mode}}",
+    "viewModeSaved": "表示モードを保存しました: {{mode}}"
   },
   "ai": {
     "title": "AIアシスタント",

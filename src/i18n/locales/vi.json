@@ -281,15 +281,17 @@
     "notesPageIndicator": "Trang {{page}} / {{total}}",
     "notesRotationDegrees": "Độ xoay",
     "notesFoldDepth": "Độ sâu nếp gấp",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "Màu nền",
+    "notesFoldCorner": "Góc gập",
+    "notesMarkdownEnabled": "Kết xuất Markdown",
+    "notesBackgroundColor": "Màu nền",
     "notesFont": "Phông chữ",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "Trên bên phải",
+      "topLeft": "Trên bên trái",
+      "bottomRight": "Dưới bên phải",
+      "bottomLeft": "Dưới bên trái"
+    },
+    "notesColor": {
       "yellow": "Vàng",
       "pink": "Hồng",
       "blue": "Xanh dương",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "Enhanced graphics",
     "rdpResolutionValue": "Vừa giới hạn không gian làm việc",
     "display": "Hiển thị",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "Mạng và hiệu suất",
+    "remoteDesktopViewMode": "Chế độ xem",
+    "remoteDesktopViewModeFit": "Vừa với không gian làm việc",
+    "remoteDesktopViewModeStretch": "Kéo giãn để lấp đầy",
+    "remoteDesktopViewModeActualSize": "Kích thước thực với thanh cuộn",
+    "remoteDesktopViewModeFitWidth": "Vừa chiều rộng",
+    "remoteDesktopViewModeFitHeight": "Vừa chiều cao",
+    "networkPerformance": "Mạng và hiệu suất",
     "encoding": "Mã hóa",
     "rdpDisplayHint": "Mặc định hiển thị dự kiến cho Kết nối RDP mới.",
     "rdpNetworkHint": "Điều chỉnh mạng dự kiến cho Kết nối RDP mới.",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "Remote desktop transport unavailable.",
     "session": "session",
     "displayAria": "VNC display",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "Chế độ xem: {{mode}}",
+    "viewModeSaved": "Đã lưu chế độ xem: {{mode}}"
   },
   "ai": {
     "title": "AI Assistant",

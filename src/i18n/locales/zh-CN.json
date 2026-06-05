@@ -281,15 +281,17 @@
     "notesPageIndicator": "第 {{page}} 页，共 {{total}} 页",
     "notesRotationDegrees": "旋转角度",
     "notesFoldDepth": "折角深度",
-    "notesFoldCorner": "Fold corner",
-    "notesMarkdownEnabled": "Render Markdown",    "notesBackgroundColor": "背景颜色",
+    "notesFoldCorner": "折角",
+    "notesMarkdownEnabled": "渲染 Markdown",
+    "notesBackgroundColor": "背景颜色",
     "notesFont": "字体",
     "notesFoldCornerOption": {
-      "topRight": "Top right",
-      "topLeft": "Top left",
-      "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left"
-    },    "notesColor": {
+      "topRight": "右上",
+      "topLeft": "左上",
+      "bottomRight": "右下",
+      "bottomLeft": "左下"
+    },
+    "notesColor": {
       "yellow": "黄色",
       "pink": "粉色",
       "blue": "蓝色",
@@ -888,12 +890,13 @@
     "enhancedGraphics": "增强图形",
     "rdpResolutionValue": "适配工作区边界",
     "display": "显示",
-    "remoteDesktopViewMode": "View mode",
-    "remoteDesktopViewModeFit": "Fit to workspace",
-    "remoteDesktopViewModeStretch": "Stretch to fill",
-    "remoteDesktopViewModeActualSize": "Actual size with scrollbars",
-    "remoteDesktopViewModeFitWidth": "Fit width",
-    "remoteDesktopViewModeFitHeight": "Fit height",    "networkPerformance": "网络与性能",
+    "remoteDesktopViewMode": "视图模式",
+    "remoteDesktopViewModeFit": "适应工作区",
+    "remoteDesktopViewModeStretch": "拉伸填充",
+    "remoteDesktopViewModeActualSize": "实际大小并显示滚动条",
+    "remoteDesktopViewModeFitWidth": "适应宽度",
+    "remoteDesktopViewModeFitHeight": "适应高度",
+    "networkPerformance": "网络与性能",
     "encoding": "编码",
     "rdpDisplayHint": "新 RDP 连接的计划显示默认值。",
     "rdpNetworkHint": "新 RDP 连接的计划网络调优。",
@@ -2121,8 +2124,8 @@
     "transportUnavailable": "远程桌面传输不可用。",
     "session": "会话",
     "displayAria": "VNC 画面",
-    "viewModeButton": "View mode: {{mode}}",
-    "viewModeSaved": "View mode saved: {{mode}}"
+    "viewModeButton": "视图模式：{{mode}}",
+    "viewModeSaved": "已保存视图模式：{{mode}}"
   },
   "ai": {
     "title": "AI 助手",
