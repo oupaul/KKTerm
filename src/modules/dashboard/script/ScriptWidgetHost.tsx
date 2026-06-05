@@ -64,6 +64,15 @@ const SCRIPT_WIDGET_MOTION_STALL_MS = 8000;
 // of the boundary.
 const SCRIPT_WIDGET_MOTION_POLL_MS = 3000;
 
+// Script widgets execute inside sandboxed iframes, but WebView2 can still run
+// iframe JavaScript on the same renderer thread as the app UI. Defer iframe
+// creation until after the Dashboard has had a chance to paint, then stagger
+// mounts so one expensive AI-created widget does not block the whole view
+// switch before any chrome or lightweight widgets are visible.
+const SCRIPT_WIDGET_MOUNT_STAGGER_MS = 120;
+const SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS = 500;
+let nextScriptWidgetMountAt = 0;
+
 const BRIDGE_RATE_LIMITS_MS = {
   setSettings: 500,
   getSecret: 500,
@@ -95,6 +104,55 @@ function postIframeVisibility(el: HTMLIFrameElement, visible: boolean) {
     { kk: true, type: "setVisible", visible },
     "*",
   );
+}
+
+type CancelScheduledScriptWidgetMount = () => void;
+
+function scheduleScriptWidgetMount(onMount: () => void): CancelScheduledScriptWidgetMount {
+  let cancelled = false;
+  let frameA = 0;
+  let frameB = 0;
+  let timeout = 0;
+  let idleHandle = 0;
+  const cancel = () => {
+    cancelled = true;
+    if (frameA) window.cancelAnimationFrame(frameA);
+    if (frameB) window.cancelAnimationFrame(frameB);
+    if (timeout) window.clearTimeout(timeout);
+    if (idleHandle && "cancelIdleCallback" in window) {
+      window.cancelIdleCallback(idleHandle);
+    }
+  };
+  const run = () => {
+    if (cancelled) return;
+    onMount();
+  };
+
+  frameA = window.requestAnimationFrame(() => {
+    frameA = 0;
+    frameB = window.requestAnimationFrame(() => {
+      frameB = 0;
+      const now = performance.now();
+      const delay = Math.max(0, nextScriptWidgetMountAt - now);
+      nextScriptWidgetMountAt = Math.max(now, nextScriptWidgetMountAt) + SCRIPT_WIDGET_MOUNT_STAGGER_MS;
+      timeout = window.setTimeout(() => {
+        timeout = 0;
+        if ("requestIdleCallback" in window) {
+          idleHandle = window.requestIdleCallback(
+            () => {
+              idleHandle = 0;
+              run();
+            },
+            { timeout: SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS },
+          );
+        } else {
+          run();
+        }
+      }, delay);
+    });
+  });
+
+  return cancel;
 }
 
 function normalizeScriptWidgetCap(cap: number): number {
@@ -209,13 +267,14 @@ export function ScriptWidgetHost({
   );
   const [libraries, setLibraries] = useState<ResolvedWidgetLibrary[] | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [iframeMountReady, setIframeMountReady] = useState(false);
   const syncVisibility = useCallback(() => {
     const el = iframeRef.current;
-    if (!el || capped || !libraries) return;
+    if (!el || capped || !libraries || !iframeMountReady) return;
     const visible = isViewActive && iframeRectIsVisible(el);
     visibleRef.current = visible;
     postIframeVisibility(el, visible);
-  }, [capped, isViewActive, libraries]);
+  }, [capped, isViewActive, libraries, iframeMountReady]);
   const requestedLibraries = useMemo(
     () => (parsed ? resolveWidgetLibraryKeys(parsed.libraries, parsed.source) : []),
     [parsed],
@@ -294,6 +353,12 @@ export function ScriptWidgetHost({
     };
   }, [parsed, capped, requestedLibraries, requestedLibKey]);
 
+  useEffect(() => {
+    setIframeMountReady(false);
+    if (!parsed || capped || !libraries || !isViewActive) return;
+    return scheduleScriptWidgetMount(() => setIframeMountReady(true));
+  }, [parsed, capped, libraries, isViewActive, reloadKey]);
+
   // Harden 5 (A2/A3 smoke test + health bubbling): when the iframe is
   // about to mount, register the widget as `pending` and arm a 2 s
   // watchdog. The message listener below transitions to `ready` or
@@ -302,7 +367,7 @@ export function ScriptWidgetHost({
   // shows up in the AI context payload as unhealthy. Cleared on unmount
   // or reload.
   useEffect(() => {
-    if (capped || !libraries) return;
+    if (capped || !libraries || !iframeMountReady) return;
     motionTickRef.current = Date.now();
     setWidgetHealth(instance.id, { state: "pending", since: Date.now() });
     const timer = window.setTimeout(() => {
@@ -317,7 +382,7 @@ export function ScriptWidgetHost({
       window.clearTimeout(timer);
       setWidgetHealth(instance.id, null);
     };
-  }, [instance.id, capped, libraries, reloadKey, setWidgetHealth]);
+  }, [instance.id, capped, libraries, iframeMountReady, reloadKey, setWidgetHealth]);
 
   // Harden 6 (B1 motion watchdog): only enabled for widgets that declared
   // `lifecycle.kind: "animation"`. Polls the last-motion-tick ref; if the
@@ -326,7 +391,7 @@ export function ScriptWidgetHost({
   // observable, so the AI sees the regression in the next context payload
   // and can offer to fix it.
   useEffect(() => {
-    if (capped || !libraries || parsed?.lifecycle?.kind !== "animation") return;
+    if (capped || !libraries || !iframeMountReady || parsed?.lifecycle?.kind !== "animation") return;
     const interval = window.setInterval(() => {
       if (!visibleRef.current) return;
       const lastTick = motionTickRef.current;
@@ -340,7 +405,7 @@ export function ScriptWidgetHost({
       }
     }, SCRIPT_WIDGET_MOTION_POLL_MS);
     return () => window.clearInterval(interval);
-  }, [instance.id, capped, libraries, parsed, reloadKey, setWidgetHealth]);
+  }, [instance.id, capped, libraries, iframeMountReady, parsed, reloadKey, setWidgetHealth]);
 
   // Mirror this widget's latest runtime-health state to the backend so the
   // assistant's dashboard_check_widget_health tool can read it in the same
@@ -357,7 +422,7 @@ export function ScriptWidgetHost({
 
   const srcdoc = useMemo(
     () =>
-      parsed && libraries
+      parsed && libraries && iframeMountReady
         ? buildSrcdoc(
             parsed,
             settingsValuesJson,
@@ -367,7 +432,7 @@ export function ScriptWidgetHost({
             widgetLayoutEnforcement,
           )
         : "",
-    [parsed, settingsValuesJson, libraries, scriptTheme, allowWidgetNetworkTools, widgetLayoutEnforcement],
+    [parsed, settingsValuesJson, libraries, iframeMountReady, scriptTheme, allowWidgetNetworkTools, widgetLayoutEnforcement],
   );
   const canUseNetworkTools = parsed?.permissions.networkTools === true && allowWidgetNetworkTools;
 
@@ -376,7 +441,7 @@ export function ScriptWidgetHost({
   // to pause expensive rAF/animation loops.
   useEffect(() => {
     const el = iframeRef.current;
-    if (!el || capped || !libraries) return;
+    if (!el || capped || !libraries || !iframeMountReady) return;
     const syncSoon = () => {
       window.requestAnimationFrame(() => {
         syncVisibility();
@@ -404,7 +469,7 @@ export function ScriptWidgetHost({
       observer.disconnect();
       window.removeEventListener("resize", syncVisibility);
     };
-  }, [capped, isViewActive, libraries, syncVisibility]);
+  }, [capped, isViewActive, libraries, iframeMountReady, syncVisibility]);
 
   // Forward net://event Tauri events to this widget's iframe subscribers.
   useEffect(() => {
@@ -786,7 +851,7 @@ export function ScriptWidgetHost({
     );
   }
 
-  if (!libraries) {
+  if (!libraries || !iframeMountReady) {
     return <div className="dw-script-loading">{t("common.loading")}</div>;
   }
 
