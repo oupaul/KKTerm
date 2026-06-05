@@ -1,11 +1,14 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, ExternalLink, Globe2, KeyRound, RefreshCw, RotateCcw, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Menu, RefreshCw, Save } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { FormEvent } from "react";
+import type { FormEvent, MouseEvent as ReactMouseEvent } from "react";
+import { menuButtonAria } from "../../../../lib/aria";
+import { nativeMenuIcons } from "../../../../lib/nativeMenuIcons";
+import { showNativeContextMenu } from "../../../../lib/nativeContextMenu";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "../../../../lib/tauri";
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
@@ -171,10 +174,12 @@ function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly) 
 export function WebViewWorkspace({
   isActive,
   layoutTabId,
+  onOpenAssistant = () => undefined,
   tab,
 }: {
   isActive: boolean;
   layoutTabId?: string;
+  onOpenAssistant?: () => void;
   tab: WorkspaceTab;
 }) {
   const { t } = useTranslation();
@@ -184,6 +189,9 @@ export function WebViewWorkspace({
   const saveTabLayout = useWorkspaceStore((state) => state.saveTabLayout);
   const resetTabLayout = useWorkspaceStore((state) => state.resetTabLayout);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const setAssistantContextSnippet = useWorkspaceStore((state) => state.setAssistantContextSnippet);
+  const submitAssistantContextSnippet = useWorkspaceStore((state) => state.submitAssistantContextSnippet);
+  const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const workspaceRef = useRef<HTMLElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const sessionStartedRef = useRef(false);
@@ -793,6 +801,79 @@ export function WebViewWorkspace({
     showStatusBarNotice(t("terminal.layoutReset"), { tone: "success" });
   }
 
+  async function handleLayoutMenu(event: ReactMouseEvent<HTMLButtonElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("terminal.saveLayout"),
+          iconSvg: nativeMenuIcons.save,
+          action: handleSaveLayout,
+        },
+        {
+          kind: "item",
+          label: t("terminal.resetLayout"),
+          iconSvg: nativeMenuIcons.rotateCcw,
+          action: handleResetLayout,
+        },
+      ],
+      {
+        x: bounds.left,
+        y: bounds.bottom,
+      },
+    );
+  }
+
+  async function captureWebviewScreenshotForAssistant() {
+    if (!isTauriRuntime()) {
+      showStatusBarNotice(t("workspace.screenshotsRequireRuntime"), { tone: "warning" });
+      return;
+    }
+    const target = workspaceRef.current;
+    if (!target) {
+      return;
+    }
+    const bounds = target.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) {
+      return;
+    }
+
+    try {
+      const screenshot = await invokeCommand("capture_screenshot_for_assistant", {
+        request: {
+          x: Math.max(0, Math.round(bounds.left)),
+          y: Math.max(0, Math.round(bounds.top)),
+          width: Math.max(1, Math.round(bounds.width)),
+          height: Math.max(1, Math.round(bounds.height)),
+        },
+      });
+      const snippet = {
+        id: `webview-screenshot-${Date.now()}`,
+        kind: "screenshot",
+        sourceLabel: t("webview.screenshotTarget", { title: tab.title }),
+        imageDataUrl: screenshot.dataUrl,
+        width: screenshot.width,
+        height: screenshot.height,
+        capturedAt: new Date().toISOString(),
+      } as const;
+      if (generalSettings.submitAiAttachmentsDirectly) {
+        submitAssistantContextSnippet(snippet, t("ai.directAttachmentPrompt"));
+      } else {
+        setAssistantContextSnippet(snippet);
+      }
+      onOpenAssistant();
+      showStatusBarNotice(t("workspace.sentToAi"), { tone: "success" });
+    } catch (error) {
+      showStatusBarNotice(
+        t("workspace.screenshotCaptureError", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+        { tone: "error" },
+      );
+    }
+  }
+
   return (
     <section
       className={isActive ? "terminal-workspace webview-workspace active" : "terminal-workspace webview-workspace"}
@@ -902,27 +983,28 @@ export function WebViewWorkspace({
               targetLabel={t("webview.screenshotTarget", { title: tab.title })}
               targetRef={workspaceRef}
             />
+            <button
+              aria-label={t("workspace.sendEntirePanelToAi")}
+              className="terminal-pane-action"
+              data-tutorial-id="webview.sendToAi"
+              disabled={!isTauriRuntime()}
+              onClick={() => void captureWebviewScreenshotForAssistant()}
+              title={t("workspace.sendEntirePanelToAi")}
+              type="button"
+            >
+              <Bot size={13} />
+            </button>
             {tab.connection ? (
-              <>
-                <button
-                  aria-label={t("terminal.saveLayout")}
-                  className="terminal-pane-action"
-                  onClick={handleSaveLayout}
-                  title={t("terminal.saveLayout")}
-                  type="button"
-                >
-                  <Save size={13} />
-                </button>
-                <button
-                  aria-label={t("terminal.resetLayout")}
-                  className="terminal-pane-action"
-                  onClick={handleResetLayout}
-                  title={t("terminal.resetLayout")}
-                  type="button"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </>
+              <button
+                aria-label={t("webview.actions")}
+                className="terminal-pane-action"
+                {...menuButtonAria(false)}
+                onClick={(event) => void handleLayoutMenu(event)}
+                title={t("webview.actions")}
+                type="button"
+              >
+                <Menu size={13} />
+              </button>
             ) : null}
           </div>
         </header>

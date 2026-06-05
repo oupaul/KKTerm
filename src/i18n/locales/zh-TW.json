@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "此 URL 連線未設定 URL。",
     "onlyDesktopRuntime": "嵌入式瀏覽器僅在桌面執行環境中可用。",
     "openExternally": "從外部開啟",
+    "actions": "URL 動作",
     "savePassword": "儲存密碼",
     "savePasswordTitle": "儲存目前在此頁面輸入的使用者名稱與密碼",
     "fillSavedCredential": "自動填入已儲存的認證",

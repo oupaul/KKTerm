@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "Für diese URL-Verbindung ist keine URL konfiguriert.",
     "onlyDesktopRuntime": "Eingebetteter Browser nur in der Desktop-Laufzeitumgebung verfügbar.",
     "openExternally": "Extern öffnen",
+    "actions": "URL-Aktionen",
     "savePassword": "Passwort speichern",
     "savePasswordTitle": "Den aktuell auf dieser Seite eingegebenen Benutzernamen und das Passwort speichern",
     "fillSavedCredential": "Gespeicherte Anmeldedaten ausfüllen",

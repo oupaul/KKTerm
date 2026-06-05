@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "이 URL 연결에는 URL이 구성되어 있지 않습니다.",
     "onlyDesktopRuntime": "내장 브라우저는 데스크톱 런타임에서만 사용 가능합니다.",
     "openExternally": "외부에서 열기",
+    "actions": "URL 작업",
     "savePassword": "비밀번호 저장",
     "savePasswordTitle": "이 페이지에 현재 입력된 사용자 이름과 비밀번호를 저장합니다",
     "fillSavedCredential": "저장된 자격 증명 자동 입력",

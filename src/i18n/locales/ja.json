@@ -2092,6 +2092,7 @@
     "noUrlConfigured": "この URL コネクションには URL が設定されていません。",
     "onlyDesktopRuntime": "埋め込みブラウザはデスクトップランタイムでのみ利用可能です。",
     "openExternally": "外部で開く",
+    "actions": "URL アクション",
     "savePassword": "パスワードを保存",
     "savePasswordTitle": "現在このページに入力されているユーザー名とパスワードを保存します",
     "fillSavedCredential": "保存済み資格情報を自動入力",

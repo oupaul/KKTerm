@@ -103,6 +103,7 @@ const WORKSPACE_TUTORIAL_TARGET_IDS = [
   "webview.autoRefresh",
   "webview.savePassword",
   "webview.fillCredential",
+  "webview.sendToAi",
   "webview.surface",
   "remoteDesktop.toolbar",
   "remoteDesktop.viewMode",
