@@ -234,10 +234,23 @@ or reload anyway, so the only meaningful state is the current one.
 
 `ScriptWidgetHost` does not attach the iframe immediately after the React
 host is rendered. Once the widget body is valid and any declared bundled
-libraries are resolved, the host waits for two animation frames, reserves a
-small file-scope stagger slot (`SCRIPT_WIDGET_MOUNT_STAGGER_MS`, 120 ms),
-and then uses `requestIdleCallback` with a bounded timeout
-(`SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS`, 500 ms) before setting `srcDoc`.
+libraries are resolved, the host waits for two animation frames (so the
+Dashboard chrome has actually painted), then reserves a small file-scope
+stagger slot (`SCRIPT_WIDGET_MOUNT_STAGGER_MS`, 120 ms) before setting
+`srcDoc`.
+
+The deferred mount runs as a `background`-priority task via the Prioritized
+Task Scheduling API (`scheduler.postTask`) when the host supports it. A
+`background` task only runs when the main thread is otherwise free and yields
+to user input and rendering, so the mount cannot stall an in-flight
+interaction; the stagger is carried by the task's native `delay` and
+cancellation by an `AbortSignal`. WebView2 is Chromium-based, so this is the
+production path. Hosts without `scheduler.postTask` (older/non-Chromium
+engines, the Node test harness) fall back to `setTimeout` for the stagger plus
+`requestIdleCallback` with a bounded timeout
+(`SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS`, 500 ms). `requestIdleCallback` is only
+a fallback because its idle deadline is heuristic and can be starved on a busy
+renderer, whereas `postTask` integrates with the browser's unified scheduler.
 
 This does **not** make arbitrary widget JavaScript safe or preemptible:
 WebView2 may still execute iframe JavaScript on the same renderer thread as

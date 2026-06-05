@@ -70,8 +70,31 @@ const SCRIPT_WIDGET_MOTION_POLL_MS = 3000;
 // mounts so one expensive AI-created widget does not block the whole view
 // switch before any chrome or lightweight widgets are visible.
 const SCRIPT_WIDGET_MOUNT_STAGGER_MS = 120;
+// Fallback idle budget for hosts without the Prioritized Task Scheduling API:
+// requestIdleCallback may never see a truly idle frame, so we cap the wait so
+// the iframe still mounts within half a second.
 const SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS = 500;
 let nextScriptWidgetMountAt = 0;
+
+// Minimal shape of the Prioritized Task Scheduling API (`scheduler.postTask`).
+// Typed locally because lib.dom does not yet ship it. WebView2 is Chromium and
+// supports this in production; the requestIdleCallback / setTimeout fallbacks
+// below cover older or non-Chromium environments (and the Node test harness).
+type SchedulerPostTask = (
+  callback: () => void,
+  options?: {
+    priority?: "user-blocking" | "user-visible" | "background";
+    delay?: number;
+    signal?: AbortSignal;
+  },
+) => Promise<unknown>;
+
+function getSchedulerPostTask(): SchedulerPostTask | null {
+  const scheduler = (globalThis as { scheduler?: { postTask?: SchedulerPostTask } }).scheduler;
+  return scheduler && typeof scheduler.postTask === "function"
+    ? scheduler.postTask.bind(scheduler)
+    : null;
+}
 
 const BRIDGE_RATE_LIMITS_MS = {
   setSettings: 500,
@@ -114,8 +137,12 @@ function scheduleScriptWidgetMount(onMount: () => void): CancelScheduledScriptWi
   let frameB = 0;
   let timeout = 0;
   let idleHandle = 0;
+  // Cancellation token for the scheduler.postTask path; cheaper paths use the
+  // raf/timeout/idle handles tracked above.
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const cancel = () => {
     cancelled = true;
+    controller?.abort();
     if (frameA) window.cancelAnimationFrame(frameA);
     if (frameB) window.cancelAnimationFrame(frameB);
     if (timeout) window.clearTimeout(timeout);
@@ -128,13 +155,38 @@ function scheduleScriptWidgetMount(onMount: () => void): CancelScheduledScriptWi
     onMount();
   };
 
+  // Two animation frames guarantee the Dashboard chrome, grid, and lightweight
+  // placeholders have painted before we even reserve a mount slot, so the
+  // iframe never competes with the view-switch frame itself.
   frameA = window.requestAnimationFrame(() => {
     frameA = 0;
     frameB = window.requestAnimationFrame(() => {
       frameB = 0;
+      if (cancelled) return;
       const now = performance.now();
       const delay = Math.max(0, nextScriptWidgetMountAt - now);
       nextScriptWidgetMountAt = Math.max(now, nextScriptWidgetMountAt) + SCRIPT_WIDGET_MOUNT_STAGGER_MS;
+
+      // Preferred path: a `background` task in the Prioritized Task Scheduling
+      // API runs only when the main thread is otherwise free and yields to
+      // user input and rendering, which is exactly what a non-urgent iframe
+      // mount wants. The native `delay` carries the stagger and the
+      // AbortSignal handles cancellation, so we avoid the manual
+      // setTimeout + requestIdleCallback bookkeeping below.
+      const postTask = getSchedulerPostTask();
+      if (postTask) {
+        postTask(run, {
+          priority: "background",
+          delay,
+          signal: controller?.signal,
+        }).catch(() => {
+          // An aborted task rejects; cancellation is already handled above.
+        });
+        return;
+      }
+
+      // Fallback for hosts without scheduler.postTask: stagger with setTimeout,
+      // then wait for an idle frame (bounded by SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS).
       timeout = window.setTimeout(() => {
         timeout = 0;
         if ("requestIdleCallback" in window) {
