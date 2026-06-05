@@ -15,6 +15,7 @@
     "release:notes": "node scripts/generate-release-notes.mjs",
     "smoke:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-installer.ps1",
     "i18n:check": "node scripts/check-locale-keys.mjs",
+    "i18n:normalize": "node scripts/normalize-locale-order.mjs",
     "measure:ssh-readiness": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/measure-ssh-readiness.ps1",
     "preview": "vite preview",
     "tauri": "tauri"

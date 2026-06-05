@@ -16,18 +16,20 @@ When you add or change an English key in `src/i18n/locales/en.json` and do **not
 
 1. Copy `_TEMPLATE.md` to `<namespace>.<keyPath>.md`.
 2. Fill in every field.
-3. Commit the file alongside the `en.json` change.
+3. Keep the English key in its intended namespace position; `en.json` is the source of truth for locale key order.
+4. Commit the file alongside the `en.json` change.
 
 When you (or a localization pass) translate the key into every supported locale:
 
 1. Update each non-English locale file under `src/i18n/locales/`.
-2. Run `npm run i18n:check` and fix any missing or redundant keys before finishing the translation run.
-3. **Delete** the matching `docs/localization_todo/<namespace>.<keyPath>.md` file.
+2. Insert translated keys in the same relative order as `src/i18n/locales/en.json`; run `npm run i18n:normalize` if a locale drifts.
+3. Run `npm run i18n:check` and fix any missing, redundant, or misordered keys before finishing the translation run.
+4. **Delete** the matching `docs/localization_todo/<namespace>.<keyPath>.md` file.
 
 When you rename or remove a key:
 
 1. Update `en.json` and every non-English locale that touched the key.
-2. Run `npm run i18n:check` and fix any missing or redundant keys.
+2. Run `npm run i18n:check` and fix any missing, redundant, or misordered keys.
 3. Rename or delete the matching `docs/localization_todo/*.md` file to match.
 
 ## Why per-file

@@ -61,7 +61,33 @@ if (!localeFiles.includes(sourceLocale)) {
   throw new Error(`Missing source locale ${sourceLocale}`);
 }
 
-const sourceKeys = flattenLeafKeys(await readJson(sourceLocale)).sort();
+function findFirstOrderMismatch(sourceKeys, localeKeys) {
+  const source = new Set(sourceKeys);
+  const locale = new Set(localeKeys);
+  const expected = sourceKeys.filter((key) => locale.has(key));
+  const actual = localeKeys.filter((key) => source.has(key));
+
+  for (let index = 0; index < Math.min(expected.length, actual.length); index += 1) {
+    if (expected[index] !== actual[index]) {
+      return {
+        index,
+        expected: expected[index],
+        actual: actual[index],
+      };
+    }
+  }
+
+  return expected.length === actual.length
+    ? null
+    : {
+        index: Math.min(expected.length, actual.length),
+        expected: expected[Math.min(expected.length, actual.length)] ?? "<none>",
+        actual: actual[Math.min(expected.length, actual.length)] ?? "<none>",
+      };
+}
+
+const sourceKeysInOrder = flattenLeafKeys(await readJson(sourceLocale));
+const sourceKeys = [...sourceKeysInOrder].sort();
 let problemCount = 0;
 
 for (const fileName of localeFiles) {
@@ -69,18 +95,30 @@ for (const fileName of localeFiles) {
     continue;
   }
 
-  const localeKeys = flattenLeafKeys(await readJson(fileName)).sort();
+  const localeKeysInOrder = flattenLeafKeys(await readJson(fileName));
+  const localeKeys = [...localeKeysInOrder].sort();
   const { missing, redundant } = diffKeys(sourceKeys, localeKeys);
+  const orderMismatch = findFirstOrderMismatch(sourceKeysInOrder, localeKeysInOrder);
 
-  if (missing.length === 0 && redundant.length === 0) {
+  if (missing.length === 0 && redundant.length === 0 && orderMismatch === null) {
     console.log(`${fileName}: OK (${localeKeys.length} keys)`);
     continue;
   }
 
-  problemCount += missing.length + redundant.length;
-  console.log(`${fileName}: ${missing.length} missing, ${redundant.length} redundant`);
+  problemCount += missing.length + redundant.length + (orderMismatch === null ? 0 : 1);
+  console.log(
+    `${fileName}: ${missing.length} missing, ${redundant.length} redundant${
+      orderMismatch === null ? "" : ", key order differs"
+    }`,
+  );
   printKeyList("Missing from locale", missing);
   printKeyList("Redundant in locale", redundant);
+  if (orderMismatch !== null) {
+    console.log(
+      `  Key order first differs at shared index ${orderMismatch.index}: expected ${orderMismatch.expected}, found ${orderMismatch.actual}`,
+    );
+    console.log("  Run `npm run i18n:normalize` to mirror en.json key order.");
+  }
 }
 
 if (problemCount > 0) {
