@@ -3401,6 +3401,8 @@ button.dashboard-pill-dot:focus-visible {
   --note-fold-depth-alpha: 0.17;
   --note-fold-shadow-offset: 2.5px;
   --note-fold-shadow-blur: 3.5px;
+  --note-fold-curl-size: calc(var(--note-fold-size) * 1.65);
+  --note-fold-under: color-mix(in srgb, var(--note-paper-edge) 72%, #b16a00 28%);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -3414,7 +3416,7 @@ button.dashboard-pill-dot:focus-visible {
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 10%)) drop-shadow(0 8px 18px rgb(0 0 0 / 14%));
   transform: rotate(var(--note-rotation, -0.6deg));
   transform-origin: 50% 0;
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
   font-family: var(--note-font);
 }
@@ -3432,45 +3434,49 @@ button.dashboard-pill-dot:focus-visible {
 }
 
 .dw-notes::before {
-  /* Subtle curled paper fold. The base sheet is clipped away below it so the
-     folded corner stays transparent where real paper would reveal the surface. */
+  /* Curled paper fold. The visible underside is larger and rounder than a
+     plain triangle so it reads like a lifted sticky-note corner. */
   content: "";
   position: absolute;
   top: 0;
   right: 0;
   z-index: 1;
-  width: var(--note-fold-size);
-  height: var(--note-fold-size);
+  width: var(--note-fold-curl-size);
+  height: var(--note-fold-curl-size);
   background:
-    radial-gradient(115% 95% at 100% 0%, rgb(255 255 255 / 50%) 0 18%, transparent 58%),
-    linear-gradient(225deg, rgb(255 255 255 / 36%) 0%, transparent 38%),
-    linear-gradient(45deg, var(--note-paper-edge) 0%, var(--note-paper) 74%);
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
+    radial-gradient(110% 90% at 100% 0%, rgb(255 255 255 / 46%) 0 12%, transparent 50%),
+    radial-gradient(120% 100% at 100% 0%, var(--note-fold-under) 0 26%, var(--note-paper-edge) 46%, transparent 72%),
+    linear-gradient(45deg, var(--note-paper) 0%, var(--note-paper-edge) 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 94% 76%, 82% 55%, 63% 35%, 38% 17%, 15% 5%);
+  border-bottom-left-radius: 88% 72%;
   box-shadow:
-    calc(0px - var(--note-fold-shadow-offset)) var(--note-fold-shadow-offset) var(--note-fold-shadow-blur) rgb(0 0 0 / 12%);
+    calc(0px - var(--note-fold-shadow-offset)) var(--note-fold-shadow-offset) var(--note-fold-shadow-blur) rgb(0 0 0 / 18%),
+    -9px 12px 18px -14px rgb(72 40 0 / calc(0.24 + var(--note-fold-depth-alpha)));
   pointer-events: none;
 }
 
 .dw-notes--fold-topRight::after {
-  clip-path: polygon(0 0, calc(100% - var(--note-fold-size)) 0, 100% var(--note-fold-size), 100% 100%, 0 100%);
+  clip-path: polygon(0 0, calc(100% - var(--note-fold-curl-size)) 0, calc(100% - (var(--note-fold-size) * 1.22)) calc(var(--note-fold-size) * 0.22), calc(100% - (var(--note-fold-size) * 0.55)) calc(var(--note-fold-size) * 0.72), 100% var(--note-fold-curl-size), 100% 100%, 0 100%);
 }
 
 .dw-notes--fold-topLeft::after {
-  clip-path: polygon(var(--note-fold-size) 0, 100% 0, 100% 100%, 0 100%, 0 var(--note-fold-size));
+  clip-path: polygon(var(--note-fold-curl-size) 0, 100% 0, 100% 100%, 0 100%, 0 var(--note-fold-curl-size), calc(var(--note-fold-size) * 0.55) calc(var(--note-fold-size) * 0.72), calc(var(--note-fold-size) * 1.22) calc(var(--note-fold-size) * 0.22));
 }
 
 .dw-notes--fold-bottomRight::after {
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--note-fold-size)), calc(100% - var(--note-fold-size)) 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--note-fold-curl-size)), calc(100% - (var(--note-fold-size) * 0.55)) calc(100% - (var(--note-fold-size) * 0.72)), calc(100% - (var(--note-fold-size) * 1.22)) calc(100% - (var(--note-fold-size) * 0.22)), calc(100% - var(--note-fold-curl-size)) 100%, 0 100%);
 }
 
 .dw-notes--fold-bottomLeft::after {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--note-fold-size) 100%, 0 calc(100% - var(--note-fold-size)));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--note-fold-curl-size) 100%, calc(var(--note-fold-size) * 1.22) calc(100% - (var(--note-fold-size) * 0.22)), calc(var(--note-fold-size) * 0.55) calc(100% - (var(--note-fold-size) * 0.72)), 0 calc(100% - var(--note-fold-curl-size)));
 }
 
 .dw-notes--fold-topRight::before {
   top: 0;
   right: 0;
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 94% 76%, 82% 55%, 63% 35%, 38% 17%, 15% 5%);
+  border-radius: 0 0 0 88% / 0 0 0 72%;
+  transform: translate(6%, -6%);
 }
 
 .dw-notes--fold-topLeft::before {
@@ -3478,12 +3484,15 @@ button.dashboard-pill-dot:focus-visible {
   left: 0;
   right: auto;
   background:
-    radial-gradient(115% 95% at 0% 0%, rgb(255 255 255 / 50%) 0 18%, transparent 58%),
-    linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, transparent 38%),
-    linear-gradient(315deg, var(--note-paper-edge) 0%, var(--note-paper) 74%);
-  clip-path: polygon(0 0, 100% 0, 0 100%);
+    radial-gradient(110% 90% at 0% 0%, rgb(255 255 255 / 46%) 0 12%, transparent 50%),
+    radial-gradient(120% 100% at 0% 0%, var(--note-fold-under) 0 26%, var(--note-paper-edge) 46%, transparent 72%),
+    linear-gradient(315deg, var(--note-paper) 0%, var(--note-paper-edge) 100%);
+  clip-path: polygon(0 0, 100% 0, 85% 5%, 62% 17%, 37% 35%, 18% 55%, 6% 76%, 0 100%);
+  border-radius: 0 0 88% 0 / 0 0 72% 0;
+  transform: translate(-6%, -6%);
   box-shadow:
-    var(--note-fold-shadow-offset) var(--note-fold-shadow-offset) var(--note-fold-shadow-blur) rgb(0 0 0 / 12%);
+    var(--note-fold-shadow-offset) var(--note-fold-shadow-offset) var(--note-fold-shadow-blur) rgb(0 0 0 / 18%),
+    9px 12px 18px -14px rgb(72 40 0 / calc(0.24 + var(--note-fold-depth-alpha)));
 }
 
 .dw-notes--fold-bottomRight::before {
@@ -3491,12 +3500,15 @@ button.dashboard-pill-dot:focus-visible {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(115% 95% at 100% 100%, rgb(255 255 255 / 50%) 0 18%, transparent 58%),
-    linear-gradient(315deg, rgb(255 255 255 / 36%) 0%, transparent 38%),
-    linear-gradient(135deg, var(--note-paper-edge) 0%, var(--note-paper) 74%);
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    radial-gradient(110% 90% at 100% 100%, rgb(255 255 255 / 46%) 0 12%, transparent 50%),
+    radial-gradient(120% 100% at 100% 100%, var(--note-fold-under) 0 26%, var(--note-paper-edge) 46%, transparent 72%),
+    linear-gradient(135deg, var(--note-paper) 0%, var(--note-paper-edge) 100%);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%, 6% 76%, 18% 55%, 37% 35%, 62% 17%, 85% 5%);
+  border-radius: 88% 0 0 0 / 72% 0 0 0;
+  transform: translate(6%, 6%);
   box-shadow:
-    calc(0px - var(--note-fold-shadow-offset)) calc(0px - var(--note-fold-shadow-offset)) var(--note-fold-shadow-blur) rgb(0 0 0 / 12%);
+    calc(0px - var(--note-fold-shadow-offset)) calc(0px - var(--note-fold-shadow-offset)) var(--note-fold-shadow-blur) rgb(0 0 0 / 18%),
+    -9px -12px 18px -14px rgb(72 40 0 / calc(0.24 + var(--note-fold-depth-alpha)));
 }
 
 .dw-notes--fold-bottomLeft::before {
@@ -3505,12 +3517,15 @@ button.dashboard-pill-dot:focus-visible {
   right: auto;
   bottom: 0;
   background:
-    radial-gradient(115% 95% at 0% 100%, rgb(255 255 255 / 50%) 0 18%, transparent 58%),
-    linear-gradient(45deg, rgb(255 255 255 / 36%) 0%, transparent 38%),
-    linear-gradient(225deg, var(--note-paper-edge) 0%, var(--note-paper) 74%);
-  clip-path: polygon(0 0, 100% 100%, 0 100%);
+    radial-gradient(110% 90% at 0% 100%, rgb(255 255 255 / 46%) 0 12%, transparent 50%),
+    radial-gradient(120% 100% at 0% 100%, var(--note-fold-under) 0 26%, var(--note-paper-edge) 46%, transparent 72%),
+    linear-gradient(225deg, var(--note-paper) 0%, var(--note-paper-edge) 100%);
+  clip-path: polygon(0 0, 15% 5%, 38% 17%, 63% 35%, 82% 55%, 94% 76%, 100% 100%, 0 100%);
+  border-radius: 0 88% 0 0 / 0 72% 0 0;
+  transform: translate(-6%, 6%);
   box-shadow:
-    var(--note-fold-shadow-offset) calc(0px - var(--note-fold-shadow-offset)) var(--note-fold-shadow-blur) rgb(0 0 0 / 12%);
+    var(--note-fold-shadow-offset) calc(0px - var(--note-fold-shadow-offset)) var(--note-fold-shadow-blur) rgb(0 0 0 / 18%),
+    9px -12px 18px -14px rgb(72 40 0 / calc(0.24 + var(--note-fold-depth-alpha)));
 }
 
 .dw-notes-page-actions {
