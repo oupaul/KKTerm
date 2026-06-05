@@ -162,6 +162,11 @@ fn debug_frontend_heartbeat(heartbeat: debug_heartbeat::FrontendHeartbeat) {
 }
 
 #[tauri::command]
+fn ui_debug_log(event: String, payload: serde_json::Value) {
+    logging::ui_debug(&event, &payload);
+}
+
+#[tauri::command]
 fn get_custom_fonts_folder() -> Result<String, String> {
     let folder = custom_fonts_folder()?;
     fs::create_dir_all(&folder).map_err(|error| {
@@ -2850,6 +2855,7 @@ pub fn run() {
             app_updates::get_app_update_target_triple,
             app_updates::download_and_install_app_update,
             debug_frontend_heartbeat,
+            ui_debug_log,
             show_native_tooltip,
             hide_native_tooltip,
             list_connection_tree,

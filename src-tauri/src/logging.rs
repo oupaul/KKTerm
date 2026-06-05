@@ -65,6 +65,19 @@ pub fn mcp_debug(event: &str, payload: &Value) {
     }
 }
 
+pub fn ui_debug(event: &str, payload: &Value) {
+    if !sensitive_debug_log_enabled(cfg!(debug_assertions), advanced_debugging_enabled()) {
+        return;
+    }
+    let Some(log_path) = LOG_PATH.get().map(|path| ui_debug_log_path_for(path)) else {
+        return;
+    };
+    let line = format_debug_log_entry(event, payload);
+    if let Err(error) = append_debug_line(&log_path, &line) {
+        eprintln!("failed to write UI debug log: {error}");
+    }
+}
+
 pub fn installer_helper_debug(event: &str, payload: &Value) {
     if !sensitive_debug_log_enabled(cfg!(debug_assertions), advanced_debugging_enabled()) {
         return;
@@ -124,6 +137,7 @@ fn write_advanced_debugging_enabled_markers() {
         ai_assistant_debug_log_path_for(runtime_log_path),
         mcp_debug_log_path_for(runtime_log_path),
         installer_helper_debug_log_path_for(runtime_log_path),
+        ui_debug_log_path_for(runtime_log_path),
     ];
     for log_path in log_paths {
         if let Err(error) = append_debug_line(&log_path, &line) {
@@ -151,6 +165,13 @@ fn installer_helper_debug_log_path_for(runtime_log_path: &Path) -> PathBuf {
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .join("installer.helper.debug.log")
+}
+
+fn ui_debug_log_path_for(runtime_log_path: &Path) -> PathBuf {
+    runtime_log_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join("ui.debug.log")
 }
 
 fn format_ai_assistant_debug_log_entry(event: &str, payload: &Value) -> String {
@@ -209,6 +230,13 @@ mod tests {
             path,
             PathBuf::from("logs").join("installer.helper.debug.log")
         );
+    }
+
+    #[test]
+    fn ui_debug_log_path_uses_runtime_log_directory() {
+        let path = ui_debug_log_path_for(Path::new("logs/kkterm.log"));
+
+        assert_eq!(path, PathBuf::from("logs").join("ui.debug.log"));
     }
 
     #[test]

@@ -799,6 +799,10 @@ type CommandMap = {
     };
     result: void;
   };
+  ui_debug_log: {
+    args: { event: string; payload: Record<string, unknown> };
+    result: void;
+  };
   show_native_tooltip: {
     args: {
       request: {
@@ -2374,6 +2378,13 @@ export async function closeMainWindow() {
     return;
   }
   await getCurrentWindow().close();
+}
+
+export function logUiDebug(event: string, payload: Record<string, unknown>) {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  void invokeCommand("ui_debug_log", { event, payload }).catch(() => undefined);
 }
 
 export async function focusCurrentWebview() {
