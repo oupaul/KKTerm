@@ -74,6 +74,10 @@ const SCRIPT_WIDGET_MOUNT_STAGGER_MS = 120;
 // requestIdleCallback may never see a truly idle frame, so we cap the wait so
 // the iframe still mounts within half a second.
 const SCRIPT_WIDGET_MOUNT_IDLE_TIMEOUT_MS = 500;
+// Viewport gate: only mount a widget's iframe once its placeholder is within
+// this margin of the viewport, so the mount runs slightly ahead of the
+// scroll and the widget is already painted by the time it is fully visible.
+const SCRIPT_WIDGET_MOUNT_ROOT_MARGIN = "256px";
 let nextScriptWidgetMountAt = 0;
 
 // Minimal shape of the Prioritized Task Scheduling API (`scheduler.postTask`).
@@ -283,6 +287,9 @@ export function ScriptWidgetHost({
 }) {
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  // The placeholder shown before the iframe mounts. We observe it so the
+  // deferred mount can wait until the widget's grid cell nears the viewport.
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
   const bridgeLastAcceptedRef = useRef(new Map<RateLimitedBridgeMessage, number>());
   const activeSubscriptionsRef = useRef<Set<string>>(new Set());
   // Last `kk.motionTick` timestamp from the iframe rAF wrapper. Reset to
@@ -320,6 +327,13 @@ export function ScriptWidgetHost({
   const [libraries, setLibraries] = useState<ResolvedWidgetLibrary[] | null>(null);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [iframeMountReady, setIframeMountReady] = useState(false);
+  // Viewport gate: a script widget on the active View does not build its
+  // iframe (and therefore does not run any top-level widget JS) until its
+  // placeholder scrolls within SCRIPT_WIDGET_MOUNT_ROOT_MARGIN of the
+  // viewport. Off-screen widgets on a tall Dashboard cost nothing until the
+  // user scrolls to them. Latched per View activation: reset when the View
+  // is left so each entry re-gates against what is actually visible.
+  const [inViewport, setInViewport] = useState(false);
   const syncVisibility = useCallback(() => {
     const el = iframeRef.current;
     if (!el || capped || !libraries || !iframeMountReady) return;
@@ -405,11 +419,44 @@ export function ScriptWidgetHost({
     };
   }, [parsed, capped, requestedLibraries, requestedLibKey]);
 
+  // Reset the viewport gate whenever the widget leaves the active View so that
+  // re-entering the View re-gates against what is actually on screen instead
+  // of immediately re-mounting every off-screen widget.
+  useEffect(() => {
+    if (!isViewActive) setInViewport(false);
+  }, [isViewActive]);
+
+  // Viewport gate observer: while the widget is eligible to mount but has not
+  // yet entered the viewport, watch the placeholder. The first intersection
+  // (widened by SCRIPT_WIDGET_MOUNT_ROOT_MARGIN) latches `inViewport`, which
+  // lets the deferred mount below proceed. Skipped when IntersectionObserver
+  // is unavailable, so those hosts mount eagerly as before.
+  useEffect(() => {
+    if (capped || !parsed || !libraries || !isViewActive) return;
+    if (inViewport || typeof IntersectionObserver === "undefined") {
+      if (typeof IntersectionObserver === "undefined") setInViewport(true);
+      return;
+    }
+    const el = placeholderRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setInViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: SCRIPT_WIDGET_MOUNT_ROOT_MARGIN },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [capped, parsed, libraries, isViewActive, inViewport]);
+
   useEffect(() => {
     setIframeMountReady(false);
-    if (!parsed || capped || !libraries || !isViewActive) return;
+    if (!parsed || capped || !libraries || !isViewActive || !inViewport) return;
     return scheduleScriptWidgetMount(() => setIframeMountReady(true));
-  }, [parsed, capped, libraries, isViewActive, reloadKey]);
+  }, [parsed, capped, libraries, isViewActive, inViewport, reloadKey]);
 
   // Harden 5 (A2/A3 smoke test + health bubbling): when the iframe is
   // about to mount, register the widget as `pending` and arm a 2 s
@@ -904,7 +951,11 @@ export function ScriptWidgetHost({
   }
 
   if (!libraries || !iframeMountReady) {
-    return <div className="dw-script-loading">{t("common.loading")}</div>;
+    return (
+      <div ref={placeholderRef} className="dw-script-loading">
+        {t("common.loading")}
+      </div>
+    );
   }
 
   return (

@@ -230,7 +230,7 @@ Health state is **in-memory only**. It is not persisted in SQLite — the
 2 s smoke window and the live iframe both restart on every app launch
 or reload anyway, so the only meaningful state is the current one.
 
-### 6. Deferred and staggered iframe startup
+### 6. Deferred, viewport-gated, and staggered iframe startup
 
 `ScriptWidgetHost` does not attach the iframe immediately after the React
 host is rendered. Once the widget body is valid and any declared bundled
@@ -238,6 +238,20 @@ libraries are resolved, the host waits for two animation frames (so the
 Dashboard chrome has actually painted), then reserves a small file-scope
 stagger slot (`SCRIPT_WIDGET_MOUNT_STAGGER_MS`, 120 ms) before setting
 `srcDoc`.
+
+**Viewport gating.** Even on the active View, the iframe is not built until
+the widget's placeholder scrolls within `SCRIPT_WIDGET_MOUNT_ROOT_MARGIN`
+(256 px) of the viewport, measured by an `IntersectionObserver` on the
+placeholder. A widget below the fold therefore runs **zero** top-level
+JavaScript until the user scrolls toward it, so a tall Dashboard with many
+script widgets only pays for the ones actually on screen. The 256 px margin
+mounts each widget slightly ahead of the scroll so it is already painted by
+the time it is fully visible. The gate is latched per View activation: it is
+reset when the View is left, so re-entering a View re-gates against what is
+actually visible instead of re-mounting every off-screen widget at once. The
+placeholder fills the widget's grid cell (`.dw-script-loading`) so the
+observer measures the widget's real area rather than a single line of text.
+Hosts without `IntersectionObserver` mount eagerly, preserving prior behavior.
 
 The deferred mount runs as a `background`-priority task via the Prioritized
 Task Scheduling API (`scheduler.postTask`) when the host supports it. A
@@ -263,7 +277,10 @@ frame.
 
 The smoke-test `pending` state and motion watchdog start only after the
 deferred iframe mount is ready. Otherwise a deliberately delayed mount could
-be misreported as a timeout before the iframe exists.
+be misreported as a timeout before the iframe exists. A consequence of
+viewport gating is that a widget which never enters the viewport never
+registers a health state — which is correct, since it is doing no work and
+cannot be stalled or broken until it actually runs.
 
 ### 7. Active-widget cap with eviction notification
 
