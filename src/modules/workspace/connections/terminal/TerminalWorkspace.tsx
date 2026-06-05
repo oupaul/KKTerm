@@ -2983,9 +2983,14 @@ function shouldPreserveTerminalWorkspaceFocus() {
     return false;
   }
 
+  // Only yield to surfaces the user is genuinely working in: the assistant
+  // panel or an editable input (e.g. a dialog field). After an OS window
+  // switch, document.activeElement reflects Chromium's automatic focus
+  // restoration, not a user action — a non-terminal *button* (e.g. the
+  // connection tree's open button) landing focus is never intent, so it must
+  // not block restoring focus to the terminal the user was using.
   return activeElement.closest(".assistant-panel") !== null ||
-    isEditableElement(activeElement) ||
-    isFocusableElement(activeElement);
+    isEditableElement(activeElement);
 }
 
 function isEditableElement(element: HTMLElement) {
