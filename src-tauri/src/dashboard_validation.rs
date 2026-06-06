@@ -130,6 +130,7 @@ pub const DASHBOARD_TAB_COLOR_IDS: &[&str] = &[
 ];
 
 pub const DYNAMIC_BACKGROUND_IDS: &[&str] = &[
+    "fuji",
     "aurora",
     "clouds",
     "ocean",
@@ -1380,6 +1381,11 @@ mod tests {
     fn dynamic_background_accepts_aquarium_and_frosted_window() {
         assert!(validate_dynamic_background("aquarium").is_ok());
         assert!(validate_dynamic_background("frostedWindow").is_ok());
+    }
+
+    #[test]
+    fn dynamic_background_accepts_fuji() {
+        assert!(validate_dynamic_background("fuji").is_ok());
     }
 
     #[test]

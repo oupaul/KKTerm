@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ComponentType } from "react";
+import { FujiBg } from "./fujiBackground";
 import {
   DashboardAnimationGate,
   useDashboardAnimationActive,
@@ -3752,6 +3753,7 @@ function ParticleCursorBg() {
 }
 
 const DYNAMIC_BACKGROUND_COMPONENTS = {
+  fuji: FujiBg,
   aurora: AuroraBg,
   clouds: CloudsBg,
   ocean: OceanBg,
@@ -3786,6 +3788,7 @@ export const DYNAMIC_BACKGROUNDS: readonly {
   labelKey: string;
   mood: "calm" | "spacey" | "warm" | "geeky" | "erratic";
 }[] = [
+  { id: "fuji", labelKey: "dashboard.dynamicBackgrounds.fuji", mood: "calm" },
   { id: "aurora", labelKey: "dashboard.dynamicBackgrounds.aurora", mood: "calm" },
   { id: "clouds", labelKey: "dashboard.dynamicBackgrounds.clouds", mood: "calm" },
   { id: "ocean", labelKey: "dashboard.dynamicBackgrounds.ocean", mood: "calm" },

@@ -6,6 +6,7 @@ import {
 } from "./dynamicBackgrounds";
 
 const expectedIds = [
+  "fuji",
   "aurora",
   "clouds",
   "ocean",
