@@ -4,8 +4,6 @@
 
 <h1 align="center">KKTerm</h1>
 
-![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
-
 <p align="center">
   <strong>O workspace nativo para administradores Windows que a era das ferramentas de IA esqueceu de criar — terminais, SSH, SFTP, RDP/VNC, dashboards, e uma IA que cria seus próprios widgets de ferramentas.</strong>
 </p>
@@ -28,6 +26,9 @@
   </a>
   <a href="https://github.com/ryantsai/KKTerm/network/members">
     <img src="https://img.shields.io/github/forks/ryantsai/KKTerm?style=for-the-badge&logo=github&color=8a63d2" alt="GitHub forks" />
+  </a>
+  <a href="https://github.com/ryantsai/KKTerm/releases">
+    <img src="https://img.shields.io/github/downloads/ryantsai/KKTerm/total?style=for-the-badge&logo=github&color=0969da" alt="GitHub downloads" />
   </a>
   <a href="https://github.com/ryantsai/KKTerm/issues">
     <img src="https://img.shields.io/github/issues/ryantsai/KKTerm?style=for-the-badge&logo=github&color=2ea043" alt="Open issues" />
