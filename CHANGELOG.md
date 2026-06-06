@@ -3,6 +3,32 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.64/kkterm-0.1.64-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.64/kkterm-0.1.64-windows-arm64-setup.exe)
+
+## Highlights
+- Terminal Session focus restoration improvements for when you switch back to KKTerm—no more “I swear I clicked” moments. 🖥️😅
+
+## New
+- Add an “Open log folder” command in Settings (with translations updated).
+
+## Improved
+- Preserve focused Pane when the Tab refreshes within a child Connection layout.
+- Color scheme updates and localization updates, including adding the **blue-green-white** color scheme.
+
+## Fixed
+- Connection Tree: Parent Child Connection Tab panoramas no longer select a child row when opened.
+- Terminal: Prevent a reactivation-focused button from blocking focus restore (fix by @ryantsai in https://github.com/ryantsai/KKTerm/pull/268, small terminal gremlin avoided).
+- Terminal: Restore keyboard input by calling `SetFocus` on the WebView2 content HWND (fix by @ryantsai in https://github.com/ryantsai/KKTerm/pull/269).
+- Win32 WebView2 focus restore: Correct the `SetFocus` import path (fix by @ryantsai in https://github.com/ryantsai/KKTerm/pull/270).
+- Revert Win32 WebView2 focus-restore changes from #269 and #270 (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/271).
+
+## Internal
+- Terminal: Refactor focus handling and improve terminal focus restore tests.
+- Dashboard/library/code cleanup and other refactors.
+- Move GitHub download badge into the README badge row.
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.63/kkterm-0.1.63-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.63/kkterm-0.1.63-windows-arm64-setup.exe)
 
