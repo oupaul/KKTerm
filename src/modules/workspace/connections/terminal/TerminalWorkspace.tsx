@@ -2014,14 +2014,7 @@ function TerminalPaneView({
       return;
     }
 
-    const sessionId = sessionIdRef.current;
-    if (sessionId) {
-      await writeWithPasteConfirmation(text, (input) => {
-        void invokeCommand("write_terminal_input", {
-          request: { sessionId, data: encodeTerminalInput(input) },
-        });
-      });
-    }
+    terminalRendererRef.current?.paste(text);
     setContextMenu(null);
     terminalRendererRef.current?.focus();
   }

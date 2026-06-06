@@ -55,6 +55,7 @@ export interface TerminalRenderer {
   open: (element: HTMLElement) => void;
   setWheelScrollbackOverride: (enabled: boolean, handler?: (lines: number) => void) => void;
   setBackgroundOpacity: (opacity: number) => void;
+  paste: (data: string) => void;
   write: (data: string) => void;
   writeln: (data: string) => void;
   setFontSize: (size: number) => void;
@@ -302,6 +303,10 @@ class XtermTerminalRenderer implements TerminalRenderer {
 
   write(data: string) {
     this.terminal.write(data);
+  }
+
+  paste(data: string) {
+    this.terminal.paste(data);
   }
 
   writeln(data: string) {
