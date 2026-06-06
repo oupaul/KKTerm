@@ -4,8 +4,6 @@
 
 <h1 align="center">KKTerm</h1>
 
-![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
-
 <p align="center">
   <strong>AI 工具时代忘记打造的原生 Windows 管理工作台——终端、SSH、SFTP、RDP/VNC、Dashboard，以及一个能为你打造专属工具 Widget 的 AI。</strong>
 </p>
@@ -28,6 +26,9 @@
   </a>
   <a href="https://github.com/ryantsai/KKTerm/network/members">
     <img src="https://img.shields.io/github/forks/ryantsai/KKTerm?style=for-the-badge&logo=github&color=8a63d2" alt="GitHub forks" />
+  </a>
+  <a href="https://github.com/ryantsai/KKTerm/releases">
+    <img src="https://img.shields.io/github/downloads/ryantsai/KKTerm/total?style=for-the-badge&logo=github&color=0969da" alt="GitHub downloads" />
   </a>
   <a href="https://github.com/ryantsai/KKTerm/issues">
     <img src="https://img.shields.io/github/issues/ryantsai/KKTerm?style=for-the-badge&logo=github&color=2ea043" alt="Open issues" />

@@ -4,8 +4,6 @@
 
 <h1 align="center">KKTerm</h1>
 
-![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
-
 <p align="center">
   <strong>AI 도구 시대가 깜빡 잊고 만들지 않은, 진짜 Windows 네이티브 관리자 Workspace — 터미널, SSH, SFTP, RDP/VNC, Dashboard, 그리고 나만의 도구 Widget을 만들어 주는 AI.</strong>
 </p>
@@ -28,6 +26,9 @@
   </a>
   <a href="https://github.com/ryantsai/KKTerm/network/members">
     <img src="https://img.shields.io/github/forks/ryantsai/KKTerm?style=for-the-badge&logo=github&color=8a63d2" alt="GitHub forks" />
+  </a>
+  <a href="https://github.com/ryantsai/KKTerm/releases">
+    <img src="https://img.shields.io/github/downloads/ryantsai/KKTerm/total?style=for-the-badge&logo=github&color=0969da" alt="GitHub downloads" />
   </a>
   <a href="https://github.com/ryantsai/KKTerm/issues">
     <img src="https://img.shields.io/github/issues/ryantsai/KKTerm?style=for-the-badge&logo=github&color=2ea043" alt="Open issues" />
