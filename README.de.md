@@ -4,6 +4,8 @@
 
 <h1 align="center">KKTerm</h1>
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 <p align="center">
   <strong>Der native Windows-Admin-Workspace, den das KI-Tools-Zeitalter zu bauen vergessen hat — Terminals, SSH, SFTP, RDP/VNC, Dashboards und eine KI, die deine eigenen Tool-Widgets baut.</strong>
 </p>

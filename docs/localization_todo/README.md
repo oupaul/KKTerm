@@ -1,5 +1,7 @@
 # Localization Backlog
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 Each pending English string lives in its own file in this directory. One key per file. This replaces the previous single `docs/LOCALIZATION.md` so feature branches can add or remove pending strings without colliding.
 
 ## Filename Convention
