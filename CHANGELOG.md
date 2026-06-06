@@ -3,6 +3,46 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.67/kkterm-0.1.67-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.67/kkterm-0.1.67-windows-arm64-setup.exe)
+
+## Highlights
+- Terminal paste is now routed through xterm handling, reducing surprise behavior when pasting into a **Pane** (PR #274, by @ryantsai).
+- Improved **RDP Connection** debug logging sizing by tracking RDP connection state (PR #275, by @ryantsai). Your logs should fit a little better—like a well-sized TTY window. 😄
+
+## New
+- None
+
+## Improved
+- **Terminal** paste now goes through **xterm** paste handling (PR #274, @ryantsai).
+- **RDP Connection** state is now included to resize debug logs (PR #275, @ryantsai).
+
+## Fixed
+- Fixed terminal paste handling for line breaks by routing paste through xterm (PR #274, @ryantsai).
+
+## Internal
+- None
+
+---
+
+## 重點摘要
+- 現在會將「終端機貼上」導入 **xterm** 的處理流程，讓你在 **Pane** 裡貼上時較不會遇到令人意外的行為（PR #274，@ryantsai）。
+- 改善 **RDP 連線（Connection）** 的除錯日誌大小：透過追蹤 RDP 連線狀態來調整（PR #275，@ryantsai）。日誌應該更好塞進去一點——就像剛好合適的 TTY 視窗。😄
+
+## 新增
+- 無
+
+## 改善
+- **終端機（Terminal）** 貼上現在透過 **xterm** 的貼上處理（PR #274，@ryantsai）。
+- 在 **RDP 連線（RDP Connection）** 中加入狀態資訊，以調整除錯日誌大小（PR #275，@ryantsai）。
+
+## 修正
+- 修正終端機貼上時的換行問題：改為走 xterm 貼上處理（PR #274，@ryantsai）。
+
+## Internal
+- 無
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.66/kkterm-0.1.66-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.66/kkterm-0.1.66-windows-arm64-setup.exe)
 
