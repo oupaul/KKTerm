@@ -14,7 +14,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEv
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
-import { focusMainWindow, invokeCommand, isTauriRuntime, listenMainWindowFocusChanged, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, focusMainWindow, invokeCommand, isTauriRuntime, listenMainWindowFocusChanged, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -248,14 +248,16 @@ export function TerminalWorkspace({
     // (the WebView2 input routing was dead until the click), which the
     // hasFocus/activeElement signals cannot distinguish.
     inputProbeArmedRef.current = true;
-    // The diagnostic confirmed the xterm textarea keeps DOM focus across an OS
+    // The diagnostic proved the xterm textarea keeps DOM focus across an OS
     // window switch (document.activeElement and document.hasFocus stay true),
-    // yet WM_KEYDOWN never arrives — the Win32 keyboard-focus HWND is not the
-    // WebView2 content child. focusMainWindow now synchronously calls SetFocus
-    // on the deepest child HWND (Chrome_RenderWidgetHostHWND) after the frame
-    // set_focus(), routing keyboard input without an extra IPC round-trip.
+    // yet keyboard input is dropped until a physical click — the Win32 keyboard
+    // focus is off the webview content HWND. A JS terminal.focus() and the
+    // WebView2 MoveFocus (focusCurrentWebview) both run without fixing it, so
+    // re-assert focus at the window level (what a click does) and then route it
+    // into the content.
     if (isTauriRuntime()) {
       void focusMainWindow()
+        .then(() => focusCurrentWebview())
         .catch(() => undefined)
         .finally(() => logTerminalFocusDiagnostic(`restored:${reason}`));
     }
@@ -1563,10 +1565,12 @@ function TerminalPaneView({
     // A freshly opened terminal holds DOM focus on its textarea but the
     // WebView2 content does not yet own OS keyboard focus (especially right
     // after a connection dialog closes), so the first keystroke is otherwise
-    // dropped until the user clicks. focusMainWindow now handles both the
-    // frame-level set_focus and the content HWND SetFocus in one native call.
+    // dropped until the user clicks. Route native focus into the webview once
+    // when this pane is the active, focused one.
     if (isActive && isFocused && isTauriRuntime()) {
-      void focusMainWindow().catch(() => undefined);
+      void focusMainWindow()
+        .then(() => focusCurrentWebview())
+        .catch(() => undefined);
     }
     terminal.attachCustomKeyEventHandler((event) => {
       // xterm.js emits a bare CR for Shift+Enter, indistinguishable from a

@@ -167,55 +167,16 @@ fn ui_debug_log(event: String, payload: serde_json::Value) {
 }
 
 // Restore native keyboard focus to the main window after the OS hands it back.
-// Diagnostics confirmed: document.hasFocus() is true and the xterm textarea is
-// document.activeElement, yet WM_KEYDOWN never arrives until the user clicks.
-// The Win32 keyboard-focus HWND is not the WebView2 content child window.
-// window.set_focus() (SetForegroundWindow on the frame) is necessary but not
-// sufficient — it wakes the outer window but leaves the content HWND without
-// keyboard focus. Walking to the deepest child HWND and calling SetFocus there
-// replicates what a physical click does and routes WM_KEYDOWN to the renderer.
+// Diagnostics proved the WebView2 content keeps DOM focus (document.hasFocus()
+// is true, the xterm textarea is active) yet keyboard input is dropped until a
+// physical click — i.e. the Win32 keyboard focus is not on the webview content
+// HWND. The JS webview MoveFocus (getCurrentWebview().setFocus) runs but does
+// not fix it; the window-level set_focus used by the tray-restore path does
+// route keyboard focus into the content, so reuse it here.
 #[tauri::command]
 fn focus_main_window(app: tauri::AppHandle) {
     if let Some(window) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
         let _ = window.set_focus();
-        #[cfg(target_os = "windows")]
-        focus_webview_content_hwnd(&window);
-    }
-}
-
-// Walk the Win32 child-window chain from the main frame HWND down to the
-// deepest descendant — Chrome_RenderWidgetHostHWND in a typical WebView2
-// hierarchy — and call SetFocus on it. This is synchronous and happens within
-// the same Tauri command invocation as set_focus(), so there is no IPC
-// round-trip gap that could let focus drift before the WebView2 step runs.
-#[cfg(target_os = "windows")]
-fn focus_webview_content_hwnd(window: &tauri::WebviewWindow) {
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
-    use windows::Win32::UI::WindowsAndMessaging::{GW_CHILD, GetWindow};
-
-    let root = match window.hwnd() {
-        Ok(handle) => HWND(handle.0 as *mut _),
-        Err(_) => return,
-    };
-    unsafe {
-        let mut hwnd = root;
-        let mut depth = 0u32;
-        loop {
-            match GetWindow(hwnd, GW_CHILD) {
-                Ok(child) => {
-                    hwnd = child;
-                    depth += 1;
-                }
-                Err(_) => break,
-            }
-            if depth >= 8 {
-                break;
-            }
-        }
-        if depth > 0 {
-            let _ = SetFocus(Some(hwnd));
-        }
     }
 }
 
