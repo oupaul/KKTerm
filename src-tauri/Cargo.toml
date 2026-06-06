@@ -29,7 +29,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream", "form", "blocking"] }
 sha2 = "0.10"
-github-copilot-sdk = "1.0.0-beta.4"
+# Do not enable default features here: github-copilot-sdk defaults to bundling
+# the Copilot CLI, which bloats the KKTerm installer by embedding a large binary.
+github-copilot-sdk = { version = "1.0.0", default-features = false }
 rand = "0.9"
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }

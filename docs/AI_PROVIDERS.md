@@ -17,6 +17,15 @@ or streaming format, do **not** force it into the OpenAI-compatible adapter. Add
 proper `AgentProvider` implementation in Rust and document the new runtime shape.
 That is intentionally more than a one-file provider addition.
 
+GitHub Copilot uses `github-copilot-sdk` only as a runtime bridge to an installed
+or path-resolved Copilot CLI. KKTerm must never bundle the Copilot CLI into the
+app binary or installer. Keep the Cargo dependency on `github-copilot-sdk`
+explicitly declared with `default-features = false`; do not enable the SDK's
+`bundled-cli` feature, set build-time CLI embedding variables, or add a release
+path that embeds Copilot CLI assets. The installer must stay lean, and Copilot
+CLI availability should be resolved at runtime from user/system installation
+state.
+
 OpenAI and Anthropic can also be routed through their local coding CLIs when the
 user enables the Settings toggles `settings.useCodexCli` or
 `settings.useClaudeCli`. This is not the same runtime as the HTTP provider
