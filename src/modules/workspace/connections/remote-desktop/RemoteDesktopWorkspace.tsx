@@ -486,18 +486,6 @@ export function RemoteDesktopWorkspace({
     }
     const previous = lastBoundsRef.current;
     const boundsChanged = !previous || !boundsEqual(previous, bounds);
-    if (wantsVisible && displayReadyRef.current && boundsChanged) {
-      displayReadyRef.current = false;
-      rdpVisibleRef.current = false;
-      setRdpStatus(t("remoteDesktop.preparingDisplay"));
-      void invokeCommand("set_rdp_visibility", {
-        request: { sessionId, visible: false, ...(previous ?? bounds) },
-      }).catch((error) => {
-        reportRemoteDesktopError(error instanceof Error ? error.message : String(error));
-      });
-      attemptRdpDisplaySync();
-      return;
-    }
     void invokeCommand("set_rdp_visibility", {
       request: { sessionId, visible, ...bounds },
     })
@@ -534,12 +522,10 @@ export function RemoteDesktopWorkspace({
     displaySettlePassesRef.current = 0;
   };
 
-  // Re-apply the remote display size for a short window after the session first
-  // becomes displayable. The first resize commonly lands before the session is
-  // interactive enough to honor it (especially the host DPI scale factor), so
-  // we re-issue it a couple of times instead of waiting for a manual nudge.
-  // This goes through update_rdp_bounds (which keeps the control on-screen) with
-  // force=true, rather than sync_rdp_display_size (which stages it off-screen).
+  // Re-apply visible RDP bounds for a short window after the session first
+  // becomes displayable. Pane-tracking modes resize the remote desktop through
+  // update_rdp_bounds; presentation-fit modes only resize the native control.
+  // Either way this stays on-screen so pane switches never park a live session.
   const scheduleRdpDisplaySettle = () => {
     if (displaySettleTimerRef.current !== null) {
       return;
@@ -842,9 +828,17 @@ export function RemoteDesktopWorkspace({
         return;
       }
       if (!rdpVisibleRef.current) {
-        displayReadyRef.current = false;
-        setRdpStatus(t("remoteDesktop.preparingDisplay"));
-        attemptRdpDisplaySync();
+        lastBoundsRef.current = bounds;
+        void invokeCommand("set_rdp_visibility", {
+          request: { sessionId, visible: true, ...bounds },
+        })
+          .then(() => {
+            rdpVisibleRef.current = true;
+            setRdpSnapshot(null);
+          })
+          .catch((error) => {
+            reportRemoteDesktopError(error instanceof Error ? error.message : String(error));
+          });
         return;
       }
       lastBoundsRef.current = bounds;

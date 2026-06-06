@@ -275,8 +275,10 @@ mod platform {
                 // resolution so the bitmap is 1:1 with the host surface. They
                 // additionally pass the host scale factor so the remote
                 // re-renders UI at the host's DPI instead of relying on local
-                // SmartSizing, which can skew pointer transforms on FreeRDP
-                // servers such as GNOME Remote Desktop.
+                // SmartSizing, which makes high-DPI desktops look tiny and can
+                // skew pointer transforms on FreeRDP servers such as GNOME
+                // Remote Desktop. The explicit SmartSizing mode seeds the same
+                // initial desktop size but then scales the bitmap locally.
                 Self::Automatic | Self::SmartSizing | Self::DpiZoom => (
                     desktop_width_for(physical_w),
                     desktop_height_for(physical_h),
@@ -638,14 +640,31 @@ mod platform {
                 let session = sessions
                     .get_mut(&request.session_id)
                     .ok_or_else(|| format!("RDP session '{}' was not found", request.session_id))?;
-                let rect = stage_rdp(
-                    session.hwnd,
-                    scale_factor,
-                    request.x,
-                    request.y,
-                    request.width,
-                    request.height,
-                )?;
+                let tracks_pane_size = session.resolution_mode.tracks_pane_size();
+                let (rect, geometry_source) = if tracks_pane_size {
+                    (
+                        stage_rdp(
+                            session.hwnd,
+                            scale_factor,
+                            request.x,
+                            request.y,
+                            request.width,
+                            request.height,
+                        )?,
+                        "staged",
+                    )
+                } else {
+                    (
+                        scaled_rect(
+                            request.x,
+                            request.y,
+                            request.width,
+                            request.height,
+                            scale_factor,
+                        ),
+                        "computed",
+                    )
+                };
                 let display_settings = session.resolution_mode.display_settings(
                     request.width,
                     request.height,
@@ -655,7 +674,8 @@ mod platform {
                 );
                 let connection_state = get_property_i32(&session.dispatch, "Connected")?;
                 let connected = is_rdp_active_state(connection_state);
-                let display_sync_attempted = is_rdp_displayable_state(connection_state);
+                let display_sync_attempted =
+                    tracks_pane_size && is_rdp_displayable_state(connection_state);
                 let display_sync_completed = display_sync_attempted
                     && sync_remote_desktop_size(session, display_settings, true);
                 let display_synced =
@@ -668,6 +688,8 @@ mod platform {
                         "connectionStateLabel": rdp_connection_state_label(connection_state),
                         "active": connected,
                         "displayable": is_rdp_displayable_state(connection_state),
+                        "tracksPaneSize": tracks_pane_size,
+                        "geometrySource": geometry_source,
                         "displaySyncAttempted": display_sync_attempted,
                         "displaySyncCompleted": display_sync_completed,
                         "displaySynced": display_synced,
@@ -678,7 +700,7 @@ mod platform {
                             "width": request.width,
                             "height": request.height,
                         },
-                        "stagedRect": {
+                        "nativeRect": {
                             "x": rect.0,
                             "y": rect.1,
                             "width": rect.2,
@@ -1970,6 +1992,46 @@ mod platform {
         }
     }
 
+    fn invoke_method_with_u32_args(
+        dispatch: &IDispatch,
+        name: &str,
+        args: &[u32],
+    ) -> Result<(), String> {
+        let dispid = get_dispid(dispatch, name)?;
+        let mut variants: Vec<VARIANT> =
+            args.iter().rev().map(|value| variant_u4(*value)).collect();
+        let mut params = DISPPARAMS {
+            rgvarg: if variants.is_empty() {
+                std::ptr::null_mut()
+            } else {
+                variants.as_mut_ptr()
+            },
+            rgdispidNamedArgs: std::ptr::null_mut(),
+            cArgs: variants.len() as u32,
+            cNamedArgs: 0,
+        };
+        let mut result = VARIANT::default();
+        unsafe {
+            let invoke_result = dispatch
+                .Invoke(
+                    dispid,
+                    &windows::core::GUID::zeroed(),
+                    LOCALE_USER_DEFAULT,
+                    DISPATCH_METHOD,
+                    &mut params,
+                    Some(&mut result),
+                    None,
+                    None,
+                )
+                .map_err(|error| format!("failed to invoke RDP ActiveX method '{name}': {error}"));
+            for variant in variants.iter_mut() {
+                let _ = VariantClear(variant);
+            }
+            let _ = VariantClear(&mut result);
+            invoke_result
+        }
+    }
+
     fn variant_i4(value: i32) -> VARIANT {
         let mut variant = VARIANT::default();
         unsafe {
@@ -2033,8 +2095,8 @@ mod platform {
         {
             return true;
         }
-        match resize_remote_desktop(&session.dispatch, display_settings) {
-            Ok(()) => {}
+        let resize_method = match resize_remote_desktop(&session.dispatch, display_settings) {
+            Ok(method) => method,
             Err(error) => {
                 session.dynamic_resize_failures =
                     session.dynamic_resize_failures.saturating_add(1);
@@ -2054,7 +2116,7 @@ mod platform {
                 );
                 return false;
             }
-        }
+        };
         if session.dynamic_resize_failures > 0 {
             rdp_debug(
                 "display.resize.recovered",
@@ -2074,6 +2136,19 @@ mod platform {
         session.desktop_height = display_settings.desktop_height;
         session.desktop_scale_factor = display_settings.desktop_scale_factor;
         session.device_scale_factor = display_settings.device_scale_factor;
+        rdp_debug(
+            "display.resize.ok",
+            &json!({
+                "method": resize_method,
+                "force": force,
+                "desktopWidth": display_settings.desktop_width,
+                "desktopHeight": display_settings.desktop_height,
+                "physicalWidth": display_settings.physical_width,
+                "physicalHeight": display_settings.physical_height,
+                "desktopScaleFactor": display_settings.desktop_scale_factor,
+                "deviceScaleFactor": display_settings.device_scale_factor,
+            }),
+        );
         true
     }
 
@@ -2101,8 +2176,8 @@ mod platform {
     fn resize_remote_desktop(
         dispatch: &IDispatch,
         display_settings: RdpDisplaySettings,
-    ) -> Result<(), String> {
-        invoke_method_with_i32_args(
+    ) -> Result<&'static str, String> {
+        match invoke_method_with_i32_args(
             dispatch,
             "UpdateSessionDisplaySettings",
             &[
@@ -2114,7 +2189,30 @@ mod platform {
                 display_settings.desktop_scale_factor,
                 display_settings.device_scale_factor,
             ],
-        )
+        ) {
+            Ok(()) => Ok("UpdateSessionDisplaySettings"),
+            Err(update_error) => {
+                reconnect_remote_desktop(
+                    dispatch,
+                    display_settings.desktop_width,
+                    display_settings.desktop_height,
+                )
+                .map(|()| "Reconnect")
+                .map_err(|reconnect_error| {
+                    format!(
+                        "UpdateSessionDisplaySettings failed: {update_error}; Reconnect fallback failed: {reconnect_error}"
+                    )
+                })
+            }
+        }
+    }
+
+    fn reconnect_remote_desktop(dispatch: &IDispatch, width: i32, height: i32) -> Result<(), String> {
+        let width = u32::try_from(width)
+            .map_err(|_| format!("RDP reconnect width '{width}' is outside ULONG range"))?;
+        let height = u32::try_from(height)
+            .map_err(|_| format!("RDP reconnect height '{height}' is outside ULONG range"))?;
+        invoke_method_with_u32_args(dispatch, "Reconnect", &[width, height])
     }
 
     fn show_rdp_for_session(
@@ -2125,6 +2223,7 @@ mod platform {
         width: f64,
         height: f64,
     ) -> Result<(i32, i32, i32, i32), String> {
+        apply_smart_sizing(&session.dispatch, session.resolution_mode.smart_sizing());
         let rect = show_rdp(
             session.hwnd,
             session.owner,
@@ -2134,32 +2233,26 @@ mod platform {
             width,
             height,
         )?;
-        match invoke_method(&session.dispatch, "SyncSessionDisplaySettings") {
-            Ok(()) => rdp_debug(
-                "display.sync_session_settings.ok",
-                &json!({
-                    "nativeRect": {
-                        "x": rect.0,
-                        "y": rect.1,
-                        "width": rect.2,
-                        "height": rect.3,
-                    },
-                }),
-            ),
-            Err(error) => rdp_debug(
-                "display.sync_session_settings.error",
-                &json!({
-                    "error": error,
-                    "nativeRect": {
-                        "x": rect.0,
-                        "y": rect.1,
-                        "width": rect.2,
-                        "height": rect.3,
-                    },
-                }),
-            ),
-        }
         Ok(rect)
+    }
+
+    fn apply_smart_sizing(dispatch: &IDispatch, enabled: bool) {
+        let Some(advanced) = get_advanced_settings(dispatch) else {
+            rdp_debug(
+                "display.smart_sizing.unavailable",
+                &json!({ "enabled": enabled }),
+            );
+            return;
+        };
+        if let Err(error) = set_property_bool(&advanced, "SmartSizing", enabled) {
+            rdp_debug(
+                "display.smart_sizing.error",
+                &json!({
+                    "enabled": enabled,
+                    "error": error,
+                }),
+            );
+        }
     }
 
     fn show_rdp(
@@ -2577,12 +2670,14 @@ mod platform {
         }
 
         #[test]
-        fn automatic_resolution_uses_physical_desktop_without_smart_sizing() {
+        fn automatic_resolution_tracks_physical_desktop_without_smart_sizing() {
             assert_eq!(
                 RemoteResolutionMode::Automatic.desktop_size(1200.0, 800.0, 1800, 1200),
                 (1800, 1200)
             );
             assert!(!RemoteResolutionMode::Automatic.smart_sizing());
+            assert!(RemoteResolutionMode::Automatic.tracks_pane_size());
+            assert!(RemoteResolutionMode::DpiZoom.tracks_pane_size());
         }
 
         #[test]

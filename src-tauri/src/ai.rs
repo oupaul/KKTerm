@@ -10932,8 +10932,8 @@ mod tests {
         let app_data_dir = PathBuf::from("C:/kkterm/app-data");
         let options = build_copilot_sdk_client_options(app_data_dir.clone(), "ghu_test-token");
 
-        assert_eq!(options.cwd, app_data_dir);
-        assert_eq!(options.copilot_home, Some(app_data_dir.join("copilot")));
+        assert_eq!(options.working_directory, app_data_dir);
+        assert_eq!(options.base_directory, Some(app_data_dir.join("copilot")));
         assert_eq!(options.github_token.as_deref(), Some("ghu_test-token"));
         assert_eq!(options.use_logged_in_user, Some(false));
     }
@@ -10955,7 +10955,7 @@ mod tests {
             model_picker_price_category: None,
             name: "GPT-4.1".to_string(),
             policy: None,
-            supported_reasoning_efforts: vec!["low".to_string(), "medium".to_string()],
+            supported_reasoning_efforts: Some(vec!["low".to_string(), "medium".to_string()]),
         };
 
         let option = copilot_model_option_from_sdk_model(&model).expect("valid model option");
