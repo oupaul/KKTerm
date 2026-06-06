@@ -1,9 +1,9 @@
 use futures::StreamExt;
 use github_copilot_sdk::{
     Client as CopilotSdkClient, ClientOptions as CopilotSdkClientOptions, Error as CopilotSdkError,
-    LogLevel as CopilotSdkLogLevel, MessageOptions as CopilotSdkMessageOptions,
-    Model as CopilotSdkModel, SessionConfig as CopilotSdkSessionConfig,
-    SessionEvent as CopilotSdkSessionEvent,
+    ErrorKind as CopilotSdkErrorKind, LogLevel as CopilotSdkLogLevel,
+    MessageOptions as CopilotSdkMessageOptions, Model as CopilotSdkModel,
+    SessionConfig as CopilotSdkSessionConfig, SessionEvent as CopilotSdkSessionEvent,
 };
 use lettre::message::{Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
@@ -3757,7 +3757,7 @@ async fn run_copilot_sdk(
                 Some(content) => Ok(content),
                 None => {
                     let messages = session
-                        .get_messages()
+                        .get_events()
                         .await
                         .map_err(|error| format_copilot_sdk_error("read messages", error))?;
                     last_copilot_assistant_message_content(&messages).ok_or_else(|| {
@@ -3943,7 +3943,7 @@ fn copilot_model_option_from_sdk_model(model: &CopilotSdkModel) -> Option<Copilo
 fn build_copilot_sdk_client_options(app_data_dir: PathBuf, token: &str) -> CopilotSdkClientOptions {
     CopilotSdkClientOptions::new()
         .with_cwd(app_data_dir.clone())
-        .with_copilot_home(app_data_dir.join("copilot"))
+        .with_base_directory(app_data_dir.join("copilot"))
         .with_github_token(token)
         .with_use_logged_in_user(false)
         .with_log_level(CopilotSdkLogLevel::Error)
@@ -3962,20 +3962,18 @@ fn build_copilot_sdk_session_config(
     config.available_tools = Some(Vec::new());
     config.mcp_servers = Some(HashMap::new());
     config.enable_config_discovery = Some(false);
-    config.request_user_input = Some(false);
-    config.request_permission = Some(false);
-    config.request_exit_plan_mode = Some(false);
-    config.request_auto_mode_switch = Some(false);
-    config.request_elicitation = Some(false);
     config.github_token = Some(token.to_string());
     config
 }
 
 fn format_copilot_sdk_error(stage: &str, error: CopilotSdkError) -> String {
-    match error {
-        CopilotSdkError::BinaryNotFound { name, hint } => format!(
-            "GitHub Copilot SDK could not find {name}. Rebuild KKTerm with bundled Copilot CLI support, set COPILOT_CLI_PATH, or install the Copilot CLI. {hint}"
-        ),
+    match error.kind() {
+        CopilotSdkErrorKind::BinaryNotFound { name, hint } => {
+            let hint = hint.as_deref().unwrap_or("No additional hint was provided.");
+            format!(
+                "GitHub Copilot SDK could not find {name}. Rebuild KKTerm with bundled Copilot CLI support, set COPILOT_CLI_PATH, or install the Copilot CLI. {hint}"
+            )
+        }
         _ => format!("GitHub Copilot SDK failed to {stage}: {error}"),
     }
 }
