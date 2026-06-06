@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   Bot,
+  Coffee,
   Info,
   KeyRound,
   LayoutDashboard,
@@ -21,6 +22,7 @@ import { AboutSettings } from "./AboutSettings";
 import { AiSettings } from "./AiSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
 import { DashboardSettings } from "./DashboardSettings";
+import { DontSleepSettings } from "./DontSleepSettings";
 import { CredentialsSettings } from "./CredentialsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { InstallerSettings } from "./InstallerSettings";
@@ -173,6 +175,14 @@ export function SettingsPage({
             <span>{t("settings.sectionVnc")}</span>
           </button>
           <button
+            className={settingsNavItemClass("dont-sleep-settings", activeSectionId)}
+            onClick={() => onActiveSectionChange("dont-sleep-settings")}
+            type="button"
+          >
+            <Coffee size={16} />
+            <span>{t("settings.sectionDontSleep")}</span>
+          </button>
+          <button
             className={settingsNavItemClass("about-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("about-settings")}
             type="button"
@@ -200,6 +210,7 @@ export function SettingsPage({
           {activeSectionId === "url-settings" && <UrlSettings />}
           {activeSectionId === "rdp-settings" && <RdpSettings />}
           {activeSectionId === "vnc-settings" && <VncSettings />}
+          {activeSectionId === "dont-sleep-settings" && <DontSleepSettings />}
           {activeSectionId === "about-settings" && <AboutSettings />}
         </section>
       </div>

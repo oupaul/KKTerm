@@ -3,6 +3,7 @@ export type SettingsSectionId =
   | "appearance-settings"
   | "dashboard-settings"
   | "workspace-settings"
+  | "dont-sleep-settings"
   | "installer-settings"
   | "credentials-settings"
   | "assistant-settings"
@@ -146,6 +147,17 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       {
         key: "settings.separateSplitTerminalBackgrounds",
         description: "Allow split terminal Panes to keep separate backgrounds instead of sharing one terminal workspace background.",
+      },
+    ],
+  },
+  "dont-sleep-settings": {
+    labelKey: "settings.sectionDontSleep",
+    fallbackLabel: "Don't Sleep",
+    controls: [
+      {
+        key: "settings.dontSleepForegroundOnly",
+        description:
+          "When enabled, Don't Sleep only asserts while the KKTerm main window is focused and not minimized.",
       },
     ],
   },

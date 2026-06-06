@@ -3,41 +3,77 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 pub struct DontSleepManager {
-    worker: Mutex<Option<DontSleepWorker>>,
+    state: Mutex<DontSleepState>,
+}
+
+struct DontSleepState {
+    desired_enabled: bool,
+    foreground_only: bool,
+    app_foreground: bool,
+    worker: Option<DontSleepWorker>,
 }
 
 impl DontSleepManager {
     pub fn new() -> Self {
         Self {
-            worker: Mutex::new(None),
+            state: Mutex::new(DontSleepState {
+                desired_enabled: false,
+                foreground_only: true,
+                app_foreground: true,
+                worker: None,
+            }),
         }
     }
 
     pub fn is_enabled(&self) -> bool {
-        self.worker
+        self.state
             .lock()
-            .map(|worker| worker.is_some())
+            .map(|state| state.desired_enabled)
             .unwrap_or(false)
     }
 
     pub fn set_enabled(&self, enabled: bool) -> Result<bool, String> {
-        let mut worker = self
-            .worker
+        let mut state = self
+            .state
             .lock()
             .map_err(|_| "Don't Sleep state is unavailable".to_string())?;
-
-        if enabled {
-            if worker.is_none() {
-                *worker = Some(DontSleepWorker::start()?);
-            }
-            return Ok(true);
-        }
-
-        if let Some(active_worker) = worker.take() {
-            active_worker.stop()?;
-        }
-        Ok(false)
+        state.desired_enabled = enabled;
+        apply_effective_state(&mut state)?;
+        Ok(state.desired_enabled)
     }
+
+    pub fn set_foreground_only(&self, foreground_only: bool) -> Result<(), String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "Don't Sleep state is unavailable".to_string())?;
+        state.foreground_only = foreground_only;
+        apply_effective_state(&mut state)
+    }
+
+    pub fn set_app_foreground(&self, app_foreground: bool) -> Result<(), String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "Don't Sleep state is unavailable".to_string())?;
+        state.app_foreground = app_foreground;
+        apply_effective_state(&mut state)
+    }
+}
+
+fn apply_effective_state(state: &mut DontSleepState) -> Result<(), String> {
+    let should_assert = state.desired_enabled && (!state.foreground_only || state.app_foreground);
+    if should_assert {
+        if state.worker.is_none() {
+            state.worker = Some(DontSleepWorker::start()?);
+        }
+        return Ok(());
+    }
+
+    if let Some(active_worker) = state.worker.take() {
+        active_worker.stop()?;
+    }
+    Ok(())
 }
 
 struct DontSleepWorker {

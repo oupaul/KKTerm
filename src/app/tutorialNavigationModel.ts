@@ -10,6 +10,8 @@ const SETTINGS_SECTION_IDS = new Set<SettingsSectionId>([
   "general-settings",
   "appearance-settings",
   "dashboard-settings",
+  "workspace-settings",
+  "dont-sleep-settings",
   "credentials-settings",
   "assistant-settings",
   "ssh-settings",

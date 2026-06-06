@@ -257,6 +257,8 @@ pub struct GeneralSettings {
     minimize_to_tray: bool,
     #[serde(default)]
     dont_sleep_enabled: bool,
+    #[serde(default = "default_dont_sleep_foreground_only")]
+    dont_sleep_foreground_only: bool,
     #[serde(default = "default_use_directx_screen_capture")]
     use_directx_screen_capture: bool,
     #[serde(default = "default_status_bar_enabled")]
@@ -288,6 +290,10 @@ impl GeneralSettings {
 
     pub(crate) fn dont_sleep_enabled(&self) -> bool {
         self.dont_sleep_enabled
+    }
+
+    pub(crate) fn dont_sleep_foreground_only(&self) -> bool {
+        self.dont_sleep_foreground_only
     }
 
     pub(crate) fn use_directx_screen_capture(&self) -> bool {
@@ -4686,6 +4692,7 @@ fn default_general_settings() -> GeneralSettings {
         auto_start_with_windows: false,
         minimize_to_tray: false,
         dont_sleep_enabled: false,
+        dont_sleep_foreground_only: default_dont_sleep_foreground_only(),
         use_directx_screen_capture: default_use_directx_screen_capture(),
         status_bar_enabled: default_status_bar_enabled(),
         status_bar_monitor_enabled: default_status_bar_monitor_enabled(),
@@ -4697,6 +4704,10 @@ fn default_general_settings() -> GeneralSettings {
 }
 
 fn default_use_directx_screen_capture() -> bool {
+    true
+}
+
+fn default_dont_sleep_foreground_only() -> bool {
     true
 }
 
@@ -6929,6 +6940,7 @@ mod tests {
         assert!(!defaults.auto_start_with_windows);
         assert!(!defaults.minimize_to_tray);
         assert!(!defaults.dont_sleep_enabled);
+        assert!(defaults.dont_sleep_foreground_only);
         assert!(defaults.use_directx_screen_capture);
         assert!(defaults.status_bar_enabled);
         assert!(defaults.status_bar_monitor_enabled);
@@ -6958,6 +6970,7 @@ mod tests {
                 auto_start_with_windows: true,
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
+                dont_sleep_foreground_only: false,
                 use_directx_screen_capture: false,
                 status_bar_enabled: false,
                 status_bar_monitor_enabled: false,
@@ -6984,6 +6997,7 @@ mod tests {
         assert!(updated.auto_start_with_windows);
         assert!(updated.minimize_to_tray);
         assert!(updated.dont_sleep_enabled);
+        assert!(!updated.dont_sleep_foreground_only);
         assert!(!updated.use_directx_screen_capture);
         assert!(!updated.status_bar_enabled);
         assert!(!updated.status_bar_monitor_enabled);
@@ -7004,6 +7018,7 @@ mod tests {
         assert!(reloaded.auto_start_with_windows);
         assert!(reloaded.minimize_to_tray);
         assert!(reloaded.dont_sleep_enabled);
+        assert!(!reloaded.dont_sleep_foreground_only);
         assert!(!reloaded.use_directx_screen_capture);
         assert!(!reloaded.status_bar_enabled);
         assert!(!reloaded.status_bar_monitor_enabled);
@@ -7268,6 +7283,7 @@ mod tests {
                 auto_start_with_windows: true,
                 minimize_to_tray: true,
                 dont_sleep_enabled: true,
+                dont_sleep_foreground_only: false,
                 use_directx_screen_capture: false,
                 status_bar_enabled: false,
                 status_bar_monitor_enabled: false,
@@ -7296,6 +7312,7 @@ mod tests {
                 auto_start_with_windows: false,
                 minimize_to_tray: false,
                 dont_sleep_enabled: false,
+                dont_sleep_foreground_only: true,
                 use_directx_screen_capture: true,
                 status_bar_enabled: true,
                 status_bar_monitor_enabled: true,
@@ -7330,6 +7347,7 @@ mod tests {
         );
         assert!(imported.general_settings.minimize_to_tray);
         assert!(imported.general_settings.dont_sleep_enabled);
+        assert!(!imported.general_settings.dont_sleep_foreground_only);
         assert!(!imported.general_settings.use_directx_screen_capture);
         assert!(!imported.general_settings.status_bar_enabled);
         assert!(!imported.general_settings.status_bar_monitor_enabled);

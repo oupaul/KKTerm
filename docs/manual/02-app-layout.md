@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.connections`, `app.aiAssistant`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `app.dontSleepStatusEnabled`, `workspace.workspaceSurface`, `workspace.hostUsage`, `watchdog.statusBarLabel`, `watchdog.detail.*`
+- Keys: `app.primaryNav`, `app.connectionRail`, `app.connectedConnectionsRail`, `app.connections`, `app.aiAssistant`, `app.resizeConnections`, `app.resizeAiAssistant`, `app.openConnectedConnection`, `app.openPinnedConnection`, `app.dontSleepEnabledTooltip`, `app.dontSleepDisabledTooltip`, `app.dontSleepStatusEnabled`, `settings.dontSleepForegroundOnly`, `workspace.workspaceSurface`, `workspace.hostUsage`, `watchdog.statusBarLabel`, `watchdog.detail.*`
 - Topics: Activity Rail, custom title-bar panel toggles, panel resize, pinned Connections on the rail, Connections panel collapse, Child Connection Tabs, universal AI Assistant panel, universal host usage status bar, Don't Sleep Status Bar indicator, Watchdog Status Bar indicator and detail panel, restored last Module on launch, tutorial targets `app.activityRailWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`, `app.connectionsResize`, `app.aiAssistantResize`, `workspace.statusBar`, `workspace.hostUsage`
 - Synonyms: "left bar", "sidebar", "right panel", "AI sidebar", "make panel wider", "hide the AI panel", "bottom bar", "coffee icon", "don't sleep indicator", "watchdog icon", "running watchdogs", "watchdog status", "connection tree tabs", "child tabs", "remember dashboard", "remember installer", "restore last page", "last module"
 
@@ -15,7 +15,7 @@ Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
    Each icon's tooltip uses `app.openPinnedConnection` or `app.openConnectedConnection` with the Connection name interpolated as `{{name}}`.
-3. **Don't Sleep** (`app.activityRailDontSleep`) — the keep-awake control.
+3. **Don't Sleep** (`app.activityRailDontSleep`) — the keep-awake control. The tooltip changes between `app.dontSleepEnabledTooltip` and `app.dontSleepDisabledTooltip`; toggling plays a short local SVG animation beside the icon.
 4. **Settings** — anchored to the bottom of the rail.
 
 The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). In the Windows Tauri runtime, the same helper uses a native topmost tooltip so rail labels can appear above RDP ActiveX and URL WebView2 surfaces. Native browser `title` tooltips are forbidden here.
@@ -66,7 +66,7 @@ Owned by `src/modules/workspace/StatusBar.tsx`. Three roles:
    General Settings → `settings.statusBar` can disable this monitor completely with `settings.statusBarMonitor`; when disabled, host usage polling stops instead of only hiding the metrics. `settings.statusBarMonitorInterval` controls the polling interval while enabled.
 2. **Transient notifications** — driven by the shared `showStatusBarNotice` store action. Success messages default to 5 seconds, then fade. Do not implement one-off toast surfaces; route through `showStatusBarNotice`.
 3. **Watchdog state** — when one or more watchdogs exist, the right side shows an animated watchdog icon with `watchdog.statusBarLabel`. Activating it opens a list of running or terminal-undismissed watchdogs. Selecting a watchdog opens its detail panel with state, elapsed time, watch summary, next check, exit condition, notification method, action mode, recent values, trigger events, AI interventions, and report actions.
-4. **Don't Sleep state** — when Don't Sleep mode is enabled, the right side shows a coffee icon with tooltip `app.dontSleepStatusEnabled`.
+4. **Don't Sleep state** — when Don't Sleep mode is enabled, the right side shows a coffee icon with tooltip `app.dontSleepStatusEnabled`. If `settings.dontSleepForegroundOnly` is on, this indicates the user-facing mode is enabled; the OS power assertion is active only while KKTerm is focused and not minimized.
 
 Tutorial targets: `workspace.statusBar`, `workspace.hostUsage`.
 

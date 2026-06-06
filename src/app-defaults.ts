@@ -35,6 +35,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   autoStartWithWindows: false,
   minimizeToTray: true,
   dontSleepEnabled: false,
+  dontSleepForegroundOnly: true,
   useDirectxScreenCapture: true,
   statusBarEnabled: true,
   statusBarMonitorEnabled: true,

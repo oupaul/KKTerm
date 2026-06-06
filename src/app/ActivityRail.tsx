@@ -12,6 +12,8 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
+import coffeeAnimationUrl from "../assets/dontsleep/coffee.svg?url";
+import sleepAnimationUrl from "../assets/dontsleep/sleep.svg?url";
 import { loadStoredChildConnections } from "../modules/workspace/connections/childConnections";
 import { ConnectionIcon } from "../modules/workspace/connections/ConnectionIcon";
 import { flattenConnections } from "../modules/workspace/connections/treeUtils";
@@ -107,6 +109,11 @@ export function ActivityRail({
   );
   const [dontSleepEnabled, setDontSleepEnabled] = useState(storedDontSleepEnabled);
   const [dontSleepUpdating, setDontSleepUpdating] = useState(false);
+  const [dontSleepAnimation, setDontSleepAnimation] = useState<{
+    enabled: boolean;
+    id: number;
+    src: string;
+  } | null>(null);
   const [savedConnections, setSavedConnections] = useState<Connection[]>([]);
   const [connectionRailOrder, setConnectionRailOrder] = useState(
     loadConnectionRailOrder,
@@ -158,6 +165,7 @@ export function ActivityRail({
     }
     const unlistenPromise = listen<boolean>("kkterm://dont-sleep-changed", (event) => {
       setDontSleepEnabled(event.payload);
+      playDontSleepAnimation(event.payload);
       setGeneralSettings({
         ...useWorkspaceStore.getState().generalSettings,
         dontSleepEnabled: event.payload,
@@ -167,6 +175,14 @@ export function ActivityRail({
       void unlistenPromise.then((unlisten) => unlisten());
     };
   }, [setGeneralSettings]);
+
+  function playDontSleepAnimation(enabled: boolean) {
+    setDontSleepAnimation({
+      enabled,
+      id: Date.now(),
+      src: enabled ? coffeeAnimationUrl : sleepAnimationUrl,
+    });
+  }
 
   async function handleDontSleepClick() {
     if (dontSleepUpdating) {
@@ -181,6 +197,7 @@ export function ActivityRail({
         ? await invokeCommand("set_dont_sleep_enabled", { enabled: nextEnabled })
         : nextEnabled;
       setDontSleepEnabled(savedEnabled);
+      playDontSleepAnimation(savedEnabled);
       setGeneralSettings({
         ...useWorkspaceStore.getState().generalSettings,
         dontSleepEnabled: savedEnabled,
@@ -561,6 +578,10 @@ export function ActivityRail({
     node.style.top = `${Math.max(8, Math.min(railConnectionMenu.y, window.innerHeight - bounds.height - 8))}px`;
   }, [railConnectionMenu]);
 
+  const dontSleepTooltip = dontSleepEnabled
+    ? t("app.dontSleepEnabledTooltip")
+    : t("app.dontSleepDisabledTooltip");
+
   return (
     <nav className="activity-rail" aria-label={t("app.primaryNav")}>
       <button
@@ -707,7 +728,28 @@ export function ActivityRail({
         onClick={() => void handleDontSleepClick()}
       >
         {dontSleepEnabled ? <Coffee size={18} /> : <BedSingle size={18} />}
-        <RailTooltip label={t("app.dontSleep")} />
+        {dontSleepAnimation ? (
+          <div
+            aria-hidden="true"
+            className="dont-sleep-animation"
+            key={dontSleepAnimation.id}
+            onAnimationEnd={() => setDontSleepAnimation(null)}
+          >
+            <img
+              alt=""
+              className="dont-sleep-animation-image"
+              src={dontSleepAnimation.src}
+            />
+            <span className="dont-sleep-animation-label">
+              {t(
+                dontSleepAnimation.enabled
+                  ? "app.dontSleepAnimationEnabledLabel"
+                  : "app.dontSleepAnimationDisabledLabel",
+              )}
+            </span>
+          </div>
+        ) : null}
+        <RailTooltip label={dontSleepTooltip} />
       </button>
       <button
         className={`rail-button rail-button-settings ${activePage === "settings" ? "active" : ""}`}

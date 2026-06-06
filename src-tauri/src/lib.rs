@@ -724,6 +724,9 @@ fn update_general_settings(
     logging::set_advanced_debugging_enabled(saved.advanced_debugging_enabled());
     debug_heartbeat::start(app);
     tray_state.set_minimize_to_tray(saved.minimize_to_tray());
+    if let Err(error) = power.set_foreground_only(saved.dont_sleep_foreground_only()) {
+        eprintln!("failed to apply Don't Sleep foreground setting: {error}");
+    }
     if let Err(error) = power.set_enabled(saved.dont_sleep_enabled()) {
         eprintln!("failed to apply saved Don't Sleep setting: {error}");
     }
@@ -803,6 +806,9 @@ fn import_settings_database(
     logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
     debug_heartbeat::start(app.clone());
     tray_state.set_minimize_to_tray(general_settings.minimize_to_tray());
+    if let Err(error) = power.set_foreground_only(general_settings.dont_sleep_foreground_only()) {
+        eprintln!("failed to apply imported Don't Sleep foreground setting: {error}");
+    }
     if let Err(error) = power.set_enabled(general_settings.dont_sleep_enabled()) {
         eprintln!("failed to apply imported Don't Sleep setting: {error}");
     }
@@ -834,6 +840,12 @@ fn persist_main_window_state(
     let settings = window_tracker.snapshot_for_window(window);
     storage.update_main_window_settings(settings)?;
     Ok(())
+}
+
+fn main_window_is_foreground(window: &tauri::Window) -> bool {
+    let focused = window.is_focused().unwrap_or(true);
+    let minimized = window.is_minimized().unwrap_or(false);
+    focused && !minimized
 }
 
 #[tauri::command]
@@ -2786,6 +2798,18 @@ pub fn run() {
                 }
             }
             let power_manager = power::DontSleepManager::new();
+            if let Err(error) =
+                power_manager.set_foreground_only(general_settings.dont_sleep_foreground_only())
+            {
+                eprintln!("failed to restore Don't Sleep foreground setting: {error}");
+            }
+            if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+                if let Err(error) =
+                    power_manager.set_app_foreground(main_window_is_foreground(&main_window))
+                {
+                    eprintln!("failed to restore Don't Sleep foreground state: {error}");
+                }
+            }
             if general_settings.dont_sleep_enabled() {
                 if let Err(error) = power_manager.set_enabled(true) {
                     eprintln!("failed to restore Don't Sleep state: {error}");
@@ -2845,12 +2869,30 @@ pub fn run() {
                             }
                         }
                         app_tray::hide_minimized_window_if_enabled(window);
+                        if let Some(power) = window.try_state::<power::DontSleepManager>() {
+                            if let Err(error) =
+                                power.set_app_foreground(main_window_is_foreground(window))
+                            {
+                                eprintln!(
+                                    "failed to update Don't Sleep foreground state: {error}"
+                                );
+                            }
+                        }
                     }
                     tauri::WindowEvent::Focused(focused) => {
                         debug_heartbeat::record_window_event(format!("focused:{focused}"));
                         let _ = window.emit("kkterm://main-window-focus-changed", *focused);
                         if !focused {
                             app_tray::hide_minimized_window_if_enabled(window);
+                        }
+                        if let Some(power) = window.try_state::<power::DontSleepManager>() {
+                            if let Err(error) =
+                                power.set_app_foreground(main_window_is_foreground(window))
+                            {
+                                eprintln!(
+                                    "failed to update Don't Sleep foreground state: {error}"
+                                );
+                            }
                         }
                     }
                     tauri::WindowEvent::ScaleFactorChanged { scale_factor, .. } => {

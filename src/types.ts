@@ -214,6 +214,7 @@ export interface GeneralSettings {
   autoStartWithWindows: boolean;
   minimizeToTray: boolean;
   dontSleepEnabled: boolean;
+  dontSleepForegroundOnly: boolean;
   useDirectxScreenCapture: boolean;
   statusBarEnabled: boolean;
   statusBarMonitorEnabled: boolean;
