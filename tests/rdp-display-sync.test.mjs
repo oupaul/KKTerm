@@ -36,3 +36,24 @@ test("remote desktop runtime session ids stay within backend limits", async () =
     "backend session ids should not include variable-length tab ids",
   );
 });
+
+test("RDP display resize debug events include connection state", async () => {
+  const rdpSource = await readFile(new URL("../src-tauri/src/rdp.rs", import.meta.url), "utf8");
+  const syncFunction = rdpSource.match(
+    /fn sync_remote_desktop_size\([\s\S]*?\n    #\[allow\(clippy::too_many_arguments\)\]/,
+  )?.[0];
+
+  assert.ok(syncFunction, "sync_remote_desktop_size function should exist");
+  for (const eventName of [
+    "display.resize.skipped",
+    "display.resize.error",
+    "display.resize.recovered",
+    "display.resize.ok",
+  ]) {
+    const eventIndex = syncFunction.indexOf(`"${eventName}"`);
+    assert.notEqual(eventIndex, -1, `${eventName} should be logged`);
+    const eventBlock = syncFunction.slice(eventIndex, syncFunction.indexOf("}),", eventIndex));
+    assert.match(eventBlock, /"connectionState": connection_state/);
+    assert.match(eventBlock, /"connectionStateLabel": rdp_connection_state_label\(connection_state\)/);
+  }
+});

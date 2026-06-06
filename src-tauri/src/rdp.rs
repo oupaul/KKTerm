@@ -2041,6 +2041,7 @@ mod platform {
         display_settings: RdpDisplaySettings,
         force: bool,
     ) -> bool {
+        let connection_state = get_property_i32(&session.dispatch, "Connected").unwrap_or(-1);
         if !force
             && !should_resize_remote_desktop(
                 session.desktop_width,
@@ -2058,6 +2059,8 @@ mod platform {
                 &json!({
                     "reason": "unchanged",
                     "force": force,
+                    "connectionState": connection_state,
+                    "connectionStateLabel": rdp_connection_state_label(connection_state),
                     "desktopWidth": display_settings.desktop_width,
                     "desktopHeight": display_settings.desktop_height,
                     "physicalWidth": display_settings.physical_width,
@@ -2079,6 +2082,8 @@ mod platform {
                         "error": error,
                         "force": force,
                         "failures": session.dynamic_resize_failures,
+                        "connectionState": connection_state,
+                        "connectionStateLabel": rdp_connection_state_label(connection_state),
                         "desktopWidth": display_settings.desktop_width,
                         "desktopHeight": display_settings.desktop_height,
                         "physicalWidth": display_settings.physical_width,
@@ -2095,6 +2100,8 @@ mod platform {
                 "display.resize.recovered",
                 &json!({
                     "previousFailures": session.dynamic_resize_failures,
+                    "connectionState": connection_state,
+                    "connectionStateLabel": rdp_connection_state_label(connection_state),
                     "desktopWidth": display_settings.desktop_width,
                     "desktopHeight": display_settings.desktop_height,
                     "physicalWidth": display_settings.physical_width,
@@ -2114,6 +2121,8 @@ mod platform {
             &json!({
                 "method": resize_method,
                 "force": force,
+                "connectionState": connection_state,
+                "connectionStateLabel": rdp_connection_state_label(connection_state),
                 "desktopWidth": display_settings.desktop_width,
                 "desktopHeight": display_settings.desktop_height,
                 "physicalWidth": display_settings.physical_width,
