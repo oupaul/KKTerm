@@ -14,6 +14,13 @@ Examples:
 
 ## Flow
 
+Every new or changed user-visible English key added to `src/i18n/locales/en.json`
+must get a matching `docs/localization_todo/<namespace>.<keyPath>.md` file in
+the same change. Add the file even when you also add best-effort translations to
+every non-English locale, because the backlog is the explicit review record for
+new translation work. Before finishing, run `npm run i18n:check` to prove every
+locale contains the key in the same relative order.
+
 When you add or change an English key in `src/i18n/locales/en.json` and do **not** translate it into the other 13 locales in the same change:
 
 1. Copy `_TEMPLATE.md` to `<namespace>.<keyPath>.md`.

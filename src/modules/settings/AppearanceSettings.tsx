@@ -62,6 +62,7 @@ const COLOR_SCHEME_OPTIONS: { value: ColorScheme; labelKey: string }[] = [
   { value: "pink", labelKey: "settings.schemePink" },
   { value: "green-kuai-kuai", labelKey: "settings.schemeGreenKuaiKuai" },
   { value: "blue-see", labelKey: "settings.schemeBlueSee" },
+  { value: "blue-green-white", labelKey: "settings.schemeBlueGreenWhite" },
   { value: "confetti", labelKey: "settings.schemeConfetti" },
   { value: "bubble-tea", labelKey: "settings.schemeBubbleTea" },
   { value: "semiconductor", labelKey: "settings.schemeSemiconductor" },
@@ -150,6 +151,15 @@ const SCHEME_PREVIEW_COLORS: Record<ColorScheme, SchemePreviewColor[]> = {
     { color: "#3fb87b", labelKey: "settings.green" },
     { color: "#0a1525", labelKey: "settings.navToolbar" },
     { color: "#c8dcf0", labelKey: "settings.toolbarText" },
+  ],
+  "blue-green-white": [
+    { color: "#ffffff", labelKey: "settings.appBg" },
+    { color: "#ffffff", labelKey: "settings.surface" },
+    { color: "#111827", labelKey: "settings.text" },
+    { color: "#1fa0cb", labelKey: "settings.accent" },
+    { color: "#73c82d", labelKey: "settings.green" },
+    { color: "#1fa0cb", labelKey: "settings.navToolbar" },
+    { color: "#ffffff", labelKey: "settings.toolbarText" },
   ],
   confetti: [
     { color: "#fef9f0", labelKey: "settings.appBg" },

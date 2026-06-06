@@ -5290,12 +5290,17 @@ fn validate_appearance_settings(
     settings.use_custom_title_bar = true;
     settings.color_scheme = match settings.color_scheme.to_lowercase().as_str() {
         "default" | "dark" | "light" | "mac" | "orange" | "purple" | "pink"
-        | "green-kuai-kuai" | "blue-see" | "confetti" | "bubble-tea" | "semiconductor" => {
+        | "green-kuai-kuai"
+        | "blue-see"
+        | "blue-green-white"
+        | "confetti"
+        | "bubble-tea"
+        | "semiconductor" => {
             settings.color_scheme.to_lowercase()
         }
         _ => {
             return Err(
-                "color scheme must be one of: default, dark, light, mac, orange, purple, pink, green-kuai-kuai, blue-see, confetti, bubble-tea, semiconductor"
+                "color scheme must be one of: default, dark, light, mac, orange, purple, pink, green-kuai-kuai, blue-see, blue-green-white, confetti, bubble-tea, semiconductor"
                     .to_string(),
             )
         }

@@ -346,6 +346,7 @@ export type ColorScheme =
   | "pink"
   | "green-kuai-kuai"
   | "blue-see"
+  | "blue-green-white"
   | "confetti"
   | "bubble-tea"
   | "semiconductor";
