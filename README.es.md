@@ -4,6 +4,8 @@
 
 <h1 align="center">KKTerm</h1>
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 <p align="center">
   <strong>El espacio de trabajo nativo para administradores Windows que la era de la IA se olvidó de construir — terminales, SSH, SFTP, RDP/VNC, dashboards, y una IA que crea tus propios widgets de herramientas.</strong>
 </p>

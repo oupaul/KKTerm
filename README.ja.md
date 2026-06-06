@@ -4,6 +4,8 @@
 
 <h1 align="center">KKTerm</h1>
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 <p align="center">
   <strong>ターミナル、SSH、SFTP、RDP/VNC、Dashboard、そして自分専用のツールWidgetを作るAI——AIツール時代に誰も作らなかった、Windowsネイティブの管理者向けワークスペース。</strong>
 </p>

@@ -4,6 +4,8 @@
 
 <h1 align="center">KKTerm</h1>
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 <p align="center">
   <strong>Không gian quản trị Windows native mà kỷ nguyên AI-tools đã quên xây — terminal, SSH, SFTP, RDP/VNC, dashboard, và một AI build các widget công cụ của riêng bạn.</strong>
 </p>

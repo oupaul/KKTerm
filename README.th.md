@@ -4,6 +4,8 @@
 
 <h1 align="center">KKTerm</h1>
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 <p align="center">
   <strong>Workspace สำหรับแอดมิน Windows แบบ native ที่ยุค AI tools ลืมสร้าง — terminal, SSH, SFTP, RDP/VNC, dashboard, และ AI ที่สร้าง widget เครื่องมือของคุณเอง</strong>
 </p>

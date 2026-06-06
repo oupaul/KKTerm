@@ -4,6 +4,8 @@
 
 <h1 align="center">KKTerm</h1>
 
+![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
+
 <p align="center">
   <strong>AI 工具當道的年代裡沒人想動手寫的那款 Windows 原生管理工作區 — 終端機、SSH、SFTP、RDP/VNC、Dashboard，加上一個能幫你打造專屬工具 Widget 的 AI。</strong>
 </p>
