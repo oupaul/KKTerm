@@ -14,7 +14,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEv
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
-import { focusCurrentWebview, focusMainWindow, invokeCommand, isTauriRuntime, listenMainWindowFocusChanged, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, focusMainWindow, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -248,13 +248,7 @@ export function TerminalWorkspace({
     // (the WebView2 input routing was dead until the click), which the
     // hasFocus/activeElement signals cannot distinguish.
     inputProbeArmedRef.current = true;
-    // The diagnostic proved the xterm textarea keeps DOM focus across an OS
-    // window switch (document.activeElement and document.hasFocus stay true),
-    // yet keyboard input is dropped until a physical click — the Win32 keyboard
-    // focus is off the webview content HWND. A JS terminal.focus() and the
-    // WebView2 MoveFocus (focusCurrentWebview) both run without fixing it, so
-    // re-assert focus at the window level (what a click does) and then route it
-    // into the content.
+    const renderer = focusedPaneId ? getPaneRenderer(focusedPaneId) : undefined;
     if (isTauriRuntime()) {
       void focusMainWindow()
         .then(() => focusCurrentWebview())
@@ -264,7 +258,6 @@ export function TerminalWorkspace({
     // Cover the case where DOM focus did leave the terminal (e.g. a title-bar
     // drag parked it on <body>): re-focus the pane's textarea. This is a no-op
     // when it already holds focus, so it cannot re-enter the native path.
-    const renderer = focusedPaneId ? getPaneRenderer(focusedPaneId) : undefined;
     renderer?.focus();
   }
 
@@ -290,10 +283,9 @@ export function TerminalWorkspace({
       return;
     }
 
-    // Restore terminal input focus when the OS hands the window back to us, or
-    // after a title-bar drag. We deliberately do NOT listen to the DOM window
-    // "focus" event: focusing the webview natively re-fires it, which would
-    // spin the restore into a feedback loop.
+    // Restore terminal input focus after a title-bar drag. The native app-window
+    // activation path is intentionally disabled: repeated WebView2/Win32 focus
+    // attempts can fight xterm's textarea and make the cursor flicker.
     const handleTitlebarPointerUp = (event: PointerEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (!target?.closest(".app-titlebar") || target.closest("button")) {
@@ -301,7 +293,6 @@ export function TerminalWorkspace({
       }
       restoreFocusedTerminalPane("titlebar");
     };
-    const handleWindowFocus = () => restoreFocusedTerminalPane("window-focus");
     // Probe: log the first user input after a focus restore. "keydown-first"
     // means keyboard focus actually worked; "pointerdown-first" means the user
     // had to click before input was accepted (native WebView2 focus issue).
@@ -319,35 +310,15 @@ export function TerminalWorkspace({
       inputProbeArmedRef.current = false;
       logTerminalFocusDiagnostic(`input-after-activation:pointerdown:${describeProbeTarget(event.target)}`);
     };
-    let disposed = false;
-    let removeNativeFocusListener: (() => void) | undefined;
 
     document.addEventListener("pointerup", handleTitlebarPointerUp, true);
     document.addEventListener("keydown", handleProbeKeydown, true);
     document.addEventListener("pointerdown", handleProbePointerdown, true);
-    if (isTauriRuntime()) {
-      void listenMainWindowFocusChanged((focused) => {
-        if (focused) {
-          restoreFocusedTerminalPane("window-activated");
-        }
-      }).then((unlisten) => {
-        if (disposed) {
-          unlisten();
-        } else {
-          removeNativeFocusListener = unlisten;
-        }
-      });
-    } else {
-      window.addEventListener("focus", handleWindowFocus);
-    }
 
     return () => {
-      disposed = true;
       document.removeEventListener("pointerup", handleTitlebarPointerUp, true);
       document.removeEventListener("keydown", handleProbeKeydown, true);
       document.removeEventListener("pointerdown", handleProbePointerdown, true);
-      window.removeEventListener("focus", handleWindowFocus);
-      removeNativeFocusListener?.();
     };
   }, [focusedPaneId, isActive]);
 

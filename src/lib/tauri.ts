@@ -2398,10 +2398,7 @@ export async function focusCurrentWebview() {
   await getCurrentWebview().setFocus();
 }
 
-// Window-level native focus. Unlike focusCurrentWebview (WebView2 MoveFocus),
-// this routes Win32 keyboard focus back onto the webview content HWND, which is
-// what a physical click does and what the WebView2 MoveFocus call fails to do
-// after the OS reactivates the window.
+// Window-level native focus for ordinary app chrome flows.
 export async function focusMainWindow() {
   if (!isTauriRuntime()) {
     return;
