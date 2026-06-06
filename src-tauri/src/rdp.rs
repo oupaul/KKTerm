@@ -55,6 +55,7 @@ mod platform {
     const LOCALE_USER_DEFAULT: u32 = 0x0400;
     const RDP_MIN_DESKTOP_WIDTH: i32 = 640;
     const RDP_MIN_DESKTOP_HEIGHT: i32 = 480;
+    const RDP_UNKNOWN_PHYSICAL_SIZE_MM: i32 = 0;
     const RDP_DISPLAY_ORIENTATION_LANDSCAPE: i32 = 0;
     const RDP_DISPLAY_SCALE_FACTOR_PERCENT: i32 = 100;
     const RDP_CONNECTED_STATE: i32 = 1;
@@ -251,10 +252,7 @@ mod platform {
         }
 
         pub fn smart_sizing(&self) -> bool {
-            matches!(
-                self,
-                Self::Automatic | Self::SmartSizing | Self::Fixed { .. }
-            )
+            matches!(self, Self::SmartSizing | Self::Fixed { .. })
         }
 
         pub fn tracks_pane_size(&self) -> bool {
@@ -273,11 +271,12 @@ mod platform {
             physical_h: i32,
         ) -> (i32, i32) {
             match self {
-                // Automatic, SmartSizing, and DpiZoom all render at the pane's physical pixel
-                // resolution so the bitmap is 1:1 with the host surface. Automatic and DpiZoom
-                // additionally pass the host scale factor so the remote re-renders UI at the
-                // host's DPI (e.g. 150% on a 4K screen), instead of relying on the bitmap stretch
-                // which leaves text/icons tiny.
+                // Automatic and DpiZoom render at the pane's physical pixel
+                // resolution so the bitmap is 1:1 with the host surface. They
+                // additionally pass the host scale factor so the remote
+                // re-renders UI at the host's DPI instead of relying on local
+                // SmartSizing, which can skew pointer transforms on FreeRDP
+                // servers such as GNOME Remote Desktop.
                 Self::Automatic | Self::SmartSizing | Self::DpiZoom => (
                     desktop_width_for(physical_w),
                     desktop_height_for(physical_h),
@@ -312,19 +311,19 @@ mod platform {
 
         fn display_physical_size(
             &self,
-            desktop_width: i32,
-            desktop_height: i32,
-            physical_w: i32,
-            physical_h: i32,
+            _desktop_width: i32,
+            _desktop_height: i32,
+            _physical_w: i32,
+            _physical_h: i32,
         ) -> (i32, i32) {
-            if self.smart_sizing() {
-                (desktop_width, desktop_height)
-            } else {
-                (
-                    desktop_width_for(physical_w),
-                    desktop_height_for(physical_h),
-                )
-            }
+            // MS-RDPEDISP defines physical size as millimeters, not pixels.
+            // The pane only gives us logical/native pixel bounds, so send an
+            // invalid small value and let the server ignore the physical-size
+            // hint instead of deriving scale/input transforms from bogus mm.
+            (
+                RDP_UNKNOWN_PHYSICAL_SIZE_MM,
+                RDP_UNKNOWN_PHYSICAL_SIZE_MM,
+            )
         }
 
         fn desktop_scale_factor(&self, scale_factor: f64) -> i32 {
@@ -464,6 +463,7 @@ mod platform {
         desktop_height: i32,
         desktop_scale_factor: i32,
         device_scale_factor: i32,
+        dynamic_resize_failures: u32,
         resolution_mode: RemoteResolutionMode,
     }
 
@@ -536,37 +536,87 @@ mod platform {
                     .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
                 let sessions = lock_sessions(&sessions)?;
                 if request.visible {
+                    let mut parked_other_sessions = 0;
                     for (other_session_id, other_session) in sessions.iter() {
                         if other_session_id != &request.session_id {
                             park_rdp_at_current_size(other_session.hwnd)?;
+                            parked_other_sessions += 1;
                         }
                     }
                     let session = sessions.get(&request.session_id).ok_or_else(|| {
                         format!("RDP session '{}' was not found", request.session_id)
                     })?;
-                    show_rdp(
-                        session.hwnd,
-                        session.owner,
+                    let connection_state =
+                        get_property_i32(&session.dispatch, "Connected").unwrap_or(-1);
+                    let rect = show_rdp_for_session(
+                        session,
                         scale_factor,
                         request.x,
                         request.y,
                         request.width,
                         request.height,
-                    )
-                    .map(|_| ())
+                    )?;
+                    rdp_debug(
+                        "visibility.set",
+                        &json!({
+                            "sessionId": &request.session_id,
+                            "visible": true,
+                            "connectionState": connection_state,
+                            "connectionStateLabel": rdp_connection_state_label(connection_state),
+                            "scaleFactor": scale_factor,
+                            "requestBounds": {
+                                "x": request.x,
+                                "y": request.y,
+                                "width": request.width,
+                                "height": request.height,
+                            },
+                            "nativeRect": {
+                                "x": rect.0,
+                                "y": rect.1,
+                                "width": rect.2,
+                                "height": rect.3,
+                            },
+                            "parkedOtherSessions": parked_other_sessions,
+                        }),
+                    );
+                    Ok(())
                 } else {
                     let session = sessions.get(&request.session_id).ok_or_else(|| {
                         format!("RDP session '{}' was not found", request.session_id)
                     })?;
-                    stage_rdp(
+                    let connection_state =
+                        get_property_i32(&session.dispatch, "Connected").unwrap_or(-1);
+                    let rect = stage_rdp(
                         session.hwnd,
                         scale_factor,
                         request.x,
                         request.y,
                         request.width,
                         request.height,
-                    )
-                    .map(|_| ())
+                    )?;
+                    rdp_debug(
+                        "visibility.set",
+                        &json!({
+                            "sessionId": &request.session_id,
+                            "visible": false,
+                            "connectionState": connection_state,
+                            "connectionStateLabel": rdp_connection_state_label(connection_state),
+                            "scaleFactor": scale_factor,
+                            "requestBounds": {
+                                "x": request.x,
+                                "y": request.y,
+                                "width": request.width,
+                                "height": request.height,
+                            },
+                            "nativeRect": {
+                                "x": rect.0,
+                                "y": rect.1,
+                                "width": rect.2,
+                                "height": rect.3,
+                            },
+                        }),
+                    );
+                    Ok(())
                 }
             })
         }
@@ -605,10 +655,51 @@ mod platform {
                 );
                 let connection_state = get_property_i32(&session.dispatch, "Connected")?;
                 let connected = is_rdp_active_state(connection_state);
-                let display_sync_completed = is_rdp_displayable_state(connection_state)
+                let display_sync_attempted = is_rdp_displayable_state(connection_state);
+                let display_sync_completed = display_sync_attempted
                     && sync_remote_desktop_size(session, display_settings, true);
                 let display_synced =
                     rdp_display_ready_after_sync(connection_state, display_sync_completed);
+                rdp_debug(
+                    "display.sync.state",
+                    &json!({
+                        "sessionId": &request.session_id,
+                        "connectionState": connection_state,
+                        "connectionStateLabel": rdp_connection_state_label(connection_state),
+                        "active": connected,
+                        "displayable": is_rdp_displayable_state(connection_state),
+                        "displaySyncAttempted": display_sync_attempted,
+                        "displaySyncCompleted": display_sync_completed,
+                        "displaySynced": display_synced,
+                        "scaleFactor": scale_factor,
+                        "requestBounds": {
+                            "x": request.x,
+                            "y": request.y,
+                            "width": request.width,
+                            "height": request.height,
+                        },
+                        "stagedRect": {
+                            "x": rect.0,
+                            "y": rect.1,
+                            "width": rect.2,
+                            "height": rect.3,
+                        },
+                        "displaySettings": {
+                            "desktopWidth": display_settings.desktop_width,
+                            "desktopHeight": display_settings.desktop_height,
+                            "physicalWidth": display_settings.physical_width,
+                            "physicalHeight": display_settings.physical_height,
+                            "desktopScaleFactor": display_settings.desktop_scale_factor,
+                            "deviceScaleFactor": display_settings.device_scale_factor,
+                        },
+                        "storedDesktop": {
+                            "width": session.desktop_width,
+                            "height": session.desktop_height,
+                            "desktopScaleFactor": session.desktop_scale_factor,
+                            "deviceScaleFactor": session.device_scale_factor,
+                        },
+                    }),
+                );
                 Ok(RdpDisplaySizeSync {
                     session_id: request.session_id,
                     connection_state,
@@ -1001,12 +1092,14 @@ mod platform {
                 dispatch,
                 // DesktopWidth/DesktopHeight seed the initial connection, but the
                 // ActiveX control may not apply dynamic sizing until after Connect
-                // has progressed. Keep the synced size unknown so the frontend's
-                // startup bounds pushes retry the real remote desktop resize.
-                desktop_width: 0,
-                desktop_height: 0,
-                desktop_scale_factor: 0,
-                device_scale_factor: 0,
+                // has progressed. Keep the initial values as the best known
+                // remote desktop aspect if the server later rejects display
+                // control updates.
+                desktop_width: display_settings.desktop_width,
+                desktop_height: display_settings.desktop_height,
+                desktop_scale_factor: display_settings.desktop_scale_factor,
+                device_scale_factor: display_settings.device_scale_factor,
+                dynamic_resize_failures: 0,
                 resolution_mode,
             },
         );
@@ -1896,9 +1989,8 @@ mod platform {
         height: f64,
         force: bool,
     ) -> Result<(), String> {
-        let rect = show_rdp(
-            session.hwnd,
-            session.owner,
+        let rect = show_rdp_for_session(
+            session,
             scale_factor,
             x,
             y,
@@ -1912,7 +2004,8 @@ mod platform {
             session
                 .resolution_mode
                 .display_settings(width, height, rect.2, rect.3, scale_factor);
-        if !sync_remote_desktop_size(session, display_settings, force) && force {
+        let display_sync_completed = sync_remote_desktop_size(session, display_settings, force);
+        if !display_sync_completed && force {
             return Err(
                 "failed to update RDP remote display size; the remote desktop may already be past the dynamic resize window"
                     .to_string(),
@@ -1943,11 +2036,14 @@ mod platform {
         match resize_remote_desktop(&session.dispatch, display_settings) {
             Ok(()) => {}
             Err(error) => {
+                session.dynamic_resize_failures =
+                    session.dynamic_resize_failures.saturating_add(1);
                 rdp_debug(
                     "display.resize.error",
                     &json!({
                         "error": error,
                         "force": force,
+                        "failures": session.dynamic_resize_failures,
                         "desktopWidth": display_settings.desktop_width,
                         "desktopHeight": display_settings.desktop_height,
                         "physicalWidth": display_settings.physical_width,
@@ -1959,6 +2055,21 @@ mod platform {
                 return false;
             }
         }
+        if session.dynamic_resize_failures > 0 {
+            rdp_debug(
+                "display.resize.recovered",
+                &json!({
+                    "previousFailures": session.dynamic_resize_failures,
+                    "desktopWidth": display_settings.desktop_width,
+                    "desktopHeight": display_settings.desktop_height,
+                    "physicalWidth": display_settings.physical_width,
+                    "physicalHeight": display_settings.physical_height,
+                    "desktopScaleFactor": display_settings.desktop_scale_factor,
+                    "deviceScaleFactor": display_settings.device_scale_factor,
+                }),
+            );
+        }
+        session.dynamic_resize_failures = 0;
         session.desktop_width = display_settings.desktop_width;
         session.desktop_height = display_settings.desktop_height;
         session.desktop_scale_factor = display_settings.desktop_scale_factor;
@@ -2004,6 +2115,51 @@ mod platform {
                 display_settings.device_scale_factor,
             ],
         )
+    }
+
+    fn show_rdp_for_session(
+        session: &RdpSession,
+        scale_factor: f64,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) -> Result<(i32, i32, i32, i32), String> {
+        let rect = show_rdp(
+            session.hwnd,
+            session.owner,
+            scale_factor,
+            x,
+            y,
+            width,
+            height,
+        )?;
+        match invoke_method(&session.dispatch, "SyncSessionDisplaySettings") {
+            Ok(()) => rdp_debug(
+                "display.sync_session_settings.ok",
+                &json!({
+                    "nativeRect": {
+                        "x": rect.0,
+                        "y": rect.1,
+                        "width": rect.2,
+                        "height": rect.3,
+                    },
+                }),
+            ),
+            Err(error) => rdp_debug(
+                "display.sync_session_settings.error",
+                &json!({
+                    "error": error,
+                    "nativeRect": {
+                        "x": rect.0,
+                        "y": rect.1,
+                        "width": rect.2,
+                        "height": rect.3,
+                    },
+                }),
+            ),
+        }
+        Ok(rect)
     }
 
     fn show_rdp(
@@ -2134,13 +2290,23 @@ mod platform {
     }
 
     fn is_rdp_displayable_state(connection_state: i32) -> bool {
-        connection_state == RDP_CONNECTED_STATE
+        connection_state == RDP_CONNECTED_STATE || connection_state == RDP_ESTABLISHING_STATE
+    }
+
+    fn rdp_connection_state_label(connection_state: i32) -> &'static str {
+        match connection_state {
+            0 => "notConnected",
+            RDP_CONNECTED_STATE => "connected",
+            RDP_ESTABLISHING_STATE => "establishing",
+            _ => "unknown",
+        }
     }
 
     fn rdp_display_ready_after_sync(connection_state: i32, _display_sync_completed: bool) -> bool {
-        // Some servers reject dynamic display updates after interactive credential
-        // prompts; once ActiveX reports connected, reveal the control at its
-        // current size instead of leaving the pane stuck preparing.
+        // Some servers keep ActiveX in the establishing state while showing
+        // interactive prompts, and some reject dynamic display updates after
+        // those prompts. Reveal active controls at their current size instead
+        // of leaving the pane stuck preparing off-screen.
         is_rdp_displayable_state(connection_state)
     }
 
@@ -2411,23 +2577,23 @@ mod platform {
         }
 
         #[test]
-        fn automatic_resolution_uses_physical_desktop_with_smart_sizing() {
+        fn automatic_resolution_uses_physical_desktop_without_smart_sizing() {
             assert_eq!(
                 RemoteResolutionMode::Automatic.desktop_size(1200.0, 800.0, 1800, 1200),
                 (1800, 1200)
             );
-            assert!(RemoteResolutionMode::Automatic.smart_sizing());
+            assert!(!RemoteResolutionMode::Automatic.smart_sizing());
         }
 
         #[test]
-        fn automatic_display_settings_apply_host_dpi_at_physical_size() {
+        fn automatic_display_settings_apply_host_dpi_with_unknown_physical_size() {
             let settings =
                 RemoteResolutionMode::Automatic.display_settings(1200.0, 800.0, 1800, 1200, 1.5);
 
             assert_eq!(settings.desktop_width, 1800);
             assert_eq!(settings.desktop_height, 1200);
-            assert_eq!(settings.physical_width, 1800);
-            assert_eq!(settings.physical_height, 1200);
+            assert_eq!(settings.physical_width, RDP_UNKNOWN_PHYSICAL_SIZE_MM);
+            assert_eq!(settings.physical_height, RDP_UNKNOWN_PHYSICAL_SIZE_MM);
             assert_eq!(settings.desktop_scale_factor, 150);
             assert_eq!(settings.device_scale_factor, 140);
         }
@@ -2453,8 +2619,8 @@ mod platform {
 
             assert_eq!(settings.desktop_width, 1440);
             assert_eq!(settings.desktop_height, 900);
-            assert_eq!(settings.physical_width, 1440);
-            assert_eq!(settings.physical_height, 900);
+            assert_eq!(settings.physical_width, RDP_UNKNOWN_PHYSICAL_SIZE_MM);
+            assert_eq!(settings.physical_height, RDP_UNKNOWN_PHYSICAL_SIZE_MM);
             assert_eq!(settings.desktop_scale_factor, 100);
         }
 
@@ -2465,8 +2631,8 @@ mod platform {
 
             assert_eq!(settings.desktop_width, 1800);
             assert_eq!(settings.desktop_height, 1200);
-            assert_eq!(settings.physical_width, 1800);
-            assert_eq!(settings.physical_height, 1200);
+            assert_eq!(settings.physical_width, RDP_UNKNOWN_PHYSICAL_SIZE_MM);
+            assert_eq!(settings.physical_height, RDP_UNKNOWN_PHYSICAL_SIZE_MM);
             assert_eq!(settings.desktop_scale_factor, 150);
             assert_eq!(settings.device_scale_factor, 140);
         }
@@ -2522,17 +2688,26 @@ mod platform {
         }
 
         #[test]
-        fn waits_for_connected_rdp_state_before_display_sync() {
+        fn treats_active_rdp_states_as_displayable() {
             assert!(!is_rdp_displayable_state(0));
             assert!(is_rdp_displayable_state(1));
-            assert!(!is_rdp_displayable_state(2));
+            assert!(is_rdp_displayable_state(2));
         }
 
         #[test]
-        fn treats_connected_rdp_as_display_ready_when_dynamic_sync_fails() {
+        fn labels_rdp_connection_states_for_debug_logs() {
+            assert_eq!(rdp_connection_state_label(0), "notConnected");
+            assert_eq!(rdp_connection_state_label(1), "connected");
+            assert_eq!(rdp_connection_state_label(2), "establishing");
+            assert_eq!(rdp_connection_state_label(99), "unknown");
+        }
+
+        #[test]
+        fn treats_active_rdp_as_display_ready_when_dynamic_sync_fails() {
             assert!(rdp_display_ready_after_sync(1, true));
             assert!(rdp_display_ready_after_sync(1, false));
-            assert!(!rdp_display_ready_after_sync(2, true));
+            assert!(rdp_display_ready_after_sync(2, true));
+            assert!(rdp_display_ready_after_sync(2, false));
             assert!(!rdp_display_ready_after_sync(0, true));
         }
 
@@ -2796,7 +2971,7 @@ mod platform {
     }
 
     fn is_rdp_displayable_state(connection_state: i32) -> bool {
-        connection_state == 1
+        connection_state == 1 || connection_state == 2
     }
 
     impl StartRdpSessionRequest {
