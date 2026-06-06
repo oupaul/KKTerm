@@ -3,6 +3,30 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.66/kkterm-0.1.66-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.66/kkterm-0.1.66-windows-arm64-setup.exe)
+
+## Highlights
+- Improved Terminal paste handling by routing pastes through xterm handling (so your text doesn’t randomly decide to take the scenic route).
+
+## Improved
+- Route Terminal paste through xterm paste handling, fixing paste formatting/line breaks in Terminal sessions. (PR #274, @ryantsai; short SHA: `5b88126`)
+
+## Internal
+- Updated app slogan translations across multiple languages. (short SHA: `5b7c5c7`)  
+
+---
+
+## 精選亮點
+- 改進 Terminal 貼上處理：將貼上內容導回 xterm 處理流程（避免你的文字在 Terminal 裡突然改走「風景路線」）。
+
+## 改進
+- 透過 xterm paste handling 轉送 Terminal 貼上內容，修正 Terminal 會出現的貼上格式/換行問題。 (PR #274，@ryantsai；短 SHA：`5b88126`)
+
+## Internal（內部）
+- 更新多語系的應用程式標語翻譯。 (short SHA：`5b7c5c7`)
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.65/kkterm-0.1.65-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.65/kkterm-0.1.65-windows-arm64-setup.exe)
 
