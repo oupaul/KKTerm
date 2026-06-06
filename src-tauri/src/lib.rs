@@ -191,7 +191,8 @@ fn focus_main_window(app: tauri::AppHandle) {
 #[cfg(target_os = "windows")]
 fn focus_webview_content_hwnd(window: &tauri::WebviewWindow) {
     use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::WindowsAndMessaging::{GW_CHILD, GetWindow, SetFocus};
+    use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
+    use windows::Win32::UI::WindowsAndMessaging::{GW_CHILD, GetWindow};
 
     let root = match window.hwnd() {
         Ok(handle) => HWND(handle.0 as *mut _),
