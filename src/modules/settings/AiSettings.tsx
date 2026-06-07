@@ -21,7 +21,6 @@ import {
   isTauriRuntime,
   openExternalUrl,
   type AiCliBackendKind,
-  type AiCliBackendStatus,
   type AiProviderModelOption,
   type GitHubCopilotDeviceFlow,
 } from "../../lib/tauri";
@@ -48,6 +47,11 @@ import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../../i18n/config";
 import { resolveInstallPlan } from "../installer/dag";
 import { installRecipeAndWait } from "../installer/progress";
+import {
+  readStoredAiCliBackendStatus,
+  writeStoredAiCliBackendStatus,
+  type StoredAiCliBackendStatus,
+} from "./aiCliStatusPersistence";
 
 const GITHUB_COPILOT_CLI_INSTALL_URL =
   "https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli";
@@ -518,10 +522,10 @@ function AiCliBackendControl({
   draft: AiProviderSettingsType;
   onDraftChange: (patch: Partial<AiProviderSettingsType>) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const cli = providerCliBackend(draft.providerKind);
-  const [status, setStatus] = useState<AiCliBackendStatus | null>(null);
+  const [storedStatus, setStoredStatus] = useState<StoredAiCliBackendStatus | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function refreshStatus() {
@@ -531,7 +535,13 @@ function AiCliBackendControl({
       const next = await invokeCommand("get_ai_cli_backend_status", {
         provider: cli.backend,
       });
-      setStatus(next);
+      const checkedAt = new Date().toISOString();
+      setStoredStatus(
+        writeStoredAiCliBackendStatus(cli.backend, next, checkedAt) ?? {
+          checkedAt,
+          status: next,
+        },
+      );
     } catch (error) {
       showStatusBarNotice(error instanceof Error ? error.message : String(error), {
         tone: "error",
@@ -580,11 +590,12 @@ function AiCliBackendControl({
   }
 
   useEffect(() => {
-    setStatus(null);
-  }, [draft.providerKind]);
+    setStoredStatus(cli ? readStoredAiCliBackendStatus(cli.backend) : null);
+  }, [cli?.backend]);
 
   if (!cli) return null;
   const enabled = cli.enabled(draft);
+  const status = storedStatus?.status ?? null;
   const statusText = !status
     ? t("settings.aiCliStatusUnknown")
     : !status.installed
@@ -592,6 +603,11 @@ function AiCliBackendControl({
       : status.authenticated
         ? t("settings.aiCliStatusReady")
         : t("settings.aiCliStatusAuthRequired");
+  const checkedAtLabel = storedStatus
+    ? t("settings.lastCheckedAt", {
+        time: new Date(storedStatus.checkedAt).toLocaleString(i18n.language),
+      })
+    : null;
 
   return (
     <div className="settings-toggle-list ai-cli-backend-control">
@@ -610,6 +626,7 @@ function AiCliBackendControl({
           <span className="field-hint">
             {statusText}
             {status?.version ? ` (${status.version})` : ""}
+            {checkedAtLabel ? ` · ${checkedAtLabel}` : ""}
           </span>
           <div className="settings-copilot-actions">
             <button className="toolbar-button" disabled={busy || !isTauriRuntime()} onClick={() => void refreshStatus()} type="button">

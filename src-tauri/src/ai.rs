@@ -1317,7 +1317,7 @@ fn handle_acp_backend_message(
             }
         }
         "session/request_permission" => {
-            if let Some(id) = message.get("id").and_then(Value::as_u64) {
+            if let Some(id) = acp_jsonrpc_id(&message) {
                 let approved = acp_permission_approved(app, settings, &message);
                 let outcome = acp_permission_selection(&message, approved);
                 session.write_json(json!({
@@ -1343,6 +1343,13 @@ fn handle_acp_backend_message(
         }
     }
     Ok(())
+}
+
+fn acp_jsonrpc_id(message: &Value) -> Option<Value> {
+    match message.get("id") {
+        Some(Value::Number(_)) | Some(Value::String(_)) => message.get("id").cloned(),
+        _ => None,
+    }
 }
 
 fn kkterm_cli_command_path() -> Result<String, String> {
@@ -1526,7 +1533,7 @@ fn default_cli_command(provider: AiCliBackendKind) -> &'static str {
 
 fn resolve_cli_backend_command(provider: AiCliBackendKind, configured: Option<String>) -> String {
     if let Some(path) = configured
-        .map(|value| value.trim().to_string())
+        .map(|value| normalize_configured_cli_command(&value))
         .filter(|value| !value.is_empty())
     {
         return path;
@@ -1535,6 +1542,15 @@ fn resolve_cli_backend_command(provider: AiCliBackendKind, configured: Option<St
     common_cli_backend_command_path(provider)
         .map(|path| path.display().to_string())
         .unwrap_or_else(|| default_cli_command(provider).to_string())
+}
+
+fn normalize_configured_cli_command(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.len() >= 2 && trimmed.starts_with('"') && trimmed.ends_with('"') {
+        trimmed[1..trimmed.len() - 1].trim().to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn common_cli_backend_command_path(provider: AiCliBackendKind) -> Option<PathBuf> {
@@ -1765,8 +1781,9 @@ fn run_cli_capture(
     args: &[&str],
     _timeout: Option<Duration>,
 ) -> Result<String, String> {
-    let mut cmd = Command::new(command);
-    cmd.args(args).stdin(Stdio::null());
+    let (program, process_args) = cli_process_invocation(command, args);
+    let mut cmd = Command::new(&program);
+    cmd.args(&process_args).stdin(Stdio::null());
     crate::installer::proc::no_window(&mut cmd);
     let output = cmd
         .output()
@@ -1794,6 +1811,27 @@ fn run_cli_capture(
     } else {
         Ok(stdout)
     }
+}
+
+fn cli_process_invocation(command: &str, args: &[&str]) -> (String, Vec<String>) {
+    #[cfg(target_os = "windows")]
+    {
+        let lower = command.to_ascii_lowercase();
+        if lower.ends_with(".cmd") || lower.ends_with(".bat") {
+            let mut process_args = vec![
+                "/D".to_string(),
+                "/C".to_string(),
+                command.to_string(),
+            ];
+            process_args.extend(args.iter().map(|arg| (*arg).to_string()));
+            return ("cmd.exe".to_string(), process_args);
+        }
+    }
+
+    (
+        command.to_string(),
+        args.iter().map(|arg| (*arg).to_string()).collect(),
+    )
 }
 
 fn spawn_external_terminal(command: &str) -> Result<(), String> {
@@ -1840,7 +1878,7 @@ fn build_cli_agent_prompt(
     let mut out = String::new();
     out.push_str("You are KKTerm's AI Assistant for local-first administration workflows. ");
     out.push_str("Answer concisely. Do not claim to have used KKTerm tools or observed live state unless it appears in the context. ");
-    out.push_str("When this turn is running through ACP, KKTerm tools are available through the attached kkterm MCP server. Use kkterm.workspace.connections.create to create saved Connections, kkterm.workspace.connections.open to open them, and the other kkterm tools when they fit the user's request. If ACP is unavailable and the backend falls back to a one-shot CLI command, suggest commands or Connection details for user review instead of claiming that tools ran.\n\n");
+    out.push_str("When this turn is running through ACP, KKTerm tools are available through the attached kkterm MCP server. Use kkterm.workspace.connections.create/update/rename/move/delete to manage saved Connections, kkterm.workspace.connection_folders.create/rename/move/delete to organize folders, kkterm.workspace.connections.open to open saved Connections, and the other kkterm tools when they fit the user's request. Connection tools do not accept passwords or other secrets. If ACP is unavailable and the backend falls back to a one-shot CLI command, suggest commands or Connection details for user review instead of claiming that tools ran.\n\n");
     if let Some(custom) =
         normalize_custom_instructions(Some(settings.custom_instructions().to_string()))
     {
@@ -4820,9 +4858,39 @@ fn ai_tool_definitions_with_skills(
             connection_request_schema(true),
         ));
         tools.push(tool_definition(
+            "connection_rename",
+            "Rename one saved KKTerm Connection by id.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string","minLength":1}},"required":["id","name"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
+            "connection_move",
+            "Move one saved KKTerm Connection to a folder and position. Use folderId null for the root list.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"folderId":{"type":["string","null"]},"targetIndex":{"type":"integer","minimum":0}},"required":["id","folderId","targetIndex"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
             "connection_delete",
             "Delete one saved KKTerm Connection by id. This removes durable Connection data but does not expose or delete secret values directly.",
             json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}),
+        ));
+        tools.push(tool_definition(
+            "connection_folder_create",
+            "Create a Connection folder. Use parentFolderId null for a root folder.",
+            json!({"type":"object","properties":{"name":{"type":"string","minLength":1},"parentFolderId":{"type":["string","null"]}},"required":["name","parentFolderId"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
+            "connection_folder_rename",
+            "Rename one Connection folder by id.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string","minLength":1}},"required":["id","name"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
+            "connection_folder_move",
+            "Move one Connection folder to a parent folder and position. Use parentFolderId null for the root list.",
+            json!({"type":"object","properties":{"id":{"type":"string"},"parentFolderId":{"type":["string","null"]},"targetIndex":{"type":"integer","minimum":0}},"required":["id","parentFolderId","targetIndex"],"additionalProperties":false}),
+        ));
+        tools.push(tool_definition(
+            "connection_folder_delete",
+            "Delete one Connection folder by id, including its contained saved Connections and nested folders.",
+            json!({"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}),
         ));
     }
     if settings.sessions() {
@@ -5688,7 +5756,16 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
             ))
         || matches!(
             tool_name,
-            "connection_create" | "connection_update" | "connection_delete" | "connection_open"
+            "connection_create"
+                | "connection_update"
+                | "connection_rename"
+                | "connection_move"
+                | "connection_delete"
+                | "connection_open"
+                | "connection_folder_create"
+                | "connection_folder_rename"
+                | "connection_folder_move"
+                | "connection_folder_delete"
         )
         || matches!(
             tool_name,
@@ -5745,6 +5822,24 @@ pub(crate) fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -
                         .map(|connection| serde_json::to_value(connection).unwrap_or(Value::Null))
                 })
         }
+        "connection_rename" => {
+            serde_json::from_value::<crate::storage::RenameConnectionRequest>(args)
+                .map_err(|error| format!("invalid connection_rename request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .rename_connection(request)
+                        .map(|connection| serde_json::to_value(connection).unwrap_or(Value::Null))
+                })
+        }
+        "connection_move" => {
+            serde_json::from_value::<crate::storage::MoveConnectionRequest>(args)
+                .map_err(|error| format!("invalid connection_move request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .move_connection(request)
+                        .map(|tree| serde_json::to_value(tree).unwrap_or(Value::Null))
+                })
+        }
         "connection_open" => {
             let id = arg_string(&args, "id");
             if id.is_empty() {
@@ -5761,6 +5856,43 @@ pub(crate) fn connection_tool(app: &tauri::AppHandle, name: &str, args: Value) -
                 Err("connection_delete requires id".to_string())
             } else {
                 storage.delete_connection(id).map(|_| json!({"ok": true}))
+            }
+        }
+        "connection_folder_create" => {
+            serde_json::from_value::<crate::storage::CreateConnectionFolderRequest>(args)
+                .map_err(|error| format!("invalid connection_folder_create request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .create_connection_folder(request)
+                        .map(|folder| serde_json::to_value(folder).unwrap_or(Value::Null))
+                })
+        }
+        "connection_folder_rename" => {
+            serde_json::from_value::<crate::storage::RenameConnectionFolderRequest>(args)
+                .map_err(|error| format!("invalid connection_folder_rename request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .rename_connection_folder(request)
+                        .map(|folder| serde_json::to_value(folder).unwrap_or(Value::Null))
+                })
+        }
+        "connection_folder_move" => {
+            serde_json::from_value::<crate::storage::MoveConnectionFolderRequest>(args)
+                .map_err(|error| format!("invalid connection_folder_move request: {error}"))
+                .and_then(|request| {
+                    storage
+                        .move_connection_folder(request)
+                        .map(|tree| serde_json::to_value(tree).unwrap_or(Value::Null))
+                })
+        }
+        "connection_folder_delete" => {
+            let id = arg_string(&args, "id");
+            if id.is_empty() {
+                Err("connection_folder_delete requires id".to_string())
+            } else {
+                storage
+                    .delete_connection_folder(id)
+                    .map(|_| json!({"ok": true}))
             }
         }
         _ => Err("Unknown Connection tool".to_string()),
@@ -8630,6 +8762,20 @@ mod tests {
     }
 
     #[test]
+    fn acp_jsonrpc_id_preserves_string_permission_ids() {
+        let message = json!({
+            "jsonrpc": "2.0",
+            "id": "d0626281-a3f5-4c6f-b0bc-c9b7a99ddd33",
+            "method": "session/request_permission"
+        });
+
+        assert_eq!(
+            acp_jsonrpc_id(&message),
+            Some(json!("d0626281-a3f5-4c6f-b0bc-c9b7a99ddd33"))
+        );
+    }
+
+    #[test]
     fn acp_command_specs_use_registry_adapters() {
         let codex = acp_command_spec(AiCliBackendKind::Codex);
         assert!(codex.args.iter().any(|arg| arg.contains("codex-acp")));
@@ -8651,6 +8797,45 @@ mod tests {
         );
 
         assert_eq!(command, "C:\\Tools\\codex.exe");
+    }
+
+    #[test]
+    fn configured_cli_backend_command_trims_wrapping_quotes() {
+        let command = resolve_cli_backend_command(
+            AiCliBackendKind::Codex,
+            Some("\"C:\\nvm4w\\nodejs\\codex.cmd\"".to_string()),
+        );
+
+        assert_eq!(command, "C:\\nvm4w\\nodejs\\codex.cmd");
+    }
+
+    #[test]
+    fn windows_cli_process_args_run_cmd_shims_through_cmd_exe() {
+        let (program, args) = cli_process_invocation(
+            "C:\\nvm4w\\nodejs\\codex.cmd",
+            &["--version", "--sandbox", "read-only"],
+        );
+
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(program, "cmd.exe");
+            assert_eq!(
+                args,
+                vec![
+                    "/D",
+                    "/C",
+                    "C:\\nvm4w\\nodejs\\codex.cmd",
+                    "--version",
+                    "--sandbox",
+                    "read-only"
+                ]
+            );
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(program, "C:\\nvm4w\\nodejs\\codex.cmd");
+            assert_eq!(args, vec!["--version", "--sandbox", "read-only"]);
+        }
     }
 
     #[test]
@@ -10920,7 +11105,13 @@ mod tests {
         assert!(tool_requires_allow_all("connection_create"));
         assert!(tool_requires_allow_all("connection_open"));
         assert!(tool_requires_allow_all("connection_update"));
+        assert!(tool_requires_allow_all("connection_rename"));
+        assert!(tool_requires_allow_all("connection_move"));
         assert!(tool_requires_allow_all("connection_delete"));
+        assert!(tool_requires_allow_all("connection_folder_create"));
+        assert!(tool_requires_allow_all("connection_folder_rename"));
+        assert!(tool_requires_allow_all("connection_folder_move"));
+        assert!(tool_requires_allow_all("connection_folder_delete"));
         assert!(tool_requires_allow_all("session_terminal_send_text"));
         assert!(tool_requires_allow_all("session_remote_desktop_send_text"));
         assert!(tool_requires_allow_all("session_remote_desktop_keypress"));
@@ -11056,7 +11247,13 @@ mod tests {
         assert!(names.contains(&"connection_create"));
         assert!(names.contains(&"connection_open"));
         assert!(names.contains(&"connection_update"));
+        assert!(names.contains(&"connection_rename"));
+        assert!(names.contains(&"connection_move"));
         assert!(names.contains(&"connection_delete"));
+        assert!(names.contains(&"connection_folder_create"));
+        assert!(names.contains(&"connection_folder_rename"));
+        assert!(names.contains(&"connection_folder_move"));
+        assert!(names.contains(&"connection_folder_delete"));
         assert!(names.contains(&"session_state"));
         assert!(names.contains(&"session_activate_tab"));
         assert!(names.contains(&"session_terminal_read_buffer"));

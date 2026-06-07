@@ -113,6 +113,46 @@ fn static_tool_descriptors() -> Vec<Value> {
             "inputSchema": connection_create_input_schema(),
         }),
         json!({
+            "name": "kkterm.workspace.connections.update",
+            "description": "Update one saved Connection in KKTerm storage. Submit the full updated Connection fields. Does not accept or store passwords or other secrets.",
+            "inputSchema": connection_update_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.workspace.connections.rename",
+            "description": "Rename one saved Connection by id.",
+            "inputSchema": id_name_input_schema("connectionId"),
+        }),
+        json!({
+            "name": "kkterm.workspace.connections.delete",
+            "description": "Delete one saved Connection by id.",
+            "inputSchema": id_input_schema("connectionId"),
+        }),
+        json!({
+            "name": "kkterm.workspace.connections.move",
+            "description": "Move one saved Connection to a folder and position. Use folderId null for the root list.",
+            "inputSchema": move_connection_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.workspace.connection_folders.create",
+            "description": "Create a Connection folder. Use parentFolderId null for a root folder.",
+            "inputSchema": folder_create_input_schema(),
+        }),
+        json!({
+            "name": "kkterm.workspace.connection_folders.rename",
+            "description": "Rename one Connection folder by id.",
+            "inputSchema": id_name_input_schema("folderId"),
+        }),
+        json!({
+            "name": "kkterm.workspace.connection_folders.delete",
+            "description": "Delete one Connection folder by id, including contained saved Connections and nested folders.",
+            "inputSchema": id_input_schema("folderId"),
+        }),
+        json!({
+            "name": "kkterm.workspace.connection_folders.move",
+            "description": "Move one Connection folder to a parent folder and position. Use parentFolderId null for the root list.",
+            "inputSchema": move_folder_input_schema(),
+        }),
+        json!({
             "name": "kkterm.workspace.connections.open",
             "description": "Open a saved Connection by its id. Starts the appropriate session (terminal, SSH, URL, RDP, VNC) inside the running KKTerm app.",
             "inputSchema": {
@@ -476,6 +516,79 @@ fn connection_create_input_schema() -> Value {
         },
         "required": ["name", "type"],
         "additionalProperties": true,
+    })
+}
+
+fn connection_update_input_schema() -> Value {
+    let mut schema = connection_create_input_schema();
+    if let Some(properties) = schema.get_mut("properties").and_then(Value::as_object_mut) {
+        properties.insert(
+            "connectionId".to_string(),
+            json!({"type": "string", "description": "The id of the saved Connection to update."}),
+        );
+    }
+    if let Some(required) = schema.get_mut("required").and_then(Value::as_array_mut) {
+        required.insert(0, json!("connectionId"));
+    }
+    schema
+}
+
+fn id_input_schema(id_name: &str) -> Value {
+    json!({
+        "type": "object",
+        "properties": {(id_name): {"type": "string"}},
+        "required": [id_name],
+        "additionalProperties": false,
+    })
+}
+
+fn id_name_input_schema(id_name: &str) -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            (id_name): {"type": "string"},
+            "name": {"type": "string", "minLength": 1},
+        },
+        "required": [id_name, "name"],
+        "additionalProperties": false,
+    })
+}
+
+fn move_connection_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "connectionId": {"type": "string"},
+            "folderId": {"type": ["string", "null"]},
+            "targetIndex": {"type": "integer", "minimum": 0},
+        },
+        "required": ["connectionId", "folderId", "targetIndex"],
+        "additionalProperties": false,
+    })
+}
+
+fn folder_create_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "parentFolderId": {"type": ["string", "null"]},
+        },
+        "required": ["name", "parentFolderId"],
+        "additionalProperties": false,
+    })
+}
+
+fn move_folder_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "folderId": {"type": "string"},
+            "parentFolderId": {"type": ["string", "null"]},
+            "targetIndex": {"type": "integer", "minimum": 0},
+        },
+        "required": ["folderId", "parentFolderId", "targetIndex"],
+        "additionalProperties": false,
     })
 }
 

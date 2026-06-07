@@ -120,6 +120,14 @@ The Workspace Module owns saved Connections and live Sessions
 |---|---|
 | `kkterm.workspace.connections.list` | List saved Connections (folders + connections) from KKTerm storage. |
 | `kkterm.workspace.connections.create` | Create a saved Connection in KKTerm storage. This is a safe tool: it does not accept passwords or other secrets, and saved credentials still go through KKTerm's normal keychain-backed secret flows. |
+| `kkterm.workspace.connections.update` | Update one saved Connection by `connectionId`. Submit the full updated Connection fields. This tool does not accept passwords or other secrets. |
+| `kkterm.workspace.connections.rename` | Rename one saved Connection by `connectionId`. |
+| `kkterm.workspace.connections.delete` | Delete one saved Connection by `connectionId`. |
+| `kkterm.workspace.connections.move` | Move one saved Connection by `connectionId` to a `folderId` and `targetIndex`; use `folderId: null` for the root list. |
+| `kkterm.workspace.connection_folders.create` | Create a Connection folder with `name` and `parentFolderId`; use `parentFolderId: null` for a root folder. |
+| `kkterm.workspace.connection_folders.rename` | Rename one Connection folder by `folderId`. |
+| `kkterm.workspace.connection_folders.delete` | Delete one Connection folder by `folderId`, including contained saved Connections and nested folders. |
+| `kkterm.workspace.connection_folders.move` | Move one Connection folder by `folderId` to `parentFolderId` and `targetIndex`; use `parentFolderId: null` for the root list. |
 | `kkterm.workspace.connections.open` | Open a saved Connection by `connectionId`. Routes through the existing AI assistant `connection_open` path and emits `assistant-open-connection` for the frontend to start the appropriate session (terminal, SSH, URL, RDP, VNC). |
 | `kkterm.workspace.connections.screenshot` | Capture the visible Workspace Canvas for an open Connection by `connectionId`. The app activates the matching Tab before capture and returns a JPEG data URL plus dimensions. |
 | `kkterm.workspace.sessions.list` | List live Sessions (terminal Panes, remote desktop targets, file browsers). Backed by `session_state`. |
