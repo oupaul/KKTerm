@@ -996,17 +996,20 @@ impl AgentProvider for CliAgentProvider {
         let backend = self.backend;
         let model = settings.model().to_string();
         let label = self.label;
+        let app_for_acp = _app.clone();
+        let settings_for_acp = settings.clone();
         let output = tauri::async_runtime::spawn_blocking(move || {
-            run_acp_agent_command(backend, &model, &prompt).or_else(|acp_error| {
-                ai_interaction_debug!(
-                    "agent.cli_acp_fallback",
-                    json!({
-                        "backend": backend,
-                        "error": acp_error,
-                    })
-                );
-                run_cli_agent_command(backend, &command, &model, &prompt)
-            })
+            run_acp_agent_command(backend, &model, &prompt, &app_for_acp, &settings_for_acp)
+                .or_else(|acp_error| {
+                    ai_interaction_debug!(
+                        "agent.cli_acp_fallback",
+                        json!({
+                            "backend": backend,
+                            "error": acp_error,
+                        })
+                    );
+                    run_cli_agent_command(backend, &command, &model, &prompt)
+                })
         })
         .await
         .map_err(|error| format!("failed to run {label}: {error}"))??;
@@ -1036,26 +1039,34 @@ impl AgentProvider for CliAgentProvider {
         let output = tauri::async_runtime::spawn_blocking({
             let channel = channel.clone();
             let model = model.clone();
+            let app_for_acp = _app.clone();
+            let settings_for_acp = settings.clone();
             move || {
-                run_acp_agent_command_streaming(backend, &model, &prompt, Some(&channel)).or_else(
-                    |acp_error| {
-                        ai_interaction_debug!(
-                            "agent.cli_acp_streaming_fallback",
-                            json!({
-                                "backend": backend,
-                                "error": acp_error,
-                            })
-                        );
-                        let output = run_cli_agent_command(backend, &command, &model, &prompt)?;
-                        emit_stream(
-                            &channel,
-                            &AiStreamEvent::ContentDelta {
-                                delta: output.clone(),
-                            },
-                        )?;
-                        Ok::<String, String>(output)
-                    },
+                run_acp_agent_command_streaming(
+                    backend,
+                    &model,
+                    &prompt,
+                    Some(&channel),
+                    &app_for_acp,
+                    &settings_for_acp,
                 )
+                .or_else(|acp_error| {
+                    ai_interaction_debug!(
+                        "agent.cli_acp_streaming_fallback",
+                        json!({
+                            "backend": backend,
+                            "error": acp_error,
+                        })
+                    );
+                    let output = run_cli_agent_command(backend, &command, &model, &prompt)?;
+                    emit_stream(
+                        &channel,
+                        &AiStreamEvent::ContentDelta {
+                            delta: output.clone(),
+                        },
+                    )?;
+                    Ok::<String, String>(output)
+                })
             }
         })
         .await
@@ -1202,8 +1213,10 @@ fn run_acp_agent_command(
     backend: AiCliBackendKind,
     model: &str,
     prompt: &str,
+    app: &tauri::AppHandle,
+    settings: &AiProviderSettings,
 ) -> Result<String, String> {
-    run_acp_agent_command_streaming(backend, model, prompt, None)
+    run_acp_agent_command_streaming(backend, model, prompt, None, app, settings)
 }
 
 fn run_acp_agent_command_streaming(
@@ -1211,6 +1224,8 @@ fn run_acp_agent_command_streaming(
     model: &str,
     prompt: &str,
     channel: Option<&Channel<Value>>,
+    app: &tauri::AppHandle,
+    settings: &AiProviderSettings,
 ) -> Result<String, String> {
     let spec = acp_command_spec(backend);
     let cwd = std::env::current_dir()
@@ -1234,17 +1249,21 @@ fn run_acp_agent_command_streaming(
             }
         }),
         Duration::from_secs(30),
-        |session, message| handle_acp_backend_message(session, message, &mut content, channel),
+        |session, message| {
+            handle_acp_backend_message(session, message, &mut content, channel, app, settings)
+        },
     )?;
     let new_session = session.request(
         2,
         "session/new",
         json!({
             "cwd": cwd,
-            "mcpServers": []
+            "mcpServers": [acp_kkterm_mcp_server(&kkterm_cli_command_path()?)]
         }),
         Duration::from_secs(60),
-        |session, message| handle_acp_backend_message(session, message, &mut content, channel),
+        |session, message| {
+            handle_acp_backend_message(session, message, &mut content, channel, app, settings)
+        },
     )?;
     let session_id = new_session
         .get("sessionId")
@@ -1265,7 +1284,9 @@ fn run_acp_agent_command_streaming(
             ]
         }),
         COPILOT_SDK_RESPONSE_TIMEOUT,
-        |session, message| handle_acp_backend_message(session, message, &mut content, channel),
+        |session, message| {
+            handle_acp_backend_message(session, message, &mut content, channel, app, settings)
+        },
     )?;
     let trimmed = content.trim();
     if trimmed.is_empty() {
@@ -1282,6 +1303,8 @@ fn handle_acp_backend_message(
     message: Value,
     content: &mut String,
     channel: Option<&Channel<Value>>,
+    app: &tauri::AppHandle,
+    settings: &AiProviderSettings,
 ) -> Result<(), String> {
     let method = message.get("method").and_then(Value::as_str).unwrap_or("");
     match method {
@@ -1295,7 +1318,8 @@ fn handle_acp_backend_message(
         }
         "session/request_permission" => {
             if let Some(id) = message.get("id").and_then(Value::as_u64) {
-                let outcome = acp_permission_rejection(&message);
+                let approved = acp_permission_approved(app, settings, &message);
+                let outcome = acp_permission_selection(&message, approved);
                 session.write_json(json!({
                     "jsonrpc": "2.0",
                     "id": id,
@@ -1321,22 +1345,47 @@ fn handle_acp_backend_message(
     Ok(())
 }
 
-fn acp_permission_rejection(message: &Value) -> Value {
-    let reject_option = message
+fn kkterm_cli_command_path() -> Result<String, String> {
+    let exe_path = std::env::current_exe()
+        .map_err(|error| format!("failed to resolve app executable path: {error}"))?;
+    let exe_folder = exe_path
+        .parent()
+        .ok_or_else(|| "failed to resolve app executable folder".to_string())?;
+    let cli_name = if cfg!(target_os = "windows") {
+        "kkterm-cli.exe"
+    } else {
+        "kkterm-cli"
+    };
+    Ok(exe_folder.join(cli_name).to_string_lossy().into_owned())
+}
+
+fn acp_kkterm_mcp_server(command: &str) -> Value {
+    json!({
+        "type": "stdio",
+        "name": "kkterm",
+        "command": command,
+        "args": [],
+        "env": [],
+    })
+}
+
+fn acp_permission_selection(message: &Value, approved: bool) -> Value {
+    let desired_prefix = if approved { "allow" } else { "reject" };
+    let selected_option = message
         .pointer("/params/options")
         .and_then(Value::as_array)
         .and_then(|options| {
             options.iter().find_map(|option| {
                 let kind = option.get("kind").and_then(Value::as_str).unwrap_or("");
                 let id = option.get("optionId").and_then(Value::as_str)?;
-                if kind.starts_with("reject") {
+                if kind.starts_with(desired_prefix) {
                     Some(id.to_string())
                 } else {
                     None
                 }
             })
         });
-    match reject_option {
+    match selected_option {
         Some(option_id) => json!({
             "outcome": "selected",
             "optionId": option_id,
@@ -1345,6 +1394,49 @@ fn acp_permission_rejection(message: &Value) -> Value {
             "outcome": "cancelled",
         }),
     }
+}
+
+fn acp_permission_approved(
+    app: &tauri::AppHandle,
+    settings: &AiProviderSettings,
+    message: &Value,
+) -> bool {
+    if settings.tool_permission_mode() == "allowAll" {
+        return true;
+    }
+    let tool_name = acp_permission_tool_name(message);
+    let args = message
+        .pointer("/params/toolCall")
+        .cloned()
+        .unwrap_or(Value::Null);
+    match app.try_state::<AssistantToolApprovalBridge>() {
+        Some(bridge) => tauri::async_runtime::block_on(bridge.request(app, &tool_name, &args)),
+        None => false,
+    }
+}
+
+fn acp_permission_tool_name(message: &Value) -> String {
+    message
+        .pointer("/params/toolCall/title")
+        .and_then(Value::as_str)
+        .or_else(|| {
+            message
+                .pointer("/params/toolCall/name")
+                .and_then(Value::as_str)
+        })
+        .or_else(|| {
+            message
+                .pointer("/params/toolCall/toolName")
+                .and_then(Value::as_str)
+        })
+        .unwrap_or("acp_tool_call")
+        .trim_start_matches("Call ")
+        .to_string()
+}
+
+#[cfg(test)]
+fn acp_permission_rejection(message: &Value) -> Value {
+    acp_permission_selection(message, false)
 }
 
 fn acp_agent_message_delta_text(message: &Value) -> Option<String> {
@@ -1748,7 +1840,7 @@ fn build_cli_agent_prompt(
     let mut out = String::new();
     out.push_str("You are KKTerm's AI Assistant for local-first administration workflows. ");
     out.push_str("Answer concisely. Do not claim to have used KKTerm tools or observed live state unless it appears in the context. ");
-    out.push_str("You are running through an external CLI backend with KKTerm tool calling disabled for this turn; suggest commands for user review instead of executing them.\n\n");
+    out.push_str("When this turn is running through ACP, KKTerm tools are available through the attached kkterm MCP server. Use kkterm.workspace.connections.create to create saved Connections, kkterm.workspace.connections.open to open them, and the other kkterm tools when they fit the user's request. If ACP is unavailable and the backend falls back to a one-shot CLI command, suggest commands or Connection details for user review instead of claiming that tools ran.\n\n");
     if let Some(custom) =
         normalize_custom_instructions(Some(settings.custom_instructions().to_string()))
     {
@@ -8450,6 +8542,86 @@ mod tests {
 
         assert_eq!(
             acp_permission_rejection(&message),
+            json!({
+                "outcome": "selected",
+                "optionId": "reject-once"
+            })
+        );
+    }
+
+    #[test]
+    fn acp_session_new_includes_kkterm_mcp_server() {
+        let server = acp_kkterm_mcp_server("C:\\Program Files\\KKTerm\\kkterm-cli.exe");
+
+        assert_eq!(server["type"], "stdio");
+        assert_eq!(server["name"], "kkterm");
+        assert_eq!(
+            server["command"],
+            "C:\\Program Files\\KKTerm\\kkterm-cli.exe"
+        );
+        assert_eq!(server["args"], json!([]));
+        assert_eq!(server["env"], json!([]));
+    }
+
+    #[test]
+    fn cli_agent_prompt_allows_acp_kkterm_tools() {
+        let settings: AiProviderSettings = serde_json::from_value(json!({
+            "baseUrl": "https://api.openai.com/v1"
+        }))
+        .expect("provider settings deserialize");
+        let request = AgentRunRequest {
+            prompt: "add a ssh connection to 10.0.0.157".to_string(),
+            context_label: "Workspace".to_string(),
+            intent: Some("chat".to_string()),
+            allow_tools: true,
+            allowed_tools: Vec::new(),
+            selected_output: None,
+            screenshot: None,
+            screenshots: Vec::new(),
+            files: Vec::new(),
+            system_context: None,
+            messages: Vec::new(),
+            output_language: None,
+            page_context: None,
+        };
+
+        let prompt = build_cli_agent_prompt(&settings, request).expect("prompt builds");
+
+        assert!(!prompt.contains("KKTerm tool calling disabled"));
+        assert!(
+            prompt.contains("KKTerm tools are available through the attached kkterm MCP server")
+        );
+        assert!(prompt.contains("kkterm.workspace.connections.create"));
+    }
+
+    #[test]
+    fn acp_permission_selection_uses_allow_option_when_approved() {
+        let message = json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "session/request_permission",
+            "params": {
+                "toolCall": {
+                    "toolCallId": "tool-1",
+                    "title": "Call kkterm.workspace.connections.create",
+                    "kind": "tool_call"
+                },
+                "options": [
+                    { "optionId": "allow-once", "name": "Allow once", "kind": "allow_once" },
+                    { "optionId": "reject-once", "name": "Reject", "kind": "reject_once" }
+                ]
+            }
+        });
+
+        assert_eq!(
+            acp_permission_selection(&message, true),
+            json!({
+                "outcome": "selected",
+                "optionId": "allow-once"
+            })
+        );
+        assert_eq!(
+            acp_permission_selection(&message, false),
             json!({
                 "outcome": "selected",
                 "optionId": "reject-once"

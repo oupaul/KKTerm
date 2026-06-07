@@ -72,6 +72,8 @@ In Prompt / Default permissions mode, mutating tool calls pause the current assi
 
 Built-in AI tools default on except `settings.aiTools.email.label`. The email tool stays off until enabled in Settings because it requires delivery configuration and an email secret.
 
+When `settings.useCodexCli` or `settings.useClaudeCli` routes a provider through a local CLI backend, ACP-backed sessions attach KKTerm's built-in `kkterm` MCP server so published safe tools, including Connection creation, can run through the same local bridge as external MCP clients. If ACP is unavailable and KKTerm falls back to a one-shot CLI command, the assistant can only suggest actions or Connection details instead of calling KKTerm tools.
+
 Names shown during a tool call (`ai.toolCallRunning` → `ai.toolCallComplete`):
 
 | Tool | Key (running) | Key (done) |

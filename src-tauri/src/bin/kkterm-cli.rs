@@ -10,9 +10,9 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 const BRIDGE_INFO_FILENAME: &str = "mcp-bridge.json";
 const BUNDLE_IDENTIFIER: &str = "com.kkterm.app";
@@ -106,6 +106,11 @@ fn static_tool_descriptors() -> Vec<Value> {
             "name": "kkterm.workspace.connections.list",
             "description": "List saved Connections (folders + connections) from KKTerm storage.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.workspace.connections.create",
+            "description": "Create a saved Connection in KKTerm storage. Does not accept or store passwords or other secrets.",
+            "inputSchema": connection_create_input_schema(),
         }),
         json!({
             "name": "kkterm.workspace.connections.open",
@@ -445,6 +450,33 @@ fn static_tool_descriptors() -> Vec<Value> {
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
         }),
     ]
+}
+
+fn connection_create_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "type": {"type": "string", "enum": ["local", "ssh", "telnet", "serial", "url", "rdp", "vnc", "ftp"]},
+            "folderId": {"type": ["string", "null"]},
+            "host": {"type": "string"},
+            "user": {"type": "string"},
+            "port": {"type": ["integer", "null"], "minimum": 1, "maximum": 65535},
+            "keyPath": {"type": ["string", "null"]},
+            "proxyJump": {"type": ["string", "null"]},
+            "authMethod": {"type": ["string", "null"], "enum": ["keyFile", "password", "agent", null]},
+            "localShell": {"type": ["string", "null"]},
+            "localStartupDirectory": {"type": ["string", "null"]},
+            "localStartupScript": {"type": ["string", "null"]},
+            "url": {"type": ["string", "null"]},
+            "dataPartition": {"type": ["string", "null"]},
+            "useTmuxSessions": {"type": ["boolean", "null"]},
+            "serialLine": {"type": ["string", "null"]},
+            "serialSpeed": {"type": ["integer", "null"], "minimum": 1},
+        },
+        "required": ["name", "type"],
+        "additionalProperties": true,
+    })
 }
 
 async fn forward(id: Value, request: Value) -> Value {

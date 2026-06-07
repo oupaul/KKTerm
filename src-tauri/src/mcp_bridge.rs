@@ -396,6 +396,11 @@ fn tool_descriptors() -> Vec<Value> {
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
         }),
         json!({
+            "name": "kkterm.workspace.connections.create",
+            "description": "Create a saved Connection in KKTerm storage. Does not accept or store passwords or other secrets.",
+            "inputSchema": connection_create_input_schema(),
+        }),
+        json!({
             "name": "kkterm.workspace.connections.open",
             "description": "Open a saved Connection by its id. Starts the appropriate session (terminal, SSH, URL, RDP, VNC) inside the running KKTerm app.",
             "inputSchema": {
@@ -751,6 +756,33 @@ fn tool_descriptors() -> Vec<Value> {
     ]
 }
 
+fn connection_create_input_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "type": {"type": "string", "enum": ["local", "ssh", "telnet", "serial", "url", "rdp", "vnc", "ftp"]},
+            "folderId": {"type": ["string", "null"]},
+            "host": {"type": "string"},
+            "user": {"type": "string"},
+            "port": {"type": ["integer", "null"], "minimum": 1, "maximum": 65535},
+            "keyPath": {"type": ["string", "null"]},
+            "proxyJump": {"type": ["string", "null"]},
+            "authMethod": {"type": ["string", "null"], "enum": ["keyFile", "password", "agent", null]},
+            "localShell": {"type": ["string", "null"]},
+            "localStartupDirectory": {"type": ["string", "null"]},
+            "localStartupScript": {"type": ["string", "null"]},
+            "url": {"type": ["string", "null"]},
+            "dataPartition": {"type": ["string", "null"]},
+            "useTmuxSessions": {"type": ["boolean", "null"]},
+            "serialLine": {"type": ["string", "null"]},
+            "serialSpeed": {"type": ["integer", "null"], "minimum": 1},
+        },
+        "required": ["name", "type"],
+        "additionalProperties": true,
+    })
+}
+
 fn dangerous_tool(name: &str) -> bool {
     // Any segment named `dangerous` in the dotted MCP tool name flags the
     // tool as gated by `built_in_mcp_allow_all_dangerous`. This lets safe
@@ -951,6 +983,10 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
     match name {
         "kkterm.workspace.connections.list" => {
             let raw = crate::ai::connection_tool(app, "connection_list", json!({}));
+            parse_tool_json(&raw)
+        }
+        "kkterm.workspace.connections.create" => {
+            let raw = crate::ai::connection_tool(app, "connection_create", args);
             parse_tool_json(&raw)
         }
         "kkterm.workspace.connections.open" => {
@@ -1482,6 +1518,7 @@ mod tests {
             .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_string))
             .collect();
         assert!(names.contains(&"kkterm.workspace.connections.open".to_string()));
+        assert!(names.contains(&"kkterm.workspace.connections.create".to_string()));
         assert!(names.contains(&"kkterm.workspace.connections.screenshot".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.send_input".to_string()));
         assert!(names.contains(&"kkterm.workspace.sessions.read_buffer".to_string()));

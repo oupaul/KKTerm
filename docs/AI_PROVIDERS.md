@@ -37,7 +37,12 @@ cached authentication. The API key field is disabled in these modes. Keep this
 bridge conservative: use documented ACP or non-interactive CLI modes, avoid
 passing KKTerm secrets through environment variables or prompt text, and do not
 claim parity with KKTerm's native tool-calling loop unless ACP tool/client
-capabilities have been explicitly implemented.
+capabilities have been explicitly implemented. ACP-backed CLI sessions attach
+KKTerm's built-in `kkterm` MCP server so published safe tools such as
+`kkterm.workspace.connections.create` can run through the same bridge used by
+external MCP clients. If ACP setup fails and KKTerm falls back to the one-shot
+CLI command path, the assistant must return suggestions instead of claiming it
+called KKTerm tools.
 
 ## Rust provider structure
 
