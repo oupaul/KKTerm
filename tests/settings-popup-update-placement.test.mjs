@@ -52,7 +52,7 @@ test("Settings renders as an app-owned popup over the active base Module", async
   assert.doesNotMatch(settingsSource, /<p className="panel-label">KKTerm<\/p>/);
   assert.match(settingsStyles, /\.settings-backdrop\s*\{[^}]*position:\s*fixed;/s);
   assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*overflow:\s*hidden;[^}]*box-shadow:\s*var\(--shadow\)/s);
-  assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*padding:\s*13px 17px 14px;/s);
+  assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*padding:\s*13px 2px 14px 17px;/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.settings-page-header\s*\{[^}]*position:\s*static;[^}]*margin:\s*0 0 12px;[^}]*padding:\s*0 58px 10px 0;/s);
   assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*grid-template-rows:\s*auto minmax\(0,\s*1fr\);/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.settings-layout\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s);

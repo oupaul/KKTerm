@@ -1988,7 +1988,7 @@
   height: calc(100vh - var(--app-titlebar-height, 0px) - 20px);
   max-height: calc(100vh - var(--app-titlebar-height, 0px) - 20px);
   overflow: hidden;
-  padding: 13px 17px 14px;
+  padding: 13px 2px 14px 17px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -2029,9 +2029,11 @@
 }
 
 .settings-popup .settings-layout {
+  width: 100%;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 28px;
   align-items: stretch;
+  justify-content: start;
   max-width: none;
   min-height: 0;
   overflow: hidden;
@@ -2041,6 +2043,7 @@
   position: relative;
   top: auto;
   align-self: start;
+  width: 220px;
   gap: 1px;
   overflow: visible;
   padding: 6px;
@@ -2053,12 +2056,19 @@
 }
 
 .settings-popup .settings-content {
+  width: 100%;
   align-self: stretch;
+  justify-self: start;
   min-height: 0;
   height: 100%;
   overflow: auto;
   padding-right: 2px;
   scrollbar-gutter: stable;
+}
+
+.settings-popup .settings-card {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 860px) {
@@ -2080,6 +2090,7 @@
   .settings-popup .settings-nav {
     position: relative;
     top: auto;
+    width: auto;
   }
 
   .app-update-check-row {
