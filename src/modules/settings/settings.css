@@ -1148,6 +1148,99 @@
   flex: 0 0 auto;
 }
 
+.app-update-summary-grid {
+  gap: 0;
+}
+
+.app-update-summary-grid .settings-summary-item {
+  min-height: 0;
+  padding: 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.app-update-summary-grid .settings-summary-item:first-child {
+  border-radius: 7px 7px 0 0;
+}
+
+.app-update-summary-grid .settings-summary-item + .settings-summary-item {
+  border-top: 0;
+}
+
+.app-update-summary-grid .settings-summary-item:last-child {
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 0 7px 7px;
+}
+
+.app-update-check-row {
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  gap: 20px;
+}
+
+.app-update-summary-grid .app-update-check-row > strong {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.settings-section .settings-toggle-row.app-update-auto-checks,
+.app-update-auto-checks span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-section .settings-toggle-row.app-update-auto-checks {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.app-update-auto-checks strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+  line-height: 1.25;
+}
+
+.app-update-auto-checks small {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.35;
+}
+
+.app-update-check-controls {
+  grid-column: 3;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.app-update-check-controls .secondary-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.app-update-auto-checks .toggle-switch {
+  margin-top: 0;
+  margin-left: 0;
+}
+
 .settings-icon-danger-button {
   display: inline-flex;
   width: 32px;
@@ -1873,4 +1966,128 @@
 .built-in-mcp-config-table td:nth-child(2) {
   white-space: normal;
   text-align: left;
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: var(--app-titlebar-height, 0px) 0 0 48px;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  background: rgba(18, 24, 38, 0.34);
+  backdrop-filter: blur(1px);
+}
+
+.settings-popup.settings-page {
+  position: relative;
+  inset: auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1440px, calc(100vw - 68px));
+  height: calc(100vh - var(--app-titlebar-height, 0px) - 20px);
+  max-height: calc(100vh - var(--app-titlebar-height, 0px) - 20px);
+  overflow: hidden;
+  padding: 13px 17px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow), 0 24px 72px rgba(0, 0, 0, 0.24);
+}
+
+.settings-popup .settings-page-header {
+  position: static;
+  z-index: 1;
+  max-width: none;
+  margin: 0 0 12px;
+  padding: 0 58px 10px 0;
+  background: var(--surface);
+}
+
+.settings-popup .connection-dialog-close {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.settings-popup .connection-dialog-close:hover,
+.settings-popup .connection-dialog-close:focus-visible {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.settings-popup .settings-layout {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+  max-width: none;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-popup .settings-nav {
+  position: relative;
+  top: auto;
+  align-self: start;
+  gap: 1px;
+  overflow: visible;
+  padding: 6px;
+}
+
+.settings-popup .settings-nav-item {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.settings-popup .settings-content {
+  align-self: stretch;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 860px) {
+  .settings-backdrop {
+    inset: var(--app-titlebar-height, 0px) 0 0 48px;
+    padding: 14px;
+  }
+
+  .settings-popup.settings-page {
+    width: calc(100vw - 76px);
+    height: calc(100vh - var(--app-titlebar-height, 0px) - 28px);
+    max-height: calc(100vh - var(--app-titlebar-height, 0px) - 28px);
+  }
+
+  .settings-popup .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-popup .settings-nav {
+    position: relative;
+    top: auto;
+  }
+
+  .app-update-check-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-update-check-controls {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
 }

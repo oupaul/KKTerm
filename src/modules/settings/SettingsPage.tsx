@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from "react";
 import {
-  ArrowLeft,
   Bot,
   Coffee,
   Info,
@@ -15,6 +14,7 @@ import {
   Settings as SettingsIcon,
   SquareStack,
   Terminal,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
@@ -64,20 +64,29 @@ export function SettingsPage({
   }, [assistantContext, onAssistantContextChange]);
 
   return (
-    <main className="settings-page">
-      <header className="settings-page-header">
-        <div>
-          <p className="panel-label">KKTerm</p>
-          <h1>{t("settings.title")}</h1>
-        </div>
-        <button className="toolbar-button" type="button" onClick={onBack}>
-          <ArrowLeft size={15} />
-          {t("common.back")}
-        </button>
-      </header>
+    <div className="settings-backdrop" role="presentation">
+      <main
+        aria-label={t("settings.title")}
+        aria-modal="true"
+        className="settings-popup settings-page"
+        role="dialog"
+      >
+        <header className="settings-page-header">
+          <div>
+            <p className="panel-label">{t("settings.title")}</p>
+          </div>
+          <button
+            aria-label={t("common.close")}
+            className="connection-dialog-close"
+            type="button"
+            onClick={onBack}
+          >
+            <X size={16} />
+          </button>
+        </header>
 
-      <div className="settings-layout">
-        <aside className="settings-nav" aria-label={t("settings.sectionsNav")}>
+        <div className="settings-layout">
+          <aside className="settings-nav" aria-label={t("settings.sectionsNav")}>
           <button
             className={settingsNavItemClass("general-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("general-settings")}
@@ -190,31 +199,32 @@ export function SettingsPage({
             <Info size={16} />
             <span>{t("settings.sectionAbout")}</span>
           </button>
-        </aside>
+          </aside>
 
-        <section
-          className="settings-content"
-          aria-label={t("settings.settingsContent")}
-        >
-          {activeSectionId === "general-settings" && <GeneralSettings />}
-          {activeSectionId === "appearance-settings" && (
-            <AppearanceSettings onResetLayout={onResetLayout} />
-          )}
-          {activeSectionId === "dashboard-settings" && <DashboardSettings />}
-          {activeSectionId === "workspace-settings" && <WorkspaceSettings />}
-          {activeSectionId === "installer-settings" && <InstallerSettings />}
-          {activeSectionId === "credentials-settings" && <CredentialsSettings />}
-          {activeSectionId === "assistant-settings" && <AiSettings />}
-          {activeSectionId === "ssh-settings" && <SshSettings />}
-          {activeSectionId === "terminal-settings" && <TerminalSettingsPage />}
-          {activeSectionId === "url-settings" && <UrlSettings />}
-          {activeSectionId === "rdp-settings" && <RdpSettings />}
-          {activeSectionId === "vnc-settings" && <VncSettings />}
-          {activeSectionId === "dont-sleep-settings" && <DontSleepSettings />}
-          {activeSectionId === "about-settings" && <AboutSettings />}
-        </section>
-      </div>
-    </main>
+          <section
+            className="settings-content"
+            aria-label={t("settings.settingsContent")}
+          >
+            {activeSectionId === "general-settings" && <GeneralSettings />}
+            {activeSectionId === "appearance-settings" && (
+              <AppearanceSettings onResetLayout={onResetLayout} />
+            )}
+            {activeSectionId === "dashboard-settings" && <DashboardSettings />}
+            {activeSectionId === "workspace-settings" && <WorkspaceSettings />}
+            {activeSectionId === "installer-settings" && <InstallerSettings />}
+            {activeSectionId === "credentials-settings" && <CredentialsSettings />}
+            {activeSectionId === "assistant-settings" && <AiSettings />}
+            {activeSectionId === "ssh-settings" && <SshSettings />}
+            {activeSectionId === "terminal-settings" && <TerminalSettingsPage />}
+            {activeSectionId === "url-settings" && <UrlSettings />}
+            {activeSectionId === "rdp-settings" && <RdpSettings />}
+            {activeSectionId === "vnc-settings" && <VncSettings />}
+            {activeSectionId === "dont-sleep-settings" && <DontSleepSettings />}
+            {activeSectionId === "about-settings" && <AboutSettings />}
+          </section>
+        </div>
+      </main>
+    </div>
   );
 }
 

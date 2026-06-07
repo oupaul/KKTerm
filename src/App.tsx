@@ -212,6 +212,10 @@ function App() {
     return { ok: true };
   }
 
+  const visibleBasePage = isOverlayPage(activePage)
+    ? previousBasePageRef.current
+    : activePage;
+
   return (
     <div
       className="app-root"
@@ -241,7 +245,7 @@ function App() {
         onConnectionsToggle={toggleConnectionPanel}
         onNavigate={navigateToPage}
       />
-      <div key="workspace-page" className="workspace-page" {...ariaHidden(activePage !== "workspace")}>
+      <div key="workspace-page" className="workspace-page" {...ariaHidden(visibleBasePage !== "workspace")}>
         <ConnectionSidebar
           onExternalOpenConnection={() => navigateToPage("workspace")}
           onTogglePanel={toggleConnectionPanel}
@@ -260,7 +264,7 @@ function App() {
           {hideTopTabButtons ? null : <TabStrip />}
           <WorkspaceCanvas
             onOpenAssistant={openAssistantPanel}
-            workspaceActive={activePage === "workspace"}
+            workspaceActive={visibleBasePage === "workspace"}
           />
         </main>
       </div>
@@ -298,12 +302,12 @@ function App() {
       {dashboardMounted ? (
         <DashboardPage
           key="dashboard-page"
-          dashboardActive={activePage === "dashboard"}
+          dashboardActive={visibleBasePage === "dashboard"}
           onAssistantContextChange={setDashboardAssistantContext}
         />
       ) : null}
       {installerMounted ? (
-        <InstallerPage key="installer-page" active={activePage === "installer"} />
+        <InstallerPage key="installer-page" active={visibleBasePage === "installer"} />
       ) : null}
       <TutorialOverlay
         key="tutorial-overlay"

@@ -8,7 +8,7 @@
 
 > Settings page styling is consistent across sections. Related controls live inside the shared `settings-subsection settings-fieldset` group so the group title sits in the border. Editable controls look editable; disabled / readonly controls stay muted. Delete buttons inside Settings are icon-only red trash cans (no visible "Delete" text). Destructive Settings-wide actions live in **General → Settings data**, behind app-owned confirmation dialogs — not inside feature-specific sections.
 
-Settings is owned by `src/modules/settings/SettingsPage.tsx`. Persisted bootstrap (`useBootstrapSettings`) lives in `src/lib/settings.ts`; add new persisted settings there, not via cloned effects in `src/App.tsx`.
+Settings is owned by `src/modules/settings/SettingsPage.tsx` and opens as an app-owned popup over the current Module. Persisted bootstrap (`useBootstrapSettings`) lives in `src/lib/settings.ts`; add new persisted settings there, not via cloned effects in `src/App.tsx`.
 
 The universal AI Assistant panel remains visible on Settings. `src/modules/settings/settingsAssistantContext.ts` publishes the active section, visible control keys, and tutorial targets to the assistant. The Tutorial tool can navigate to the owning Settings section before highlighting known targets after the user accepts a navigation offer.
 
@@ -49,6 +49,7 @@ Settings tutorial targets:
 ## General
 
 - Defaults group `settings.generalDefaults`.
+- App Update subsection `settings.softwareUpdates`: shows the installed version with `settings.version`, the last manual update check with `settings.lastCheckedAt` / `settings.lastCheckedNever`, and the manual `settings.checkForUpdates` action. Startup update checks are controlled by `settings.autoUpdateChecks` (hint `settings.autoUpdateChecksHint`).
 - Language picker: label `settings.language`. Native names come from the `languages` namespace. See [16-localization.md](16-localization.md).
 - Start with Windows minimized: toggle `settings.autoStartWithWindows` (hint `settings.autoStartWithWindowsHint`). When on, KKTerm registers itself for the current Windows user, launches after sign-in, and starts minimized; if `settings.minimizeToTray` is also on, the launch window hides to the system tray.
 - Minimize to tray: toggle `settings.minimizeToTray` (hint `settings.minimizeToTrayHint`). When on, the title-bar close button hides the window; when off, it exits. Tray "Exit" (`app.trayExit`) always quits.
@@ -167,7 +168,7 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 
 `settings.sectionAbout`. Shows version (`settings.version`) and slogan (`settings.appSlogan`). The version value should match `package.json`'s `version` field. License info, GitHub link, and acknowledgements live here.
 
-`settings.autoUpdateChecks` controls startup update checks, and manual checks surface update state through `settings.checkingForUpdates`, `settings.updateNoUpdates`, and `settings.updateCheckFailed`. When an app update is available, the `settings.updatePromptLabel` dialog shows `settings.updateAvailableBody`, renders `settings.updateNotes` from the release markdown, and offers `settings.updateOpenDownloadPage`, `settings.updateDownloadAndInstall`, or `settings.updateLater` when the matching installer and checksum are available. `settings.updateDownloadAndInstall` downloads the installer, verifies the release checksum, closes KKTerm, and launches the installer after the app exits.
+Manual app update checks live in General -> `settings.softwareUpdates`, not About. `settings.autoUpdateChecks` controls startup update checks, and manual checks surface update state through `settings.checkingForUpdates`, `settings.updateNoUpdates`, and `settings.updateCheckFailed`. When an app update is available, the `settings.updatePromptLabel` dialog shows `settings.updateAvailableBody`, renders `settings.updateNotes` from the release markdown, and offers `settings.updateOpenDownloadPage`, `settings.updateDownloadAndInstall`, or `settings.updateLater` when the matching installer and checksum are available. `settings.updateDownloadAndInstall` downloads the installer, verifies the release checksum, closes KKTerm, and launches the installer after the app exits.
 
 
 ## Built-in MCP Server

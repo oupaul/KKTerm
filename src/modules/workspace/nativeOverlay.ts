@@ -6,6 +6,7 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
   ".transfer-conflict-backdrop",
   ".connection-dialog-backdrop",
   ".app-launcher-dialog-backdrop",
+  ".settings-backdrop",
   ".settings-page",
   ".tutorial-overlay",
   ".dw-catalog-backdrop",
@@ -14,6 +15,7 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
 
 const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
   ".connection-dialog-backdrop",
+  ".settings-backdrop",
   ".dw-catalog-backdrop",
   ".screenshot-region-overlay",
 ].join(", ");

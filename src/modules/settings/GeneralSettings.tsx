@@ -3,12 +3,14 @@ import {
   Download,
   FolderOpen,
   Languages,
+  RefreshCw,
   RotateCcw,
   Save,
   Settings as SettingsIcon,
   Upload,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
 import {
   defaultAppearanceSettings,
   defaultAiProviderSettings,
@@ -42,7 +44,9 @@ import {
   EMAIL_SMTP_SECRET_OWNER_ID,
   allAiProviderSecretOwnerIds,
 } from "../../lib/settings";
-import { SettingsSectionHeader } from "./shared";
+import { useLastUpdateCheckAt } from "../../lib/lastUpdateCheck";
+import { ABOUT_PRODUCT } from "./aboutData";
+import { SettingsSectionHeader, SettingsSummary } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 const STATUS_BAR_MONITOR_INTERVAL_OPTIONS = [5, 15, 30, 60, 300] as const;
@@ -61,7 +65,8 @@ function formatBackupDate(value?: string | null) {
 }
 
 export function GeneralSettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lastCheckedAt = useLastUpdateCheckAt();
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>(detectLanguage);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
@@ -292,6 +297,11 @@ export function GeneralSettings() {
   }
 
   const lastBackup = formatBackupDate(generalSettings.lastBackupAt);
+  const lastCheckedLabel = lastCheckedAt
+    ? t("settings.lastCheckedAt", {
+        time: new Date(lastCheckedAt).toLocaleString(i18n.language),
+      })
+    : t("settings.lastCheckedNever");
 
   return (
     <section className="settings-card settings-section">
@@ -311,6 +321,40 @@ export function GeneralSettings() {
         label={t("settings.sectionGeneral")}
         title={t("settings.generalDefaults")}
       />
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.softwareUpdates")}</legend>
+        <div className="settings-summary-grid compact app-update-summary-grid">
+          <SettingsSummary label={t("settings.version")} value={ABOUT_PRODUCT.version} />
+          <div className="settings-summary-item app-update-check-row">
+            <span>{t("settings.updates")}</span>
+            <strong>{lastCheckedLabel}</strong>
+            <div className="app-update-check-controls">
+              <label className="settings-toggle-row app-update-auto-checks">
+                <span>
+                  <strong>{t("settings.autoUpdateChecks")}</strong>
+                </span>
+                <ToggleSwitch
+                  checked={draft.autoUpdateChecksEnabled}
+                  onChange={(checked) =>
+                    setDraft((s) => ({ ...s, autoUpdateChecksEnabled: checked }))
+                  }
+                />
+              </label>
+              <button
+                className="secondary-button"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent(CHECK_FOR_APP_UPDATES_EVENT))
+                }
+                type="button"
+              >
+                <RefreshCw size={16} />
+                {t("settings.checkForUpdates")}
+              </button>
+            </div>
+          </div>
+        </div>
+      </fieldset>
 
       <div className="form-grid general-settings-grid">
         <label data-tutorial-id="settings.language">
@@ -486,18 +530,6 @@ export function GeneralSettings() {
             <span>
               <strong>{t("settings.autoBackup")}</strong>
               <small>{t("settings.autoBackupHint")}</small>
-            </span>
-          </label>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.autoUpdateChecksEnabled}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, autoUpdateChecksEnabled: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.autoUpdateChecks")}</strong>
-              <small>{t("settings.autoUpdateChecksHint")}</small>
             </span>
           </label>
         </div>
