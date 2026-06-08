@@ -959,9 +959,6 @@ export function WebViewWorkspace({
               />
             </form>
           </div>
-          <span className="webview-title-center">
-            {tab.title}
-          </span>
           <div className="terminal-pane-actions">
             {fillStatus ? <span className="webview-toolbar-status">{fillStatus}</span> : null}
             <button

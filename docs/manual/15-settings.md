@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `settings.*` (full namespace — over 400 keys; section roots listed below), including General keys `settings.autoStartWithWindows`, `settings.minimizeToTray`, `settings.useDirectxScreenCapture`, `settings.statusBar`, `settings.statusBarVisible`, `settings.statusBarMonitor`, `settings.statusBarMonitorInterval`, `settings.debug`, `settings.advancedDebugging`, `settings.openLogFolder`, Don't Sleep keys `settings.sectionDontSleep`, `settings.dontSleepForegroundOnly`, SSH X server keys `settings.xServer*`, Appearance keys for theme/font/layout, and AI provider keys `settings.apiMode`, `settings.apiModeChatCompletions`, `settings.apiModeResponses`, `settings.extraHeaders`, `settings.extraHeadersPlaceholder`, `settings.useCodexCli`, `settings.useClaudeCli`, and `settings.assistantSkills*`
-- Topics: General, Appearance, Dashboard, Workspace, Don't Sleep, Credentials & MCP, AI Assistant, assistant tool defaults, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, SSH, managed VcXsrv X server launcher, Terminal, network troubleshooting, DNS, DHCP, firewall, TLS certificates, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all; Windows startup; launch minimized; DirectX screenshot capture; Status Bar visibility; Status Bar CPU/RAM/Network monitor; custom title bar; RDP session stability (WebView2); Advanced Debugging; AI Assistant debug logs; MCP debug logs; built-in MCP config; random dynamic Dashboard backgrounds; terminal default transparency; random dynamic terminal backgrounds; hidden top Tab Strip; Child Connection Tabs in the Connection Tree; foreground-only keep-awake behavior
+- Topics: General, Appearance, Workspace, Dashboard, Don't Sleep, Credentials & MCP, AI Assistant, assistant tool defaults, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, SSH, managed VcXsrv X server launcher, Terminal, network troubleshooting, DNS, DHCP, firewall, TLS certificates, RDP, VNC, URL, About; settings draft/save/reset; backup ZIP; settings import; reset all; Windows startup; launch minimized; DirectX screenshot capture; Status Bar visibility; Status Bar CPU/RAM/Network monitor; custom title bar; RDP session stability (WebView2); Advanced Debugging; AI Assistant debug logs; MCP debug logs; built-in MCP config; random dynamic Dashboard backgrounds; terminal default transparency; random dynamic terminal backgrounds; hidden top Tab Strip; Child Connection Tabs in the Connection Tree; foreground-only keep-awake behavior
 - Synonyms: "preferences", "options", "config", "theme", "dark mode", "color", "language", "API key", "Codex CLI", "Claude Code CLI", "Claude CLI", "CLI backend", "CLI auth", "import settings", "factory reset", "show me where", "start with Windows", "run at login", "launch minimized", "custom title bar", "titlebar", "window chrome", "DirectX", "DXGI", "screen capture", "screenshot acceleration", "status bar", "show status bar", "hide status bar", "CPU monitor", "RAM monitor", "network monitor", "host usage", "performance overhead", "debug", "diagnostics", "open logs", "log folder", "AI debug log", "MCP debug log", "Installer Helper debug log", "heartbeat debug log", "aiassistant.debug.log", "mcp.debug.log", "installer.helper.debug.log", "kkterm-heartbeat.debug.log", "ui.debug.log", "UI debug log", "terminal focus", "MCP config", "mcpServers", "mcp_servers", "TOML", "kkterm-cli", "Codex MCP", "Claude MCP", "expand tools", "collapse skills", "random wallpaper", "dynamic wallpaper", "dashboard background", "terminal wallpaper", "terminal transparency", "terminal background", "top tabs", "tab buttons", "hide tabs", "connection tree tabs", "child tabs", "saved tabs", "X11", "X forwarding", "X server", "VcXsrv", "network-connectivity-troubleshooter", "dashboard-widget-designer", "dashboard-data-visualization", "desktop-accessibility-ui", "dns-dhcp-troubleshooter", "firewall-port-troubleshooter", "tls-certificate-troubleshooter"
 
 > Settings page styling is consistent across sections. Related controls live inside the shared `settings-subsection settings-fieldset` group so the group title sits in the border. Editable controls look editable; disabled / readonly controls stay muted. Delete buttons inside Settings are icon-only red trash cans (no visible "Delete" text). Destructive Settings-wide actions live in **General → Settings data**, behind app-owned confirmation dialogs — not inside feature-specific sections.
@@ -16,6 +16,7 @@ Settings tutorial targets:
 
 - General: `settings.language`, `settings.workspaceAccess`, `settings.useDirectxScreenCapture`, `settings.statusBar`, `settings.settingsData`, `settings.debug`.
 - Appearance: `settings.appUiFontFamily`, `settings.appearance.colorScheme`, `settings.resetLayout`.
+- Workspace: `settings.connectedConnectionsRail`, `settings.hideTopTabButtons`, `settings.submitAiAttachmentsDirectly`, `settings.separateSplitTerminalBackgrounds`.
 - Dashboard: `settings.dashboardDefaultLanding`, `settings.dashboardUseRandomDynamicBackground`, `settings.dashboardMaxActiveScriptWidgets`.
 - Credentials: `settings.credentialsStored`, `settings.widgetCredentialsStored`.
 - AI Assistant: `settings.aiProvider`, `settings.aiToolsTitle`, `settings.aiCustomInstructions`, `settings.assistantSkillsTitle`, `settings.mcpServersTitle`, `settings.allowInsecureMcpHttp`.
@@ -73,16 +74,6 @@ Settings tutorial targets:
 - Layout group `settings.layout`. Reset layout: `settings.resetLayout` (description `settings.resetLayoutDescription`) — resets Connections / AI panel widths.
 - Save status: `settings.appearanceSaved`. Reset status `settings.appearanceReset`.
 
-## Dashboard
-
-- Section header `settings.sectionDashboard`. Title and description `settings.dashboardTitle` / `settings.dashboardDescription`.
-- General group `settings.dashboardGeneral`:
-  - Default landing view: `settings.dashboardDefaultLanding`. `settings.dashboardLandingLast` reopens the last active Dashboard View; other options are durable Dashboard View titles.
-  - Random dynamic background: `settings.dashboardUseRandomDynamicBackground` (hint `settings.dashboardUseRandomDynamicBackgroundDesc`). When on, newly-created Dashboard Views automatically get one random dynamic background; existing Views are unchanged.
-  - Widget network tools remain enabled for script widgets that declare `permissions.networkTools`. The underlying setting keys `settings.dashboardAllowWidgetNetworkTools` / `settings.dashboardAllowWidgetNetworkToolsDesc` are hidden from Settings for now.
-- Performance group `settings.dashboardPerformance`:
-  - Active script widgets cap: `settings.dashboardMaxActiveScriptWidgets` (hint `settings.dashboardMaxActiveScriptWidgetsHint`).
-
 ## Workspace
 
 - Section header `settings.sectionWorkspace`.
@@ -95,6 +86,16 @@ Settings tutorial targets:
 - Terminal backgrounds group `settings.terminalBackgrounds`.
 - Toggle `settings.separateSplitTerminalBackgrounds` (hint `settings.separateSplitTerminalBackgroundsDesc`). The default is off: a Connection Tab paints one background behind the terminal workspace content area. When on, split terminal Panes can keep per-Pane terminal backgrounds; a single terminal Tab behaves the same as the default shared mode.
 - Save status: `settings.workspaceSaved`.
+
+## Dashboard
+
+- Section header `settings.sectionDashboard`. Title and description `settings.dashboardTitle` / `settings.dashboardDescription`.
+- General group `settings.dashboardGeneral`:
+  - Default landing view: `settings.dashboardDefaultLanding`. `settings.dashboardLandingLast` reopens the last active Dashboard View; other options are durable Dashboard View titles.
+  - Random dynamic background: `settings.dashboardUseRandomDynamicBackground` (hint `settings.dashboardUseRandomDynamicBackgroundDesc`). When on, newly-created Dashboard Views automatically get one random dynamic background; existing Views are unchanged.
+  - Widget network tools remain enabled for script widgets that declare `permissions.networkTools`. The underlying setting keys `settings.dashboardAllowWidgetNetworkTools` / `settings.dashboardAllowWidgetNetworkToolsDesc` are hidden from Settings for now.
+- Performance group `settings.dashboardPerformance`:
+  - Active script widgets cap: `settings.dashboardMaxActiveScriptWidgets` (hint `settings.dashboardMaxActiveScriptWidgetsHint`).
 
 ## Don't Sleep
 
