@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bot, Copy, RefreshCw, Save, X } from "lucide-react";
+import { Bot, Copy, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   AI_PROVIDER_DEFINITIONS,
@@ -41,7 +41,11 @@ import {
 } from "../../ai/providerModelOptions";
 import { McpServersControl } from "./McpServers";
 import { AssistantSkillsControl } from "./AssistantSkills";
-import { SettingsCollapsibleFieldset, SettingsSectionHeader } from "./shared";
+import {
+  SettingsCollapsibleFieldset,
+  SettingsSectionHeader,
+  useSettingsSaveRegistration,
+} from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../../i18n/config";
@@ -1500,23 +1504,14 @@ export function AiSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       {showBuiltInMcpConfig && (
         <BuiltInMcpConfigDialog onClose={() => setShowBuiltInMcpConfig(false)} />
       )}
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Bot size={18} />}
         label={t("settings.sectionAiAssistant")}
         title={t("settings.aiProvider")}

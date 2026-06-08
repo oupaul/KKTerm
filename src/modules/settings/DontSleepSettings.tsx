@@ -1,10 +1,10 @@
-import { Coffee, Save } from "lucide-react";
+import { Coffee } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { GeneralSettings } from "../../types";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function DontSleepSettings() {
@@ -22,9 +22,14 @@ export function DontSleepSettings() {
 
   async function handleSave() {
     try {
+      const currentSettings = useWorkspaceStore.getState().generalSettings;
+      const request = {
+        ...currentSettings,
+        dontSleepForegroundOnly: draft.dontSleepForegroundOnly,
+      };
       const saved = isTauriRuntime()
-        ? await invokeCommand("update_general_settings", { request: draft })
-        : draft;
+        ? await invokeCommand("update_general_settings", { request })
+        : request;
       setGeneralSettings(saved);
       setDraft(saved);
       showStatusBarNotice(t("settings.dontSleepSettingsSaved"), {
@@ -37,20 +42,11 @@ export function DontSleepSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Coffee size={18} />}
         label={t("settings.sectionDontSleep")}
         title={t("settings.sectionDontSleep")}

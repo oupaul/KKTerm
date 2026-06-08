@@ -1251,7 +1251,12 @@
     "builtInMcpConfigMethodRunCommandOrManualEdit": "Executar comando / edição manual",
     "builtInMcpConfigMethodManualEdit": "Edição manual",
     "exportSettings": "Exportar",
-    "exportSettingsComplete": "Configurações exportadas: {{filename}}."
+    "exportSettingsComplete": "Configurações exportadas: {{filename}}.",
+    "changesNotSaved": "Alteração não salva",
+    "unsavedQuitTitle": "Configurações não salvas",
+    "unsavedQuitBody": "Salvar suas alterações antes de fechar as Configurações?",
+    "saveAndQuit": "Salvar e sair",
+    "quitWithoutSaving": "Sair sem salvar"
   },
   "connections": {
     "title": "Conexões",

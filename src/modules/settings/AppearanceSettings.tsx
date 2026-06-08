@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FolderOpen, Palette, RotateCcw, Save } from "lucide-react";
+import { FolderOpen, Palette, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   listCustomFontOptions,
@@ -11,7 +11,7 @@ import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { defaultAppearanceSettings } from "../../app-defaults";
 import { useWorkspaceStore } from "../../store";
 import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../../types";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 
 const APP_UI_FONT_OPTIONS = [
   {
@@ -273,20 +273,11 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
   const knownFontSelected = APP_UI_FONT_OPTIONS.some((option) => option.value === draft.appFontFamily);
   const customFontSelected = customFonts.some((font) => font.cssValue === draft.appFontFamily);
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Palette size={18} />}
         label={t("settings.sectionAppearance")}
         title={t("settings.appearanceInterface")}

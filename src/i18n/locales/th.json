@@ -1251,7 +1251,12 @@
     "builtInMcpConfigMethodRunCommandOrManualEdit": "เรียกใช้คำสั่ง / แก้ไขด้วยตนเอง",
     "builtInMcpConfigMethodManualEdit": "แก้ไขด้วยตนเอง",
     "exportSettings": "ส่งออก",
-    "exportSettingsComplete": "ส่งออกการตั้งค่าแล้ว: {{filename}}"
+    "exportSettingsComplete": "ส่งออกการตั้งค่าแล้ว: {{filename}}",
+    "changesNotSaved": "ยังไม่ได้บันทึกการเปลี่ยนแปลง",
+    "unsavedQuitTitle": "การตั้งค่ายังไม่ได้บันทึก",
+    "unsavedQuitBody": "บันทึกการเปลี่ยนแปลงก่อนปิดการตั้งค่าหรือไม่",
+    "saveAndQuit": "บันทึกและออก",
+    "quitWithoutSaving": "ออกโดยไม่บันทึก"
   },
   "connections": {
     "title": "การเชื่อมต่อ",

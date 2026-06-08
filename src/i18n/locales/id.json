@@ -1251,7 +1251,12 @@
     "builtInMcpConfigMethodRunCommandOrManualEdit": "Jalankan perintah / edit manual",
     "builtInMcpConfigMethodManualEdit": "Edit manual",
     "exportSettings": "Ekspor",
-    "exportSettingsComplete": "Pengaturan diekspor: {{filename}}."
+    "exportSettingsComplete": "Pengaturan diekspor: {{filename}}.",
+    "changesNotSaved": "Perubahan belum disimpan",
+    "unsavedQuitTitle": "Pengaturan belum disimpan",
+    "unsavedQuitBody": "Simpan perubahan sebelum menutup Pengaturan?",
+    "saveAndQuit": "Simpan dan keluar",
+    "quitWithoutSaving": "Keluar tanpa menyimpan"
   },
   "connections": {
     "title": "Koneksi",

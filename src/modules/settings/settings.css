@@ -1153,16 +1153,16 @@
 }
 
 .app-update-summary-grid .settings-summary-item {
-  min-height: 0;
-  padding: 10px;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
+  min-height: 54px;
+  padding: 11px 0;
+  background: transparent;
+  border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
 }
 
 .app-update-summary-grid .settings-summary-item:first-child {
-  border-radius: 7px 7px 0 0;
+  border-radius: 0;
 }
 
 .app-update-summary-grid .settings-summary-item + .settings-summary-item {
@@ -1170,8 +1170,8 @@
 }
 
 .app-update-summary-grid .settings-summary-item:last-child {
-  border-bottom: 1px solid var(--border);
-  border-radius: 0 0 7px 7px;
+  border-bottom: 0;
+  border-radius: 0;
 }
 
 .app-update-check-row {
@@ -2000,8 +2000,46 @@
   z-index: 1;
   max-width: none;
   margin: 0 0 12px;
-  padding: 0 58px 10px 0;
+  padding: 0 220px 10px 0;
   background: var(--surface);
+}
+
+.settings-page-actions {
+  position: absolute;
+  top: 6px;
+  right: 48px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 36px;
+  max-width: min(420px, calc(100% - 112px));
+}
+
+.settings-unsaved-label {
+  min-width: 0;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-page-save-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.settings-page-save-button svg {
+  color: var(--accent);
 }
 
 .settings-popup .connection-dialog-close {
@@ -2066,6 +2104,38 @@
   scrollbar-gutter: stable;
 }
 
+.settings-section-panel[hidden] {
+  display: none;
+}
+
+.settings-unsaved-dialog {
+  width: min(420px, calc(100vw - 48px));
+}
+
+.settings-unsaved-dialog .connection-dialog-body p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.settings-unsaved-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.settings-unsaved-dialog .dialog-actions .primary-button,
+.settings-unsaved-dialog .dialog-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.settings-unsaved-dialog .danger-button {
+  color: var(--red);
+}
+
 .settings-popup .settings-card {
   width: 100%;
   box-sizing: border-box;
@@ -2081,6 +2151,14 @@
     width: calc(100vw - 76px);
     height: calc(100vh - var(--app-titlebar-height, 0px) - 28px);
     max-height: calc(100vh - var(--app-titlebar-height, 0px) - 28px);
+  }
+
+  .settings-popup .settings-page-header {
+    padding-right: 176px;
+  }
+
+  .settings-page-actions {
+    max-width: min(320px, calc(100% - 92px));
   }
 
   .settings-popup .settings-layout {

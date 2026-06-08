@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Save, Terminal } from "lucide-react";
+import { Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 function normalizeTerminalSettingsDraft(settings: TerminalSettingsType, t: TFunction): TerminalSettingsType {
@@ -74,20 +74,11 @@ export function TerminalSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Terminal size={18} />}
         label={t("settings.sectionTerminal")}
         title={t("settings.terminalBehavior")}

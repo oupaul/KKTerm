@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Save, SquareStack } from "lucide-react";
+import { SquareStack } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { GeneralSettings } from "../../types";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function WorkspaceSettings() {
@@ -25,9 +25,17 @@ export function WorkspaceSettings() {
 
   async function handleSave() {
     try {
+      const currentSettings = useWorkspaceStore.getState().generalSettings;
+      const request = {
+        ...currentSettings,
+        hideTopTabButtons: draft.hideTopTabButtons,
+        separateSplitTerminalBackgrounds: draft.separateSplitTerminalBackgrounds,
+        showConnectedConnectionsInRail: draft.showConnectedConnectionsInRail,
+        submitAiAttachmentsDirectly: draft.submitAiAttachmentsDirectly,
+      };
       const saved = isTauriRuntime()
-        ? await invokeCommand("update_general_settings", { request: draft })
-        : draft;
+        ? await invokeCommand("update_general_settings", { request })
+        : request;
       setGeneralSettings(saved);
       setDraft(saved);
       showStatusBarNotice(t("settings.workspaceSaved"), { tone: "success" });
@@ -39,20 +47,11 @@ export function WorkspaceSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<SquareStack size={18} />}
         label={t("settings.sectionWorkspace")}
         title={t("settings.sectionWorkspace")}

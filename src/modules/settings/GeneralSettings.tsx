@@ -5,7 +5,6 @@ import {
   Languages,
   RefreshCw,
   RotateCcw,
-  Save,
   Settings as SettingsIcon,
   Upload,
 } from "lucide-react";
@@ -46,7 +45,11 @@ import {
 } from "../../lib/settings";
 import { useLastUpdateCheckAt } from "../../lib/lastUpdateCheck";
 import { ABOUT_PRODUCT } from "./aboutData";
-import { SettingsSectionHeader, SettingsSummary } from "./shared";
+import {
+  SettingsSectionHeader,
+  SettingsSummary,
+  useSettingsSaveRegistration,
+} from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 const STATUS_BAR_MONITOR_INTERVAL_OPTIONS = [5, 15, 30, 60, 300] as const;
@@ -99,7 +102,9 @@ export function GeneralSettings() {
   const [draft, setDraft] = useState(generalSettings);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const hasChanges = JSON.stringify(draft) !== JSON.stringify(generalSettings);
+  const hasChanges =
+    JSON.stringify(draft) !== JSON.stringify(generalSettings) ||
+    currentLanguage !== detectLanguage();
 
   useEffect(() => {
     setDraft(generalSettings);
@@ -112,6 +117,7 @@ export function GeneralSettings() {
         : draft;
       setGeneralSettings(saved);
       setDraft(saved);
+      await switchLanguage(currentLanguage);
       showStatusBarNotice(t("settings.generalDefaultsSaved"), { tone: "success" });
     } catch (saveError) {
       showStatusBarNotice(saveError instanceof Error ? saveError.message : String(saveError), { tone: "error" });
@@ -303,20 +309,11 @@ export function GeneralSettings() {
       })
     : t("settings.lastCheckedNever");
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<SettingsIcon size={18} />}
         label={t("settings.sectionGeneral")}
         title={t("settings.generalDefaults")}
@@ -366,7 +363,6 @@ export function GeneralSettings() {
             onChange={(event) => {
               const lang = event.currentTarget.value as SupportedLanguage;
               setCurrentLanguage(lang);
-              void switchLanguage(lang);
             }}
           >
             {SUPPORTED_LANGUAGES.map((lang) => (

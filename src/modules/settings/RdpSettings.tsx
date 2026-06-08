@@ -1,4 +1,4 @@
-import { Monitor, Save } from "lucide-react";
+import { Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
@@ -11,7 +11,7 @@ import {
   type RdpRemoteResolution,
   type RdpSettings as RdpSettingsModel,
 } from "../../types";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function RdpSettings() {
@@ -39,15 +39,11 @@ export function RdpSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button className="toolbar-button" disabled={!hasChanges} onClick={() => void handleSave()} type="button">
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Monitor size={18} />}
         label={t("settings.sectionRdp")}
         title={t("settings.qualityDefaults")}

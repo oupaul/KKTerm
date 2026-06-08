@@ -1,4 +1,11 @@
-import { useEffect, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   Bot,
   Coffee,
@@ -10,6 +17,7 @@ import {
   Network,
   Package,
   Palette,
+  Save,
   Server,
   Settings as SettingsIcon,
   SquareStack,
@@ -37,8 +45,29 @@ import {
   type SettingsAssistantContext,
   type SettingsSectionId,
 } from "./settingsAssistantContext";
+import {
+  SettingsSaveProvider,
+  type SettingsSaveRegistration,
+} from "./shared";
 
 export { AI_PROVIDER_SECRET_OWNER_ID };
+
+const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
+  "general-settings",
+  "appearance-settings",
+  "dashboard-settings",
+  "workspace-settings",
+  "installer-settings",
+  "credentials-settings",
+  "assistant-settings",
+  "ssh-settings",
+  "terminal-settings",
+  "url-settings",
+  "rdp-settings",
+  "vnc-settings",
+  "dont-sleep-settings",
+  "about-settings",
+];
 
 export function SettingsPage({
   activeSectionId,
@@ -54,17 +83,104 @@ export function SettingsPage({
   onResetLayout: () => void;
 }) {
   const { t } = useTranslation();
+  const [saveRegistrations, setSaveRegistrations] = useState<
+    Partial<Record<SettingsSectionId, SettingsSaveRegistration>>
+  >({});
+  const [visitedSectionIds, setVisitedSectionIds] = useState<Set<SettingsSectionId>>(
+    () => new Set([activeSectionId]),
+  );
+  const [unsavedQuitDialogOpen, setUnsavedQuitDialogOpen] = useState(false);
   const assistantContext = useMemo(
     () => buildSettingsAssistantContext(activeSectionId, (key, fallback) => t(key, fallback)),
     [activeSectionId, t],
   );
+  const registerSaveState = useCallback((sectionId: string, registration: SettingsSaveRegistration) => {
+    setSaveRegistrations((current) => ({
+      ...current,
+      [sectionId as SettingsSectionId]: registration,
+    }));
+  }, []);
+  const dirtyRegistrations = SETTINGS_SECTION_IDS
+    .map((sectionId) => saveRegistrations[sectionId])
+    .filter((registration): registration is SettingsSaveRegistration =>
+      Boolean(registration?.hasChanges && registration.onSave),
+    );
+  const hasUnsavedChanges = dirtyRegistrations.length > 0;
 
   useEffect(() => {
     onAssistantContextChange(assistantContext);
   }, [assistantContext, onAssistantContextChange]);
 
+  useEffect(() => {
+    setVisitedSectionIds((current) => {
+      if (current.has(activeSectionId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(activeSectionId);
+      return next;
+    });
+  }, [activeSectionId]);
+
+  async function handleSaveAllDirty({ quitAfter = false }: { quitAfter?: boolean } = {}) {
+    const registrationsToSave = SETTINGS_SECTION_IDS
+      .map((sectionId) => saveRegistrations[sectionId])
+      .filter((registration): registration is SettingsSaveRegistration =>
+        Boolean(registration?.hasChanges && registration.onSave),
+      );
+
+    for (const registration of registrationsToSave) {
+      await registration.onSave?.();
+    }
+
+    if (quitAfter) {
+      onBack();
+    }
+  }
+
+  function requestCloseSettings() {
+    if (hasUnsavedChanges) {
+      setUnsavedQuitDialogOpen(true);
+      return;
+    }
+    onBack();
+  }
+
+  function handleQuitWithoutSaving() {
+    setUnsavedQuitDialogOpen(false);
+    onBack();
+  }
+
+  function renderSettingsSection(sectionId: SettingsSectionId, children: ReactNode) {
+    const shouldMount = visitedSectionIds.has(sectionId) || activeSectionId === sectionId;
+    return (
+      <SettingsSaveProvider
+        key={sectionId}
+        onRegister={registerSaveState}
+        sectionId={sectionId}
+      >
+        <div
+          className="settings-section-panel"
+          hidden={activeSectionId !== sectionId}
+        >
+          {shouldMount ? children : null}
+        </div>
+      </SettingsSaveProvider>
+    );
+  }
+
+  function handleBackdropClick(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) {
+      requestCloseSettings();
+    }
+  }
+
   return (
-    <div className="settings-backdrop" role="presentation">
+    <div
+      className="settings-backdrop"
+      onClick={handleBackdropClick}
+      role="presentation"
+    >
       <main
         aria-label={t("settings.title")}
         aria-modal="true"
@@ -75,11 +191,28 @@ export function SettingsPage({
           <div>
             <p className="panel-label">{t("settings.title")}</p>
           </div>
+          <div className="settings-page-actions">
+            {hasUnsavedChanges ? (
+              <>
+                <span className="settings-unsaved-label">
+                  {t("settings.changesNotSaved")}
+                </span>
+                <button
+                  className="toolbar-button settings-page-save-button"
+                  onClick={() => void handleSaveAllDirty()}
+                  type="button"
+                >
+                  <Save size={15} />
+                  {t("settings.save")}
+                </button>
+              </>
+            ) : null}
+          </div>
           <button
             aria-label={t("common.close")}
             className="connection-dialog-close"
             type="button"
-            onClick={onBack}
+            onClick={requestCloseSettings}
           >
             <X size={16} />
           </button>
@@ -205,25 +338,67 @@ export function SettingsPage({
             className="settings-content"
             aria-label={t("settings.settingsContent")}
           >
-            {activeSectionId === "general-settings" && <GeneralSettings />}
-            {activeSectionId === "appearance-settings" && (
-              <AppearanceSettings onResetLayout={onResetLayout} />
+            {renderSettingsSection("general-settings", <GeneralSettings />)}
+            {renderSettingsSection(
+              "appearance-settings",
+              <AppearanceSettings onResetLayout={onResetLayout} />,
             )}
-            {activeSectionId === "dashboard-settings" && <DashboardSettings />}
-            {activeSectionId === "workspace-settings" && <WorkspaceSettings />}
-            {activeSectionId === "installer-settings" && <InstallerSettings />}
-            {activeSectionId === "credentials-settings" && <CredentialsSettings />}
-            {activeSectionId === "assistant-settings" && <AiSettings />}
-            {activeSectionId === "ssh-settings" && <SshSettings />}
-            {activeSectionId === "terminal-settings" && <TerminalSettingsPage />}
-            {activeSectionId === "url-settings" && <UrlSettings />}
-            {activeSectionId === "rdp-settings" && <RdpSettings />}
-            {activeSectionId === "vnc-settings" && <VncSettings />}
-            {activeSectionId === "dont-sleep-settings" && <DontSleepSettings />}
-            {activeSectionId === "about-settings" && <AboutSettings />}
+            {renderSettingsSection("dashboard-settings", <DashboardSettings />)}
+            {renderSettingsSection("workspace-settings", <WorkspaceSettings />)}
+            {renderSettingsSection("installer-settings", <InstallerSettings />)}
+            {renderSettingsSection("credentials-settings", <CredentialsSettings />)}
+            {renderSettingsSection("assistant-settings", <AiSettings />)}
+            {renderSettingsSection("ssh-settings", <SshSettings />)}
+            {renderSettingsSection("terminal-settings", <TerminalSettingsPage />)}
+            {renderSettingsSection("url-settings", <UrlSettings />)}
+            {renderSettingsSection("rdp-settings", <RdpSettings />)}
+            {renderSettingsSection("vnc-settings", <VncSettings />)}
+            {renderSettingsSection("dont-sleep-settings", <DontSleepSettings />)}
+            {renderSettingsSection("about-settings", <AboutSettings />)}
           </section>
         </div>
       </main>
+      {unsavedQuitDialogOpen ? (
+        <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
+          <section
+            aria-labelledby="settings-unsaved-quit-title"
+            aria-modal="true"
+            className="connection-dialog settings-unsaved-dialog"
+            role="dialog"
+          >
+            <header className="connection-dialog-header">
+              <h2 id="settings-unsaved-quit-title">{t("settings.unsavedQuitTitle")}</h2>
+            </header>
+            <div className="connection-dialog-body">
+              <p>{t("settings.unsavedQuitBody")}</p>
+            </div>
+            <footer className="dialog-actions">
+              <button
+                className="secondary-button danger-button"
+                onClick={handleQuitWithoutSaving}
+                type="button"
+              >
+                {t("settings.quitWithoutSaving")}
+              </button>
+              <button
+                className="primary-button"
+                onClick={() => void handleSaveAllDirty({ quitAfter: true })}
+                type="button"
+              >
+                <Save size={15} />
+                {t("settings.saveAndQuit")}
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => setUnsavedQuitDialogOpen(false)}
+                type="button"
+              >
+                {t("common.cancel")}
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

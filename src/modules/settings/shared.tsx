@@ -1,6 +1,64 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ariaExpanded } from "../../lib/aria";
+
+export type SettingsSaveRegistration = {
+  hasChanges: boolean;
+  onSave?: () => void | Promise<void>;
+};
+
+const SettingsSaveContext =
+  createContext<((registration: SettingsSaveRegistration) => void) | null>(null);
+
+export function SettingsSaveProvider({
+  children,
+  onRegister,
+  sectionId,
+}: {
+  children: ReactNode;
+  onRegister: (sectionId: string, registration: SettingsSaveRegistration) => void;
+  sectionId: string;
+}) {
+  const register = useCallback(
+    (registration: SettingsSaveRegistration) => onRegister(sectionId, registration),
+    [onRegister, sectionId],
+  );
+
+  return (
+    <SettingsSaveContext.Provider value={register}>
+      {children}
+    </SettingsSaveContext.Provider>
+  );
+}
+
+export function useSettingsSaveRegistration(registration: SettingsSaveRegistration) {
+  const register = useContext(SettingsSaveContext);
+  const onSaveRef = useRef(registration.onSave);
+
+  useEffect(() => {
+    onSaveRef.current = registration.onSave;
+  }, [registration.onSave]);
+
+  useEffect(() => {
+    if (!register) {
+      return;
+    }
+    register({
+      hasChanges: registration.hasChanges,
+      onSave: () => onSaveRef.current?.(),
+    });
+    return () => register({ hasChanges: false });
+  }, [register, registration.hasChanges]);
+}
 
 export function SettingsSectionHeader({
   actions,

@@ -1251,7 +1251,12 @@
     "builtInMcpConfigMethodRunCommandOrManualEdit": "Befehl ausführen / manuell bearbeiten",
     "builtInMcpConfigMethodManualEdit": "Manuell bearbeiten",
     "exportSettings": "Exportieren",
-    "exportSettingsComplete": "Einstellungen exportiert: {{filename}}."
+    "exportSettingsComplete": "Einstellungen exportiert: {{filename}}.",
+    "changesNotSaved": "Änderung nicht gespeichert",
+    "unsavedQuitTitle": "Ungespeicherte Einstellungen",
+    "unsavedQuitBody": "Änderungen vor dem Schließen der Einstellungen speichern?",
+    "saveAndQuit": "Speichern und beenden",
+    "quitWithoutSaving": "Ohne Speichern beenden"
   },
   "connections": {
     "title": "Verbindungen",

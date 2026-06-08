@@ -1,11 +1,11 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { FolderOpen, KeyRound, Play, Save, Server } from "lucide-react";
+import { FolderOpen, KeyRound, Play, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { SshSettings as SshSettingsType } from "../../types";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): SshSettingsType {
@@ -163,20 +163,11 @@ export function SshSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Server size={18} />}
         label={t("settings.sectionSsh")}
         title={t("settings.sshDefaults")}

@@ -45,13 +45,14 @@ Settings tutorial targets:
   - `settings.sectionUrl`
   - `settings.sectionDontSleep`
   - `settings.sectionAbout`
-- Save action: `settings.save`. Per-section status, e.g. `settings.appearanceSaved`, `settings.generalDefaultsSaved`.
+- Save action: `settings.save`. When any visited section has unsaved edits, the popup header shows `settings.changesNotSaved` followed by the Save button immediately to the left of the close button. Switching Settings sections preserves each visited section's draft until it is saved or Settings is closed. When all sections are clean, both the text and Save button are hidden. Clicking outside the Settings popup or using the top-right close button closes it only while there are no unsaved edits; otherwise the warning dialog uses `settings.unsavedQuitTitle`, `settings.unsavedQuitBody`, `settings.saveAndQuit`, `settings.quitWithoutSaving`, and `common.cancel`.
+- Per-section status, e.g. `settings.appearanceSaved`, `settings.generalDefaultsSaved`.
 
 ## General
 
 - Defaults group `settings.generalDefaults`.
 - App Update subsection `settings.softwareUpdates`: shows the installed version with `settings.version`, the last manual update check with `settings.lastCheckedAt` / `settings.lastCheckedNever`, and the manual `settings.checkForUpdates` action. Startup update checks are controlled by `settings.autoUpdateChecks` (hint `settings.autoUpdateChecksHint`).
-- Language picker: label `settings.language`. Native names come from the `languages` namespace. See [16-localization.md](16-localization.md).
+- Language picker: label `settings.language`. Native names come from the `languages` namespace. Changing the selection marks General dirty and applies only after `settings.save`. See [16-localization.md](16-localization.md).
 - Start with Windows minimized: toggle `settings.autoStartWithWindows` (hint `settings.autoStartWithWindowsHint`). When on, KKTerm registers itself for the current Windows user, launches after sign-in, and starts minimized; if `settings.minimizeToTray` is also on, the launch window hides to the system tray.
 - Minimize to tray: toggle `settings.minimizeToTray` (hint `settings.minimizeToTrayHint`). When on, the title-bar close button hides the window; when off, it exits. Tray "Exit" (`app.trayExit`) always quits.
 - Performance subsection `settings.performance`: toggle `settings.useDirectxScreenCapture` (hint `settings.useDirectxScreenCaptureHint`). When on, screenshot capture tries DXGI Desktop Duplication first and falls back to GDI when DirectX capture is unavailable or unsupported for the requested region.

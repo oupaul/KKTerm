@@ -5,7 +5,7 @@ import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { UrlCredentialSummary, UrlDataPartitionSummary } from "../../types";
 import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 function formatDate(value: string) {
@@ -157,15 +157,11 @@ export function UrlSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button className="toolbar-button" disabled={!hasChanges} onClick={() => void handleSave()} type="button">
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Globe size={18} />}
         label={t("settings.sectionUrl")}
         title={t("settings.urlDefaults")}

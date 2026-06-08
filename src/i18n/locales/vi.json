@@ -1251,7 +1251,12 @@
     "builtInMcpConfigMethodRunCommandOrManualEdit": "Chạy lệnh / sửa thủ công",
     "builtInMcpConfigMethodManualEdit": "Sửa thủ công",
     "exportSettings": "Xuất",
-    "exportSettingsComplete": "Đã xuất cài đặt: {{filename}}."
+    "exportSettingsComplete": "Đã xuất cài đặt: {{filename}}.",
+    "changesNotSaved": "Thay đổi chưa được lưu",
+    "unsavedQuitTitle": "Cài đặt chưa được lưu",
+    "unsavedQuitBody": "Lưu thay đổi trước khi đóng Cài đặt?",
+    "saveAndQuit": "Lưu và thoát",
+    "quitWithoutSaving": "Thoát mà không lưu"
   },
   "connections": {
     "title": "Connections",

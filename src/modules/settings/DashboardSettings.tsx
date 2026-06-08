@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Save } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDashboardStore } from "../dashboard/state/dashboardStore";
 import { useWorkspaceStore } from "../../store";
@@ -9,7 +9,7 @@ import {
   MAX_ACTIVE_SCRIPT_WIDGETS_LIMIT,
   MAX_ACTIVE_SCRIPT_WIDGETS_MIN,
 } from "../../app-defaults";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function DashboardSettings() {
@@ -43,20 +43,11 @@ export function DashboardSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<LayoutDashboard size={18} />}
         label={t("settings.sectionDashboard")}
         title={t("settings.sectionDashboard")}

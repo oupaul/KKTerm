@@ -45,7 +45,22 @@ test("Settings renders as an app-owned popup over the active base Module", async
   assert.match(appSource, /const visibleBasePage = isOverlayPage\(activePage\)/);
   assert.match(appSource, /dashboardActive=\{visibleBasePage === "dashboard"\}/);
   assert.match(settingsSource, /className="settings-backdrop"/);
+  assert.match(settingsSource, /onClick=\{handleBackdropClick\}/);
   assert.match(settingsSource, /className="settings-popup settings-page"/);
+  assert.match(settingsSource, /className="settings-page-actions"/);
+  assert.match(settingsSource, /settings\.changesNotSaved/);
+  assert.match(settingsSource, /settings-page-save-button/);
+  assert.match(settingsSource, /saveRegistrations/);
+  assert.match(settingsSource, /visitedSectionIds/);
+  assert.match(settingsSource, /handleSaveAllDirty/);
+  assert.match(settingsSource, /requestCloseSettings/);
+  assert.match(settingsSource, /settings-section-panel/);
+  assert.match(settingsSource, /unsavedQuitDialogOpen/);
+  assert.match(settingsSource, /settings\.unsavedQuitTitle/);
+  assert.match(settingsSource, /settings\.unsavedQuitBody/);
+  assert.match(settingsSource, /settings\.saveAndQuit/);
+  assert.match(settingsSource, /settings\.quitWithoutSaving/);
+  assert.doesNotMatch(settingsSource, /setSaveRegistration\(\{ hasChanges: false \}\);\s*\}, \[activeSectionId\]\);/s);
   assert.match(settingsSource, /connection-dialog-close/);
   assert.match(settingsSource, /<p className="panel-label">\{t\("settings\.title"\)\}<\/p>/);
   assert.doesNotMatch(settingsSource, /<h1>\{t\("settings\.title"\)\}<\/h1>/);
@@ -53,13 +68,28 @@ test("Settings renders as an app-owned popup over the active base Module", async
   assert.match(settingsStyles, /\.settings-backdrop\s*\{[^}]*position:\s*fixed;/s);
   assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*overflow:\s*hidden;[^}]*box-shadow:\s*var\(--shadow\)/s);
   assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*padding:\s*13px 2px 14px 17px;/s);
-  assert.match(settingsStyles, /\.settings-popup\s+\.settings-page-header\s*\{[^}]*position:\s*static;[^}]*margin:\s*0 0 12px;[^}]*padding:\s*0 58px 10px 0;/s);
+  assert.match(settingsStyles, /\.settings-popup\s+\.settings-page-header\s*\{[^}]*position:\s*static;[^}]*margin:\s*0 0 12px;[^}]*padding:\s*0 220px 10px 0;/s);
+  assert.match(settingsStyles, /\.settings-page-actions\s*\{[^}]*position:\s*absolute;[^}]*right:\s*48px;/s);
+  assert.match(settingsStyles, /\.settings-unsaved-label\s*\{[^}]*color:\s*var\(--red\);/s);
+  assert.match(settingsStyles, /\.settings-page-save-button\s*\{[^}]*display:\s*inline-flex;/s);
+  assert.match(settingsStyles, /\.settings-page-save-button\s*\{[^}]*border-color:\s*transparent;/s);
+  assert.match(settingsStyles, /\.settings-page-save-button svg\s*\{[^}]*color:\s*var\(--accent\);/s);
+  assert.match(settingsStyles, /\.settings-section-panel\[hidden\]\s*\{[^}]*display:\s*none;/s);
+  assert.match(settingsStyles, /\.settings-unsaved-dialog\s*\{[^}]*width:\s*min\(420px,\s*calc\(100vw - 48px\)\);/s);
   assert.match(settingsStyles, /\.settings-popup\.settings-page\s*\{[^}]*grid-template-rows:\s*auto minmax\(0,\s*1fr\);/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.settings-layout\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.settings-nav\s*\{[^}]*overflow:\s*visible;/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.settings-nav-item\s*\{[^}]*min-height:\s*34px;/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.settings-content\s*\{[^}]*overflow:\s*auto;/s);
   assert.match(settingsStyles, /\.settings-popup\s+\.connection-dialog-close\s*\{[^}]*position:\s*absolute;[^}]*top:\s*6px;[^}]*right:\s*4px;/s);
+  assert.match(
+    settingsStyles,
+    /\.app-update-summary-grid \.settings-summary-item\s*\{[^}]*background:\s*transparent;[^}]*border:\s*0;[^}]*border-bottom:\s*1px solid var\(--border\);/s,
+  );
+  assert.match(
+    settingsStyles,
+    /\.app-update-summary-grid \.settings-summary-item:last-child\s*\{[^}]*border-bottom:\s*0;/s,
+  );
   assert.match(
     settingsStyles,
     /\.app-update-check-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) max-content max-content;[^}]*gap:\s*20px;/s,

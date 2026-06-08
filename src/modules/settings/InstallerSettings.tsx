@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Package, Save } from "lucide-react";
+import { Package } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
@@ -8,7 +8,7 @@ import {
   INSTALLER_CHECK_INTERVAL_OPTIONS,
   resolveInstallerCheckIntervalSeconds,
 } from "../installer/checkInterval";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function InstallerSettings() {
@@ -28,9 +28,15 @@ export function InstallerSettings() {
 
   async function handleSave() {
     try {
+      const currentSettings = useWorkspaceStore.getState().generalSettings;
+      const request = {
+        ...currentSettings,
+        installerCheckIntervalSeconds: draft.installerCheckIntervalSeconds,
+        showInstallerOnRail: draft.showInstallerOnRail,
+      };
       const saved = isTauriRuntime()
-        ? await invokeCommand("update_general_settings", { request: draft })
-        : draft;
+        ? await invokeCommand("update_general_settings", { request })
+        : request;
       setGeneralSettings(saved);
       setDraft(saved);
       showStatusBarNotice(t("settings.installerSaved"), { tone: "success" });
@@ -42,20 +48,11 @@ export function InstallerSettings() {
     }
   }
 
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
+
   return (
     <section className="settings-card settings-section">
       <SettingsSectionHeader
-        actions={
-          <button
-            className="toolbar-button"
-            disabled={!hasChanges}
-            onClick={() => void handleSave()}
-            type="button"
-          >
-            <Save size={15} />
-            {t("settings.save")}
-          </button>
-        }
         icon={<Package size={18} />}
         label={t("settings.sectionInstaller")}
         title={t("settings.sectionInstaller")}

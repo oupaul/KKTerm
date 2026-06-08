@@ -1251,7 +1251,12 @@
     "builtInMcpConfigMethodRunCommandOrManualEdit": "執行指令 / 手動編輯",
     "builtInMcpConfigMethodManualEdit": "手動編輯",
     "exportSettings": "匯出",
-    "exportSettingsComplete": "設定已匯出：{{filename}}。"
+    "exportSettingsComplete": "設定已匯出：{{filename}}。",
+    "changesNotSaved": "變更尚未儲存",
+    "unsavedQuitTitle": "設定尚未儲存",
+    "unsavedQuitBody": "關閉設定前要先儲存變更嗎？",
+    "saveAndQuit": "儲存並離開",
+    "quitWithoutSaving": "不儲存並離開"
   },
   "connections": {
     "title": "連線",
