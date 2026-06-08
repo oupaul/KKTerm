@@ -12,6 +12,7 @@ import type {
   TerminalSettings,
   WorkspaceTab,
 } from "./types";
+import { defaultLocalShell } from "./lib/platform";
 
 export const connectionTree: ConnectionTree = {
   connections: [],
@@ -73,7 +74,7 @@ export const defaultTerminalSettings: TerminalSettings = {
   copyOnSelect: false,
   allowOsc52Clipboard: true,
   confirmMultilinePaste: true,
-  defaultShell: "powershell.exe",
+  defaultShell: defaultLocalShell(),
 };
 
 export const defaultAppearanceSettings: AppearanceSettings = {

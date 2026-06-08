@@ -2,6 +2,7 @@ import { Cable, FolderInput, Globe2, Laptop, Monitor, Mouse, Network, Server } f
 import { confirmNativeDialog, invokeCommand, type SshHostKeyPreview } from "../../../lib/tauri";
 import i18next from "../../../i18n/config";
 import type { Connection, ConnectionType, SshSettings, WorkspaceTab } from "../../../types";
+import { isWindowsPlatform } from "../../../lib/platform";
 
 const WINDOWS_LOCAL_SHELL_OPTIONS = [
   { labelKey: "settings.powerShell", value: "powershell.exe" },
@@ -14,14 +15,6 @@ export type LocalShellOption = {
   label: string;
   value?: string;
 };
-
-function isWindowsPlatform() {
-  if (typeof navigator === "undefined") {
-    return true;
-  }
-
-  return /windows/i.test(`${navigator.userAgent} ${navigator.platform}`);
-}
 
 export function localShellOptionsForPlatform(): LocalShellOption[] {
   if (!isWindowsPlatform()) {

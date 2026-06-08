@@ -12,6 +12,8 @@ Settings is owned by `src/modules/settings/SettingsPage.tsx` and opens as an app
 
 The universal AI Assistant panel remains visible on Settings. `src/modules/settings/settingsAssistantContext.ts` publishes the active section, visible control keys, and tutorial targets to the assistant. The Tutorial tool can navigate to the owning Settings section before highlighting known targets after the user accepts a navigation offer.
 
+Platform-specific controls are shown only where the runtime supports them. Windows-only controls such as `settings.autoStartWithWindows`, `settings.useDirectxScreenCapture`, `settings.rdpWebviewStability`, `settings.sectionInstaller`, and `settings.sectionRdp` are hidden in the macOS build.
+
 Settings tutorial targets:
 
 - General: `settings.language`, `settings.workspaceAccess`, `settings.useDirectxScreenCapture`, `settings.statusBar`, `settings.settingsData`, `settings.debug`.

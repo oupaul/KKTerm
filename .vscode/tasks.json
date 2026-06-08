@@ -16,6 +16,19 @@
       "problemMatcher": []
     },
     {
+      "label": "cargo build (tauri debug macOS arm64)",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--manifest-path",
+        "src-tauri/Cargo.toml",
+        "--target",
+        "aarch64-apple-darwin"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "kill running KKTerm processes",
       "type": "process",
       "command": "powershell.exe",
@@ -25,6 +38,16 @@
         "Bypass",
         "-Command",
         "try { Get-Process -Name kkterm,kkterm-cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue } catch { }; exit 0"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "kill running KKTerm processes (macOS)",
+      "type": "shell",
+      "command": "zsh",
+      "args": [
+        "-lc",
+        "pkill -x kkterm >/dev/null 2>&1 || true; pkill -x KKTerm >/dev/null 2>&1 || true"
       ],
       "problemMatcher": []
     },
@@ -59,6 +82,16 @@
       "dependsOn": [
         "kill running KKTerm processes",
         "cargo build (tauri debug)",
+        "start Vite dev server"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "debug KKTerm macOS arm64",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "kill running KKTerm processes (macOS)",
+        "cargo build (tauri debug macOS arm64)",
         "start Vite dev server"
       ],
       "problemMatcher": []

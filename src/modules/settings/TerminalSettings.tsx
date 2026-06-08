@@ -3,6 +3,7 @@ import { Save, Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import { isWindowsPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
 import { SettingsSectionHeader } from "./shared";
@@ -176,20 +177,34 @@ export function TerminalSettings() {
         <div className="form-grid three-columns">
           <label data-tutorial-id="settings.defaultShell">
             <span>{t("settings.defaultShell")}</span>
-            <select
-              onChange={(event) => {
-                const defaultShell = event.currentTarget.value;
-                setDraft((settings) => ({
-                  ...settings,
-                  defaultShell,
-                }));
-              }}
-              value={draft.defaultShell}
-            >
-              <option value="powershell.exe">{t("settings.powerShell")}</option>
-              <option value="cmd.exe">{t("settings.commandPrompt")}</option>
-              <option value="wsl.exe">{t("settings.wsl")}</option>
-            </select>
+            {isWindowsPlatform() ? (
+              <select
+                onChange={(event) => {
+                  const defaultShell = event.currentTarget.value;
+                  setDraft((settings) => ({
+                    ...settings,
+                    defaultShell,
+                  }));
+                }}
+                value={draft.defaultShell}
+              >
+                <option value="powershell.exe">{t("settings.powerShell")}</option>
+                <option value="cmd.exe">{t("settings.commandPrompt")}</option>
+                <option value="wsl.exe">{t("settings.wsl")}</option>
+              </select>
+            ) : (
+              <input
+                onChange={(event) => {
+                  const defaultShell = event.currentTarget.value;
+                  setDraft((settings) => ({
+                    ...settings,
+                    defaultShell,
+                  }));
+                }}
+                placeholder="/bin/zsh"
+                value={draft.defaultShell}
+              />
+            )}
           </label>
           <label data-tutorial-id="settings.scrollbackLines">
             <span>{t("settings.scrollbackLines")}</span>

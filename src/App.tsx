@@ -39,6 +39,7 @@ import {
   type TutorialSurfaceKind,
 } from "./app/tutorialNavigationModel";
 import { ariaHidden } from "./lib/aria";
+import { supportsInstallerHelper } from "./lib/platform";
 import { useBootstrapSettings } from "./lib/settings";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
@@ -54,7 +55,9 @@ function App() {
   const { t } = useTranslation();
   const launchPageRef = useRef<BaseModulePage | null>(null);
   if (launchPageRef.current === null) {
-    launchPageRef.current = loadStoredActivePage();
+    const storedPage = loadStoredActivePage();
+    launchPageRef.current =
+      storedPage === "installer" && !supportsInstallerHelper() ? "workspace" : storedPage;
   }
   const [activePage, setActivePage] = useState<ActivePage>(launchPageRef.current);
   const [dashboardMounted, setDashboardMounted] = useState(
@@ -74,6 +77,9 @@ function App() {
   }
 
   function navigateToPage(page: ActivePage) {
+    if (page === "installer" && !supportsInstallerHelper()) {
+      page = "workspace";
+    }
     const currentBasePage: BaseModulePage = isOverlayPage(activePage)
       ? previousBasePageRef.current
       : activePage;

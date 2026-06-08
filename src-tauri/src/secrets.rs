@@ -376,7 +376,15 @@ fn configure_default_store() -> Result<String, String> {
     Ok("Windows Credential Manager".to_string())
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn configure_default_store() -> Result<String, String> {
+    keyring_core::set_default_store(
+        apple_native_keyring_store::keychain::Store::new().map_err(to_secret_error)?,
+    );
+    Ok("macOS Keychain".to_string())
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn configure_default_store() -> Result<String, String> {
     Err("OS keychain backend is not configured for this platform yet".to_string())
 }

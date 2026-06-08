@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
+import { supportsInstallerHelper, supportsRdp } from "../../lib/platform";
 import { AboutSettings } from "./AboutSettings";
 import { AiSettings } from "./AiSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
@@ -54,10 +55,21 @@ export function SettingsPage({
   onResetLayout: () => void;
 }) {
   const { t } = useTranslation();
+  const installerSupported = supportsInstallerHelper();
+  const rdpSupported = supportsRdp();
   const assistantContext = useMemo(
     () => buildSettingsAssistantContext(activeSectionId, (key, fallback) => t(key, fallback)),
     [activeSectionId, t],
   );
+
+  useEffect(() => {
+    if (
+      (activeSectionId === "installer-settings" && !installerSupported) ||
+      (activeSectionId === "rdp-settings" && !rdpSupported)
+    ) {
+      onActiveSectionChange("general-settings");
+    }
+  }, [activeSectionId, installerSupported, onActiveSectionChange, rdpSupported]);
 
   useEffect(() => {
     onAssistantContextChange(assistantContext);
@@ -119,14 +131,16 @@ export function SettingsPage({
             <LayoutDashboard size={16} />
             <span>{t("settings.sectionDashboard")}</span>
           </button>
-          <button
-            className={settingsNavItemClass("installer-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("installer-settings")}
-            type="button"
-          >
-            <Package size={16} />
-            <span>{t("settings.sectionInstaller")}</span>
-          </button>
+          {installerSupported ? (
+            <button
+              className={settingsNavItemClass("installer-settings", activeSectionId)}
+              onClick={() => onActiveSectionChange("installer-settings")}
+              type="button"
+            >
+              <Package size={16} />
+              <span>{t("settings.sectionInstaller")}</span>
+            </button>
+          ) : null}
           <button
             className={settingsNavItemClass("credentials-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("credentials-settings")}
@@ -167,14 +181,16 @@ export function SettingsPage({
             <Globe size={16} />
             <span>{t("settings.sectionUrl")}</span>
           </button>
-          <button
-            className={settingsNavItemClass("rdp-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("rdp-settings")}
-            type="button"
-          >
-            <Monitor size={16} />
-            <span>{t("settings.sectionRdp")}</span>
-          </button>
+          {rdpSupported ? (
+            <button
+              className={settingsNavItemClass("rdp-settings", activeSectionId)}
+              onClick={() => onActiveSectionChange("rdp-settings")}
+              type="button"
+            >
+              <Monitor size={16} />
+              <span>{t("settings.sectionRdp")}</span>
+            </button>
+          ) : null}
           <button
             className={settingsNavItemClass("vnc-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("vnc-settings")}
@@ -211,13 +227,13 @@ export function SettingsPage({
             )}
             {activeSectionId === "dashboard-settings" && <DashboardSettings />}
             {activeSectionId === "workspace-settings" && <WorkspaceSettings />}
-            {activeSectionId === "installer-settings" && <InstallerSettings />}
+            {activeSectionId === "installer-settings" && installerSupported && <InstallerSettings />}
             {activeSectionId === "credentials-settings" && <CredentialsSettings />}
             {activeSectionId === "assistant-settings" && <AiSettings />}
             {activeSectionId === "ssh-settings" && <SshSettings />}
             {activeSectionId === "terminal-settings" && <TerminalSettingsPage />}
             {activeSectionId === "url-settings" && <UrlSettings />}
-            {activeSectionId === "rdp-settings" && <RdpSettings />}
+            {activeSectionId === "rdp-settings" && rdpSupported && <RdpSettings />}
             {activeSectionId === "vnc-settings" && <VncSettings />}
             {activeSectionId === "dont-sleep-settings" && <DontSleepSettings />}
             {activeSectionId === "about-settings" && <AboutSettings />}
