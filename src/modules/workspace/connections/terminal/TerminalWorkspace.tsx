@@ -1363,6 +1363,7 @@ function TerminalPaneView({
   const resizeFrameRef = useRef<number | null>(null);
   const resizeTimeoutRefs = useRef<number[]>([]);
   const fitAndResizeRef = useRef<() => void>(() => undefined);
+  const isActiveRef = useRef(isActive);
   const startedRef = useRef(false);
   const tmuxWheelFlushTimerRef = useRef<number | null>(null);
   const tmuxWheelPendingLinesRef = useRef(0);
@@ -1372,6 +1373,9 @@ function TerminalPaneView({
   useEffect(() => {
     onFocusRef.current = onFocus;
   }, [onFocus]);
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResult, setSearchResult] = useState<{
@@ -1580,6 +1584,7 @@ function TerminalPaneView({
             allowOsc52Clipboard: sshSettings.allowOsc52Clipboard,
           }
         : terminalSettings;
+    const terminalHost = element;
     const terminal = createTerminalRenderer(rendererSettings, terminalOpacity);
     terminalRendererRef.current = terminal;
     const cwdDisposable = terminal.onCwdChange((cwd) => updatePaneCwd(tabId, pane.id, cwd));
@@ -1703,6 +1708,14 @@ function TerminalPaneView({
     });
 
     function fitAndResizeTerminal() {
+      // Inactive workspace Tabs are display:none. Fitting xterm while hidden can
+      // resize Windows ConPTY through a zero/unstable viewport; ConPTY then
+      // replays the visible screen on the next real resize, which appends a
+      // duplicate-looking terminal buffer after switching back to the Tab.
+      if (!isActiveRef.current || terminalHost.clientWidth <= 0 || terminalHost.clientHeight <= 0) {
+        return;
+      }
+
       const dimensions = terminal.fit();
       const lastDimensions = lastResizeDimensionsRef.current;
       if (lastDimensions && terminalDimensionsEqual(lastDimensions, dimensions)) {
