@@ -12,7 +12,7 @@
 
 .webview-pane > header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 28ch) max-content;
+  grid-template-columns: minmax(0, 1fr) max-content;
   gap: 8px;
   overflow: hidden;
 }
@@ -55,19 +55,6 @@
 .webview-nav-group .webview-address-input:focus {
   border-color: rgba(86, 166, 255, 0.45);
   background: rgba(255, 255, 255, 0.09);
-}
-
-.webview-pane > header > .webview-title-center {
-  display: block;
-  justify-self: center;
-  width: 100%;
-  min-width: 0;
-  padding: 0 10px;
-  box-sizing: border-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  white-space: nowrap;
 }
 
 .webview-pane .terminal-pane-actions {

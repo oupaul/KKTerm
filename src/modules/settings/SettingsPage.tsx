@@ -104,20 +104,20 @@ export function SettingsPage({
             <span>{t("settings.sectionAppearance")}</span>
           </button>
           <button
-            className={settingsNavItemClass("dashboard-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("dashboard-settings")}
-            type="button"
-          >
-            <LayoutDashboard size={16} />
-            <span>{t("settings.sectionDashboard")}</span>
-          </button>
-          <button
             className={settingsNavItemClass("workspace-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("workspace-settings")}
             type="button"
           >
             <SquareStack size={16} />
             <span>{t("settings.sectionWorkspace")}</span>
+          </button>
+          <button
+            className={settingsNavItemClass("dashboard-settings", activeSectionId)}
+            onClick={() => onActiveSectionChange("dashboard-settings")}
+            type="button"
+          >
+            <LayoutDashboard size={16} />
+            <span>{t("settings.sectionDashboard")}</span>
           </button>
           <button
             className={settingsNavItemClass("installer-settings", activeSectionId)}
