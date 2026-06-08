@@ -923,6 +923,7 @@ interface WorkspaceState {
     paneId: string,
     status: TerminalPane["x11ForwardingStatus"],
   ) => void;
+  markOpenTerminalPaneTmuxUnavailable: (tabId: string, paneId: string) => void;
   markConnectionSessionStarted: (connectionId: string) => void;
   markConnectionSessionEnded: (connectionId: string) => void;
   closeAllTabs: () => void;
@@ -2397,6 +2398,29 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           }
           changed = true;
           return { ...pane, x11ForwardingStatus: status };
+        });
+        return changed ? { ...tab, panes } : tab;
+      }),
+    }));
+  },
+
+  markOpenTerminalPaneTmuxUnavailable: (tabId, paneId) => {
+    set((state) => ({
+      tabs: state.tabs.map((tab) => {
+        if (tab.id !== tabId || tab.kind !== "terminal") {
+          return tab;
+        }
+        let changed = false;
+        const panes = tab.panes.map((pane) => {
+          if (!isTerminalPane(pane) || pane.id !== paneId || !pane.tmuxSessionId) {
+            return pane;
+          }
+          changed = true;
+          return {
+            ...pane,
+            title: pane.title === pane.tmuxSessionId ? pane.connection?.name ?? pane.title : pane.title,
+            tmuxSessionId: undefined,
+          };
         });
         return changed ? { ...tab, panes } : tab;
       }),

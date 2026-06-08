@@ -40,6 +40,7 @@ type TerminalContextMenuState = {
 };
 
 const TMUX_MOUSE_MODE_EVENT = "kkterm:tmux-mouse-mode";
+const TMUX_UNAVAILABLE_MARKER = "[KKTerm: tmux not found, using normal shell]";
 const MAIN_WINDOW_FOCUS_CHANGED_EVENT = "kkterm://main-window-focus-changed";
 const terminalInputEncoder = new TextEncoder();
 
@@ -1365,6 +1366,7 @@ function TerminalPaneView({
   const startedRef = useRef(false);
   const tmuxWheelFlushTimerRef = useRef<number | null>(null);
   const tmuxWheelPendingLinesRef = useRef(0);
+  const tmuxStartupOutputTailRef = useRef("");
   const multilinePasteConfirmationResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
   const onFocusRef = useRef(onFocus);
   useEffect(() => {
@@ -1436,6 +1438,7 @@ function TerminalPaneView({
   const updateOpenTerminalPaneAppearance = useWorkspaceStore((state) => state.updateOpenTerminalPaneAppearance);
   const updateOpenTerminalPaneBackground = useWorkspaceStore((state) => state.updateOpenTerminalPaneBackground);
   const updateOpenTerminalPaneX11ForwardingStatus = useWorkspaceStore((state) => state.updateOpenTerminalPaneX11ForwardingStatus);
+  const markOpenTerminalPaneTmuxUnavailable = useWorkspaceStore((state) => state.markOpenTerminalPaneTmuxUnavailable);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const { t } = useTranslation();
   const terminalOpacity =
@@ -1767,6 +1770,14 @@ function TerminalPaneView({
       const unlisten = await listen<TerminalOutput>("terminal-output", (event) => {
         if (event.payload.sessionId === sessionIdRef.current) {
           terminal.write(event.payload.data);
+          if (pane.tmuxSessionId) {
+            tmuxStartupOutputTailRef.current = (tmuxStartupOutputTailRef.current + event.payload.data).slice(
+              -TMUX_UNAVAILABLE_MARKER.length * 2,
+            );
+            if (tmuxStartupOutputTailRef.current.includes(TMUX_UNAVAILABLE_MARKER)) {
+              markOpenTerminalPaneTmuxUnavailable(tabId, pane.id);
+            }
+          }
         }
       });
       if (disposed) {

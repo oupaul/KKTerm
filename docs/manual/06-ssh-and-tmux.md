@@ -34,7 +34,7 @@ For tmux-enabled SSH Sessions, an unexpected channel close may silently attempt 
 
 ## tmux sessions
 
-SSH Connections may opt into tmux. When tmux is enabled, opening the Connection starts (or attaches to) a named tmux session on the remote host. If `tmux` is not installed on the remote, the Pane silently falls back to the normal shell — no error dialog.
+SSH Connections may opt into tmux. When tmux is enabled, opening the Connection starts (or attaches to) a named tmux session on the remote host. If `tmux` is not installed on the remote, the Pane silently falls back to the normal shell — no error dialog — and the Pane toolbar stops showing tmux controls for that live shell.
 
 When a tmux-enabled SSH Connection is opened through the Connection Tree `workspace.newTab` path (`connections.newTabShortcut`), KKTerm first asks the remote for tmux sessions and picks the newest unattached session by `session_created`, excluding tmux Session ids that are already present in current workspace Panes. If no eligible session is available, or if the tmux listing fails, the new Tab falls through to the normal new-Pane tmux naming path.
 
