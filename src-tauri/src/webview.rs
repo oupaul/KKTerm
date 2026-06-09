@@ -759,8 +759,8 @@ fn overlay_rect(
         .scale_factor()
         .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
     let host_origin = host_window
-        .outer_position()
-        .map_err(|error| format!("failed to read host window position: {error}"))?;
+        .inner_position()
+        .map_err(|error| format!("failed to read host window content position: {error}"))?;
     let left = host_origin.x + (x.max(0.0) * scale_factor).round() as i32;
     let top = host_origin.y + (y.max(0.0) * scale_factor).round() as i32;
     let width = (width.max(1.0) * scale_factor).round().max(1.0) as u32;
@@ -779,9 +779,17 @@ fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
         ShowWindow,
     };
 
-    let hwnd = window
-        .hwnd()
-        .map_err(|error| format!("failed to get URL webview HWND: {error}"))?;
+    let hwnd = match window.hwnd() {
+        Ok(hwnd) => hwnd,
+        Err(_) => {
+            window
+                .show()
+                .map_err(|error| format!("failed to realize URL webview window: {error}"))?;
+            window
+                .hwnd()
+                .map_err(|error| format!("failed to get URL webview HWND after realize: {error}"))?
+        }
+    };
     unsafe {
         SetWindowPos(
             HWND(hwnd.0),

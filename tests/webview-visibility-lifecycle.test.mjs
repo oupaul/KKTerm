@@ -70,6 +70,31 @@ test("backend hides overlay URL WebViews instead of using unstable child APIs", 
   assert.doesNotMatch(source, /Window::add_child|\.add_child\(|\.build_as_child\(/);
 });
 
+test("backend realizes hidden URL overlay windows before HWND-dependent no-activate show", async () => {
+  const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
+  const showFunction = source.match(/fn show_webview_window\(window: &WebviewWindow\) -> Result<\(\), String> \{[\s\S]*?\n\}/)?.[0];
+
+  assert.ok(showFunction, "Windows show_webview_window should exist");
+  assert.match(showFunction, /match window\.hwnd\(\)/);
+  assert.match(showFunction, /window\s*\.show\(\)/);
+  assert.match(showFunction, /failed to get URL webview HWND after realize/);
+  assert.match(showFunction, /SW_SHOWNOACTIVATE/);
+  assert.match(showFunction, /SWP_NOACTIVATE/);
+});
+
+test("backend positions URL overlays from the host WebView client origin", async () => {
+  const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
+  const overlayFunction = source.match(/fn overlay_rect\([\s\S]*?\n\}/)?.[0];
+
+  assert.ok(overlayFunction, "overlay_rect should exist");
+  assert.match(overlayFunction, /inner_position\(\)/);
+  assert.doesNotMatch(
+    overlayFunction,
+    /outer_position\(\)/,
+    "DOM client coordinates should be offset from the host WebView content origin",
+  );
+});
+
 test("frontend repushes URL overlay bounds on native window move", async () => {
   const source = await readFile(
     new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
