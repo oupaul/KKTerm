@@ -458,6 +458,10 @@ function terminalBackgroundColor(opacity: number) {
 function terminalOptionsFor(settings: TerminalSettings, backgroundOpacity: number): ITerminalOptions {
   return {
     altClickMovesCursor: false,
+    // @xterm/addon-search renders match decorations through xterm's proposed
+    // decoration API. Without this, the first decorated scrollback search can
+    // throw from the renderer path and leave the Tauri WebView unusable.
+    allowProposedApi: true,
     allowTransparency: true,
     convertEol: false,
     customGlyphs: true,
