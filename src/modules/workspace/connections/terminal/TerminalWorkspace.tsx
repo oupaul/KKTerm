@@ -14,7 +14,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEv
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
-import { focusCurrentWebview, focusMainWindow, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -260,8 +260,15 @@ export function TerminalWorkspace({
     focusRenderer();
     window.requestAnimationFrame(focusRenderer);
     if (isTauriRuntime()) {
-      void focusMainWindow()
-        .then(() => focusCurrentWebview())
+      // Restore keyboard focus through WebView2's own MoveFocus
+      // (focusCurrentWebview), NOT by raising the frame with SetForegroundWindow
+      // (focusMainWindow). With the custom title bar (decorations: false) the OS
+      // no longer auto-restores focus to the WebView2 content child on
+      // activation, and raising the top-level frame first yanked focus back up to
+      // the frame HWND — the regression behind the lost-input bug. MoveFocus is
+      // the documented path a native title bar leverages to route WM_KEYDOWN into
+      // the web content, so we call it alone.
+      void focusCurrentWebview()
         .catch(() => undefined)
         .finally(() => {
           window.requestAnimationFrame(focusRenderer);
@@ -1598,9 +1605,7 @@ function TerminalPaneView({
     // dropped until the user clicks. Route native focus into the webview once
     // when this pane is the active, focused one.
     if (isActive && isFocused && isTauriRuntime()) {
-      void focusMainWindow()
-        .then(() => focusCurrentWebview())
-        .catch(() => undefined);
+      void focusCurrentWebview().catch(() => undefined);
     }
     terminal.attachCustomKeyEventHandler((event) => {
       // xterm.js emits a bare CR for Shift+Enter, indistinguishable from a
