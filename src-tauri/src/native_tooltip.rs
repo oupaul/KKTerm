@@ -40,7 +40,7 @@ mod platform {
         request: NativeTooltipRequest,
     ) -> Result<bool, String> {
         let window = app
-            .get_window(crate::window_state::MAIN_WINDOW_LABEL)
+            .get_webview_window(crate::window_state::MAIN_WINDOW_LABEL)
             .ok_or_else(|| "main window is not available".to_string())?;
         let inner_position = window
             .inner_position()

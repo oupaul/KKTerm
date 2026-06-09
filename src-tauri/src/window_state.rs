@@ -82,7 +82,7 @@ impl MainWindowState {
         }
     }
 
-    pub(crate) fn snapshot_for_window(&self, window: &Window) -> MainWindowSettings {
+    pub(crate) fn snapshot_for_window<R: Runtime>(&self, window: &Window<R>) -> MainWindowSettings {
         let mut settings = self
             .settings
             .lock()

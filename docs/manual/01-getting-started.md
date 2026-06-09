@@ -44,7 +44,7 @@ Top to bottom:
 - Connection Rail shortcuts (label `app.connectionRail`, group `app.connectedConnectionsRail`) — pinned and currently-connected Connections appear here as direct shortcuts.
 - Settings (label `app.settings`, anchored to the bottom)
 
-Hover tooltips on rail icons are rendered by the shared `RailTooltip` (`src/app/RailTooltip.tsx`), never the browser's native `title` tooltip. On Windows desktop builds, `RailTooltip` mirrors labels through a native topmost tooltip so they can show above RDP ActiveX and URL WebView2 surfaces.
+Hover tooltips on rail icons are rendered by the shared `RailTooltip` (`src/app/RailTooltip.tsx`), never the browser's native `title` tooltip. On Windows desktop builds, `RailTooltip` mirrors labels through a native topmost tooltip so they can show above RDP ActiveX surfaces.
 
 ## System tray
 
