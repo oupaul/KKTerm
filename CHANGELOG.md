@@ -3,6 +3,19 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.70/kkterm-0.1.70-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.70/kkterm-0.1.70-windows-arm64-setup.exe)
+
+## Highlights
+- Terminal keyboard focus should no longer get “stolen” when using the drag/resize frame—your Session should keep responding like a good terminal should. (Small sysadmin joke: the window finally stops grabbing the keyboard like a rogue `sudo`.)
+
+## Fixed
+- Prevented the `TAURI_DRAG_RESIZE_WINDOW` helper from stealing terminal keyboard focus, so Tabs/Session interaction won’t break on re-activation. PR #287 by @ryantsai (https://github.com/ryantsai/KKTerm/pull/287, c59be44 / 384b091).  
+
+## Internal
+- Updated window effect behavior to keep focus handling from interfering with terminal input (WS_EX_NOACTIVATE applied to the helper window).
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.69/kkterm-0.1.69-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.69/kkterm-0.1.69-windows-arm64-setup.exe)
 
