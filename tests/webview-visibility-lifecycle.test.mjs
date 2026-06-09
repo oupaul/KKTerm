@@ -112,7 +112,7 @@ test("frontend opens target blank URL navigations in new Workspace Tabs", async 
     new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
     "utf8",
   );
-  const listener = source.match(/listen<WebviewNewWindowEvent>\("webview-new-window",[\s\S]*?\),\n      listen<WebviewTitleChangedEvent>/)?.[0];
+  const listener = source.match(/listen<WebviewNewWindowEvent>\("webview-new-window",[\s\S]*?\),\r?\n      listen<WebviewTitleChangedEvent>/)?.[0];
 
   assert.ok(listener, "webview-new-window listener should exist");
   assert.match(source, /const openUrlInNewTab = useWorkspaceStore/);
@@ -126,8 +126,8 @@ test("frontend opens target blank URL navigations in new Workspace Tabs", async 
 
 test("store creates top-level WebView Tabs for URL new-tab launches", async () => {
   const source = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
-  const openUrlInNewTab = source.match(/openUrlInNewTab: \(connection, url, options\) => \{[\s\S]*?\n  \},\n  openChildConnectionInNewTab/)?.[0];
-  const openConnectionInNewTab = source.match(/openConnectionInNewTab: \(connection, options\) => \{[\s\S]*?\n  \},\n  openUrlInNewTab/)?.[0];
+  const openUrlInNewTab = source.match(/openUrlInNewTab: \(connection, url, options\) => \{[\s\S]*?\r?\n  \},\r?\n  openChildConnectionInNewTab/)?.[0];
+  const openConnectionInNewTab = source.match(/openConnectionInNewTab: \(connection, options\) => \{[\s\S]*?\r?\n  \},\r?\n  openUrlInNewTab/)?.[0];
   const openUrlConnection = source.match(/openUrlConnection: \(connection\) => \{[\s\S]*?openSshPortForwardBrowser/)?.[0];
 
   assert.ok(openUrlInNewTab, "openUrlInNewTab action should exist");
