@@ -18,13 +18,13 @@ A top-level section of the locale JSON mapping to a feature area in the frontend
 
 
 **Connection**:
-A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an http(s) target opened in the user's default browser), RDP, VNC, and FTP/FTPS. SFTP is opened from an SSH Connection and is not stored as a standalone Connection.
+A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an embedded http(s) WebView2 target), RDP, VNC, and FTP/FTPS. SFTP is opened from an SSH Connection and is not stored as a standalone Connection.
 _Avoid_: Profile, saved session, host entry
 
 SSH Connections may persist non-secret tmux launch preferences, including whether KKTerm should start terminal Panes inside named tmux sessions. The remote tmux process itself remains live Session/runtime state and is not the durable Connection.
 
 **URL Connection**:
-A Connection of kind `url`. It stores an http(s) URL plus an optional `dataPartition` label. The address bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. The embedded WebView2 browser path is stubbed while KKTerm runs without Tauri's `unstable` feature, so opening a URL Connection launches the URL in the user's default browser. The `dataPartition` field is persisted but currently a no-op until embedded browser isolation is revisited.
+A Connection of kind `url`. It stores an http(s) URL plus an optional `dataPartition` label. The address bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. The embedded WebView2 browser runs in a stable, owned, borderless overlay `WebviewWindow` positioned over the Pane instead of Tauri's `unstable` child-webview API. The `dataPartition` field is persisted but currently a no-op until embedded browser isolation is revisited.
 _Avoid_: Web tab, browser bookmark, URL profile
 
 **RDP/VNC Connection**:
@@ -146,7 +146,7 @@ _Avoid_: settings nav, settings menu
 
 - A **Connection** may start zero or more **Sessions** over time.
 - An SSH **Connection** may start terminal **Sessions** and related SFTP browser **Sessions**.
-- A **URL Connection** starts a stub URL **Session** that opens the target in the user's default browser and owns no native child surface.
+- A **URL Connection** starts a URL **Session** that owns a stable overlay WebView2 window positioned over the active Pane.
 - An **RDP Connection** starts a Windows-native remote-desktop **Session** hosted as a native child control over its **Tab**.
 - A **VNC Connection** starts a Rust-managed remote framebuffer **Session** rendered into its **Tab**.
 - A **Quick Connect** starts exactly one **Session** unless the user saves it as a **Connection**.

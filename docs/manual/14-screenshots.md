@@ -32,4 +32,4 @@ Screenshots are transient by design: a capture is either copied to the clipboard
 
 ## RDP screenshots
 
-RDP captures use a dedicated typed Tauri command that asks the OS for the visible RDP host bitmap, because the native HWND behind RDP cannot be composited into a normal DOM screenshot. URL Connections currently own no live WebView2 child surface because embedded browsing is stubbed without Tauri's `unstable` feature; they should not use RDP screenshot parking. Do not generalise the RDP screenshot code path to other surfaces — see [09-remote-desktop.md](09-remote-desktop.md).
+RDP captures use a dedicated typed Tauri command that asks the OS for the visible RDP host bitmap, because the native HWND behind RDP cannot be composited into a normal DOM screenshot. URL Connections use the standard capture path; while `workspace.selectRegion` is active, the URL overlay WebView2 is hidden behind a captured placeholder so the Region controls stay above it. Do not generalise the RDP screenshot code path to other surfaces — see [09-remote-desktop.md](09-remote-desktop.md).

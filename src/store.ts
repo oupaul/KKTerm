@@ -850,6 +850,11 @@ interface WorkspaceState {
       tmuxSessionId?: string;
     },
   ) => void;
+  openUrlInNewTab: (
+    connection: Connection,
+    url: string,
+    options?: { title?: string; subtitle?: string },
+  ) => void;
   openChildConnectionInNewTab: (
     connection: Connection,
     child: WorkspaceChildConnection,
@@ -1147,6 +1152,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }));
   },
   openConnectionInNewTab: (connection, options) => {
+    if (connection.type === "url") {
+      get().openUrlInNewTab(connection, connection.url ?? "", {
+        title: options?.title,
+      });
+      return;
+    }
+
     if (connection.type === "ftp") {
       if (connection.ftpOptions?.protocol === "sftp") {
         const sshConnection: Connection = {
@@ -1215,12 +1227,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
 
     const tabId = createConnectionTabId(connection.id);
-    const subtitle =
-      connection.type === "url"
-        ? urlConnectionSubtitle(connection)
-        : isRemoteDesktopConnection(connection)
-          ? remoteDesktopSubtitle(connection)
-          : terminalConnectionSubtitle(connection);
+    const subtitle = isRemoteDesktopConnection(connection)
+      ? remoteDesktopSubtitle(connection)
+      : terminalConnectionSubtitle(connection);
     const tab: WorkspaceTab = {
       id: tabId,
       childConnectionId: options?.childConnectionId,
@@ -1243,6 +1252,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       activeSessionCounts: incrementActiveSessionCounts(
         state.activeSessionCounts,
         urlConnectionIdsForTab(tab),
+      ),
+    }));
+  },
+  openUrlInNewTab: (connection, url, options) => {
+    const nextUrl = url.trim();
+    if (connection.type !== "url" || !nextUrl) {
+      return;
+    }
+    const tabConnection: Connection = {
+      ...connection,
+      url: nextUrl,
+    };
+    const tab: WorkspaceTab = {
+      id: createConnectionTabId(connection.id),
+      title: options?.title ?? connection.name,
+      toolbarTitle: toolbarTitleForConnection(connection),
+      subtitle: options?.subtitle ?? urlConnectionSubtitle(tabConnection),
+      kind: "webview",
+      panes: [],
+      connection: tabConnection,
+      url: nextUrl,
+      dataPartition: connection.dataPartition,
+    };
+
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+      activeSessionCounts: incrementActiveSessionCounts(
+        state.activeSessionCounts,
+        [connection.id],
       ),
     }));
   },
@@ -1514,16 +1553,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    const stored = loadStoredLayout(connection.id);
-    const panes = buildPanesFromStoredLayout(connection, stored);
-    if (panes.length === 0) {
-      return;
-    }
-    const paneIds = panes.map((pane) => pane.id);
-    const layout =
-      (stored ? hydrateLayout(stored.layout, paneIds) : undefined) ??
-      defaultLayoutFor(panes);
-
     const subtitle = urlConnectionSubtitle(connection);
 
     const tab: WorkspaceTab = {
@@ -1531,11 +1560,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       title: connection.name,
       toolbarTitle: toolbarTitleForConnection(connection),
       subtitle,
-      kind: "terminal",
-      panes,
-      layout,
-      focusedPaneId: panes[0]?.id,
-      quickCommandBarVisible: loadStoredQuickCommandBarVisible(connection.id),
+      kind: "webview",
+      panes: [],
       connection,
       url: connection.url,
       dataPartition: connection.dataPartition,
