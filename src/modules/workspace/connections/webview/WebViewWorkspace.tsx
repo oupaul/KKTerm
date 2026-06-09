@@ -50,6 +50,11 @@ interface WebviewSessionLease {
 
 const webviewSessionLeases = new Map<string, WebviewSessionLease>();
 const HIDDEN_WEBVIEW_BOUNDS = { x: 0, y: 0, width: 1, height: 1 };
+// The overlay's native window handle is realized asynchronously by the event loop, so the
+// very first show after a session starts can race ahead of it and fail with "the underlying
+// handle is not available". Retrying the show across a few short delays lets the loop catch up.
+const WEBVIEW_HANDLE_NOT_READY_PATTERN = /handle is not available|webview hwnd|failed to realize/i;
+const WEBVIEW_SHOW_RETRY_DELAYS_MS = [80, 160, 320, 640, 1000];
 
 function acquireWebviewSession(sessionId: string, start: () => Promise<WebviewSessionStarted>) {
   const current = webviewSessionLeases.get(sessionId);
@@ -271,6 +276,29 @@ export function WebViewWorkspace({
     });
   };
 
+  const requestWebviewVisibility = (
+    request: { sessionId: string; visible: boolean; x: number; y: number; width: number; height: number },
+    attempt = 0,
+  ): Promise<void | null> =>
+    invokeCommand("set_webview_visibility", { request }).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      const stillWantsVisible = visibilityRef.current.isActive && !visibilityRef.current.suppressed;
+      const shouldRetry =
+        request.visible &&
+        stillWantsVisible &&
+        sessionStartedRef.current &&
+        attempt < WEBVIEW_SHOW_RETRY_DELAYS_MS.length &&
+        WEBVIEW_HANDLE_NOT_READY_PATTERN.test(message);
+      if (!shouldRetry) {
+        throw error instanceof Error ? error : new Error(message);
+      }
+      return new Promise<void | null>((resolve, reject) => {
+        window.setTimeout(() => {
+          requestWebviewVisibility(request, attempt + 1).then(resolve, reject);
+        }, WEBVIEW_SHOW_RETRY_DELAYS_MS[attempt]);
+      });
+    });
+
   const pushWebviewVisibility = () => {
     if (!sessionStartedRef.current) {
       return;
@@ -280,8 +308,10 @@ export function WebViewWorkspace({
     if (!bounds && visible) {
       return;
     }
-    const visibilityUpdate = invokeCommand("set_webview_visibility", {
-      request: { sessionId: sessionIdRef.current, visible, ...(bounds ?? HIDDEN_WEBVIEW_BOUNDS) },
+    const visibilityUpdate = requestWebviewVisibility({
+      sessionId: sessionIdRef.current,
+      visible,
+      ...(bounds ?? HIDDEN_WEBVIEW_BOUNDS),
     });
     void visibilityUpdate.catch((error) => {
       setNavError(error instanceof Error ? error.message : String(error));

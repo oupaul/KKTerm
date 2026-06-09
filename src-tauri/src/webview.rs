@@ -758,17 +758,50 @@ fn overlay_rect(
     let scale_factor = host_window
         .scale_factor()
         .map_err(|error| format!("failed to read host window scale factor: {error}"))?;
-    let host_origin = host_window
-        .inner_position()
-        .map_err(|error| format!("failed to read host window content position: {error}"))?;
+    let host_origin = host_content_origin(host_window)?;
     let left = host_origin.x + (x.max(0.0) * scale_factor).round() as i32;
     let top = host_origin.y + (y.max(0.0) * scale_factor).round() as i32;
-    let width = (width.max(1.0) * scale_factor).round().max(1.0) as u32;
-    let height = (height.max(1.0) * scale_factor).round().max(1.0) as u32;
+    let physical_width = (width.max(1.0) * scale_factor).round().max(1.0) as u32;
+    let physical_height = (height.max(1.0) * scale_factor).round().max(1.0) as u32;
+    webview_debug_log(format!(
+        "overlay_rect scale={scale_factor} host_origin=({host_x},{host_y}) dom=(x={x},y={y},w={width},h={height}) -> pos=({left},{top}) size=({physical_width},{physical_height})",
+        host_x = host_origin.x,
+        host_y = host_origin.y,
+    ));
     Ok((
         PhysicalPosition::new(left, top),
-        PhysicalSize::new(width, height),
+        PhysicalSize::new(physical_width, physical_height),
     ))
+}
+
+/// Screen-space origin of the host WebView's client area — where DOM `(0, 0)`
+/// physically renders. On Windows the host is a borderless, resizable window
+/// whose frame insets can make `inner_position` drift a few pixels from the
+/// actual content origin, leaving a gap beside the overlay; `ClientToScreen`
+/// reports the true client origin instead.
+#[cfg(target_os = "windows")]
+fn host_content_origin(host_window: &WebviewWindow) -> Result<PhysicalPosition<i32>, String> {
+    use windows::Win32::Foundation::{HWND, POINT};
+    use windows::Win32::Graphics::Gdi::ClientToScreen;
+
+    let hwnd = host_window
+        .hwnd()
+        .map_err(|error| format!("failed to read host window HWND: {error}"))?;
+    let mut origin = POINT { x: 0, y: 0 };
+    let mapped = unsafe { ClientToScreen(HWND(hwnd.0), &mut origin) };
+    if mapped.as_bool() {
+        return Ok(PhysicalPosition::new(origin.x, origin.y));
+    }
+    host_window
+        .inner_position()
+        .map_err(|error| format!("failed to read host window content position: {error}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn host_content_origin(host_window: &WebviewWindow) -> Result<PhysicalPosition<i32>, String> {
+    host_window
+        .inner_position()
+        .map_err(|error| format!("failed to read host window content position: {error}"))
 }
 
 #[cfg(target_os = "windows")]

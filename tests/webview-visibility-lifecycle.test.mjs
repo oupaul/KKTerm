@@ -85,14 +85,34 @@ test("backend realizes hidden URL overlay windows before HWND-dependent no-activ
 test("backend positions URL overlays from the host WebView client origin", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
   const overlayFunction = source.match(/fn overlay_rect\([\s\S]*?\n\}/)?.[0];
+  const hostOriginFunction = source.match(/fn host_content_origin[\s\S]*?ClientToScreen[\s\S]*?\n\}/)?.[0];
 
   assert.ok(overlayFunction, "overlay_rect should exist");
-  assert.match(overlayFunction, /inner_position\(\)/);
+  assert.match(overlayFunction, /host_content_origin\(host_window\)/);
   assert.doesNotMatch(
     overlayFunction,
     /outer_position\(\)/,
     "DOM client coordinates should be offset from the host WebView content origin",
   );
+  assert.ok(hostOriginFunction, "host_content_origin should resolve the client origin via ClientToScreen on Windows");
+  assert.match(hostOriginFunction, /inner_position\(\)/, "host_content_origin should fall back to inner_position");
+});
+
+test("frontend retries the overlay show while the native handle is still realizing", async () => {
+  const source = await readFile(
+    new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const WEBVIEW_HANDLE_NOT_READY_PATTERN = /);
+  assert.match(source, /const WEBVIEW_SHOW_RETRY_DELAYS_MS = \[/);
+  const requestVisibility = source.match(/const requestWebviewVisibility = \([\s\S]*?\n    \}\);/)?.[0];
+  assert.ok(requestVisibility, "requestWebviewVisibility should exist");
+  assert.match(requestVisibility, /request\.visible/);
+  assert.match(requestVisibility, /WEBVIEW_HANDLE_NOT_READY_PATTERN\.test\(message\)/);
+  assert.match(requestVisibility, /attempt < WEBVIEW_SHOW_RETRY_DELAYS_MS\.length/);
+  assert.match(requestVisibility, /requestWebviewVisibility\(request, attempt \+ 1\)/);
+  assert.match(source, /const visibilityUpdate = requestWebviewVisibility\(\{/);
 });
 
 test("frontend repushes URL overlay bounds on native window move", async () => {
