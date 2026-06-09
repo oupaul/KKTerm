@@ -213,7 +213,8 @@ fn toggle_dont_sleep<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 }
 
 pub fn restore_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    if let Some(main_window) = app.get_window(crate::window_state::MAIN_WINDOW_LABEL) {
+    if let Some(main_webview) = app.get_webview_window(crate::window_state::MAIN_WINDOW_LABEL) {
+        let main_window = main_webview.as_ref().window();
         let was_minimized = main_window.is_minimized().unwrap_or(false);
         let unminimize_result = if was_minimized {
             main_window.unminimize().map(|_| "ok").unwrap_or("error")

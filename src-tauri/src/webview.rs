@@ -1,392 +1,47 @@
+//! Embedded URL-browser backend — STUBBED.
+//!
+//! KKTerm previously embedded the "URL / webview" connection type as a child
+//! webview (`Window::add_child`), which required Tauri's `unstable` feature. That
+//! feature globally switches every webview — including the main terminal webview —
+//! from `build()` (window content) to `build_as_child()` (a child HWND). wry only
+//! installs its `WM_SETFOCUS` focus-forwarding subclass for window-content
+//! webviews (`attach_parent_subclass`, gated on `!is_child`), so as a child HWND
+//! the terminal lost keyboard focus on alt-tab until a click.
+//!
+//! The in-app browser is a nice-to-have, so we dropped `unstable` and stubbed the
+//! embedded path: `start_session` opens the URL in the user's default browser and
+//! the remaining session commands are no-ops. This restores native focus
+//! forwarding for the terminal with no native focus code. The public API surface
+//! and the main-window WebView2 clipboard-permission helper are preserved so the
+//! rest of the app and the command handlers compile unchanged.
+
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     sync::{
-        Arc, Mutex, MutexGuard,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
 };
 
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Webview, WebviewBuilder, WebviewUrl,
-    webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
-};
+use tauri::AppHandle;
+use tauri_plugin_opener::OpenerExt;
 
-const HOST_WINDOW_LABEL: &str = "main";
 const DEFAULT_PARTITION: &str = "shared";
-const HIDDEN_WEBVIEW_POSITION: f64 = -32_000.0;
 
 /// WebView2 browser arguments that keep the renderer alive across RDP session
-/// disconnect/reconnect. When KKTerm runs inside a remote session, ending the
-/// mstsc connection tears down the host's display/GPU device; WebView2's GPU
-/// process then loses its DirectComposition device and the renderer hangs on
-/// reconnect (the native heartbeat thread keeps logging while the frontend
-/// heartbeat ages out). `--disable-gpu` forces software compositing so there is
-/// no GPU device to lose, and disabling `CalculateNativeWinOcclusion` stops the
-/// hidden-window render throttle.
-///
-/// These are passed through `additional_browser_args` because wry always sets
-/// WebView2's `AdditionalBrowserArguments` itself (which makes the runtime
-/// ignore the `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` environment variable).
-/// Setting that option replaces wry's own default arguments, so wry's defaults
-/// (`--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection`) are
-/// re-included here, with `CalculateNativeWinOcclusion` merged into the same
-/// `--disable-features` switch. Every WebView2 surface sharing the default data
-/// directory must use the same arguments, so URL Connection child webviews
-/// receive this when the main window does.
+/// disconnect/reconnect. Passed to the main window's webview at startup; see the
+/// call site in `lib.rs`. Retained here as the shared owner of the constant.
 #[cfg(target_os = "windows")]
 pub(crate) const REMOTE_SESSION_WEBVIEW2_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-gpu";
-const AUTOFILL_AGENT: &str = r#"
-(() => {
-  const TITLE_CHANNEL = "__KKTERM_URL_CREDENTIAL__";
-  const agent = {
-    fill(credential) {
-      const result = fillCredential(credential);
-      if (result.filled) {
-        return result;
-      }
-      observeForCredentialFields(credential);
-      return result;
-    },
-    capture(nonce) {
-      const passwordInput = findPasswordInput(true);
-      if (!passwordInput) {
-        publish({ ok: false, nonce, reason: "no-password-field", url: window.location.href });
-        return;
-      }
-      const password = passwordInput.value || "";
-      if (!password) {
-        publish({ ok: false, nonce, reason: "empty-password", url: window.location.href });
-        return;
-      }
-      const usernameInput = findUsernameInput(passwordInput);
-      const fieldValues = captureTextFieldValues(passwordInput);
-      const username = usernameInput?.value || firstSavedFieldValue(fieldValues) || window.location.host || window.location.href;
-      publish({
-        ok: true,
-        nonce,
-        url: window.location.href,
-        username,
-        password,
-        usernameSelector: usernameInput ? selectorFor(usernameInput) : undefined,
-        passwordSelector: selectorFor(passwordInput),
-        fieldValues,
-      });
-    },
-  };
 
-  function publish(payload) {
-    const previousTitle = document.title;
-    document.title = `${TITLE_CHANNEL}${JSON.stringify(payload)}`;
-    window.setTimeout(() => {
-      if (document.title.startsWith(TITLE_CHANNEL)) {
-        document.title = previousTitle;
-      }
-    }, 150);
-  }
-
-  let pendingFillObserver;
-  let pendingFillTimer;
-
-  function fillCredential(credential) {
-    const passwordInput = inputFromSelector(credential.passwordSelector) || findPasswordInput(false);
-    if (!passwordInput) {
-      return { filled: false, reason: "no-password-field" };
-    }
-    if (credential.automatic && passwordInput.value) {
-      return { filled: false, reason: "password-already-entered" };
-    }
-
-    const fieldValues = normalizeFieldValues(credential.fieldValues);
-    for (const field of fieldValues) {
-      const input = inputFromSelector(field.selector) || inputFromFieldDescriptor(field);
-      if (input && input !== passwordInput && (!credential.automatic || !input.value)) {
-        setInputValue(input, field.value || "");
-      }
-    }
-    const usernameInput = inputFromSelector(credential.usernameSelector) || findUsernameInput(passwordInput);
-    if (usernameInput && credential.username && fieldValues.length === 0 && (!credential.automatic || !usernameInput.value)) {
-      setInputValue(usernameInput, credential.username);
-    }
-    setInputValue(passwordInput, credential.password);
-    if (!credential.automatic) {
-      passwordInput.focus({ preventScroll: true });
-    }
-    return { filled: true, usernameFilled: Boolean(usernameInput && credential.username) };
-  }
-
-  function observeForCredentialFields(credential) {
-    if (pendingFillObserver) {
-      pendingFillObserver.disconnect();
-    }
-    if (pendingFillTimer) {
-      window.clearTimeout(pendingFillTimer);
-    }
-    pendingFillObserver = new MutationObserver(() => {
-      if (fillCredential(credential).filled) {
-        pendingFillObserver?.disconnect();
-        pendingFillObserver = undefined;
-        if (pendingFillTimer) {
-          window.clearTimeout(pendingFillTimer);
-          pendingFillTimer = undefined;
-        }
-      }
-    });
-    pendingFillObserver.observe(document.documentElement, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-    });
-    pendingFillTimer = window.setTimeout(() => {
-      pendingFillObserver?.disconnect();
-      pendingFillObserver = undefined;
-      pendingFillTimer = undefined;
-    }, 10000);
-  }
-
-  function normalizeFieldValues(fieldValues) {
-    if (Array.isArray(fieldValues)) {
-      return fieldValues;
-    }
-    if (typeof fieldValues === "string" && fieldValues) {
-      try {
-        const parsed = JSON.parse(fieldValues);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (_) {
-        return [];
-      }
-    }
-    return [];
-  }
-
-  function inputFromSelector(selector) {
-    if (!selector) {
-      return undefined;
-    }
-    try {
-      const input = document.querySelector(selector);
-      return isUsableTextControl(input) || isUsableInput(input) ? input : undefined;
-    } catch (_) {
-      return undefined;
-    }
-  }
-
-  function inputFromFieldDescriptor(field) {
-    if (!field) {
-      return undefined;
-    }
-    const controls = textFieldCandidates(document);
-    const stableMatch = controls.find((input) =>
-      field.tagName === input.tagName.toLowerCase() &&
-      (!field.type || field.type === textControlType(input)) &&
-      ((field.name && field.name === input.getAttribute("name")) ||
-        (field.id && field.id === input.id) ||
-        (field.autocomplete && field.autocomplete === input.getAttribute("autocomplete")) ||
-        (field.ariaLabel && field.ariaLabel === input.getAttribute("aria-label")) ||
-        (field.placeholder && field.placeholder === input.getAttribute("placeholder")))
-    );
-    if (stableMatch) {
-      return stableMatch;
-    }
-    return Number.isInteger(field.index) ? controls[field.index] : undefined;
-  }
-
-  function findPasswordInput(requireValue) {
-    return Array.from(document.querySelectorAll("input[type='password']"))
-      .filter(isUsableInput)
-      .filter((input) => !requireValue || input.value)
-      .sort((left, right) => visibleScore(right) - visibleScore(left))[0];
-  }
-
-  function findUsernameInput(passwordInput) {
-    const form = passwordInput.form || passwordInput.closest("form") || document;
-    const candidates = textFieldCandidates(form).filter((input) => input !== passwordInput);
-    if (candidates.length === 0) {
-      return undefined;
-    }
-    return candidates
-      .map((input, index) => ({ input, index, score: usernameScore(input, index, passwordInput) }))
-      .sort((left, right) => right.score - left.score || right.index - left.index)[0].input;
-  }
-
-  function usernameScore(input, index, passwordInput) {
-    const label = [
-      input.name,
-      input.id,
-      input.getAttribute("autocomplete"),
-      input.getAttribute("aria-label"),
-      input.placeholder,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    let score = index;
-    if (input.value) {
-      score += 40;
-    }
-    if (/user|email|login|account|name/.test(label)) {
-      score += 100;
-    }
-    if (/one-time|otp|code|search/.test(label)) {
-      score -= 100;
-    }
-    if (input.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_FOLLOWING) {
-      score += 20;
-    }
-    return score;
-  }
-
-  function visibleScore(input) {
-    const rect = input.getBoundingClientRect();
-    return Math.max(0, rect.width) * Math.max(0, rect.height);
-  }
-
-  function isUsableInput(input) {
-    return input instanceof HTMLInputElement &&
-      !input.disabled &&
-      !input.readOnly &&
-      input.type !== "hidden" &&
-      isVisibleElement(input);
-  }
-
-  function isUsableTextControl(input) {
-    if (input instanceof HTMLTextAreaElement) {
-      return !input.disabled && !input.readOnly && isVisibleElement(input);
-    }
-    return isUsableInput(input) && textInputTypes().includes(textControlType(input));
-  }
-
-  function isVisibleElement(input) {
-    const style = window.getComputedStyle(input);
-    return style.visibility !== "hidden" && style.display !== "none" && input.getClientRects().length > 0;
-  }
-
-  function textInputTypes() {
-    return ["", "text", "email", "tel", "search", "url", "number"];
-  }
-
-  function textControlType(input) {
-    return input instanceof HTMLInputElement ? (input.getAttribute("type") || "text").toLowerCase() : "textarea";
-  }
-
-  function textFieldCandidates(root) {
-    return Array.from(root.querySelectorAll("input, textarea")).filter(isUsableTextControl);
-  }
-
-  function captureTextFieldValues(passwordInput) {
-    const candidates = textFieldCandidates(document).filter((input) => input !== passwordInput && input.value);
-    return candidates.map((input) => ({
-      selector: selectorFor(input),
-      value: input.value,
-      tagName: input.tagName.toLowerCase(),
-      type: textControlType(input),
-      id: input.id || undefined,
-      name: input.getAttribute("name") || undefined,
-      autocomplete: input.getAttribute("autocomplete") || undefined,
-      ariaLabel: input.getAttribute("aria-label") || undefined,
-      placeholder: input.getAttribute("placeholder") || undefined,
-      index: textFieldCandidates(document).indexOf(input),
-    }));
-  }
-
-  function firstSavedFieldValue(fieldValues) {
-    return fieldValues.find((field) => field.value)?.value;
-  }
-
-  function setInputValue(input, value) {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-      "value"
-    );
-    descriptor.set.call(input, value);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  function selectorFor(input) {
-    const tagName = input.tagName.toLowerCase();
-    const stable = ["id", "name", "autocomplete", "aria-label", "placeholder"];
-    for (const attr of stable) {
-      const value = input.getAttribute(attr);
-      if (value) {
-        const selector = `${tagName}[${CSS.escape(attr)}=${JSON.stringify(value)}]`;
-        try {
-          if (document.querySelector(selector) === input) {
-            return selector;
-          }
-        } catch (_) {}
-      }
-    }
-    if (input instanceof HTMLInputElement) {
-      const type = input.getAttribute("type") || "text";
-      const inputs = Array.from(document.querySelectorAll(`input[type='${CSS.escape(type)}']`));
-      const index = inputs.indexOf(input);
-      return index >= 0 ? `input[type='${CSS.escape(type)}']:nth-of-type(${index + 1})` : "input";
-    }
-    const textareas = Array.from(document.querySelectorAll("textarea"));
-    const index = textareas.indexOf(input);
-    return index >= 0 ? `textarea:nth-of-type(${index + 1})` : "textarea";
-  }
-
-  Object.defineProperty(window, "__KKTERM_URL_AUTOFILL__", {
-    configurable: true,
-    value: agent,
-  });
-})();
-"#;
-const EXTERNAL_LINK_SHORTCUT_AGENT: &str = r#"
-(() => {
-  const TITLE_CHANNEL = "__KKTERM_URL_EXTERNAL_LINK__";
-  const BRIDGE_TOKEN = __KKTERM_EXTERNAL_LINK_BRIDGE_TOKEN__;
-
-  document.addEventListener("click", (event) => {
-    if (!event.shiftKey || event.defaultPrevented || event.button !== 0) {
-      return;
-    }
-    const anchor = event.target?.closest?.("a[href]");
-    if (!anchor) {
-      return;
-    }
-    const href = anchor.getAttribute("href");
-    if (!href) {
-      return;
-    }
-    let url;
-    try {
-      url = new URL(href, window.location.href);
-    } catch (_) {
-      return;
-    }
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    publish({ url: url.href, token: BRIDGE_TOKEN });
-  }, true);
-
-  function publish(payload) {
-    const previousTitle = document.title;
-    document.title = `${TITLE_CHANNEL}${JSON.stringify(payload)}`;
-    window.setTimeout(() => {
-      if (document.title.startsWith(TITLE_CHANNEL)) {
-        document.title = previousTitle;
-      }
-    }, 150);
-  }
-})();
-"#;
 pub struct WebviewSessionManager {
-    sessions: Mutex<HashMap<String, WebviewSession>>,
-    starting_sessions: Mutex<HashSet<String>>,
     clipboard_read_allowed: Arc<AtomicBool>,
+    /// Session ids already routed to the external browser, so repeated frontend
+    /// start attempts for the same pane do not reopen the browser each time.
+    externally_opened: Mutex<HashSet<String>>,
+    #[allow(dead_code)]
     additional_browser_args: Option<&'static str>,
-}
-
-struct WebviewSession {
-    webview: Webview,
-    visible: bool,
 }
 
 #[derive(Deserialize)]
@@ -394,12 +49,18 @@ struct WebviewSession {
 pub struct StartWebviewSessionRequest {
     session_id: String,
     url: String,
+    #[allow(dead_code)]
     data_partition: Option<String>,
     #[serde(default)]
+    #[allow(dead_code)]
     ignore_certificate_errors: bool,
+    #[allow(dead_code)]
     x: f64,
+    #[allow(dead_code)]
     y: f64,
+    #[allow(dead_code)]
     width: f64,
+    #[allow(dead_code)]
     height: f64,
 }
 
@@ -415,550 +76,164 @@ pub struct WebviewSessionStarted {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWebviewBoundsRequest {
+    #[allow(dead_code)]
     session_id: String,
+    #[allow(dead_code)]
     x: f64,
+    #[allow(dead_code)]
     y: f64,
+    #[allow(dead_code)]
     width: f64,
+    #[allow(dead_code)]
     height: f64,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SetWebviewVisibilityRequest {
+    #[allow(dead_code)]
     session_id: String,
+    #[allow(dead_code)]
     visible: bool,
+    #[allow(dead_code)]
     x: f64,
+    #[allow(dead_code)]
     y: f64,
+    #[allow(dead_code)]
     width: f64,
+    #[allow(dead_code)]
     height: f64,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebviewNavigateRequest {
+    #[allow(dead_code)]
     session_id: String,
+    #[allow(dead_code)]
     url: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebviewSimpleRequest {
+    #[allow(dead_code)]
     session_id: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebviewCaptureCredentialRequest {
+    #[allow(dead_code)]
     session_id: String,
+    #[allow(dead_code)]
     nonce: String,
 }
 
 pub(crate) struct WebviewFillCredentialRequest {
+    #[allow(dead_code)]
     pub(crate) session_id: String,
+    #[allow(dead_code)]
     pub(crate) username: String,
+    #[allow(dead_code)]
     pub(crate) password: String,
+    #[allow(dead_code)]
     pub(crate) username_selector: Option<String>,
+    #[allow(dead_code)]
     pub(crate) password_selector: Option<String>,
+    #[allow(dead_code)]
     pub(crate) field_values: Option<String>,
+    #[allow(dead_code)]
     pub(crate) automatic: bool,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WebviewNavigationPayload {
-    session_id: String,
-    url: String,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WebviewPageLoadPayload {
-    session_id: String,
-    url: String,
-    status: &'static str,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WebviewTitleChangedPayload {
-    session_id: String,
-    title: String,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WebviewDownloadPayload {
-    session_id: String,
-    url: String,
-    status: &'static str,
-    path: Option<String>,
-    success: Option<bool>,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WebviewNewWindowPayload {
-    session_id: String,
-    url: String,
-}
-
-/// RAII reservation for the `starting_sessions` set. Clears the reservation on
-/// drop — including any early `?` return or panic during startup — unless
-/// `commit()` is called on success. Without this, an error after the
-/// reservation but before insertion (e.g. a failed clipboard/cert configure or
-/// navigate) left the session id stuck as "already starting" until restart.
-struct StartingReservation<'a> {
-    manager: &'a WebviewSessionManager,
-    session_id: String,
-    committed: bool,
-}
-
-impl StartingReservation<'_> {
-    fn commit(mut self) {
-        self.committed = true;
-    }
-}
-
-impl Drop for StartingReservation<'_> {
-    fn drop(&mut self) {
-        if !self.committed {
-            self.manager.clear_starting(&self.session_id);
-        }
-    }
 }
 
 impl WebviewSessionManager {
     pub fn new(allow_clipboard_read: bool, additional_browser_args: Option<&'static str>) -> Self {
         Self {
-            sessions: Mutex::new(HashMap::new()),
-            starting_sessions: Mutex::new(HashSet::new()),
             clipboard_read_allowed: Arc::new(AtomicBool::new(allow_clipboard_read)),
+            externally_opened: Mutex::new(HashSet::new()),
             additional_browser_args,
         }
     }
 
     pub fn set_clipboard_read_allowed(&self, allowed: bool) {
-        self.clipboard_read_allowed
-            .store(allowed, Ordering::Relaxed);
+        self.clipboard_read_allowed.store(allowed, Ordering::Relaxed);
     }
 
     pub fn clipboard_read_allowed_state(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.clipboard_read_allowed)
     }
 
+    /// Embedded browsing is disabled. Open the URL in the user's default browser
+    /// (once per session id) and report that nothing was embedded.
     pub fn start_session(
         &self,
         app: &AppHandle,
         request: StartWebviewSessionRequest,
     ) -> Result<WebviewSessionStarted, String> {
-        let StartWebviewSessionRequest {
-            session_id,
-            url,
-            data_partition,
-            ignore_certificate_errors,
-            x,
-            y,
-            width,
-            height,
-        } = request;
-
-        let session_id = required_id(session_id)?;
-        let parsed_url = parse_external_url(&url)?;
-        // WebView2 only supports one user-data folder per process. Tauri's
-        // host webview already owns one, so a child webview that asks for a
-        // different `data_directory` triggers a controller-creation crash
-        // inside `EmbeddedBrowserWebView.dll`. For Phase 1 every URL session
-        // shares the host process's data store; cookies and storage are
-        // therefore shared across all URL connections. Real per-connection
-        // isolation needs a separate WebView2 process and is deferred.
-        let partition = resolve_partition(data_partition);
-
-        {
-            let sessions = self.lock()?;
-            if sessions.contains_key(&session_id) {
-                return Err(format!("webview session '{session_id}' is already running"));
-            }
-        }
-        {
-            let mut starting_sessions = self.lock_starting()?;
-            if !starting_sessions.insert(session_id.clone()) {
-                return Err(format!(
-                    "webview session '{session_id}' is already starting"
-                ));
-            }
-        }
-        // From here on, any early return clears the reservation via Drop unless
-        // we commit() on success.
-        let starting_reservation = StartingReservation {
-            manager: self,
-            session_id: session_id.clone(),
-            committed: false,
-        };
-
-        let host_window = app
-            .get_window(HOST_WINDOW_LABEL)
-            .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
-
-        let label = webview_label_for(&session_id);
-        let navigation_app = app.clone();
-        let navigation_session_id = session_id.clone();
-        let page_load_app = app.clone();
-        let page_load_session_id = session_id.clone();
-        let title_app = app.clone();
-        let title_session_id = session_id.clone();
-        let download_app = app.clone();
-        let download_session_id = session_id.clone();
-        let new_window_app = app.clone();
-        let new_window_session_id = session_id.clone();
-        let initial_webview_url = if ignore_certificate_errors && cfg!(windows) {
-            parse_webview_blank_url()?
-        } else {
-            parsed_url.clone()
-        };
-        let external_link_token = external_link_bridge_token();
-        let initialization_script = format!(
-            "{AUTOFILL_AGENT}\n{}",
-            external_link_shortcut_agent(&external_link_token)?
-        );
-        let mut builder = WebviewBuilder::new(&label, WebviewUrl::External(initial_webview_url))
-            .initialization_script(initialization_script)
-            .on_navigation(move |url| {
-                let _ = navigation_app.emit(
-                    "webview-navigation",
-                    WebviewNavigationPayload {
-                        session_id: navigation_session_id.clone(),
-                        url: url.to_string(),
-                    },
-                );
-                true
-            })
-            .on_page_load(move |_webview, payload| {
-                let status = match payload.event() {
-                    PageLoadEvent::Started => "started",
-                    PageLoadEvent::Finished => "finished",
-                };
-                let _ = page_load_app.emit(
-                    "webview-page-load",
-                    WebviewPageLoadPayload {
-                        session_id: page_load_session_id.clone(),
-                        url: payload.url().to_string(),
-                        status,
-                    },
-                );
-            })
-            .on_document_title_changed(move |_webview, title| {
-                let _ = title_app.emit(
-                    "webview-title-changed",
-                    WebviewTitleChangedPayload {
-                        session_id: title_session_id.clone(),
-                        title,
-                    },
-                );
-            })
-            .on_new_window(move |url, _features| {
-                if matches!(url.scheme(), "http" | "https") {
-                    let _ = new_window_app.emit(
-                        "webview-new-window",
-                        WebviewNewWindowPayload {
-                            session_id: new_window_session_id.clone(),
-                            url: url.to_string(),
-                        },
-                    );
-                }
-                NewWindowResponse::Deny
-            })
-            .on_download(move |_webview, event| {
-                let payload = match event {
-                    DownloadEvent::Requested { url, destination } => WebviewDownloadPayload {
-                        session_id: download_session_id.clone(),
-                        url: url.to_string(),
-                        status: "requested",
-                        path: Some(destination.display().to_string()),
-                        success: None,
-                    },
-                    DownloadEvent::Finished { url, path, success } => WebviewDownloadPayload {
-                        session_id: download_session_id.clone(),
-                        url: url.to_string(),
-                        status: "finished",
-                        path: path.map(|path| path.display().to_string()),
-                        success: Some(success),
-                    },
-                    _ => WebviewDownloadPayload {
-                        session_id: download_session_id.clone(),
-                        url: String::new(),
-                        status: "unknown",
-                        path: None,
-                        success: None,
-                    },
-                };
-                let _ = download_app.emit("webview-download", payload);
-                true
-            })
-            .auto_resize();
-        if let Some(additional_browser_args) = self.additional_browser_args {
-            builder = builder.additional_browser_args(additional_browser_args);
-        }
-
-        let position = LogicalPosition::new(x.max(0.0), y.max(0.0));
-        let size = LogicalSize::new(width.max(1.0), height.max(1.0));
-
-        let webview = host_window
-            .add_child(builder, position, size)
-            .map_err(|error| format!("failed to attach child webview: {error}"))?;
-
-        configure_clipboard_read_permission(&webview, Arc::clone(&self.clipboard_read_allowed))?;
-        configure_certificate_error_bypass(&webview, ignore_certificate_errors)?;
-        if ignore_certificate_errors && cfg!(windows) {
-            webview
-                .navigate(parsed_url)
-                .map_err(|error| format!("failed to navigate webview: {error}"))?;
-        }
-
-        let mut sessions = self.lock()?;
-        sessions.insert(
-            session_id.clone(),
-            WebviewSession {
-                webview,
-                visible: true,
-            },
-        );
-        starting_reservation.commit();
-
-        Ok(WebviewSessionStarted {
-            session_id,
-            label,
-            partition,
-            external_link_token,
-        })
-    }
-
-    pub fn update_bounds(&self, request: UpdateWebviewBoundsRequest) -> Result<(), String> {
-        let UpdateWebviewBoundsRequest {
-            session_id,
-            x,
-            y,
-            width,
-            height,
-        } = request;
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&session_id)
-            .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;
-        webview_debug_log(format!(
-            "update_bounds session={session_id} tracked_visible={} x={x} y={y} width={width} height={height}",
-            session.visible
-        ));
-        if session.visible {
-            show_webview(&session.webview, x, y, width, height)?;
-        }
-        Ok(())
-    }
-
-    // Child WebView2 surfaces can draw above DOM overlays. Hidden URL sessions
-    // are parked offscreen with a 1x1 footprint; the frontend sends the
-    // current placeholder rect again before revealing.
-    pub fn set_visibility(&self, request: SetWebviewVisibilityRequest) -> Result<(), String> {
-        let SetWebviewVisibilityRequest {
-            session_id,
-            visible,
-            x,
-            y,
-            width,
-            height,
-        } = request;
-        let mut sessions = self.lock()?;
-        if !sessions.contains_key(&session_id) {
-            return Err(format!("webview session '{session_id}' was not found"));
-        }
-        if visible {
-            let session = sessions
-                .get_mut(&session_id)
-                .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;
-            webview_debug_log(format!(
-                "set_visibility session={session_id} visible=true x={x} y={y} width={width} height={height}"
-            ));
-            show_webview(&session.webview, x, y, width, height)?;
-            session.visible = true;
-        } else {
-            let session = sessions
-                .get_mut(&session_id)
-                .ok_or_else(|| format!("webview session '{session_id}' was not found"))?;
-            webview_debug_log(format!(
-                "set_visibility session={session_id} visible=false x={x} y={y} width={width} height={height}"
-            ));
-            hide_webview(&session.webview)?;
-            session.visible = false;
-        }
-        Ok(())
-    }
-
-    pub fn focus(&self, request: WebviewSimpleRequest) -> Result<(), String> {
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        if !session.visible {
-            return Ok(());
-        }
-        session
-            .webview
-            .set_focus()
-            .map_err(|error| format!("failed to focus webview: {error}"))
-    }
-
-    pub fn navigate(&self, request: WebviewNavigateRequest) -> Result<(), String> {
+        let session_id = required_id(request.session_id)?;
         let url = parse_external_url(&request.url)?;
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        session
-            .webview
-            .navigate(url)
-            .map_err(|error| format!("failed to navigate webview: {error}"))
+
+        let already_opened = self
+            .externally_opened
+            .lock()
+            .map(|mut set| !set.insert(session_id.clone()))
+            .unwrap_or(false);
+        if !already_opened {
+            app.opener()
+                .open_url(url.to_string(), None::<&str>)
+                .map_err(|error| format!("failed to open URL in external browser: {error}"))?;
+        }
+
+        Err("The in-app browser is disabled in this build; the URL opened in your default browser.".to_string())
     }
 
-    pub fn reload(&self, request: WebviewSimpleRequest) -> Result<(), String> {
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        session
-            .webview
-            .eval("window.location.reload();")
-            .map_err(|error| format!("failed to reload webview: {error}"))
+    pub fn update_bounds(&self, _request: UpdateWebviewBoundsRequest) -> Result<(), String> {
+        Ok(())
     }
 
-    pub fn go_back(&self, request: WebviewSimpleRequest) -> Result<(), String> {
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        session
-            .webview
-            .eval("window.history.back();")
-            .map_err(|error| format!("failed to navigate webview back: {error}"))
+    pub fn set_visibility(&self, _request: SetWebviewVisibilityRequest) -> Result<(), String> {
+        Ok(())
     }
 
-    pub fn go_forward(&self, request: WebviewSimpleRequest) -> Result<(), String> {
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        session
-            .webview
-            .eval("window.history.forward();")
-            .map_err(|error| format!("failed to navigate webview forward: {error}"))
+    pub fn focus(&self, _request: WebviewSimpleRequest) -> Result<(), String> {
+        Ok(())
     }
 
-    pub(crate) fn fill_credential(
-        &self,
-        request: WebviewFillCredentialRequest,
-    ) -> Result<(), String> {
-        let payload = serde_json::json!({
-            "username": request.username,
-            "password": request.password,
-            "usernameSelector": request.username_selector,
-            "passwordSelector": request.password_selector,
-            "fieldValues": request.field_values,
-            "automatic": request.automatic,
-        });
-        let payload = serde_json::to_string(&payload)
-            .map_err(|error| format!("failed to prepare URL credential payload: {error}"))?;
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        session
-            .webview
-            .eval(format!("window.__KKTERM_URL_AUTOFILL__?.fill({payload});"))
-            .map_err(|error| format!("failed to fill webview credential: {error}"))
+    pub fn navigate(&self, _request: WebviewNavigateRequest) -> Result<(), String> {
+        Ok(())
     }
 
-    pub fn capture_credential(
-        &self,
-        request: WebviewCaptureCredentialRequest,
-    ) -> Result<(), String> {
-        let nonce = serde_json::to_string(&request.nonce)
-            .map_err(|error| format!("failed to prepare URL credential capture nonce: {error}"))?;
-        let sessions = self.lock()?;
-        let session = sessions
-            .get(&request.session_id)
-            .ok_or_else(|| format!("webview session '{}' was not found", request.session_id))?;
-        session
-            .webview
-            .eval(format!("window.__KKTERM_URL_AUTOFILL__?.capture({nonce});"))
-            .map_err(|error| format!("failed to capture webview credential: {error}"))
+    pub fn reload(&self, _request: WebviewSimpleRequest) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn go_back(&self, _request: WebviewSimpleRequest) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn go_forward(&self, _request: WebviewSimpleRequest) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn fill_credential(&self, _request: WebviewFillCredentialRequest) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn capture_credential(&self, _request: WebviewCaptureCredentialRequest) -> Result<(), String> {
+        Ok(())
     }
 
     pub fn close_session(&self, request: WebviewSimpleRequest) -> Result<(), String> {
-        let mut sessions = self.lock()?;
-        if let Some(session) = sessions.remove(&request.session_id) {
-            session
-                .webview
-                .close()
-                .map_err(|error| format!("failed to close webview: {error}"))?;
+        if let Ok(mut set) = self.externally_opened.lock() {
+            set.remove(&request.session_id);
         }
         Ok(())
     }
-
-    fn lock(&self) -> Result<MutexGuard<'_, HashMap<String, WebviewSession>>, String> {
-        self.sessions
-            .lock()
-            .map_err(|_| "webview session lock is poisoned".to_string())
-    }
-
-    fn lock_starting(&self) -> Result<MutexGuard<'_, HashSet<String>>, String> {
-        self.starting_sessions
-            .lock()
-            .map_err(|_| "webview startup lock is poisoned".to_string())
-    }
-
-    fn clear_starting(&self, session_id: &str) {
-        if let Ok(mut starting_sessions) = self.starting_sessions.lock() {
-            starting_sessions.remove(session_id);
-        }
-    }
 }
 
-fn webview_label_for(session_id: &str) -> String {
-    format!("url-session-{session_id}")
-}
-
-fn show_webview(webview: &Webview, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
-    webview
-        .set_position(LogicalPosition::new(x.max(0.0), y.max(0.0)))
-        .map_err(|error| format!("failed to position webview: {error}"))?;
-    webview
-        .set_size(LogicalSize::new(width.max(1.0), height.max(1.0)))
-        .map_err(|error| format!("failed to size webview: {error}"))
-}
-
-fn hide_webview(webview: &Webview) -> Result<(), String> {
-    webview
-        .set_position(LogicalPosition::new(
-            HIDDEN_WEBVIEW_POSITION,
-            HIDDEN_WEBVIEW_POSITION,
-        ))
-        .map_err(|error| format!("failed to hide webview: {error}"))?;
-    webview
-        .set_size(LogicalSize::new(1.0, 1.0))
-        .map_err(|error| format!("failed to hide webview: {error}"))
-}
-
-fn webview_debug_log(message: String) {
-    if std::env::var("KKTERM_WEBVIEW_DEBUG").ok().as_deref() == Some("1") {
-        eprintln!("[kkterm:webview] {message}");
-    }
-}
-
-fn configure_certificate_error_bypass(webview: &Webview, enabled: bool) -> Result<(), String> {
-    if !enabled {
-        return Ok(());
-    }
-    configure_platform_certificate_error_bypass(webview)
-}
-
+/// Allow the main terminal webview to read the clipboard without per-paste
+/// prompts. Operates on the window-content `WebviewWindow` (no `unstable` needed).
 pub(crate) fn configure_shell_clipboard_read_permission(
     webview: &tauri::WebviewWindow,
     allowed: Arc<AtomicBool>,
@@ -966,45 +241,11 @@ pub(crate) fn configure_shell_clipboard_read_permission(
     configure_platform_shell_clipboard_read_permission(webview, allowed)
 }
 
-fn configure_clipboard_read_permission(
-    webview: &Webview,
-    allowed: Arc<AtomicBool>,
-) -> Result<(), String> {
-    configure_platform_clipboard_read_permission(webview, allowed)
-}
-
 #[cfg(windows)]
 fn configure_platform_shell_clipboard_read_permission(
     webview: &tauri::WebviewWindow,
     allowed: Arc<AtomicBool>,
 ) -> Result<(), String> {
-    configure_webview2_clipboard_permission(webview, allowed)
-}
-
-#[cfg(not(windows))]
-fn configure_platform_shell_clipboard_read_permission(
-    _webview: &tauri::WebviewWindow,
-    _allowed: Arc<AtomicBool>,
-) -> Result<(), String> {
-    Ok(())
-}
-
-#[cfg(windows)]
-fn configure_platform_clipboard_read_permission(
-    webview: &Webview,
-    allowed: Arc<AtomicBool>,
-) -> Result<(), String> {
-    configure_webview2_clipboard_permission(webview, allowed)
-}
-
-#[cfg(windows)]
-fn configure_webview2_clipboard_permission<T>(
-    webview: &T,
-    allowed: Arc<AtomicBool>,
-) -> Result<(), String>
-where
-    T: Webview2PermissionTarget,
-{
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::{
             COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ, COREWEBVIEW2_PERMISSION_STATE_ALLOW,
@@ -1018,7 +259,7 @@ where
     let setup_error_for_callback = Arc::clone(&setup_error);
 
     webview
-        .with_webview_for_permission(move |platform_webview| {
+        .with_webview(move |platform_webview| {
             let result = (|| -> Result<(), String> {
                 unsafe {
                     let webview2 = platform_webview
@@ -1028,8 +269,7 @@ where
                     let handler =
                         PermissionRequestedEventHandler::create(Box::new(move |_sender, args| {
                             if let Some(args) = args {
-                                let mut permission_kind =
-                                    COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ;
+                                let mut permission_kind = COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ;
                                 args.PermissionKind(&mut permission_kind)?;
                                 if permission_kind == COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ {
                                     if allowed.load(Ordering::Relaxed) {
@@ -1070,103 +310,10 @@ where
 }
 
 #[cfg(not(windows))]
-fn configure_platform_clipboard_read_permission(
-    _webview: &Webview,
+fn configure_platform_shell_clipboard_read_permission(
+    _webview: &tauri::WebviewWindow,
     _allowed: Arc<AtomicBool>,
 ) -> Result<(), String> {
-    Ok(())
-}
-
-#[cfg(windows)]
-trait Webview2PermissionTarget {
-    fn with_webview_for_permission<F>(&self, f: F) -> Result<(), tauri::Error>
-    where
-        F: FnOnce(tauri::webview::PlatformWebview) + Send + 'static;
-}
-
-#[cfg(windows)]
-impl Webview2PermissionTarget for Webview {
-    fn with_webview_for_permission<F>(&self, f: F) -> Result<(), tauri::Error>
-    where
-        F: FnOnce(tauri::webview::PlatformWebview) + Send + 'static,
-    {
-        self.with_webview(f)
-    }
-}
-
-#[cfg(windows)]
-impl Webview2PermissionTarget for tauri::WebviewWindow {
-    fn with_webview_for_permission<F>(&self, f: F) -> Result<(), tauri::Error>
-    where
-        F: FnOnce(tauri::webview::PlatformWebview) + Send + 'static,
-    {
-        self.with_webview(f)
-    }
-}
-
-#[cfg(windows)]
-fn configure_platform_certificate_error_bypass(webview: &Webview) -> Result<(), String> {
-    use std::sync::{Arc, Mutex};
-
-    use webview2_com::{
-        Microsoft::Web::WebView2::Win32::{
-            COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW, ICoreWebView2_14,
-        },
-        ServerCertificateErrorDetectedEventHandler,
-    };
-    use windows_core::Interface;
-
-    let setup_error = Arc::new(Mutex::new(None::<String>));
-    let setup_error_for_callback = Arc::clone(&setup_error);
-
-    webview
-        .with_webview(move |platform_webview| {
-            let result = (|| -> Result<(), String> {
-                unsafe {
-                    let webview2 = platform_webview
-                        .controller()
-                        .CoreWebView2()
-                        .map_err(|error| error.to_string())?;
-                    let webview2 = webview2
-                        .cast::<ICoreWebView2_14>()
-                        .map_err(|error| error.to_string())?;
-                    let handler = ServerCertificateErrorDetectedEventHandler::create(Box::new(
-                        move |_sender, args| {
-                            if let Some(args) = args {
-                                args.SetAction(
-                                    COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW,
-                                )?;
-                            }
-                            Ok(())
-                        },
-                    ));
-                    let mut token = 0;
-                    webview2
-                        .add_ServerCertificateErrorDetected(&handler, &mut token)
-                        .map_err(|error| error.to_string())?;
-                }
-                Ok::<(), String>(())
-            })();
-            if let Err(error) = result {
-                if let Ok(mut setup_error) = setup_error_for_callback.lock() {
-                    *setup_error = Some(error);
-                }
-            }
-        })
-        .map_err(|error| format!("failed to access WebView2 for certificate settings: {error}"))?;
-
-    if let Ok(mut setup_error) = setup_error.lock() {
-        if let Some(error) = setup_error.take() {
-            return Err(format!(
-                "failed to enable URL certificate bypass for WebView2: {error}"
-            ));
-        }
-    }
-    Ok(())
-}
-
-#[cfg(not(windows))]
-fn configure_platform_certificate_error_bypass(_webview: &Webview) -> Result<(), String> {
     Ok(())
 }
 
@@ -1187,10 +334,6 @@ fn required_id(value: String) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-fn parse_webview_blank_url() -> Result<url::Url, String> {
-    url::Url::parse("about:blank").map_err(|error| format!("blank URL is not valid: {error}"))
-}
-
 fn parse_external_url(value: &str) -> Result<url::Url, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -1201,32 +344,17 @@ fn parse_external_url(value: &str) -> Result<url::Url, String> {
     } else {
         format!("https://{trimmed}")
     };
-    let parsed =
-        url::Url::parse(&candidate).map_err(|error| format!("URL is not valid: {error}"))?;
+    let parsed = url::Url::parse(&candidate).map_err(|error| format!("URL is not valid: {error}"))?;
     match parsed.scheme() {
         "http" | "https" => Ok(parsed),
         other => Err(format!("URL scheme must be http or https, got {other}")),
     }
 }
 
+#[allow(dead_code)]
 fn resolve_partition(data_partition: Option<String>) -> String {
     data_partition
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| DEFAULT_PARTITION.to_string())
-}
-
-fn external_link_bridge_token() -> String {
-    let mut random = [0_u8; 16];
-    rand::rng().fill_bytes(&mut random);
-    random
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>()
-}
-
-fn external_link_shortcut_agent(token: &str) -> Result<String, String> {
-    let token = serde_json::to_string(token)
-        .map_err(|error| format!("failed to prepare URL external-link token: {error}"))?;
-    Ok(EXTERNAL_LINK_SHORTCUT_AGENT.replace("__KKTERM_EXTERNAL_LINK_BRIDGE_TOKEN__", &token))
 }

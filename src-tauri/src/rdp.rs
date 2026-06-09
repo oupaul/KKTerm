@@ -502,7 +502,7 @@ mod platform {
             let sessions = Arc::clone(&self.sessions);
             run_on_main_thread("update_rdp_bounds", app, move |app| {
                 let host_window = app
-                    .get_window(HOST_WINDOW_LABEL)
+                    .get_webview_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
                 let scale_factor = host_window
                     .scale_factor()
@@ -531,7 +531,7 @@ mod platform {
             let sessions = Arc::clone(&self.sessions);
             run_on_main_thread("set_rdp_visibility", app, move |app| {
                 let host_window = app
-                    .get_window(HOST_WINDOW_LABEL)
+                    .get_webview_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
                 let scale_factor = host_window
                     .scale_factor()
@@ -631,7 +631,7 @@ mod platform {
             let sessions = Arc::clone(&self.sessions);
             run_on_main_thread("sync_rdp_display_size", app, move |app| {
                 let host_window = app
-                    .get_window(HOST_WINDOW_LABEL)
+                    .get_webview_window(HOST_WINDOW_LABEL)
                     .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
                 let scale_factor = host_window
                     .scale_factor()
@@ -1011,7 +1011,7 @@ mod platform {
         }
 
         let host_window = app
-            .get_window(HOST_WINDOW_LABEL)
+            .get_webview_window(HOST_WINDOW_LABEL)
             .ok_or_else(|| format!("host window '{HOST_WINDOW_LABEL}' is not available"))?;
         let parent_hwnd = host_window
             .hwnd()

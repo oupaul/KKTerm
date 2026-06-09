@@ -231,7 +231,7 @@ struct CaptureTarget {
 
 #[cfg(target_os = "windows")]
 struct MinimizedCaptureWindow {
-    window: tauri::Window,
+    window: tauri::WebviewWindow,
     was_minimized: bool,
     was_visible: bool,
 }
@@ -240,7 +240,7 @@ struct MinimizedCaptureWindow {
 impl MinimizedCaptureWindow {
     fn new(app: &tauri::AppHandle) -> Result<Self, String> {
         let window = app
-            .get_window("main")
+            .get_webview_window("main")
             .ok_or_else(|| "main window is not available".to_string())?;
         let was_minimized = window.is_minimized().unwrap_or(false);
         let was_visible = window.is_visible().unwrap_or(true);
@@ -275,7 +275,7 @@ fn capture_target(
     request: CaptureScreenshotRequest,
 ) -> Result<CaptureTarget, String> {
     let window = app
-        .get_window("main")
+        .get_webview_window("main")
         .ok_or_else(|| "main window is not available".to_string())?;
     let inner_position = window
         .inner_position()

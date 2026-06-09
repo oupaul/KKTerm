@@ -18,13 +18,13 @@ A top-level section of the locale JSON mapping to a feature area in the frontend
 
 
 **Connection**:
-A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an embedded WebView2 browser surface targeting a single http(s) origin), RDP, VNC, and FTP/FTPS. SFTP is opened from an SSH Connection and is not stored as a standalone Connection.
+A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an http(s) target opened in the user's default browser), RDP, VNC, and FTP/FTPS. SFTP is opened from an SSH Connection and is not stored as a standalone Connection.
 _Avoid_: Profile, saved session, host entry
 
 SSH Connections may persist non-secret tmux launch preferences, including whether KKTerm should start terminal Panes inside named tmux sessions. The remote tmux process itself remains live Session/runtime state and is not the durable Connection.
 
 **URL Connection**:
-A Connection of kind `url`. It stores an http(s) URL plus an optional `dataPartition` label. The address bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. The `dataPartition` field is persisted but currently a no-op: WebView2 enforces one user-data folder per process, so all URL Connections share the host app's WebView2 cookie/storage in Phase 1. Real per-Connection isolation is deferred until Phase 2 explores out-of-process WebView2 environments.
+A Connection of kind `url`. It stores an http(s) URL plus an optional `dataPartition` label. The address bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. The embedded WebView2 browser path is stubbed while KKTerm runs without Tauri's `unstable` feature, so opening a URL Connection launches the URL in the user's default browser. The `dataPartition` field is persisted but currently a no-op until embedded browser isolation is revisited.
 _Avoid_: Web tab, browser bookmark, URL profile
 
 **RDP/VNC Connection**:
@@ -124,7 +124,7 @@ The fallback view shown when no Sessions are open, displaying recent Connections
 _Avoid_: dashboard page, home screen
 
 **Workspace Canvas**:
-The central content area for the active Module. Each Module (Workspace, Dashboard) owns its own content layout within this area. For the Workspace Module, this includes the Tab Strip, active Tab content (terminals, RDP/VNC surfaces, WebView2 surfaces, SFTP/FTP browsers), and optional pane splits.
+The central content area for the active Module. Each Module (Workspace, Dashboard) owns its own content layout within this area. For the Workspace Module, this includes the Tab Strip, active Tab content (terminals, URL launch placeholders, RDP/VNC surfaces, SFTP/FTP browsers), and optional pane splits.
 _Avoid_: main area, content area
 
 **Tab Strip**:
@@ -146,7 +146,7 @@ _Avoid_: settings nav, settings menu
 
 - A **Connection** may start zero or more **Sessions** over time.
 - An SSH **Connection** may start terminal **Sessions** and related SFTP browser **Sessions**.
-- A **URL Connection** starts a webview **Session** that owns one child WebView2 surface positioned over its **Tab**.
+- A **URL Connection** starts a stub URL **Session** that opens the target in the user's default browser and owns no native child surface.
 - An **RDP Connection** starts a Windows-native remote-desktop **Session** hosted as a native child control over its **Tab**.
 - A **VNC Connection** starts a Rust-managed remote framebuffer **Session** rendered into its **Tab**.
 - A **Quick Connect** starts exactly one **Session** unless the user saves it as a **Connection**.

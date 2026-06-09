@@ -2640,7 +2640,8 @@ fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> t
 
 #[cfg(target_os = "windows")]
 fn restore_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+    if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+        let main_window = main_webview.as_ref().window();
         if main_window.is_minimized().unwrap_or(false) {
             let _ = main_window.unminimize();
         }
@@ -2774,7 +2775,8 @@ pub fn run() {
                 .map_err(setup_error)?;
                 window_effects::apply_title_bar_mode(&main_webview);
             }
-            if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+            if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+                let main_window = main_webview.as_ref().window();
                 let title = format!("KKTerm v{}", env!("CARGO_PKG_VERSION"));
                 main_window
                     .set_title(&title)
@@ -2790,7 +2792,8 @@ pub fn run() {
                 general_settings.minimize_to_tray(),
             ));
             if general_settings.auto_start_with_windows() {
-                if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+                if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+                    let main_window = main_webview.as_ref().window();
                     let _ = main_window.minimize();
                     if general_settings.minimize_to_tray() {
                         let _ = main_window.hide();
@@ -2803,7 +2806,8 @@ pub fn run() {
             {
                 eprintln!("failed to restore Don't Sleep foreground setting: {error}");
             }
-            if let Some(main_window) = app.get_window(window_state::MAIN_WINDOW_LABEL) {
+            if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+                let main_window = main_webview.as_ref().window();
                 if let Err(error) =
                     power_manager.set_app_foreground(main_window_is_foreground(&main_window))
                 {

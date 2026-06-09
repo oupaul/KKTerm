@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("backend bounds updates do not re-show hidden URL WebView sessions", async () => {
+test("backend URL sessions are stubbed instead of managing child WebViews", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
 
-  assert.match(source, /struct WebviewSession/);
-  assert.match(source, /visible: bool/);
-  assert.match(source, /if session\.visible\s*\{\s*show_webview/);
-  assert.match(source, /session\.visible = false;/);
+  assert.match(source, /Embedded URL-browser backend/);
+  assert.match(source, /open_url\(url\.to_string\(\), None::<&str>\)/);
+  assert.match(source, /pub fn update_bounds\(&self, _request: UpdateWebviewBoundsRequest\) -> Result<\(\), String> \{\s*Ok\(\(\)\)\s*\}/);
+  assert.match(source, /pub fn set_visibility\(&self, _request: SetWebviewVisibilityRequest\) -> Result<\(\), String> \{\s*Ok\(\(\)\)\s*\}/);
+  assert.doesNotMatch(source, /use tauri::\{[\s\S]*WebviewBuilder/);
+  assert.doesNotMatch(source, /WebviewBuilder::new|\.add_child\(|\.build_as_child\(/);
+  assert.doesNotMatch(source, /fn show_webview|fn hide_webview/);
 });
 
 test("frontend URL WebView runtime session ids stay within backend limits", async () => {
@@ -26,18 +29,19 @@ test("frontend URL WebView runtime session ids stay within backend limits", asyn
   );
 });
 
-test("backend can keep multiple child URL WebViews visible at once", async () => {
+test("backend URL visibility commands remain no-op stubs", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
 
   const visibilityFunction = source.match(
-    /pub fn set_visibility\(&self, request: SetWebviewVisibilityRequest\) -> Result<\(\), String> \{[\s\S]*?\n    pub fn navigate/,
+    /pub fn set_visibility\(&self, _request: SetWebviewVisibilityRequest\) -> Result<\(\), String> \{[\s\S]*?\n    pub fn focus/,
   )?.[0];
 
   assert.ok(visibilityFunction, "set_visibility should exist");
+  assert.match(visibilityFunction, /Ok\(\(\)\)/);
   assert.doesNotMatch(
     visibilityFunction,
-    /hide_other|for \(other_session_id, other_session\) in sessions\.iter_mut\(\)/,
-    "showing one URL WebView must not hide another visible URL WebView",
+    /show_webview|hide_webview|sessions\.get|sessions\.insert/,
+    "stubbed URL visibility should not manage native child WebView sessions",
   );
 });
 
@@ -53,12 +57,12 @@ test("Dashboard catalog dialog suppresses embedded URL Connection WebViews", asy
   assert.match(webviewSelector, /\.dw-catalog-backdrop/);
 });
 
-test("backend parks hidden child WebViews offscreen instead of relying on DOM visibility", async () => {
+test("backend no longer parks child URL WebViews offscreen", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
 
-  assert.match(source, /const HIDDEN_WEBVIEW_POSITION: f64 = -32_000\.0;/);
-  assert.match(source, /fn hide_webview[\s\S]*?HIDDEN_WEBVIEW_POSITION[\s\S]*?LogicalSize::new\(1\.0, 1\.0\)/);
-  assert.doesNotMatch(source, /fn hide_webview[\s\S]*?\.hide\(\)/);
+  assert.doesNotMatch(source, /const HIDDEN_WEBVIEW_POSITION/);
+  assert.doesNotMatch(source, /LogicalPosition|LogicalSize/);
+  assert.doesNotMatch(source, /fn hide_webview|fn show_webview/);
 });
 
 test("Dashboard background picker directly suppresses embedded URL Connection widgets", async () => {
