@@ -62,7 +62,7 @@ Settings tutorial targets:
   - Import: `settings.importSettings`, confirmation `settings.importSettingsConfirm`, success `settings.importSettingsComplete`.
   - Reset all: `settings.resetAllSettings`, confirmation `settings.resetAllSettingsConfirm`, success `settings.resetAllSettingsComplete`.
 - Debug subsection `settings.debug`: toggle `settings.advancedDebugging` (hint `settings.advancedDebuggingHint`) enables full AI Assistant, MCP, Installer Helper, UI, RDP, and heartbeat debug log writing even in release builds. `settings.openLogFolder` opens the local log directory. KKTerm resolves that directory from the running `kkterm.exe` folder first and falls back to `%LOCALAPPDATA%\KKTerm\Logs` if the executable folder cannot be resolved. Enabling advanced debugging writes an `advanced_debugging.enabled` marker to the JSONL logs `aiassistant.debug.log`, `mcp.debug.log`, `installer.helper.debug.log`, `ui.debug.log`, and `rdp.debug.log` beside `kkterm.log`, so the release logging path is visible before the next assistant, MCP, Installer Helper, UI, or RDP event. It also starts `kkterm-heartbeat.debug.log`; turning the setting off stops release heartbeat writes. The `ui.debug.log` records frontend UI diagnostics such as terminal focus-restore attempts (document focus state and the active element) used to troubleshoot input focus after switching apps. The `rdp.debug.log` records RDP startup, ActiveX control creation, display-size sync, and main-thread command timing with non-secret Connection details, and defensively redacts password-like, secret-like, token-like, and credential-like fields. These local logs may include prompts, tool arguments, MCP arguments/results, Installer Helper command output, hostnames, usernames, local paths, frontend/native liveness timing, screenshots, and generated Dashboard AI Created Widget source.
-- RDP session stability (WebView2): toggle `settings.rdpWebviewStability` (hint `settings.rdpWebviewStabilityHint`) lives in the Debug subsection. When enabled, the next launch applies matching WebView2 stability browser arguments to the main app WebView while KKTerm runs inside an RDP host. Embedded URL panes are currently disabled; URL Connections open in the user's default browser instead.
+- RDP session stability (WebView2): toggle `settings.rdpWebviewStability` (hint `settings.rdpWebviewStabilityHint`) lives in the Debug subsection. When enabled, the next launch applies matching WebView2 stability browser arguments to the main app WebView and URL overlay WebViews while KKTerm runs inside an RDP host.
 
 > Automatic database backups do **not** run from app-window close. The supported shape is startup or manual backup ZIP creation.
 
@@ -165,7 +165,7 @@ Section header `settings.sectionTerminal`. Font family + size, line height, curs
 
 ## URL
 
-`settings.sectionUrl` — defaults for URL Connections (e.g. default auto-refresh). Embedded URL browsing is currently disabled while KKTerm runs without Tauri's `unstable` feature; opening a URL Connection launches the target in the user's default browser.
+`settings.sectionUrl` — defaults for URL Connections (e.g. default auto-refresh). URL Connections embed WebView2 through stable owned overlay windows, not Tauri's `unstable` child-webview API. The `unstable` child-webview path was removed because it changed the main app WebView2 host shape and could break terminal keyboard input after Alt+Tab/app switch or minimize/restore until the user clicked the terminal Pane again.
 
 ## About
 

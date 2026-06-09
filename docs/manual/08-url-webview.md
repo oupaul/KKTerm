@@ -1,16 +1,20 @@
-# 08 — URL Connections (Embedded WebView)
+# 08 — URL Connections
 
 ## AI grep hints
 
 - Keys: `webview.*` (full namespace), `connections.embeddedWebApp`
-- Topics: URL Connection, address bar, back/forward/reload, auto-refresh, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
+- Topics: URL Connection, embedded WebView2, address bar, back/forward/reload, auto-refresh, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
 - Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "open link in browser", "external browser"
 
-> **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL plus an optional `dataPartition` label. The `dataPartition` field is persisted but currently a no-op — Phase 1 WebView2 shares one user-data folder across all URL Connections. Real per-Connection isolation is deferred to Phase 2.
+> **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL plus an optional `dataPartition` label. The `dataPartition` field is persisted but currently a no-op; embedded URL Sessions share the WebView2 process data store.
 
 ## Surface
 
-A URL Pane hosts a child WebView2 surface positioned over its Tab. The surface is not a Tab — it follows the Tab's geometry and is hidden when the Tab is inactive. When a URL Pane becomes active, or KKTerm regains OS focus while the page owned focus, KKTerm reapplies focus to the child WebView2 surface. In split Panes and Dashboard Connection widgets, the WebView2 bounds are clipped to the host panel so page content stays contained and scrolls inside the URL Pane. App-owned modal overlays that must appear above native browser content, such as Connection dialogs and the Dashboard catalog, temporarily park intersecting WebView2 surfaces offscreen. Menu overlays do **not** suppress WebView2 (RDP remains the only kind that uses screenshot-backed overlay parking).
+In the desktop runtime, a URL Pane hosts a real WebView2 browser in a stable, borderless, owned `WebviewWindow`. The frontend computes the Pane's DOM rectangle, the Rust backend converts that to screen coordinates, and the overlay window is moved/sized over the Pane. The overlay is hidden when the Tab, Dashboard View, Dashboard Module, or URL Pane is inactive, and when a registered app-owned blocking overlay intersects it.
+
+This deliberately does **not** use Tauri's `unstable` child-webview API. Enabling that feature changed the main KKTerm WebView2 host into a child HWND path, and Windows could restore focus to a native child/control instead of the terminal WebView2 content after Alt+Tab/app switch or minimize/restore. The visible terminal Pane could still look focused, but keyboard input did not reach xterm until the user clicked. The stable overlay-window path keeps URL browsing embedded while preserving the terminal's normal WebView2 focus forwarding.
+
+If this surface changes, verify in the real Windows Tauri runtime that a focused terminal Pane accepts keyboard input immediately after Alt+Tab/app switch and minimize/restore. RDP remains the only workspace kind that uses screenshot-backed overlay parking.
 
 Tutorial target: `webview.surface`.
 
@@ -22,7 +26,7 @@ Tutorial target: `webview.surface`.
 - Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present.
 - Auto-refresh: `webview.autoRefresh` / `webview.autoRefreshOff`. Interval label `webview.autoRefreshSeconds`.
 - Open externally: toolbar button `webview.openExternally` (opens the current URL in the OS default browser).
-- In-page links: normal http(s) link clicks navigate inside the URL Pane, including links that ask for a new browser window. Shift-click an http(s) link in the embedded page to open it in the OS default browser instead of navigating the URL Pane.
+- In-page links: normal http(s) link clicks navigate inside the URL Pane. Links that request a new browser window, such as `target="_blank"`, open a new KKTerm Workspace Tab for that URL. Shift-click an http(s) link in the embedded page opens it in the OS default browser instead of navigating the URL Pane.
 - Fill saved credential: `webview.fill` / `webview.fillCredential` / `webview.fillSavedCredential`.
 - Save password: `webview.savePassword`, dialog title `webview.savePasswordTitle`.
 - Send current URL Pane screenshot to AI Assistant: `workspace.sendEntirePanelToAi` (tutorial target `webview.sendToAi`). Status Bar confirmation: `workspace.sentToAi`.

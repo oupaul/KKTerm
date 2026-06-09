@@ -192,6 +192,7 @@ export function WebViewWorkspace({
 }) {
   const { t } = useTranslation();
   const updateWebviewTabMetadata = useWorkspaceStore((state) => state.updateWebviewTabMetadata);
+  const openUrlInNewTab = useWorkspaceStore((state) => state.openUrlInNewTab);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const ignoreCertificateErrors = useWorkspaceStore((state) => state.urlSettings.ignoreCertificateErrors);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
@@ -481,10 +482,18 @@ export function WebViewWorkspace({
     observer.observe(node);
     window.addEventListener("resize", scheduleBoundsPush);
     window.addEventListener("scroll", scheduleBoundsPush, true);
+    const repushOnNativeMove = () => {
+      lastBoundsRef.current = null;
+      scheduleBoundsPush();
+    };
+    const moveUnlisten = listen("tauri://move", repushOnNativeMove).catch(() => null);
+    const resizeUnlisten = listen("tauri://resize", repushOnNativeMove).catch(() => null);
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", scheduleBoundsPush);
       window.removeEventListener("scroll", scheduleBoundsPush, true);
+      void moveUnlisten.then((dispose) => dispose?.());
+      void resizeUnlisten.then((dispose) => dispose?.());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -638,9 +647,13 @@ export function WebViewWorkspace({
         if (event.payload.sessionId !== sessionIdRef.current) {
           return;
         }
-        void invokeCommand("webview_navigate", {
-          request: { sessionId: sessionIdRef.current, url: event.payload.url },
-        }).catch((error) => {
+        if (tab.connection) {
+          openUrlInNewTab(tab.connection, event.payload.url, {
+            subtitle: formatWebviewSubtitle(event.payload.url),
+          });
+          return;
+        }
+        void openExternalUrl(event.payload.url).catch((error) => {
           setNavError(error instanceof Error ? error.message : String(error));
         });
       }),
@@ -693,7 +706,7 @@ export function WebViewWorkspace({
       disposed = true;
       disposers.forEach((dispose) => dispose());
     };
-  }, [refreshOpenConnectionMetadata, tab.id, t, updateWebviewTabMetadata]);
+  }, [openUrlInNewTab, refreshOpenConnectionMetadata, tab.connection, tab.id, t, updateWebviewTabMetadata]);
 
   function handleNavigate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

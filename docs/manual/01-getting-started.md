@@ -8,7 +8,7 @@
 
 ## What KKTerm is
 
-KKTerm is a local-first Windows desktop workspace for terminal, SSH, SFTP, URL (embedded WebView), RDP, and VNC work, with a built-in Dashboard and AI Assistant. Durable data lives in SQLite on the user's machine; secrets live in the Windows Credential Manager. There is no cloud account.
+KKTerm is a local-first Windows desktop workspace for terminal, SSH, SFTP, embedded URL Connections, RDP, and VNC work, with a built-in Dashboard and AI Assistant. Durable data lives in SQLite on the user's machine; secrets live in the Windows Credential Manager. There is no cloud account.
 
 See `CONTEXT.md` for the canonical domain terms — **Connection**, **Quick Connect**, **Session**, **Tab**, **Pane**, **Dashboard View**, **Widget Instance**.
 

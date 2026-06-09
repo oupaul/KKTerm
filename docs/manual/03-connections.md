@@ -17,7 +17,7 @@
 | SSH terminal | `connections.secureShell`, type label `connections.ssh` | Backed by the `NativeSsh` transport. May persist tmux launch prefs. |
 | Telnet | `connections.telnetShell`, type label `connections.telnet` | Password terminal. |
 | Serial | `connections.serialLine`, type label `connections.serial` | Serial line. |
-| URL | `connections.embeddedWebApp` | Embedded WebView2. See [08-url-webview.md](08-url-webview.md). |
+| URL | `connections.embeddedWebApp` | Embedded WebView2 overlay window. See [08-url-webview.md](08-url-webview.md). |
 | RDP | `connections.windowsRdp` | Windows native via mstscax. See [09-remote-desktop.md](09-remote-desktop.md). |
 | VNC | `connections.screenControl` | RFB through `vnc-rs`. |
 | FTP/FTPS | `connections.ftp` | Standalone file-transfer Connection routed through the SFTP/FTP browser surface. |

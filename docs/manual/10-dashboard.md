@@ -24,7 +24,7 @@ A View is a Dashboard tab. The first View is named `dashboard.defaultView` and s
 - In edit layout mode, drag View tab buttons to reorder Dashboard Views.
 
 Each View has its own `grid_density` (`dashboard.density.compact`, `dashboard.density.default`, `dashboard.density.roomy`) and its own background.
-Previously opened Views remain mounted while hidden so switching between View tabs preserves Widget Instance state and keeps embedded Connection panes responsive; hidden Connection panes are marked inactive instead of being closed. Embedded URL Connection panes use a native WebView2 child surface in the desktop runtime, so KKTerm explicitly hides that native surface whenever its Dashboard View or the Dashboard Module is inactive.
+Previously opened Views remain mounted while hidden so switching between View tabs preserves Widget Instance state and keeps embedded Connection panes responsive; hidden Connection panes are marked inactive instead of being closed. Embedded URL Connection panes use a stable owned WebView2 overlay window, so inactive Dashboard Views and Modules hide that overlay instead of closing the URL Session.
 
 ## Edit layout mode
 
@@ -79,7 +79,7 @@ Presets are CSS wrappers that read the Instance's `--w-accent` / `--w-accent-sof
 
 Dashboard Views and terminal Connection backgrounds use the same shared background picker datasource. New preset, media-mode, fit, dim, or dynamic background options must be added through the shared picker/registry path so both `dashboard.changeBackground` and `terminal.background` show the same list.
 
-While the `dashboard.changeBackground` picker is open, embedded URL Connection widgets on the active View are temporarily marked inactive. This is intentional: URL widgets render through a native WebView2 child surface in the desktop runtime, and hiding that surface prevents it from drawing above the app-owned background picker.
+While the `dashboard.changeBackground` picker is open, embedded URL Connection widgets on the active View are temporarily marked inactive. This hides their owned WebView2 overlay windows so the app-owned background picker stays visible above the Dashboard.
 
 Dynamic and video backgrounds keep playing on the active View while the Dashboard Module is selected and any portion of the background is on screen, even when another OS window has focus on top of KKTerm. Playback pauses when the app is minimized (the document becomes hidden), when the user switches to another Module (Workspace or Settings), when a different Dashboard View becomes active, or when the background host is fully off-screen.
 
