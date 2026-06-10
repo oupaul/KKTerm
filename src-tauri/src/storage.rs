@@ -2730,10 +2730,12 @@ fn normalize_local_shell(
         .map(str::trim)
         .filter(|shell| !shell.is_empty())
     {
+        #[cfg(target_os = "windows")]
         Some(shell @ ("powershell.exe" | "cmd.exe" | "wsl.exe")) => Ok(Some(shell.to_string())),
-        Some(_) => {
-            Err("local terminal shell must be PowerShell, Command Prompt, or WSL".to_string())
-        }
+        #[cfg(target_os = "windows")]
+        Some(_) => Err("local terminal shell must be PowerShell, Command Prompt, or WSL".to_string()),
+        #[cfg(not(target_os = "windows"))]
+        Some(shell) => Ok(Some(shell.to_string())),
         None => Ok(None),
     }
 }

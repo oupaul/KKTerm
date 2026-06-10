@@ -25,7 +25,9 @@
     "active": true,
     "createUpdaterArtifacts": false,
     "targets": [
-      "nsis"
+      "nsis",
+      "app",
+      "dmg"
     ],
     "publisher": "Ryan Tsai",
     "licenseFile": "../LICENSE",

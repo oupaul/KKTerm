@@ -25,6 +25,18 @@
   -webkit-app-region: drag;
 }
 
+/* macOS overlay title bar: the native traffic-light controls sit at the top-left
+   and the custom minimize/maximize/close buttons are not rendered, so reserve
+   space on the left for the controls and shrink the right reservation to the
+   remaining panel-toggle buttons. */
+.app-titlebar-native-controls {
+  padding-right: 92px;
+}
+
+.app-titlebar-native-controls .app-titlebar-label {
+  padding-left: 78px;
+}
+
 .app-titlebar-label {
   display: flex;
   align-items: center;

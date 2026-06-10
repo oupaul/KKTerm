@@ -2538,8 +2538,21 @@ pub fn run() {
                 .title("KKTerm")
                 .inner_size(1360.0, 860.0)
                 .min_inner_size(1120.0, 720.0)
-                .decorations(false)
                 .disable_drag_drop_handler();
+                // macOS keeps the native traffic-light controls but renders them
+                // over a transparent overlay title bar so the React-painted bar
+                // shows through (the title text is hidden). Every other platform
+                // drops system decorations entirely and relies on the custom bar.
+                #[cfg(target_os = "macos")]
+                {
+                    main_window_builder = main_window_builder
+                        .title_bar_style(tauri::TitleBarStyle::Overlay)
+                        .hidden_title(true);
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    main_window_builder = main_window_builder.decorations(false);
+                }
                 #[cfg(target_os = "windows")]
                 if apply_webview_stability {
                     main_window_builder = main_window_builder

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
+import { supportsInstallerHelper, supportsRdp } from "../../lib/platform";
 import { AboutSettings } from "./AboutSettings";
 import { AiSettings } from "./AiSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
@@ -90,6 +91,8 @@ export function SettingsPage({
     () => new Set([activeSectionId]),
   );
   const [unsavedQuitDialogOpen, setUnsavedQuitDialogOpen] = useState(false);
+  const installerSupported = supportsInstallerHelper();
+  const rdpSupported = supportsRdp();
   const assistantContext = useMemo(
     () => buildSettingsAssistantContext(activeSectionId, (key, fallback) => t(key, fallback)),
     [activeSectionId, t],
@@ -106,6 +109,15 @@ export function SettingsPage({
       Boolean(registration?.hasChanges && registration.onSave),
     );
   const hasUnsavedChanges = dirtyRegistrations.length > 0;
+
+  useEffect(() => {
+    if (
+      (activeSectionId === "installer-settings" && !installerSupported) ||
+      (activeSectionId === "rdp-settings" && !rdpSupported)
+    ) {
+      onActiveSectionChange("general-settings");
+    }
+  }, [activeSectionId, installerSupported, onActiveSectionChange, rdpSupported]);
 
   useEffect(() => {
     onAssistantContextChange(assistantContext);
@@ -252,14 +264,16 @@ export function SettingsPage({
             <LayoutDashboard size={16} />
             <span>{t("settings.sectionDashboard")}</span>
           </button>
-          <button
-            className={settingsNavItemClass("installer-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("installer-settings")}
-            type="button"
-          >
-            <Package size={16} />
-            <span>{t("settings.sectionInstaller")}</span>
-          </button>
+          {installerSupported ? (
+            <button
+              className={settingsNavItemClass("installer-settings", activeSectionId)}
+              onClick={() => onActiveSectionChange("installer-settings")}
+              type="button"
+            >
+              <Package size={16} />
+              <span>{t("settings.sectionInstaller")}</span>
+            </button>
+          ) : null}
           <button
             className={settingsNavItemClass("credentials-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("credentials-settings")}
@@ -300,14 +314,16 @@ export function SettingsPage({
             <Globe size={16} />
             <span>{t("settings.sectionUrl")}</span>
           </button>
-          <button
-            className={settingsNavItemClass("rdp-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("rdp-settings")}
-            type="button"
-          >
-            <Monitor size={16} />
-            <span>{t("settings.sectionRdp")}</span>
-          </button>
+          {rdpSupported ? (
+            <button
+              className={settingsNavItemClass("rdp-settings", activeSectionId)}
+              onClick={() => onActiveSectionChange("rdp-settings")}
+              type="button"
+            >
+              <Monitor size={16} />
+              <span>{t("settings.sectionRdp")}</span>
+            </button>
+          ) : null}
           <button
             className={settingsNavItemClass("vnc-settings", activeSectionId)}
             onClick={() => onActiveSectionChange("vnc-settings")}
@@ -345,13 +361,15 @@ export function SettingsPage({
             )}
             {renderSettingsSection("dashboard-settings", <DashboardSettings />)}
             {renderSettingsSection("workspace-settings", <WorkspaceSettings />)}
-            {renderSettingsSection("installer-settings", <InstallerSettings />)}
+            {installerSupported
+              ? renderSettingsSection("installer-settings", <InstallerSettings />)
+              : null}
             {renderSettingsSection("credentials-settings", <CredentialsSettings />)}
             {renderSettingsSection("assistant-settings", <AiSettings />)}
             {renderSettingsSection("ssh-settings", <SshSettings />)}
             {renderSettingsSection("terminal-settings", <TerminalSettingsPage />)}
             {renderSettingsSection("url-settings", <UrlSettings />)}
-            {renderSettingsSection("rdp-settings", <RdpSettings />)}
+            {rdpSupported ? renderSettingsSection("rdp-settings", <RdpSettings />) : null}
             {renderSettingsSection("vnc-settings", <VncSettings />)}
             {renderSettingsSection("dont-sleep-settings", <DontSleepSettings />)}
             {renderSettingsSection("about-settings", <AboutSettings />)}
