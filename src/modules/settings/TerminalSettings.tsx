@@ -180,6 +180,7 @@ export function TerminalSettings() {
                 value={draft.defaultShell}
               >
                 <option value="powershell.exe">{t("settings.powerShell")}</option>
+                <option value="pwsh.exe">{t("settings.powerShell7")}</option>
                 <option value="cmd.exe">{t("settings.commandPrompt")}</option>
                 <option value="wsl.exe">{t("settings.wsl")}</option>
               </select>

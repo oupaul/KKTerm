@@ -6,6 +6,7 @@ import { isWindowsPlatform } from "../../../lib/platform";
 
 const WINDOWS_LOCAL_SHELL_OPTIONS = [
   { labelKey: "settings.powerShell", value: "powershell.exe" },
+  { labelKey: "settings.powerShell7", value: "pwsh.exe" },
   { labelKey: "settings.commandPrompt", value: "cmd.exe" },
   { labelKey: "settings.wsl", value: "wsl.exe" },
 ];
