@@ -54,12 +54,12 @@ export function formatRemoteTime(timestamp?: number) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(timestamp * 1000));
+  const date = new Date(timestamp * 1000);
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return (
+    `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
 }
 
 export function formatMode(mode?: number) {
