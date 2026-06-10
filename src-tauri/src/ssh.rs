@@ -856,7 +856,12 @@ pub(crate) fn remote_tmux_resume_command(
         .map(|directory| format!("cd -- {} && ", shell_single_quote(directory)))
         .unwrap_or_default();
     format!(
-        "if command -v tmux >/dev/null 2>&1; then {cd_command}exec tmux new-session -A -s {} \\; set-option mouse on \\; set-option set-clipboard on \\; set-option history-limit {}; else {cd_command}printf '\\r\\n[KKTerm: tmux not found, using normal shell]\\r\\n'; exec \"${{SHELL:-sh}}\" -i; fi",
+        // The else-branch builds the "[KKTerm: tmux not found, using normal shell]"
+        // marker from a printf %s argument on purpose: the command is typed into the
+        // remote PTY, which echoes it back, and the frontend hides the tmux label when
+        // it sees that marker in terminal output. Keeping the bracketed marker out of
+        // the literal command source means only a genuine tmux-less run emits it.
+        "if command -v tmux >/dev/null 2>&1; then {cd_command}exec tmux new-session -A -s {} \\; set-option mouse on \\; set-option set-clipboard on \\; set-option history-limit {}; else {cd_command}printf '\\r\\n[%s]\\r\\n' 'KKTerm: tmux not found, using normal shell'; exec \"${{SHELL:-sh}}\" -i; fi",
         shell_single_quote(session_id),
         clamp_tmux_history_limit(history_limit),
     )
@@ -1462,6 +1467,23 @@ mod tests {
 
         assert!(error.contains("test SSH agent"));
         assert!(error.contains("failed to list SSH agent identities"));
+    }
+
+    #[test]
+    fn tmux_resume_command_does_not_embed_frontend_unavailable_marker() {
+        // The startup command is typed into the remote interactive PTY, which
+        // echoes it back through `terminal-output`. The frontend hides the tmux
+        // label when it sees this exact marker in the output. If the marker were
+        // a contiguous substring of the command, the harmless PTY echo would trip
+        // detection and hide the label even though tmux is running. The marker
+        // must only ever appear as runtime `printf` output on a tmux-less host.
+        const FRONTEND_MARKER: &str = "[KKTerm: tmux not found, using normal shell]";
+        let cmd = remote_tmux_resume_command(None, "kkterm-test", 5_000);
+        assert!(
+            !cmd.contains(FRONTEND_MARKER),
+            "resume command must not contain the frontend tmux-unavailable marker contiguously, \
+             or PTY echo hides the tmux label while tmux is running: {cmd}"
+        );
     }
 
     #[test]
