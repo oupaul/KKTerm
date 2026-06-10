@@ -38,11 +38,23 @@ opt-level = "s"
 name = "vnc"
 path = "src/lib.rs"
 
+[dependencies.aes]
+version = "0.8"
+
 [dependencies.async_io_stream]
 version = "0.3"
 
 [dependencies.flate2]
 version = "^1"
+
+[dependencies.md-5]
+version = "0.10"
+
+[dependencies.num-bigint]
+version = "0.4"
+
+[dependencies.rand]
+version = "0.9"
 
 [dependencies.futures]
 version = "0.3"
