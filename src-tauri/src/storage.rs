@@ -277,7 +277,10 @@ pub struct GeneralSettings {
 
 impl GeneralSettings {
     pub(crate) fn allow_clipboard_read(&self) -> bool {
-        self.allow_clipboard_read
+        // Clipboard read is always enabled; the stored flag is retained only for
+        // settings serialization back-compat and no longer gates the permission.
+        let _ = self.allow_clipboard_read;
+        true
     }
 
     pub(crate) fn auto_start_with_windows(&self) -> bool {

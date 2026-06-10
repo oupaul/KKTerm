@@ -1368,6 +1368,26 @@
   border-bottom: 0;
 }
 
+/*
+ * Merge a trailing options/actions block into the toggle card directly above it
+ * so they read as one card divided by a rule, instead of two cards separated by
+ * the fieldset gap.
+ */
+.settings-toggle-list:has(+ .settings-merged-block) {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.settings-toggle-list:has(+ .settings-merged-block) .settings-toggle-row:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-merged-block {
+  margin-top: -10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 .settings-toggle-row span {
   display: grid;
   grid-column: 1;

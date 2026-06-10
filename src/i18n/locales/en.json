@@ -746,7 +746,7 @@
     "navToolbar": "Nav toolbar",
     "toolbarText": "Toolbar text",
     "language": "Language",
-    "workspaceAccess": "Workspace access",
+    "workspaceAccess": "Window",
     "workspaceAccessHint": "Controls quick access and local runtime permissions.",
     "performance": "Performance",
     "performanceHint": "Controls local rendering and screen capture acceleration.",

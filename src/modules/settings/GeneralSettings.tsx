@@ -382,18 +382,6 @@ export function GeneralSettings() {
           <p className="field-hint">{t("settings.workspaceAccessHint")}</p>
         </div>
         <div className="settings-toggle-list">
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.allowClipboardRead}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, allowClipboardRead: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.allowClipboardRead")}</strong>
-              <small>{t("settings.allowClipboardReadHint")}</small>
-            </span>
-          </label>
           {windowsPlatform ? (
             <label className="settings-toggle-row">
               <ToggleSwitch
@@ -486,7 +474,7 @@ export function GeneralSettings() {
             </span>
           </label>
         </div>
-        <div className="form-grid general-settings-grid">
+        <div className="form-grid general-settings-grid settings-merged-block">
           <label>
             <span>{t("settings.statusBarMonitorInterval")}</span>
             <select
@@ -536,7 +524,7 @@ export function GeneralSettings() {
           </label>
         </div>
         <div
-          className="settings-data-actions"
+          className="settings-data-actions settings-merged-block"
           aria-label={t("settings.settingsDataActions")}
         >
           <button
