@@ -2080,41 +2080,43 @@ fn set_terminal_environment(command: &mut CommandBuilder) {
     command.env("COLORTERM", "truecolor");
 }
 
+#[cfg(target_os = "windows")]
+const WINDOWS_LOCAL_ENV_ALLOWLIST: &[&str] = &[
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "ComSpec",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "POSH_THEMES_PATH",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "ProgramData",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "PSModulePath",
+    "PUBLIC",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "windir",
+];
+
 fn sanitize_windows_local_environment(command: &mut CommandBuilder) -> Vec<String> {
     #[cfg(target_os = "windows")]
     {
-        const WINDOWS_LOCAL_ENV_ALLOWLIST: &[&str] = &[
-            "ALLUSERSPROFILE",
-            "APPDATA",
-            "CommonProgramFiles",
-            "CommonProgramFiles(x86)",
-            "ComSpec",
-            "HOMEDRIVE",
-            "HOMEPATH",
-            "LOCALAPPDATA",
-            "NUMBER_OF_PROCESSORS",
-            "OS",
-            "PATH",
-            "PATHEXT",
-            "PROCESSOR_ARCHITECTURE",
-            "PROCESSOR_IDENTIFIER",
-            "PROCESSOR_LEVEL",
-            "PROCESSOR_REVISION",
-            "ProgramData",
-            "ProgramFiles",
-            "ProgramFiles(x86)",
-            "PSModulePath",
-            "PUBLIC",
-            "SystemDrive",
-            "SystemRoot",
-            "TEMP",
-            "TMP",
-            "USERDOMAIN",
-            "USERNAME",
-            "USERPROFILE",
-            "windir",
-        ];
-
         command.env_clear();
         let mut retained = Vec::new();
         for key in WINDOWS_LOCAL_ENV_ALLOWLIST {
@@ -2157,6 +2159,57 @@ fn windows_cmd_program() -> String {
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| "cmd.exe".to_string())
+}
+
+/// Whether the given local shell program can be launched. Mirrors how
+/// `command_for` would resolve the program: `cmd` maps to `ComSpec`, and a
+/// bare program name (no path separator) is searched across `PATH` using
+/// `PATHEXT`. An absolute or relative path is checked directly. The pwsh
+/// pre-flight gate is Windows-only; on other platforms this always returns
+/// true so callers spawn `$SHELL` unchanged.
+pub fn local_shell_available(shell: &str) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let resolved = resolved_local_shell_program(shell.trim().to_string());
+        if resolved.is_empty() {
+            return false;
+        }
+        let path = std::path::Path::new(&resolved);
+        if resolved.contains('\\') || resolved.contains('/') || path.is_absolute() {
+            return path.is_file();
+        }
+        let pathext =
+            std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string());
+        let exts: Vec<String> = pathext
+            .split(';')
+            .map(str::trim)
+            .filter(|ext| !ext.is_empty())
+            .map(str::to_string)
+            .collect();
+        let path_var = match std::env::var_os("PATH") {
+            Some(value) => value,
+            None => return false,
+        };
+        for dir in std::env::split_paths(&path_var) {
+            // Direct match (the program already carries an extension, e.g. "pwsh.exe").
+            if dir.join(&resolved).is_file() {
+                return true;
+            }
+            // Extension-completed match (e.g. "pwsh" + ".EXE").
+            for ext in &exts {
+                if dir.join(format!("{resolved}{ext}")).is_file() {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = shell;
+        true
+    }
 }
 
 fn initial_directory_for(request: &StartTerminalSessionRequest) -> Option<String> {
@@ -2207,6 +2260,33 @@ fn make_session_id(title: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn allowlist_includes_posh_themes_path() {
+        assert!(
+            WINDOWS_LOCAL_ENV_ALLOWLIST.contains(&"POSH_THEMES_PATH"),
+            "oh-my-posh theme loading needs POSH_THEMES_PATH passed through"
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn local_shell_available_resolves_known_and_unknown_programs() {
+        // cmd.exe resolves via ComSpec on every Windows host.
+        assert!(local_shell_available("cmd.exe"));
+        // powershell.exe (5.1) ships in System32 and is on PATH everywhere.
+        assert!(local_shell_available("powershell.exe"));
+        // A bogus program name must not resolve.
+        assert!(!local_shell_available("kkterm-no-such-shell.exe"));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn local_shell_available_is_permissive_off_windows() {
+        // The pwsh pre-flight gate is Windows-only; elsewhere this is a no-op.
+        assert!(local_shell_available("anything"));
+    }
 
     fn local_request() -> StartTerminalSessionRequest {
         StartTerminalSessionRequest {
