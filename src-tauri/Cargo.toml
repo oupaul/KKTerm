@@ -82,6 +82,12 @@ tauri-plugin-single-instance = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 apple-native-keyring-store = { version = "1.0.0", features = ["keychain"] }
+# Host monitoring (Status Bar CPU/RAM/Network + detailed Dashboard counters).
+# macOS-only: the Windows path uses hand-rolled Win32 calls in performance.rs.
+sysinfo = "0.39"
+# CFString construction for the IOKit power assertion used by Don't Sleep.
+# IOKit itself links as a system framework via #[link] in power.rs.
+core-foundation-sys = "0.8"
 
 [target.'cfg(all(target_os = "windows", any(target_arch = "x86", target_arch = "x86_64")))'.dependencies]
 # AV mitigation #1: use IcmpSendEcho2 via winping (NOT raw sockets) on Windows.
