@@ -30,7 +30,11 @@ const QUARANTINE = new Set([
 ]);
 
 const entries = await readdir(here);
-const allTests = entries.filter((name) => name.endsWith(".test.mjs")).sort();
+// .test.mjs are plain Node tests; .test.ts are behavioral tests against pure
+// frontend modules, run through the tsx loader (added below).
+const allTests = entries
+  .filter((name) => name.endsWith(".test.mjs") || name.endsWith(".test.ts"))
+  .sort();
 const active = allTests.filter((name) => !QUARANTINE.has(name));
 const skipped = allTests.filter((name) => QUARANTINE.has(name));
 
@@ -46,7 +50,7 @@ if (skipped.length > 0) {
 
 const child = spawn(
   process.execPath,
-  ["--test", ...active.map((name) => join(here, name))],
+  ["--import", "tsx", "--test", ...active.map((name) => join(here, name))],
   { stdio: "inherit" },
 );
 child.on("exit", (code) => process.exit(code ?? 1));
