@@ -1216,9 +1216,21 @@ fn open_windows_task_manager() -> Result<(), String> {
             .map_err(|error| format!("failed to open Windows Task Manager: {error}"))
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        Err("Windows Task Manager is only available on Windows.".to_string())
+        std::process::Command::new("open")
+            .args(["-a", "Activity Monitor"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| format!("failed to open Activity Monitor: {error}"))
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        Err("Opening the system activity monitor is not supported on this platform.".to_string())
     }
 }
 
