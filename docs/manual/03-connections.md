@@ -69,11 +69,11 @@ Clicking a parent Connection with Child Connection Tabs opens all of its childre
 
 Both are app-owned DOM dialogs (not browser-native `prompt`).
 
-**Quick Connect** (`connections.quickConnectDialog`) is an unsaved one-off draft that starts a single Session. Fields shown depend on the chosen kind:
+**Quick Connect** (`connections.quickConnectDialog`) is a fast path that **persists** a saved Connection and opens it — it is no longer an unsaved one-off. Before creating, it reuses an identical existing Connection (matched by host/user/port for SSH, or shell for local shells); otherwise it creates a new Connection at the tree root. A password typed on a reused target updates that Connection's stored credential. The full Quick Connect dialog reflects this: subtitle `connections.openOneOffSession` and primary button `connections.saveAndConnect`. Fields shown depend on the chosen kind:
 
 - Hostname (`connections.hostname`, placeholder `connections.exampleHost`)
 - Port (`connections.port`)
-- Connect button (`connections.connect`), Cancel (`connections.cancel`)
+- Save & connect button (`connections.saveAndConnect`), Cancel (`connections.cancel`). The compact recent-host menu uses `connections.connect`.
 - Permission tier toggle: `connections.normal` / `connections.admin`
 - Recently used Connections list, empty state `connections.noRecent`
 
@@ -81,10 +81,11 @@ Opening a saved Connection or Quick Connect starts the live Session asynchronous
 
 For local Command Prompt and PowerShell Quick Connect entries, `connections.admin`
 depends on how KKTerm itself is running. If KKTerm is already elevated, the
-admin shell opens as an embedded local terminal Session and the draft shell is
-labelled with the admin tier. If KKTerm is not elevated, KKTerm launches an
-external elevated Command Prompt or PowerShell process through the Windows UAC
-path.
+admin shell opens as an embedded local terminal Session and is **persisted** as a
+saved local Connection (reuse-or-create, matched by shell). If KKTerm is not
+elevated, KKTerm launches an external elevated Command Prompt or PowerShell
+process through the Windows UAC path; that external process has no in-app Session
+and is **not** saved.
 
 **Add Connection** uses the same form shape but persists to SQLite. The Type selector label is `connections.type`.
 

@@ -1,13 +1,5 @@
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree } from "../../../types";
 
-export function upsertRootConnection(tree: ConnectionTree, connection: Connection): ConnectionTree {
-  const withoutConnection = removeConnectionFromTree(tree, connection.id);
-  return {
-    ...withoutConnection,
-    connections: [connection, ...withoutConnection.connections],
-  };
-}
-
 // Display-only. Each connection is shallow-cloned to attach `status`, so the
 // returned tree has fresh references on every `activeSessionCounts` change.
 // Never feed the result into a workspace component (Terminal/WebView/RDP/VNC/
@@ -40,26 +32,6 @@ function withLiveFolderStatuses(
     })),
     folders: folder.folders.map((childFolder) =>
       withLiveFolderStatuses(childFolder, activeSessionCounts),
-    ),
-  };
-}
-
-function removeConnectionFromTree(tree: ConnectionTree, connectionId: string): ConnectionTree {
-  return {
-    connections: tree.connections.filter((connection) => connection.id !== connectionId),
-    folders: tree.folders.map((folder) => removeConnectionFromFolder(folder, connectionId)),
-  };
-}
-
-function removeConnectionFromFolder(
-  folder: ConnectionFolder,
-  connectionId: string,
-): ConnectionFolder {
-  return {
-    ...folder,
-    connections: folder.connections.filter((connection) => connection.id !== connectionId),
-    folders: folder.folders.map((childFolder) =>
-      removeConnectionFromFolder(childFolder, connectionId),
     ),
   };
 }

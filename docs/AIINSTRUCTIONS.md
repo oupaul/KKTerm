@@ -246,7 +246,7 @@ Before touching code, read these definitions — they matter for naming, storage
 | Term | Meaning |
 |---|---|
 | **Connection** | A durable saved resource stored in SQLite. Kinds: local terminal, SSH, Telnet, Serial, URL, RDP, VNC. |
-| **Quick Connect** | An unsaved one-off draft that starts a Session without saving. |
+| **Quick Connect** | A fast path that persists a saved Connection (reuse-or-create) and starts a Session on it. Only the external elevated admin shell (when KKTerm is not elevated) is not saved. |
 | **Session** | A live runtime instance — a PTY, SSH channel, SFTP browser, WebView2 host, RDP control, or VNC framebuffer. |
 | **Tab** | Frontend workspace container. Tabs hold Sessions (or split Panes). Closing a Tab ends the Session. |
 | **Dashboard** | Built-in Activity Rail Module hosting a 12-column drag-and-resize widget grid. |
@@ -372,7 +372,7 @@ Inside Workspace, the left panel shows the Connection tree. Connections are orga
 - **Right-click** for rename, duplicate, delete, open SFTP, pin to rail
 - **Drag** to reorder or move into folders
 - **Search bar** at top filters the tree
-- **Quick Connect button** (+ icon) starts a Session without saving a Connection
+- **Quick Connect button** (+ icon) saves a Connection (reusing an identical existing one when present) and opens a Session on it
 
 ### Sessions and Tabs
 

@@ -77,6 +77,7 @@ const workspaceTargets = [
   "webview.savePassword",
   "webview.fillCredential",
   "webview.sendToAi",
+  "webview.close",
   "webview.surface",
   "remoteDesktop.toolbar",
   "remoteDesktop.sendCtrlAltDel",

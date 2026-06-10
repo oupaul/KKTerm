@@ -21,14 +21,14 @@ import {
   resolveDefaultTerminalAppearance,
   supportsTerminalAppearanceDefaults,
 } from "./terminalAppearanceDefaults";
-import { quickConnectRecentLabel } from "./quickConnectMenuModel";
+import { elevatedLocalShellAction, findMatchingConnection, quickConnectRecentLabel } from "./quickConnectMenuModel";
 import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
 } from "./connectionTabContextMenu";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
-import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, upsertRootConnection, withLiveConnectionStatuses } from "./treeUtils";
+import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, withLiveConnectionStatuses } from "./treeUtils";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -164,7 +164,6 @@ export function ConnectionSidebar({
   const closeTab = useWorkspaceStore((state) => state.closeTab);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
-  const openElevatedLocalTerminal = useWorkspaceStore((state) => state.openElevatedLocalTerminal);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const rdpSettings = useWorkspaceStore((state) => state.rdpSettings);
@@ -348,14 +347,65 @@ export function ConnectionSidebar({
     });
   }
 
-  function handleConnectionReady(connection: Connection) {
-    setTree((currentTree) => upsertRootConnection(currentTree, connection));
-    rememberConnection(connection);
+  function quickConnectionCreateRequest(connection: Connection): CreateConnectionRequest {
+    return {
+      name: connection.name,
+      host: connection.host,
+      user: connection.user,
+      type: connection.type,
+      port: connection.port,
+      keyPath: connection.keyPath,
+      proxyJump: connection.proxyJump,
+      authMethod: connection.authMethod,
+      localShell: connection.localShell,
+      localStartupDirectory: connection.localStartupDirectory,
+      localStartupScript: connection.localStartupScript,
+      useTmuxSessions: connection.useTmuxSessions,
+    };
+  }
+
+  // Quick Connect persists its target as a saved connection (reusing an identical
+  // existing one when present), then opens it — so the sidebar tree only ever
+  // holds real database connections. Throws on backend failure; callers route the
+  // error to the appropriate surface. Returns the opened connection.
+  async function quickConnect(
+    candidate: Connection,
+    creds?: { password?: string; passwordCredentialId?: string | null },
+  ): Promise<Connection> {
+    if (!isTauriRuntime()) {
+      openConnection(candidate);
+      rememberConnection(candidate);
+      return candidate;
+    }
+
+    const existing = findMatchingConnection(flattenConnections(treeRef.current), candidate);
+    if (existing) {
+      let connection = existing;
+      if (creds?.password) {
+        connection = await createConnectionPasswordCredential(connection.id, creds.password);
+        await reloadConnectionGroups();
+      } else if (creds?.passwordCredentialId) {
+        connection = await assignConnectionPasswordCredential(connection.id, creds.passwordCredentialId);
+        await reloadConnectionGroups();
+      }
+      openConnection(connection);
+      rememberConnection(connection);
+      return connection;
+    }
+
+    let connection = await invokeCommand("create_connection", {
+      request: quickConnectionCreateRequest(candidate),
+    });
+    if (creds?.password) {
+      connection = await createConnectionPasswordCredential(connection.id, creds.password);
+    } else if (creds?.passwordCredentialId) {
+      connection = await assignConnectionPasswordCredential(connection.id, creds.passwordCredentialId);
+    }
+    await reloadConnectionGroups();
+    notifyConnectionTreeInvalidated();
     openConnection(connection);
-    setFormMode(null);
-    setNewConnectionType(null);
-    setFormError("");
-    setTreeError("");
+    rememberConnection(connection);
+    return connection;
   }
 
   function handleNewConnectionTypeSelected(connectionType: ConnectionType) {
@@ -707,12 +757,16 @@ export function ConnectionSidebar({
       terminalBackground: appearance.terminalBackground,
       status: "idle",
     };
-    openConnection(connection);
+    void quickConnect(connection).catch((error) => {
+      setTreeError(error instanceof Error ? error.message : String(error));
+    });
   }
 
   function handleQuickSsh(connection: Connection) {
     setQuickConnectMenuOpen(false);
-    openConnection(connection);
+    void quickConnect(connection).catch((error) => {
+      setTreeError(error instanceof Error ? error.message : String(error));
+    });
   }
 
   async function handleQuickAdminShell(option: LocalShellOption) {
@@ -723,24 +777,33 @@ export function ConnectionSidebar({
     setTreeError("");
     setQuickConnectMenuOpen(false);
     try {
-      await openElevatedLocalTerminal(option);
+      const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
+      const action = elevatedLocalShellAction({
+        adminLabel: t("connections.admin"),
+        isAppElevated,
+        option,
+      });
+
+      if (action.mode === "external") {
+        await invokeCommand("launch_elevated_terminal", { request: { shell: action.shell } });
+        return;
+      }
+
+      const appearance = resolveDefaultTerminalAppearance("local", sshSettings, terminalSettings);
+      await quickConnect({
+        id: uniqueRuntimeId("quick"),
+        name: action.name,
+        host: "localhost",
+        user: "local",
+        type: "local",
+        localShell: action.shell,
+        terminalOpacity: appearance.terminalOpacity,
+        terminalBackground: appearance.terminalBackground,
+        status: "idle",
+      });
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
     }
-  }
-
-  async function storeConnectionPassword(connectionId: string, password: string) {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    await invokeCommand("store_secret", {
-      request: {
-        kind: "connectionPassword",
-        ownerId: connectionId,
-        secret: password,
-      },
-    });
   }
 
   async function storeUrlPassword(connectionId: string, password: string) {
@@ -829,17 +892,19 @@ export function ConnectionSidebar({
       return;
     }
 
-    const connection: Connection = {
-      id: `quick-${Date.now()}`,
-      name: connectionRequest.name || connectionRequest.host || connectionRequest.url || i18next.t("connections.quickSessionFallbackName"),
+    const candidate: Connection = {
+      id: uniqueRuntimeId("quick"),
+      name:
+        connectionRequest.name ||
+        connectionRequest.host ||
+        connectionRequest.url ||
+        i18next.t("connections.quickSessionFallbackName"),
       host: connectionRequest.host ?? "",
       user: connectionRequest.user ?? "",
       port: connectionRequest.port,
       keyPath: connectionRequest.keyPath,
       proxyJump: connectionRequest.proxyJump,
       authMethod: connectionRequest.authMethod,
-      hasPassword: Boolean(password),
-      passwordCredentialId: passwordCredentialId || undefined,
       type: connectionRequest.type,
       localShell: connectionRequest.localShell,
       localStartupDirectory: connectionRequest.localStartupDirectory,
@@ -849,28 +914,16 @@ export function ConnectionSidebar({
       url: connectionRequest.url,
       dataPartition: connectionRequest.dataPartition,
       useTmuxSessions: connectionRequest.useTmuxSessions,
-      tmuxConnectionId:
-        connectionRequest.type === "ssh" && connectionRequest.useTmuxSessions !== false
-          ? uniqueRuntimeId("kkterm")
-          : undefined,
-      urlCredentialUsername:
-        connectionRequest.type === "url" && urlCredentialUsername ? urlCredentialUsername : undefined,
-      hasUrlCredential: connectionRequest.type === "url" && Boolean(urlCredentialUsername && urlPassword),
-      iconDataUrl,
-      iconBackgroundColor,
       terminalOpacity: appearance?.terminalOpacity,
       terminalBackground: appearance?.terminalBackground,
       status: "idle",
     };
 
     try {
-      if (password) {
-        await storeConnectionPassword(connection.id, password);
-      }
-      if (connection.type === "url" && urlCredentialUsername && urlPassword) {
-        await storeUrlPassword(connection.id, urlPassword);
-      }
-      handleConnectionReady(connection);
+      await quickConnect(candidate, { password, passwordCredentialId });
+      setFormMode(null);
+      setNewConnectionType(null);
+      setFormError("");
     } catch (error) {
       setFormError(error instanceof Error ? error.message : String(error));
     }
@@ -1044,6 +1097,14 @@ export function ConnectionSidebar({
   async function commitConnectionRename(connection: Connection, name: string) {
     const trimmedName = name.trim();
     if (!trimmedName || trimmedName === connection.name) {
+      setInlineRenameTarget(null);
+      return true;
+    }
+
+    if (connection.id.startsWith("quick-")) {
+      // Non-persisted runtime connection: no database row to rename. Quick
+      // Connect now persists connections, so this is defensive — it prevents
+      // the backend "connection was not found" error from recurring here.
       setInlineRenameTarget(null);
       return true;
     }
@@ -3614,8 +3675,8 @@ function ConnectionDialog({
 
         <div className="dialog-actions">
           <button className="approve-button" disabled={!connectionType} type="submit">
-            {mode === "quick" ? <Play size={15} /> : <Save size={15} />}
-            {mode === "quick" ? t("connections.connect") : t("common.save")}
+            <Save size={15} />
+            {mode === "quick" ? t("connections.saveAndConnect") : t("common.save")}
           </button>
           <button className="toolbar-button" type="button" onClick={onCancel}>
             {t("connections.cancel")}
