@@ -1372,6 +1372,10 @@ type CommandMap = {
     args: { request: StartTerminalSessionRequest };
     result: TerminalSessionStarted;
   };
+  local_shell_available: {
+    args: { shell: string };
+    result: boolean;
+  };
   write_terminal_input: {
     args: { request: { sessionId: string; data: number[] } };
     result: null;

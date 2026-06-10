@@ -1640,6 +1640,11 @@ fn parse_widget_secret_owner_id(owner_id: &str) -> Option<(String, String)> {
 }
 
 #[tauri::command]
+fn local_shell_available(shell: String) -> bool {
+    sessions::local_shell_available(&shell)
+}
+
+#[tauri::command]
 async fn start_terminal_session(
     app: tauri::AppHandle,
     request: sessions::StartTerminalSessionRequest,
@@ -2899,6 +2904,7 @@ pub fn run() {
             delete_stored_credential,
             // ── Terminal sessions & recordings
             start_terminal_session,
+            local_shell_available,
             write_terminal_input,
             resize_terminal,
             close_terminal_session,
