@@ -24,8 +24,9 @@ export function isTerminalProgressEvent(
 export async function installRecipeAndWait(
   toolId: string,
   options?: InstallOptions,
+  onProgress?: (event: ProgressEvent) => void,
 ): Promise<TerminalProgressEvent> {
-  const waiter = waitForTerminalProgress(toolId);
+  const waiter = waitForTerminalProgress(toolId, onProgress);
   await waiter.ready;
   try {
     await invokeCommand("installer_install_recipe", { toolId, options });
@@ -36,7 +37,10 @@ export async function installRecipeAndWait(
   return waiter.done;
 }
 
-function waitForTerminalProgress(toolId: string) {
+function waitForTerminalProgress(
+  toolId: string,
+  onProgress?: (event: ProgressEvent) => void,
+) {
   let unlisten: (() => void) | undefined;
   let resolveTerminalEvent!: (event: TerminalProgressEvent) => void;
   const done = new Promise<TerminalProgressEvent>((resolve) => {
@@ -44,8 +48,9 @@ function waitForTerminalProgress(toolId: string) {
   });
   const ready = listen<ProgressEvent>(PROGRESS_EVENT_NAME, (event) => {
     const payload = event.payload;
+    if (!("toolId" in payload) || payload.toolId !== toolId) return;
+    onProgress?.(payload);
     if (!isTerminalProgressEvent(payload)) return;
-    if (payload.toolId !== toolId) return;
     unlisten?.();
     resolveTerminalEvent(payload);
   }).then((u) => {
