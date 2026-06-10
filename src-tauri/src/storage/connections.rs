@@ -171,20 +171,18 @@ impl Storage {
         let rdp_options_json = serialize_connection_options(&rdp_options, "RDP")?;
         let vnc_options_json = serialize_connection_options(&vnc_options, "VNC")?;
         let ftp_options_json = serialize_connection_options(&ftp_options, "FTP")?;
-        let use_tmux_sessions =
-            normalize_use_tmux_sessions(request.use_tmux_sessions, &connection_type);
-
         let mut connection = self.lock()?;
         let transaction = connection.transaction().map_err(to_storage_error)?;
         let existing = transaction
             .query_row(
-                "SELECT folder_id, connection_type, tmux_connection_id FROM connections WHERE id = ?1",
+                "SELECT folder_id, connection_type, use_tmux_sessions, tmux_connection_id FROM connections WHERE id = ?1",
                 params![&id],
                 |row| {
                     Ok((
                         row.get::<_, Option<String>>(0)?,
                         row.get::<_, String>(1)?,
-                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, bool>(2)?,
+                        row.get::<_, Option<String>>(3)?,
                     ))
                 },
             )
@@ -192,7 +190,12 @@ impl Storage {
             .map_err(to_storage_error)?
             .ok_or_else(|| "connection was not found".to_string())?;
 
-        let (source_folder_id, existing_connection_type, existing_tmux_connection_id) = existing;
+        let (
+            source_folder_id,
+            existing_connection_type,
+            existing_use_tmux_sessions,
+            existing_tmux_connection_id,
+        ) = existing;
         if existing_connection_type != connection_type {
             return Err("connection type cannot be changed".to_string());
         }
@@ -200,6 +203,13 @@ impl Storage {
             ensure_folder_exists(&transaction, folder_id, folder_name_for(folder_id))?;
         }
 
+        let use_tmux_sessions = if connection_type == "ssh" {
+            request
+                .use_tmux_sessions
+                .unwrap_or(existing_use_tmux_sessions)
+        } else {
+            false
+        };
         let tmux_connection_id = if use_tmux_sessions && connection_type == "ssh" {
             Some(existing_tmux_connection_id.unwrap_or_else(|| make_tmux_connection_id(&id)))
         } else {

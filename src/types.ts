@@ -128,6 +128,7 @@ export interface TerminalPane {
   connection?: Connection;
   terminalBackground?: DashboardBackground | null;
   tmuxSessionId?: string;
+  tmuxUnavailable?: boolean;
   x11ForwardingStatus?: "disabled" | "enabled" | "rejected";
 }
 

@@ -72,14 +72,38 @@ test("backend hides overlay URL WebViews instead of using unstable child APIs", 
 
 test("backend realizes hidden URL overlay windows before HWND-dependent no-activate show", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
+  const hwndFunction = source.match(/fn webview_hwnd\(window: &WebviewWindow\)[\s\S]*?\n\}/)?.[0];
   const showFunction = source.match(/fn show_webview_window\(window: &WebviewWindow\) -> Result<\(\), String> \{[\s\S]*?\n\}/)?.[0];
 
+  assert.ok(hwndFunction, "Windows webview HWND helper should exist");
   assert.ok(showFunction, "Windows show_webview_window should exist");
-  assert.match(showFunction, /match window\.hwnd\(\)/);
-  assert.match(showFunction, /window\s*\.show\(\)/);
-  assert.match(showFunction, /failed to get URL webview HWND after realize/);
+  assert.match(hwndFunction, /match window\.hwnd\(\)/);
+  assert.match(hwndFunction, /window\s*\.show\(\)/);
+  assert.match(hwndFunction, /failed to get URL webview HWND after realize/);
+  assert.match(showFunction, /webview_hwnd\(window\)\?/);
   assert.match(showFunction, /SW_SHOWNOACTIVATE/);
   assert.match(showFunction, /SWP_NOACTIVATE/);
+});
+
+test("backend applies URL overlay bounds through the same native screen rect as RDP", async () => {
+  const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
+  const positionFunction = Array.from(source.matchAll(/fn position_webview_window\([\s\S]*?\n\}/g))
+    .map((match) => match[0])
+    .find((candidate) => candidate.includes("SetWindowPos"));
+
+  assert.ok(positionFunction, "Windows URL overlay positioning helper should exist");
+  assert.match(positionFunction, /SetWindowPos/);
+  assert.match(positionFunction, /position\.x/);
+  assert.match(positionFunction, /position\.y/);
+  assert.match(positionFunction, /size\.width as i32/);
+  assert.match(positionFunction, /size\.height as i32/);
+  assert.doesNotMatch(positionFunction, /client_offset/);
+  assert.doesNotMatch(positionFunction, /GetClientRect|GetWindowRect/);
+  assert.doesNotMatch(
+    positionFunction,
+    /\.set_position\(/,
+    "Windows URL overlays should use the same native HWND positioning primitive as RDP",
+  );
 });
 
 test("backend positions URL overlays from the host WebView client origin", async () => {
@@ -113,6 +137,24 @@ test("frontend retries the overlay show while the native handle is still realizi
   assert.match(requestVisibility, /attempt < WEBVIEW_SHOW_RETRY_DELAYS_MS\.length/);
   assert.match(requestVisibility, /requestWebviewVisibility\(request, attempt \+ 1\)/);
   assert.match(source, /const visibilityUpdate = requestWebviewVisibility\(\{/);
+});
+
+test("frontend marks URL Connections live as soon as the WebView Session starts opening", async () => {
+  const source = await readFile(
+    new URL("../src/modules/workspace/connections/webview/WebViewWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  const startupEffect = source.match(/useEffect\(\(\) => \{[\s\S]*?start_webview_session[\s\S]*?\n  \}, \[\]\);/)?.[0];
+
+  assert.match(source, /const markConnectionSessionStarted = useWorkspaceStore/);
+  assert.match(source, /const markConnectionSessionEnded = useWorkspaceStore/);
+  assert.match(source, /connectionSessionCountedRef/);
+  assert.match(source, /const markWebviewConnectionStarted = \(\) => \{/);
+  assert.match(source, /const markWebviewConnectionEnded = \(\) => \{/);
+  assert.ok(startupEffect, "URL WebView startup effect should exist");
+  assert.match(startupEffect, /sessionStartingRef\.current = true;[\s\S]*?markWebviewConnectionStarted\(\);/);
+  assert.match(startupEffect, /\.catch\(\(error\) => \{[\s\S]*?markWebviewConnectionEnded\(\);/);
+  assert.match(startupEffect, /releaseWebviewSession\(sessionId\);[\s\S]*?markWebviewConnectionEnded\(\);/);
 });
 
 test("frontend repushes URL overlay bounds on native window move", async () => {

@@ -199,6 +199,8 @@ export function WebViewWorkspace({
   const updateWebviewTabMetadata = useWorkspaceStore((state) => state.updateWebviewTabMetadata);
   const openUrlInNewTab = useWorkspaceStore((state) => state.openUrlInNewTab);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
+  const markConnectionSessionStarted = useWorkspaceStore((state) => state.markConnectionSessionStarted);
+  const markConnectionSessionEnded = useWorkspaceStore((state) => state.markConnectionSessionEnded);
   const ignoreCertificateErrors = useWorkspaceStore((state) => state.urlSettings.ignoreCertificateErrors);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const setAssistantContextSnippet = useWorkspaceStore((state) => state.setAssistantContextSnippet);
@@ -220,6 +222,7 @@ export function WebViewWorkspace({
   const pendingCaptureNonceRef = useRef<string | null>(null);
   const externalLinkTokenRef = useRef<string | null>(null);
   const faviconUpdatedRef = useRef(false);
+  const connectionSessionCountedRef = useRef(false);
   const restoreFocusOnWindowFocusRef = useRef(false);
   const credentialRef = useRef({ canFillCredential: false });
   const [navError, setNavError] = useState("");
@@ -232,6 +235,22 @@ export function WebViewWorkspace({
   const [hasSavedCredential, setHasSavedCredential] = useState(Boolean(tab.connection?.hasUrlCredential));
   const [webviewSnapshot, setWebviewSnapshot] = useState<AssistantScreenshot | null>(null);
   const canFillCredential = Boolean(hasSavedCredential);
+
+  const markWebviewConnectionStarted = () => {
+    if (!tab.connection || connectionSessionCountedRef.current) {
+      return;
+    }
+    connectionSessionCountedRef.current = true;
+    markConnectionSessionStarted(tab.connection.id);
+  };
+
+  const markWebviewConnectionEnded = () => {
+    if (!tab.connection || !connectionSessionCountedRef.current) {
+      return;
+    }
+    connectionSessionCountedRef.current = false;
+    markConnectionSessionEnded(tab.connection.id);
+  };
 
   useEffect(() => {
     credentialRef.current = {
@@ -425,6 +444,7 @@ export function WebViewWorkspace({
     const sessionId = sessionIdRef.current;
     sessionStartingRef.current = true;
     lastBoundsRef.current = bounds;
+    markWebviewConnectionStarted();
     const lease = acquireWebviewSession(sessionId, () =>
       invokeCommand("start_webview_session", {
         request: {
@@ -451,6 +471,7 @@ export function WebViewWorkspace({
         sessionStartingRef.current = false;
         sessionStartedRef.current = false;
         if (!disposed) {
+          markWebviewConnectionEnded();
           setNavError(error instanceof Error ? error.message : String(error));
         }
       });
@@ -468,6 +489,7 @@ export function WebViewWorkspace({
       if (ownsSession) {
         releaseWebviewSession(sessionId);
       }
+      markWebviewConnectionEnded();
       if (tab.sshPortForwardSessionId) {
         void invokeCommand("close_ssh_port_forward", {
           request: { forwardId: tab.sshPortForwardSessionId },

@@ -466,6 +466,36 @@ function buildPanesFromStoredLayout(
     const pane = storedPane?.connection
       ? buildPaneFromStoredLayoutPane(storedPane, index)
       : fallbackPane;
+    if (pane && isTerminalPane(pane) && fallbackPane && isTerminalPane(fallbackPane)) {
+      const sameConnection = pane.connection?.id === fallbackPane.connection?.id;
+      if (sameConnection) {
+        const tmuxDisabled =
+          fallbackPane.connection?.type === "ssh" &&
+          fallbackPane.connection.useTmuxSessions === false;
+        return {
+          ...pane,
+          connection: fallbackPane.connection,
+          tmuxSessionId: tmuxDisabled
+            ? undefined
+            : pane.tmuxSessionId ?? (pane.tmuxUnavailable ? undefined : fallbackPane.tmuxSessionId),
+          tmuxUnavailable: tmuxDisabled ? undefined : pane.tmuxUnavailable,
+        };
+      }
+    }
+    if (
+      pane &&
+      isTerminalPane(pane) &&
+      !pane.tmuxSessionId &&
+      !pane.tmuxUnavailable &&
+      fallbackPane &&
+      isTerminalPane(fallbackPane) &&
+      fallbackPane.tmuxSessionId
+    ) {
+      return {
+        ...pane,
+        tmuxSessionId: fallbackPane.tmuxSessionId,
+      };
+    }
     return pane ?? fallbackPane;
   }).filter((pane): pane is WorkspacePane => Boolean(pane));
 }
@@ -727,6 +757,22 @@ function inheritedTerminalCwdForConnection(
 
 function isTerminalPane(pane: WorkspacePane): pane is TerminalPane {
   return pane.kind === undefined || pane.kind === "terminal";
+}
+
+function refreshTerminalPaneConnection(
+  pane: TerminalPane,
+  connection: Connection,
+  toolbarTitle = toolbarTitleForConnection(connection),
+): TerminalPane {
+  const tmuxDisabled = connection.type === "ssh" && connection.useTmuxSessions === false;
+  return {
+    ...pane,
+    connection,
+    title: refreshedPaneTitle(pane, connection),
+    toolbarTitle,
+    tmuxSessionId: tmuxDisabled ? undefined : pane.tmuxSessionId,
+    tmuxUnavailable: tmuxDisabled ? undefined : pane.tmuxUnavailable,
+  };
 }
 
 function urlConnectionIdsForTab(tab: WorkspaceTab) {
@@ -1122,7 +1168,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       (tab) => tab.id === `tab-${connection.id}`,
     );
     if (existingTab) {
-      set({ activeTabId: existingTab.id });
+      set((state) => ({
+        tabs: state.tabs.map((tab) => refreshTabConnectionMetadata(tab, connection)),
+        activeTabId: existingTab.id,
+      }));
       return;
     }
 
@@ -2446,6 +2495,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             ...pane,
             title: pane.title === pane.tmuxSessionId ? pane.connection?.name ?? pane.title : pane.title,
             tmuxSessionId: undefined,
+            tmuxUnavailable: true,
           };
         });
         return changed ? { ...tab, panes } : tab;
@@ -2507,15 +2557,10 @@ function refreshTabConnectionMetadata(tab: WorkspaceTab, connection: Connection)
   const tabConnectionMatches = tab.connection?.id === connection.id;
   const toolbarTitle = toolbarTitleForConnection(connection);
   const panes = tab.panes.map((pane) => {
-    if (pane.connection?.id !== connection.id) {
+    if (!isTerminalPane(pane) || pane.connection?.id !== connection.id) {
       return pane;
     }
-    return {
-      ...pane,
-      connection,
-      title: refreshedPaneTitle(pane, connection),
-      toolbarTitle,
-    };
+    return refreshTerminalPaneConnection(pane, connection, toolbarTitle);
   });
   const panesChanged = panes.some((pane, index) => pane !== tab.panes[index]);
   if (!tabConnectionMatches && !panesChanged) {

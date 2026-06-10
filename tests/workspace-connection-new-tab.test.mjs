@@ -92,6 +92,36 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
   assert.match(sidebarSource, /openConnectionInNewTab = useWorkspaceStore/);
   assert.match(sidebarSource, /event\.ctrlKey/);
   assert.match(sidebarSource, /handleOpenConnection\(connection,\s*\{\s*forceNewTab: true\s*\}\)/);
+  assert.match(
+    storeSource,
+    /!pane\.tmuxSessionId[\s\S]*?fallbackPane\.tmuxSessionId[\s\S]*?tmuxSessionId: fallbackPane\.tmuxSessionId/,
+    "stored single-pane SSH layouts should inherit generated tmux ids so the toolbar can show tmux controls",
+  );
+  assert.match(
+    storeSource,
+    /sameConnection[\s\S]*?connection: fallbackPane\.connection[\s\S]*?pane\.tmuxUnavailable \? undefined : fallbackPane\.tmuxSessionId/,
+    "stored same-Connection panes should refresh stale Connection metadata without resurrecting tmux controls after tmux is unavailable",
+  );
+  assert.match(
+    storeSource,
+    /const tmuxDisabled =[\s\S]*?fallbackPane\.connection\.useTmuxSessions === false[\s\S]*?tmuxSessionId: tmuxDisabled\s*\?\s*undefined/,
+    "stored SSH panes should clear stale tmux ids when the current durable Connection disables tmux",
+  );
+  assert.match(
+    storeSource,
+    /function refreshTerminalPaneConnection[\s\S]*?connection\.useTmuxSessions === false[\s\S]*?tmuxSessionId: tmuxDisabled \? undefined : pane\.tmuxSessionId/,
+    "reactivating an existing SSH tab should clear stale tmux ids when the current durable Connection disables tmux",
+  );
+  assert.match(
+    storeSource,
+    /existingTab[\s\S]*?refreshTabConnectionMetadata\(tab,\s*connection\)[\s\S]*?activeTabId: existingTab\.id/,
+    "opening an already-live Connection should refresh stale Tab metadata before reactivation",
+  );
+  assert.match(
+    storeSource,
+    /tmuxUnavailable: true/,
+    "remote hosts without tmux should keep suppressing tmux controls after the startup marker is detected",
+  );
   assert.match(sidebarSource, /openTmuxSessionIdsForConnection\(connection\.id\)/);
   assert.match(sidebarSource, /newestUnattachedTmuxSession\(sessions,\s*openSessionIds\)/);
   assert.match(sidebarSource, /label: `\$\{t\("workspace\.newTab"\)\}\\t\$\{t\("connections\.newTabShortcut"\)\}`/);

@@ -874,6 +874,68 @@
     }
 
     #[test]
+    fn update_connection_preserves_existing_tmux_preference_when_omitted() {
+        let storage = Storage::open(temp_db_path("update_preserve_tmux")).expect("storage opens");
+        let connection =
+            create_test_ssh_connection(&storage, "API Stage", "api-stage.internal", None);
+        let disabled = storage
+            .update_connection(UpdateConnectionRequest {
+                id: connection.id.clone(),
+                name: connection.name.clone(),
+                host: connection.host.clone(),
+                user: connection.user.clone(),
+                connection_type: "ssh".to_string(),
+                folder_id: None,
+                port: connection.port,
+                key_path: connection.key_path.clone(),
+                proxy_jump: connection.proxy_jump.clone(),
+                auth_method: Some(connection.auth_method.clone()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: Some(false),
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("tmux preference is disabled");
+
+        let updated = storage
+            .update_connection(UpdateConnectionRequest {
+                id: disabled.id.clone(),
+                name: "API Stage Renamed".to_string(),
+                host: disabled.host.clone(),
+                user: disabled.user.clone(),
+                connection_type: "ssh".to_string(),
+                folder_id: None,
+                port: disabled.port,
+                key_path: disabled.key_path.clone(),
+                proxy_jump: disabled.proxy_jump.clone(),
+                auth_method: Some(disabled.auth_method.clone()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("connection is updated without tmux preference");
+
+        assert_eq!(updated.name, "API Stage Renamed");
+        assert!(!updated.use_tmux_sessions);
+        assert!(updated.tmux_connection_id.is_none());
+    }
+
+    #[test]
     fn delete_connection_removes_connection_and_tags() {
         let storage = Storage::open(temp_db_path("delete")).expect("storage opens");
         let production = storage

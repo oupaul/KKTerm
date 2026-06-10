@@ -725,15 +725,60 @@ fn show_webview(
     height: f64,
 ) -> Result<(), String> {
     let (position, size) = overlay_rect(&session.host_window, x, y, width, height)?;
-    session
-        .window
+    position_webview_window(&session.window, position, size)?;
+    show_webview_window(&session.window)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn position_webview_window(
+    window: &WebviewWindow,
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+) -> Result<(), String> {
+    window
         .set_position(Position::Physical(position))
         .map_err(|error| format!("failed to position webview: {error}"))?;
-    session
-        .window
+    window
         .set_size(Size::Physical(size))
         .map_err(|error| format!("failed to size webview: {error}"))?;
-    show_webview_window(&session.window)
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn position_webview_window(
+    window: &WebviewWindow,
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+) -> Result<(), String> {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos,
+    };
+
+    let hwnd = webview_hwnd(window)?;
+    let hwnd = HWND(hwnd);
+    unsafe {
+        // RDP positions its native child HWND by translating the Pane rect to
+        // host-client screen coordinates and applying that exact rect. URL
+        // overlays use a borderless owned WebviewWindow; compensating for the
+        // overlay window's own client inset over-corrects by a few pixels on
+        // Windows, so keep the same screen rect contract here.
+        SetWindowPos(
+            hwnd,
+            None,
+            position.x,
+            position.y,
+            size.width as i32,
+            size.height as i32,
+            SWP_NOACTIVATE | SWP_NOZORDER,
+        )
+        .map_err(|error| format!("failed to position URL webview window: {error}"))?;
+    }
+    webview_debug_log(format!(
+        "position_webview_window screen_rect=({},{},{},{})",
+        position.x, position.y, size.width, size.height,
+    ));
+    Ok(())
 }
 
 fn hide_webview(window: &WebviewWindow) -> Result<(), String> {
@@ -805,6 +850,22 @@ fn host_content_origin(host_window: &WebviewWindow) -> Result<PhysicalPosition<i
 }
 
 #[cfg(target_os = "windows")]
+fn webview_hwnd(window: &WebviewWindow) -> Result<*mut std::ffi::c_void, String> {
+    match window.hwnd() {
+        Ok(hwnd) => Ok(hwnd.0),
+        Err(_) => {
+            window
+                .show()
+                .map_err(|error| format!("failed to realize URL webview window: {error}"))?;
+            window
+                .hwnd()
+                .map(|hwnd| hwnd.0)
+                .map_err(|error| format!("failed to get URL webview HWND after realize: {error}"))
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
 fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
     use windows::Win32::Foundation::HWND;
     use windows::Win32::UI::WindowsAndMessaging::{
@@ -812,20 +873,10 @@ fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
         ShowWindow,
     };
 
-    let hwnd = match window.hwnd() {
-        Ok(hwnd) => hwnd,
-        Err(_) => {
-            window
-                .show()
-                .map_err(|error| format!("failed to realize URL webview window: {error}"))?;
-            window
-                .hwnd()
-                .map_err(|error| format!("failed to get URL webview HWND after realize: {error}"))?
-        }
-    };
+    let hwnd = webview_hwnd(window)?;
     unsafe {
         SetWindowPos(
-            HWND(hwnd.0),
+            HWND(hwnd),
             None,
             0,
             0,
@@ -834,7 +885,7 @@ fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
             SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER,
         )
         .map_err(|error| format!("failed to show webview without activation: {error}"))?;
-        let _ = ShowWindow(HWND(hwnd.0), SW_SHOWNOACTIVATE);
+        let _ = ShowWindow(HWND(hwnd), SW_SHOWNOACTIVATE);
     }
     Ok(())
 }
