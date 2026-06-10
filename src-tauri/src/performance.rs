@@ -73,6 +73,12 @@ struct TerminalReadyMeasurement {
 struct HostUsageState {
     previous_cpu: Option<SystemCpuTimes>,
     previous_network: Option<NetworkSample>,
+    #[cfg(target_os = "macos")]
+    macos_system: Option<sysinfo::System>,
+    #[cfg(target_os = "macos")]
+    macos_networks: Option<sysinfo::Networks>,
+    #[cfg(target_os = "macos")]
+    macos_net_sampled_at: Option<Instant>,
 }
 
 #[derive(Default)]
@@ -256,7 +262,47 @@ fn host_usage_counters(
     )
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn host_usage_counters(
+    state: Option<&mut HostUsageState>,
+) -> (
+    Option<f64>,
+    Option<f64>,
+    Option<NetworkTransferRates>,
+    &'static str,
+) {
+    let Some(state) = state else {
+        return (None, None, None, "macos-sysinfo-stateless");
+    };
+
+    // CPU usage needs a previous sample; the first call returns None.
+    let had_system = state.macos_system.is_some();
+    let system = state.macos_system.get_or_insert_with(sysinfo::System::new);
+    system.refresh_cpu_usage();
+    system.refresh_memory();
+
+    let cpu_percent = if had_system {
+        Some(system.global_cpu_usage() as f64)
+    } else {
+        None
+    };
+
+    let ram_percent = {
+        let total = system.total_memory();
+        if total == 0 {
+            None
+        } else {
+            Some(system.used_memory() as f64 / total as f64 * 100.0)
+        }
+    };
+
+    let network_transfer_rates =
+        macos_network_rates(&mut state.macos_networks, &mut state.macos_net_sampled_at);
+
+    (cpu_percent, ram_percent, network_transfer_rates, "macos-sysinfo")
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn host_usage_counters(
     _state: Option<&mut HostUsageState>,
 ) -> (
@@ -266,6 +312,44 @@ fn host_usage_counters(
     &'static str,
 ) {
     (None, None, None, "unsupported-platform")
+}
+
+#[cfg(target_os = "macos")]
+fn macos_network_rates(
+    networks: &mut Option<sysinfo::Networks>,
+    sampled_at: &mut Option<Instant>,
+) -> Option<NetworkTransferRates> {
+    let now = Instant::now();
+
+    let Some(nets) = networks else {
+        // First call: establish a baseline, no delta available yet.
+        *networks = Some(sysinfo::Networks::new_with_refreshed_list());
+        *sampled_at = Some(now);
+        return None;
+    };
+
+    // `refresh(true)` updates per-interface byte counters; `received()` /
+    // `transmitted()` then report bytes since this refresh.
+    nets.refresh(true);
+    let elapsed = sampled_at
+        .replace(now)
+        .map(|previous| now.duration_since(previous).as_secs_f64())
+        .unwrap_or(0.0);
+    if elapsed <= 0.0 {
+        return None;
+    }
+
+    let (down_bytes, up_bytes) = nets.iter().fold((0_u64, 0_u64), |(down, up), (_, data)| {
+        (
+            down.saturating_add(data.received()),
+            up.saturating_add(data.transmitted()),
+        )
+    });
+
+    Some(NetworkTransferRates {
+        downstream_bytes_per_second: down_bytes as f64 / elapsed,
+        upstream_bytes_per_second: up_bytes as f64 / elapsed,
+    })
 }
 
 fn cpu_usage_between(previous: SystemCpuTimes, current: SystemCpuTimes) -> Option<f64> {
@@ -717,7 +801,24 @@ fn process_working_set_bytes() -> (Option<u64>, &'static str) {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn process_working_set_bytes() -> (Option<u64>, &'static str) {
+    use sysinfo::{ProcessesToUpdate, System, get_current_pid};
+
+    let Ok(pid) = get_current_pid() else {
+        return (None, "macos-sysinfo-unavailable");
+    };
+
+    let mut system = System::new();
+    system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+
+    match system.process(pid) {
+        Some(process) => (Some(process.memory()), "macos-sysinfo"),
+        None => (None, "macos-sysinfo-unavailable"),
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn process_working_set_bytes() -> (Option<u64>, &'static str) {
     (None, "unsupported-platform")
 }
@@ -843,5 +944,25 @@ mod tests {
 
         assert!(snapshot.working_set_bytes.unwrap_or_default() > 0);
         assert_eq!(snapshot.memory_source, "windows-working-set");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_snapshot_reports_working_set() {
+        let snapshot = PerformanceMonitor::new().snapshot();
+
+        assert!(snapshot.working_set_bytes.unwrap_or_default() > 0);
+        assert_eq!(snapshot.memory_source, "macos-sysinfo");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_host_usage_reports_source_and_ram() {
+        let snapshot = PerformanceMonitor::new().host_usage_snapshot();
+
+        assert_eq!(snapshot.source, "macos-sysinfo");
+        // RAM percent does not need a previous sample, so it is available on the
+        // first call even though CPU/network deltas are not.
+        assert!(snapshot.ram_percent.is_some());
     }
 }
