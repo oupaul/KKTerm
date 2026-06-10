@@ -28,6 +28,19 @@
       "port": 9222,
       "useWebView": true,
       "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Run KKTerm macOS arm64",
+      "type": "lldb-dap",
+      "request": "launch",
+      "program": "${workspaceFolder}/src-tauri/target/aarch64-apple-darwin/debug/kkterm",
+      "debugAdapterExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/lldb-dap",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "preLaunchTask": "debug KKTerm macOS arm64"
     }
   ]
 }

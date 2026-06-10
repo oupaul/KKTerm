@@ -1,8 +1,11 @@
-//! Title-bar setup for the main window. KKTerm always uses the custom
-//! React-painted title bar, so system decorations are removed and Win11 rounded
-//! corners are reinstated via DwmSetWindowAttribute.
+//! Title-bar setup for the main window. KKTerm uses a custom React-painted title
+//! bar. On Windows/Linux system decorations are removed entirely (and Win11
+//! rounded corners are reinstated via DwmSetWindowAttribute). On macOS the native
+//! traffic-light controls are kept via the overlay title-bar style applied at
+//! window-build time, so decorations must NOT be stripped here.
 
 pub fn apply_title_bar_mode<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    #[cfg(not(target_os = "macos"))]
     if let Err(error) = window.set_decorations(false) {
         eprintln!("title-bar mode: set_decorations failed: {error}");
     }

@@ -10,6 +10,7 @@ import {
   minimizeMainWindow,
   toggleMaximizeMainWindow,
 } from "../lib/tauri";
+import { usesNativeWindowControls } from "../lib/platform";
 import appIconUrl from "../../src-tauri/icons/32x32.png";
 
 const ICON_SIZE = 10;
@@ -117,6 +118,7 @@ export function TitleBar({
   onToggleConnectionPanel: () => void;
 }) {
   const { t } = useTranslation();
+  const nativeWindowControls = usesNativeWindowControls();
   const [maximized, setMaximized] = useState(false);
   const [version, setVersion] = useState<string>("");
 
@@ -146,7 +148,12 @@ export function TitleBar({
   const titleText = version ? `KKTerm v${version}` : "KKTerm";
 
   return (
-    <div className="app-titlebar" data-tauri-drag-region>
+    <div
+      className={`app-titlebar${
+        nativeWindowControls ? " app-titlebar-native-controls" : ""
+      }`}
+      data-tauri-drag-region
+    >
       <div className="app-titlebar-label" data-tauri-drag-region>
         <img
           className="app-titlebar-icon"
@@ -187,37 +194,41 @@ export function TitleBar({
         >
           <Bot size={15} strokeWidth={1.8} />
         </button>
-        <button
-          type="button"
-          className="app-titlebar-button"
-          onClick={handleMinimize}
-          aria-label={t("app.titlebar.minimize")}
-          title={t("app.titlebar.minimize")}
-        >
-          <MinimizeIcon />
-        </button>
-        <button
-          type="button"
-          className="app-titlebar-button"
-          onClick={handleToggleMaximize}
-          aria-label={t(
-            maximized ? "app.titlebar.restore" : "app.titlebar.maximize",
-          )}
-          title={t(
-            maximized ? "app.titlebar.restore" : "app.titlebar.maximize",
-          )}
-        >
-          {maximized ? <RestoreIcon /> : <MaximizeIcon />}
-        </button>
-        <button
-          type="button"
-          className="app-titlebar-button app-titlebar-close"
-          onClick={handleClose}
-          aria-label={t("app.titlebar.close")}
-          title={t("app.titlebar.close")}
-        >
-          <CloseIcon />
-        </button>
+        {nativeWindowControls ? null : (
+          <>
+            <button
+              type="button"
+              className="app-titlebar-button"
+              onClick={handleMinimize}
+              aria-label={t("app.titlebar.minimize")}
+              title={t("app.titlebar.minimize")}
+            >
+              <MinimizeIcon />
+            </button>
+            <button
+              type="button"
+              className="app-titlebar-button"
+              onClick={handleToggleMaximize}
+              aria-label={t(
+                maximized ? "app.titlebar.restore" : "app.titlebar.maximize",
+              )}
+              title={t(
+                maximized ? "app.titlebar.restore" : "app.titlebar.maximize",
+              )}
+            >
+              {maximized ? <RestoreIcon /> : <MaximizeIcon />}
+            </button>
+            <button
+              type="button"
+              className="app-titlebar-button app-titlebar-close"
+              onClick={handleClose}
+              aria-label={t("app.titlebar.close")}
+              title={t("app.titlebar.close")}
+            >
+              <CloseIcon />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

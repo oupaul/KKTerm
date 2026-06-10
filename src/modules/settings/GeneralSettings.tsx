@@ -36,6 +36,7 @@ import {
   selectSettingsExportFile,
   selectSettingsImportFile,
 } from "../../lib/tauri";
+import { isWindowsPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import {
   AI_PROVIDER_SECRET_OWNER_ID,
@@ -69,6 +70,7 @@ function formatBackupDate(value?: string | null) {
 
 export function GeneralSettings() {
   const { t, i18n } = useTranslation();
+  const windowsPlatform = isWindowsPlatform();
   const lastCheckedAt = useLastUpdateCheckAt();
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>(detectLanguage);
@@ -392,18 +394,20 @@ export function GeneralSettings() {
               <small>{t("settings.allowClipboardReadHint")}</small>
             </span>
           </label>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.autoStartWithWindows}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, autoStartWithWindows: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.autoStartWithWindows")}</strong>
-              <small>{t("settings.autoStartWithWindowsHint")}</small>
-            </span>
-          </label>
+          {windowsPlatform ? (
+            <label className="settings-toggle-row">
+              <ToggleSwitch
+                checked={draft.autoStartWithWindows}
+                onChange={(checked) =>
+                  setDraft((s) => ({ ...s, autoStartWithWindows: checked }))
+                }
+              />
+              <span>
+                <strong>{t("settings.autoStartWithWindows")}</strong>
+                <small>{t("settings.autoStartWithWindowsHint")}</small>
+              </span>
+            </label>
+          ) : null}
           <label className="settings-toggle-row">
             <ToggleSwitch
               checked={draft.minimizeToTray}
@@ -428,21 +432,23 @@ export function GeneralSettings() {
           <p className="field-hint">{t("settings.performanceHint")}</p>
         </div>
         <div className="settings-toggle-list">
-          <label
-            className="settings-toggle-row"
-            data-tutorial-id="settings.useDirectxScreenCapture"
-          >
-            <ToggleSwitch
-              checked={draft.useDirectxScreenCapture}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, useDirectxScreenCapture: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.useDirectxScreenCapture")}</strong>
-              <small>{t("settings.useDirectxScreenCaptureHint")}</small>
-            </span>
-          </label>
+          {windowsPlatform ? (
+            <label
+              className="settings-toggle-row"
+              data-tutorial-id="settings.useDirectxScreenCapture"
+            >
+              <ToggleSwitch
+                checked={draft.useDirectxScreenCapture}
+                onChange={(checked) =>
+                  setDraft((s) => ({ ...s, useDirectxScreenCapture: checked }))
+                }
+              />
+              <span>
+                <strong>{t("settings.useDirectxScreenCapture")}</strong>
+                <small>{t("settings.useDirectxScreenCaptureHint")}</small>
+              </span>
+            </label>
+          ) : null}
         </div>
       </fieldset>
 
@@ -599,18 +605,20 @@ export function GeneralSettings() {
               />
             </div>
           </div>
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.rdpWebviewStability}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, rdpWebviewStability: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.rdpWebviewStability")}</strong>
-              <small>{t("settings.rdpWebviewStabilityHint")}</small>
-            </span>
-          </label>
+          {windowsPlatform ? (
+            <label className="settings-toggle-row">
+              <ToggleSwitch
+                checked={draft.rdpWebviewStability}
+                onChange={(checked) =>
+                  setDraft((s) => ({ ...s, rdpWebviewStability: checked }))
+                }
+              />
+              <span>
+                <strong>{t("settings.rdpWebviewStability")}</strong>
+                <small>{t("settings.rdpWebviewStabilityHint")}</small>
+              </span>
+            </label>
+          ) : null}
         </div>
       </fieldset>
 

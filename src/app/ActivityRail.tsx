@@ -20,6 +20,7 @@ import { flattenConnections } from "../modules/workspace/connections/treeUtils";
 import { ariaPressed } from "../lib/aria";
 import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";
+import { supportsInstallerHelper } from "../lib/platform";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { Connection } from "../types";
@@ -604,7 +605,7 @@ export function ActivityRail({
         <Gauge size={18} />
         <RailTooltip label={t("dashboard.title")} />
       </button>
-      {generalSettings.showInstallerOnRail ? (
+      {generalSettings.showInstallerOnRail && supportsInstallerHelper() ? (
         <button
           className={`rail-button rail-button-installer ${activePage === "installer" ? "active" : ""}`}
           aria-label={t("installer.railLabel")}
