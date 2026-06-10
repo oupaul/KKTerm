@@ -23,6 +23,15 @@ const SSH_TMUX_RESUME_TIMEOUT: Duration = Duration::from_secs(10);
 const SSH_TMUX_RESUME_DELAY: Duration = Duration::from_millis(750);
 const SSH_STARTUP_TIMEOUT: Duration = Duration::from_secs(15);
 const SSH_X11_REQUEST_WANT_REPLY: bool = true;
+// Idle SSH sessions must keep sending SSH-level keepalives so NAT/firewall state
+// stays alive and a dead link is detected instead of silently freezing input
+// (russh equivalent of OpenSSH ServerAliveInterval/ServerAliveCountMax). An
+// active session resets this timer on received data, so it adds no traffic.
+const SSH_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
+// Tear down a dead link after this many unanswered keepalives. With a 30s
+// interval that is a ~2.5 min detection window — tight enough to recover an
+// idle freeze quickly, loose enough to ride out a brief network blip.
+const SSH_KEEPALIVE_MAX_MISSED: usize = 4;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1002,6 +1011,8 @@ fn x11_auth_cookie() -> String {
 fn native_ssh_client_config() -> client::Config {
     client::Config {
         inactivity_timeout: None,
+        keepalive_interval: Some(SSH_KEEPALIVE_INTERVAL),
+        keepalive_max: SSH_KEEPALIVE_MAX_MISSED,
         ..Default::default()
     }
 }
@@ -1258,6 +1269,21 @@ mod tests {
         let config = native_ssh_client_config();
 
         assert_eq!(config.inactivity_timeout, None);
+    }
+
+    #[test]
+    fn native_ssh_client_sends_keepalives_to_detect_dead_idle_links() {
+        let config = native_ssh_client_config();
+
+        // Without keepalives an idle session behind a NAT/firewall freezes:
+        // the link dies silently, input is swallowed, yet the session never
+        // observes EOF/Close so it keeps reporting as connected.
+        assert_eq!(config.keepalive_interval, Some(SSH_KEEPALIVE_INTERVAL));
+        assert!(
+            config.keepalive_max > 0,
+            "a dead link must be torn down after a bounded number of missed keepalives"
+        );
+        assert_eq!(config.keepalive_max, SSH_KEEPALIVE_MAX_MISSED);
     }
 
     #[test]
