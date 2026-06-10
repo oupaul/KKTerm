@@ -1,7 +1,7 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, RefreshCw, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, RefreshCw, Save, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -188,10 +188,12 @@ function webviewChromeHasInteractiveFocus(workspace: HTMLElement | null) {
 
 export function WebViewWorkspace({
   isActive,
+  onClose,
   onOpenAssistant = () => undefined,
   tab,
 }: {
   isActive: boolean;
+  onClose?: () => void;
   onOpenAssistant?: () => void;
   tab: WorkspaceTab;
 }) {
@@ -1094,6 +1096,18 @@ export function WebViewWorkspace({
             >
               <Bot size={13} />
             </button>
+            {onClose ? (
+              <button
+                aria-label={t("workspace.closeTab", { title: tab.title })}
+                className="terminal-pane-action webview-close-action"
+                data-tutorial-id="webview.close"
+                onClick={onClose}
+                title={t("workspace.closeTab", { title: tab.title })}
+                type="button"
+              >
+                <X size={13} />
+              </button>
+            ) : null}
           </div>
         </header>
         <div ref={placeholderRef} className="webview-placeholder" data-tutorial-id="webview.surface">

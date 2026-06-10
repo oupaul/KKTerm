@@ -264,6 +264,10 @@ export function WorkspaceCanvas({
   const { t } = useTranslation();
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
+  const closeTab = useWorkspaceStore((state) => state.closeTab);
+  // The toolbar close button only earns its place when the tab strip is hidden;
+  // otherwise the tab strip's own close button already covers it.
+  const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
 
   if (tabs.length === 0) {
     return (
@@ -320,6 +324,7 @@ export function WorkspaceCanvas({
             <WebViewWorkspace
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
               onOpenAssistant={onOpenAssistant}
               tab={tab}
             />
