@@ -144,4 +144,10 @@ cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
+`npm run check` runs ESLint (`npm run lint`), then the auto-discovered frontend
+test suite (`tests/run-all.mjs` picks up every `tests/*.test.{mjs,ts}` except a
+documented `QUARANTINE` set), then `tsc --noEmit`. Add a new frontend test by
+dropping a file in `tests/`; do not maintain a hand-edited test list. CI runs
+the same checks, including `cargo test`.
+
 If a required check cannot be run, explain why in the final response.

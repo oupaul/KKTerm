@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { ArrowLeft } from "lucide-react";
 import { marked } from "marked";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -71,7 +72,7 @@ export function ManualPage({ onBack }: { onBack: () => void }) {
   const renderedHtml = useMemo(() => {
     if (!markdown) return "";
     try {
-      return marked.parse(markdown, { async: false }) as string;
+      return DOMPurify.sanitize(marked.parse(markdown, { async: false }) as string);
     } catch {
       return "";
     }

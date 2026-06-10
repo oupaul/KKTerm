@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "check": "node tests/tutorial-target-navigation.test.mjs && node tests/no-terminal-agent-detection.test.mjs && node tests/release-notes-generator.test.mjs && node tests/release-github-script.test.mjs && node tests/smoke-installer-script.test.mjs && node tests/package-installer-arm64-script.test.mjs && node tests/titlebar-app-icon.test.mjs && node tests/titlebar-theme.test.mjs && node tests/no-local-profile-path.test.mjs && node tests/dashboard-connection-widget-tmux.test.mjs && node tests/dashboard-app-launcher-settings-merge.test.mjs && node tests/dashboard-notes-widget-options.test.mjs && node tests/activity-rail-child-shortcut.test.mjs && node tests/native-overlay-menu-policy.test.mjs && node tests/dialog-portal-policy.test.mjs && node tests/settings-popup-update-placement.test.mjs && node tests/webview-visibility-lifecycle.test.mjs && node tests/dynamic-background-aquarium-parity.test.mjs && node tests/workspace-connection-new-tab.test.mjs && node tests/connection-properties-identity.test.mjs && node tests/workspace-tab-rename-runtime.test.mjs && node tests/terminal-background-transparency.test.mjs && node tests/terminal-background-scope-settings.test.mjs && node tests/sftp-toolbar-popup.test.mjs && node tests/assistant-send-reveals-panel.test.mjs && node tests/assistant-composer-submit-reset.test.mjs && node tests/assistant-composer-queue.test.mjs && node tests/assistant-add-menu-order.test.mjs && node tests/ai-cli-status-persistence.test.mjs && node tests/watchdog-status-icons.test.mjs && node tests/x-server-status-bar.test.mjs && node tests/status-bar-x-server-menu.test.mjs && node tests/ssh-x11-forwarding.test.mjs && node tests/installer-vcxsrv-machine-scope.test.mjs && node tests/installer-stepper-legacy-log.test.mjs && node tests/installer-version-comparison.test.mjs && node tests/installer-latest-support.test.mjs && node tests/installer-winget-prereq.test.mjs && node tests/installer-web-ui-affordance.test.mjs && node tests/installer-managed-service-catalog.test.mjs && tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "check": "npm run lint && node tests/run-all.mjs && tsc --noEmit",
     "package:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-installer.ps1",
     "package:installer:arm64": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-installer-arm64.ps1",
     "release:github": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-github.ps1",
@@ -79,14 +80,20 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-grid-layout": "^2.1.0",
     "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^10.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.22.4",
     "typescript": "~6.0.3",
+    "typescript-eslint": "^8.61.0",
     "vite": "^8.0.16"
   },
   "overrides": {

@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { Copy, Terminal } from "lucide-react";
 import { marked, type Tokens } from "marked";
 import { useMemo, type MouseEvent } from "react";
@@ -76,7 +77,7 @@ export function MarkdownContent({
             </div>
           );
         }
-        const html = marked.parse(token.raw, { async: false }) as string;
+        const html = DOMPurify.sanitize(marked.parse(token.raw, { async: false }) as string);
         return <div key={`md-${index}`} dangerouslySetInnerHTML={{ __html: html }} />;
       })}
     </div>

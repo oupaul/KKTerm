@@ -183,11 +183,15 @@ Full glossary with examples: [`CONTEXT.md`](CONTEXT.md).
 Run all four. They are not optional.
 
 ```bash
-npm run check                                              # TypeScript
+npm run check                                              # ESLint + frontend tests + tsc
 npm run build                                              # Vite production build
 cargo check --manifest-path src-tauri/Cargo.toml           # Rust compiles
 cargo test  --manifest-path src-tauri/Cargo.toml           # Rust tests pass
 ```
+
+`npm run check` runs, in order: `npm run lint` (ESLint flat config — correctness rules such as `react-hooks/rules-of-hooks` are errors, pre-existing stylistic findings are warnings), the frontend test suite, then `tsc --noEmit`. Both CI jobs run the same checks (`cargo test` included).
+
+Frontend tests live in `tests/` and are **auto-discovered** by `tests/run-all.mjs` — drop in a `*.test.mjs` (plain Node) or `*.test.ts` (run through the `tsx` loader, for behavioral tests against pure modules) and it runs automatically; there is no list to edit. A short, documented `QUARANTINE` set in the runner holds pre-existing source-grep guards whose asserted source text has drifted; prefer fixing or replacing those with behavioral tests over adding to it.
 
 If a check cannot be run in your environment, say so explicitly in the PR description rather than skipping it silently.
 

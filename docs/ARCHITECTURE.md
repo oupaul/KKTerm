@@ -478,7 +478,9 @@ New feature code should land in the owning source area above. New feature CSS sh
 
 ## Backend Source Map
 
-Rust backend modules live flat under `src-tauri/src/`, with multi-file features grouped into subdirectories. `lib.rs` wires the Tauri builder: it registers commands, manages shared state (registries, managers, trackers), and owns the app-shell/native integration glue. New backend work should land in the owning module below rather than growing `lib.rs`.
+Rust backend modules live flat under `src-tauri/src/`, with multi-file features grouped into subdirectories. `lib.rs` wires the Tauri builder: it registers commands, manages shared state (registries, managers, trackers), and owns the app-shell/native integration glue. The `generate_handler!` registry is annotated with domain section headers (Connections, Settings, SFTP, RDP, Dashboard, Installer, Watchdog, …); pure custom-font and dashboard-background media helpers live in `media.rs`. New backend work should land in the owning module below rather than growing `lib.rs`.
+
+The two largest backend modules are split into directory modules rather than single files. `ai/` and `storage/` keep their public type/`impl` surface intact (additional `impl Storage` blocks attach to the same type) while spreading the implementation across cohesive submodules — see the `ai.rs` and `storage.rs` entries below. Their inline `#[cfg(test)]` suites live in `ai/tests.rs` and `storage/tests.rs`.
 
 Connections, Sessions, and transports:
 
@@ -499,7 +501,7 @@ Connections, Sessions, and transports:
 
 AI, Dashboard, Installer, and Network tools:
 
-- `ai.rs` — assistant runtime: provider chat/Responses streaming, tool registration and execution, approval gating, and the live-tool bridge. See the AI Assistant area for the full contract. `ai/` holds provider adapters and `prompt_contracts.rs`.
+- `ai.rs` — assistant runtime: tool registration and execution, approval gating, the live-tool bridge, and shared logging macros. See the AI Assistant area for the full contract. `ai/` holds the decomposition: provider adapters (`providers/`), prompt contracts (`prompt_contracts.rs`), the OpenAI-compatible chat/Responses implementation (`openai_provider.rs`), SSE streaming and the HTTP client (`streaming.rs`), ACP/CLI agent backends and discovery (`cli_backend.rs`), the email tool transports (`email.rs`), web search/scrape (`web_search.rs`), and the test suite (`tests.rs`).
 - `ai_coding_usage.rs` — tracks and syncs coding-CLI usage/quota (Codex, Claude Code) and persists auth state.
 - `github_copilot.rs` — GitHub Copilot OAuth device-flow sign-in and token polling.
 - `mcp.rs` — remote MCP HTTP client: server CRUD, schema caching, tool calls, and keychain-stored auth headers.
@@ -516,7 +518,7 @@ Watchdog, secrets, storage, and diagnostics:
 
 - `watchdog/` — AI Watchdog backend (registry, polling, predicate evaluation, targets, SSH session-activity tracking); see the Watchdog area.
 - `secrets.rs` — OS keychain wrapper (Connection passwords, API keys, MCP auth, widget secrets).
-- `storage.rs` — SQLite schema, migrations, and validation for Connections, folders, tags, per-type options, credentials, and Dashboard state.
+- `storage.rs` — SQLite schema, migrations, validation, and core `Storage` lifecycle. The large `impl Storage` is split by entity under `storage/`: `connections.rs` (connection records, folders, duplicate/move, and credential metadata), `settings.rs` (all get/update settings accessors), with the test suite in `storage/tests.rs`. Additional `impl Storage` blocks in these files attach to the same `Storage` type, so callers are unaffected.
 - `diagnostics.rs` — builds local-only diagnostic bundles (logs, performance snapshots, manifest) while excluding secrets, the database, and terminal output.
 - `logging.rs` — initializes local log files and the Advanced-Debugging-gated AI/MCP/Installer debug logs.
 - `debug_heartbeat.rs` — polls main-thread and frontend liveness, logging stalls for freeze diagnostics.
