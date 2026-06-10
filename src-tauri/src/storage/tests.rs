@@ -1,0 +1,2467 @@
+    use super::*;
+
+    fn find_folder<'a>(
+        folders: &'a [ConnectionFolder],
+        folder_id: &str,
+    ) -> Option<&'a ConnectionFolder> {
+        folders.iter().find_map(|folder| {
+            if folder.id == folder_id {
+                Some(folder)
+            } else {
+                find_folder(&folder.folders, folder_id)
+            }
+        })
+    }
+
+    fn all_connections(tree: &ConnectionTree) -> impl Iterator<Item = &SavedConnection> {
+        tree.connections
+            .iter()
+            .chain(tree.folders.iter().flat_map(folder_connections))
+    }
+
+    fn folder_connections(
+        folder: &ConnectionFolder,
+    ) -> Box<dyn Iterator<Item = &SavedConnection> + '_> {
+        Box::new(
+            folder
+                .connections
+                .iter()
+                .chain(folder.folders.iter().flat_map(folder_connections)),
+        )
+    }
+
+    fn create_test_ssh_connection(
+        storage: &Storage,
+        name: &str,
+        host: &str,
+        folder_id: Option<String>,
+    ) -> SavedConnection {
+        storage
+            .create_connection(CreateConnectionRequest {
+                name: name.to_string(),
+                host: host.to_string(),
+                user: "admin".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: Some("agent".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("SSH connection is created")
+    }
+
+    fn create_test_local_connection(storage: &Storage, name: &str, shell: &str) -> SavedConnection {
+        storage
+            .create_connection(CreateConnectionRequest {
+                name: name.to_string(),
+                host: "localhost".to_string(),
+                user: "local".to_string(),
+                connection_type: "local".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: Some("keyFile".to_string()),
+                local_shell: Some(shell.to_string()),
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("local connection is created")
+    }
+
+    fn backup_filename_has_serial(filename: &str) -> bool {
+        let stem = filename.strip_suffix(".zip").unwrap_or(filename);
+        stem.rsplit_once('-')
+            .map(|(_, serial)| serial.len() == 3 && serial.chars().all(|ch| ch.is_ascii_digit()))
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn schema_initializes_an_empty_connection_tree() {
+        let storage = Storage::open(temp_db_path("empty")).expect("storage opens");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+
+        assert!(tree.connections.is_empty());
+        assert!(tree.folders.is_empty());
+    }
+
+    #[test]
+    fn schema_initialization_is_idempotent_without_initial_data() {
+        let db_path = temp_db_path("idempotent");
+        let storage = Storage::open(db_path.clone()).expect("first open succeeds");
+        drop(storage);
+
+        let reopened_storage = Storage::open(db_path).expect("second open succeeds");
+        let tree = reopened_storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let connection_count = all_connections(&tree).count();
+
+        assert_eq!(connection_count, 0);
+        assert!(tree.folders.is_empty());
+    }
+
+    #[test]
+    fn create_connection_can_persist_root_ssh_connection() {
+        let storage = Storage::open(temp_db_path("create")).expect("storage opens");
+
+        let created = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Lab Host".to_string(),
+                host: "lab.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id: None,
+                port: Some(2222),
+                key_path: Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string()),
+                proxy_jump: Some("jump.internal".to_string()),
+                auth_method: Some("keyFile".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("connection is created");
+
+        assert_eq!(created.name, "Lab Host");
+        assert_eq!(created.port, Some(2222));
+        assert_eq!(created.proxy_jump.as_deref(), Some("jump.internal"));
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let root_connection = tree
+            .connections
+            .iter()
+            .find(|connection| connection.host == "lab.internal")
+            .expect("root connection exists");
+
+        assert_eq!(root_connection.name, "Lab Host");
+        assert_eq!(root_connection.tags, Vec::<String>::new());
+    }
+
+    #[test]
+    fn local_connection_persists_startup_directory_and_script() {
+        let storage = Storage::open(temp_db_path("local-startup-options")).expect("storage opens");
+
+        let created = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Project Shell".to_string(),
+                host: "localhost".to_string(),
+                user: "local".to_string(),
+                connection_type: "local".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: Some("powershell.exe".to_string()),
+                local_startup_directory: Some("  C:\\Work\\KKTerm  ".to_string()),
+                local_startup_script: Some("  npm run check  ".to_string()),
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("local connection is created");
+
+        assert_eq!(
+            created.local_startup_directory.as_deref(),
+            Some("C:\\Work\\KKTerm")
+        );
+        assert_eq!(
+            created.local_startup_script.as_deref(),
+            Some("npm run check")
+        );
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let reloaded = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == created.id)
+            .expect("local connection reloads");
+        assert_eq!(
+            reloaded.local_startup_directory.as_deref(),
+            Some("C:\\Work\\KKTerm")
+        );
+        assert_eq!(
+            reloaded.local_startup_script.as_deref(),
+            Some("npm run check")
+        );
+    }
+
+    #[test]
+    fn create_connection_can_persist_remote_desktop_connections() {
+        let storage = Storage::open(temp_db_path("remote-desktop-create")).expect("storage opens");
+
+        let rdp = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Jump Box".to_string(),
+                host: "jumpbox.internal".to_string(),
+                user: "DOMAIN\\admin".to_string(),
+                connection_type: "rdp".to_string(),
+                folder_id: None,
+                port: Some(3389),
+                key_path: Some("C:\\ignored\\id_ed25519".to_string()),
+                proxy_jump: Some("ignored.internal".to_string()),
+                auth_method: Some("password".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: Some(true),
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("RDP connection is created");
+
+        assert_eq!(rdp.connection_type, "rdp");
+        assert_eq!(rdp.host, "jumpbox.internal");
+        assert_eq!(rdp.user, "DOMAIN\\admin");
+        assert_eq!(rdp.port, Some(3389));
+        assert!(rdp.key_path.is_none());
+        assert!(rdp.proxy_jump.is_none());
+        assert!(!rdp.use_tmux_sessions);
+
+        let vnc = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Console VNC".to_string(),
+                host: "console.internal".to_string(),
+                user: "   ".to_string(),
+                connection_type: "vnc".to_string(),
+                folder_id: None,
+                port: Some(5900),
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("VNC connection is created");
+
+        assert_eq!(vnc.connection_type, "vnc");
+        assert_eq!(vnc.user, "");
+        assert_eq!(vnc.port, Some(5900));
+    }
+
+    #[test]
+    fn create_connection_can_persist_telnet_and_serial_connections() {
+        let storage = Storage::open(temp_db_path("telnet-serial-create")).expect("storage opens");
+
+        let telnet = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Legacy Router".to_string(),
+                host: "router.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "telnet".to_string(),
+                folder_id: None,
+                port: Some(23),
+                key_path: Some("C:\\ignored\\id_ed25519".to_string()),
+                proxy_jump: Some("ignored.internal".to_string()),
+                auth_method: Some("agent".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: Some(true),
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("Telnet connection is created");
+
+        assert_eq!(telnet.connection_type, "telnet");
+        assert_eq!(telnet.auth_method, "password");
+        assert!(telnet.key_path.is_none());
+        assert!(telnet.proxy_jump.is_none());
+        assert!(!telnet.use_tmux_sessions);
+
+        let serial = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Console Cable".to_string(),
+                host: String::new(),
+                user: "ignored".to_string(),
+                connection_type: "serial".to_string(),
+                folder_id: None,
+                port: Some(22),
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: Some("COM7".to_string()),
+                serial_speed: Some(115200),
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("Serial connection is created");
+
+        assert_eq!(serial.connection_type, "serial");
+        assert_eq!(serial.host, "COM7");
+        assert_eq!(serial.user, "");
+        assert_eq!(serial.port, None);
+        assert_eq!(serial.serial_line.as_deref(), Some("COM7"));
+        assert_eq!(serial.serial_speed, Some(115200));
+    }
+
+    #[test]
+    fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
+        let storage = Storage::open(temp_db_path("url-credentials")).expect("storage opens");
+        let created = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Router UI".to_string(),
+                host: String::new(),
+                user: String::new(),
+                connection_type: "url".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: Some("router.internal".to_string()),
+                data_partition: Some("ops".to_string()),
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("URL connection is created");
+
+        assert_eq!(created.url.as_deref(), Some("https://router.internal/"));
+        assert!(!created.has_url_credential);
+
+        let updated = storage
+            .upsert_url_credential(UpsertUrlCredentialRequest {
+                connection_id: created.id.clone(),
+                username: "admin".to_string(),
+                page_url: None,
+                username_selector: None,
+                password_selector: None,
+                field_values: None,
+            })
+            .expect("URL credential metadata is stored");
+        assert!(updated.has_url_credential);
+        assert_eq!(updated.url_credential_username.as_deref(), Some("admin"));
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let reloaded = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == created.id)
+            .expect("URL connection exists");
+        assert!(reloaded.has_url_credential);
+        assert_eq!(reloaded.url_credential_username.as_deref(), Some("admin"));
+    }
+
+    #[test]
+    fn connection_icon_data_url_updates_for_any_connection_type() {
+        let storage =
+            Storage::open(temp_db_path("connection-icon-data-url")).expect("storage opens");
+        let created = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+        let icon_data_url = " data:image/png;base64,customicon ".to_string();
+
+        let updated = storage
+            .update_connection_icon_data_url(created.id.clone(), Some(icon_data_url))
+            .expect("connection icon is updated")
+            .expect("changed icon returns the updated connection");
+
+        assert_eq!(
+            updated.icon_data_url.as_deref(),
+            Some("data:image/png;base64,customicon")
+        );
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let reloaded = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == created.id)
+            .expect("connection exists");
+        assert_eq!(
+            reloaded.icon_data_url.as_deref(),
+            Some("data:image/png;base64,customicon")
+        );
+
+        let cleared = storage
+            .update_connection_icon_data_url(created.id.clone(), None)
+            .expect("connection icon is cleared")
+            .expect("cleared icon returns the updated connection");
+        assert!(cleared.icon_data_url.is_none());
+    }
+
+    #[test]
+    fn connection_icon_background_color_updates_for_any_connection_type() {
+        let storage =
+            Storage::open(temp_db_path("connection-icon-background")).expect("storage opens");
+        let created = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+
+        let updated = storage
+            .update_connection_icon_background_color(
+                created.id.clone(),
+                Some(" #2563eb ".to_string()),
+            )
+            .expect("connection icon background is updated")
+            .expect("changed background returns the updated connection");
+
+        assert_eq!(updated.icon_background_color.as_deref(), Some("#2563eb"));
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let reloaded = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == created.id)
+            .expect("connection exists");
+        assert_eq!(reloaded.icon_background_color.as_deref(), Some("#2563eb"));
+
+        let cleared = storage
+            .update_connection_icon_background_color(created.id.clone(), None)
+            .expect("connection icon background is cleared")
+            .expect("cleared background returns the updated connection");
+        assert!(cleared.icon_background_color.is_none());
+    }
+
+    #[test]
+    fn connection_terminal_appearance_updates_and_persists() {
+        let storage =
+            Storage::open(temp_db_path("connection-terminal-appearance")).expect("storage opens");
+        let created = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+        assert_eq!(created.terminal_opacity, Some(DEFAULT_TERMINAL_OPACITY));
+        assert!(created.terminal_background.is_none());
+
+        let background = crate::dashboard_storage::DashboardBackground::Preset {
+            preset: "midnight".to_string(),
+        };
+        let updated = storage
+            .update_connection_terminal_appearance(
+                created.id.clone(),
+                Some(82),
+                Some(background.clone()),
+            )
+            .expect("terminal appearance is updated")
+            .expect("changed appearance returns the updated connection");
+
+        assert_eq!(updated.terminal_opacity, Some(82));
+        assert_eq!(updated.terminal_background, Some(background.clone()));
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let reloaded = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == created.id)
+            .expect("connection exists");
+        assert_eq!(reloaded.terminal_opacity, Some(82));
+        assert_eq!(reloaded.terminal_background, Some(background));
+
+        let cleared = storage
+            .update_connection_terminal_appearance(
+                created.id.clone(),
+                Some(DEFAULT_TERMINAL_OPACITY),
+                None,
+            )
+            .expect("terminal appearance is cleared")
+            .expect("cleared appearance returns the updated connection");
+        assert_eq!(cleared.terminal_opacity, Some(DEFAULT_TERMINAL_OPACITY));
+        assert!(cleared.terminal_background.is_none());
+    }
+
+    #[test]
+    fn connection_tab_title_updates_without_renaming_connection() {
+        let storage = Storage::open(temp_db_path("connection-tab-title")).expect("storage opens");
+        let created = create_test_ssh_connection(&storage, "pb60", "pb60.internal", None);
+
+        let updated = storage
+            .update_connection_tab_title(created.id.clone(), Some(" My Terminal ".to_string()))
+            .expect("tab title updates")
+            .expect("changed connection is returned");
+
+        assert_eq!(updated.name, "pb60");
+        assert_eq!(updated.tab_title.as_deref(), Some("My Terminal"));
+
+        let reloaded = storage
+            .list_connection_tree()
+            .expect("connection tree reloads")
+            .connections
+            .into_iter()
+            .find(|connection| connection.id == created.id)
+            .expect("connection remains listed");
+
+        assert_eq!(reloaded.name, "pb60");
+        assert_eq!(reloaded.tab_title.as_deref(), Some("My Terminal"));
+    }
+
+    #[test]
+    fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
+        let storage =
+            Storage::open(temp_db_path("stored-credential-candidates")).expect("storage opens");
+
+        let ssh = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Password Host".to_string(),
+                host: "password.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: Some("password".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("SSH connection is created");
+        let url = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Portal".to_string(),
+                host: String::new(),
+                user: String::new(),
+                connection_type: "url".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: Some("https://portal.example".to_string()),
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("URL connection is created");
+        storage
+            .upsert_url_credential(UpsertUrlCredentialRequest {
+                connection_id: url.id.clone(),
+                username: "web-user".to_string(),
+                page_url: None,
+                username_selector: None,
+                password_selector: None,
+                field_values: None,
+            })
+            .expect("URL credential metadata is stored");
+
+        storage.with_connection(|connection| {
+            connection.execute(
+                "INSERT INTO dashboard_views (id, title, sort_order, grid_density)
+                 VALUES ('view-1', 'Default', 0, 'default')",
+                [],
+            ).map_err(to_storage_error)?;
+            connection.execute(
+                "INSERT INTO dashboard_custom_widgets
+                    (id, title, summary, category, body_json, settings_schema_json, created_by)
+                 VALUES
+                    ('cw-1', 'API Widget', '', 'custom',
+                     '{\"source\":\"console.log(1)\",\"permissions\":{\"network\":false}}',
+                     '{\"fields\":[{\"type\":\"secret\",\"key\":\"apiKey\",\"label\":\"API key\"}]}',
+                     'agent')",
+                [],
+            ).map_err(to_storage_error)?;
+            connection.execute(
+                "INSERT INTO dashboard_widget_instances
+                    (id, view_id, kind, source_id, preset, accent_name, icon_name, custom_title,
+                     glass, action_direction, settings_values_json, body_opacity,
+                     grid_x, grid_y, grid_w, grid_h, sort_order)
+                 VALUES
+                    ('inst-1', 'view-1', 'script', 'cw-1', 'panel', 'blue', 'Key', NULL,
+                     0, NULL,
+                     '{\"apiKey\":{\"type\":\"secretRef\",\"ownerId\":\"dashboard-widget-secret:inst-1:apiKey\",\"hasSecret\":true}}',
+                     NULL, 0, 0, 4, 3, 0)",
+                [],
+            ).map_err(to_storage_error)?;
+            Ok(())
+        }).expect("dashboard widget metadata is inserted");
+
+        let candidates = storage
+            .list_stored_credential_candidates()
+            .expect("credential candidates load");
+
+        assert!(candidates.iter().any(|candidate| {
+            candidate.kind == "connectionPassword" && candidate.owner_id == ssh.id
+        }));
+        assert!(
+            candidates.iter().any(|candidate| {
+                candidate.kind == "urlPassword" && candidate.owner_id == url.id
+            })
+        );
+        assert!(candidates.iter().any(|candidate| {
+            candidate.kind == "widgetSecret"
+                && candidate.owner_id == "dashboard-widget-secret:inst-1:apiKey"
+        }));
+    }
+
+    #[test]
+    fn connection_password_credentials_use_type_host_metadata_and_suffixes() {
+        let storage =
+            Storage::open(temp_db_path("connection-password-credentials")).expect("storage opens");
+        let first = create_test_ssh_connection(&storage, "Bastion One", "bastion.internal", None);
+        let second = create_test_ssh_connection(&storage, "Bastion Two", "bastion.internal", None);
+
+        let first_credential = storage
+            .create_connection_password_credential_metadata(first.id.clone())
+            .expect("first credential metadata is created");
+        let second_credential = storage
+            .create_connection_password_credential_metadata(second.id.clone())
+            .expect("second credential metadata is created");
+
+        assert_eq!(first_credential.connection_type, "ssh");
+        assert_eq!(first_credential.host, "bastion.internal");
+        assert_eq!(first_credential.username, "admin");
+        assert_eq!(first_credential.label, "admin @ bastion.internal");
+        assert_eq!(second_credential.label, "admin @ bastion.internal #2");
+    }
+
+    #[test]
+    fn assigning_connection_password_credential_requires_matching_type() {
+        let storage = Storage::open(temp_db_path("connection-password-credential-assign"))
+            .expect("storage opens");
+        let ssh = create_test_ssh_connection(&storage, "SSH", "ssh.internal", None);
+        let rdp = storage
+            .create_connection(CreateConnectionRequest {
+                name: "RDP".to_string(),
+                host: "rdp.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "rdp".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("RDP connection is created");
+        let credential = storage
+            .create_connection_password_credential_metadata(ssh.id.clone())
+            .expect("SSH credential metadata is created");
+
+        let assigned = storage
+            .assign_connection_password_credential(ssh.id.clone(), credential.id.clone())
+            .expect("matching credential can be assigned");
+        assert_eq!(
+            assigned.password_credential_id.as_deref(),
+            Some(credential.id.as_str())
+        );
+
+        let error = match storage.assign_connection_password_credential(rdp.id, credential.id) {
+            Ok(_) => panic!("mismatched credential is rejected"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error,
+            "password credential type must match the connection type"
+        );
+    }
+
+    #[test]
+    fn url_credentials_reject_non_url_connections() {
+        let storage = Storage::open(temp_db_path("url-credential-type")).expect("storage opens");
+        let connection = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
+
+        let error = match storage.upsert_url_credential(UpsertUrlCredentialRequest {
+            connection_id: connection.id,
+            username: "admin".to_string(),
+            page_url: None,
+            username_selector: None,
+            password_selector: None,
+            field_values: None,
+        }) {
+            Ok(_) => panic!("SSH connections cannot store URL credentials"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error,
+            "URL credentials can only be stored for URL connections"
+        );
+    }
+
+    #[test]
+    fn rename_connection_updates_durable_connection_name() {
+        let storage = Storage::open(temp_db_path("rename")).expect("storage opens");
+        let staging = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Staging".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("staging folder is created");
+        let connection = create_test_ssh_connection(
+            &storage,
+            "API Stage",
+            "api-stage.internal",
+            Some(staging.id.clone()),
+        );
+
+        let renamed = storage
+            .rename_connection(RenameConnectionRequest {
+                id: connection.id.clone(),
+                name: "API Stage Blue".to_string(),
+            })
+            .expect("connection is renamed");
+
+        assert_eq!(renamed.id, connection.id);
+        assert_eq!(renamed.name, "API Stage Blue");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let staging = find_folder(&tree.folders, &staging.id).expect("staging folder exists");
+
+        assert_eq!(staging.connections[0].name, "API Stage Blue");
+    }
+
+    #[test]
+    fn update_connection_edits_fields_and_moves_folder() {
+        let storage = Storage::open(temp_db_path("update")).expect("storage opens");
+        let staging = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Staging".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("staging folder is created");
+        let production = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Production".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("production folder is created");
+        let connection = create_test_ssh_connection(
+            &storage,
+            "API Stage",
+            "api-stage.internal",
+            Some(staging.id.clone()),
+        );
+
+        let updated = storage
+            .update_connection(UpdateConnectionRequest {
+                id: connection.id.clone(),
+                name: "API Production".to_string(),
+                host: "api-prod.internal".to_string(),
+                user: "deploy".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id: Some(production.id.clone()),
+                port: Some(2222),
+                key_path: Some("C:\\Users\\example\\.ssh\\prod".to_string()),
+                proxy_jump: Some("jump.internal".to_string()),
+                auth_method: Some("keyFile".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: Some(false),
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("connection is updated");
+
+        assert_eq!(updated.id, connection.id);
+        assert_eq!(updated.name, "API Production");
+        assert_eq!(updated.host, "api-prod.internal");
+        assert_eq!(updated.user, "deploy");
+        assert_eq!(updated.port, Some(2222));
+        assert_eq!(
+            updated.key_path.as_deref(),
+            Some("C:\\Users\\example\\.ssh\\prod")
+        );
+        assert_eq!(updated.proxy_jump.as_deref(), Some("jump.internal"));
+        assert_eq!(updated.auth_method, "keyFile");
+        assert!(!updated.use_tmux_sessions);
+        assert!(updated.tmux_connection_id.is_none());
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let staging = find_folder(&tree.folders, &staging.id).expect("staging folder exists");
+        let production =
+            find_folder(&tree.folders, &production.id).expect("production folder exists");
+
+        assert!(staging.connections.is_empty());
+        assert_eq!(production.connections[0].id, connection.id);
+        assert_eq!(production.connections[0].name, "API Production");
+    }
+
+    #[test]
+    fn delete_connection_removes_connection_and_tags() {
+        let storage = Storage::open(temp_db_path("delete")).expect("storage opens");
+        let production = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Production".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("production folder is created");
+        let connection = create_test_ssh_connection(
+            &storage,
+            "Bastion East",
+            "bastion-east.internal",
+            Some(production.id.clone()),
+        );
+
+        storage
+            .delete_connection(connection.id)
+            .expect("connection is deleted");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let production =
+            find_folder(&tree.folders, &production.id).expect("production folder exists");
+
+        assert!(production.connections.is_empty());
+    }
+
+    #[test]
+    fn duplicate_connection_copies_non_secret_connection_data() {
+        let storage = Storage::open(temp_db_path("duplicate")).expect("storage opens");
+        let production = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Production".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("production folder is created");
+        let connection = create_test_ssh_connection(
+            &storage,
+            "Bastion East",
+            "bastion-east.internal",
+            Some(production.id.clone()),
+        );
+
+        let duplicated = storage
+            .duplicate_connection(DuplicateConnectionRequest {
+                id: connection.id.clone(),
+                name: Some("Bastion East Copy".to_string()),
+            })
+            .expect("connection is duplicated");
+
+        assert_ne!(duplicated.id, connection.id);
+        assert_eq!(duplicated.name, "Bastion East Copy");
+        assert_eq!(duplicated.host, "bastion-east.internal");
+        assert_eq!(duplicated.user, "admin");
+        assert_eq!(duplicated.tags, Vec::<String>::new());
+        assert_eq!(duplicated.status, "idle");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let production =
+            find_folder(&tree.folders, &production.id).expect("production folder exists");
+
+        assert_eq!(production.connections.len(), 2);
+        assert_eq!(production.connections[1].id, duplicated.id);
+    }
+
+    #[test]
+    fn create_rename_and_delete_connection_folder() {
+        let storage = Storage::open(temp_db_path("folder-crud")).expect("storage opens");
+
+        let created = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Customer A".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("folder is created");
+        assert_eq!(created.name, "Customer A");
+        assert!(created.connections.is_empty());
+
+        let renamed = storage
+            .rename_connection_folder(RenameConnectionFolderRequest {
+                id: created.id.clone(),
+                name: "Customer A Production".to_string(),
+            })
+            .expect("folder is renamed");
+        assert_eq!(renamed.name, "Customer A Production");
+
+        storage
+            .delete_connection_folder(created.id.clone())
+            .expect("folder is deleted");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        assert!(find_folder(&tree.folders, &created.id).is_none());
+    }
+
+    #[test]
+    fn folders_can_contain_subfolders() {
+        let storage = Storage::open(temp_db_path("folder-nesting")).expect("storage opens");
+        let parent = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Customer A".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("parent folder is created");
+        let child = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Production".to_string(),
+                parent_folder_id: Some(parent.id.clone()),
+            })
+            .expect("child folder is created");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        let parent = find_folder(&tree.folders, &parent.id).expect("parent folder exists");
+
+        assert_eq!(parent.folders[0].id, child.id);
+        assert_eq!(parent.folders[0].name, "Production");
+    }
+
+    #[test]
+    fn deleting_folder_removes_connections_in_that_folder() {
+        let storage = Storage::open(temp_db_path("folder-delete-cascade")).expect("storage opens");
+        let folder = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Ephemeral".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("folder is created");
+
+        storage
+            .create_connection(CreateConnectionRequest {
+                name: "Throwaway SSH".to_string(),
+                host: "throwaway.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id: Some(folder.id.clone()),
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: Some("agent".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+            })
+            .expect("connection is created in folder");
+
+        storage
+            .delete_connection_folder(folder.id)
+            .expect("folder is deleted");
+
+        let tree = storage
+            .list_connection_tree()
+            .expect("connection tree loads");
+        assert!(!all_connections(&tree).any(|connection| connection.host == "throwaway.internal"));
+    }
+
+    #[test]
+    fn move_connection_folder_updates_durable_root_folder_order() {
+        let storage = Storage::open(temp_db_path("folder-move")).expect("storage opens");
+        let production = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Production".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("production folder is created");
+        let staging = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Staging".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("staging folder is created");
+
+        let tree = storage
+            .move_connection_folder(MoveConnectionFolderRequest {
+                id: staging.id.clone(),
+                parent_folder_id: None,
+                target_index: 0,
+            })
+            .expect("folder is moved");
+
+        assert_eq!(tree.folders[0].id, staging.id);
+        assert_eq!(tree.folders[1].id, production.id);
+
+        let reloaded = storage
+            .list_connection_tree()
+            .expect("connection tree reloads");
+        assert_eq!(reloaded.folders[0].id, staging.id);
+    }
+
+    #[test]
+    fn move_connection_reorders_within_target_folder() {
+        let storage = Storage::open(temp_db_path("connection-move")).expect("storage opens");
+        let production = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Production".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("production folder is created");
+        let staging = storage
+            .create_connection_folder(CreateConnectionFolderRequest {
+                name: "Staging".to_string(),
+                parent_folder_id: None,
+            })
+            .expect("staging folder is created");
+        create_test_ssh_connection(
+            &storage,
+            "Bastion East",
+            "bastion-east.internal",
+            Some(production.id.clone()),
+        );
+        let api_stage = create_test_ssh_connection(
+            &storage,
+            "API Stage",
+            "api-stage.internal",
+            Some(staging.id.clone()),
+        );
+
+        let tree = storage
+            .move_connection(MoveConnectionRequest {
+                id: api_stage.id.clone(),
+                folder_id: Some(production.id.clone()),
+                target_index: 1,
+            })
+            .expect("connection is moved");
+
+        let production =
+            find_folder(&tree.folders, &production.id).expect("production folder exists");
+        assert_eq!(production.connections[1].id, api_stage.id);
+        assert_eq!(production.connections.len(), 2);
+
+        let staging = find_folder(&tree.folders, &staging.id).expect("staging folder exists");
+        assert!(staging.connections.is_empty());
+    }
+
+    #[test]
+    fn move_connection_before_later_connection_in_root() {
+        let storage =
+            Storage::open(temp_db_path("connection-move-same-folder")).expect("storage opens");
+        let powershell = create_test_local_connection(&storage, "PowerShell", "powershell.exe");
+        let wsl = create_test_local_connection(&storage, "WSL", "wsl.exe");
+
+        let tree = storage
+            .move_connection(MoveConnectionRequest {
+                id: wsl.id.clone(),
+                folder_id: None,
+                target_index: 0,
+            })
+            .expect("connection order is normalized");
+
+        assert_eq!(tree.connections[0].id, wsl.id);
+        assert_eq!(tree.connections[1].id, powershell.id);
+    }
+
+    #[test]
+    fn general_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("general-settings")).expect("storage opens");
+
+        let defaults = storage
+            .general_settings()
+            .expect("default general settings load");
+        assert!(defaults.auto_backup_enabled);
+        assert!(defaults.auto_update_checks_enabled);
+        assert!(defaults.show_connected_connections_in_rail);
+        assert!(!defaults.show_all_connections_in_tree);
+        assert!(!defaults.hide_top_tab_buttons);
+        assert!(defaults.submit_ai_attachments_directly);
+        assert!(!defaults.separate_split_terminal_backgrounds);
+        assert!(defaults.show_installer_on_rail);
+        assert_eq!(defaults.installer_check_interval_seconds, 86_400);
+        assert!(defaults.pinned_connection_ids.is_empty());
+        assert!(defaults.allow_clipboard_read);
+        assert!(!defaults.auto_start_with_windows);
+        assert!(!defaults.minimize_to_tray);
+        assert!(!defaults.dont_sleep_enabled);
+        assert!(defaults.dont_sleep_foreground_only);
+        assert!(defaults.use_directx_screen_capture);
+        assert!(defaults.status_bar_enabled);
+        assert!(defaults.status_bar_monitor_enabled);
+        assert_eq!(defaults.status_bar_monitor_interval_seconds, 5);
+        assert!(!defaults.advanced_debugging_enabled);
+        assert!(!defaults.rdp_webview_stability);
+        assert!(defaults.last_backup_at.is_none());
+
+        let updated = storage
+            .update_general_settings(GeneralSettings {
+                auto_backup_enabled: false,
+                auto_update_checks_enabled: false,
+                show_connected_connections_in_rail: true,
+                show_all_connections_in_tree: true,
+                hide_top_tab_buttons: true,
+                submit_ai_attachments_directly: false,
+                separate_split_terminal_backgrounds: true,
+                show_installer_on_rail: false,
+                installer_check_interval_seconds: 604_800,
+                pinned_connection_ids: vec![
+                    " connection-a ".to_string(),
+                    "connection-a".to_string(),
+                    "".to_string(),
+                    "connection-b".to_string(),
+                ],
+                allow_clipboard_read: false,
+                auto_start_with_windows: true,
+                minimize_to_tray: true,
+                dont_sleep_enabled: true,
+                dont_sleep_foreground_only: false,
+                use_directx_screen_capture: false,
+                status_bar_enabled: false,
+                status_bar_monitor_enabled: false,
+                status_bar_monitor_interval_seconds: 30,
+                advanced_debugging_enabled: true,
+                rdp_webview_stability: true,
+                last_backup_at: None,
+            })
+            .expect("general settings update");
+        assert!(!updated.auto_backup_enabled);
+        assert!(!updated.auto_update_checks_enabled);
+        assert!(updated.show_connected_connections_in_rail);
+        assert!(updated.show_all_connections_in_tree);
+        assert!(updated.hide_top_tab_buttons);
+        assert!(!updated.submit_ai_attachments_directly);
+        assert!(updated.separate_split_terminal_backgrounds);
+        assert!(!updated.show_installer_on_rail);
+        assert_eq!(updated.installer_check_interval_seconds, 604_800);
+        assert_eq!(
+            updated.pinned_connection_ids,
+            vec!["connection-a".to_string(), "connection-b".to_string()]
+        );
+        assert!(!updated.allow_clipboard_read);
+        assert!(updated.auto_start_with_windows);
+        assert!(updated.minimize_to_tray);
+        assert!(updated.dont_sleep_enabled);
+        assert!(!updated.dont_sleep_foreground_only);
+        assert!(!updated.use_directx_screen_capture);
+        assert!(!updated.status_bar_enabled);
+        assert!(!updated.status_bar_monitor_enabled);
+        assert_eq!(updated.status_bar_monitor_interval_seconds, 30);
+        assert!(updated.advanced_debugging_enabled);
+        assert!(updated.rdp_webview_stability);
+
+        let reloaded = storage.general_settings().expect("general settings reload");
+        assert!(!reloaded.auto_backup_enabled);
+        assert!(!reloaded.auto_update_checks_enabled);
+        assert!(reloaded.show_connected_connections_in_rail);
+        assert!(reloaded.show_all_connections_in_tree);
+        assert_eq!(
+            reloaded.pinned_connection_ids,
+            vec!["connection-a".to_string(), "connection-b".to_string()]
+        );
+        assert!(!reloaded.allow_clipboard_read);
+        assert!(reloaded.auto_start_with_windows);
+        assert!(reloaded.minimize_to_tray);
+        assert!(reloaded.dont_sleep_enabled);
+        assert!(!reloaded.dont_sleep_foreground_only);
+        assert!(!reloaded.use_directx_screen_capture);
+        assert!(!reloaded.status_bar_enabled);
+        assert!(!reloaded.status_bar_monitor_enabled);
+        assert_eq!(reloaded.status_bar_monitor_interval_seconds, 30);
+        assert!(reloaded.advanced_debugging_enabled);
+        assert!(reloaded.rdp_webview_stability);
+        assert!(reloaded.last_backup_at.is_none());
+    }
+
+    #[test]
+    fn app_launcher_settings_round_trip_and_validation() {
+        let storage = Storage::open(temp_db_path("app-launcher-settings")).expect("storage opens");
+
+        let defaults = storage
+            .app_launcher_settings()
+            .expect("default app launcher settings load");
+        assert!(defaults.entries.is_empty());
+
+        let updated = storage
+            .update_app_launcher_settings(AppLauncherSettings {
+                entries: vec![
+                    AppLauncherEntry {
+                        id: " app-a ".to_string(),
+                        name: " Windows Terminal ".to_string(),
+                        path: " C:\\Program Files\\WindowsApps\\wt.exe ".to_string(),
+                        arguments: Some(" -p PowerShell ".to_string()),
+                        working_directory: Some(" C:\\Users ".to_string()),
+                        icon_data_url: Some(" data:image/png;base64,abc ".to_string()),
+                        rail_pinned: true,
+                        created_at: "2026-05-11T00:00:00Z".to_string(),
+                        updated_at: "2026-05-11T00:00:00Z".to_string(),
+                    },
+                    AppLauncherEntry {
+                        id: "app-a".to_string(),
+                        name: "Duplicate".to_string(),
+                        path: "C:\\Duplicate.exe".to_string(),
+                        arguments: None,
+                        working_directory: None,
+                        icon_data_url: None,
+                        rail_pinned: false,
+                        created_at: "2026-05-11T00:00:00Z".to_string(),
+                        updated_at: "2026-05-11T00:00:00Z".to_string(),
+                    },
+                    AppLauncherEntry {
+                        id: "app-b".to_string(),
+                        name: "  ".to_string(),
+                        path: " C:\\Tools\\tool.exe ".to_string(),
+                        arguments: Some("".to_string()),
+                        working_directory: Some("".to_string()),
+                        icon_data_url: Some("".to_string()),
+                        rail_pinned: false,
+                        created_at: "2026-05-11T00:00:00Z".to_string(),
+                        updated_at: "2026-05-11T00:00:00Z".to_string(),
+                    },
+                    AppLauncherEntry {
+                        id: "".to_string(),
+                        name: "Missing id".to_string(),
+                        path: "C:\\Missing.exe".to_string(),
+                        arguments: None,
+                        working_directory: None,
+                        icon_data_url: None,
+                        rail_pinned: false,
+                        created_at: "2026-05-11T00:00:00Z".to_string(),
+                        updated_at: "2026-05-11T00:00:00Z".to_string(),
+                    },
+                ],
+                view_mode: "details".to_string(),
+                list_sort: AppLauncherSortState {
+                    field: "type".to_string(),
+                    direction: "desc".to_string(),
+                },
+                details_sort: AppLauncherSortState {
+                    field: "modified".to_string(),
+                    direction: "desc".to_string(),
+                },
+            })
+            .expect("app launcher settings update");
+
+        assert_eq!(updated.entries.len(), 2);
+        assert_eq!(updated.entries[0].id, "app-a");
+        assert_eq!(updated.entries[0].name, "Windows Terminal");
+        assert_eq!(
+            updated.entries[0].path,
+            "C:\\Program Files\\WindowsApps\\wt.exe"
+        );
+        assert_eq!(
+            updated.entries[0].arguments.as_deref(),
+            Some("-p PowerShell")
+        );
+        assert_eq!(
+            updated.entries[0].working_directory.as_deref(),
+            Some("C:\\Users")
+        );
+        assert_eq!(
+            updated.entries[0].icon_data_url.as_deref(),
+            Some("data:image/png;base64,abc")
+        );
+        assert!(updated.entries[0].rail_pinned);
+        assert_eq!(updated.entries[1].name, "tool");
+        assert_eq!(updated.entries[1].path, "C:\\Tools\\tool.exe");
+        assert!(updated.entries[1].arguments.is_none());
+        assert!(updated.entries[1].working_directory.is_none());
+        assert!(updated.entries[1].icon_data_url.is_none());
+        assert_eq!(updated.view_mode, "details");
+        assert_eq!(updated.list_sort.field, "type");
+        assert_eq!(updated.list_sort.direction, "desc");
+        assert_eq!(updated.details_sort.field, "modified");
+        assert_eq!(updated.details_sort.direction, "desc");
+
+        let reloaded = storage
+            .app_launcher_settings()
+            .expect("app launcher settings reload");
+        assert_eq!(reloaded.entries.len(), 2);
+        assert_eq!(reloaded.entries[0].id, "app-a");
+        assert_eq!(reloaded.entries[1].id, "app-b");
+    }
+
+    #[test]
+    fn dashboard_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("dashboard-settings")).expect("storage opens");
+
+        let defaults = storage
+            .dashboard_settings()
+            .expect("default dashboard settings load");
+        assert!(defaults.confirm_remove);
+        assert_eq!(defaults.default_landing_view, "lastActive");
+        assert_eq!(defaults.max_active_script_widgets, 8);
+        assert!(defaults.allow_widget_network_tools);
+        assert!(!defaults.use_random_dynamic_background);
+        assert_eq!(defaults.widget_layout_enforcement, "strict");
+
+        let updated = storage
+            .update_dashboard_settings(DashboardSettings {
+                confirm_remove: false,
+                default_landing_view: " view-default ".to_string(),
+                max_active_script_widgets: 20,
+                allow_widget_network_tools: false,
+                use_random_dynamic_background: true,
+                widget_layout_enforcement: "low".to_string(),
+            })
+            .expect("dashboard settings update");
+        assert!(!updated.confirm_remove);
+        assert_eq!(updated.default_landing_view, "view-default");
+        assert_eq!(updated.max_active_script_widgets, 20);
+        assert!(updated.allow_widget_network_tools);
+        assert!(updated.use_random_dynamic_background);
+        assert_eq!(updated.widget_layout_enforcement, "low");
+
+        let reloaded = storage
+            .dashboard_settings()
+            .expect("dashboard settings reload");
+        assert!(!reloaded.confirm_remove);
+        assert_eq!(reloaded.default_landing_view, "view-default");
+        assert_eq!(reloaded.max_active_script_widgets, 20);
+        assert!(reloaded.allow_widget_network_tools);
+        assert!(reloaded.use_random_dynamic_background);
+        assert_eq!(reloaded.widget_layout_enforcement, "low");
+
+        // Unknown enforcement levels normalize back to the strict default.
+        let normalized = storage
+            .update_dashboard_settings(DashboardSettings {
+                confirm_remove: true,
+                default_landing_view: "lastActive".to_string(),
+                max_active_script_widgets: 8,
+                allow_widget_network_tools: true,
+                use_random_dynamic_background: false,
+                widget_layout_enforcement: "bogus".to_string(),
+            })
+            .expect("dashboard settings update normalizes enforcement");
+        assert_eq!(normalized.widget_layout_enforcement, "strict");
+
+        // Out-of-range values are rejected at the storage boundary.
+        let too_low = storage.update_dashboard_settings(DashboardSettings {
+            confirm_remove: true,
+            default_landing_view: "lastActive".to_string(),
+            max_active_script_widgets: 0,
+            allow_widget_network_tools: true,
+            use_random_dynamic_background: false,
+            widget_layout_enforcement: "strict".to_string(),
+        });
+        assert!(too_low.is_err(), "0 must be rejected");
+        let too_high = storage.update_dashboard_settings(DashboardSettings {
+            confirm_remove: true,
+            default_landing_view: "lastActive".to_string(),
+            max_active_script_widgets: 101,
+            allow_widget_network_tools: true,
+            use_random_dynamic_background: false,
+            widget_layout_enforcement: "strict".to_string(),
+        });
+        assert!(too_high.is_err(), "101 must be rejected");
+    }
+
+    #[test]
+    fn database_backup_import_restores_app_launcher_settings() {
+        let db_path = temp_db_path("database-export-import-app-launcher");
+        let storage = Storage::open(db_path).expect("storage opens");
+        storage
+            .update_app_launcher_settings(AppLauncherSettings {
+                entries: vec![AppLauncherEntry {
+                    id: "launcher-entry".to_string(),
+                    name: "Portable Tool".to_string(),
+                    path: "Z:\\missing\\tool.exe".to_string(),
+                    arguments: None,
+                    working_directory: None,
+                    icon_data_url: None,
+                    rail_pinned: true,
+                    created_at: "2026-05-11T00:00:00Z".to_string(),
+                    updated_at: "2026-05-11T00:00:00Z".to_string(),
+                }],
+                view_mode: "list".to_string(),
+                list_sort: AppLauncherSortState {
+                    field: "name".to_string(),
+                    direction: "desc".to_string(),
+                },
+                details_sort: default_app_launcher_details_sort(),
+            })
+            .expect("app launcher settings update");
+
+        let backup = storage.backup_database().expect("database backup succeeds");
+        storage
+            .update_app_launcher_settings(AppLauncherSettings {
+                entries: Vec::new(),
+                view_mode: "icons".to_string(),
+                list_sort: default_app_launcher_list_sort(),
+                details_sort: default_app_launcher_details_sort(),
+            })
+            .expect("app launcher settings changes after export");
+
+        let imported = storage
+            .import_database_zip(PathBuf::from(&backup.path))
+            .expect("database imports");
+
+        assert_eq!(imported.app_launcher_settings.entries.len(), 1);
+        assert_eq!(
+            imported.app_launcher_settings.entries[0].id,
+            "launcher-entry"
+        );
+        assert_eq!(
+            imported.app_launcher_settings.entries[0].path,
+            "Z:\\missing\\tool.exe"
+        );
+        assert!(imported.app_launcher_settings.entries[0].rail_pinned);
+    }
+
+    #[test]
+    fn database_backup_import_restores_settings_and_connections() {
+        let db_path = temp_db_path("database-export-import");
+        let storage = Storage::open(db_path).expect("storage opens");
+        storage
+            .update_general_settings(GeneralSettings {
+                auto_backup_enabled: false,
+                auto_update_checks_enabled: true,
+                show_connected_connections_in_rail: true,
+                show_all_connections_in_tree: true,
+                hide_top_tab_buttons: true,
+                submit_ai_attachments_directly: true,
+                separate_split_terminal_backgrounds: true,
+                show_installer_on_rail: false,
+                installer_check_interval_seconds: 86_400,
+                pinned_connection_ids: vec!["connection-pinned".to_string()],
+                allow_clipboard_read: true,
+                auto_start_with_windows: true,
+                minimize_to_tray: true,
+                dont_sleep_enabled: true,
+                dont_sleep_foreground_only: false,
+                use_directx_screen_capture: false,
+                status_bar_enabled: false,
+                status_bar_monitor_enabled: false,
+                status_bar_monitor_interval_seconds: 15,
+                advanced_debugging_enabled: true,
+                rdp_webview_stability: false,
+                last_backup_at: None,
+            })
+            .expect("general settings update");
+        let connection = create_test_ssh_connection(&storage, "Prod SSH", "prod.internal", None);
+
+        let backup = storage.backup_database().expect("database backup succeeds");
+        storage
+            .update_general_settings(GeneralSettings {
+                auto_backup_enabled: true,
+                auto_update_checks_enabled: true,
+                show_connected_connections_in_rail: false,
+                show_all_connections_in_tree: false,
+                hide_top_tab_buttons: false,
+                submit_ai_attachments_directly: false,
+                separate_split_terminal_backgrounds: false,
+                show_installer_on_rail: true,
+                installer_check_interval_seconds: 86_400,
+                pinned_connection_ids: Vec::new(),
+                allow_clipboard_read: false,
+                auto_start_with_windows: false,
+                minimize_to_tray: false,
+                dont_sleep_enabled: false,
+                dont_sleep_foreground_only: true,
+                use_directx_screen_capture: true,
+                status_bar_enabled: true,
+                status_bar_monitor_enabled: true,
+                status_bar_monitor_interval_seconds: 5,
+                advanced_debugging_enabled: false,
+                rdp_webview_stability: false,
+                last_backup_at: None,
+            })
+            .expect("general settings changes after export");
+        storage
+            .delete_connection(connection.id.clone())
+            .expect("connection can be removed before import");
+
+        let imported = storage
+            .import_database_zip(PathBuf::from(&backup.path))
+            .expect("database imports");
+
+        assert!(!imported.general_settings.auto_backup_enabled);
+        assert!(imported.general_settings.show_connected_connections_in_rail);
+        assert!(imported.general_settings.show_all_connections_in_tree);
+        assert!(imported.general_settings.hide_top_tab_buttons);
+        assert!(imported.general_settings.submit_ai_attachments_directly);
+        assert!(
+            imported
+                .general_settings
+                .separate_split_terminal_backgrounds
+        );
+        assert!(!imported.general_settings.show_installer_on_rail);
+        assert_eq!(
+            imported.general_settings.pinned_connection_ids,
+            vec!["connection-pinned".to_string()]
+        );
+        assert!(imported.general_settings.minimize_to_tray);
+        assert!(imported.general_settings.dont_sleep_enabled);
+        assert!(!imported.general_settings.dont_sleep_foreground_only);
+        assert!(!imported.general_settings.use_directx_screen_capture);
+        assert!(!imported.general_settings.status_bar_enabled);
+        assert!(!imported.general_settings.status_bar_monitor_enabled);
+        assert_eq!(
+            imported
+                .general_settings
+                .status_bar_monitor_interval_seconds,
+            15
+        );
+        assert!(imported.general_settings.advanced_debugging_enabled);
+        assert_eq!(
+            imported.general_settings.last_backup_at.as_deref(),
+            Some(imported.backup.created_at.as_str())
+        );
+        assert_eq!(imported.connection_tree.connections.len(), 1);
+        assert_eq!(imported.connection_tree.connections[0].id, connection.id);
+        assert!(Path::new(&imported.backup.path).exists());
+        assert!(imported.backup.filename.ends_with(".zip"));
+    }
+
+    #[test]
+    fn database_backup_zip_is_serialized_and_importable() {
+        let db_path = temp_db_path("database-backup-importable");
+        let storage = Storage::open(db_path).expect("storage opens");
+        let connection = create_test_ssh_connection(&storage, "Prod SSH", "prod.internal", None);
+
+        let first_backup = storage.backup_database().expect("database backup succeeds");
+        let second_backup = storage
+            .backup_database()
+            .expect("second database backup succeeds");
+
+        assert_ne!(first_backup.filename, second_backup.filename);
+        assert!(backup_filename_has_serial(&first_backup.filename));
+        assert!(backup_filename_has_serial(&second_backup.filename));
+        assert!(Path::new(&first_backup.path).exists());
+        assert!(Path::new(&second_backup.path).exists());
+        let settings = storage
+            .general_settings()
+            .expect("general settings reloads after backup");
+        assert_eq!(
+            settings.last_backup_at.as_deref(),
+            Some(second_backup.created_at.as_str())
+        );
+
+        storage
+            .delete_connection(connection.id.clone())
+            .expect("connection can be removed before import");
+
+        let imported = storage
+            .import_database_zip(PathBuf::from(&first_backup.path))
+            .expect("backup imports");
+
+        assert_eq!(imported.connection_tree.connections.len(), 1);
+        assert_eq!(imported.connection_tree.connections[0].id, connection.id);
+    }
+
+    #[test]
+    fn terminal_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("terminal-settings")).expect("storage opens");
+
+        let defaults = storage
+            .terminal_settings()
+            .expect("default terminal settings load");
+        assert_eq!(defaults.font_size, 12);
+        assert_eq!(defaults.scrollback_lines, 5_000);
+        assert_eq!(defaults.default_transparency, 50);
+        assert!(!defaults.use_random_dynamic_background);
+        assert!(defaults.confirm_multiline_paste);
+
+        let updated = storage
+            .update_terminal_settings(TerminalSettings {
+                font_family: "Cascadia Mono".to_string(),
+                font_size: 14,
+                line_height: 1.35,
+                cursor_style: "bar".to_string(),
+                scrollback_lines: 5_000,
+                default_transparency: 35,
+                use_random_dynamic_background: true,
+                copy_on_select: true,
+                allow_osc52_clipboard: true,
+                confirm_multiline_paste: false,
+                default_shell: "pwsh.exe".to_string(),
+            })
+            .expect("terminal settings update");
+
+        assert_eq!(updated.cursor_style, "bar");
+        assert_eq!(updated.default_transparency, 35);
+        assert!(updated.use_random_dynamic_background);
+        assert!(updated.copy_on_select);
+
+        let reloaded = storage
+            .terminal_settings()
+            .expect("terminal settings reload");
+        assert_eq!(reloaded.font_family, "Cascadia Mono");
+        assert_eq!(reloaded.default_shell, "pwsh.exe");
+    }
+
+    #[test]
+    fn appearance_settings_round_trip_through_settings_table() {
+        let db_path = temp_db_path("appearance-settings");
+        let storage = Storage::open(db_path.clone()).expect("storage opens");
+
+        let defaults = storage
+            .appearance_settings()
+            .expect("default appearance settings load");
+        assert!(defaults.app_font_family.contains("Inter"));
+        assert!(defaults.use_custom_title_bar);
+
+        let updated = storage
+            .update_appearance_settings(AppearanceSettings {
+                app_font_family: "  \"Custom UI Font\", \"Segoe UI\", sans-serif  ".to_string(),
+                color_scheme: "dark".to_string(),
+                custom_font_path: Some("  C:/KKTerm/fonts/custom.ttf  ".to_string()),
+                use_custom_title_bar: false,
+            })
+            .expect("appearance settings update");
+
+        assert_eq!(
+            updated.app_font_family,
+            "\"Custom UI Font\", \"Segoe UI\", sans-serif"
+        );
+        assert_eq!(
+            updated.custom_font_path.as_deref(),
+            Some("C:/KKTerm/fonts/custom.ttf")
+        );
+        assert!(updated.use_custom_title_bar);
+
+        drop(storage);
+
+        let reopened = Storage::open(db_path).expect("storage reopens after app restart");
+        let reloaded = reopened
+            .appearance_settings()
+            .expect("appearance settings reload after restart");
+        assert_eq!(reloaded.app_font_family, updated.app_font_family);
+    }
+
+    #[test]
+    fn ssh_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("ssh-settings")).expect("storage opens");
+
+        let defaults = storage.ssh_settings().expect("default SSH settings load");
+        assert_eq!(defaults.default_port, 22);
+        assert_eq!(defaults.buffer_lines, 5_000);
+        assert_eq!(defaults.default_transparency, 50);
+        assert!(!defaults.use_random_dynamic_background);
+        assert!(defaults.hide_common_port_redirects);
+        assert!(defaults.allow_osc52_clipboard);
+        assert!(!defaults.managed_x_server_enabled);
+        assert_eq!(defaults.x_server_display, 0);
+        assert_eq!(defaults.x_server_args, "-multiwindow -clipboard -wgl");
+        assert!(defaults.default_key_path.is_some());
+
+        let updated = storage
+            .update_ssh_settings(SshSettings {
+                default_user: "deploy".to_string(),
+                default_port: 2200,
+                default_key_path: Some("  C:\\Users\\example\\.ssh\\deploy_ed25519  ".to_string()),
+                default_proxy_jump: Some("  bastion.internal  ".to_string()),
+                buffer_lines: 12_000,
+                default_transparency: 40,
+                use_random_dynamic_background: true,
+                hide_common_port_redirects: false,
+                allow_osc52_clipboard: false,
+                managed_x_server_enabled: true,
+                x_server_path: Some("  C:\\Program Files\\VcXsrv\\vcxsrv.exe  ".to_string()),
+                x_server_display: 120,
+                x_server_args: "  -multiwindow -clipboard -nowgl  ".to_string(),
+            })
+            .expect("SSH settings update");
+
+        assert_eq!(updated.default_user, "deploy");
+        assert_eq!(
+            updated.default_key_path.as_deref(),
+            Some("C:\\Users\\example\\.ssh\\deploy_ed25519")
+        );
+
+        let reloaded = storage.ssh_settings().expect("SSH settings reload");
+        assert_eq!(reloaded.default_port, 2200);
+        assert_eq!(reloaded.buffer_lines, 12_000);
+        assert_eq!(reloaded.default_transparency, 40);
+        assert!(reloaded.use_random_dynamic_background);
+        assert!(!reloaded.hide_common_port_redirects);
+        assert!(!reloaded.allow_osc52_clipboard);
+        assert!(reloaded.managed_x_server_enabled);
+        assert_eq!(
+            reloaded.x_server_path.as_deref(),
+            Some("C:\\Program Files\\VcXsrv\\vcxsrv.exe")
+        );
+        assert_eq!(reloaded.x_server_display, 99);
+        assert_eq!(reloaded.x_server_args, "-multiwindow -clipboard -nowgl");
+        assert_eq!(
+            reloaded.default_proxy_jump.as_deref(),
+            Some("bastion.internal")
+        );
+    }
+
+    #[test]
+    fn sftp_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("sftp-settings")).expect("storage opens");
+
+        let defaults = storage.sftp_settings().expect("default SFTP settings load");
+        assert_eq!(defaults.overwrite_behavior, "fail");
+
+        let updated = storage
+            .update_sftp_settings(SftpSettings {
+                overwrite_behavior: "  REPLACE  ".to_string(),
+            })
+            .expect("SFTP settings update");
+
+        assert_eq!(updated.overwrite_behavior, "overwrite");
+
+        let reloaded = storage.sftp_settings().expect("SFTP settings reload");
+        assert_eq!(reloaded.overwrite_behavior, "overwrite");
+    }
+
+    #[test]
+    fn url_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("url-settings")).expect("storage opens");
+
+        let defaults = storage.url_settings().expect("default URL settings load");
+        assert!(!defaults.ignore_certificate_errors);
+
+        let updated = storage
+            .update_url_settings(UrlSettings {
+                ignore_certificate_errors: true,
+            })
+            .expect("URL settings update");
+
+        assert!(updated.ignore_certificate_errors);
+
+        let reloaded = storage.url_settings().expect("URL settings reload");
+        assert!(reloaded.ignore_certificate_errors);
+    }
+
+    #[test]
+    fn rdp_and_vnc_settings_round_trip_through_settings_table() {
+        let storage =
+            Storage::open(temp_db_path("remote-desktop-settings")).expect("storage opens");
+
+        let rdp_defaults = storage.rdp_settings().expect("default RDP settings load");
+        assert_eq!(rdp_defaults.color_depth, 32);
+        assert!(rdp_defaults.redirect_clipboard);
+        assert!(!rdp_defaults.redirect_drives);
+
+        storage
+            .update_rdp_settings(RdpSettings {
+                color_depth: 24,
+                redirect_clipboard: false,
+                redirect_drives: true,
+                bitmap_cache: true,
+                performance_profile: "quality".to_string(),
+                remote_resolution: "automatic".to_string(),
+                view_mode: "actualSize".to_string(),
+            })
+            .expect("RDP settings update");
+
+        let rdp_reloaded = storage.rdp_settings().expect("RDP settings reload");
+        assert_eq!(rdp_reloaded.color_depth, 24);
+        assert!(!rdp_reloaded.redirect_clipboard);
+        assert!(rdp_reloaded.redirect_drives);
+        assert_eq!(rdp_reloaded.performance_profile, "quality");
+        assert_eq!(rdp_reloaded.view_mode, "actualSize");
+
+        let vnc_defaults = storage.vnc_settings().expect("default VNC settings load");
+        assert!(vnc_defaults.shared_session);
+        assert_eq!(vnc_defaults.color_level, "full");
+
+        storage
+            .update_vnc_settings(VncSettings {
+                shared_session: false,
+                view_only: true,
+                color_level: "256".to_string(),
+                preferred_encoding: "raw".to_string(),
+                view_mode: "fitWidth".to_string(),
+            })
+            .expect("VNC settings update");
+
+        let vnc_reloaded = storage.vnc_settings().expect("VNC settings reload");
+        assert!(!vnc_reloaded.shared_session);
+        assert!(vnc_reloaded.view_only);
+        assert_eq!(vnc_reloaded.color_level, "256");
+        assert_eq!(vnc_reloaded.preferred_encoding, "raw");
+        assert_eq!(vnc_reloaded.view_mode, "fitWidth");
+    }
+
+    #[test]
+    fn remote_desktop_connection_options_are_optional_protocol_overrides() {
+        let storage = Storage::open(temp_db_path("remote-desktop-connection-options"))
+            .expect("storage opens");
+
+        let rdp = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Jumpbox".to_string(),
+                host: "jumpbox.internal".to_string(),
+                user: "DOMAIN\\admin".to_string(),
+                connection_type: "rdp".to_string(),
+                folder_id: None,
+                port: Some(3389),
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: Some(RdpConnectionOptions {
+                    inherit_defaults: false,
+                    color_depth: Some(24),
+                    redirect_clipboard: Some(false),
+                    redirect_drives: Some(true),
+                    bitmap_cache: Some(true),
+                    performance_profile: Some("quality".to_string()),
+                    remote_resolution: None,
+                    view_mode: Some("actualSize".to_string()),
+                }),
+                vnc_options: Some(VncConnectionOptions {
+                    inherit_defaults: false,
+                    shared_session: Some(false),
+                    view_only: Some(true),
+                    color_level: Some("256".to_string()),
+                    preferred_encoding: Some("raw".to_string()),
+                    view_mode: Some("fitWidth".to_string()),
+                }),
+                ftp_options: None,
+            })
+            .expect("RDP connection with options is created");
+
+        assert_eq!(rdp.connection_type, "rdp");
+        assert!(rdp.rdp_options.is_some());
+        assert!(rdp.vnc_options.is_none());
+
+        let vnc = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Console".to_string(),
+                host: "console.internal".to_string(),
+                user: "".to_string(),
+                connection_type: "vnc".to_string(),
+                folder_id: None,
+                port: Some(5900),
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: Some(RdpConnectionOptions {
+                    inherit_defaults: false,
+                    color_depth: Some(24),
+                    redirect_clipboard: Some(false),
+                    redirect_drives: Some(true),
+                    bitmap_cache: Some(true),
+                    performance_profile: Some("quality".to_string()),
+                    remote_resolution: None,
+                    view_mode: Some("actualSize".to_string()),
+                }),
+                vnc_options: Some(VncConnectionOptions {
+                    inherit_defaults: false,
+                    shared_session: Some(false),
+                    view_only: Some(true),
+                    color_level: Some("256".to_string()),
+                    preferred_encoding: Some("raw".to_string()),
+                    view_mode: Some("fitWidth".to_string()),
+                }),
+                ftp_options: None,
+            })
+            .expect("VNC connection with options is created");
+
+        assert_eq!(vnc.connection_type, "vnc");
+        assert!(vnc.rdp_options.is_none());
+        assert!(vnc.vnc_options.is_some());
+
+        let tree = storage.list_connection_tree().expect("tree reloads");
+        let saved_rdp = tree
+            .connections
+            .iter()
+            .find(|connection| connection.id == rdp.id)
+            .expect("RDP connection is listed");
+        assert_eq!(
+            saved_rdp
+                .rdp_options
+                .as_ref()
+                .and_then(|options| options.color_depth),
+            Some(24)
+        );
+        assert_eq!(
+            saved_rdp
+                .rdp_options
+                .as_ref()
+                .and_then(|options| options.view_mode.as_deref()),
+            Some("actualSize")
+        );
+    }
+
+    #[test]
+    fn ai_provider_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("ai-provider-settings")).expect("storage opens");
+
+        let defaults = storage
+            .ai_provider_settings()
+            .expect("default AI provider settings load");
+        assert!(!defaults.enabled);
+        assert_eq!(defaults.provider_kind, "openai");
+        assert_eq!(defaults.base_url, "https://api.openai.com/v1");
+        assert_eq!(defaults.model, "gpt-5.4-mini");
+        assert_eq!(defaults.reasoning_effort, "medium");
+        assert_eq!(defaults.custom_instructions, "");
+        assert_eq!(defaults.api_mode, "chatCompletions");
+        assert_eq!(defaults.extra_headers, "");
+        assert_eq!(defaults.cli_execution_policy, "suggestOnly");
+        assert_eq!(defaults.tool_permission_mode, "prompt");
+        assert!(!defaults.allow_insecure_tls);
+        assert!(!defaults.show_all_models);
+        assert!(defaults.tools.web_search());
+        assert!(defaults.tools.web_fetch());
+        assert!(defaults.tools.shell_command());
+        assert!(defaults.tools.app_data_file_search());
+        assert!(defaults.tools.app_data_file_read());
+        assert!(defaults.tools.current_time());
+        assert!(defaults.tools.performance_counters());
+        assert!(defaults.tools.dashboard());
+        assert!(defaults.tools.connections());
+        assert!(defaults.tools.sessions());
+        assert!(defaults.tools.tutorial());
+        assert!(defaults.tools.manual());
+        assert!(!defaults.tools.email());
+        assert!(defaults.tools.network());
+
+        let updated = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                enabled: true,
+                provider_kind: "  OpenRouter  ".to_string(),
+                base_url: "  https://llm-gateway.internal/v1/  ".to_string(),
+                model: " openai/gpt-5.5 ".to_string(),
+                reasoning_effort: " XHIGH ".to_string(),
+                output_language: String::new(),
+                custom_instructions: String::new(),
+                api_mode: " responses ".to_string(),
+                extra_headers: "  sid=1, \"env\"=\"3\"  ".to_string(),
+                allow_insecure_tls: true,
+                allow_insecure_mcp_http: true,
+                show_all_models: true,
+                cli_execution_policy: "suggest-only".to_string(),
+                tool_permission_mode: " Allow All ".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
+                claude_cli_path: Some("  C:\\Tools\\claude.exe  ".to_string()),
+                codex_cli_path: Some("  codex  ".to_string()),
+                disabled_skill_names: vec!["ssh-helper".to_string(), "bad name".to_string()],
+                custom_skills_enabled: true,
+                tools: default_ai_assistant_tool_settings(),
+                search_provider: default_search_provider(),
+                searxng_url: String::new(),
+                email_provider: default_email_provider(),
+                email_from: String::new(),
+                mailgun_domain: String::new(),
+                smtp_host: String::new(),
+                smtp_port: default_smtp_port(),
+                smtp_username: String::new(),
+                smtp_security: default_smtp_security(),
+                search_provider_api_key: None,
+                email_secret: None,
+            })
+            .expect("AI provider settings update");
+
+        assert!(updated.enabled);
+        assert_eq!(updated.provider_kind, "openrouter");
+        assert_eq!(updated.base_url, "https://llm-gateway.internal/v1");
+        assert_eq!(updated.model, "openai/gpt-5.5");
+        assert_eq!(updated.reasoning_effort, "max");
+        assert_eq!(updated.api_mode, "responses");
+        assert_eq!(updated.extra_headers, "sid=1, \"env\"=\"3\"");
+        assert_eq!(updated.cli_execution_policy, "suggestOnly");
+        assert_eq!(updated.tool_permission_mode, "allowAll");
+        assert!(updated.allow_insecure_tls);
+        assert!(updated.allow_insecure_mcp_http);
+        assert!(updated.show_all_models);
+        assert_eq!(
+            updated.claude_cli_path.as_deref(),
+            Some("C:\\Tools\\claude.exe")
+        );
+        assert_eq!(updated.codex_cli_path.as_deref(), Some("codex"));
+        assert_eq!(updated.disabled_skill_names, vec!["ssh-helper".to_string()]);
+
+        let reloaded = storage
+            .ai_provider_settings()
+            .expect("AI provider settings reload");
+        assert_eq!(reloaded.base_url, "https://llm-gateway.internal/v1");
+        assert_eq!(reloaded.model, "openai/gpt-5.5");
+        assert_eq!(reloaded.reasoning_effort, "max");
+        assert_eq!(reloaded.api_mode, "responses");
+        assert_eq!(reloaded.extra_headers, "sid=1, \"env\"=\"3\"");
+        assert_eq!(reloaded.tool_permission_mode, "allowAll");
+        assert!(reloaded.allow_insecure_tls);
+        assert!(reloaded.allow_insecure_mcp_http);
+        assert!(reloaded.show_all_models);
+    }
+
+    #[test]
+    fn stored_credential_candidates_include_one_ai_key_owner_per_provider() {
+        let storage = Storage::open(temp_db_path("ai-provider-credential-candidates"))
+            .expect("storage opens");
+
+        let candidates = storage
+            .list_stored_credential_candidates()
+            .expect("credential candidates load");
+        let ai_candidates = candidates
+            .iter()
+            .filter(|candidate| candidate.kind == "aiApiKey")
+            .collect::<Vec<_>>();
+
+        assert!(
+            ai_candidates
+                .iter()
+                .any(|candidate| candidate.owner_id == "ai-provider:openai")
+        );
+        assert!(
+            ai_candidates
+                .iter()
+                .any(|candidate| candidate.owner_id == "ai-provider:openrouter")
+        );
+        assert!(ai_candidates.len() > 1);
+    }
+
+    #[test]
+    fn ai_provider_settings_reject_invalid_tool_permission_mode() {
+        let storage =
+            Storage::open(temp_db_path("ai-provider-tool-permission-mode")).expect("storage opens");
+
+        let error = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                enabled: true,
+                provider_kind: "openai".to_string(),
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-5.5".to_string(),
+                reasoning_effort: "medium".to_string(),
+                output_language: String::new(),
+                custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
+                extra_headers: String::new(),
+                allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
+                show_all_models: false,
+                cli_execution_policy: "suggestOnly".to_string(),
+                tool_permission_mode: "autoDeleteEverything".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
+                claude_cli_path: None,
+                codex_cli_path: None,
+                disabled_skill_names: Vec::new(),
+                custom_skills_enabled: true,
+                tools: default_ai_assistant_tool_settings(),
+                search_provider: default_search_provider(),
+                searxng_url: String::new(),
+                email_provider: default_email_provider(),
+                email_from: String::new(),
+                mailgun_domain: String::new(),
+                smtp_host: String::new(),
+                smtp_port: default_smtp_port(),
+                smtp_username: String::new(),
+                smtp_security: default_smtp_security(),
+                search_provider_api_key: None,
+                email_secret: None,
+            })
+            .expect_err("unknown tool permission mode is rejected");
+
+        assert_eq!(error, "AI tool permission mode must be prompt or allowAll");
+    }
+
+    #[test]
+    fn ai_provider_settings_reject_invalid_base_url() {
+        let storage = Storage::open(temp_db_path("ai-provider-invalid")).expect("storage opens");
+
+        let error = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                enabled: true,
+                provider_kind: "openai".to_string(),
+                base_url: "api.openai.com/v1".to_string(),
+                model: "gpt-5.5".to_string(),
+                reasoning_effort: "medium".to_string(),
+                output_language: String::new(),
+                custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
+                extra_headers: String::new(),
+                allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
+                show_all_models: false,
+                cli_execution_policy: "suggestOnly".to_string(),
+                tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
+                claude_cli_path: None,
+                codex_cli_path: None,
+                disabled_skill_names: Vec::new(),
+                custom_skills_enabled: true,
+                tools: default_ai_assistant_tool_settings(),
+                search_provider: default_search_provider(),
+                searxng_url: String::new(),
+                email_provider: default_email_provider(),
+                email_from: String::new(),
+                mailgun_domain: String::new(),
+                smtp_host: String::new(),
+                smtp_port: default_smtp_port(),
+                smtp_username: String::new(),
+                smtp_security: default_smtp_security(),
+                search_provider_api_key: None,
+                email_secret: None,
+            })
+            .expect_err("scheme-less endpoint is rejected");
+
+        assert_eq!(
+            error,
+            "AI provider endpoint must start with https:// or http://"
+        );
+    }
+
+    #[test]
+    fn ai_provider_settings_reject_blank_model() {
+        let storage =
+            Storage::open(temp_db_path("ai-provider-blank-model")).expect("storage opens");
+
+        let error = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                enabled: true,
+                provider_kind: "openai".to_string(),
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "   ".to_string(),
+                reasoning_effort: "medium".to_string(),
+                output_language: String::new(),
+                custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
+                extra_headers: String::new(),
+                allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
+                show_all_models: false,
+                cli_execution_policy: "suggestOnly".to_string(),
+                tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
+                claude_cli_path: None,
+                codex_cli_path: None,
+                disabled_skill_names: Vec::new(),
+                custom_skills_enabled: true,
+                tools: default_ai_assistant_tool_settings(),
+                search_provider: default_search_provider(),
+                searxng_url: String::new(),
+                email_provider: default_email_provider(),
+                email_from: String::new(),
+                mailgun_domain: String::new(),
+                smtp_host: String::new(),
+                smtp_port: default_smtp_port(),
+                smtp_username: String::new(),
+                smtp_security: default_smtp_security(),
+                search_provider_api_key: None,
+                email_secret: None,
+            })
+            .expect_err("blank model is rejected");
+
+        assert_eq!(error, "AI model is required");
+    }
+
+    #[test]
+    fn ai_provider_settings_trim_and_limit_custom_instructions() {
+        let storage =
+            Storage::open(temp_db_path("ai-provider-custom-instructions")).expect("storage opens");
+
+        let updated = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                enabled: true,
+                provider_kind: "openai".to_string(),
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-5.5".to_string(),
+                reasoning_effort: "medium".to_string(),
+                output_language: String::new(),
+                custom_instructions: "  Prefer concise PowerShell examples.  ".to_string(),
+                api_mode: default_ai_api_mode(),
+                extra_headers: String::new(),
+                allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
+                show_all_models: false,
+                cli_execution_policy: "suggestOnly".to_string(),
+                tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
+                claude_cli_path: None,
+                codex_cli_path: None,
+                disabled_skill_names: Vec::new(),
+                custom_skills_enabled: true,
+                tools: default_ai_assistant_tool_settings(),
+                search_provider: default_search_provider(),
+                searxng_url: String::new(),
+                email_provider: default_email_provider(),
+                email_from: String::new(),
+                mailgun_domain: String::new(),
+                smtp_host: String::new(),
+                smtp_port: default_smtp_port(),
+                smtp_username: String::new(),
+                smtp_security: default_smtp_security(),
+                search_provider_api_key: None,
+                email_secret: None,
+            })
+            .expect("custom instructions update");
+
+        assert_eq!(
+            updated.custom_instructions,
+            "Prefer concise PowerShell examples."
+        );
+
+        let error = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                custom_instructions: "x".repeat(1001),
+                ..updated
+            })
+            .expect_err("overlong custom instructions are rejected");
+
+        assert_eq!(
+            error,
+            "AI Assistant custom instructions must be 1000 characters or fewer"
+        );
+    }
+
+    #[test]
+    fn ai_provider_settings_keep_cli_policy_suggest_only() {
+        let storage = Storage::open(temp_db_path("ai-provider-cli-policy")).expect("storage opens");
+
+        let error = storage
+            .update_ai_provider_settings(AiProviderSettings {
+                enabled: true,
+                provider_kind: "openai".to_string(),
+                base_url: "https://api.openai.com/v1".to_string(),
+                model: "gpt-5.5".to_string(),
+                reasoning_effort: "medium".to_string(),
+                output_language: String::new(),
+                custom_instructions: String::new(),
+                api_mode: default_ai_api_mode(),
+                extra_headers: String::new(),
+                allow_insecure_tls: false,
+                allow_insecure_mcp_http: false,
+                show_all_models: false,
+                cli_execution_policy: "executeAutomatically".to_string(),
+                tool_permission_mode: "prompt".to_string(),
+                built_in_mcp_server_enabled: true,
+                built_in_mcp_allow_all_dangerous: false,
+                use_codex_cli: false,
+                use_claude_cli: false,
+                claude_cli_path: Some("claude".to_string()),
+                codex_cli_path: Some("codex".to_string()),
+                disabled_skill_names: Vec::new(),
+                custom_skills_enabled: true,
+                tools: default_ai_assistant_tool_settings(),
+                search_provider: default_search_provider(),
+                searxng_url: String::new(),
+                email_provider: default_email_provider(),
+                email_from: String::new(),
+                mailgun_domain: String::new(),
+                smtp_host: String::new(),
+                smtp_port: default_smtp_port(),
+                smtp_username: String::new(),
+                smtp_security: default_smtp_security(),
+                search_provider_api_key: None,
+                email_secret: None,
+            })
+            .expect_err("auto-execution policy is rejected");
+
+        assert_eq!(
+            error,
+            "CLI adapter policy must remain suggest-only for approval-based execution"
+        );
+    }
+
+    #[test]
+    fn main_window_settings_round_trip_through_settings_table() {
+        let storage = Storage::open(temp_db_path("main-window-settings")).expect("storage opens");
+
+        assert_eq!(
+            storage
+                .main_window_settings()
+                .expect("missing main window settings load"),
+            None
+        );
+
+        let updated = storage
+            .update_main_window_settings(MainWindowSettings {
+                width: 1440,
+                height: 900,
+                maximized: true,
+            })
+            .expect("main window settings update");
+
+        assert_eq!(
+            updated,
+            MainWindowSettings {
+                width: 1440,
+                height: 900,
+                maximized: true,
+            }
+        );
+        assert_eq!(
+            storage
+                .main_window_settings()
+                .expect("main window settings reload"),
+            Some(updated)
+        );
+    }
+
+    #[test]
+    fn assistant_chat_history_round_trips_from_sqlite_by_recent_update() {
+        let storage = Storage::open(temp_db_path("assistant-chat-history")).expect("storage opens");
+        let older = AssistantChatThreadRecord {
+            id: "thread-older".to_string(),
+            title: "Older".to_string(),
+            context_label: "Workspace".to_string(),
+            messages_json: r#"[{"role":"user","content":"first"}]"#.to_string(),
+            created_at: "2026-05-01T00:00:00Z".to_string(),
+            updated_at: "2026-05-01T00:00:00Z".to_string(),
+        };
+        let newer = AssistantChatThreadRecord {
+            id: "thread-newer".to_string(),
+            title: "Newer".to_string(),
+            context_label: "Dashboard".to_string(),
+            messages_json: r#"[{"role":"user","content":"second"}]"#.to_string(),
+            created_at: "2026-05-02T00:00:00Z".to_string(),
+            updated_at: "2026-05-03T00:00:00Z".to_string(),
+        };
+
+        storage
+            .upsert_assistant_chat_thread(older.clone())
+            .expect("older thread saved");
+        storage
+            .upsert_assistant_chat_thread(newer.clone())
+            .expect("newer thread saved");
+
+        let threads = storage
+            .list_assistant_chat_threads()
+            .expect("assistant chat history loads");
+        assert_eq!(threads.len(), 2);
+        assert_eq!(threads[0].id, newer.id);
+        assert_eq!(threads[1].id, older.id);
+
+        storage
+            .delete_assistant_chat_thread(newer.id.clone())
+            .expect("newer thread deleted");
+        let threads = storage
+            .list_assistant_chat_threads()
+            .expect("assistant chat history reloads");
+        assert_eq!(threads.len(), 1);
+        assert_eq!(threads[0].id, older.id);
+    }
+
+    #[test]
+    fn assistant_chat_history_schema_has_list_indexes() {
+        let storage = Storage::open(temp_db_path("assistant-chat-indexes")).expect("storage opens");
+        let connection = storage.lock().expect("storage lock");
+        let indexes = connection
+            .prepare(
+                "SELECT name FROM sqlite_master
+                 WHERE type = 'index' AND tbl_name = 'assistant_chat_threads'
+                 ORDER BY name",
+            )
+            .expect("index query prepares")
+            .query_map([], |row| row.get::<_, String>(0))
+            .expect("index query runs")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("indexes collect");
+
+        assert!(indexes.contains(&"idx_assistant_chat_threads_created_at".to_string()));
+        assert!(indexes.contains(&"idx_assistant_chat_threads_updated_at".to_string()));
+    }
+
+    fn temp_db_path(name: &str) -> PathBuf {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock is after Unix epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("kkterm-storage-{name}-{unique}"));
+        fs::create_dir_all(&dir).expect("temp directory is created");
+        dir.join("kkterm.sqlite3")
+    }
