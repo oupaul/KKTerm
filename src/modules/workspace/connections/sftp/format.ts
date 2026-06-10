@@ -26,7 +26,8 @@ export function joinLocalPath(basePath: string, childName: string) {
   if (basePath.endsWith("\\") || basePath.endsWith("/")) {
     return `${basePath}${childName}`;
   }
-  return `${basePath}\\${childName}`;
+  const separator = basePath.startsWith("/") ? "/" : "\\";
+  return `${basePath}${separator}${childName}`;
 }
 
 export function formatFileSize(size?: number) {
