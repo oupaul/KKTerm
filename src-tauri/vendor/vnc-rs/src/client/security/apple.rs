@@ -7,10 +7,15 @@
 
 use aes::Aes128;
 use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
+use md5::{Digest, Md5};
+use num_bigint::BigUint;
+use rand::RngCore;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+
+use crate::VncError;
 
 /// Left-pad (or left-truncate) `bytes` to exactly `len` bytes, big-endian.
-#[cfg(test)]
-fn left_pad(bytes: &[u8], len: usize) -> Vec<u8> {
+pub(crate) fn left_pad(bytes: &[u8], len: usize) -> Vec<u8> {
     if bytes.len() >= len {
         bytes[bytes.len() - len..].to_vec()
     } else {
@@ -46,10 +51,65 @@ pub(crate) fn aes_ecb_encrypt(key: &[u8; 16], data: &mut [u8]) {
     }
 }
 
+/// Perform the Apple (security type 30) credential exchange on `stream`.
+///
+/// Reads the server DH parameters, derives the AES key, sends the encrypted
+/// 128-byte credential block plus the client public key. Does NOT read the
+/// SecurityResult — the connector reads it afterwards, like the VncAuth path.
+pub(crate) async fn authenticate<S>(
+    stream: &mut S,
+    username: &str,
+    password: &str,
+) -> Result<(), VncError>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
+    // 1. Server DH params: generator(u16), keyLength(u16), prime[..], serverPub[..].
+    let generator = stream.read_u16().await?;
+    let key_len = stream.read_u16().await? as usize;
+    if key_len == 0 || key_len > 1024 {
+        return Err(VncError::General(format!("invalid ARD key length {key_len}")));
+    }
+    let mut prime = vec![0u8; key_len];
+    stream.read_exact(&mut prime).await?;
+    let mut server_pub = vec![0u8; key_len];
+    stream.read_exact(&mut server_pub).await?;
+
+    // 2. Diffie-Hellman.
+    let prime_bn = BigUint::from_bytes_be(&prime);
+    let generator_bn = BigUint::from(generator);
+    let mut private_bytes = vec![0u8; key_len];
+    rand::rng().fill_bytes(&mut private_bytes);
+    let private_bn = BigUint::from_bytes_be(&private_bytes);
+
+    let client_pub = generator_bn.modpow(&private_bn, &prime_bn);
+    let shared = BigUint::from_bytes_be(&server_pub).modpow(&private_bn, &prime_bn);
+    let client_pub_bytes = left_pad(&client_pub.to_bytes_be(), key_len);
+    let shared_bytes = left_pad(&shared.to_bytes_be(), key_len);
+
+    // 3. AES-128 key = MD5(shared secret).
+    let mut hasher = Md5::new();
+    hasher.update(&shared_bytes);
+    let digest = hasher.finalize();
+    let mut aes_key = [0u8; 16];
+    aes_key.copy_from_slice(&digest);
+
+    // 4. 128-byte credential block (random-padded), AES-128-ECB encrypted.
+    let mut credentials = [0u8; 128];
+    rand::rng().fill_bytes(&mut credentials);
+    fill_credentials(&mut credentials, username, password);
+    aes_ecb_encrypt(&aes_key, &mut credentials);
+
+    // 5. Send ciphertext + client public key.
+    stream.write_all(&credentials).await?;
+    stream.write_all(&client_pub_bytes).await?;
+    stream.flush().await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use md5::{Digest, Md5};
 
     #[test]
     fn left_pad_pads_and_truncates() {
