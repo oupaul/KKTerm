@@ -466,6 +466,28 @@
       "options": ["provider", "scope", "version"]
     },
     {
+      "id": "powershell-7",
+      "name": "PowerShell 7",
+      "descriptionEn": "Cross-platform PowerShell 7 (pwsh), with its own $PROFILE separate from Windows PowerShell 5.1.",
+      "category": "windows-power-user",
+      "icon": "TerminalSquare",
+      "needs": ["winget"],
+      "homepage": "https://learn.microsoft.com/powershell/",
+      "releaseNotesUrl": "https://github.com/PowerShell/PowerShell/releases",
+      "detection": {
+        "displayNames": ["PowerShell 7-x64", "PowerShell 7-arm64", "PowerShell"]
+      },
+      "provider": { "kind": "winget", "id": "Microsoft.PowerShell" },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/PowerShell-7.6.2-win-x64.msi",
+        "fileName": "PowerShell-7.6.2-win-x64.msi",
+        "arm64Url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/PowerShell-7.6.2-win-arm64.msi",
+        "arm64FileName": "PowerShell-7.6.2-win-arm64.msi"
+      },
+      "options": ["provider", "scope", "version"]
+    },
+    {
       "id": "sysinternals-suite",
       "name": "Sysinternals Suite",
       "descriptionEn": "Microsoft Sysinternals troubleshooting and administration utilities.",

@@ -605,6 +605,33 @@ mod tests {
     }
 
     #[test]
+    fn shipped_catalog_includes_powershell_7_winget_and_msi() {
+        let json = include_str!("../../../installer/catalog.v1.json");
+        let catalog: Catalog =
+            serde_json::from_str(json).expect("shipped catalog JSON should parse");
+        let recipe = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "powershell-7")
+            .expect("catalog should include PowerShell 7");
+
+        assert_eq!(recipe.name, "PowerShell 7");
+        assert_eq!(recipe.category.as_deref(), Some("windows-power-user"));
+        assert!(matches!(
+            &recipe.provider,
+            Provider::Winget { id } if id == "Microsoft.PowerShell"
+        ));
+        let download = recipe
+            .download_provider
+            .as_ref()
+            .expect("PowerShell 7 should offer an MSI download provider");
+        let (x64_url, _) = download.download_target(false).expect("x64 target");
+        assert!(x64_url.ends_with("-win-x64.msi"), "got {x64_url}");
+        let (arm_url, _) = download.download_target(true).expect("arm64 target");
+        assert!(arm_url.ends_with("-win-arm64.msi"), "got {arm_url}");
+    }
+
+    #[test]
     fn shipped_desktop_agent_apps_use_stable_install_sources() {
         let json = include_str!("../../../installer/catalog.v1.json");
         let catalog: Catalog =
