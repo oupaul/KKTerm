@@ -43,6 +43,9 @@ mod window_state;
 #[cfg(target_os = "windows")]
 mod windows_local_pty;
 mod x_server;
+mod media;
+#[allow(unused_imports)]
+pub(crate) use media::*;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -328,195 +331,6 @@ fn dashboard_load_background_image_sync(
     })
 }
 
-fn list_custom_fonts_sync() -> Result<Vec<CustomFontEntry>, String> {
-    let folder = custom_fonts_folder()?;
-    fs::create_dir_all(&folder).map_err(|error| {
-        format!(
-            "failed to create custom fonts folder {}: {error}",
-            folder.display()
-        )
-    })?;
-
-    let mut fonts = fs::read_dir(&folder)
-        .map_err(|error| {
-            format!(
-                "failed to read custom fonts folder {}: {error}",
-                folder.display()
-            )
-        })?
-        .filter_map(|entry| entry.ok())
-        .filter_map(|entry| custom_font_entry(entry.path()))
-        .collect::<Vec<_>>();
-
-    fonts.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    Ok(fonts)
-}
-
-fn load_custom_font_data_sync(path: String) -> Result<CustomFontData, String> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
-
-    let folder = custom_fonts_folder()?;
-    fs::create_dir_all(&folder).map_err(|error| {
-        format!(
-            "failed to create custom fonts folder {}: {error}",
-            folder.display()
-        )
-    })?;
-
-    let folder = folder
-        .canonicalize()
-        .map_err(|error| format!("failed to resolve custom fonts folder: {error}"))?;
-    let path = PathBuf::from(path);
-    let canonical_path = path
-        .canonicalize()
-        .map_err(|error| format!("failed to resolve custom font path: {error}"))?;
-
-    if !canonical_path.starts_with(&folder) {
-        return Err("custom font path must stay inside the fonts folder".to_string());
-    }
-
-    if custom_font_entry(canonical_path.clone()).is_none() {
-        return Err("custom font file must be .ttf, .otf, .woff, or .woff2".to_string());
-    }
-
-    let bytes = fs::read(&canonical_path).map_err(|error| {
-        format!(
-            "failed to read custom font {}: {error}",
-            canonical_path.display()
-        )
-    })?;
-
-    Ok(CustomFontData {
-        data_base64: STANDARD.encode(bytes),
-    })
-}
-
-fn custom_fonts_folder() -> Result<PathBuf, String> {
-    let exe_path = std::env::current_exe()
-        .map_err(|error| format!("failed to resolve app executable path: {error}"))?;
-    let exe_folder = exe_path
-        .parent()
-        .ok_or_else(|| "failed to resolve app executable folder".to_string())?;
-    Ok(exe_folder.join("fonts"))
-}
-
-pub(crate) fn backgrounds_folder() -> Result<PathBuf, String> {
-    let exe_path = std::env::current_exe()
-        .map_err(|error| format!("failed to resolve app executable path: {error}"))?;
-    let exe_folder = exe_path
-        .parent()
-        .ok_or_else(|| "failed to resolve app executable folder".to_string())?;
-    Ok(exe_folder.join("backgrounds"))
-}
-
-/// Best-effort: delete background media files no view references anymore.
-/// Never returns an error — cleanup failures must not break view mutations.
-pub(crate) fn prune_unreferenced_backgrounds(app: &tauri::AppHandle) {
-    let storage = app.state::<storage::Storage>();
-    let referenced = storage.with_connection_infallible(|conn| {
-        dashboard_storage::referenced_background_image_files(conn)
-            .map_err(|error| format!("{error:?}"))
-    });
-    let referenced = match referenced {
-        Ok(set) => set,
-        Err(error) => {
-            eprintln!("background prune skipped: {error}");
-            return;
-        }
-    };
-    let folder = match backgrounds_folder() {
-        Ok(folder) => folder,
-        Err(error) => {
-            eprintln!("background prune skipped: {error}");
-            return;
-        }
-    };
-    let entries = match fs::read_dir(&folder) {
-        Ok(entries) => entries,
-        Err(_) => return, // folder may not exist yet — nothing to prune.
-    };
-    for entry in entries.filter_map(Result::ok) {
-        let path = entry.path();
-        let name = match path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name.to_string(),
-            None => continue,
-        };
-        if !referenced.contains(&name) {
-            if let Err(error) = fs::remove_file(&path) {
-                eprintln!(
-                    "failed to prune background image {}: {error}",
-                    path.display()
-                );
-            }
-        }
-    }
-}
-
-fn custom_font_entry(path: PathBuf) -> Option<CustomFontEntry> {
-    if !path.is_file() {
-        return None;
-    }
-
-    let extension = path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .map(|extension| extension.to_lowercase())?;
-
-    if !is_supported_font_extension(&extension) {
-        return None;
-    }
-
-    let name = path
-        .file_stem()
-        .and_then(|name| name.to_str())
-        .or_else(|| path.file_name().and_then(|name| name.to_str()))?
-        .to_string();
-
-    Some(CustomFontEntry {
-        name,
-        path: path.to_string_lossy().into_owned(),
-        extension,
-    })
-}
-
-fn is_supported_font_extension(extension: &str) -> bool {
-    matches!(extension, "ttf" | "otf" | "woff" | "woff2")
-}
-
-/// Returns the lowercased extension if `path` is a supported background media file.
-fn background_media_extension(path: &std::path::Path) -> Option<String> {
-    let extension = path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .map(|extension| extension.to_lowercase())?;
-    if matches!(
-        extension.as_str(),
-        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "mp4" | "webm" | "mov" | "m4v" | "ogv",
-    ) {
-        Some(extension)
-    } else {
-        None
-    }
-}
-
-fn background_media_mime(extension: &str) -> &'static str {
-    match extension {
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "webp" => "image/webp",
-        "gif" => "image/gif",
-        "bmp" => "image/bmp",
-        "mp4" | "m4v" => "video/mp4",
-        "webm" => "video/webm",
-        "mov" => "video/quicktime",
-        "ogv" => "video/ogg",
-        _ => "application/octet-stream",
-    }
-}
-
-fn background_media_extension_error() -> &'static str {
-    "background file must be .png, .jpg, .jpeg, .webp, .gif, .bmp, .mp4, .webm, .mov, .m4v, or .ogv"
-}
 
 #[tauri::command]
 fn list_connection_tree(
@@ -2913,6 +2727,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            // ── App lifecycle, window, diagnostics & updates
             app_bootstrap,
             is_debug_build,
             app_updates::get_app_update_target_triple,
@@ -2922,6 +2737,7 @@ pub fn run() {
             focus_main_window,
             show_native_tooltip,
             hide_native_tooltip,
+            // ── Connections & folders
             list_connection_tree,
             create_connection,
             create_connection_folder,
@@ -2937,12 +2753,14 @@ pub fn run() {
             duplicate_connection,
             move_connection_folder,
             move_connection,
+            // ── URL connections & credentials
             update_url_connection_icon_from_page,
             upsert_url_credential,
             list_url_credentials,
             delete_url_credential,
             list_url_data_partitions,
             clear_url_data_partition,
+            // ── Settings (general, launcher, dashboard, terminal, appearance, transport)
             get_general_settings,
             update_general_settings,
             get_app_launcher_settings,
@@ -2983,6 +2801,7 @@ pub fn run() {
             update_screenshot_settings,
             get_ai_provider_settings,
             update_ai_provider_settings,
+            // ── Assistant skills, MCP config & chat threads
             list_assistant_skills,
             set_custom_assistant_skills_enabled,
             set_assistant_skill_enabled,
@@ -2994,22 +2813,27 @@ pub fn run() {
             list_assistant_chat_threads,
             upsert_assistant_chat_thread,
             delete_assistant_chat_thread,
+            // ── AI providers, models & CLI backends
             start_github_copilot_device_flow,
             poll_github_copilot_device_flow,
             list_github_copilot_models,
             list_ai_provider_models,
             get_ai_cli_backend_status,
             open_ai_cli_backend_auth,
+            // ── AI assistant: command proposals & tool approvals
             plan_command_proposal,
             complete_assistant_live_tool_request,
             complete_assistant_tool_approval_request,
+            // ── AI agent runs
             run_ai_agent,
             run_ai_agent_streaming,
+            // ── AI coding usage
             ai_coding_usage::ai_coding_usage_load,
             ai_coding_usage::ai_coding_usage_connect,
             ai_coding_usage::ai_coding_usage_refresh,
             ai_coding_usage::ai_coding_usage_reconnect,
             ai_coding_usage::ai_coding_usage_disconnect,
+            // ── Keychain, performance, diagnostics, power & tray
             keychain_status,
             get_performance_snapshot,
             get_host_usage_snapshot,
@@ -3019,6 +2843,7 @@ pub fn run() {
             get_dont_sleep_enabled,
             set_dont_sleep_enabled,
             update_tray_menu,
+            // ── Screenshots
             capture_screenshot_to_clipboard,
             capture_screenshot_for_assistant,
             capture_fullscreen_screenshot_for_assistant,
@@ -3029,6 +2854,7 @@ pub fn run() {
             list_screenshots,
             delete_screenshot,
             clear_screenshots,
+            // ── SSH transport, config import, bookmarks & host keys
             ssh_transport_plan,
             import_ssh_config,
             parse_import_file,
@@ -3037,6 +2863,7 @@ pub fn run() {
             scan_network_for_connections,
             inspect_ssh_host_key,
             trust_ssh_host_key,
+            // ── Secrets & stored credentials
             store_secret,
             secret_exists,
             delete_secret,
@@ -3045,6 +2872,7 @@ pub fn run() {
             create_connection_password_credential,
             assign_connection_password_credential,
             delete_stored_credential,
+            // ── Terminal sessions & recordings
             start_terminal_session,
             write_terminal_input,
             resize_terminal,
@@ -3054,18 +2882,21 @@ pub fn run() {
             list_terminal_recordings,
             open_terminal_recordings_folder,
             open_terminal_recording,
+            // ── tmux
             list_tmux_sessions,
             close_tmux_session,
             rename_tmux_session,
             set_tmux_mouse,
             scroll_tmux_pane,
             capture_tmux_pane,
+            // ── SSH system context, port forwarding & elevation
             inspect_ssh_system_context,
             list_remote_loopback_ports,
             start_ssh_port_forward,
             close_ssh_port_forward,
             is_app_elevated,
             launch_elevated_terminal,
+            // ── SFTP
             start_sftp_session,
             list_sftp_directory,
             list_local_directory,
@@ -3078,6 +2909,7 @@ pub fn run() {
             sftp_path_properties,
             update_sftp_path_properties,
             close_sftp_session,
+            // ── FTP
             start_ftp_session,
             list_ftp_directory,
             upload_ftp_path,
@@ -3088,6 +2920,7 @@ pub fn run() {
             delete_ftp_path,
             ftp_path_properties,
             close_ftp_session,
+            // ── URL WebView
             start_webview_session,
             update_webview_bounds,
             set_webview_visibility,
@@ -3099,6 +2932,7 @@ pub fn run() {
             fill_webview_credential,
             capture_webview_credential,
             close_webview_session,
+            // ── RDP
             start_rdp_session,
             update_rdp_bounds,
             set_rdp_visibility,
@@ -3109,6 +2943,7 @@ pub fn run() {
             send_rdp_text,
             send_rdp_key_press,
             send_rdp_mouse_click,
+            // ── VNC
             start_vnc_session,
             send_vnc_pointer_event,
             send_vnc_key_event,
@@ -3116,6 +2951,7 @@ pub fn run() {
             close_vnc_session,
             get_vnc_session_status,
             send_vnc_ctrl_alt_delete,
+            // ── Dashboard
             dashboard_commands::dashboard_load_state,
             dashboard_commands::dashboard_create_view,
             dashboard_commands::dashboard_update_view,
@@ -3133,6 +2969,7 @@ pub fn run() {
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,
             dashboard_load_background_image,
+            // ── Installer Helper
             installer::commands::installer_load_catalog,
             installer::commands::installer_load_detection_cache,
             installer::commands::installer_detect_all,
@@ -3150,14 +2987,17 @@ pub fn run() {
             installer::commands::installer_remove_service,
             installer::commands::installer_get_state,
             installer::commands::installer_set_pinned,
+            // ── MCP servers
             mcp::mcp_list_servers,
             mcp::mcp_create_server,
             mcp::mcp_update_server,
             mcp::mcp_delete_server,
             mcp::mcp_refresh_tools,
             mcp::mcp_call_tool,
+            // ── Operation manual
             manual::list_manual_chapters,
             manual::read_manual_chapter,
+            // ── Network tools
             net::commands::network_dns_lookup,
             net::commands::network_tcp_check,
             net::commands::network_interfaces,
@@ -3166,6 +3006,7 @@ pub fn run() {
             net::commands::network_ping_start,
             net::commands::network_port_scan_start,
             net::commands::network_stream_cancel,
+            // ── Watchdog
             watchdog::commands::watchdog_create,
             watchdog::commands::watchdog_list,
             watchdog::commands::watchdog_cancel,
