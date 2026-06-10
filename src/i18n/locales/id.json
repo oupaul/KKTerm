@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "Pembantu Instalasi",
+    "powerShell7": {
+      "installTitle": "Pasang PowerShell 7?",
+      "installPrompt": "PowerShell 7 (pwsh) belum terpasang. Pasang sekarang dan buka, atau gunakan Windows PowerShell saja?",
+      "installing": "Memasang PowerShell 7…",
+      "installFailed": "Pemasangan PowerShell 7 gagal, membuka Windows PowerShell sebagai gantinya. {{message}}"
+    },
     "subtitle": "Instal dan kelola tumpukan alat AI di Windows",
     "railLabel": "Pembantu Instalasi",
     "refresh": "Segarkan",
@@ -885,6 +891,7 @@
     "bar": "Batang",
     "underline": "Garis bawah",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Command Prompt",
     "wsl": "WSL",
     "copyOnSelect": "Salin teks terminal otomatis saat dipilih",

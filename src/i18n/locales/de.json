@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "Installationshelfer",
+    "powerShell7": {
+      "installTitle": "PowerShell 7 installieren?",
+      "installPrompt": "PowerShell 7 (pwsh) ist nicht installiert. Jetzt installieren und öffnen oder stattdessen Windows PowerShell verwenden?",
+      "installing": "PowerShell 7 wird installiert…",
+      "installFailed": "Installation von PowerShell 7 fehlgeschlagen, Windows PowerShell wird stattdessen geöffnet. {{message}}"
+    },
     "subtitle": "KI-Tool-Stacks unter Windows installieren und verwalten",
     "railLabel": "Installationshelfer",
     "refresh": "Aktualisieren",
@@ -885,6 +891,7 @@
     "bar": "Balken",
     "underline": "Unterstrichen",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Eingabeaufforderung",
     "wsl": "WSL",
     "copyOnSelect": "Ausgewählten Text automatisch kopieren",

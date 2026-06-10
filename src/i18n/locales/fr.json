@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "Assistant d’installation",
+    "powerShell7": {
+      "installTitle": "Installer PowerShell 7 ?",
+      "installPrompt": "PowerShell 7 (pwsh) n'est pas installé. L'installer maintenant et l'ouvrir, ou utiliser Windows PowerShell à la place ?",
+      "installing": "Installation de PowerShell 7…",
+      "installFailed": "Échec de l'installation de PowerShell 7, ouverture de Windows PowerShell à la place. {{message}}"
+    },
     "subtitle": "Installer et gérer des piles d’outils IA sous Windows",
     "railLabel": "Assistant d’installation",
     "refresh": "Actualiser",
@@ -885,6 +891,7 @@
     "bar": "Barre",
     "underline": "Souligné",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Invite de commandes",
     "wsl": "WSL",
     "copyOnSelect": "Copier automatiquement le texte sélectionné",

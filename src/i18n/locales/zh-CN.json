@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "安装助手",
+    "powerShell7": {
+      "installTitle": "要安装 PowerShell 7 吗？",
+      "installPrompt": "尚未安装 PowerShell 7 (pwsh)。要立即安装并打开它，还是改用 Windows PowerShell？",
+      "installing": "正在安装 PowerShell 7…",
+      "installFailed": "PowerShell 7 安装失败，改为打开 Windows PowerShell。{{message}}"
+    },
     "subtitle": "在 Windows 上安装和管理 AI 工具栈",
     "railLabel": "安装助手",
     "refresh": "刷新",
@@ -885,6 +891,7 @@
     "bar": "条状",
     "underline": "下划线",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Command Prompt",
     "wsl": "WSL",
     "copyOnSelect": "选中时自动复制终端文字",

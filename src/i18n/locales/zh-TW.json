@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "安裝小幫手",
+    "powerShell7": {
+      "installTitle": "要安裝 PowerShell 7 嗎？",
+      "installPrompt": "尚未安裝 PowerShell 7 (pwsh)。要立即安裝並開啟它，還是改用 Windows PowerShell？",
+      "installing": "正在安裝 PowerShell 7…",
+      "installFailed": "PowerShell 7 安裝失敗，改為開啟 Windows PowerShell。{{message}}"
+    },
     "subtitle": "在 Windows 上安裝與管理 AI 工具堆疊",
     "railLabel": "安裝小幫手",
     "refresh": "重新整理",
@@ -885,6 +891,7 @@
     "bar": "長條",
     "underline": "底線",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Command Prompt",
     "wsl": "WSL",
     "copyOnSelect": "選取時自動複製終端機文字",

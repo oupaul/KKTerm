@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "Installer Helper",
+    "powerShell7": {
+      "installTitle": "Install PowerShell 7?",
+      "installPrompt": "PowerShell 7 (pwsh) is not installed. Install it now and open it, or use Windows PowerShell instead?",
+      "installing": "Installing PowerShell 7…",
+      "installFailed": "PowerShell 7 install failed, opening Windows PowerShell instead. {{message}}"
+    },
     "subtitle": "Install and manage AI tool stacks on Windows",
     "railLabel": "Installer Helper",
     "refresh": "Refresh",
@@ -885,6 +891,7 @@
     "bar": "Bar",
     "underline": "Underline",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Command Prompt",
     "wsl": "WSL",
     "copyOnSelect": "Copy on select",

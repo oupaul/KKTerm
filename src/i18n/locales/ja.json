@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "インストールヘルパー",
+    "powerShell7": {
+      "installTitle": "PowerShell 7 をインストールしますか？",
+      "installPrompt": "PowerShell 7 (pwsh) がインストールされていません。今すぐインストールして開きますか、それとも Windows PowerShell を使用しますか？",
+      "installing": "PowerShell 7 をインストールしています…",
+      "installFailed": "PowerShell 7 のインストールに失敗したため、Windows PowerShell を開きます。{{message}}"
+    },
     "subtitle": "Windows で AI ツール スタックをインストールして管理",
     "railLabel": "インストールヘルパー",
     "refresh": "更新",
@@ -885,6 +891,7 @@
     "bar": "バー",
     "underline": "下線",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "コマンドプロンプト",
     "wsl": "WSL",
     "copyOnSelect": "選択時にターミナルテキストを自動コピー",

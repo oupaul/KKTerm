@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "Asistente de instalación",
+    "powerShell7": {
+      "installTitle": "¿Instalar PowerShell 7?",
+      "installPrompt": "PowerShell 7 (pwsh) no está instalado. ¿Instalarlo ahora y abrirlo, o usar Windows PowerShell en su lugar?",
+      "installing": "Instalando PowerShell 7…",
+      "installFailed": "Error al instalar PowerShell 7; se abrirá Windows PowerShell en su lugar. {{message}}"
+    },
     "subtitle": "Instala y administra stacks de herramientas de IA en Windows",
     "railLabel": "Asistente de instalación",
     "refresh": "Actualizar",
@@ -885,6 +891,7 @@
     "bar": "Barra",
     "underline": "Subrayado",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Símbolo del sistema",
     "wsl": "WSL",
     "copyOnSelect": "Copiar texto seleccionado automáticamente",

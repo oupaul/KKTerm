@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "설치 도우미",
+    "powerShell7": {
+      "installTitle": "PowerShell 7을 설치하시겠습니까?",
+      "installPrompt": "PowerShell 7(pwsh)이 설치되어 있지 않습니다. 지금 설치하여 열까요, 아니면 Windows PowerShell을 사용할까요?",
+      "installing": "PowerShell 7 설치 중…",
+      "installFailed": "PowerShell 7 설치에 실패하여 Windows PowerShell을 엽니다. {{message}}"
+    },
     "subtitle": "Windows에서 AI 도구 스택 설치 및 관리",
     "railLabel": "설치 도우미",
     "refresh": "새로 고침",
@@ -885,6 +891,7 @@
     "bar": "막대",
     "underline": "밑줄",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "명령 프롬프트",
     "wsl": "WSL",
     "copyOnSelect": "선택 시 터미널 텍스트 자동 복사",

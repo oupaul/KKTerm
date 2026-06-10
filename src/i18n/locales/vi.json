@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "Trợ lý cài đặt",
+    "powerShell7": {
+      "installTitle": "Cài đặt PowerShell 7?",
+      "installPrompt": "PowerShell 7 (pwsh) chưa được cài đặt. Cài đặt ngay và mở, hoặc dùng Windows PowerShell thay thế?",
+      "installing": "Đang cài đặt PowerShell 7…",
+      "installFailed": "Cài đặt PowerShell 7 thất bại, mở Windows PowerShell thay thế. {{message}}"
+    },
     "subtitle": "Cài đặt và quản lý các bộ công cụ AI trên Windows",
     "railLabel": "Trợ lý cài đặt",
     "refresh": "Làm mới",
@@ -885,6 +891,7 @@
     "bar": "Bar",
     "underline": "Underline",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "Command Prompt",
     "wsl": "WSL",
     "copyOnSelect": "Copy selected terminal text automatically",

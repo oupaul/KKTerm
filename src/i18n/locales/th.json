@@ -488,6 +488,12 @@
   },
   "installer": {
     "title": "ตัวช่วยติดตั้ง",
+    "powerShell7": {
+      "installTitle": "ติดตั้ง PowerShell 7 หรือไม่?",
+      "installPrompt": "ยังไม่ได้ติดตั้ง PowerShell 7 (pwsh) ต้องการติดตั้งและเปิดใช้งานเลยหรือไม่ หรือจะใช้ Windows PowerShell แทน?",
+      "installing": "กำลังติดตั้ง PowerShell 7…",
+      "installFailed": "ติดตั้ง PowerShell 7 ไม่สำเร็จ จะเปิด Windows PowerShell แทน {{message}}"
+    },
     "subtitle": "ติดตั้งและจัดการชุดเครื่องมือ AI บน Windows",
     "railLabel": "ตัวช่วยติดตั้ง",
     "refresh": "รีเฟรช",
@@ -885,6 +891,7 @@
     "bar": "แถบ",
     "underline": "ขีดเส้นใต้",
     "powerShell": "PowerShell",
+    "powerShell7": "PowerShell 7 (pwsh)",
     "commandPrompt": "พร้อมท์คำสั่ง",
     "wsl": "WSL",
     "copyOnSelect": "คัดลอกข้อความเทอร์มินัลอัตโนมัติเมื่อเลือก",
