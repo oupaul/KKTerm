@@ -268,6 +268,29 @@ fn required_id(value: String) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
+/// Copy the `(x, y, w, h)` sub-rectangle out of a full-frame RGBA buffer
+/// (`stride = full_width * 4`) into a tightly packed RGBA buffer.
+fn extract_rgba_rect(
+    full_rgba: &[u8],
+    full_width: u16,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+) -> Vec<u8> {
+    let stride = full_width as usize * 4;
+    let mut out = Vec::with_capacity(w as usize * h as usize * 4);
+    for row in 0..h as usize {
+        let src_y = y as usize + row;
+        let start = src_y * stride + x as usize * 4;
+        let end = start + w as usize * 4;
+        if end <= full_rgba.len() {
+            out.extend_from_slice(&full_rgba[start..end]);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -287,5 +310,17 @@ mod tests {
         assert!(request.domain.is_none());
         assert_eq!(request.desktop_width(), DEFAULT_RDP_WIDTH);
         assert_eq!(request.desktop_height(), DEFAULT_RDP_HEIGHT);
+    }
+
+    #[test]
+    fn extracts_rgba_rect_from_framebuffer() {
+        // 2x2 RGBA image, extract the bottom-right 1x1 pixel.
+        let width = 2u16;
+        let full = vec![
+            0, 0, 0, 255,        1, 1, 1, 255,
+            2, 2, 2, 255,        3, 3, 3, 255,
+        ];
+        let rect = extract_rgba_rect(&full, width, 1, 1, 1, 1);
+        assert_eq!(rect, vec![3, 3, 3, 255]);
     }
 }
