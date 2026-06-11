@@ -3,7 +3,8 @@ param(
     [string]$InstallerPath,
     [string]$InstallDir,
     [switch]$SkipChecksum,
-    [switch]$KeepInstall
+    [switch]$KeepInstall,
+    [switch]$AllowExistingInstall
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,6 +34,10 @@ $InstalledExe = Join-Path $ResolvedInstallDir "kkterm.exe"
 $InstalledCliExe = Join-Path $ResolvedInstallDir "kkterm-cli.exe"
 $Uninstaller = Join-Path $ResolvedInstallDir "uninstall.exe"
 $SmokeRegistryKey = "Registry::HKEY_CURRENT_USER\Software\Ryan Tsai\KKTerm"
+# Apps & Features registration written by the installer. This key is keyed by
+# product name, not install directory, so it identifies a real install
+# regardless of where the smoke build would be unpacked.
+$ProductUninstallKey = "Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\KKTerm"
 
 function Assert-ChildPath {
     param(
@@ -72,6 +77,39 @@ function Remove-SmokeRegistryKey {
     }
 }
 
+function Get-ExistingRealInstall {
+    # Returns the install path of a real (non-smoke) per-user KKTerm install if one
+    # is registered, otherwise $null.
+    #
+    # The installer keys its product state at fixed registry paths, so running the
+    # smoke build's silent install would trip Tauri's "uninstall previous version"
+    # upgrade path against a real install -- removing its files, Start Menu folder,
+    # and registration -- no matter which temp /D= directory we target. Detect a
+    # real install up front so the caller can skip the destructive smoke instead.
+    $Candidates = @()
+
+    if (Test-Path $ProductUninstallKey) {
+        $Location = (Get-ItemProperty -LiteralPath $ProductUninstallKey -ErrorAction SilentlyContinue).InstallLocation
+        if ($Location) { $Candidates += ([string]$Location).Trim('"') }
+    }
+
+    if (Test-Path $SmokeRegistryKey) {
+        $Default = (Get-ItemProperty -LiteralPath $SmokeRegistryKey -ErrorAction SilentlyContinue).'(default)'
+        if ($Default) { $Candidates += ([string]$Default).Trim('"') }
+    }
+
+    foreach ($Path in $Candidates) {
+        if (-not $Path) { continue }
+        # Ignore stale registration left behind by a prior interrupted smoke run;
+        # only a real install (outside the temp smoke directory) should block.
+        $LeafName = [System.IO.Path]::GetFileName($Path.TrimEnd('\'))
+        if ($LeafName -like "kkterm-installer-smoke-*") { continue }
+        return $Path
+    }
+
+    return $null
+}
+
 if (-not (Test-Path $ResolvedInstallerPath)) {
     throw "Installer not found at $ResolvedInstallerPath. Run npm run package:installer first."
 }
@@ -88,6 +126,31 @@ if (-not $SkipChecksum) {
     $ActualHash = (-join ($HashBytes | ForEach-Object { $_.ToString("x2") })).ToLowerInvariant()
     if ($ActualHash -ne $ExpectedHash) {
         throw "Installer checksum mismatch. Expected $ExpectedHash but found $ActualHash."
+    }
+}
+
+# Guardrail for dev machines: the silent install/uninstall below is destructive to
+# any existing per-user KKTerm install (Tauri silently uninstalls the previous
+# version on upgrade, and the cleanup deletes the shared product registry key).
+# If a real install is present, skip the install/uninstall portion and return the
+# non-destructive checks only. The clean CI runner has no prior install, so it
+# still runs the full smoke; pass -AllowExistingInstall to force it locally.
+if (-not $AllowExistingInstall) {
+    $ExistingInstall = Get-ExistingRealInstall
+    if ($ExistingInstall) {
+        Write-Host "Existing KKTerm install detected at: $ExistingInstall" -ForegroundColor Yellow
+        Write-Host "Skipping the install/uninstall smoke so your local install is left intact." -ForegroundColor Yellow
+        Write-Host "The full install smoke runs on the clean CI runner. Re-run with -AllowExistingInstall to force it here." -ForegroundColor DarkGray
+
+        return [PSCustomObject]@{
+            Installer = $ResolvedInstallerPath.Path
+            ChecksumVerified = -not $SkipChecksum
+            InstallDirectory = $null
+            InstalledExecutable = $null
+            InstalledCliExecutable = $null
+            SilentInstall = $false
+            Cleanup = "skipped (existing install present)"
+        }
     }
 }
 

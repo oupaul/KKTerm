@@ -54,6 +54,46 @@ test("release script can also build and publish the ARM64 installer", () => {
   assert.match(script, /\$GhArgs \+= \$ReleaseAssets/);
 });
 
+test("release script validates source before mutating the version files", () => {
+  // Guardrail: lint/type/test must run before the version bump, so a test
+  // failure aborts on a pristine tree with nothing to roll back.
+  const checkIdx = script.indexOf('@("run", "check")');
+  const cargoTestIdx = script.indexOf(
+    '@("test", "--manifest-path", "src-tauri/Cargo.toml")',
+  );
+  const versionBumpIdx = script.indexOf('@("version", $NextVersion');
+
+  assert.ok(checkIdx !== -1, "npm run check step should exist");
+  assert.ok(cargoTestIdx !== -1, "cargo test step should exist");
+  assert.ok(versionBumpIdx !== -1, "npm version bump step should exist");
+  assert.ok(
+    checkIdx < versionBumpIdx && cargoTestIdx < versionBumpIdx,
+    "validation must run before the version bump",
+  );
+});
+
+test("release script rolls back local mutations when a release step fails", () => {
+  assert.match(script, /function Undo-ReleaseMutations \{/);
+  assert.match(script, /git reset --hard \$OriginalHead/);
+  assert.match(script, /\$OriginalHead = \(git rev-parse HEAD\)/);
+  // The mutate->publish region is wrapped so failures trigger the rollback.
+  assert.match(script, /Undo-ReleaseMutations\s+`?\s*-OriginalHead/);
+});
+
+test("release script pushes the commit and tag atomically", () => {
+  assert.match(
+    script,
+    /@\("push", "--atomic", \$Remote, "HEAD:\$Branch", \$TagName\)/,
+  );
+  // The two-step commit-then-tag push is gone.
+  assert.doesNotMatch(script, /"push", \$Remote, \$TagName\)/);
+});
+
+test("release script detects a stale half-applied release up front", () => {
+  assert.match(script, /\$TrackedVersionFiles = @\(/);
+  assert.match(script, /git checkout -- \$ResetTargets/);
+});
+
 test("release script imports local env files without overriding existing environment", () => {
   assert.match(script, /function Import-LocalEnvFiles \{/);
   assert.match(script, /@\(.*"\.env\.local".*"\.env".*\)/s);

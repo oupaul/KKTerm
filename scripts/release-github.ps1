@@ -169,6 +169,43 @@ function Set-TauriConfigVersion {
     Set-TextFileUtf8NoBom -Path $Path -Value ($Updated + [Environment]::NewLine)
 }
 
+function Undo-ReleaseMutations {
+    # Restores the working tree to its pre-release state after a failed run so a
+    # retry starts clean. The release goes through three stages of mutation;
+    # rollback is keyed on how far we got:
+    #   - files written, not committed  -> restore tracked files, delete notes
+    #   - committed + tagged locally     -> delete tag, hard reset to original HEAD
+    # Once the commit/tag are pushed we no longer roll back (the caller handles
+    # that case), because un-publishing a remote ref is not safe to do silently.
+    param(
+        [string]$OriginalHead,
+        [string]$TagName,
+        [bool]$Committed,
+        [string[]]$TrackedVersionFiles,
+        [string[]]$GeneratedFiles
+    )
+
+    Write-Warning "Release failed before publishing; rolling back local mutations so the tree is clean for a retry."
+
+    if ($Committed) {
+        git tag -d $TagName *> $null
+        git reset --hard $OriginalHead *> $null
+    }
+    else {
+        foreach ($File in $TrackedVersionFiles) {
+            git checkout -- $File *> $null
+        }
+    }
+
+    # Generated release notes are untracked until the release commit lands, so a
+    # hard reset does not remove the artifacts copy. Delete any that linger.
+    foreach ($File in $GeneratedFiles) {
+        if (Test-Path $File) {
+            Remove-Item -Force $File -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Push-Location $RepoRoot
 try {
     Import-LocalEnvFiles -RootPath $RepoRoot
@@ -207,6 +244,17 @@ try {
         $ReleaseAssets += @($Arm64InstallerExe, $Arm64InstallerSha)
     }
 
+    # Files the release run rewrites and commits. Used both to detect a stale
+    # half-applied release up front and to roll those exact files back on failure.
+    $TrackedVersionFiles = @(
+        "package.json",
+        "package-lock.json",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock"
+    )
+    $GeneratedReleaseNotes = @($VersionReleaseNotesPath, $ReleaseNotesPath)
+
     Write-Host "Current version: $CurrentVersion"
     Write-Host "Next version:    $NextVersion"
     Write-Host "Release tag:     $TagName"
@@ -218,6 +266,25 @@ try {
 
     $Status = git status --porcelain
     if ($Status -and -not $AllowDirty) {
+        # A prior release run that died after the version bump but before the
+        # commit leaves *only* the release-managed files dirty. Detect that exact
+        # signature and print the precise reset command, rather than the generic
+        # "working tree dirty" error, so a stale state is obvious and quick to fix.
+        $DirtyPaths = @($Status | ForEach-Object { ($_ -replace '^.{3}', '').Trim() })
+        $UnexpectedDirty = @($DirtyPaths | Where-Object { $TrackedVersionFiles -notcontains $_ })
+        if ($DirtyPaths.Count -gt 0 -and $UnexpectedDirty.Count -eq 0) {
+            $ResetTargets = $TrackedVersionFiles -join " "
+            throw @"
+The working tree contains only release version files. This usually means a prior
+release run failed after the version bump but before committing, leaving a
+half-applied release. Reset it and rerun:
+
+    git checkout -- $ResetTargets
+
+Also remove any uncommitted generated notes (docs/releases/*.md,
+artifacts/release-notes-*.md) that were not part of a finished release.
+"@
+        }
         throw "Working tree has uncommitted changes. Commit/stash them first, or rerun with -AllowDirty."
     }
 
@@ -242,172 +309,226 @@ try {
         Write-Host "Previous tag:    $PreviousTag"
     }
 
-    $ReleaseNotesArgs = @(
-        "scripts/generate-release-notes.mjs",
-        "--version",
-        $TagName,
-        "--target",
-        "HEAD",
-        "--output",
-        $ReleaseNotesPath,
-        "--release-file",
-        $VersionReleaseNotesPath,
-        "--changelog",
-        $ChangelogPath,
-        "--model",
-        "gpt-5.4-nano"
-    )
-    if ($PreviousTag) {
-        $ReleaseNotesArgs += @("--previous-tag", $PreviousTag)
-    }
-    if ($SkipAiReleaseNotes) {
-        $ReleaseNotesArgs += "--skip-ai"
-    }
-
-    Invoke-Checked -FilePath "node" -ArgumentList $ReleaseNotesArgs -Action "Generate release notes"
-
-    Invoke-Checked -FilePath "npm" -ArgumentList @("version", $NextVersion, "--no-git-tag-version", "--allow-same-version") -Action "Update npm package version"
-    Set-TauriConfigVersion -Path $TauriConfigPath -Version $NextVersion
-    Set-CargoPackageVersion -Path $CargoTomlPath -Version $NextVersion
-
-    if (-not $SkipBuild) {
-        Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer") -Action "Build installer package"
-        if ($IncludeArm64) {
-            # `--` forwards -InstallMissing to the ARM64 packaging script so the
-            # cross-build toolchain (aarch64 Rust target, ARM64 MSVC tools, CMake,
-            # NASM) is provisioned on the runner before building.
-            Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer:arm64", "--", "-InstallMissing") -Action "Build ARM64 installer package"
-        }
-    }
-
-    # TODO(updates): Restore latest.json generation when the Tauri updater is
-    # re-enabled.
-    # if (-not (Test-Path $InstallerSig)) {
-    #     throw "Updater signature not found: $InstallerSig"
-    # }
-    #
-    # $Signature = (Get-Content -Raw $InstallerSig).Trim()
-    # $DownloadUrl = "https://github.com/ryantsai/KKTerm/releases/download/$TagName/$([System.IO.Path]::GetFileName($InstallerExe))"
-    # $LatestMetadata = [ordered]@{
-    #     version = $NextVersion
-    #     notes = "KKTerm $TagName Windows release."
-    #     pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    #     platforms = [ordered]@{
-    #         "windows-x86_64" = [ordered]@{
-    #             signature = $Signature
-    #             url = $DownloadUrl
-    #         }
-    #     }
-    # }
-    # $LatestMetadata |
-    #     ConvertTo-Json -Depth 5 |
-    #     Set-Content -Path $LatestJson -Encoding UTF8
-
-    foreach ($Asset in $ReleaseAssets) {
-        if (-not (Test-Path $Asset)) {
-            throw "Release asset not found: $Asset"
-        }
-    }
-
-    if (-not $SkipSmoke) {
-        Invoke-Checked -FilePath "npm" -ArgumentList @("run", "smoke:installer") -Action "Smoke test installer"
-    }
-
-    Invoke-Checked -FilePath "npm" -ArgumentList @("run", "check") -Action "Frontend type check"
+    # Validate the source tree BEFORE mutating anything (release notes, version
+    # bump, build). These checks do not depend on the release version, so running
+    # them first means a lint/type/test failure aborts on a pristine tree with
+    # nothing to undo. This is the primary guardrail: tests can no longer fail
+    # *after* the version files have already been rewritten.
+    Invoke-Checked -FilePath "npm" -ArgumentList @("run", "check") -Action "Frontend lint, tests, and type check"
     Invoke-Checked -FilePath "cargo" -ArgumentList @("check", "--manifest-path", "src-tauri/Cargo.toml") -Action "Rust check"
     Invoke-Checked -FilePath "cargo" -ArgumentList @("test", "--manifest-path", "src-tauri/Cargo.toml") -Action "Rust tests"
 
-    $AddResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("add", "package.json", "package-lock.json", "src-tauri/tauri.conf.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "CHANGELOG.md", $VersionReleaseNotesPath)
-    if ($AddResult.ExitCode -ne 0) {
-        throw "Unable to stage version files:`n$($AddResult.Output -join "`n")"
+    # Everything past this point mutates the tree. Capture the starting commit so
+    # a failure can roll back to it, and track how far we got so the catch knows
+    # what to undo.
+    $OriginalHead = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to resolve current HEAD commit."
     }
+    $ReleaseCommitted = $false
+    $ReleasePushed = $false
 
-    $StagedDiff = git diff --cached --name-only
-    if (-not $StagedDiff) {
-        throw "No staged release changes to commit. Files may already be at $NextVersion from a prior run; reset the version files and generated release notes, then rerun."
-    }
-
-    $CommitResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("commit", "-m", "chore: release $TagName")
-    if ($CommitResult.ExitCode -ne 0) {
-        throw "Unable to commit release version bump (exit $($CommitResult.ExitCode)):`n$($CommitResult.Output -join "`n")"
-    }
-
-    $TagResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("tag", "-a", $TagName, "-m", "KKTerm $TagName")
-    if ($TagResult.ExitCode -ne 0) {
-        throw "Unable to create git tag $TagName (exit $($TagResult.ExitCode)):`n$($TagResult.Output -join "`n")"
-    }
-
-    Invoke-Checked -FilePath "git" -ArgumentList @("push", $Remote, "HEAD:$Branch") -Action "Push release commit"
-    Invoke-Checked -FilePath "git" -ArgumentList @("push", $Remote, $TagName) -Action "Push release tag"
-
-    # Optional VirusTotal pre-publish scan. Gated by VT_API_KEY presence so local
-    # release runs don't require an API key.
-    if ($env:VT_API_KEY) {
-        Write-Host "Submitting installer to VirusTotal..." -ForegroundColor Cyan
-        try {
-            $vtUrl = "https://www.virustotal.com/api/v3/files"
-            $form = @{ file = Get-Item -Path $InstallerExe }
-            $headers = @{ "x-apikey" = $env:VT_API_KEY }
-            $response = Invoke-RestMethod -Uri $vtUrl -Method Post -Headers $headers -Form $form
-            $analysisId = $response.data.id
-            Write-Host "VT analysis id: $analysisId"
-            # Poll the analysis (up to 3 minutes)
-            $analysisUrl = "https://www.virustotal.com/api/v3/analyses/$analysisId"
-            $maxWait = 180
-            $waited = 0
-            while ($waited -lt $maxWait) {
-                Start-Sleep -Seconds 10
-                $waited += 10
-                $r = Invoke-RestMethod -Uri $analysisUrl -Headers $headers
-                if ($r.data.attributes.status -eq "completed") {
-                    $stats = $r.data.attributes.stats
-                    Write-Host ("VT stats: malicious={0} suspicious={1} undetected={2}" -f $stats.malicious, $stats.suspicious, $stats.undetected)
-                    if ($stats.malicious -gt 2) {
-                        Write-Error "VirusTotal flagged $($stats.malicious) malicious engines. Release aborted."
-                        exit 1
-                    }
-                    break
-                }
-            }
-            if ($waited -ge $maxWait) {
-                Write-Warning "VirusTotal analysis did not complete in $maxWait seconds. Proceeding without gate."
-            }
-        } catch {
-            Write-Warning "VirusTotal submission failed: $_. Proceeding without gate."
+    try {
+        $ReleaseNotesArgs = @(
+            "scripts/generate-release-notes.mjs",
+            "--version",
+            $TagName,
+            "--target",
+            "HEAD",
+            "--output",
+            $ReleaseNotesPath,
+            "--release-file",
+            $VersionReleaseNotesPath,
+            "--changelog",
+            $ChangelogPath,
+            "--model",
+            "gpt-5.4-nano"
+        )
+        if ($PreviousTag) {
+            $ReleaseNotesArgs += @("--previous-tag", $PreviousTag)
         }
-    } else {
-        Write-Host "VT_API_KEY not set; skipping VirusTotal pre-publish scan." -ForegroundColor DarkGray
+        if ($SkipAiReleaseNotes) {
+            $ReleaseNotesArgs += "--skip-ai"
+        }
+
+        Invoke-Checked -FilePath "node" -ArgumentList $ReleaseNotesArgs -Action "Generate release notes"
+
+        Invoke-Checked -FilePath "npm" -ArgumentList @("version", $NextVersion, "--no-git-tag-version", "--allow-same-version") -Action "Update npm package version"
+        Set-TauriConfigVersion -Path $TauriConfigPath -Version $NextVersion
+        Set-CargoPackageVersion -Path $CargoTomlPath -Version $NextVersion
+
+        if (-not $SkipBuild) {
+            Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer") -Action "Build installer package"
+            if ($IncludeArm64) {
+                # `--` forwards -InstallMissing to the ARM64 packaging script so the
+                # cross-build toolchain (aarch64 Rust target, ARM64 MSVC tools, CMake,
+                # NASM) is provisioned on the runner before building.
+                Invoke-Checked -FilePath "npm" -ArgumentList @("run", "package:installer:arm64", "--", "-InstallMissing") -Action "Build ARM64 installer package"
+            }
+        }
+
+        # TODO(updates): Restore latest.json generation when the Tauri updater is
+        # re-enabled.
+        # if (-not (Test-Path $InstallerSig)) {
+        #     throw "Updater signature not found: $InstallerSig"
+        # }
+        #
+        # $Signature = (Get-Content -Raw $InstallerSig).Trim()
+        # $DownloadUrl = "https://github.com/ryantsai/KKTerm/releases/download/$TagName/$([System.IO.Path]::GetFileName($InstallerExe))"
+        # $LatestMetadata = [ordered]@{
+        #     version = $NextVersion
+        #     notes = "KKTerm $TagName Windows release."
+        #     pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        #     platforms = [ordered]@{
+        #         "windows-x86_64" = [ordered]@{
+        #             signature = $Signature
+        #             url = $DownloadUrl
+        #         }
+        #     }
+        # }
+        # $LatestMetadata |
+        #     ConvertTo-Json -Depth 5 |
+        #     Set-Content -Path $LatestJson -Encoding UTF8
+
+        foreach ($Asset in $ReleaseAssets) {
+            if (-not (Test-Path $Asset)) {
+                throw "Release asset not found: $Asset"
+            }
+        }
+
+        if (-not $SkipSmoke) {
+            Invoke-Checked -FilePath "npm" -ArgumentList @("run", "smoke:installer") -Action "Smoke test installer"
+        }
+
+        # Optional VirusTotal scan. Runs *before* the commit/tag are pushed so a
+        # malicious verdict aborts on a still-local release that the rollback trap
+        # can fully undo. Gated by VT_API_KEY so local runs don't require a key.
+        if ($env:VT_API_KEY) {
+            Write-Host "Submitting installer to VirusTotal..." -ForegroundColor Cyan
+            try {
+                $vtUrl = "https://www.virustotal.com/api/v3/files"
+                $form = @{ file = Get-Item -Path $InstallerExe }
+                $headers = @{ "x-apikey" = $env:VT_API_KEY }
+                $response = Invoke-RestMethod -Uri $vtUrl -Method Post -Headers $headers -Form $form
+                $analysisId = $response.data.id
+                Write-Host "VT analysis id: $analysisId"
+                # Poll the analysis (up to 3 minutes)
+                $analysisUrl = "https://www.virustotal.com/api/v3/analyses/$analysisId"
+                $maxWait = 180
+                $waited = 0
+                $vtMalicious = $null
+                while ($waited -lt $maxWait) {
+                    Start-Sleep -Seconds 10
+                    $waited += 10
+                    $r = Invoke-RestMethod -Uri $analysisUrl -Headers $headers
+                    if ($r.data.attributes.status -eq "completed") {
+                        $stats = $r.data.attributes.stats
+                        Write-Host ("VT stats: malicious={0} suspicious={1} undetected={2}" -f $stats.malicious, $stats.suspicious, $stats.undetected)
+                        $vtMalicious = [int]$stats.malicious
+                        break
+                    }
+                }
+                if ($waited -ge $maxWait) {
+                    Write-Warning "VirusTotal analysis did not complete in $maxWait seconds. Proceeding without gate."
+                }
+            } catch {
+                Write-Warning "VirusTotal submission failed: $_. Proceeding without gate."
+                $vtMalicious = $null
+            }
+
+            # Throw (not exit) on a malicious verdict so the rollback trap reverts
+            # the build/version mutations instead of leaving a half-applied release.
+            if ($null -ne $vtMalicious -and $vtMalicious -gt 2) {
+                throw "VirusTotal flagged $vtMalicious malicious engines. Release aborted before publishing."
+            }
+        } else {
+            Write-Host "VT_API_KEY not set; skipping VirusTotal pre-publish scan." -ForegroundColor DarkGray
+        }
+
+        $AddResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("add", "package.json", "package-lock.json", "src-tauri/tauri.conf.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "CHANGELOG.md", $VersionReleaseNotesPath)
+        if ($AddResult.ExitCode -ne 0) {
+            throw "Unable to stage version files:`n$($AddResult.Output -join "`n")"
+        }
+
+        $StagedDiff = git diff --cached --name-only
+        if (-not $StagedDiff) {
+            throw "No staged release changes to commit. Files may already be at $NextVersion from a prior run; reset the version files and generated release notes, then rerun."
+        }
+
+        $CommitResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("commit", "-m", "chore: release $TagName")
+        if ($CommitResult.ExitCode -ne 0) {
+            throw "Unable to commit release version bump (exit $($CommitResult.ExitCode)):`n$($CommitResult.Output -join "`n")"
+        }
+
+        $TagResult = Invoke-NativeCapture -FilePath "git" -ArgumentList @("tag", "-a", $TagName, "-m", "KKTerm $TagName")
+        if ($TagResult.ExitCode -ne 0) {
+            throw "Unable to create git tag $TagName (exit $($TagResult.ExitCode)):`n$($TagResult.Output -join "`n")"
+        }
+        $ReleaseCommitted = $true
+
+        # Push the commit and tag in a single atomic operation. If either ref is
+        # rejected, neither lands, so the remote never sees a tag without its
+        # commit (or vice versa).
+        Invoke-Checked -FilePath "git" -ArgumentList @("push", "--atomic", $Remote, "HEAD:$Branch", $TagName) -Action "Push release commit and tag"
+        $ReleasePushed = $true
+
+        $GhArgs = @(
+            "release",
+            "create",
+            $TagName
+        )
+        $GhArgs += $ReleaseAssets
+        $GhArgs += @(
+            "--title",
+            "KKTerm $TagName",
+            "--notes-file",
+            $ReleaseNotesPath
+        )
+
+        if ($Draft) {
+            $GhArgs += "--draft"
+        }
+        if ($Prerelease) {
+            $GhArgs += "--prerelease"
+        }
+
+        Invoke-Checked -FilePath "gh" -ArgumentList $GhArgs -Action "Create GitHub release"
+
+        [PSCustomObject]@{
+            Version = $NextVersion
+            Tag = $TagName
+            Draft = [bool]$Draft
+            Prerelease = [bool]$Prerelease
+            Assets = $ReleaseAssets
+            ReleaseNotes = $ReleaseNotesPath
+        }
     }
+    catch {
+        if ($ReleasePushed) {
+            # The commit and tag are already on the remote; the GitHub release
+            # upload (the only remaining step) failed. We do not auto-undo a
+            # published ref. Tell the operator exactly how to finish or abandon
+            # the release.
+            Write-Error @"
+The release commit and tag for $TagName were pushed to $Remote, but a later step failed:
+$($_.Exception.Message)
 
-    $GhArgs = @(
-        "release",
-        "create",
-        $TagName
-    )
-    $GhArgs += $ReleaseAssets
-    $GhArgs += @(
-        "--title",
-        "KKTerm $TagName",
-        "--notes-file",
-        $ReleaseNotesPath
-    )
+The local repository is intact. To finish the release, retry the GitHub release upload:
+    gh release create $TagName <assets> --title "KKTerm $TagName" --notes-file "$ReleaseNotesPath"
 
-    if ($Draft) {
-        $GhArgs += "--draft"
-    }
-    if ($Prerelease) {
-        $GhArgs += "--prerelease"
-    }
-
-    Invoke-Checked -FilePath "gh" -ArgumentList $GhArgs -Action "Create GitHub release"
-
-    [PSCustomObject]@{
-        Version = $NextVersion
-        Tag = $TagName
-        Draft = [bool]$Draft
-        Prerelease = [bool]$Prerelease
-        Assets = $ReleaseAssets
-        ReleaseNotes = $ReleaseNotesPath
+To abandon this release instead, delete the pushed tag:
+    git push $Remote :refs/tags/$TagName
+"@
+        }
+        else {
+            Undo-ReleaseMutations `
+                -OriginalHead $OriginalHead `
+                -TagName $TagName `
+                -Committed $ReleaseCommitted `
+                -TrackedVersionFiles $TrackedVersionFiles `
+                -GeneratedFiles $GeneratedReleaseNotes
+        }
+        throw
     }
 }
 finally {
