@@ -24,6 +24,7 @@ export function ScreenshotMenu({
   targetRef,
   targetLabel: _targetLabel,
   onPreCapture,
+  onCaptureToClipboard,
 }: {
   buttonLabel?: string;
   buttonClassName?: string;
@@ -31,6 +32,7 @@ export function ScreenshotMenu({
   targetRef: RefObject<HTMLElement | null>;
   targetLabel?: string;
   onPreCapture?: () => void;
+  onCaptureToClipboard?: (rect: ScreenshotRect) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
@@ -63,7 +65,11 @@ export function ScreenshotMenu({
 
     try {
       await waitForScreenshotSurface();
-      await invokeCommand("capture_screenshot_to_clipboard", { request: rect });
+      if (onCaptureToClipboard) {
+        await onCaptureToClipboard(rect);
+      } else {
+        await invokeCommand("capture_screenshot_to_clipboard", { request: rect });
+      }
       setCopiedStatus(t("workspace.copied"));
       showStatusBarNotice(t("workspace.copied"), { tone: "success" });
       window.setTimeout(() => setCopiedStatus(""), 1600);

@@ -40,6 +40,7 @@ Transport labels for status messages: `remoteDesktop.rdpActiveX`, `remoteDesktop
 
 - `remoteDesktop.sendCtrlAltDel` — keyboard icon in the toolbar.
   - **RDP**: clicking opens a native context menu with the hint `remoteDesktop.sendCtrlAltDelHint` ("Press CTRL+ALT+END to Send CTRL+ALT+DEL"). The embedded Microsoft RDP ActiveX control cannot reliably synthesize the Secure Attention Sequence from outside its own keyboard hook, so the local Ctrl+Alt+End hotkey (set via `HotKeyCtrlAltDel = VK_END`) is the supported path.
+  - **macOS RDP**: clicking sends Ctrl+Alt+Delete directly through the IronRDP canvas session.
   - **VNC**: the same button still calls `send_vnc_ctrl_alt_delete` directly.
 - `remoteDesktop.reconnect` — explicit reconnect button.
 - `workspace.sendEntirePanelToAi` — captures the visible remote desktop Pane for AI Assistant. By default `settings.submitAiAttachmentsDirectly` submits the screenshot with `ai.directAttachmentPrompt`; when disabled, the button only attaches the screenshot to the composer.

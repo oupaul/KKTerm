@@ -25,6 +25,8 @@ mod net;
 mod performance;
 mod power;
 mod rdp;
+#[cfg(not(target_os = "windows"))]
+mod rdp_client;
 mod screenshot;
 mod secrets;
 mod serial;
@@ -2457,6 +2459,85 @@ fn send_vnc_ctrl_alt_delete(
     vnc_sessions.send_ctrl_alt_delete(request)
 }
 
+// ── macOS IronRDP client commands (Windows uses the native ActiveX path) ──────
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+async fn start_rdp_client_session(
+    app: tauri::AppHandle,
+    mut request: rdp_client::StartRdpClientSessionRequest,
+) -> Result<rdp_client::RdpClientSessionStarted, String> {
+    run_blocking_command("RDP startup", move || {
+        let rdp_sessions = app.state::<rdp_client::RdpClientSessionManager>();
+        let secrets = app.state::<secrets::Secrets>();
+        if request.password().is_none() {
+            if let Some(owner_id) = request.secret_owner_id().map(str::to_string) {
+                request.set_password(
+                    secrets
+                        .read_connection_password(owner_id)
+                        .map_err(|error| format!("failed to read RDP password: {error}"))?,
+                );
+            }
+        }
+        rdp_sessions.start_session(app.clone(), request)
+    })
+    .await
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn send_rdp_client_pointer_event(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientPointerEventRequest,
+) -> Result<(), String> {
+    rdp_sessions.pointer_event(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn send_rdp_client_key_event(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientKeyEventRequest,
+) -> Result<(), String> {
+    rdp_sessions.key_event(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn send_rdp_client_text(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientTextRequest,
+) -> Result<(), String> {
+    rdp_sessions.text_input(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn send_rdp_client_ctrl_alt_delete(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientSimpleRequest,
+) -> Result<(), String> {
+    rdp_sessions.send_ctrl_alt_delete(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn close_rdp_client_session(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientSimpleRequest,
+) -> Result<(), String> {
+    rdp_sessions.close_session(request)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn get_rdp_client_session_status(
+    rdp_sessions: tauri::State<'_, rdp_client::RdpClientSessionManager>,
+    request: rdp_client::RdpClientSimpleRequest,
+) -> Result<rdp_client::RdpClientSessionStatus, String> {
+    rdp_sessions.session_status(request)
+}
+
 #[cfg(target_os = "windows")]
 fn configure_single_instance<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -2677,6 +2758,8 @@ pub fn run() {
             app.manage(webview_sessions);
             app.manage(rdp::RdpSessionManager::new());
             app.manage(vnc::VncSessionManager::new());
+            #[cfg(not(target_os = "windows"))]
+            app.manage(rdp_client::RdpClientSessionManager::new());
             app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
@@ -2982,6 +3065,20 @@ pub fn run() {
             close_vnc_session,
             get_vnc_session_status,
             send_vnc_ctrl_alt_delete,
+            #[cfg(not(target_os = "windows"))]
+            start_rdp_client_session,
+            #[cfg(not(target_os = "windows"))]
+            send_rdp_client_pointer_event,
+            #[cfg(not(target_os = "windows"))]
+            send_rdp_client_key_event,
+            #[cfg(not(target_os = "windows"))]
+            send_rdp_client_text,
+            #[cfg(not(target_os = "windows"))]
+            send_rdp_client_ctrl_alt_delete,
+            #[cfg(not(target_os = "windows"))]
+            close_rdp_client_session,
+            #[cfg(not(target_os = "windows"))]
+            get_rdp_client_session_status,
             // ── Dashboard
             dashboard_commands::dashboard_load_state,
             dashboard_commands::dashboard_create_view,

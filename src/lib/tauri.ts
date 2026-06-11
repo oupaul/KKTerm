@@ -713,6 +713,51 @@ export interface VncSimpleRequest {
   sessionId: string;
 }
 
+export interface StartRdpClientSessionRequest {
+  sessionId: string;
+  host: string;
+  port?: number;
+  username: string;
+  domain?: string;
+  secretOwnerId?: string;
+  password?: string;
+  desktopWidth?: number;
+  desktopHeight?: number;
+}
+
+export interface RdpClientSessionStarted {
+  sessionId: string;
+  host: string;
+  port: number;
+}
+
+export interface RdpClientSessionStatus {
+  sessionId: string;
+  connected: boolean;
+}
+
+export interface RdpClientPointerEventRequest {
+  sessionId: string;
+  x: number;
+  y: number;
+  buttonMask: number;
+}
+
+export interface RdpClientKeyEventRequest {
+  sessionId: string;
+  scancode: number;
+  down: boolean;
+}
+
+export interface RdpClientTextRequest {
+  sessionId: string;
+  text: string;
+}
+
+export interface RdpClientSimpleRequest {
+  sessionId: string;
+}
+
 export interface GitHubCopilotDeviceFlow {
   deviceCode: string;
   userCode: string;
@@ -1821,6 +1866,34 @@ type CommandMap = {
   send_vnc_ctrl_alt_delete: {
     args: { request: VncSimpleRequest };
     result: null;
+  };
+  start_rdp_client_session: {
+    args: { request: StartRdpClientSessionRequest };
+    result: RdpClientSessionStarted;
+  };
+  send_rdp_client_pointer_event: {
+    args: { request: RdpClientPointerEventRequest };
+    result: null;
+  };
+  send_rdp_client_key_event: {
+    args: { request: RdpClientKeyEventRequest };
+    result: null;
+  };
+  send_rdp_client_text: {
+    args: { request: RdpClientTextRequest };
+    result: null;
+  };
+  send_rdp_client_ctrl_alt_delete: {
+    args: { request: RdpClientSimpleRequest };
+    result: null;
+  };
+  close_rdp_client_session: {
+    args: { request: RdpClientSimpleRequest };
+    result: null;
+  };
+  get_rdp_client_session_status: {
+    args: { request: RdpClientSimpleRequest };
+    result: RdpClientSessionStatus;
   };
   dashboard_load_state: {
     args: undefined;

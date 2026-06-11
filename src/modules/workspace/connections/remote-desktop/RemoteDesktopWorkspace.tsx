@@ -31,6 +31,8 @@ import {
   unregisterRemoteDesktopController,
   type RemoteDesktopController,
 } from "../../paneRegistry";
+import { usesCanvasRdp } from "../../../../lib/platform";
+import { RdpCanvasView } from "./RdpCanvasView";
 
 type VncSessionEvent =
   | { kind: "connected"; sessionId: string; name: string }
@@ -140,10 +142,22 @@ export function RemoteDesktopWorkspace({
   const [rdpSnapshot, setRdpSnapshot] = useState<AssistantScreenshot | null>(null);
   const [rdpStatus, setRdpStatus] = useState("");
   const [rdpStartKey, setRdpStartKey] = useState(0);
+  const [rdpCanvasCadSignal, setRdpCanvasCadSignal] = useState(0);
+  const [optimisticViewMode, setOptimisticViewMode] = useState<RemoteDesktopViewMode | null>(null);
   const [vncHasDisplay, setVncHasDisplay] = useState(false);
-  const canStartRdp = connection?.type === "rdp";
+  // macOS renders RDP through the in-app IronRDP canvas (RdpCanvasView), not the
+  // Windows native ActiveX overlay. Keep the overlay path Windows-only so its
+  // effects never run on macOS.
+  const useRdpCanvas = connection?.type === "rdp" && usesCanvasRdp();
+  const canStartRdp = connection?.type === "rdp" && !useRdpCanvas;
   const canStartVnc = connection?.type === "vnc";
-  const viewMode = resolveRemoteDesktopViewMode(connection, rdpSettings, vncSettings);
+  const resolvedViewMode = resolveRemoteDesktopViewMode(connection, rdpSettings, vncSettings);
+  const viewMode = optimisticViewMode ?? resolvedViewMode;
+  const showRemoteDesktopToolbar = canStartRdp || canStartVnc || useRdpCanvas;
+
+  useEffect(() => {
+    setOptimisticViewMode(null);
+  }, [connection?.id, connection?.rdpOptions, connection?.vncOptions, rdpSettings, vncSettings]);
 
   const reportRemoteDesktopError = (message: string) => {
     setRdpError(message);
@@ -267,14 +281,19 @@ export function RemoteDesktopWorkspace({
     }
 
     try {
-      const screenshot = await invokeCommand("capture_screenshot_for_assistant", {
-        request: {
-          x: Math.max(0, Math.round(bounds.left)),
-          y: Math.max(0, Math.round(bounds.top)),
-          width: Math.max(1, Math.round(bounds.width)),
-          height: Math.max(1, Math.round(bounds.height)),
-        },
-      });
+      const request = {
+        x: Math.max(0, Math.round(bounds.left)),
+        y: Math.max(0, Math.round(bounds.top)),
+        width: Math.max(1, Math.round(bounds.width)),
+        height: Math.max(1, Math.round(bounds.height)),
+      };
+      const screenshot = useRdpCanvas || canStartVnc
+        ? await captureCanvasScreenshotForAssistant(
+            canvasRef.current,
+            request,
+            useRdpCanvas ? "stretch" : viewMode,
+          )
+        : await invokeCommand("capture_screenshot_for_assistant", { request });
       const snippet = {
         id: `remote-desktop-screenshot-${Date.now()}`,
         kind: "screenshot",
@@ -313,14 +332,38 @@ export function RemoteDesktopWorkspace({
     if (bounds.width <= 0 || bounds.height <= 0) {
       throw new Error("Remote desktop host is not visible.");
     }
-    return invokeCommand("capture_screenshot_for_assistant", {
-      request: {
-        x: Math.max(0, Math.round(bounds.left)),
-        y: Math.max(0, Math.round(bounds.top)),
-        width: Math.max(1, Math.round(bounds.width)),
-        height: Math.max(1, Math.round(bounds.height)),
-      },
-    });
+    const request = {
+      x: Math.max(0, Math.round(bounds.left)),
+      y: Math.max(0, Math.round(bounds.top)),
+      width: Math.max(1, Math.round(bounds.width)),
+      height: Math.max(1, Math.round(bounds.height)),
+    };
+    if (useRdpCanvas || canStartVnc) {
+      return captureCanvasScreenshotForAssistant(
+        canvasRef.current,
+        request,
+        useRdpCanvas ? "stretch" : viewMode,
+      );
+    }
+    return invokeCommand("capture_screenshot_for_assistant", { request });
+  };
+
+  const captureRemoteDesktopCanvasToClipboard = async (request: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => {
+    if (!(useRdpCanvas || canStartVnc)) {
+      await invokeCommand("capture_screenshot_to_clipboard", { request });
+      return;
+    }
+    const screenshot = await captureCanvasScreenshotForAssistant(
+      canvasRef.current,
+      request,
+      useRdpCanvas ? "stretch" : viewMode,
+    );
+    await copyCanvasDataUrlToClipboard(screenshot.dataUrl);
   };
 
   const sendVncText = async (text: string, pressEnter: boolean) => {
@@ -668,7 +711,11 @@ export function RemoteDesktopWorkspace({
   };
 
   const handleReconnect = () => {
-    if ((!canStartRdp && !canStartVnc) || !connection || !isTauriRuntime()) {
+    if ((!canStartRdp && !canStartVnc && !useRdpCanvas) || !connection || !isTauriRuntime()) {
+      return;
+    }
+    if (useRdpCanvas) {
+      setRdpStartKey((key) => key + 1);
       return;
     }
     const sessionId = sessionIdRef.current;
@@ -695,6 +742,10 @@ export function RemoteDesktopWorkspace({
   };
 
   const handleSendCtrlAltDelete = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (useRdpCanvas) {
+      setRdpCanvasCadSignal((value) => value + 1);
+      return;
+    }
     if (canStartRdp) {
       const rect = event.currentTarget.getBoundingClientRect();
       void showNativeContextMenu(
@@ -720,7 +771,7 @@ export function RemoteDesktopWorkspace({
   };
 
   const handleViewModeMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (!connection || (!canStartRdp && !canStartVnc)) {
+    if (!connection || !showRemoteDesktopToolbar) {
       return;
     }
     const rect = event.currentTarget.getBoundingClientRect();
@@ -740,6 +791,7 @@ export function RemoteDesktopWorkspace({
     if (!connection || nextViewMode === viewMode) {
       return;
     }
+    setOptimisticViewMode(nextViewMode);
     const updated = connection.type === "rdp"
       ? {
           ...connection,
@@ -769,6 +821,7 @@ export function RemoteDesktopWorkspace({
         });
         refreshOpenConnectionMetadata(saved);
       } catch (error) {
+        setOptimisticViewMode(null);
         refreshOpenConnectionMetadata(connection);
         showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
         return;
@@ -777,7 +830,7 @@ export function RemoteDesktopWorkspace({
     showStatusBarNotice(t("remoteDesktop.viewModeSaved", { mode: viewModeLabel(t, nextViewMode) }), {
       tone: "success",
     });
-    if (connection.type === "rdp") {
+    if (connection.type === "rdp" && !useRdpCanvas) {
       handleReconnect();
     }
   };
@@ -1406,7 +1459,7 @@ export function RemoteDesktopWorkspace({
           <div className="terminal-pane-actions" data-tutorial-id="remoteDesktop.toolbar">
             {tab.subtitle ? <small>{tab.subtitle}</small> : null}
           {rdpStatus ? <span className="webview-toolbar-status">{rdpStatus}</span> : null}
-          {canStartRdp || canStartVnc ? (
+          {showRemoteDesktopToolbar ? (
             <button
               aria-label={t("remoteDesktop.viewModeButton", { mode: viewModeLabel(t, viewMode) })}
               className="terminal-pane-action"
@@ -1419,12 +1472,12 @@ export function RemoteDesktopWorkspace({
               <Scaling size={13} />
             </button>
           ) : null}
-          {canStartRdp || canStartVnc ? (
+          {showRemoteDesktopToolbar ? (
             <button
               aria-label={`${t("remoteDesktop.sendCtrlAltDel")} ${typeLabel} ${t("remoteDesktop.session")}`}
               className="terminal-pane-action"
               data-tutorial-id="remoteDesktop.sendCtrlAltDel"
-              disabled={!isTauriRuntime() || (!canStartRdp && !sessionStartedRef.current)}
+              disabled={!isTauriRuntime() || (!canStartRdp && !useRdpCanvas && !sessionStartedRef.current)}
               onClick={handleSendCtrlAltDelete}
               title={canStartRdp ? t("remoteDesktop.sendCtrlAltDelHint") : t("remoteDesktop.sendCtrlAltDel")}
               type="button"
@@ -1432,7 +1485,7 @@ export function RemoteDesktopWorkspace({
               <Keyboard size={13} />
             </button>
           ) : null}
-          {canStartRdp || canStartVnc ? (
+          {showRemoteDesktopToolbar ? (
             <button
               aria-label={`${t("remoteDesktop.reconnect")} ${typeLabel} ${t("remoteDesktop.session")}`}
               className="terminal-pane-action"
@@ -1448,9 +1501,10 @@ export function RemoteDesktopWorkspace({
           <ScreenshotMenu
             buttonClassName="terminal-pane-action"
             dataTutorialId="workspace.screenshotMenu"
+            onCaptureToClipboard={captureRemoteDesktopCanvasToClipboard}
             targetRef={connection?.type === "rdp" || connection?.type === "vnc" ? hostRef : workspaceRef}
           />
-          {canStartRdp || canStartVnc ? (
+          {showRemoteDesktopToolbar ? (
             <button
               aria-label={t("workspace.sendEntirePanelToAi")}
               className="terminal-pane-action"
@@ -1480,6 +1534,14 @@ export function RemoteDesktopWorkspace({
             width={rdpSnapshot.width}
           />
         ) : null}
+        {useRdpCanvas && connection ? (
+          <RdpCanvasView
+            cadSignal={rdpCanvasCadSignal}
+            connection={connection}
+            key={rdpStartKey}
+            surfaceRef={canvasRef}
+          />
+        ) : null}
         {connection?.type === "vnc" ? (
           <canvas
             aria-label={`${tab.title} ${t("remoteDesktop.displayAria")}`}
@@ -1495,7 +1557,7 @@ export function RemoteDesktopWorkspace({
             tabIndex={0}
           />
         ) : null}
-        <div className="remote-desktop-placeholder" hidden={vncHasDisplay || Boolean(rdpSnapshot)}>
+        <div className="remote-desktop-placeholder" hidden={vncHasDisplay || Boolean(rdpSnapshot) || useRdpCanvas}>
           <Icon size={34} />
           <h2>{connection?.name ?? typeLabel}</h2>
           <p>{connection ? `${typeLabel} ${connectionSubtitle(connection)}` : typeLabel}</p>
@@ -1554,6 +1616,85 @@ function vncRenderedContentRect(
     width: contentWidth,
     height: rect.height,
   };
+}
+
+async function captureCanvasScreenshotForAssistant(
+  canvas: HTMLCanvasElement | null,
+  request: { x: number; y: number; width: number; height: number },
+  viewMode: RemoteDesktopViewMode,
+): Promise<AssistantScreenshot> {
+  if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
+    throw new Error("Remote desktop canvas is not ready.");
+  }
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) {
+    throw new Error("Remote desktop canvas is not visible.");
+  }
+  const contentRect = vncRenderedContentRect(rect, canvas.width, canvas.height, viewMode);
+  const requestedRect = {
+    left: request.x,
+    top: request.y,
+    right: request.x + request.width,
+    bottom: request.y + request.height,
+  };
+  const cropCss = {
+    left: Math.max(contentRect.left, requestedRect.left),
+    top: Math.max(contentRect.top, requestedRect.top),
+    right: Math.min(contentRect.left + contentRect.width, requestedRect.right),
+    bottom: Math.min(contentRect.top + contentRect.height, requestedRect.bottom),
+  };
+  if (cropCss.right <= cropCss.left || cropCss.bottom <= cropCss.top) {
+    throw new Error("Screenshot region is outside the remote desktop canvas.");
+  }
+
+  const scaleX = canvas.width / Math.max(1, contentRect.width);
+  const scaleY = canvas.height / Math.max(1, contentRect.height);
+  const sourceX = Math.max(0, Math.round((cropCss.left - contentRect.left) * scaleX));
+  const sourceY = Math.max(0, Math.round((cropCss.top - contentRect.top) * scaleY));
+  const sourceWidth = Math.min(
+    canvas.width - sourceX,
+    Math.max(1, Math.round((cropCss.right - cropCss.left) * scaleX)),
+  );
+  const sourceHeight = Math.min(
+    canvas.height - sourceY,
+    Math.max(1, Math.round((cropCss.bottom - cropCss.top) * scaleY)),
+  );
+
+  const output = document.createElement("canvas");
+  output.width = sourceWidth;
+  output.height = sourceHeight;
+  const context = output.getContext("2d");
+  if (!context) {
+    throw new Error("Could not prepare remote desktop screenshot.");
+  }
+  context.drawImage(
+    canvas,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    sourceWidth,
+    sourceHeight,
+  );
+  return {
+    dataUrl: output.toDataURL("image/png"),
+    width: sourceWidth,
+    height: sourceHeight,
+  };
+}
+
+async function copyCanvasDataUrlToClipboard(dataUrl: string) {
+  if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
+    throw new Error("Image clipboard is not available in this runtime.");
+  }
+  const blob = await fetch(dataUrl).then((response) => response.blob());
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      [blob.type || "image/png"]: blob,
+    }),
+  ]);
 }
 
 function decodeBase64Bytes(value: string) {
