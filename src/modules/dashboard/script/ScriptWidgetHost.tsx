@@ -970,6 +970,11 @@ export function ScriptWidgetHost({
       ref={iframeRef}
       key={reloadKey}
       className="dw-script-frame"
+      // Must match the srcdoc's `:root { color-scheme }`. When an embedded
+      // document's color scheme differs from the iframe element's, browsers
+      // disallow transparency and paint an opaque canvas behind the widget
+      // (black for dark themes) — the "fat black border" around AI widgets.
+      style={{ colorScheme: scriptTheme.colorScheme }}
       title={t("dashboard.scriptWidgetFrameTitle")}
       loading="lazy"
       onLoad={syncVisibility}
