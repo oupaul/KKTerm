@@ -129,6 +129,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Windows NSIS installer (current-user mode, creates Start Menu entries, bootstraps WebView2).
 - [x] Installer smoke test (checksum verify, silent install/uninstall into temp directory).
 - [x] GitHub Release script: version bump across npm/Tauri/Cargo, build, smoke test, commit, tag, push, and create release.
+- [x] macOS DMG release helper: build on macOS, upload DMG/checksum to an existing GitHub Release, and patch release notes.
 - [x] No-telemetry posture: no analytics, no crash upload, diagnostics are local files.
 
 ## Planned
@@ -159,7 +160,6 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### Cross-Platform & Distribution
 
-- [ ] macOS packaging (.dmg).
 - [ ] Linux packaging (AppImage/deb/rpm).
 - [ ] Windows Authenticode signing for installer.
 - [ ] Tauri updater artifact signing and `latest.json` generation.

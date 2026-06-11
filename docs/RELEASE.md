@@ -97,9 +97,28 @@ npm run release:github
 
 GitHub Actions uses the same scripts through the manual **Release** workflow. The workflow invokes `scripts/release-github-both-arch.ps1` so a CI/CD release always builds and publishes the x64 **and** ARM64 installers together, matching the local `npm run release:github:both-arch` path (and the `Direct Downloads` section, which links both architecture assets). Store the API key as the repository secret `OPENAI_API_KEY`; the workflow exposes it to the script as the same environment variable. Use the workflow inputs to mark a release as draft/prerelease, skip the installer build or smoke test, disable AI notes, or run a dry preview.
 
+## macOS GitHub Release Assets
+
+macOS builds are attached after the Windows release because they must run on a Mac with Apple signing credentials. The Windows release script remains the canonical version/tag creator. Do not bump versions on the Mac side.
+
+After the Windows release exists, run this on macOS:
+
+```bash
+npm run release:github:macos
+```
+
+The script builds the arm64 DMG with `npm run package:macos`, copies it to:
+
+- `artifacts/kkterm-<version>-macos-arm64.dmg`
+- `artifacts/kkterm-<version>-macos-arm64.dmg.sha256`
+
+It detects the version from the DMG filename and uses the matching `v<version>` GitHub Release when `--tag` is not supplied. It then uploads both files with `gh release upload --clobber` and patches the release notes `Direct Downloads` section with macOS links. Use `--tag v<version>` to force a specific release, `--skip-build` to upload the latest already-built Tauri DMG, `--skip-notes-patch` to leave the release body unchanged, and `--dry-run` to print the resolved version, tag, repository, and artifact names without building or uploading.
+
+The macOS build still requires Apple Developer ID signing and notarization environment variables expected by Tauri, such as `APPLE_SIGNING_IDENTITY` plus either App Store Connect API key variables or Apple ID notarization variables. Keep those values in the local shell environment or an uncommitted `.env.local`; never commit Apple certificates, private keys, app-specific passwords, or notarization secrets.
+
 ## Known Limitations
 
-- Windows is the primary supported platform. macOS and Linux packaging are planned.
+- Windows is the primary supported platform. macOS DMG publishing is available as a follow-up asset upload to an existing GitHub Release; Linux packaging is planned.
 - The Windows installer build and smoke test are repeatable, but the installer is unsigned until release signing is configured.
 - SSH readiness performance is instrumented for native post-auth terminal setup and retained in local performance snapshots after a native SSH Session starts. The repeatable `npm run measure:ssh-readiness` helper can validate the `<= 150 ms` budget against a trusted non-`ProxyJump` SSH Connection, but the latest documented run still lacks a measured value because valid SSH auth was not available in the measurement environment.
 - Native SSH-launched SFTP does not support `ProxyJump`; SSH terminal sessions with `ProxyJump` use the system `ssh` fallback/debug path where available.
