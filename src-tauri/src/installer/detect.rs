@@ -27,6 +27,8 @@ pub struct DetectedState {
     /// installed-tool info dialog. Populated for install types KKTerm owns
     /// under %LOCALAPPDATA%, such as github-release tools and managed apps.
     pub install_location: Option<String>,
+    #[serde(default)]
+    pub install_scope: Option<InstallScope>,
     /// Extra runtime version for manager-backed bundles. For Node/Python
     /// bundles, `installed_version` remains the manager version used for
     /// update comparisons, while this carries the managed runtime version.
@@ -44,6 +46,7 @@ impl DetectedState {
             installed_version: None,
             partial_count: None,
             install_location: None,
+            install_scope: None,
             runtime_version: None,
             last_checked_at: None,
         }
@@ -54,6 +57,7 @@ impl DetectedState {
             installed_version: version,
             partial_count: None,
             install_location: None,
+            install_scope: None,
             runtime_version: None,
             last_checked_at: None,
         }
@@ -62,10 +66,21 @@ impl DetectedState {
         self.install_location = location;
         self
     }
+    pub fn with_install_scope(mut self, scope: Option<InstallScope>) -> Self {
+        self.install_scope = scope;
+        self
+    }
     pub fn with_last_checked_at(mut self, checked_at: Option<i64>) -> Self {
         self.last_checked_at = checked_at;
         self
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum InstallScope {
+    User,
+    Machine,
 }
 
 /// Detect every recipe in the catalog. The frontend only runs this on first
@@ -258,6 +273,7 @@ fn default_bundle_detected_state(child_states: &[&DetectedState], total: u32) ->
             installed_version: None,
             partial_count: Some((installed_count, total)),
             install_location: None,
+            install_scope: None,
             runtime_version: None,
             last_checked_at: None,
         }
@@ -286,6 +302,7 @@ fn runtime_bundle_detected_state(
             installed_version: None,
             partial_count: Some((child_states.len() as u32, child_states.len() as u32 + 1)),
             install_location: None,
+            install_scope: None,
             runtime_version: None,
             last_checked_at: None,
         },
@@ -492,7 +509,8 @@ fn detect_installed_software_match(
             continue;
         }
         let state = DetectedState::installed(entry.display_version.clone())
-            .with_install_location(entry.install_location.clone());
+            .with_install_location(entry.install_location.clone())
+            .with_install_scope(installed_entry_scope(entry));
         if installed_entry_is_user_scope(entry) {
             return state;
         }
@@ -538,6 +556,17 @@ fn display_name_matches_alias(display_name: &str, alias: &str) -> bool {
 
 fn installed_entry_is_user_scope(entry: &InstalledSoftwareEntry) -> bool {
     normalize_detection_value(&entry.registry_key).starts_with("arp\\user\\")
+}
+
+fn installed_entry_scope(entry: &InstalledSoftwareEntry) -> Option<InstallScope> {
+    let registry_key = normalize_detection_value(&entry.registry_key);
+    if registry_key.starts_with("arp\\user\\") {
+        Some(InstallScope::User)
+    } else if registry_key.starts_with("arp\\machine\\") {
+        Some(InstallScope::Machine)
+    } else {
+        None
+    }
 }
 
 fn normalize_detection_value(value: &str) -> String {
@@ -1152,6 +1181,7 @@ mod tests {
             state.install_location.as_deref(),
             Some("C:\\Users\\ryan\\AppData\\Local\\Programs\\Cursor")
         );
+        assert_eq!(state.install_scope, Some(InstallScope::User));
     }
 
     #[test]
@@ -1249,5 +1279,25 @@ mod tests {
                 "C:\\Users\\ryan\\AppData\\Local\\Microsoft\\WinGet\\Packages\\SST.opencode_Microsoft.Winget.Source_8wekyb3d8bbwe"
             )
         );
+        assert_eq!(state.install_scope, Some(InstallScope::User));
+    }
+
+    #[test]
+    fn installed_software_match_reports_machine_scope() {
+        let recipe =
+            winget_recipe_with_detection("Git.Git", &["ARP\\Machine\\X64\\Git_is1"], &[], &[]);
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![InstalledSoftwareEntry {
+                registry_key: "ARP\\Machine\\X64\\Git_is1".into(),
+                display_name: Some("Git".into()),
+                display_version: Some("2.53.0.2".into()),
+                install_location: None,
+            }],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.install_scope, Some(InstallScope::Machine));
     }
 }

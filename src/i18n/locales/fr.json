@@ -533,10 +533,10 @@
       "addToWorkspace": "Ajouter à l'espace de travail"
     },
     "options": {
-      "scope": "Portée",
-      "scopeUser": "Par utilisateur",
-      "scopeMachine": "Tous les utilisateurs (UAC)",
-      "scopeSelfElevatingHint": "Cet installateur peut encore afficher l’UAC dans le périmètre utilisateur.",
+      "scope": "Mode d’installation",
+      "scopeUser": "Mode utilisateur",
+      "scopeMachine": "Mode système (UAC)",
+      "scopeSelfElevatingHint": "Cet installateur peut encore afficher l’UAC dans le mode utilisateur.",
       "version": "Version",
       "versionLatest": "Dernière",
       "location": "Emplacement d’installation",

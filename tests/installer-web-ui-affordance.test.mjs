@@ -94,6 +94,39 @@ test("installed dialog uses a switch for pin version", async () => {
   );
 });
 
+test("installer properties surface user and system install modes", async () => {
+  const dialogSource = await readFile(
+    new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const detectSource = await readFile(
+    new URL("../src-tauri/src/installer/detect.rs", import.meta.url),
+    "utf8",
+  );
+  const enSource = await readFile(
+    new URL("../src/i18n/locales/en.json", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    detectSource,
+    /install_scope: Option<InstallScope>/,
+    "Detection should expose the resolved winget install scope to the frontend",
+  );
+  assert.match(
+    dialogSource,
+    /installModeForInstalledRecipe\(detected\)/,
+    "Installed properties should derive their install mode from detected scope",
+  );
+  assert.match(
+    dialogSource,
+    /installModeForOptions\(recipe, options\)/,
+    "Not-installed properties should show the currently selected install mode",
+  );
+  assert.match(enSource, /"scopeUser": "User Mode"/);
+  assert.match(enSource, /"scopeMachine": "System Mode\(UAC\)"/);
+});
+
 test("managed web UI install completion auto-starts the app", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),

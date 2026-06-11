@@ -533,10 +533,10 @@
       "addToWorkspace": "Tambah ke ruang kerja"
     },
     "options": {
-      "scope": "Cakupan",
-      "scopeUser": "Per pengguna",
-      "scopeMachine": "Semua pengguna (UAC)",
-      "scopeSelfElevatingHint": "Penginstal ini masih dapat menampilkan UAC dalam cakupan per pengguna.",
+      "scope": "Mode pemasangan",
+      "scopeUser": "Mode pengguna",
+      "scopeMachine": "Mode sistem (UAC)",
+      "scopeSelfElevatingHint": "Penginstal ini masih dapat menampilkan UAC dalam mode pengguna.",
       "version": "Versi",
       "versionLatest": "Terbaru",
       "location": "Lokasi instalasi",

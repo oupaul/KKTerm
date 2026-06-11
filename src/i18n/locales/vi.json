@@ -533,10 +533,10 @@
       "addToWorkspace": "Thêm vào không gian làm việc"
     },
     "options": {
-      "scope": "Phạm vi",
-      "scopeUser": "Theo người dùng",
-      "scopeMachine": "Tất cả người dùng (UAC)",
-      "scopeSelfElevatingHint": "Trình cài đặt này vẫn có thể hiển thị UAC trong phạm vi theo người dùng.",
+      "scope": "Chế độ cài đặt",
+      "scopeUser": "Chế độ người dùng",
+      "scopeMachine": "Chế độ hệ thống (UAC)",
+      "scopeSelfElevatingHint": "Trình cài đặt này vẫn có thể hiển thị UAC trong chế độ người dùng.",
       "version": "Phiên bản",
       "versionLatest": "Mới nhất",
       "location": "Vị trí cài đặt",

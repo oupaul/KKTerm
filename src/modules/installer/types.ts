@@ -81,6 +81,8 @@ export interface DetectedState {
   /// Best-effort install directory. Populated for app-local installs KKTerm
   /// owns, such as github-release recipes and managed server apps.
   installLocation?: string | null;
+  /// Best-effort winget install scope detected from Add/Remove Programs.
+  installScope?: "user" | "machine" | null;
   /// Extra runtime version for manager-backed bundles. For Node/Python
   /// bundles, installedVersion remains nvm/uv for update comparisons while
   /// this carries the managed Node/Python runtime version.
