@@ -1,0 +1,189 @@
+.dw-dns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.dw-dns-form {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.dw-dns-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.dw-dns-input:focus-visible {
+  outline: none;
+  border-color: var(--w-accent, var(--accent));
+  box-shadow: 0 0 0 2px var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-dns-type {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+}
+
+.dw-dns-go {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dw-dns-go:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.dw-dns-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dw-dns-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 60px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.dw-dns-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--w-accent-soft, var(--accent-soft));
+  border-top-color: var(--w-accent, var(--accent));
+  border-radius: 50%;
+  animation: dw-dns-spin 720ms linear infinite;
+}
+
+.dw-dns-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dw-dns-row,
+.dw-dns-myip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+  animation: dw-dns-row-in 240ms ease backwards;
+  animation-delay: calc(var(--row-index, 0) * 35ms);
+  transition: background-color 120ms ease;
+}
+
+.dw-dns-row:hover,
+.dw-dns-row:focus-visible,
+.dw-dns-myip:hover,
+.dw-dns-myip:focus-visible {
+  background: var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-dns-row-type {
+  flex: 0 0 auto;
+  min-width: 44px;
+  color: var(--w-accent, var(--accent));
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
+.dw-dns-row-data {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.dw-dns-row.is-copied .dw-dns-row-data,
+.dw-dns-myip.is-copied .dw-dns-row-data {
+  color: var(--green);
+}
+
+.dw-dns-row-ttl {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dw-dns-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dw-dns-myip-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.dw-dns-myip-button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+@keyframes dw-dns-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dw-dns-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-dns-row,
+  .dw-dns-myip {
+    animation: none;
+  }
+
+  .dw-dns-spinner {
+    animation-duration: 1600ms;
+  }
+}

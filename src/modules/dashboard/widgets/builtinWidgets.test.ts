@@ -47,6 +47,25 @@ if (!builtInIds.includes("aiCodingUsage")) {
   throw new Error("Dashboard built-in registry is missing the AI Coding Usage widget.");
 }
 
+// Utility widgets shipped as built-ins. Keep this list in sync with
+// builtInRegistry.ts so a dropped registration fails loudly.
+const requiredUtilityIds = ["networkTools", "generatorTools"];
+for (const requiredId of requiredUtilityIds) {
+  if (!builtInIds.includes(requiredId)) {
+    throw new Error(`Dashboard built-in registry is missing the ${requiredId} widget.`);
+  }
+}
+
+// Every built-in must point at a translatable title/summary and a real Body.
+for (const entry of BUILT_IN_WIDGETS) {
+  if (!entry.titleKey.startsWith("dashboard.") && !entry.titleKey.includes(".")) {
+    throw new Error(`Built-in widget ${entry.id} has a non-namespaced titleKey.`);
+  }
+  if (typeof entry.Body !== "function") {
+    throw new Error(`Built-in widget ${entry.id} has no Body component.`);
+  }
+}
+
 void bodyProps;
 void connectionTab;
 void defaultAccent;

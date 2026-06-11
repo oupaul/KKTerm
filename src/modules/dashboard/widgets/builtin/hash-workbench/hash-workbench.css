@@ -1,0 +1,207 @@
+.dw-hash {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.dw-hash-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  align-self: flex-start;
+}
+
+.dw-hash-tab {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.dw-hash-tab.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.dw-hash-input {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  resize: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.dw-hash-input:focus-visible {
+  outline: none;
+  border-color: var(--w-accent, var(--accent));
+  box-shadow: 0 0 0 2px var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-hash-directions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.dw-hash-direction {
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.dw-hash-direction.is-active {
+  background: var(--w-accent-soft, var(--accent-soft));
+  border-color: var(--w-accent, var(--accent));
+  color: var(--text);
+}
+
+.dw-hash-results {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dw-hash-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dw-hash-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+  animation: dw-hash-row-in 240ms ease backwards;
+  animation-delay: calc(var(--row-index, 0) * 30ms);
+  transition: background-color 120ms ease;
+}
+
+.dw-hash-row:hover,
+.dw-hash-row:focus-visible {
+  background: var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-hash-row-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
+.dw-hash-row-value {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dw-hash-row.is-copied .dw-hash-row-value {
+  color: var(--green);
+}
+
+.dw-hash-output {
+  padding: 7px 9px;
+  border: 0;
+  border-left: 2px solid var(--w-accent, var(--accent));
+  border-radius: 0 6px 6px 0;
+  background: var(--w-accent-soft, var(--accent-soft));
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: left;
+  cursor: copy;
+  animation: dw-hash-row-in 240ms ease;
+}
+
+.dw-hash-output.is-copied {
+  color: var(--green);
+}
+
+.dw-hash-jwt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dw-hash-jwt-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dw-hash-row-in 240ms ease;
+}
+
+.dw-hash-pre {
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dw-hash-empty {
+  display: grid;
+  flex: 1 1 auto;
+  place-content: center;
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@keyframes dw-hash-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-hash-row,
+  .dw-hash-output,
+  .dw-hash-jwt-section {
+    animation: none;
+  }
+}

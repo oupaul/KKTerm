@@ -1,0 +1,150 @@
+.dw-cron {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.dw-cron-input {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.dw-cron-input:focus-visible {
+  outline: none;
+  border-color: var(--w-accent, var(--accent));
+  box-shadow: 0 0 0 2px var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-cron-input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.dw-cron-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dw-cron-preset {
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.dw-cron-preset:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.dw-cron-preset.is-active {
+  background: var(--w-accent-soft, var(--accent-soft));
+  border-color: var(--w-accent, var(--accent));
+  color: var(--text);
+}
+
+.dw-cron-description {
+  padding: 7px 9px;
+  border: 0;
+  border-left: 2px solid var(--w-accent, var(--accent));
+  border-radius: 0 6px 6px 0;
+  background: var(--w-accent-soft, var(--accent-soft));
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  cursor: copy;
+  animation: dw-cron-fade-in 240ms ease;
+}
+
+.dw-cron-description.is-copied {
+  color: var(--green);
+}
+
+.dw-cron-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dw-cron-runs-title {
+  margin-bottom: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dw-cron-run {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  animation: dw-cron-fade-in 240ms ease backwards;
+  animation-delay: calc(var(--row-index, 0) * 40ms);
+}
+
+.dw-cron-run:nth-child(even) {
+  background: var(--surface-muted);
+}
+
+.dw-cron-run-relative {
+  color: var(--w-accent, var(--accent));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dw-cron-run-absolute {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dw-cron-empty {
+  display: grid;
+  flex: 1 1 auto;
+  place-content: center;
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@keyframes dw-cron-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-cron-description,
+  .dw-cron-run {
+    animation: none;
+  }
+}

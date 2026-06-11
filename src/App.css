@@ -14,4 +14,13 @@
 @import "./modules/workspace/connections/webview/webview.css";
 @import "./manual/manual.css";
 @import "./modules/dashboard/widgets/builtin/ai-coding-usage/ai-coding-usage.css";
+@import "./modules/dashboard/widgets/builtin/subnet-calculator/subnet-calculator.css";
+@import "./modules/dashboard/widgets/builtin/qr-code/qr-code.css";
+@import "./modules/dashboard/widgets/builtin/cron-builder/cron-builder.css";
+@import "./modules/dashboard/widgets/builtin/time-converter/time-converter.css";
+@import "./modules/dashboard/widgets/builtin/hash-workbench/hash-workbench.css";
+@import "./modules/dashboard/widgets/builtin/password-generator/password-generator.css";
+@import "./modules/dashboard/widgets/builtin/dns-lookup/dns-lookup.css";
+@import "./modules/dashboard/widgets/builtin/speedtest/speedtest.css";
+@import "./modules/dashboard/widgets/builtin/tool-group/tool-group.css";
 @import "./watchdog/watchdog.css";

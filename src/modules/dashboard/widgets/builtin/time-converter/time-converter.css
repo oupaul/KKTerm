@@ -1,0 +1,153 @@
+.dw-time {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.dw-time-now {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-time-now-epoch {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--w-accent, var(--accent));
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  cursor: copy;
+}
+
+.dw-time-now-epoch.is-copied {
+  color: var(--green);
+}
+
+.dw-time-now-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.dw-time-now-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dw-time-now-local {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.dw-time-input {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.dw-time-input:focus-visible {
+  outline: none;
+  border-color: var(--w-accent, var(--accent));
+  box-shadow: 0 0 0 2px var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-time-input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.dw-time-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dw-time-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+  animation: dw-time-row-in 240ms ease backwards;
+  animation-delay: calc(var(--row-index, 0) * 30ms);
+  transition: background-color 120ms ease;
+}
+
+.dw-time-row:hover,
+.dw-time-row:focus-visible {
+  background: var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-time-row-label {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.dw-time-row-value {
+  overflow: hidden;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dw-time-row.is-copied .dw-time-row-value {
+  color: var(--green);
+}
+
+.dw-time-empty {
+  display: grid;
+  flex: 1 1 auto;
+  place-content: center;
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@keyframes dw-time-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-time-row {
+    animation: none;
+  }
+}

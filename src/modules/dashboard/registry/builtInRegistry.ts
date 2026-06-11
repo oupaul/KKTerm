@@ -3,6 +3,8 @@ import type { AccentName, IconName, WidgetPreset } from "../types";
 import { AiCodingUsageBody } from "../widgets/AiCodingUsageBody";
 import { AppLauncherBody } from "../widgets/AppLauncherBody";
 import { ConnectionWidgetBody } from "../widgets/ConnectionWidgetBody";
+import { GeneratorToolsBody } from "../widgets/GeneratorToolsBody";
+import { NetworkToolsBody } from "../widgets/NetworkToolsBody";
 import { NotesBody } from "../widgets/NotesBody";
 import type { DashboardWidgetInstance } from "../types";
 
@@ -68,6 +70,28 @@ export const BUILT_IN_WIDGETS: BuiltInWidgetEntry[] = [
     defaultIcon: "Pin",
     defaultSize: { w: 3, h: 3 },
     Body: NotesBody,
+  },
+  {
+    id: "networkTools",
+    titleKey: "dashboard.networkToolsTitle",
+    summaryKey: "dashboard.networkToolsSummary",
+    category: "utility",
+    defaultPreset: "panel",
+    defaultAccent: "sky",
+    defaultIcon: "Network",
+    defaultSize: { w: 4, h: 5 },
+    Body: NetworkToolsBody,
+  },
+  {
+    id: "generatorTools",
+    titleKey: "dashboard.generatorToolsTitle",
+    summaryKey: "dashboard.generatorToolsSummary",
+    category: "utility",
+    defaultPreset: "panel",
+    defaultAccent: "purple",
+    defaultIcon: "Hammer",
+    defaultSize: { w: 4, h: 5 },
+    Body: GeneratorToolsBody,
   },
 ];
 

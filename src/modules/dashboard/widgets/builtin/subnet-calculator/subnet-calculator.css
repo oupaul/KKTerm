@@ -1,0 +1,138 @@
+.dw-subnet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.dw-subnet-input {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.dw-subnet-input:focus-visible {
+  outline: none;
+  border-color: var(--w-accent, var(--accent));
+  box-shadow: 0 0 0 2px var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-subnet-input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.dw-subnet-bits {
+  display: grid;
+  grid-template-columns: repeat(32, 1fr);
+  gap: 2px;
+}
+
+.dw-subnet-bit {
+  height: 14px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+  transition: background-color 200ms ease, box-shadow 200ms ease, transform 120ms ease;
+  transition-delay: calc(var(--bit-index, 0) * 7ms);
+}
+
+.dw-subnet-bit.is-octet-end {
+  margin-right: 4px;
+}
+
+.dw-subnet-bit.is-network {
+  background: var(--w-accent, var(--accent));
+  box-shadow: none;
+}
+
+.dw-subnet-bit:hover {
+  transform: scaleY(1.25);
+  transition-delay: 0ms;
+}
+
+.dw-subnet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dw-subnet-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+  animation: dw-subnet-row-in 240ms ease backwards;
+  animation-delay: calc(var(--row-index, 0) * 30ms);
+  transition: background-color 120ms ease;
+}
+
+.dw-subnet-row:hover,
+.dw-subnet-row:focus-visible {
+  background: var(--w-accent-soft, var(--accent-soft));
+}
+
+.dw-subnet-row-label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.dw-subnet-row-value {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.dw-subnet-row.is-copied .dw-subnet-row-value {
+  color: var(--green);
+}
+
+.dw-subnet-empty {
+  display: grid;
+  flex: 1 1 auto;
+  place-content: center;
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@keyframes dw-subnet-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-subnet-bit,
+  .dw-subnet-row {
+    animation: none;
+    transition: none;
+  }
+}

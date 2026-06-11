@@ -1,0 +1,62 @@
+.dw-toolgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.dw-toolgroup-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.dw-toolgroup-tab {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.dw-toolgroup-tab.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.dw-toolgroup-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  animation: dw-toolgroup-in 200ms ease;
+}
+
+@keyframes dw-toolgroup-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-toolgroup-body {
+    animation: none;
+  }
+}
