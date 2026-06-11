@@ -3,6 +3,70 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.74/kkterm-0.1.74-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.74/kkterm-0.1.74-windows-arm64-setup.exe)
+
+## v0.1.74 Release Notes (KKTerm)
+
+### Highlights
+- **Fix SSH + tmux label visibility**: PTY echo no longer hides the **Pane** tmux session label when tmux is actually running.
+- **Quick Connect now persists**: Quick Connect always creates/updates a saved **Connection** and opens it, instead of leaving the **Tab** backed by ephemeral state.
+- **PowerShell 7 (pwsh) support**: Added as a Windows local shell option with an installer recipe and launch gating.
+
+### New
+- **Settings**: Renamed **Settings > General** section to **Window** and tidied the card layout. ([#298](https://github.com/ryantsai/KKTerm/pull/298))
+- **macOS**: Added **Don’t Sleep** monitoring.
+- **PowerShell 7 (pwsh)** support:
+  - Shell option in Terminal settings
+  - Installer recipe
+  - Install-or-fallback gate for launching `pwsh`  
+  ([#301](https://github.com/ryantsai/KKTerm/pull/301), by @ryantsai)
+- **VNC**: Added Apple Remote Desktop authentication (RFB security type 30). ([#302](https://github.com/ryantsai/KKTerm/pull/302), by @ryantsai)
+
+### Improved
+- **Quick Connect**: Always saves (reuse-or-create) and opens the persisted **Connection**. ([#300](https://github.com/ryantsai/KKTerm/pull/300))
+- **Terminal/PowerShell**: `pwsh` launch is gated behind install-or-fallback pre-flight.
+- **SSH / tmux UX**: Prevented a false-positive scenario that could hide the tmux session label on reconnect.
+
+### Fixed
+- **SSH**: Stop PTY echo from hiding the tmux session label. ([#297](https://github.com/ryantsai/KKTerm/pull/297), by @ryantsai)
+
+### Internal
+- Implemented a **rollback mechanism for failed releases** and validated source before mutations.  
+- Build tooling update: release script + installer smoke coverage updates.
+
+---
+
+## v0.1.74 更新日誌（KKTerm）
+
+### 重點
+- **修正 SSH + tmux 標籤可見性**：PTY 回顯不再在 **Pane** 的 tmux session 標籤被「遮住」——前提是 tmux 的確有在跑。
+- **Quick Connect 會永久保存**：Quick Connect 會固定建立/更新已保存的 **Connection**，並打開它；不再讓 **Tab** 落在臨時狀態上。
+- **支援 PowerShell 7（pwsh）**：新增為 Windows 本機殼層選項，並提供安裝規格與啟動門檻。
+
+### 新增
+- **設定**：將 **Settings > General** 改名為 **Window**，並整理卡片版面。([#298](https://github.com/ryantsai/KKTerm/pull/298))
+- **macOS**：新增 **防止螢幕/系統休眠（Don’t Sleep）監控**。
+- **PowerShell 7（pwsh）支援**：
+  - Terminal 設定中的殼層選項
+  - 安裝配方
+  - 啟動前的 install-or-fallback 門檻  
+  ([#301](https://github.com/ryantsai/KKTerm/pull/301)，作者 @ryantsai)
+- **VNC**：加入 Apple Remote Desktop 驗證（RFB security type 30）。([#302](https://github.com/ryantsai/KKTerm/pull/302)，作者 @ryantsai)
+
+### 改善
+- **Quick Connect**：固定儲存（reuse-or-create），並打開已持久化的 **Connection**。([#300](https://github.com/ryantsai/KKTerm/pull/300))
+- **Terminal/PowerShell**：`pwsh` 啟動會先經過 install-or-fallback 的預檢。
+- **SSH / tmux UX**：避免在重新連線時出現會「誤判」並隱藏 tmux 標籤的情境。
+
+### 修正
+- **SSH**：停止 PTY 回顯造成 tmux session 標籤消失的問題。([#297](https://github.com/ryantsai/KKTerm/pull/297)，作者 @ryantsai)
+
+### Internal
+- 新增 **釋出失敗回滾機制**，並在變更前先驗證來源。
+- 建置/發布工具更新：更新釋出腳本與安裝煙霧測試覆蓋。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.73/kkterm-0.1.73-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.73/kkterm-0.1.73-windows-arm64-setup.exe)
 
