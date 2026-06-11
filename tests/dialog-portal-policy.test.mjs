@@ -47,6 +47,25 @@ test("blocking dialogs mounted from contained panes use the app-window DialogPor
   }
 });
 
+test("Quick Command subdialogs stack above the manager dialog", async () => {
+  const terminalStyles = await readFile(new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url), "utf8");
+  const baseStyles = await readFile(new URL("../src/styles/base.css", import.meta.url), "utf8");
+
+  const managerBackdropZIndex = Number(
+    baseStyles.match(/\.connection-dialog-backdrop\s*\{[^}]*z-index:\s*(\d+);/s)?.[1] ?? Number.NaN,
+  );
+  const subdialogBackdropZIndex = Number(
+    terminalStyles.match(/\.quick-command-subdialog-backdrop\s*\{[^}]*z-index:\s*(\d+);/s)?.[1] ?? Number.NaN,
+  );
+
+  assert.ok(Number.isFinite(managerBackdropZIndex), "shared connection dialog backdrop should define a z-index");
+  assert.ok(Number.isFinite(subdialogBackdropZIndex), "Quick Command subdialog backdrop should define a z-index");
+  assert.ok(
+    subdialogBackdropZIndex > managerBackdropZIndex,
+    "Quick Command add/library dialogs should stack above the manager dialog backdrop",
+  );
+});
+
 test("Assistant image preview escapes the AI Assistant Panel and remains RDP-blocking", async () => {
   const assistantSource = await readFile(new URL("../src/ai/AssistantPanel.tsx", import.meta.url), "utf8");
   const assistantStyles = await readFile(new URL("../src/ai/assistant.css", import.meta.url), "utf8");

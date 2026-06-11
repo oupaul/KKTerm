@@ -963,7 +963,7 @@
 }
 
 .quick-command-subdialog-backdrop {
-  z-index: 14;
+  z-index: 100;
   background: rgba(3, 8, 18, 0.68);
   backdrop-filter: blur(1px);
 }
