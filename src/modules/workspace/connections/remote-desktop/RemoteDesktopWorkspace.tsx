@@ -31,6 +31,8 @@ import {
   unregisterRemoteDesktopController,
   type RemoteDesktopController,
 } from "../../paneRegistry";
+import { usesCanvasRdp } from "../../../../lib/platform";
+import { RdpCanvasView } from "./RdpCanvasView";
 
 type VncSessionEvent =
   | { kind: "connected"; sessionId: string; name: string }
@@ -141,7 +143,11 @@ export function RemoteDesktopWorkspace({
   const [rdpStatus, setRdpStatus] = useState("");
   const [rdpStartKey, setRdpStartKey] = useState(0);
   const [vncHasDisplay, setVncHasDisplay] = useState(false);
-  const canStartRdp = connection?.type === "rdp";
+  // macOS renders RDP through the in-app IronRDP canvas (RdpCanvasView), not the
+  // Windows native ActiveX overlay. Keep the overlay path Windows-only so its
+  // effects never run on macOS.
+  const useRdpCanvas = connection?.type === "rdp" && usesCanvasRdp();
+  const canStartRdp = connection?.type === "rdp" && !useRdpCanvas;
   const canStartVnc = connection?.type === "vnc";
   const viewMode = resolveRemoteDesktopViewMode(connection, rdpSettings, vncSettings);
 
@@ -1480,6 +1486,7 @@ export function RemoteDesktopWorkspace({
             width={rdpSnapshot.width}
           />
         ) : null}
+        {useRdpCanvas && connection ? <RdpCanvasView connection={connection} /> : null}
         {connection?.type === "vnc" ? (
           <canvas
             aria-label={`${tab.title} ${t("remoteDesktop.displayAria")}`}
@@ -1495,7 +1502,7 @@ export function RemoteDesktopWorkspace({
             tabIndex={0}
           />
         ) : null}
-        <div className="remote-desktop-placeholder" hidden={vncHasDisplay || Boolean(rdpSnapshot)}>
+        <div className="remote-desktop-placeholder" hidden={vncHasDisplay || Boolean(rdpSnapshot) || useRdpCanvas}>
           <Icon size={34} />
           <h2>{connection?.name ?? typeLabel}</h2>
           <p>{connection ? `${typeLabel} ${connectionSubtitle(connection)}` : typeLabel}</p>
