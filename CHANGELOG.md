@@ -3,6 +3,52 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.76/kkterm-0.1.76-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.76/kkterm-0.1.76-windows-arm64-setup.exe)
+
+## Highlights
+- Refined Connection Tree behavior so visible connections stay in the expected order.
+- Added a source-correctness contract and refreshed related tests (because terminals deserve receipts too).
+
+## New
+- **Connection Tree**: Enhanced functionality to preserve order in visible connections.
+
+## Improved
+- **Contracting for AI inputs**: Added a source-correctness contract and updated related tests.  
+  (PR not specified)
+
+## Fixed
+- No user-facing fixes were listed in this release context.
+
+## Internal
+- Updated AI prompt contracts and tests (`src-tauri/src/ai.rs`, `src-tauri/src/ai/prompt_contracts.rs`, `src-tauri/src/ai/tests.rs`).
+- Improved Connection Tree filtering/context-menu coverage in tests (`tests/connection-tree-connected-filter.test.ts`, `tests/connection-tree-context-menu.test.mjs`).
+
+**Full Changelog**: https://github.com/ryantsai/KKTerm/compare/v0.1.75...v0.1.76
+
+---
+
+## Highlights（繁體中文 - 台灣）
+- 精進 **連線樹（Connection Tree）** 的行為，讓在畫面上可見的連線維持預期順序。
+- 新增「來源正確性（source-correctness）」合約並更新相關測試——畢竟終端機也要有憑有據。
+
+## New（新增）
+- **連線樹（Connection Tree）**：強化功能，讓「可見連線」在排序上保持正確順序。
+
+## Improved（改善）
+- **AI 輸入的合約約束**：新增「來源正確性」合約並更新相關測試。  
+ （本次釋出內容未提供 PR 編號）
+
+## Fixed（修正）
+- 本次版本釋出內容中未列出使用者可見的修正項目。
+
+## Internal（內部）
+- 更新 AI 提示合約與測試（`src-tauri/src/ai.rs`、`src-tauri/src/ai/prompt_contracts.rs`、`src-tauri/src/ai/tests.rs`）。
+- 強化連線樹篩選/內容選單相關測試（`tests/connection-tree-connected-filter.test.ts`、`tests/connection-tree-context-menu.test.mjs`）。
+
+**完整變更紀錄（Full Changelog）**: https://github.com/ryantsai/KKTerm/compare/v0.1.75...v0.1.76
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.75/kkterm-0.1.75-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.75/kkterm-0.1.75-windows-arm64-setup.exe)
 
