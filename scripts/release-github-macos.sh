@@ -164,7 +164,6 @@ patch_release_notes() {
   local version="$2"
   local repo="$3"
   local dmg_name="$4"
-  local sha_name="$5"
   local current temp_file
 
   current=$(gh release view "$tag" --json body --jq .body)
@@ -174,17 +173,14 @@ patch_release_notes() {
   RELEASE_TAG="$tag" \
   RELEASE_REPO="$repo" \
   DMG_NAME="$dmg_name" \
-  SHA_NAME="$sha_name" \
     node --input-type=module > "$temp_file" <<'NODE'
 const body = process.env.NOTES_BODY ?? "";
 const tag = process.env.RELEASE_TAG;
 const repo = process.env.RELEASE_REPO;
 const dmgName = process.env.DMG_NAME;
-const shaName = process.env.SHA_NAME;
 
 const macLines = [
   `* 🍎 [Download for macOS (Apple Silicon)](https://github.com/${repo}/releases/download/${tag}/${dmgName})`,
-  `* 🔐 [macOS SHA-256 checksum](https://github.com/${repo}/releases/download/${tag}/${shaName})`,
 ];
 
 const withoutOldMac = body
@@ -192,7 +188,7 @@ const withoutOldMac = body
   .filter(
     (line) =>
       !line.includes("[Download for macOS (Apple Silicon)]") &&
-      !line.includes("[macOS SHA-256 checksum]"),
+      !line.includes("[SHA-256 checksum]"),
   );
 
 if (withoutOldMac[0] === "## Direct Downloads") {
@@ -324,7 +320,7 @@ gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" --clobber
 
 if (( ! SKIP_NOTES_PATCH )); then
   log "Patch GitHub Release notes"
-  patch_release_notes "$TAG_NAME" "$VERSION" "$REPO" "$DMG_NAME" "$SHA_NAME"
+  patch_release_notes "$TAG_NAME" "$VERSION" "$REPO" "$DMG_NAME"
 fi
 
 log "macOS release assets published."

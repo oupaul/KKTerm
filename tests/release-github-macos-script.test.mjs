@@ -55,7 +55,7 @@ test("macOS release script infers the release tag from the DMG when tag is omitt
 test("macOS release script patches GitHub release notes with macOS direct downloads", () => {
   assert.match(script, /patch_release_notes\(\) \{/);
   assert.match(script, /Download for macOS \(Apple Silicon\)/);
-  assert.match(script, /macOS SHA-256 checksum/);
+  assert.doesNotMatch(script, /macOS SHA-256 checksum/);
   assert.match(script, /gh release edit "\$tag" --notes-file "\$temp_file"/);
   assert.match(script, /--skip-notes-patch/);
 });
