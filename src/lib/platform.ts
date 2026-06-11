@@ -38,7 +38,15 @@ export function supportsInstallerHelper() {
 }
 
 export function supportsRdp() {
-  return isWindowsPlatform();
+  // Windows uses the native ActiveX control; macOS uses the in-app IronRDP
+  // canvas client. Both render RDP inside the workspace.
+  return isWindowsPlatform() || isMacPlatform();
+}
+
+// RDP on macOS renders to the shared remote-desktop <canvas> via the IronRDP
+// backend (rdp-canvas-event), like VNC — not the Windows native ActiveX overlay.
+export function usesCanvasRdp() {
+  return isMacPlatform();
 }
 
 export function defaultLocalShell() {
