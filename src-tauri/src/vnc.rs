@@ -44,6 +44,8 @@ pub struct StartVncSessionRequest {
     session_id: String,
     host: String,
     port: Option<u16>,
+    #[serde(default)]
+    username: Option<String>,
     secret_owner_id: Option<String>,
     password: Option<String>,
     options: Option<VncSessionOptions>,
@@ -185,11 +187,17 @@ impl VncSessionManager {
         }
 
         let password = request.password.clone();
+        let username = request
+            .username
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
         let options = request.options.unwrap_or_default();
         let address = self.runtime.block_on(resolve_vnc_address(&host, port))?;
         let client = self
             .runtime
-            .block_on(connect_vnc(address, password, &options))?;
+            .block_on(connect_vnc(address, username, password, &options))?;
         let (stop_tx, stop_rx) = oneshot::channel();
         let (input_tx, input_rx) = mpsc::unbounded_channel();
         spawn_vnc_event_loop(
@@ -338,25 +346,31 @@ async fn resolve_vnc_address(host: &str, port: u16) -> Result<SocketAddr, String
 
 async fn connect_vnc(
     address: SocketAddr,
+    username: Option<String>,
     password: Option<String>,
     options: &VncSessionOptions,
 ) -> Result<vnc::VncClient, String> {
-    connect_vnc_with_timeout(address, password, options, VNC_CONNECT_TIMEOUT).await
+    connect_vnc_with_timeout(address, username, password, options, VNC_CONNECT_TIMEOUT).await
 }
 
 async fn connect_vnc_with_timeout(
     address: SocketAddr,
+    username: Option<String>,
     password: Option<String>,
     options: &VncSessionOptions,
     timeout: Duration,
 ) -> Result<vnc::VncClient, String> {
-    time::timeout(timeout, connect_vnc_unbounded(address, password, options))
-        .await
-        .map_err(|_| format!("timed out connecting to VNC server {address}"))?
+    time::timeout(
+        timeout,
+        connect_vnc_unbounded(address, username, password, options),
+    )
+    .await
+    .map_err(|_| format!("timed out connecting to VNC server {address}"))?
 }
 
 async fn connect_vnc_unbounded(
     address: SocketAddr,
+    username: Option<String>,
     password: Option<String>,
     options: &VncSessionOptions,
 ) -> Result<vnc::VncClient, String> {
@@ -370,6 +384,9 @@ async fn connect_vnc_unbounded(
         .set_auth_method(async move { Ok((*password_for_auth).clone()) })
         .allow_shared(options.shared_session)
         .set_pixel_format(pixel_format);
+    if let Some(username) = username {
+        connector = connector.set_username(username);
+    }
     connector = match options.preferred_encoding.as_str() {
         "raw" => connector
             .add_encoding(VncEncoding::Raw)
@@ -703,6 +720,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn start_request_accepts_optional_username() {
+        let json = r#"{"sessionId":"vnc-1","host":"mac.local","username":"bob","password":"pw"}"#;
+        let request: StartVncSessionRequest =
+            serde_json::from_str(json).expect("request deserializes");
+        assert_eq!(request.username.as_deref(), Some("bob"));
+    }
+
+    #[test]
+    fn start_request_username_defaults_to_none() {
+        let json = r#"{"sessionId":"vnc-1","host":"mac.local"}"#;
+        let request: StartVncSessionRequest =
+            serde_json::from_str(json).expect("request deserializes");
+        assert!(request.username.is_none());
+    }
+
+    #[test]
     fn validates_vnc_session_ids() {
         assert_eq!(
             required_id("vnc-session_1".to_string()).as_deref(),
@@ -731,6 +764,7 @@ mod tests {
 
             let result = connect_vnc_with_timeout(
                 address,
+                None,
                 None,
                 &VncSessionOptions::default(),
                 Duration::from_millis(25),

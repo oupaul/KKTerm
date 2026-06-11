@@ -1387,6 +1387,8 @@
     "useTmux": "Auto tmux sessions",
     "rdpOptions": "RDP options",
     "vncOptions": "VNC options",
+    "vncUsername": "Username (Apple Remote Desktop)",
+    "vncUsernameHint": "Optional. Use the Mac account name for macOS Screen Sharing / Apple Remote Desktop login. Leave blank for password-only VNC.",
     "inheritSettingsDefaults": "Use Settings defaults",
     "localTerminal": "Local terminal",
     "sshTerminal": "SSH terminal",

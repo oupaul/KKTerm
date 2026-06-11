@@ -59,13 +59,14 @@ export function VncConnectionFields({
       </div>
       <div className="connection-auth-fields">
         <label>
-          <span>{t("connections.user")}</span>
+          <span>{t("connections.vncUsername")}</span>
           <input
             key="user-vnc"
             name="user"
             defaultValue={initialConnection?.user ?? ""}
             placeholder={t("connections.optionalUsername")}
           />
+          <small className="field-hint">{t("connections.vncUsernameHint")}</small>
         </label>
         <PasswordField
           hasStoredSecret={isEditMode && hasStoredConnectionPassword}

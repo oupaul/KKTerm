@@ -968,6 +968,7 @@ export function RemoteDesktopWorkspace({
           sessionId,
           host: connection.host,
           port: connection.port,
+          username: connection.user || undefined,
           secretOwnerId: connectionPasswordOwnerId(connection),
           options: resolveVncOptions(vncSettings, connection.vncOptions),
         },
