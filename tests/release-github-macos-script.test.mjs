@@ -47,3 +47,20 @@ test("macOS release script patches GitHub release notes with macOS direct downlo
   assert.match(script, /gh release edit "\$tag" --notes-file "\$temp_file"/);
   assert.match(script, /--skip-notes-patch/);
 });
+
+test("macOS release script notarizes and staples the final DMG before checksumming", () => {
+  assert.match(script, /notarize_and_staple_dmg\(\) \{/);
+  assert.match(script, /xcrun notarytool submit "\$dmg_path"/);
+  assert.match(script, /xcrun stapler staple "\$dmg_path"/);
+  assert.match(script, /xcrun stapler validate "\$dmg_path"/);
+
+  const notarizeIndex = script.indexOf('notarize_and_staple_dmg "$DMG_PATH"');
+  const checksumIndex = script.indexOf('shasum -a 256 "$DMG_PATH"');
+  const uploadIndex = script.indexOf('gh release upload "$TAG_NAME"');
+
+  assert.ok(notarizeIndex !== -1, "release flow should notarize the copied DMG");
+  assert.ok(checksumIndex !== -1, "release flow should checksum the copied DMG");
+  assert.ok(uploadIndex !== -1, "release flow should upload the copied DMG");
+  assert.ok(notarizeIndex < checksumIndex, "notarization must happen before checksum generation");
+  assert.ok(checksumIndex < uploadIndex, "checksum must happen before upload");
+});

@@ -112,7 +112,7 @@ The script builds the arm64 DMG with `npm run package:macos`, copies it to:
 - `artifacts/kkterm-<version>-macos-arm64.dmg`
 - `artifacts/kkterm-<version>-macos-arm64.dmg.sha256`
 
-It detects the version from the DMG filename and uses the matching `v<version>` GitHub Release when `--tag` is not supplied. It then uploads both files with `gh release upload --clobber` and patches the release notes `Direct Downloads` section with macOS links. Use `--tag v<version>` to force a specific release, `--skip-build` to upload the latest already-built Tauri DMG, `--skip-notes-patch` to leave the release body unchanged, and `--dry-run` to print the resolved version, tag, repository, and artifact names without building or uploading.
+It detects the version from the DMG filename and uses the matching `v<version>` GitHub Release when `--tag` is not supplied. It then notarizes and staples the final renamed DMG, writes the checksum, uploads both files with `gh release upload --clobber`, and patches the release notes `Direct Downloads` section with macOS links. Use `--tag v<version>` to force a specific release, `--skip-build` to upload the latest already-built Tauri DMG, `--skip-notes-patch` to leave the release body unchanged, and `--dry-run` to print the resolved version, tag, repository, and artifact names without building or uploading.
 
 The macOS build still requires Apple Developer ID signing and notarization environment variables expected by Tauri, such as `APPLE_SIGNING_IDENTITY` plus either App Store Connect API key variables or Apple ID notarization variables. Keep those values in the local shell environment or an uncommitted `.env.local`; never commit Apple certificates, private keys, app-specific passwords, or notarization secrets.
 

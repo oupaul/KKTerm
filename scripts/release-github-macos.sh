@@ -42,6 +42,11 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "Required command not found on PATH: $1"
 }
 
+require_env() {
+  local name="$1"
+  [[ -n "${(P)name:-}" ]] || die "Required environment variable is missing: $name"
+}
+
 import_local_env_files() {
   local env_file line name value
 
@@ -112,6 +117,26 @@ find_latest_dmg() {
   (( ${#matches[@]} > 0 )) || die "No DMG found in $dmg_dir"
 
   print -r -- "${matches[1]}"
+}
+
+notarize_and_staple_dmg() {
+  local dmg_path="$1"
+
+  require_env APPLE_API_ISSUER
+  require_env APPLE_API_KEY
+  require_env APPLE_API_KEY_PATH
+  [[ -f "$APPLE_API_KEY_PATH" ]] || die "APPLE_API_KEY_PATH does not point to a file: $APPLE_API_KEY_PATH"
+
+  log "Notarize DMG"
+  xcrun notarytool submit "$dmg_path" \
+    --key "$APPLE_API_KEY_PATH" \
+    --key-id "$APPLE_API_KEY" \
+    --issuer "$APPLE_API_ISSUER" \
+    --wait
+
+  log "Staple DMG notarization ticket"
+  xcrun stapler staple "$dmg_path"
+  xcrun stapler validate "$dmg_path"
 }
 
 patch_release_notes() {
@@ -215,6 +240,7 @@ require_command gh
 require_command npm
 require_command node
 require_command shasum
+require_command xcrun
 
 PACKAGE_VERSION=$(read_package_version)
 assert_version "$PACKAGE_VERSION"
@@ -270,6 +296,7 @@ git rev-parse "$TAG_NAME" >/dev/null 2>&1 || die "Local tag not found: $TAG_NAME
 gh release view "$TAG_NAME" >/dev/null || die "GitHub release not found: $TAG_NAME"
 mkdir -p "$OUTPUT_PATH"
 cp "$SOURCE_DMG" "$DMG_PATH"
+notarize_and_staple_dmg "$DMG_PATH"
 shasum -a 256 "$DMG_PATH" | awk -v name="$DMG_NAME" '{ print $1 "  " name }' > "$SHA_PATH"
 
 log "Upload macOS assets"
