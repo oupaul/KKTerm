@@ -162,6 +162,7 @@ export function ConnectionSidebar({
   const resetConnectionLayout = useWorkspaceStore((state) => state.resetConnectionLayout);
   const activeSessionCounts = useWorkspaceStore((state) => state.activeSessionCounts);
   const closeTab = useWorkspaceStore((state) => state.closeTab);
+  const closePane = useWorkspaceStore((state) => state.closePane);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
@@ -1167,6 +1168,7 @@ export function ConnectionSidebar({
       await invokeCommand("delete_connection", {
         connectionId: connection.id,
       });
+      closeOpenTabsForConnection(connection.id);
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
       showConnectionSuccessStatus(t("connections.deleteConnectionComplete", { name: connection.name }));
@@ -1678,11 +1680,27 @@ export function ConnectionSidebar({
     if (menu.kind !== "connection") {
       return;
     }
-    const tabIds = tabs
-      .filter((tab) => tab.connection?.id === menu.connection.id)
-      .map((tab) => tab.id);
-    for (const tabId of tabIds) {
-      closeTab(tabId);
+    closeOpenTabsForConnection(menu.connection.id);
+  }
+
+  function closeOpenTabsForConnection(connectionId: string) {
+    for (const tab of tabs) {
+      const matchingPaneIds = tab.panes
+        .filter((pane) => pane.connection?.id === connectionId)
+        .map((pane) => pane.id);
+      if (matchingPaneIds.length === 0) {
+        if (tab.connection?.id === connectionId) {
+          closeTab(tab.id);
+        }
+        continue;
+      }
+      if (matchingPaneIds.length === tab.panes.length) {
+        closeTab(tab.id);
+        continue;
+      }
+      for (const paneId of matchingPaneIds) {
+        closePane(tab.id, paneId);
+      }
     }
   }
 

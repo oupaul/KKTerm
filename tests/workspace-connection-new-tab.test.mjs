@@ -87,6 +87,16 @@ test("Connection Tree supports forced new Tabs from Ctrl-click and Add to menu",
     /function handleTreeMenuCloseConnection\(menu: TreeContextMenuState\)/,
     "Close Connection should close open tabs for that durable Connection",
   );
+  assert.match(
+    sidebarSource,
+    /function closeOpenTabsForConnection\(connectionId: string\)[\s\S]*?pane\.connection\?\.id === connectionId[\s\S]*?if \(tab\.connection\?\.id === connectionId\) \{[\s\S]*?closeTab\(tab\.id\);[\s\S]*?if \(matchingPaneIds\.length === tab\.panes\.length\) \{[\s\S]*?closeTab\(tab\.id\);[\s\S]*?closePane\(tab\.id, paneId\);[\s\S]*?function handleTreeMenuRename/,
+    "Connection delete should close any open Tab or Pane for the durable Connection",
+  );
+  assert.match(
+    sidebarSource,
+    /await invokeCommand\("delete_connection"[\s\S]*?closeOpenTabsForConnection\(connection\.id\);[\s\S]*?await reloadConnectionGroups/,
+    "Deleting a Connection should close its open workspace surface before reloading the tree",
+  );
   assert.match(storeSource, /openSftpBrowserInNewTab: \(connection: Connection\) => void/);
   assert.match(storeSource, /get\(\)\.openSftpBrowserInNewTab\(sshConnection\)/);
   assert.match(sidebarSource, /openConnectionInNewTab = useWorkspaceStore/);

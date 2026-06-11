@@ -48,7 +48,7 @@ Driven by `src/lib/nativeContextMenu.ts`. On a Connection or folder node:
 - `connections.newConnection`
 - `connections.newSubfolderIn` (when the right-clicked node is a folder)
 - `connections.rename`, dialogs `connections.renameFolder` / `connections.renameConnection`
-- `connections.delete`, confirmation copy `connections.deleteFolderConfirm` or `connections.deleteConnectionConfirm`, with caveat `connections.cannotBeUndone`
+- `connections.delete`, confirmation copy `connections.deleteFolderConfirm` or `connections.deleteConnectionConfirm`, with caveat `connections.cannotBeUndone`. Deleting a Connection also closes any open Tab or Pane for that Connection.
 - Pin to rail: `connections.pinToRail` / `connections.unpinFromRail`. Status: `connections.pinnedToRailStatus`, `connections.unpinnedFromRailStatus`. Error: `connections.pinRailError`.
 - Top-level `workspace.newTab` on Connection rows. This opens the same new Tab flow as the Add-to-folder `workspace.newTab` entry and remains available in both places.
 - Add to folder: `connections.addTo`, including `workspace.newTab` with shortcut hint `connections.newTabShortcut`, then pane placement directions `connections.left`, `connections.right`, `connections.lower`, `connections.upper`.
