@@ -3,6 +3,32 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.75/kkterm-0.1.75-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.75/kkterm-0.1.75-windows-arm64-setup.exe)
+
+## Highlights
+- Added a **“Show Connected”** filter to the Connection Tree so you can focus on connections with an active Session.
+- When deleting a connection, KKTerm will now **close any open Tab(s) and Pane(s)** tied to it—less “stale terminal” energy, more clean state.
+
+## New
+- **Connection Tree:** Added **“Show Connected”** filter (session-only, not persisted) in the control row next to the tree view actions.  
+  - PR #303 — by @ryantsai (codex) · https://github.com/ryantsai/KKTerm/pull/303 (includes fix: Hide Folders duplication)
+
+## Improved
+- **Connection Tree rendering clarity:** “Show All” was renamed to **“Hide Folders”** for clarity, and the related localization keys were updated (including **connections.hideFolders** and **connections.showConnected**).  
+  - PR #303 — @ryantsai · https://github.com/ryantsai/KKTerm/pull/303
+
+## Fixed
+- **Connection Tree duplicate roots in flat view:** Fixed a bug where root-level connections could be rendered twice when using the tree/flat combinations.  
+  - PR #303 — @ryantsai · https://github.com/ryantsai/KKTerm/pull/303
+- **Deleting a connection:** Fixed lingering UI by **closing open Tabs and Panes** associated with the deleted Connection.  
+  - (sha: e938cb5)
+
+## Internal
+- Adjusted z-index and added related tests for the **Quick Command** subdialog backdrop. (sha: 26b64a0)
+- Localization updates/todo entries across locales. (sha: aa4676f)
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.74/kkterm-0.1.74-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.74/kkterm-0.1.74-windows-arm64-setup.exe)
 
