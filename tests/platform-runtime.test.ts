@@ -69,15 +69,19 @@ test("Windows-only helpers are gated to Windows", () => {
   withNavigator(WINDOWS, () => {
     assert.equal(isWindowsPlatform(), true);
     assert.equal(supportsInstallerHelper(), true);
-    assert.equal(supportsRdp(), true);
   });
   for (const nav of [MAC, LINUX]) {
     withNavigator(nav, () => {
       assert.equal(isWindowsPlatform(), false);
       assert.equal(supportsInstallerHelper(), false);
-      assert.equal(supportsRdp(), false);
     });
   }
+});
+
+test("RDP is supported on Windows and macOS", () => {
+  withNavigator(WINDOWS, () => assert.equal(supportsRdp(), true));
+  withNavigator(MAC, () => assert.equal(supportsRdp(), true));
+  withNavigator(LINUX, () => assert.equal(supportsRdp(), false));
 });
 
 test("native window controls are used only on macOS (overlay title bar)", () => {
