@@ -70,6 +70,31 @@ function filterConnectionFolder(
   };
 }
 
+// Keeps only connections whose live status is "connected", pruning folders that
+// end up empty. Mirrors `filterConnectionTree` so the "Show Connected" filter
+// composes with the search filter and the "Hide Folders" flat view.
+export function filterConnectedConnections(tree: ConnectionTree): ConnectionTree {
+  return {
+    connections: tree.connections.filter((connection) => connection.status === "connected"),
+    folders: tree.folders
+      .map((folder) => filterConnectedFolder(folder))
+      .filter((folder): folder is ConnectionFolder => Boolean(folder)),
+  };
+}
+
+function filterConnectedFolder(folder: ConnectionFolder): ConnectionFolder | null {
+  const connections = folder.connections.filter((connection) => connection.status === "connected");
+  const folders = folder.folders
+    .map((childFolder) => filterConnectedFolder(childFolder))
+    .filter((childFolder): childFolder is ConnectionFolder => Boolean(childFolder));
+
+  if (connections.length === 0 && folders.length === 0) {
+    return null;
+  }
+
+  return { ...folder, connections, folders };
+}
+
 function connectionMatchesQuery(connection: Connection, normalizedQuery: string) {
   return [connection.name, connection.host, connection.user, connection.type]
     .join(" ")

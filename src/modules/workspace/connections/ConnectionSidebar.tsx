@@ -28,8 +28,8 @@ import {
 } from "./connectionTabContextMenu";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
-import { collectConnectionFolderIds, countConnections, countFolders, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, withLiveConnectionStatuses } from "./treeUtils";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
+import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, withLiveConnectionStatuses } from "./treeUtils";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Filter, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
@@ -194,6 +194,9 @@ export function ConnectionSidebar({
   const [transferSshPublicKeyError, setTransferSshPublicKeyError] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<DeleteTarget | null>(null);
+  // Ephemeral filter: only show connections with a live session. Not persisted
+  // because "currently connected" is meaningless across restarts.
+  const [showConnectedOnly, setShowConnectedOnly] = useState(false);
   const showAllConnections = generalSettings.showAllConnectionsInTree;
   const showChildTabsInTree = generalSettings.hideTopTabButtons;
   const reusableChildIconDataUrls = useMemo(() => {
@@ -1190,6 +1193,13 @@ export function ConnectionSidebar({
 
     return filterConnectionTree(treeWithLiveStatuses, normalizedQuery);
   }, [deferredQuery, treeWithLiveStatuses]);
+  // The tree actually rendered: the search-filtered tree, optionally narrowed to
+  // connected-only by the "Show Connected" filter. Both the folder view and the
+  // "Hide Folders" flat view read from this so the two filters compose.
+  const displayTree = useMemo(
+    () => (showConnectedOnly ? filterConnectedConnections(filteredTree) : filteredTree),
+    [filteredTree, showConnectedOnly],
+  );
   const quickConnectShellOptions = useMemo(() => localShellOptionsForPlatform(), [i18n.language]);
   const recentConnections = useMemo(() => {
     const connectionsById = new Map(
@@ -1253,7 +1263,7 @@ export function ConnectionSidebar({
     };
   }, []);
 
-  const isTreeFiltered = deferredQuery.trim().length > 0;
+  const isTreeFiltered = deferredQuery.trim().length > 0 || showConnectedOnly;
   const visibleCollapsedFolderIds = useMemo(
     () => (isTreeFiltered ? new Set<string>() : collapsedFolderIds),
     [collapsedFolderIds, isTreeFiltered],
@@ -1263,10 +1273,10 @@ export function ConnectionSidebar({
       return [];
     }
 
-    return flattenConnections(filteredTree).slice().sort((left, right) =>
+    return flattenConnections(displayTree).slice().sort((left, right) =>
       left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
     );
-  }, [filteredTree, showAllConnections]);
+  }, [displayTree, showAllConnections]);
 
 
   function menuPositionFromElement(element: HTMLElement) {
@@ -2117,11 +2127,21 @@ export function ConnectionSidebar({
           <Maximize2 size={13} />
         </button>
         <button
+          aria-pressed={showConnectedOnly}
+          aria-label={t("connections.showConnected")}
+          className={`tree-folder-control${showConnectedOnly ? " active" : ""}`}
+          onClick={() => setShowConnectedOnly((previous) => !previous)}
+          title={t("connections.showConnected")}
+          type="button"
+        >
+          <Filter size={13} />
+        </button>
+        <button
           aria-pressed={showAllConnections}
-          aria-label={t("connections.showAll")}
+          aria-label={t("connections.hideFolders")}
           className={`tree-folder-control${showAllConnections ? " active" : ""}`}
           onClick={() => void handleToggleShowAllConnections()}
-          title={t("connections.showAll")}
+          title={t("connections.hideFolders")}
           type="button"
         >
           <List size={13} />
@@ -2133,12 +2153,16 @@ export function ConnectionSidebar({
         className={`tree-list ${dropTarget === "root" ? "drop-target" : ""}`}
         aria-label={t("connections.connectionTree")}
         data-tutorial-id="connections.tree"
-        data-connection-count={filteredTree.connections.length}
-        data-folder-count={filteredTree.folders.length}
+        data-connection-count={displayTree.connections.length}
+        data-folder-count={displayTree.folders.length}
         data-tree-drop-kind="root"
         onContextMenu={handleTreeContextMenu}
       >
-        {filteredTree.connections.map((connection, connectionIndex) => (
+        {/* In "Hide Folders" mode the flat list below already includes these
+            root connections (flattenConnections starts at the root), so render
+            them here only in the normal/folder view to avoid duplicates. */}
+        {!showAllConnections &&
+          displayTree.connections.map((connection, connectionIndex) => (
           <ConnectionRowWithChildTabs
             activeTabId={activeTabId}
             childTabs={openTabsForConnection(connection.id)}
@@ -2225,7 +2249,7 @@ export function ConnectionSidebar({
                 onPointerDragStart={() => {}}
               />
             ))
-          : filteredTree.folders.map((folder, folderIndex) => (
+          : displayTree.folders.map((folder, folderIndex) => (
               <ConnectionFolderNode
                 dragDisabled={dragDisabled}
                 draggedSourceId={draggedSourceId}
@@ -2271,8 +2295,8 @@ export function ConnectionSidebar({
         {dragPreview ? (
           <div
             className={`tree-root-drop-target${dropTarget === "root" ? " drop-target" : ""}`}
-            data-connection-count={filteredTree.connections.length}
-            data-folder-count={filteredTree.folders.length}
+            data-connection-count={displayTree.connections.length}
+            data-folder-count={displayTree.folders.length}
             data-tree-drop-kind="root"
             role="presentation"
           >
