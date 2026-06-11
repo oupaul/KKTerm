@@ -47,7 +47,7 @@ url = "2"
 scraper = "0.27"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
-vnc = { package = "vnc-rs", version = "0.5.3" }
+vnc = { package = "vnc-rs", path = "vendor/vnc-rs" }
 time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
 zip = "8"
 futures = "0.3"

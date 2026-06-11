@@ -679,6 +679,7 @@ export interface StartVncSessionRequest {
   sessionId: string;
   host: string;
   port?: number;
+  username?: string;
   secretOwnerId?: string;
   password?: string;
   options?: VncSettings;
