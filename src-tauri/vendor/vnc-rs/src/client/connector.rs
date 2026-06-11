@@ -80,53 +80,63 @@ where
                             }
                         }
                     } else {
-                        // choose a auth method
-                        if security_types.contains(&SecurityType::VncAuth) {
-                            if connector.rfb_version != VncVersion::RFB33 {
-                                // In the security handshake (Section 7.1.2), rather than a two-way
-                                // negotiation, the server decides the security type and sends a single
-                                // word:
-
-                                //            +--------------+--------------+---------------+
-                                //            | No. of bytes | Type [Value] | Description   |
-                                //            +--------------+--------------+---------------+
-                                //            | 4            | U32          | security-type |
-                                //            +--------------+--------------+---------------+
-
-                                // The security-type may only take the value 0, 1, or 2.  A value of 0
-                                // means that the connection has failed and is followed by a string
-                                // giving the reason, as described in Section 7.1.2.
-                                SecurityType::write(&SecurityType::VncAuth, &mut connector.stream)
-                                    .await?;
-                            }
-                        } else {
-                            let msg = "Security type apart from Vnc Auth has not been implemented";
-                            return Err(VncError::General(msg.to_owned()));
-                        }
-
-                        // get password
+                        // Both VncAuth and AppleDh need the password from the
+                        // callback; fetch it once up front.
                         if connector.auth_methond.is_none() {
                             return Err(VncError::NoPassword);
                         }
-
                         let credential = (connector.auth_methond.take().unwrap()).await?;
 
-                        // auth
-                        let auth = AuthHelper::read(&mut connector.stream, &credential).await?;
-                        auth.write(&mut connector.stream).await?;
-                        let result = auth.finish(&mut connector.stream).await?;
-                        if let AuthResult::Failed = result {
-                            if let VncVersion::RFB37 = connector.rfb_version {
-                                // In VNC Authentication (Section 7.2.2), if the authentication fails,
-                                // the server sends the SecurityResult message, but does not send an
-                                // error message before closing the connection.
+                        if connector.username.is_some()
+                            && security_types.contains(&SecurityType::AppleDh)
+                        {
+                            // Apple Remote Desktop / macOS Screen Sharing login.
+                            SecurityType::write(&SecurityType::AppleDh, &mut connector.stream)
+                                .await?;
+                            let username = connector.username.take().unwrap();
+                            crate::client::security::apple::authenticate(
+                                &mut connector.stream,
+                                &username,
+                                &credential,
+                            )
+                            .await?;
+
+                            // SecurityResult (U32: 0 = OK).
+                            let status = connector.stream.read_u32().await?;
+                            if status != 0 {
+                                if let VncVersion::RFB38 = connector.rfb_version {
+                                    let len = connector.stream.read_u32().await?;
+                                    let mut reason = vec![0u8; len as usize];
+                                    connector.stream.read_exact(&mut reason).await?;
+                                    return Err(VncError::General(
+                                        String::from_utf8_lossy(&reason).into_owned(),
+                                    ));
+                                }
                                 return Err(VncError::WrongPassword);
-                            } else {
-                                let _ = connector.stream.read_u32().await?;
-                                let mut err_msg = String::new();
-                                connector.stream.read_to_string(&mut err_msg).await?;
-                                return Err(VncError::General(err_msg));
                             }
+                        } else if security_types.contains(&SecurityType::VncAuth) {
+                            if connector.rfb_version != VncVersion::RFB33 {
+                                SecurityType::write(&SecurityType::VncAuth, &mut connector.stream)
+                                    .await?;
+                            }
+
+                            let auth = AuthHelper::read(&mut connector.stream, &credential).await?;
+                            auth.write(&mut connector.stream).await?;
+                            let result = auth.finish(&mut connector.stream).await?;
+                            if let AuthResult::Failed = result {
+                                if let VncVersion::RFB37 = connector.rfb_version {
+                                    return Err(VncError::WrongPassword);
+                                } else {
+                                    let _ = connector.stream.read_u32().await?;
+                                    let mut err_msg = String::new();
+                                    connector.stream.read_to_string(&mut err_msg).await?;
+                                    return Err(VncError::General(err_msg));
+                                }
+                            }
+                        } else {
+                            let msg =
+                                "Security type apart from Vnc Auth has not been implemented";
+                            return Err(VncError::General(msg.to_owned()));
                         }
                     }
                     info!("auth done, client connected");
@@ -163,6 +173,7 @@ where
 {
     stream: S,
     auth_methond: Option<F>,
+    username: Option<String>,
     rfb_version: VncVersion,
     allow_shared: bool,
     pixel_format: Option<PixelFormat>,
@@ -205,6 +216,7 @@ where
         Self {
             stream,
             auth_methond: None,
+            username: None,
             allow_shared: true,
             rfb_version: VncVersion::RFB38,
             pixel_format: None,
@@ -253,6 +265,13 @@ where
     ///
     pub fn set_auth_method(mut self, auth_callback: F) -> Self {
         self.auth_methond = Some(auth_callback);
+        self
+    }
+
+    /// Optional username for servers that use Apple Remote Desktop (RFB
+    /// security type 30) authentication. Ignored by other security types.
+    pub fn set_username(mut self, username: String) -> Self {
+        self.username = Some(username);
         self
     }
 
