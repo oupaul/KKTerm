@@ -446,6 +446,23 @@ fn extract_server_public_key(
 
 type UpgradedFramed = ironrdp_tokio::TokioFramed<tokio_rustls::client::TlsStream<TcpStream>>;
 
+/// Flatten an error and its `source()` chain into one message, so a generic
+/// top-level label (e.g. "CredSSP") surfaces the underlying reason
+/// (e.g. an NTLM logon failure) instead of being swallowed.
+fn error_chain(error: &dyn std::error::Error) -> String {
+    let mut message = error.to_string();
+    let mut source = error.source();
+    while let Some(inner) = source {
+        let inner_text = inner.to_string();
+        if !message.ends_with(&inner_text) {
+            message.push_str(": ");
+            message.push_str(&inner_text);
+        }
+        source = inner.source();
+    }
+    message
+}
+
 async fn rdp_connect(
     host: String,
     port: u16,
@@ -462,6 +479,16 @@ async fn rdp_connect(
     use ironrdp::pdu::gcc::KeyboardType;
     use ironrdp::pdu::rdp::capability_sets::MajorPlatformType;
     use ironrdp_tokio::{TokioFramed, connect_begin, connect_finalize, mark_as_upgraded};
+
+    // CredSSP/NTLM needs the domain separated from the username. Split a
+    // `DOMAIN\user` login into (domain, user); otherwise keep the requested
+    // domain and the username as-is (UPN `user@domain` is left intact).
+    let (username, domain) = match username.split_once('\\') {
+        Some((d, u)) if !d.trim().is_empty() && !u.trim().is_empty() => {
+            (u.trim().to_string(), Some(d.trim().to_string()))
+        }
+        _ => (username, domain),
+    };
 
     // Step 1: TCP connect + create framed
     let stream = TcpStream::connect((host.as_str(), port))
@@ -508,7 +535,7 @@ async fn rdp_connect(
     let mut connector = ClientConnector::new(config, client_addr);
     let should_upgrade = connect_begin(&mut framed, &mut connector)
         .await
-        .map_err(|e| format!("RDP connect_begin failed: {e}"))?;
+        .map_err(|e| format!("RDP connect_begin failed: {}", error_chain(&e)))?;
 
     // Step 4: Extract inner stream
     let (tcp_stream, leftover) = framed.into_inner();
@@ -536,7 +563,7 @@ async fn rdp_connect(
         None::<KerberosConfig>,
     )
     .await
-    .map_err(|e| format!("RDP connect_finalize failed: {e}"))?;
+    .map_err(|e| format!("RDP connect_finalize failed: {}", error_chain(&e)))?;
 
     Ok((connection_result, upgraded_framed))
 }
