@@ -64,6 +64,36 @@ refresh` parameter is now a no-op kept only for frontend-API
 compatibility. The command returns the bundled `Catalog` directly with
 no source-kind discriminator.
 
+## Adding a recipe (developer checklist)
+
+A catalog entry is **necessary but not sufficient** to make a tool show
+up in the Installer Helper. The UI does not render by the catalog's
+`category` field — it renders by a hardcoded per-section allow-list of
+recipe ids. A valid recipe that is not in that list is silently
+invisible. This has bitten us several times (most recently
+`powershell-7`). When adding a tool, update **all** of the following:
+
+1. **`installer/catalog.v1.json`** — add the recipe object (`id`,
+   `name`, `descriptionEn`, `category`, provider, detection, etc.). The
+   `shipped_catalog_parses_and_validates` Rust test guards the schema.
+   Because the catalog is `include_str!`-embedded, this requires a Rust
+   rebuild to take effect at runtime.
+2. **`src/modules/installer/InstallerPage.tsx`** — add the recipe `id`
+   to the matching section's `ids` array in
+   `INSTALLER_CATEGORY_SECTIONS`. **This is the step that actually makes
+   the tool visible.** `groupRecipes` builds its `visibleIds` set from
+   the union of these arrays and skips any recipe not present, so it
+   also gates update detection. Forgetting this is the classic
+   "I added it to the catalog but don't see it" bug.
+3. **`src/modules/installer/icons.ts`** — optionally map the `id` to a
+   bundled brand icon in `RECIPE_ICON_URLS`. This one is safe to skip:
+   unmapped ids fall back to the generic package icon, so it affects
+   appearance only, not visibility.
+
+Steps 1 and 2 are mandatory and independent; step 3 is cosmetic. The
+manual chapter `docs/manual/18-installer.md` lists tools for end users
+and should be updated to match when the user-visible set changes.
+
 ## What was removed
 
 - `src-tauri/src/installer/trust.rs` (Ed25519 / minisign verification).

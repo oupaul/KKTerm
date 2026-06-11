@@ -410,6 +410,11 @@ interface GroupedRecipes {
   categories: Array<{ titleKey: string; recipes: Recipe[] }>;
 }
 
+// Visibility allow-list for the Installer Helper. The UI renders by these
+// explicit per-section id lists, NOT by the catalog's `category` field, so a
+// recipe added to installer/catalog.v1.json stays invisible until its id is
+// listed here (groupRecipes filters on the union of these ids). See
+// docs/ADR/0008 "Adding a recipe (developer checklist)".
 const INSTALLER_CATEGORY_SECTIONS: Array<{
   titleKey: string;
   ids: string[];
@@ -448,7 +453,7 @@ const INSTALLER_CATEGORY_SECTIONS: Array<{
   },
   {
     titleKey: "installer.section.windowsPowerUser",
-    ids: ["powertoys", "sysinternals-suite", "everything", "ditto"],
+    ids: ["powershell-7", "powertoys", "sysinternals-suite", "everything", "ditto"],
   },
   {
     titleKey: "installer.section.remoteAccess",

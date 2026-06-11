@@ -4,6 +4,8 @@ import ftpIcon from "../../../assets/connection-icons/ftp.png";
 import rdpIcon from "../../../assets/connection-icons/rdp.png";
 import serialIcon from "../../../assets/connection-icons/serial.png";
 import sshIcon from "../../../assets/connection-icons/ssh.png";
+import powershellIcon from "../../../assets/connection-icons/powershell.svg";
+import powershell5Icon from "../../../assets/connection-icons/powershell5.svg";
 import telnetIcon from "../../../assets/connection-icons/telnet.png";
 import terminalIcon from "../../../assets/connection-icons/terminal.png";
 import urlIcon from "../../../assets/connection-icons/url.png";
@@ -41,11 +43,19 @@ export function connectionIconSrcForConnection({
   localShell?: string;
   type: ConnectionType;
 }) {
-  return iconDataUrl
-    ? iconDataUrl
-    : type === "local" && localShell === "wsl.exe"
-      ? wslIcon
-      : CONNECTION_ICON_SRC[type];
+  if (iconDataUrl) {
+    return iconDataUrl;
+  }
+  if (type === "local" && localShell === "wsl.exe") {
+    return wslIcon;
+  }
+  if (type === "local" && localShell === "powershell.exe") {
+    return powershell5Icon;
+  }
+  if (type === "local" && localShell === "pwsh.exe") {
+    return powershellIcon;
+  }
+  return CONNECTION_ICON_SRC[type];
 }
 
 export function ConnectionIcon({
