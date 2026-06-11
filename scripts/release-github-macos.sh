@@ -47,6 +47,25 @@ require_env() {
   [[ -n "${(P)name:-}" ]] || die "Required environment variable is missing: $name"
 }
 
+expand_env_file_value() {
+  local value="$1"
+
+  case "$value" in
+    '$HOME'/*)
+      print -r -- "$HOME/${value#\$HOME/}"
+      ;;
+    '${HOME}'/*)
+      print -r -- "$HOME/${value#\$\{HOME\}/}"
+      ;;
+    '~'/*)
+      print -r -- "$HOME/${value#~/}"
+      ;;
+    *)
+      print -r -- "$value"
+      ;;
+  esac
+}
+
 import_local_env_files() {
   local env_file line name value
 
@@ -69,6 +88,7 @@ import_local_env_files() {
           value="${value[2,-2]}"
         fi
 
+        value=$(expand_env_file_value "$value")
         export "$name=$value"
       fi
     done < "$env_file"
