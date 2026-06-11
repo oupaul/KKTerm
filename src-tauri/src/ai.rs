@@ -48,8 +48,9 @@ use prompt_contracts::{
     DASHBOARD_WIDGET_DESIGN_DIRECTION_CONTRACT, DASHBOARD_WIDGET_DESIGN_PREFLIGHT_CONTRACT,
     DASHBOARD_WIDGET_DOM_CONTRACT, DASHBOARD_WIDGET_HEALTH_CONTRACT,
     DASHBOARD_WIDGET_LAYOUT_CONTRACT, DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT,
-    DASHBOARD_WIDGET_PHYSICS_CONTRACT, DASHBOARD_WIDGET_SURFACE_CONTRACT,
-    DASHBOARD_WIDGET_UTF8_CONTRACT, DASHBOARD_WIDGET_VISUAL_CONTRACT,
+    DASHBOARD_WIDGET_PHYSICS_CONTRACT, DASHBOARD_WIDGET_SOURCE_CONTRACT,
+    DASHBOARD_WIDGET_SURFACE_CONTRACT, DASHBOARD_WIDGET_UTF8_CONTRACT,
+    DASHBOARD_WIDGET_VISUAL_CONTRACT,
 };
 use providers::provider_for;
 use tauri::ipc::Channel;
@@ -2306,6 +2307,11 @@ fn ai_tool_definitions_with_skills(
         create_widget_tool
             .function
             .description
+            .push_str(DASHBOARD_WIDGET_SOURCE_CONTRACT);
+        create_widget_tool.function.description.push(' ');
+        create_widget_tool
+            .function
+            .description
             .push_str(DASHBOARD_WIDGET_DOM_CONTRACT);
         create_widget_tool.function.description.push(' ');
         create_widget_tool
@@ -2315,12 +2321,12 @@ fn ai_tool_definitions_with_skills(
         tools.push(create_widget_tool.strict());
         tools.push(tool_definition(
             "dashboard_create_custom_widget",
-            format!("Create a reusable script AI Created Widget definition only; this does not place it on a view. bodyJson must be a UTF-8 JSON string matching the script body schema. Optional settingsSchemaJson defines app-rendered per-instance settings fields and is also UTF-8 JSON. Use type secret for passwords, API keys, and tokens so only secret references are stored in SQLite. Prefer dashboard_create_widget when the user expects a visible widget. Apply the same pre-create duplicate check described on dashboard_create_widget: if an existing AI Created Widget overlaps in function, ask the user to choose edit / create new / place an instance instead of silently creating a duplicate. {DASHBOARD_WIDGET_UTF8_CONTRACT} {DASHBOARD_WIDGET_DOM_CONTRACT}"),
+            format!("Create a reusable script AI Created Widget definition only; this does not place it on a view. bodyJson must be a UTF-8 JSON string matching the script body schema. Optional settingsSchemaJson defines app-rendered per-instance settings fields and is also UTF-8 JSON. Use type secret for passwords, API keys, and tokens so only secret references are stored in SQLite. Prefer dashboard_create_widget when the user expects a visible widget. Apply the same pre-create duplicate check described on dashboard_create_widget: if an existing AI Created Widget overlaps in function, ask the user to choose edit / create new / place an instance instead of silently creating a duplicate. {DASHBOARD_WIDGET_UTF8_CONTRACT} {DASHBOARD_WIDGET_SOURCE_CONTRACT} {DASHBOARD_WIDGET_DOM_CONTRACT}"),
             json!({"type":"object","properties":{"title":{"type":"string"},"summary":{"type":"string"},"category":{"type":"string"},"bodyJson":{"type":"string"},"settingsSchemaJson":{"type":"string"},"createdBy":{"type":"string","enum":["user","agent"]}},"required":["title","summary","category","bodyJson","createdBy"]}),
         ));
         tools.push(tool_definition(
             "dashboard_update_custom_widget",
-            format!("Update an existing AI Created Widget's title, summary, category, or body. Prefer patch.body with the same structured body shape used by dashboard_create_widget so KKTerm serializes valid UTF-8 JSON for you. Use legacy patch.bodyJson only when you intentionally need to submit a pre-serialized UTF-8 JSON string. {DASHBOARD_WIDGET_UTF8_CONTRACT} {DASHBOARD_WIDGET_DOM_CONTRACT}"),
+            format!("Update an existing AI Created Widget's title, summary, category, or body. Prefer patch.body with the same structured body shape used by dashboard_create_widget so KKTerm serializes valid UTF-8 JSON for you. Use legacy patch.bodyJson only when you intentionally need to submit a pre-serialized UTF-8 JSON string. {DASHBOARD_WIDGET_UTF8_CONTRACT} {DASHBOARD_WIDGET_SOURCE_CONTRACT} {DASHBOARD_WIDGET_DOM_CONTRACT}"),
             dashboard_update_custom_widget_schema(),
         ));
         tools.push(tool_definition(
@@ -4723,6 +4729,7 @@ fn build_agent_messages(
         DASHBOARD_WIDGET_ANIMATION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_PHYSICS_CONTRACT.to_string(),
         DASHBOARD_WIDGET_PERFORMANCE_COUNTER_CONTRACT.to_string(),
+        DASHBOARD_WIDGET_SOURCE_CONTRACT.to_string(),
         DASHBOARD_WIDGET_DOM_CONTRACT.to_string(),
         "PERFORMANCE COUNTERS: Use the performance_counters tool when the user asks about current local system load, memory pressure, network throughput, KKTerm process resource use, uptime, or drive free space. For Dashboard performance widgets, create a script widget that calls await KK.getPerformanceCounters() and polls at a modest interval such as 2-5 seconds; never poll counters from requestAnimationFrame or high-frequency animation loops.".to_string(),
         "MCP IN WIDGETS: When a widget's source will call KK.callMcpTool('<server>', '<tool>', <args>), you MUST first discover the real tool list and parameter shape of that server before writing the widget. Use the mcp_list_tools tool (or read tool schemas from current page context) to look up the exact tool names, required argument keys, and response field names. Do not guess tool names like 'opendata-search_datasets' or invent arguments like 'agency' or 'normalised_only' and do not assume a response has fields like 'datasets[0].dataset_id' without verifying. Quote the tool's documented argument keys verbatim in the widget source, and parse the actual response shape returned by that tool. If a tool result does not match what the widget expects at runtime, fix the parser to match the real shape rather than retrying with the same guess. If the user names an MCP server (for example twinkle-hub) but no tool list is available, ask the user to confirm the server is connected before generating widget code that depends on it.".to_string(),

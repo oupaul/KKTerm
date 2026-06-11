@@ -1890,6 +1890,30 @@
                 .description
                 .contains("pre-serialized UTF-8 JSON string")
         );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("Dashboard widget source-correctness contract")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("const root = document.getElementById('root')")
+        );
+        assert!(
+            create_tool
+                .function
+                .description
+                .contains("throws ReferenceError at runtime")
+        );
+        assert!(
+            update_tool
+                .function
+                .description
+                .contains("Dashboard widget source-correctness contract")
+        );
     }
 
     #[test]
@@ -2152,6 +2176,8 @@
         assert!(system_content.contains("use multiple tool-call rounds"));
         assert!(system_content.contains("wired to the actual data source"));
         assert!(system_content.contains("Creative Commons images from credible sources"));
+        assert!(system_content.contains("Dashboard widget source-correctness contract"));
+        assert!(system_content.contains("const root = document.getElementById('root')"));
     }
 
     #[test]
