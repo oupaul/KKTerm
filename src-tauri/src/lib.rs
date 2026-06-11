@@ -25,6 +25,8 @@ mod net;
 mod performance;
 mod power;
 mod rdp;
+#[cfg(not(target_os = "windows"))]
+mod rdp_client;
 mod screenshot;
 mod secrets;
 mod serial;

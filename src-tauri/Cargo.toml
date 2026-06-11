@@ -37,7 +37,7 @@ base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 portable-pty = "0.9.0"
 keyring-core = "1.0.0"
-russh = { version = "0.60.3", default-features = false, features = ["flate2", "ring", "rsa"] }
+russh = { version = "0.60.0", default-features = false, features = ["flate2", "ring", "rsa"] }
 russh-sftp = "2.1.2"
 suppaftp = { version = "=7.1.0", default-features = false, features = ["tokio", "tokio-async-native-tls", "deprecated"] }
 async-native-tls = { version = "0.5", default-features = false, features = ["runtime-tokio"] }
@@ -97,6 +97,18 @@ winping = "0.10"
 # Unix ICMP via surge-ping (raw sockets - Unix users typically have CAP_NET_RAW or root).
 # Windows uses winping instead (see Windows target block above).
 surge-ping = "0.8"
+# macOS RDP client via IronRDP (Windows uses the native ActiveX path in rdp.rs instead).
+# The umbrella crate pins a mutually-compatible sub-crate set.
+# ironrdp-tokio re-exports all of ironrdp-async (connect_begin, connect_finalize,
+# mark_as_upgraded, NetworkClient) via `pub use ironrdp_async::*`, so no separate
+# ironrdp-async dep is needed. The umbrella `input` feature re-exports ironrdp-input v0.6,
+# so no separate ironrdp-input dep is needed either.
+ironrdp = { version = "0.15", features = ["connector", "session", "graphics", "pdu", "input"] }
+ironrdp-tokio = "0.9"
+tokio-rustls = "0.26"
+# NOTE: sspi = "0.21" (needed for CredSSP/NTLM) is a transitive dep of ironrdp-connector.
+# It is omitted here as a direct dep because ironrdp-connector already pulls it in.
+# To add direct sspi usage in Task 4: sspi = { version = "0.21", default-features = false }
 
 [profile.release]
 lto = "fat"
