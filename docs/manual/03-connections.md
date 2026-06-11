@@ -33,7 +33,8 @@ Header row (top of the panel):
 - Quick Connect: `connections.quickConnect`
 - New Folder: `connections.newFolder`
 - Collapse / Expand all: `connections.collapseAll`, `connections.expandAll`
-- Show All: `connections.showAll`; flattens the Connection Tree across folders, shows the button in its pressed state while enabled, and persists the preference in the Settings database across app relaunches.
+- Show Connected: `connections.showConnected`; filters the Connection Tree to only connections that currently have a live session, pruning empty folders. Shows the button in its pressed state while enabled; the filter is session-only and is not persisted across app relaunches. It composes with both the search box and Hide Folders.
+- Hide Folders: `connections.hideFolders` (formerly "Show All"); flattens the Connection Tree across folders into a single de-duplicated list, shows the button in its pressed state while enabled, and persists the preference in the Settings database across app relaunches.
 - Search box: placeholder `connections.searchPlaceholder`. While a search is active, matching folders are shown expanded so nested result rows are immediately visible; clearing search restores the folder collapse/expand state from before the search.
 - Column toggle: custom title-bar `app.connections` icon or Workspace icon on the Activity Rail
 
