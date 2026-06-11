@@ -56,7 +56,7 @@ test("startup update check only runs once when enabled in the Tauri runtime", as
 });
 
 test("installer asset selection requires matching installer and checksum assets", async () => {
-  const { selectInstallerAssets } = await importTypeScriptModule(
+  const { selectWindowsInstallerAssets } = await importTypeScriptModule(
     new URL("../src/lib/appUpdatesModel.ts", import.meta.url),
   );
 
@@ -75,12 +75,23 @@ test("installer asset selection requires matching installer and checksum assets"
     },
   ];
 
-  assert.deepEqual(selectInstallerAssets(assets, "windows-x64"), {
+  assert.deepEqual(selectWindowsInstallerAssets(assets, "windows-x64"), {
     assetName: "kkterm-0.1.54-windows-x64-setup.exe",
     downloadUrl: "https://github.com/ryantsai/KKTerm/releases/download/v0.1.54/kkterm-0.1.54-windows-x64-setup.exe",
     checksumUrl: "https://github.com/ryantsai/KKTerm/releases/download/v0.1.54/kkterm-0.1.54-windows-x64-setup.exe.sha256",
   });
-  assert.equal(selectInstallerAssets(assets, "windows-arm64"), null);
+  assert.equal(selectWindowsInstallerAssets(assets, "windows-arm64"), null);
+});
+
+test("app update install strategy keeps Windows installer flow separate from macOS Tauri updater", async () => {
+  const { appUpdateInstallStrategy } = await importTypeScriptModule(
+    new URL("../src/lib/appUpdatesModel.ts", import.meta.url),
+  );
+
+  assert.equal(appUpdateInstallStrategy("windows"), "windows-installer");
+  assert.equal(appUpdateInstallStrategy("macos"), "tauri-updater");
+  assert.equal(appUpdateInstallStrategy("linux"), "download-page");
+  assert.equal(appUpdateInstallStrategy("unknown"), "download-page");
 });
 
 test("app update install command is exposed across the frontend and backend boundary", async () => {

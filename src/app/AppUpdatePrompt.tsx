@@ -122,6 +122,9 @@ export function AppUpdatePrompt({
     }
   }, [update?.body]);
 
+  const canDownloadAndInstall =
+    update?.installStrategy === "tauri-updater" || Boolean(update?.installer);
+
   function handleUpdateNotesClick(event: MouseEvent<HTMLDivElement>) {
     const link = (event.target as Element | null)?.closest("a");
     if (!link) {
@@ -199,7 +202,7 @@ export function AppUpdatePrompt({
             <ExternalLink size={15} />
             {t("settings.updateOpenDownloadPage")}
           </button>
-          {update.installer ? (
+          {canDownloadAndInstall ? (
             <button
               className="approve-button"
               disabled={installing}

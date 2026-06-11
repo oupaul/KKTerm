@@ -12,7 +12,10 @@ const packageJson = JSON.parse(
 
 test("macOS release script is a native zsh GitHub release asset uploader", () => {
   assert.match(script, /^#!\/usr\/bin\/env zsh/);
-  assert.match(script, /gh release upload "\$TAG_NAME" "\$DMG_PATH" "\$SHA_PATH" --clobber/);
+  assert.match(
+    script,
+    /gh release upload "\$TAG_NAME" "\$DMG_PATH" "\$SHA_PATH" "\$UPDATER_PATH" "\$UPDATER_SIG_PATH" "\$LATEST_JSON_PATH" --clobber/,
+  );
   assert.doesNotMatch(script, /powershell|pwsh|release-github\.ps1/);
   assert.equal(packageJson.scripts["release:github:macos"], "zsh scripts/release-github-macos.sh");
 });
@@ -43,6 +46,15 @@ test("macOS release script builds deterministic DMG and checksum asset names", (
   assert.match(script, /SHA_NAME="\$DMG_NAME\.sha256"/);
   assert.match(script, /npm run package:macos/);
   assert.match(script, /shasum -a 256 "\$DMG_PATH"/);
+});
+
+test("macOS release script uploads signed Tauri updater metadata", () => {
+  assert.match(script, /find_latest_updater_bundle\(\) \{/);
+  assert.match(script, /UPDATER_NAME="kkterm-\$VERSION-macos-arm64\.app\.tar\.gz"/);
+  assert.match(script, /UPDATER_SIG_NAME="\$UPDATER_NAME\.sig"/);
+  assert.match(script, /LATEST_JSON_NAME="latest\.json"/);
+  assert.match(script, /write_latest_json "\$LATEST_JSON_PATH"/);
+  assert.match(script, /"darwin-aarch64"/);
 });
 
 test("macOS release script infers the release tag from the DMG when tag is omitted", () => {

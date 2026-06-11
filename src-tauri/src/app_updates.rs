@@ -2,6 +2,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
+#[cfg(target_os = "windows")]
 use std::process::Command;
 use std::time::Duration;
 use tauri::Manager;
@@ -211,6 +212,7 @@ fn spawn_installer_after_exit(_installer_path: &Path, _parent_pid: u32) -> Resul
     Err("download and install is only available for Windows installers".into())
 }
 
+#[cfg(target_os = "windows")]
 fn ps_single_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }

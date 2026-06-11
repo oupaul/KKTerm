@@ -2594,13 +2594,25 @@ fn is_remote_session() -> bool {
     }
 }
 
+#[cfg(target_os = "macos")]
+fn configure_macos_updater<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn configure_macos_updater<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
     // The heartbeat is started from `setup` once the main window's AppHandle
     // exists, so the native UI-thread liveness probe has a window to ping.
 
-    configure_single_instance(tauri::Builder::default())
+    configure_macos_updater(configure_single_instance(tauri::Builder::default()))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())

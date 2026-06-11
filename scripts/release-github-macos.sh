@@ -139,6 +139,18 @@ find_latest_dmg() {
   print -r -- "${matches[1]}"
 }
 
+find_latest_updater_bundle() {
+  local updater_dir="$REPO_ROOT/src-tauri/target/$TARGET_TRIPLE/release/bundle/macos"
+  local -a matches
+
+  [[ -d "$updater_dir" ]] || die "Updater bundle directory not found: $updater_dir"
+  matches=("$updater_dir"/*.app.tar.gz(Nom[1]))
+  (( ${#matches[@]} > 0 )) || die "No macOS updater bundle found in $updater_dir"
+  [[ -f "${matches[1]}.sig" ]] || die "Updater signature not found: ${matches[1]}.sig"
+
+  print -r -- "${matches[1]}"
+}
+
 notarize_and_staple_dmg() {
   local dmg_path="$1"
 
@@ -210,6 +222,41 @@ NODE
   rm -f "$temp_file"
 }
 
+write_latest_json() {
+  local path="$1"
+  local version="$2"
+  local repo="$3"
+  local tag="$4"
+  local updater_name="$5"
+  local signature_path="$6"
+
+  UPDATE_SIGNATURE=$(<"$signature_path") \
+  UPDATE_VERSION="$version" \
+  UPDATE_URL="https://github.com/$repo/releases/download/$tag/$updater_name" \
+    node --input-type=module > "$path" <<'NODE'
+const signature = process.env.UPDATE_SIGNATURE?.trim();
+const version = process.env.UPDATE_VERSION;
+const url = process.env.UPDATE_URL;
+
+if (!signature || !version || !url) {
+  throw new Error("Missing updater metadata input.");
+}
+
+const metadata = {
+  version,
+  notes: "See the GitHub Release notes for this KKTerm version.",
+  platforms: {
+    "darwin-aarch64": {
+      signature,
+      url,
+    },
+  },
+};
+
+process.stdout.write(`${JSON.stringify(metadata, null, 2)}\n`);
+NODE
+}
+
 while (( $# > 0 )); do
   case "$1" in
     -t|--tag)
@@ -278,8 +325,10 @@ fi
 if (( DRY_RUN && ! SKIP_BUILD )); then
   VERSION="$PACKAGE_VERSION"
   SOURCE_DMG="<created by npm run package:macos>"
+  SOURCE_UPDATER="<created by npm run package:macos>"
 else
   SOURCE_DMG=$(find_latest_dmg)
+  SOURCE_UPDATER=$(find_latest_updater_bundle)
   VERSION=$(detect_dmg_version "$SOURCE_DMG")
 fi
 
@@ -293,15 +342,23 @@ fi
 OUTPUT_PATH="$REPO_ROOT/$OUTPUT_DIR"
 DMG_NAME="kkterm-$VERSION-macos-arm64.dmg"
 SHA_NAME="$DMG_NAME.sha256"
+UPDATER_NAME="kkterm-$VERSION-macos-arm64.app.tar.gz"
+UPDATER_SIG_NAME="$UPDATER_NAME.sig"
+LATEST_JSON_NAME="latest.json"
 DMG_PATH="$OUTPUT_PATH/$DMG_NAME"
 SHA_PATH="$OUTPUT_PATH/$SHA_NAME"
+UPDATER_PATH="$OUTPUT_PATH/$UPDATER_NAME"
+UPDATER_SIG_PATH="$OUTPUT_PATH/$UPDATER_SIG_NAME"
+LATEST_JSON_PATH="$OUTPUT_PATH/$LATEST_JSON_NAME"
 
 log "Version:       $VERSION"
 log "Release tag:   $TAG_NAME"
 log "Repository:    $REPO"
 log "Target triple: $TARGET_TRIPLE"
 log "Source DMG:    $SOURCE_DMG"
+log "Source update: $SOURCE_UPDATER"
 log "DMG asset:     $DMG_PATH"
+log "Update asset:  $UPDATER_PATH"
 
 if (( DRY_RUN )); then
   exit 0
@@ -312,11 +369,14 @@ git rev-parse "$TAG_NAME" >/dev/null 2>&1 || die "Local tag not found: $TAG_NAME
 gh release view "$TAG_NAME" >/dev/null || die "GitHub release not found: $TAG_NAME"
 mkdir -p "$OUTPUT_PATH"
 cp "$SOURCE_DMG" "$DMG_PATH"
+cp "$SOURCE_UPDATER" "$UPDATER_PATH"
+cp "$SOURCE_UPDATER.sig" "$UPDATER_SIG_PATH"
 notarize_and_staple_dmg "$DMG_PATH"
 shasum -a 256 "$DMG_PATH" | awk -v name="$DMG_NAME" '{ print $1 "  " name }' > "$SHA_PATH"
+write_latest_json "$LATEST_JSON_PATH" "$VERSION" "$REPO" "$TAG_NAME" "$UPDATER_NAME" "$UPDATER_SIG_PATH"
 
 log "Upload macOS assets"
-gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" --clobber
+gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" "$UPDATER_PATH" "$UPDATER_SIG_PATH" "$LATEST_JSON_PATH" --clobber
 
 if (( ! SKIP_NOTES_PATCH )); then
   log "Patch GitHub Release notes"

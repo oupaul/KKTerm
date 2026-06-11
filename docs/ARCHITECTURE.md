@@ -349,11 +349,11 @@ Owns structured local logs, diagnostics bundle creation, and redaction rules. No
 
 ### Updates
 
-Owns update discovery and installation for packaged desktop builds. The update mechanism is currently disabled while release signing is deferred. When restored, it should target the installed Windows app only, use signed Tauri updater artifacts and GitHub Releases static updater metadata for a single stable channel, and remain user-mediated.
+Owns update discovery and installation for packaged desktop builds. Windows uses the current GitHub Releases installer flow: release metadata lookup, matching NSIS installer asset plus `.sha256`, user confirmation, checksum verification, app exit, and detached installer handoff. macOS uses Tauri's signed updater flow with GitHub Releases `latest.json`, a `darwin-aarch64` `.app.tar.gz` updater bundle, and its `.sig` signature. Both paths remain user-mediated.
 
-Update checks are disabled for now. When restored, update checks may contact the configured GitHub Releases/update metadata endpoint. This network request is part of the updater flow and must be described clearly in Settings as distinct from telemetry. KKTerm must not add analytics or crash upload as part of update checking.
+Update checks may contact the configured GitHub Releases/update metadata endpoint. This network request is part of the updater flow and must be described clearly in Settings as distinct from telemetry. KKTerm must not add analytics or crash upload as part of update checking.
 
-Installation is user-mediated. Settings owns manual update checks and update preferences, while app chrome may show a lightweight update-available notification after a successful check. The first v0.2 updater supports normal forward updates only. Rollback, downgrade, preview channels, managed update servers, silent installs, and cross-platform updater support are deferred.
+Installation is user-mediated. Settings owns manual update checks and update preferences, while app chrome may show a lightweight update-available notification after a successful check. The first updater supports normal forward updates only. Rollback, downgrade, preview channels, managed update servers, and silent installs are deferred.
 
 ## Data Boundaries
 

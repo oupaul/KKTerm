@@ -21,7 +21,19 @@ export type AppUpdateInstallerAssets = {
   checksumUrl: string;
 };
 
-export function selectInstallerAssets(
+export type AppUpdateInstallStrategy = "windows-installer" | "tauri-updater" | "download-page";
+
+export function appUpdateInstallStrategy(platform: "windows" | "macos" | "linux" | "unknown"): AppUpdateInstallStrategy {
+  if (platform === "windows") {
+    return "windows-installer";
+  }
+  if (platform === "macos") {
+    return "tauri-updater";
+  }
+  return "download-page";
+}
+
+export function selectWindowsInstallerAssets(
   assets: AppUpdateAsset[] | undefined,
   targetTriple: string,
 ): AppUpdateInstallerAssets | null {

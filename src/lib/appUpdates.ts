@@ -1,6 +1,13 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "./tauri";
-import { selectInstallerAssets, type AppUpdateAsset, type AppUpdateInstallerAssets } from "./appUpdatesModel";
+import { currentPlatform } from "./platform";
+import {
+  appUpdateInstallStrategy,
+  selectWindowsInstallerAssets,
+  type AppUpdateAsset,
+  type AppUpdateInstallerAssets,
+  type AppUpdateInstallStrategy,
+} from "./appUpdatesModel";
 
 let debugBuildPromise: Promise<boolean> | null = null;
 
@@ -23,6 +30,7 @@ export type AppUpdate = {
   body: string;
   htmlUrl: string;
   installer: AppUpdateInstallerAssets | null;
+  installStrategy: AppUpdateInstallStrategy;
 };
 
 function normalizeTag(tag: string) {
@@ -69,6 +77,11 @@ export async function checkForAppUpdate(): Promise<AppUpdate | null> {
     return null;
   }
 
+  const strategy = appUpdateInstallStrategy(currentPlatform());
+  if (strategy === "tauri-updater") {
+    return checkForTauriAppUpdate();
+  }
+
   const currentVersion = await getVersion();
 
   const controller = new AbortController();
@@ -104,7 +117,11 @@ export async function checkForAppUpdate(): Promise<AppUpdate | null> {
     version: latestVersion,
     body: (release.body ?? "").trim(),
     htmlUrl: release.html_url ?? RELEASES_PAGE_URL,
-    installer: selectInstallerAssets(release.assets, targetTriple),
+    installer:
+      strategy === "windows-installer"
+        ? selectWindowsInstallerAssets(release.assets, targetTriple)
+        : null,
+    installStrategy: strategy,
   };
 }
 
@@ -113,6 +130,10 @@ export async function openReleaseDownloadPage(update: AppUpdate) {
 }
 
 export async function downloadAndInstallAppUpdate(update: AppUpdate) {
+  if (update.installStrategy === "tauri-updater") {
+    await installTauriAppUpdate();
+    return;
+  }
   if (!update.installer) {
     throw new Error("No installer asset is available for this device.");
   }
@@ -124,4 +145,34 @@ export async function downloadAndInstallAppUpdate(update: AppUpdate) {
       checksumUrl: update.installer.checksumUrl,
     },
   });
+}
+
+async function checkForTauriAppUpdate(): Promise<AppUpdate | null> {
+  const { check } = await import("@tauri-apps/plugin-updater");
+  const tauriUpdate = await check({ timeout: 10_000 });
+  if (!tauriUpdate) {
+    return null;
+  }
+
+  return {
+    currentVersion: tauriUpdate.currentVersion,
+    version: tauriUpdate.version,
+    body: (tauriUpdate.body ?? "").trim(),
+    htmlUrl: RELEASES_PAGE_URL,
+    installer: null,
+    installStrategy: "tauri-updater",
+  };
+}
+
+async function installTauriAppUpdate() {
+  const [{ check }, { relaunch }] = await Promise.all([
+    import("@tauri-apps/plugin-updater"),
+    import("@tauri-apps/plugin-process"),
+  ]);
+  const tauriUpdate = await check({ timeout: 10_000 });
+  if (!tauriUpdate) {
+    throw new Error("No signed update is available for this device.");
+  }
+  await tauriUpdate.downloadAndInstall(undefined, { timeout: 120_000 });
+  await relaunch();
 }
