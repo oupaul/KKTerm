@@ -3384,6 +3384,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
+dependencies = [
+ "cfg-if",
+ "digest 0.10.7",
+]
+
+[[package]]
 name = "md5"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7369,9 +7379,13 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "vnc-rs"
 version = "0.5.3"
 dependencies = [
+ "aes 0.8.4",
  "async_io_stream",
  "flate2",
  "futures",
+ "md-5",
+ "num-bigint",
+ "rand 0.9.4",
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
