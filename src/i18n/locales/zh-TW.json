@@ -533,10 +533,10 @@
       "addToWorkspace": "加入工作區"
     },
     "options": {
-      "scope": "範圍",
-      "scopeUser": "每位使用者",
-      "scopeMachine": "所有使用者 (UAC)",
-      "scopeSelfElevatingHint": "此安裝程式在依使用者範圍安裝時仍可能顯示 UAC。",
+      "scope": "安裝模式",
+      "scopeUser": "使用者模式",
+      "scopeMachine": "系統模式 (UAC)",
+      "scopeSelfElevatingHint": "此安裝程式在使用者模式安裝時仍可能顯示 UAC。",
       "version": "版本",
       "versionLatest": "最新",
       "location": "安裝位置",

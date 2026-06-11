@@ -533,10 +533,10 @@
       "addToWorkspace": "Aggiungi all'area di lavoro"
     },
     "options": {
-      "scope": "Ambito",
-      "scopeUser": "Per utente",
-      "scopeMachine": "Tutti gli utenti (UAC)",
-      "scopeSelfElevatingHint": "Questo installer può comunque mostrare UAC nell’ambito per utente.",
+      "scope": "Modalità di installazione",
+      "scopeUser": "Modalità utente",
+      "scopeMachine": "Modalità sistema (UAC)",
+      "scopeSelfElevatingHint": "Questo installer può comunque mostrare UAC nell’modalità utente.",
       "version": "Versione",
       "versionLatest": "Più recente",
       "location": "Percorso di installazione",

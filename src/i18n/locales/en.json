@@ -533,10 +533,10 @@
       "addToWorkspace": "Add to workspace"
     },
     "options": {
-      "scope": "Scope",
-      "scopeUser": "Per-user",
-      "scopeMachine": "All users (UAC)",
-      "scopeSelfElevatingHint": "This installer may still show UAC in per-user scope.",
+      "scope": "Install mode",
+      "scopeUser": "User Mode",
+      "scopeMachine": "System Mode(UAC)",
+      "scopeSelfElevatingHint": "This installer may still show UAC in user mode.",
       "version": "Version",
       "versionLatest": "Latest",
       "location": "Install location",

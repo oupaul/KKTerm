@@ -533,10 +533,10 @@
       "addToWorkspace": "เพิ่มไปยังพื้นที่ทำงาน"
     },
     "options": {
-      "scope": "ขอบเขต",
-      "scopeUser": "ต่อผู้ใช้",
-      "scopeMachine": "ผู้ใช้ทั้งหมด (UAC)",
-      "scopeSelfElevatingHint": "ตัวติดตั้งนี้อาจยังแสดง UAC ในขอบเขตต่อผู้ใช้ได้",
+      "scope": "โหมดการติดตั้ง",
+      "scopeUser": "โหมดผู้ใช้",
+      "scopeMachine": "โหมดระบบ (UAC)",
+      "scopeSelfElevatingHint": "ตัวติดตั้งนี้อาจยังแสดง UAC ในโหมดผู้ใช้ได้",
       "version": "เวอร์ชัน",
       "versionLatest": "ล่าสุด",
       "location": "ตำแหน่งติดตั้ง",

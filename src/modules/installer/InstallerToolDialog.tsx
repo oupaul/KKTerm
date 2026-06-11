@@ -123,6 +123,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const service = serviceAffordanceForRecipe(recipe);
   const terminalLaunch = terminalLaunchAffordanceForRecipe(recipe);
   const workspaceSpec = workspaceConnectionSpecForRecipe(recipe);
+  const installMode = installModeForInstalledRecipe(detected);
   const [webUiStatus, setWebUiStatus] = useState<ManagedWebUiStatus | null>(
     null,
   );
@@ -325,6 +326,11 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
           <Row label={t("installer.dialog.provider")}>
             {providerSummary(recipe.provider)}
           </Row>
+          {installMode ? (
+            <Row label={t("installer.options.scope")}>
+              {installModeLabel(installMode, t)}
+            </Row>
+          ) : null}
           {version ? (
             <Row label={t("installer.dialog.installedVersion")}>
               {version}
@@ -535,6 +541,7 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const homepage = recipe.homepage;
   const selectedProvider = selectedProviderForRecipe(recipe, options);
   const releaseUrl = recipe.releaseNotesUrl ?? deriveProviderUrl(selectedProvider);
+  const installMode = installModeForOptions(recipe, options);
 
   function applyOption<K extends keyof InstallOptions>(
     key: K,
@@ -640,6 +647,11 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
           <Row label={t("installer.dialog.provider")}>
             {providerSummary(selectedProvider)}
           </Row>
+          {installMode ? (
+            <Row label={t("installer.options.scope")}>
+              {installModeLabel(installMode, t)}
+            </Row>
+          ) : null}
           {supportsLatestVersion ? (
             <Row label={t("installer.dialog.latestVersion")}>
               {latestError ? (
@@ -1101,6 +1113,37 @@ function selectedProviderForRecipe(
     return recipe.downloadProvider;
   }
   return recipe.provider;
+}
+
+function recipeSupportsScope(recipe: Recipe): boolean {
+  return (recipe.options ?? []).includes("scope");
+}
+
+function installModeForOptions(
+  recipe: Recipe,
+  options: InstallOptions,
+): "user" | "machine" | null {
+  if (selectedProviderForRecipe(recipe, options).kind !== "winget") return null;
+  if (recipeSupportsScope(recipe)) return options.scope ?? "user";
+  return "machine";
+}
+
+function installModeForInstalledRecipe(
+  detected: { installScope?: "user" | "machine" | null } | undefined,
+): "user" | "machine" | null {
+  if (detected?.installScope === "user" || detected?.installScope === "machine") {
+    return detected.installScope;
+  }
+  return null;
+}
+
+function installModeLabel(
+  scope: "user" | "machine",
+  t: (key: string) => string,
+): string {
+  return scope === "machine"
+    ? t("installer.options.scopeMachine")
+    : t("installer.options.scopeUser");
 }
 
 function providerSummary(provider: Provider): string {

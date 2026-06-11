@@ -533,10 +533,10 @@
       "addToWorkspace": "ワークスペースに追加"
     },
     "options": {
-      "scope": "スコープ",
-      "scopeUser": "ユーザー単位",
-      "scopeMachine": "すべてのユーザー (UAC)",
-      "scopeSelfElevatingHint": "このインストーラーはユーザー単位の範囲でも UAC を表示する場合があります。",
+      "scope": "インストール モード",
+      "scopeUser": "ユーザー モード",
+      "scopeMachine": "システム モード (UAC)",
+      "scopeSelfElevatingHint": "このインストーラーはユーザー モードでも UAC を表示する場合があります。",
       "version": "バージョン",
       "versionLatest": "最新",
       "location": "インストール先",
