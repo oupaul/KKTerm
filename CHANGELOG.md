@@ -3,6 +3,31 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.78/kkterm-0.1.78-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.78/kkterm-0.1.78-windows-arm64-setup.exe)
+
+## Highlights
+- Smarter assistant memory, work plans, and streaming harness—plus less “mystery meat” behavior in tool approvals. (PRs #307, #306)
+- Dashboard script widgets now render cleanly without the opaque black backdrop border on dark backgrounds.
+
+## New
+- **Persistent per-Connection assistant memory** (global + `connection:<id>` scoped). Includes remember/recall/forget tools and Connection-aware context injection.
+- **Model-driven work plans** via a new always-on `update_plan` tool. The Work panel can display per-step status and persist with the chat thread.
+- **Network Tools and Generators** built-in widgets (subnet calculator, DNS lookup, speedtest, QR/barcode, cron builder, password generator, timestamp converter, hash & encoding workbench).
+
+## Improved
+- **Tool approval card risk reasons**: the approval UI can show the red warning block with specific risk notes (plus watchdog “standing-permission” note).
+- **AI assistant harness safety & context discipline** improvements for Stop/approval/risk flows and MCP tool listing (to avoid hallucinated tool calls).
+- **Dashboard widget contracts**: reduce duplicate widget contract token emission by sending each contract only once (attached to its governed tool).
+
+## Fixed
+- **Dashboard**: removed the opaque black backdrop border behind AI script widgets by aligning the iframe `color-scheme` with the host theme. (PR #306 by @ryantsai)
+  
+## Internal
+- Added a **replay-based eval harness** for provider streams to ensure consistent parsing across live streaming vs replay fixture runs (no network call). (PR #307 by @ryantsai)
+- Strengthened AI streaming/tool dispatch/testing structure (including accumulator/refactor and fixture coverage for tool-call argument fragments and reasoning).
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.77/kkterm-0.1.77-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.77/kkterm-0.1.77-windows-arm64-setup.exe)
 
