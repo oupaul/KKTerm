@@ -160,6 +160,7 @@ export function WidgetFrame({
         hideTitle={instance.hideTitle}
         onTitleCommit={(next) => { void updateInstance(instance.id, { customTitle: next }); }}
       />
+      {editMode ? <span className="dw-layout-grip drag-handle" aria-hidden="true" /> : null}
     </div>
   );
 }
