@@ -86,6 +86,12 @@ export type AssistantToolApprovalRequest = {
   requestId: string;
   toolName: string;
   args?: Record<string, unknown>;
+  /**
+   * Backend keyword heuristic flagged this call's command payload as risky
+   * (destructive/service-disrupting/credential-touching). Session allows must
+   * not auto-approve these; they always re-prompt.
+   */
+  riskElevated?: boolean;
 };
 
 export type PendingToolApproval = AssistantToolApprovalRequest & {

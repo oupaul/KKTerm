@@ -1115,6 +1115,11 @@ async fn run_ai_agent(
 }
 
 #[tauri::command]
+fn cancel_assistant_streams(app: tauri::AppHandle) {
+    ai::cancel_assistant_streams(&app);
+}
+
+#[tauri::command]
 async fn run_ai_agent_streaming(
     app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
@@ -2762,6 +2767,7 @@ pub fn run() {
             app.manage(secrets::Secrets::new());
             app.manage(ai::AssistantLiveToolBridge::new());
             app.manage(ai::AssistantToolApprovalBridge::new());
+            app.manage(ai::AssistantStreamCancellation::new());
             app.manage(ai::WidgetHealthRegistry::new());
             app.manage(native_tooltip::new_state());
             app.manage(sessions::SessionManager::new());
@@ -2952,6 +2958,7 @@ pub fn run() {
             // ── AI agent runs
             run_ai_agent,
             run_ai_agent_streaming,
+            cancel_assistant_streams,
             // ── AI coding usage
             ai_coding_usage::ai_coding_usage_load,
             ai_coding_usage::ai_coding_usage_connect,

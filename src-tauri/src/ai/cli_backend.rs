@@ -334,8 +334,12 @@ pub(crate) fn acp_permission_approved(
         .pointer("/params/toolCall")
         .cloned()
         .unwrap_or(Value::Null);
+    // ACP tool calls carry CLI-defined shapes we can't classify, so no
+    // riskElevated hint here; session-allow behavior is unchanged for ACP.
     match app.try_state::<AssistantToolApprovalBridge>() {
-        Some(bridge) => tauri::async_runtime::block_on(bridge.request(app, &tool_name, &args)),
+        Some(bridge) => {
+            tauri::async_runtime::block_on(bridge.request(app, &tool_name, &args, false))
+        }
         None => false,
     }
 }

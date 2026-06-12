@@ -46,7 +46,6 @@ import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import type {
   AiProviderModelOption,
   AiStreamEvent,
-  AssistantChatThreadRecord,
   CaptureScreenshotRequest,
 } from "../lib/tauri";
 import {
@@ -62,7 +61,6 @@ import {
 import {
   applyAssistantStreamEventToMessage,
   completeAssistantStreamMessageFromResponse,
-  type AssistantToolCallStatus,
 } from "./streamMessage";
 import { useWorkspaceStore } from "../store";
 import { isAccentName, isIconName } from "../modules/dashboard/registry/palette";
@@ -78,7 +76,6 @@ import i18next from "../i18n/config";
 import { prepareAssistantTerminalInput } from "./terminalCommandSend";
 import { Channel } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { aiProviderSecretOwnerId } from "../lib/settings";
 import {
   parseAssistantSecretRequests,
   secretRequestStorageNotice,
@@ -86,7 +83,6 @@ import {
 } from "./secretRequest";
 import { scrollAssistantChatToBottom } from "./assistantScroll";
 import type { AiToolPermissionMode, AssistantContextSnippet, QuickCommand } from "../types";
-import { resolveCreateWidgetFollowupPrompt } from "./widgetFollowupPrompt";
 import { MarkdownContent } from "./AssistantMarkdownContent";
 import { AssistantToolApprovalCards } from "./AssistantToolApprovalCards";
 import { AssistantWorkPanel } from "./AssistantWorkPanel";
@@ -109,8 +105,6 @@ import type {
   AssistantLiveToolRequest,
   AssistantPageContext,
   AssistantPromptIntent,
-  AssistantRunManifest,
-  AssistantRunManifestStep,
   AssistantToolApprovalRequest,
   AssistantTextAttachment,
   PendingToolApproval,
@@ -119,31 +113,45 @@ import type {
 
 export type { AssistantPageContext } from "./assistantTypes";
 
+import {
+  assistantChatThreadToRecord,
+  assistantThreadPreview,
+  assistantThreadTitle,
+  createAssistantChatThreadId,
+  loadAssistantChatHistoryFromStorage,
+  readLegacyAssistantChatHistory,
+  sanitizeAssistantThreadTitle,
+  sortedAssistantThreads,
+  upsertAssistantChatThread,
+  writeLegacyAssistantChatHistory,
+} from "./assistantChatThreads";
+import {
+  ASSISTANT_FILE_MAX_BYTES,
+  assistantAgentIntent,
+  assistantIntentExamples,
+  assistantIntentForPrompt,
+  assistantIntentLabel,
+  assistantIntentPlaceholder,
+  assistantPromptForIntent,
+  assistantQuickCommandId,
+  createAiProviderSecretRequestMarkdown,
+  createAssistantChatMessage,
+  createAssistantRunManifest,
+  createImageAttachment,
+  formatAssistantMessageTime,
+  logAssistantStreamEvent,
+  readFileAsDataUrl,
+  readImageFileAsDataUrl,
+  resolveAssistantOutputLanguage,
+  sampleRandom,
+} from "./assistantComposer";
+
 type AssistantQueuedPrompt = {
   id: string;
   intent: AssistantPromptIntent;
   prompt: string;
   contextSnippet?: AssistantContextSnippet;
 };
-
-function resolveAssistantOutputLanguage(outputLanguage: string): string | undefined {
-  if (!outputLanguage) {
-    const uiCode = i18next.language || "en";
-    const name = i18next.t(`languages.${uiCode}`);
-    return name && name !== `languages.${uiCode}` ? name : undefined;
-  }
-  return outputLanguage;
-}
-
-const ASSISTANT_IMAGE_MAX_EDGE = 1280;
-const ASSISTANT_IMAGE_JPEG_QUALITY = 0.72;
-const ASSISTANT_FILE_MAX_BYTES = 10 * 1024 * 1024;
-
-function assistantQuickCommandId() {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? `quick-${crypto.randomUUID()}`
-    : `quick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 function maxMeasuredTextWidth(node: HTMLDivElement | null) {
   if (!node) {
@@ -155,677 +163,6 @@ function maxMeasuredTextWidth(node: HTMLDivElement | null) {
   }, 0);
 }
 
-function createAssistantChatMessage(
-  role: AssistantChatMessage["role"],
-  content: string,
-  intent?: AssistantPromptIntent,
-  textAttachments?: AssistantTextAttachment[],
-  imageAttachments?: AssistantImageAttachment[],
-  fileAttachments?: AssistantFileAttachment[],
-  reasoningContent?: string,
-): AssistantChatMessage {
-  return {
-    id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    role,
-    content,
-    reasoningContent,
-    textAttachments,
-    imageAttachments,
-    fileAttachments,
-    intent,
-    createdAt: new Date().toISOString(),
-  };
-}
-
-function createAssistantRunManifest(
-  goal: string,
-  intent: AssistantPromptIntent,
-  toolCalls?: AssistantToolCallStatus[],
-): AssistantRunManifest {
-  const scopeByIntent: Record<AssistantPromptIntent, string> = {
-    chat: "assistant.chat",
-    extensionCreation: "assistant.extensionCreation",
-    createWidget: "assistant.dashboardWidget",
-    watchdog: "assistant.watchdog",
-  };
-  const hasToolErrors = (toolCalls ?? []).some(
-    (toolCall) => toolCall.status === "completed" && Boolean(toolCall.error?.trim()),
-  );
-  const hasRunningTools = (toolCalls ?? []).some((toolCall) => toolCall.status === "running");
-  const verificationStatus = hasToolErrors ? "failed" : hasRunningTools ? "pending" : "passed";
-  const steps: AssistantRunManifestStep[] = [
-    {
-      id: "plan",
-      label: "Plan response",
-      status: "completed",
-    },
-    {
-      id: "verify",
-      label: "Verify tool outcomes",
-      status: hasToolErrors ? "blocked" : hasRunningTools ? "running" : "completed",
-      detail: hasToolErrors ? "One or more tool calls reported an error." : undefined,
-    },
-  ];
-  return {
-    runId: `assistant-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    goal: goal.trim(),
-    scope: scopeByIntent[intent],
-    definitionOfDone: "Provide response with completed verification step or explicit blocker.",
-    verificationStatus,
-    steps,
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function createAssistantChatThreadId() {
-  return `assistant-chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function assistantThreadTitle(messages: AssistantChatMessage[]) {
-  const firstUserMessage = messages.find((message) => message.role === "user");
-  const title = firstUserMessage?.content.trim().replace(/\s+/g, " ") || i18next.t("ai.newChat");
-  return title.length > 56 ? `${title.slice(0, 53)}...` : title;
-}
-
-function assistantThreadPreview(thread: AssistantChatThread) {
-  const lastMessage = thread.messages[thread.messages.length - 1];
-  const preview = lastMessage?.content.trim().replace(/\s+/g, " ") || i18next.t("ai.noMessages");
-  return preview.length > 64 ? `${preview.slice(0, 61)}...` : preview;
-}
-
-function assistantAgentIntent(intent: AssistantPromptIntent): "chat" | "extensionCreation" {
-  return intent === "extensionCreation" ? "extensionCreation" : "chat";
-}
-
-function assistantPromptForIntent(
-  intent: AssistantPromptIntent,
-  prompt: string,
-  previousMessages: readonly AssistantChatMessage[] = [],
-) {
-  if (intent === "createWidget") {
-    return `Create a Dashboard widget for this request:\n${resolveCreateWidgetFollowupPrompt(prompt, previousMessages)}`;
-  }
-  if (intent === "watchdog") {
-    return `Configure or draft a Watchdog for this monitoring request:\n${prompt}`;
-  }
-  return prompt;
-}
-
-function assistantIntentLabel(
-  intent: AssistantPromptIntent,
-  t: ReturnType<typeof useTranslation>["t"],
-) {
-  if (intent === "extensionCreation") {
-    return t("ai.extensionDraft");
-  }
-  if (intent === "createWidget") {
-    return t("ai.createWidget");
-  }
-  if (intent === "watchdog") {
-    return t("ai.watchdog");
-  }
-  return t("ai.title");
-}
-
-function sampleRandom<T>(arr: T[], n: number): T[] {
-  const copy = arr.slice();
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy.slice(0, n);
-}
-
-function assistantIntentExamples(
-  intent: AssistantPromptIntent,
-  t: ReturnType<typeof useTranslation>["t"],
-) {
-  const key =
-    intent === "createWidget"
-      ? "ai.createWidgetExamples"
-      : intent === "watchdog"
-        ? "ai.watchdogExamples"
-        : undefined;
-  if (!key) {
-    return [];
-  }
-  const examples = t(key, { returnObjects: true });
-  return Array.isArray(examples) ? examples.map(String) : [];
-}
-
-function assistantIntentPlaceholder(
-  intent: AssistantPromptIntent,
-  t: ReturnType<typeof useTranslation>["t"],
-) {
-  if (intent === "createWidget") {
-    return t("ai.createWidgetPlaceholder");
-  }
-  if (intent === "watchdog") {
-    return t("ai.watchdogPlaceholder");
-  }
-  return t("ai.composerPlaceholder");
-}
-
-function sanitizeAssistantThreadTitle(value: string) {
-  const title = value
-    .trim()
-    .split(/\r?\n/)[0]
-    ?.replace(/^title:\s*/i, "")
-    .replace(/^["'`]+|["'`.]+$/g, "")
-    .trim();
-  if (!title) {
-    return "";
-  }
-  return title.length > 56 ? `${title.slice(0, 53)}...` : title;
-}
-
-function formatAssistantMessageTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  const hours = date.getHours();
-  const hour12 = hours % 12 || 12;
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const period = hours >= 12 ? i18next.t("common.pm") : i18next.t("common.am");
-  return `${hour12}:${minutes} ${period}`;
-}
-
-function readImageFileAsDataUrl(file: File): Promise<string> {
-  return readFileAsDataUrl(file);
-}
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("image paste did not produce a data URL"));
-      }
-    });
-    reader.addEventListener("error", () => {
-      reject(reader.error ?? new Error("failed to read pasted image"));
-    });
-    reader.readAsDataURL(file);
-  });
-}
-
-function loadImage(dataUrl: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", () => reject(new Error("failed to load image")));
-    image.src = dataUrl;
-  });
-}
-
-async function compressImageDataUrl(dataUrl: string) {
-  const image = await loadImage(dataUrl);
-  const sourceWidth = image.naturalWidth || image.width;
-  const sourceHeight = image.naturalHeight || image.height;
-  if (sourceWidth <= 0 || sourceHeight <= 0) {
-    return { dataUrl, width: 0, height: 0 };
-  }
-
-  const scale = Math.min(1, ASSISTANT_IMAGE_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return { dataUrl, width: sourceWidth, height: sourceHeight };
-  }
-
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, width, height);
-  context.drawImage(image, 0, 0, width, height);
-  return {
-    dataUrl: canvas.toDataURL("image/jpeg", ASSISTANT_IMAGE_JPEG_QUALITY),
-    width,
-    height,
-  };
-}
-
-async function createImageAttachment(
-  sourceLabel: string,
-  dataUrl: string,
-): Promise<AssistantImageAttachment> {
-  const compressed = await compressImageDataUrl(dataUrl);
-  return {
-    id: `assistant-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    sourceLabel,
-    imageDataUrl: compressed.dataUrl,
-    width: compressed.width,
-    height: compressed.height,
-  };
-}
-
-function normalizeImageAttachments(value: unknown): AssistantImageAttachment[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.flatMap((item) => {
-    if (!item || typeof item !== "object") {
-      return [];
-    }
-    const candidate = item as Partial<AssistantImageAttachment>;
-    if (
-      typeof candidate.sourceLabel !== "string" ||
-      !candidate.sourceLabel.trim() ||
-      typeof candidate.imageDataUrl !== "string" ||
-      !candidate.imageDataUrl.startsWith("data:image/")
-    ) {
-      return [];
-    }
-    return [
-      {
-        id:
-          typeof candidate.id === "string" && candidate.id
-            ? candidate.id
-            : `assistant-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        sourceLabel: candidate.sourceLabel.trim(),
-        imageDataUrl: candidate.imageDataUrl,
-        width: typeof candidate.width === "number" ? candidate.width : 0,
-        height: typeof candidate.height === "number" ? candidate.height : 0,
-      },
-    ];
-  });
-}
-
-function normalizeFileAttachments(value: unknown): AssistantFileAttachment[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.flatMap((item) => {
-    if (!item || typeof item !== "object") {
-      return [];
-    }
-    const candidate = item as Partial<AssistantFileAttachment>;
-    if (
-      typeof candidate.sourceLabel !== "string" ||
-      !candidate.sourceLabel.trim() ||
-      typeof candidate.dataUrl !== "string" ||
-      !candidate.dataUrl.startsWith("data:")
-    ) {
-      return [];
-    }
-    return [
-      {
-        id:
-          typeof candidate.id === "string" && candidate.id
-            ? candidate.id
-            : `assistant-file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        sourceLabel: candidate.sourceLabel.trim(),
-        dataUrl: candidate.dataUrl,
-        mimeType:
-          typeof candidate.mimeType === "string" && candidate.mimeType.trim()
-            ? candidate.mimeType.trim()
-            : "application/octet-stream",
-        size: typeof candidate.size === "number" ? candidate.size : 0,
-      },
-    ];
-  });
-}
-
-function normalizeTextAttachments(value: unknown): AssistantTextAttachment[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.flatMap((item) => {
-    if (!item || typeof item !== "object") {
-      return [];
-    }
-    const candidate = item as Partial<AssistantTextAttachment>;
-    if (
-      typeof candidate.sourceLabel !== "string" ||
-      !candidate.sourceLabel.trim() ||
-      typeof candidate.text !== "string" ||
-      !candidate.text.trim()
-    ) {
-      return [];
-    }
-    return [
-      {
-        id:
-          typeof candidate.id === "string" && candidate.id
-            ? candidate.id
-            : `assistant-text-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        sourceLabel: candidate.sourceLabel.trim(),
-        text: candidate.text,
-        capturedAt: normalizeDateString(candidate.capturedAt) ?? new Date().toISOString(),
-      },
-    ];
-  });
-}
-
-function sortedAssistantThreads(threads: AssistantChatThread[]) {
-  return [...threads].sort(
-    (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
-  );
-}
-
-function upsertAssistantChatThread(
-  threads: AssistantChatThread[],
-  thread: AssistantChatThread,
-) {
-  const withoutThread = threads.filter((item) => item.id !== thread.id);
-  return sortedAssistantThreads([thread, ...withoutThread]);
-}
-
-function assistantIntentForPrompt(
-  activeIntent: AssistantPromptIntent,
-  prompt: string,
-): AssistantPromptIntent {
-  if (activeIntent !== "chat") {
-    return activeIntent;
-  }
-
-  const normalized = prompt.toLowerCase();
-  const asksForExtension =
-    /\b(extension|plugin|addon|add-on)\b/.test(normalized) &&
-    /\b(create|build|generate|write|draft|scaffold|make)\b/.test(normalized);
-  return asksForExtension ? "extensionCreation" : "chat";
-}
-
-function readLegacyAssistantChatHistory(): AssistantChatThread[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  try {
-    const rawHistory = window.localStorage.getItem(ASSISTANT_CHAT_HISTORY_KEY);
-    if (!rawHistory) {
-      return [];
-    }
-    const parsed = JSON.parse(rawHistory);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.flatMap(normalizeAssistantChatThread);
-  } catch {
-    return [];
-  }
-}
-
-function writeLegacyAssistantChatHistory(threads: AssistantChatThread[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.setItem(ASSISTANT_CHAT_HISTORY_KEY, JSON.stringify(threads));
-}
-
-function clearLegacyAssistantChatHistory() {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.removeItem(ASSISTANT_CHAT_HISTORY_KEY);
-}
-
-function assistantChatThreadToRecord(thread: AssistantChatThread): AssistantChatThreadRecord {
-  return {
-    id: thread.id,
-    title: thread.title,
-    contextLabel: thread.contextLabel,
-    messagesJson: JSON.stringify(thread.messages),
-    createdAt: thread.createdAt,
-    updatedAt: thread.updatedAt,
-  };
-}
-
-function assistantChatThreadFromRecord(record: AssistantChatThreadRecord): AssistantChatThread[] {
-  let messages: unknown;
-  try {
-    messages = JSON.parse(record.messagesJson);
-  } catch {
-    return [];
-  }
-  return normalizeAssistantChatThread({
-    id: record.id,
-    title: record.title,
-    contextLabel: record.contextLabel,
-    messages,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-  });
-}
-
-async function loadAssistantChatHistoryFromStorage(): Promise<AssistantChatThread[]> {
-  try {
-    const records = await invokeCommand("list_assistant_chat_threads", undefined);
-    const storedThreads = records.flatMap(assistantChatThreadFromRecord);
-    const legacyThreads = readLegacyAssistantChatHistory();
-    if (legacyThreads.length === 0) {
-      return storedThreads;
-    }
-
-    await Promise.all(
-      legacyThreads.map((thread) =>
-        invokeCommand("upsert_assistant_chat_thread", {
-          request: assistantChatThreadToRecord(thread),
-        }),
-      ),
-    );
-    clearLegacyAssistantChatHistory();
-    const migratedRecords = await invokeCommand("list_assistant_chat_threads", undefined);
-    return migratedRecords.flatMap(assistantChatThreadFromRecord);
-  } catch (error) {
-    console.warn("[kkterm-ai] failed to load SQLite chat history", error);
-    return readLegacyAssistantChatHistory();
-  }
-}
-
-function normalizeAssistantChatThread(value: unknown): AssistantChatThread[] {
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const candidate = value as Partial<AssistantChatThread>;
-  const messages = Array.isArray(candidate.messages)
-    ? candidate.messages.flatMap(normalizeAssistantChatMessage)
-    : [];
-  if (messages.length === 0) {
-    return [];
-  }
-  const createdAt = normalizeDateString(candidate.createdAt) ?? messages[0].createdAt;
-  const updatedAt =
-    normalizeDateString(candidate.updatedAt) ?? messages[messages.length - 1].createdAt;
-  return [
-    {
-      id: typeof candidate.id === "string" && candidate.id ? candidate.id : createAssistantChatThreadId(),
-      title:
-        typeof candidate.title === "string" && candidate.title.trim()
-          ? candidate.title.trim()
-          : assistantThreadTitle(messages),
-      contextLabel:
-        typeof candidate.contextLabel === "string" && candidate.contextLabel.trim()
-          ? candidate.contextLabel.trim()
-          : i18next.t("ai.workspace"),
-      messages,
-      createdAt,
-      updatedAt,
-    },
-  ];
-}
-
-function normalizeAssistantChatMessage(value: unknown): AssistantChatMessage[] {
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const candidate = value as Partial<AssistantChatMessage>;
-  if (candidate.role !== "assistant" && candidate.role !== "user") {
-    return [];
-  }
-  if (typeof candidate.content !== "string" || !candidate.content.trim()) {
-    return [];
-  }
-  return [
-    {
-      id: typeof candidate.id === "string" && candidate.id ? candidate.id : `${candidate.role}-${Date.now()}`,
-      role: candidate.role,
-      content: candidate.content,
-      reasoningContent: typeof candidate.reasoningContent === "string" && candidate.reasoningContent ? candidate.reasoningContent : undefined,
-      textAttachments: normalizeTextAttachments(candidate.textAttachments),
-      imageAttachments: normalizeImageAttachments(candidate.imageAttachments),
-      fileAttachments: normalizeFileAttachments(candidate.fileAttachments),
-      intent:
-        candidate.intent === "chat" ||
-        candidate.intent === "extensionCreation" ||
-        candidate.intent === "createWidget" ||
-        candidate.intent === "watchdog"
-          ? candidate.intent
-          : undefined,
-      createdAt: normalizeDateString(candidate.createdAt) ?? new Date().toISOString(),
-      toolCalls: normalizeAssistantToolCalls(candidate.toolCalls),
-      skillNames: normalizeAssistantSkillNames(candidate.skillNames),
-      workStartedAt: normalizeDateString(candidate.workStartedAt),
-      workCompletedAt: normalizeDateString(candidate.workCompletedAt),
-      runManifest: normalizeAssistantRunManifest(candidate.runManifest),
-    },
-  ];
-}
-
-function normalizeAssistantRunManifest(value: unknown): AssistantRunManifest | undefined {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-  const candidate = value as Partial<AssistantRunManifest>;
-  if (typeof candidate.goal !== "string" || !candidate.goal.trim()) {
-    return undefined;
-  }
-  if (typeof candidate.scope !== "string" || !candidate.scope.trim()) {
-    return undefined;
-  }
-  if (typeof candidate.definitionOfDone !== "string" || !candidate.definitionOfDone.trim()) {
-    return undefined;
-  }
-  const normalizedStatus =
-    candidate.verificationStatus === "failed" ||
-    candidate.verificationStatus === "passed" ||
-    candidate.verificationStatus === "pending"
-      ? candidate.verificationStatus
-      : "pending";
-  return {
-    runId:
-      typeof candidate.runId === "string" && candidate.runId
-        ? candidate.runId
-        : `assistant-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    goal: candidate.goal.trim(),
-    scope: candidate.scope.trim(),
-    definitionOfDone: candidate.definitionOfDone.trim(),
-    verificationStatus: normalizedStatus,
-    steps: Array.isArray(candidate.steps) ? candidate.steps.filter(Boolean) as AssistantRunManifestStep[] : [],
-    updatedAt: normalizeDateString(candidate.updatedAt) ?? new Date().toISOString(),
-  };
-}
-
-function normalizeAssistantSkillNames(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-  const names = Array.from(
-    new Set(
-      value
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter((item) => /^[a-z0-9-]{1,64}$/.test(item)),
-    ),
-  );
-  return names.length > 0 ? names : undefined;
-}
-
-function normalizeAssistantToolCalls(value: unknown): AssistantToolCallStatus[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-  const calls: AssistantToolCallStatus[] = value.flatMap((item) => {
-    if (!item || typeof item !== "object") {
-      return [];
-    }
-    const candidate = item as Partial<AssistantToolCallStatus>;
-    if (
-      typeof candidate.toolId !== "string" ||
-      !candidate.toolId ||
-      typeof candidate.toolName !== "string" ||
-      !candidate.toolName
-    ) {
-      return [];
-    }
-    return [
-      {
-        toolId: candidate.toolId,
-        toolName: candidate.toolName,
-        status: candidate.status === "running" ? "running" : "completed",
-        startedAt: normalizeDateString(candidate.startedAt) ?? new Date().toISOString(),
-        endedAt: normalizeDateString(candidate.endedAt),
-      },
-    ];
-  });
-  return calls.length > 0 ? calls : undefined;
-}
-
-function logAssistantStreamEvent(event: AiStreamEvent) {
-  switch (event.type) {
-    case "reasoningDelta":
-    case "contentDelta":
-      console.debug("[kkterm-ai] stream event", {
-        type: event.type,
-        deltaLength: event.delta.length,
-      });
-      return;
-    case "toolCallStart":
-    case "toolCallEnd":
-      console.debug("[kkterm-ai] stream event", {
-        type: event.type,
-        toolId: event.toolId,
-        toolName: event.toolName,
-      });
-      return;
-    case "done":
-      console.debug("[kkterm-ai] stream event", {
-        type: event.type,
-        providerKind: event.providerKind,
-        model: event.model,
-      });
-      return;
-    case "error":
-      console.debug("[kkterm-ai] stream event", {
-        type: event.type,
-        messageLength: event.message.length,
-      });
-      return;
-  }
-}
-
-function normalizeDateString(value: unknown) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-}
-
-const ASSISTANT_CHAT_HISTORY_KEY = "kkterm.aiAssistant.chatHistory.v1";
-
-function createAiProviderSecretRequestMarkdown(
-  label: string,
-  provider: string,
-  providerKind: string,
-) {
-  return [
-    i18next.t("ai.secretCardAiProviderMessage", { provider }),
-    "",
-    "```kkterm-secret-request",
-    JSON.stringify({
-      kind: "aiApiKey",
-      ownerId: aiProviderSecretOwnerId(providerKind),
-      label,
-      description: i18next.t("ai.secretCardAiProviderDescription", { provider }),
-    }),
-    "```",
-  ].join("\n");
-}
 
 export function AssistantPanel({
   collapsed,
@@ -1171,6 +508,7 @@ export function AssistantPanel({
       const normalizedToolName = normalizeAssistantToolName(request.toolName);
       if (
         normalizedToolName &&
+        !request.riskElevated &&
         allowedToolApprovalsForCurrentChatRef.current.has(normalizedToolName)
       ) {
         setPendingToolApprovals((current) => [
@@ -1285,6 +623,11 @@ export function AssistantPanel({
     activeAssistantRequestIdRef.current += 1;
     setIsSendingPrompt(false);
     setChatError("");
+    if (isTauriRuntime()) {
+      // Detaching the UI is not enough: without this the backend agent loop
+      // keeps running — and keeps executing tools — after Stop.
+      void invokeCommand("cancel_assistant_streams").catch(() => {});
+    }
     pendingToolApprovals
       .filter((request) => request.status === "pending")
       .forEach((request) => {
@@ -2350,6 +1693,12 @@ export function AssistantPanel({
       role: message.role,
       content: message.content,
       reasoningContent: message.reasoningContent,
+      toolCalls:
+        message.role === "assistant"
+          ? (message.toolCalls ?? [])
+              .filter((toolCall) => toolCall.status === "completed")
+              .map((toolCall) => ({ toolName: toolCall.toolName, error: toolCall.error }))
+          : undefined,
     }));
     setMessages(nextMessages);
     setCurrentThreadTitle(fallbackTitle);

@@ -124,6 +124,52 @@ macro_rules! ai_debug {
 }
 pub(crate) use ai_debug;
 
+/// Monotonic cancellation generation for user-initiated assistant chat runs.
+///
+/// The streaming agent loops capture the generation when they start; bumping
+/// it via [`cancel_assistant_streams`] makes every in-flight streaming run
+/// abort before its next provider call or tool execution. Without this, the
+/// frontend Stop button only detached the UI while the backend kept looping —
+/// and kept executing mutating tools. Watchdog intervention sub-turns use the
+/// non-streaming `run_agent` path and are deliberately unaffected.
+#[derive(Default)]
+pub struct AssistantStreamCancellation {
+    generation: AtomicU64,
+}
+
+impl AssistantStreamCancellation {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn current(&self) -> u64 {
+        self.generation.load(Ordering::SeqCst)
+    }
+
+    fn cancel_all(&self) {
+        self.generation.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
+pub fn cancel_assistant_streams(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AssistantStreamCancellation>() {
+        state.cancel_all();
+        ai_interaction_debug!("stream.cancel_requested", json!({}));
+    }
+}
+
+pub(crate) fn assistant_stream_generation(app: &tauri::AppHandle) -> u64 {
+    app.try_state::<AssistantStreamCancellation>()
+        .map(|state| state.current())
+        .unwrap_or(0)
+}
+
+pub(crate) fn assistant_stream_canceled(app: &tauri::AppHandle, generation: u64) -> bool {
+    assistant_stream_generation(app) != generation
+}
+
+pub(crate) const ASSISTANT_STREAM_CANCELED_ERROR: &str = "assistant run canceled by the user";
+
 pub struct AssistantLiveToolBridge {
     pending: Mutex<HashMap<String, oneshot::Sender<String>>>,
 }
@@ -288,7 +334,7 @@ impl AssistantLiveToolBridge {
                 .to_string();
         }
 
-        match timeout(Duration::from_secs(15), rx).await {
+        match timeout(live_tool_timeout(tool_name), rx).await {
             Ok(Ok(result)) => {
                 ai_interaction_debug!(
                     "live_tool.result",
@@ -349,7 +395,13 @@ impl AssistantToolApprovalBridge {
         }
     }
 
-    async fn request(&self, app: &tauri::AppHandle, tool_name: &str, args: &Value) -> bool {
+    async fn request(
+        &self,
+        app: &tauri::AppHandle,
+        tool_name: &str,
+        args: &Value,
+        risk_elevated: bool,
+    ) -> bool {
         let request_id = new_tool_approval_request_id();
         let (tx, rx) = oneshot::channel();
         match self.pending.lock() {
@@ -365,6 +417,7 @@ impl AssistantToolApprovalBridge {
             "requestId": request_id,
             "toolName": tool_name,
             "args": args,
+            "riskElevated": risk_elevated,
         });
         ai_interaction_debug!("tool.approval_request", payload.clone());
         if let Err(error) = app.emit("assistant-tool-approval-request", payload) {
@@ -430,6 +483,20 @@ impl AssistantToolApprovalBridge {
             .lock()
             .ok()
             .and_then(|mut pending| pending.remove(request_id))
+    }
+}
+
+/// How long the backend waits for the frontend to answer a live tool request.
+/// Capture-style tools (remote desktop screenshots, large terminal buffer
+/// reads, SFTP listings) can legitimately take longer than the default on a
+/// slow machine or link, so they get a wider window instead of feeding the
+/// model a spurious timeout error.
+fn live_tool_timeout(tool_name: &str) -> Duration {
+    match tool_name {
+        "session_remote_desktop_screenshot"
+        | "session_terminal_read_buffer"
+        | "session_file_browser_list" => Duration::from_secs(60),
+        _ => Duration::from_secs(15),
     }
 }
 
@@ -682,6 +749,19 @@ pub struct AgentChatMessage {
     content: String,
     #[serde(default)]
     reasoning_content: Option<String>,
+    /// Compact summaries of the tool calls the assistant made in this turn.
+    /// Replayed into later turns as a short transcript so the model remembers
+    /// what it already did instead of re-discovering state every turn.
+    #[serde(default)]
+    tool_calls: Vec<AgentToolCallSummary>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentToolCallSummary {
+    tool_name: String,
+    #[serde(default)]
+    error: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -1163,10 +1243,9 @@ impl AgentProvider for OpenAiCompatibleProvider {
             ));
         }
 
-        match self.api_style_for_settings(settings.api_mode()) {
-            OpenAiApiStyle::ChatCompletions => self.run_chat(app, settings, api_key, request).await,
-            OpenAiApiStyle::Responses => self.run_responses(app, settings, api_key, request).await,
-        }
+        let api_style = self.api_style_for_settings(settings.api_mode());
+        self.run_agent_loop(app, settings, api_key, request, None, api_style)
+            .await
     }
 
     async fn run_streaming(
@@ -1187,16 +1266,9 @@ impl AgentProvider for OpenAiCompatibleProvider {
             ));
         }
 
-        match self.api_style_for_settings(settings.api_mode()) {
-            OpenAiApiStyle::ChatCompletions => {
-                self.run_chat_streaming(app, settings, api_key, request, channel)
-                    .await
-            }
-            OpenAiApiStyle::Responses => {
-                self.run_responses_streaming(app, settings, api_key, request, channel)
-                    .await
-            }
-        }
+        let api_style = self.api_style_for_settings(settings.api_mode());
+        self.run_agent_loop(app, settings, api_key, request, Some(channel), api_style)
+            .await
     }
 }
 
@@ -2123,6 +2195,11 @@ fn ai_tool_definitions_with_skills(
         "Ask KKTerm to render a local secret entry card without exposing the secret to the AI model. Use this for API keys, passwords, tokens, and widget secrets after the owning widget or provider metadata exists.",
         request_secret_entry_schema(),
     ).strict());
+    tools.push(tool_definition(
+        "mcp_list_tools",
+        "List the remote MCP servers configured in KKTerm Settings together with their cached tool schemas (per tool: name, description, inputSchema). Call this before writing any widget source that uses KK.callMcpTool so tool names, argument keys, and response shapes come from the real server instead of guesses. Read-only: serves the cached tools/list result from local storage and does not contact the servers.",
+        json!({"type":"object","properties":{}}),
+    ));
     if settings.current_time() {
         tools.push(tool_definition(
             "current_time",
@@ -3113,8 +3190,13 @@ async fn run_ai_tool(
         && settings.tool_permission_mode() != "allowAll"
         && !pre_approved
     {
+        let risk_elevated = approval_risk_elevated(&call.function.name, &args);
         let approved = match app.try_state::<AssistantToolApprovalBridge>() {
-            Some(bridge) => bridge.request(app, &call.function.name, &args).await,
+            Some(bridge) => {
+                bridge
+                    .request(app, &call.function.name, &args, risk_elevated)
+                    .await
+            }
             None => false,
         };
         if !approved {
@@ -3142,6 +3224,7 @@ async fn run_ai_tool(
         "request_secret_entry" => {
             request_secret_entry_tool(args, settings.provider_kind(), stream_channel)
         }
+        "mcp_list_tools" => mcp_list_tools_tool(app),
         "current_time" if tool_settings.current_time() => current_time_tool(),
         "web_search" if tool_settings.web_search() => web_search_tool(settings, args).await,
         "web_fetch" if tool_settings.web_fetch() => web_fetch_tool(args).await,
@@ -3188,7 +3271,13 @@ async fn run_ai_tool(
         name if tool_settings.watchdog() && name.starts_with("watchdog_") => {
             watchdog_tool(app, name, args).await
         }
-        _ => "Tool is disabled in AI Assistant settings.".to_string(),
+        // JSON envelope so ConsecutiveToolErrorTracker counts repeated calls
+        // to a disabled/unknown tool and aborts instead of looping to the cap.
+        name => json!({
+            "ok": false,
+            "error": format!("Tool is disabled in AI Assistant settings or does not exist: {name}. Do not call it again."),
+        })
+        .to_string(),
     };
     ai_interaction_debug!(
         "tool.result",
@@ -3288,6 +3377,27 @@ fn tool_requires_allow_all(tool_name: &str) -> bool {
                 | "quick_command_create"
                 | "quick_command_edit"
         )
+}
+
+/// Whether an approval request carries a command-like payload that the
+/// keyword heuristic flags as risky. The frontend uses this to make
+/// "Allow for session" non-transferable to dangerous payloads: a session
+/// allow keyed on the tool name alone would otherwise auto-approve any later
+/// destructive command sent through the same tool. Heuristic only — the
+/// per-call approval prompt remains the actual safety boundary (ADR-0003).
+fn approval_risk_elevated(tool_name: &str, args: &Value) -> bool {
+    let command = match tool_name {
+        "shell_command" | "quick_command_create" | "quick_command_edit" => {
+            args.get("command").and_then(Value::as_str)
+        }
+        "session_terminal_send_text" | "session_remote_desktop_send_text" => {
+            args.get("text").and_then(Value::as_str)
+        }
+        _ => None,
+    };
+    command.is_some_and(|command| {
+        classify_command_safety(command, None).extra_confirmation_required
+    })
 }
 
 fn is_assistant_skill_tool(tool_name: &str) -> bool {
@@ -3851,6 +3961,42 @@ fn is_dashboard_mutating_tool(name: &str) -> bool {
         )
 }
 
+/// Read-only listing of the remote MCP servers configured in Settings, with
+/// their cached tool schemas. Serves the SQLite cache only (no network) so the
+/// model can ground KK.callMcpTool widget code in real tool shapes. The system
+/// prompt has always pointed at this tool name; before it existed, every
+/// MCP-widget request began with a hallucinated tool call.
+fn mcp_list_tools_tool(app: &tauri::AppHandle) -> String {
+    let storage = app.state::<Storage>();
+    let servers = storage.with_connection_infallible(crate::mcp::list_servers);
+    match servers {
+        Ok(servers) => {
+            let servers: Vec<Value> = servers
+                .into_iter()
+                .map(|server| {
+                    json!({
+                        "name": server.name,
+                        "lastStatus": server.last_status,
+                        "lastError": server.last_error,
+                        "toolsFetchedAt": server.tools_fetched_at,
+                        "tools": server.tools,
+                    })
+                })
+                .collect();
+            json!({
+                "ok": true,
+                "servers": servers,
+                "note": "Cached tools/list results. A null tools value means the server's tool list has not been fetched; ask the user to refresh that server in Settings → AI Assistant → MCP Servers.",
+            })
+            .to_string()
+        }
+        Err(error) => {
+            json!({"ok": false, "error": format!("failed to list MCP servers: {error:?}")})
+                .to_string()
+        }
+    }
+}
+
 fn request_secret_entry_tool(
     args: Value,
     provider_kind: &str,
@@ -4105,7 +4251,11 @@ async fn watchdog_tool(app: &tauri::AppHandle, name: &str, args: Value) -> Strin
                     return json!({"ok": false, "error": "approval bridge unavailable"})
                         .to_string();
                 };
-                let approved = bridge.request(app, "watchdog_create", &approval_args).await;
+                // Granting standing intervention tool permissions is always
+                // elevated: a session allow must never skip this modal.
+                let approved = bridge
+                    .request(app, "watchdog_create", &approval_args, true)
+                    .await;
                 if !approved {
                     return json!({
                         "ok": false,
@@ -4268,10 +4418,14 @@ fn shell_command_tool(root: &Path, args: Value) -> String {
     let command = arg_string(&args, "command");
     let shell = arg_string(&args, "shell");
     if command.is_empty() {
-        return "shell_command requires command.".to_string();
+        return json!({"ok": false, "error": "shell_command requires command."}).to_string();
     }
     if is_destructive_command(&command) {
-        return "Blocked: deletion or destructive commands require an explicit KKTerm approval prompt and were not executed.".to_string();
+        return json!({
+            "ok": false,
+            "error": "Blocked: deletion, file-writing, or destructive commands are not allowed through shell_command and were not executed. Use read-only commands, or ask the user to run the command themselves.",
+        })
+        .to_string();
     }
     let output = if shell.eq_ignore_ascii_case("batch") {
         Command::new("cmd")
@@ -4292,7 +4446,9 @@ fn shell_command_tool(root: &Path, args: Value) -> String {
             text.push_str(&String::from_utf8_lossy(&output.stderr));
             text.chars().take(12000).collect()
         }
-        Err(error) => format!("Command failed to start: {error}"),
+        Err(error) => {
+            json!({"ok": false, "error": format!("Command failed to start: {error}")}).to_string()
+        }
     }
 }
 
@@ -4592,32 +4748,104 @@ Last error: {err}",
     }
 }
 
+// Word-boundary blocklist for the assistant `shell_command` tool.
+//
+// Defense in depth only: execution is still gated by the user approval flow
+// (ADR-0003), and a "clean" result never means the command is safe. Matching
+// whole words (PowerShell cmdlet names keep their dashes) instead of raw
+// substrings stops `Format-Table` or a `>` inside a quoted string from
+// tripping the block, while common destructive aliases (`ri`, `rd`, `iex`,
+// `saps`) and verbs the old list missed (Invoke-Expression, Start-Process,
+// Stop-Process, reg/regedit, vssadmin, bcdedit) are now covered. Keep the set
+// here so it stays reviewable in one place.
+const DESTRUCTIVE_SHELL_COMMAND_WORDS: &[&str] = &[
+    // delete / wipe
+    "remove-item",
+    "ri",
+    "rm",
+    "rmdir",
+    "rd",
+    "del",
+    "erase",
+    "clear-content",
+    "clear-disk",
+    "format",
+    "format-volume",
+    "diskpart",
+    "fdisk",
+    "mkfs",
+    "dd",
+    "cipher",
+    "vssadmin",
+    "bcdedit",
+    // file writes / moves
+    "set-content",
+    "add-content",
+    "out-file",
+    "-outfile",
+    "new-item",
+    "ni",
+    "move-item",
+    "mi",
+    "move",
+    "mv",
+    "copy-item",
+    "cp",
+    "copy",
+    "rename-item",
+    "ren",
+    // registry
+    "reg",
+    "regedit",
+    "set-itemproperty",
+    "new-itemproperty",
+    "remove-itemproperty",
+    // process / system control
+    "invoke-expression",
+    "iex",
+    "start-process",
+    "saps",
+    "start",
+    "stop-process",
+    "kill",
+    "taskkill",
+    "stop-service",
+    "restart-service",
+    "shutdown",
+    "restart-computer",
+    "stop-computer",
+];
+
 fn is_destructive_command(command: &str) -> bool {
-    contains_any(
-        &command.to_ascii_lowercase(),
-        &[
-            "remove-item",
-            "rm ",
-            "rm-",
-            "del ",
-            "erase ",
-            "rmdir",
-            "rd /",
-            "format",
-            "diskpart",
-            "mkfs",
-            "dd if=",
-            "shutdown",
-            "restart-computer",
-            "stop-computer",
-            "set-content",
-            "out-file",
-            ">",
-            "move-item",
-            "copy-item",
-            "new-item",
-        ],
-    )
+    let lowercase = command.to_ascii_lowercase();
+    if has_unquoted_redirection(&lowercase) {
+        return true;
+    }
+    // '-' stays part of a token so PowerShell cmdlet names and parameters
+    // match whole ("remove-item", "-outfile") while `-Format`-style parameters
+    // never collapse into the bare command word "format".
+    lowercase
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+        .map(|token| token.trim_end_matches('-'))
+        .filter(|token| !token.is_empty())
+        .any(|token| DESTRUCTIVE_SHELL_COMMAND_WORDS.contains(&token))
+}
+
+/// True when the command contains a `>` redirection outside single or double
+/// quotes. Quoted `>` (e.g. in a string literal) is fine; redirection writes
+/// files, which the shell_command tool must not do without approval.
+fn has_unquoted_redirection(command: &str) -> bool {
+    let mut in_single = false;
+    let mut in_double = false;
+    for c in command.chars() {
+        match c {
+            '\'' if !in_double => in_single = !in_single,
+            '"' if !in_single => in_double = !in_double,
+            '>' if !in_single && !in_double => return true,
+            _ => {}
+        }
+    }
+    false
 }
 
 
@@ -4689,6 +4917,36 @@ struct OpenAiToolCallFunction {
     arguments: String,
 }
 
+/// Per-message and total character budgets for replayed conversation history.
+/// Character-based, so they are deliberately conservative (~4 chars/token):
+/// long threads must degrade by dropping the oldest turns, not by overflowing
+/// the provider context window with an opaque 400.
+const HISTORY_MESSAGE_MAX_CHARS: usize = 8_000;
+const HISTORY_TOTAL_MAX_CHARS: usize = 60_000;
+
+/// Keep the newest history messages that fit the total budget, truncating each
+/// message to the per-message cap first. The newest message is always kept.
+fn bounded_history(history: Vec<AgentChatMessage>) -> Vec<AgentChatMessage> {
+    let mut total = 0usize;
+    let mut kept: Vec<AgentChatMessage> = Vec::new();
+    for mut message in history.into_iter().rev() {
+        message.content = truncate_prompt_section(&message.content, HISTORY_MESSAGE_MAX_CHARS);
+        let cost = message.content.chars().count()
+            + message
+                .reasoning_content
+                .as_deref()
+                .map(|r| r.chars().count())
+                .unwrap_or(0);
+        if !kept.is_empty() && total + cost > HISTORY_TOTAL_MAX_CHARS {
+            break;
+        }
+        total += cost;
+        kept.push(message);
+    }
+    kept.reverse();
+    kept
+}
+
 fn build_agent_messages(
     prompt: String,
     context_label: String,
@@ -4704,6 +4962,7 @@ fn build_agent_messages(
     output_language: Option<String>,
     custom_instructions: Option<String>,
     skill_summaries: Vec<AssistantSkillSummary>,
+    dashboard_tools_enabled: bool,
 ) -> Vec<OpenAiCompatibleMessage> {
     let normalized_intent = normalize_agent_intent(intent);
     let mut system_instructions: Vec<String> = vec![
@@ -4717,6 +4976,13 @@ fn build_agent_messages(
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
         "SESSION TOOLS: Use session_state to discover active Tabs, pane ids, remote desktop targets, and SFTP/FTP browser Sessions before using session_* interaction tools. To actually switch which Tab the user is looking at, call session_activate_tab with a tabId from session_state (optionally a paneId to focus a Pane); do not claim you switched Tabs without calling it, and do not invent tab or pane ids. Terminal, remote desktop, and file browser tools operate on live Sessions, not saved Connections. Prefer read tools before mutating tools. For RDP/VNC, use send_text for text, keypress for named keys, and mouse_click for remote surface coordinates. In Default permissions mode, KKTerm shows an in-chat Yes/No approval prompt for mutating tools and resumes the same tool call after the user answers; do not ask the user to change the global permission mode.".to_string(),
         "TUTORIAL TOOL: For UI/how-to questions, first answer with concise steps. When a known tutorial target is relevant, offer to navigate to that UI for the user. Do not navigate in the same answer unless the user explicitly asks to be shown/taken there. If the user accepts that offer or says yes to it in a follow-up, only call tutorial_highlight after the user accepts, using the exact targetId from current page context or the tutorial_highlight schema and including navigation when the target is on another app surface. terminal.*, sftp.*, webview.*, and remoteDesktop.* targets live inside an open Workspace Tab; the tool activates a matching open Tab automatically but reports an error when no Tab of that kind is open, so check session_state or open the relevant Connection first instead of insisting on a control that is not on screen. Do not invent target ids or CSS selectors.".to_string(),
+    ];
+    // The Dashboard widget-authoring contracts are by far the largest part of
+    // the system prompt. Include them only when Dashboard tools are enabled;
+    // otherwise every chat pays their token cost for tools the model cannot
+    // call anyway.
+    if dashboard_tools_enabled {
+        system_instructions.extend([
         "DASHBOARD TOOLS: When the active page context is Dashboard and the user asks to create, customize, arrange, repair, or remove Dashboard widgets or views, use the dashboard_* tools. To create a new user-requested widget on the active view, use dashboard_create_widget so the widget is validated and placed on the selected view in one step. Do not use the separate two-step dashboard_create_custom_widget + dashboard_add_instance for user-visible widget creation. dashboard_load_state returns compact metadata only. When the user reports an error in an existing AI Created Widget, use dashboard_load_state to identify the widget id, then call dashboard_read_widget_source for that one widget before checking or updating source. Prefer patch.body for widget source edits; patch.body is structured JSON and avoids escaping mistakes. Do not ask the user to paste widget source that KKTerm can read through dashboard_read_widget_source. All AI Created Widgets are script widgets. For static requests, create a small script widget that renders concise DOM inside #root using KKTerm's built-in classes. Design AI Created Widgets as polished, self-contained Mac OS X Dashboard-style widgets: a single-purpose singleton object with a focused visual state, minimal explanatory text, and only the controls needed for the task. Make widgets as graphical as possible by default, using charts, meters, maps, timelines, canvases, imagery, icons, and spatial layout instead of prose-first blocks; avoid text-only widgets unless the user explicitly asks for text-only output. When an illustrative or photographic asset would improve the widget, search for and use or download Creative Commons images from credible sources, prefer stable source URLs, avoid arbitrary copyrighted/hotlinked images, and preserve attribution/licensing context in source comments or nearby metadata when practical. Avoid generic form-like layouts unless the user explicitly asks for a data-entry form; prefer compact meters, clocks, gauges, search boxes, calculators, monitors, launchers, canvases, and other object-like surfaces. Choose the preset, accent, icon, and grid size to fit the widget's job and KKTerm's quiet desktop style. Choose an accent color that fits the widget theme; if no accent is clearly preferable, choose a random non-default accent. Be boundary-aware: size simple timers/counters at least 4x3, forms or images need 5x4 or larger, and list widgets tall enough for their expected rows so the initial widget does not show inner scrollbars. Games, canvas demos, and single-purpose interactive tools should start compact, normally 4-6 columns wide and 4-7 rows tall; do not make them full-width unless the user asks for a wide layout. For Three.js widgets, list body.libraries [\"three\"], size the renderer from KK.getViewport(), update renderer/camera on KK.onViewportResize, center the scene at world origin, and fit the camera to a Box3/Sphere around the complete object with about 15-25% margin so it remains centered and fully visible instead of oversized or clipped. For QR code widgets, list body.libraries [\"qrcode\"] and pass a real canvas element to QRCode.toCanvas; create a wrapping div only for padding/background, then append the canvas inside it. For chartjs, leaflet, uplot, konva, pixijs, matter, qrcode, jsbarcode, and gridjs widgets, mount the visual area inside kk-stage or kk-panel and size it from KK.getViewport() or the containing element; on KK.onViewportResize call the library's resize/update method so it stays centered and proportionate. Script widgets can create file and folder drop zones with KK.onFileDrop(elementOrSelector, callback, options); the callback receives dropped file and directory entries, and file entries include bytes as Uint8Array. Keep generated script widget UI compact, app-like, readable, high-contrast, and free of full HTML documents or script tags. Use KKTerm's built-in script UI classes before writing custom CSS: kk-shell, kk-toolbar, kk-cluster, kk-title, kk-subtitle, kk-muted, kk-panel, kk-card, kk-grid, kk-stat, kk-stat-value, kk-stat-label, kk-pill, kk-badge, kk-stage, and kk-fill. Avoid default unstyled browser controls and oversized explanatory text. Use body.libraries for curated local script libraries such as uplot, Fuse.js, simple-statistics, Matter.js, and animejs; runtime CDN scripts are blocked by CSP. Use permissions.network=true only for remote network access or remote images. Use settingsSchema.fields for persistent per-instance custom options; KKTerm renders those settings and scripts can read non-secret values with KK.getSettings() and save via KK.setSetting(key, value). KK.getSettings() is synchronous; do not await it. Passwords, API keys, tokens, and similar sensitive values must use settingsSchema field type secret with no defaultValue; SQLite stores only a secretRef, the value lives in OS keychain as widgetSecret. Top-level await is not available because script widgets run inside a synchronous function wrapper; wrap async bridge calls such as KK.getSecret('fieldKey') in an async IIFE. After creating a widget with a secret field, call request_secret_entry using the returned widget instance id and the exact secret field key instead of asking the user to paste the secret in chat. When a widget embeds remote images or fetches remote data, set script permissions.network=true. External website links should be http/https anchors or KK.openExternal(url); they open in the external browser, not inside the widget iframe.".to_string(),
         DASHBOARD_WIDGET_COMPLETION_CONTRACT.to_string(),
         DASHBOARD_WIDGET_ARCHETYPE_CONTRACT.to_string(),
@@ -4733,7 +4999,8 @@ fn build_agent_messages(
         DASHBOARD_WIDGET_DOM_CONTRACT.to_string(),
         "PERFORMANCE COUNTERS: Use the performance_counters tool when the user asks about current local system load, memory pressure, network throughput, KKTerm process resource use, uptime, or drive free space. For Dashboard performance widgets, create a script widget that calls await KK.getPerformanceCounters() and polls at a modest interval such as 2-5 seconds; never poll counters from requestAnimationFrame or high-frequency animation loops.".to_string(),
         "MCP IN WIDGETS: When a widget's source will call KK.callMcpTool('<server>', '<tool>', <args>), you MUST first discover the real tool list and parameter shape of that server before writing the widget. Use the mcp_list_tools tool (or read tool schemas from current page context) to look up the exact tool names, required argument keys, and response field names. Do not guess tool names like 'opendata-search_datasets' or invent arguments like 'agency' or 'normalised_only' and do not assume a response has fields like 'datasets[0].dataset_id' without verifying. Quote the tool's documented argument keys verbatim in the widget source, and parse the actual response shape returned by that tool. If a tool result does not match what the widget expects at runtime, fix the parser to match the real shape rather than retrying with the same guess. If the user names an MCP server (for example twinkle-hub) but no tool list is available, ask the user to confirm the server is connected before generating widget code that depends on it.".to_string(),
-    ];
+        ]);
+    }
     if !skill_summaries.is_empty() {
         let skills = skill_summaries
             .iter()
@@ -4771,7 +5038,7 @@ fn build_agent_messages(
     }];
 
     messages.extend(
-        history
+        bounded_history(history)
             .into_iter()
             .filter_map(to_openai_compatible_history_message),
     );
@@ -4999,7 +5266,35 @@ fn to_openai_compatible_history_message(
         "user" => "user",
         _ => return None,
     };
-    let content = message.content.trim().to_string();
+    let mut content = message.content.trim().to_string();
+    // Replay a compact tool transcript so the model remembers what it already
+    // did in earlier turns instead of re-discovering state (dashboard_load_state,
+    // session_state, ...) every turn. This also keeps pure tool turns — which
+    // have no visible text and used to be dropped from history entirely.
+    if role == "assistant" && !message.tool_calls.is_empty() {
+        let transcript = message
+            .tool_calls
+            .iter()
+            .map(|call| {
+                match call
+                    .error
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|error| !error.is_empty())
+                {
+                    Some(error) => {
+                        format!("{} (error: {})", call.tool_name, ellipsize(error, 200))
+                    }
+                    None => format!("{} (ok)", call.tool_name),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        if !content.is_empty() {
+            content.push_str("\n\n");
+        }
+        content.push_str(&format!("[Tools used in this turn: {transcript}]"));
+    }
     if content.is_empty() {
         return None;
     }
@@ -5010,6 +5305,15 @@ fn to_openai_compatible_history_message(
         tool_call_id: None,
         tool_calls: None,
     })
+}
+
+fn ellipsize(value: &str, max_chars: usize) -> String {
+    if value.chars().count() <= max_chars {
+        return value.to_string();
+    }
+    let mut truncated: String = value.chars().take(max_chars).collect();
+    truncated.push('…');
+    truncated
 }
 
 fn responses_endpoint(

@@ -37,12 +37,20 @@ impl OpenAiCompatibleProvider {
         responses_tool_definitions(&tools)
     }
 
-    pub(crate) async fn run_chat(
+    /// Shared agent orchestration for both OpenAI API styles, streaming and
+    /// non-streaming: sub-turn cap, tool execution with approval flow,
+    /// consecutive-tool-error abort, user cancellation, stream events, and
+    /// the final forced answer once the cap is reached. This loop previously
+    /// existed as four hand-kept copies that had already drifted — the
+    /// non-streaming copies lacked the consecutive-error abort entirely.
+    pub(crate) async fn run_agent_loop(
         &self,
         app: tauri::AppHandle,
         settings: AiProviderSettings,
         api_key: Option<String>,
         request: AgentRunRequest,
+        channel: Option<Channel<Value>>,
+        api_style: OpenAiApiStyle,
     ) -> Result<AgentRunResponse, String> {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let allowed_tools = request.allowed_tools.clone();
@@ -52,224 +60,6 @@ impl OpenAiCompatibleProvider {
             settings.disabled_skill_names(),
             settings.custom_skills_enabled(),
         )?;
-        let endpoint =
-            chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
-        let mut messages = build_agent_messages(
-            prompt,
-            context_label,
-            request.intent,
-            settings.reasoning_effort().to_string(),
-            request.system_context,
-            request.selected_output,
-            request.page_context,
-            supports_image_input(self.provider_kind, settings.model()),
-            request.screenshot,
-            request.screenshots,
-            request.messages,
-            request.output_language,
-            Some(settings.custom_instructions().to_string()),
-            skill_summaries.clone(),
-        );
-        let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = agent_tool_definitions(
-            request.allow_tools,
-            &allowed_tools,
-            settings.tools(),
-            &skill_summaries,
-        );
-        let provider_tool_definitions = self.tool_definitions_for_provider(&tool_definitions);
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
-        let mut content = String::new();
-        let mut reasoning_content: Option<String> = None;
-        let mut exhausted = true;
-
-        for turn_index in 0..10 {
-            let request_body = OpenAiCompatibleChatRequest {
-                model: settings.model().to_string(),
-                messages: messages.clone(),
-                stream: false,
-                tools: provider_tool_definitions.clone(),
-                tool_choice: (!provider_tool_definitions.is_empty()).then(|| "auto".to_string()),
-                thinking: deepseek_thinking(self.provider_kind, settings.reasoning_effort()),
-            };
-            log_provider_request(
-                "chat_completions",
-                self.provider_kind,
-                settings.model(),
-                turn_index + 1,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            let response_text = response
-                .text()
-                .await
-                .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-            log_provider_response(
-                "chat_completions",
-                self.provider_kind,
-                settings.model(),
-                turn_index + 1,
-                status.as_u16(),
-                &response_text,
-            );
-
-            if !status.is_success() {
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let completion: OpenAiCompatibleChatResponse = serde_json::from_str(&response_text)
-                .map_err(|error| format!("failed to parse {} response: {error}", self.label))?;
-            let Some(choice) = completion.choices.into_iter().next() else {
-                return Err(format!("{} response did not include a choice", self.label));
-            };
-            content = choice.message.content.trim().to_string();
-            reasoning_content = chat_response_reasoning(&choice.message);
-            if choice.message.tool_calls.is_empty() {
-                exhausted = false;
-                break;
-            }
-
-            let tool_calls = choice.message.tool_calls;
-            messages.push(OpenAiCompatibleMessage {
-                role: "assistant".to_string(),
-                content: OpenAiCompatibleContent::Text(content.clone()),
-                reasoning_content: reasoning_content.clone().filter(|r| !r.trim().is_empty()),
-                tool_call_id: None,
-                tool_calls: Some(
-                    tool_calls
-                        .iter()
-                        .map(|tool_call| OpenAiAssistantToolCall {
-                            id: tool_call.id.clone(),
-                            tool_type: "function".to_string(),
-                            function: OpenAiAssistantToolCallFunction {
-                                name: tool_call.function.name.clone(),
-                                arguments: tool_call.function.arguments.clone(),
-                            },
-                        })
-                        .collect(),
-                ),
-            });
-            for tool_call in tool_calls {
-                let result = run_ai_tool(
-                    &settings,
-                    &app_data_dir,
-                    &app,
-                    &tool_call,
-                    None,
-                    &allowed_tools,
-                )
-                .await;
-                messages.push(OpenAiCompatibleMessage {
-                    role: "tool".to_string(),
-                    content: OpenAiCompatibleContent::Text(result),
-                    reasoning_content: None,
-                    tool_call_id: Some(tool_call.id),
-                    tool_calls: None,
-                });
-            }
-        }
-
-        if exhausted {
-            let request_body = OpenAiCompatibleChatRequest {
-                model: settings.model().to_string(),
-                messages: messages.clone(),
-                stream: false,
-                tools: vec![],
-                tool_choice: None,
-                thinking: deepseek_thinking(self.provider_kind, settings.reasoning_effort()),
-            };
-            log_provider_request(
-                "chat_completions",
-                self.provider_kind,
-                settings.model(),
-                11,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            let response_text = response
-                .text()
-                .await
-                .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-            log_provider_response(
-                "chat_completions",
-                self.provider_kind,
-                settings.model(),
-                11,
-                status.as_u16(),
-                &response_text,
-            );
-
-            if !status.is_success() {
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let completion: OpenAiCompatibleChatResponse = serde_json::from_str(&response_text)
-                .map_err(|error| format!("failed to parse {} response: {error}", self.label))?;
-            let Some(choice) = completion.choices.into_iter().next() else {
-                return Err(format!("{} response did not include a choice", self.label));
-            };
-            content = choice.message.content.trim().to_string();
-            reasoning_content = chat_response_reasoning(&choice.message);
-        }
-
-        finish_agent_response(self, settings.model(), content, reasoning_content)
-    }
-
-    pub(crate) async fn run_responses(
-        &self,
-        app: tauri::AppHandle,
-        settings: AiProviderSettings,
-        api_key: Option<String>,
-        request: AgentRunRequest,
-    ) -> Result<AgentRunResponse, String> {
-        let prompt = trim_required("assistant prompt", request.prompt)?;
-        let allowed_tools = request.allowed_tools.clone();
-        let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries = enabled_skill_summaries_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            settings.custom_skills_enabled(),
-        )?;
-        let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
         let messages = build_agent_messages(
             prompt,
             context_label,
@@ -285,364 +75,97 @@ impl OpenAiCompatibleProvider {
             request.output_language,
             Some(settings.custom_instructions().to_string()),
             skill_summaries.clone(),
+            settings.tools().dashboard(),
         );
-        let mut input = responses_input_from_messages(messages, request.files);
-        let client = ai_http_client(settings.allow_insecure_tls())?;
         let tool_definitions = agent_tool_definitions(
             request.allow_tools,
             &allowed_tools,
             settings.tools(),
             &skill_summaries,
         );
-        let provider_tool_definitions =
-            self.responses_tool_definitions_for_provider(&tool_definitions);
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
-        let mut content = String::new();
-        let mut reasoning_content: Option<String> = None;
-        let mut exhausted = true;
-
-        for turn_index in 0..10 {
-            let request_body = OpenAiResponsesRequest {
-                model: settings.model().to_string(),
-                input: input.clone(),
-                stream: false,
-                store: false,
-                reasoning: openai_responses_reasoning(
-                    self.provider_kind,
+        let mut transport = match api_style {
+            OpenAiApiStyle::ChatCompletions => AgentTransport::Chat {
+                endpoint: chat_completions_endpoint(
+                    settings.base_url(),
                     settings.model(),
-                    settings.reasoning_effort(),
-                ),
-                tools: provider_tool_definitions.clone(),
-                tool_choice: (!provider_tool_definitions.is_empty()).then(|| "auto".to_string()),
-            };
-            log_provider_request(
-                "responses",
-                self.provider_kind,
-                settings.model(),
-                turn_index + 1,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            let response_text = response
-                .text()
-                .await
-                .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-            log_provider_response(
-                "responses",
-                self.provider_kind,
-                settings.model(),
-                turn_index + 1,
-                status.as_u16(),
-                &response_text,
-            );
-
-            if !status.is_success() {
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let response_value: Value = serde_json::from_str(&response_text)
-                .map_err(|error| format!("failed to parse {} response: {error}", self.label))?;
-            if let Some(text) = response_value
-                .get("output_text")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-            {
-                content = text.to_string();
-            } else if let Some(text) = extract_responses_output_text(&response_value) {
-                content = text;
-            }
-            reasoning_content = extract_responses_reasoning_text(&response_value);
-
-            let tool_calls = extract_responses_tool_calls(&response_value);
-            if tool_calls.is_empty() {
-                exhausted = false;
-                break;
-            }
-
-            if let Some(output) = response_value.get("output").and_then(Value::as_array) {
-                input.extend(output.iter().cloned());
-            }
-            for tool_call in tool_calls {
-                let result = run_ai_tool(
-                    &settings,
-                    &app_data_dir,
-                    &app,
-                    &tool_call,
-                    None,
-                    &allowed_tools,
-                )
-                .await;
-                input.push(json!({
-                    "type": "function_call_output",
-                    "call_id": tool_call.id,
-                    "output": result,
-                }));
-            }
-        }
-
-        if exhausted {
-            let request_body = OpenAiResponsesRequest {
-                model: settings.model().to_string(),
-                input: input.clone(),
-                stream: false,
-                store: false,
-                reasoning: openai_responses_reasoning(
-                    self.provider_kind,
-                    settings.model(),
-                    settings.reasoning_effort(),
-                ),
-                tools: vec![],
-                tool_choice: None,
-            };
-            log_provider_request(
-                "responses",
-                self.provider_kind,
-                settings.model(),
-                11,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            let response_text = response
-                .text()
-                .await
-                .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-            log_provider_response(
-                "responses",
-                self.provider_kind,
-                settings.model(),
-                11,
-                status.as_u16(),
-                &response_text,
-            );
-
-            if !status.is_success() {
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let response_value: Value = serde_json::from_str(&response_text)
-                .map_err(|error| format!("failed to parse {} response: {error}", self.label))?;
-            if let Some(text) = response_value
-                .get("output_text")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-            {
-                content = text.to_string();
-            } else if let Some(text) = extract_responses_output_text(&response_value) {
-                content = text;
-            }
-            reasoning_content = response_value
-                .get("reasoning_content")
-                .and_then(Value::as_str)
-                .filter(|r| !r.trim().is_empty())
-                .map(String::from);
-        }
-
-        finish_agent_response(self, settings.model(), content, reasoning_content)
-    }
-
-    pub(crate) async fn run_chat_streaming(
-        &self,
-        app: tauri::AppHandle,
-        settings: AiProviderSettings,
-        api_key: Option<String>,
-        request: AgentRunRequest,
-        channel: Channel<Value>,
-    ) -> Result<AgentRunResponse, String> {
-        let prompt = trim_required("assistant prompt", request.prompt)?;
-        let allowed_tools = request.allowed_tools.clone();
-        let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries = enabled_skill_summaries_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            settings.custom_skills_enabled(),
-        )?;
-        let endpoint =
-            chat_completions_endpoint(settings.base_url(), settings.model(), self.endpoint_style)?;
-        let mut messages = build_agent_messages(
-            prompt,
-            context_label,
-            request.intent,
-            settings.reasoning_effort().to_string(),
-            request.system_context,
-            request.selected_output,
-            request.page_context,
-            supports_image_input(self.provider_kind, settings.model()),
-            request.screenshot,
-            request.screenshots,
-            request.messages,
-            request.output_language,
-            Some(settings.custom_instructions().to_string()),
-            skill_summaries.clone(),
-        );
+                    self.endpoint_style,
+                )?,
+                messages,
+                tools: self.tool_definitions_for_provider(&tool_definitions),
+            },
+            OpenAiApiStyle::Responses => AgentTransport::Responses {
+                endpoint: responses_endpoint(settings.base_url(), self.endpoint_style)?,
+                input: responses_input_from_messages(messages, request.files),
+                tools: self.responses_tool_definitions_for_provider(&tool_definitions),
+            },
+        };
         let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = agent_tool_definitions(
-            request.allow_tools,
-            &allowed_tools,
-            settings.tools(),
-            &skill_summaries,
-        );
-        let provider_tool_definitions = self.tool_definitions_for_provider(&tool_definitions);
         let app_data_dir = app
             .path()
             .app_data_dir()
             .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
         let model = settings.model().to_string();
-        let exhausted = true;
         let mut tool_error_tracker = ConsecutiveToolErrorTracker::default();
+        // Cancellation is scoped to interactive (streaming) runs. Unattended
+        // non-streaming runs — watchdog intervention sub-turns — must not be
+        // killed by the user pressing Stop on an unrelated chat.
+        let cancel_generation = channel.as_ref().map(|_| assistant_stream_generation(&app));
+        let run_canceled = |app: &tauri::AppHandle| {
+            cancel_generation.is_some_and(|generation| assistant_stream_canceled(app, generation))
+        };
 
         for turn_index in 0..10 {
+            if run_canceled(&app) {
+                return Err(ASSISTANT_STREAM_CANCELED_ERROR.to_string());
+            }
             ai_debug!(
-                "chat stream request provider={} model={} subturn={} messages={} tools={}",
+                "agent turn provider={} model={} subturn={} streaming={}",
                 self.provider_kind,
                 model,
                 turn_index + 1,
-                messages.len(),
-                tool_definitions.len()
+                channel.is_some()
             );
-            let request_body = OpenAiCompatibleChatRequest {
-                model: model.clone(),
-                messages: messages.clone(),
-                stream: true,
-                tools: provider_tool_definitions.clone(),
-                tool_choice: (!provider_tool_definitions.is_empty()).then(|| "auto".to_string()),
-                thinking: deepseek_thinking(self.provider_kind, settings.reasoning_effort()),
-            };
-            log_provider_request(
-                "chat_completions_stream",
-                self.provider_kind,
-                &model,
-                turn_index + 1,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
+            let turn = transport
+                .run_turn(
+                    self,
+                    &client,
+                    &settings,
                     api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let response_text = response
-                    .text()
-                    .await
-                    .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-                log_provider_response(
-                    "chat_completions_stream",
-                    self.provider_kind,
-                    &model,
+                    channel.as_ref(),
                     turn_index + 1,
-                    status.as_u16(),
-                    &response_text,
-                );
-                ai_debug!(
-                    "chat stream HTTP error provider={} model={} subturn={} status={} body={}",
-                    self.provider_kind,
-                    model,
-                    turn_index + 1,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                );
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let (content, tool_calls, streamed_reasoning) =
-                stream_chat_completions(response, &channel).await?;
+                    true,
+                )
+                .await?;
             ai_debug!(
-                "chat stream response provider={} model={} subturn={} content_len={} reasoning_len={} tool_calls={}",
+                "agent turn reply provider={} model={} subturn={} content_len={} tool_calls={}",
                 self.provider_kind,
                 model,
                 turn_index + 1,
-                content.len(),
-                streamed_reasoning.as_deref().map(str::len).unwrap_or(0),
-                tool_calls.len()
+                turn.content.len(),
+                turn.tool_calls.len()
             );
-
-            if tool_calls.is_empty() {
-                require_streamed_assistant_content(self, &content)?;
-                emit_stream(
-                    &channel,
-                    &AiStreamEvent::Done {
-                        model: model.clone(),
-                        provider_kind: self.provider_kind.to_string(),
-                    },
-                )?;
-                return finish_agent_response(self, &model, content, streamed_reasoning);
+            if turn.tool_calls.is_empty() {
+                return self.finish_turn(&model, turn, channel.as_ref(), true);
             }
-
-            messages.push(OpenAiCompatibleMessage {
-                role: "assistant".to_string(),
-                content: OpenAiCompatibleContent::Text(content.clone()),
-                reasoning_content: streamed_reasoning.filter(|r| !r.trim().is_empty()),
-                tool_call_id: None,
-                tool_calls: Some(
-                    tool_calls
-                        .iter()
-                        .map(|tool_call| OpenAiAssistantToolCall {
-                            id: tool_call.id.clone(),
-                            tool_type: "function".to_string(),
-                            function: OpenAiAssistantToolCallFunction {
-                                name: tool_call.function.name.clone(),
-                                arguments: tool_call.function.arguments.clone(),
-                            },
-                        })
-                        .collect(),
-                ),
-            });
-            for tool_call in &tool_calls {
+            transport.append_model_turn(&turn);
+            for tool_call in &turn.tool_calls {
+                // Stop before executing the next tool, not just the next
+                // provider call: a canceled run must not keep mutating state.
+                if run_canceled(&app) {
+                    return Err(ASSISTANT_STREAM_CANCELED_ERROR.to_string());
+                }
                 let is_skill_tool = is_assistant_skill_tool(&tool_call.function.name);
+                if let Some(channel) = channel.as_ref() {
+                    if !is_skill_tool {
+                        emit_stream(
+                            channel,
+                            &AiStreamEvent::ToolCallStart {
+                                tool_id: tool_call.id.clone(),
+                                tool_name: tool_call.function.name.clone(),
+                            },
+                        )?;
+                    }
+                }
                 ai_debug!(
                     "tool start provider={} model={} subturn={} id={} name={} args_len={}",
                     self.provider_kind,
@@ -652,21 +175,12 @@ impl OpenAiCompatibleProvider {
                     tool_call.function.name,
                     tool_call.function.arguments.len()
                 );
-                if !is_skill_tool {
-                    emit_stream(
-                        &channel,
-                        &AiStreamEvent::ToolCallStart {
-                            tool_id: tool_call.id.clone(),
-                            tool_name: tool_call.function.name.clone(),
-                        },
-                    )?;
-                }
                 let result = run_ai_tool(
                     &settings,
                     &app_data_dir,
                     &app,
                     tool_call,
-                    Some(&channel),
+                    channel.as_ref(),
                     &allowed_tools,
                 )
                 .await;
@@ -681,376 +195,380 @@ impl OpenAiCompatibleProvider {
                 );
                 let tool_error = tool_result_error(&result);
                 let abort_message = tool_error_tracker.note(&tool_call.function.name, &tool_error);
-                messages.push(OpenAiCompatibleMessage {
-                    role: "tool".to_string(),
-                    content: OpenAiCompatibleContent::Text(result),
-                    reasoning_content: None,
-                    tool_call_id: Some(tool_call.id.clone()),
-                    tool_calls: None,
-                });
-                if !is_skill_tool {
-                    emit_stream(
-                        &channel,
-                        &AiStreamEvent::ToolCallEnd {
-                            tool_id: tool_call.id.clone(),
-                            tool_name: tool_call.function.name.clone(),
-                            error: tool_error,
-                        },
-                    )?;
+                transport.append_tool_result(tool_call, result);
+                if let Some(channel) = channel.as_ref() {
+                    if !is_skill_tool {
+                        emit_stream(
+                            channel,
+                            &AiStreamEvent::ToolCallEnd {
+                                tool_id: tool_call.id.clone(),
+                                tool_name: tool_call.function.name.clone(),
+                                error: tool_error,
+                            },
+                        )?;
+                    }
                 }
                 if let Some(message) = abort_message {
-                    emit_stream(
-                        &channel,
-                        &AiStreamEvent::Done {
-                            model: model.clone(),
-                            provider_kind: self.provider_kind.to_string(),
-                        },
-                    )?;
-                    return finish_agent_response(self, &model, message, None);
+                    let turn = AgentTurnOutput {
+                        content: message,
+                        reasoning: None,
+                        tool_calls: vec![],
+                        raw_response_output: None,
+                    };
+                    return self.finish_turn(&model, turn, channel.as_ref(), false);
                 }
             }
         }
 
-        if exhausted {
-            ai_debug!(
-                "chat stream exhausted tool loop provider={} model={} messages={}",
-                self.provider_kind,
-                model,
-                messages.len()
-            );
-            let request_body = OpenAiCompatibleChatRequest {
-                model: model.clone(),
-                messages: messages.clone(),
-                stream: true,
-                tools: vec![],
-                tool_choice: None,
-                thinking: deepseek_thinking(self.provider_kind, settings.reasoning_effort()),
-            };
-            log_provider_request(
-                "chat_completions_stream",
-                self.provider_kind,
-                &model,
+        // Sub-turn cap reached: ask for one final answer with tools withheld
+        // so the model must reply instead of looping.
+        ai_debug!(
+            "agent loop exhausted provider={} model={} streaming={}",
+            self.provider_kind,
+            model,
+            channel.is_some()
+        );
+        let turn = transport
+            .run_turn(
+                self,
+                &client,
+                &settings,
+                api_key.as_deref(),
+                channel.as_ref(),
                 11,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let response_text = response
-                    .text()
-                    .await
-                    .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-                log_provider_response(
-                    "chat_completions_stream",
-                    self.provider_kind,
-                    &model,
-                    11,
-                    status.as_u16(),
-                    &response_text,
-                );
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let (content, _tool_calls, _streamed_reasoning) =
-                stream_chat_completions(response, &channel).await?;
-            require_streamed_assistant_content(self, &content)?;
-            emit_stream(
-                &channel,
-                &AiStreamEvent::Done {
-                    model: model.clone(),
-                    provider_kind: self.provider_kind.to_string(),
-                },
-            )?;
-            return finish_agent_response(self, &model, content, _streamed_reasoning);
-        }
-
-        Err(format!("{} exhausted the assistant tool loop", self.label))
+                false,
+            )
+            .await?;
+        self.finish_turn(&model, turn, channel.as_ref(), true)
     }
 
-    pub(crate) async fn run_responses_streaming(
+    /// Common run completion: the streamed-content requirement (skipped for
+    /// the consecutive-error abort message, which was never streamed), the
+    /// Done stream event, and the provider-labelled response envelope.
+    fn finish_turn(
         &self,
-        app: tauri::AppHandle,
-        settings: AiProviderSettings,
-        api_key: Option<String>,
-        request: AgentRunRequest,
-        channel: Channel<Value>,
+        model: &str,
+        turn: AgentTurnOutput,
+        channel: Option<&Channel<Value>>,
+        require_content: bool,
     ) -> Result<AgentRunResponse, String> {
-        let prompt = trim_required("assistant prompt", request.prompt)?;
-        let allowed_tools = request.allowed_tools.clone();
-        let context_label = trim_required("assistant context", request.context_label)?;
-        let skill_summaries = enabled_skill_summaries_for_request(
-            &app,
-            settings.disabled_skill_names(),
-            settings.custom_skills_enabled(),
-        )?;
-        let endpoint = responses_endpoint(settings.base_url(), self.endpoint_style)?;
-        let messages = build_agent_messages(
-            prompt,
-            context_label,
-            request.intent,
-            settings.reasoning_effort().to_string(),
-            request.system_context,
-            request.selected_output,
-            request.page_context,
-            supports_image_input(self.provider_kind, settings.model()),
-            request.screenshot,
-            request.screenshots,
-            request.messages,
-            request.output_language,
-            Some(settings.custom_instructions().to_string()),
-            skill_summaries.clone(),
-        );
-        let client = ai_http_client(settings.allow_insecure_tls())?;
-        let tool_definitions = agent_tool_definitions(
-            request.allow_tools,
-            &allowed_tools,
-            settings.tools(),
-            &skill_summaries,
-        );
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|error| format!("failed to locate KKTerm app data: {error}"))?;
-        let model = settings.model().to_string();
-        let exhausted = true;
-
-        let mut input = responses_input_from_messages(messages, request.files);
-        let resp_tool_defs = self.responses_tool_definitions_for_provider(&tool_definitions);
-        let mut tool_error_tracker = ConsecutiveToolErrorTracker::default();
-
-        for turn_index in 0..10 {
-            let request_body = OpenAiResponsesRequest {
-                model: model.clone(),
-                input: input.clone(),
-                stream: true,
-                store: false,
-                reasoning: openai_responses_reasoning(
-                    self.provider_kind,
-                    settings.model(),
-                    settings.reasoning_effort(),
-                ),
-                tools: resp_tool_defs.clone(),
-                tool_choice: (!resp_tool_defs.is_empty()).then(|| "auto".to_string()),
-            };
-            log_provider_request(
-                "responses_stream",
-                self.provider_kind,
-                &model,
-                turn_index + 1,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let response_text = response
-                    .text()
-                    .await
-                    .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-                log_provider_response(
-                    "responses_stream",
-                    self.provider_kind,
-                    &model,
-                    turn_index + 1,
-                    status.as_u16(),
-                    &response_text,
-                );
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
+        if let Some(channel) = channel {
+            if require_content {
+                require_streamed_assistant_content(self, &turn.content)?;
             }
-
-            let (content, tool_calls, _streamed_reasoning) =
-                stream_responses_completions(response, &channel).await?;
-
-            if let Some(output) = &content {
-                input.push(json!({
-                    "type": "message",
-                    "role": "assistant",
-                    "content": [{"type": "output_text", "text": output}],
-                }));
-            }
-
-            if tool_calls.is_empty() {
-                require_streamed_assistant_content(self, content.as_deref().unwrap_or(""))?;
-                emit_stream(
-                    &channel,
-                    &AiStreamEvent::Done {
-                        model,
-                        provider_kind: self.provider_kind.to_string(),
-                    },
-                )?;
-                return finish_agent_response(
-                    self,
-                    settings.model(),
-                    content.unwrap_or_default(),
-                    _streamed_reasoning,
-                );
-            }
-
-            for tc in &tool_calls {
-                input.push(json!({
-                    "type": "function_call",
-                    "call_id": tc.id,
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments,
-                }));
-            }
-            for tool_call in &tool_calls {
-                let is_skill_tool = is_assistant_skill_tool(&tool_call.function.name);
-                if !is_skill_tool {
-                    emit_stream(
-                        &channel,
-                        &AiStreamEvent::ToolCallStart {
-                            tool_id: tool_call.id.clone(),
-                            tool_name: tool_call.function.name.clone(),
-                        },
-                    )?;
-                }
-                let result = run_ai_tool(
-                    &settings,
-                    &app_data_dir,
-                    &app,
-                    tool_call,
-                    Some(&channel),
-                    &allowed_tools,
-                )
-                .await;
-                let tool_error = tool_result_error(&result);
-                let abort_message = tool_error_tracker.note(&tool_call.function.name, &tool_error);
-                input.push(json!({
-                    "type": "function_call_output",
-                    "call_id": tool_call.id,
-                    "output": result,
-                }));
-                if !is_skill_tool {
-                    emit_stream(
-                        &channel,
-                        &AiStreamEvent::ToolCallEnd {
-                            tool_id: tool_call.id.clone(),
-                            tool_name: tool_call.function.name.clone(),
-                            error: tool_error,
-                        },
-                    )?;
-                }
-                if let Some(message) = abort_message {
-                    emit_stream(
-                        &channel,
-                        &AiStreamEvent::Done {
-                            model: model.clone(),
-                            provider_kind: self.provider_kind.to_string(),
-                        },
-                    )?;
-                    return finish_agent_response(self, &model, message, None);
-                }
-            }
-        }
-
-        if exhausted {
-            let request_body = OpenAiResponsesRequest {
-                model: model.clone(),
-                input: input.clone(),
-                stream: true,
-                store: false,
-                reasoning: openai_responses_reasoning(
-                    self.provider_kind,
-                    settings.model(),
-                    settings.reasoning_effort(),
-                ),
-                tools: vec![],
-                tool_choice: None,
-            };
-            log_provider_request(
-                "responses_stream",
-                self.provider_kind,
-                &model,
-                11,
-                &endpoint,
-                &request_body,
-            );
-            let response = client
-                .post(endpoint.clone())
-                .headers(openai_compatible_headers(
-                    api_key.as_deref(),
-                    self.auth_style,
-                    extra_headers_for_provider(self.provider_kind, &settings),
-                )?)
-                .json(&request_body)
-                .send()
-                .await
-                .map_err(|error| format!("failed to reach {}: {error}", self.label))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let response_text = response
-                    .text()
-                    .await
-                    .map_err(|error| format!("failed to read {} response: {error}", self.label))?;
-                log_provider_response(
-                    "responses_stream",
-                    self.provider_kind,
-                    &model,
-                    11,
-                    status.as_u16(),
-                    &response_text,
-                );
-                return Err(format!(
-                    "{} returned HTTP {}: {}",
-                    self.label,
-                    status.as_u16(),
-                    truncate_error_body(&response_text)
-                ));
-            }
-
-            let (content, _tool_calls, _streamed_reasoning) =
-                stream_responses_completions(response, &channel).await?;
-            require_streamed_assistant_content(self, content.as_deref().unwrap_or(""))?;
             emit_stream(
-                &channel,
+                channel,
                 &AiStreamEvent::Done {
-                    model: model.clone(),
+                    model: model.to_string(),
                     provider_kind: self.provider_kind.to_string(),
                 },
             )?;
-            return finish_agent_response(
-                self,
-                &model,
-                content.unwrap_or_default(),
-                _streamed_reasoning,
-            );
         }
+        finish_agent_response(self, model, turn.content, turn.reasoning)
+    }
+}
 
-        Err(format!("{} exhausted the assistant tool loop", self.label))
+/// One model turn's parsed output, independent of API style and transport.
+pub(crate) struct AgentTurnOutput {
+    pub(crate) content: String,
+    pub(crate) reasoning: Option<String>,
+    pub(crate) tool_calls: Vec<OpenAiToolCall>,
+    /// Raw `output` items from a non-streaming Responses turn. Replayed
+    /// verbatim into the next request so provider-side items (reasoning,
+    /// message ids) survive exactly as returned.
+    pub(crate) raw_response_output: Option<Vec<Value>>,
+}
+
+/// API-style-specific transcript state plus request building and reply
+/// parsing for one agent run. All orchestration lives in `run_agent_loop`.
+pub(crate) enum AgentTransport {
+    Chat {
+        endpoint: String,
+        messages: Vec<OpenAiCompatibleMessage>,
+        tools: Vec<OpenAiToolDefinition>,
+    },
+    Responses {
+        endpoint: String,
+        input: Vec<Value>,
+        tools: Vec<Value>,
+    },
+}
+
+impl AgentTransport {
+    fn api_name(&self, streaming: bool) -> &'static str {
+        match (self, streaming) {
+            (AgentTransport::Chat { .. }, false) => "chat_completions",
+            (AgentTransport::Chat { .. }, true) => "chat_completions_stream",
+            (AgentTransport::Responses { .. }, false) => "responses",
+            (AgentTransport::Responses { .. }, true) => "responses_stream",
+        }
+    }
+
+    /// Send one model turn and parse the reply, streaming through `channel`
+    /// when present. `with_tools=false` is the final forced-answer turn after
+    /// the sub-turn cap.
+    async fn run_turn(
+        &self,
+        provider: &OpenAiCompatibleProvider,
+        client: &reqwest::Client,
+        settings: &AiProviderSettings,
+        api_key: Option<&str>,
+        channel: Option<&Channel<Value>>,
+        turn_number: usize,
+        with_tools: bool,
+    ) -> Result<AgentTurnOutput, String> {
+        let api = self.api_name(channel.is_some());
+        let model = settings.model();
+        let response = match self {
+            AgentTransport::Chat {
+                endpoint,
+                messages,
+                tools,
+            } => {
+                let request_body = OpenAiCompatibleChatRequest {
+                    model: model.to_string(),
+                    messages: messages.clone(),
+                    stream: channel.is_some(),
+                    tools: if with_tools { tools.clone() } else { vec![] },
+                    tool_choice: (with_tools && !tools.is_empty()).then(|| "auto".to_string()),
+                    thinking: deepseek_thinking(
+                        provider.provider_kind,
+                        settings.reasoning_effort(),
+                    ),
+                };
+                log_provider_request(
+                    api,
+                    provider.provider_kind,
+                    model,
+                    turn_number,
+                    endpoint,
+                    &request_body,
+                );
+                client
+                    .post(endpoint.clone())
+                    .headers(openai_compatible_headers(
+                        api_key,
+                        provider.auth_style,
+                        extra_headers_for_provider(provider.provider_kind, settings),
+                    )?)
+                    .json(&request_body)
+                    .send()
+                    .await
+                    .map_err(|error| format!("failed to reach {}: {error}", provider.label))?
+            }
+            AgentTransport::Responses {
+                endpoint,
+                input,
+                tools,
+            } => {
+                let request_body = OpenAiResponsesRequest {
+                    model: model.to_string(),
+                    input: input.clone(),
+                    stream: channel.is_some(),
+                    store: false,
+                    reasoning: openai_responses_reasoning(
+                        provider.provider_kind,
+                        model,
+                        settings.reasoning_effort(),
+                    ),
+                    tools: if with_tools { tools.clone() } else { vec![] },
+                    tool_choice: (with_tools && !tools.is_empty()).then(|| "auto".to_string()),
+                };
+                log_provider_request(
+                    api,
+                    provider.provider_kind,
+                    model,
+                    turn_number,
+                    endpoint,
+                    &request_body,
+                );
+                client
+                    .post(endpoint.clone())
+                    .headers(openai_compatible_headers(
+                        api_key,
+                        provider.auth_style,
+                        extra_headers_for_provider(provider.provider_kind, settings),
+                    )?)
+                    .json(&request_body)
+                    .send()
+                    .await
+                    .map_err(|error| format!("failed to reach {}: {error}", provider.label))?
+            }
+        };
+
+        let status = response.status();
+        if let Some(channel) = channel {
+            // Streaming: the body can only be read once, so error text is
+            // fetched (and logged) only on failure.
+            if !status.is_success() {
+                let response_text = response.text().await.map_err(|error| {
+                    format!("failed to read {} response: {error}", provider.label)
+                })?;
+                log_provider_response(
+                    api,
+                    provider.provider_kind,
+                    model,
+                    turn_number,
+                    status.as_u16(),
+                    &response_text,
+                );
+                return Err(format!(
+                    "{} returned HTTP {}: {}",
+                    provider.label,
+                    status.as_u16(),
+                    truncate_error_body(&response_text)
+                ));
+            }
+            match self {
+                AgentTransport::Chat { .. } => {
+                    let (content, tool_calls, reasoning) =
+                        stream_chat_completions(response, channel).await?;
+                    Ok(AgentTurnOutput {
+                        content,
+                        reasoning,
+                        tool_calls,
+                        raw_response_output: None,
+                    })
+                }
+                AgentTransport::Responses { .. } => {
+                    let (content, tool_calls, reasoning) =
+                        stream_responses_completions(response, channel).await?;
+                    Ok(AgentTurnOutput {
+                        content: content.unwrap_or_default(),
+                        reasoning,
+                        tool_calls,
+                        raw_response_output: None,
+                    })
+                }
+            }
+        } else {
+            let response_text = response
+                .text()
+                .await
+                .map_err(|error| format!("failed to read {} response: {error}", provider.label))?;
+            log_provider_response(
+                api,
+                provider.provider_kind,
+                model,
+                turn_number,
+                status.as_u16(),
+                &response_text,
+            );
+            if !status.is_success() {
+                return Err(format!(
+                    "{} returned HTTP {}: {}",
+                    provider.label,
+                    status.as_u16(),
+                    truncate_error_body(&response_text)
+                ));
+            }
+            match self {
+                AgentTransport::Chat { .. } => {
+                    let completion: OpenAiCompatibleChatResponse =
+                        serde_json::from_str(&response_text).map_err(|error| {
+                            format!("failed to parse {} response: {error}", provider.label)
+                        })?;
+                    let Some(choice) = completion.choices.into_iter().next() else {
+                        return Err(format!(
+                            "{} response did not include a choice",
+                            provider.label
+                        ));
+                    };
+                    Ok(AgentTurnOutput {
+                        content: choice.message.content.trim().to_string(),
+                        reasoning: chat_response_reasoning(&choice.message),
+                        tool_calls: choice.message.tool_calls,
+                        raw_response_output: None,
+                    })
+                }
+                AgentTransport::Responses { .. } => {
+                    let response_value: Value =
+                        serde_json::from_str(&response_text).map_err(|error| {
+                            format!("failed to parse {} response: {error}", provider.label)
+                        })?;
+                    let content = response_value
+                        .get("output_text")
+                        .and_then(Value::as_str)
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                        .map(str::to_string)
+                        .or_else(|| extract_responses_output_text(&response_value))
+                        .unwrap_or_default();
+                    Ok(AgentTurnOutput {
+                        content,
+                        reasoning: extract_responses_reasoning_text(&response_value),
+                        tool_calls: extract_responses_tool_calls(&response_value),
+                        raw_response_output: response_value
+                            .get("output")
+                            .and_then(Value::as_array)
+                            .cloned(),
+                    })
+                }
+            }
+        }
+    }
+
+    /// Record the model's tool-calling turn in the transcript before the tool
+    /// results are appended. Only called when the turn carried tool calls.
+    pub(crate) fn append_model_turn(&mut self, turn: &AgentTurnOutput) {
+        match self {
+            AgentTransport::Chat { messages, .. } => messages.push(OpenAiCompatibleMessage {
+                role: "assistant".to_string(),
+                content: OpenAiCompatibleContent::Text(turn.content.clone()),
+                reasoning_content: turn.reasoning.clone().filter(|r| !r.trim().is_empty()),
+                tool_call_id: None,
+                tool_calls: Some(
+                    turn.tool_calls
+                        .iter()
+                        .map(|tool_call| OpenAiAssistantToolCall {
+                            id: tool_call.id.clone(),
+                            tool_type: "function".to_string(),
+                            function: OpenAiAssistantToolCallFunction {
+                                name: tool_call.function.name.clone(),
+                                arguments: tool_call.function.arguments.clone(),
+                            },
+                        })
+                        .collect(),
+                ),
+            }),
+            AgentTransport::Responses { input, .. } => {
+                if let Some(raw) = &turn.raw_response_output {
+                    input.extend(raw.iter().cloned());
+                } else {
+                    if !turn.content.trim().is_empty() {
+                        input.push(json!({
+                            "type": "message",
+                            "role": "assistant",
+                            "content": [{"type": "output_text", "text": turn.content}],
+                        }));
+                    }
+                    for tool_call in &turn.tool_calls {
+                        input.push(json!({
+                            "type": "function_call",
+                            "call_id": tool_call.id,
+                            "name": tool_call.function.name,
+                            "arguments": tool_call.function.arguments,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    pub(crate) fn append_tool_result(&mut self, tool_call: &OpenAiToolCall, result: String) {
+        match self {
+            AgentTransport::Chat { messages, .. } => messages.push(OpenAiCompatibleMessage {
+                role: "tool".to_string(),
+                content: OpenAiCompatibleContent::Text(result),
+                reasoning_content: None,
+                tool_call_id: Some(tool_call.id.clone()),
+                tool_calls: None,
+            }),
+            AgentTransport::Responses { input, .. } => input.push(json!({
+                "type": "function_call_output",
+                "call_id": tool_call.id,
+                "output": result,
+            })),
+        }
     }
 }

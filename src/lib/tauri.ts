@@ -422,6 +422,11 @@ export interface AgentChatMessage {
   role: "assistant" | "user";
   content: string;
   reasoningContent?: string;
+  /**
+   * Compact summaries of tool calls made in this assistant turn, replayed by
+   * the backend as a short transcript so later turns remember prior tool work.
+   */
+  toolCalls?: Array<{ toolName: string; error?: string }>;
 }
 
 export interface AssistantSkillSummary {
@@ -1229,6 +1234,10 @@ type CommandMap = {
   run_ai_agent_streaming: {
     args: { channel: Channel<AiStreamEvent>; request: AgentRunRequest };
     result: AgentRunResponse;
+  };
+  cancel_assistant_streams: {
+    args: undefined;
+    result: null;
   };
   ai_coding_usage_load: {
     args: undefined;
