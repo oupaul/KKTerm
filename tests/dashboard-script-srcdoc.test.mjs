@@ -142,11 +142,28 @@ test("script widget host exposes runtime theme contract without prompt payload b
     },
   );
 
-  assert.match(srcdoc, /color-scheme: dark;/);
+  assert.match(srcdoc, /color-scheme: dark !important;/);
   assert.match(srcdoc, /--kk-readable-surface: rgba\(15, 23, 42, 0\.92\);/);
   assert.match(srcdoc, /getTheme: function \(\)/);
   assert.match(srcdoc, /\\"backgroundTone\\":\\"dark\\"/);
   assert.match(srcdoc, /\\"requiresOpaqueTextSurface\\":false/);
+});
+
+test("script widget host keeps generated root color-scheme overrides from repainting the iframe canvas", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const srcdoc = buildSrcdoc({
+    source: `
+      const style = document.createElement('style');
+      style.textContent = ':root { color-scheme: light dark; } body { background: black; }';
+      document.getElementById('root').append(style);
+    `,
+    permissions: { network: false },
+  });
+
+  assert.match(srcdoc, /:root \{[\s\S]*color-scheme: light !important;/);
+  assert.match(srcdoc, /html, body \{[\s\S]*background: transparent !important;/);
 });
 
 test("script widget host notifies generated animation code when visibility changes", async () => {

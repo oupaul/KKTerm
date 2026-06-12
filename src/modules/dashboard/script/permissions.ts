@@ -250,7 +250,7 @@ export function buildSrcdoc(
   <meta http-equiv="Content-Security-Policy" content="${csp.replace(/"/g, "&quot;")}" />
   <style>
     :root {
-      color-scheme: ${normalizedTheme.colorScheme === "dark" ? "dark" : "light"};
+      color-scheme: ${normalizedTheme.colorScheme === "dark" ? "dark" : "light"} !important;
       --kk-text: ${cssValue(normalizedTheme.text, DEFAULT_SCRIPT_WIDGET_THEME.text)};
       --kk-muted: ${cssValue(normalizedTheme.muted, DEFAULT_SCRIPT_WIDGET_THEME.muted)};
       --kk-border: ${cssValue(normalizedTheme.border, DEFAULT_SCRIPT_WIDGET_THEME.border)};
@@ -271,8 +271,8 @@ export function buildSrcdoc(
       color: var(--kk-text);
       font-size: 13px;
       line-height: 1.4;
+      background: transparent !important;
     }
-    body { background: transparent; }
     #root {
       width: 100%;
       height: 100%;
