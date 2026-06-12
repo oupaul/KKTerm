@@ -4,21 +4,15 @@ set -euo pipefail
 KEY_PATH=${TAURI_SIGNING_PRIVATE_KEY_PATH:-$HOME/.tauri/kkterm-updater.key}
 
 normalize_tauri_signing_key() {
-  local key_content decoded first_line
+  local key_content first_line
 
   key_content="$1"
   first_line="${key_content%%$'\n'*}"
 
+  # Tauri expects base64 of the full minisign key box (untrusted comment +
+  # payload). Wrap a raw box if given one; otherwise pass through verbatim.
   if [[ "$first_line" == "untrusted comment:"* ]]; then
-    print -r -- "${${key_content#*$'\n'}%%$'\n'*}"
-    return
-  fi
-
-  decoded="$(printf '%s' "$key_content" | base64 -D 2>/dev/null || true)"
-  first_line="${decoded%%$'\n'*}"
-
-  if [[ "$first_line" == "untrusted comment:"* ]]; then
-    print -r -- "${${decoded#*$'\n'}%%$'\n'*}"
+    printf '%s' "$key_content" | base64
     return
   fi
 
