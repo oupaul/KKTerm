@@ -2,8 +2,9 @@ import { Minus, Plus } from "lucide-react";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { showNativeContextMenu } from "../../../../../lib/nativeContextMenu";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 
@@ -172,6 +173,43 @@ export function NotesBody({ instance }: BuiltInWidgetBodyProps) {
     }, DELETE_ANIMATION_MS);
   }
 
+  function selectedTextFromNotesSurface() {
+    const textArea = textAreaRef.current;
+    if (textArea && document.activeElement === textArea && textArea.selectionStart !== textArea.selectionEnd) {
+      return textArea.value.slice(textArea.selectionStart, textArea.selectionEnd);
+    }
+    return window.getSelection()?.toString() ?? "";
+  }
+
+  function handleMarkdownClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (event.button !== 0 || selectedTextFromNotesSurface().trim().length > 0) {
+      return;
+    }
+    setIsEditingMarkdown(true);
+  }
+
+  async function handleNotesContextMenu(event: ReactMouseEvent<HTMLElement>) {
+    const selectedText = selectedTextFromNotesSurface();
+    if (selectedText.trim().length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("common.copy"),
+          action: () => {
+            void navigator.clipboard.writeText(selectedText);
+          },
+        },
+      ],
+      { x: event.clientX, y: event.clientY },
+    );
+  }
+
   return (
     <div
       className={`dw-notes dw-notes--color-${config.color} dw-notes--font-${config.font} dw-notes--fold-${settings.foldCorner}${tearingPageIndex === activePageIndex ? " is-tearing" : ""}`}
@@ -211,10 +249,8 @@ export function NotesBody({ instance }: BuiltInWidgetBodyProps) {
           className="dw-notes-markdown"
           aria-label={t("dashboard.notesAriaLabel")}
           dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
-          onMouseDown={(event) => {
-            event.preventDefault();
-            setIsEditingMarkdown(true);
-          }}
+          onClick={handleMarkdownClick}
+          onContextMenu={handleNotesContextMenu}
         />
       ) : (
         <textarea
@@ -227,6 +263,7 @@ export function NotesBody({ instance }: BuiltInWidgetBodyProps) {
           placeholder={t("dashboard.notesPlaceholder")}
           aria-label={t("dashboard.notesAriaLabel")}
           spellCheck={false}
+          onContextMenu={handleNotesContextMenu}
         />
       )}
       <div className="dw-notes-toolbar" role="toolbar" aria-label={t("dashboard.notesToolbarLabel")}>
