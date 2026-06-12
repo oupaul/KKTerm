@@ -133,6 +133,7 @@ export function WidgetFrame({
     instance.kind !== "builtIn" ? "dw-custom-widget" : "",
     shouldSpaceWarp ? "dw-reveal-space-warp" : "",
     editMode ? "dw-edit" : "",
+    editMode ? "drag-handle" : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -160,7 +161,6 @@ export function WidgetFrame({
         hideTitle={instance.hideTitle}
         onTitleCommit={(next) => { void updateInstance(instance.id, { customTitle: next }); }}
       />
-      {editMode ? <span className="dw-layout-grip drag-handle" aria-hidden="true" /> : null}
     </div>
   );
 }

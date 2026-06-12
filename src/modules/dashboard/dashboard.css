@@ -1386,29 +1386,16 @@ button.dashboard-pill-dot:focus-visible {
   border-radius: var(--dashboard-radius-lg);
 }
 
+.dw-instance.dw-edit.drag-handle,
 .dw-instance.dw-edit .drag-handle {
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
+.react-grid-item.react-draggable-dragging .dw-instance.dw-edit.drag-handle,
 .react-grid-item.react-draggable-dragging .dw-instance.dw-edit .drag-handle {
   cursor: grabbing;
-}
-
-.dw-layout-grip {
-  position: absolute;
-  top: -11px;
-  left: -11px;
-  z-index: 5;
-  width: 22px;
-  height: 22px;
-  border: 1px solid color-mix(in srgb, var(--accent) 72%, var(--border));
-  border-radius: 999px;
-  background:
-    radial-gradient(circle, var(--accent) 1.4px, transparent 1.7px) 6px 6px / 5px 5px,
-    var(--surface);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 16%),
-    0 0 0 2px color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
 .react-grid-item > .react-resizable-handle {
@@ -1416,6 +1403,9 @@ button.dashboard-pill-dot:focus-visible {
   background-image: none !important;
   opacity: 1;
   padding: 0 !important;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .react-grid-item > .react-resizable-handle::after {
@@ -1488,18 +1478,6 @@ button.dashboard-pill-dot:focus-visible {
   right: -6px !important;
   bottom: -6px !important;
   cursor: nwse-resize;
-}
-
-.dw-canvas-scroll.is-editing .react-grid-item > .react-resizable-handle.react-resizable-handle-nw,
-.dw-canvas-scroll.is-editing .react-grid-item > .react-resizable-handle.react-resizable-handle-ne,
-.dw-canvas-scroll.is-editing .react-grid-item > .react-resizable-handle.react-resizable-handle-sw,
-.dw-canvas-scroll.is-editing .react-grid-item > .react-resizable-handle.react-resizable-handle-se {
-  border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--border));
-  border-radius: 5px;
-  background: var(--surface-muted) !important;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 16%),
-    inset 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .dw-preset {
