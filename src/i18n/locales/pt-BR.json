@@ -2455,6 +2455,7 @@
     "thoughtFor": "Pensou por",
     "workedFor": "Trabalhou por {{duration}}",
     "thinkingStep": "Pensando",
+    "workPlanTitle": "Plano",
     "toolCallRunning": "Executando",
     "toolCallUsing": "Usando a ferramenta {{tool}}...",
     "toolCallComplete": "Concluído",

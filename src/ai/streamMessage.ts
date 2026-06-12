@@ -1,5 +1,6 @@
 import type { AiStreamEvent } from "../lib/tauri";
 import type { AgentRunResponse } from "../lib/tauri";
+import type { AssistantRunManifest, AssistantRunManifestStep } from "./assistantTypes";
 
 export type AssistantToolCallStatus = {
   toolId: string;
@@ -15,6 +16,7 @@ export type AssistantStreamMessage = {
   reasoningContent?: string;
   toolCalls?: AssistantToolCallStatus[];
   skillNames?: string[];
+  runManifest?: AssistantRunManifest;
   workStartedAt?: string;
   workCompletedAt?: string;
   isStreaming?: boolean;
@@ -80,6 +82,45 @@ export function applyAssistantStreamEventToMessage(
           : tc,
       );
       break;
+    case "planUpdate": {
+      const steps: AssistantRunManifestStep[] = (Array.isArray(event.steps) ? event.steps : [])
+        .filter((step) => step && typeof step.id === "string" && typeof step.label === "string")
+        .map((step) => ({
+          id: step.id,
+          label: step.label,
+          status:
+            step.status === "running" || step.status === "completed" || step.status === "blocked"
+              ? step.status
+              : "pending",
+          detail: typeof step.detail === "string" && step.detail.trim() ? step.detail : undefined,
+        }));
+      if (steps.length === 0) {
+        break;
+      }
+      msg.workStartedAt = msg.workStartedAt ?? options.workStartedAt;
+      msg.runManifest = {
+        runId:
+          msg.runManifest?.runId ??
+          `assistant-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        goal:
+          typeof event.goal === "string" && event.goal.trim()
+            ? event.goal.trim()
+            : msg.runManifest?.goal ?? "",
+        scope: msg.runManifest?.scope ?? "assistant.chat",
+        definitionOfDone:
+          msg.runManifest?.definitionOfDone ??
+          "Complete every plan step or report the blocker.",
+        verificationStatus: steps.some((step) => step.status === "blocked")
+          ? "failed"
+          : steps.every((step) => step.status === "completed")
+            ? "passed"
+            : "pending",
+        steps,
+        updatedAt: options.now(),
+        source: "model",
+      };
+      break;
+    }
     case "done":
       msg.isStreaming = false;
       msg.workCompletedAt = options.now();

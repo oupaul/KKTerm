@@ -2455,6 +2455,7 @@
     "thoughtFor": "Thought for",
     "workedFor": "Worked for {{duration}}",
     "thinkingStep": "Thinking",
+    "workPlanTitle": "Plan",
     "toolCallRunning": "Running",
     "toolCallUsing": "Using {{tool}} tool...",
     "toolCallComplete": "Complete",

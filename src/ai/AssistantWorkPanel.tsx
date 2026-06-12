@@ -25,10 +25,12 @@ export function AssistantWorkPanel({ message }: { message: AssistantChatMessage 
   const reasoningContent = message.reasoningContent?.trim() ?? "";
   const toolCalls = message.toolCalls ?? [];
   const skillNames = message.skillNames ?? [];
+  const modelPlan = message.runManifest?.source === "model" ? message.runManifest : undefined;
   const hasWork =
     Boolean(reasoningContent) ||
     toolCalls.length > 0 ||
     skillNames.length > 0 ||
+    Boolean(modelPlan) ||
     Boolean(message.isStreaming);
   const shouldShowThinkingStep = assistantWorkPanelShouldShowThinkingStep(message);
 
@@ -123,6 +125,23 @@ export function AssistantWorkPanel({ message }: { message: AssistantChatMessage 
       </button>
       {expanded ? (
         <div className="assistant-work-timeline">
+          {modelPlan ? (
+            <div className="assistant-work-step" data-state="plan">
+              <span className="assistant-work-step-icon" aria-hidden="true" />
+              <div>
+                <strong>{t("ai.workPlanTitle")}</strong>
+                {modelPlan.goal ? <small>{modelPlan.goal}</small> : null}
+                <ul className="assistant-work-plan-steps">
+                  {modelPlan.steps.map((step) => (
+                    <li data-state={step.status} key={step.id}>
+                      <span>{step.label}</span>
+                      {step.detail ? <small>{step.detail}</small> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
           {shouldShowThinkingStep ? (
             <div className="assistant-work-step" data-state={thinkingStatus}>
               <span className="assistant-work-step-icon" aria-hidden="true">

@@ -2455,6 +2455,7 @@
     "thoughtFor": "Đã suy nghĩ trong",
     "workedFor": "Đã làm việc trong {{duration}}",
     "thinkingStep": "Đang suy nghĩ",
+    "workPlanTitle": "Kế hoạch",
     "toolCallRunning": "Đang chạy",
     "toolCallUsing": "Đang sử dụng công cụ {{tool}}...",
     "toolCallComplete": "Hoàn tất",

@@ -690,6 +690,54 @@
     }
 
     #[test]
+    fn update_plan_tool_validates_and_normalizes_steps() {
+        // Valid plan without a stream channel (non-streaming run): accepted
+        // as a no-op so the model keeps one habit across run kinds.
+        let result = update_plan_tool(
+            json!({
+                "goal": "Fix the widget",
+                "steps": [
+                    {"id": "read", "label": "Read widget source", "status": "completed"},
+                    {"id": "fix", "label": "Patch the bug", "status": "running"},
+                    {"id": "junk", "label": "", "status": "running"},
+                    {"id": "odd", "label": "Weird status", "status": "exploded"},
+                ]
+            }),
+            None,
+        );
+        let parsed: Value = serde_json::from_str(&result).expect("json result");
+        assert_eq!(parsed["ok"], true);
+        // Empty-label step dropped; invalid status coerced to pending.
+        assert_eq!(parsed["stepCount"], 3);
+
+        let missing = update_plan_tool(json!({"goal": "no steps"}), None);
+        let parsed: Value = serde_json::from_str(&missing).expect("json result");
+        assert_eq!(parsed["ok"], false);
+
+        let empty = update_plan_tool(json!({"steps": [{"id": "", "label": "", "status": "pending"}]}), None);
+        let parsed: Value = serde_json::from_str(&empty).expect("json result");
+        assert_eq!(parsed["ok"], false);
+    }
+
+    #[test]
+    fn update_plan_is_registered_and_silent() {
+        let settings: AiAssistantToolSettings =
+            serde_json::from_value(json!({})).expect("tool settings deserialize");
+        let tools = ai_tool_definitions(&settings);
+        assert!(
+            tools.iter().any(|tool| tool.function.name == "update_plan"),
+            "update_plan must be registered alongside the always-on tools"
+        );
+        assert!(is_silent_assistant_tool("update_plan"));
+        assert!(is_silent_assistant_tool("assistant_use_skill"));
+        assert!(!is_silent_assistant_tool("web_search"));
+        assert!(
+            !tool_requires_allow_all("update_plan"),
+            "publishing a plan is display-only and needs no approval"
+        );
+    }
+
+    #[test]
     fn copilot_prompt_history_includes_tool_transcripts() {
         let request = AgentRunRequest {
             prompt: "and now?".to_string(),

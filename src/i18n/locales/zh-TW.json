@@ -2455,6 +2455,7 @@
     "thoughtFor": "思考用時",
     "workedFor": "耗時 {{duration}}",
     "thinkingStep": "思考中",
+    "workPlanTitle": "計畫",
     "toolCallRunning": "執行中",
     "toolCallUsing": "正在使用 {{tool}} 工具...",
     "toolCallComplete": "完成",

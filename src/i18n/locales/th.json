@@ -2455,6 +2455,7 @@
     "thoughtFor": "ใช้เวลาคิด",
     "workedFor": "ทำงานเป็นเวลา {{duration}}",
     "thinkingStep": "กำลังคิด",
+    "workPlanTitle": "แผนงาน",
     "toolCallRunning": "กำลังทำงาน",
     "toolCallUsing": "กำลังใช้เครื่องมือ {{tool}}...",
     "toolCallComplete": "เสร็จสมบูรณ์",

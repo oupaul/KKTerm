@@ -251,6 +251,7 @@ export function normalizeAssistantRunManifest(value: unknown): AssistantRunManif
     verificationStatus: normalizedStatus,
     steps: Array.isArray(candidate.steps) ? candidate.steps.filter(Boolean) as AssistantRunManifestStep[] : [],
     updatedAt: normalizeDateString(candidate.updatedAt) ?? new Date().toISOString(),
+    source: candidate.source === "model" ? "model" : undefined,
   };
 }
 

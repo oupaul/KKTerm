@@ -1308,11 +1308,13 @@ export function AssistantPanel({
             workStartedAt,
           }),
         };
-        streamingMessageSnapshot.runManifest = createAssistantRunManifest(
-          normalizedPrompt,
-          requestIntent,
-          streamingMessageSnapshot.toolCalls,
-        );
+        if (streamingMessageSnapshot.runManifest?.source !== "model") {
+          streamingMessageSnapshot.runManifest = createAssistantRunManifest(
+            normalizedPrompt,
+            requestIntent,
+            streamingMessageSnapshot.toolCalls,
+          );
+        }
         if (streamingFlushTimer === null) {
           streamingFlushTimer = setTimeout(flushStreamingSnapshot, 50);
         }
@@ -1359,11 +1361,13 @@ export function AssistantPanel({
           tc.status === "running" ? { ...tc, status: "completed", endedAt: completedAt } : tc,
         ),
       };
-      streamingMessageSnapshot.runManifest = createAssistantRunManifest(
-        normalizedPrompt,
-        requestIntent,
-        streamingMessageSnapshot.toolCalls,
-      );
+      if (streamingMessageSnapshot.runManifest?.source !== "model") {
+        streamingMessageSnapshot.runManifest = createAssistantRunManifest(
+          normalizedPrompt,
+          requestIntent,
+          streamingMessageSnapshot.toolCalls,
+        );
+      }
       setMessages((current) =>
         current.map((message) => {
           const nextMessage =

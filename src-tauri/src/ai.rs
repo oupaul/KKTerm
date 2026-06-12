@@ -853,10 +853,26 @@ pub(crate) enum AiStreamEvent {
     SkillInvocation {
         skill_name: String,
     },
+    PlanUpdate {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        goal: Option<String>,
+        steps: Vec<AssistantPlanStep>,
+    },
     Done {
         model: String,
         provider_kind: String,
     },
+}
+
+/// One step of the model-published work plan (the `update_plan` tool).
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AssistantPlanStep {
+    id: String,
+    label: String,
+    status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    detail: Option<String>,
 }
 
 pub async fn run_agent(
@@ -2206,6 +2222,19 @@ fn ai_tool_definitions_with_skills(
         "List the remote MCP servers configured in KKTerm Settings together with their cached tool schemas (per tool: name, description, inputSchema). Call this before writing any widget source that uses KK.callMcpTool so tool names, argument keys, and response shapes come from the real server instead of guesses. Read-only: serves the cached tools/list result from local storage and does not contact the servers.",
         json!({"type":"object","properties":{}}),
     ));
+    tools.push(tool_definition(
+        "update_plan",
+        "Publish or update your visible work plan for this run. For multi-step tasks that need three or more tool calls, call this early with 2-6 short steps, then call it again as statuses change (pending | running | completed | blocked). Always resend the full step list. The plan only renders in the user's progress panel; it does not execute anything. Write step labels in the user's language.",
+        json!({"type":"object","properties":{
+            "goal":{"type":"string"},
+            "steps":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"object","properties":{
+                "id":{"type":"string"},
+                "label":{"type":"string"},
+                "status":{"type":"string","enum":["pending","running","completed","blocked"]},
+                "detail":{"type":"string"}
+            },"required":["id","label","status"]}}
+        },"required":["steps"]}),
+    ));
     if settings.current_time() {
         tools.push(tool_definition(
             "current_time",
@@ -3231,6 +3260,7 @@ async fn run_ai_tool(
             request_secret_entry_tool(args, settings.provider_kind(), stream_channel)
         }
         "mcp_list_tools" => mcp_list_tools_tool(app),
+        "update_plan" => update_plan_tool(args, stream_channel),
         "current_time" if tool_settings.current_time() => current_time_tool(),
         "web_search" if tool_settings.web_search() => web_search_tool(settings, args).await,
         "web_fetch" if tool_settings.web_fetch() => web_fetch_tool(args).await,
@@ -3408,6 +3438,56 @@ fn approval_risk_elevated(tool_name: &str, args: &Value) -> bool {
 
 fn is_assistant_skill_tool(tool_name: &str) -> bool {
     tool_name == "assistant_use_skill"
+}
+
+/// Tools whose calls should not surface as tool chips in the chat UI: skill
+/// loading shows as a skill step, and plan updates render in the plan panel.
+fn is_silent_assistant_tool(tool_name: &str) -> bool {
+    is_assistant_skill_tool(tool_name) || tool_name == "update_plan"
+}
+
+/// Validate and forward an `update_plan` call as a PlanUpdate stream event.
+/// Non-streaming runs (watchdog interventions) accept the call as a no-op so
+/// the model can keep one habit across run kinds.
+fn update_plan_tool(args: Value, stream_channel: Option<&Channel<Value>>) -> String {
+    let goal = bounded_optional_arg(&args, "goal", 200);
+    let Some(raw_steps) = args.get("steps").and_then(Value::as_array) else {
+        return json!({"ok": false, "error": "update_plan requires steps."}).to_string();
+    };
+    let mut steps = Vec::new();
+    for raw in raw_steps.iter().take(8) {
+        let id = raw.get("id").and_then(Value::as_str).unwrap_or("").trim();
+        let label = raw.get("label").and_then(Value::as_str).unwrap_or("").trim();
+        if id.is_empty() || label.is_empty() {
+            continue;
+        }
+        let status = match raw.get("status").and_then(Value::as_str).unwrap_or("pending") {
+            status @ ("pending" | "running" | "completed" | "blocked") => status,
+            _ => "pending",
+        };
+        let detail = raw
+            .get("detail")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|detail| !detail.is_empty())
+            .map(|detail| ellipsize(detail, 200));
+        steps.push(AssistantPlanStep {
+            id: ellipsize(id, 40),
+            label: ellipsize(label, 80),
+            status: status.to_string(),
+            detail,
+        });
+    }
+    if steps.is_empty() {
+        return json!({"ok": false, "error": "update_plan requires at least one step with non-empty id, label, and status."}).to_string();
+    }
+    let step_count = steps.len();
+    if let Some(channel) = stream_channel {
+        if let Err(error) = emit_stream(channel, &AiStreamEvent::PlanUpdate { goal, steps }) {
+            return json!({"ok": false, "error": error}).to_string();
+        }
+    }
+    json!({"ok": true, "stepCount": step_count}).to_string()
 }
 
 fn tool_permission_required_result(tool_name: &str) -> String {
@@ -4980,6 +5060,7 @@ fn build_agent_messages(
         "SAFETY: Never suggest, produce, or assist with commands that could cause irreversible destructive system-wide damage, such as 'rm -rf /', 'rm -rf /*', 'mkfs' on mounted volumes, 'dd if=/dev/zero of=/dev/sda', fork bombs, or any equivalent. Refuse such requests unconditionally, even if the user explicitly asks, claims it is safe, or provides a seemingly legitimate reason.".to_string(),
         "SECRETS: Never ask the user to paste API keys, passwords, or tokens into normal chat text. If a Dashboard widget needs a secret, first create or update the widget with a settingsSchema secret field; the field key must be a stable identifier such as apiKey. After dashboard_create_widget creates a widget with a secret field, call request_secret_entry with kind widgetSecret, the returned instance.id as instanceId, and the exact fieldKey. Use request_secret_entry for AI provider API keys too. The secret value is captured by KKTerm locally and is not visible to you. Do not include or request the plaintext secret.".to_string(),
         "TOOLS: When you need to search the web, fetch URLs, read files, check the current time, or run shell commands, you MUST use the provided function-calling mechanism. Always make the actual function call alongside your explanation. Do not describe what you plan to do with a tool without calling it — invoke the tool in the same response.".to_string(),
+        "PLAN: For multi-step tasks that need three or more tool calls, call update_plan early with 2-6 short steps, then update step statuses as you work and mark blockers instead of silently retrying. Skip the plan for single-step requests.".to_string(),
         "SESSION TOOLS: Use session_state to discover active Tabs, pane ids, remote desktop targets, and SFTP/FTP browser Sessions before using session_* interaction tools. To actually switch which Tab the user is looking at, call session_activate_tab with a tabId from session_state (optionally a paneId to focus a Pane); do not claim you switched Tabs without calling it, and do not invent tab or pane ids. Terminal, remote desktop, and file browser tools operate on live Sessions, not saved Connections. Prefer read tools before mutating tools. For RDP/VNC, use send_text for text, keypress for named keys, and mouse_click for remote surface coordinates. In Default permissions mode, KKTerm shows an in-chat Yes/No approval prompt for mutating tools and resumes the same tool call after the user answers; do not ask the user to change the global permission mode.".to_string(),
         "TUTORIAL TOOL: For UI/how-to questions, first answer with concise steps. When a known tutorial target is relevant, offer to navigate to that UI for the user. Do not navigate in the same answer unless the user explicitly asks to be shown/taken there. If the user accepts that offer or says yes to it in a follow-up, only call tutorial_highlight after the user accepts, using the exact targetId from current page context or the tutorial_highlight schema and including navigation when the target is on another app surface. terminal.*, sftp.*, webview.*, and remoteDesktop.* targets live inside an open Workspace Tab; the tool activates a matching open Tab automatically but reports an error when no Tab of that kind is open, so check session_state or open the relevant Connection first instead of insisting on a control that is not on screen. Do not invent target ids or CSS selectors.".to_string(),
     ];

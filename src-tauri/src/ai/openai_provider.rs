@@ -154,7 +154,7 @@ impl OpenAiCompatibleProvider {
                 if run_canceled(&app) {
                     return Err(ASSISTANT_STREAM_CANCELED_ERROR.to_string());
                 }
-                let is_skill_tool = is_assistant_skill_tool(&tool_call.function.name);
+                let is_skill_tool = is_silent_assistant_tool(&tool_call.function.name);
                 if let Some(channel) = channel.as_ref() {
                     if !is_skill_tool {
                         emit_stream(

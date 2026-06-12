@@ -487,6 +487,16 @@ export type AiStreamEvent =
   | { type: "toolCallStart"; toolId: string; toolName: string }
   | { type: "toolCallEnd"; toolId: string; toolName: string; error?: string }
   | { type: "skillInvocation"; skillName: string }
+  | {
+      type: "planUpdate";
+      goal?: string;
+      steps: Array<{
+        id: string;
+        label: string;
+        status: "pending" | "running" | "completed" | "blocked";
+        detail?: string;
+      }>;
+    }
   | { type: "done"; model: string; providerKind: string }
   | { type: "error"; message: string };
 

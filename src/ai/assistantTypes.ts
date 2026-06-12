@@ -44,6 +44,12 @@ export type AssistantRunManifest = {
   verificationStatus: "pending" | "passed" | "failed";
   steps: AssistantRunManifestStep[];
   updatedAt: string;
+  /**
+   * "model" when the assistant published this plan via the update_plan tool.
+   * Absent for manifests the panel synthesizes; the panel never overwrites a
+   * model-provided plan with a synthesized one.
+   */
+  source?: "model";
 };
 
 export type AssistantTextAttachment = {

@@ -118,6 +118,7 @@ Thinking / progress markers:
 - Duration formatting: `ai.workDurationUnderSecond`, `ai.workDurationSeconds`, `ai.workDurationMinutesSeconds`.
 - While a response is streaming, the work panel stays collapsed by default. During normal thinking it shows the rotating waiting phrase. During an active tool call the collapsed summary switches to `ai.toolCallUsing`, then returns to the waiting phrase after the tool completes.
 - The expanded work panel only shows `ai.thinkingStep` when the provider streams actual reasoning text or a reasoning summary. Empty thinking rows are not shown. Reasoning text is rendered as markdown.
+- For multi-step tasks, the assistant can publish a work plan through its `update_plan` tool. The expanded work panel then shows an `ai.workPlanTitle` step listing the plan's steps with their live statuses (pending, running, completed, blocked); step labels are model-generated text in the user's language. The plan replaces the synthesized progress entry for that response and is saved with the chat. `update_plan` calls do not appear as tool chips and never require approval.
 
 Waiting animation phrases rotate through `ai.waitingPhrases.0`..`ai.waitingPhrases.31`. Pre-stream state: `ai.preparingResponse`, `ai.chargingBeacon`.
 
