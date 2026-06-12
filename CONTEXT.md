@@ -115,6 +115,10 @@ _Avoid_: connection sidebar, host list
 The right-side resizable panel for AI chat interactions. Collapsed/expanded state is workspace-wide.
 _Avoid_: AI sidebar, chat panel
 
+**Assistant Memory**:
+Short durable notes the AI Assistant saves about the user's environment, stored in the SQLite `assistant_memories` table and scoped to `global` or a specific `connection:<id>`. The global notes plus the active Connection's notes are recalled into the assistant's context at the start of each turn. Plain operator facts only — never secrets, which remain in the OS keychain. Distinct from chat history (the saved transcript of a conversation) and from RAM/working-set "memory" reported in the Status Bar.
+_Avoid_: RAM, chat history, context window
+
 **Dashboard Widget Playground**:
 The content area of the Dashboard Module. Hosts dynamic, user-selectable widgets and reports, including the App Launcher Widget. The AI Assistant can create new widgets on request.
 _Avoid_: landing page, overview

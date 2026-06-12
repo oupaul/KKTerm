@@ -83,8 +83,12 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] API keys stored in OS keychain; provider-specific model selector with custom model ID field.
 - [x] Command proposal flow with explicit approval before execution.
 - [x] Screenshot capture to clipboard and transient AI context (full surface, partial area, and region).
-- [x] AI Assistant tool calling: local tools (rg, curl, filesystem search), web fetch/search, Dashboard, Connections, and live Sessions.
-- [x] AI Assistant tool permission mode: Prompt (default, blocks mutating tools) and Allow All (explicit automatic execution).
+- [x] AI Assistant tool calling: local tools (rg, curl, filesystem search), web fetch/search, Dashboard, Connections, live Sessions, network admin, and watchdogs.
+- [x] AI Assistant tool permission mode: Prompt (default, blocks mutating tools) and Allow All (explicit automatic execution). Stop cancels the in-flight run end to end, including local CLI (ACP) backends, before any further provider call or tool execution.
+- [x] Risk-aware approvals: command-bearing tool calls flagged by a keyword heuristic show their risk reasons on the approval card and re-prompt even under "Allow for session".
+- [x] Model-driven work plans: the assistant publishes a live step plan (`update_plan`) shown in the work panel and saved with the chat.
+- [x] Persistent assistant memory: short durable notes scoped per Connection or global, recalled automatically when that Connection is active; secrets are never stored.
+- [x] `mcp_list_tools` so widget authoring can ground `KK.callMcpTool` code in the real cached tool schemas of configured MCP servers.
 - [x] Saved Connection tools: list/create/open/update/delete.
 - [x] Live Session tools: terminal buffer reads, terminal input, RDP/VNC screenshots and input, SFTP/FTP browser list/create-folder/rename/delete actions.
 - [x] Review-only extension draft mode.
