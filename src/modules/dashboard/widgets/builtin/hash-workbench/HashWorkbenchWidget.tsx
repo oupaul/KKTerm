@@ -1,11 +1,21 @@
+import { FileUp, X } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import { isTauriRuntime, pickAndReadFile } from "../../../../../lib/tauri";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import { useCopyFeedback } from "../../useCopyFeedback";
-import { decodeBase64, decodeUrl, encodeBase64, encodeUrl, bytesToHex } from "./encoding";
+import {
+  crc32Hex,
+  decodeBase64,
+  decodeUrl,
+  encodeBase64,
+  encodeUrl,
+  bytesToHex,
+  md5Hex,
+} from "./encoding";
 
 type WorkbenchTab = "hash" | "base64" | "url" | "jwt";
 type Direction = "encode" | "decode";
@@ -18,7 +28,8 @@ interface HashConfig {
 
 const DEFAULT_CONFIG: HashConfig = { tab: "hash", direction: "encode", text: "" };
 const TABS: WorkbenchTab[] = ["hash", "base64", "url", "jwt"];
-const HASH_ALGORITHMS = ["SHA-256", "SHA-1", "SHA-384", "SHA-512"] as const;
+const WEB_CRYPTO_HASH_ALGORITHMS = ["SHA-256", "SHA-1", "SHA-384", "SHA-512"] as const;
+const HASH_ALGORITHMS = [...WEB_CRYPTO_HASH_ALGORITHMS, "MD5", "CRC32"] as const;
 
 function storageKey(instanceId: string) {
   return `kkterm.dashboard.hashWorkbench.${instanceId}.v1`;
@@ -47,6 +58,12 @@ function decodeJwtParts(token: string): { header: string; payload: string } | nu
   }
 }
 
+function toDigestBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 export function HashWorkbenchBody({ instance }: BuiltInWidgetBodyProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useWidgetConfig(
@@ -56,28 +73,39 @@ export function HashWorkbenchBody({ instance }: BuiltInWidgetBodyProps) {
   );
   const { copiedKey, copy } = useCopyFeedback();
   const [digests, setDigests] = useState<Record<string, string>>({});
+  const [fileInput, setFileInput] = useState<{ name: string; bytes: Uint8Array } | null>(null);
+  const [fileError, setFileError] = useState(false);
   const text = config.text;
+  const hashBytes = useMemo(() => fileInput?.bytes ?? new TextEncoder().encode(text), [fileInput, text]);
+  const hashSourceKey = fileInput ? `file:${fileInput.name}:${fileInput.bytes.length}` : `text:${text}`;
+  const hasHashInput = fileInput !== null || text.length > 0;
   const hasText = text.length > 0;
 
   useEffect(() => {
-    if (config.tab !== "hash" || !hasText) {
+    if (config.tab !== "hash" || !hasHashInput) {
       setDigests({});
       return;
     }
     let cancelled = false;
-    const bytes = new TextEncoder().encode(text);
+    const digestBuffer = toDigestBuffer(hashBytes);
     void Promise.all(
-      HASH_ALGORITHMS.map(async (algorithm) => {
-        const digest = await crypto.subtle.digest(algorithm, bytes);
+      WEB_CRYPTO_HASH_ALGORITHMS.map(async (algorithm) => {
+        const digest = await crypto.subtle.digest(algorithm, digestBuffer);
         return [algorithm, bytesToHex(digest)] as const;
       }),
     ).then((entries) => {
-      if (!cancelled) setDigests(Object.fromEntries(entries));
+      if (!cancelled) {
+        setDigests({
+          ...Object.fromEntries(entries),
+          MD5: md5Hex(hashBytes),
+          CRC32: crc32Hex(hashBytes),
+        });
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [config.tab, text, hasText]);
+  }, [config.tab, hashBytes, hashSourceKey, hasHashInput]);
 
   const transform = useMemo(() => {
     if (!hasText || config.tab === "hash") return null;
@@ -100,31 +128,79 @@ export function HashWorkbenchBody({ instance }: BuiltInWidgetBodyProps) {
     jwt: "JWT",
   };
 
+  async function selectFileForHash() {
+    try {
+      const file = await pickAndReadFile();
+      if (!file) return;
+      setFileInput({ name: file.name, bytes: file.bytes });
+      setFileError(false);
+      setConfig({ ...config, tab: "hash" });
+    } catch {
+      setFileError(true);
+    }
+  }
+
+  function updateText(nextText: string) {
+    setFileInput(null);
+    setFileError(false);
+    setConfig({ ...config, text: nextText });
+  }
+
   return (
     <div className="dw-hash">
-      <div className="dw-hash-tabs" role="tablist" aria-label={t("dashboard.hashTitle")}>
-        {TABS.map((tab) => (
+      <div className="dw-hash-topbar">
+        <div className="dw-hash-tabs" role="tablist" aria-label={t("dashboard.hashTitle")}>
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={config.tab === tab}
+              className={`dw-hash-tab${config.tab === tab ? " is-active" : ""}`}
+              onClick={() => setConfig({ ...config, tab })}
+            >
+              {tabLabels[tab]}
+            </button>
+          ))}
+        </div>
+        {config.tab === "hash" && isTauriRuntime() ? (
           <button
-            key={tab}
             type="button"
-            role="tab"
-            aria-selected={config.tab === tab}
-            className={`dw-hash-tab${config.tab === tab ? " is-active" : ""}`}
-            onClick={() => setConfig({ ...config, tab })}
+            className="dashboard-widget-icon-button"
+            aria-label={t("dashboard.hashSelectFile")}
+            title={t("dashboard.hashSelectFile")}
+            onClick={() => void selectFileForHash()}
           >
-            {tabLabels[tab]}
+            <FileUp size={14} />
           </button>
-        ))}
+        ) : null}
       </div>
       <textarea
         className="dw-hash-input"
         value={text}
-        onChange={(event) => setConfig({ ...config, text: event.target.value })}
+        onChange={(event) => updateText(event.target.value)}
         placeholder={config.tab === "jwt" ? t("dashboard.hashJwtPlaceholder") : t("dashboard.hashPlaceholder")}
         aria-label={t("dashboard.hashPlaceholder")}
         rows={2}
         spellCheck={false}
       />
+      {config.tab === "hash" && fileInput ? (
+        <div className="dw-hash-file">
+          <span>{t("dashboard.hashSelectedFile", { name: fileInput.name })}</span>
+          <button
+            type="button"
+            className="dashboard-widget-icon-button"
+            aria-label={t("common.remove")}
+            title={t("common.remove")}
+            onClick={() => setFileInput(null)}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      ) : null}
+      {config.tab === "hash" && fileError ? (
+        <div className="dw-hash-file-error">{t("dashboard.hashFileReadError")}</div>
+      ) : null}
       {(config.tab === "base64" || config.tab === "url") && (
         <div className="dw-hash-directions" role="radiogroup" aria-label={t("dashboard.hashDirectionLabel")}>
           {(["encode", "decode"] as const).map((direction) => (
@@ -142,10 +218,10 @@ export function HashWorkbenchBody({ instance }: BuiltInWidgetBodyProps) {
         </div>
       )}
       <div className="dw-hash-results">
-        {!hasText ? (
+        {config.tab === "hash" && !hasHashInput ? (
           <div className="dw-hash-empty">{t("dashboard.hashHint")}</div>
         ) : config.tab === "hash" ? (
-          <div className="dw-hash-rows" key={text}>
+          <div className="dw-hash-rows" key={hashSourceKey}>
             {HASH_ALGORITHMS.map((algorithm, index) =>
               digests[algorithm] ? (
                 <button

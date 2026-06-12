@@ -6,6 +6,8 @@ import {
   encodeBase64,
   encodeUrl,
   bytesToHex,
+  crc32Hex,
+  md5Hex,
 } from "../src/modules/dashboard/widgets/builtin/hash-workbench/encoding";
 
 test("base64 round-trips UTF-8 text", () => {
@@ -31,4 +33,13 @@ test("url encoding round-trips and rejects bad escapes", () => {
 
 test("bytesToHex formats with zero padding", () => {
   assert.equal(bytesToHex(new Uint8Array([0, 1, 255, 16]).buffer), "0001ff10");
+});
+
+test("md5Hex returns the standard digest for bytes", () => {
+  assert.equal(md5Hex(new TextEncoder().encode("hello")), "5d41402abc4b2a76b9719d911017c592");
+});
+
+test("crc32Hex returns the standard checksum for bytes", () => {
+  assert.equal(crc32Hex(new TextEncoder().encode("123456789")), "cbf43926");
+  assert.equal(crc32Hex(new Uint8Array()), "00000000");
 });

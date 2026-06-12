@@ -379,6 +379,14 @@
 .host-metrics {
   flex: 0 0 auto;
   gap: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: 0;
 }
 
 .status-bar span,

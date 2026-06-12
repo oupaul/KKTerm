@@ -65,8 +65,8 @@ export function QrCodeBody({ instance }: BuiltInWidgetBodyProps) {
       if (config.mode === "qr") {
         QRCode.toCanvas(canvas, trimmed, {
           errorCorrectionLevel: "M",
-          margin: 1,
-          width: 480,
+          margin: 0,
+          width: 360,
           color: { dark, light: "#00000000" },
         })
           .then(revealAfterRender)

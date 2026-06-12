@@ -217,11 +217,12 @@ function WorkspaceHostMetrics({ t }: { t: (key: string) => string }) {
   }
 
   return (
-    <div
+    <button
       className="host-metrics"
       aria-label={t("workspace.hostUsage")}
       data-tutorial-id="workspace.hostUsage"
-      onDoubleClick={openTaskManager}
+      onClick={openTaskManager}
+      type="button"
     >
       <Metric
         icon={<Cpu size={13} />}
@@ -246,7 +247,7 @@ function WorkspaceHostMetrics({ t }: { t: (key: string) => string }) {
         upstreamTitle={t("workspace.networkUpstreamUsage")}
         upstreamValue={formatNetwork(hostUsage?.networkUpstreamBytesPerSecond)}
       />
-    </div>
+    </button>
   );
 }
 
