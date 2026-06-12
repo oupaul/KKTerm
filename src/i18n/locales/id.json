@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Alat admin jaringan",
         "description": "Ping host, periksa port TCP, resolusi DNS, jalankan WHOIS, daftar antarmuka, dan kirim Wake-on-LAN."
+      },
+      "memory": {
+        "label": "Memori asisten",
+        "description": "Memungkinkan asisten menyimpan dan mengingat catatan singkat tentang host dan preferensi Anda lintas obrolan. Tidak pernah menyimpan rahasia."
       }
     },
     "searchProvider": "Penyedia pencarian",

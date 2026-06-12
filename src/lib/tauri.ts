@@ -469,6 +469,8 @@ export interface DownloadAndInstallAppUpdateRequest {
     text?: string;
   }>;
   systemContext?: string;
+  /** Id of the active Connection, when one is. Scopes assistant memory. */
+  activeConnectionId?: string;
   messages: AgentChatMessage[];
   outputLanguage?: string;
   allowTools?: boolean;

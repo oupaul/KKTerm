@@ -786,6 +786,7 @@ const AI_ASSISTANT_TOOL_IDS: AiAssistantToolId[] = [
   "tutorial",
   "manual",
   "network",
+  "memory",
 ];
 
 const SEARCH_PROVIDER_OPTIONS: { value: SearchProvider; labelKey: string }[] = [

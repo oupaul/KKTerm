@@ -1305,6 +1305,10 @@
       "network": {
         "label": "網路管理工具",
         "description": "ping 主機、檢查 TCP 連接埠、解析 DNS、執行 WHOIS、列出網路介面並傳送網路喚醒。"
+      },
+      "memory": {
+        "label": "助理記憶",
+        "description": "讓助理在不同對話間儲存並回想關於你主機與偏好的簡短筆記。絕不儲存機密。"
       }
     },
     "searchProvider": "搜尋提供者",

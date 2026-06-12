@@ -1340,6 +1340,7 @@ export function AssistantPanel({
           systemContext,
           messages: history,
           outputLanguage: resolveAssistantOutputLanguage(aiProviderSettings.outputLanguage),
+          activeConnectionId: activeTab?.connection?.id,
         },
       });
 

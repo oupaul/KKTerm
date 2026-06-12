@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Công cụ quản trị mạng",
         "description": "Ping các host, kiểm tra cổng TCP, phân giải DNS, chạy WHOIS, liệt kê giao diện và gửi Wake-on-LAN."
+      },
+      "memory": {
+        "label": "Bộ nhớ trợ lý",
+        "description": "Cho phép trợ lý lưu và nhớ lại các ghi chú ngắn về máy chủ và tùy chọn của bạn qua các cuộc trò chuyện. Không bao giờ lưu thông tin bí mật."
       }
     },
     "searchProvider": "Nhà cung cấp tìm kiếm",

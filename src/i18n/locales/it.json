@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Strumenti di amministrazione rete",
         "description": "Esegui ping sugli host, controlla le porte TCP, risolvi DNS, esegui WHOIS, elenca le interfacce e invia Wake-on-LAN."
+      },
+      "memory": {
+        "label": "Memoria dell'assistente",
+        "description": "Consente all'assistente di salvare e richiamare brevi note sui tuoi host e sulle preferenze tra le chat. Non memorizza mai segreti."
       }
     },
     "searchProvider": "Provider di ricerca",

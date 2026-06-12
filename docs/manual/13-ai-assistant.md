@@ -72,6 +72,8 @@ In Prompt / Default permissions mode, mutating tool calls pause the current assi
 
 Built-in AI tools default on except `settings.aiTools.email.label`. The email tool stays off until enabled in Settings because it requires delivery configuration and an email secret.
 
+The assistant memory tools (`settings.aiTools.memory.label`, default on) let the assistant keep short durable notes about the user's environment. `assistant_memory_remember` saves a note scoped to the active Connection (`connection:<id>`) or `global`; `assistant_memory_recall` lists notes in scope; `assistant_memory_forget` deletes one by id. Notes are stored in the SQLite `assistant_memories` table — never secrets, which stay in the OS keychain. At the start of each turn the assistant is given the global notes plus the active Connection's notes as background knowledge. Memory tools are display/local-data only and never require an approval prompt.
+
 The assistant can also call the read-only `mcp_list_tools` tool to list the remote MCP servers configured in Settings together with their cached tool schemas. It serves the cached `tools/list` results from local storage without contacting the servers and is used to ground widget code that calls `KK.callMcpTool` in real tool names and argument shapes.
 
 When `settings.useCodexCli` or `settings.useClaudeCli` routes a provider through a local CLI backend, ACP-backed sessions attach KKTerm's built-in `kkterm` MCP server so published safe tools, including Connection creation, can run through the same local bridge as external MCP clients. If ACP is unavailable and KKTerm falls back to a one-shot CLI command, the assistant can only suggest actions or Connection details instead of calling KKTerm tools.

@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Netzwerk-Verwaltungstools",
         "description": "Hosts anpingen, TCP-Ports prüfen, DNS auflösen, WHOIS ausführen, Schnittstellen auflisten und Wake-on-LAN senden."
+      },
+      "memory": {
+        "label": "Assistenten-Gedächtnis",
+        "description": "Erlaubt dem Assistenten, kurze Notizen zu deinen Hosts und Einstellungen über Chats hinweg zu speichern und abzurufen. Speichert niemals Geheimnisse."
       }
     },
     "searchProvider": "Suchanbieter",

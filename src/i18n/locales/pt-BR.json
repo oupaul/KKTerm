@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Ferramentas de administração de rede",
         "description": "Executar ping em hosts, verificar portas TCP, resolver DNS, executar WHOIS, listar interfaces e enviar Wake-on-LAN."
+      },
+      "memory": {
+        "label": "Memória do assistente",
+        "description": "Permite que o assistente salve e relembre notas curtas sobre seus hosts e preferências entre conversas. Nunca armazena segredos."
       }
     },
     "searchProvider": "Provedor de busca",

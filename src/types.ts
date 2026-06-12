@@ -525,7 +525,8 @@ export type AiAssistantToolId =
   | "tutorial"
   | "manual"
   | "network"
-  | "watchdog";
+  | "watchdog"
+  | "memory";
 
 export type AiAssistantToolSettings = Record<AiAssistantToolId, boolean>;
 

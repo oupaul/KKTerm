@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 18;
+const SCHEMA_USER_VERSION: i32 = 19;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -186,6 +186,21 @@ CREATE INDEX IF NOT EXISTS idx_assistant_chat_threads_updated_at
 
 CREATE INDEX IF NOT EXISTS idx_assistant_chat_threads_created_at
     ON assistant_chat_threads(created_at);
+
+-- Durable per-scope notes the AI Assistant accumulates (the assistant_memory
+-- tools). Scope is "global" or "connection:<id>"; the assistant recalls the
+-- matching notes when that Connection's Session is active. Plain operator
+-- knowledge only — never secrets, which live in the OS keychain.
+CREATE TABLE IF NOT EXISTS assistant_memories (
+    id TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_assistant_memories_scope
+    ON assistant_memories(scope, updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS ai_coding_usage_accounts (
     provider TEXT PRIMARY KEY CHECK (provider IN ('codex', 'claudeCode')),
@@ -573,6 +588,8 @@ pub struct AiAssistantToolSettings {
     network: bool,
     #[serde(default = "default_ai_watchdog_tool_enabled")]
     watchdog: bool,
+    #[serde(default = "default_ai_memory_tool_enabled")]
+    memory: bool,
 }
 
 impl AiAssistantToolSettings {
@@ -621,6 +638,9 @@ impl AiAssistantToolSettings {
     pub(crate) fn watchdog(&self) -> bool {
         self.watchdog
     }
+    pub(crate) fn memory(&self) -> bool {
+        self.memory
+    }
     pub(crate) fn any_enabled(&self) -> bool {
         self.web_search
             || self.web_fetch
@@ -637,6 +657,7 @@ impl AiAssistantToolSettings {
             || self.manual
             || self.network
             || self.watchdog
+            || self.memory
     }
 }
 
@@ -1159,6 +1180,16 @@ pub struct AssistantChatThreadRecord {
     pub title: String,
     pub context_label: String,
     pub messages_json: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantMemoryRecord {
+    pub id: String,
+    pub scope: String,
+    pub content: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -3435,10 +3466,15 @@ fn default_ai_assistant_tool_settings() -> AiAssistantToolSettings {
         manual: default_ai_manual_tool_enabled(),
         network: true,
         watchdog: default_ai_watchdog_tool_enabled(),
+        memory: default_ai_memory_tool_enabled(),
     }
 }
 
 fn default_ai_watchdog_tool_enabled() -> bool {
+    true
+}
+
+fn default_ai_memory_tool_enabled() -> bool {
     true
 }
 
@@ -4103,6 +4139,53 @@ fn assistant_chat_thread_from_row(
         messages_json: row.get(3)?,
         created_at: row.get(4)?,
         updated_at: row.get(5)?,
+    })
+}
+
+fn assistant_memory_from_row(
+    row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<AssistantMemoryRecord> {
+    Ok(AssistantMemoryRecord {
+        id: row.get(0)?,
+        scope: row.get(1)?,
+        content: row.get(2)?,
+        created_at: row.get(3)?,
+        updated_at: row.get(4)?,
+    })
+}
+
+/// Maximum stored length of one assistant memory note. Memories are meant to be
+/// short operator facts, not transcripts; the assistant tool also caps input.
+const ASSISTANT_MEMORY_MAX_CHARS: usize = 2_000;
+
+fn validate_assistant_memory(
+    record: AssistantMemoryRecord,
+) -> Result<AssistantMemoryRecord, String> {
+    let id = required_field("assistant memory id", record.id)?;
+    let scope = required_field("assistant memory scope", record.scope)?;
+    // Scope is an internal key: "global" or "connection:<id>". Reject anything
+    // else so a memory can never be written to an unbounded namespace.
+    let scope_ok = scope == "global"
+        || scope
+            .strip_prefix("connection:")
+            .is_some_and(|id| !id.trim().is_empty());
+    if !scope_ok {
+        return Err("assistant memory scope must be 'global' or 'connection:<id>'".to_string());
+    }
+    let content = required_field("assistant memory content", record.content)?;
+    if content.chars().count() > ASSISTANT_MEMORY_MAX_CHARS {
+        return Err(format!(
+            "assistant memory content exceeds {ASSISTANT_MEMORY_MAX_CHARS} characters"
+        ));
+    }
+    let created_at = required_field("assistant memory created time", record.created_at)?;
+    let updated_at = required_field("assistant memory updated time", record.updated_at)?;
+    Ok(AssistantMemoryRecord {
+        id,
+        scope,
+        content,
+        created_at,
+        updated_at,
     })
 }
 

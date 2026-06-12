@@ -777,6 +777,69 @@ impl Storage {
         Ok(())
     }
 
+    /// List assistant memories for the given scopes, newest first. Callers pass
+    /// "global" plus the active "connection:<id>" scope so the assistant only
+    /// recalls notes relevant to where the user is working.
+    pub fn list_assistant_memories(
+        &self,
+        scopes: &[String],
+    ) -> Result<Vec<AssistantMemoryRecord>, String> {
+        if scopes.is_empty() {
+            return Ok(Vec::new());
+        }
+        let connection = self.lock()?;
+        let placeholders = vec!["?"; scopes.len()].join(", ");
+        let mut statement = connection
+            .prepare(&format!(
+                "SELECT id, scope, content, created_at, updated_at
+                 FROM assistant_memories
+                 WHERE scope IN ({placeholders})
+                 ORDER BY updated_at DESC, created_at DESC"
+            ))
+            .map_err(to_storage_error)?;
+        let params = rusqlite::params_from_iter(scopes.iter());
+        let rows = statement
+            .query_map(params, assistant_memory_from_row)
+            .map_err(to_storage_error)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(to_storage_error)
+    }
+
+    pub fn upsert_assistant_memory(
+        &self,
+        record: AssistantMemoryRecord,
+    ) -> Result<AssistantMemoryRecord, String> {
+        let memory = validate_assistant_memory(record)?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "INSERT INTO assistant_memories
+                    (id, scope, content, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET
+                    scope = excluded.scope,
+                    content = excluded.content,
+                    updated_at = excluded.updated_at",
+                params![
+                    &memory.id,
+                    &memory.scope,
+                    &memory.content,
+                    &memory.created_at,
+                    &memory.updated_at,
+                ],
+            )
+            .map_err(to_storage_error)?;
+        Ok(memory)
+    }
+
+    pub fn delete_assistant_memory(&self, id: String) -> Result<bool, String> {
+        let id = required_field("assistant memory id", id)?;
+        let connection = self.lock()?;
+        let affected = connection
+            .execute("DELETE FROM assistant_memories WHERE id = ?1", params![id])
+            .map_err(to_storage_error)?;
+        Ok(affected > 0)
+    }
+
     pub fn clear_widget_secret_reference(
         &self,
         instance_id: String,

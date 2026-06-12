@@ -55,6 +55,13 @@ impl OpenAiCompatibleProvider {
         let prompt = trim_required("assistant prompt", request.prompt)?;
         let allowed_tools = request.allowed_tools.clone();
         let context_label = trim_required("assistant context", request.context_label)?;
+        let active_connection_scope =
+            active_connection_memory_scope(request.active_connection_id.as_deref());
+        let recalled_memories = if settings.tools().memory() {
+            recall_assistant_memories(&app, active_connection_scope.as_deref())
+        } else {
+            Vec::new()
+        };
         let skill_summaries = enabled_skill_summaries_for_request(
             &app,
             settings.disabled_skill_names(),
@@ -76,6 +83,7 @@ impl OpenAiCompatibleProvider {
             Some(settings.custom_instructions().to_string()),
             skill_summaries.clone(),
             settings.tools().dashboard(),
+            recalled_memories,
         );
         let tool_definitions = agent_tool_definitions(
             request.allow_tools,
@@ -182,6 +190,7 @@ impl OpenAiCompatibleProvider {
                     tool_call,
                     channel.as_ref(),
                     &allowed_tools,
+                    active_connection_scope.as_deref(),
                 )
                 .await;
                 ai_debug!(

@@ -141,6 +141,7 @@ export const defaultAiAssistantToolSettings = {
   manual: true,
   network: true,
   watchdog: true,
+  memory: true,
 };
 
 export const defaultAiProviderSettings: AiProviderSettings = {

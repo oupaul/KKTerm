@@ -1305,6 +1305,10 @@
       "network": {
         "label": "ネットワーク管理ツール",
         "description": "ホストへの ping、TCP ポートの確認、DNS 解決、WHOIS の実行、インターフェイスの一覧表示、Wake-on-LAN の送信を行います。"
+      },
+      "memory": {
+        "label": "アシスタントメモリー",
+        "description": "ホストや設定に関する短いメモをチャット間で保存・参照できるようにします。秘密情報は保存しません。"
       }
     },
     "searchProvider": "検索プロバイダー",

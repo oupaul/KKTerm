@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Outils d'administration réseau",
         "description": "Envoyer un ping aux hôtes, vérifier les ports TCP, résoudre le DNS, exécuter WHOIS, lister les interfaces et envoyer Wake-on-LAN."
+      },
+      "memory": {
+        "label": "Mémoire de l'assistant",
+        "description": "Permet à l'assistant d'enregistrer et de rappeler de courtes notes sur vos hôtes et préférences entre les discussions. Ne stocke jamais de secrets."
       }
     },
     "searchProvider": "Fournisseur de recherche",

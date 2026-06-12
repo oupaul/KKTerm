@@ -1305,6 +1305,10 @@
       "network": {
         "label": "Network admin tools",
         "description": "Ping hosts, check TCP ports, resolve DNS, run WHOIS, list interfaces, and send Wake-on-LAN."
+      },
+      "memory": {
+        "label": "Assistant memory",
+        "description": "Let the assistant save and recall short notes about your hosts and preferences across chats. Never stores secrets."
       }
     },
     "searchProvider": "Search provider",

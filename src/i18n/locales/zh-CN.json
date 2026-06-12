@@ -1305,6 +1305,10 @@
       "network": {
         "label": "网络管理工具",
         "description": "ping 主机、检查 TCP 端口、解析 DNS、运行 WHOIS、列出网络接口并发送网络唤醒。"
+      },
+      "memory": {
+        "label": "助手记忆",
+        "description": "让助手在不同对话间保存并回忆有关你主机和偏好的简短笔记。绝不存储机密。"
       }
     },
     "searchProvider": "搜索提供商",

@@ -2518,6 +2518,92 @@
         assert!(indexes.contains(&"idx_assistant_chat_threads_updated_at".to_string()));
     }
 
+    #[test]
+    fn assistant_memories_scope_and_round_trip() {
+        let storage = Storage::open(temp_db_path("assistant-memory")).expect("storage opens");
+        let now = "2026-06-12T00:00:00Z".to_string();
+        storage
+            .upsert_assistant_memory(AssistantMemoryRecord {
+                id: "m-global".to_string(),
+                scope: "global".to_string(),
+                content: "Prefers concise answers".to_string(),
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            })
+            .expect("global memory saves");
+        storage
+            .upsert_assistant_memory(AssistantMemoryRecord {
+                id: "m-conn".to_string(),
+                scope: "connection:web01".to_string(),
+                content: "nginx under systemd".to_string(),
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            })
+            .expect("connection memory saves");
+
+        // Only the requested scopes come back.
+        let global_only = storage
+            .list_assistant_memories(&["global".to_string()])
+            .expect("list global");
+        assert_eq!(global_only.len(), 1);
+        assert_eq!(global_only[0].id, "m-global");
+
+        let both = storage
+            .list_assistant_memories(&["global".to_string(), "connection:web01".to_string()])
+            .expect("list both");
+        assert_eq!(both.len(), 2);
+
+        // A different connection scope never sees web01's note.
+        let other = storage
+            .list_assistant_memories(&["global".to_string(), "connection:db02".to_string()])
+            .expect("list other");
+        assert_eq!(other.len(), 1);
+
+        // Update in place keeps the id.
+        storage
+            .upsert_assistant_memory(AssistantMemoryRecord {
+                id: "m-conn".to_string(),
+                scope: "connection:web01".to_string(),
+                content: "nginx under systemd; logs in /var/log/nginx".to_string(),
+                created_at: now.clone(),
+                updated_at: "2026-06-12T00:01:00Z".to_string(),
+            })
+            .expect("update saves");
+        let updated = storage
+            .list_assistant_memories(&["connection:web01".to_string()])
+            .expect("list updated");
+        assert_eq!(updated.len(), 1);
+        assert!(updated[0].content.contains("/var/log/nginx"));
+
+        assert!(storage.delete_assistant_memory("m-conn".to_string()).expect("delete"));
+        assert!(!storage
+            .delete_assistant_memory("m-conn".to_string())
+            .expect("second delete is a no-op"));
+    }
+
+    #[test]
+    fn assistant_memory_validation_rejects_bad_scope_and_oversize() {
+        let storage = Storage::open(temp_db_path("assistant-memory-validate")).expect("opens");
+        let now = "2026-06-12T00:00:00Z".to_string();
+        let bad_scope = storage.upsert_assistant_memory(AssistantMemoryRecord {
+            id: "x".to_string(),
+            scope: "wildcard".to_string(),
+            content: "nope".to_string(),
+            created_at: now.clone(),
+            updated_at: now.clone(),
+        });
+        assert!(bad_scope.is_err());
+
+        let oversize = storage.upsert_assistant_memory(AssistantMemoryRecord {
+            id: "y".to_string(),
+            scope: "global".to_string(),
+            content: "z".repeat(2_001),
+            created_at: now.clone(),
+            updated_at: now,
+        });
+        assert!(oversize.is_err());
+    }
+
     fn temp_db_path(name: &str) -> PathBuf {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
