@@ -472,6 +472,17 @@
       "speedtestPhaseDownload": "Đang đo tải xuống…",
       "speedtestError": "Không thể hoàn tất kiểm tra.",
       "speedtestNote": "Chỉ chạy khi bạn bắt đầu. Sử dụng băng thông thực.",
+      "speedtestTargetLabel": "Target",
+      "speedtestTargets": {
+        "cloudflareAuto": "Automatic - Cloudflare global edge",
+        "newYork": "North America - New York",
+        "losAngeles": "North America - Los Angeles",
+        "london": "Europe - London",
+        "frankfurt": "Europe - Frankfurt",
+        "tokyo": "Asia - Tokyo",
+        "singapore": "Asia - Singapore",
+        "johannesburg": "Africa - Johannesburg"
+      },
       "networkToolsTitle": "Công cụ mạng",
       "networkToolsSummary": "Tính subnet, tra cứu DNS và kiểm tra tốc độ theo yêu cầu trong một widget dạng tab.",
       "networkToolsTab": {

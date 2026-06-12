@@ -472,6 +472,17 @@
       "speedtestPhaseDownload": "다운로드 측정 중…",
       "speedtestError": "테스트를 완료할 수 없습니다.",
       "speedtestNote": "시작할 때만 실행됩니다. 실제 대역폭을 사용합니다.",
+      "speedtestTargetLabel": "Target",
+      "speedtestTargets": {
+        "cloudflareAuto": "Automatic - Cloudflare global edge",
+        "newYork": "North America - New York",
+        "losAngeles": "North America - Los Angeles",
+        "london": "Europe - London",
+        "frankfurt": "Europe - Frankfurt",
+        "tokyo": "Asia - Tokyo",
+        "singapore": "Asia - Singapore",
+        "johannesburg": "Africa - Johannesburg"
+      },
       "networkToolsTitle": "네트워크 도구",
       "networkToolsSummary": "서브넷 계산, DNS 조회, 주문형 속도 테스트를 탭이 있는 하나의 위젯에 모았습니다.",
       "networkToolsTab": {

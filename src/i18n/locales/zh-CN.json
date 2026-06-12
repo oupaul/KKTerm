@@ -472,6 +472,17 @@
       "speedtestPhaseDownload": "正在测量下载…",
       "speedtestError": "测试无法完成。",
       "speedtestNote": "仅在你启动时运行。会消耗真实带宽。",
+      "speedtestTargetLabel": "Target",
+      "speedtestTargets": {
+        "cloudflareAuto": "Automatic - Cloudflare global edge",
+        "newYork": "North America - New York",
+        "losAngeles": "North America - Los Angeles",
+        "london": "Europe - London",
+        "frankfurt": "Europe - Frankfurt",
+        "tokyo": "Asia - Tokyo",
+        "singapore": "Asia - Singapore",
+        "johannesburg": "Africa - Johannesburg"
+      },
       "networkToolsTitle": "网络工具",
       "networkToolsSummary": "子网计算、DNS 查询和按需测速集成在一个带标签页的小部件中。",
       "networkToolsTab": {

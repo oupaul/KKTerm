@@ -472,6 +472,17 @@
       "speedtestPhaseDownload": "กำลังวัดดาวน์โหลด…",
       "speedtestError": "ไม่สามารถทำการทดสอบให้เสร็จได้",
       "speedtestNote": "ทำงานเฉพาะเมื่อคุณเริ่มเท่านั้น ใช้แบนด์วิดท์จริง",
+      "speedtestTargetLabel": "Target",
+      "speedtestTargets": {
+        "cloudflareAuto": "Automatic - Cloudflare global edge",
+        "newYork": "North America - New York",
+        "losAngeles": "North America - Los Angeles",
+        "london": "Europe - London",
+        "frankfurt": "Europe - Frankfurt",
+        "tokyo": "Asia - Tokyo",
+        "singapore": "Asia - Singapore",
+        "johannesburg": "Africa - Johannesburg"
+      },
       "networkToolsTitle": "เครื่องมือเครือข่าย",
       "networkToolsSummary": "คำนวณซับเน็ต ค้นหา DNS และทดสอบความเร็วตามต้องการในวิดเจ็ตแบบแท็บเดียว",
       "networkToolsTab": {

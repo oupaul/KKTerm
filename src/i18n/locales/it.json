@@ -472,6 +472,17 @@
       "speedtestPhaseDownload": "Misurazione del download…",
       "speedtestError": "Impossibile completare il test.",
       "speedtestNote": "Si esegue solo quando lo avvii. Consuma banda reale.",
+      "speedtestTargetLabel": "Target",
+      "speedtestTargets": {
+        "cloudflareAuto": "Automatic - Cloudflare global edge",
+        "newYork": "North America - New York",
+        "losAngeles": "North America - Los Angeles",
+        "london": "Europe - London",
+        "frankfurt": "Europe - Frankfurt",
+        "tokyo": "Asia - Tokyo",
+        "singapore": "Asia - Singapore",
+        "johannesburg": "Africa - Johannesburg"
+      },
       "networkToolsTitle": "Strumenti di rete",
       "networkToolsSummary": "Calcoli subnet, ricerche DNS e uno speed test su richiesta in un widget a schede.",
       "networkToolsTab": {

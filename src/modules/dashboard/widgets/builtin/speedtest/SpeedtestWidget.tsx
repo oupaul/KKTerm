@@ -2,7 +2,7 @@ import { Play, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
-import { gaugePosition, runSpeedtest } from "./speedtestRunner";
+import { SPEEDTEST_TARGETS, gaugePosition, runSpeedtest } from "./speedtestRunner";
 import type { SpeedtestResult } from "./speedtestRunner";
 
 type TestState =
@@ -24,6 +24,7 @@ export function SpeedtestBody(_props: BuiltInWidgetBodyProps) {
   const [liveMbps, setLiveMbps] = useState(0);
   const [liveLatency, setLiveLatency] = useState<number | null>(null);
   const [liveJitter, setLiveJitter] = useState<number | null>(null);
+  const [targetId, setTargetId] = useState(SPEEDTEST_TARGETS[0].id);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function SpeedtestBody(_props: BuiltInWidgetBodyProps) {
     setLiveJitter(null);
     setState({ phase: "latency" });
     try {
+      const target = SPEEDTEST_TARGETS.find((item) => item.id === targetId) ?? SPEEDTEST_TARGETS[0];
       const result = await runSpeedtest(controller.signal, (progress) => {
         setState((current) =>
           current.phase === progress.phase ? current : { phase: progress.phase },
@@ -46,7 +48,7 @@ export function SpeedtestBody(_props: BuiltInWidgetBodyProps) {
         setLiveLatency(progress.latencyMs);
         setLiveJitter(progress.jitterMs);
         if (progress.downloadMbps !== null) setLiveMbps(progress.downloadMbps);
-      });
+      }, target);
       setLiveMbps(result.downloadMbps);
       setState({ phase: "done", result });
     } catch {
@@ -115,6 +117,20 @@ export function SpeedtestBody(_props: BuiltInWidgetBodyProps) {
           </span>
         </div>
       </div>
+      <label className="dw-speedtest-target">
+        <span>{t("dashboard.speedtestTargetLabel")}</span>
+        <select
+          value={targetId}
+          disabled={running}
+          onChange={(event) => setTargetId(event.currentTarget.value)}
+        >
+          {SPEEDTEST_TARGETS.map((target) => (
+            <option key={target.id} value={target.id}>
+              {t(target.labelKey)}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="dw-speedtest-footer">
         {state.phase === "error" ? (
           <span className="dw-speedtest-error">{t("dashboard.speedtestError")}</span>
