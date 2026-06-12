@@ -79,7 +79,7 @@ test("Quick Command subdialogs stack above the manager dialog", async () => {
 });
 
 test("Assistant image preview escapes the AI Assistant Panel and remains RDP-blocking", async () => {
-  const assistantSource = await readFile(new URL("../src/ai/AssistantPanel.tsx", import.meta.url), "utf8");
+  const assistantSource = await readFile(new URL("../src/ai/AssistantMessageView.tsx", import.meta.url), "utf8");
   const assistantStyles = await readFile(new URL("../src/ai/assistant.css", import.meta.url), "utf8");
   const nativeOverlaySource = await readFile(new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url), "utf8");
 

@@ -690,6 +690,36 @@
     }
 
     #[test]
+    fn copilot_prompt_history_includes_tool_transcripts() {
+        let request = AgentRunRequest {
+            prompt: "and now?".to_string(),
+            context_label: "Workspace".to_string(),
+            intent: None,
+            allow_tools: true,
+            allowed_tools: vec![],
+            selected_output: None,
+            screenshot: None,
+            screenshots: vec![],
+            files: vec![],
+            system_context: None,
+            messages: vec![AgentChatMessage {
+                role: "assistant".to_string(),
+                content: "Checked the dashboard.".to_string(),
+                reasoning_content: None,
+                tool_calls: vec![AgentToolCallSummary {
+                    tool_name: "dashboard_load_state".to_string(),
+                    error: None,
+                }],
+            }],
+            output_language: None,
+            page_context: None,
+        };
+        let prompt = build_copilot_prompt(request, None);
+        assert!(prompt.contains("assistant: Checked the dashboard."));
+        assert!(prompt.contains("[Tools used in this turn: dashboard_load_state (ok)]"));
+    }
+
+    #[test]
     fn history_tool_transcripts_survive_into_later_turns() {
         // A pure tool turn (no visible text) used to be dropped entirely;
         // now it replays as a compact transcript.

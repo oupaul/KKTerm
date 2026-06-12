@@ -1814,10 +1814,16 @@ fn build_copilot_prompt(request: AgentRunRequest, custom_instructions: Option<St
                 } else {
                     message.role
                 };
-                format!(
-                    "{role}: {content}",
-                    content = truncate_prompt_section(&message.content, 8_000)
-                )
+                let mut content = truncate_prompt_section(&message.content, 8_000);
+                if role == "assistant" {
+                    if let Some(transcript) = agent_tool_transcript(&message.tool_calls) {
+                        if !content.is_empty() {
+                            content.push('\n');
+                        }
+                        content.push_str(&transcript);
+                    }
+                }
+                format!("{role}: {content}")
             })
             .collect::<Vec<_>>()
             .join("\n\n");
@@ -5271,29 +5277,13 @@ fn to_openai_compatible_history_message(
     // did in earlier turns instead of re-discovering state (dashboard_load_state,
     // session_state, ...) every turn. This also keeps pure tool turns — which
     // have no visible text and used to be dropped from history entirely.
-    if role == "assistant" && !message.tool_calls.is_empty() {
-        let transcript = message
-            .tool_calls
-            .iter()
-            .map(|call| {
-                match call
-                    .error
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|error| !error.is_empty())
-                {
-                    Some(error) => {
-                        format!("{} (error: {})", call.tool_name, ellipsize(error, 200))
-                    }
-                    None => format!("{} (ok)", call.tool_name),
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
-        if !content.is_empty() {
-            content.push_str("\n\n");
+    if role == "assistant" {
+        if let Some(transcript) = agent_tool_transcript(&message.tool_calls) {
+            if !content.is_empty() {
+                content.push_str("\n\n");
+            }
+            content.push_str(&transcript);
         }
-        content.push_str(&format!("[Tools used in this turn: {transcript}]"));
     }
     if content.is_empty() {
         return None;
@@ -5305,6 +5295,31 @@ fn to_openai_compatible_history_message(
         tool_call_id: None,
         tool_calls: None,
     })
+}
+
+/// Compact one history turn's tool calls into a bracketed transcript line so
+/// later turns remember prior tool work. Shared by the OpenAI-compatible
+/// history conversion and the Copilot prompt stitcher.
+fn agent_tool_transcript(tool_calls: &[AgentToolCallSummary]) -> Option<String> {
+    if tool_calls.is_empty() {
+        return None;
+    }
+    let transcript = tool_calls
+        .iter()
+        .map(|call| {
+            match call
+                .error
+                .as_deref()
+                .map(str::trim)
+                .filter(|error| !error.is_empty())
+            {
+                Some(error) => format!("{} (error: {})", call.tool_name, ellipsize(error, 200)),
+                None => format!("{} (ok)", call.tool_name),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    Some(format!("[Tools used in this turn: {transcript}]"))
 }
 
 fn ellipsize(value: &str, max_chars: usize) -> String {
