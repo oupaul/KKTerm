@@ -893,7 +893,7 @@
                 None,
                 Vec::new(),
                 dashboard_enabled,
-            Vec::new(),
+                Vec::new(),
             )
         };
         let with_dashboard_messages = build(true);
@@ -908,8 +908,28 @@
         assert!(without_dashboard.contains("SAFETY:"));
         assert!(without_dashboard.contains("SECRETS:"));
         assert!(
-            without_dashboard.len() < with_dashboard.len() / 2,
-            "dashboard contracts dominate the prompt; gating must shrink it substantially"
+            without_dashboard.len() < with_dashboard.len(),
+            "the dashboard prompt section must add content when dashboard tools are enabled"
+        );
+
+        // Tool tiering: the verbose widget-authoring contracts live on the
+        // dashboard_create_widget tool description, NOT duplicated in the
+        // system prompt. Guard against the duplication creeping back.
+        const COMPLETION_PHRASE: &str =
+            "Dashboard widget completion contract: complete the first created widget";
+        assert!(
+            !with_dashboard.contains(COMPLETION_PHRASE),
+            "widget contracts must not be duplicated into the system prompt"
+        );
+        let settings: AiAssistantToolSettings =
+            serde_json::from_value(json!({"dashboard": true})).expect("settings deserialize");
+        let create_widget = ai_tool_definitions(&settings)
+            .into_iter()
+            .find(|tool| tool.function.name == "dashboard_create_widget")
+            .expect("create-widget tool present when dashboard enabled");
+        assert!(
+            create_widget.function.description.contains(COMPLETION_PHRASE),
+            "widget contracts must remain on the dashboard_create_widget tool description"
         );
     }
 
@@ -2470,35 +2490,48 @@
             Vec::new(),
         );
 
-        let system_content = text_content(&messages[0]);
-        assert!(system_content.contains("use dashboard_load_state"));
-        assert!(system_content.contains("patch.body"));
-        assert!(system_content.contains("Do not ask the user to paste widget source"));
-        assert!(system_content.contains("For Three.js widgets"));
-        assert!(system_content.contains("pass a real canvas element to QRCode.toCanvas"));
-        assert!(system_content.contains("KK.getViewport()"));
-        assert!(system_content.contains("treat the widget root as the full allocated surface"));
-        assert!(system_content.contains("Do not create a smaller centered app card"));
-        assert!(
-            system_content
-                .contains("avoid max-width, fixed-height, or shrink-to-content outer wrappers")
-        );
-        assert!(system_content.contains("kk-shell"));
-        assert!(system_content.contains("chartjs, leaflet"));
-        assert!(system_content.contains("KK.onFileDrop"));
-        assert!(system_content.contains("choose a random non-default accent"));
-        assert!(system_content.contains("Mac OS X Dashboard-style widgets"));
-        assert!(system_content.contains("singleton object"));
-        assert!(system_content.contains("Avoid generic form-like layouts"));
-        assert!(system_content.contains("minimal explanatory text"));
-        assert!(system_content.contains("as graphical as possible"));
-        assert!(system_content.contains("text-only widgets"));
-        assert!(system_content.contains("do not create a text-only placeholder or scaffold"));
-        assert!(system_content.contains("use multiple tool-call rounds"));
-        assert!(system_content.contains("wired to the actual data source"));
-        assert!(system_content.contains("Creative Commons images from credible sources"));
-        assert!(system_content.contains("Dashboard widget source-correctness contract"));
-        assert!(system_content.contains("const root = document.getElementById('root')"));
+        // Assert against the full guidance the model receives: the DASHBOARD
+        // TOOLS system instruction plus the dashboard_create_widget tool
+        // description. The verbose authoring contracts now live only on the
+        // tool (tool tiering), so they are no longer duplicated in the prompt.
+        let settings: AiAssistantToolSettings =
+            serde_json::from_value(json!({"dashboard": true})).expect("settings deserialize");
+        let create_widget_description = ai_tool_definitions(&settings)
+            .into_iter()
+            .find(|tool| tool.function.name == "dashboard_create_widget")
+            .expect("create-widget tool present")
+            .function
+            .description;
+        let guidance = format!("{}\n{create_widget_description}", text_content(&messages[0]));
+        for phrase in [
+            "use dashboard_load_state",
+            "patch.body",
+            "Do not ask the user to paste widget source",
+            "For Three.js widgets",
+            "pass a real canvas element to QRCode.toCanvas",
+            "KK.getViewport()",
+            "treat the widget root as the full allocated surface",
+            "Do not create a smaller centered app card",
+            "avoid max-width, fixed-height, or shrink-to-content outer wrappers",
+            "kk-shell",
+            "chartjs, leaflet",
+            "KK.onFileDrop",
+            "choose a random non-default accent",
+            "Mac OS X Dashboard-style widgets",
+            "singleton object",
+            "Avoid generic form-like layouts",
+            "minimal explanatory text",
+            "as graphical as possible",
+            "text-only widgets",
+            "do not create a text-only placeholder or scaffold",
+            "use multiple tool-call rounds",
+            "wired to the actual data source",
+            "Creative Commons images from credible sources",
+            "Dashboard widget source-correctness contract",
+            "const root = document.getElementById('root')",
+        ] {
+            assert!(guidance.contains(phrase), "missing widget guidance phrase: {phrase}");
+        }
     }
 
     #[test]
@@ -2726,13 +2759,25 @@
             Vec::new(),
         );
 
+        // The secret-request workflow guidance is part of the DASHBOARD TOOLS
+        // system instruction, so it stays in the system prompt.
         let system_content = text_content(&messages[0]);
         assert!(system_content.contains("After dashboard_create_widget creates a widget with a secret field, call request_secret_entry"));
         assert!(system_content.contains("the returned instance.id as instanceId"));
         assert!(system_content.contains("Top-level await is not available"));
         assert!(system_content.contains("async IIFE"));
-        assert!(system_content.contains("durable base motion"));
-        assert!(system_content.contains("does not decay to a static frame"));
+        // The animation contract now lives only on the tool description (it is
+        // not duplicated into the system prompt).
+        let settings: AiAssistantToolSettings =
+            serde_json::from_value(json!({"dashboard": true})).expect("settings deserialize");
+        let create_widget_description = ai_tool_definitions(&settings)
+            .into_iter()
+            .find(|tool| tool.function.name == "dashboard_create_widget")
+            .expect("create-widget tool present")
+            .function
+            .description;
+        assert!(create_widget_description.contains("durable base motion"));
+        assert!(create_widget_description.contains("does not decay to a static frame"));
     }
 
     #[test]
@@ -2774,30 +2819,10 @@
                 .contains("contrast, hierarchy, density, layout/alignment, copy economy, responsiveness, and motion cost")
         );
 
-        let messages = build_agent_messages(
-            "Create an eye-catching dashboard widget.".to_string(),
-            "Dashboard - Default".to_string(),
-            None,
-            "medium".to_string(),
-            None,
-            None,
-            None,
-            true,
-            None,
-            vec![],
-            vec![],
-            None,
-            None,
-            Vec::new(),
-            true,
-            Vec::new(),
-        );
-
-        let system_content = text_content(&messages[0]);
-        assert!(system_content.contains("OpenDesign-style design direction"));
-        assert!(system_content.contains("Widget design preflight"));
-        assert!(system_content.contains("selected direction"));
-        assert!(system_content.contains("self-critique"));
+        // The design-direction and preflight contracts live on the tool
+        // description (asserted above), not duplicated into the system prompt.
+        assert!(create_tool.function.description.contains("Widget design preflight"));
+        assert!(create_tool.function.description.contains("selected direction"));
     }
 
     #[test]
