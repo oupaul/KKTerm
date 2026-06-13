@@ -7,7 +7,9 @@
 .kk-dlg,
 .kk-surface {
   --bg: var(--surface);
-  --bg-2: var(--surface-muted);
+  /* Footer shares the body surface — one consistent dialog background;
+     a hairline divider provides the separation, not a second fill. */
+  --bg-2: var(--surface);
   --chrome-2: var(--surface-muted);
   --sidebar: var(--surface-muted);
   --muted: var(--surface-muted);

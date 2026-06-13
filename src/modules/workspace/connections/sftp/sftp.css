@@ -36,15 +36,11 @@
 .sftp-conn-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 21px;
-  padding: 0 9px 0 7px;
-  border-radius: 999px;
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
+  gap: 6px;
   flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 .sftp-conn-pill .dot {
   width: 7px;

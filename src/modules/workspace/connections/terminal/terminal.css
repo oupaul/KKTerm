@@ -1679,16 +1679,25 @@
   max-height: calc(100vh - 48px);
   padding: 0;
   overflow: hidden;
+  /* One consistent surface for the whole dialog (the grey field the panes
+     sit on); the white panes/toolbar/transfer bar are the only cards. */
+  background: var(--app-bg);
 }
 
 .sftp-popup-dialog .connection-dialog-header {
   flex: 0 0 auto;
-  padding: 16px 54px 12px 18px;
+  padding: 16px 56px 12px 18px;
+  border-bottom: 0;
 }
 
 .sftp-popup-dialog .connection-dialog-header h2 {
   margin: 0;
   font-size: 17px;
+}
+
+.sftp-popup-dialog .connection-dialog-close {
+  top: 14px;
+  right: 16px;
 }
 
 .sftp-popup-dialog-body {
