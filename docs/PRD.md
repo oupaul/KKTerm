@@ -8,7 +8,7 @@ KKTerm is intended to be a fast, professional desktop workspace for personal/loc
 
 ## Solution
 
-KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (remote connection manager with VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Installer Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
+KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (a named-Workspace connection manager where each Workspace isolates its own Connections and folders while live Sessions/Tabs stay open across Workspace switches; includes VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, File Explorer, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Installer Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
 
 Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, OS keychain secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 
@@ -20,6 +20,8 @@ The product will be light chrome with dark terminal panes by default, optimized 
 2. As an operator, I want a left-side connection tree, so that I can open Connections from the root or organize them into folders when useful.
 3. As an operator, I want to create saved SSH connections, so that I do not retype hostnames, usernames, ports, or key paths.
 4. As an operator, I want optional folders and subfolders in the connection tree, so that I can group hosts by project, environment, customer, or region without forcing every Connection into a folder.
+4a. As an operator, I want multiple named Workspaces with separate Connection trees, so that I can isolate customer, lab, or project resources without mixing their saved Connections.
+4b. As an operator creating a Workspace, I want to copy selected Connections from an existing Workspace, so that I can start from known resources without sharing mutable Connection records between Workspaces.
 5. As an operator, I want search and filtering in the connection tree, so that large host lists remain usable.
 6. As an operator, I want drag/drop reorder in the tree, so that I can keep my workspace arranged naturally.
 7. As an operator, I want rename, delete, and duplicate actions for folders and connections, so that connection maintenance is fast.

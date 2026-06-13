@@ -287,6 +287,46 @@
     }
 
     #[test]
+    fn local_files_connection_can_be_created_with_starting_directory() {
+        let storage =
+            Storage::open(temp_db_path("local-files-connection")).expect("storage opens");
+
+        let created = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Project Files".to_string(),
+                host: String::new(),
+                user: String::new(),
+                connection_type: "localFiles".to_string(),
+                folder_id: None,
+                port: None,
+                key_path: None,
+                proxy_jump: None,
+                auth_method: None,
+                local_shell: None,
+                local_startup_directory: Some("  C:\\Users\\user\\.claude  ".to_string()),
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+                workspace_id: None,
+            })
+            .expect("local File Explorer connection is created");
+
+        assert_eq!(created.connection_type, "localFiles");
+        assert_eq!(created.host, "localhost");
+        assert_eq!(created.user, "");
+        assert_eq!(
+            created.local_startup_directory.as_deref(),
+            Some("C:\\Users\\user\\.claude")
+        );
+    }
+
+    #[test]
     fn create_connection_can_persist_remote_desktop_connections() {
         let storage = Storage::open(temp_db_path("remote-desktop-create")).expect("storage opens");
 

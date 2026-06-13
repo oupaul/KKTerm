@@ -3143,13 +3143,18 @@ fn ensure_folder_exists(
 }
 
 fn normalize_connection_type(value: &str) -> Result<String, String> {
-    match value.trim().to_lowercase().as_str() {
-        "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" => {
-            Ok(value.trim().to_lowercase())
-        }
-        _ => Err(
-            "connection type must be local, ssh, telnet, serial, url, rdp, vnc, or ftp".to_string(),
-        ),
+    match value.trim() {
+        "localFiles" => Ok("localFiles".to_string()),
+        value => match value.to_lowercase().as_str() {
+            "local" | "ssh" | "telnet" | "serial" | "url" | "rdp" | "vnc" | "ftp" => {
+                Ok(value.to_lowercase())
+            }
+            "localfiles" => Ok("localFiles".to_string()),
+            _ => Err(
+                "connection type must be local, ssh, telnet, serial, url, rdp, vnc, ftp, or localFiles"
+                    .to_string(),
+            ),
+        },
     }
 }
 
@@ -3187,7 +3192,7 @@ fn extract_url_host(value: &str) -> Option<String> {
 
 fn normalize_connection_user(value: String, connection_type: &str) -> Result<String, String> {
     match connection_type {
-        "serial" | "url" => Ok(String::new()),
+        "serial" | "url" | "localFiles" => Ok(String::new()),
         "vnc" => Ok(value.trim().to_string()),
         _ => required_field("user", value),
     }
@@ -3309,7 +3314,7 @@ fn normalize_local_startup_directory(
     value: Option<String>,
     connection_type: &str,
 ) -> Result<Option<String>, String> {
-    if connection_type != "local" {
+    if connection_type != "local" && connection_type != "localFiles" {
         return Ok(None);
     }
 
