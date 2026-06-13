@@ -45,7 +45,7 @@ import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { DialogPortal } from "../../../app/DialogPortal";
 import { pushTrayMenu } from "../../../app/trayMenu";
-import { CHILD_CONNECTION_CLOSED_EVENT, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
+import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
 
 type DraggedTreeItem =
@@ -142,6 +142,14 @@ export function ConnectionSidebar({
   const { i18n, t } = useTranslation();
   const query = useWorkspaceStore((state) => state.query);
   const setQuery = useWorkspaceStore((state) => state.setQuery);
+  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+  const activeWorkspace = useWorkspaceStore((state) =>
+    state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId),
+  );
+  const panelTitle =
+    activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID
+      ? t("workspace.defaultWorkspaceTitle")
+      : activeWorkspace?.name || t("connections.title");
   // Keep the search input bound to `query` for instant typing, but drive the
   // expensive full-tree filter off a deferred value so large trees don't
   // re-filter on every keystroke.
@@ -2048,7 +2056,7 @@ export function ConnectionSidebar({
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
       <div className="sidebar-header" onDoubleClick={handleHeaderDoubleClick}>
         <div>
-          <h1>{t("connections.title")}</h1>
+          <h1>{panelTitle}</h1>
         </div>
         <div className="sidebar-actions">
           <div className="add-connection-anchor" ref={addConnectionRef}>

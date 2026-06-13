@@ -2925,6 +2925,7 @@
     "localTerminalSession": "本地终端会话",
     "workspaceSwitcher": "Workspaces",
     "defaultWorkspace": "Default",
+    "defaultWorkspaceTitle": "Default Workspace",
     "newWorkspace": "New Workspace",
     "workspaceName": "Name",
     "workspaceNamePlaceholder": "Workspace name",

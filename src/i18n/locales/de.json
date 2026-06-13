@@ -2925,6 +2925,7 @@
     "localTerminalSession": "Lokale Terminalsitzung",
     "workspaceSwitcher": "Workspaces",
     "defaultWorkspace": "Default",
+    "defaultWorkspaceTitle": "Default Workspace",
     "newWorkspace": "New Workspace",
     "workspaceName": "Name",
     "workspaceNamePlaceholder": "Workspace name",

@@ -2925,6 +2925,7 @@
     "localTerminalSession": "로컬 터미널 세션",
     "workspaceSwitcher": "Workspaces",
     "defaultWorkspace": "Default",
+    "defaultWorkspaceTitle": "Default Workspace",
     "newWorkspace": "New Workspace",
     "workspaceName": "Name",
     "workspaceNamePlaceholder": "Workspace name",
