@@ -5,19 +5,19 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>O workspace nativo para administradores Windows que a era das ferramentas de IA esqueceu de criar — terminais, SSH, SFTP, RDP/VNC, dashboards, e uma IA que cria seus próprios widgets de ferramentas.</strong>
+  <strong>Uma única janela nativa do Windows para terminais, SSH, SFTP, RDP/VNC e um painel — mais uma IA que constrói as suas próprias ferramentinhas sob demanda.</strong>
 </p>
 
 <p align="center">
-  <em>Porque a sua barra de tarefas não deveria parecer uma caça-níqueis em Las Vegas.</em>
+  <em>Porque a sua barra de tarefas não devia parecer um caça-níquel de Las Vegas.</em>
 </p>
 
 <p align="center">
-  <sub>Batizado em homenagem à <strong>乖乖 (Kuāi Kuāi)</strong>, o salgadinho de coco verde que os sysadmins taiwaneses colocam em cima dos servidores para que se comportem bem. Esperamos que este app mereça um lugar no rack.</sub>
+  <sub>Batizado em homenagem ao <strong>乖乖 (Kuāi Kuāi)</strong>, o salgadinho verde de coco que os sysadmins taiwaneses colocam sobre os servidores para que se comportem. Esperamos que este app conquiste seu lugar no rack.</sub>
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/ryantsai/KKTerm/releases/latest">Baixar o instalador Windows mais recente (.exe)</a></strong>
+  <strong><a href="https://github.com/ryantsai/KKTerm/releases/latest">Baixar o instalador mais recente do Windows (.exe)</a></strong>
 </p>
 
 <p align="center">
@@ -38,9 +38,6 @@
   </a>
   <br />
   <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
-  <img src="https://img.shields.io/badge/built%20with-Tauri%20v2-FFC131?style=flat-square&logo=tauri" alt="Tauri v2" />
-  <img src="https://img.shields.io/badge/Rust-russh-orange?style=flat-square&logo=rust" alt="Rust" />
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React 19" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -63,66 +60,58 @@
 
 ---
 
-## O Argumento (45 segundos)
+## O pitch em 45 segundos
 
-Você é sysadmin / DevOps / homelab / aquele que programa no feeling. Neste exato momento, você tem aberto:
+Você é sysadmin / DevOps / entusiasta de homelab / vibe-coder. Agora mesmo você tem:
 
 - Um emulador de terminal
-- Um cliente SSH separado (com uma lista de perfis que levou um fim de semana inteiro para montar)
-- Um cliente SFTP de 2007 que milagrosamente ainda funciona
-- Remote Desktop numa janela que você vive perdendo no monitor errado
-- Um VNC viewer para aquela máquina Linux
-- Uma aba do navegador com a interface de administração do roteador
-- Uma sessão do `claude` / `codex` rodando num servidor remoto que cai toda vez que o Wi-Fi espirra
-- Um post-it com senhas *(não se preocupa, a gente não conta)*
+- Um cliente SSH à parte (com uma lista de perfis que levou um fim de semana inteiro pra montar)
+- Um cliente SFTP de 2007 que, sabe-se lá como, ainda existe
+- A Área de Trabalho Remota numa janela que você sempre perde no monitor errado
+- Um visualizador VNC só por causa daquela máquina Linux
+- Uma aba do navegador pra interface de administração do roteador
+- Uma sessão `claude` / `codex` numa máquina remota que cai toda vez que o Wi-Fi espirra
+- Um post-it com senhas *(relaxa, a gente não conta)*
 
-**KKTerm é uma janela só para tudo isso.** Nativo no Windows — *de propósito, enquanto o resto do mundo das ferramentas de dev lança tudo pro mac primeiro e trata o seu sistema operacional como nota de rodapé* — escrito em Rust + Tauri v2, distribuído como um único instalador, e que não liga pra casa.
+**KKTerm é uma única janela pra tudo isso.** Nativo no Windows — *de propósito, enquanto o resto do mundo de ferramentas pra dev lança primeiro pro mac e trata o seu SO como uma nota de rodapé* — num único instalador que se recusa a telefonar pra casa.
 
-Mais algumas coisas que você não sabia que queria:
+Mais umas coisas que você não sabia que queria:
 
-- Um **Dashboard** onde você fala pra uma IA *"cria um widget que faz ping no meu roteador a cada 30 segundos"* e ele aparece, em sandbox, na sua grade.
-- **Panes de SSH com auto-attach a sessões tmux nomeadas** para que sua sessão remota do `claude` / `codex` sobreviva a qualquer birra de Wi-Fi que o seu notebook resolver ter.
-- Um **widget de uso de IA para codar** que mostra suas cotas do Claude Code e do Codex — janela de 5 horas, janela semanal, plano atual, e-mail da conta — no **Dashboard** e na barra de status, para você parar de bater na parede do rate-limit às 3 da manhã.
-- Um módulo **Installer Helper** que detecta, instala, atualiza, desinstala e inicia um catálogo curado de ferramentas de desenvolvimento para Windows — Node, Python, Docker, WSL, CLIs de codificação com IA e aquelas utilidades pequenas que você normalmente acaba caçando em abas do navegador.
-- Um **servidor MCP integrado** (`kkterm-cli`) que deixa agentes de codificação externos (Claude Code, Codex, Copilot, Antigravity, OpenCode) dirigirem seu Workspace e Dashboard — listar Connections, ler buffers de terminal, posicionar widgets — sobre uma superfície de ferramentas curada e com aprovação. IA-para-IA, na sua máquina, sem relay na nuvem.
-- Vinte e um **fundos animados em canvas** (sim, incluindo `matrix`) para o dashboard, porque a gente não tem vergonha disso não.
+- Um **Dashboard** onde você fala pra uma IA *«monta um widget que dá ping no meu roteador a cada 30 segundos»* e ele aparece, na própria sandbox, na sua grade.
+- **Painéis SSH que se reconectam à sua sessão remota `claude` / `codex`** depois de cada chilique do Wi-Fi, pra um trabalho de seis horas sobreviver a uma queda.
+- Um **medidor de uso de IA** pra você parar de bater de surpresa no muro do limite de uso às 3 da manhã.
+- Um **Installer Helper** que acha, instala, atualiza e abre as ferramentas pra dev do Windows que você normalmente caça por dez abas do navegador.
+- **Vinte e cinco fundos animados** pro painel (sim, incluindo `matrix`), porque a gente não tem vergonha.
 
-Ah, e o AI assistant pode transformar uma frase numa pequena ferramenta de dashboard que você realmente continua usando.
+E a melhor parte: o assistente de IA consegue transformar uma única frase numa pequena ferramenta de painel que você realmente continua usando.
 
-> ⭐ **Se isso parece o app que você sempre quis mas nunca teve tempo de construir — dá uma estrela no repositório pra gente saber que tem alguém por aí. Ajuda de verdade.**
+> ⭐ **Se isso parece o app que você vinha querendo construir nos últimos seis anos — dá uma estrela no repo pra gente saber que tem alguém de olho. Ajuda de verdade.**
 
----
-
-## Por que "KKTerm"?
-
-Entre em qualquer datacenter taiwanês e olhe para o topo dos racks. Nas fábricas da TSMC, nas salas de controle do Metrô de Taipei, nos halls de servidores do Cathay Bank, nos equipamentos de switching da Chunghwa Telecom — você vai encontrar um saquinho verde de 乖乖 (Kuāi Kuāi), um salgadinho de milho com sabor de coco dos anos 1960.
-
-O nome significa literalmente **"seja bonzinho"**, **"se comporte"**. A tradição de TI é direta e absolutamente séria:
-
-- **Precisa ser o sabor verde (coco).** Amarelo (curry) significa *fica em casa*; vermelho (picante) deixa o servidor nervoso. Verde somente.
-- **Precisa estar dentro do prazo de validade.** Um Kuai Kuai vencido trabalha contra você. Os engenheiros os trocam com diligência.
-- **Precisa estar visível.** O servidor precisa saber que está lá.
-- **Não pode comer.** Aquele saquinho está de plantão.
-
-Alguns dos maiores, mais entediantes e mais obcecados com uptime sistemas da Ásia funcionam com um saquinho de pipoca de milho colado no chassi. Funciona porque as pessoas que os mantêm acreditam que funciona — o que é uma descrição surpreendentemente honesta da maior parte da cultura de TI.
-
-**KKTerm** é **Kuai Kuai Term** — um workspace de administração que aspira ao mesmo papel do salgadinho: sentar quietinho do lado das suas máquinas importantes e ajudá-las a se comportar. Local-first. Sem telemetria. IA com aprovação obrigatória. O tipo de software chato e confiável.
-
-Ainda não conseguimos incluir um saquinho de Kuai Kuai de verdade com o instalador. Isso vai para a v2.
+Tem uma opinião sobre o que deveria vir a seguir? Entra na thread pública de feedback:
+**[O que o KKTerm deveria priorizar para fluxos de administração Windows-first?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
-## Veja em Movimento
+## Por que «KKTerm»?
 
-<!--
-  TODO: Substitua este placeholder por um GIF de demonstração real.
-  Recomendado:
-    - 5-10 segundos, em loop
-    - Mostrar: abrir uma Connection -> dividir um pane -> upload SFTP -> IA propondo um comando
-    - Cerca de 5 MB para que o GitHub renderize inline sem lazy-loading
-  Caminho sugerido: docs/assets/demo.gif
-  Depois altere o <img src=...> abaixo para: src="docs/assets/demo.gif"
--->
+Entre em qualquer data center taiwanês e olhe o topo dos racks. Passando pelas fábricas da TSMC, salas de controle do metrô de Taipei, salas de servidores do banco Cathay, equipamentos de comutação da Chunghwa Telecom — você vai avistar um saquinho verde de 乖乖 (Kuāi Kuāi), um salgadinho de milho com sabor de coco dos anos 1960.
+
+O nome significa literalmente **«seja bonzinho»**, **«comporte-se»**. A tradição de TI é simples e totalmente séria:
+
+- **Tem que ser verde (coco).** Amarelo (curry) significa *fique em casa hoje*; vermelho (apimentado) deixa o servidor com raiva. Só verde.
+- **Não pode estar vencido.** Um Kuai Kuai passado joga contra você. Os engenheiros trocam com diligência.
+- **Tem que estar visível.** O servidor precisa saber que ele está ali.
+- **Não coma.** Aquele saquinho está de plantão.
+
+Alguns dos sistemas maiores, mais entediantes e mais obcecados por uptime da Ásia rodam com um saquinho de salgadinho de milho colado no chassi. Funciona porque quem os mantém acredita que funciona, o que é uma descrição notavelmente honesta de grande parte da cultura de TI.
+
+**KKTerm** é **Kuai Kuai Term** — um espaço de administração que aspira ao mesmo trabalho do salgadinho: sentar quietinho ao lado das suas máquinas importantes e ajudá-las a se comportar. Local primeiro. Sem telemetria. IA com aprovação. Aquele tipo de software entediante e confiável.
+
+Ainda não conseguimos enviar um saquinho de Kuai Kuai de verdade junto com o instalador. Isso é item pra v2.
+
+---
+
+## Ver em movimento
 
 <p align="center">
   <a href="https://github.com/ryantsai/KKTerm">
@@ -134,339 +123,177 @@ Ainda não conseguimos incluir um saquinho de Kuai Kuai de verdade com o instala
   </a>
 </p>
 
-<p align="center"><sub><em>(O GIF de demo vai aqui. Uma imagem vale mil bullet points, e a gente ficou sem bullet points.)</em></sub></p>
+<p align="center"><sub><em>(O GIF de demonstração vai aqui. Uma imagem vale mais que mil bullet points, e nossos bullet points acabaram.)</em></sub></p>
 
 ---
 
-## Por que as Pessoas Mantêm Aberto o Dia Todo
+## Uma janela, cada conexão
 
-### Windows-first, de propósito
-
-Dê uma olhada no ecossistema de ferramentas de dev em 2026. Claude Code: lança para mac/linux primeiro, Windows é "usa o WSL." Codex CLI: a mesma coisa. `gemini-cli`, metade do Homebrew, todo novo TUI bacana: mac/linux primeiro, e os usuários Windows ganham um comentário `# Windows: contributions welcome` no README e um script de fish-completion que não roda.
-
-Enquanto isso, as pessoas que de fato mantêm empresas no ar — TI corporativo, MSPs, qualquer um rodando Hyper-V ou AD ou SCCM ou IIS ou um domain controller mais velho que alguns estagiários — estão em frente a máquinas Windows se perguntando por que toda ferramenta nova age como se o sistema operacional deles fosse um inconveniente.
-
-**KKTerm é a aposta contrária.** A gente constrói nativo para Windows primeiro, e os ports para macOS / Linux vêm depois. Isso significa que podemos usar as APIs do Windows que realmente importam, em vez de cobri-las com uma camada de portabilidade:
-
-- **ConPTY** para shells locais — o pseudoconsole real do Windows, não um shim de tradução. PowerShell, `cmd.exe`, distribuições WSL, todos hospedados como PTYs de verdade com foco, resize e tratamento de sequências VT que batem com o comportamento da plataforma.
-- **WebView2** para toda a interface e **Connections** de URL embutidas — Chromium em processo usando o runtime do sistema, que é um dos motivos pelo qual o instalador é pequeno e inicia rápido.
-- **Microsoft RDP ActiveX (`mstscax.dll`)** para RDP — *o mesmo que a Microsoft distribui*. Mesmo controle que o Remote Desktop Connection (`mstsc.exe`). Não é uma reimplementação de terceiros, não é FreeRDP dentro de um wrapper. Quem mexe com RDP percebe a diferença em cinco segundos.
-- **Windows Credential Manager** para todos os segredos. Senhas de SSH, senhas de FTP, chaves de API, credenciais de URL Connection — tudo vive no OS keychain e o `credwiz.exe` pode auditá-los.
-- **Instalador NSIS para o usuário atual** com SHA-256 correspondente, menu de bandeja nativo, asserção de energia Don't-Sleep, amostragem de CPU/RAM/rede do host, menus de contexto Tauri nativos com ícones PNG reais, diálogos Open/Save nativos. Nenhum deles é simulado.
-- **WSL é um shell de primeira classe, não um paliativo.** Abra Ubuntu ao lado de um pane PowerShell ao lado de uma sessão SSH ao lado de uma **Tab** RDP, tudo na mesma janela.
-
-Os builds para macOS e Linux estão no roadmap e receberão o mesmo cuidado. Mas se você estava esperando alguém construir a ferramenta de administração Windows *boa* — em vez de deixá-la por último — esse é o acordo.
-
-### Local-first significa realmente local
-
-Suas **Connections** salvas ficam num arquivo SQLite na sua máquina. As senhas ficam no **Windows Credential Manager**, não num JSON ao lado do binário. O app não inclui analytics, não liga pra casa ao iniciar e não precisa de uma conta em nuvem para abrir. Não existe "faça login para sincronizar" porque não existe sincronização.
-
-Se o cabo de rede pegar fogo, o KKTerm ainda abre.
-
-### Um workspace, todo tipo de conexão
-
-| Você queria… | KKTerm tem |
+| Você queria… | O KKTerm faz |
 | --- | --- |
-| Abrir um shell PowerShell / cmd / WSL local | **Sessions** de terminal local com ConPTY |
-| Entrar por SSH num servidor | `russh` nativo com auth por agente / chave / senha, fluxo de confiança de host-key, ProxyJump, port forwarding |
-| Navegar pelos arquivos desse servidor | SFTP aberto pela **Connection** SSH, painel duplo, transferências recursivas, chmod/chown |
-| FTP num NAS de 2012 | **Connections** FTP / FTPS no mesmo navegador estilo SFTP |
-| Telnet para equipamento antigo | Sim, pronto, Telnet está lá também |
-| Falar com uma porta serial | Tipo de **Connection** serial, COM port + baud, sem ferramentas extras |
-| Acessar remotamente uma máquina Windows | RDP nativo via controle Microsoft ActiveX (o de verdade, não um clone) |
-| VNC num Raspberry Pi | Framebuffer Rust `vnc-rs` renderizado direto no workspace |
-| Abrir a interface web do roteador | **URL Connection** WebView2 embutido com preenchimento de credenciais |
-| Monitorar CPU do host | Barra de status em tempo real + módulo **Dashboard** com widgets arrastáveis e redimensionáveis |
+| Abrir um shell local PowerShell / cmd / WSL | Terminais locais, lado a lado |
+| SSH num servidor | SSH com chaves, agent, senhas, jump hosts e encaminhamento de portas |
+| Navegar pelos arquivos desse servidor | SFTP a partir da conexão SSH — painel duplo, arraste para transferir |
+| FTP num NAS de 2012 | FTP / FTPS no mesmo navegador de arquivos |
+| Telnet num equipamento pré-histórico | Sim, Telnet também está aí |
+| Falar com uma porta serial | Conexões seriais — escolha porta COM e baud |
+| Acessar remotamente uma máquina Windows | A verdadeira Área de Trabalho Remota da Microsoft, embutida |
+| VNC num Pi | VNC, renderizado direto no espaço de trabalho |
+| Abrir a interface web do roteador | Uma aba de navegador embutida com logins salvos |
+| Acompanhar a CPU do host | Uma barra de status ao vivo e um painel que você mesmo monta |
 
-É tudo o mesmo app. Mesma janela. Mesmos atalhos de teclado. Mesmo tema que esperamos não agredir seus olhos.
+O mesmo app. A mesma janela. Os mesmos atalhos. O mesmo tema, que tomara não faça seus olhos sangrarem.
 
-### Terminais que não enlouquecem
+---
 
-- Panes divididos dentro de uma **Tab**.
-- Renderização xterm.js acelerada por WebGL, com fallback gracioso quando não está disponível.
-- Busca no scrollback.
-- Panes de SSH com tmux que fazem attach a sessões estáveis por pane, de forma que reconectar realmente significa *reconectar*, e não "começar do zero e fingir que a última hora não aconteceu."
-- Trocar de **Tab** **não** mata a **Session**. Fechar a **Tab** sim. Essa distinção foi uma guerra religiosa internamente; a gente ganhou.
+## Por que as pessoas deixam aberto o dia inteiro
 
-### Um AI Assistant que cria suas ferramentas
+### Windows primeiro, de propósito
 
-A maioria das demos de "IA no seu terminal" para no chat. O assistente do KKTerm também pode criar pequenos widgets de dashboard, duráveis, para o jeito como você realmente trabalha. Ainda assim, ele mantém as coisas perigosas atrás de dois controles:
+Olhe o cenário das ferramentas pra dev. Claude Code: mac/linux primeiro, Windows é «usa WSL». Codex CLI: a mesma coisa. Metade das ferramentas novas e brilhantes sai primeiro pro mac e deixa pros usuários de Windows um comentário `# contributions welcome` e um script de autocompletar que não roda.
 
-- **Famílias de ferramentas** (Dashboard / Connections / Live Sessions) — ative ou desative por categoria.
-- **Modo de permissão** no composer — `Prompt` (padrão, pergunta sempre) ou `Allow All` (você é adulto, assinou o termo de responsabilidade).
+Enquanto isso, quem de fato mantém as empresas no ar — TI corporativa, MSPs, qualquer um administrando um controlador de domínio mais velho que alguns estagiários — está sentado em máquinas Windows se perguntando por que toda ferramenta nova trata o SO deles como um incômodo.
 
-Converse com OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, ou qualquer endpoint compatível com OpenAI. As chaves de API vão para o OS keychain. Modelos que propõem `rm -rf` são classificados como perigosos e exigem aprovação humana explícita. A IA não consegue silenciosamente executar um comando destrutivo porque alguém achou graça numa injeção de prompt em uma página de manual.
+**O KKTerm faz o trato oposto.** Construímos nativo pro Windows primeiro, então o que importa pra quem está no Windows simplesmente funciona: a *verdadeira* Área de Trabalho Remota da Microsoft (a mesma do `mstsc.exe`, não um clone), shells reais de PowerShell / cmd / WSL, segredos guardados no Gerenciador de Credenciais do Windows, um ícone de bandeja de verdade, menus e diálogos nativos. As builds de macOS e Linux estão no roadmap e vão receber o mesmo cuidado. Mas se você estava esperando alguém construir a *boa* ferramenta de administração do Windows primeiro em vez de por último — esse é o trato.
 
-### Um Dashboard que não finge ser o Grafana
+### Local primeiro significa de verdade local
 
-O módulo **Dashboard** é uma grade de 12 colunas arrastável e redimensionável de instâncias de widget. Não é para observabilidade de petabytes — é para "quero um botão para abrir meus cinco apps favoritos e um painel mostrando o uptime do meu host SSH, *ao lado* do meu chat."
+Suas conexões salvas vivem num arquivo na sua máquina. As senhas vivem no Gerenciador de Credenciais do Windows, não num arquivo de texto ao lado do app. O KKTerm não envia analytics, não telefona pra casa ao iniciar e não precisa de conta na nuvem pra abrir. Não tem «faça login pra sincronizar» porque não tem sincronização.
 
-#### Widgets criados pela IA — descreva e receba
+Se o seu cabo de rede pegar fogo, o KKTerm abre do mesmo jeito.
 
-Essa é a parte que a gente está genuinamente animado. Você não escolhe num marketplace e não escreve JavaScript. Você **fala para o AI assistant o que quer**, e ele constrói o widget ali mesmo no seu dashboard:
+### Terminais que não piram
 
-> *"Adiciona um widget mostrando os últimos 5 commits do meu repositório principal como uma lista."*
-> *"Me faz um widget de sticky note para o meu roteiro de plantão."*
-> *"Constrói um widget que faz ping no meu roteador doméstico a cada 30 segundos e mostra verde/vermelho."*
-> *"Preciso de um cronômetro. Me surpreende no estilo."*
+- Painéis divididos dentro de uma Tab.
+- Renderização rápida e fluida, com scrollback pesquisável.
+- Reconectar significa de verdade *reconectar* — sua sessão remota retoma de onde parou, não «começar do zero e fingir que a última hora não aconteceu».
+- Trocar de Tab **não** mata a Session. Fechar a Tab, sim. Essa distinção foi uma guerra religiosa interna; a gente ganhou.
 
-Dois sabores:
+### Um assistente de IA que constrói suas ferramentas
 
-- **Content widgets** — JSON declarativo: markdown, listas chave-valor, checklists, stat grande único. Seguros por construção, sem script. A maioria dos pedidos "só preciso disso no dashboard" cai aqui.
-- **Script widgets** — JavaScript hospedado dentro de um sandbox `iframe srcdoc` isolado com permissões explícitas e declaradas (lista de permissões de `network`, orçamento de `pollSeconds`). A IA escreve o script, você aprova as permissões, o widget roda numa caixa que não consegue alcançar o resto do app.
+A maioria das demos de «IA no seu terminal» para no chat. O assistente do KKTerm também consegue construir pequenos widgets de painel duráveis, no formato de como você realmente trabalha — e mantém o perigoso atrás de um interruptor:
 
-Todo widget que você mantém é seu. Eles persistem no SQLite ao lado das suas **Connections**, com seu próprio preset visual (`panel` / `ambient` / `hero`), cor de destaque, ícone e título. Múltiplas instâncias do mesmo widget podem coexistir com tamanhos e estilos completamente diferentes. Delete-os com botão direito quando a magia acabar.
+- **Decida o que ele pode tocar** — ligue ou desligue famílias inteiras de ferramentas (Dashboard / Connections / Live Sessions).
+- **Decida como ele pergunta** — `Prompt` (padrão, pergunta toda vez) ou `Allow All` (você é adulto, assinou o termo).
 
-#### Fundos animados para o dashboard (porque a gente quis)
+Qualquer coisa parecida com `rm -rf` é marcada como perigosa e espera um sim humano explícito. A IA não consegue rodar escondido um comando destrutivo só porque alguém deu uma de esperto com um prompt injection numa man page.
 
-O dashboard tem vinte e um fundos animados em canvas que você pode escolher por **Dashboard View**:
+Ele conversa com OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA ou qualquer endpoint compatível com OpenAI. Suas chaves de API vão pro chaveiro do SO.
+
+### Um painel que não finge ser o Grafana
+
+O Dashboard é uma grade de widgets que você arrasta e redimensiona. Não é pra observabilidade em escala de petabytes — é pra «quero um botão que abra meus cinco apps favoritos e um painel mostrando o uptime do meu host SSH, *do lado* do meu chat».
+
+#### Widgets criados pela IA — descreva, e pronto
+
+Essa é a parte que a gente fica genuinamente animado. Você não escolhe de um marketplace nem escreve JavaScript. Você **diz ao assistente de IA o que quer**, e ele constrói o widget ali mesmo, no seu painel:
+
+> *«Adiciona um widget mostrando os últimos 5 commits do meu repo principal em lista.»*
+> *«Faz um widget de post-it pra minha cola de plantão.»*
+> *«Constrói um widget que dá ping no meu roteador de casa a cada 30 segundos e mostra verde/vermelho.»*
+> *«Preciso de um cronômetro. Me surpreende no estilo.»*
+
+Alguns são simples painéis de exibição (markdown, listas de tarefas, um número grandão); outros rodam código ao vivo numa sandbox isolada que você aprova. Cada widget que você guarda é seu — fica salvo com a própria cor, ícone e título, e você pode ter várias cópias de tamanhos diferentes. Apague um com o botão direito quando a mágica passar.
+
+#### Fundos animados do painel (porque a gente quis)
+
+Escolha um clima por visão do painel entre **vinte e cinco** fundos animados em canvas:
 
 | Clima | Fundos |
 | --- | --- |
-| Calmo | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
+| Calmo | `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
 | Espacial | `starfield`, `nebula` |
-| Aconchegante | `embers`, `lava` |
-| Nerd | `matrix`, `topo`, `synthwave` |
-| Caótico | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
+| Quente | `embers`, `lava` |
+| Geek | `matrix`, `topo`, `synthwave` |
+| Agitado | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
-Eles rodam num único `requestAnimationFrame` compartilhado e respeitam o foco da janela, então custam praticamente nada quando você está em outra janela. Combine `matrix` com seu assistente de IA para um visual que diz "sou extremamente produtivo e possivelmente estou num filme dos Wachowski." Ou escolha `ocean` e pareça uma pessoa séria. A gente não julga nenhuma das opções.
+Eles pausam quando você está em outro lugar, então custam quase nada. Combine `matrix` com o seu assistente de IA pra um clima que diz «sou extremamente produtivo e provavelmente estou dentro de um filme das Wachowski». Ou escolha `ocean` e pareça uma pessoa séria. Não julgamos nenhuma das duas escolhas.
 
-### Rodando agentes de IA em servidor, do jeito certo
+### Mantenha vivos os seus agentes de IA remotos
 
-Essa é a segunda funcionalidade de que as pessoas se apaixonam. Os terminais SSH do KKTerm podem ser abertos diretamente numa **sessão tmux nomeada** no host remoto — por padrão, um id amigável gerado automaticamente como `kkterm-cockpit001` que sobrevive à reconexão:
+Essa é a segunda função pela qual as pessoas se apaixonam. Os terminais SSH do KKTerm podem te jogar direto numa **sessão tmux nomeada** no host remoto que sobrevive à reconexão:
 
-- Abra uma **Connection** SSH com tmux habilitado.
-- Dentro do pane, inicie `claude`, `codex`, `gemini-cli`, `cursor-agent`, ou qualquer agente de código de longa duração que você preferir. São apps TUI de tela cheia; tmux é exatamente onde eles querem estar.
-- Feche o notebook. Abra de novo. O pane silenciosamente faz re-attach à mesma sessão tmux. O agente ainda está rodando, ainda tem seu scrollback, ainda no meio do que estava fazendo.
-- Queda de rede na conexão SSH? O KKTerm faz uma tentativa silenciosa e limitada de re-attach ao mesmo id tmux sem te incomodar.
-- Quer que o AI assistant veja o que o agente está fazendo? "Add terminal buffer to context" chama `capture_tmux_pane` via SSH e puxa o scrollback completo do tmux — não só o que está na tela, a sessão inteira — para a conversa. Seu assistente local agora consegue raciocinar sobre o trabalho do seu agente remoto.
+- Abra uma conexão SSH com tmux ativado e inicie `claude`, `codex`, `gemini-cli`, `cursor-agent` ou o agente de longa duração que você preferir.
+- Feche o notebook. Abra de novo. O painel se reconecta em silêncio — o agente ainda está rodando, mantém seu scrollback, no meio do que estava fazendo.
+- Uma piscada na rede? O KKTerm reconecta discretamente à mesma sessão sem te incomodar.
+- Quer a ajuda do assistente? «Adicionar o buffer do terminal ao contexto» puxa a sessão remota inteira pra conversa, pra sua IA local raciocinar sobre o que o seu agente remoto está fazendo.
 
-Se você já perdeu uma sessão de seis horas do `claude` ou `codex` por causa do Wi-Fi ruim de um hotel, essa única funcionalidade já valeria o preço do app. O app é gratuito. A funcionalidade ainda assim vale.
+Se você já perdeu uma sessão `claude` ou `codex` de seis horas pro Wi-Fi instável de um hotel, essa função sozinha já paga o app. (O app é grátis. A função vale a pena mesmo assim.)
 
-### Saber quanta IA ainda sobra
+### Saber quanta IA ainda te resta
 
-Agentes de codificação cobram por janela de plano, não por mês. Claude Code tem janela de 5 horas e janela semanal. Codex tem a versão dele. Os dois conseguem devorar sua cota tranquilamente em background enquanto você está numa reunião.
+Os agentes de programação cobram por janela do plano, não por mês, e devoram alegremente a sua cota enquanto você está numa reunião. O **medidor de uso de IA** mantém isso à vista:
 
-O widget **Uso de IA para codar** mantém isso visível:
+- Um widget de painel mostrando **Claude Code** e **Codex** lado a lado: conta conectada, plano, consumo da janela atual e desta semana, hora do próximo reset.
+- Um **indicador compacto na barra de status** que espelha os mesmos números, pra que mesmo com o painel fechado você veja num relance se tem folga antes da próxima grande refatoração.
+- Ele te avisa com antecedência se você precisa logar de novo — *antes* de uma tarefa longa, não no meio dela.
 
-- Um widget de Dashboard mostrando **Claude Code** e **Codex** lado a lado: conta conectada, nível do plano, percentual usado na janela de 5 horas atual, percentual usado nesta semana, próximo horário de reset.
-- Um **indicador compacto na barra de status** que reflete os mesmos números, para que mesmo com o Dashboard fechado dê para ver de relance se ainda tem margem antes de chutar o próximo refactor grande.
-- O estado de auth é exibido direto (`connected` / `expired` / `error`) para você descobrir *antes* de uma tarefa longa que precisa relogar, não no meio dela.
-- A política de refresh respeita os rate limits; o widget faz polling no próprio ritmo, em vez de martelar as APIs upstream cada vez que você olha.
+### Deixe outras IAs pilotarem o KKTerm
 
-### Um servidor MCP integrado — deixe outras IAs dirigirem o KKTerm
+O KKTerm traz o próprio servidor MCP, pra que agentes de programação externos (Claude Code, Codex, Copilot, Antigravity, OpenCode) usem o seu espaço de trabalho como você usa — listar conexões, abrir uma, ler um buffer de terminal, posicionar widgets no painel. De IA pra IA, na sua máquina, sem relay na nuvem. As ações que modificam, as mais arriscadas, ficam atrás de um único interruptor de segurança **desligado** por padrão.
 
-Seu terminal também é onde Claude Code, Codex, o modo agent do Copilot, Antigravity e o resto do mundo que fala MCP querem trabalhar. Por isso o KKTerm já vem com seu próprio **servidor MCP via stdio**, [`kkterm-cli`](docs/MCP.md), que expõe uma fatia curada do app:
-
-- **Módulo Workspace** (`kkterm.workspace.*`): listar **Connections** salvas, abrir uma Connection por id, listar **Sessions** ativas, enviar input para um pane de terminal, ler um snapshot do buffer.
-- **Módulo Dashboard** (`kkterm.dashboard.*`): carregar o estado do Dashboard, ler a fonte de um widget criado por IA, criar / atualizar / remover views, posicionar / mover / remover instâncias de widget, aplicar layouts em lote.
-- **Sub-namespaces perigosos** (`kkterm.<module>.dangerous.*`): mutar a superfície executável — criar widgets de script, clicar em remote desktops, esvaziar o Dashboard — está protegido por uma única configuração (`built_in_mcp_allow_all_dangerous`), desligada por padrão.
-
-`kkterm-cli` é um forwarder leve. Ele fala stdio JSON-RPC com seu cliente MCP e se comunica com a janela do KKTerm em execução por um named pipe Windows autenticado por lançamento. Com o KKTerm fechado, `tools/list` continua funcionando (clientes podem introspectar a superfície), mas `tools/call` devolve um erro estruturado `app_not_running` em vez de fazer alguma coisa.
-
-Plugue no seu cliente preferido e sua IA passa a usar o KKTerm como você usa:
-
-```json
-{
-  "mcpServers": {
-    "kkterm": { "command": "<caminho-para-kkterm-cli>", "args": [] }
-  }
-}
-```
-
-Settings → AI Assistant → **Servidor MCP integrado** tem um diálogo "Mostrar config" de um clique com snippets JSON e TOML pré-preenchidos com o caminho do binário resolvido, além de comandos `claude mcp add` / `codex mcp add` copiáveis.
+Configurações → AI Assistant → **Built-in MCP Server** tem um diálogo «Mostrar configuração» de um clique, já preenchido, além de comandos `claude mcp add` / `codex mcp add` pra copiar.
 
 ---
 
-## Como Tudo Se Encaixa
+## O que o KKTerm não é
 
-```mermaid
-flowchart LR
-    User([You]) --> Shell[KKTerm Window<br/>Tauri v2 + React 19]
-    Shell --> Rail[Activity Rail]
-    Rail --> WS[Workspace Module]
-    Rail --> Dash[Dashboard Module]
-    Rail --> Inst[Installer Helper Module]
-    Rail -.-> FE[File Explorer<br/>planned]
-    Rail --> Set[Settings]
+Uma lista curta, porque honestidade conquista confiança:
 
-    WS --> Tabs[Tabs &amp; Panes]
-    Tabs --> Term[Terminal<br/>ConPTY / russh]
-    Tabs --> SFTP[SFTP / FTP]
-    Tabs --> Web[WebView2 URL]
-    Tabs --> RD[RDP / VNC]
-
-    Shell -.calls.-> Rust[Rust Backend]
-    Rust --> SQLite[(SQLite<br/>Connections)]
-    Rust --> Keychain[(OS Keychain<br/>Secrets)]
-    Rust --> AI[AI Providers<br/>OpenAI-compat]
-
-    AI -. approval gate .-> Tabs
-
-    classDef local fill:#1f6feb,stroke:#1f6feb,color:#fff
-    classDef ai fill:#8a63d2,stroke:#8a63d2,color:#fff
-    class SQLite,Keychain local
-    class AI ai
-```
-
-O que importa nessa forma: dados salvos duráveis (**Connection**) são separados do estado em tempo de execução (**Session**), que é separado do contêiner de interface (**Tab**). Fechar uma **Tab** encerra a **Session**. Trocar de **Tab** não. Essa é a regra que mantém o app sensato.
-
----
-
-## Mapa de Funcionalidades Atual
-
-| Área | Implementado hoje |
-| --- | --- |
-| **Connections** | Árvore com SQLite, pastas/subpastas, busca, ordenação por arrastar/soltar, renomear, duplicar, deletar, **Quick Connect**, ícones personalizados, atalhos fixados/ativos no rail |
-| **Terminal** | Shells locais, SSH, Telnet, Serial, panes divididos, xterm.js + WebGL oportunístico, busca no scrollback, diretório/script de inicialização local |
-| **SSH** | `russh` nativo, auth por agente/chave/senha, fluxo de confiança de host-key, fallback opcional para SSH do sistema, ProxyJump, port forwarding, **sessões tmux com nome automático (`kkterm-<scifi-name><n>`) com re-attach silencioso em queda de transporte** — perfeito para agentes de código remotos de longa duração (Claude Code, Codex, gemini-cli, etc.) |
-| **SFTP / FTP** | SFTP via SSH mais **Connections** FTP/FTPS, navegador de painel duplo, transferências recursivas, fila/cancelamento/histórico, conflitos, propriedades, chmod/chown onde suportado |
-| **URL WebView** | **Sessions** de URL WebView2 embutidas, barra de navegação, captura de favicon, metadados/preenchimento de credenciais de site salvas, metadados de partição de dados |
-| **Remote Desktop** | RDP via ActiveX Windows com parking de overlay com escopo geométrico; VNC via framebuffer `vnc-rs` renderizado no canvas do workspace |
-| **Dashboard** | Views duráveis, instâncias de widget, modo de edição, arrastar/redimensionar, App Launcher, **widgets de conteúdo/script criados pela IA** (JSON declarativo ou iframe JS sandboxed com permissões), presets / destaque / ícone / título por widget, **23 fundos animados em canvas** (aurora, clouds, ocean, raindrops, rainywindow, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti, particleCursor) |
-| **AI Assistant** | Chat em streaming, runtime compatível com OpenAI, registro de provedores, classificação de segurança de propostas de comandos, anexos de screenshot/contexto, **criação de widgets para Dashboard (conteúdo + script sandboxed)**, **captura de pane tmux** como contexto de conversa para sessões remotas, ferramentas de gerenciamento de **Connection** e ferramentas de **Session** ao vivo para terminal, RDP/VNC e SFTP/FTP |
-| **Uso de IA para codar** | **Widget do Dashboard + indicador na barra de status** que rastreiam o uso das cotas do **Claude Code** e do **Codex**: conta conectada, nível do plano, percentuais das janelas de 5 horas e semanal, próximo horário de reset, estado de auth (`connected` / `expired` / `error`), política de refresh ciente do rate-limit |
-| **Servidor MCP integrado** | Servidor MCP via stdio (`kkterm-cli`) que expõe ferramentas curadas de Workspace e Dashboard a agentes de codificação externos (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge de named pipe autenticado; sub-namespaces `dangerous.*` por Módulo atrás de um único toggle de segurança; diálogo nas Settings com snippets JSON / TOML de um clique e comandos `claude mcp add` / `codex mcp add` |
-| **Installer Helper** | Módulo do Activity Rail para um catálogo incluído de ferramentas de desenvolvimento Windows: detectar ferramentas instaladas, comparar versões mais recentes, instalar/atualizar/desinstalar, excluir ferramentas do Update all, transmitir logs de comando e iniciar apps gerenciados compatíveis |
-| **Settings** | Geral, Aparência, Credenciais, IA, SSH, Terminal, fundos do terminal, URL, RDP, VNC, Dashboard, Installer Helper, Sobre; fontes de interface personalizadas; minimizar para bandeja; Don't Sleep; backup/importação |
-| **Localization** | Interface i18next com inglês como fonte original e pacotes de locale dinâmicos: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
-
-### Provedores de IA
-
-OpenAI · Anthropic · OpenRouter · DeepSeek · Grok · Azure OpenAI · LiteLLM · GitHub Copilot · Ollama · NVIDIA · qualquer endpoint compatível com OpenAI.
-
-Os metadados de provedores ficam em [`src/ai/providerRegistry/`](src/ai/providerRegistry/); adaptadores Rust em [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/). As chaves de API passam pelo OS keychain, nunca pelo SQLite.
-
----
-
-## Quick Start
-
-Você precisa de:
-
-- **Windows** (plataforma primária suportada)
-- **Node.js + npm**
-- **Rust toolchain**
-- **Pré-requisitos do Tauri v2 para Windows** incluindo **WebView2**
-
-```bash
-npm install
-npm run tauri dev
-```
-
-Isso deve gerar uma janela nativa de verdade. Se gerar um stack trace em vez disso, abra uma issue — adoramos uma boa reprodução.
-
-### Verificações comuns
-
-```bash
-npm run check                                              # TypeScript
-npm run build                                              # Vite build
-cargo check --manifest-path src-tauri/Cargo.toml           # Rust
-cargo test  --manifest-path src-tauri/Cargo.toml           # Rust tests
-```
-
-### Build do instalador Windows
-
-```bash
-npm run package:installer
-```
-
-O script do instalador grava `artifacts/kkterm-<version>-windows-x64-setup.exe` e um arquivo `.sha256` correspondente. Atualmente está **sem assinatura** — a assinatura para release está no roadmap, mas até lá seu antivírus pode te olhar torto. Isso é normal.
-
----
-
-## O que KKTerm Não É
-
-Uma lista curta, porque honestidade gera confiança:
-
-- **Não é um produto em nuvem.** Sem sincronização, sem contas de equipe, sem camada SaaS. Se você algum dia ver um diálogo "Entrar no KKTerm", algo deu terrivelmente errado.
-- **Não finge ser cross-platform.** Somos Windows-first de propósito; macOS e Linux estão no roadmap e usarão o mesmo shell Tauri v2. Se você precisa de uma ferramenta mac-first hoje, tem centenas de opções. A gente está construindo aquela que os admins Windows ficaram quietinhos esperando.
+- **Não é um produto de nuvem.** Sem sincronização, sem contas de equipe, sem plano SaaS. Se você um dia vir um diálogo «Entrar no KKTerm», algo deu catastroficamente errado.
+- **Não finge ser multiplataforma.** Somos Windows-first de propósito; macOS e Linux estão no roadmap. Se você precisa de uma ferramenta mac-first hoje, tem centenas de opções. Estamos construindo aquela que os admins de Windows vinham esperando em silêncio.
 - **Não é um agente de IA autônomo.** O assistente propõe; o humano decide. `Allow All` é uma escolha que você faz, não um padrão.
-- **Não é substituto do Grafana / Datadog.** O Dashboard é para painéis de controle pessoais, não para observabilidade de 10 mil hosts.
-- **Não é uma IDE para Kubernetes.** É um workspace de administração voltado para terminal. Por favor, não peça pra ele renderizar um Helm chart.
+- **Não é um substituto pro Grafana / Datadog.** O Dashboard é pra superfícies de controle pessoais, não pra observabilidade de 10 mil hosts.
+- **Não é uma IDE de Kubernetes.** É um espaço de administração centrado no terminal. Por favor, não peça pra ele renderizar um chart do Helm.
 
-Se alguma dessas *foi* um dealbreaker — sem problemas, a gente se vê na v2.
-
----
-
-## Debug Nativo
-
-Use o runtime Tauri de verdade para validação:
-
-```bash
-npm run tauri dev
-```
-
-Uma prévia do Vite no navegador é útil para alguma inspeção de frontend, mas **não** hospeda um WebView2 real, ConPTY, RDP ActiveX, framebuffer VNC, keychain ou superfície de menu nativo. Se uma funcionalidade toca qualquer um desses, valide-a no runtime desktop de verdade.
-
-Usuários do VS Code: a config de launch `Run KKTerm exe` inicia `src-tauri/target/debug/kkterm.exe` com `RUST_BACKTRACE=1`. A config pareada `Attach KKTerm WebView2` oferece DevTools dentro do host WebView2 real.
+Se algum desses pontos *era* um motivo de desistência — justo, a gente se vê na v2.
 
 ---
 
-## Limitações Atuais (sim, a gente sabe)
+## Pegue o KKTerm
 
-- O instalador está atualmente sem assinatura. As verificações de atualização estão desativadas até que a assinatura para release seja configurada.
-- SFTP via ProxyJump ainda não é suportado no caminho SFTP nativo.
-- Retomada de transferência de arquivos, sincronização/diff de pastas, compactação/extração e edição remota foram adiados.
-- A importação de config SSH está implementada, mas a entrada para o usuário nas Settings ainda não está exposta.
-- RDP e VNC estão disponíveis; sincronização mais rica de área de transferência/dispositivos e controles de qualidade ainda estão evoluindo.
-- Os builds para macOS e Linux estão no roadmap. Estão chegando, e serão feitos da forma correta — não às pressas como um port "a gente também funciona mais ou menos por aí".
-- O AI assistant propõe e pode operar ferramentas habilitadas dentro do limite de permissão configurado — por favor, não o trate como um robô sem supervisão. Ele, de fato, não sabe o que seu CEO quer.
+**[Baixe o instalador mais recente do Windows (.exe)](https://github.com/ryantsai/KKTerm/releases/latest)** e execute. O instalador no momento está **sem assinatura** — a assinatura de release está no roadmap, então até lá o seu antivírus pode te olhar torto. É normal.
+
+Quer compilar do código-fonte ou contribuir? Tudo que você precisa está em [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
 ## Roadmap (versão curta)
 
-- Builds para macOS + Linux
+- Builds macOS + Linux
 - Instalador assinado + atualização automática
-- SFTP via ProxyJump no caminho nativo
-- Retomada de transferência de arquivos, sincronização de pastas, compactação/extração
-- Redirecionamento mais rico de área de transferência/dispositivos do RDP
-- Mais widgets integrados ao **Dashboard** (e um schema público para os criados pela IA)
+- Mais poder na transferência de arquivos (retomar, sync de pastas, arquivar/extrair)
+- Compartilhamento de área de transferência e dispositivos mais rico na Área de Trabalho Remota
+- Mais widgets de painel embutidos
 
-Versão completa e atualizada frequentemente: [`docs/ROADMAP.md`](docs/ROADMAP.md).
-
----
-
-## Contribuindo
-
-Adoraríamos uma ajuda. De verdade. Até coisas pequenas importam:
-
-- **Teste o build de desenvolvimento** e abra uma issue quando algo parecer errado. "Parecia estranho" é um bug report legítimo; vamos investigar com você.
-- **Traduza um locale.** O inglês é a fonte da verdade em [`src/i18n/locales/en.json`](src/i18n/locales/en.json); outros 12 locales ficam ao lado e carregam sob demanda. Strings pendentes são rastreadas por chave em [`docs/localization_todo/`](docs/localization_todo/) — escolha uma, traduza, delete o arquivo.
-- **Adicione um widget ao Dashboard.** Os widgets integrados ficam em [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Escolha uma ideia pequena, entregue, aprenda o padrão.
-- **Aperte a superfície de ferramentas da IA.** Adaptadores de provedores ficam em [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); o registro do frontend está em [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
-- **Melhore o manual.** A documentação para usuários finais fica em [`docs/manual/`](docs/manual/). Um capítulo por módulo de interface. Se você usou uma funcionalidade e a documentação não ajudou, um PR corrigindo isso vale ouro.
-
-Setup completo, estrutura do projeto, checklist de PR e a lista de regras "por favor não quebre essas" ficam em [`CONTRIBUTING.md`](CONTRIBUTING.md). Os destaques em 30 segundos:
-
-- **Leia [`CONTEXT.md`](CONTEXT.md) antes de renomear termos visíveis ao usuário.** **Connection**, **Session**, **Tab** e **Quick Connect** têm significados específicos; por favor, não desvie.
-- **Toda string visível ao usuário passa pelo `t()`.** Sem texto em inglês puro em JSX.
-- **Sem hooks de fechamento no frontend.** O fechamento da barra de título do Tauri v2 foi quebrado por padrões `onCloseRequested` meia dúzia de vezes. Finalmente temos uma forma que funciona; por favor, não a reintroduza.
-- **Rode as verificações** (`npm run check && npm run build && cargo check && cargo test`) antes de abrir um PR.
-
-Procurando um ponto de entrada? Filtre as issues abertas por [`good first issue`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) ou [`help wanted`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). Se não houver nenhuma marcada ainda, abra uma issue descrevendo o que você gostaria de trabalhar e a gente ajuda a definir o escopo.
+Versão completa e atualizada com frequência: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ---
 
-## Documentação do Projeto
+## Contribuir
 
-- [Contexto do produto](CONTEXT.md) — a linguagem de domínio que você deve seguir
-- [Arquitetura](docs/ARCHITECTURE.md) — mapa de módulos, onde colocar novo código
+A gente adoraria uma mão. De verdade. Até coisas pequenas importam:
+
+- **Teste a build de desenvolvimento** e abra uma issue quando algo parecer errado. «Pareceu estranho» é um relatório de bug legítimo; a gente investiga junto.
+- **Traduza um idioma.** O inglês é a fonte da verdade; outros treze idiomas vivem ao lado.
+- **Adicione um widget de painel.** Pegue uma ideia pequena, lance, aprenda o padrão.
+- **Melhore o manual.** Se você usou uma função e a documentação não ajudou, uma PR que conserta isso vale ouro.
+
+Setup completo, estrutura do projeto e checklist de PR estão em [`CONTRIBUTING.md`](CONTRIBUTING.md). Procurando um ponto de entrada? Filtre as issues abertas por [`good first issue`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) ou [`help wanted`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
+
+---
+
+## Documentos do projeto
+
+- [Contexto de produto](CONTEXT.md) — a linguagem de domínio que você deve respeitar
+- [Arquitetura](docs/ARCHITECTURE.md) — mapa de módulos, onde colocar código novo
 - [Roadmap](docs/ROADMAP.md)
 - [Arquitetura do Dashboard](docs/DASHBOARD.md)
 - [Guia de provedores de IA](docs/AI_PROVIDERS.md)
-- [Notas de performance](docs/PERFORMANCE.md)
-- [Notas de release e gates](docs/RELEASE.md)
 
 ---
 
-## Stack
-
-Rust · Tauri v2 · React 19 · TypeScript · Vite · Tailwind CSS · Zustand · xterm.js · SQLite · WebView2 · `russh` · `russh-sftp` · `vnc-rs` · `suppaftp` · OS keychain storage.
-
----
-
-## Histórico de Estrelas
+## Histórico de estrelas
 
 <a href="https://www.star-history.com/#ryantsai/KKTerm&Date">
   <picture>
@@ -476,12 +303,12 @@ Rust · Tauri v2 · React 19 · TypeScript · Vite · Tailwind CSS · Zustand ·
   </picture>
 </a>
 
-Se você chegou até aqui e ainda não deu estrela — o que está esperando, um convite pessoal? Considere este o convite pessoal.
+Se você chegou até aqui e ainda não deu uma estrela — o que está esperando, um convite pessoal? Considere este o convite pessoal.
 
-⭐ **[Dê uma estrela no KKTerm no GitHub](https://github.com/ryantsai/KKTerm)** — custa um clique e faz a semana do mantenedor. Pense nisso como um 乖乖 digital no rack.
+⭐ **[Dê uma estrela ao KKTerm no GitHub](https://github.com/ryantsai/KKTerm)** — custa um clique e alegra a semana inteira do mantenedor. Pense nisso como um 乖乖 digital no rack.
 
 ---
 
 ## Licença
 
-MIT. Veja [LICENSE](LICENSE). Use, faça fork, distribua, coloque num homelab que mais ninguém consegue achar — esse é o acordo.
+MIT. Veja [LICENSE](LICENSE). Use, faça fork, publique, coloque num homelab que ninguém mais vai achar — esse é o trato.

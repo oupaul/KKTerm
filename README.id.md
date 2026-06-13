@@ -5,15 +5,15 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Workspace admin Windows native yang lupa dibangun oleh era AI-tools — terminal, SSH, SFTP, RDP/VNC, dashboard, dan AI yang membangun widget tool milikmu sendiri.</strong>
+  <strong>Satu jendela Windows native untuk terminal, SSH, SFTP, RDP/VNC, dan dashboard — plus AI yang membuatkan alat-alat kecilmu sendiri sesuai permintaan.</strong>
 </p>
 
 <p align="center">
-  <em>Karena taskbar kamu tidak seharusnya terlihat seperti mesin slot Vegas.</em>
+  <em>Karena taskbar-mu tidak seharusnya terlihat seperti mesin slot Las Vegas.</em>
 </p>
 
 <p align="center">
-  <sub>Dinamai dari <strong>乖乖 (Kuāi Kuāi)</strong>, camilan kelapa hijau yang ditaruh sysadmin Taiwan di atas server supaya perangkat mereka tetap nurut. Semoga app ini layak menempati raknya.</sub>
+  <sub>Dinamai dari <strong>乖乖 (Kuāi Kuāi)</strong>, camilan jagung hijau rasa kelapa yang ditaruh para sysadmin Taiwan di atas server agar berperilaku baik. Semoga aplikasi ini juga mendapat tempatnya di rak.</sub>
 </p>
 
 <p align="center">
@@ -38,9 +38,6 @@
   </a>
   <br />
   <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
-  <img src="https://img.shields.io/badge/built%20with-Tauri%20v2-FFC131?style=flat-square&logo=tauri" alt="Tauri v2" />
-  <img src="https://img.shields.io/badge/Rust-russh-orange?style=flat-square&logo=rust" alt="Rust" />
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React 19" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -63,66 +60,58 @@
 
 ---
 
-## Pitch-nya (45 detik)
+## Pitch dalam 45 detik
 
-Kamu seorang sysadmin / DevOps / homelab / vibe-coder. Sekarang kamu punya:
+Kamu seorang sysadmin / DevOps / penggemar homelab / vibe-coder. Saat ini kamu punya:
 
-- Satu terminal emulator
-- SSH client terpisah (dengan daftar profil yang butuh satu weekend buat dibangun)
-- SFTP client dari tahun 2007 yang entah kenapa masih terus dipakai
-- Remote Desktop di jendela yang selalu nyasar ke monitor yang salah
-- VNC viewer buat satu kotak Linux itu
-- Tab browser untuk admin UI router
-- Sesi `claude` / `codex` yang jalan di dev box remote dan putus setiap kali Wi-Fi bersin
-- Sticky note berisi password *(tenang, kita tidak akan bilang siapa-siapa)*
+- Sebuah emulator terminal
+- Klien SSH terpisah (dengan daftar profil yang butuh satu akhir pekan untuk dirakit)
+- Klien SFTP dari 2007 yang entah bagaimana masih ada
+- Remote Desktop di jendela yang selalu kamu kehilangan di monitor yang salah
+- Sebuah viewer VNC hanya demi satu mesin Linux itu
+- Satu tab browser untuk halaman admin router
+- Sebuah sesi `claude` / `codex` di mesin remote yang putus setiap kali Wi-Fi bersin
+- Secarik sticky note berisi kata sandi *(tenang, kami tak akan bilang)*
 
-**KKTerm adalah satu jendela untuk semua itu.** Native di Windows — *memang sengaja, sementara semua tools developer lain rilis untuk Mac duluan dan memperlakukan OS kamu seperti catatan kaki* — ditulis dengan Rust + Tauri v2, tersedia sebagai satu installer, dan tidak pernah lapor ke mana-mana.
+**KKTerm adalah satu jendela untuk semua itu.** Native di Windows — *sengaja, sementara dunia dev tools lainnya merilis mac dulu dan memperlakukan OS-mu seperti catatan kaki* — dalam satu installer yang menolak menelepon pulang.
 
-Plus beberapa hal yang belum kamu tahu kamu inginkan:
+Ditambah beberapa hal yang kamu tak tahu kamu inginkan:
 
-- Sebuah **Dashboard** tempat kamu bilang ke AI *"buatkan widget yang ping router saya setiap 30 detik"* dan langsung muncul, tersandbox, di gridmu.
-- **SSH pane yang otomatis attach ke sesi tmux bernama** supaya sesi remote `claude` / `codex` kamu bertahan dari setiap tantrum Wi-Fi yang dilempar laptopmu.
-- Sebuah **widget penggunaan AI Coding** yang menampilkan kuota Claude Code dan Codex kamu — jendela 5 jam, jendela mingguan, plan saat ini, email akun — di **Dashboard** dan di status bar, supaya kamu berhenti kaget kena tembok rate-limit jam 3 pagi.
-- Sebuah Module **Installer Helper** yang mendeteksi, memasang, memperbarui, menghapus, dan menjalankan katalog tool developer Windows yang dikurasi — Node, Python, Docker, WSL, CLI coding AI, dan utilitas kecil yang biasanya kamu buru lewat banyak tab browser.
-- Sebuah **server MCP built-in** (`kkterm-cli`) yang memungkinkan coding agent eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode) mengendalikan Workspace dan Dashboard kamu — list Connections, baca buffer terminal, place widget — lewat surface tool yang dikurasi dan di-gate dengan safety. AI-ke-AI, di mesin kamu, tanpa relay cloud.
-- Dua puluh satu **latar belakang canvas beranimasi** (iya, termasuk `matrix`) untuk dashboard, karena kami memang tidak malu-malu soal itu.
+- Sebuah **Dashboard** tempat kamu menyuruh AI *"buatkan widget yang ping router-ku tiap 30 detik"* lalu ia muncul, dalam sandbox-nya sendiri, di grid-mu.
+- **Panel SSH yang menyambung kembali ke sesi remote `claude` / `codex`-mu** setelah setiap amukan Wi-Fi, agar kerja enam jam selamat dari putusnya koneksi.
+- Sebuah **pengukur penggunaan AI** agar kamu berhenti menabrak tembok rate limit secara mengejutkan pukul 3 pagi.
+- Sebuah **Installer Helper** yang menemukan, memasang, memperbarui, dan menjalankan alat dev Windows yang biasanya kamu kejar lewat sepuluh tab browser.
+- **Dua puluh lima latar animasi** untuk dashboard (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
 
-Oh, dan asisten AI-nya bisa mengubah satu kalimat menjadi tool dashboard kecil yang benar-benar terus kamu pakai.
+Dan bagian terbaiknya: asisten AI bisa mengubah satu kalimat menjadi alat dashboard kecil yang benar-benar terus kamu pakai.
 
-> ⭐ **Kalau ini kedengarannya seperti app yang sudah kamu rencanakan ingin bangun selama enam tahun terakhir — star repo-nya supaya kami tahu ada yang memperhatikan. Ini benar-benar membantu.**
+> ⭐ **Kalau ini terdengar seperti aplikasi yang sudah enam tahun ingin kamu bangun — beri bintang ke repo-nya agar kami tahu ada yang memperhatikan. Ini sungguh membantu.**
+
+Punya pendapat tentang apa yang sebaiknya datang berikutnya? Gabung ke thread umpan balik publik:
+**[Apa yang sebaiknya diprioritaskan KKTerm untuk alur kerja admin Windows-first?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
 ## Kenapa "KKTerm"?
 
-Masuk ke data center mana saja di Taiwan dan lihat bagian atas rak. Dari pabrik TSMC, ruang kendali Taipei Metro, ruang server Cathay Bank, perangkat switching Chunghwa Telecom — kamu akan menemukan sekantong kecil 乖乖 (Kuāi Kuāi), camilan jagung rasa kelapa dari tahun 1960-an.
+Masuklah ke data center Taiwan mana pun dan lihat bagian atas rak. Melewati pabrik TSMC, ruang kendali Metro Taipei, ruang server bank Cathay, perangkat switching Chunghwa Telecom — kamu akan melihat kantong hijau kecil 乖乖 (Kuāi Kuāi), camilan jagung rasa kelapa dari era 1960-an.
 
-Namanya secara harfiah berarti **"jadilah baik"**, **"berperilaku"**. Tradisi IT-nya sederhana dan sangat serius:
+Namanya secara harfiah berarti **"jadilah baik"**, **"berperilakulah"**. Tradisi IT-nya sederhana dan sungguh-sungguh serius:
 
-- **Harus rasa hijau (kelapa).** Kuning (kari) artinya *bolos kerja*; merah (pedas) bikin server marah. Hijau saja.
-- **Harus belum kedaluwarsa.** Kuai Kuai basi justru merugikanmu. Para engineer rajin menggantinya.
-- **Harus terlihat.** Server harus tahu kalau itu ada.
+- **Harus hijau (kelapa).** Kuning (kari) berarti *hari ini di rumah saja*; merah (pedas) membuat server marah. Hanya hijau.
+- **Tidak boleh kedaluwarsa.** Kuai Kuai basi justru merugikanmu. Para insinyur rajin menggantinya.
+- **Harus terlihat.** Server harus tahu ia ada di sana.
 - **Jangan dimakan.** Kantong itu sedang bertugas.
 
-Beberapa sistem terbesar, paling membosankan, dan paling terobsesi dengan uptime di Asia dijalankan dengan sekantong puff jagung yang ditempel di chassis. Berhasil karena orang-orang yang merawatnya percaya itu berhasil — yang merupakan deskripsi paling jujur dari sebagian besar budaya IT.
+Beberapa sistem terbesar, paling membosankan, dan paling terobsesi pada uptime di Asia berjalan dengan sekantong jagung yang ditempel di sasis. Itu berhasil karena orang-orang yang merawatnya percaya itu berhasil, yang merupakan deskripsi luar biasa jujur tentang sebagian besar budaya IT.
 
-**KKTerm** adalah **Kuai Kuai Term** — workspace admin yang bercita-cita menjalankan tugas yang sama seperti camilan itu: duduk diam di samping mesin-mesin pentingmu dan membantu mereka berperilaku baik. Local-first. Tanpa telemetry. AI dengan approval-gate. Perangkat lunak yang membosankan dan bisa diandalkan.
+**KKTerm** adalah **Kuai Kuai Term** — ruang kerja admin yang mengincar pekerjaan yang sama dengan camilan itu: duduk diam di samping mesin-mesin pentingmu dan membantu mereka berperilaku baik. Local-first. Tanpa telemetri. AI dengan persetujuan. Jenis perangkat lunak yang membosankan tapi bisa diandalkan.
 
-Kami belum berhasil menyertakan kantong Kuai Kuai sungguhan dengan installer. Itu item v2.
+Kami belum berhasil menyertakan sekantong Kuai Kuai sungguhan bersama installer-nya. Itu item untuk v2.
 
 ---
 
-## Lihat Gerakannya
-
-<!--
-  TODO: Ganti placeholder ini dengan GIF demo yang nyata.
-  Rekomendasi:
-    - 5-10 detik, diputar berulang
-    - Tampilkan: buka Connection -> split pane -> upload SFTP -> AI mengusulkan perintah
-    - Target ~5 MB supaya GitHub me-render inline tanpa lazy-loading
-  Jalur yang disarankan: docs/assets/demo.gif
-  Kemudian ganti <img src=...> di bawah menjadi: src="docs/assets/demo.gif"
--->
+## Lihat ia bergerak
 
 <p align="center">
   <a href="https://github.com/ryantsai/KKTerm">
@@ -134,294 +123,148 @@ Kami belum berhasil menyertakan kantong Kuai Kuai sungguhan dengan installer. It
   </a>
 </p>
 
-<p align="center"><sub><em>(GIF demo ada di sini. Satu gambar bernilai seribu bullet point, dan kami kehabisan bullet point.)</em></sub></p>
+<p align="center"><sub><em>(GIF demo ada di sini. Satu gambar bernilai seribu poin, dan poin kami sudah habis.)</em></sub></p>
 
 ---
 
-## Kenapa Orang Membiarkannya Terbuka Sepanjang Hari
+## Satu jendela, setiap koneksi
 
-### Windows-first, memang sengaja
+| Kamu ingin… | KKTerm melakukannya |
+| --- | --- |
+| Buka shell lokal PowerShell / cmd / WSL | Terminal lokal, berdampingan |
+| SSH ke server | SSH dengan kunci, agent, kata sandi, jump host, dan port forwarding |
+| Jelajahi berkas di server itu | SFTP dari koneksi SSH — panel ganda, seret untuk transfer |
+| FTP ke NAS dari 2012 | FTP / FTPS di browser berkas yang sama |
+| Telnet ke perangkat purba | Ya, Telnet juga ada di dalamnya |
+| Bicara dengan port serial | Koneksi serial — pilih port COM dan baud |
+| Remote ke mesin Windows | Remote Desktop Microsoft asli, terintegrasi langsung |
+| VNC ke sebuah Pi | VNC, dirender langsung ke ruang kerja |
+| Buka UI web router | Tab browser tertanam dengan login tersimpan |
+| Pantau CPU host | Bilah status langsung dan dashboard yang kamu rakit sendiri |
 
-Lihat lanskap tooling developer 2026. Claude Code: rilis untuk mac/linux duluan, Windows adalah "pakai WSL." Codex CLI: sama. `gemini-cli`, separuh Homebrew, setiap TUI baru yang kinclong: mac/linux duluan, pengguna Windows mendapat komentar `# Windows: contributions welcome` di README dan skrip fish-completion yang tidak bisa dijalankan.
+Aplikasi yang sama. Jendela yang sama. Pintasan yang sama. Tema yang sama, yang semoga tak bikin matamu berdarah.
 
-Sementara itu, orang-orang yang benar-benar menjaga perusahaan tetap online — corporate IT, MSP, siapa pun yang menjalankan Hyper-V atau AD atau SCCM atau IIS atau domain controller yang lebih tua dari beberapa intern — duduk di depan mesin Windows bertanya-tanya kenapa setiap tools baru bersikap seolah OS mereka adalah gangguan.
+---
 
-**KKTerm adalah kebalikannya.** Kami membangun Windows native duluan, dan port macOS / Linux menyusul. Artinya kami bisa memanfaatkan Windows API yang benar-benar penting, bukan melapisinya dengan portability layer:
+## Kenapa orang membiarkannya terbuka seharian
 
-- **ConPTY** untuk shell lokal — pseudo-console Windows yang asli, bukan shim terjemahan. PowerShell, `cmd.exe`, distro WSL, semua di-hosting sebagai PTY proper dengan focus, resize, dan penanganan VT sequence yang sesuai perilaku platform.
-- **WebView2** untuk seluruh UI dan **Connections** URL yang ditanam — Chromium in-process menggunakan runtime sistem, yang merupakan salah satu alasan installer-nya kecil dan cepat dibuka.
-- **Microsoft RDP ActiveX (`mstscax.dll`)** untuk RDP — *yang asli dari Microsoft*. Control yang sama dengan Remote Desktop Connection (`mstsc.exe`). Bukan reimplementasi pihak ketiga, bukan FreeRDP dalam wrapper. Pengguna RDP akan merasakan bedanya dalam lima detik.
-- **Windows Credential Manager** untuk semua rahasia. Password SSH, password FTP, API key, kredensial URL Connection — semuanya hidup di OS keychain dan `credwiz.exe` bisa mengauditnya.
-- **NSIS current-user installer** dengan SHA-256 yang matching, tray menu native, Don't-Sleep power assertion, sampling CPU/RAM/jaringan host, Tauri context menu native dengan ikon PNG sungguhan, dialog Open/Save native. Tidak ada satu pun yang dipalsukan.
-- **WSL adalah shell kelas satu, bukan solusi darurat.** Jalankan Ubuntu di samping pane PowerShell di samping sesi SSH di samping **Tab** RDP dalam satu jendela yang sama.
+### Windows dulu, dengan sengaja
 
-Build untuk macOS dan Linux ada di roadmap dan akan mendapat perhatian yang sama. Tapi kalau kamu sudah lama menunggu seseorang membangun tools admin Windows yang *bagus* duluan bukan terakhir — ini dia dealnya.
+Lihatlah lanskap dev tools. Claude Code: mac/linux dulu, Windows itu "pakai WSL". Codex CLI: sama. Separuh tool baru yang berkilau dirilis mac dulu dan meninggalkan pengguna Windows sebuah komentar `# contributions welcome` dan skrip autocomplete yang tak jalan.
+
+Sementara itu, orang-orang yang benar-benar menjaga perusahaan tetap online — IT korporat, MSP, siapa pun yang mengelola domain controller yang lebih tua dari sebagian magang — duduk di mesin Windows sambil bertanya-tanya kenapa setiap tool baru memperlakukan OS mereka seperti gangguan.
+
+**KKTerm mengambil pilihan sebaliknya.** Kami membangun native Windows dulu, jadi hal yang dipedulikan orang Windows langsung berfungsi: Remote Desktop Microsoft yang *asli* (yang sama dengan `mstsc.exe`, bukan tiruan), shell PowerShell / cmd / WSL sungguhan, rahasia yang disimpan di Windows Credential Manager, ikon tray yang benar, menu dan dialog native. Build macOS dan Linux ada di roadmap dan akan mendapat perhatian yang sama. Tapi kalau kamu sudah menunggu seseorang membangun tool admin Windows yang *bagus* lebih dulu alih-alih terakhir — itulah kesepakatannya.
 
 ### Local-first artinya benar-benar lokal
 
-**Connections** yang tersimpan hidup dalam file SQLite di mesinmu. Password hidup di **Windows Credential Manager**, bukan di JSON di samping binary. App ini tidak menyertakan analitik, tidak melapor ke mana-mana saat startup, dan tidak butuh akun cloud untuk diluncurkan. Tidak ada "masuk untuk sync" karena tidak ada sync.
+Koneksi tersimpanmu ada di sebuah berkas di mesinmu. Kata sandi ada di Windows Credential Manager, bukan di berkas teks di sebelah aplikasi. KKTerm tidak mengirim analitik, tidak menelepon pulang saat dijalankan, dan tidak butuh akun cloud untuk dibuka. Tidak ada "masuk untuk sinkronisasi" karena tidak ada sinkronisasi.
 
-Kalau kabel jaringanmu kebakaran, KKTerm tetap bisa dibuka.
+Kalau kabel jaringanmu terbakar, KKTerm tetap terbuka.
 
-### Satu workspace, setiap jenis koneksi
+### Terminal yang tidak hilang akal
 
-| Kamu mau… | KKTerm punya |
-| --- | --- |
-| Buka shell PowerShell / cmd / WSL lokal | **Sessions** terminal lokal berbasis ConPTY |
-| SSH ke server | `russh` native dengan auth agent / key / password, alur trust host-key, ProxyJump, port forwarding |
-| Browse file di server itu | SFTP diluncurkan dari **Connection** SSH, dual-pane, transfer rekursif, chmod/chown |
-| FTP ke NAS dari tahun 2012 | **Connections** FTP / FTPS dalam browser bergaya SFTP yang sama |
-| Telnet ke perangkat jadul | Iya, oke, Telnet juga ada |
-| Bicara ke serial port | **Connection** kind Serial, COM port + baud, tanpa tooling tambahan |
-| Remote ke mesin Windows | RDP native via kontrol Microsoft ActiveX (yang asli, bukan tiruannya) |
-| VNC ke Raspberry Pi | Rust `vnc-rs` framebuffer yang dirender langsung ke workspace |
-| Buka web UI router | **URL Connection** WebView2 tertanam dengan pengisian kredensial |
-| Pantau CPU di host | Status bar langsung + modul **Dashboard** dengan widget yang bisa di-drag/resize |
+- Panel terbagi di dalam sebuah Tab.
+- Render cepat dan mulus, dengan scrollback yang bisa dicari.
+- Menyambung kembali benar-benar berarti *menyambung kembali* — sesi remote-mu melanjutkan dari posisinya, bukan "mulai dari nol dan berpura-pura satu jam terakhir tak pernah terjadi".
+- Berpindah Tab **tidak** membunuh Session. Menutup Tab, ya. Perbedaan ini dulu jadi perang agama internal; kami menang.
 
-Semuanya satu app yang sama. Satu jendela yang sama. Hotkey yang sama. Tema yang mudah-mudahan tidak bikin mata perih.
+### Asisten AI yang membangun alatmu
 
-### Terminal yang tidak gila-gilaan
+Kebanyakan demo "AI di terminalmu" berhenti di obrolan. Asisten KKTerm juga bisa membangun widget dashboard kecil yang awet, pas dengan cara kerjamu yang sebenarnya — dan menyimpan yang berbahaya di balik sakelar:
 
-- Split pane di dalam **Tab**.
-- Rendering xterm.js berakselerasi WebGL, dengan fallback yang mulus saat tidak bisa.
-- Pencarian scrollback.
-- SSH pane berbasis tmux yang bisa attach ke sesi per-pane yang stabil, jadi reconnect benar-benar berarti *menyambung kembali*, bukan "mulai dari awal dan pura-pura satu jam terakhir tidak pernah terjadi."
-- Berganti **Tab** **tidak** mematikan **Session**. Menutup **Tab** yang melakukannya. Perbedaan ini sempat jadi perang saudara secara internal; kami yang menang.
+- **Tentukan apa yang boleh ia sentuh** — nyalakan atau matikan seluruh keluarga alat (Dashboard / Connections / Live Sessions).
+- **Tentukan bagaimana ia bertanya** — `Prompt` (default, bertanya setiap kali) atau `Allow All` (kamu sudah dewasa, kamu menandatangani pernyataannya).
 
-### Asisten AI yang membangun tool-mu
+Apa pun yang terlihat seperti `rm -rf` ditandai berbahaya dan menunggu kata "ya" eksplisit dari manusia. AI tidak bisa diam-diam menjalankan perintah merusak hanya karena ada yang berbuat licik dengan prompt injection di sebuah halaman man.
 
-Sebagian besar demo "AI di terminal" berhenti di chat. Asisten KKTerm juga bisa membangun widget dashboard kecil yang tahan lama untuk cara kerjamu yang sebenarnya. Hal-hal berbahaya tetap dijaga di balik dua sakelar:
-
-- **Tool families** (Dashboard / Connections / Live Sessions) — toggle on atau off per kategori.
-- **Permission mode** di composer — `Prompt` (default, selalu tanya) atau `Allow All` (kamu sudah dewasa, kamu yang tanda tangan waivernya).
-
-Bicara ke OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, atau apapun yang kompatibel dengan OpenAI. API key masuk ke OS keychain. Model yang mengusulkan `rm -rf` diklasifikasikan sebagai berbahaya dan memerlukan persetujuan manusia yang eksplisit. AI tidak bisa diam-diam menjalankan perintah destruktif hanya karena seseorang pintar melakukan prompt injection di halaman man.
+Ia bicara dengan OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, atau endpoint apa pun yang kompatibel OpenAI. Kunci API-mu masuk ke keychain OS.
 
 ### Dashboard yang tidak berpura-pura jadi Grafana
 
-Modul **Dashboard** adalah grid drag/resize 12 kolom dari instance widget. Ini bukan untuk observabilitas petabyte — ini untuk "aku mau tombol untuk membuka lima app favorit dan panel yang menampilkan uptime SSH host, *di samping* chatku."
+Dashboard adalah grid widget yang bisa kamu seret dan ubah ukurannya. Ini bukan untuk observability skala petabyte — ini untuk "aku mau satu tombol untuk meluncurkan lima aplikasi favoritku dan satu panel yang menampilkan uptime host SSH-ku, *di samping* obrolanku".
 
-#### Widget Buatan AI — deskripsikan, langsung jadi
+#### Widget buatan AI — jelaskan, langsung jadi
 
-Ini bagian yang benar-benar membuat kami excited. Kamu tidak perlu pilih dari marketplace dan tidak perlu nulis JavaScript. Kamu **bilang ke asisten AI apa yang kamu mau**, dan dia membangun widget itu langsung di dashboardmu:
+Ini bagian yang benar-benar membuat kami bersemangat. Kamu tidak memilih dari marketplace dan tidak menulis JavaScript. Kamu **memberi tahu asisten AI apa yang kamu mau**, lalu ia membangun widget-nya langsung di dashboard-mu:
 
-> *"Tambahkan widget yang menampilkan 5 commit terakhir di repo utama saya sebagai daftar."*
-> *"Buatkan saya widget sticky-note yang menyimpan cheat sheet on-call saya."*
-> *"Buat widget yang ping router rumah saya setiap 30 detik dan tampilkan hijau/merah."*
-> *"Saya butuh stopwatch. Bebas ya soal styling-nya."*
+> *"Tambahkan widget yang menampilkan 5 commit terakhir repo utamaku sebagai daftar."*
+> *"Buatkan aku widget sticky-note untuk contekan jaga on-call-ku."*
+> *"Bangun widget yang ping router rumahku tiap 30 detik dan menampilkan hijau/merah."*
+> *"Aku butuh stopwatch. Kejutkan aku soal gayanya."*
 
-Dua jenis:
+Sebagian adalah panel tampilan sederhana (markdown, checklist, satu angka besar); sebagian menjalankan kode langsung di sandbox terisolasi yang kamu setujui. Setiap widget yang kamu simpan jadi milikmu — tersimpan dengan warna, ikon, dan judulnya sendiri, dan kamu bisa punya beberapa salinan dengan ukuran berbeda. Hapus satu dengan klik kanan saat keajaibannya memudar.
 
-- **Content widgets** — JSON deklaratif: markdown, kv list, checklist, satu stat besar. Aman secara konstruksi, tanpa skrip. Sebagian besar permintaan "aku hanya butuh ini di dashboard-ku" berakhir di sini.
-- **Script widgets** — JavaScript yang di-hosting di dalam sandbox `iframe srcdoc` yang terisolasi dengan izin yang eksplisit dan dideklarasikan (allowlist `network`, budget `pollSeconds`). AI yang menulis skrip, kamu yang menyetujui izin, widget berjalan di kotak yang tidak bisa menjangkau sisa app.
+#### Latar animasi dashboard (karena kami mau saja)
 
-Setiap widget yang kamu simpan adalah milikmu. Mereka bertahan di SQLite di samping **Connections**-mu, dengan preset visual mereka sendiri (`panel` / `ambient` / `hero`), warna aksen, ikon, dan judul. Beberapa instance dari widget yang sama bisa hidup berdampingan dengan ukuran dan gaya yang benar-benar berbeda. Hapus dengan klik kanan ketika magicnya sudah habis.
+Pilih satu suasana per tampilan dashboard dari **dua puluh lima** latar animasi canvas:
 
-#### Latar belakang dashboard beranimasi (karena kami memang mau)
-
-Dashboard punya dua puluh satu latar belakang canvas beranimasi yang bisa kamu pilih per **Dashboard View**:
-
-| Suasana | Latar Belakang |
+| Suasana | Latar |
 | --- | --- |
-| Tenang | `aurora`, `clouds`, `ocean`, `raindrops`, `snow`, `sakura`, `fireflies`, `bubbles`, `ricefield`, `lanterns` |
-| Luar Angkasa | `starfield`, `nebula` |
+| Tenang | `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
+| Antariksa | `starfield`, `nebula` |
 | Hangat | `embers`, `lava` |
 | Geek | `matrix`, `topo`, `synthwave` |
-| Ugal-ugalan | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti` |
+| Gelisah | `cyberpunk`, `taipei101`, `thunderstorm`, `confetti`, `particleCursor` |
 
-Semuanya berjalan di satu `requestAnimationFrame` bersama dan menghormati focus jendela, jadi biayanya hampir nol saat kamu ada di tempat lain. Pasangkan `matrix` dengan asisten AI untuk vibe yang terkesan "aku sangat produktif dan mungkin juga berada dalam film Wachowski." Atau pilih `ocean` dan terlihat seperti orang serius. Kami tidak menghakimi pilihan apapun.
+Mereka berhenti saat kamu di tempat lain, jadi nyaris tak memakan sumber daya. Padukan `matrix` dengan asisten AI-mu untuk suasana yang berkata "aku sangat produktif dan mungkin sedang berada di film Wachowski". Atau pilih `ocean` dan tampak seperti orang serius. Kami tidak menghakimi kedua pilihan itu.
 
-### Menjalankan agen coding AI di server, dengan benar
+### Jaga agar agen AI remote-mu tetap hidup
 
-Ini fitur kedua yang langsung disukai orang. Terminal SSH KKTerm bisa diluncurkan langsung ke **sesi tmux bernama** di host remote — secara default, friendly id yang auto-generated seperti `kkterm-cockpit001` yang bertahan saat reconnect:
+Ini fitur kedua yang membuat orang jatuh cinta. Terminal SSH KKTerm bisa langsung menjatuhkanmu ke sebuah **sesi tmux bernama** di host remote yang selamat dari penyambungan ulang:
 
-- Buka **Connection** SSH dengan tmux diaktifkan.
-- Di dalam pane, jalankan `claude`, `codex`, `gemini-cli`, `cursor-agent`, atau agen coding long-running apapun yang kamu suka. Mereka adalah app TUI full-screen; tmux persis tempat yang mereka inginkan.
-- Tutup laptop. Buka lagi. Pane diam-diam re-attach ke sesi tmux yang sama. Agen masih berjalan, masih punya scrollback-nya, masih di tengah-tengah apa yang sedang dilakukannya.
-- Gangguan jaringan di transport SSH? KKTerm melakukan bounded silent reattach attempt ke tmux id yang sama tanpa mengganggumu.
-- Mau asisten AI melihat apa yang dilakukan agen itu? "Tambahkan terminal buffer ke context" memanggil `capture_tmux_pane` via SSH dan menarik seluruh scrollback tmux — bukan hanya yang ada di layar, seluruh sesinya — ke dalam percakapan. Asisten lokal kamu kini bisa bernalar tentang pekerjaan agen remote-mu.
+- Buka koneksi SSH dengan tmux aktif lalu jalankan `claude`, `codex`, `gemini-cli`, `cursor-agent`, atau agen jangka panjang apa pun yang kamu suka.
+- Tutup laptop. Buka lagi. Panel menyambung kembali diam-diam — agennya masih berjalan, masih punya scrollback-nya, masih di tengah apa pun yang sedang dikerjakannya.
+- Jaringan tersendat? KKTerm menyambung kembali diam-diam ke sesi yang sama tanpa mengganggumu.
+- Mau bantuan asisten? "Tambahkan terminal buffer ke konteks" menarik seluruh sesi remote ke dalam percakapan, agar AI lokalmu bisa menalar apa yang sedang dikerjakan agen remote-mu.
 
-Kalau kamu pernah kehilangan sesi `claude` atau `codex` enam jam karena Wi-Fi hotel yang tidak stabil, fitur tunggal ini sudah melunasi harga app-nya. App-nya gratis. Fiturnya tetap worth it.
+Kalau kamu pernah kehilangan sesi `claude` atau `codex` enam jam gara-gara Wi-Fi hotel yang labil, fitur satu ini saja sudah menebus harga aplikasinya. (Aplikasinya gratis. Fiturnya tetap layak.)
 
-### Tahu berapa AI kamu yang tersisa
+### Tahu berapa sisa AI-mu
 
-Coding agent menagih per jendela plan, bukan per bulan. Claude Code punya jendela 5 jam dan jendela mingguan. Codex punya versinya sendiri. Keduanya bisa dengan senang hati melahap kuota kamu di background saat kamu lagi meeting.
+Agen coding menagih per jendela paket, bukan per bulan, dan mereka dengan senang hati melahap kuotamu saat kamu sedang rapat. **Pengukur penggunaan AI** menjaga itu tetap terlihat:
 
-Widget **Penggunaan AI Coding** menjaga itu tetap terlihat:
+- Widget dashboard yang menampilkan **Claude Code** dan **Codex** berdampingan: akun terhubung, paket, pemakaian di jendela saat ini dan minggu ini, waktu reset berikutnya.
+- Sebuah **indikator ringkas di bilah status** yang mencerminkan angka yang sama, sehingga bahkan dengan dashboard tertutup kamu bisa melihat sekilas apakah masih ada ruang sebelum refactoring besar berikutnya.
+- Ia memberitahumu lebih awal kalau kamu perlu login ulang — *sebelum* tugas panjang, bukan di tengahnya.
 
-- Widget Dashboard yang menampilkan **Claude Code** dan **Codex** berdampingan: akun yang terhubung, level plan, persen yang dipakai di jendela 5 jam saat ini, persen yang dipakai minggu ini, waktu reset berikutnya.
-- Indikator **status bar yang ringkas** yang memantulkan angka yang sama, jadi meski Dashboard ditutup kamu bisa lihat sekilas apakah masih ada ruang sebelum mulai refactor besar berikutnya.
-- Status auth ditampilkan langsung (`connected` / `expired` / `error`) supaya kamu tahu *sebelum* tugas panjang bahwa kamu perlu re-login, bukan di tengah-tengah.
-- Policy refresh menghormati rate limit; widget polling di tempo sendiri alih-alih menghantam API upstream tiap kali kamu lihat.
+### Biarkan AI lain mengemudikan KKTerm
 
-### Sebuah server MCP built-in — biarkan AI lain mengendalikan KKTerm
+KKTerm membawa server MCP-nya sendiri, agar agen coding eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode) bisa memakai ruang kerjamu seperti kamu — mendaftar koneksi, membuka satu, membaca buffer terminal, menempatkan widget di dashboard. AI ke AI, di mesinmu, tanpa relay cloud. Aksi yang mengubah dan lebih berisiko tetap di balik satu sakelar keamanan yang **mati** secara default.
 
-Terminal kamu juga tempat Claude Code, Codex, Copilot agent mode, Antigravity, dan sisa dunia yang ngobrol MCP ingin bekerja. Maka KKTerm membawa **server MCP stdio**-nya sendiri, [`kkterm-cli`](docs/MCP.md), yang membuka slice app yang dikurasi:
-
-- **Modul Workspace** (`kkterm.workspace.*`): list **Connections** tersimpan, buka Connection by id, list **Sessions** yang hidup, kirim input ke pane terminal, baca snapshot buffer.
-- **Modul Dashboard** (`kkterm.dashboard.*`): load state Dashboard, baca source AI-Created Widget, buat / update / hapus view, place / pindah / hapus widget instance, apply bulk layout.
-- **Sub-namespace berbahaya** (`kkterm.<module>.dangerous.*`): mengubah surface yang executable — bikin widget script, klik ke remote desktop, wipe Dashboard — di-gate di balik satu setting (`built_in_mcp_allow_all_dangerous`), default **mati**.
-
-`kkterm-cli` adalah forwarder tipis. Dia bicara stdio JSON-RPC ke MCP client kamu dan berkomunikasi dengan window KKTerm yang berjalan via Windows named pipe yang ter-authenticate per-launch. Saat KKTerm tertutup, `tools/list` tetap jalan (client bisa introspeksi surface), tapi `tools/call` mengembalikan error terstruktur `app_not_running` alih-alih melakukan apapun.
-
-Sambungkan ke client favorit kamu dan AI kamu sekarang pakai KKTerm seperti kamu:
-
-```json
-{
-  "mcpServers": {
-    "kkterm": { "command": "<path-ke-kkterm-cli>", "args": [] }
-  }
-}
-```
-
-Settings → AI Assistant → **Built-in MCP Server** punya dialog "Show config" satu klik dengan snippet JSON dan TOML pre-filled dengan path binary yang resolved, plus command `claude mcp add` / `codex mcp add` yang bisa di-copy.
+Pengaturan → AI Assistant → **Built-in MCP Server** punya dialog "Tampilkan konfig" sekali klik, sudah terisi, plus perintah `claude mcp add` / `codex mcp add` yang bisa disalin.
 
 ---
 
-## Cara Kerjanya
+## Apa yang bukan KKTerm
 
-```mermaid
-flowchart LR
-    User([You]) --> Shell[KKTerm Window<br/>Tauri v2 + React 19]
-    Shell --> Rail[Activity Rail]
-    Rail --> WS[Workspace Module]
-    Rail --> Dash[Dashboard Module]
-    Rail --> Inst[Installer Helper Module]
-    Rail -.-> FE[File Explorer<br/>planned]
-    Rail --> Set[Settings]
+Daftar singkat, karena kejujuran menumbuhkan kepercayaan:
 
-    WS --> Tabs[Tabs &amp; Panes]
-    Tabs --> Term[Terminal<br/>ConPTY / russh]
-    Tabs --> SFTP[SFTP / FTP]
-    Tabs --> Web[WebView2 URL]
-    Tabs --> RD[RDP / VNC]
+- **Bukan produk cloud.** Tanpa sinkronisasi, tanpa akun tim, tanpa tingkatan SaaS. Kalau suatu hari kamu melihat dialog "Masuk ke KKTerm", ada yang salah secara katastrofik.
+- **Tidak berpura-pura lintas platform.** Kami Windows-first dengan sengaja; macOS dan Linux ada di roadmap. Kalau kamu butuh tool mac-first hari ini, kamu punya ratusan pilihan. Kami sedang membangun yang sudah lama ditunggu para admin Windows dalam diam.
+- **Bukan agen AI otonom.** Asisten mengusulkan; manusia memutuskan. `Allow All` adalah pilihan yang kamu buat, bukan default.
+- **Bukan pengganti Grafana / Datadog.** Dashboard untuk permukaan kendali pribadi, bukan observability 10.000 host.
+- **Bukan IDE Kubernetes.** Ini ruang kerja admin yang berpusat pada terminal. Tolong jangan minta ia me-render chart Helm.
 
-    Shell -.calls.-> Rust[Rust Backend]
-    Rust --> SQLite[(SQLite<br/>Connections)]
-    Rust --> Keychain[(OS Keychain<br/>Secrets)]
-    Rust --> AI[AI Providers<br/>OpenAI-compat]
-
-    AI -. approval gate .-> Tabs
-
-    classDef local fill:#1f6feb,stroke:#1f6feb,color:#fff
-    classDef ai fill:#8a63d2,stroke:#8a63d2,color:#fff
-    class SQLite,Keychain local
-    class AI ai
-```
-
-Bentuk yang penting: data tersimpan yang tahan lama (**Connection**) terpisah dari state runtime langsung (**Session**), yang terpisah dari container UI (**Tab**). Menutup **Tab** mengakhiri **Session**. Berganti **Tab** tidak. Ini aturan yang menjaga app tetap waras.
+Kalau salah satu poin itu *dulunya* jadi penentu — wajar saja, sampai jumpa di v2.
 
 ---
 
-## Peta Fitur Saat Ini
+## Dapatkan KKTerm
 
-| Area | Sudah diimplementasikan hari ini |
-| --- | --- |
-| **Connections** | Pohon berbasis SQLite, folder/subfolder, pencarian, urutan drag/drop, rename, duplicate, hapus, **Quick Connect**, ikon kustom, pintasan rail yang disematkan/aktif |
-| **Terminal** | Shell lokal, SSH, Telnet, Serial, split pane, xterm.js + WebGL oportunistik, pencarian scrollback, direktori/skrip startup lokal |
-| **SSH** | `russh` native, auth agent/key/password, alur trust host-key, fallback SSH sistem opsional, ProxyJump, port forwarding, **sesi tmux auto-named (`kkterm-<scifi-name><n>`) dengan silent reattach saat transport blip** — sempurna untuk agen coding remote long-running (Claude Code, Codex, gemini-cli, dll.) |
-| **SFTP / FTP** | SFTP yang diluncurkan via SSH plus **Connections** FTP/FTPS, browser dual-pane, transfer rekursif, antrean/batalkan/bersihkan riwayat, konflik, properti, chmod/chown jika didukung |
-| **URL WebView** | **Sessions** URL WebView2 tertanam, toolbar navigasi, pengambilan favicon, metadata/isian kredensial website tersimpan, metadata partisi data |
-| **Remote Desktop** | RDP melalui Windows ActiveX dengan geometry-scoped overlay parking; VNC melalui `vnc-rs` framebuffer yang dirender di canvas workspace |
-| **Dashboard** | View yang tahan lama, instance widget, mode edit, drag/resize, App Launcher, **widget konten/skrip buatan AI** (JSON deklaratif atau iframe JS tersandbox dengan izin), preset / aksen / ikon / judul per-widget, **23 latar belakang canvas beranimasi** (aurora, clouds, ocean, raindrops, rainywindow, snow, sakura, fireflies, bubbles, ricefield, lanterns, starfield, nebula, embers, lava, matrix, topo, synthwave, cyberpunk, taipei101, thunderstorm, confetti, particleCursor) |
-| **AI Assistant** | Chat streaming, runtime kompatibel OpenAI, registri provider, klasifikasi keamanan proposal perintah, lampiran screenshot/context, **pembuatan widget Dashboard (konten + skrip tersandbox)**, **penangkapan pane tmux** sebagai context percakapan untuk sesi remote, tools manajemen **Connection**, dan tools **Session** langsung untuk terminal, RDP/VNC, dan SFTP/FTP |
-| **Penggunaan AI Coding** | **Widget Dashboard + indikator status bar** yang melacak penggunaan kuota **Claude Code** dan **Codex**: akun terhubung, level plan, persen jendela 5 jam dan mingguan, waktu reset berikutnya, status auth (`connected` / `expired` / `error`), policy refresh yang sadar rate-limit |
-| **Server MCP Built-in** | Server MCP stdio (`kkterm-cli`) yang membuka tools Workspace dan Dashboard yang dikurasi ke agen coding eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode); bridge named pipe ter-authenticate; sub-namespace `dangerous.*` per-Modul di balik satu toggle safety; dialog Settings dengan snippet JSON / TOML satu klik dan command `claude mcp add` / `codex mcp add` |
-| **Installer Helper** | Module Activity Rail untuk katalog tool developer Windows yang dibundel: mendeteksi tool terpasang, membandingkan versi terbaru, install/update/uninstall, mengecualikan tool dari Update all, streaming log command, dan menjalankan managed app yang didukung |
-| **Settings** | Umum, Tampilan, Kredensial, AI, SSH, Terminal, latar terminal, URL, RDP, VNC, Dashboard, Installer Helper, Tentang; font UI kustom; minimize-to-tray; Don't Sleep; backup/import |
-| **Lokalisasi** | UI i18next dengan sumber bahasa Inggris dan bundel lokal dinamis: zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi |
+**[Unduh installer Windows terbaru (.exe)](https://github.com/ryantsai/KKTerm/releases/latest)** lalu jalankan. Installer-nya saat ini **belum ditandatangani** — penandatanganan rilis ada di roadmap, jadi sampai saat itu antivirus-mu mungkin menatapmu tajam. Itu normal.
 
-### AI Providers
-
-OpenAI · Anthropic · OpenRouter · DeepSeek · Grok · Azure OpenAI · LiteLLM · GitHub Copilot · Ollama · NVIDIA · endpoint apapun yang kompatibel dengan OpenAI.
-
-Metadata provider ada di [`src/ai/providerRegistry/`](src/ai/providerRegistry/); adapter Rust ada di [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/). API key melewati OS keychain, tidak pernah SQLite.
-
----
-
-## Quick Start
-
-Yang kamu butuhkan:
-
-- **Windows** (platform yang didukung utama)
-- **Node.js + npm**
-- **Rust toolchain**
-- **Prasyarat Tauri v2 untuk Windows** termasuk **WebView2**
-
-```bash
-npm install
-npm run tauri dev
-```
-
-Itu seharusnya menghasilkan jendela native yang sungguhan. Kalau malah menghasilkan stack trace, silakan buat issue — kami suka repro yang bagus.
-
-### Pengecekan umum
-
-```bash
-npm run check                                              # TypeScript
-npm run build                                              # Vite build
-cargo check --manifest-path src-tauri/Cargo.toml           # Rust
-cargo test  --manifest-path src-tauri/Cargo.toml           # Rust tests
-```
-
-### Build installer Windows
-
-```bash
-npm run package:installer
-```
-
-Skrip installer menulis `artifacts/kkterm-<version>-windows-x64-setup.exe` dan file `.sha256` yang matching. Saat ini **belum ditandatangani** — penandatanganan rilis ada di roadmap, tapi sampai saat itu antivirus kamu mungkin akan menatap dengan tatapan serius. Itu normal.
-
----
-
-## Apa yang KKTerm Bukan
-
-Daftar singkat, karena kejujuran membangun kepercayaan:
-
-- **Bukan produk cloud.** Tidak ada sync, tidak ada akun tim, tidak ada tier SaaS. Kalau kamu pernah melihat dialog "Masuk ke KKTerm", ada yang salah secara katastrofis.
-- **Tidak berpura-pura lintas platform.** Kami Windows-first secara sengaja; macOS dan Linux ada di roadmap dan akan menggunakan shell Tauri v2 yang sama. Kalau kamu butuh tools mac-first hari ini, kamu punya ratusan pilihan. Kami sedang membangun yang selama ini diam-diam ditunggu oleh admin Windows.
-- **Bukan agen AI otonom.** Asisten mengusulkan; manusia yang memutuskan. `Allow All` adalah pilihan yang kamu buat, bukan default.
-- **Bukan pengganti Grafana / Datadog.** Dashboard ini untuk control surface personal, bukan observabilitas 10k host.
-- **Bukan Kubernetes IDE.** Ini adalah workspace admin yang mengutamakan terminal. Tolong jangan minta dia me-render Helm chart.
-
-Kalau ada dari itu yang *jadi dealbreaker* — tidak apa-apa, kita ketemu di v2.
-
----
-
-## Debugging Native
-
-Gunakan runtime Tauri yang sesungguhnya untuk validasi:
-
-```bash
-npm run tauri dev
-```
-
-Preview browser Vite berguna untuk beberapa inspeksi frontend, tapi **tidak** meng-hosting WebView2, ConPTY, RDP ActiveX, VNC framebuffer, keychain, atau permukaan menu native yang sesungguhnya. Kalau sebuah fitur menyentuh salah satu dari itu, validasi di runtime desktop yang asli.
-
-Pengguna VS Code: konfigurasi launch `Run KKTerm exe` memulai `src-tauri/target/debug/kkterm.exe` dengan `RUST_BACKTRACE=1`. Konfigurasi berpasangan `Attach KKTerm WebView2` memberikanmu DevTools di dalam host WebView2 yang sesungguhnya.
-
----
-
-## Batasan Saat Ini (iya, kami tahu)
-
-- Installer saat ini belum ditandatangani. Pemeriksaan update dinonaktifkan sampai penandatanganan rilis dikonfigurasi.
-- SFTP melalui ProxyJump belum didukung di jalur SFTP native.
-- Resume transfer file, sync/diff folder, archive/extract, dan pengeditan remote ditunda.
-- Impor SSH config sudah diimplementasikan tapi entri yang menghadap pengguna di Settings belum terekspos.
-- RDP dan VNC sedang dirilis; sinkronisasi clipboard/perangkat yang lebih kaya dan kontrol kualitas masih berkembang.
-- Build macOS dan Linux ada di roadmap. Mereka akan datang, dan akan dikerjakan dengan benar — tidak terburu-buru sebagai port "kami juga agak bisa di sana."
-- Asisten AI mengusulkan dan dapat mengoperasikan tools yang diaktifkan dalam batas izin yang dikonfigurasi — tolong jangan perlakukan dia sebagai robot tanpa pengawasan. Dia sebenarnya tidak tahu apa yang diinginkan CEO kamu.
+Mau build dari sumber atau berkontribusi? Semua yang kamu butuhkan ada di [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
 ## Roadmap (versi singkat)
 
 - Build macOS + Linux
-- Installer bertanda tangan + auto-update
-- SFTP melalui ProxyJump di jalur native
-- Resume transfer file, sync folder, archive/extract
-- Pengalihan clipboard/perangkat RDP yang lebih kaya
-- Lebih banyak widget **Dashboard** bawaan (dan skema publik untuk yang dibuat AI)
+- Installer bertanda tangan + pembaruan otomatis
+- Transfer berkas lebih bertenaga (lanjutkan, sinkron folder, arsip/ekstrak)
+- Berbagi clipboard dan perangkat Remote Desktop yang lebih kaya
+- Lebih banyak widget dashboard bawaan
 
 Versi lengkap dan sering diperbarui: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
@@ -429,44 +272,28 @@ Versi lengkap dan sering diperbarui: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Berkontribusi
 
-Kami sangat butuh bantuan. Sungguh. Bahkan hal kecil pun berarti:
+Kami akan senang sekali dibantu. Sungguh. Hal kecil pun penting:
 
-- **Coba dev build** dan buat issue ketika ada yang terasa aneh. "Rasanya aneh" adalah laporan bug yang sah; kami akan menggali bersama kamu.
-- **Terjemahkan satu lokal.** Bahasa Inggris adalah sumber kebenaran di [`src/i18n/locales/en.json`](src/i18n/locales/en.json); 12 lokal lainnya ada di sebelahnya dan dimuat sesuai permintaan. String yang tertunda dilacak per-key di bawah [`docs/localization_todo/`](docs/localization_todo/) — pilih satu, terjemahkan, hapus file-nya.
-- **Tambahkan widget Dashboard.** Widget bawaan ada di [`src/modules/dashboard/widgets/builtin/`](src/modules/dashboard/widgets/builtin/). Pilih ide kecil, kirim, pelajari polanya.
-- **Sempurnakan tool surface AI.** Adapter provider ada di [`src-tauri/src/ai/providers/`](src-tauri/src/ai/providers/); registri frontend ada di [`src/ai/providerRegistry/`](src/ai/providerRegistry/).
-- **Tingkatkan manual.** Dokumen pengguna akhir ada di [`docs/manual/`](docs/manual/). Satu bab per modul UI. Kalau kamu menggunakan sebuah fitur dan dokumennya tidak membantu, PR yang memperbaiki itu sangat berharga.
+- **Coba build dev** dan buka issue saat ada yang terasa janggal. "Rasanya janggal" adalah laporan bug yang sah; kami akan menggali bersamamu.
+- **Terjemahkan satu bahasa.** Bahasa Inggris adalah sumber kebenaran; tiga belas bahasa lain tinggal di sebelahnya.
+- **Tambahkan widget dashboard.** Ambil satu ide kecil, rilis, pelajari polanya.
+- **Perbaiki manual.** Kalau kamu memakai sebuah fitur dan dokumentasinya tak membantu, PR yang memperbaikinya berharga emas.
 
-Setup lengkap, tata letak proyek, checklist PR, dan daftar aturan "tolong jangan rusak ini" ada di [`CONTRIBUTING.md`](CONTRIBUTING.md). Highlights 30 detik:
-
-- **Baca [`CONTEXT.md`](CONTEXT.md) sebelum mengganti nama istilah yang menghadap pengguna.** **Connection**, **Session**, **Tab**, dan **Quick Connect** punya arti spesifik; tolong jangan melenceng.
-- **Setiap string yang terlihat pengguna melewati `t()`.** Tidak ada teks bahasa Inggris polos di JSX.
-- **Tidak ada frontend close hooks.** Close title-bar Tauri v2 sudah beberapa kali rusak oleh pola `onCloseRequested`. Kami akhirnya punya bentuk yang berfungsi; tolong jangan diperkenalkan kembali.
-- **Jalankan pengecekan** (`npm run check && npm run build && cargo check && cargo test`) sebelum membuka PR.
-
-Mencari titik masuk? Filter issue terbuka dengan [`good first issue`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) atau [`help wanted`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). Kalau belum ada yang ditag, buat issue yang mendeskripsikan apa yang ingin kamu kerjakan dan kami akan membantu menentukan cakupannya.
+Penyiapan lengkap, struktur proyek, dan checklist PR ada di [`CONTRIBUTING.md`](CONTRIBUTING.md). Mencari titik masuk? Saring issue terbuka dengan [`good first issue`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) atau [`help wanted`](https://github.com/ryantsai/KKTerm/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
 
 ---
 
-## Dokumentasi Proyek
+## Dokumen proyek
 
-- [Konteks produk](CONTEXT.md) — bahasa domain yang harus kamu cocokkan
+- [Konteks produk](CONTEXT.md) — bahasa domain yang harus kamu ikuti
 - [Arsitektur](docs/ARCHITECTURE.md) — peta modul, di mana menaruh kode baru
 - [Roadmap](docs/ROADMAP.md)
 - [Arsitektur Dashboard](docs/DASHBOARD.md)
-- [Panduan AI provider](docs/AI_PROVIDERS.md)
-- [Catatan performa](docs/PERFORMANCE.md)
-- [Catatan rilis dan gates](docs/RELEASE.md)
+- [Panduan penyedia AI](docs/AI_PROVIDERS.md)
 
 ---
 
-## Stack
-
-Rust · Tauri v2 · React 19 · TypeScript · Vite · Tailwind CSS · Zustand · xterm.js · SQLite · WebView2 · `russh` · `russh-sftp` · `vnc-rs` · `suppaftp` · OS keychain storage.
-
----
-
-## Riwayat Star
+## Riwayat bintang
 
 <a href="https://www.star-history.com/#ryantsai/KKTerm&Date">
   <picture>
@@ -476,12 +303,12 @@ Rust · Tauri v2 · React 19 · TypeScript · Vite · Tailwind CSS · Zustand ·
   </picture>
 </a>
 
-Kalau kamu sudah sampai sejauh ini dan belum bintangin — apa yang kamu tunggu, undangan pribadi? Anggap ini sebagai undangan pribadinya.
+Kalau kamu sudah sampai sejauh ini dan belum memberi bintang — tunggu apa lagi, undangan pribadi? Anggap ini undangan pribadinya.
 
-⭐ **[Bintangi KKTerm di GitHub](https://github.com/ryantsai/KKTerm)** — butuh satu klik dan membuat minggu maintainer-nya jadi lebih bermakna. Anggap saja sebagai 乖乖 digital di raknya.
+⭐ **[Beri bintang KKTerm di GitHub](https://github.com/ryantsai/KKTerm)** — cukup satu klik dan membuat sepekan penuh sang maintainer cerah. Anggap saja 乖乖 digital di rak.
 
 ---
 
 ## Lisensi
 
-MIT. Lihat [LICENSE](LICENSE). Gunakan, fork, kirim, taruh di homelab yang tidak bisa ditemukan siapapun — begitulah dealnya.
+MIT. Lihat [LICENSE](LICENSE). Pakai, fork, rilis, taruh di homelab yang takkan ditemukan orang lain — itulah kesepakatannya.
