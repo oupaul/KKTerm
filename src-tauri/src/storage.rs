@@ -2564,6 +2564,19 @@ fn next_connection_sort_order(
     }
 }
 
+fn next_root_connection_sort_order_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<i64, String> {
+    connection
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM connections WHERE folder_id IS NULL AND workspace_id = ?1",
+            params![workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(to_storage_error)
+}
+
 fn next_folder_sort_order(
     connection: &SqliteConnection,
     parent_folder_id: Option<&str>,
@@ -2585,6 +2598,19 @@ fn next_folder_sort_order(
             )
             .map_err(to_storage_error)
     }
+}
+
+fn next_root_folder_sort_order_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<i64, String> {
+    connection
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM connection_folders WHERE parent_folder_id IS NULL AND workspace_id = ?1",
+            params![workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(to_storage_error)
 }
 
 fn reorder_folder_ids(
@@ -2611,12 +2637,60 @@ fn reorder_folder_ids(
     Ok(())
 }
 
+fn reorder_root_folder_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+    moved_folder: Option<(&str, usize)>,
+) -> Result<(), String> {
+    let mut folder_ids = list_root_folder_ids_for_workspace(connection, workspace_id)?;
+    if let Some((folder_id, target_index)) = moved_folder {
+        folder_ids.retain(|id| id != folder_id);
+        let target_index = target_index.min(folder_ids.len());
+        folder_ids.insert(target_index, folder_id.to_string());
+    }
+
+    for (index, folder_id) in folder_ids.iter().enumerate() {
+        connection
+            .execute(
+                "UPDATE connection_folders SET sort_order = ?1 WHERE id = ?2",
+                params![index as i64, folder_id],
+            )
+            .map_err(to_storage_error)?;
+    }
+
+    Ok(())
+}
+
 fn reorder_connection_ids(
     connection: &SqliteConnection,
     folder_id: Option<&str>,
     moved_connection: Option<(&str, usize)>,
 ) -> Result<(), String> {
     let mut connection_ids = list_connection_ids_for_folder(connection, folder_id)?;
+    if let Some((connection_id, target_index)) = moved_connection {
+        connection_ids.retain(|id| id != connection_id);
+        let target_index = target_index.min(connection_ids.len());
+        connection_ids.insert(target_index, connection_id.to_string());
+    }
+
+    for (index, connection_id) in connection_ids.iter().enumerate() {
+        connection
+            .execute(
+                "UPDATE connections SET sort_order = ?1 WHERE id = ?2",
+                params![index as i64, connection_id],
+            )
+            .map_err(to_storage_error)?;
+    }
+
+    Ok(())
+}
+
+fn reorder_root_connection_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+    moved_connection: Option<(&str, usize)>,
+) -> Result<(), String> {
+    let mut connection_ids = list_root_connection_ids_for_workspace(connection, workspace_id)?;
     if let Some((connection_id, target_index)) = moved_connection {
         connection_ids.retain(|id| id != connection_id);
         let target_index = target_index.min(connection_ids.len());
@@ -2666,6 +2740,44 @@ fn list_connection_ids_for_folder(
             .collect::<Result<Vec<_>, _>>()
             .map_err(to_storage_error)
     }
+}
+
+fn list_root_folder_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<Vec<String>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id
+             FROM connection_folders
+             WHERE parent_folder_id IS NULL AND workspace_id = ?1
+             ORDER BY sort_order, name",
+        )
+        .map_err(to_storage_error)?;
+    statement
+        .query_map(params![workspace_id], |row| row.get::<_, String>(0))
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
+}
+
+fn list_root_connection_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<Vec<String>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id
+             FROM connections
+             WHERE folder_id IS NULL AND workspace_id = ?1
+             ORDER BY sort_order, name",
+        )
+        .map_err(to_storage_error)?;
+    statement
+        .query_map(params![workspace_id], |row| row.get::<_, String>(0))
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
 }
 
 fn get_connection_by_id(

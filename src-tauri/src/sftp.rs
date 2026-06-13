@@ -1026,11 +1026,28 @@ pub struct CopyLocalPathRequest {
 
 pub fn copy_local_path(request: CopyLocalPathRequest) -> Result<SftpTransferResult, String> {
     let source = PathBuf::from(&request.source_path);
+    let source_metadata = fs::symlink_metadata(&source)
+        .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+    let source_canonical = fs::canonicalize(&source)
+        .map_err(|error| format!("cannot resolve {}: {error}", source.display()))?;
     let destination_directory = resolve_local_directory(Some(&request.destination_directory))?;
+    let destination_canonical = fs::canonicalize(&destination_directory).map_err(|error| {
+        format!(
+            "cannot resolve destination {}: {error}",
+            destination_directory.display()
+        )
+    })?;
     let name = local_path_name(&source)?;
     let target = destination_directory.join(&name);
-    if target == source {
+    if target.exists()
+        && fs::canonicalize(&target)
+            .map(|target_canonical| target_canonical == source_canonical)
+            .unwrap_or(false)
+    {
         return Err("source and destination are the same".to_string());
+    }
+    if source_metadata.is_dir() && destination_canonical.starts_with(&source_canonical) {
+        return Err("cannot copy a folder into itself or one of its subfolders".to_string());
     }
     let mut files = 0u64;
     let mut folders = 0u64;
@@ -1906,6 +1923,29 @@ mod tests {
             Ok(SftpOverwriteBehavior::Overwrite)
         ));
         assert!(normalize_sftp_overwrite_behavior(Some("skip")).is_err());
+    }
+
+    #[test]
+    fn local_copy_rejects_directory_into_its_descendant() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time is after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("kkterm-local-copy-{unique}"));
+        let source = root.join("source");
+        let child = source.join("child");
+        fs::create_dir_all(&child).expect("test directories are created");
+
+        let result = copy_local_path(CopyLocalPathRequest {
+            source_path: display_local_path(&source),
+            destination_directory: display_local_path(&child),
+        });
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(matches!(
+            result,
+            Err(message) if message.contains("cannot copy a folder into itself")
+        ));
     }
 
     fn sftp_request() -> StartSftpSessionRequest {
