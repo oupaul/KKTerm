@@ -166,17 +166,27 @@ async function svgMenuIconToImage(
 const MENU_ICON_SIZE = 16;
 
 const macosTemplateNativeIconsBySvg = new Map<string, MenuIcon>([
+  [nativeMenuIcons.arrowDown, "GoRight"],
   [nativeMenuIcons.arrowLeft, "GoLeft"],
   [nativeMenuIcons.arrowRight, "GoRight"],
+  [nativeMenuIcons.arrowUp, "GoRight"],
   [nativeMenuIcons.camera, "QuickLook"],
   [nativeMenuIcons.download, "Path"],
   [nativeMenuIcons.folderPlus, "Add"],
+  [nativeMenuIcons.keyRound, "LockUnlocked"],
   [nativeMenuIcons.layoutDashboard, "IconView"],
+  [nativeMenuIcons.panelRight, "ColumnView"],
+  [nativeMenuIcons.pencil, "Advanced"],
+  [nativeMenuIcons.pin, "SmartBadge"],
+  [nativeMenuIcons.pinOff, "SmartBadge"],
   [nativeMenuIcons.plus, "Add"],
   [nativeMenuIcons.rotateCcw, "Refresh"],
   [nativeMenuIcons.save, "Path"],
   [nativeMenuIcons.scanLine, "QuickLook"],
+  [nativeMenuIcons.server, "Network"],
+  [nativeMenuIcons.settings, "PreferencesGeneral"],
   [nativeMenuIcons.squarePlus, "Add"],
+  [nativeMenuIcons.terminal, "GoRight"],
   [nativeMenuIcons.trash, "Remove"],
   [nativeMenuIcons.x, "Remove"],
 ]);
