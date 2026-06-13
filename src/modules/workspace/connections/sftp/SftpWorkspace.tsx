@@ -1,5 +1,4 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
-import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { Terminal } from "lucide-react";
 import { DIcon } from "../../../../app/ui/dialog";
@@ -1050,13 +1049,6 @@ export function SftpWorkspace({
               <Terminal size={15} />
               {t("sftp.terminal")}
             </button>
-          ) : null}
-          {!inline ? (
-            <ScreenshotMenu
-              dataTutorialId="workspace.screenshotMenu"
-              targetLabel={t("sftp.screenshotTarget", { title: tab.title })}
-              targetRef={workspaceRef}
-            />
           ) : null}
         </div>
       </div>

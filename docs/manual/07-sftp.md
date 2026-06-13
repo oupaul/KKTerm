@@ -54,7 +54,7 @@ Double-click affordance hint: `sftp.doubleClickToOpenFile`. Remote symbolic link
 
 ## Transferring files
 
-Use drag/drop between panes or the **center transfer arrows** (`sftp.upload` to the remote pane, `sftp.download` to the local pane). In the Tauri desktop runtime, dropping local files or folders from the operating system onto the remote Pane also queues uploads to the current remote path. Standalone SFTP panes expose a `sftp.terminal` action that reopens the parent SSH terminal in the originating Pane; SFTP popups opened from an active SSH terminal omit that action because closing the popup returns to the parent terminal. Inline SFTP popups also omit the screenshot toolbar action, while standalone SFTP panes keep the screenshot target `sftp.screenshotTarget`.
+Use drag/drop between panes or the **center transfer arrows** (`sftp.upload` to the remote pane, `sftp.download` to the local pane). In the Tauri desktop runtime, dropping local files or folders from the operating system onto the remote Pane also queues uploads to the current remote path. Standalone SFTP panes expose a `sftp.terminal` action that reopens the parent SSH terminal in the originating Pane; SFTP popups opened from an active SSH terminal omit that action because closing the popup returns to the parent terminal. The SFTP browser and File Explorer (`localFiles`) do not show a screenshot / send-to-AI toolbar action.
 
 Tutorial targets: `sftp.upload`, `sftp.download`, `sftp.terminal`.
 
@@ -93,5 +93,3 @@ Open via the context menu's Get Info (`sftp.getInfo`). Dialog `sftp.sftpProperti
 - Save: `sftp.save`.
 
 Item-kind labels for selection and properties: `sftp.folder`, `sftp.file`, `sftp.symlink`. Generic delete-button label: `sftp.deleteLabel`. Transfer labels in summaries: `sftp.transfer`, `sftp.transferUpload`, `sftp.transferDownload`. External file fallthrough indicator: `sftp.extFile`.
-
-Screenshot targeting label (used by [14-screenshots.md](14-screenshots.md)): `sftp.screenshotTarget`.
