@@ -1,4 +1,6 @@
 import { isTauriRuntime } from "./tauri";
+import { isMacPlatform } from "./platform";
+import { nativeMenuIcons } from "./nativeMenuIcons";
 import {
   normalizeNativeContextMenuItems,
   type NativeContextMenuItem,
@@ -143,6 +145,11 @@ async function svgMenuIconToImage(
   svg: string,
   imageFactory: TauriImageFactory,
 ) {
+  const macosTemplateIcon = macosTemplateIconForSvg(svg);
+  if (macosTemplateIcon) {
+    return macosTemplateIcon;
+  }
+
   const cacheKey = `${MENU_ICON_SIZE}:${svg}`;
   const cachedIcon = rasterizedIconCache.get(cacheKey);
   if (cachedIcon) {
@@ -157,6 +164,26 @@ async function svgMenuIconToImage(
 }
 
 const MENU_ICON_SIZE = 16;
+
+const macosTemplateNativeIconsBySvg = new Map<string, MenuIcon>([
+  [nativeMenuIcons.arrowLeft, "GoLeft"],
+  [nativeMenuIcons.arrowRight, "GoRight"],
+  [nativeMenuIcons.camera, "QuickLook"],
+  [nativeMenuIcons.download, "Path"],
+  [nativeMenuIcons.folderPlus, "Add"],
+  [nativeMenuIcons.layoutDashboard, "IconView"],
+  [nativeMenuIcons.plus, "Add"],
+  [nativeMenuIcons.rotateCcw, "Refresh"],
+  [nativeMenuIcons.save, "Path"],
+  [nativeMenuIcons.scanLine, "QuickLook"],
+  [nativeMenuIcons.squarePlus, "Add"],
+  [nativeMenuIcons.trash, "Remove"],
+  [nativeMenuIcons.x, "Remove"],
+]);
+
+function macosTemplateIconForSvg(svg: string) {
+  return isMacPlatform() ? macosTemplateNativeIconsBySvg.get(svg) : undefined;
+}
 
 export function svgToDataUrl(svg: string) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

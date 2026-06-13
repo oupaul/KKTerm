@@ -20,3 +20,14 @@ test("native context menu rasterizer passes PNG bytes to Tauri Image.fromBytes",
   assert.match(source, /canvasToPngBytes/);
   assert.match(source, /imageFactory\.fromBytes\(pngBytes\)/);
 });
+
+test("native context menu uses macOS template icons for matching command glyphs", async () => {
+  const source = await readFile(
+    new URL("../src/lib/nativeContextMenu.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /macosTemplateIconForSvg/);
+  assert.match(source, /\[nativeMenuIcons\.plus,\s*"Add"\]/);
+  assert.match(source, /\[nativeMenuIcons\.squarePlus,\s*"Add"\]/);
+});
