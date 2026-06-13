@@ -1,11 +1,20 @@
-import { ArrowDown, ChevronDown, FolderPlus, History, Pencil, RefreshCw, Trash2 } from "lucide-react";
+// SFTP file pane — Apple/Finder symmetric dual-pane presentation.
+// Breadcrumb navigation + List/Gallery views, sortable columns, inline rename,
+// editable path with recent-paths history, drag-to-transfer. All data flows in
+// through props; this file owns only local view/sort/edit UI state.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import i18next from "../../../../i18n/config";
+import { DIcon } from "../../../../app/ui/dialog";
 import type { FileEntry } from "../../../../types";
 import { FileTypeIcon } from "./fileIcons";
-import type { FilePaneSide, FileSortKey } from "./types";
+import type { FilePaneSide } from "./types";
+
+type SortKey = "name" | "size" | "date";
+type SortState = { key: SortKey; dir: "asc" | "desc" };
+type ViewMode = "list" | "gallery";
+
+const LIST_GRID = "minmax(0,1fr) 88px 128px";
 
 export function FilePane({
   side,
@@ -45,11 +54,7 @@ export function FilePane({
   onPathSubmit?: (path: string) => void | Promise<void>;
   recentPaths?: string[];
   onSelectionChange?: (fileNames: string[]) => void;
-  onContextMenuRequest?: (
-    side: FilePaneSide,
-    fileNames: string[],
-    event: ReactMouseEvent,
-  ) => void;
+  onContextMenuRequest?: (side: FilePaneSide, fileNames: string[], event: ReactMouseEvent) => void;
   onDropTransfer?: (targetSide: FilePaneSide, fileNames: string[]) => void;
   forceDropTarget?: boolean;
   renameRequest?: { side: FilePaneSide; name: string; requestId: number };
@@ -62,16 +67,14 @@ export function FilePane({
   const [editingName, setEditingName] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [pathDraft, setPathDraft] = useState(path);
+  const [editingPath, setEditingPath] = useState(false);
   const [recentMenuOpen, setRecentMenuOpen] = useState(false);
-  const [sortKey, setSortKey] = useState<FileSortKey>("name");
+  const [sort, setSort] = useState<SortState>({ key: "name", dir: "asc" });
+  const [view, setView] = useState<ViewMode>("list");
   const [isDropTarget, setIsDropTarget] = useState(false);
-  const hasMutationActions = Boolean(onCreateFolder || onRenameSelected || onDeleteSelected);
-  const selectedFile = files.find((file) => file.name === selectedNames[0]);
-  const canRenameSelected = Boolean(
-    onRenameSelected && selectedFile && selectedNames.length === 1 && !isLoading,
-  );
-  const sortedFiles = useMemo(() => sortFileEntries(files, sortKey), [files, sortKey]);
-  const nextSortKey: FileSortKey = sortKey === "name" ? "date" : "name";
+
+  const sortedFiles = useMemo(() => sortFileEntries(files, sort), [files, sort]);
+  const crumbs = useMemo(() => buildCrumbs(side, path), [side, path]);
   const pathSuggestions = useMemo(
     () => buildFolderPathSuggestions({ side, currentPath: path, draft: pathDraft, files }),
     [files, path, pathDraft, side],
@@ -79,13 +82,13 @@ export function FilePane({
 
   useEffect(() => {
     setPathDraft(path);
+    setEditingPath(false);
   }, [path]);
 
   useEffect(() => {
     if (!editingName) {
       return;
     }
-
     window.requestAnimationFrame(() => {
       renameInputRef.current?.focus();
       renameInputRef.current?.select();
@@ -103,44 +106,29 @@ export function FilePane({
     if (!renameRequest || renameRequest.side !== side || isLoading) {
       return;
     }
-
     const requestedFile = files.find((file) => file.name === renameRequest.name);
     if (!requestedFile || !onRenameSelected) {
       return;
     }
-
     onSelectionChange?.([requestedFile.name]);
     renameCanceledRef.current = false;
     setEditingName(requestedFile.name);
     setRenameDraft(requestedFile.name);
   }, [files, isLoading, onRenameSelected, onSelectionChange, renameRequest, side]);
 
-  function beginRename(targetName = selectedFile?.name) {
-    if (!targetName) {
-      return;
-    }
-
-    renameCanceledRef.current = false;
-    setEditingName(targetName);
-    setRenameDraft(targetName);
-  }
-
   function selectFile(fileName: string, event?: ReactMouseEvent | KeyboardEvent<HTMLDivElement>) {
     if (isLoading) {
       return;
     }
-
     if (event?.shiftKey && lastSelectedNameRef.current) {
       const currentIndex = sortedFiles.findIndex((file) => file.name === fileName);
       const lastIndex = sortedFiles.findIndex((file) => file.name === lastSelectedNameRef.current);
       if (currentIndex >= 0 && lastIndex >= 0) {
-        const [start, end] =
-          currentIndex < lastIndex ? [currentIndex, lastIndex] : [lastIndex, currentIndex];
+        const [start, end] = currentIndex < lastIndex ? [currentIndex, lastIndex] : [lastIndex, currentIndex];
         onSelectionChange?.(sortedFiles.slice(start, end + 1).map((file) => file.name));
         return;
       }
     }
-
     if (event?.ctrlKey || event?.metaKey) {
       const nextNames = selectedNames.includes(fileName)
         ? selectedNames.filter((name) => name !== fileName)
@@ -149,7 +137,6 @@ export function FilePane({
       onSelectionChange?.(nextNames);
       return;
     }
-
     lastSelectedNameRef.current = fileName;
     onSelectionChange?.([fileName]);
   }
@@ -158,12 +145,10 @@ export function FilePane({
     if (!editingName) {
       return;
     }
-
     if (renameCanceledRef.current) {
       renameCanceledRef.current = false;
       return;
     }
-
     const nextName = renameDraft.trim();
     const currentName = editingName;
     if (!nextName || nextName === currentName) {
@@ -171,7 +156,6 @@ export function FilePane({
       setRenameDraft("");
       return;
     }
-
     await onRenameSelected?.(currentName, nextName);
     setEditingName(null);
     setRenameDraft("");
@@ -185,17 +169,28 @@ export function FilePane({
 
   async function commitPathDraft(value = pathDraft) {
     const nextPath = value.trim();
+    setEditingPath(false);
     if (!nextPath || nextPath === path || isLoading) {
       setPathDraft(path);
       return;
     }
-
     setRecentMenuOpen(false);
     await onPathSubmit?.(nextPath);
   }
 
-  function dragPayloadFor(fileName: string) {
-    return selectedNames.includes(fileName) ? selectedNames : [fileName];
+  function toggleSort(key: SortKey) {
+    setSort((current) =>
+      current.key === key
+        ? { key, dir: current.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: "asc" },
+    );
+  }
+
+  function navigateToCrumb(crumbPath: string) {
+    if (isLoading || !onPathSubmit || crumbPath === path) {
+      return;
+    }
+    void onPathSubmit(crumbPath);
   }
 
   function handleDragStart(fileName: string, event: ReactDragEvent<HTMLDivElement>) {
@@ -203,21 +198,16 @@ export function FilePane({
       event.preventDefault();
       return;
     }
-
-    const names = dragPayloadFor(fileName);
+    const names = selectedNames.includes(fileName) ? selectedNames : [fileName];
     onSelectionChange?.(names);
     event.dataTransfer.effectAllowed = "copy";
-    event.dataTransfer.setData(
-      "application/x-kkterm-sftp-items",
-      JSON.stringify({ side, names }),
-    );
+    event.dataTransfer.setData("application/x-kkterm-sftp-items", JSON.stringify({ side, names }));
   }
 
   function handleDragOver(event: ReactDragEvent<HTMLDivElement>) {
     if (!Array.from(event.dataTransfer.types).includes("application/x-kkterm-sftp-items")) {
       return;
     }
-
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
     setIsDropTarget(true);
@@ -226,11 +216,11 @@ export function FilePane({
   function handleDrop(event: ReactDragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDropTarget(false);
-
     try {
-      const payload = JSON.parse(
-        event.dataTransfer.getData("application/x-kkterm-sftp-items"),
-      ) as { side?: FilePaneSide; names?: string[] };
+      const payload = JSON.parse(event.dataTransfer.getData("application/x-kkterm-sftp-items")) as {
+        side?: FilePaneSide;
+        names?: string[];
+      };
       if (payload.side && payload.side !== side && payload.names?.length) {
         onDropTransfer?.(side, payload.names);
       }
@@ -239,40 +229,118 @@ export function FilePane({
     }
   }
 
+  function renderRowName(file: FileEntry) {
+    if (editingName === file.name) {
+      return (
+        <input
+          aria-label={t("sftp.renameFileAria", { name: file.name })}
+          className="sftp-rename-input"
+          onBlur={() => void commitRename()}
+          onChange={(event) => setRenameDraft(event.currentTarget.value)}
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              event.currentTarget.blur();
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              cancelRename();
+            }
+          }}
+          ref={renameInputRef}
+          value={renameDraft}
+        />
+      );
+    }
+    return <span>{file.name}</span>;
+  }
+
+  function rowHandlers(file: FileEntry, isSelected: boolean) {
+    return {
+      draggable: !isLoading && editingName !== file.name,
+      onClick: (event: ReactMouseEvent<HTMLDivElement>) => {
+        if (!isLoading) {
+          selectFile(file.name, event);
+        }
+      },
+      onDoubleClick: () => {
+        if (!isLoading && file.kind === "folder") {
+          onOpenFolder?.(file.name);
+        }
+      },
+      onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => {
+        if (isLoading) {
+          return;
+        }
+        event.stopPropagation();
+        const names = isSelected ? selectedNames : [file.name];
+        onContextMenuRequest?.(side, names, event);
+      },
+      onDragStart: (event: ReactDragEvent<HTMLDivElement>) => handleDragStart(file.name, event),
+      onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+        if ((event.key === "Enter" || event.key === " ") && !isLoading) {
+          event.preventDefault();
+          selectFile(file.name, event);
+          if (event.key === "Enter" && file.kind === "folder") {
+            onOpenFolder?.(file.name);
+          }
+        }
+      },
+    };
+  }
+
+  const isEmpty = !isLoading && !status && sortedFiles.length === 0;
+
   return (
-    <article
-      className="file-pane"
+    <section
+      className="sftp-pane"
       data-sftp-pane-side={side}
+      data-tutorial-id={side === "local" ? "sftp.localPane" : "sftp.remotePane"}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setRecentMenuOpen(false);
         }
       }}
-      data-tutorial-id={side === "local" ? "sftp.localPane" : "sftp.remotePane"}
+      onKeyDown={(event) => {
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          onDeleteSelected &&
+          !editingName &&
+          !editingPath &&
+          selectedNames.length > 0 &&
+          !isLoading
+        ) {
+          event.preventDefault();
+          onDeleteSelected();
+        }
+      }}
     >
-      <header>
-        <div className="file-pane-path-row">
-          <strong>{title}</strong>
-          <div className="file-pane-path-control">
+      <div className="sftp-pane-head">
+        <span className="sftp-pane-label">
+          <DIcon name={side === "local" ? "drive" : "server"} size={13} />
+          {title}
+        </span>
+        {editingPath ? (
+          <div className="sftp-path-edit">
             <input
               aria-label={t("sftp.pathInputAria", { pane: title.toLowerCase() })}
-              className="file-pane-path-input"
+              className="sftp-path-input"
+              autoFocus
               disabled={!onPathSubmit || isLoading}
               list={pathSuggestions.length > 0 ? pathSuggestionsId : undefined}
-              onBlur={() => setPathDraft(path)}
+              onBlur={() => commitPathDraft()}
               onChange={(event) => setPathDraft(event.currentTarget.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  const nextPath = event.currentTarget.value;
-                  void commitPathDraft(nextPath);
-                  event.currentTarget.blur();
+                  void commitPathDraft(event.currentTarget.value);
                 }
                 if (event.key === "Escape") {
                   event.preventDefault();
                   setPathDraft(path);
-                  setRecentMenuOpen(false);
-                  event.currentTarget.blur();
+                  setEditingPath(false);
                 }
               }}
               spellCheck={false}
@@ -285,19 +353,83 @@ export function FilePane({
                 ))}
               </datalist>
             ) : null}
+          </div>
+        ) : (
+          <div
+            className="sftp-crumbs"
+            onDoubleClick={() => {
+              if (onPathSubmit && !isLoading) {
+                setPathDraft(path);
+                setEditingPath(true);
+              }
+            }}
+            title={t("sftp.editPathTitle")}
+          >
+            <button
+              className={`sftp-crumb${crumbs.items.length === 0 ? " current" : ""}`}
+              onClick={() => navigateToCrumb(crumbs.rootPath)}
+              title={crumbs.rootLabel}
+              type="button"
+            >
+              <span className="gl">
+                <DIcon name={side === "local" ? "home" : "server"} size={14} />
+              </span>
+              <span className="sftp-crumb-text">{crumbs.rootLabel}</span>
+            </button>
+            {crumbs.items.map((crumb, index) => (
+              <span className="sftp-crumb-seg" key={crumb.path}>
+                <span className="sftp-crumb-sep">
+                  <DIcon name="chevright" size={13} />
+                </span>
+                <button
+                  className={`sftp-crumb${index === crumbs.items.length - 1 ? " current" : ""}`}
+                  onClick={() => navigateToCrumb(crumb.path)}
+                  title={crumb.name}
+                  type="button"
+                >
+                  {crumb.name}
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="sftp-pane-head-actions">
+          <button
+            className="sftp-icon-btn"
+            aria-label={t("sftp.openParentFolderAria", { pane: title.toLowerCase() })}
+            disabled={!onGoUp || isLoading}
+            onClick={onGoUp}
+            title={t("sftp.openParentFolderAria", { pane: title.toLowerCase() })}
+            type="button"
+          >
+            <DIcon name="up" size={16} />
+          </button>
+          {onCreateFolder ? (
+            <button
+              className="sftp-icon-btn"
+              aria-label={t("sftp.createFolderAria", { pane: title.toLowerCase() })}
+              disabled={isLoading}
+              onClick={onCreateFolder}
+              title={t("sftp.createFolderAria", { pane: title.toLowerCase() })}
+              type="button"
+            >
+              <DIcon name="newfolder" size={16} />
+            </button>
+          ) : null}
+          <div className="sftp-recent-wrap">
             <button
               aria-expanded={recentMenuOpen}
               aria-label={t("sftp.recentPathsAria", { pane: title.toLowerCase() })}
-              className="icon-button file-pane-recent-button"
+              className="sftp-icon-btn"
               disabled={recentPaths.length === 0 || isLoading || !onPathSubmit}
               onClick={() => setRecentMenuOpen((open) => !open)}
               title={t("sftp.recentPathsAria", { pane: title.toLowerCase() })}
               type="button"
             >
-              <History size={14} />
+              <DIcon name="clock" size={15} />
             </button>
             {recentMenuOpen && recentPaths.length > 0 ? (
-              <div className="file-pane-recent-menu" role="menu">
+              <div className="sftp-recent-menu" role="menu">
                 {recentPaths.map((recentPath) => (
                   <button
                     key={recentPath}
@@ -312,210 +444,200 @@ export function FilePane({
               </div>
             ) : null}
           </div>
-        </div>
-        <div className="file-pane-actions">
           <button
-            className="icon-button"
-            aria-label={t("sftp.openParentFolderAria", { pane: title.toLowerCase() })}
-            disabled={!onGoUp || isLoading}
-            onClick={onGoUp}
-            title={t("sftp.openParentFolderAria", { pane: title.toLowerCase() })}
-            type="button"
-          >
-            <ChevronDown className="up-icon" size={15} />
-          </button>
-          {hasMutationActions && (
-            <>
-              <button
-                className="icon-button"
-                aria-label={t("sftp.createFolderAria", { pane: title.toLowerCase() })}
-                disabled={!onCreateFolder || isLoading}
-                onClick={onCreateFolder}
-                title={t("sftp.createFolderAria", { pane: title.toLowerCase() })}
-                type="button"
-              >
-                <FolderPlus size={15} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label={t("sftp.renameSelectedAria", { pane: title.toLowerCase() })}
-                disabled={!canRenameSelected}
-                onClick={() => beginRename()}
-                title={t("sftp.renameSelectedAria", { pane: title.toLowerCase() })}
-                type="button"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label={t("sftp.deleteSelectedAria", { pane: title.toLowerCase() })}
-                disabled={!onDeleteSelected || selectedNames.length === 0 || isLoading}
-                onClick={onDeleteSelected}
-                title={t("sftp.deleteSelectedAria", { pane: title.toLowerCase() })}
-                type="button"
-              >
-                <Trash2 size={15} />
-              </button>
-            </>
-          )}
-          <button
-            className="icon-button file-sort-button"
-            aria-label={t("sftp.sortByAria", { pane: title.toLowerCase(), key: nextSortKey })}
-            onClick={() => setSortKey(nextSortKey)}
-            title={t("sftp.sortByTitle", { key: nextSortKey })}
-            type="button"
-          >
-            <ArrowDown size={15} />
-            <span>{fileSortLabel(sortKey)}</span>
-          </button>
-          <button
-            className="icon-button"
+            className="sftp-icon-btn"
             aria-label={t("sftp.refreshFilesAria", { pane: title.toLowerCase() })}
             disabled={!onRefresh || isLoading}
             onClick={onRefresh}
             title={t("sftp.refreshFilesAria", { pane: title.toLowerCase() })}
             type="button"
           >
-            <RefreshCw size={15} />
+            <DIcon name="refresh" size={15} />
           </button>
+          <ViewSeg value={view} onChange={setView} t={t} />
         </div>
-      </header>
+      </div>
+
+      {view === "list" ? (
+        <ListColumnHeader sort={sort} onSort={toggleSort} t={t} />
+      ) : null}
+
       <div
-        className={`file-table${isDropTarget || forceDropTarget ? " drop-target" : ""}`}
+        className={`sftp-file-body sftp-view-${view}${isDropTarget || forceDropTarget ? " drop-target" : ""}`}
         onContextMenu={(event) => onContextMenuRequest?.(side, selectedNames, event)}
         onDragLeave={() => setIsDropTarget(false)}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        {isLoading && <div className="file-row file-row-muted">{t("sftp.loading")}</div>}
-        {!isLoading && status && <div className="file-row file-row-muted">{status}</div>}
-        {!isLoading && !status && sortedFiles.length === 0 && (
-          <div className="file-row file-row-muted">{t("sftp.noFiles")}</div>
-        )}
-        {sortedFiles.map((file) => {
-          const isEditing = editingName === file.name;
-          const isSelected = selectedNames.includes(file.name);
-          const fileTitle = file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name;
-          const fileContents = (
-            <>
-              <FileTypeIcon file={file} />
-              {isEditing ? (
-                <input
-                  aria-label={t("sftp.renameFileAria", { name: file.name })}
-                  className="file-rename-input"
-                  onBlur={() => void commitRename()}
-                  onChange={(event) => setRenameDraft(event.currentTarget.value)}
-                  onClick={(event) => event.stopPropagation()}
-                  onDoubleClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      event.currentTarget.blur();
-                    }
-                    if (event.key === "Escape") {
-                      event.preventDefault();
-                      cancelRename();
-                    }
-                  }}
-                  ref={renameInputRef}
-                  value={renameDraft}
-                />
-              ) : (
-                <span>{file.name}</span>
-              )}
-              <small>{file.size}</small>
-              <small>{file.modified}</small>
-            </>
-          );
+        {isLoading ? <div className="sftp-empty">{t("sftp.loading")}</div> : null}
+        {!isLoading && status ? <div className="sftp-empty">{status}</div> : null}
+        {isEmpty ? (
+          <div className="sftp-empty">
+            <DIcon name="info" size={22} />
+            <span>{t("sftp.noFiles")}</span>
+          </div>
+        ) : null}
 
-          if (isEditing) {
-            return (
-              <div
-                className={`file-row file-row-interactive${isSelected ? " selected" : ""}`}
-                draggable={false}
-                key={file.name}
-                title={fileTitle}
-              >
-                {fileContents}
-              </div>
-            );
-          }
+        {!isLoading && !status && view === "list"
+          ? sortedFiles.map((file) => {
+              const isSelected = selectedNames.includes(file.name);
+              const handlers = rowHandlers(file, isSelected);
+              return (
+                <div
+                  className={`sftp-row${isSelected ? " sel" : ""}`}
+                  key={file.name}
+                  role="button"
+                  tabIndex={isLoading ? -1 : 0}
+                  title={file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name}
+                  style={{ gridTemplateColumns: LIST_GRID }}
+                  {...handlers}
+                >
+                  <div className="nm">
+                    <FileTypeIcon file={file} />
+                    {renderRowName(file)}
+                  </div>
+                  <div className="num">{file.size}</div>
+                  <div className="num">{file.modified}</div>
+                </div>
+              );
+            })
+          : null}
 
-          return (
-            <div
-              className={`file-row file-row-interactive${isSelected ? " selected" : ""}`}
-              draggable={!isLoading}
-              key={file.name}
-              onClick={(event) => {
-                if (!isLoading) {
-                  selectFile(file.name, event);
-                }
-              }}
-              onDoubleClick={() => {
-                if (!isLoading && file.kind === "folder") {
-                  onOpenFolder?.(file.name);
-                }
-              }}
-              onContextMenu={(event) => {
-                if (isLoading) {
-                  return;
-                }
-
-                event.stopPropagation();
-                const names = isSelected ? selectedNames : [file.name];
-                onContextMenuRequest?.(side, names, event);
-              }}
-              onDragStart={(event) => handleDragStart(file.name, event)}
-              onKeyDown={(event) => {
-                if ((event.key === "Enter" || event.key === " ") && !isLoading) {
-                  event.preventDefault();
-                  selectFile(file.name, event);
-                  if (event.key === "Enter" && file.kind === "folder") {
-                    onOpenFolder?.(file.name);
-                  }
-                }
-              }}
-              role="button"
-              tabIndex={isLoading ? -1 : 0}
-              title={fileTitle}
-            >
-              {fileContents}
-            </div>
-          );
-        })}
+        {!isLoading && !status && view === "gallery" ? (
+          <div className="sftp-gallery-grid">
+            {sortedFiles.map((file) => {
+              const isSelected = selectedNames.includes(file.name);
+              const handlers = rowHandlers(file, isSelected);
+              return (
+                <div
+                  className={`sftp-tile${isSelected ? " sel" : ""}`}
+                  key={file.name}
+                  role="button"
+                  tabIndex={isLoading ? -1 : 0}
+                  title={file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name}
+                  {...handlers}
+                >
+                  <span className="sftp-tile-ico">
+                    <FileTypeIcon file={file} />
+                  </span>
+                  <span className="sftp-tile-cap">{renderRowName(file)}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
-    </article>
+    </section>
   );
 }
 
-function sortFileEntries(files: FileEntry[], sortKey: FileSortKey) {
-  return [...files].sort((left, right) => {
+function ViewSeg({
+  value,
+  onChange,
+  t,
+}: {
+  value: ViewMode;
+  onChange: (value: ViewMode) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className="sftp-segmented" role="tablist" aria-label={t("sftp.viewMode")}>
+      {(["list", "gallery"] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          role="tab"
+          aria-selected={value === mode}
+          className={value === mode ? "active" : ""}
+          onClick={() => onChange(mode)}
+          title={t(mode === "list" ? "sftp.listView" : "sftp.galleryView")}
+        >
+          <DIcon name={mode} size={15} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ListColumnHeader({
+  sort,
+  onSort,
+  t,
+}: {
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+  t: (key: string) => string;
+}) {
+  const Head = ({ k, label, cls }: { k: SortKey; label: string; cls?: string }) => (
+    <button className={cls} onClick={() => onSort(k)} type="button">
+      {label}
+      {sort.key === k ? (
+        <span className="sftp-sort-ind">
+          <DIcon name={sort.dir === "asc" ? "arrowup" : "arrowdown"} size={12} />
+        </span>
+      ) : null}
+    </button>
+  );
+  return (
+    <div className="sftp-col-head" style={{ gridTemplateColumns: LIST_GRID }}>
+      <Head k="name" label={t("sftp.name")} />
+      <Head k="size" label={t("sftp.size")} cls="num" />
+      <Head k="date" label={t("sftp.date")} cls="num" />
+    </div>
+  );
+}
+
+function sortFileEntries(files: FileEntry[], sort: SortState) {
+  const sorted = [...files].sort((left, right) => {
     if (left.kind === "folder" && right.kind !== "folder") {
       return -1;
     }
     if (left.kind !== "folder" && right.kind === "folder") {
       return 1;
     }
-
-    if (sortKey === "date") {
-      const leftTime = left.modifiedTimestamp ?? 0;
-      const rightTime = right.modifiedTimestamp ?? 0;
-      if (leftTime !== rightTime) {
-        return rightTime - leftTime;
-      }
+    const byName = left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: "base" });
+    const primary =
+      sort.key === "size"
+        ? (left.sizeBytes ?? -1) - (right.sizeBytes ?? -1)
+        : sort.key === "date"
+          ? (left.modifiedTimestamp ?? 0) - (right.modifiedTimestamp ?? 0)
+          : byName;
+    if (primary === 0) {
+      // Stable tiebreak by name ascending regardless of primary direction.
+      return byName;
     }
-
-    return left.name.localeCompare(right.name, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    });
+    return sort.dir === "asc" ? primary : -primary;
   });
+  return sorted;
 }
 
-function fileSortLabel(sortKey: FileSortKey) {
-  return sortKey === "name" ? i18next.t("sftp.name") : i18next.t("sftp.date");
+type Crumb = { name: string; path: string };
+function buildCrumbs(side: FilePaneSide, path: string): { rootLabel: string; rootPath: string; items: Crumb[] } {
+  if (!path || path === ".") {
+    return { rootLabel: side === "local" ? "/" : "/", rootPath: path || "/", items: [] };
+  }
+  const isWindows = side === "local" && (path.includes("\\") || /^[A-Za-z]:/.test(path));
+  if (isWindows) {
+    const normalized = path.replace(/\//g, "\\");
+    const parts = normalized.split("\\").filter(Boolean);
+    const drive = parts[0] ?? "";
+    const rootPath = `${drive}\\`;
+    let accumulator = rootPath;
+    const items: Crumb[] = parts.slice(1).map((name) => {
+      const current = accumulator.endsWith("\\") ? `${accumulator}${name}` : `${accumulator}\\${name}`;
+      accumulator = `${current}\\`;
+      return { name, path: current };
+    });
+    return { rootLabel: drive || "\\", rootPath, items };
+  }
+  const parts = path.split("/").filter(Boolean);
+  let accumulator = "";
+  const items: Crumb[] = parts.map((name) => {
+    accumulator = `${accumulator}/${name}`;
+    return { name, path: accumulator };
+  });
+  return { rootLabel: "/", rootPath: "/", items };
 }
-
 
 function buildFolderPathSuggestions({
   side,
@@ -532,26 +654,20 @@ function buildFolderPathSuggestions({
   if (folders.length === 0 || (side === "local" && !/[\\/]/.test(currentPath))) {
     return [];
   }
-
-  const separator = pathSeparatorFor(side, currentPath || draft);
+  const separator = side === "local" && (currentPath || draft).includes("\\") ? "\\" : "/";
   const splitPattern = side === "local" ? /[\\/]/ : /\//;
   const parts = draft.split(splitPattern);
   const typedName = parts[parts.length - 1] ?? "";
   const typedParent = parts.length > 1 ? draft.slice(0, draft.length - typedName.length) : "";
-  const parentPath = typedParent || appendPathSeparator(currentPath, separator);
+  const parentPath = typedParent || appendSeparator(currentPath, separator);
   const normalizedTypedName = typedName.toLocaleLowerCase();
-
   return folders
     .filter((folder) => folder.name.toLocaleLowerCase().startsWith(normalizedTypedName))
     .slice(0, 8)
     .map((folder) => `${parentPath}${folder.name}${separator}`);
 }
 
-function pathSeparatorFor(side: FilePaneSide, path: string) {
-  return side === "local" && path.includes("\\") ? "\\" : "/";
-}
-
-function appendPathSeparator(path: string, separator: string) {
+function appendSeparator(path: string, separator: string) {
   if (!path) {
     return "";
   }

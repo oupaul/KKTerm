@@ -1,5 +1,4 @@
-import { useTranslation } from "react-i18next";
-import { DialogPortal } from "./DialogPortal";
+import { ConfirmSheet } from "./ui/dialog";
 
 export function ConfirmDialog({
   cancelLabel,
@@ -18,37 +17,16 @@ export function ConfirmDialog({
   title: string;
   tone?: "default" | "danger";
 }) {
-  const { t } = useTranslation();
-
   return (
-    <DialogPortal>
-    <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
-      <div
-        aria-label={title}
-        aria-modal="true"
-        className="connection-dialog app-confirm-dialog"
-        role="alertdialog"
-      >
-        <header className="connection-dialog-header compact">
-          <div>
-            <h2>{title}</h2>
-          </div>
-        </header>
-        <p className="field-hint app-confirm-message">{message}</p>
-        <div className="dialog-actions">
-          <button
-            className={`secondary-button${tone === "danger" ? " danger" : ""}`}
-            onClick={onConfirm}
-            type="button"
-          >
-            {confirmLabel}
-          </button>
-          <button className="toolbar-button" onClick={onCancel} type="button">
-            {cancelLabel ?? t("common.cancel")}
-          </button>
-        </div>
-      </div>
-    </div>
-    </DialogPortal>
+    <ConfirmSheet
+      tone={tone === "danger" ? "danger" : "info"}
+      title={title}
+      message={message}
+      confirmLabel={confirmLabel}
+      confirmIcon={tone === "danger" ? "trash" : undefined}
+      cancelLabel={cancelLabel}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }

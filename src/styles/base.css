@@ -419,36 +419,57 @@ h2 {
 
 .primary-button,
 .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   height: 30px;
-  padding: 0 12px;
-  border-radius: 6px;
+  padding: 0 15px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 560;
+  letter-spacing: -0.005em;
+  transition: background 0.12s, border-color 0.12s, transform 0.04s, box-shadow 0.12s;
+}
+
+.primary-button:active,
+.secondary-button:active {
+  transform: translateY(0.5px);
 }
 
 .primary-button {
   color: #ffffff;
   background: var(--accent);
-  border: 1px solid var(--accent);
+  border: 0.5px solid transparent;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--accent-press);
 }
 
 .secondary-button {
   color: var(--text);
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 0.5px solid var(--border-strong);
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--hover);
 }
 
 .secondary-button.danger {
   color: #ffffff;
   background: var(--red);
-  border-color: var(--red);
+  border-color: transparent;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--red) 30%, transparent);
 }
 
 .primary-button:disabled,
 .secondary-button:disabled {
   cursor: default;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 
@@ -477,7 +498,17 @@ h2 {
   place-items: center;
   overflow: auto;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.18);
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+    rgba(15, 23, 42, 0.32);
+}
+
+[data-color-scheme="dark"] .connection-dialog-backdrop,
+[data-color-scheme="purple"] .connection-dialog-backdrop,
+[data-color-scheme="blue-see"] .connection-dialog-backdrop {
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    rgba(0, 0, 0, 0.5);
 }
 
 .connection-dialog,
@@ -487,8 +518,8 @@ h2 {
   padding: 16px;
   color: var(--text);
   background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
   box-shadow: var(--shadow);
 }
 
@@ -638,14 +669,15 @@ h2 {
 .settings-section textarea {
   width: 100%;
   min-width: 0;
-  height: 30px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 11px;
   color: var(--text);
   background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 8px;
   outline: 0;
   font-size: 13px;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
 
 .connection-dialog textarea {
@@ -692,7 +724,7 @@ h2 {
 .settings-section select:focus,
 .settings-section textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: var(--ring);
 }
 
 .connection-dialog input:disabled,

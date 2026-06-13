@@ -664,8 +664,9 @@
 .dialog-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px;
 }
 
 .connection-dialog-header.compact {
@@ -718,8 +719,9 @@
 .connection-dialog-header .panel-label {
   margin-bottom: 0;
   color: var(--text);
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 17px;
+  font-weight: 680;
+  letter-spacing: -0.018em;
   line-height: 1.25;
   text-transform: none;
 }
@@ -731,13 +733,14 @@
 .connection-type-summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 14px;
   align-items: center;
   min-width: 0;
-  padding: 8px;
+  padding: 13px 14px;
   background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 0.5px var(--border);
 }
 
 .connection-type-summary > span {
@@ -754,14 +757,15 @@
 }
 
 .connection-type-summary > span strong {
-  font-size: 13px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
 }
 
 .connection-type-summary > span small {
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 500;
 }
 
 .connection-appearance-controls {

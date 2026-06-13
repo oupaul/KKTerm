@@ -1,0 +1,646 @@
+/* KKTerm dialog design language — Apple/Finder-flavoured.
+   Ported from the design reference; class names are kk- prefixed and the
+   design's private tokens are aliased onto the app token system so every
+   surface themes with the active color scheme. */
+
+/* token bridge: design token name -> app token */
+.kk-dlg,
+.kk-surface {
+  --bg: var(--surface);
+  --bg-2: var(--surface-muted);
+  --chrome-2: var(--surface-muted);
+  --sidebar: var(--surface-muted);
+  --muted: var(--surface-muted);
+  --field: var(--surface-muted);
+  --text-2: var(--text-muted);
+  --text-3: var(--text-faint);
+  --red-press: color-mix(in srgb, var(--red) 82%, #000);
+  --radius-sheet: 14px;
+  --radius-field: 8px;
+  --field-h: 32px;
+}
+
+.kk-dlg,
+.kk-dlg * {
+  box-sizing: border-box;
+}
+
+/* ============================ backdrop ================================= */
+.kk-dlg-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 20px;
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+    rgba(15, 23, 42, 0.32);
+}
+
+[data-color-scheme="dark"] .kk-dlg-backdrop,
+[data-color-scheme="purple"] .kk-dlg-backdrop,
+[data-color-scheme="blue-see"] .kk-dlg-backdrop {
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    rgba(0, 0, 0, 0.5);
+}
+
+/* ============================== sheet shell ============================ */
+.kk-dlg {
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.kk-dlg-head {
+  position: relative;
+  padding: 20px 22px 0;
+  flex: 0 0 auto;
+}
+.kk-dlg-eyebrow {
+  margin: 0 0 4px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.kk-dlg-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 680;
+  letter-spacing: -0.018em;
+}
+.kk-dlg-sub {
+  margin: 5px 0 0;
+  max-width: 46ch;
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.kk-dlg-head.with-rule {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.kk-dlg-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--muted);
+  border: 0;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.kk-dlg-close:hover {
+  background: var(--press);
+  color: var(--text);
+}
+
+.kk-dlg-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 18px 22px;
+  overflow-y: auto;
+}
+.kk-dlg-foot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  padding: 14px 22px;
+  border-top: 1px solid var(--hairline);
+  background: var(--bg-2);
+}
+.kk-spacer {
+  flex: 1 1 auto;
+}
+.kk-dlg-foot.center {
+  justify-content: center;
+}
+
+/* ============================== buttons ================================ */
+.kk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 15px;
+  border-radius: var(--radius-field);
+  border: 0.5px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 560;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.04s, box-shadow 0.12s;
+}
+.kk-btn:hover {
+  background: var(--hover);
+}
+.kk-btn:active {
+  transform: translateY(0.5px);
+}
+.kk-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.kk-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.kk-btn.primary:hover {
+  background: var(--accent-press);
+}
+.kk-btn.danger {
+  background: var(--red);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--red) 30%, transparent);
+}
+.kk-btn.danger:hover {
+  background: var(--red-press);
+}
+.kk-btn.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.kk-btn.ghost:hover {
+  background: var(--hover);
+}
+.kk-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.kk-btn.sm {
+  height: 26px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+.kk-btn.wide {
+  padding: 0 22px;
+}
+
+/* ============================== fields ================================= */
+.kk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.kk-field > .kk-lbl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 590;
+}
+.kk-field > .kk-lbl .kk-req {
+  color: var(--accent);
+}
+.kk-field > .kk-hint {
+  margin-top: -1px;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+
+.kk-inp {
+  width: 100%;
+  height: var(--field-h);
+  padding: 0 11px;
+  border-radius: var(--radius-field);
+  border: 0.5px solid var(--border-strong);
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.kk-inp::placeholder {
+  color: var(--text-3);
+}
+.kk-inp:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+textarea.kk-inp {
+  height: auto;
+  min-height: 80px;
+  padding: 9px 11px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: var(--font-mono, "SF Mono", ui-monospace, Menlo, monospace);
+  font-size: 12.5px;
+}
+.kk-inp.mono {
+  font-family: var(--font-mono, "SF Mono", ui-monospace, Menlo, monospace);
+}
+
+.kk-inp-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.kk-inp-row .kk-inp {
+  flex: 1 1 auto;
+}
+.kk-inp-row .kk-btn {
+  flex: 0 0 auto;
+  height: var(--field-h);
+}
+
+.kk-field-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), 1fr);
+  gap: 12px;
+  align-items: end;
+}
+.kk-col-span-2 {
+  grid-column: span 2;
+}
+
+/* ============================ popup select ============================= */
+.kk-sel {
+  position: relative;
+  display: block;
+}
+.kk-sel select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: var(--field-h);
+  padding: 0 34px 0 11px;
+  border-radius: var(--radius-field);
+  border: 0.5px solid var(--border-strong);
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.kk-sel select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.kk-sel .kk-chev {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  pointer-events: none;
+}
+
+/* ============================ toggle switch ============================ */
+.kk-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 23px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-3) 45%, transparent);
+  cursor: pointer;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kk-switch.on {
+  background: var(--green);
+}
+.kk-switch[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.kk-switch .kk-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 0.5px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kk-switch.on .kk-knob {
+  transform: translateX(15px);
+}
+
+/* ============================ segmented =============================== */
+.kk-seg {
+  display: inline-flex;
+  align-items: stretch;
+  width: 100%;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--chrome-2);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.kk-seg button {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 530;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.kk-seg button:hover {
+  color: var(--text);
+}
+.kk-seg button.active {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 590;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+/* ============================ grouped list ============================= */
+.kk-group {
+  border-radius: 10px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  overflow: hidden;
+}
+.kk-group-title {
+  margin: 4px 0 7px 3px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.kk-grow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 44px;
+  padding: 7px 14px;
+}
+.kk-grow + .kk-grow {
+  border-top: 0.5px solid var(--hairline);
+}
+.kk-grow .kk-gl-ico {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-2);
+}
+.kk-grow .kk-gl-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.kk-grow .kk-gl-label {
+  font-size: 13px;
+  font-weight: 510;
+}
+.kk-grow .kk-gl-desc {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.kk-grow .kk-gl-ctl {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kk-grow .kk-gl-val {
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+
+.kk-ni-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #fff;
+  flex: 0 0 auto;
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.18);
+}
+
+/* ====================== connection identity tile ====================== */
+.kk-conn-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.kk-conn-tile {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 13px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+}
+.kk-conn-tile.editable {
+  cursor: pointer;
+}
+.kk-conn-tile .kk-edit-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  color: var(--text-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.kk-conn-id .kk-conn-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.kk-conn-id .kk-conn-meta .kk-nm {
+  font-size: 15px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+}
+.kk-conn-id .kk-conn-meta .kk-sub {
+  margin-top: 1px;
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.kk-conn-swatches {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.kk-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  transition: transform 0.1s;
+}
+.kk-swatch:hover {
+  transform: scale(1.12);
+}
+.kk-swatch.sel {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+.kk-swatch.none {
+  position: relative;
+  background: var(--field);
+}
+.kk-swatch.none::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--text-3);
+}
+
+/* ============================== stepper =============================== */
+.kk-stepper {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-field);
+  box-shadow: inset 0 0 0 0.5px var(--border-strong);
+  overflow: hidden;
+  background: var(--field);
+}
+.kk-stepper input {
+  width: 46px;
+  height: calc(var(--field-h) - 2px);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.kk-stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: calc(var(--field-h) - 2px);
+  border: 0;
+  background: var(--chrome-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.kk-stepper button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.kk-stepper button:first-child {
+  border-right: 0.5px solid var(--border);
+}
+.kk-stepper button:last-child {
+  border-left: 0.5px solid var(--border);
+}
+
+/* ============================ confirm body ============================= */
+.kk-confirm-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+.kk-confirm-ico.info {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.kk-confirm-ico.danger {
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
+}
+.kk-confirm-ico.warn {
+  background: color-mix(in srgb, var(--amber) 18%, transparent);
+  color: var(--amber);
+}
+.kk-confirm-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.kk-confirm-body .kk-ct {
+  flex: 1 1 auto;
+}
+.kk-confirm-body .kk-ct h2 {
+  margin: 1px 0 6px;
+  font-size: 16px;
+  font-weight: 660;
+  letter-spacing: -0.015em;
+}
+.kk-confirm-body .kk-ct p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.kk-confirm-body .kk-ct p b {
+  color: var(--text);
+  font-weight: 600;
+}

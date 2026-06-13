@@ -1,11 +1,14 @@
-.sftp-workspace {
-  grid-template-rows: 42px minmax(0, 1fr) 112px;
-  gap: 10px;
-}
+/* SFTP browser — Apple/Finder symmetric dual-pane. Ported from the design
+   reference; drives off the app token system (no standalone window chrome). */
 
+/* Base hidden / active display is owned by terminal.css
+   (.sftp-workspace { display:none } / .active { display:grid }); override the
+   active layout to a flex column for the twin shell. */
 .sftp-workspace.active {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  min-height: 0;
 }
 
 .sftp-workspace .workspace-toolbar {
@@ -13,530 +16,762 @@
   margin-bottom: 0;
 }
 
-.sftp-workspace .transfer-queue {
-  flex: 0 0 112px;
-  min-height: 0;
-}
-
-.file-manager {
-  display: grid;
-  flex: 1 1 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+/* toolbar identity */
+.sftp-toolbar-id {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  height: auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.file-pane,
-.transfer-queue,
-.approval-card,
-.settings-stack {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.file-pane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.file-pane header {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 0 10px 0 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.file-pane-path-row {
-  display: flex;
-  flex: 1 1 auto;
-  gap: 8px;
-  align-items: center;
   min-width: 0;
 }
-
-.file-pane-path-row strong {
+.sftp-toolbar-id strong {
   flex: 0 0 auto;
 }
-
-.file-pane-path-control {
-  position: relative;
-  display: flex;
-  flex: 1 1 auto;
-  gap: 4px;
+.sftp-conn-pill {
+  display: inline-flex;
   align-items: center;
-  min-width: 0;
-}
-
-.file-pane-path-input {
-  width: 100%;
-  min-width: 0;
-  padding: 0;
+  gap: 5px;
+  height: 21px;
+  padding: 0 9px 0 7px;
+  border-radius: 999px;
+  background: var(--surface-muted);
   color: var(--text-muted);
-  background: transparent;
-  border: 0;
-  outline: none;
+  font-size: 11px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+.sftp-conn-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.sftp-conn-pill[data-connected="true"] .dot {
+  background: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent);
+}
+.sftp-toolbar-sub {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: inherit;
+  color: var(--text-muted);
 }
 
-.file-pane-path-input:focus {
-  padding: 1px 5px;
-  color: var(--text);
-  background: var(--surface-muted);
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px var(--accent);
+/* ============================== panes row ============================== */
+.sftp-panes {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
-.file-pane-path-input:disabled {
-  opacity: 1;
+.sftp-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 
-.file-pane-recent-button {
+.sftp-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--hairline);
   flex: 0 0 auto;
 }
+.sftp-pane-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 
-.file-pane-recent-menu {
+/* breadcrumb */
+.sftp-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  overflow: hidden;
+}
+.sftp-crumb-seg {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.sftp-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 180px;
+  height: 24px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.sftp-crumb .sftp-crumb-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sftp-crumb:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.sftp-crumb.current {
+  color: var(--text);
+  font-weight: 640;
+  pointer-events: none;
+}
+.sftp-crumb .gl {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+.sftp-crumb-sep {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+/* editable path */
+.sftp-path-edit {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sftp-path-input {
+  width: 100%;
+  height: 26px;
+  padding: 0 8px;
+  border: 0.5px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  outline: none;
+  box-shadow: var(--ring);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.sftp-pane-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.sftp-recent-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.sftp-recent-menu {
   position: absolute;
   top: calc(100% + 5px);
   right: 0;
   z-index: 40;
   display: grid;
   width: min(360px, 80vw);
-  max-width: 100%;
   padding: 4px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
 }
-
-.file-pane-recent-menu button {
+.sftp-recent-menu button {
   min-width: 0;
   padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--text);
   text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+}
+.sftp-recent-menu button:hover {
+  background: var(--hover);
 }
 
-.file-pane-recent-menu button:hover,
-.file-pane-recent-menu button:focus-visible {
-  background: var(--surface-muted);
-  outline: none;
-}
-
-.file-pane-actions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 6px;
-  align-items: center;
-}
-
-.file-sort-button {
-  width: auto;
-  gap: 5px;
-  padding: 0 7px;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.up-icon {
-  transform: rotate(180deg);
-}
-
-.file-table {
-  flex: 1 1 0;
-  min-height: 0;
-  max-height: 100%;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  overscroll-behavior: contain;
-}
-
-.file-table.drop-target {
-  background: var(--accent-soft);
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.file-row {
-  display: grid;
-  grid-template-columns: 20px minmax(140px, 1fr) 70px 86px;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  height: 34px;
-  padding: 0 12px;
-  color: var(--text);
-  text-align: left;
-  background: transparent;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-}
-
-.file-type-icon {
-  position: relative;
+/* icon button */
+.sftp-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 0.12s, color 0.12s;
+}
+.sftp-icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.sftp-icon-btn:active {
+  background: var(--press);
+}
+.sftp-icon-btn[disabled] {
+  color: var(--text-faint);
+  background: transparent;
+  opacity: 0.55;
+  cursor: default;
 }
 
-.file-type-icon img {
-  display: block;
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
+/* segmented view switch */
+.sftp-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.sftp-segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sftp-segmented button:hover {
+  color: var(--text);
+}
+.sftp-segmented button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
 }
 
-.file-type-icon-symlink::after {
-  position: absolute;
-  right: 0;
-  bottom: 1px;
-  width: 6px;
-  height: 6px;
-  content: "";
-  background: var(--accent);
-  border: 1px solid var(--surface);
-  border-radius: 999px;
+/* list column header */
+.sftp-col-head {
+  display: grid;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  flex: 0 0 auto;
+  user-select: none;
 }
-
-.file-row-interactive {
+.sftp-col-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
 }
-
-.file-row-interactive:hover {
-  background: var(--surface-muted);
-}
-
-.file-row-interactive.selected {
-  background: var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.file-row-interactive[aria-disabled="true"] {
-  cursor: default;
-  opacity: 0.72;
-}
-
-.file-row small {
-  color: var(--text-muted);
-}
-
-.file-row-muted {
-  grid-template-columns: minmax(0, 1fr);
-  color: var(--text-muted);
-}
-
-.file-rename-input {
-  width: 100%;
-  min-width: 0;
-  height: 24px;
-  padding: 0 5px;
+.sftp-col-head button:hover {
   color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--accent);
-  border-radius: 3px;
-  outline: none;
-  font-size: 12px;
 }
-
-
-.sftp-context-menu small {
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.sftp-properties-popover {
-  position: fixed;
-  top: 84px;
-  right: 360px;
-  z-index: 45;
-  display: grid;
-  gap: 12px;
-  width: min(360px, calc(100vw - 40px));
-  padding: 12px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-}
-
-.sftp-properties-popover header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-}
-
-.sftp-properties-popover header > div:first-child {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.sftp-properties-popover header strong,
-.sftp-properties-popover header span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sftp-properties-popover header span {
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-.properties-grid {
-  display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  gap: 7px 10px;
-  padding: 10px;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  font-size: 12px;
-}
-
-.properties-grid span {
-  color: var(--text-muted);
-}
-
-.properties-grid strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.properties-edit-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.properties-edit-grid label {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.properties-edit-grid span {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.properties-edit-grid input {
-  width: 100%;
-  min-width: 0;
-  height: 30px;
-  padding: 0 8px;
-  color: var(--text);
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  outline: none;
-  font-size: 12px;
-}
-
-.properties-edit-grid input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.properties-error {
-  margin: 0;
-  color: var(--red);
-  font-size: 12px;
-}
-
-.properties-actions {
-  display: flex;
+.sftp-col-head .num {
   justify-content: flex-end;
-  gap: 8px;
+  text-align: right;
 }
-
-
-.transfer-conflict-backdrop {
-  z-index: 55;
-}
-
-.transfer-conflict-dialog {
-  display: grid;
-  gap: 12px;
-  width: min(440px, calc(100vw - 40px));
-  padding: 14px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-}
-
-.transfer-conflict-dialog header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.transfer-conflict-dialog header > div:first-child {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.transfer-conflict-dialog header span,
-.transfer-conflict-dialog small {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.transfer-conflict-dialog p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.transfer-conflict-dialog code {
-  min-width: 0;
-  padding: 8px;
-  overflow: hidden;
-  color: var(--text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.transfer-conflict-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.sftp-folder-dialog {
-  width: min(420px, calc(100vw - 40px));
-}
-
-.sftp-folder-dialog label {
-  display: grid;
-  gap: 6px;
-}
-
-.sftp-folder-dialog label > span {
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.transfer-queue {
-  overflow: hidden;
-}
-
-.transfer-queue header {
-  height: 34px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.transfer-queue-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.transfer-clear-button {
-  height: 26px;
-  padding: 0 8px;
-}
-
-.transfer-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) 150px 64px minmax(
-      150px,
-      0.85fr
-    ) 24px;
-  gap: 10px;
-  align-items: center;
-  height: 34px;
-  padding: 0 12px;
-  font-size: 12px;
-}
-
-.transfer-row span,
-.transfer-row small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transfer-row-muted {
-  grid-template-columns: minmax(0, 1fr);
-  color: var(--text-muted);
-}
-
-.transfer-state {
-  font-weight: 800;
-  text-transform: capitalize;
-}
-
-.transfer-state-done {
-  color: var(--green);
-}
-
-.transfer-state-failed {
-  color: var(--red);
-}
-
-.transfer-state-active {
+.sftp-col-head .sftp-sort-ind {
+  display: inline-flex;
   color: var(--accent);
 }
 
-.transfer-state-queued {
+/* file body */
+.sftp-file-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+  overscroll-behavior: contain;
+}
+.sftp-file-body.sftp-view-gallery {
+  padding: 14px;
+}
+.sftp-file-body::-webkit-scrollbar {
+  width: 9px;
+}
+.sftp-file-body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-faint) 50%, transparent);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.sftp-file-body.drop-target {
+  background: var(--sel-soft);
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+  border-radius: 10px;
+}
+
+/* list rows */
+.sftp-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--text);
+  user-select: none;
+  cursor: default;
+  font-size: 13px;
+}
+.sftp-row .nm {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.sftp-row .nm > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.sftp-row .num {
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+.sftp-row:hover {
+  background: var(--hover);
+}
+.sftp-row.sel {
+  background: var(--sel);
+  color: #fff;
+}
+.sftp-row.sel .num {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* gallery */
+.sftp-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.sftp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px 10px;
+  border-radius: 10px;
+  user-select: none;
+  cursor: default;
+}
+.sftp-tile:hover {
+  background: var(--hover);
+}
+.sftp-tile.sel {
+  background: var(--sel-soft);
+}
+.sftp-tile-ico .file-type-icon {
+  width: 52px;
+  height: 52px;
+}
+.sftp-tile-ico .file-type-icon img {
+  width: 46px;
+  height: 46px;
+}
+.sftp-tile-cap {
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sftp-tile.sel .sftp-tile-cap {
+  background: var(--sel);
+  color: #fff;
+}
+
+/* inline rename */
+.sftp-rename-input {
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+}
+
+.sftp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+/* ============================ center gutter ============================ */
+.sftp-gutter {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 58px;
+}
+.sftp-xfer-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 0.5px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text-muted);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, transform 0.05s;
+}
+.sftp-xfer-arrow:hover:not([disabled]) {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.sftp-xfer-arrow:active:not([disabled]) {
+  transform: scale(0.94);
+}
+.sftp-xfer-arrow[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ============================ transfer area ============================ */
+.sftp-xfer {
+  flex: 0 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sftp-xfer-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px 0 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.sftp-xfer-bar:hover {
+  background: var(--hover);
+}
+.sftp-xfer-bar .lead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--text-muted);
 }
-
-.transfer-state-canceled {
-  color: var(--amber);
-}
-
-.transfer-row .row-action:disabled {
-  color: var(--text-faint);
-  cursor: default;
-  opacity: 0.45;
-}
-
-progress {
-  width: 100%;
-  height: 7px;
+.sftp-xfer-bar .status {
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
   overflow: hidden;
-  accent-color: var(--accent);
+  text-overflow: ellipsis;
+}
+.sftp-xfer-bar .mini-track {
+  flex: 0 0 120px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.sftp-xfer-bar .mini-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.sftp-xfer-bar .right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+.sftp-xfer-chev {
+  display: inline-flex;
+  transition: transform 0.18s;
+}
+.sftp-xfer.open .sftp-xfer-chev {
+  transform: rotate(180deg);
+}
+.sftp-xfer-panel {
+  max-height: 0;
+  overflow: hidden;
+  border-top: 1px solid transparent;
+  background: var(--surface);
+  transition: max-height 0.22s ease;
+}
+.sftp-xfer.open .sftp-xfer-panel {
+  max-height: 220px;
+  overflow-y: auto;
+  border-top-color: var(--hairline);
+}
+.sftp-xfer-panel-inner {
+  padding: 6px;
+}
+.sftp-xfer-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 78px 28px;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+.sftp-xfer-row:hover {
+  background: var(--hover);
+}
+.sftp-xfer-row .dir {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+.sftp-xfer-row .meta {
+  min-width: 0;
+}
+.sftp-xfer-row .meta .nm {
+  font-size: 12.5px;
+  font-weight: 590;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sftp-xfer-row .meta .track {
+  margin-top: 4px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.sftp-xfer-row .meta .fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+}
+.sftp-xfer-row .meta .fill.done {
+  background: var(--green);
+}
+.sftp-xfer-row .meta .fill.failed,
+.sftp-xfer-row .meta .fill.canceled {
+  background: var(--red);
+}
+.sftp-xfer-row .st {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+.sftp-xfer-row .st.active {
+  color: var(--accent);
+}
+.sftp-xfer-row .st.done {
+  color: var(--green);
+}
+.sftp-xfer-row .st.queued {
+  color: var(--text-faint);
+}
+.sftp-xfer-row .st.failed,
+.sftp-xfer-row .st.canceled {
+  color: var(--red);
+}
+.sftp-xfer-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+
+/* ============================ context menu ============================= */
+.sftp-ctx-menu {
+  position: fixed;
+  z-index: 51;
+  min-width: 196px;
+  padding: 5px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+.sftp-ctx-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  cursor: default;
+}
+.sftp-ctx-menu button:hover:not([disabled]) {
+  background: var(--accent);
+  color: #fff;
+}
+.sftp-ctx-menu button[disabled] {
+  color: var(--text-faint);
+}
+.sftp-ctx-sep {
+  height: 1px;
+  margin: 5px 8px;
+  background: var(--hairline);
+}
+
+/* ============================ properties ============================== */
+.sftp-props {
+  width: 320px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.sftp-props-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+.sftp-props-glyph .file-type-icon {
+  width: 56px;
+  height: 56px;
+}
+.sftp-props-glyph .file-type-icon img {
+  width: 50px;
+  height: 50px;
+}
+.sftp-props-head .nm {
+  font-size: 15px;
+  font-weight: 640;
+  text-align: center;
+  word-break: break-word;
+}
+.sftp-props-head .sub {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+.sftp-props-body {
+  padding: 6px 18px 14px;
+}
+.sftp-props-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 4px 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12.5px;
+}
+.sftp-props-row:last-child {
+  border-bottom: 0;
+}
+.sftp-props-row .k {
+  color: var(--text-muted);
+}
+.sftp-props-row .v {
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+  text-transform: capitalize;
+}
+.sftp-perm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px 18px 18px;
+}
+.sftp-props-error {
+  margin: 0 18px;
+  color: var(--red);
+  font-size: 12px;
+}
+.sftp-props-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+
+/* transfer-conflict path + z */
+.sftp-conflict-z {
+  z-index: 95;
+}
+.sftp-conflict-path {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, Menlo, monospace);
+  font-size: 12px;
 }

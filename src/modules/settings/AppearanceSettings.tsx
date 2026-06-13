@@ -15,8 +15,12 @@ import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 
 const APP_UI_FONT_OPTIONS = [
   {
-    labelKey: "settings.interDefault",
+    labelKey: "settings.uiFontDefault",
     value: defaultAppearanceSettings.appFontFamily,
+  },
+  {
+    labelKey: "settings.inter",
+    value: '"Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
   },
   {
     labelKey: "settings.segoeUi",
@@ -73,20 +77,20 @@ type SchemePreviewColor = { color: string; labelKey: string };
 
 const SCHEME_PREVIEW_COLORS: Record<ColorScheme, SchemePreviewColor[]> = {
   default: [
-    { color: "#eef1f5", labelKey: "settings.appBg" },
+    { color: "#ececed", labelKey: "settings.appBg" },
     { color: "#ffffff", labelKey: "settings.surface" },
-    { color: "#17202b", labelKey: "settings.text" },
-    { color: "#2563eb", labelKey: "settings.accent" },
-    { color: "#15915f", labelKey: "settings.green" },
+    { color: "#1d1d1f", labelKey: "settings.text" },
+    { color: "#0a84ff", labelKey: "settings.accent" },
+    { color: "#34c759", labelKey: "settings.green" },
     { color: "#202936", labelKey: "settings.navToolbar" },
     { color: "#d8e1ef", labelKey: "settings.toolbarText" },
   ],
   dark: [
-    { color: "#1a1d24", labelKey: "settings.appBg" },
-    { color: "#2b303b", labelKey: "settings.surface" },
-    { color: "#e4e7ee", labelKey: "settings.text" },
-    { color: "#4b8bff", labelKey: "settings.accent" },
-    { color: "#3fb87b", labelKey: "settings.green" },
+    { color: "#1c1c1e", labelKey: "settings.appBg" },
+    { color: "#28282a", labelKey: "settings.surface" },
+    { color: "#f5f5f7", labelKey: "settings.text" },
+    { color: "#0a84ff", labelKey: "settings.accent" },
+    { color: "#32d74b", labelKey: "settings.green" },
     { color: "#202936", labelKey: "settings.navToolbar" },
     { color: "#d8e1ef", labelKey: "settings.toolbarText" },
   ],

@@ -22,26 +22,39 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --app-bg: #eef1f5;
-  --chrome: #f8fafc;
+  /* Default scheme — the Apple/Finder design-language light palette. */
+  --app-bg: #ececed;
+  --chrome: #f6f6f7;
   --chrome-strong: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #f3f6fa;
+  --surface-muted: #f4f4f6;
   --terminal: #111820;
   --terminal-2: #0c1219;
   --terminal-border: #243344;
-  --text: #17202b;
-  --text-muted: #687386;
-  --text-faint: #8a95a6;
-  --border: #d7dde7;
-  --border-strong: #c3ccd9;
-  --accent: #2563eb;
-  --accent-soft: #dbe8ff;
+  --text: #1d1d1f;
+  --text-muted: #6e6e73;
+  --text-faint: #97979d;
+  --border: #d6d6db;
+  --border-strong: #c5c5cb;
+  --accent: #0a84ff;
+  --accent-soft: #e6f0ff;
   --green-soft: #ecfdf5;
   --amber-soft: #fff8e7;
-  --green: #15915f;
-  --amber: #b7791f;
-  --red: #c2413b;
+  --green: #34c759;
+  --amber: #ff9f0a;
+  --red: #ff453a;
+  /* design-language surface tokens (exact reference light values) */
+  --hover: rgba(0, 0, 0, 0.05);
+  --press: rgba(0, 0, 0, 0.09);
+  --hairline: #e6e6e9;
+  --accent-press: #0060df;
+  --sel: #0a84ff;
+  --sel-soft: #e6f0ff;
+  --folder-top: #79c0ff;
+  --folder-bot: #2e92f5;
+  --doc-fill: #ffffff;
+  --doc-stroke: #c9c9d0;
+  --ring: 0 0 0 3px rgba(10, 132, 255, 0.3);
   --nav-toolbar-bg: #202936;
   --nav-toolbar-text: #d8e1ef;
   --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
@@ -50,30 +63,61 @@
   --nav-toolbar-tooltip-bg: #111827;
   --nav-toolbar-tooltip-text: #f8fafc;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
-  --shadow: 0 18px 50px rgba(31, 42, 58, 0.12);
+  --shadow: 0 32px 80px rgba(0, 0, 0, 0.26), 0 8px 24px rgba(0, 0, 0, 0.14);
+  /* Platform-aware default: SF Pro on macOS, bundled Inter on Windows. */
   --app-ui-font-family:
-    "Inter", ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+}
+
+/* Generic design-language surface tokens for every scheme that does not set
+   its own. Zero-specificity :where() so the per-scheme blocks above always win.
+   Derived from each scheme's own text/accent/border so they adapt light/dark. */
+:where(:root) {
+  --hover: color-mix(in srgb, var(--text) 7%, transparent);
+  --press: color-mix(in srgb, var(--text) 12%, transparent);
+  --hairline: color-mix(in srgb, var(--border) 65%, transparent);
+  --accent-press: color-mix(in srgb, var(--accent) 84%, #000);
+  --sel: var(--accent);
+  --sel-soft: var(--accent-soft);
+  --folder-top: color-mix(in srgb, var(--accent) 55%, #ffffff);
+  --folder-bot: var(--accent);
+  --doc-fill: var(--surface);
+  --doc-stroke: var(--border-strong);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 [data-color-scheme="dark"] {
-  --app-bg: #1a1d24;
-  --chrome: #232730;
-  --chrome-strong: #2b303b;
-  --surface: #2b303b;
-  --surface-muted: #232730;
-  --text: #e4e7ee;
-  --text-muted: #8b92a5;
-  --text-faint: #5c6275;
-  --border: #363a47;
-  --border-strong: #454b5b;
-  --accent: #4b8bff;
-  --accent-soft: #1e3053;
+  /* Dark scheme — the Apple/Finder design-language dark palette. */
+  --app-bg: #1c1c1e;
+  --chrome: #2c2c2e;
+  --chrome-strong: #2e2e30;
+  --surface: #28282a;
+  --surface-muted: #232325;
+  --text: #f5f5f7;
+  --text-muted: #a1a1a6;
+  --text-faint: #6d6d72;
+  --border: #4a4a4e;
+  --border-strong: #5a5a5e;
+  --accent: #0a84ff;
+  --accent-soft: #18334f;
   --green-soft: #0d3326;
   --amber-soft: #33270d;
-  --green: #3fb87b;
-  --amber: #d99a3d;
-  --red: #d9534f;
+  --green: #32d74b;
+  --amber: #ff9f0a;
+  --red: #ff453a;
+  /* design-language surface tokens (exact reference dark values) */
+  --hover: rgba(255, 255, 255, 0.07);
+  --press: rgba(255, 255, 255, 0.12);
+  --hairline: #38383a;
+  --accent-press: #409cff;
+  --sel: #0a6dff;
+  --sel-soft: #18334f;
+  --folder-top: #6db0ff;
+  --folder-bot: #2b7fe0;
+  --doc-fill: #3a3a3d;
+  --doc-stroke: #565659;
+  --ring: 0 0 0 3px rgba(10, 132, 255, 0.45);
   --nav-toolbar-bg: #202936;
   --nav-toolbar-text: #d8e1ef;
   --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
@@ -82,7 +126,7 @@
   --nav-toolbar-tooltip-bg: #111827;
   --nav-toolbar-tooltip-text: #f8fafc;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --shadow: 0 36px 96px rgba(0, 0, 0, 0.62), 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 [data-color-scheme="light"] {

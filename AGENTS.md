@@ -84,6 +84,11 @@ Strong success criteria let you loop independently.
   translation-safe: use named `{{…}}` placeholders, one full sentence per key,
   no concatenated fragments around a variable. See
   `docs/manual/16-localization.md` and `docs/ARCHITECTURE.md`.
+- The UI design language (tokens, dialog primitives, the `ConfirmSheet`
+  confirmation template, button order, and the SFTP file-browser pattern) lives
+  in `docs/DESIGN_LANGUAGE.md`. Read it before adding any dialog, sheet, settings
+  surface, or file-browser UI. Build dialogs from `src/app/ui/dialog` primitives
+  and read color tokens from `src/styles/colorSchemes.css`; never hard-code hex.
 - App-owned popup dialogs use a single concise title by default. Do not add a
   subtitle or explanatory header copy unless the flow truly needs it; put
   supporting text in the dialog body near the relevant controls instead.

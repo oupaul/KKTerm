@@ -1,7 +1,8 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 
-import { Download, Terminal, Trash2, Upload, X } from "lucide-react";
+import { Terminal } from "lucide-react";
+import { DIcon } from "../../../../app/ui/dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -824,6 +825,20 @@ export function SftpWorkspace({
     setContextMenu(null);
   };
 
+  const handleContextCopyPath = (menu: SftpContextMenuState) => {
+    const name = menu.names[0];
+    if (name) {
+      const fullPath =
+        menu.side === "local"
+          ? isLocalDrivePicker
+            ? name
+            : joinLocalPath(localPath, name)
+          : joinRemotePath(remotePath, name);
+      void navigator.clipboard?.writeText(fullPath);
+    }
+    setContextMenu(null);
+  };
+
   const handleContextDelete = (menu: SftpContextMenuState) => {
     if (menu.side === "remote") {
       void handleDeleteRemotePath(menu.names);
@@ -904,7 +919,6 @@ export function SftpWorkspace({
 
   const isConnected = status === t("sftp.connected") && Boolean(sessionIdRef.current);
   const isTransferring = transfers.some((transfer) => transfer.state === "active");
-  const activeTransferCount = transfers.filter((transfer) => transfer.state === "active").length;
   const clearableTransferCount = transfers.filter((transfer) =>
     TRANSFER_HISTORY_STATES.includes(transfer.state),
   ).length;
@@ -1011,34 +1025,20 @@ export function SftpWorkspace({
       data-selected-color-scheme={appearanceSettings.colorScheme}
       ref={workspaceRef}
     >
-      <div className="workspace-toolbar" data-tutorial-id="sftp.toolbar">
-        <div>
+      <div className="workspace-toolbar sftp-toolbar" data-tutorial-id="sftp.toolbar">
+        <div className="sftp-toolbar-id">
           <strong>{toolbarTitle}</strong>
-          <span>{status === t("sftp.connected") ? tab.subtitle : status}</span>
+          {connection ? (
+            <span className="sftp-conn-pill" data-connected={isConnected ? "true" : "false"}>
+              <span className="dot" />
+              {isConnected ? t("sftp.connected") : t("sftp.connecting")}
+            </span>
+          ) : null}
+          <span className="sftp-toolbar-sub">
+            {status === t("sftp.connected") ? tab.subtitle : status}
+          </span>
         </div>
         <div className="toolbar-cluster">
-          <button
-            className="toolbar-button"
-            data-tutorial-id="sftp.upload"
-            disabled={!isConnected || isLocalDrivePicker || selectedLocalFiles.length === 0}
-            onClick={() => handleUpload()}
-            type="button"
-          >
-            <Upload size={15} />
-            {t("sftp.upload")}
-          </button>
-          <button
-            className="toolbar-button"
-            data-tutorial-id="sftp.download"
-            disabled={
-              !isConnected || selectedRemoteFiles.length === 0 || !localPath || isLocalDrivePicker
-            }
-            onClick={() => handleDownload()}
-            type="button"
-          >
-            <Download size={15} />
-            {t("sftp.download")}
-          </button>
           {!inline && commands?.capabilities.openTerminalHere ? (
             <button
               className="toolbar-button"
@@ -1058,11 +1058,10 @@ export function SftpWorkspace({
               targetRef={workspaceRef}
             />
           ) : null}
-        
         </div>
       </div>
 
-      <div className="file-manager">
+      <div className="sftp-panes">
         <FilePane
           side="local"
           title={t("sftp.local")}
@@ -1082,6 +1081,30 @@ export function SftpWorkspace({
             isConnected && !isTransferring && !isLocalDrivePicker ? handleDropTransfer : undefined
           }
         />
+        <div className="sftp-gutter">
+          <button
+            className="sftp-xfer-arrow"
+            data-tutorial-id="sftp.upload"
+            aria-label={t("sftp.upload")}
+            title={t("sftp.upload")}
+            disabled={!isConnected || isLocalDrivePicker || selectedLocalFiles.length === 0}
+            onClick={() => handleUpload()}
+            type="button"
+          >
+            <DIcon name="forward" size={18} />
+          </button>
+          <button
+            className="sftp-xfer-arrow"
+            data-tutorial-id="sftp.download"
+            aria-label={t("sftp.download")}
+            title={t("sftp.download")}
+            disabled={!isConnected || selectedRemoteFiles.length === 0 || !localPath || isLocalDrivePicker}
+            onClick={() => handleDownload()}
+            type="button"
+          >
+            <DIcon name="back" size={18} />
+          </button>
+        </div>
         <FilePane
           side="remote"
           title={t("sftp.remote")}
@@ -1106,56 +1129,21 @@ export function SftpWorkspace({
         />
       </div>
 
-      <div className="transfer-queue" data-tutorial-id="sftp.transferQueue">
-        <header>
-          <strong>{t("sftp.transferActivity")}</strong>
-          <div className="transfer-queue-actions">
-            <span>{t("sftp.transferCountActive", { count: activeTransferCount })}</span>
-            <button
-              className="toolbar-button transfer-clear-button"
-              disabled={clearableTransferCount === 0}
-              onClick={() =>
-                setTransfers((current) =>
-                  current.filter((transfer) => !TRANSFER_HISTORY_STATES.includes(transfer.state)),
-                )
-              }
-              type="button"
-            >
-              <Trash2 size={14} />
-              {t("sftp.clear")}
-            </button>
-          </div>
-        </header>
-        {transfers.length === 0 ? (
-          <div className="transfer-row transfer-row-muted">{t("sftp.noTransfers")}</div>
-        ) : null}
-        {transfers.map((transfer) => (
-          <div className="transfer-row" key={transfer.id}>
-            <span>
-              {t(transfer.direction === "upload" ? "sftp.upload" : "sftp.download")} {transfer.name}
-            </span>
-            <progress value={transfer.progress} max="100" />
-            <small className={`transfer-state transfer-state-${transfer.state}`}>
-              {transfer.state}
-            </small>
-            <small>{transfer.detail}</small>
-            <button
-              className="row-action"
-              aria-label={t("sftp.cancelTransferName", { name: transfer.name })}
-              disabled={!["active", "queued"].includes(transfer.state)}
-              onClick={() => void handleCancelTransfer(transfer)}
-              title={t("sftp.cancelTransferName", { name: transfer.name })}
-              type="button"
-            >
-              <X size={13} />
-            </button>
-          </div>
-        ))}
-      </div>
+      <TransferArea
+        transfers={transfers}
+        clearableCount={clearableTransferCount}
+        onClear={() =>
+          setTransfers((current) =>
+            current.filter((transfer) => !TRANSFER_HISTORY_STATES.includes(transfer.state)),
+          )
+        }
+        onCancel={(transfer) => void handleCancelTransfer(transfer)}
+      />
       {contextMenu ? (
         <SftpContextMenu
           menu={contextMenu}
           onClose={() => setContextMenu(null)}
+          onCopyPath={handleContextCopyPath}
           onDelete={handleContextDelete}
           onProperties={handleContextProperties}
           onRename={handleContextRename}
@@ -1189,6 +1177,128 @@ export function SftpWorkspace({
         />
       ) : null}
     </section>
+  );
+}
+
+function TransferArea({
+  transfers,
+  clearableCount,
+  onClear,
+  onCancel,
+}: {
+  transfers: TransferRecord[];
+  clearableCount: number;
+  onClear: () => void;
+  onCancel: (transfer: TransferRecord) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const active = transfers.filter(
+    (transfer) => transfer.state === "active" || transfer.state === "queued",
+  );
+  const doneCount = transfers.filter((transfer) => transfer.state === "done").length;
+  const averageProgress = active.length
+    ? Math.round(active.reduce((sum, transfer) => sum + transfer.progress, 0) / active.length)
+    : 0;
+
+  useEffect(() => {
+    if (active.length > 0) {
+      setOpen(true);
+    }
+  }, [active.length]);
+
+  let status: string;
+  if (active.length) {
+    status = t("sftp.transferringStatus", { count: active.length, percent: averageProgress });
+  } else if (transfers.length) {
+    status = t("sftp.transfersIdleStatus", { count: doneCount });
+  } else {
+    status = t("sftp.noTransfers");
+  }
+
+  return (
+    <div className={`sftp-xfer${open ? " open" : ""}`} data-tutorial-id="sftp.transferQueue">
+      <div
+        className="sftp-xfer-bar"
+        onClick={() => setOpen((value) => !value)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setOpen((value) => !value);
+          }
+        }}
+      >
+        <div className="lead">
+          <DIcon name={active.length ? "refresh" : "check"} size={15} />
+          <span className="status">{status}</span>
+        </div>
+        {active.length > 0 ? (
+          <div className="mini-track">
+            <div className="mini-fill" style={{ width: `${averageProgress}%` }} />
+          </div>
+        ) : null}
+        <div className="right">
+          {transfers.length > 0 ? (
+            <button
+              className="sftp-icon-btn"
+              disabled={clearableCount === 0}
+              title={t("sftp.clear")}
+              aria-label={t("sftp.clear")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onClear();
+              }}
+              type="button"
+            >
+              <DIcon name="trash" size={14} />
+            </button>
+          ) : null}
+          <span className="sftp-xfer-chev">
+            <DIcon name="chevdown" size={16} />
+          </span>
+        </div>
+      </div>
+      <div className="sftp-xfer-panel">
+        <div className="sftp-xfer-panel-inner">
+          {transfers.length === 0 ? (
+            <div className="sftp-xfer-empty">{t("sftp.transferHint")}</div>
+          ) : null}
+          {transfers.map((transfer) => (
+            <div className="sftp-xfer-row" key={transfer.id}>
+              <span className="dir">
+                <DIcon name={transfer.direction === "upload" ? "upload" : "download"} size={16} />
+              </span>
+              <div className="meta">
+                <div className="nm">{transfer.name}</div>
+                <div className="track">
+                  <div className={`fill ${transfer.state}`} style={{ width: `${transfer.progress}%` }} />
+                </div>
+              </div>
+              <span className={`st ${transfer.state}`}>
+                {transfer.state === "active"
+                  ? `${Math.round(transfer.progress)}%`
+                  : t(`sftp.transferState.${transfer.state}`)}
+              </span>
+              {transfer.state === "active" || transfer.state === "queued" ? (
+                <button
+                  className="sftp-icon-btn"
+                  title={t("sftp.cancelTransferName", { name: transfer.name })}
+                  aria-label={t("sftp.cancelTransferName", { name: transfer.name })}
+                  onClick={() => onCancel(transfer)}
+                  type="button"
+                >
+                  <DIcon name="close" size={13} />
+                </button>
+              ) : (
+                <span />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

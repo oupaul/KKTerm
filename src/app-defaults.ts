@@ -78,8 +78,9 @@ export const defaultTerminalSettings: TerminalSettings = {
 };
 
 export const defaultAppearanceSettings: AppearanceSettings = {
+  // Platform-aware default: SF Pro on macOS, bundled Inter on Windows.
   appFontFamily:
-    '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
   colorScheme: "default",
 };
 
