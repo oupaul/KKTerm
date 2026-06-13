@@ -1,5 +1,4 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
-import { ScreenshotMenu } from "../../ScreenshotMenu";
 
 import { Terminal } from "lucide-react";
 import { DIcon } from "../../../../app/ui/dialog";
@@ -1028,17 +1027,17 @@ export function SftpWorkspace({
       <div className="workspace-toolbar sftp-toolbar" data-tutorial-id="sftp.toolbar">
         <div className="sftp-toolbar-id">
           <strong>{toolbarTitle}</strong>
+          <span className="sftp-toolbar-sub">
+            {status === t("sftp.connected") ? tab.subtitle : status}
+          </span>
+        </div>
+        <div className="toolbar-cluster">
           {connection ? (
             <span className="sftp-conn-pill" data-connected={isConnected ? "true" : "false"}>
               <span className="dot" />
               {isConnected ? t("sftp.connected") : t("sftp.connecting")}
             </span>
           ) : null}
-          <span className="sftp-toolbar-sub">
-            {status === t("sftp.connected") ? tab.subtitle : status}
-          </span>
-        </div>
-        <div className="toolbar-cluster">
           {!inline && commands?.capabilities.openTerminalHere ? (
             <button
               className="toolbar-button"
@@ -1050,13 +1049,6 @@ export function SftpWorkspace({
               <Terminal size={15} />
               {t("sftp.terminal")}
             </button>
-          ) : null}
-          {!inline ? (
-            <ScreenshotMenu
-              dataTutorialId="workspace.screenshotMenu"
-              targetLabel={t("sftp.screenshotTarget", { title: tab.title })}
-              targetRef={workspaceRef}
-            />
           ) : null}
         </div>
       </div>

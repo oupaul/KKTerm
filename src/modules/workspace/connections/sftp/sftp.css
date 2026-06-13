@@ -9,6 +9,9 @@
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  /* Grey field so the white pane / toolbar / transfer cards stand out
+     (Default-scheme design language). */
+  background: var(--app-bg);
 }
 
 .sftp-workspace .workspace-toolbar {
@@ -16,15 +19,19 @@
   margin-bottom: 0;
 }
 
-/* toolbar identity */
+/* toolbar identity — host over status; the connected pill lives in the right
+   cluster so it anchors top-right on the same row as the host name. */
 .sftp-toolbar-id {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 1px;
   min-width: 0;
 }
 .sftp-toolbar-id strong {
-  flex: 0 0 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sftp-conn-pill {
   display: inline-flex;
@@ -358,6 +365,10 @@
   gap: 9px;
   min-width: 0;
 }
+.sftp-row-glyph {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
 .sftp-row .nm > span {
   white-space: nowrap;
   overflow: hidden;
@@ -404,13 +415,11 @@
 .sftp-tile.sel {
   background: var(--sel-soft);
 }
-.sftp-tile-ico .file-type-icon {
-  width: 52px;
+.sftp-tile-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 52px;
-}
-.sftp-tile-ico .file-type-icon img {
-  width: 46px;
-  height: 46px;
 }
 .sftp-tile-cap {
   max-width: 100%;
@@ -697,13 +706,10 @@
   padding: 22px 18px 16px;
   border-bottom: 1px solid var(--hairline);
 }
-.sftp-props-glyph .file-type-icon {
-  width: 56px;
-  height: 56px;
-}
-.sftp-props-glyph .file-type-icon img {
-  width: 50px;
-  height: 50px;
+.sftp-props-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .sftp-props-head .nm {
   font-size: 15px;

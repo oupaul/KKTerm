@@ -7,7 +7,7 @@ import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMou
 import { useTranslation } from "react-i18next";
 import { DIcon } from "../../../../app/ui/dialog";
 import type { FileEntry } from "../../../../types";
-import { FileTypeIcon } from "./fileIcons";
+import { FileGlyph } from "./finderGlyphs";
 import type { FilePaneSide } from "./types";
 
 type SortKey = "name" | "size" | "date";
@@ -493,7 +493,9 @@ export function FilePane({
                   {...handlers}
                 >
                   <div className="nm">
-                    <FileTypeIcon file={file} />
+                    <span className="sftp-row-glyph">
+                      <FileGlyph entry={file} size={20} />
+                    </span>
                     {renderRowName(file)}
                   </div>
                   <div className="num">{file.size}</div>
@@ -518,7 +520,7 @@ export function FilePane({
                   {...handlers}
                 >
                   <span className="sftp-tile-ico">
-                    <FileTypeIcon file={file} />
+                    <FileGlyph entry={file} size={52} />
                   </span>
                   <span className="sftp-tile-cap">{renderRowName(file)}</span>
                 </div>

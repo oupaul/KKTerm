@@ -10,7 +10,7 @@ import {
   Sheet,
   TextInput,
 } from "../../../../app/ui/dialog";
-import { FileTypeIcon } from "./fileIcons";
+import { FileGlyph } from "./finderGlyphs";
 import { formatFileSize, formatRemoteTime } from "./format";
 import type {
   FilePropertiesState,
@@ -319,7 +319,7 @@ export function SftpPropertiesPopup({
       <div className="sftp-props" role="dialog" aria-label={t("sftp.sftpProperties")}>
         <div className="sftp-props-head">
           <span className="sftp-props-glyph">
-            <FileTypeIcon file={properties.entry} />
+            <FileGlyph entry={properties.entry} size={56} />
           </span>
           <div className="nm">{properties.entry.name}</div>
           <div className="sub">{remoteProperties?.kind ?? properties.entry.kind}</div>
