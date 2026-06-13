@@ -7,6 +7,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MouseEvent as ReactMouseEvent } from "react";
+import { resolveAppliedColorScheme } from "../../../../app/appShellEffects";
 import { invokeCommand, isTauriRuntime, type LocalDirectoryEntry, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../../../../lib/tauri";
 import {
   fileBrowserCommandsFor,
@@ -56,6 +57,7 @@ export function SftpWorkspace({
   inline?: boolean;
 }) {
   const { t } = useTranslation();
+  const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const openTerminalHere = useWorkspaceStore((state) => state.openTerminalHere);
   const connection = tab.connection;
   const commands = useMemo<FileBrowserCommands | null>(
@@ -1005,6 +1007,8 @@ export function SftpWorkspace({
   return (
     <section
       className={isActive ? "sftp-workspace active" : "sftp-workspace"}
+      data-color-scheme={resolveAppliedColorScheme(appearanceSettings.colorScheme)}
+      data-selected-color-scheme={appearanceSettings.colorScheme}
       ref={workspaceRef}
     >
       <div className="workspace-toolbar" data-tutorial-id="sftp.toolbar">
