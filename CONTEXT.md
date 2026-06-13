@@ -60,7 +60,7 @@ A frontend workspace container that presents one session or a set of related pan
 _Avoid_: Session, connection, backend tab
 
 **Child Connection Tab**:
-A saved frontend Tab instance shown as an italic child row under its parent Connection in the Connection Tree when Workspace Settings enables the hidden top Tab Strip mode. A Child Connection Tab may remember a display name, icon/background, tmux session id, and last terminal directory so it can be reopened lazily after app launch. It is not the durable backend Connection itself and it is not a live Session until the user opens it.
+A saved frontend Tab instance shown as an italic child row under its parent terminal-type Connection in the Connection Tree when Workspace Settings enables the hidden top Tab Strip mode. A Child Connection Tab may remember a display name, icon/background, tmux session id, and last terminal directory so it can be reopened lazily after app launch. It is not the durable backend Connection itself and it is not a live Session until the user opens it.
 _Avoid_: child connection, saved session, sub-connection, backend tab
 
 **Dashboard Module**:

@@ -1555,6 +1555,7 @@ export function ConnectionSidebar({
     const isPinned = generalSettings.pinnedConnectionIds.includes(menu.connection.id);
     const isConnected = (activeSessionCounts[menu.connection.id] ?? 0) > 0;
     const canAddToPane = Boolean(tabs.find((tab) => tab.id === activeTabId && tab.kind === "terminal"));
+    const canOpenNewTab = !showChildTabsInTree || isTerminalConnectionType(menu.connection.type);
     items.push(
       { kind: "separator" },
       {
@@ -1583,6 +1584,7 @@ export function ConnectionSidebar({
           kind: "item",
           label: `${t("workspace.newTab")}\t${t("connections.newTabShortcut")}`,
           iconSvg: nativeMenuIcons.squarePlus,
+          disabled: !canOpenNewTab,
           action: () => handleTreeMenuOpenNewTab(menu),
         },
         ...(canAddToPane
@@ -2337,6 +2339,11 @@ export function ConnectionSidebar({
         <TreeContextMenu
           menu={treeContextMenu}
           canAddToPane={Boolean(tabs.find((tab) => tab.id === activeTabId && tab.kind === "terminal"))}
+          canOpenNewTab={
+            treeContextMenu.kind !== "connection" ||
+            !showChildTabsInTree ||
+            isTerminalConnectionType(treeContextMenu.connection.type)
+          }
           isPinned={
             treeContextMenu.kind === "connection" &&
             generalSettings.pinnedConnectionIds.includes(treeContextMenu.connection.id)
@@ -2948,6 +2955,7 @@ function InlineTreeRenameInput({
 function TreeContextMenu({
   menu,
   canAddToPane,
+  canOpenNewTab,
   isPinned,
   onClose,
   onCreateConnection,
@@ -2964,6 +2972,7 @@ function TreeContextMenu({
 }: {
   menu: TreeContextMenuState;
   canAddToPane: boolean;
+  canOpenNewTab: boolean;
   isPinned: boolean;
   onClose: () => void;
   onCreateConnection: () => void;
@@ -3036,7 +3045,7 @@ function TreeContextMenu({
         </>
       ) : null}
       {menu.kind === "connection" ? (
-        <button onClick={onOpenNewTab} role="menuitem" type="button">
+        <button disabled={!canOpenNewTab} onClick={onOpenNewTab} role="menuitem" type="button">
           <SquarePlus className="menu-item-icon" size={15} />
           <span>{t("workspace.newTab")}</span>
         </button>
@@ -3070,7 +3079,7 @@ function TreeContextMenu({
               <ChevronRight className="menu-item-chevron" size={13} />
             </button>
             <div className="tree-context-submenu-menu" role="menu" aria-label={t("connections.addToPane")}>
-              <button onClick={onOpenNewTab} role="menuitem" type="button">
+              <button disabled={!canOpenNewTab} onClick={onOpenNewTab} role="menuitem" type="button">
                 <SquarePlus className="menu-item-icon" size={15} />
                 <span>{t("workspace.newTab")}</span>
                 <small className="menu-shortcut">{t("connections.newTabShortcut")}</small>
