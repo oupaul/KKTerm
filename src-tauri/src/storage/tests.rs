@@ -2737,6 +2737,237 @@
     }
 
     #[test]
+    fn v20_workspace_migration_keeps_connection_foreign_keys_pointing_at_connections() {
+        let db_path = temp_db_path("workspace-migration-fks");
+        {
+            let connection = rusqlite::Connection::open(&db_path).expect("old database opens");
+            connection
+                .execute_batch(
+                    r#"
+                    PRAGMA foreign_keys = OFF;
+                    CREATE TABLE connection_folders (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        parent_folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+                        sort_order INTEGER NOT NULL
+                    );
+                    CREATE TABLE connection_password_credentials (
+                        id TEXT PRIMARY KEY,
+                        connection_type TEXT NOT NULL CHECK (connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')),
+                        host TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        label TEXT NOT NULL,
+                        created_from_connection_id TEXT REFERENCES connections(id) ON DELETE SET NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE connections (
+                        id TEXT PRIMARY KEY,
+                        folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        tab_title TEXT,
+                        host TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        port INTEGER,
+                        key_path TEXT,
+                        proxy_jump TEXT,
+                        auth_method TEXT NOT NULL DEFAULT 'keyFile',
+                        local_shell TEXT,
+                        local_startup_directory TEXT,
+                        local_startup_script TEXT,
+                        url TEXT,
+                        data_partition TEXT,
+                        use_tmux_sessions INTEGER NOT NULL DEFAULT 1,
+                        tmux_connection_id TEXT,
+                        serial_line TEXT,
+                        serial_speed INTEGER,
+                        rdp_options TEXT,
+                        vnc_options TEXT,
+                        ftp_options TEXT,
+                        password_credential_id TEXT REFERENCES connection_password_credentials(id) ON DELETE SET NULL,
+                        icon_data_url TEXT,
+                        icon_background_color TEXT,
+                        terminal_opacity INTEGER,
+                        terminal_background_json TEXT,
+                        connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp')),
+                        status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
+                        sort_order INTEGER NOT NULL
+                    );
+                    CREATE TABLE connection_tags (
+                        connection_id TEXT NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+                        tag TEXT NOT NULL,
+                        sort_order INTEGER NOT NULL,
+                        PRIMARY KEY (connection_id, tag)
+                    );
+                    INSERT INTO connections (
+                        id, folder_id, name, tab_title, host, username, port, key_path,
+                        proxy_jump, auth_method, local_shell, local_startup_directory,
+                        local_startup_script, url, data_partition, use_tmux_sessions,
+                        tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                        ftp_options, password_credential_id, icon_data_url, icon_background_color,
+                        terminal_opacity, terminal_background_json, connection_type, status, sort_order
+                    )
+                    VALUES (
+                        'existing', NULL, 'Existing', NULL, 'existing.internal', 'admin',
+                        NULL, NULL, NULL, 'agent', NULL, NULL, NULL, NULL, NULL, 1,
+                        'tmux-existing', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, 'ssh', 'idle', 0
+                    );
+                    INSERT INTO connection_tags (connection_id, tag, sort_order)
+                    VALUES ('existing', 'ops', 0);
+                    PRAGMA user_version = 19;
+                    "#,
+                )
+                .expect("old schema is created");
+        }
+
+        let storage = Storage::open(db_path).expect("storage migrates");
+        create_test_ssh_connection(&storage, "New Host", "new.internal", None);
+
+        let schema_sql = storage
+            .with_connection(|connection| {
+                connection
+                    .query_row(
+                        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'connection_tags'",
+                        [],
+                        |row| row.get::<_, String>(0),
+                    )
+                    .map_err(to_storage_error)
+            })
+            .expect("connection_tags schema loads");
+        assert!(
+            !schema_sql.contains("connections_pre_v20"),
+            "connection_tags must not retain the migration scratch table name"
+        );
+    }
+
+    #[test]
+    fn schema_initialization_repairs_v20_connections_pre_table_foreign_keys() {
+        let db_path = temp_db_path("workspace-repair-fks");
+        {
+            let connection = rusqlite::Connection::open(&db_path).expect("corrupt database opens");
+            connection
+                .execute_batch(
+                    r#"
+                    PRAGMA foreign_keys = OFF;
+                    CREATE TABLE workspaces (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        icon TEXT,
+                        is_default INTEGER NOT NULL DEFAULT 0,
+                        sort_order INTEGER NOT NULL
+                    );
+                    CREATE TABLE connection_folders (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        parent_folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+                        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+                        sort_order INTEGER NOT NULL
+                    );
+                    CREATE TABLE connection_password_credentials (
+                        id TEXT PRIMARY KEY,
+                        connection_type TEXT NOT NULL CHECK (connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')),
+                        host TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        label TEXT NOT NULL,
+                        created_from_connection_id TEXT REFERENCES connections_pre_v20(id) ON DELETE SET NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE connections (
+                        id TEXT PRIMARY KEY,
+                        folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+                        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        tab_title TEXT,
+                        host TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        port INTEGER,
+                        key_path TEXT,
+                        proxy_jump TEXT,
+                        auth_method TEXT NOT NULL DEFAULT 'keyFile',
+                        local_shell TEXT,
+                        local_startup_directory TEXT,
+                        local_startup_script TEXT,
+                        url TEXT,
+                        data_partition TEXT,
+                        use_tmux_sessions INTEGER NOT NULL DEFAULT 1,
+                        tmux_connection_id TEXT,
+                        serial_line TEXT,
+                        serial_speed INTEGER,
+                        rdp_options TEXT,
+                        vnc_options TEXT,
+                        ftp_options TEXT,
+                        password_credential_id TEXT REFERENCES connection_password_credentials(id) ON DELETE SET NULL,
+                        icon_data_url TEXT,
+                        icon_background_color TEXT,
+                        terminal_opacity INTEGER,
+                        terminal_background_json TEXT,
+                        connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp', 'localFiles')),
+                        status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
+                        sort_order INTEGER NOT NULL
+                    );
+                    CREATE TABLE connection_tags (
+                        connection_id TEXT NOT NULL REFERENCES connections_pre_v20(id) ON DELETE CASCADE,
+                        tag TEXT NOT NULL,
+                        sort_order INTEGER NOT NULL,
+                        PRIMARY KEY (connection_id, tag)
+                    );
+                    CREATE TABLE url_credentials (
+                        connection_id TEXT PRIMARY KEY REFERENCES connections_pre_v20(id) ON DELETE CASCADE,
+                        username TEXT NOT NULL,
+                        page_url TEXT,
+                        username_selector TEXT,
+                        password_selector TEXT,
+                        field_values TEXT,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    INSERT INTO workspaces (id, name, icon, is_default, sort_order)
+                    VALUES ('default', 'Default', NULL, 1, 0);
+                    INSERT INTO connections (
+                        id, folder_id, workspace_id, name, tab_title, host, username, port,
+                        key_path, proxy_jump, auth_method, local_shell, local_startup_directory,
+                        local_startup_script, url, data_partition, use_tmux_sessions,
+                        tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                        ftp_options, password_credential_id, icon_data_url, icon_background_color,
+                        terminal_opacity, terminal_background_json, connection_type, status, sort_order
+                    )
+                    VALUES (
+                        'existing', NULL, 'default', 'Existing', NULL, 'existing.internal',
+                        'admin', NULL, NULL, NULL, 'agent', NULL, NULL, NULL, NULL, NULL, 1,
+                        'tmux-existing', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, 'ssh', 'idle', 0
+                    );
+                    INSERT INTO connection_tags (connection_id, tag, sort_order)
+                    VALUES ('existing', 'ops', 0);
+                    PRAGMA user_version = 20;
+                    "#,
+                )
+                .expect("stale v20 schema is created");
+        }
+
+        let storage = Storage::open(db_path).expect("storage repairs stale fks");
+        let created = create_test_ssh_connection(&storage, "New Host", "new.internal", None);
+        storage
+            .create_connection_password_credential_metadata(created.id)
+            .expect("password credential metadata can point at the new connection");
+
+        let stale_reference_count: i64 = storage
+            .with_connection(|connection| {
+                connection
+                    .query_row(
+                        "SELECT COUNT(*) FROM sqlite_master
+                         WHERE type = 'table' AND sql LIKE '%connections_pre_v20%'",
+                        [],
+                        |row| row.get(0),
+                    )
+                    .map_err(to_storage_error)
+            })
+            .expect("schema scan runs");
+        assert_eq!(stale_reference_count, 0);
+    }
+
+    #[test]
     fn create_workspace_copy_imports_connections_independently() {
         let storage = Storage::open(temp_db_path("workspace-import")).expect("storage opens");
         let source = create_test_ssh_connection(&storage, "Bastion", "bastion.internal", None);
