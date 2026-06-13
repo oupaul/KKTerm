@@ -528,8 +528,8 @@ h2 {
   width: min(560px, calc(100vw - 40px));
   padding: 14px;
   overflow: hidden;
-  background: var(--chrome);
-  border-color: var(--border-strong);
+  background: var(--surface);
+  border-color: var(--border);
   box-shadow: var(--shadow);
   font-size: 13px;
 }

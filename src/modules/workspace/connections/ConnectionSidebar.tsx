@@ -30,7 +30,7 @@ import {
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
@@ -3674,14 +3674,22 @@ function ConnectionDialog({
           className={mode === "quick" ? "connection-dialog-header" : "connection-dialog-header compact"}
         >
           <div>
-            <p className="panel-label">
+            <p className="connection-dialog-eyebrow">
               {mode === "edit"
                 ? t("connections.connectionProperties")
                 : mode === "save"
                   ? t("connections.newConnectionTitle")
                   : t("connections.quickConnect")}
             </p>
-            {mode === "quick" ? <h2>{t("connections.openOneOffSession")}</h2> : null}
+            {connectionType ? (
+              <h2 className="connection-dialog-title">
+                {isEditMode
+                  ? initialConnection?.name || connectionTypeLabel(connectionType)
+                  : connectionTypeLabel(connectionType)}
+              </h2>
+            ) : mode === "quick" ? (
+              <h2 className="connection-dialog-title">{t("connections.openOneOffSession")}</h2>
+            ) : null}
           </div>
         </header>
 
@@ -3756,7 +3764,7 @@ function ConnectionDialog({
 
         <div className="dialog-actions">
           <button className="approve-button" disabled={!connectionType} type="submit">
-            <Save size={15} />
+            <Check size={15} />
             {mode === "quick" ? t("connections.saveAndConnect") : t("common.save")}
           </button>
           <button className="toolbar-button" type="button" onClick={onCancel}>
