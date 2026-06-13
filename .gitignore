@@ -37,3 +37,4 @@ dist-ssr
 /node_modules
 /.playwright-mcp
 /tmp
+/promo
