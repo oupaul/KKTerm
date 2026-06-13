@@ -206,7 +206,7 @@ export function ConnectionIconPicker({
           iconBackgroundColor={iconBackgroundColor}
           iconDataUrl={currentIconDataUrl}
           localShell={localShell}
-          size={32}
+          size={44}
           type={type}
         />
         <span className="connection-icon-edit-glyph" aria-hidden="true">

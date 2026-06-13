@@ -2509,24 +2509,22 @@ function ChildConnectionPropertiesDialog({
           </div>
         </header>
         <div className="connection-type-summary">
-          <div className="connection-appearance-controls">
-            <ConnectionIconPicker
-              customIconDataUrls={customIconDataUrls}
-              iconBackgroundColor={iconBackgroundColor}
-              iconDataUrl={iconDataUrl}
-              localShell={state.connection.localShell}
-              onChange={setIconDataUrl}
-              type={state.connection.type}
-            />
-            <ConnectionIconBackgroundPicker
-              color={iconBackgroundColor}
-              onChange={setIconBackgroundColor}
-            />
-          </div>
+          <ConnectionIconPicker
+            customIconDataUrls={customIconDataUrls}
+            iconBackgroundColor={iconBackgroundColor}
+            iconDataUrl={iconDataUrl}
+            localShell={state.connection.localShell}
+            onChange={setIconDataUrl}
+            type={state.connection.type}
+          />
           <span>
             <strong>{state.connection.name}</strong>
             <small>{connectionSubtitle(state.connection)}</small>
           </span>
+          <ConnectionIconBackgroundPicker
+            color={iconBackgroundColor}
+            onChange={setIconBackgroundColor}
+          />
         </div>
         <div className="connection-dialog-fields">
           <label>
@@ -3704,20 +3702,14 @@ function ConnectionDialog({
                 type={connectionType}
               />
             ) : (
-              <div className="connection-appearance-controls">
-                <ConnectionIconPicker
-                  customIconDataUrls={reusableIconDataUrls}
-                  iconBackgroundColor={iconBackgroundColor}
-                  iconDataUrl={iconDataUrl}
-                  localShell={initialConnection?.localShell}
-                  onChange={setIconDataUrl}
-                  type={connectionType}
-                />
-                <ConnectionIconBackgroundPicker
-                  color={iconBackgroundColor}
-                  onChange={setIconBackgroundColor}
-                />
-              </div>
+              <ConnectionIconPicker
+                customIconDataUrls={reusableIconDataUrls}
+                iconBackgroundColor={iconBackgroundColor}
+                iconDataUrl={iconDataUrl}
+                localShell={initialConnection?.localShell}
+                onChange={setIconDataUrl}
+                type={connectionType}
+              />
             )}
             <span>
               <strong>{connectionTypeLabel(connectionType)}</strong>
@@ -3727,6 +3719,12 @@ function ConnectionDialog({
                   : connectionTypeSubtitle(connectionType)}
               </small>
             </span>
+            {mode !== "quick" ? (
+              <ConnectionIconBackgroundPicker
+                color={iconBackgroundColor}
+                onChange={setIconBackgroundColor}
+              />
+            ) : null}
           </div>
         ) : null}
 

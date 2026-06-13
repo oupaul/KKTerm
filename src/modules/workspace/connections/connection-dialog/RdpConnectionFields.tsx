@@ -1,3 +1,4 @@
+import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   RDP_REMOTE_RESOLUTION_FIXED,
@@ -108,6 +109,7 @@ export function RdpConnectionOptions({
         <legend>{t("connections.rdpOptions")}</legend>
         <div className="connection-specific-options-panel">
           <label className="connection-session-toggle">
+            <Settings2 className="option-glyph" size={17} aria-hidden />
             <span>{t("connections.inheritSettingsDefaults")}</span>
             <input
               name="rdpInheritDefaults"
@@ -118,6 +120,7 @@ export function RdpConnectionOptions({
           </label>
           <div className="connection-option-fields">
             <label>
+              <Palette className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.colorDepth")}</span>
               <select
                 disabled={rdpInheritsSettingsDefaults}
@@ -131,6 +134,7 @@ export function RdpConnectionOptions({
               </select>
             </label>
             <label>
+              <Zap className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.performanceFlags")}</span>
               <select
                 disabled={rdpInheritsSettingsDefaults}
@@ -143,6 +147,7 @@ export function RdpConnectionOptions({
               </select>
             </label>
             <label>
+              <Scaling className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.remoteDesktopViewMode")}</span>
               <select
                 disabled={rdpInheritsSettingsDefaults}
@@ -157,6 +162,7 @@ export function RdpConnectionOptions({
               </select>
             </label>
             <label>
+              <Monitor className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.rdpRemoteResolution")}</span>
               <select
                 disabled={rdpInheritsSettingsDefaults}
@@ -174,6 +180,7 @@ export function RdpConnectionOptions({
           </div>
           <div className="connection-session-fields">
             <label className="connection-session-toggle">
+              <Clipboard className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.rdpRedirectClipboard")}</span>
               <input
                 disabled={rdpInheritsSettingsDefaults}
@@ -183,6 +190,7 @@ export function RdpConnectionOptions({
               />
             </label>
             <label className="connection-session-toggle">
+              <HardDrive className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.rdpRedirectDrives")}</span>
               <input
                 disabled={rdpInheritsSettingsDefaults}
@@ -192,6 +200,7 @@ export function RdpConnectionOptions({
               />
             </label>
             <label className="connection-session-toggle">
+              <Layers className="option-glyph" size={17} aria-hidden />
               <span>{t("settings.bitmapCache")}</span>
               <input
                 disabled={rdpInheritsSettingsDefaults}

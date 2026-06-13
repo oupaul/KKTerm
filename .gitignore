@@ -38,3 +38,4 @@ dist-ssr
 /.playwright-mcp
 /tmp
 /promo
+.tmp
