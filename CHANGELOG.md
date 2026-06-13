@@ -3,6 +3,64 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.79/kkterm-0.1.79-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.79/kkterm-0.1.79-windows-arm64-setup.exe)
+
+## Highlights
+- **New “Match OS” color scheme** with **system accent color** integration—so your Dashboard colors can finally keep up with your desktop theme.  
+- **Dashboard edit mode gains better handling**: drag handles and resize functionality for Dashboard Widget Instances.
+- **Speedtest widget upgrades**: enhanced target selection and improvements to related target handling.
+
+## New
+- **Add “Match OS” color scheme option** and integrate **system accent color**. (**a**0193d5, **2**9998b6d)
+- **LibreSpeed targets for speed tests** (with updated/related tests). (**2**015c21)
+- **Selectable speedtest targets** with regional options (including translations and updated manual docs). (**b**a45297)
+- **Enhance QR code widget** with **dynamic canvas sizing**. (**d**375d54)
+
+## Improved
+- **Dashboard edit mode drag handle & resize** for Dashboard Widget Instances. (**2**daff9d, **b**8fad3a)
+- **Script widget iframe styling enforcement** for color-scheme and background styling. (**1**955b49)
+- **Localization updates** for speedtest target labels across multiple languages. (**6**2babbb)
+
+## Fixed
+- Simplify BOOL usage in `system_accent_color` function. (**a**0193d5)
+
+## Internal
+- Update source-of-truth docs for the AI harness changes. (PR from **#308**, **d**1ce349)
+- Update release script variable naming for clarity and align tests. (**b**3e327e)
+- Update macOS packaging scripts for base64-wrapped Minisign keys, key normalization/extraction, and signing key handling. (**0**acb095, **c**ceea67, **b**fa5778)
+- Remove obsolete localization files and update translations for work plan title. (**f**ced0e8)
+- Enhance hash workbench with file selection and additional hashing algorithms (MD5, CRC32) + related UI and tests. (**d**57e2ba)
+
+---
+
+## 重點摘要
+- 新增 **「依系統」(Match OS)** 色彩方案，並整合 **系統強調色**——讓你的 Dashboard 也能跟上桌面主題的節奏。
+- Dashboard 編輯模式更好用：為 **Dashboard Widget Instance** 提供拖曳把手與調整大小功能。
+- Speedtest 小工具也有升級：強化測試目標選擇與相關目標處理。
+
+## 新增
+- 新增 **「依系統」(Match OS)** 色彩方案選項，並整合 **系統強調色**。(**a**0193d5, **2**9998b6d)
+- **LibreSpeed 測速目標**（並更新/補強相關測試）。(**2**015c21)
+- **支援可選擇的 speedtest 目標與區域選項**（含翻譯與更新手冊文件）。(**b**a45297)
+- **強化 QR Code 小工具**：支援 **動態 canvas 尺寸**。(**d**375d54)
+
+## 改善
+- Dashboard 編輯模式新增 **拖曳把手**與 **調整大小**，用於 **Dashboard Widget Instance**。(**2**daff9d, **b**8fad3a)
+- Script 小工具的 iframe 強制套用 **color-scheme** 與 **背景樣式**。(**1**955b49)
+- 多語系更新 **speedtest 目標標籤**在翻譯內容。(**6**2babbb)
+
+## 修正
+- `system_accent_color` 函式中簡化 BOOL 用法。(**a**0193d5)
+
+## 內部
+- 更新 AI harness 變更的「單一真相來源」文件。（PR **#308**，**d**1ce349）
+- 更新釋出腳本中的變數命名以提升清晰度，並對齊測試。(**b**3e327e)
+- 更新 macOS 打包腳本：支援 base64 包裝的 Minisign keys、進行 key 正規化/擷取，以及 signing key 處理。(**0**acb095, **c**ceea67, **b**fa5778)
+- 移除過時的在地化檔案，並更新工作計畫標題的翻譯。(**f**ced0e8)
+- 強化 Hash workbench：加入檔案選擇能力與新增雜湊演算法（MD5、CRC32），並更新 UI 與相關測試。(**d**57e2ba)
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.78/kkterm-0.1.78-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.78/kkterm-0.1.78-windows-arm64-setup.exe)
 
