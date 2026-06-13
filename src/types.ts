@@ -8,7 +8,37 @@ export type ConnectionType =
   | "url"
   | "rdp"
   | "vnc"
-  | "ftp";
+  | "ftp"
+  | "localFiles";
+
+/**
+ * A named, isolated container of Connections. The first Workspace ("Default")
+ * is seeded and permanent; additional Workspaces are user-created. Switching the
+ * active Workspace re-scopes the Connection Tree only — open Sessions/Tabs,
+ * Dashboard, and Settings remain global.
+ */
+export interface Workspace {
+  id: string;
+  name: string;
+  icon?: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+}
+
+export interface CreateWorkspaceRequest {
+  name: string;
+  icon?: string | null;
+  importConnectionIds?: string[];
+}
+
+export interface RenameWorkspaceRequest {
+  id: string;
+  name: string;
+}
+
+export interface ReorderWorkspacesRequest {
+  orderedIds: string[];
+}
 export type ConnectionStatus = "connected" | "idle" | "offline";
 export type SshAuthMethod = "keyFile" | "password" | "agent";
 
@@ -64,6 +94,7 @@ export interface CreateConnectionRequest {
   user?: string;
   type: ConnectionType;
   folderId?: string;
+  workspaceId?: string;
   port?: number;
   keyPath?: string;
   proxyJump?: string;
@@ -84,6 +115,7 @@ export interface CreateConnectionRequest {
 export interface CreateConnectionFolderRequest {
   name: string;
   parentFolderId?: string;
+  workspaceId?: string;
 }
 
 export interface RenameConnectionFolderRequest {
@@ -581,7 +613,7 @@ export interface WorkspaceTab {
   displayTitle?: string | null;
   toolbarTitle?: string;
   subtitle: string;
-  kind: "terminal" | "sftp" | "webview" | "remoteDesktop" | "ftp";
+  kind: "terminal" | "sftp" | "webview" | "remoteDesktop" | "ftp" | "localFiles";
   panes: WorkspacePane[];
   layout?: LayoutNode;
   focusedPaneId?: string;

@@ -193,7 +193,7 @@
     "broadcast": "Broadcast",
     "mask": "Subnet mask",
     "usable": "Usable hosts",
-    "subnetInvalid": "Enter a valid CIDR block, e.g. 192.168.1.0/24.",
+    "subnetInvalid": "That is not a valid IPv4 subnet or range.",
     "reportStep1": "Confirm current backup age.",
     "reportStep2": "Review changed Connections before maintenance.",
     "reportStep3": "Capture terminal evidence only when explicitly needed.",
@@ -323,7 +323,7 @@
     "deleteCustomWidgetConfirm": "Delete Widget",
     "emptyTitle": "No widgets selected",
     "emptyHint": "Choose a widget from the catalog to build a focused Dashboard workspace.",
-    "hashTitle": "Hash Calculator",
+    "hashTitle": "Hash & Encoding",
     "hashSample": "KKTerm",
     "hashInput": "Text to hash",
     "hashUnavailable": "Unavailable",
@@ -331,7 +331,7 @@
     "bytes": "Bytes",
     "sha1": "SHA-1",
     "sha256": "SHA-256",
-    "subnetTitle": "IPv4 Subnet Calculator",
+    "subnetTitle": "Subnet Calculator",
     "subnetSample": "192.168.10.44/27",
     "subnetInput": "CIDR block",
     "networkAddress": "Network",
@@ -384,10 +384,8 @@
     },
     "widgetCopyValue": "Click to copy",
     "widgetCopied": "Copied",
-    "subnetTitle": "Subnet Calculator",
     "subnetPlaceholder": "192.168.1.0/24 or 10.0.0.5 - 10.0.0.200",
     "subnetHint": "Enter a CIDR block, an address and mask, or an address range.",
-    "subnetInvalid": "That is not a valid IPv4 subnet or range.",
     "subnetNetwork": "Network",
     "subnetNetmask": "Netmask",
     "subnetWildcard": "Wildcard",
@@ -420,7 +418,6 @@
     "timeUtc": "UTC (ISO 8601)",
     "timeEpochSeconds": "Epoch seconds",
     "timeEpochMillis": "Epoch milliseconds",
-    "hashTitle": "Hash & Encoding",
     "hashPlaceholder": "Enter text to hash or encode…",
     "hashJwtPlaceholder": "Paste a JWT to decode its header and payload…",
     "hashHint": "Enter text above to see results.",
@@ -483,22 +480,22 @@
       "singapore": "Asia - Singapore",
       "johannesburg": "Africa - Johannesburg"
     },
-      "networkToolsTitle": "Network Tools",
-      "networkToolsSummary": "Subnet math, DNS lookups, and an on-demand speedtest in one tabbed widget.",
-      "networkToolsTab": {
-        "subnet": "Subnet",
-        "dns": "DNS",
-        "speedtest": "Speed"
-      },
-      "generatorToolsTitle": "Generators",
-      "generatorToolsSummary": "QR codes, cron schedules, passwords, timestamps, and hashes in one tabbed widget.",
-      "generatorToolsTab": {
-        "qr": "QR",
-        "cron": "Cron",
-        "password": "Password",
-        "time": "Time",
-        "hash": "Hash"
-      }
+    "networkToolsTitle": "Network Tools",
+    "networkToolsSummary": "Subnet math, DNS lookups, and an on-demand speedtest in one tabbed widget.",
+    "networkToolsTab": {
+      "subnet": "Subnet",
+      "dns": "DNS",
+      "speedtest": "Speed"
+    },
+    "generatorToolsTitle": "Generators",
+    "generatorToolsSummary": "QR codes, cron schedules, passwords, timestamps, and hashes in one tabbed widget.",
+    "generatorToolsTab": {
+      "qr": "QR",
+      "cron": "Cron",
+      "password": "Password",
+      "time": "Time",
+      "hash": "Hash"
+    }
   },
   "appLauncher": {
     "title": "App Launcher",
@@ -1630,7 +1627,11 @@
       "importedFromPutty": "PuTTY",
       "importedDefault": "Imported"
     },
-    "closeConnection": "Close Connection"
+    "closeConnection": "Close Connection",
+    "localFiles": "File Explorer",
+    "localFilesSubtitle": "Local file browser",
+    "localFilesRootDirectory": "Starting folder",
+    "localFilesRootDirectoryPlaceholder": "Home folder"
   },
   "terminal": {
     "openSftp": "Open SFTP browser",
@@ -2921,7 +2922,20 @@
     "workspace": "Workspace",
     "terminal": "Terminal",
     "connectionKind": "{{type}} connection",
-    "localTerminalSession": "Local terminal session"
+    "localTerminalSession": "Local terminal session",
+    "workspaceSwitcher": "Workspaces",
+    "defaultWorkspace": "Default",
+    "newWorkspace": "New Workspace",
+    "workspaceName": "Name",
+    "workspaceNamePlaceholder": "Workspace name",
+    "workspaceIcon": "Icon",
+    "importConnections": "Import connections",
+    "importConnectionsHint": "Copy connections from existing workspaces into this one.",
+    "createWorkspace": "Create Workspace",
+    "renameWorkspace": "Rename Workspace",
+    "deleteWorkspace": "Delete Workspace",
+    "deleteWorkspaceConfirm": "Delete \"{{name}}\" and all of its connections? This cannot be undone.",
+    "workspaceCreated": "Workspace \"{{name}}\" created"
   },
   "common": {
     "save": "Save",

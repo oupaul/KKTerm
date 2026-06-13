@@ -45,6 +45,7 @@ import type {
   LayoutNode,
   WorkspacePane,
   StatusBarNotice,
+  Workspace,
   WorkspaceChildConnection,
   WorkspaceTab,
 } from "./types";
@@ -827,10 +828,41 @@ function emitChildConnectionClosed(childConnectionId: string) {
   );
 }
 
+/** Stable id of the seeded, permanent Default Workspace (mirrors the Rust side). */
+export const DEFAULT_WORKSPACE_ID = "default";
+
+const ACTIVE_WORKSPACE_STORAGE_KEY = "kkterm.activeWorkspaceId";
+
+function loadStoredActiveWorkspaceId(): string {
+  if (typeof window === "undefined") {
+    return DEFAULT_WORKSPACE_ID;
+  }
+  try {
+    return (
+      window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY) ?? DEFAULT_WORKSPACE_ID
+    );
+  } catch {
+    return DEFAULT_WORKSPACE_ID;
+  }
+}
+
+function persistActiveWorkspaceId(workspaceId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, workspaceId);
+  } catch {
+    // Active Workspace is a convenience preference; ignore storage failures.
+  }
+}
+
 interface WorkspaceState {
   query: string;
   tabs: WorkspaceTab[];
   activeTabId: string;
+  activeWorkspaceId: string;
+  workspaces: Workspace[];
   generalSettings: GeneralSettings;
   dashboardSettings: DashboardSettings;
   terminalSettings: TerminalSettings;
@@ -851,6 +883,8 @@ interface WorkspaceState {
   statusBarNotice?: StatusBarNotice;
   quickCommandsByConnection: Record<string, QuickCommand[]>;
   setQuery: (query: string) => void;
+  setWorkspaces: (workspaces: Workspace[]) => void;
+  setActiveWorkspace: (workspaceId: string) => void;
   setGeneralSettings: (settings: GeneralSettings) => void;
   setDashboardSettings: (settings: DashboardSettings) => void;
   setTerminalSettings: (settings: TerminalSettings) => void;
@@ -919,6 +953,7 @@ interface WorkspaceState {
   openSftpBrowser: (connection: Connection) => void;
   openSftpBrowserInNewTab: (connection: Connection) => void;
   openFtpBrowser: (connection: Connection) => void;
+  openLocalFilesBrowser: (connection: Connection) => void;
   openTerminalHere: (connection: Connection, remotePath: string) => void;
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openElevatedLocalTerminal: (option: LocalShellOption) => Promise<void>;
@@ -984,6 +1019,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   query: "",
   tabs: initialTabs,
   activeTabId: initialTabs[0]?.id ?? "",
+  activeWorkspaceId: loadStoredActiveWorkspaceId(),
+  workspaces: [],
   generalSettings: defaultGeneralSettings,
   dashboardSettings: defaultDashboardSettings,
   terminalSettings: defaultTerminalSettings,
@@ -1004,6 +1041,34 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   statusBarNotice: undefined,
   quickCommandsByConnection: {},
   setQuery: (query) => set({ query }),
+  setWorkspaces: (workspaces) => {
+    const { activeWorkspaceId } = get();
+    // If the active Workspace was deleted elsewhere, fall back to Default.
+    const stillExists = workspaces.some(
+      (workspace) => workspace.id === activeWorkspaceId,
+    );
+    if (!stillExists && workspaces.length > 0) {
+      const fallbackId =
+        workspaces.find((workspace) => workspace.isDefault)?.id ??
+        workspaces[0].id;
+      persistActiveWorkspaceId(fallbackId);
+      set({ workspaces, activeWorkspaceId: fallbackId });
+      return;
+    }
+    set({ workspaces });
+  },
+  setActiveWorkspace: (workspaceId) => {
+    if (get().activeWorkspaceId === workspaceId) {
+      return;
+    }
+    persistActiveWorkspaceId(workspaceId);
+    set({ activeWorkspaceId: workspaceId });
+    // The Connection Tree, rail, and sidebar all re-read the active Workspace's
+    // tree off this shared invalidation event.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+    }
+  },
   setGeneralSettings: (generalSettings) => set({ generalSettings }),
   setDashboardSettings: (dashboardSettings) => set({ dashboardSettings }),
   setTerminalSettings: (terminalSettings) => set({ terminalSettings }),
@@ -1161,6 +1226,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
     if (connection.type === "ftp") {
       get().openFtpBrowser(connection);
+      return;
+    }
+    if (connection.type === "localFiles") {
+      get().openLocalFilesBrowser(connection);
       return;
     }
 
@@ -1762,6 +1831,30 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       connection,
     };
 
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+    }));
+  },
+  openLocalFilesBrowser: (connection) => {
+    if (connection.type !== "localFiles") {
+      return;
+    }
+    const tabId = `tab-${connection.id}-localFiles`;
+    const existingTab = get().tabs.find((tab) => tab.id === tabId);
+    if (existingTab) {
+      set({ activeTabId: existingTab.id });
+      return;
+    }
+    const tab: WorkspaceTab = {
+      id: tabId,
+      title: connection.name,
+      toolbarTitle: toolbarTitleForConnection(connection),
+      subtitle: connection.localStartupDirectory || connection.host || "",
+      kind: "localFiles",
+      panes: [],
+      connection,
+    };
     set((state) => ({
       tabs: [...state.tabs, tab],
       activeTabId: tab.id,

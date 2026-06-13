@@ -55,6 +55,10 @@ import type {
   UrlDataPartitionSummary,
   UrlSettings,
   VncSettings,
+  Workspace,
+  CreateWorkspaceRequest,
+  RenameWorkspaceRequest,
+  ReorderWorkspacesRequest,
 } from "../types";
 import type {
   DashboardCustomWidget,
@@ -886,8 +890,28 @@ type CommandMap = {
     result: void;
   };
   list_connection_tree: {
-    args: undefined;
+    args: { workspaceId?: string } | undefined;
     result: ConnectionTree;
+  };
+  list_workspaces: {
+    args: undefined;
+    result: Workspace[];
+  };
+  create_workspace: {
+    args: { request: CreateWorkspaceRequest };
+    result: Workspace;
+  };
+  rename_workspace: {
+    args: { request: RenameWorkspaceRequest };
+    result: Workspace;
+  };
+  delete_workspace: {
+    args: { id: string };
+    result: null;
+  };
+  reorder_workspaces: {
+    args: { request: ReorderWorkspacesRequest };
+    result: Workspace[];
   };
   create_connection: {
     args: { request: CreateConnectionRequest };
@@ -1664,6 +1688,26 @@ type CommandMap = {
   list_local_directory: {
     args: { request: { path?: string } };
     result: LocalDirectoryListing;
+  };
+  create_local_folder: {
+    args: { request: { parentPath: string; name: string } };
+    result: null;
+  };
+  rename_local_path: {
+    args: { request: { path: string; newName: string } };
+    result: null;
+  };
+  delete_local_path: {
+    args: { request: { path: string } };
+    result: null;
+  };
+  local_path_properties: {
+    args: { request: { path: string } };
+    result: SftpPathProperties;
+  };
+  copy_local_path: {
+    args: { request: { sourcePath: string; destinationDirectory: string } };
+    result: SftpTransferResult;
   };
   upload_sftp_path: {
     args: {

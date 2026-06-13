@@ -118,8 +118,11 @@ Represents all openable resources as saved connections. Current connection types
 - RDP
 - VNC
 - FTP/FTPS
+- File Explorer (`localFiles`)
 
-SFTP is a related workspace surface opened from an SSH Connection, not a standalone saved Connection type. FTP/FTPS is a standalone Connection type that routes through the same file-browser workspace with FTP command adapters.
+SFTP is a related workspace surface opened from an SSH Connection, not a standalone saved Connection type. FTP/FTPS is a standalone Connection type that routes through the same file-browser workspace with FTP command adapters. File Explorer (`localFiles`) is a standalone Connection type that routes through the same file-browser workspace (`SftpWorkspace`) driven by a local-filesystem adapter (`localBrowserCommands` in `src/lib/fileBrowserCommands.ts`): listing reuses `list_local_directory` and mutations use the `create_local_folder` / `rename_local_path` / `delete_local_path` / `local_path_properties` / `copy_local_path` Tauri commands in `src-tauri/src/sftp.rs`. It has no remote host or network Session.
+
+Every saved Connection (and ConnectionFolder) belongs to exactly one **Workspace** via a `workspace_id` column (schema v20). A Workspace is a named, isolated container of Connections; the seeded permanent Default Workspace has the stable id `default`. The Activity Rail hosts a Workspace switcher (`src/app/ActivityRail.tsx`) with a New Workspace wizard (`src/modules/workspace/NewWorkspaceDialog.tsx`); creating a Workspace can copy-import Connections from other Workspaces. The frontend's active Workspace (`activeWorkspaceId`, persisted in `localStorage`) is passed to `list_connection_tree` and threaded onto `create_connection` / `create_connection_folder`; switching it re-scopes the Connection Tree only and never closes open Sessions. Workspace CRUD is exposed through the `list_workspaces` / `create_workspace` / `rename_workspace` / `delete_workspace` / `reorder_workspaces` Tauri commands; `list_connection_tree` without a `workspaceId` still returns the full cross-Workspace tree for export, import validation, and AI context.
 
 SSH Connections may store a non-secret `useTmuxSessions` preference. This value describes how future terminal Sessions should launch; it does not represent a live remote process.
 

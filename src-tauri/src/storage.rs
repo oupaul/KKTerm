@@ -12,21 +12,36 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 19;
+const SCHEMA_USER_VERSION: i32 = 20;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
+/// Stable id of the seeded, permanent Default Workspace. Every Connection and
+/// ConnectionFolder belongs to exactly one Workspace; rows created before the
+/// Workspace model existed are backfilled to this id.
+pub const DEFAULT_WORKSPACE_ID: &str = "default";
+
 const CURRENT_SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS connection_folders (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     parent_folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+    workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS connections (
     id TEXT PRIMARY KEY,
     folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+    workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     tab_title TEXT,
     host TEXT NOT NULL,
@@ -52,7 +67,7 @@ CREATE TABLE IF NOT EXISTS connections (
     icon_background_color TEXT,
     terminal_opacity INTEGER,
     terminal_background_json TEXT,
-    connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp')),
+    connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp', 'localFiles')),
     status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
     sort_order INTEGER NOT NULL
 );
@@ -888,6 +903,39 @@ pub struct ConnectionTree {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Workspace {
+    id: String,
+    name: String,
+    icon: Option<String>,
+    is_default: bool,
+    sort_order: i64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateWorkspaceRequest {
+    name: String,
+    #[serde(default)]
+    icon: Option<String>,
+    #[serde(default)]
+    import_connection_ids: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameWorkspaceRequest {
+    id: String,
+    name: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReorderWorkspacesRequest {
+    ordered_ids: Vec<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConnectionFolder {
     id: String,
     name: String,
@@ -944,6 +992,8 @@ pub struct CreateConnectionRequest {
     #[serde(rename = "type")]
     connection_type: String,
     folder_id: Option<String>,
+    #[serde(default)]
+    workspace_id: Option<String>,
     port: Option<u16>,
     key_path: Option<String>,
     proxy_jump: Option<String>,
@@ -1039,6 +1089,8 @@ pub struct VncConnectionOptions {
 pub struct CreateConnectionFolderRequest {
     name: String,
     parent_folder_id: Option<String>,
+    #[serde(default)]
+    workspace_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -1402,11 +1454,27 @@ impl Storage {
         })
     }
 
+    /// Full root tree across every Workspace. Used by export, import
+    /// validation, and the AI connection-context projection, which intentionally
+    /// span all Workspaces.
     pub fn list_connection_tree(&self) -> Result<ConnectionTree, String> {
         let connection = self.lock()?;
         Ok(ConnectionTree {
             connections: list_connections_for_folder(&connection, None)?,
             folders: list_folders_for_parent(&connection, None)?,
+        })
+    }
+
+    /// Root tree scoped to a single Workspace — the UI Connection Tree path.
+    pub fn list_connection_tree_for_workspace(
+        &self,
+        workspace_id: String,
+    ) -> Result<ConnectionTree, String> {
+        let workspace_id = normalize_workspace_id(workspace_id);
+        let connection = self.lock()?;
+        Ok(ConnectionTree {
+            connections: list_root_connections_for_workspace(&connection, &workspace_id)?,
+            folders: list_root_folders_for_workspace(&connection, &workspace_id)?,
         })
     }
 
@@ -1563,6 +1631,96 @@ impl Storage {
                     END
                  WHERE grid_y < 0 OR grid_y + grid_h > ?1",
                 params![crate::dashboard_validation::GRID_MAX_ROWS],
+            )
+            .map_err(to_storage_error)?;
+        // v20: Workspace model. Existing connection tables predate the
+        // `workspace_id` column and the `localFiles` connection kind. SQLite
+        // can't alter a CHECK constraint in place, so rebuild the connections
+        // table when it lacks `workspace_id` (fresh installs already get the
+        // new shape from CURRENT_SCHEMA and skip this). Then seed the permanent
+        // Default Workspace and backfill every pre-existing Connection/folder
+        // onto it.
+        if table_exists(&connection, "connections")?
+            && !column_exists(&connection, "connections", "workspace_id")?
+        {
+            connection
+                .execute_batch(
+                    r#"
+                    BEGIN;
+                    ALTER TABLE connections RENAME TO connections_pre_v20;
+                    CREATE TABLE connections (
+                        id TEXT PRIMARY KEY,
+                        folder_id TEXT REFERENCES connection_folders(id) ON DELETE CASCADE,
+                        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        tab_title TEXT,
+                        host TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        port INTEGER,
+                        key_path TEXT,
+                        proxy_jump TEXT,
+                        auth_method TEXT NOT NULL DEFAULT 'keyFile',
+                        local_shell TEXT,
+                        local_startup_directory TEXT,
+                        local_startup_script TEXT,
+                        url TEXT,
+                        data_partition TEXT,
+                        use_tmux_sessions INTEGER NOT NULL DEFAULT 1,
+                        tmux_connection_id TEXT,
+                        serial_line TEXT,
+                        serial_speed INTEGER,
+                        rdp_options TEXT,
+                        vnc_options TEXT,
+                        ftp_options TEXT,
+                        password_credential_id TEXT REFERENCES connection_password_credentials(id) ON DELETE SET NULL,
+                        icon_data_url TEXT,
+                        icon_background_color TEXT,
+                        terminal_opacity INTEGER,
+                        terminal_background_json TEXT,
+                        connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp', 'localFiles')),
+                        status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
+                        sort_order INTEGER NOT NULL
+                    );
+                    INSERT INTO connections (
+                        id, folder_id, name, tab_title, host, username, port, key_path,
+                        proxy_jump, auth_method, local_shell, local_startup_directory,
+                        local_startup_script, url, data_partition, use_tmux_sessions,
+                        tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                        ftp_options, password_credential_id, icon_data_url, icon_background_color,
+                        terminal_opacity, terminal_background_json, connection_type, status, sort_order
+                    )
+                    SELECT
+                        id, folder_id, name, tab_title, host, username, port, key_path,
+                        proxy_jump, auth_method, local_shell, local_startup_directory,
+                        local_startup_script, url, data_partition, use_tmux_sessions,
+                        tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                        ftp_options, password_credential_id, icon_data_url, icon_background_color,
+                        terminal_opacity, terminal_background_json, connection_type, status, sort_order
+                    FROM connections_pre_v20;
+                    DROP TABLE connections_pre_v20;
+                    COMMIT;
+                    "#,
+                )
+                .map_err(to_storage_error)?;
+        }
+        ensure_column(&connection, "connection_folders", "workspace_id", "TEXT")?;
+        connection
+            .execute(
+                "INSERT OR IGNORE INTO workspaces (id, name, icon, is_default, sort_order)
+                 VALUES (?1, 'Default', NULL, 1, 0)",
+                params![DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(to_storage_error)?;
+        connection
+            .execute(
+                "UPDATE connections SET workspace_id = ?1 WHERE workspace_id IS NULL",
+                params![DEFAULT_WORKSPACE_ID],
+            )
+            .map_err(to_storage_error)?;
+        connection
+            .execute(
+                "UPDATE connection_folders SET workspace_id = ?1 WHERE workspace_id IS NULL",
+                params![DEFAULT_WORKSPACE_ID],
             )
             .map_err(to_storage_error)?;
         connection
@@ -1754,6 +1912,22 @@ fn table_exists(connection: &SqliteConnection, table: &str) -> Result<bool, Stri
         )
         .map_err(to_storage_error)?;
     Ok(count > 0)
+}
+
+fn column_exists(
+    connection: &SqliteConnection,
+    table: &str,
+    column: &str,
+) -> Result<bool, String> {
+    let mut statement = connection
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(to_storage_error)?;
+    let columns = statement
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)?;
+    Ok(columns.iter().any(|existing| existing == column))
 }
 
 fn ensure_column(
@@ -2125,6 +2299,108 @@ fn list_widget_secret_candidates(
     Ok(credentials)
 }
 
+/// Normalize a (possibly empty) workspace id to the permanent Default
+/// Workspace when missing, so callers that predate the Workspace model still
+/// resolve to a valid scope.
+pub fn normalize_workspace_id(workspace_id: String) -> String {
+    let trimmed = workspace_id.trim();
+    if trimmed.is_empty() {
+        DEFAULT_WORKSPACE_ID.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// Resolve the Workspace a folder belongs to, defaulting to the Default
+/// Workspace if the folder is missing or unscoped.
+fn folder_workspace_id(
+    connection: &SqliteConnection,
+    folder_id: &str,
+) -> Result<String, String> {
+    let stored: Option<Option<String>> = connection
+        .query_row(
+            "SELECT workspace_id FROM connection_folders WHERE id = ?1",
+            params![folder_id],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .optional()
+        .map_err(to_storage_error)?;
+    Ok(normalize_workspace_id(stored.flatten().unwrap_or_default()))
+}
+
+/// Resolve the Workspace a Connection belongs to, defaulting to Default.
+fn connection_workspace_id(
+    connection: &SqliteConnection,
+    connection_id: &str,
+) -> Result<String, String> {
+    let stored: Option<Option<String>> = connection
+        .query_row(
+            "SELECT workspace_id FROM connections WHERE id = ?1",
+            params![connection_id],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .optional()
+        .map_err(to_storage_error)?;
+    Ok(normalize_workspace_id(stored.flatten().unwrap_or_default()))
+}
+
+/// Root-level Connections (no folder) belonging to a single Workspace. Nested
+/// Connections are reached through their folder, which already carries the
+/// Workspace scope, so only the root query filters on `workspace_id`.
+fn list_root_connections_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<Vec<SavedConnection>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
+                    url_credentials.username
+             FROM connections
+             LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
+             WHERE folder_id IS NULL AND workspace_id = ?1
+             ORDER BY sort_order, name",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map(params![workspace_id], saved_connection_from_row)
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)?;
+    let mut connections = Vec::new();
+    for row in rows {
+        let mut saved_connection = row;
+        saved_connection.tags = list_tags(connection, &saved_connection.id)?;
+        connections.push(saved_connection);
+    }
+    Ok(connections)
+}
+
+/// Root-level folders belonging to a single Workspace. Their descendants are
+/// resolved through the existing folder recursion in `get_folder_by_id`.
+fn list_root_folders_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<Vec<ConnectionFolder>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name
+             FROM connection_folders
+             WHERE parent_folder_id IS NULL AND workspace_id = ?1
+             ORDER BY sort_order, name",
+        )
+        .map_err(to_storage_error)?;
+    let rows = statement
+        .query_map(params![workspace_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)?;
+    rows.into_iter()
+        .map(|(id, name)| get_folder_by_id(connection, &id, name))
+        .collect()
+}
+
 fn list_connections_for_folder(
     connection: &SqliteConnection,
     folder_id: Option<&str>,
@@ -2288,6 +2564,19 @@ fn next_connection_sort_order(
     }
 }
 
+fn next_root_connection_sort_order_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<i64, String> {
+    connection
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM connections WHERE folder_id IS NULL AND workspace_id = ?1",
+            params![workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(to_storage_error)
+}
+
 fn next_folder_sort_order(
     connection: &SqliteConnection,
     parent_folder_id: Option<&str>,
@@ -2309,6 +2598,19 @@ fn next_folder_sort_order(
             )
             .map_err(to_storage_error)
     }
+}
+
+fn next_root_folder_sort_order_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<i64, String> {
+    connection
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM connection_folders WHERE parent_folder_id IS NULL AND workspace_id = ?1",
+            params![workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(to_storage_error)
 }
 
 fn reorder_folder_ids(
@@ -2335,12 +2637,60 @@ fn reorder_folder_ids(
     Ok(())
 }
 
+fn reorder_root_folder_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+    moved_folder: Option<(&str, usize)>,
+) -> Result<(), String> {
+    let mut folder_ids = list_root_folder_ids_for_workspace(connection, workspace_id)?;
+    if let Some((folder_id, target_index)) = moved_folder {
+        folder_ids.retain(|id| id != folder_id);
+        let target_index = target_index.min(folder_ids.len());
+        folder_ids.insert(target_index, folder_id.to_string());
+    }
+
+    for (index, folder_id) in folder_ids.iter().enumerate() {
+        connection
+            .execute(
+                "UPDATE connection_folders SET sort_order = ?1 WHERE id = ?2",
+                params![index as i64, folder_id],
+            )
+            .map_err(to_storage_error)?;
+    }
+
+    Ok(())
+}
+
 fn reorder_connection_ids(
     connection: &SqliteConnection,
     folder_id: Option<&str>,
     moved_connection: Option<(&str, usize)>,
 ) -> Result<(), String> {
     let mut connection_ids = list_connection_ids_for_folder(connection, folder_id)?;
+    if let Some((connection_id, target_index)) = moved_connection {
+        connection_ids.retain(|id| id != connection_id);
+        let target_index = target_index.min(connection_ids.len());
+        connection_ids.insert(target_index, connection_id.to_string());
+    }
+
+    for (index, connection_id) in connection_ids.iter().enumerate() {
+        connection
+            .execute(
+                "UPDATE connections SET sort_order = ?1 WHERE id = ?2",
+                params![index as i64, connection_id],
+            )
+            .map_err(to_storage_error)?;
+    }
+
+    Ok(())
+}
+
+fn reorder_root_connection_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+    moved_connection: Option<(&str, usize)>,
+) -> Result<(), String> {
+    let mut connection_ids = list_root_connection_ids_for_workspace(connection, workspace_id)?;
     if let Some((connection_id, target_index)) = moved_connection {
         connection_ids.retain(|id| id != connection_id);
         let target_index = target_index.min(connection_ids.len());
@@ -2390,6 +2740,44 @@ fn list_connection_ids_for_folder(
             .collect::<Result<Vec<_>, _>>()
             .map_err(to_storage_error)
     }
+}
+
+fn list_root_folder_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<Vec<String>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id
+             FROM connection_folders
+             WHERE parent_folder_id IS NULL AND workspace_id = ?1
+             ORDER BY sort_order, name",
+        )
+        .map_err(to_storage_error)?;
+    statement
+        .query_map(params![workspace_id], |row| row.get::<_, String>(0))
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
+}
+
+fn list_root_connection_ids_for_workspace(
+    connection: &SqliteConnection,
+    workspace_id: &str,
+) -> Result<Vec<String>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id
+             FROM connections
+             WHERE folder_id IS NULL AND workspace_id = ?1
+             ORDER BY sort_order, name",
+        )
+        .map_err(to_storage_error)?;
+    statement
+        .query_map(params![workspace_id], |row| row.get::<_, String>(0))
+        .map_err(to_storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(to_storage_error)
 }
 
 fn get_connection_by_id(
@@ -4060,6 +4448,10 @@ fn make_connection_id(name: &str) -> String {
 
 fn make_folder_id(name: &str) -> String {
     make_unique_id("folder", name)
+}
+
+fn make_workspace_id(name: &str) -> String {
+    make_unique_id("workspace", name)
 }
 
 fn make_tmux_connection_id(connection_id: &str) -> String {

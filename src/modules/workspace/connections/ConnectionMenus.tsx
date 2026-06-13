@@ -199,6 +199,10 @@ export function AddConnectionMenu({
       type: "ftp",
       title: t("connections.ftp"),
     },
+    {
+      type: "localFiles",
+      title: t("connections.localFiles"),
+    },
   ];
 
   return (

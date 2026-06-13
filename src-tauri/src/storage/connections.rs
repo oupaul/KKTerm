@@ -17,6 +17,15 @@ impl Storage {
                 .unwrap_or_default()
         } else if connection_type == "serial" {
             serial_line.clone().unwrap_or_else(|| "COM1".to_string())
+        } else if connection_type == "localFiles" {
+            // The local File Explorer has no remote host; it browses the local
+            // filesystem starting from the local startup directory (or home).
+            let trimmed = request.host.trim();
+            if trimmed.is_empty() {
+                "localhost".to_string()
+            } else {
+                trimmed.to_string()
+            }
         } else {
             required_field("host", request.host)?
         };
@@ -52,13 +61,22 @@ impl Storage {
         if let Some(folder_id) = folder_id.as_deref() {
             ensure_folder_exists(&transaction, folder_id, folder_name_for(folder_id))?;
         }
-        let next_sort_order = next_connection_sort_order(&transaction, folder_id.as_deref())?;
+        // A Connection inherits the Workspace of its target folder; root-level
+        // Connections use the requested (active) Workspace, defaulting to Default.
+        let workspace_id = match folder_id.as_deref() {
+            Some(folder_id) => folder_workspace_id(&transaction, folder_id)?,
+            None => normalize_workspace_id(request.workspace_id.unwrap_or_default()),
+        };
+        let next_sort_order = match folder_id.as_deref() {
+            Some(folder_id) => next_connection_sort_order(&transaction, Some(folder_id))?,
+            None => next_root_connection_sort_order_for_workspace(&transaction, &workspace_id)?,
+        };
 
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, 'idle', ?23)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order, workspace_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, 'idle', ?23, ?24)",
                 params![
                     id,
                     folder_id,
@@ -82,7 +100,8 @@ impl Storage {
                     vnc_options_json,
                     ftp_options_json,
                     connection_type,
-                    next_sort_order
+                    next_sort_order,
+                    workspace_id
                 ],
             )
             .map_err(to_storage_error)?;
@@ -151,6 +170,15 @@ impl Storage {
                 .unwrap_or_default()
         } else if connection_type == "serial" {
             serial_line.clone().unwrap_or_else(|| "COM1".to_string())
+        } else if connection_type == "localFiles" {
+            // The local File Explorer has no remote host; it browses the local
+            // filesystem starting from the local startup directory (or home).
+            let trimmed = request.host.trim();
+            if trimmed.is_empty() {
+                "localhost".to_string()
+            } else {
+                trimmed.to_string()
+            }
         } else {
             required_field("host", request.host)?
         };
@@ -175,7 +203,7 @@ impl Storage {
         let transaction = connection.transaction().map_err(to_storage_error)?;
         let existing = transaction
             .query_row(
-                "SELECT folder_id, connection_type, use_tmux_sessions, tmux_connection_id FROM connections WHERE id = ?1",
+                "SELECT folder_id, connection_type, use_tmux_sessions, tmux_connection_id, workspace_id FROM connections WHERE id = ?1",
                 params![&id],
                 |row| {
                     Ok((
@@ -183,6 +211,7 @@ impl Storage {
                         row.get::<_, String>(1)?,
                         row.get::<_, bool>(2)?,
                         row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<String>>(4)?,
                     ))
                 },
             )
@@ -195,6 +224,7 @@ impl Storage {
             existing_connection_type,
             existing_use_tmux_sessions,
             existing_tmux_connection_id,
+            existing_workspace_id,
         ) = existing;
         if existing_connection_type != connection_type {
             return Err("connection type cannot be changed".to_string());
@@ -215,6 +245,14 @@ impl Storage {
         } else {
             None
         };
+        let source_workspace_id = match source_folder_id.as_deref() {
+            Some(folder_id) => folder_workspace_id(&transaction, folder_id)?,
+            None => normalize_workspace_id(existing_workspace_id.clone().unwrap_or_default()),
+        };
+        let target_workspace_id = match target_folder_id.as_deref() {
+            Some(folder_id) => folder_workspace_id(&transaction, folder_id)?,
+            None => normalize_workspace_id(existing_workspace_id.unwrap_or_default()),
+        };
         let sort_order = if source_folder_id == target_folder_id {
             transaction
                 .query_row(
@@ -224,7 +262,13 @@ impl Storage {
                 )
                 .map_err(to_storage_error)?
         } else {
-            next_connection_sort_order(&transaction, target_folder_id.as_deref())?
+            match target_folder_id.as_deref() {
+                Some(folder_id) => next_connection_sort_order(&transaction, Some(folder_id))?,
+                None => next_root_connection_sort_order_for_workspace(
+                    &transaction,
+                    &target_workspace_id,
+                )?,
+            }
         };
 
         transaction
@@ -250,8 +294,9 @@ impl Storage {
                      rdp_options = ?18,
                      vnc_options = ?19,
                      ftp_options = ?20,
-                     sort_order = ?21
-                 WHERE id = ?22",
+                     sort_order = ?21,
+                     workspace_id = ?22
+                 WHERE id = ?23",
                 params![
                     target_folder_id,
                     name,
@@ -274,14 +319,29 @@ impl Storage {
                     vnc_options_json,
                     ftp_options_json,
                     sort_order,
+                    &target_workspace_id,
                     &id
                 ],
             )
             .map_err(to_storage_error)?;
 
         if source_folder_id != target_folder_id {
-            reorder_connection_ids(&transaction, source_folder_id.as_deref(), None)?;
-            reorder_connection_ids(&transaction, target_folder_id.as_deref(), None)?;
+            match source_folder_id.as_deref() {
+                Some(folder_id) => reorder_connection_ids(&transaction, Some(folder_id), None)?,
+                None => reorder_root_connection_ids_for_workspace(
+                    &transaction,
+                    &source_workspace_id,
+                    None,
+                )?,
+            }
+            match target_folder_id.as_deref() {
+                Some(folder_id) => reorder_connection_ids(&transaction, Some(folder_id), None)?,
+                None => reorder_root_connection_ids_for_workspace(
+                    &transaction,
+                    &target_workspace_id,
+                    None,
+                )?,
+            }
         }
 
         transaction.commit().map_err(to_storage_error)?;
@@ -901,12 +961,21 @@ impl Storage {
                 folder_name_for(parent_folder_id),
             )?;
         }
-        let next_sort_order = next_folder_sort_order(&connection, parent_folder_id.as_deref())?;
+        // Sub-folders inherit their parent's Workspace; root folders use the
+        // requested (active) Workspace, defaulting to Default.
+        let workspace_id = match parent_folder_id.as_deref() {
+            Some(parent_folder_id) => folder_workspace_id(&connection, parent_folder_id)?,
+            None => normalize_workspace_id(request.workspace_id.unwrap_or_default()),
+        };
+        let next_sort_order = match parent_folder_id.as_deref() {
+            Some(parent_folder_id) => next_folder_sort_order(&connection, Some(parent_folder_id))?,
+            None => next_root_folder_sort_order_for_workspace(&connection, &workspace_id)?,
+        };
 
         connection
             .execute(
-                "INSERT INTO connection_folders (id, name, parent_folder_id, sort_order) VALUES (?1, ?2, ?3, ?4)",
-                params![id, name, parent_folder_id, next_sort_order],
+                "INSERT INTO connection_folders (id, name, parent_folder_id, sort_order, workspace_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![id, name, parent_folder_id, next_sort_order, workspace_id],
             )
             .map_err(to_storage_error)?;
 
@@ -1004,7 +1073,7 @@ impl Storage {
 
         let source = transaction
             .query_row(
-                "SELECT folder_id, name, tab_title, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json
+                "SELECT folder_id, name, tab_title, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, workspace_id
                  FROM connections
                  WHERE id = ?1",
                 params![source_id],
@@ -1032,6 +1101,7 @@ impl Storage {
                         row.get::<_, Option<String>>(19)?,
                         normalize_loaded_terminal_opacity(row.get::<_, Option<i64>>(20)?),
                         terminal_background_from_json(row.get::<_, Option<String>>(21)?),
+                        row.get::<_, Option<String>>(22)?,
                     ))
                 },
             )
@@ -1061,7 +1131,9 @@ impl Storage {
             icon_background_color,
             terminal_opacity,
             terminal_background,
+            workspace_id,
         ) = source;
+        let workspace_id = normalize_workspace_id(workspace_id.unwrap_or_default());
         let duplicate_name = request
             .name
             .map(|name| name.trim().to_string())
@@ -1073,13 +1145,16 @@ impl Storage {
         } else {
             None
         };
-        let next_sort_order = next_connection_sort_order(&transaction, folder_id.as_deref())?;
+        let next_sort_order = match folder_id.as_deref() {
+            Some(folder_id) => next_connection_sort_order(&transaction, Some(folder_id))?,
+            None => next_root_connection_sort_order_for_workspace(&transaction, &workspace_id)?,
+        };
 
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, tab_title, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, status, sort_order
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 'idle', ?25)",
+                    id, folder_id, name, tab_title, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, status, sort_order, workspace_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 'idle', ?25, ?26)",
                 params![
                     duplicate_id,
                     folder_id,
@@ -1105,7 +1180,8 @@ impl Storage {
                     icon_background_color,
                     terminal_opacity.map(i64::from),
                     terminal_background_to_json(&terminal_background)?,
-                    next_sort_order
+                    next_sort_order,
+                    workspace_id
                 ],
             )
             .map_err(to_storage_error)?;
@@ -1127,6 +1203,7 @@ impl Storage {
         let transaction = connection.transaction().map_err(to_storage_error)?;
         let source_parent_folder_id = folder_parent_id(&transaction, &id)?
             .ok_or_else(|| "connection folder was not found".to_string())?;
+        let source_workspace_id = folder_workspace_id(&transaction, &id)?;
         if let Some(parent_id) = target_parent_folder_id.as_deref() {
             ensure_folder_exists(&transaction, parent_id, folder_name_for(parent_id))?;
             if folder_has_descendant(&transaction, &id, parent_id)? {
@@ -1135,8 +1212,10 @@ impl Storage {
         }
 
         let target_index = if source_parent_folder_id == target_parent_folder_id {
-            let folder_ids =
-                list_folder_ids_for_parent(&transaction, source_parent_folder_id.as_deref())?;
+            let folder_ids = match source_parent_folder_id.as_deref() {
+                Some(parent_id) => list_folder_ids_for_parent(&transaction, Some(parent_id))?,
+                None => list_root_folder_ids_for_workspace(&transaction, &source_workspace_id)?,
+            };
             match folder_ids.iter().position(|folder_id| folder_id == &id) {
                 Some(current_index) if current_index < request.target_index => {
                     request.target_index.saturating_sub(1)
@@ -1147,21 +1226,48 @@ impl Storage {
             request.target_index
         };
 
+        // A folder follows its target parent's Workspace; moving to root keeps
+        // its current Workspace.
+        let parent_workspace_id = match target_parent_folder_id.as_deref() {
+            Some(target_parent_folder_id) => {
+                Some(folder_workspace_id(&transaction, target_parent_folder_id)?)
+            }
+            None => None,
+        };
         transaction
             .execute(
                 "UPDATE connection_folders SET parent_folder_id = ?1 WHERE id = ?2",
                 params![target_parent_folder_id, id],
             )
             .map_err(to_storage_error)?;
-        reorder_folder_ids(&transaction, source_parent_folder_id.as_deref(), None)?;
-        reorder_folder_ids(
-            &transaction,
-            target_parent_folder_id.as_deref(),
-            Some((&id, target_index)),
-        )?;
+        if let Some(parent_workspace_id) = parent_workspace_id.as_deref() {
+            transaction
+                .execute(
+                    "UPDATE connection_folders SET workspace_id = ?1 WHERE id = ?2",
+                    params![parent_workspace_id, id],
+                )
+                .map_err(to_storage_error)?;
+        }
+        let scoped_workspace_id = folder_workspace_id(&transaction, &id)?;
+        match source_parent_folder_id.as_deref() {
+            Some(parent_id) => reorder_folder_ids(&transaction, Some(parent_id), None)?,
+            None => {
+                reorder_root_folder_ids_for_workspace(&transaction, &source_workspace_id, None)?
+            }
+        }
+        match target_parent_folder_id.as_deref() {
+            Some(parent_id) => {
+                reorder_folder_ids(&transaction, Some(parent_id), Some((&id, target_index)))?
+            }
+            None => reorder_root_folder_ids_for_workspace(
+                &transaction,
+                &scoped_workspace_id,
+                Some((&id, target_index)),
+            )?,
+        }
         transaction.commit().map_err(to_storage_error)?;
         drop(connection);
-        self.list_connection_tree()
+        self.list_connection_tree_for_workspace(scoped_workspace_id)
     }
 
     pub fn move_connection(
@@ -1182,10 +1288,13 @@ impl Storage {
             .optional()
             .map_err(to_storage_error)?
             .ok_or_else(|| "connection was not found".to_string())?;
+        let source_workspace_id = connection_workspace_id(&transaction, &id)?;
 
         let target_index = if source_folder_id == target_folder_id {
-            let connection_ids =
-                list_connection_ids_for_folder(&transaction, source_folder_id.as_deref())?;
+            let connection_ids = match source_folder_id.as_deref() {
+                Some(folder_id) => list_connection_ids_for_folder(&transaction, Some(folder_id))?,
+                None => list_root_connection_ids_for_workspace(&transaction, &source_workspace_id)?,
+            };
             match connection_ids
                 .iter()
                 .position(|connection_id| connection_id == &id)
@@ -1207,21 +1316,232 @@ impl Storage {
             )?;
         }
 
+        // A Connection follows its target folder's Workspace; moving to root
+        // keeps its current Workspace.
+        let workspace_id = match target_folder_id.as_deref() {
+            Some(target_folder_id) => Some(folder_workspace_id(&transaction, target_folder_id)?),
+            None => None,
+        };
         transaction
             .execute(
                 "UPDATE connections SET folder_id = ?1 WHERE id = ?2",
                 params![target_folder_id, id],
             )
             .map_err(to_storage_error)?;
+        if let Some(workspace_id) = workspace_id.as_deref() {
+            transaction
+                .execute(
+                    "UPDATE connections SET workspace_id = ?1 WHERE id = ?2",
+                    params![workspace_id, id],
+                )
+                .map_err(to_storage_error)?;
+        }
 
-        reorder_connection_ids(&transaction, source_folder_id.as_deref(), None)?;
-        reorder_connection_ids(
-            &transaction,
-            target_folder_id.as_deref(),
-            Some((&id, target_index)),
-        )?;
+        let scoped_workspace_id = connection_workspace_id(&transaction, &id)?;
+        match source_folder_id.as_deref() {
+            Some(folder_id) => reorder_connection_ids(&transaction, Some(folder_id), None)?,
+            None => {
+                reorder_root_connection_ids_for_workspace(&transaction, &source_workspace_id, None)?
+            }
+        }
+        match target_folder_id.as_deref() {
+            Some(folder_id) => {
+                reorder_connection_ids(&transaction, Some(folder_id), Some((&id, target_index)))?
+            }
+            None => reorder_root_connection_ids_for_workspace(
+                &transaction,
+                &scoped_workspace_id,
+                Some((&id, target_index)),
+            )?,
+        }
         transaction.commit().map_err(to_storage_error)?;
         drop(connection);
-        self.list_connection_tree()
+        self.list_connection_tree_for_workspace(scoped_workspace_id)
+    }
+}
+
+impl Storage {
+    pub fn list_workspaces(&self) -> Result<Vec<Workspace>, String> {
+        let connection = self.lock()?;
+        let mut statement = connection
+            .prepare(
+                "SELECT id, name, icon, is_default, sort_order
+                 FROM workspaces
+                 ORDER BY sort_order, name",
+            )
+            .map_err(to_storage_error)?;
+        let workspaces = statement
+            .query_map([], |row| {
+                Ok(Workspace {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    icon: row.get(2)?,
+                    is_default: row.get::<_, i64>(3)? != 0,
+                    sort_order: row.get(4)?,
+                })
+            })
+            .map_err(to_storage_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(to_storage_error)?;
+        Ok(workspaces)
+    }
+
+    pub fn create_workspace(
+        &self,
+        request: CreateWorkspaceRequest,
+    ) -> Result<Workspace, String> {
+        let name = required_field("workspace name", request.name)?;
+        let icon = request
+            .icon
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        let id = make_workspace_id(&name);
+        let mut connection = self.lock()?;
+        let transaction = connection.transaction().map_err(to_storage_error)?;
+
+        let next_sort_order: i64 = transaction
+            .query_row(
+                "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM workspaces",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(to_storage_error)?;
+        transaction
+            .execute(
+                "INSERT INTO workspaces (id, name, icon, is_default, sort_order)
+                 VALUES (?1, ?2, ?3, 0, ?4)",
+                params![id, name, icon, next_sort_order],
+            )
+            .map_err(to_storage_error)?;
+
+        // Copy-import: clone the selected Connections (by id, from any source
+        // Workspace) into the new Workspace at root. Imported rows are
+        // independent copies that keep the shared, non-secret
+        // `password_credential_id` reference.
+        if let Some(connection_ids) = request.import_connection_ids.as_ref() {
+            for source_id in connection_ids {
+                let new_id = make_connection_id(source_id);
+                let tmux_connection_id = make_tmux_connection_id(&new_id);
+                let next_connection_sort_order =
+                    next_root_connection_sort_order_for_workspace(&transaction, &id)?;
+                transaction
+                    .execute(
+                        "INSERT INTO connections (
+                            id, folder_id, workspace_id, name, tab_title, host, username, port,
+                            key_path, proxy_jump, auth_method, local_shell, local_startup_directory,
+                            local_startup_script, url, data_partition, use_tmux_sessions,
+                            tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
+                            ftp_options, password_credential_id, icon_data_url, icon_background_color,
+                            terminal_opacity, terminal_background_json, connection_type, status, sort_order
+                        )
+                        SELECT
+                            ?1, NULL, ?2, name, tab_title, host, username, port,
+                            key_path, proxy_jump, auth_method, local_shell, local_startup_directory,
+                            local_startup_script, url, data_partition, use_tmux_sessions,
+                            ?3, serial_line, serial_speed, rdp_options, vnc_options,
+                            ftp_options, password_credential_id, icon_data_url, icon_background_color,
+                            terminal_opacity, terminal_background_json, connection_type, 'idle', ?4
+                        FROM connections
+                        WHERE id = ?5",
+                        params![
+                            new_id,
+                            id,
+                            tmux_connection_id,
+                            next_connection_sort_order,
+                            source_id
+                        ],
+                    )
+                    .map_err(to_storage_error)?;
+            }
+        }
+
+        transaction.commit().map_err(to_storage_error)?;
+        Ok(Workspace {
+            id,
+            name,
+            icon,
+            is_default: false,
+            sort_order: next_sort_order,
+        })
+    }
+
+    pub fn rename_workspace(
+        &self,
+        request: RenameWorkspaceRequest,
+    ) -> Result<Workspace, String> {
+        let id = required_field("workspace id", request.id)?;
+        let name = required_field("workspace name", request.name)?;
+        let connection = self.lock()?;
+        let updated = connection
+            .execute(
+                "UPDATE workspaces SET name = ?1 WHERE id = ?2",
+                params![name, id],
+            )
+            .map_err(to_storage_error)?;
+        if updated == 0 {
+            return Err("workspace was not found".to_string());
+        }
+        let (icon, is_default, sort_order) = connection
+            .query_row(
+                "SELECT icon, is_default, sort_order FROM workspaces WHERE id = ?1",
+                params![id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, i64>(1)? != 0,
+                        row.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .map_err(to_storage_error)?;
+        Ok(Workspace {
+            id,
+            name,
+            icon,
+            is_default,
+            sort_order,
+        })
+    }
+
+    pub fn delete_workspace(&self, id: String) -> Result<(), String> {
+        let id = required_field("workspace id", id)?;
+        let connection = self.lock()?;
+        let is_default: Option<bool> = connection
+            .query_row(
+                "SELECT is_default FROM workspaces WHERE id = ?1",
+                params![id],
+                |row| Ok(row.get::<_, i64>(0)? != 0),
+            )
+            .optional()
+            .map_err(to_storage_error)?;
+        match is_default {
+            None => return Err("workspace was not found".to_string()),
+            Some(true) => return Err("the Default Workspace cannot be deleted".to_string()),
+            Some(false) => {}
+        }
+        // FK cascades delete this Workspace's Connections and folders.
+        connection
+            .execute("DELETE FROM workspaces WHERE id = ?1", params![id])
+            .map_err(to_storage_error)?;
+        Ok(())
+    }
+
+    pub fn reorder_workspaces(
+        &self,
+        request: ReorderWorkspacesRequest,
+    ) -> Result<Vec<Workspace>, String> {
+        let mut connection = self.lock()?;
+        let transaction = connection.transaction().map_err(to_storage_error)?;
+        for (index, workspace_id) in request.ordered_ids.iter().enumerate() {
+            transaction
+                .execute(
+                    "UPDATE workspaces SET sort_order = ?1 WHERE id = ?2",
+                    params![index as i64, workspace_id],
+                )
+                .map_err(to_storage_error)?;
+        }
+        transaction.commit().map_err(to_storage_error)?;
+        drop(connection);
+        self.list_workspaces()
     }
 }

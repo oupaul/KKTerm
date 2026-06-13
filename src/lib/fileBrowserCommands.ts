@@ -186,8 +186,68 @@ export function ftpBrowserCommands(
   };
 }
 
+/**
+ * Local File Explorer adapter. Drives the same file-browser surface over the
+ * local filesystem with no network session: listing reuses `list_local_directory`
+ * and mutations use the `*_local_*` commands. "Transfers" are local copies, so
+ * the dual-pane copy actions work as a local file manager.
+ */
+let localBrowserCommandsSingleton: FileBrowserCommands | null = null;
+
+export function localBrowserCommands(): FileBrowserCommands {
+  if (localBrowserCommandsSingleton) {
+    return localBrowserCommandsSingleton;
+  }
+  async function listLocal(path: string, sessionId: string): Promise<SftpDirectoryListing> {
+    const listing = await invokeCommand("list_local_directory", {
+      request: { path: path?.trim() ? path : undefined },
+    });
+    return { sessionId, path: listing.path, entries: listing.entries };
+  }
+  localBrowserCommandsSingleton = {
+    protocolLabel: "Files",
+    capabilities: {
+      editPermissions: false,
+      verifySshHostKey: false,
+      openTerminalHere: false,
+    },
+    startSession: ({ sessionId, path }) => listLocal(path, sessionId),
+    listDirectory: ({ sessionId, path }) => listLocal(path, sessionId),
+    closeSession: () => Promise.resolve(),
+    createFolder: ({ parentPath, name }) =>
+      invokeCommand("create_local_folder", {
+        request: { parentPath, name },
+      }).then(() => undefined),
+    renamePath: ({ path, newName }) =>
+      invokeCommand("rename_local_path", {
+        request: { path, newName },
+      }).then(() => undefined),
+    deletePath: ({ path }) =>
+      invokeCommand("delete_local_path", { request: { path } }).then(() => undefined),
+    pathProperties: ({ path }) =>
+      invokeCommand("local_path_properties", { request: { path } }),
+    updatePathProperties: () => {
+      throw new Error("Local File Explorer does not support editing POSIX properties");
+    },
+    uploadPath: ({ localPath, remoteDirectory }) =>
+      invokeCommand("copy_local_path", {
+        request: { sourcePath: localPath, destinationDirectory: remoteDirectory },
+      }),
+    downloadPath: ({ remotePath, localDirectory }) =>
+      invokeCommand("copy_local_path", {
+        request: { sourcePath: remotePath, destinationDirectory: localDirectory },
+      }),
+    cancelTransfer: () => Promise.resolve(),
+    transferProgressEvent: "local-files-transfer-progress",
+  };
+  return localBrowserCommandsSingleton;
+}
+
 /** Resolve the right adapter from a Connection. */
 export function fileBrowserCommandsFor(connection: Connection): FileBrowserCommands {
+  if (connection.type === "localFiles") {
+    return localBrowserCommands();
+  }
   if (connection.type === "ftp") {
     const options: FtpConnectionOptions = connection.ftpOptions ?? {
       protocol: "ftp",

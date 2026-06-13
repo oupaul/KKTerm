@@ -5,6 +5,7 @@ import { connectionIconSrcForConnection } from "./ConnectionIcon";
 import { AddConnectionMenu, QuickConnectMenu } from "./ConnectionMenus";
 import { FtpConnectionFields, FtpConnectionOptions } from "./connection-dialog/FtpConnectionFields";
 import { LocalConnectionFields } from "./connection-dialog/LocalConnectionFields";
+import { LocalFilesConnectionFields } from "./connection-dialog/LocalFilesConnectionFields";
 import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
 import { SerialConnectionFields } from "./connection-dialog/SerialConnectionFields";
 import { SshConnectionFields } from "./connection-dialog/SshConnectionFields";
@@ -330,7 +331,11 @@ export function ConnectionSidebar({
 
   async function reloadConnectionGroups() {
     try {
-      setTree(await invokeCommand("list_connection_tree"));
+      setTree(
+        await invokeCommand("list_connection_tree", {
+          workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+        }),
+      );
     } catch {
       setTree(connectionTree);
     }
@@ -357,6 +362,7 @@ export function ConnectionSidebar({
       host: connection.host,
       user: connection.user,
       type: connection.type,
+      workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
       port: connection.port,
       keyPath: connection.keyPath,
       proxyJump: connection.proxyJump,
@@ -864,7 +870,10 @@ export function ConnectionSidebar({
     if (formMode === "save") {
       try {
         let connection = await invokeCommand("create_connection", {
-          request: connectionRequest,
+          request: {
+            ...connectionRequest,
+            workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+          },
         });
         if (appearance) {
           const updated = await invokeCommand("update_connection_terminal_appearance", {
@@ -1022,7 +1031,11 @@ export function ConnectionSidebar({
     try {
       setTreeError("");
       await invokeCommand("create_connection_folder", {
-        request: { name, parentFolderId },
+        request: {
+          name,
+          parentFolderId,
+          workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+        },
       });
       await reloadConnectionGroups();
       notifyConnectionTreeInvalidated();
@@ -1295,6 +1308,7 @@ export function ConnectionSidebar({
       "rdp",
       "vnc",
       "ftp",
+      "localFiles",
     ];
     return [
       ...connectionTypes.map((connectionType) => ({
@@ -3279,7 +3293,7 @@ function ConnectionDialog({
     const rawUrl = String(form.get("url") ?? "").trim();
     const serialLine = String(form.get("serialLine") ?? "COM1").trim() || "COM1";
     const host =
-      connectionType === "local"
+      connectionType === "local" || connectionType === "localFiles"
         ? "localhost"
         : connectionType === "serial"
           ? serialLine
@@ -3290,6 +3304,8 @@ function ConnectionDialog({
     const name =
       connectionType === "local"
         ? requestedName || selectedLocalShellLabel
+        : connectionType === "localFiles"
+          ? requestedName || t("connections.localFiles")
         : connectionType === "serial"
           ? requestedName || serialLine
         : requestedName || host;
@@ -3312,7 +3328,7 @@ function ConnectionDialog({
       name,
       host,
       user:
-        connectionType === "local"
+        connectionType === "local" || connectionType === "localFiles"
           ? "local"
           : connectionType === "serial"
             ? ""
@@ -3328,7 +3344,7 @@ function ConnectionDialog({
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,
       localShell: connectionType === "local" ? selectedLocalShell || undefined : undefined,
       localStartupDirectory:
-        connectionType === "local"
+        connectionType === "local" || connectionType === "localFiles"
           ? String(form.get("localStartupDirectory") ?? "").trim() || undefined
           : undefined,
       localStartupScript:
@@ -3500,6 +3516,15 @@ function ConnectionDialog({
           <LocalConnectionFields
             initialConnection={initialConnection}
             localShellOptions={localShellOptions}
+            localStartupDirectory={localStartupDirectory}
+            onBrowseLocalStartupDirectory={() => void handleBrowseLocalStartupDirectory()}
+            onLocalStartupDirectoryChange={setLocalStartupDirectory}
+          />
+        );
+      case "localFiles":
+        return (
+          <LocalFilesConnectionFields
+            initialConnection={initialConnection}
             localStartupDirectory={localStartupDirectory}
             onBrowseLocalStartupDirectory={() => void handleBrowseLocalStartupDirectory()}
             onLocalStartupDirectoryChange={setLocalStartupDirectory}

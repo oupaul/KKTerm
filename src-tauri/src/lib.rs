@@ -338,8 +338,51 @@ fn dashboard_load_background_image_sync(
 #[tauri::command]
 fn list_connection_tree(
     storage: tauri::State<'_, storage::Storage>,
+    workspace_id: Option<String>,
 ) -> Result<storage::ConnectionTree, String> {
-    storage.list_connection_tree()
+    match workspace_id {
+        Some(workspace_id) => storage.list_connection_tree_for_workspace(workspace_id),
+        None => storage.list_connection_tree(),
+    }
+}
+
+#[tauri::command]
+fn list_workspaces(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<Vec<storage::Workspace>, String> {
+    storage.list_workspaces()
+}
+
+#[tauri::command]
+fn create_workspace(
+    storage: tauri::State<'_, storage::Storage>,
+    request: storage::CreateWorkspaceRequest,
+) -> Result<storage::Workspace, String> {
+    storage.create_workspace(request)
+}
+
+#[tauri::command]
+fn rename_workspace(
+    storage: tauri::State<'_, storage::Storage>,
+    request: storage::RenameWorkspaceRequest,
+) -> Result<storage::Workspace, String> {
+    storage.rename_workspace(request)
+}
+
+#[tauri::command]
+fn delete_workspace(
+    storage: tauri::State<'_, storage::Storage>,
+    id: String,
+) -> Result<(), String> {
+    storage.delete_workspace(id)
+}
+
+#[tauri::command]
+fn reorder_workspaces(
+    storage: tauri::State<'_, storage::Storage>,
+    request: storage::ReorderWorkspacesRequest,
+) -> Result<Vec<storage::Workspace>, String> {
+    storage.reorder_workspaces(request)
 }
 
 #[tauri::command]
@@ -1967,6 +2010,47 @@ fn list_local_directory(
 }
 
 #[tauri::command]
+async fn create_local_folder(request: sftp::CreateLocalFolderRequest) -> Result<(), String> {
+    run_blocking_command("create local folder", move || {
+        sftp::create_local_folder(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn rename_local_path(request: sftp::RenameLocalPathRequest) -> Result<(), String> {
+    run_blocking_command("rename local path", move || {
+        sftp::rename_local_path(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn delete_local_path(request: sftp::DeleteLocalPathRequest) -> Result<(), String> {
+    run_blocking_command("delete local path", move || {
+        sftp::delete_local_path(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn local_path_properties(
+    request: sftp::LocalPathPropertiesRequest,
+) -> Result<sftp::SftpPathProperties, String> {
+    run_blocking_command("local path properties", move || {
+        sftp::local_path_properties(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn copy_local_path(
+    request: sftp::CopyLocalPathRequest,
+) -> Result<sftp::SftpTransferResult, String> {
+    run_blocking_command("copy local path", move || sftp::copy_local_path(request)).await
+}
+
+#[tauri::command]
 async fn upload_sftp_path(
     app: tauri::AppHandle,
     request: sftp::UploadSftpPathRequest,
@@ -2876,6 +2960,11 @@ pub fn run() {
             hide_native_tooltip,
             // ── Connections & folders
             list_connection_tree,
+            list_workspaces,
+            create_workspace,
+            rename_workspace,
+            delete_workspace,
+            reorder_workspaces,
             create_connection,
             create_connection_folder,
             rename_connection_folder,
@@ -3040,6 +3129,11 @@ pub fn run() {
             start_sftp_session,
             list_sftp_directory,
             list_local_directory,
+            create_local_folder,
+            rename_local_path,
+            delete_local_path,
+            local_path_properties,
+            copy_local_path,
             upload_sftp_path,
             download_sftp_path,
             cancel_sftp_transfer,

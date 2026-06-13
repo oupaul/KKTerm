@@ -7,6 +7,7 @@ import {
   Package,
   Pin,
   PinOff,
+  Plus,
   Settings,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +24,10 @@ import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/native
 import { supportsInstallerHelper } from "../lib/platform";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
-import type { Connection } from "../types";
+import type { Connection, Workspace } from "../types";
+import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
+import { RenameWorkspaceDialog, DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
+import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
 import { RailTooltip } from "./RailTooltip";
 
 export type ActivePage = "workspace" | "dashboard" | "installer" | "settings";
@@ -95,6 +99,10 @@ export function ActivityRail({
 }) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+  const workspaces = useWorkspaceStore((state) => state.workspaces);
+  const setWorkspaces = useWorkspaceStore((state) => state.setWorkspaces);
+  const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const activeSessionCounts = useWorkspaceStore((state) => state.activeSessionCounts);
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -126,6 +134,9 @@ export function ActivityRail({
     useState<ConnectionRailDropTarget | null>(null);
   const [railConnectionMenu, setRailConnectionMenu] =
     useState<RailConnectionMenuState | null>(null);
+  const [showNewWorkspace, setShowNewWorkspace] = useState(false);
+  const [workspaceToRename, setWorkspaceToRename] = useState<Workspace | null>(null);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const railConnectionMenuRef = useRef<HTMLDivElement | null>(null);
   const connectionRailDragRef = useRef<ConnectionRailDragState | null>(null);
   const connectionRailListRef = useRef<HTMLDivElement | null>(null);
@@ -220,7 +231,9 @@ export function ActivityRail({
 
     async function loadSavedConnections() {
       try {
-        const tree = await invokeCommand("list_connection_tree");
+        const tree = await invokeCommand("list_connection_tree", {
+          workspaceId: activeWorkspaceId,
+        });
         if (!disposed) {
           setSavedConnections(flattenConnections(tree));
         }
@@ -240,14 +253,59 @@ export function ActivityRail({
       disposed = true;
       window.removeEventListener("kkterm:connection-tree-invalidated", handleTreeInvalidated);
     };
-  }, []);
+  }, [activeWorkspaceId]);
 
-  function handleConnectionsClick() {
-    if (activePage === "workspace") {
-      onConnectionsToggle();
-    } else {
-      onNavigate("workspace");
+  useEffect(() => {
+    let disposed = false;
+    async function loadWorkspaces() {
+      try {
+        const list = await invokeCommand("list_workspaces");
+        if (!disposed) {
+          setWorkspaces(list);
+        }
+      } catch {
+        // The rail still renders with the default-only workspace state.
+      }
     }
+    void loadWorkspaces();
+    return () => {
+      disposed = true;
+    };
+  }, [setWorkspaces]);
+
+  async function reloadWorkspaces() {
+    try {
+      setWorkspaces(await invokeCommand("list_workspaces"));
+    } catch {
+      // Non-fatal; keep the current list.
+    }
+  }
+
+  function handleWorkspaceClick(workspace: Workspace) {
+    if (workspace.id === activeWorkspaceId && activePage === "workspace") {
+      onConnectionsToggle();
+      return;
+    }
+    setActiveWorkspace(workspace.id);
+    onNavigate("workspace");
+  }
+
+  async function openWorkspaceMenu(workspace: Workspace, x: number, y: number) {
+    await showNativeContextMenu(
+      [
+        {
+          kind: "item",
+          label: t("workspace.renameWorkspace"),
+          action: () => setWorkspaceToRename(workspace),
+        },
+        {
+          kind: "item",
+          label: t("workspace.deleteWorkspace"),
+          action: () => setWorkspaceToDelete(workspace),
+        },
+      ],
+      { x, y },
+    );
   }
 
   function handleRailConnectionClick(item: ConnectedRailItem) {
@@ -585,17 +643,69 @@ export function ActivityRail({
 
   return (
     <nav className="activity-rail" aria-label={t("app.primaryNav")}>
-      <button
-        className={`rail-button ${activePage === "workspace" ? "active" : ""} ${
-          connectionsCollapsed ? "connections-collapsed-indicator" : ""
-        }`}
-        aria-label={t("workspace.workspace")}
-        data-tutorial-id="app.activityRailWorkspace"
-        onClick={handleConnectionsClick}
-      >
-        <LayoutDashboard size={18} />
-        <RailTooltip label={t("workspace.workspace")} />
-      </button>
+      <div className="rail-workspaces" aria-label={t("workspace.workspaceSwitcher")}>
+        {(workspaces.length > 0
+          ? workspaces
+          : [
+              {
+                id: activeWorkspaceId,
+                name: t("workspace.defaultWorkspace"),
+                icon: null,
+                isDefault: true,
+                sortOrder: 0,
+              } as Workspace,
+            ]
+        ).map((workspace) => {
+          const isActiveWorkspace = workspace.id === activeWorkspaceId;
+          const label = workspace.isDefault
+            ? t("workspace.defaultWorkspace")
+            : workspace.name;
+          return (
+            <button
+              key={workspace.id}
+              className={`rail-button rail-button-workspace ${
+                activePage === "workspace" && isActiveWorkspace ? "active" : ""
+              } ${
+                connectionsCollapsed && isActiveWorkspace
+                  ? "connections-collapsed-indicator"
+                  : ""
+              }`}
+              aria-label={label}
+              data-tutorial-id={
+                workspace.isDefault ? "app.activityRailWorkspace" : undefined
+              }
+              onClick={() => handleWorkspaceClick(workspace)}
+              onContextMenu={
+                workspace.isDefault
+                  ? undefined
+                  : (event) => {
+                      event.preventDefault();
+                      void openWorkspaceMenu(
+                        workspace,
+                        event.clientX,
+                        event.clientY,
+                      );
+                    }
+              }
+            >
+              {workspace.isDefault ? (
+                <LayoutDashboard size={18} />
+              ) : (
+                <WorkspaceIcon icon={workspace.icon} name={label} size={18} />
+              )}
+              <RailTooltip label={label} />
+            </button>
+          );
+        })}
+        <button
+          className="rail-button rail-button-add-workspace"
+          aria-label={t("workspace.newWorkspace")}
+          onClick={() => setShowNewWorkspace(true)}
+        >
+          <Plus size={18} />
+          <RailTooltip label={t("workspace.newWorkspace")} />
+        </button>
+      </div>
       <button
         className={`rail-button ${activePage === "dashboard" ? "active" : ""}`}
         aria-label={t("dashboard.title")}
@@ -761,6 +871,42 @@ export function ActivityRail({
         <Settings size={18} />
         <RailTooltip label={t("app.settings")} />
       </button>
+      {showNewWorkspace ? (
+        <NewWorkspaceDialog
+          workspaces={workspaces}
+          onClose={() => setShowNewWorkspace(false)}
+          onCreated={(workspace) => {
+            setShowNewWorkspace(false);
+            void reloadWorkspaces();
+            setActiveWorkspace(workspace.id);
+            onNavigate("workspace");
+            showStatusBarNotice(
+              t("workspace.workspaceCreated", { name: workspace.name }),
+              { tone: "success" },
+            );
+          }}
+        />
+      ) : null}
+      {workspaceToRename ? (
+        <RenameWorkspaceDialog
+          workspace={workspaceToRename}
+          onClose={() => setWorkspaceToRename(null)}
+          onRenamed={() => {
+            setWorkspaceToRename(null);
+            void reloadWorkspaces();
+          }}
+        />
+      ) : null}
+      {workspaceToDelete ? (
+        <DeleteWorkspaceDialog
+          workspace={workspaceToDelete}
+          onClose={() => setWorkspaceToDelete(null)}
+          onDeleted={() => {
+            setWorkspaceToDelete(null);
+            void reloadWorkspaces();
+          }}
+        />
+      ) : null}
     </nav>
   );
 }

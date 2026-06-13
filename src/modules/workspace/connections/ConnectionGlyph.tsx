@@ -19,6 +19,8 @@ export function connectionTypeSubtitle(type: ConnectionType) {
       return i18next.t("connections.windowsRdp");
     case "vnc":
       return i18next.t("connections.screenControl");
+    case "localFiles":
+      return i18next.t("connections.localFilesSubtitle");
   }
 }
 

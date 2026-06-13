@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { ConnectionType } from "../../../types";
 import ftpIcon from "../../../assets/connection-icons/ftp.png";
+import localFilesIcon from "../../../assets/connection-icons/localfiles.svg";
 import rdpIcon from "../../../assets/connection-icons/rdp.png";
 import serialIcon from "../../../assets/connection-icons/serial.png";
 import sshIcon from "../../../assets/connection-icons/ssh.png";
@@ -21,6 +22,7 @@ export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   rdp: rdpIcon,
   vnc: vncIcon,
   ftp: ftpIcon,
+  localFiles: localFilesIcon,
 };
 
 export const PREDEFINED_CONNECTION_ICON_TYPES: ConnectionType[] = [
@@ -32,6 +34,7 @@ export const PREDEFINED_CONNECTION_ICON_TYPES: ConnectionType[] = [
   "rdp",
   "vnc",
   "ftp",
+  "localFiles",
 ];
 
 export function connectionIconSrcForConnection({

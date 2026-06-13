@@ -912,6 +912,189 @@ pub fn list_local_directory(
     })
 }
 
+// Local File Explorer file operations. These back the `localFiles` Connection
+// type's file-browser surface and operate purely on the local filesystem (no
+// network session). They reuse the same listing/path helpers as the local pane
+// of the SFTP browser.
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateLocalFolderRequest {
+    parent_path: String,
+    name: String,
+}
+
+pub fn create_local_folder(request: CreateLocalFolderRequest) -> Result<(), String> {
+    let parent = resolve_local_directory(Some(&request.parent_path))?;
+    let name = request.name.trim();
+    if name.is_empty() || name.contains(['/', '\\']) {
+        return Err("invalid folder name".to_string());
+    }
+    fs::create_dir(parent.join(name)).map_err(|error| format!("failed to create folder: {error}"))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameLocalPathRequest {
+    path: String,
+    new_name: String,
+}
+
+pub fn rename_local_path(request: RenameLocalPathRequest) -> Result<(), String> {
+    let source = PathBuf::from(&request.path);
+    let name = request.new_name.trim();
+    if name.is_empty() || name.contains(['/', '\\']) {
+        return Err("invalid name".to_string());
+    }
+    let parent = source
+        .parent()
+        .ok_or_else(|| "path has no parent directory".to_string())?;
+    fs::rename(&source, parent.join(name)).map_err(|error| format!("failed to rename: {error}"))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteLocalPathRequest {
+    path: String,
+}
+
+pub fn delete_local_path(request: DeleteLocalPathRequest) -> Result<(), String> {
+    let path = PathBuf::from(&request.path);
+    let metadata =
+        fs::symlink_metadata(&path).map_err(|error| format!("cannot read path: {error}"))?;
+    if metadata.is_dir() {
+        fs::remove_dir_all(&path)
+    } else {
+        fs::remove_file(&path)
+    }
+    .map_err(|error| format!("failed to delete: {error}"))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalPathPropertiesRequest {
+    path: String,
+}
+
+pub fn local_path_properties(
+    request: LocalPathPropertiesRequest,
+) -> Result<SftpPathProperties, String> {
+    let path = PathBuf::from(&request.path);
+    let metadata =
+        fs::symlink_metadata(&path).map_err(|error| format!("cannot read path: {error}"))?;
+    let kind = if metadata.file_type().is_symlink() {
+        "symlink"
+    } else if metadata.is_dir() {
+        "folder"
+    } else if metadata.is_file() {
+        "file"
+    } else {
+        "other"
+    };
+    Ok(SftpPathProperties {
+        path: display_local_path(&path),
+        name: local_path_name(&path)?,
+        kind: kind.to_string(),
+        size: if metadata.is_file() {
+            Some(metadata.len())
+        } else {
+            None
+        },
+        modified: metadata
+            .modified()
+            .ok()
+            .and_then(|time| unix_timestamp(time).ok()),
+        accessed: metadata
+            .accessed()
+            .ok()
+            .and_then(|time| unix_timestamp(time).ok()),
+        permissions: None,
+        mode: None,
+        uid: None,
+        user: None,
+        gid: None,
+        group: None,
+    })
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CopyLocalPathRequest {
+    source_path: String,
+    destination_directory: String,
+}
+
+pub fn copy_local_path(request: CopyLocalPathRequest) -> Result<SftpTransferResult, String> {
+    let source = PathBuf::from(&request.source_path);
+    let source_metadata = fs::symlink_metadata(&source)
+        .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+    let source_canonical = fs::canonicalize(&source)
+        .map_err(|error| format!("cannot resolve {}: {error}", source.display()))?;
+    let destination_directory = resolve_local_directory(Some(&request.destination_directory))?;
+    let destination_canonical = fs::canonicalize(&destination_directory).map_err(|error| {
+        format!(
+            "cannot resolve destination {}: {error}",
+            destination_directory.display()
+        )
+    })?;
+    let name = local_path_name(&source)?;
+    let target = destination_directory.join(&name);
+    if target.exists()
+        && fs::canonicalize(&target)
+            .map(|target_canonical| target_canonical == source_canonical)
+            .unwrap_or(false)
+    {
+        return Err("source and destination are the same".to_string());
+    }
+    if source_metadata.is_dir() && destination_canonical.starts_with(&source_canonical) {
+        return Err("cannot copy a folder into itself or one of its subfolders".to_string());
+    }
+    let mut files = 0u64;
+    let mut folders = 0u64;
+    let mut bytes = 0u64;
+    copy_local_recursive(&source, &target, &mut files, &mut folders, &mut bytes)?;
+    Ok(SftpTransferResult {
+        name,
+        files,
+        folders,
+        bytes,
+    })
+}
+
+fn copy_local_recursive(
+    source: &Path,
+    target: &Path,
+    files: &mut u64,
+    folders: &mut u64,
+    bytes: &mut u64,
+) -> Result<(), String> {
+    let metadata = fs::symlink_metadata(source)
+        .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+    if metadata.is_dir() {
+        fs::create_dir_all(target)
+            .map_err(|error| format!("failed to create {}: {error}", target.display()))?;
+        *folders += 1;
+        for entry in fs::read_dir(source)
+            .map_err(|error| format!("failed to read {}: {error}", source.display()))?
+        {
+            let entry = entry.map_err(|error| format!("failed to read entry: {error}"))?;
+            copy_local_recursive(
+                &entry.path(),
+                &target.join(entry.file_name()),
+                files,
+                folders,
+                bytes,
+            )?;
+        }
+    } else {
+        let copied = fs::copy(source, target)
+            .map_err(|error| format!("failed to copy {}: {error}", source.display()))?;
+        *files += 1;
+        *bytes += copied;
+    }
+    Ok(())
+}
+
 async fn read_directory(
     sftp: &SftpSession,
     session_id: &str,
@@ -1740,6 +1923,29 @@ mod tests {
             Ok(SftpOverwriteBehavior::Overwrite)
         ));
         assert!(normalize_sftp_overwrite_behavior(Some("skip")).is_err());
+    }
+
+    #[test]
+    fn local_copy_rejects_directory_into_its_descendant() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time is after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("kkterm-local-copy-{unique}"));
+        let source = root.join("source");
+        let child = source.join("child");
+        fs::create_dir_all(&child).expect("test directories are created");
+
+        let result = copy_local_path(CopyLocalPathRequest {
+            source_path: display_local_path(&source),
+            destination_directory: display_local_path(&child),
+        });
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(matches!(
+            result,
+            Err(message) if message.contains("cannot copy a folder into itself")
+        ));
     }
 
     fn sftp_request() -> StartSftpSessionRequest {

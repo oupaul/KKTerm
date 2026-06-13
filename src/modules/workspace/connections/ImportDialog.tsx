@@ -19,6 +19,7 @@ import {
   type ScanResultEntry,
 } from "../../../lib/tauri";
 import { DialogPortal } from "../../../app/DialogPortal";
+import { useWorkspaceStore } from "../../../store";
 import { defaultPortForConnectionType, uniqueRuntimeId } from "./utils";
 import { flattenFolders } from "./treeUtils";
 import type {
@@ -915,7 +916,11 @@ function ImportPreviewSection({
         continue;
       }
       const folder = await invokeCommand("create_connection_folder", {
-        request: { name: segment, parentFolderId },
+        request: {
+          name: segment,
+          parentFolderId,
+          workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+        },
       });
       folderCache.set(cacheKey, folder.id);
       parentFolderId = folder.id;
@@ -953,7 +958,10 @@ function ImportPreviewSection({
           return;
         }
         const folder = await invokeCommand("create_connection_folder", {
-          request: { name: trimmed },
+          request: {
+            name: trimmed,
+            workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+          },
         });
         targetFolderId = folder.id;
       } else if (folderTarget !== "__root__") {
@@ -987,6 +995,7 @@ function ImportPreviewSection({
           host: row.type === "url" ? undefined : row.host,
           user: row.user,
           folderId: rowFolderId,
+          workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
           port,
           url: row.type === "url" ? row.url ?? row.host : undefined,
           authMethod: password && row.type === "ssh" ? "password" : undefined,

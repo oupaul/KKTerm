@@ -3,7 +3,7 @@ import {
   dispatchConnectionTabContextMenu,
   isConnectionTabContextMenuConnection,
 } from "./connections/connectionTabContextMenu";
-import { ftpBrowserCommands } from "../../lib/fileBrowserCommands";
+import { ftpBrowserCommands, localBrowserCommands } from "../../lib/fileBrowserCommands";
 import { RemoteDesktopWorkspace } from "./connections/remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "./connections/sftp/SftpWorkspace";
 import { TerminalWorkspace } from "./connections/terminal/TerminalWorkspace";
@@ -313,6 +313,18 @@ export function WorkspaceCanvas({
           return (
             <SftpWorkspace
               commands={commands}
+              isActive={workspaceActive && tab.id === activeTabId}
+              key={tab.id}
+              tab={tab}
+            />
+          );
+        }
+        if (tab.kind === "localFiles") {
+          // Local File Explorer reuses the SFTP browser surface driven by the
+          // local-filesystem adapter (no network session).
+          return (
+            <SftpWorkspace
+              commands={localBrowserCommands()}
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
               tab={tab}

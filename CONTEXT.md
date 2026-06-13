@@ -18,8 +18,16 @@ A top-level section of the locale JSON mapping to a feature area in the frontend
 
 
 **Connection**:
-A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an embedded http(s) WebView2 target), RDP, VNC, and FTP/FTPS. SFTP is opened from an SSH Connection and is not stored as a standalone Connection.
+A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an embedded http(s) WebView2 target), RDP, VNC, FTP/FTPS, and File Explorer (a local filesystem browser, kind `localFiles`). SFTP is opened from an SSH Connection and is not stored as a standalone Connection. Every Connection belongs to exactly one **Workspace**.
 _Avoid_: Profile, saved session, host entry
+
+**File Explorer Connection**:
+A Connection of kind `localFiles`. It browses the local filesystem (no remote host or network Session) by reusing the SFTP file-browser surface driven by a local-filesystem command adapter. It stores an optional starting directory; "transfers" between its panes are local file copies.
+_Avoid_: SFTP, FTP, local SFTP, remote browser
+
+**Workspace**:
+A named, isolated container of Connections, surfaced as a switcher in the Activity Rail. The first Workspace ("Default") is seeded on first run and is permanent (non-deletable, non-movable); additional Workspaces are created through the New Workspace wizard (name, icon, and optional copy-import of Connections from other Workspaces). Switching the active Workspace re-scopes the Connection Tree and the rail's connected/pinned list only; open Sessions/Tabs, the Dashboard Module, the Installer Helper Module, and Settings remain global. The Workspace Module and Workspace Canvas render the *active* Workspace.
+_Avoid_: Space, vault, environment, project, tab
 
 SSH Connections may persist non-secret tmux launch preferences, including whether KKTerm should start terminal Panes inside named tmux sessions. The remote tmux process itself remains live Session/runtime state and is not the durable Connection.
 
@@ -104,7 +112,7 @@ _Avoid_: monitor profile, saved alert, durable watcher
 ## UI Layout
 
 **Activity Rail (Left Rail)**:
-The vertical icon bar on the far left of the app. Shows top-level built-in Modules (Workspace, Dashboard), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
+The vertical icon bar on the far left of the app. Its top section is the **Workspace switcher** — the Default Workspace, any additional Workspaces, and a `+` button that opens the New Workspace wizard; selecting a Workspace activates it and navigates to the Workspace Module. Below that it shows the other top-level built-in Modules (Dashboard, Installer Helper), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
 _Avoid_: sidebar, left sidebar, nav bar
 
 **Connection Tree (Connections Panel)**:
@@ -176,3 +184,4 @@ _Avoid_: settings nav, settings menu
 - "Profile" and "saved connection" were both used for durable openable resources. Resolved: use **Connection** as the canonical term.
 - "Session" was previously easy to confuse with a saved connection or visible tab. Resolved: a **Session** is live runtime state, while a **Tab** is only the frontend container.
 - "Child connection" can sound like a nested durable Connection. Resolved: use **Child Connection Tab** for the saved child row that reopens a Tab under a parent Connection.
+- "Workspace" was previously an implicit singleton — the term named both the rail Module and the single Connection Tree. Resolved: **Workspace** is now an instanceable container of Connections; the seeded **Default Workspace** is permanent. The Workspace Module / Workspace Canvas keep their names and render the active Workspace. **Tab** remains the frontend container for a Session, distinct from the capital-W Workspace instance.
