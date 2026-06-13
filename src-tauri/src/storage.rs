@@ -1646,6 +1646,9 @@ impl Storage {
             && !column_exists(&connection, "connections", "workspace_id")?
         {
             connection
+                .pragma_update(None, "legacy_alter_table", "ON")
+                .map_err(to_storage_error)?;
+            connection
                 .execute_batch(
                     r#"
                     BEGIN;
@@ -1704,7 +1707,11 @@ impl Storage {
                     "#,
                 )
                 .map_err(to_storage_error)?;
+            connection
+                .pragma_update(None, "legacy_alter_table", "OFF")
+                .map_err(to_storage_error)?;
         }
+        repair_connections_pre_v20_references(&connection)?;
         ensure_column(&connection, "connection_folders", "workspace_id", "TEXT")?;
         ensure_column(&connection, "workspaces", "icon_color", "TEXT")?;
         connection
@@ -1955,6 +1962,136 @@ fn ensure_column(
         )
         .map_err(to_storage_error)?;
     Ok(())
+}
+
+fn repair_connections_pre_v20_references(connection: &SqliteConnection) -> Result<(), String> {
+    let table_names = [
+        "connection_tags",
+        "url_credentials",
+        "connection_password_credentials",
+    ];
+    let needs_repair = table_names.iter().try_fold(false, |needs_repair, table| {
+        Ok::<bool, String>(
+            needs_repair || table_sql_mentions(connection, table, "connections_pre_v20")?,
+        )
+    })?;
+    if !needs_repair {
+        return Ok(());
+    }
+
+    // SQLite rewrites dependent FK clauses on ALTER TABLE RENAME unless legacy
+    // rename behavior is enabled. These rebuilds intentionally keep the public
+    // `connections` table name stable while replacing stale temp-table FKs.
+    connection
+        .pragma_update(None, "foreign_keys", "OFF")
+        .map_err(to_storage_error)?;
+    connection
+        .pragma_update(None, "legacy_alter_table", "ON")
+        .map_err(to_storage_error)?;
+    let repair_result = connection.execute_batch(
+        r#"
+        BEGIN;
+
+        ALTER TABLE connection_tags RENAME TO connection_tags_pre_v20_fk_fix;
+        CREATE TABLE connection_tags (
+            connection_id TEXT NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+            tag TEXT NOT NULL,
+            sort_order INTEGER NOT NULL,
+            PRIMARY KEY (connection_id, tag)
+        );
+        INSERT INTO connection_tags (connection_id, tag, sort_order)
+        SELECT connection_id, tag, sort_order
+        FROM connection_tags_pre_v20_fk_fix
+        WHERE EXISTS (
+            SELECT 1 FROM connections WHERE connections.id = connection_tags_pre_v20_fk_fix.connection_id
+        );
+        DROP TABLE connection_tags_pre_v20_fk_fix;
+
+        ALTER TABLE url_credentials RENAME TO url_credentials_pre_v20_fk_fix;
+        CREATE TABLE url_credentials (
+            connection_id TEXT PRIMARY KEY REFERENCES connections(id) ON DELETE CASCADE,
+            username TEXT NOT NULL,
+            page_url TEXT,
+            username_selector TEXT,
+            password_selector TEXT,
+            field_values TEXT,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO url_credentials (
+            connection_id, username, page_url, username_selector, password_selector,
+            field_values, updated_at
+        )
+        SELECT
+            connection_id, username, page_url, username_selector, password_selector,
+            field_values, updated_at
+        FROM url_credentials_pre_v20_fk_fix
+        WHERE EXISTS (
+            SELECT 1 FROM connections WHERE connections.id = url_credentials_pre_v20_fk_fix.connection_id
+        );
+        DROP TABLE url_credentials_pre_v20_fk_fix;
+
+        ALTER TABLE connection_password_credentials RENAME TO connection_password_credentials_pre_v20_fk_fix;
+        CREATE TABLE connection_password_credentials (
+            id TEXT PRIMARY KEY,
+            connection_type TEXT NOT NULL CHECK (connection_type IN ('ssh', 'telnet', 'rdp', 'vnc', 'ftp')),
+            host TEXT NOT NULL,
+            username TEXT NOT NULL,
+            label TEXT NOT NULL,
+            created_from_connection_id TEXT REFERENCES connections(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO connection_password_credentials (
+            id, connection_type, host, username, label, created_from_connection_id,
+            created_at, updated_at
+        )
+        SELECT
+            id, connection_type, host, username, label,
+            CASE
+                WHEN created_from_connection_id IS NULL THEN NULL
+                WHEN EXISTS (
+                    SELECT 1 FROM connections
+                    WHERE connections.id = connection_password_credentials_pre_v20_fk_fix.created_from_connection_id
+                ) THEN created_from_connection_id
+                ELSE NULL
+            END,
+            created_at, updated_at
+        FROM connection_password_credentials_pre_v20_fk_fix;
+        DROP TABLE connection_password_credentials_pre_v20_fk_fix;
+
+        CREATE INDEX IF NOT EXISTS idx_connection_tags_connection_sort
+            ON connection_tags(connection_id, sort_order);
+        CREATE INDEX IF NOT EXISTS idx_url_credentials_connection
+            ON url_credentials(connection_id);
+        CREATE INDEX IF NOT EXISTS idx_connection_password_credentials_type_host
+            ON connection_password_credentials(connection_type, host);
+
+        COMMIT;
+        "#,
+    );
+    let reset_legacy_result = connection.pragma_update(None, "legacy_alter_table", "OFF");
+    let reset_fk_result = connection.pragma_update(None, "foreign_keys", "ON");
+
+    repair_result.map_err(to_storage_error)?;
+    reset_legacy_result.map_err(to_storage_error)?;
+    reset_fk_result.map_err(to_storage_error)?;
+    Ok(())
+}
+
+fn table_sql_mentions(
+    connection: &SqliteConnection,
+    table: &str,
+    needle: &str,
+) -> Result<bool, String> {
+    let sql: Option<String> = connection
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            params![table],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(to_storage_error)?;
+    Ok(sql.is_some_and(|sql| sql.contains(needle)))
 }
 
 fn timestamp_for_filename() -> String {

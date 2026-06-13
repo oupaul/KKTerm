@@ -76,6 +76,29 @@ test("SFTP popup uses the selected app color scheme outside the app shell", asyn
   );
 });
 
+test("SFTP workspace carries the selected app color scheme on its own surface", async () => {
+  const sftpWorkspaceSource = await readFile(
+    new URL("../src/modules/workspace/connections/sftp/SftpWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    sftpWorkspaceSource,
+    /const appearanceSettings = useWorkspaceStore\(\(state\) => state\.appearanceSettings\);/,
+    "the SFTP/File Browser surface should read the selected app appearance settings directly",
+  );
+  assert.match(
+    sftpWorkspaceSource,
+    /data-color-scheme=\{resolveAppliedColorScheme\(appearanceSettings\.colorScheme\)\}/,
+    "the SFTP/File Browser pane should expose the applied color scheme for its own descendants",
+  );
+  assert.match(
+    sftpWorkspaceSource,
+    /data-selected-color-scheme=\{appearanceSettings\.colorScheme\}/,
+    "the SFTP/File Browser pane should retain the selected scheme name for scheme-specific styling",
+  );
+});
+
 test("SFTP popup close button is anchored to the dialog top right", async () => {
   const terminalStyles = await readFile(
     new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url),
