@@ -23,7 +23,7 @@ Tutorial targets: `workspace.tabStrip`, `workspace.canvas`, `workspace.emptyStat
 
 ## Child Connection Tabs
 
-Child Connection Tabs are the alternate Workspace tab model enabled by `settings.hideTopTabButtons`. In this mode, the top Tab Strip is hidden and each saved Tab for a Connection appears as an italic child row under that parent Connection in the active Workspace's Connection Tree.
+Child Connection Tabs are the alternate Workspace tab model enabled by `settings.hideTopTabButtons`. In this mode, the top Tab Strip is hidden and each saved Tab for a terminal-type Connection appears as an italic child row under that parent Connection in the active Workspace's Connection Tree. Non-terminal Connections disable the Add Tab action in this mode.
 
 A Child Connection Tab stores Workspace presentation and reopen hints:
 

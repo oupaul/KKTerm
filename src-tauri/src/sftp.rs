@@ -1024,6 +1024,13 @@ pub struct CopyLocalPathRequest {
     destination_directory: String,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveLocalPathRequest {
+    source_path: String,
+    destination_directory: String,
+}
+
 pub fn copy_local_path(request: CopyLocalPathRequest) -> Result<SftpTransferResult, String> {
     let source = PathBuf::from(&request.source_path);
     let source_metadata = fs::symlink_metadata(&source)
@@ -1061,6 +1068,69 @@ pub fn copy_local_path(request: CopyLocalPathRequest) -> Result<SftpTransferResu
     })
 }
 
+pub fn move_local_path(request: MoveLocalPathRequest) -> Result<SftpTransferResult, String> {
+    let source = PathBuf::from(&request.source_path);
+    let source_metadata = fs::symlink_metadata(&source)
+        .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+    let source_canonical = fs::canonicalize(&source)
+        .map_err(|error| format!("cannot resolve {}: {error}", source.display()))?;
+    let destination_directory = resolve_local_directory(Some(&request.destination_directory))?;
+    let destination_canonical = fs::canonicalize(&destination_directory).map_err(|error| {
+        format!(
+            "cannot resolve destination {}: {error}",
+            destination_directory.display()
+        )
+    })?;
+    let name = local_path_name(&source)?;
+    let target = destination_directory.join(&name);
+    if target.exists() {
+        if fs::canonicalize(&target)
+            .map(|target_canonical| target_canonical == source_canonical)
+            .unwrap_or(false)
+        {
+            return Err("source and destination are the same".to_string());
+        }
+        return Err(format!("destination already exists: {}", target.display()));
+    }
+    if source_metadata.is_dir() && destination_canonical.starts_with(&source_canonical) {
+        return Err("cannot move a folder into itself or one of its subfolders".to_string());
+    }
+
+    let mut files = 0u64;
+    let mut folders = 0u64;
+    let mut bytes = 0u64;
+    count_local_recursive(&source, &mut files, &mut folders, &mut bytes)?;
+    match fs::rename(&source, &target) {
+        Ok(()) => Ok(SftpTransferResult {
+            name,
+            files,
+            folders,
+            bytes,
+        }),
+        Err(_) => {
+            let mut copied_files = 0u64;
+            let mut copied_folders = 0u64;
+            let mut copied_bytes = 0u64;
+            copy_local_recursive(
+                &source,
+                &target,
+                &mut copied_files,
+                &mut copied_folders,
+                &mut copied_bytes,
+            )?;
+            delete_local_path(DeleteLocalPathRequest {
+                path: request.source_path,
+            })?;
+            Ok(SftpTransferResult {
+                name,
+                files: copied_files,
+                folders: copied_folders,
+                bytes: copied_bytes,
+            })
+        }
+    }
+}
+
 fn copy_local_recursive(
     source: &Path,
     target: &Path,
@@ -1093,6 +1163,278 @@ fn copy_local_recursive(
         *bytes += copied;
     }
     Ok(())
+}
+
+fn count_local_recursive(
+    source: &Path,
+    files: &mut u64,
+    folders: &mut u64,
+    bytes: &mut u64,
+) -> Result<(), String> {
+    let metadata = fs::symlink_metadata(source)
+        .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+    if metadata.is_dir() {
+        *folders += 1;
+        for entry in fs::read_dir(source)
+            .map_err(|error| format!("failed to read {}: {error}", source.display()))?
+        {
+            let entry = entry.map_err(|error| format!("failed to read entry: {error}"))?;
+            count_local_recursive(&entry.path(), files, folders, bytes)?;
+        }
+    } else {
+        *files += 1;
+        *bytes += metadata.len();
+    }
+    Ok(())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalFileClipboard {
+    operation: String,
+    paths: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetLocalFileClipboardRequest {
+    operation: String,
+    paths: Vec<String>,
+}
+
+pub fn set_local_file_clipboard(request: SetLocalFileClipboardRequest) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        windows_file_clipboard::set(request)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = request;
+        Err("native file clipboard is only available on Windows".to_string())
+    }
+}
+
+pub fn read_local_file_clipboard() -> Result<Option<LocalFileClipboard>, String> {
+    #[cfg(target_os = "windows")]
+    {
+        windows_file_clipboard::read()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(None)
+    }
+}
+
+#[cfg(target_os = "windows")]
+mod windows_file_clipboard {
+    use super::{LocalFileClipboard, SetLocalFileClipboardRequest};
+    use std::{ffi::c_void, mem, ptr};
+    use windows_sys::Win32::{
+        Foundation::POINT,
+        System::{
+            DataExchange::{
+                CloseClipboard, EmptyClipboard, GetClipboardData, IsClipboardFormatAvailable,
+                OpenClipboard, RegisterClipboardFormatW, SetClipboardData,
+            },
+            Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
+        },
+        UI::Shell::{DragQueryFileW, DROPFILES},
+    };
+
+    const CF_HDROP: u32 = 15;
+    const DROPEFFECT_COPY: u32 = 1;
+    const DROPEFFECT_MOVE: u32 = 2;
+
+    struct ClipboardGuard;
+
+    impl ClipboardGuard {
+        fn open() -> Result<Self, String> {
+            let opened = unsafe { OpenClipboard(std::ptr::null_mut()) };
+            if opened == 0 {
+                return Err("failed to open clipboard".to_string());
+            }
+            Ok(Self)
+        }
+    }
+
+    impl Drop for ClipboardGuard {
+        fn drop(&mut self) {
+            unsafe {
+                CloseClipboard();
+            }
+        }
+    }
+
+    pub fn set(request: SetLocalFileClipboardRequest) -> Result<(), String> {
+        let operation = normalize_operation(&request.operation);
+        let paths = request
+            .paths
+            .into_iter()
+            .filter(|path| !path.trim().is_empty())
+            .collect::<Vec<_>>();
+        if paths.is_empty() {
+            return Err("no file paths to copy".to_string());
+        }
+
+        let _guard = ClipboardGuard::open()?;
+        let emptied = unsafe { EmptyClipboard() };
+        if emptied == 0 {
+            return Err("failed to empty clipboard".to_string());
+        }
+
+        let drop_data = build_dropfiles(&paths)?;
+        let drop_result = unsafe { SetClipboardData(CF_HDROP, drop_data) };
+        if drop_result.is_null() {
+            return Err("failed to set file clipboard data".to_string());
+        }
+
+        let effect_data = build_dropeffect(operation)?;
+        let format = preferred_drop_effect_format();
+        let effect_result = unsafe { SetClipboardData(format, effect_data) };
+        if effect_result.is_null() {
+            return Err("failed to set clipboard drop effect".to_string());
+        }
+
+        Ok(())
+    }
+
+    pub fn read() -> Result<Option<LocalFileClipboard>, String> {
+        let _guard = ClipboardGuard::open()?;
+        let has_drop = unsafe { IsClipboardFormatAvailable(CF_HDROP) };
+        if has_drop == 0 {
+            return Ok(None);
+        }
+
+        let handle = unsafe { GetClipboardData(CF_HDROP) };
+        if handle.is_null() {
+            return Ok(None);
+        }
+
+        let count = unsafe { DragQueryFileW(handle, u32::MAX, ptr::null_mut(), 0) };
+        let mut paths = Vec::new();
+        for index in 0..count {
+            let len = unsafe { DragQueryFileW(handle, index, ptr::null_mut(), 0) };
+            if len == 0 {
+                continue;
+            }
+            let mut buffer = vec![0u16; len as usize + 1];
+            let copied = unsafe {
+                DragQueryFileW(handle, index, buffer.as_mut_ptr(), buffer.len() as u32)
+            };
+            if copied > 0 {
+                paths.push(String::from_utf16_lossy(&buffer[..copied as usize]));
+            }
+        }
+
+        if paths.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(LocalFileClipboard {
+            operation: read_drop_effect_operation(),
+            paths,
+        }))
+    }
+
+    fn normalize_operation(operation: &str) -> &str {
+        if operation.eq_ignore_ascii_case("cut") || operation.eq_ignore_ascii_case("move") {
+            "cut"
+        } else {
+            "copy"
+        }
+    }
+
+    fn preferred_drop_effect_format() -> u32 {
+        let mut wide = "Preferred DropEffect".encode_utf16().collect::<Vec<_>>();
+        wide.push(0);
+        unsafe { RegisterClipboardFormatW(wide.as_ptr()) }
+    }
+
+    fn build_dropfiles(paths: &[String]) -> Result<*mut c_void, String> {
+        let mut path_list = Vec::<u16>::new();
+        for path in paths {
+            path_list.extend(path.encode_utf16());
+            path_list.push(0);
+        }
+        path_list.push(0);
+
+        let header_size = mem::size_of::<DROPFILES>();
+        let bytes = header_size + path_list.len() * mem::size_of::<u16>();
+        let handle = unsafe { GlobalAlloc(GMEM_MOVEABLE, bytes) };
+        if handle.is_null() {
+            return Err("failed to allocate clipboard data".to_string());
+        }
+
+        let locked = unsafe { GlobalLock(handle) };
+        if locked.is_null() {
+            return Err("failed to lock clipboard data".to_string());
+        }
+
+        unsafe {
+            let dropfiles = locked as *mut DROPFILES;
+            ptr::write(
+                dropfiles,
+                DROPFILES {
+                    pFiles: header_size as u32,
+                    pt: POINT { x: 0, y: 0 },
+                    fNC: 0,
+                    fWide: 1,
+                },
+            );
+            ptr::copy_nonoverlapping(
+                path_list.as_ptr(),
+                (locked as *mut u8).add(header_size) as *mut u16,
+                path_list.len(),
+            );
+            GlobalUnlock(handle);
+        }
+
+        Ok(handle)
+    }
+
+    fn build_dropeffect(operation: &str) -> Result<*mut c_void, String> {
+        let handle = unsafe { GlobalAlloc(GMEM_MOVEABLE, mem::size_of::<u32>()) };
+        if handle.is_null() {
+            return Err("failed to allocate clipboard effect".to_string());
+        }
+        let locked = unsafe { GlobalLock(handle) };
+        if locked.is_null() {
+            return Err("failed to lock clipboard effect".to_string());
+        }
+        unsafe {
+            ptr::write(
+                locked as *mut u32,
+                if operation == "cut" {
+                    DROPEFFECT_MOVE
+                } else {
+                    DROPEFFECT_COPY
+                },
+            );
+            GlobalUnlock(handle);
+        }
+        Ok(handle)
+    }
+
+    fn read_drop_effect_operation() -> String {
+        let format = preferred_drop_effect_format();
+        let handle = unsafe { GetClipboardData(format) };
+        if handle.is_null() {
+            return "copy".to_string();
+        }
+        let locked = unsafe { GlobalLock(handle) };
+        if locked.is_null() {
+            return "copy".to_string();
+        }
+        let effect = unsafe { *(locked as *const u32) };
+        unsafe {
+            GlobalUnlock(handle);
+        }
+        if effect & DROPEFFECT_MOVE != 0 {
+            "cut".to_string()
+        } else {
+            "copy".to_string()
+        }
+    }
 }
 
 async fn read_directory(

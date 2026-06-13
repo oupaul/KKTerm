@@ -233,6 +233,13 @@ export interface SftpTransferProgress {
   progress: number;
 }
 
+export type LocalFileClipboardOperation = "copy" | "cut";
+
+export interface LocalFileClipboard {
+  operation: LocalFileClipboardOperation;
+  paths: string[];
+}
+
 export interface SftpPathProperties {
   path: string;
   name: string;
@@ -1712,6 +1719,18 @@ type CommandMap = {
   copy_local_path: {
     args: { request: { sourcePath: string; destinationDirectory: string } };
     result: SftpTransferResult;
+  };
+  move_local_path: {
+    args: { request: { sourcePath: string; destinationDirectory: string } };
+    result: SftpTransferResult;
+  };
+  set_local_file_clipboard: {
+    args: { request: { operation: LocalFileClipboardOperation; paths: string[] } };
+    result: null;
+  };
+  read_local_file_clipboard: {
+    args: undefined;
+    result: LocalFileClipboard | null;
   };
   upload_sftp_path: {
     args: {

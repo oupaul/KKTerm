@@ -2066,6 +2066,28 @@ async fn copy_local_path(
 }
 
 #[tauri::command]
+async fn move_local_path(
+    request: sftp::MoveLocalPathRequest,
+) -> Result<sftp::SftpTransferResult, String> {
+    run_blocking_command("move local path", move || sftp::move_local_path(request)).await
+}
+
+#[tauri::command]
+async fn set_local_file_clipboard(
+    request: sftp::SetLocalFileClipboardRequest,
+) -> Result<(), String> {
+    run_blocking_command("set local file clipboard", move || {
+        sftp::set_local_file_clipboard(request)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn read_local_file_clipboard() -> Result<Option<sftp::LocalFileClipboard>, String> {
+    run_blocking_command("read local file clipboard", sftp::read_local_file_clipboard).await
+}
+
+#[tauri::command]
 async fn upload_sftp_path(
     app: tauri::AppHandle,
     request: sftp::UploadSftpPathRequest,
@@ -3150,6 +3172,9 @@ pub fn run() {
             local_path_properties,
             open_filesystem_path,
             copy_local_path,
+            move_local_path,
+            set_local_file_clipboard,
+            read_local_file_clipboard,
             upload_sftp_path,
             download_sftp_path,
             cancel_sftp_transfer,

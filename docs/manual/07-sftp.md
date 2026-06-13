@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `sftp.*` (full namespace), `terminal.openSftp`, `terminal.sftp`
-- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, upload, download, conflicts, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
+- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
 - Synonyms: "file transfer", "scp", "upload to server", "download from server", "remote files"
 
 ## Opening an SFTP browser
@@ -50,13 +50,15 @@ Each pane header carries (with `Aria` siblings for accessibility):
 - Recent paths (`sftp.recentPathsAria`) and Refresh files: `sftp.refreshFiles` (`sftp.refreshFilesAria`)
 - View switch: list / gallery (`sftp.viewMode`).
 
-Rename, Copy Path, Delete, and Get Info are on the right-click context menu (see below). Pressing **Delete** or **Backspace** with a remote selection deletes it (confirm copy `sftp.deleteRemoteConfirm`, `sftp.deleteRemoteItemConfirm`, `sftp.deleteRemoteItemsMultiple`; in-flight `sftp.deleting`). Rename in-flight `sftp.renaming` / empty warning `sftp.remoteNameBlank`; rename file aria `sftp.renameFileAria`.
+Cut, Copy, Paste, Rename, Copy Path, Delete, and Get Info are on the right-click context menu (see below). Pressing **Delete** or **Backspace** with a mutable local or remote selection starts the delete flow (remote confirm copy `sftp.deleteRemoteConfirm`, `sftp.deleteRemoteItemConfirm`, `sftp.deleteRemoteItemsMultiple`; local confirm copy reuses `sftp.deleteLabel` / `sftp.deleteSelected`; in-flight `sftp.deleting`). Rename in-flight `sftp.renaming` / empty warning `sftp.remoteNameBlank`; rename file aria `sftp.renameFileAria`.
 
 Double-click affordance hint: `sftp.doubleClickToOpenFile`. Double-clicking a local file runs the operating system's normal Open action for that file. Double-clicking a remote file downloads it to the current local pane directory, then runs the operating system Open action only after the transfer completes successfully; canceled, skipped, or failed downloads do not open. Remote symbolic links that resolve to directories are listed as openable folder entries so double-clicking enters the resolved target directory.
 
 ## Transferring files
 
 Use drag/drop between panes or the **center transfer arrows** (`sftp.upload` to the remote pane, `sftp.download` to the local pane). In the Tauri desktop runtime, dropping local files or folders from the operating system onto the remote Pane also queues uploads to the current remote path. Standalone SFTP panes expose a `sftp.terminal` action that reopens the parent SSH terminal in the originating Pane; SFTP popups opened from an active SSH terminal omit that action because closing the popup returns to the parent terminal. The SFTP browser and File Explorer (`localFiles`) do not show a screenshot / send-to-AI toolbar action.
+
+The right-click file clipboard uses `common.cut`, `common.copy`, and `common.paste`. Local file selections are also written to the Windows Explorer file clipboard, so Explorer can paste copied/cut local items from KKTerm and KKTerm can paste copied/cut local items from Explorer. Cross-pane local-to-remote and remote-to-local paste queues normal transfers; cut deletes the original only after the transfer completes successfully. Remote-to-remote paste is not a server-side copy operation.
 
 Tutorial targets: `sftp.upload`, `sftp.download`, `sftp.terminal`.
 
@@ -82,7 +84,7 @@ When a transfer would overwrite an existing target, KKTerm shows an app-owned di
 
 ## Context menu
 
-Right-click an item for: transfer (`sftp.upload` / `sftp.download`), Open (`common.open`, single file selection), Rename (`sftp.renameItem`, remote single selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, remote), and Get Info (`sftp.getInfo`, opens properties). The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
+Right-click an item for: transfer (`sftp.upload` / `sftp.download`, hidden in File Explorer), Open (`common.open`, single file selection), Cut (`common.cut`), Copy (`common.copy`), Paste (`common.paste`, also available from empty pane space), Rename (`sftp.renameItem`, single mutable local or remote selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, mutable local or remote selections), and Get Info (`sftp.getInfo`, opens properties). The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
 
 ## Properties / chmod / chown
 

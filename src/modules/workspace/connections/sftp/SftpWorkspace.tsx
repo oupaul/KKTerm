@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { resolveAppliedColorScheme } from "../../../../app/appShellEffects";
-import { invokeCommand, isTauriRuntime, openFilesystemPath, type LocalDirectoryEntry, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../../../../lib/tauri";
+import { invokeCommand, isTauriRuntime, openFilesystemPath, type LocalDirectoryEntry, type LocalFileClipboardOperation, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../../../../lib/tauri";
 import {
   fileBrowserCommandsFor,
   type FileBrowserCommands,
@@ -30,9 +30,9 @@ import {
 } from "./SftpOverlays";
 import { formatFileSize, formatMode, formatRemoteTime, formatTransferResult, joinLocalPath, joinRemotePath } from "./format";
 import type {
+  DeleteRequest,
   FilePaneSide,
   FilePropertiesState,
-  RemoteDeleteRequest,
   SftpContextMenuState,
   TransferConflictDecision,
   TransferConflictState,
@@ -44,6 +44,13 @@ const TRANSFER_HISTORY_STATES: TransferRecord["state"][] = ["canceled", "done", 
 const WINDOWS_DRIVES_PATH = "__KKTERM_WINDOWS_DRIVES__";
 const FILE_BROWSER_RECENT_PATHS_STORAGE_KEY = "kkterm.fileBrowserRecentPaths.v1";
 const RECENT_PATH_LIMIT = 5;
+
+type FileClipboard = {
+  operation: LocalFileClipboardOperation;
+  side: FilePaneSide;
+  paths: string[];
+  names: string[];
+};
 
 export function SftpWorkspace({
   isActive,
@@ -84,11 +91,12 @@ export function SftpWorkspace({
   const [selectedLocalNames, setSelectedLocalNames] = useState<string[]>([]);
   const [selectedRemoteNames, setSelectedRemoteNames] = useState<string[]>([]);
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
+  const [fileClipboard, setFileClipboard] = useState<FileClipboard | null>(null);
   const [contextMenu, setContextMenu] = useState<SftpContextMenuState | null>(null);
   const [propertiesState, setPropertiesState] = useState<FilePropertiesState | null>(null);
   const [transferConflict, setTransferConflict] = useState<TransferConflictState | null>(null);
   const [newRemoteFolderOpen, setNewRemoteFolderOpen] = useState(false);
-  const [remoteDeleteRequest, setRemoteDeleteRequest] = useState<RemoteDeleteRequest | null>(null);
+  const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
   const [isRemoteDropTarget, setIsRemoteDropTarget] = useState(false);
   const [renameRequest, setRenameRequest] = useState<{
     side: FilePaneSide;
@@ -417,6 +425,19 @@ export function SftpWorkspace({
               overwriteBehavior: transfer.overwriteBehavior,
             });
 
+      if (transfer.deleteSourceWhenDone) {
+        if (transfer.deleteSourceWhenDone.side === "local") {
+          await invokeCommand("delete_local_path", {
+            request: { path: transfer.deleteSourceWhenDone.path },
+          });
+        } else {
+          await commands.deletePath({
+            sessionId,
+            path: transfer.deleteSourceWhenDone.path,
+          });
+        }
+      }
+
       setTransferState(transfer.id, {
         state: "done",
         progress: 100,
@@ -425,8 +446,14 @@ export function SftpWorkspace({
 
       if (transfer.direction === "upload") {
         await refreshRemoteDirectory();
+        if (transfer.deleteSourceWhenDone?.side === "local") {
+          await refreshLocalDirectory();
+        }
       } else {
         await refreshLocalDirectory();
+        if (transfer.deleteSourceWhenDone?.side === "remote") {
+          await refreshRemoteDirectory();
+        }
         if (transfer.openWhenDone) {
           await openFilesystemPath(transfer.openWhenDone);
         }
@@ -642,6 +669,159 @@ export function SftpWorkspace({
     void enqueueTransfers("download", names);
   };
 
+  const selectedPathsForMenu = (menu: SftpContextMenuState) => {
+    const files = menu.side === "local" ? localFiles : remoteFiles;
+    return menu.names
+      .filter((name) => files.some((file) => file.name === name))
+      .map((name) =>
+        menu.side === "local"
+          ? isLocalDrivePicker
+            ? name
+            : joinLocalPath(localPath, name)
+          : joinRemotePath(remotePath, name),
+      );
+  };
+
+  const writeFileClipboard = async (
+    menu: SftpContextMenuState,
+    operation: LocalFileClipboardOperation,
+  ) => {
+    const paths = selectedPathsForMenu(menu);
+    if (paths.length === 0) {
+      return;
+    }
+
+    setFileClipboard({
+      operation,
+      side: menu.side,
+      paths,
+      names: menu.names,
+    });
+
+    if (menu.side === "local" && isTauriRuntime()) {
+      await invokeCommand("set_local_file_clipboard", {
+        request: { operation, paths },
+      }).catch(() => undefined);
+    }
+  };
+
+  const readClipboardForPaste = async () => {
+    if (!isTauriRuntime()) {
+      return fileClipboard;
+    }
+    if (fileClipboard?.side === "remote") {
+      return fileClipboard;
+    }
+
+    const nativeClipboard = await invokeCommand("read_local_file_clipboard").catch(() => null);
+    if (nativeClipboard?.paths.length) {
+      return {
+        operation: nativeClipboard.operation,
+        side: "local" as const,
+        paths: nativeClipboard.paths,
+        names: nativeClipboard.paths.map(localNameFromPath).filter(Boolean),
+      };
+    }
+
+    return fileClipboard;
+  };
+
+  const pasteLocalPaths = async (
+    operation: LocalFileClipboardOperation,
+    paths: string[],
+    targetSide: FilePaneSide,
+  ) => {
+    const uniquePaths = Array.from(new Set(paths.map((path) => path.trim()).filter(Boolean)));
+    if (uniquePaths.length === 0 || !isTauriRuntime()) {
+      return;
+    }
+
+    if (targetSide === "local") {
+      if (!localPath || isLocalDrivePicker) {
+        return;
+      }
+      setIsLocalLoading(true);
+      setLocalStatus(t("sftp.waiting"));
+      try {
+        for (const path of uniquePaths) {
+          await invokeCommand(operation === "cut" ? "move_local_path" : "copy_local_path", {
+            request: { sourcePath: path, destinationDirectory: localPath },
+          });
+        }
+        await refreshLocalDirectory();
+        if (operation === "cut") {
+          setFileClipboard(null);
+        }
+      } catch (error) {
+        setLocalStatus(error instanceof Error ? error.message : String(error));
+      } finally {
+        setIsLocalLoading(false);
+      }
+      return;
+    }
+
+    if (!sessionIdRef.current || !commands || isLocalFilesBrowser || isTransferring) {
+      return;
+    }
+
+    const nextTransfers = uniquePaths.flatMap((path): TransferRecord[] => {
+      const name = localNameFromPath(path);
+      return name
+        ? [
+            {
+              id: uniqueRuntimeId("upload"),
+              direction: "upload",
+              name,
+              state: "queued",
+              progress: 0,
+              detail: t("sftp.waiting"),
+              overwriteBehavior: "fail",
+              localPath: path,
+              remoteDirectory: remotePath,
+              deleteSourceWhenDone: operation === "cut" ? { side: "local", path } : undefined,
+            },
+          ]
+        : [];
+    });
+    if (nextTransfers.length > 0) {
+      setTransfers((current) => [...current, ...nextTransfers]);
+      if (operation === "cut") {
+        setFileClipboard(null);
+      }
+    }
+  };
+
+  const pasteRemotePaths = async (
+    operation: LocalFileClipboardOperation,
+    paths: string[],
+    targetSide: FilePaneSide,
+  ) => {
+    if (targetSide !== "local" || !localPath || isLocalDrivePicker || !sessionIdRef.current || !commands) {
+      return;
+    }
+    const selected = paths
+      .map((path) => ({ path, name: remoteNameFromPath(path) }))
+      .filter((entry) => entry.name.length > 0);
+    const nextTransfers = selected.map((entry): TransferRecord => ({
+      id: uniqueRuntimeId("download"),
+      direction: "download",
+      name: entry.name,
+      state: "queued",
+      progress: 0,
+      detail: t("sftp.waiting"),
+      overwriteBehavior: "fail",
+      remotePath: entry.path,
+      localDirectory: localPath,
+      deleteSourceWhenDone: operation === "cut" ? { side: "remote", path: entry.path } : undefined,
+    }));
+    if (nextTransfers.length > 0) {
+      setTransfers((current) => [...current, ...nextTransfers]);
+      if (operation === "cut") {
+        setFileClipboard(null);
+      }
+    }
+  };
+
   const handleOpenLocalFile = async (fileName: string) => {
     const file = localFiles.find((entry) => entry.name === fileName);
     if (!file || file.kind !== "file" || !localPath || isLocalDrivePicker || !isTauriRuntime()) {
@@ -653,6 +833,46 @@ export function SftpWorkspace({
     } catch (error) {
       setLocalStatus(error instanceof Error ? error.message : String(error));
     }
+  };
+
+  const handleRenameLocalPath = async (currentName: string, newName: string) => {
+    const selected = localFiles.find((file) => file.name === currentName);
+    if (!selected || !localPath || isLocalDrivePicker || !isTauriRuntime()) {
+      return;
+    }
+
+    const trimmedName = newName.trim();
+    if (!trimmedName || trimmedName === selected.name) {
+      return;
+    }
+
+    setIsLocalLoading(true);
+    setLocalStatus(t("sftp.renaming"));
+    try {
+      await invokeCommand("rename_local_path", {
+        request: {
+          path: joinLocalPath(localPath, selected.name),
+          newName: trimmedName,
+        },
+      });
+      await refreshLocalDirectory();
+    } catch (error) {
+      setLocalStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsLocalLoading(false);
+    }
+  };
+
+  const handleDeleteLocalPath = async (names = selectedLocalNames) => {
+    const selected = localFiles.filter((file) => names.includes(file.name));
+    if (!localPath || isLocalDrivePicker || selected.length === 0 || !isTauriRuntime()) {
+      return;
+    }
+
+    setDeleteRequest({
+      side: "local",
+      items: selected.map((item) => ({ kind: item.kind, name: item.name })),
+    });
   };
 
   const handleOpenRemoteFile = async (fileName: string) => {
@@ -810,22 +1030,38 @@ export function SftpWorkspace({
       return;
     }
 
-    setRemoteDeleteRequest({
+    setDeleteRequest({
+      side: "remote",
       items: selected.map((item) => ({ kind: item.kind, name: item.name })),
     });
   };
 
-  const handleConfirmDeleteRemotePath = async () => {
+  const handleConfirmDeletePath = async () => {
     const sessionId = sessionIdRef.current;
-    const request = remoteDeleteRequest;
-    if (!sessionId || !request || !isTauriRuntime() || !commands) {
+    const request = deleteRequest;
+    if (!request || !isTauriRuntime()) {
       return;
     }
 
-    setRemoteDeleteRequest(null);
-    setIsRemoteLoading(true);
-    setStatus(t("sftp.deleting"));
+    setDeleteRequest(null);
     try {
+      if (request.side === "local") {
+        setIsLocalLoading(true);
+        setLocalStatus(t("sftp.deleting"));
+        for (const item of request.items) {
+          await invokeCommand("delete_local_path", {
+            request: { path: joinLocalPath(localPath, item.name) },
+          });
+        }
+        await refreshLocalDirectory();
+        return;
+      }
+
+      if (!sessionId || !commands) {
+        return;
+      }
+      setIsRemoteLoading(true);
+      setStatus(t("sftp.deleting"));
       for (const item of request.items) {
         await commands.deletePath({
           sessionId,
@@ -834,8 +1070,14 @@ export function SftpWorkspace({
       }
       await refreshRemoteDirectory();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      if (request.side === "local") {
+        setLocalStatus(message);
+      } else {
+        setStatus(message);
+      }
     } finally {
+      setIsLocalLoading(false);
       setIsRemoteLoading(false);
     }
   };
@@ -870,14 +1112,10 @@ export function SftpWorkspace({
     event.preventDefault();
     const fallbackNames = side === "local" ? selectedLocalNames : selectedRemoteNames;
     const nextNames = names.length > 0 ? names : fallbackNames;
-    if (nextNames.length === 0) {
-      setContextMenu(null);
-      return;
-    }
 
-    if (side === "local") {
+    if (side === "local" && nextNames.length > 0) {
       setSelectedLocalNames(nextNames);
-    } else {
+    } else if (side === "remote" && nextNames.length > 0) {
       setSelectedRemoteNames(nextNames);
     }
 
@@ -886,6 +1124,8 @@ export function SftpWorkspace({
       names: nextNames,
       x: event.clientX,
       y: event.clientY,
+      mutable: side === "local" ? !isLocalDrivePicker : isConnected && !isTransferring,
+      canPaste: side === "local" ? !isLocalDrivePicker : isConnected && !isTransferring,
       openable:
         nextNames.length === 1 &&
         (side === "local" ? localFiles : remoteFiles).some(
@@ -916,7 +1156,14 @@ export function SftpWorkspace({
   };
 
   const handleContextRename = (menu: SftpContextMenuState) => {
-    if (menu.side === "remote" && menu.names.length === 1) {
+    if (menu.side === "local" && menu.names.length === 1 && menu.mutable) {
+      setSelectedLocalNames(menu.names);
+      setRenameRequest({
+        side: "local",
+        name: menu.names[0],
+        requestId: Date.now(),
+      });
+    } else if (menu.side === "remote" && menu.names.length === 1 && menu.mutable) {
       setSelectedRemoteNames(menu.names);
       setRenameRequest({
         side: "remote",
@@ -924,6 +1171,31 @@ export function SftpWorkspace({
         requestId: Date.now(),
       });
     }
+    setContextMenu(null);
+  };
+
+  const handleContextCut = (menu: SftpContextMenuState) => {
+    void writeFileClipboard(menu, "cut");
+    setContextMenu(null);
+  };
+
+  const handleContextCopy = (menu: SftpContextMenuState) => {
+    void writeFileClipboard(menu, "copy");
+    setContextMenu(null);
+  };
+
+  const handleContextPaste = (menu: SftpContextMenuState) => {
+    void (async () => {
+      const clipboard = await readClipboardForPaste();
+      if (!clipboard || clipboard.paths.length === 0) {
+        return;
+      }
+      if (clipboard.side === "local") {
+        await pasteLocalPaths(clipboard.operation, clipboard.paths, menu.side);
+      } else {
+        await pasteRemotePaths(clipboard.operation, clipboard.paths, menu.side);
+      }
+    })();
     setContextMenu(null);
   };
 
@@ -942,7 +1214,9 @@ export function SftpWorkspace({
   };
 
   const handleContextDelete = (menu: SftpContextMenuState) => {
-    if (menu.side === "remote") {
+    if (menu.side === "local") {
+      void handleDeleteLocalPath(menu.names);
+    } else if (menu.side === "remote") {
       void handleDeleteRemotePath(menu.names);
     }
     setContextMenu(null);
@@ -1194,6 +1468,8 @@ export function SftpWorkspace({
           selectedNames={selectedLocalNames}
           onRefresh={refreshLocalDirectory}
           onGoUp={openLocalParent}
+          onRenameSelected={!isLocalDrivePicker ? handleRenameLocalPath : undefined}
+          onDeleteSelected={!isLocalDrivePicker ? handleDeleteLocalPath : undefined}
           onOpenFolder={openLocalFolder}
           onOpenFile={(fileName) => void handleOpenLocalFile(fileName)}
           onPathSubmit={(path) => void loadLocalDirectory(path)}
@@ -1203,6 +1479,7 @@ export function SftpWorkspace({
           onDropTransfer={
             !isLocalFilesBrowser && isConnected && !isTransferring && !isLocalDrivePicker ? handleDropTransfer : undefined
           }
+          renameRequest={renameRequest?.side === "local" ? renameRequest : undefined}
         />
         {!isLocalFilesBrowser ? (
           <>
@@ -1274,9 +1551,12 @@ export function SftpWorkspace({
         <SftpContextMenu
           menu={contextMenu}
           onClose={() => setContextMenu(null)}
+          onCopy={handleContextCopy}
           onCopyPath={handleContextCopyPath}
+          onCut={handleContextCut}
           onDelete={handleContextDelete}
           onOpen={handleContextOpen}
+          onPaste={handleContextPaste}
           onProperties={handleContextProperties}
           onRename={handleContextRename}
           showTransfer={!isLocalFilesBrowser}
@@ -1296,11 +1576,11 @@ export function SftpWorkspace({
           onCreate={(name) => void handleConfirmCreateRemoteFolder(name)}
         />
       ) : null}
-      {remoteDeleteRequest ? (
+      {deleteRequest ? (
         <ConfirmRemoteDeleteDialog
-          request={remoteDeleteRequest}
-          onCancel={() => setRemoteDeleteRequest(null)}
-          onConfirm={() => void handleConfirmDeleteRemotePath()}
+          request={deleteRequest}
+          onCancel={() => setDeleteRequest(null)}
+          onConfirm={() => void handleConfirmDeletePath()}
         />
       ) : null}
       {transferConflict ? (
@@ -1454,6 +1734,12 @@ function isPositionOverRemotePane(x: number, y: number) {
 function localNameFromPath(path: string) {
   const trimmedPath = path.trim().replace(/[\\/]+$/, "");
   const parts = trimmedPath.split(/[\\/]/);
+  return parts[parts.length - 1] ?? "";
+}
+
+function remoteNameFromPath(path: string) {
+  const trimmedPath = path.trim().replace(/\/+$/, "");
+  const parts = trimmedPath.split("/");
   return parts[parts.length - 1] ?? "";
 }
 

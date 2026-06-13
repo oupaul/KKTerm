@@ -14,6 +14,10 @@ export type TransferRecord = {
   remotePath?: string;
   localDirectory?: string;
   openWhenDone?: string;
+  deleteSourceWhenDone?: {
+    side: FilePaneSide;
+    path: string;
+  };
 };
 
 export type TransferDirection = TransferRecord["direction"];
@@ -38,6 +42,8 @@ export type SftpContextMenuState = {
   y: number;
   names: string[];
   openable: boolean;
+  mutable: boolean;
+  canPaste: boolean;
 };
 
 export type FilePropertiesState = {
@@ -47,6 +53,7 @@ export type FilePropertiesState = {
   remoteProperties?: SftpPathProperties;
 };
 
-export type RemoteDeleteRequest = {
+export type DeleteRequest = {
+  side: FilePaneSide;
   items: Array<Pick<FileEntry, "kind" | "name">>;
 };
