@@ -189,8 +189,8 @@ export function ftpBrowserCommands(
 /**
  * Local File Explorer adapter. Drives the same file-browser surface over the
  * local filesystem with no network session: listing reuses `list_local_directory`
- * and mutations use the `*_local_*` commands. "Transfers" are local copies, so
- * the dual-pane copy actions work as a local file manager.
+ * and item details use `local_path_properties`. The File Explorer UI presents
+ * this as a single-pane local browser rather than a transfer surface.
  */
 let localBrowserCommandsSingleton: FileBrowserCommands | null = null;
 

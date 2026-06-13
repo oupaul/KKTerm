@@ -22,7 +22,7 @@ A durable openable resource stored in SQLite. The supported kinds are local term
 _Avoid_: Profile, saved session, host entry
 
 **File Explorer Connection**:
-A Connection of kind `localFiles`. It browses the local filesystem (no remote host or network Session) by reusing the SFTP file-browser surface driven by a local-filesystem command adapter. It stores an optional starting directory; "transfers" between its panes are local file copies.
+A Connection of kind `localFiles`. It browses the local filesystem (no remote host or network Session) by reusing the SFTP file-browser shell as a single-pane local browser driven by local filesystem commands. It stores an optional starting directory and does not surface remote-connection status or transfer activity.
 _Avoid_: SFTP, FTP, local SFTP, remote browser
 
 **Workspace**:

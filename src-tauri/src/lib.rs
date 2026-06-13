@@ -221,6 +221,21 @@ fn open_log_folder(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_filesystem_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let canonical_path = PathBuf::from(&path)
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve filesystem path {path}: {error}"))?;
+    app.opener()
+        .open_path(canonical_path.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            format!(
+                "failed to open filesystem path {}: {error}",
+                canonical_path.display()
+            )
+        })
+}
+
+#[tauri::command]
 async fn list_custom_fonts() -> Result<Vec<CustomFontEntry>, String> {
     tauri::async_runtime::spawn_blocking(list_custom_fonts_sync)
         .await
@@ -3133,6 +3148,7 @@ pub fn run() {
             rename_local_path,
             delete_local_path,
             local_path_properties,
+            open_filesystem_path,
             copy_local_path,
             upload_sftp_path,
             download_sftp_path,

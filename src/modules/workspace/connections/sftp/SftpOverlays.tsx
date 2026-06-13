@@ -162,6 +162,7 @@ export function SftpContextMenu({
   onProperties,
   onCopyPath,
   onClose,
+  showTransfer = true,
 }: {
   menu: SftpContextMenuState;
   onTransfer: (menu: SftpContextMenuState) => void;
@@ -171,6 +172,7 @@ export function SftpContextMenu({
   onProperties: (menu: SftpContextMenuState) => void;
   onCopyPath: (menu: SftpContextMenuState) => void;
   onClose: () => void;
+  showTransfer?: boolean;
 }) {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -222,10 +224,12 @@ export function SftpContextMenu({
       ref={menuRef}
       role="menu"
     >
-      <button onClick={() => onTransfer(menu)} role="menuitem" type="button">
-        <DIcon name={isRemote ? "download" : "upload"} size={15} />
-        {isRemote ? t("sftp.download") : t("sftp.upload")}
-      </button>
+      {showTransfer ? (
+        <button onClick={() => onTransfer(menu)} role="menuitem" type="button">
+          <DIcon name={isRemote ? "download" : "upload"} size={15} />
+          {isRemote ? t("sftp.download") : t("sftp.upload")}
+        </button>
+      ) : null}
       <button disabled={!canOpen} onClick={() => onOpen(menu)} role="menuitem" type="button">
         <DIcon name="folder" size={15} />
         {t("common.open")}

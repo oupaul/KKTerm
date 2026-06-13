@@ -62,6 +62,7 @@ export function SftpWorkspace({
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const openTerminalHere = useWorkspaceStore((state) => state.openTerminalHere);
   const connection = tab.connection;
+  const isLocalFilesBrowser = tab.kind === "localFiles";
   const commands = useMemo<FileBrowserCommands | null>(
     () => (commandsProp ?? (connection ? fileBrowserCommandsFor(connection) : null)),
     [commandsProp, connection],
@@ -112,8 +113,8 @@ export function SftpWorkspace({
   );
 
   useEffect(() => {
-    void loadLocalDirectory();
-  }, []);
+    void loadLocalDirectory(isLocalFilesBrowser ? connection?.localStartupDirectory : undefined);
+  }, [connection?.localStartupDirectory, isLocalFilesBrowser]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -196,6 +197,16 @@ export function SftpWorkspace({
   };
 
   useEffect(() => {
+    if (isLocalFilesBrowser) {
+      sessionIdRef.current = null;
+      setIsRemoteLoading(false);
+      setRemoteError("");
+      setRemoteFiles([]);
+      setSelectedRemoteNames([]);
+      setStatus("");
+      return;
+    }
+
     if (!connection) {
       setStatus(t("sftp.noSshConnection"));
       return;
@@ -276,7 +287,7 @@ export function SftpWorkspace({
         sessionIdRef.current = null;
       }
     };
-  }, [commands, connection, markConnectionSessionEnded, markConnectionSessionStarted]);
+  }, [commands, connection, isLocalFilesBrowser, markConnectionSessionEnded, markConnectionSessionStarted, t]);
 
   const refreshRemoteDirectory = async () => {
     await loadRemoteDirectory(remotePath, t("sftp.refreshing"));
@@ -1020,7 +1031,7 @@ export function SftpWorkspace({
       : tab.kind === "localFiles"
         ? t("sftp.protocolFiles")
         : t("sftp.protocolSftp");
-  const hasRemoteHost = tab.kind !== "localFiles" && Boolean(connection);
+  const hasRemoteHost = !isLocalFilesBrowser && Boolean(connection);
   const hostLabel = tab.subtitle || toolbarTitle;
   const connectionStatusLabel = isConnected
     ? t("sftp.connected")
@@ -1030,7 +1041,7 @@ export function SftpWorkspace({
   const connectionStatusState = isConnected ? "connected" : remoteError ? "error" : "connecting";
 
   useEffect(() => {
-    if (!isActive || !isConnected || isTransferring || !isTauriRuntime()) {
+    if (isLocalFilesBrowser || !isActive || !isConnected || isTransferring || !isTauriRuntime()) {
       setIsRemoteDropTarget(false);
       return;
     }
@@ -1066,10 +1077,10 @@ export function SftpWorkspace({
       disposed = true;
       unlisten?.();
     };
-  }, [isActive, isConnected, isTransferring]);
+  }, [isActive, isConnected, isLocalFilesBrowser, isTransferring]);
 
   useEffect(() => {
-    if (!commands || !isTauriRuntime()) {
+    if (isLocalFilesBrowser || !commands || !isTauriRuntime()) {
       return;
     }
     const controller: FileBrowserController = {
@@ -1121,7 +1132,7 @@ export function SftpWorkspace({
     };
     registerFileBrowserController(tab.id, controller);
     return () => unregisterFileBrowserController(tab.id, controller);
-  }, [commands, connection?.id, connection?.name, remoteFiles, remotePath, selectedRemoteNames, status, t, tab.id, tab.kind]);
+  }, [commands, connection?.id, connection?.name, isLocalFilesBrowser, remoteFiles, remotePath, selectedRemoteNames, status, t, tab.id, tab.kind]);
 
   return (
     <section
@@ -1172,7 +1183,7 @@ export function SftpWorkspace({
         </span>
       </div>
 
-      <div className="sftp-panes">
+      <div className={isLocalFilesBrowser ? "sftp-panes sftp-panes-single" : "sftp-panes"}>
         <FilePane
           side="local"
           title={t("sftp.local")}
@@ -1190,69 +1201,75 @@ export function SftpWorkspace({
           onSelectionChange={setSelectedLocalNames}
           onContextMenuRequest={handleOpenContextMenu}
           onDropTransfer={
-            isConnected && !isTransferring && !isLocalDrivePicker ? handleDropTransfer : undefined
+            !isLocalFilesBrowser && isConnected && !isTransferring && !isLocalDrivePicker ? handleDropTransfer : undefined
           }
         />
-        <div className="sftp-gutter">
-          <button
-            className="sftp-xfer-arrow"
-            data-tutorial-id="sftp.upload"
-            aria-label={t("sftp.upload")}
-            title={t("sftp.upload")}
-            disabled={!isConnected || isLocalDrivePicker || selectedLocalFiles.length === 0}
-            onClick={() => handleUpload()}
-            type="button"
-          >
-            <DIcon name="forward" size={18} />
-          </button>
-          <button
-            className="sftp-xfer-arrow"
-            data-tutorial-id="sftp.download"
-            aria-label={t("sftp.download")}
-            title={t("sftp.download")}
-            disabled={!isConnected || selectedRemoteFiles.length === 0 || !localPath || isLocalDrivePicker}
-            onClick={() => handleDownload()}
-            type="button"
-          >
-            <DIcon name="back" size={18} />
-          </button>
-        </div>
-        <FilePane
-          side="remote"
-          title={t("sftp.remote")}
-          path={remotePath}
-          files={remoteFiles}
-          isLoading={isRemoteLoading}
-          status={remoteError ? t("sftp.notConnected") : status === t("sftp.connected") ? "" : status}
-          selectedNames={selectedRemoteNames}
-          onRefresh={refreshRemoteDirectory}
-          onGoUp={openRemoteParent}
-          onCreateFolder={isConnected && !isTransferring ? handleCreateRemoteFolder : undefined}
-          onRenameSelected={isConnected && !isTransferring ? handleRenameRemotePath : undefined}
-          onDeleteSelected={isConnected && !isTransferring ? handleDeleteRemotePath : undefined}
-          onOpenFolder={openRemoteFolder}
-          onOpenFile={(fileName) => void handleOpenRemoteFile(fileName)}
-          onPathSubmit={(path) => void loadRemoteDirectory(path)}
-          recentPaths={recentRemotePaths}
-          onSelectionChange={setSelectedRemoteNames}
-          onContextMenuRequest={handleOpenContextMenu}
-          onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
-          forceDropTarget={isRemoteDropTarget}
-          renameRequest={renameRequest?.side === "remote" ? renameRequest : undefined}
-        />
+        {!isLocalFilesBrowser ? (
+          <>
+            <div className="sftp-gutter">
+              <button
+                className="sftp-xfer-arrow"
+                data-tutorial-id="sftp.upload"
+                aria-label={t("sftp.upload")}
+                title={t("sftp.upload")}
+                disabled={!isConnected || isLocalDrivePicker || selectedLocalFiles.length === 0}
+                onClick={() => handleUpload()}
+                type="button"
+              >
+                <DIcon name="forward" size={18} />
+              </button>
+              <button
+                className="sftp-xfer-arrow"
+                data-tutorial-id="sftp.download"
+                aria-label={t("sftp.download")}
+                title={t("sftp.download")}
+                disabled={!isConnected || selectedRemoteFiles.length === 0 || !localPath || isLocalDrivePicker}
+                onClick={() => handleDownload()}
+                type="button"
+              >
+                <DIcon name="back" size={18} />
+              </button>
+            </div>
+            <FilePane
+              side="remote"
+              title={t("sftp.remote")}
+              path={remotePath}
+              files={remoteFiles}
+              isLoading={isRemoteLoading}
+              status={remoteError ? t("sftp.notConnected") : status === t("sftp.connected") ? "" : status}
+              selectedNames={selectedRemoteNames}
+              onRefresh={refreshRemoteDirectory}
+              onGoUp={openRemoteParent}
+              onCreateFolder={isConnected && !isTransferring ? handleCreateRemoteFolder : undefined}
+              onRenameSelected={isConnected && !isTransferring ? handleRenameRemotePath : undefined}
+              onDeleteSelected={isConnected && !isTransferring ? handleDeleteRemotePath : undefined}
+              onOpenFolder={openRemoteFolder}
+              onOpenFile={(fileName) => void handleOpenRemoteFile(fileName)}
+              onPathSubmit={(path) => void loadRemoteDirectory(path)}
+              recentPaths={recentRemotePaths}
+              onSelectionChange={setSelectedRemoteNames}
+              onContextMenuRequest={handleOpenContextMenu}
+              onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
+              forceDropTarget={isRemoteDropTarget}
+              renameRequest={renameRequest?.side === "remote" ? renameRequest : undefined}
+            />
+          </>
+        ) : null}
       </div>
 
-      <TransferArea
-        transfers={transfers}
-        clearableCount={clearableTransferCount}
-        error={remoteError}
-        onClear={() =>
-          setTransfers((current) =>
-            current.filter((transfer) => !TRANSFER_HISTORY_STATES.includes(transfer.state)),
-          )
-        }
-        onCancel={(transfer) => void handleCancelTransfer(transfer)}
-      />
+      {!isLocalFilesBrowser ? (
+        <TransferArea
+          transfers={transfers}
+          clearableCount={clearableTransferCount}
+          error={remoteError}
+          onClear={() =>
+            setTransfers((current) =>
+              current.filter((transfer) => !TRANSFER_HISTORY_STATES.includes(transfer.state)),
+            )
+          }
+          onCancel={(transfer) => void handleCancelTransfer(transfer)}
+        />
+      ) : null}
       {contextMenu ? (
         <SftpContextMenu
           menu={contextMenu}
@@ -1262,6 +1279,7 @@ export function SftpWorkspace({
           onOpen={handleContextOpen}
           onProperties={handleContextProperties}
           onRename={handleContextRename}
+          showTransfer={!isLocalFilesBrowser}
           onTransfer={handleContextTransfer}
         />
       ) : null}

@@ -9,7 +9,7 @@ import {
 } from "@tauri-apps/plugin-dialog";
 import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import i18next from "../i18n/config";
 import type {
   AppearanceSettings,
@@ -1705,6 +1705,10 @@ type CommandMap = {
     args: { request: { path: string } };
     result: SftpPathProperties;
   };
+  open_filesystem_path: {
+    args: { path: string };
+    result: null;
+  };
   copy_local_path: {
     args: { request: { sourcePath: string; destinationDirectory: string } };
     result: SftpTransferResult;
@@ -2648,7 +2652,7 @@ export async function openFilesystemPath(path: string) {
   if (!isTauriRuntime()) {
     return;
   }
-  await openPath(path);
+  await invokeCommand("open_filesystem_path", { path });
 }
 
 export async function openExternalUrl(url: string) {
