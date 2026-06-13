@@ -857,6 +857,14 @@ function persistActiveWorkspaceId(workspaceId: string) {
   }
 }
 
+function tabWorkspaceId(tab: Pick<WorkspaceTab, "workspaceId"> | undefined) {
+  return tab?.workspaceId ?? DEFAULT_WORKSPACE_ID;
+}
+
+function firstTabIdForWorkspace(tabs: WorkspaceTab[], workspaceId: string) {
+  return tabs.find((tab) => tabWorkspaceId(tab) === workspaceId)?.id ?? "";
+}
+
 interface WorkspaceState {
   query: string;
   tabs: WorkspaceTab[];
@@ -1062,7 +1070,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
     persistActiveWorkspaceId(workspaceId);
-    set({ activeWorkspaceId: workspaceId });
+    const activeTab = get().tabs.find((tab) => tab.id === get().activeTabId);
+    set({
+      activeWorkspaceId: workspaceId,
+      activeTabId: tabWorkspaceId(activeTab) === workspaceId
+        ? activeTab?.id ?? ""
+        : firstTabIdForWorkspace(get().tabs, workspaceId),
+    });
     // The Connection Tree, rail, and sidebar all re-read the active Workspace's
     // tree off this shared invalidation event.
     if (typeof window !== "undefined") {
@@ -1203,12 +1217,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   closeTab: (tabId) => {
     const closingTab = get().tabs.find((tab) => tab.id === tabId);
     const remainingTabs = get().tabs.filter((tab) => tab.id !== tabId);
+    const activeWorkspaceId = get().activeWorkspaceId;
+    const nextActiveTabId =
+      get().activeTabId === tabId
+        ? firstTabIdForWorkspace(remainingTabs, activeWorkspaceId)
+        : get().activeTabId;
     set({
       tabs: remainingTabs,
-      activeTabId:
-        get().activeTabId === tabId
-          ? (remainingTabs[0]?.id ?? "")
-          : get().activeTabId,
+      activeTabId: nextActiveTabId,
       activeSessionCounts: decrementActiveSessionCounts(
         get().activeSessionCounts,
         closingTab ? urlConnectionIdsForTab(closingTab) : [],

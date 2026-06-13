@@ -17,16 +17,21 @@ import type {
   MouseEvent as ReactMouseEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspaceStore } from "../../store";
+import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "../../store";
 import type { WorkspaceTab } from "../../types";
 
 function tabDisplayTitle(tab: WorkspaceTab) {
   return tab.displayTitle?.trim() || tab.title;
 }
 
+function tabWorkspaceId(tab: WorkspaceTab) {
+  return tab.workspaceId ?? DEFAULT_WORKSPACE_ID;
+}
+
 export function TabStrip() {
   const { t } = useTranslation();
   const tabs = useWorkspaceStore((state) => state.tabs);
+  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const activateTab = useWorkspaceStore((state) => state.activateTab);
   const renameTab = useWorkspaceStore((state) => state.renameTab);
@@ -38,6 +43,7 @@ export function TabStrip() {
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const visibleTabs = tabs.filter((tab) => tabWorkspaceId(tab) === activeWorkspaceId);
 
   const updateScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -63,7 +69,7 @@ export function TabStrip() {
       observer.disconnect();
       el.removeEventListener("scroll", updateScroll);
     };
-  }, [tabs.length, updateScroll]);
+  }, [visibleTabs.length, updateScroll]);
 
   useEffect(() => {
     if (!editingTabId) {
@@ -174,7 +180,7 @@ export function TabStrip() {
         </button>
       ) : null}
       <div className="tab-scroll-container" ref={scrollRef}>
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const displayTitle = tabDisplayTitle(tab);
           const isRenaming = editingTabId === tab.id;
           return (
@@ -263,11 +269,14 @@ export function WorkspaceCanvas({
 } = {}) {
   const { t } = useTranslation();
   const tabs = useWorkspaceStore((state) => state.tabs);
+  const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const closeTab = useWorkspaceStore((state) => state.closeTab);
   // The toolbar close button only earns its place when the tab strip is hidden;
   // otherwise the tab strip's own close button already covers it.
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
+  const visibleTabs = tabs.filter((tab) => tabWorkspaceId(tab) === activeWorkspaceId);
+  const showEmptyState = tabs.length === 0 || (!hideTopTabButtons && visibleTabs.length === 0);
 
   if (tabs.length === 0) {
     return (
@@ -283,6 +292,13 @@ export function WorkspaceCanvas({
 
   return (
     <div className="workspace-canvas" data-tutorial-id="workspace.canvas">
+      {showEmptyState ? (
+        <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
+          <Terminal size={28} />
+          <h2>{t("workspace.noActiveSession")}</h2>
+          <p>{t("workspace.openFromTree")}</p>
+        </section>
+      ) : null}
       {tabs.map((tab) => {
         if (tab.kind === "sftp") {
           return (
