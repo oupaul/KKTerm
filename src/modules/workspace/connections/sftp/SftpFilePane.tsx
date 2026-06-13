@@ -30,6 +30,7 @@ export function FilePane({
   onRenameSelected,
   onDeleteSelected,
   onOpenFolder,
+  onOpenFile,
   onPathSubmit,
   recentPaths = [],
   onSelectionChange,
@@ -51,6 +52,7 @@ export function FilePane({
   onRenameSelected?: (currentName: string, newName: string) => void | Promise<void>;
   onDeleteSelected?: () => void;
   onOpenFolder?: (folderName: string) => void;
+  onOpenFile?: (fileName: string) => void;
   onPathSubmit?: (path: string) => void | Promise<void>;
   recentPaths?: string[];
   onSelectionChange?: (fileNames: string[]) => void;
@@ -266,8 +268,13 @@ export function FilePane({
         }
       },
       onDoubleClick: () => {
-        if (!isLoading && file.kind === "folder") {
+        if (isLoading) {
+          return;
+        }
+        if (file.kind === "folder") {
           onOpenFolder?.(file.name);
+        } else if (file.kind === "file") {
+          onOpenFile?.(file.name);
         }
       },
       onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -285,6 +292,8 @@ export function FilePane({
           selectFile(file.name, event);
           if (event.key === "Enter" && file.kind === "folder") {
             onOpenFolder?.(file.name);
+          } else if (event.key === "Enter" && file.kind === "file") {
+            onOpenFile?.(file.name);
           }
         }
       },

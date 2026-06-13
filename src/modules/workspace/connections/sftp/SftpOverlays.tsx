@@ -156,6 +156,7 @@ export function TransferConflictDialog({
 export function SftpContextMenu({
   menu,
   onTransfer,
+  onOpen,
   onRename,
   onDelete,
   onProperties,
@@ -164,6 +165,7 @@ export function SftpContextMenu({
 }: {
   menu: SftpContextMenuState;
   onTransfer: (menu: SftpContextMenuState) => void;
+  onOpen: (menu: SftpContextMenuState) => void;
   onRename: (menu: SftpContextMenuState) => void;
   onDelete: (menu: SftpContextMenuState) => void;
   onProperties: (menu: SftpContextMenuState) => void;
@@ -210,6 +212,7 @@ export function SftpContextMenu({
 
   const canRename = isRemote && menu.names.length === 1;
   const canDelete = isRemote && menu.names.length > 0;
+  const canOpen = menu.names.length === 1 && menu.openable;
 
   return (
     <div
@@ -222,6 +225,10 @@ export function SftpContextMenu({
       <button onClick={() => onTransfer(menu)} role="menuitem" type="button">
         <DIcon name={isRemote ? "download" : "upload"} size={15} />
         {isRemote ? t("sftp.download") : t("sftp.upload")}
+      </button>
+      <button disabled={!canOpen} onClick={() => onOpen(menu)} role="menuitem" type="button">
+        <DIcon name="folder" size={15} />
+        {t("common.open")}
       </button>
       <div className="sftp-ctx-sep" />
       <button disabled={!canRename} onClick={() => onRename(menu)} role="menuitem" type="button">

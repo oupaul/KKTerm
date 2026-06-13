@@ -50,7 +50,7 @@ Each pane header carries (with `Aria` siblings for accessibility):
 
 Rename, Copy Path, Delete, and Get Info are on the right-click context menu (see below). Pressing **Delete** or **Backspace** with a remote selection deletes it (confirm copy `sftp.deleteRemoteConfirm`, `sftp.deleteRemoteItemConfirm`, `sftp.deleteRemoteItemsMultiple`; in-flight `sftp.deleting`). Rename in-flight `sftp.renaming` / empty warning `sftp.remoteNameBlank`; rename file aria `sftp.renameFileAria`.
 
-Double-click affordance hint: `sftp.doubleClickToOpenFile`. Remote symbolic links that resolve to directories are listed as openable folder entries so double-clicking enters the resolved target directory.
+Double-click affordance hint: `sftp.doubleClickToOpenFile`. Double-clicking a local file runs the operating system's normal Open action for that file. Double-clicking a remote file downloads it to the current local pane directory, then runs the operating system Open action only after the transfer completes successfully; canceled, skipped, or failed downloads do not open. Remote symbolic links that resolve to directories are listed as openable folder entries so double-clicking enters the resolved target directory.
 
 ## Transferring files
 
@@ -80,7 +80,7 @@ When a transfer would overwrite an existing target, KKTerm shows an app-owned di
 
 ## Context menu
 
-Right-click an item for: transfer (`sftp.upload` / `sftp.download`), Rename (`sftp.renameItem`, remote single selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, remote), and Get Info (`sftp.getInfo`, opens properties). The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
+Right-click an item for: transfer (`sftp.upload` / `sftp.download`), Open (`common.open`, single file selection), Rename (`sftp.renameItem`, remote single selection), Copy Path (`sftp.copyPath`, copies the item's full path to the clipboard), Delete (`sftp.deleteLabel`, remote), and Get Info (`sftp.getInfo`, opens properties). The menu is a styled app-owned DOM menu — a documented exception to the native-menu preference (see [DESIGN_LANGUAGE.md](../DESIGN_LANGUAGE.md)).
 
 ## Properties / chmod / chown
 

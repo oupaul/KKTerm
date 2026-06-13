@@ -13,6 +13,7 @@ export type TransferRecord = {
   remoteDirectory?: string;
   remotePath?: string;
   localDirectory?: string;
+  openWhenDone?: string;
 };
 
 export type TransferDirection = TransferRecord["direction"];
@@ -36,6 +37,7 @@ export type SftpContextMenuState = {
   x: number;
   y: number;
   names: string[];
+  openable: boolean;
 };
 
 export type FilePropertiesState = {
