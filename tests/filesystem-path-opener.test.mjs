@@ -30,7 +30,22 @@ test("local file browser opens filesystem paths through the typed Tauri command"
   assert.match(
     rustSource,
     /fn open_filesystem_path\(app: tauri::AppHandle, path: String\) -> Result<\(\), String>[\s\S]*canonicalize\(\)[\s\S]*\.open_path\(canonical_path\.to_string_lossy\(\), None::<&str>\)/,
-    "the backend opener should canonicalize and open the requested filesystem path",
+    "the backend opener should canonicalize and open non-executable filesystem paths",
+  );
+  assert.match(
+    rustSource,
+    /let requested_path = PathBuf::from\(&path\)[\s\S]*requested_path[\s\S]*\.canonicalize\(\)/,
+    "the backend opener should keep the requested filesystem path alongside the canonical existence check",
+  );
+  assert.match(
+    rustSource,
+    /is_windows_executable_path\(&canonical_path\)[\s\S]*open_windows_executable_path\(&requested_path\)/,
+    "Windows executable files should launch through the executable branch with the non-canonical requested path",
+  );
+  assert.match(
+    rustSource,
+    /fn open_windows_executable_path\(path: &Path\) -> Result<\(\), String>[\s\S]*ShellExecuteW\(/,
+    "Windows executable files should use ShellExecuteW instead of the generic opener path",
   );
   assert.match(
     rustSource,

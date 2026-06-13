@@ -52,7 +52,7 @@ pub(crate) use media::*;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
 
@@ -222,9 +222,13 @@ fn open_log_folder(app: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 fn open_filesystem_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
-    let canonical_path = PathBuf::from(&path)
+    let requested_path = PathBuf::from(&path);
+    let canonical_path = requested_path
         .canonicalize()
         .map_err(|error| format!("failed to resolve filesystem path {path}: {error}"))?;
+    if is_windows_executable_path(&canonical_path) {
+        return open_windows_executable_path(&requested_path);
+    }
     app.opener()
         .open_path(canonical_path.to_string_lossy(), None::<&str>)
         .map_err(|error| {
@@ -233,6 +237,61 @@ fn open_filesystem_path(app: tauri::AppHandle, path: String) -> Result<(), Strin
                 canonical_path.display()
             )
         })
+}
+
+fn is_windows_executable_path(path: &Path) -> bool {
+    cfg!(target_os = "windows")
+        && path.is_file()
+        && path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+}
+
+#[cfg(target_os = "windows")]
+fn open_windows_executable_path(path: &Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};
+
+    let file = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<u16>>();
+    let working_directory = path.parent().map(|parent| {
+        parent
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<u16>>()
+    });
+    let result = unsafe {
+        ShellExecuteW(
+            null_mut(),
+            null(),
+            file.as_ptr(),
+            null(),
+            working_directory
+                .as_ref()
+                .map(|value| value.as_ptr())
+                .unwrap_or(null()),
+            SW_SHOWNORMAL,
+        )
+    } as isize;
+
+    if result <= 32 {
+        return Err(format!("failed to launch executable {}", path.display()));
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn open_windows_executable_path(path: &Path) -> Result<(), String> {
+    Err(format!(
+        "Windows executable launch is unavailable for {}",
+        path.display()
+    ))
 }
 
 #[tauri::command]
