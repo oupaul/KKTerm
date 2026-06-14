@@ -71,6 +71,6 @@ test("Don't Sleep has its own foreground-only Settings section", () => {
   assert.match(settingsPageSource, /<DontSleepSettings \/>/);
   assert.match(
     settingsPageSource,
-    /settingsNavItemClass\("vnc-settings"[\s\S]*settingsNavItemClass\("dont-sleep-settings"[\s\S]*settingsNavItemClass\("about-settings"/,
+    /id: "vnc-settings"[\s\S]*id: "dont-sleep-settings"[\s\S]*id: "about-settings"/,
   );
 });

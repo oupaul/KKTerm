@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../../lib/inputBehavior";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import { useCopyFeedback } from "../../useCopyFeedback";
@@ -111,7 +112,7 @@ export function TimeConverterBody({ instance, isViewActive }: BuiltInWidgetBodyP
         placeholder={t("dashboard.timePlaceholder")}
         aria-label={t("dashboard.timeTitle")}
         aria-invalid={trimmed.length > 0 && !parsed}
-        spellCheck={false}
+        {...technicalInputProps}
         autoComplete="off"
       />
       {parsed ? (

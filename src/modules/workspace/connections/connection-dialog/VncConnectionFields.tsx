@@ -1,5 +1,6 @@
 import { Binary, Eye, Palette, Scaling, Settings2, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary, VncSettings } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
@@ -38,6 +39,7 @@ export function VncConnectionFields({
           <span>{t("connections.host")}*</span>
           <input
             name="host"
+            {...technicalInputProps}
             defaultValue={initialConnection?.host ?? ""}
             placeholder={t("connections.exampleHost")}
             required
@@ -64,6 +66,7 @@ export function VncConnectionFields({
           <input
             key="user-vnc"
             name="user"
+            {...technicalInputProps}
             defaultValue={initialConnection?.user ?? ""}
             placeholder={t("connections.optionalUsername")}
           />

@@ -51,6 +51,11 @@ tokens. Existing shared dialog classes (`.connection-dialog`, `.settings-*`,
 `.primary-button`, `.secondary-button`, dialog inputs, `.dialog-backdrop`) are
 restyled in `src/styles/base.css` to the same language, so legacy dialogs match.
 
+`TextInput` and `TextArea` default to the shared technical-input behaviour from
+`src/lib/inputBehavior.ts`, disabling autocorrect, autocapitalization, and
+spellcheck for machine-oriented dialog fields. Callers may override those props
+only for prose fields where spelling assistance is useful.
+
 ### Button order (Windows)
 
 KKTerm is Windows-first: the primary/confirm action comes **immediately before**

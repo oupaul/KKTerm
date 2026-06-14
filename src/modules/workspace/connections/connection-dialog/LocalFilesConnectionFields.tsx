@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection } from "../../../../types";
 
 /**
@@ -33,6 +34,7 @@ export function LocalFilesConnectionFields({
         <div className="input-with-button">
           <input
             name="localStartupDirectory"
+            {...technicalInputProps}
             onChange={(event) => onLocalStartupDirectoryChange(event.currentTarget.value)}
             placeholder={t("connections.localFilesRootDirectoryPlaceholder")}
             value={localStartupDirectory}

@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { DIcon } from "../../../../app/ui/dialog";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { FileEntry } from "../../../../types";
 import { FileGlyph } from "./finderGlyphs";
 import type { FilePaneSide } from "./types";
@@ -237,6 +238,7 @@ export function FilePane({
         <input
           aria-label={t("sftp.renameFileAria", { name: file.name })}
           className="sftp-rename-input"
+          {...technicalInputProps}
           onBlur={() => void commitRename()}
           onChange={(event) => setRenameDraft(event.currentTarget.value)}
           onClick={(event) => event.stopPropagation()}
@@ -337,6 +339,7 @@ export function FilePane({
               aria-label={t("sftp.pathInputAria", { pane: title.toLowerCase() })}
               className="sftp-path-input"
               autoFocus
+              {...technicalInputProps}
               disabled={!onPathSubmit || isLoading}
               list={pathSuggestions.length > 0 ? pathSuggestionsId : undefined}
               onBlur={() => commitPathDraft()}
@@ -352,7 +355,6 @@ export function FilePane({
                   setEditingPath(false);
                 }
               }}
-              spellCheck={false}
               value={pathDraft}
             />
             {pathSuggestions.length > 0 ? (

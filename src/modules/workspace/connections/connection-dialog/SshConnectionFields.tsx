@@ -1,5 +1,6 @@
 import { KeyRound, Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
@@ -51,6 +52,7 @@ export function SshConnectionFields({
           <span>{t("connections.host")}*</span>
           <input
             name="host"
+            {...technicalInputProps}
             defaultValue={initialConnection?.host ?? ""}
             placeholder={t("connections.exampleHost")}
             required
@@ -86,6 +88,7 @@ export function SshConnectionFields({
           <input
             key="user-ssh"
             name="user"
+            {...technicalInputProps}
             defaultValue={initialConnection?.user ?? sshSettings.defaultUser}
             placeholder={t("connections.admin")}
             required
@@ -125,6 +128,7 @@ export function SshConnectionFields({
             <div className="input-with-button ssh-key-input-actions">
               <input
                 name="keyPath"
+                {...technicalInputProps}
                 onChange={(event) => onKeyPathChange(event.currentTarget.value)}
                 placeholder={t("connections.keyPathExample")}
                 value={keyPath}

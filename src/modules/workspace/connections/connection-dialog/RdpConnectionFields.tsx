@@ -1,5 +1,6 @@
 import { Clipboard, HardDrive, Layers, Monitor, Palette, Scaling, Settings2, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import {
   RDP_REMOTE_RESOLUTION_FIXED,
   type Connection,
@@ -44,6 +45,7 @@ export function RdpConnectionFields({
           <span>{t("connections.host")}*</span>
           <input
             name="host"
+            {...technicalInputProps}
             defaultValue={initialConnection?.host ?? ""}
             placeholder={t("connections.exampleHost")}
             required
@@ -70,6 +72,7 @@ export function RdpConnectionFields({
           <input
             key="user-rdp"
             name="user"
+            {...technicalInputProps}
             defaultValue={initialConnection?.user ?? ""}
             placeholder={t("connections.domainAdmin")}
             required

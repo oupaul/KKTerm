@@ -1,5 +1,6 @@
 import { Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection } from "../../../../types";
 import type { LocalShellOption } from "../utils";
 
@@ -42,6 +43,7 @@ export function LocalConnectionFields({
         <div className="input-with-button">
           <input
             name="localStartupDirectory"
+            {...technicalInputProps}
             onChange={(event) => onLocalStartupDirectoryChange(event.currentTarget.value)}
             placeholder={t("connections.localStartupDirectoryPlaceholder")}
             value={localStartupDirectory}
@@ -55,6 +57,7 @@ export function LocalConnectionFields({
         <span>{t("connections.localStartupScript")}</span>
         <textarea
           name="localStartupScript"
+          {...technicalInputProps}
           defaultValue={initialConnection?.localStartupScript ?? ""}
           placeholder={t("connections.localStartupScriptPlaceholder")}
           rows={4}

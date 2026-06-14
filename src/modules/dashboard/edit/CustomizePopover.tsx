@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IconLibraryPicker } from "../../../app/IconLibraryPicker";
 import { ariaSelected } from "../../../lib/aria";
+import { technicalInputProps } from "../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime } from "../../../lib/tauri";
 import { ToggleSwitch } from "../../settings/ToggleSwitch";
 import { useDashboardStore } from "../state/dashboardStore";
@@ -694,7 +695,7 @@ function ScriptAdvanced({
           <textarea
             className="dw-source-editor"
             value={sourceDraft}
-            spellCheck={false}
+            {...technicalInputProps}
             onChange={(event) => setSourceDraft(event.target.value)}
           />
         ) : (

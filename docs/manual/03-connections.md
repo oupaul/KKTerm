@@ -70,6 +70,12 @@ Clicking a parent Connection with Child Connection Tabs opens all of its active 
 
 Both are app-owned DOM dialogs (not browser-native `prompt`).
 
+Connection and Quick Connect text fields that collect technical values — hosts,
+ports, usernames, passwords, key paths, serial lines, local directories, URLs,
+and URL credential metadata — disable OS spelling autocorrect, capitalization,
+and spellcheck in the app WebView on Windows and macOS. Keyboard/IME suggestion
+UI supplied outside the WebView may still appear.
+
 **Quick Connect** (`connections.quickConnectDialog`) is a fast path that **persists** a saved Connection and opens it — it is no longer an unsaved one-off. Before creating, it reuses an identical existing Connection (matched by host/user/port for SSH, or shell for local shells); otherwise it creates a new Connection at the tree root. A password typed on a reused target updates that Connection's stored credential. The full Quick Connect dialog reflects this: subtitle `connections.openOneOffSession` and primary button `connections.saveAndConnect`. Fields shown depend on the chosen kind:
 
 - Hostname (`connections.hostname`, placeholder `connections.exampleHost`)

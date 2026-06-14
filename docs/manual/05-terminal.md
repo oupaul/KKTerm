@@ -72,6 +72,12 @@ The Quick Command Bar shows the active Connection's saved Quick Commands and sen
 
 `terminal.quickCommandsManage` opens the manager dialog for the current Connection's Quick Command Bar. The Add menu offers `terminal.quickCommandsCustomCommand` and `terminal.quickCommandsLibrary` (From Library). Custom commands let the user choose a built-in icon and app palette color from compact picker dialogs, and decide whether confirmation is required. If an AI API key is configured, `terminal.quickCommandsGenerateWithAi` can turn a short request such as `terminal.quickCommandsAiPromptPlaceholder` into a single command using the active Connection context, then inserts the generated text into the Command field without running it. Presets add common executable snippets to that Connection only.
 
+Quick Command command, label, search, and AI-generation prompt fields use the
+app's technical-input behaviour: OS autocorrect, autocapitalization, and
+spellcheck are disabled in the WebView on Windows and macOS so shell text is not
+rewritten while editing. Keyboard/IME suggestions outside the WebView remain
+owned by the OS.
+
 The AI Assistant and built-in MCP bridge can also inspect Quick Commands through `quick_command_list` / `quick_command_read`, create saved entries through `quick_command_create`, and update existing entries through `quick_command_edit`. Creating or editing a Quick Command saves it to the target Connection's Quick Command Bar but does not run it. In Prompt tool-permission mode, `quick_command_create` and `quick_command_edit` use the normal in-chat approval card before saving.
 
 The From Library dialog keeps `terminal.quickCommandsSearch` at the top as a global filter, then organizes results with `terminal.quickCommandLibrary.categoryTabs` and `terminal.quickCommandLibrary.subcategoryTabs`. Built-in category tabs use the `terminal.quickCommandLibrary.categories.*` keys. Risky or state-changing entries show the `terminal.quickCommandsDangerous` tag, use red command emphasis, and are saved with confirmation enabled so they show `terminal.quickCommandsConfirmTitle` / `terminal.quickCommandsConfirm` before sending input.

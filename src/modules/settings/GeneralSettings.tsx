@@ -71,6 +71,7 @@ function formatBackupDate(value?: string | null) {
 export function GeneralSettings() {
   const { t, i18n } = useTranslation();
   const windowsPlatform = isWindowsPlatform();
+  const showPerformanceSettings = windowsPlatform;
   const lastCheckedAt = useLastUpdateCheckAt();
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>(detectLanguage);
@@ -411,16 +412,16 @@ export function GeneralSettings() {
         </div>
       </fieldset>
 
-      <fieldset
-        className="settings-subsection settings-fieldset"
-        data-tutorial-id="settings.workspaceAccess"
-      >
-        <legend>{t("settings.performance")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.performanceHint")}</p>
-        </div>
-        <div className="settings-toggle-list">
-          {windowsPlatform ? (
+      {showPerformanceSettings ? (
+        <fieldset
+          className="settings-subsection settings-fieldset"
+          data-tutorial-id="settings.workspaceAccess"
+        >
+          <legend>{t("settings.performance")}</legend>
+          <div>
+            <p className="field-hint">{t("settings.performanceHint")}</p>
+          </div>
+          <div className="settings-toggle-list">
             <label
               className="settings-toggle-row"
               data-tutorial-id="settings.useDirectxScreenCapture"
@@ -436,9 +437,9 @@ export function GeneralSettings() {
                 <small>{t("settings.useDirectxScreenCaptureHint")}</small>
               </span>
             </label>
-          ) : null}
-        </div>
-      </fieldset>
+          </div>
+        </fieldset>
+      ) : null}
 
       <fieldset
         className="settings-subsection settings-fieldset"

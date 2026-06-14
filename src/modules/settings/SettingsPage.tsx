@@ -23,6 +23,7 @@ import {
   SquareStack,
   Terminal,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
@@ -68,6 +69,32 @@ const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   "vnc-settings",
   "dont-sleep-settings",
   "about-settings",
+];
+
+// Each section gets a colored icon chip, macOS System Settings style. Colors are
+// the design language's vivid Apple-system palette; `requires` gates a section to
+// platforms that support it.
+const SETTINGS_NAV: readonly {
+  id: SettingsSectionId;
+  Icon: LucideIcon;
+  color: string;
+  labelKey: string;
+  requires?: "installer" | "rdp";
+}[] = [
+  { id: "general-settings", Icon: SettingsIcon, color: "#8e8e93", labelKey: "settings.sectionGeneral" },
+  { id: "appearance-settings", Icon: Palette, color: "#ff2d55", labelKey: "settings.sectionAppearance" },
+  { id: "workspace-settings", Icon: SquareStack, color: "#5e5ce6", labelKey: "settings.sectionWorkspace" },
+  { id: "dashboard-settings", Icon: LayoutDashboard, color: "#0a84ff", labelKey: "settings.sectionDashboard" },
+  { id: "installer-settings", Icon: Package, color: "#ff9f0a", labelKey: "settings.sectionInstaller", requires: "installer" },
+  { id: "credentials-settings", Icon: KeyRound, color: "#34c759", labelKey: "settings.sectionCredentials" },
+  { id: "assistant-settings", Icon: Bot, color: "#bf5af2", labelKey: "settings.sectionAiAssistant" },
+  { id: "ssh-settings", Icon: Server, color: "#30b0c7", labelKey: "settings.sectionSsh" },
+  { id: "terminal-settings", Icon: Terminal, color: "#1c1c1e", labelKey: "settings.sectionTerminal" },
+  { id: "url-settings", Icon: Globe, color: "#32ade6", labelKey: "settings.sectionUrl" },
+  { id: "rdp-settings", Icon: Monitor, color: "#5856d6", labelKey: "settings.sectionRdp", requires: "rdp" },
+  { id: "vnc-settings", Icon: Network, color: "#5ac8fa", labelKey: "settings.sectionVnc" },
+  { id: "dont-sleep-settings", Icon: Coffee, color: "#ac8e68", labelKey: "settings.sectionDontSleep" },
+  { id: "about-settings", Icon: Info, color: "#64748b", labelKey: "settings.sectionAbout" },
 ];
 
 export function SettingsPage({
@@ -232,122 +259,25 @@ export function SettingsPage({
 
         <div className="settings-layout">
           <aside className="settings-nav" aria-label={t("settings.sectionsNav")}>
-          <button
-            className={settingsNavItemClass("general-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("general-settings")}
-            type="button"
-          >
-            <SettingsIcon size={16} />
-            <span>{t("settings.sectionGeneral")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("appearance-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("appearance-settings")}
-            type="button"
-          >
-            <Palette size={16} />
-            <span>{t("settings.sectionAppearance")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("workspace-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("workspace-settings")}
-            type="button"
-          >
-            <SquareStack size={16} />
-            <span>{t("settings.sectionWorkspace")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("dashboard-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("dashboard-settings")}
-            type="button"
-          >
-            <LayoutDashboard size={16} />
-            <span>{t("settings.sectionDashboard")}</span>
-          </button>
-          {installerSupported ? (
-            <button
-              className={settingsNavItemClass("installer-settings", activeSectionId)}
-              onClick={() => onActiveSectionChange("installer-settings")}
-              type="button"
-            >
-              <Package size={16} />
-              <span>{t("settings.sectionInstaller")}</span>
-            </button>
-          ) : null}
-          <button
-            className={settingsNavItemClass("credentials-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("credentials-settings")}
-            type="button"
-          >
-            <KeyRound size={16} />
-            <span>{t("settings.sectionCredentials")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("assistant-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("assistant-settings")}
-            type="button"
-          >
-            <Bot size={16} />
-            <span>{t("settings.sectionAiAssistant")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("ssh-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("ssh-settings")}
-            type="button"
-          >
-            <Server size={16} />
-            <span>{t("settings.sectionSsh")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("terminal-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("terminal-settings")}
-            type="button"
-          >
-            <Terminal size={16} />
-            <span>{t("settings.sectionTerminal")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("url-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("url-settings")}
-            type="button"
-          >
-            <Globe size={16} />
-            <span>{t("settings.sectionUrl")}</span>
-          </button>
-          {rdpSupported ? (
-            <button
-              className={settingsNavItemClass("rdp-settings", activeSectionId)}
-              onClick={() => onActiveSectionChange("rdp-settings")}
-              type="button"
-            >
-              <Monitor size={16} />
-              <span>{t("settings.sectionRdp")}</span>
-            </button>
-          ) : null}
-          <button
-            className={settingsNavItemClass("vnc-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("vnc-settings")}
-            type="button"
-          >
-            <Network size={16} />
-            <span>{t("settings.sectionVnc")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("dont-sleep-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("dont-sleep-settings")}
-            type="button"
-          >
-            <Coffee size={16} />
-            <span>{t("settings.sectionDontSleep")}</span>
-          </button>
-          <button
-            className={settingsNavItemClass("about-settings", activeSectionId)}
-            onClick={() => onActiveSectionChange("about-settings")}
-            type="button"
-          >
-            <Info size={16} />
-            <span>{t("settings.sectionAbout")}</span>
-          </button>
+            {SETTINGS_NAV.filter((item) =>
+              item.requires === "installer"
+                ? installerSupported
+                : item.requires === "rdp"
+                  ? rdpSupported
+                  : true,
+            ).map(({ id, Icon, color, labelKey }) => (
+              <button
+                key={id}
+                className={settingsNavItemClass(id, activeSectionId)}
+                onClick={() => onActiveSectionChange(id)}
+                type="button"
+              >
+                <span className="settings-nav-icon" style={{ background: color }}>
+                  <Icon size={14} />
+                </span>
+                <span>{t(labelKey)}</span>
+              </button>
+            ))}
           </aside>
 
           <section

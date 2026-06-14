@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { technicalInputProps } from "../../../lib/inputBehavior";
 import { isMacPlatform } from "../../../lib/platform";
 import { DIcon, type DialogIconName } from "./icons";
 
@@ -179,12 +180,12 @@ export function Field({
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { mono?: boolean };
 export function TextInput({ mono, className = "", ...rest }: InputProps) {
-  return <input className={`kk-inp${mono ? " mono" : ""} ${className}`.trim()} {...rest} />;
+  return <input className={`kk-inp${mono ? " mono" : ""} ${className}`.trim()} {...technicalInputProps} {...rest} />;
 }
 
 type AreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 export function TextArea({ rows = 4, className = "", ...rest }: AreaProps) {
-  return <textarea className={`kk-inp ${className}`.trim()} rows={rows} {...rest} />;
+  return <textarea className={`kk-inp ${className}`.trim()} rows={rows} {...technicalInputProps} {...rest} />;
 }
 
 type SelectOption = string | { value: string; label: string };

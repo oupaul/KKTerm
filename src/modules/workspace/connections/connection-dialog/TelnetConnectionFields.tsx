@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
@@ -37,6 +38,7 @@ export function TelnetConnectionFields({
           <span>{t("connections.host")}*</span>
           <input
             name="host"
+            {...technicalInputProps}
             defaultValue={initialConnection?.host ?? ""}
             placeholder={t("connections.exampleHost")}
             required
@@ -63,6 +65,7 @@ export function TelnetConnectionFields({
           <input
             key="user-telnet"
             name="user"
+            {...technicalInputProps}
             defaultValue={initialConnection?.user ?? sshSettings.defaultUser}
             placeholder={t("connections.admin")}
             required

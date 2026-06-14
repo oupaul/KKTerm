@@ -1,5 +1,6 @@
 import { Database } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection } from "../../../../types";
 import { PasswordField } from "./ConnectionPasswordFields";
 
@@ -23,7 +24,13 @@ export function UrlConnectionFields({
       <div className="connection-endpoint-fields">
         <label className="endpoint-wide-input">
           <span>{t("connections.url")}*</span>
-          <input name="url" defaultValue={initialConnection?.url ?? ""} placeholder={t("connections.urlPlaceholder")} required />
+          <input
+            name="url"
+            {...technicalInputProps}
+            defaultValue={initialConnection?.url ?? ""}
+            placeholder={t("connections.urlPlaceholder")}
+            required
+          />
         </label>
       </div>
       <div className="connection-auth-fields">
@@ -31,6 +38,7 @@ export function UrlConnectionFields({
           <span>{t("connections.credentialUser")}</span>
           <input
             name="urlCredentialUsername"
+            {...technicalInputProps}
             defaultValue={initialConnection?.urlCredentialUsername ?? ""}
             placeholder={t("connections.optionalUsername")}
           />
@@ -48,6 +56,7 @@ export function UrlConnectionFields({
           <span>{t("connections.dataPartition")}</span>
           <input
             name="dataPartition"
+            {...technicalInputProps}
             defaultValue={initialConnection?.dataPartition ?? ""}
             placeholder={t("connections.default")}
           />
