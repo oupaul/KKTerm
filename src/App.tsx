@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AssistantPanel } from "./ai/AssistantPanel";
 import type { AssistantPageContext } from "./ai/AssistantPanel";
@@ -42,6 +42,8 @@ import {
 import { ariaHidden } from "./lib/aria";
 import { currentPlatform, supportsInstallerHelper } from "./lib/platform";
 import { useBootstrapSettings } from "./lib/settings";
+import { invokeCommand, isTauriRuntime } from "./lib/tauri";
+import { shouldPromptForEncryptedFileSetup } from "./modules/settings/credentialStorageModel";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
 import type { SettingsSectionId } from "./modules/settings/settingsAssistantContext";
@@ -72,6 +74,8 @@ function App() {
   const previousBasePageRef = useRef<"workspace" | "dashboard" | "installer">(
     launchPageRef.current,
   );
+  const activePageRef = useRef<ActivePage>(activePage);
+  const encryptedFileAutoPromptCheckedRef = useRef(false);
 
   function isOverlayPage(page: ActivePage): page is "settings" {
     return page === "settings";
@@ -189,6 +193,45 @@ function App() {
     appearanceSettings,
     connectionPanelLayout,
   });
+
+  useEffect(() => {
+    activePageRef.current = activePage;
+  }, [activePage]);
+
+  useEffect(() => {
+    if (
+      encryptedFileAutoPromptCheckedRef.current ||
+      !generalSettingsReady ||
+      !isTauriRuntime() ||
+      currentPlatform() !== "linux"
+    ) {
+      return;
+    }
+    encryptedFileAutoPromptCheckedRef.current = true;
+    void (async () => {
+      try {
+        const [credentialSettings, secretStatus] = await Promise.all([
+          invokeCommand("get_credential_settings", undefined),
+          invokeCommand("keychain_status", undefined),
+        ]);
+        if (
+          shouldPromptForEncryptedFileSetup({
+            platform: currentPlatform(),
+            selectedStore: credentialSettings.secretStore,
+            secretStatus,
+          })
+        ) {
+          setActiveSettingsSectionId("credentials-settings");
+          if (activePageRef.current !== "settings") {
+            previousBasePageRef.current = activePageRef.current;
+          }
+          setActivePage("settings");
+        }
+      } catch {
+        // Credentials Settings will surface backend errors when opened manually.
+      }
+    })();
+  }, [generalSettingsReady]);
 
   function assistantPageContext() {
     if (activePage === "dashboard") {

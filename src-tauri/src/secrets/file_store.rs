@@ -52,6 +52,23 @@ impl FlatFileSecretStore {
         Self::new(default_secret_store_path()?, password)
     }
 
+    pub(super) fn from_password(password: String) -> Result<Self, String> {
+        Self::new(default_secret_store_path()?, password)
+    }
+
+    pub(super) fn initialize_or_verify(&self, create_if_missing: bool) -> Result<(), String> {
+        if self.path.exists() {
+            self.read_all().map(|_| ())
+        } else if create_if_missing {
+            self.write_encrypted_map(&BTreeMap::new())
+        } else {
+            Err(format!(
+                "Encrypted secret store {} does not exist",
+                self.path.display()
+            ))
+        }
+    }
+
     fn read_all(&self) -> Result<BTreeMap<String, String>, String> {
         if !self.path.exists() {
             return Ok(BTreeMap::new());
@@ -129,6 +146,10 @@ impl FlatFileSecretStore {
             return Ok(());
         }
 
+        self.write_encrypted_map(secrets)
+    }
+
+    fn write_encrypted_map(&self, secrets: &BTreeMap<String, String>) -> Result<(), String> {
         let parent = self.path.parent().ok_or_else(|| {
             "Encrypted secret store path must have a parent directory".to_string()
         })?;

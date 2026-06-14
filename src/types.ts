@@ -270,6 +270,16 @@ export interface CredentialSettings {
   secretStore: SecretStoreKind;
 }
 
+export interface ConfigureEncryptedFileSecretStoreRequest {
+  password: string;
+  createIfMissing: boolean;
+}
+
+export interface ConfigureEncryptedFileSecretStoreResult {
+  settings: CredentialSettings;
+  status: KeychainStatus;
+}
+
 export type AppLauncherLaunchMode = "normal" | "admin" | "differentUser" | "openFolder";
 export type AppLauncherViewMode = "icons" | "list" | "details";
 export type AppLauncherSortField = "name" | "path" | "type" | "size" | "modified";

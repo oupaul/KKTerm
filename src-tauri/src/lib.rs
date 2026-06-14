@@ -725,6 +725,27 @@ fn update_credential_settings(
     storage.update_credential_settings(settings)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConfigureEncryptedFileSecretStoreResult {
+    settings: storage::CredentialSettings,
+    status: secrets::KeychainStatus,
+}
+
+#[tauri::command]
+fn configure_encrypted_file_secret_store(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: secrets::ConfigureEncryptedFileSecretStoreRequest,
+) -> Result<ConfigureEncryptedFileSecretStoreResult, String> {
+    let status = secrets.configure_encrypted_file_store(request)?;
+    let settings = storage::validate_credential_settings_for_command(storage::CredentialSettings {
+        secret_store: "file".to_string(),
+    })?;
+    let settings = storage.update_credential_settings(settings)?;
+    Ok(ConfigureEncryptedFileSecretStoreResult { settings, status })
+}
+
 /// Frontend -> backend push of a script widget's latest runtime-health state
 /// (from `ScriptWidgetHost`'s smoke test / watchdog) so the assistant's
 /// `dashboard_check_widget_health` tool can read it in the same turn.
@@ -3128,6 +3149,7 @@ pub fn run() {
             update_dashboard_settings,
             get_credential_settings,
             update_credential_settings,
+            configure_encrypted_file_secret_store,
             dashboard_report_widget_health,
             prepare_app_launcher_entry,
             launch_app_launcher_entry,

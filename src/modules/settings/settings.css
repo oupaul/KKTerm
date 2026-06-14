@@ -1286,6 +1286,10 @@
   text-transform: uppercase;
 }
 
+.settings-dialog-error {
+  color: var(--red);
+}
+
 .settings-list-row > .settings-list-actions,
 .settings-list-row > button,
 .settings-summary-item strong,

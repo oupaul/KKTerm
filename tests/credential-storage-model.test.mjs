@@ -43,3 +43,91 @@ test("credential storage model keeps the selected backend renderable for bad sta
     "os",
   ]);
 });
+
+test("credential storage model routes file backend selection through setup", async () => {
+  const { credentialStorageSelectionAction } =
+    await importTypeScriptModule(
+      new URL("../src/modules/settings/credentialStorageModel.ts", import.meta.url),
+    );
+
+  assert.equal(
+    credentialStorageSelectionAction({
+      currentStore: "os",
+      nextStore: "file",
+      secretStatus: {
+        available: false,
+        selectedStore: "file",
+        availableStores: ["os", "file"],
+      },
+    }),
+    "setup-file",
+  );
+  assert.equal(
+    credentialStorageSelectionAction({
+      currentStore: "file",
+      nextStore: "file",
+      secretStatus: {
+        available: true,
+        selectedStore: "file",
+        availableStores: ["os", "file"],
+      },
+    }),
+    "select",
+  );
+  assert.equal(
+    credentialStorageSelectionAction({
+      currentStore: "file",
+      nextStore: "os",
+      secretStatus: {
+        available: true,
+        selectedStore: "file",
+        availableStores: ["os", "file"],
+      },
+    }),
+    "select",
+  );
+});
+
+test("credential storage model auto-prompts Linux when encrypted file storage needs setup", async () => {
+  const { shouldPromptForEncryptedFileSetup } =
+    await importTypeScriptModule(
+      new URL("../src/modules/settings/credentialStorageModel.ts", import.meta.url),
+    );
+
+  assert.equal(
+    shouldPromptForEncryptedFileSetup({
+      platform: "linux",
+      selectedStore: "file",
+      secretStatus: {
+        available: false,
+        selectedStore: "file",
+        availableStores: ["file"],
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    shouldPromptForEncryptedFileSetup({
+      platform: "windows",
+      selectedStore: "file",
+      secretStatus: {
+        available: false,
+        selectedStore: "file",
+        availableStores: ["os", "file"],
+      },
+    }),
+    false,
+  );
+  assert.equal(
+    shouldPromptForEncryptedFileSetup({
+      platform: "linux",
+      selectedStore: "file",
+      secretStatus: {
+        available: true,
+        selectedStore: "file",
+        availableStores: ["file"],
+      },
+    }),
+    false,
+  );
+});

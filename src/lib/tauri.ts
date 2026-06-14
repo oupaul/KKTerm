@@ -17,6 +17,8 @@ import type {
   AppBootstrap,
   AppLauncherLaunchMode,
   AppLauncherSettings,
+  ConfigureEncryptedFileSecretStoreRequest,
+  ConfigureEncryptedFileSecretStoreResult,
   CredentialSettings,
   Connection,
   ConnectionPasswordCredentialSummary,
@@ -1049,6 +1051,10 @@ type CommandMap = {
   update_credential_settings: {
     args: { request: CredentialSettings };
     result: CredentialSettings;
+  };
+  configure_encrypted_file_secret_store: {
+    args: { request: ConfigureEncryptedFileSecretStoreRequest };
+    result: ConfigureEncryptedFileSecretStoreResult;
   };
   get_app_launcher_settings: {
     args: undefined;

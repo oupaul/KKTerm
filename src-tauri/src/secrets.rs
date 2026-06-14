@@ -33,6 +33,13 @@ pub struct KeychainStatus {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ConfigureEncryptedFileSecretStoreRequest {
+    password: String,
+    create_if_missing: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StoreSecretRequest {
     kind: SecretKind,
     owner_id: String,
@@ -290,6 +297,27 @@ impl Secrets {
             store: Some(configured.store),
             init_error: None,
             selected_store,
+        };
+        drop(state);
+        Ok(self.status())
+    }
+
+    pub fn configure_encrypted_file_store(
+        &self,
+        request: ConfigureEncryptedFileSecretStoreRequest,
+    ) -> Result<KeychainStatus, String> {
+        let _guard = self.lock()?;
+        let store = FlatFileSecretStore::from_password(request.password)?;
+        store.initialize_or_verify(request.create_if_missing)?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "secret store state lock is poisoned".to_string())?;
+        *state = SecretStoreState {
+            backend: Some("Encrypted file secret store".to_string()),
+            store: Some(Box::new(store)),
+            init_error: None,
+            selected_store: "file".to_string(),
         };
         drop(state);
         Ok(self.status())
@@ -746,6 +774,32 @@ mod tests {
         let error = wrong_password_store
             .read(&reference)
             .expect_err("wrong password should not decrypt the file");
+        assert!(error.contains("could not decrypt"));
+    }
+
+    #[test]
+    fn encrypted_file_store_setup_creates_verifiable_empty_file() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let path = temp_dir.path().join("secrets.json.enc");
+        let store = FlatFileSecretStore::new(path.clone(), "setup-password".to_string())
+            .expect("file store");
+
+        store
+            .initialize_or_verify(true)
+            .expect("empty encrypted file is created");
+        assert!(path.exists());
+
+        let reopened = FlatFileSecretStore::new(path.clone(), "setup-password".to_string())
+            .expect("file store");
+        reopened
+            .initialize_or_verify(false)
+            .expect("existing file decrypts with the same password");
+
+        let wrong_password_store =
+            FlatFileSecretStore::new(path, "wrong-password".to_string()).expect("file store");
+        let error = wrong_password_store
+            .initialize_or_verify(false)
+            .expect_err("wrong password should not verify setup file");
         assert!(error.contains("could not decrypt"));
     }
 }

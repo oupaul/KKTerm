@@ -21,7 +21,9 @@ Settings tutorial targets:
 - Appearance: `settings.appUiFontFamily`, `settings.appearance.colorScheme`, `settings.resetLayout`.
 - Workspace: `settings.connectedConnectionsRail`, `settings.hideTopTabButtons`, `settings.submitAiAttachmentsDirectly`, `settings.separateSplitTerminalBackgrounds`.
 - Dashboard: `settings.dashboardDefaultLanding`, `settings.dashboardUseRandomDynamicBackground`, `settings.dashboardMaxActiveScriptWidgets`.
-- Credentials: `settings.credentialStorage`, `settings.credentialsStored`, `settings.widgetCredentialsStored`.
+- Credentials: `settings.credentialStorage`, `settings.encryptedSecretStoreSetupTitle`,
+  `settings.encryptedSecretStoreSetupAction`, `settings.encryptedSecretStoreSetupRequiredTitle`, `settings.credentialsStored`,
+  `settings.widgetCredentialsStored`.
 - AI Assistant: `settings.aiProvider`, `settings.aiToolsTitle`, `settings.aiCustomInstructions`, `settings.assistantSkillsTitle`, `settings.mcpServersTitle`, `settings.allowInsecureMcpHttp`.
 - SSH: `settings.defaultUser`, `settings.defaultPort`, `settings.defaultKey`, `settings.sshBufferLines`.
 - Terminal: `settings.terminalFontFamily`, `settings.terminalFontSize`, `settings.defaultShell`, `settings.scrollbackLines`.
@@ -121,7 +123,7 @@ Settings tutorial targets:
 This is the central manager for secrets stored in the selected credential backend.
 
 - Section header `settings.sectionCredentials`. Stored credentials list `settings.credentialsTitle` / `settings.credentialsStored` (hint `settings.credentialsHint`, empty `settings.credentialsEmpty`).
-- Secret storage selector: `settings.credentialStorage` / `settings.credentialStorageBackend`. Windows and macOS default to `settings.credentialStorageOs` and can optionally switch to `settings.credentialStorageFile`; Linux exposes only `settings.credentialStorageFile`. The switch changes which backend KKTerm reads and writes from. It does not migrate existing secrets between stores.
+- Secret storage selector: `settings.credentialStorage` / `settings.credentialStorageBackend`. Windows and macOS default to `settings.credentialStorageOs` and can optionally switch to `settings.credentialStorageFile`; Linux exposes only `settings.credentialStorageFile`. Selecting `settings.credentialStorageFile` opens the setup dialog `settings.encryptedSecretStoreSetupTitle`, where the user can unlock an existing encrypted secrets file or create a new one. Linux automatically opens Settings to Credentials and shows `settings.encryptedSecretStoreSetupRequiredTitle` on launch when encrypted file storage is selected but the file store has not been set up or cannot be decrypted; `settings.encryptedSecretStoreSetupAction` reopens that dialog from Credentials Settings. The switch changes which backend KKTerm reads and writes from. It does not migrate existing secrets between stores.
 - Per-credential fields: username `settings.credentialUsername`. Kinds (badges): `settings.credentialKindConnectionPassword`, `…UrlPassword`, `…AiApiKey`, `…EmailApiKey`, `…EmailSmtpPassword`, `…WidgetSecret`.
 - Save status: `settings.credentialSavedPassword`, `…SavedApiKey`, `…SavedSecret`. Updated: `settings.credentialUpdated`. Missing secret error: `settings.credentialMissingSecret`. Stored marker: `settings.credentialStored`.
 - Delete: red trash button `settings.deleteCredential`, confirmation body `settings.deleteCredentialConfirmBody`, status `settings.credentialDeleted`.
