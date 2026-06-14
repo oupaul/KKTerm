@@ -148,6 +148,18 @@
   background: var(--chrome-strong);
 }
 
+/* File-browser sub-panes (SFTP / FTP / File Explorer) must fill the embedded
+   pane the same way the terminal surface does. `.sftp-workspace.active` is a
+   block-level flex column, so as a flex item in this row it would otherwise size
+   to its content width and leave the pane partially empty. Webview/remote-desktop
+   surfaces don't need this — their native overlay windows are positioned to the
+   pane bounds in JS, independent of the DOM box width. */
+.embedded-workspace-pane > .sftp-workspace {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+}
+
 .embedded-workspace-pane:has(> .embedded-pane-close) > .webview-workspace .webview-pane > header {
   padding-right: 40px;
 }
