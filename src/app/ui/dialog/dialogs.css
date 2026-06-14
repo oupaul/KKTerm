@@ -646,3 +646,395 @@ textarea.kk-inp {
   color: var(--text);
   font-weight: 600;
 }
+
+/* ======================= quick command manager ======================== */
+.kk-qc-muted {
+  margin: 4px 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.kk-qc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.kk-qc-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  user-select: none;
+}
+.kk-qc-row.dragging {
+  opacity: 0.5;
+}
+.kk-qc-row.drag-over {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.kk-qc-grip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-3);
+  cursor: grab;
+  touch-action: none;
+}
+.kk-qc-row.dragging .kk-qc-grip {
+  cursor: grabbing;
+}
+.kk-qc-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #fff;
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.18);
+}
+.kk-qc-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.kk-qc-main .kk-ql {
+  display: block;
+  font-size: 13px;
+  font-weight: 590;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kk-qc-main code {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono, "SF Mono", ui-monospace, Menlo, monospace);
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kk-qc-acts {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+
+.kk-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.kk-iconbtn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.kk-iconbtn.danger:hover {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+}
+.kk-iconbtn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ====================== quick command icon/color ====================== */
+.kk-picker-row {
+  display: flex;
+  gap: 14px;
+}
+.kk-picker-row .kk-pk {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kk-picker-row .kk-pk.kk-pk-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.kk-picker-row .kk-pk > span {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 590;
+}
+.kk-pk-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 0.5px solid var(--border-strong);
+  background: var(--field);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.kk-pk-trigger.color {
+  color: #fff;
+}
+.kk-pk-trigger:hover,
+.kk-pk-trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.kk-icon-grid,
+.kk-color-grid {
+  position: absolute;
+  top: 70px;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  padding: 9px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 11px;
+  box-shadow: var(--shadow);
+}
+.kk-icon-grid {
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.kk-color-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.kk-icon-grid button,
+.kk-color-grid button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--muted);
+  color: var(--text);
+  cursor: pointer;
+}
+.kk-icon-grid button:hover {
+  background: var(--hover);
+}
+.kk-icon-grid button.active {
+  background: var(--accent);
+  color: #fff;
+}
+.kk-color-grid button.active {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+.kk-qc-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--field);
+  box-shadow: inset 0 0 0 0.5px var(--border-strong);
+  font-size: 13px;
+  font-weight: 560;
+}
+.kk-qc-preview-ico {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.kk-qc-preview-label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ====================== quick command command field =================== */
+.kk-qc-cmd-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kk-qc-cmd-head .kk-lbl {
+  display: flex;
+  align-items: center;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 590;
+}
+.kk-qc-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.kk-qc-ai-btn:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.kk-qc-cmd-wrap {
+  position: relative;
+}
+.kk-qc-ai-popover {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 15;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100% - 16px));
+  padding: 11px;
+  background: var(--bg);
+  border: 0.5px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.kk-qc-ai-popover .kk-lbl {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 590;
+}
+.kk-qc-ai-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.kk-qc-ai-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+}
+
+/* ====================== quick command library ========================= */
+.kk-qc-library-sheet .kk-dlg-body {
+  gap: 12px;
+}
+.kk-qc-lib-tabs,
+.kk-qc-lib-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.kk-qc-lib-tab {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.kk-qc-lib-tab:hover {
+  color: var(--text);
+}
+.kk-qc-lib-tab[data-state="active"] {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 590;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+}
+.kk-qc-lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kk-qc-lib-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.kk-qc-lib-entry > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.kk-qc-lib-entry-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.kk-qc-lib-entry-title strong {
+  font-size: 13px;
+  font-weight: 590;
+}
+.kk-qc-lib-entry p {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.kk-qc-lib-entry code {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--font-mono, "SF Mono", ui-monospace, Menlo, monospace);
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kk-qc-lib-entry.danger strong,
+.kk-qc-lib-entry.danger code {
+  color: var(--red);
+}
+.kk-qc-lib-entry-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 7px;
+}
+.kk-qc-danger-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Nested subdialogs (edit / library) stack above the manager. The manager
+   backdrop already dims the app, so this layer stays transparent — it only
+   raises the z-index, never adds a second visual dim over the manager. */
+.kk-dlg-backdrop.kk-qc-subdialog {
+  z-index: 96;
+  background: transparent;
+}

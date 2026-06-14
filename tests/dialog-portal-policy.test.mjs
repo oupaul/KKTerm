@@ -18,15 +18,6 @@ const portalBackdrops = [
     path: "../src/modules/workspace/connections/ImportDialog.tsx",
     backdrops: ["connection-dialog import-dialog"],
   },
-  {
-    name: "Terminal Quick Command blocking dialogs",
-    path: "../src/modules/workspace/connections/terminal/QuickCommandBar.tsx",
-    backdrops: [
-      "quick-command-dialog quick-command-manager-dialog",
-      "quick-command-dialog quick-command-custom-dialog",
-      "quick-command-dialog quick-command-preset-dialog",
-    ],
-  },
 ];
 
 test("blocking dialogs mounted from contained panes use the app-window DialogPortal", async () => {
@@ -47,23 +38,45 @@ test("blocking dialogs mounted from contained panes use the app-window DialogPor
   }
 });
 
+test("Quick Command blocking dialogs portal to the app window via the dialog kit", async () => {
+  const source = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/QuickCommandBar.tsx", import.meta.url),
+    "utf8",
+  );
+  // DialogShell createPortals to document.body, so the manager/add/library
+  // dialogs escape the contained terminal pane just like the legacy portal.
+  assert.match(source, /DialogShell/, "Quick Command dialogs should mount through the dialog-kit DialogShell");
+  for (const dialog of ["QuickCommandManagerDialog", "CustomCommandDialog", "PresetLibraryDialog"]) {
+    assert.match(source, new RegExp(`function ${dialog}`), `Quick Command should still render ${dialog}`);
+  }
+  // The add/library subdialogs opt into the stacking scrim class.
+  assert.match(
+    source,
+    /zClassName="kk-qc-subdialog"/,
+    "Quick Command add/library subdialogs should request the stacking backdrop class",
+  );
+
+  const shellSource = await readFile(new URL("../src/app/ui/dialog/Sheet.tsx", import.meta.url), "utf8");
+  assert.match(
+    shellSource,
+    /createPortal\([\s\S]*document\.body/,
+    "DialogShell should portal its backdrop to document.body",
+  );
+});
+
 test("Quick Command subdialogs stack above the manager dialog", async () => {
-  const terminalStyles = await readFile(new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url), "utf8");
-  const baseStyles = await readFile(new URL("../src/styles/base.css", import.meta.url), "utf8");
+  const dialogStyles = await readFile(new URL("../src/app/ui/dialog/dialogs.css", import.meta.url), "utf8");
+  const baseBackdropZIndex = Number(
+    dialogStyles.match(/\.kk-dlg-backdrop\s*\{[^}]*z-index:\s*(\d+);/s)?.[1] ?? Number.NaN,
+  );
   const subdialogBackdropRule =
-    terminalStyles.match(/\.quick-command-subdialog-backdrop\s*\{(?<body>[^}]*)\}/s)?.groups?.body ?? "";
+    dialogStyles.match(/\.kk-dlg-backdrop\.kk-qc-subdialog\s*\{(?<body>[^}]*)\}/s)?.groups?.body ?? "";
+  const subdialogBackdropZIndex = Number(subdialogBackdropRule.match(/z-index:\s*(\d+);/)?.[1] ?? Number.NaN);
 
-  const managerBackdropZIndex = Number(
-    baseStyles.match(/\.connection-dialog-backdrop\s*\{[^}]*z-index:\s*(\d+);/s)?.[1] ?? Number.NaN,
-  );
-  const subdialogBackdropZIndex = Number(
-    terminalStyles.match(/\.quick-command-subdialog-backdrop\s*\{[^}]*z-index:\s*(\d+);/s)?.[1] ?? Number.NaN,
-  );
-
-  assert.ok(Number.isFinite(managerBackdropZIndex), "shared connection dialog backdrop should define a z-index");
+  assert.ok(Number.isFinite(baseBackdropZIndex), "shared dialog-kit backdrop should define a z-index");
   assert.ok(Number.isFinite(subdialogBackdropZIndex), "Quick Command subdialog backdrop should define a z-index");
   assert.ok(
-    subdialogBackdropZIndex > managerBackdropZIndex,
+    subdialogBackdropZIndex > baseBackdropZIndex,
     "Quick Command add/library dialogs should stack above the manager dialog backdrop",
   );
   assert.match(

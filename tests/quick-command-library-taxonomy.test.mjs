@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 
 const source = await readFile("src/modules/workspace/connections/terminal/quickCommandLibrary.ts", "utf8");
 const dialogSource = await readFile("src/modules/workspace/connections/terminal/QuickCommandBar.tsx", "utf8");
-const terminalCss = await readFile("src/modules/workspace/connections/terminal/terminal.css", "utf8");
+const dialogCss = await readFile("src/app/ui/dialog/dialogs.css", "utf8");
 
 for (const category of [
   "aiAgents",
@@ -44,15 +44,15 @@ assert.match(source, /entry\("linux-apt-install-docker", "linuxAdministration", 
 assert.match(source, /entry\("container-docker-stop", "containersKubernetes", "docker", "containerDockerStop", "docker stop <container>", "XCircle", "red", true, false\)/);
 assert.match(source, /entry\("container-kubectl-logs", "containersKubernetes", "kubectl", "containerKubectlLogs", "kubectl logs -f <pod>", "List", "indigo", false, false\)/);
 assert.match(source, /entry\("macos-defaults-write", "macosAdministration", "preferences", "macosDefaultsWrite", "defaults write <domain> <key> <value>", "Settings", "amber", true, false\)/);
-assert.match(dialogSource, /quick-command-library-entry-danger/);
+assert.match(dialogSource, /entry\.confirm \? "danger"/);
 assert.match(dialogSource, /quickCommandsDangerous/);
 assert.match(dialogSource, /onRunCommand\(commandFromLibrary\(entry, t\)\)/);
 assert.match(dialogSource, /quickCommandsAddCommand/);
-assert.match(dialogSource, /quickCommandsPickFromLibrary/);
+assert.match(dialogSource, /quickCommandsLibraryAction/);
 assert.match(dialogSource, /@radix-ui\/react-tabs/);
 assert.match(dialogSource, /RadixTabs\.Root/);
 assert.match(dialogSource, /RadixTabs\.Trigger/);
 assert.doesNotMatch(dialogSource, /quick-command-add-menu/);
-assert.match(terminalCss, /\.quick-command-preset-dialog\s*{[^}]*\n\s*height:/s);
-assert.match(terminalCss, /grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);
-assert.match(terminalCss, /quick-command-library-tab\[data-state="active"\]/);
+assert.match(dialogSource, /height=\{640\}/);
+assert.match(dialogCss, /\.kk-qc-lib-entry\.danger/);
+assert.match(dialogCss, /kk-qc-lib-tab\[data-state="active"\]/);

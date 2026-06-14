@@ -1,16 +1,27 @@
 import * as Icons from "lucide-react";
 import * as RadixTabs from "@radix-ui/react-tabs";
-import type { ComponentType, CSSProperties, FormEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { ComponentType, CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
-import { DialogPortal } from "../../../../app/DialogPortal";
+import {
+  Actions,
+  Btn,
+  DialogShell,
+  DIcon,
+  Field,
+  Group,
+  GRow,
+  Sheet,
+  Switch,
+  TextArea,
+  TextInput,
+} from "../../../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
-import { ToggleSwitch } from "../../../settings/ToggleSwitch";
 import { useWorkspaceStore } from "../../../../store";
 import type { Connection, QuickCommand, WorkspaceTab } from "../../../../types";
-import { ACCENT_PALETTE, isAccentName, resolveAccent } from "../../../dashboard/registry/palette";
-import { ICON_NAMES, type IconName } from "../../../dashboard/types";
+import { ACCENT_PALETTE } from "../../../dashboard/registry/palette";
+import { ICON_NAMES, type AccentName, type IconName } from "../../../dashboard/types";
 import { getPaneRenderer, writeInputToPane } from "../../paneRegistry";
 import {
   QUICK_COMMAND_LIBRARY,
@@ -67,8 +78,29 @@ function commandFromLibrary(entry: QuickCommandLibraryEntry, translate: (key: st
   };
 }
 
-function accentFor(name: string) {
-  return resolveAccent(isAccentName(name) ? name : "default");
+// Quick Command chips use the design language's vivid Apple-system palette
+// rather than the app's muted dashboard ACCENT_PALETTE, so the icons read as
+// brightly as the redesign reference. Keyed by the stored accent name.
+const QUICK_COMMAND_ACCENT_COLORS: Record<AccentName, string> = {
+  default: "var(--accent)",
+  blue: "#0a84ff",
+  indigo: "#5e5ce6",
+  teal: "#30b0c7",
+  green: "#34c759",
+  amber: "#ff9f0a",
+  red: "#ff3b30",
+  purple: "#bf5af2",
+  pink: "#ff375f",
+  slate: "#8e8e93",
+  cyan: "#32ade6",
+  orange: "#ff9500",
+  rose: "#ff2d55",
+  emerald: "#30d158",
+  sky: "#5ac8fa",
+};
+
+function quickCommandColor(accentName: string): string {
+  return QUICK_COMMAND_ACCENT_COLORS[accentName as AccentName] ?? QUICK_COMMAND_ACCENT_COLORS.default;
 }
 
 function connectionAiContext(connection: Connection | undefined) {
@@ -144,13 +176,12 @@ export function QuickCommandBar({ tab }: { tab: WorkspaceTab }) {
         ) : (
           quickCommands.map((command) => {
             const Icon = iconFor(command.iconName);
-            const accent = accentFor(command.accentName);
             return (
               <button
                 className="quick-command-button"
                 key={command.id}
                 onClick={() => run(command)}
-                style={{ "--quick-command-accent": accent.color } as CSSProperties}
+                style={{ "--quick-command-accent": quickCommandColor(command.accentName) } as CSSProperties}
                 title={command.command}
                 type="button"
               >
@@ -198,6 +229,7 @@ export function QuickCommandBar({ tab }: { tab: WorkspaceTab }) {
   );
 }
 
+
 function QuickCommandManagerDialog({
   connection,
   connectionId,
@@ -235,7 +267,7 @@ function QuickCommandManagerDialog({
 
     function onPointerMove(event: PointerEvent) {
       const target = document.elementFromPoint(event.clientX, event.clientY);
-      const row = target instanceof Element ? target.closest<HTMLElement>(".quick-command-list-row") : null;
+      const row = target instanceof Element ? target.closest<HTMLElement>(".kk-qc-row") : null;
       const targetCommandId = row?.dataset.commandId ?? null;
       if (targetCommandId && targetCommandId !== activeDraggingCommandId) {
         setDragOverCommandId(targetCommandId);
@@ -284,41 +316,38 @@ function QuickCommandManagerDialog({
   }
 
   return (
-    <DialogPortal>
-    <div className="dialog-backdrop connection-dialog-backdrop quick-command-dialog-backdrop" role="presentation">
-      <div className="connection-dialog quick-command-dialog quick-command-manager-dialog" role="dialog" aria-modal="true" aria-label={t("terminal.quickCommandsManage")}>
-        <header className="connection-dialog-header compact">
-          <div>
-            <h2>{t("terminal.quickCommandsManage")}</h2>
-          </div>
-          <button className="connection-dialog-close" onClick={onClose} type="button" aria-label={t("common.close")}>
-            <Icons.X size={16} />
-          </button>
-        </header>
-
-        <section className="quick-command-manager-body">
-          <div className="quick-command-list-header">
-            <div className="quick-command-add-actions">
-              <button className="toolbar-button" onClick={() => openCustomDialog()} type="button">
-                <Icons.Plus size={13} />
+    <>
+      <DialogShell onBackdrop={onClose}>
+        <Sheet
+          width={500}
+          title={t("terminal.quickCommandsTitle")}
+          ariaLabel={t("terminal.quickCommandsManage")}
+          footer={
+            <>
+              <Btn kind="primary" icon="plus" onClick={() => openCustomDialog()}>
                 {t("terminal.quickCommandsAddCommand")}
-              </button>
-              <button className="toolbar-button" onClick={openPresetDialog} type="button">
-                <Icons.Library size={13} />
-                {t("terminal.quickCommandsPickFromLibrary")}
-              </button>
-            </div>
-          </div>
+              </Btn>
+              <Btn icon="library" onClick={openPresetDialog}>
+                {t("terminal.quickCommandsLibraryAction")}
+              </Btn>
+              <span className="kk-spacer" />
+              <Btn onClick={onClose}>{t("terminal.quickCommandsDone")}</Btn>
+            </>
+          }
+        >
+          <p className="kk-dlg-sub" style={{ margin: "-2px 0 0" }}>
+            {t("terminal.quickCommandsManageSubtitle")}
+          </p>
           {quickCommands.length === 0 ? (
-            <p className="quick-command-muted">{t("terminal.quickCommandsEmpty")}</p>
+            <p className="kk-qc-muted">{t("terminal.quickCommandsEmpty")}</p>
           ) : (
-            <div className="quick-command-list-rows">
+            <div className="kk-qc-list">
               {quickCommands.map((command, index) => {
                 const Icon = iconFor(command.iconName);
                 return (
                   <div
                     className={[
-                      "quick-command-list-row",
+                      "kk-qc-row",
                       dragOverCommandId === command.id ? "drag-over" : "",
                       draggingCommandId === command.id ? "dragging" : "",
                     ]
@@ -327,40 +356,49 @@ function QuickCommandManagerDialog({
                     data-command-id={command.id}
                     key={command.id}
                   >
-                    <span className="quick-command-drag-handle" onPointerDown={(event) => startReorderDrag(event, command.id)}>
-                      <Icons.GripVertical size={14} />
+                    <span
+                      className="kk-qc-grip"
+                      onPointerDown={(event) => startReorderDrag(event, command.id)}
+                      aria-hidden="true"
+                    >
+                      <DIcon name="grip" size={15} />
                     </span>
-                    <Icon size={14} />
-                    <button onClick={() => openCustomDialog(command)} type="button">
-                      <span>{command.label}</span>
+                    <span className="kk-qc-chip" style={{ background: quickCommandColor(command.accentName) }}>
+                      <Icon size={15} />
+                    </span>
+                    <button className="kk-qc-main" onClick={() => openCustomDialog(command)} type="button">
+                      <span className="kk-ql">{command.label}</span>
                       <code>{command.command}</code>
                     </button>
-                    <div className="quick-command-row-actions">
+                    <div className="kk-qc-acts">
                       <button
+                        className="kk-iconbtn"
                         onClick={() => moveQuickCommand(connectionId, command.id, -1)}
                         disabled={index === 0}
                         type="button"
                         aria-label={t("terminal.quickCommandsMoveUp", { label: command.label })}
                         title={t("terminal.quickCommandsMoveUp", { label: command.label })}
                       >
-                        <Icons.ArrowUp size={13} />
+                        <DIcon name="arrowup" size={14} />
                       </button>
                       <button
+                        className="kk-iconbtn"
                         onClick={() => moveQuickCommand(connectionId, command.id, 1)}
                         disabled={index === quickCommands.length - 1}
                         type="button"
                         aria-label={t("terminal.quickCommandsMoveDown", { label: command.label })}
                         title={t("terminal.quickCommandsMoveDown", { label: command.label })}
                       >
-                        <Icons.ArrowDown size={13} />
+                        <DIcon name="arrowdown" size={14} />
                       </button>
                       <button
-                        className="quick-command-delete"
+                        className="kk-iconbtn danger"
                         onClick={() => removeQuickCommand(connectionId, command.id)}
                         type="button"
                         aria-label={t("terminal.quickCommandsDelete", { label: command.label })}
+                        title={t("terminal.quickCommandsDelete", { label: command.label })}
                       >
-                        <Icons.Trash size={13} />
+                        <DIcon name="trash" size={14} />
                       </button>
                     </div>
                   </div>
@@ -368,8 +406,8 @@ function QuickCommandManagerDialog({
               })}
             </div>
           )}
-        </section>
-      </div>
+        </Sheet>
+      </DialogShell>
       {customDialogOpen ? (
         <CustomCommandDialog
           command={editingCommand}
@@ -388,16 +426,8 @@ function QuickCommandManagerDialog({
           onRunCommand={onRunCommand}
         />
       ) : null}
-    </div>
-    </DialogPortal>
+    </>
   );
-}
-
-function menuExpanded(expanded: boolean) {
-  return {
-    "aria-expanded": expanded,
-    "aria-haspopup": "menu" as const,
-  };
 }
 
 function CustomCommandDialog({
@@ -434,7 +464,7 @@ function CustomCommandDialog({
       : DEFAULT_DRAFT,
   );
   const SelectedIcon = iconFor(draft.iconName);
-  const selectedAccent = accentFor(draft.accentName);
+  const selectedAccentColor = quickCommandColor(draft.accentName);
   const commandInputId = useId();
   const canGenerateWithAi = aiProviderHasApiKey && isTauriRuntime();
 
@@ -482,8 +512,7 @@ function CustomCommandDialog({
     }
   }
 
-  function saveDraft(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function saveDraft() {
     const label = draft.label.trim();
     const commandText = draft.command.trim();
     if (!label || !commandText) {
@@ -503,160 +532,197 @@ function CustomCommandDialog({
     onClose();
   }
 
-  return (
-    <DialogPortal>
-    <div className="dialog-backdrop connection-dialog-backdrop quick-command-subdialog-backdrop" role="presentation">
-      <div className="connection-dialog quick-command-dialog quick-command-custom-dialog" role="dialog" aria-modal="true" aria-label={t("terminal.quickCommandsCustomCommand")}>
-        <header className="connection-dialog-header compact">
-          <div>
-            <h2>{existingCommand ? t("common.edit") : `${t("common.add")} ${t("terminal.quickCommandsCustomCommand")}`}</h2>
-          </div>
-        </header>
+  const previewLabel = draft.label.trim() || t("terminal.quickCommandsLabel");
 
-        <form className="quick-command-custom-form" onSubmit={saveDraft}>
-                <div className="quick-command-appearance-row">
-                  <div className="quick-command-selector">
-                    <span>{t("terminal.quickCommandsIcon")}</span>
+  return (
+    <DialogShell onBackdrop={onClose} zClassName="kk-qc-subdialog">
+      <Sheet
+        width={460}
+        title={existingCommand ? t("terminal.quickCommandsEditTitle") : t("terminal.quickCommandsAddCommand")}
+        ariaLabel={existingCommand ? t("terminal.quickCommandsEditTitle") : t("terminal.quickCommandsAddCommand")}
+        footer={
+          <Actions
+            cancel={<Btn onClick={onClose}>{t("common.cancel")}</Btn>}
+            primary={
+              <Btn kind="primary" icon="check" onClick={saveDraft}>
+                {existingCommand ? t("common.save") : t("terminal.quickCommandsCreate")}
+              </Btn>
+            }
+          />
+        }
+      >
+        <div className="kk-picker-row">
+          <div className="kk-pk">
+            <span>{t("terminal.quickCommandsIcon")}</span>
+            <button
+              className="kk-pk-trigger"
+              onClick={() => setOpenPicker(openPicker === "icon" ? null : "icon")}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={openPicker === "icon"}
+              aria-label={t("terminal.quickCommandsIcon")}
+            >
+              <SelectedIcon size={18} />
+            </button>
+            {openPicker === "icon" ? (
+              <div className="kk-icon-grid" role="menu" aria-label={t("terminal.quickCommandsIcon")}>
+                {ICON_NAMES.map((name) => {
+                  const Icon = iconFor(name);
+                  return (
                     <button
-                      className="quick-command-selector-button"
-                      onClick={() => setOpenPicker(openPicker === "icon" ? null : "icon")}
+                      className={draft.iconName === name ? "active" : ""}
+                      key={name}
+                      onClick={() => {
+                        setDraft({ ...draft, iconName: name as IconName });
+                        setOpenPicker(null);
+                      }}
                       type="button"
-                      {...menuExpanded(openPicker === "icon")}
+                      aria-label={name}
                     >
-                      <SelectedIcon size={12} />
+                      <Icon size={15} />
                     </button>
-                    {openPicker === "icon" ? (
-                      <div className="quick-command-mini-dialog quick-command-icon-grid" role="dialog" aria-label={t("terminal.quickCommandsIcon")}>
-                        {ICON_NAMES.map((name) => {
-                          const Icon = iconFor(name);
-                          return (
-                            <button
-                              className={draft.iconName === name ? "active" : ""}
-                              key={name}
-                              onClick={() => {
-                                setDraft({ ...draft, iconName: name as IconName });
-                                setOpenPicker(null);
-                              }}
-                              type="button"
-                              aria-label={name}
-                            >
-                              <Icon size={13} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="quick-command-selector">
-                    <span>{t("terminal.quickCommandsColor")}</span>
-                    <button
-                      className="quick-command-selector-button"
-                      onClick={() => setOpenPicker(openPicker === "color" ? null : "color")}
-                      style={{ "--quick-command-accent": selectedAccent.color } as CSSProperties}
-                      type="button"
-                      {...menuExpanded(openPicker === "color")}
-                    />
-                    {openPicker === "color" ? (
-                      <div className="quick-command-mini-dialog quick-command-color-grid" role="dialog" aria-label={t("terminal.quickCommandsColor")}>
-                        {ACCENT_PALETTE.map((accent) => (
-                          <button
-                            className={draft.accentName === accent.name ? "active" : ""}
-                            key={accent.name}
-                            onClick={() => {
-                              setDraft({ ...draft, accentName: accent.name });
-                              setOpenPicker(null);
-                            }}
-                            style={{ "--quick-command-accent": accent.color } as CSSProperties}
-                            type="button"
-                            aria-label={accent.name}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                <label>
-                  {t("terminal.quickCommandsLabel")}
-                  <input value={draft.label} onChange={(event) => setDraft({ ...draft, label: event.currentTarget.value })} />
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          <div className="kk-pk">
+            <span>{t("terminal.quickCommandsColor")}</span>
+            <button
+              className="kk-pk-trigger color"
+              style={{ background: selectedAccentColor }}
+              onClick={() => setOpenPicker(openPicker === "color" ? null : "color")}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={openPicker === "color"}
+              aria-label={t("terminal.quickCommandsColor")}
+            />
+            {openPicker === "color" ? (
+              <div className="kk-color-grid" role="menu" aria-label={t("terminal.quickCommandsColor")}>
+                {ACCENT_PALETTE.map((accent) => (
+                  <button
+                    className={draft.accentName === accent.name ? "active" : ""}
+                    key={accent.name}
+                    onClick={() => {
+                      setDraft({ ...draft, accentName: accent.name });
+                      setOpenPicker(null);
+                    }}
+                    style={{ background: quickCommandColor(accent.name) }}
+                    type="button"
+                    aria-label={accent.name}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="kk-pk kk-pk-preview">
+            <span>{t("settings.colorSchemePreview")}</span>
+            <div className="kk-qc-preview">
+              <span className="kk-qc-preview-ico" style={{ color: selectedAccentColor }}>
+                <SelectedIcon size={15} />
+              </span>
+              <span className="kk-qc-preview-label">{previewLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        <Field label={t("terminal.quickCommandsLabel")}>
+          <TextInput
+            value={draft.label}
+            onChange={(event) => setDraft({ ...draft, label: event.currentTarget.value })}
+          />
+        </Field>
+
+        <div className="kk-field">
+          <div className="kk-qc-cmd-head">
+            <span className="kk-lbl">{t("terminal.quickCommandsCommand")}</span>
+            {canGenerateWithAi ? (
+              <button
+                className="kk-qc-ai-btn"
+                onClick={() => {
+                  setAiPromptOpen((open) => !open);
+                  setAiError("");
+                }}
+                title={t("terminal.quickCommandsGenerateWithAi")}
+                type="button"
+                aria-label={t("terminal.quickCommandsGenerateWithAi")}
+              >
+                <Icons.WandSparkles size={13} />
+              </button>
+            ) : null}
+          </div>
+          <div className="kk-qc-cmd-wrap">
+            <TextArea
+              id={commandInputId}
+              value={draft.command}
+              onChange={(event) => setDraft({ ...draft, command: event.currentTarget.value })}
+              rows={3}
+            />
+            {aiPromptOpen ? (
+              <div className="kk-qc-ai-popover" role="dialog" aria-label={t("terminal.quickCommandsGenerateWithAi")}>
+                <label className="kk-lbl" htmlFor={`${commandInputId}-ai`}>
+                  {t("terminal.quickCommandsAiPromptLabel")}
                 </label>
-                <div className="quick-command-command-field">
-                  <div className="quick-command-field-header">
-                    <div className="quick-command-command-label">
-                      <label htmlFor={commandInputId}>{t("terminal.quickCommandsCommand")}</label>
-                    {canGenerateWithAi ? (
-                      <button
-                        className="quick-command-ai-button"
-                        onClick={() => {
-                          setAiPromptOpen((open) => !open);
-                          setAiError("");
-                        }}
-                        title={t("terminal.quickCommandsGenerateWithAi")}
-                        type="button"
-                        aria-label={t("terminal.quickCommandsGenerateWithAi")}
-                      >
-                        <Icons.WandSparkles size={13} />
-                      </button>
-                    ) : null}
-                    </div>
-                  </div>
-                  <div className="quick-command-command-input-wrap">
-                    <textarea
-                      id={commandInputId}
-                      value={draft.command}
-                      onChange={(event) => setDraft({ ...draft, command: event.currentTarget.value })}
-                      rows={4}
-                    />
-                    {aiPromptOpen ? (
-                      <div className="quick-command-ai-popover" role="dialog" aria-label={t("terminal.quickCommandsGenerateWithAi")}>
-                        <label>
-                          {t("terminal.quickCommandsAiPromptLabel")}
-                          <input
-                            onChange={(event) => setAiPrompt(event.currentTarget.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                void generateCommandFromAi();
-                              }
-                            }}
-                            placeholder={t("terminal.quickCommandsAiPromptPlaceholder")}
-                            value={aiPrompt}
-                          />
-                        </label>
-                        {aiError ? <p className="quick-command-ai-error">{aiError}</p> : null}
-                        <div className="quick-command-ai-actions">
-                          <button className="primary-button" disabled={!aiPrompt.trim() || aiGenerating} onClick={() => void generateCommandFromAi()} type="button">
-                            {aiGenerating ? t("terminal.quickCommandsAiGenerating") : t("terminal.quickCommandsAiGenerate")}
-                          </button>
-                          <button className="toolbar-button" disabled={aiGenerating} onClick={() => setAiPromptOpen(false)} type="button">
-                            {t("common.cancel")}
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="quick-command-toggle-list">
-                  <div className="quick-command-toggle-row">
-                    <span>{t("terminal.quickCommandsSendEnter")}</span>
-                    <ToggleSwitch checked={draft.sendEnter} onChange={(sendEnter) => setDraft({ ...draft, sendEnter })} />
-                  </div>
-                  <div className="quick-command-toggle-row">
-                    <span>{t("terminal.quickCommandsRequireConfirm")}</span>
-                    <ToggleSwitch checked={draft.confirm} onChange={(confirm) => setDraft({ ...draft, confirm })} />
-                  </div>
-                </div>
-                <div className="dialog-actions quick-command-custom-actions">
-                  <button className="primary-button" type="submit">
-                    {existingCommand ? t("common.save") : t("terminal.quickCommandsCreate")}
-                  </button>
-                  <button className="toolbar-button" onClick={onClose} type="button">
+                <input
+                  id={`${commandInputId}-ai`}
+                  className="kk-inp"
+                  onChange={(event) => setAiPrompt(event.currentTarget.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void generateCommandFromAi();
+                    }
+                  }}
+                  placeholder={t("terminal.quickCommandsAiPromptPlaceholder")}
+                  value={aiPrompt}
+                />
+                {aiError ? <p className="kk-qc-ai-error">{aiError}</p> : null}
+                <div className="kk-qc-ai-actions">
+                  <Btn onClick={() => setAiPromptOpen(false)} disabled={aiGenerating} sm>
                     {t("common.cancel")}
-                  </button>
+                  </Btn>
+                  <Btn
+                    kind="primary"
+                    onClick={() => void generateCommandFromAi()}
+                    disabled={!aiPrompt.trim() || aiGenerating}
+                    sm
+                  >
+                    {aiGenerating ? t("terminal.quickCommandsAiGenerating") : t("terminal.quickCommandsAiGenerate")}
+                  </Btn>
                 </div>
-        </form>
-      </div>
-    </div>
-    </DialogPortal>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <Group>
+          <GRow
+            icon="send"
+            label={t("terminal.quickCommandsSendEnterTitle")}
+            desc={t("terminal.quickCommandsSendEnterDesc")}
+            control={
+              <Switch
+                on={draft.sendEnter}
+                onChange={(sendEnter) => setDraft({ ...draft, sendEnter })}
+                ariaLabel={t("terminal.quickCommandsSendEnterTitle")}
+              />
+            }
+          />
+          <GRow
+            icon="shield"
+            label={t("terminal.quickCommandsRequireConfirmTitle")}
+            desc={t("terminal.quickCommandsRequireConfirmDesc")}
+            control={
+              <Switch
+                on={draft.confirm}
+                onChange={(confirm) => setDraft({ ...draft, confirm })}
+                ariaLabel={t("terminal.quickCommandsRequireConfirmTitle")}
+              />
+            }
+          />
+        </Group>
+      </Sheet>
+    </DialogShell>
   );
 }
 
@@ -733,86 +799,79 @@ function PresetLibraryDialog({
   }
 
   return (
-    <DialogPortal>
-    <div className="dialog-backdrop connection-dialog-backdrop quick-command-subdialog-backdrop" role="presentation">
-      <div className="connection-dialog quick-command-dialog quick-command-preset-dialog" role="dialog" aria-modal="true" aria-label={t("terminal.quickCommandsLibrary")}>
-        <header className="connection-dialog-header compact">
-          <div>
-            <h2>{`${t("common.add")} ${t("terminal.quickCommandsLibrary")}`}</h2>
-          </div>
-          <button className="connection-dialog-close" onClick={onClose} type="button" aria-label={t("common.close")}>
-            <Icons.X size={16} />
-          </button>
-        </header>
-        <section className="quick-command-library">
-          <input
-            aria-label={t("common.search")}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-            placeholder={t("terminal.quickCommandsSearch")}
-            value={query}
-          />
-          <RadixTabs.Root value={activeCategory?.categoryKey ?? ""} onValueChange={selectCategory}>
-            <RadixTabs.List className="quick-command-library-tabs" aria-label={t("terminal.quickCommandLibrary.categoryTabs")}>
-              {QUICK_COMMAND_LIBRARY_CATEGORIES.map((category) => (
-                <RadixTabs.Trigger className="quick-command-library-tab" key={category.categoryKey} value={category.categoryKey}>
-                  {t(category.categoryKey)}
+    <DialogShell onBackdrop={onClose} zClassName="kk-qc-subdialog">
+      <Sheet
+        width={720}
+        height={640}
+        title={`${t("common.add")} ${t("terminal.quickCommandsLibrary")}`}
+        ariaLabel={t("terminal.quickCommandsLibrary")}
+        onClose={onClose}
+        className="kk-qc-library-sheet"
+      >
+        <input
+          className="kk-inp"
+          aria-label={t("common.search")}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+          placeholder={t("terminal.quickCommandsSearch")}
+          value={query}
+        />
+        <RadixTabs.Root value={activeCategory?.categoryKey ?? ""} onValueChange={selectCategory}>
+          <RadixTabs.List className="kk-qc-lib-tabs" aria-label={t("terminal.quickCommandLibrary.categoryTabs")}>
+            {QUICK_COMMAND_LIBRARY_CATEGORIES.map((category) => (
+              <RadixTabs.Trigger className="kk-qc-lib-tab" key={category.categoryKey} value={category.categoryKey}>
+                {t(category.categoryKey)}
+              </RadixTabs.Trigger>
+            ))}
+          </RadixTabs.List>
+        </RadixTabs.Root>
+        {visibleSubcategoryKeys.length > 0 ? (
+          <RadixTabs.Root value={activeSubcategoryKey} onValueChange={setActiveSubcategoryKey}>
+            <RadixTabs.List className="kk-qc-lib-subtabs" aria-label={t("terminal.quickCommandLibrary.subcategoryTabs")}>
+              {visibleSubcategoryKeys.map((subcategoryKey) => (
+                <RadixTabs.Trigger className="kk-qc-lib-tab" key={subcategoryKey} value={subcategoryKey}>
+                  {t(subcategoryKey)}
                 </RadixTabs.Trigger>
               ))}
             </RadixTabs.List>
           </RadixTabs.Root>
-          {visibleSubcategoryKeys.length > 0 ? (
-            <RadixTabs.Root value={activeSubcategoryKey} onValueChange={setActiveSubcategoryKey}>
-              <RadixTabs.List className="quick-command-library-subtabs" aria-label={t("terminal.quickCommandLibrary.subcategoryTabs")}>
-                {visibleSubcategoryKeys.map((subcategoryKey) => (
-                  <RadixTabs.Trigger className="quick-command-library-tab" key={subcategoryKey} value={subcategoryKey}>
-                    {t(subcategoryKey)}
-                  </RadixTabs.Trigger>
-                ))}
-              </RadixTabs.List>
-            </RadixTabs.Root>
-          ) : null}
-          {visibleEntries.length > 0 ? (
-            <section className="quick-command-library-group">
-              {visibleEntries.map((entry) => (
-                <article
-                  className={[
-                    "quick-command-library-entry",
-                    entry.confirm ? "quick-command-library-entry-danger" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  key={entry.libraryId}
-                >
-                  <div>
-                    <span className="quick-command-library-entry-title">
-                      <strong>{t(entry.labelKey)}</strong>
-                      {entry.confirm ? (
-                        <span className="quick-command-danger-tag">{t("terminal.quickCommandsDangerous")}</span>
-                      ) : null}
-                    </span>
-                    <p>{t(entry.descriptionKey)}</p>
-                    <code>{entry.command}</code>
-                  </div>
-                  <div className="quick-command-library-entry-actions">
-                    <button className="toolbar-button" onClick={() => addQuickCommand(connectionId, commandFromLibrary(entry, t))} type="button">
-                      <Icons.Plus size={13} />
-                      {t("terminal.quickCommandsAdd")}
-                    </button>
-                    <button className="toolbar-button" onClick={() => onRunCommand(commandFromLibrary(entry, t))} type="button">
-                      <Icons.Play size={13} />
-                      {t("terminal.quickCommandsRun")}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </section>
-          ) : null}
-          {visibleEntries.length === 0 ? (
-            <p className="quick-command-muted">{t("terminal.quickCommandsNoLibraryMatches")}</p>
-          ) : null}
-        </section>
-      </div>
-    </div>
-    </DialogPortal>
+        ) : null}
+        {visibleEntries.length > 0 ? (
+          <div className="kk-qc-lib-list">
+            {visibleEntries.map((entry) => (
+              <article
+                className={[
+                  "kk-qc-lib-entry",
+                  entry.confirm ? "danger" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                key={entry.libraryId}
+              >
+                <div>
+                  <span className="kk-qc-lib-entry-title">
+                    <strong>{t(entry.labelKey)}</strong>
+                    {entry.confirm ? (
+                      <span className="kk-qc-danger-tag">{t("terminal.quickCommandsDangerous")}</span>
+                    ) : null}
+                  </span>
+                  <p>{t(entry.descriptionKey)}</p>
+                  <code>{entry.command}</code>
+                </div>
+                <div className="kk-qc-lib-entry-actions">
+                  <Btn sm icon="plus" onClick={() => addQuickCommand(connectionId, commandFromLibrary(entry, t))}>
+                    {t("terminal.quickCommandsAdd")}
+                  </Btn>
+                  <Btn sm icon="send" onClick={() => onRunCommand(commandFromLibrary(entry, t))}>
+                    {t("terminal.quickCommandsRun")}
+                  </Btn>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="kk-qc-muted">{t("terminal.quickCommandsNoLibraryMatches")}</p>
+        )}
+      </Sheet>
+    </DialogShell>
   );
 }
