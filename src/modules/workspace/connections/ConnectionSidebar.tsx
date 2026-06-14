@@ -3311,6 +3311,9 @@ function ConnectionDialog({
   const [authMethod, setAuthMethod] = useState<"keyFile" | "password" | "agent">(
     initialConnection?.authMethod ?? "keyFile",
   );
+  const [ftpProtocol, setFtpProtocol] = useState<"ftp" | "ftps" | "sftp">(
+    initialConnection?.ftpOptions?.protocol ?? "sftp",
+  );
   const [keyPath, setKeyPath] = useState(
     initialConnection?.keyPath ?? sshSettings.defaultKeyPath ?? "",
   );
@@ -3328,7 +3331,14 @@ function ConnectionDialog({
     Boolean(initialConnection?.hasUrlCredential),
   );
   const [portDraft, setPortDraft] = useState(
-    String(initialConnection?.port ?? (connectionType ? defaultPortForConnectionType(connectionType, sshSettings) : "")),
+    String(
+      initialConnection?.port ??
+      (connectionType === "ftp"
+        ? ftpPortForProtocolSelection(initialConnection?.ftpOptions?.protocol ?? "sftp", "")
+        : connectionType
+          ? defaultPortForConnectionType(connectionType, sshSettings)
+          : ""),
+    ),
   );
   const [passwordCredentials, setPasswordCredentials] = useState<StoredCredentialSummary[]>([]);
   const [selectedPasswordCredentialId, setSelectedPasswordCredentialId] = useState(
@@ -3467,7 +3477,7 @@ function ConnectionDialog({
         : connectionType === "serial"
           ? requestedName || serialLine
         : requestedName || host;
-    const ftpProtocolSelection = String(form.get("ftpProtocol") ?? "ftp");
+    const ftpProtocolSelection = String(form.get("ftpProtocol") ?? "sftp");
     const ftpTlsModeSelection = String(form.get("ftpTlsMode") ?? "explicit");
     const rawPortValue = String(form.get("port") ?? "").trim();
     const portValue =
@@ -3578,7 +3588,7 @@ function ConnectionDialog({
       ftpOptions:
         connectionType === "ftp"
           ? {
-              protocol: String(form.get("ftpProtocol") ?? "ftp") as "sftp" | "ftp" | "ftps",
+              protocol: String(form.get("ftpProtocol") ?? "sftp") as "sftp" | "ftp" | "ftps",
               mode: String(form.get("ftpMode") ?? "passive") as "passive" | "active",
               tlsMode:
                 form.get("ftpProtocol") === "ftps"
@@ -3639,8 +3649,9 @@ function ConnectionDialog({
     setKeyEmailDialogOpen(true);
   }
 
-  function handleFtpProtocolChange(event: FormEvent<HTMLSelectElement>) {
-    if (event.currentTarget.value === "sftp") {
+  function handleFtpProtocolChange(protocol: "ftp" | "ftps" | "sftp") {
+    setFtpProtocol(protocol);
+    if (protocol === "sftp") {
       setPortDraft("22");
     }
   }
@@ -3800,7 +3811,13 @@ function ConnectionDialog({
           />
         );
       case "ftp":
-        return <FtpConnectionOptions initialConnection={initialConnection} onFtpProtocolChange={handleFtpProtocolChange} />;
+        return (
+          <FtpConnectionOptions
+            ftpProtocol={ftpProtocol}
+            initialConnection={initialConnection}
+            onFtpProtocolChange={handleFtpProtocolChange}
+          />
+        );
       default:
         return null;
     }

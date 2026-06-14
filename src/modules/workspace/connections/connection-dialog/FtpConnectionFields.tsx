@@ -1,5 +1,4 @@
 import { Activity, ArrowLeftRight, Eye, FileType, Lock, Network, ShieldOff, Timer, Type } from "lucide-react";
-import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
@@ -90,11 +89,13 @@ export function FtpConnectionFields({
 }
 
 export function FtpConnectionOptions({
+  ftpProtocol,
   initialConnection,
   onFtpProtocolChange,
 }: {
+  ftpProtocol: "ftp" | "ftps" | "sftp";
   initialConnection?: Connection;
-  onFtpProtocolChange: (event: FormEvent<HTMLSelectElement>) => void;
+  onFtpProtocolChange: (protocol: "ftp" | "ftps" | "sftp") => void;
 }) {
   const { t } = useTranslation();
 
@@ -103,19 +104,46 @@ export function FtpConnectionOptions({
         <legend>{t("connections.ftpOptions")}</legend>
         <div className="connection-specific-options-panel">
           <div className="connection-option-fields">
-            <label>
+            <div className="ftp-protocol-row">
               <Network className="option-glyph" size={17} aria-hidden />
-              <span>{t("connections.ftpProtocol")}</span>
-              <select
-                name="ftpProtocol"
-                defaultValue={initialConnection?.ftpOptions?.protocol ?? "ftp"}
-                onChange={onFtpProtocolChange}
+              <span id="ftp-protocol-label">{t("connections.ftpProtocol")}</span>
+              <input name="ftpProtocol" type="hidden" value={ftpProtocol} />
+              <div
+                className="ftp-protocol-selector"
+                data-ftp-protocol={ftpProtocol}
+                role="tablist"
+                aria-label={t("connections.ftpProtocol")}
+                aria-labelledby="ftp-protocol-label"
               >
-                <option value="ftp">{t("connections.ftpProtocolFtp")}</option>
-                <option value="ftps">{t("connections.ftpProtocolFtps")}</option>
-                <option value="sftp">{t("connections.ftpProtocolSftp")}</option>
-              </select>
-            </label>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={ftpProtocol === "sftp"}
+                  className={ftpProtocol === "sftp" ? "active" : ""}
+                  onClick={() => onFtpProtocolChange("sftp")}
+                >
+                  <span>{t("connections.ftpProtocolSftp")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={ftpProtocol === "ftps"}
+                  className={ftpProtocol === "ftps" ? "active" : ""}
+                  onClick={() => onFtpProtocolChange("ftps")}
+                >
+                  <span>{t("connections.ftpProtocolFtps")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={ftpProtocol === "ftp"}
+                  className={ftpProtocol === "ftp" ? "active" : ""}
+                  onClick={() => onFtpProtocolChange("ftp")}
+                >
+                  <span>{t("connections.ftpProtocolFtp")}</span>
+                </button>
+              </div>
+            </div>
             <label>
               <ArrowLeftRight className="option-glyph" size={17} aria-hidden />
               <span>{t("connections.ftpMode")}</span>
