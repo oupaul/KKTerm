@@ -36,6 +36,7 @@ if (addConnectionNavigation.settingsSectionId) {
 
 const workspaceTargets = [
   "app.activityRailWorkspace",
+  "app.activityRailNewWorkspace",
   "app.activityRailDashboard",
   "app.connectionRail",
   "app.activityRailDontSleep",
@@ -189,6 +190,7 @@ const chromeTargets = [
   "workspace.statusBar",
   "connections.tree",
   "app.activityRailWorkspace",
+  "app.activityRailNewWorkspace",
   "settings.language",
 ];
 

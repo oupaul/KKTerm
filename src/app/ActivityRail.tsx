@@ -705,6 +705,7 @@ export function ActivityRail({
         <button
           className="rail-button rail-button-add-workspace"
           aria-label={t("workspace.newWorkspace")}
+          data-tutorial-id="app.activityRailNewWorkspace"
           onClick={() => setShowNewWorkspace(true)}
         >
           <Plus size={18} />

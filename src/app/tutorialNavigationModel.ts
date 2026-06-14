@@ -64,6 +64,7 @@ const SETTINGS_TUTORIAL_TARGET_SECTIONS: Record<string, SettingsSectionId> = {
 
 const WORKSPACE_TUTORIAL_TARGET_IDS = [
   "app.activityRailWorkspace",
+  "app.activityRailNewWorkspace",
   "app.activityRailDashboard",
   "app.connectionRail",
   "app.activityRailDontSleep",
