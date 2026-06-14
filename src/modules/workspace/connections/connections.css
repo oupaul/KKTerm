@@ -901,9 +901,15 @@
   margin: 0;
 }
 
-.connection-dialog .icon-library-search input[type="search"] {
+/* The icon search lives inside a slim `.search-box` row and is shared across
+   dialogs (connections, workspace, dashboard). Reset the input globally so
+   container input styling (height/padding/border/background) can never make the
+   typed text spill out of the row — this fix must not be scoped to one dialog. */
+.icon-library-search input[type="search"] {
   height: auto;
+  min-height: 0;
   padding: 0;
+  line-height: normal;
   background: transparent;
   border: 0;
   border-radius: 0;

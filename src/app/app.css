@@ -617,7 +617,8 @@
   height: var(--workspace-icon-shell-size);
   color: var(--workspace-icon-color);
   background: var(--workspace-icon-bg);
-  border-radius: 999px;
+  /* Rounded-rectangle fill to match the connection icons, not a circle. */
+  border-radius: 6px;
   vertical-align: middle;
 }
 

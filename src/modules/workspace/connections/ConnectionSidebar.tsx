@@ -30,6 +30,7 @@ import {
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
+import { WorkspaceIcon } from "../workspaceIcons";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -2073,7 +2074,17 @@ export function ConnectionSidebar({
   return (
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
       <div className="sidebar-header" onDoubleClick={handleHeaderDoubleClick}>
-        <div>
+        <div className="sidebar-title">
+          {activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID ? (
+            <LayoutDashboard aria-hidden="true" className="sidebar-title-icon" size={18} />
+          ) : (
+            <WorkspaceIcon
+              color={activeWorkspace?.iconColor}
+              icon={activeWorkspace?.icon}
+              name={activeWorkspace?.name || panelTitle}
+              size={18}
+            />
+          )}
           <h1>{panelTitle}</h1>
         </div>
         <div className="sidebar-actions">

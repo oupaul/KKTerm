@@ -1,4 +1,5 @@
 import manifest from "../assets/file-icons/material-icon-theme/manifest.json";
+import { buildIconSearchGroups, iconSearchGroupsMatch } from "./iconSearchAliases";
 
 export const MATERIAL_ICON_REF_PREFIX = "material:";
 export const LUCIDE_ICON_REF_PREFIX = "lucide:";
@@ -109,17 +110,17 @@ export function materialIconFileNameForId(iconId: string) {
   return materialIconManifest.iconFiles[iconId] ?? null;
 }
 
-export function searchMaterialIcons(query: string, limit = 120) {
-  const tokens = query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
-  const source = tokens.length === 0
+export function searchMaterialIcons(query: string, limit = 120, language?: string) {
+  // Groups are AND-ed; each group holds the typed token plus any English
+  // catalog keywords it maps to in the current UI language (OR-ed within a
+  // group). With no language (or English) each group is just the raw token.
+  const groups = buildIconSearchGroups(query, language);
+  const scoreTokens = groups.flat();
+  const source = groups.length === 0
     ? MATERIAL_ICON_SEARCH_ITEMS
     : MATERIAL_ICON_SEARCH_ITEMS
-        .filter((icon) => tokens.every((token) => icon.searchText.includes(token)))
-        .sort((left, right) => scoreMaterialIcon(right, tokens) - scoreMaterialIcon(left, tokens));
+        .filter((icon) => iconSearchGroupsMatch(icon.searchText, groups))
+        .sort((left, right) => scoreMaterialIcon(right, scoreTokens) - scoreMaterialIcon(left, scoreTokens));
 
   return source.slice(0, limit);
 }

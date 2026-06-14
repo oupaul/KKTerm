@@ -9,6 +9,7 @@ import {
   type MaterialIconSearchItem,
 } from "../lib/iconCatalog";
 import { materialIconUrlForId } from "../lib/iconCatalogUrls";
+import { buildIconSearchGroups, iconSearchGroupsMatch } from "../lib/iconSearchAliases";
 
 const DEFAULT_MATERIAL_RESULT_LIMIT = 180;
 
@@ -46,7 +47,8 @@ export function IconLibraryPicker({
   staticOptions?: readonly IconLibraryStaticOption[];
   value: string | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
   const [query, setQuery] = useState("");
   const visibleBaseOptions = useMemo(
     () => createStaticOptions({
@@ -60,12 +62,12 @@ export function IconLibraryPicker({
     [defaultOption, lucideNames, lucideValueForName, savedImageDataUrls, savedImageLabelForIndex, extraStaticOptions],
   );
   const visibleStaticOptions = useMemo(
-    () => filterStaticOptions(visibleBaseOptions, query),
-    [query, visibleBaseOptions],
+    () => filterStaticOptions(visibleBaseOptions, query, language),
+    [language, query, visibleBaseOptions],
   );
   const materialOptions = useMemo(
-    () => searchMaterialIcons(query, materialResultLimit),
-    [materialResultLimit, query],
+    () => searchMaterialIcons(query, materialResultLimit, language),
+    [language, materialResultLimit, query],
   );
   const hasResults = visibleStaticOptions.length > 0 || materialOptions.length > 0;
 
@@ -147,18 +149,18 @@ function createStaticOptions({
   return options.filter((option) => option.icon !== null);
 }
 
-function filterStaticOptions(options: readonly IconLibraryStaticOption[], query: string) {
-  const tokens = query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (tokens.length === 0) {
+function filterStaticOptions(
+  options: readonly IconLibraryStaticOption[],
+  query: string,
+  language?: string,
+) {
+  const groups = buildIconSearchGroups(query, language);
+  if (groups.length === 0) {
     return options;
   }
   return options.filter((option) => {
     const searchText = [option.label, ...(option.keywords ?? [])].join(" ").toLowerCase();
-    return tokens.every((token) => searchText.includes(token));
+    return iconSearchGroupsMatch(searchText, groups);
   });
 }
 

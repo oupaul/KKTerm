@@ -65,6 +65,26 @@ button {
   line-height: 1.2;
 }
 
+/* Workspace icon sits to the left of the panel title, mirroring the rail. */
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sidebar-title-icon {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.sidebar-title h1 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .connection-sidebar .icon-button {
   width: 27px;
   height: 27px;
