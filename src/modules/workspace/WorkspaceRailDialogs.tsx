@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { ConfirmSheet } from "../../app/ui/dialog";
 import { invokeCommand } from "../../lib/tauri";
 import type { Workspace } from "../../types";
 
@@ -33,36 +33,20 @@ export function DeleteWorkspaceDialog({
     }
   }
 
-  return createPortal(
-    <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
-      <div
-        aria-label={t("workspace.deleteWorkspace")}
-        aria-modal="true"
-        className="connection-dialog new-workspace-dialog"
-        role="dialog"
-      >
-        <header className="connection-dialog-header compact">
-          <h2>{t("workspace.deleteWorkspace")}</h2>
-        </header>
-        <div className="new-workspace-body">
+  return (
+    <ConfirmSheet
+      tone="danger"
+      title={t("workspace.deleteWorkspace")}
+      message={
+        <>
           <p>{t("workspace.deleteWorkspaceConfirm", { name: workspace.name })}</p>
-          {error ? <div className="settings-error">{error}</div> : null}
-        </div>
-        <footer className="connection-dialog-footer">
-          <button
-            className="toolbar-button danger"
-            disabled={submitting}
-            onClick={() => void handleDelete()}
-            type="button"
-          >
-            {t("common.delete")}
-          </button>
-          <button className="toolbar-button" onClick={onClose} type="button">
-            {t("common.cancel")}
-          </button>
-        </footer>
-      </div>
-    </div>,
-    document.body,
+          {error ? <p className="settings-error">{error}</p> : null}
+        </>
+      }
+      confirmLabel={t("common.delete")}
+      confirmIcon="trash"
+      onConfirm={() => void handleDelete()}
+      onCancel={onClose}
+    />
   );
 }

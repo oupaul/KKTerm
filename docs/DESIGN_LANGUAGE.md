@@ -62,6 +62,22 @@ KKTerm is Windows-first: the primary/confirm action comes **immediately before**
 Cancel, and the action group anchors bottom-right. `Actions` defaults to this via
 `DialogConventionProvider` value `windows`. Do not reorder per-dialog.
 
+### Footer & buttons
+
+Build every dialog footer from the kit — never hand-roll the action row:
+
+- Primitive dialogs (`Sheet`): pass `footer={<Actions … />}` built from `Btn`s.
+  `Actions` packs the group bottom-right in Windows order automatically.
+- Legacy `.connection-dialog` surfaces: use the styled `.dialog-actions` row
+  (right-anchored, gapped) with `.approve-button` primary + `.toolbar-button`
+  cancel, and put a glyph on the primary (e.g. lucide `<Save size={15} />`).
+- The primary action carries an icon; primary and Cancel share one button size.
+
+**Never use the `connection-dialog-footer` class.** It has no CSS rule, so it
+renders a left-aligned, gap-less, icon-less footer (the bug this paradigm
+exists to prevent). `tests/dialog-footer-policy.test.mjs` fails the build if it
+reappears or if the Delete Workspace confirmation stops using `ConfirmSheet`.
+
 ### Titles
 
 One concise title by default (no subtitle/explanatory header unless the flow
@@ -99,6 +115,8 @@ Copy Path / Get Info. Reuse `FilePane` and these patterns for new browser UIs.
 1. Read tokens; never hard-code colors.
 2. Compose from `src/app/ui/dialog` primitives; confirmations use `ConfirmSheet`.
 3. Windows button order; one concise title; close-X only without a footer dismiss.
+   Footer from `Actions`/`.dialog-actions` with an icon'd primary — never
+   `connection-dialog-footer`.
 4. Route every string through `t()`; add `en.json` keys + a
    `docs/localization_todo/` pending file (see that README).
 5. Verify in Default and Dark plus one extra scheme in the real Tauri runtime.
