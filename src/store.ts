@@ -454,7 +454,10 @@ function buildPanesFromStoredLayout(
 ): WorkspacePane[] {
   const paneCount = Math.max(1, stored?.paneCount ?? 1);
   const fallback =
-    connection.type === "url" || isRemoteDesktopConnection(connection)
+    connection.type === "url" ||
+    isRemoteDesktopConnection(connection) ||
+    connection.type === "ftp" ||
+    connection.type === "localFiles"
       ? Array.from({ length: paneCount }, () => {
           const pane = buildPaneForConnection(connection);
           return pane ? { ...pane, id: createPaneId(connection.id) } : null;
@@ -528,6 +531,27 @@ function buildPaneFromStoredLayoutPane(
   if (isRemoteDesktopConnection(connection)) {
     return {
       kind: "remoteDesktop",
+      id,
+      title,
+      toolbarTitle,
+      connection,
+    };
+  }
+  if (connection.type === "ftp") {
+    const isSftpProtocol = connection.ftpOptions?.protocol === "sftp";
+    return {
+      kind: isSftpProtocol ? "sftp" : "ftp",
+      id,
+      title,
+      toolbarTitle,
+      connection: isSftpProtocol
+        ? sftpBrowserConnectionFromFtpConnection(connection)
+        : connection,
+    };
+  }
+  if (connection.type === "localFiles") {
+    return {
+      kind: "localFiles",
       id,
       title,
       toolbarTitle,
@@ -639,6 +663,32 @@ function buildPaneForConnection(
       id: createPaneId(connection.id),
       childConnectionId: options?.childConnectionId,
       title: titleForConnectionPane(connection),
+      toolbarTitle: options?.toolbarTitle ?? toolbarTitleForConnection(connection),
+      connection,
+    };
+  }
+
+  if (connection.type === "ftp") {
+    const isSftpProtocol = connection.ftpOptions?.protocol === "sftp";
+    const fileConnection = isSftpProtocol
+      ? sftpBrowserConnectionFromFtpConnection(connection)
+      : connection;
+    return {
+      kind: isSftpProtocol ? "sftp" : "ftp",
+      id: createPaneId(connection.id),
+      childConnectionId: options?.childConnectionId,
+      title: options?.title ?? `${connection.name} ${connection.ftpOptions?.protocol?.toUpperCase() ?? "FTP"}`,
+      toolbarTitle: options?.toolbarTitle ?? toolbarTitleForConnection(fileConnection),
+      connection: fileConnection,
+    };
+  }
+
+  if (connection.type === "localFiles") {
+    return {
+      kind: "localFiles",
+      id: createPaneId(connection.id),
+      childConnectionId: options?.childConnectionId,
+      title: options?.title ?? connection.name,
       toolbarTitle: options?.toolbarTitle ?? toolbarTitleForConnection(connection),
       connection,
     };

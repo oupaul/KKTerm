@@ -15,6 +15,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEv
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
+import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
 import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
@@ -606,7 +607,7 @@ function EmbeddedConnectionPane({
     subtitle:
       pane.kind === "webview"
         ? formatUrlPaneSubtitle(pane.url)
-        : formatRemoteDesktopPaneSubtitle(pane.connection),
+        : formatEmbeddedConnectionPaneSubtitle(pane.connection),
     kind: pane.kind,
     panes: [],
     connection: pane.connection,
@@ -636,10 +637,16 @@ function EmbeddedConnectionPane({
           onOpenAssistant={onOpenAssistant}
           tab={embeddedTab}
         />
-      ) : (
+      ) : pane.kind === "remoteDesktop" ? (
         <RemoteDesktopWorkspace
           isActive={isActive}
           onOpenAssistant={onOpenAssistant}
+          tab={embeddedTab}
+        />
+      ) : (
+        <SftpWorkspace
+          commands={fileBrowserCommandsFor(pane.connection)}
+          isActive={isActive}
           tab={embeddedTab}
         />
       )}
@@ -655,8 +662,14 @@ function formatUrlPaneSubtitle(url: string) {
   }
 }
 
-function formatRemoteDesktopPaneSubtitle(connection: Connection) {
-  return connection.user?.trim() || connection.host;
+function formatEmbeddedConnectionPaneSubtitle(connection: Connection) {
+  if (connection.type === "localFiles") {
+    return connection.localStartupDirectory || connection.host || "";
+  }
+  if (connection.user.trim()) {
+    return `${connection.user}@${connection.host}`;
+  }
+  return connection.host;
 }
 
 function formatTmuxSessionTimestamp(value?: number) {

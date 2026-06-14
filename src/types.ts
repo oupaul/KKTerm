@@ -193,7 +193,16 @@ export interface RemoteDesktopPane {
   connection: Connection;
 }
 
-export type WorkspacePane = TerminalPane | UrlPane | RemoteDesktopPane;
+export interface FileBrowserPane {
+  kind: "sftp" | "ftp" | "localFiles";
+  id: string;
+  childConnectionId?: string;
+  title: string;
+  toolbarTitle?: string;
+  connection: Connection;
+}
+
+export type WorkspacePane = TerminalPane | UrlPane | RemoteDesktopPane | FileBrowserPane;
 
 export interface QuickCommand {
   id: string;
