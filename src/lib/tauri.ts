@@ -219,6 +219,24 @@ export interface LocalDirectoryListing {
   entries: LocalDirectoryEntry[];
 }
 
+export interface LocalPlace {
+  id: string;
+  label: string;
+  path: string;
+  icon: string;
+}
+
+export interface LocalDrivePlace extends LocalPlace {
+  totalBytes: number;
+  freeBytes: number;
+}
+
+export interface LocalPlacesListing {
+  home: LocalPlace | null;
+  common: LocalPlace[];
+  drives: LocalDrivePlace[];
+}
+
 export interface SftpTransferResult {
   name: string;
   files: number;
@@ -1695,6 +1713,10 @@ type CommandMap = {
   list_local_directory: {
     args: { request: { path?: string } };
     result: LocalDirectoryListing;
+  };
+  list_local_places: {
+    args: undefined;
+    result: LocalPlacesListing;
   };
   create_local_folder: {
     args: { request: { parentPath: string; name: string } };

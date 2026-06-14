@@ -2084,6 +2084,11 @@ fn list_local_directory(
 }
 
 #[tauri::command]
+async fn list_local_places() -> Result<sftp::LocalPlacesListing, String> {
+    run_blocking_command("list local places", sftp::list_local_places).await
+}
+
+#[tauri::command]
 async fn create_local_folder(request: sftp::CreateLocalFolderRequest) -> Result<(), String> {
     run_blocking_command("create local folder", move || {
         sftp::create_local_folder(request)
@@ -3225,6 +3230,7 @@ pub fn run() {
             start_sftp_session,
             list_sftp_directory,
             list_local_directory,
+            list_local_places,
             create_local_folder,
             rename_local_path,
             delete_local_path,

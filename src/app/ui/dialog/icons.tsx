@@ -188,6 +188,7 @@ export const DIALOG_ICONS = {
   list: stroke(<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />),
   gallery: stroke(<path d="M4 5h6v6H4zM14 5h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />),
   drive: stroke(<path d="M5 5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM8 9.5h.01" />),
+  sidebar: stroke(<path d="M4 5.5h16a1.5 1.5 0 011.5 1.5v10a1.5 1.5 0 01-1.5 1.5H4A1.5 1.5 0 012.5 17V7A1.5 1.5 0 014 5.5zM9.5 5.5v13M5.5 9h1.5M5.5 12h1.5" />),
 } as const;
 
 export type DialogIconName = keyof typeof DIALOG_ICONS;

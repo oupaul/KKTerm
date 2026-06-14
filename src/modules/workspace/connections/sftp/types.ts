@@ -36,6 +36,16 @@ export type FileSortKey = "name" | "date";
 
 export type FilePaneSide = "local" | "remote";
 
+// A user-pinned local folder shown in the File Explorer sidebar's Favorites
+// section. Persisted globally (favorites describe the local filesystem, not a
+// specific connection).
+export type LocalFavorite = {
+  id: string;
+  label: string;
+  path: string;
+  icon: string;
+};
+
 export type SftpContextMenuState = {
   side: FilePaneSide;
   x: number;

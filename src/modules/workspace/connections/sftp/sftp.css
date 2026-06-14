@@ -519,6 +519,308 @@
   font-size: 13px;
 }
 
+/* ===================== local explorer sidebar ======================== */
+/* Pane body splits into [sidebar | content]; the col header + file body live
+   inside .sftp-pane-content so the sidebar spans their combined height. */
+.sftp-pane-body {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+}
+.sftp-pane-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sftp-sidebar {
+  flex: 0 0 var(--sftp-sb-w, 214px);
+  width: var(--sftp-sb-w, 214px);
+  background: var(--surface-muted);
+  border-right: 1px solid var(--hairline);
+  padding: 8px 0 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  user-select: none;
+  --sftp-sb-row-h: 30px;
+  --sftp-sb-pad: 11px;
+  transition: flex-basis 0.22s ease, width 0.22s ease, padding 0.22s ease, opacity 0.16s ease;
+}
+.sftp-sidebar.collapsed {
+  flex-basis: 0;
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-color: transparent;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.sftp-sidebar::-webkit-scrollbar {
+  width: 9px;
+}
+.sftp-sidebar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-faint) 45%, transparent);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.sftp-sb-section + .sftp-sb-section {
+  margin-top: 10px;
+}
+.sftp-sb-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px 0 var(--sftp-sb-pad);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  color: var(--text-faint);
+  text-align: left;
+}
+.sftp-sb-header .tw {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-faint);
+  transition: transform 0.16s ease;
+  transform: rotate(90deg);
+}
+.sftp-sb-section.collapsed .sftp-sb-header .tw {
+  transform: rotate(0deg);
+}
+.sftp-sb-header .lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sftp-sb-header .hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.12s;
+  padding-right: 2px;
+}
+.sftp-sb-header:hover .hint {
+  opacity: 1;
+}
+.sftp-sb-header:hover .lbl {
+  color: var(--text-muted);
+}
+
+.sftp-sb-list {
+  display: grid;
+  gap: 1px;
+  padding: 2px 8px 0;
+  overflow: hidden;
+}
+.sftp-sb-section.collapsed .sftp-sb-list {
+  display: none;
+}
+
+.sftp-sb-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: var(--sftp-sb-row-h);
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+.sftp-sb-row:hover {
+  background: var(--hover);
+}
+.sftp-sb-row.active {
+  background: var(--sel);
+  color: #fff;
+}
+.sftp-sb-row .ico {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 19px;
+  justify-content: center;
+  color: var(--sftp-sb-tint, var(--accent));
+}
+.sftp-sb-row.active .ico {
+  color: #fff;
+}
+.sftp-sb-row .nm {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* drive rows carry a capacity bar */
+.sftp-sb-row.has-meta {
+  height: calc(var(--sftp-sb-row-h) + 16px);
+}
+.sftp-sb-row .stack {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.sftp-sb-row .cap {
+  height: 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-faint) 38%, transparent);
+  overflow: hidden;
+}
+.sftp-sb-row.active .cap {
+  background: rgba(255, 255, 255, 0.28);
+}
+.sftp-sb-row .cap > i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--sftp-sb-tint, var(--accent)) 85%, transparent);
+}
+.sftp-sb-row.active .cap > i {
+  background: #fff;
+}
+.sftp-sb-row .cap-txt {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sftp-sb-row.active .cap-txt {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* trailing action (pin / unpin) */
+.sftp-sb-row .act {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  margin-right: -3px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+.sftp-sb-row:hover .act {
+  opacity: 1;
+}
+.sftp-sb-row .act:hover {
+  background: var(--press);
+  color: var(--text);
+}
+.sftp-sb-row .act.pinned {
+  color: var(--accent);
+  opacity: 0;
+}
+.sftp-sb-row:hover .act.pinned {
+  opacity: 1;
+}
+.sftp-sb-row.active .act {
+  color: rgba(255, 255, 255, 0.85);
+}
+.sftp-sb-row.active .act:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* favorites drag-to-reorder */
+.sftp-sb-row.dragging {
+  opacity: 0.4;
+}
+.sftp-sb-drop-line {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.sftp-sb-empty {
+  margin: 2px 10px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  border: 1px dashed var(--border);
+  color: var(--text-faint);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* search box (local pane, right of the view switcher) */
+.sftp-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin-left: 2px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  color: var(--text-faint);
+  transition: box-shadow 0.12s, background 0.12s;
+}
+.sftp-search:focus-within {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.sftp-search input {
+  width: 120px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+  font: inherit;
+  font-size: 12.5px;
+}
+.sftp-search input::placeholder {
+  color: var(--text-faint);
+}
+.sftp-search .sftp-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text-faint);
+  color: var(--surface);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
 /* ============================ center gutter ============================ */
 .sftp-gutter {
   flex: 0 0 auto;
