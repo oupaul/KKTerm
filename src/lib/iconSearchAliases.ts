@@ -844,21 +844,30 @@ const CONCEPTS: readonly IconSearchConcept[] = [
   },
 ];
 
-// language -> (localized word -> english keywords). Built once and cached.
-const dictionaryCache = new Map<string, Map<string, readonly string[]>>();
+// A built dictionary: localized phrase -> English keywords, plus the longest
+// phrase length (in words) so the tokenizer knows how far to look ahead.
+type AliasDictionary = {
+  map: Map<string, readonly string[]>;
+  maxWords: number;
+};
 
-function buildDictionary(language: string): Map<string, readonly string[]> {
+// language -> dictionary (or null when there are no aliases). Built once and cached.
+const dictionaryCache = new Map<string, AliasDictionary | null>();
+
+function buildDictionary(language: string): AliasDictionary {
   const map = new Map<string, string[]>();
+  let maxWords = 1;
   for (const concept of CONCEPTS) {
     const words = concept.localized[language];
     if (!words) {
       continue;
     }
     for (const word of words) {
-      const key = word.trim().toLowerCase();
+      const key = word.trim().toLowerCase().replace(/\s+/g, " ");
       if (!key) {
         continue;
       }
+      maxWords = Math.max(maxWords, key.split(" ").length);
       const existing = map.get(key);
       if (existing) {
         for (const keyword of concept.en) {
@@ -871,35 +880,41 @@ function buildDictionary(language: string): Map<string, readonly string[]> {
       }
     }
   }
-  return map;
+  return { map, maxWords };
 }
 
-function dictionaryFor(language: string | undefined): Map<string, readonly string[]> | null {
+function dictionaryFor(language: string | undefined): AliasDictionary | null {
   if (!language || language === "en") {
     return null;
   }
-  const cached = dictionaryCache.get(language);
-  if (cached) {
-    return cached;
+  if (dictionaryCache.has(language)) {
+    return dictionaryCache.get(language) ?? null;
   }
   // Exact match first, then fall back to the base language (e.g. es-MX -> es).
   let dictionary = buildDictionary(language);
-  if (dictionary.size === 0) {
+  if (dictionary.map.size === 0) {
     const base = language.split("-")[0];
-    if (base !== language) {
-      dictionary = new Map(dictionaryFor(base) ?? []);
-    }
+    dictionary = base !== language
+      ? dictionaryFor(base) ?? { map: new Map(), maxWords: 1 }
+      : dictionary;
   }
-  dictionaryCache.set(language, dictionary);
-  return dictionary;
+  const result = dictionary.map.size === 0 ? null : dictionary;
+  dictionaryCache.set(language, result);
+  return result;
 }
 
 /**
- * Tokenize a search query into AND-ed groups of OR-ed alternatives. A localized
- * word is expanded to include the English catalog keywords it maps to, so the
- * group matches whether the icon text contains the original word or its English
- * equivalent. English (or unknown languages) yield each raw token in its own
- * single-member group, preserving the previous English-only behavior.
+ * Tokenize a search query into AND-ed groups of OR-ed alternatives, making the
+ * search bilingual: the active UI language *and* English both work.
+ *
+ * Each group keeps the raw token, so an English term always matches the
+ * (English) icon catalog directly — users who prefer to search in English can,
+ * regardless of UI language. In addition, localized terms are expanded to the
+ * English catalog keywords they map to, so the same query also works in the UI
+ * language. Lookup is greedy and phrase-aware (longest match first), so
+ * multi-word localized names like "base de datos" or "thư mục" resolve as a unit
+ * instead of being split into unrelated tokens. English (or unmapped languages)
+ * yield one raw token per group, preserving the English-only behavior.
  */
 export function buildIconSearchGroups(query: string, language?: string): string[][] {
   const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -907,10 +922,33 @@ export function buildIconSearchGroups(query: string, language?: string): string[
     return [];
   }
   const dictionary = dictionaryFor(language);
-  return tokens.map((token) => {
-    const aliases = dictionary?.get(token);
-    return aliases ? [token, ...aliases] : [token];
-  });
+  if (!dictionary) {
+    return tokens.map((token) => [token]);
+  }
+
+  const groups: string[][] = [];
+  let index = 0;
+  while (index < tokens.length) {
+    const maxLength = Math.min(dictionary.maxWords, tokens.length - index);
+    let matched: { length: number; phrase: string; english: readonly string[] } | null = null;
+    for (let length = maxLength; length >= 1; length -= 1) {
+      const phrase = tokens.slice(index, index + length).join(" ");
+      const english = dictionary.map.get(phrase);
+      if (english) {
+        matched = { length, phrase, english };
+        break;
+      }
+    }
+    if (matched) {
+      // Bilingual group: the localized phrase OR its English catalog keywords.
+      groups.push([matched.phrase, ...matched.english]);
+      index += matched.length;
+    } else {
+      groups.push([tokens[index]]);
+      index += 1;
+    }
+  }
+  return groups;
 }
 
 /** A search text matches when every group has at least one alternative present. */

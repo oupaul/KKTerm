@@ -37,3 +37,30 @@ test("unmapped localized text does not match everything", () => {
   // A token with no alias stays literal, so a nonsense string finds nothing.
   assert.equal(searchMaterialIcons("zzzznotarealicon", 50, "zh-TW").length, 0);
 });
+
+test("search is bilingual: English works under a non-English UI", () => {
+  // A user on a non-English UI can still search in English; the raw token is
+  // kept and matches the English catalog directly.
+  assert.deepEqual(buildIconSearchGroups("folder", "zh-TW"), [["folder"]]);
+  assert.deepEqual(buildIconSearchGroups("settings", "ja"), [["settings"]]);
+  assert.ok(searchMaterialIcons("folder", 200, "zh-TW").length > 0);
+  assert.ok(searchMaterialIcons("database", 200, "vi").length > 0);
+});
+
+test("multi-word localized phrases resolve as a unit", () => {
+  // Greedy longest-match so the phrase maps to its concept instead of each word
+  // colliding with unrelated concepts (e.g. vi "thư" alone means mail).
+  const vi = buildIconSearchGroups("thư mục", "vi");
+  assert.equal(vi.length, 1, "the two-word phrase should form a single group");
+  assert.ok(vi[0].includes("folder"), "thư mục should map to folder");
+
+  const es = buildIconSearchGroups("base de datos", "es");
+  assert.equal(es.length, 1);
+  assert.ok(es[0].includes("database"));
+
+  const englishFolder = searchMaterialIcons("folder", 300).map((icon) => icon.id);
+  assert.ok(
+    searchMaterialIcons("thư mục", 300, "vi").some((icon) => englishFolder.includes(icon.id)),
+    "Vietnamese thư mục should surface the same folder icons as English folder",
+  );
+});
