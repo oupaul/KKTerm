@@ -77,6 +77,16 @@ test("installer latest-version UI only treats versioned providers as supported",
       name: "BentoPDF",
       descriptionEn: "",
       provider: { kind: "npm", pkg: "github:alam00000/bentopdf" },
+      releaseNotesUrl: "https://github.com/alam00000/bentopdf/releases",
+    }),
+    true,
+  );
+  assert.equal(
+    recipeSupportsLatestVersion({
+      id: "github-source-without-releases",
+      name: "GitHub source without releases",
+      descriptionEn: "",
+      provider: { kind: "npm", pkg: "github:goodtab/bentopdf" },
     }),
     false,
   );

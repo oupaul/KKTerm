@@ -18,7 +18,7 @@ pub fn latest_version(recipe: &Recipe) -> LatestVersionResult {
     );
     let result = match &recipe.provider {
         Provider::Winget { id } => winget_latest(id),
-        Provider::Npm { pkg } => npm_latest(pkg),
+        Provider::Npm { pkg } => npm_latest_for_recipe(pkg, recipe.release_notes_url.as_deref()),
         Provider::UvPip { package } => pypi_latest(package),
         Provider::DownloadInstaller { .. } => Ok(None),
         Provider::GithubRelease { repo, .. } => github_latest(repo),
@@ -259,6 +259,16 @@ fn npm_latest(pkg: &str) -> LatestVersionResult {
         .map(Some)
 }
 
+fn npm_latest_for_recipe(pkg: &str, release_notes_url: Option<&str>) -> LatestVersionResult {
+    if pkg.starts_with("github:") {
+        return release_notes_url
+            .and_then(github_releases_repo_from_url)
+            .map(|repo| github_latest(&repo))
+            .unwrap_or(Ok(None));
+    }
+    npm_latest(pkg)
+}
+
 fn npm_latest_from_registry_document(json: &str) -> Option<String> {
     let json: serde_json::Value = serde_json::from_str(json).ok()?;
     json.get("dist-tags")
@@ -273,6 +283,18 @@ fn npm_registry_url(pkg: &str) -> String {
         "https://registry.npmjs.org/{}",
         encode_npm_package_name(pkg)
     )
+}
+
+fn github_releases_repo_from_url(url: &str) -> Option<String> {
+    let path = url.strip_prefix("https://github.com/")?;
+    let mut parts = path.split('/');
+    let owner = parts.next()?.trim();
+    let repo = parts.next()?.trim();
+    let releases = parts.next()?.trim();
+    if owner.is_empty() || repo.is_empty() || releases != "releases" {
+        return None;
+    }
+    Some(format!("{owner}/{repo}"))
 }
 
 fn pypi_latest(package: &str) -> LatestVersionResult {
@@ -328,9 +350,16 @@ fn github_latest(repo: &str) -> LatestVersionResult {
         .map_err(|error| format!("GitHub release lookup for `{repo}` failed: {error}"))?;
     json.get("tag_name")
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
+        .map(normalize_github_release_tag)
         .ok_or_else(|| format!("GitHub response for `{repo}` did not include tag_name"))
         .map(Some)
+}
+
+fn normalize_github_release_tag(tag: &str) -> String {
+    tag.strip_prefix(['v', 'V'])
+        .filter(|rest| rest.chars().next().is_some_and(|c| c.is_ascii_digit()))
+        .unwrap_or(tag)
+        .to_string()
 }
 
 fn command_error_text(stderr: &[u8], stdout: &[u8]) -> String {
@@ -383,6 +412,29 @@ mod tests {
             npm_registry_url("@anthropic-ai/claude-code"),
             "https://registry.npmjs.org/@anthropic-ai%2Fclaude-code"
         );
+    }
+
+    #[test]
+    fn github_releases_repo_from_url_extracts_release_metadata_repo() {
+        assert_eq!(
+            github_releases_repo_from_url("https://github.com/alam00000/bentopdf/releases"),
+            Some("alam00000/bentopdf".to_string())
+        );
+        assert_eq!(
+            github_releases_repo_from_url("https://github.com/alam00000/bentopdf/releases/tag/v2.8.5"),
+            Some("alam00000/bentopdf".to_string())
+        );
+        assert_eq!(
+            github_releases_repo_from_url("https://github.com/goodtab/bentopdf"),
+            None
+        );
+    }
+
+    #[test]
+    fn github_release_tag_normalizes_common_v_prefix() {
+        assert_eq!(normalize_github_release_tag("v2.8.5"), "2.8.5");
+        assert_eq!(normalize_github_release_tag("V2.8.5"), "2.8.5");
+        assert_eq!(normalize_github_release_tag("release-2.8.5"), "release-2.8.5");
     }
 
     #[test]

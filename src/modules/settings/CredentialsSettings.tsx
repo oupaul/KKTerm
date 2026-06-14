@@ -14,6 +14,10 @@ import type {
   StoredCredentialSummary,
 } from "../../types";
 import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
+import {
+  normalizeAvailableSecretStores,
+  normalizeSecretStoreKind,
+} from "./credentialStorageModel";
 import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 
@@ -77,6 +81,11 @@ export function CredentialsSettings() {
   const storedCredentialGroups = useMemo(
     () => groupCredentialsByKind(storedCredentials),
     [storedCredentials],
+  );
+  const selectedSecretStore = normalizeSecretStoreKind(draft.secretStore);
+  const availableSecretStores = useMemo(
+    () => normalizeAvailableSecretStores(secretStatus?.availableStores, selectedSecretStore),
+    [secretStatus?.availableStores, selectedSecretStore],
   );
 
   async function load() {
@@ -187,16 +196,17 @@ export function CredentialsSettings() {
           <label>
             <span>{t("settings.credentialStorageBackend")}</span>
             <select
-              disabled={(secretStatus?.availableStores.length ?? 1) <= 1}
+              disabled={availableSecretStores.length <= 1}
               onChange={(event) => {
+                const secretStore = normalizeSecretStoreKind(event.currentTarget.value);
                 setDraft((settings) => ({
                   ...settings,
-                  secretStore: event.currentTarget.value as SecretStoreKind,
+                  secretStore,
                 }));
               }}
-              value={draft.secretStore}
+              value={selectedSecretStore}
             >
-              {(secretStatus?.availableStores ?? [draft.secretStore]).map((store) => (
+              {availableSecretStores.map((store) => (
                 <option key={store} value={store}>
                   {t(secretStoreLabelKey(store))}
                 </option>

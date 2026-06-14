@@ -18,6 +18,12 @@ export function providerSupportsLatestVersion(provider: Provider): boolean {
 }
 
 export function recipeSupportsLatestVersion(recipe: Recipe): boolean {
+  if (
+    recipe.provider.kind === "npm" &&
+    recipe.provider.pkg.startsWith("github:")
+  ) {
+    return githubReleasesRepoFromUrl(recipe.releaseNotesUrl) !== null;
+  }
   return providerSupportsLatestVersion(recipe.provider);
 }
 
@@ -27,4 +33,12 @@ export function latestVersionWebUrlForRecipe(recipe: Recipe): string | null {
     return recipe.provider.url;
   }
   return null;
+}
+
+function githubReleasesRepoFromUrl(url?: string): string | null {
+  const match = url?.match(
+    /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/releases(?:\/|$)/,
+  );
+  if (!match) return null;
+  return `${match[1]}/${match[2]}`;
 }
