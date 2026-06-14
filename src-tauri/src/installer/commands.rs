@@ -1240,10 +1240,14 @@ fn stop_web_ui_for_tool(tool_id: &str) -> Result<(), String> {
             Some("RUNNING")
         )
     }) {
-        return run_elevated_cmd_script(
+        run_elevated_cmd_script(
             &service_control_script(&service.service_name, "stop"),
             &format!("stop service {}", service.service_name),
-        );
+        )?;
+        if let Some(port) = effective_web_ui_port(&affordance) {
+            stop_port_listener(port)?;
+        }
+        return Ok(());
     }
     effective_web_ui_port(&affordance)
         .ok_or_else(|| format!("tool `{tool_id}` does not have a recorded web UI port"))
@@ -1471,21 +1475,20 @@ fn build_terminal_launcher_ps_command(affordance: &TerminalLaunchAffordance) -> 
 
 #[cfg(target_os = "windows")]
 fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
-    let command_line = web_ui_command_line(affordance);
-    let mut command = Command::new("cmd");
+    let mut command = Command::new(&affordance.program);
     command
-        .args(["/K", &web_ui_console_script(&command_line)])
+        .args(&affordance.args)
         .envs(affordance.env.iter().map(|(key, value)| (*key, value)))
         .current_dir(&affordance.working_dir);
     use std::os::windows::process::CommandExt;
-    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
-    command.creation_flags(CREATE_NEW_CONSOLE);
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    command.creation_flags(CREATE_NO_WINDOW);
     if let Some(path) = super::install::refreshed_path_public() {
         command.env("PATH", path);
     }
     command
         .spawn()
-        .map_err(|error| format!("failed to run `{command_line}`: {error}"))?;
+        .map_err(|error| format!("failed to run `{}`: {error}", web_ui_command_line(affordance)))?;
     Ok(())
 }
 
@@ -1506,11 +1509,6 @@ fn spawn_web_ui_affordance(affordance: &WebUiAffordance) -> Result<(), String> {
             )
         })?;
     Ok(())
-}
-
-#[cfg(target_os = "windows")]
-fn web_ui_console_script(command_line: &str) -> String {
-    format!("title KKTerm web tool && {command_line}")
 }
 
 #[cfg(target_os = "windows")]
@@ -1793,17 +1791,17 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "windows")]
-    fn web_ui_console_script_sets_title_without_start_title_ambiguity() {
-        let script = web_ui_console_script(r#""npm.cmd" exec -- "vite""#);
+    fn web_ui_runs_without_cmd_title_window() {
+        let source = include_str!("commands.rs");
+        let spawn_body = source
+            .split("fn spawn_web_ui_affordance")
+            .nth(1)
+            .and_then(|rest| rest.split("#[cfg(not(target_os = \"windows\"))]").next())
+            .expect("Windows web UI spawn helper should exist");
 
-        assert_eq!(
-            script,
-            r#"title KKTerm web tool && "npm.cmd" exec -- "vite""#
-        );
-        assert!(
-            !script.starts_with("start "),
-            "Run should not depend on cmd start parsing a quoted title"
-        );
+        assert!(spawn_body.contains("CREATE_NO_WINDOW"));
+        assert!(!spawn_body.contains("KKTerm web tool"));
+        assert!(!spawn_body.contains(".args([\"/K\""));
     }
 
     #[test]
@@ -1993,6 +1991,21 @@ mod tests {
         assert!(
             script.contains(r#"nssm start "KKTerm-Test""#),
             "the command handler clears the normal localhost run before registration, so the service can start in the background"
+        );
+    }
+
+    #[test]
+    fn stop_web_ui_service_path_cleans_up_recorded_port() {
+        let source = include_str!("commands.rs");
+        let service_stop = source
+            .split("fn stop_web_ui_for_tool")
+            .nth(1)
+            .expect("stop helper should exist");
+
+        assert!(service_stop.contains("service_control_script"));
+        assert!(
+            service_stop.contains("stop_port_listener(port)?"),
+            "service stop should also kill the managed web UI process listening on the recorded port"
         );
     }
 
