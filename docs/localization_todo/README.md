@@ -32,8 +32,9 @@ When you (or a localization pass) translate the key into every supported locale:
 
 1. Update each non-English locale file under `src/i18n/locales/`.
 2. Insert translated keys in the same relative order as `src/i18n/locales/en.json`; run `npm run i18n:normalize` if a locale drifts.
-3. Run `npm run i18n:check` and fix any missing, redundant, or misordered keys before finishing the translation run.
-4. **Delete** the matching `docs/localization_todo/<namespace>.<keyPath>.md` file.
+3. For related regional locales, translate independently instead of copying from the sibling locale. Cross-locale translation bleed is forbidden even when scripts or words look similar: `zh-CN` and `zh-TW`, `es-ES` and `es-MX`, and `pt-PT` and `pt-BR` must use their own script, spelling, and regional terminology.
+4. Run `npm run i18n:check` and fix any missing, redundant, or misordered keys before finishing the translation run.
+5. **Delete** the matching `docs/localization_todo/<namespace>.<keyPath>.md` file.
 
 When you rename or remove a key:
 
