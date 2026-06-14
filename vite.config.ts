@@ -49,6 +49,7 @@ function manualChunks(id: string): string | undefined {
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
+  base: "./",
   plugins: [widgetLibBundlePlugin(), react(), tailwindcss()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
