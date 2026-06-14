@@ -85,6 +85,34 @@ type TreeDragPreview = {
   width: number;
 };
 
+// A docking target on the Workspace Canvas resolved while dragging a Connection
+// out of the tree: either split a specific pane in a direction, or open as a new
+// Tab on an empty canvas. `rect` is the target's viewport bounds for the overlay.
+type DockRect = { left: number; top: number; width: number; height: number };
+type CanvasDropZone =
+  | {
+      kind: "split";
+      tabId: string;
+      paneId: string;
+      direction: SplitDirection;
+      rect: DockRect;
+    }
+  | { kind: "empty"; rect: DockRect };
+
+// Pick the edge of `bounds` nearest the pointer using normalized distances, so
+// dropping near a corner snaps to the closer axis (VS-style docking).
+function nearestEdgeDirection(bounds: DOMRect, x: number, y: number): SplitDirection {
+  const nx = (x - bounds.left) / bounds.width;
+  const ny = (y - bounds.top) / bounds.height;
+  const distances: Array<[SplitDirection, number]> = [
+    ["left", nx],
+    ["right", 1 - nx],
+    ["up", ny],
+    ["down", 1 - ny],
+  ];
+  return distances.reduce((nearest, entry) => (entry[1] < nearest[1] ? entry : nearest))[0];
+}
+
 type PendingFolderDraft = {
   parentFolderId?: string;
 };
@@ -203,6 +231,7 @@ export function ConnectionSidebar({
   const [dropTarget, setDropTarget] = useState("");
   const [dragPreview, setDragPreview] = useState<TreeDragPreview | null>(null);
   const [draggedSourceId, setDraggedSourceId] = useState("");
+  const [canvasDropZone, setCanvasDropZone] = useState<CanvasDropZone | null>(null);
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(loadCollapsedFolderIds);
   const [pendingFolderDraft, setPendingFolderDraft] = useState<PendingFolderDraft | null>(null);
   const [inlineRenameTarget, setInlineRenameTarget] = useState<InlineRenameTarget | null>(null);
@@ -245,6 +274,7 @@ export function ConnectionSidebar({
   const quickConnectRef = useRef<HTMLDivElement | null>(null);
   const draggedItemRef = useRef<DraggedTreeItem | null>(null);
   const pointerDragTargetRef = useRef<TreeDropTarget | null>(null);
+  const canvasDropTargetRef = useRef<CanvasDropZone | null>(null);
   const pointerDragListenersRef = useRef<{
     move: (event: PointerEvent) => void;
     stop: (event: PointerEvent) => void;
@@ -1475,9 +1505,11 @@ export function ConnectionSidebar({
   function handleDragEnd() {
     draggedItemRef.current = null;
     pointerDragTargetRef.current = null;
+    canvasDropTargetRef.current = null;
     setDragPreview(null);
     setDraggedSourceId("");
     setDropTarget("");
+    setCanvasDropZone(null);
   }
 
   function handleTreeClickCapture(event: ReactMouseEvent) {
@@ -1866,6 +1898,66 @@ export function ConnectionSidebar({
     setTreeContextMenu(null);
   }
 
+  // Resolve a docking target on the Workspace Canvas from the element under the
+  // pointer. Only the active Tab's panes are dockable; everything else falls
+  // back to the empty-canvas drop when present.
+  function canvasDropZoneFromElement(
+    element: Element | null,
+    pointerX: number,
+    pointerY: number,
+  ): CanvasDropZone | null {
+    const paneEl = element?.closest<HTMLElement>("[data-dock-pane-id]");
+    if (paneEl) {
+      const paneId = paneEl.dataset.dockPaneId;
+      const tabId = paneEl.dataset.dockTabId;
+      if (!paneId || !tabId || tabId !== activeTabId) {
+        return null;
+      }
+      const bounds = paneEl.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) {
+        return null;
+      }
+      return {
+        kind: "split",
+        tabId,
+        paneId,
+        direction: nearestEdgeDirection(bounds, pointerX, pointerY),
+        rect: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height },
+      };
+    }
+
+    const emptyEl = element?.closest<HTMLElement>("[data-dock-empty-canvas]");
+    if (emptyEl) {
+      const bounds = emptyEl.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) {
+        return null;
+      }
+      return {
+        kind: "empty",
+        rect: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height },
+      };
+    }
+
+    return null;
+  }
+
+  function completeCanvasDrop(connectionId: string, zone: CanvasDropZone) {
+    const found = findConnectionInTree(treeRef.current, connectionId);
+    if (!found) {
+      return;
+    }
+    const connection = found.connection;
+    rememberConnection(connection);
+    if (zone.kind === "split") {
+      const tab = tabs.find((entry) => entry.id === zone.tabId);
+      if (tab && tab.kind === "terminal") {
+        addConnectionToTerminalPane(zone.tabId, connection, zone.direction, zone.paneId);
+        return;
+      }
+    }
+    handleOpenConnection(connection);
+  }
+
   function completeTreeDrop(item: DraggedTreeItem, target: TreeDropTarget) {
     if (item.kind === "folder") {
       if (target.kind === "connection") {
@@ -2057,13 +2149,19 @@ export function ConnectionSidebar({
 
       pointerEvent.preventDefault();
       updateDragPreview(pointerEvent);
-      const target = treeDropTargetFromElement(
-        document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY),
-        item,
-        pointerEvent.clientY,
-      );
+      const element = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+      const target = treeDropTargetFromElement(element, item, pointerEvent.clientY);
       pointerDragTargetRef.current = target;
       setDropTarget(target ? treeDropTargetId(target) : "");
+
+      // Reordering inside the tree takes precedence; only when the pointer is
+      // off the tree does a Connection dock onto the Workspace Canvas.
+      const canvasZone =
+        target || item.kind !== "connection"
+          ? null
+          : canvasDropZoneFromElement(element, pointerEvent.clientX, pointerEvent.clientY);
+      canvasDropTargetRef.current = canvasZone;
+      setCanvasDropZone(canvasZone);
     };
     const stop = (pointerEvent: PointerEvent) => {
       if (pointerEvent.pointerId !== pointerId) {
@@ -2077,10 +2175,13 @@ export function ConnectionSidebar({
 
       pointerEvent.preventDefault();
       const target = pointerDragTargetRef.current;
+      const canvasZone = canvasDropTargetRef.current;
       const dragged = draggedItemRef.current;
       removePointerDragListeners();
       handleDragEnd();
-      if (target && dragged) {
+      if (canvasZone && dragged?.kind === "connection") {
+        completeCanvasDrop(dragged.connectionId, canvasZone);
+      } else if (target && dragged) {
         completeTreeDrop(dragged, target);
       }
       window.setTimeout(() => {
@@ -2422,6 +2523,8 @@ export function ConnectionSidebar({
       ) : null}
 
       {dragPreview ? <TreeDragPreview preview={dragPreview} /> : null}
+
+      <DockOverlay zone={canvasDropZone} />
 
       {formMode ? (
         <ConnectionDialog
@@ -4163,6 +4266,66 @@ function TreeDragPreview({ preview }: { preview: TreeDragPreview }) {
       ) : preview.connectionStatus ? (
         <span className={`status-dot ${preview.connectionStatus}`} />
       ) : null}
+    </div>
+  );
+}
+
+// The slice of the target the dropped Connection will occupy: half the pane in
+// the chosen direction for a split, or the whole area for an empty-canvas drop.
+function dockHighlightRect(zone: CanvasDropZone): DockRect {
+  const { rect } = zone;
+  if (zone.kind === "empty") {
+    return rect;
+  }
+  const halfW = rect.width / 2;
+  const halfH = rect.height / 2;
+  switch (zone.direction) {
+    case "left":
+      return { left: rect.left, top: rect.top, width: halfW, height: rect.height };
+    case "right":
+      return { left: rect.left + halfW, top: rect.top, width: halfW, height: rect.height };
+    case "up":
+      return { left: rect.left, top: rect.top, width: rect.width, height: halfH };
+    case "down":
+    default:
+      return { left: rect.left, top: rect.top + halfH, width: rect.width, height: halfH };
+  }
+}
+
+// Visual Studio–style docking overlay shown while dragging a Connection over the
+// Workspace Canvas. A faint outline frames the target pane and an accent-tinted
+// panel previews the snap region; both glide between edges/panes because the
+// same nodes persist across renders and animate their inline geometry via CSS.
+function DockOverlay({ zone }: { zone: CanvasDropZone | null }) {
+  if (!zone) {
+    return null;
+  }
+  const { rect } = zone;
+  const highlight = dockHighlightRect(zone);
+  const highlightClass =
+    zone.kind === "split"
+      ? `dock-overlay-highlight dock-overlay-${zone.direction}`
+      : "dock-overlay-highlight dock-overlay-empty";
+  return (
+    <div className="dock-overlay" aria-hidden="true">
+      <div
+        className="dock-overlay-outline"
+        style={{
+          left: `${rect.left}px`,
+          top: `${rect.top}px`,
+          width: `${rect.width}px`,
+          height: `${rect.height}px`,
+        }}
+      />
+      <div
+        className={highlightClass}
+        style={{
+          left: `${highlight.left}px`,
+          top: `${highlight.top}px`,
+          width: `${highlight.width}px`,
+          height: `${highlight.height}px`,
+        }}
+      />
     </div>
   );
 }

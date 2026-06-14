@@ -502,6 +502,8 @@ function TerminalLayoutView({
         ]
           .filter(Boolean)
           .join(" ")}
+        data-dock-pane-id={pane.id}
+        data-dock-tab-id={tabId}
       >
         {isTerminalPane(pane) ? (
           <TerminalPaneView

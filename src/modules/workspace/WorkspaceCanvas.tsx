@@ -280,7 +280,7 @@ export function WorkspaceCanvas({
 
   if (tabs.length === 0) {
     return (
-      <div className="workspace-canvas" data-tutorial-id="workspace.canvas">
+      <div className="workspace-canvas" data-dock-empty-canvas data-tutorial-id="workspace.canvas">
         <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
           <Terminal size={28} />
           <h2>{t("workspace.noActiveSession")}</h2>
@@ -291,7 +291,11 @@ export function WorkspaceCanvas({
   }
 
   return (
-    <div className="workspace-canvas" data-tutorial-id="workspace.canvas">
+    <div
+      className="workspace-canvas"
+      data-dock-empty-canvas={showEmptyState ? "" : undefined}
+      data-tutorial-id="workspace.canvas"
+    >
       {showEmptyState ? (
         <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
           <Terminal size={28} />

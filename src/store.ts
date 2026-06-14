@@ -1025,6 +1025,7 @@ interface WorkspaceState {
     tabId: string,
     connection: Connection,
     direction: SplitDirection,
+    targetPaneId?: string,
   ) => void;
   closePane: (tabId: string, paneId: string) => void;
   closeChildConnection: (childConnectionId: string) => void;
@@ -2052,20 +2053,23 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       };
     });
   },
-  addConnectionToTerminalPane: (tabId, connection, direction) => {
+  addConnectionToTerminalPane: (tabId, connection, direction, targetPaneId) => {
     set((state) => {
       const openedUrlConnectionIds: string[] = [];
       const tabs = state.tabs.map((tab) => {
         if (tab.id !== tabId || tab.kind !== "terminal") {
           return tab;
         }
-        const focusedPane =
-          tab.panes.find((pane) => pane.id === tab.focusedPaneId) ??
+        // Prefer an explicit drop target (e.g. the pane hovered during a
+        // drag-to-dock), falling back to the focused pane for menu-driven splits.
+        const targetPane =
+          (targetPaneId && tab.panes.find((pane) => pane.id === targetPaneId)) ||
+          tab.panes.find((pane) => pane.id === tab.focusedPaneId) ||
           tab.panes[0];
-        if (!focusedPane) {
+        if (!targetPane) {
           return tab;
         }
-        const newPane = buildPaneForConnection(connection, focusedPane);
+        const newPane = buildPaneForConnection(connection, targetPane);
         if (!newPane) {
           return tab;
         }
@@ -2076,7 +2080,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         const baseLayout = ensureLayout(tab.layout, tab.panes);
         const nextLayout = splitLayout(
           baseLayout,
-          focusedPane.id,
+          targetPane.id,
           direction,
           newPane.id,
           tab.panes.map((pane) => pane.id),

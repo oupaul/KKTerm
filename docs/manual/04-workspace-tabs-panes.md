@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `workspace.tabs`, `workspace.newTab`, `workspace.closeTab`, `workspace.noActiveSession`, `workspace.openFromTree`, `workspace.terminalPane`, `workspace.sftpBrowser`, `workspace.webview`, `settings.hideTopTabButtons`, `settings.hideTopTabButtonsDesc`, `connections.childConnectionProperties`, `terminal.splitLayout`, `terminal.splitRight`, `terminal.splitLeft`, `terminal.splitDown`, `terminal.splitUp`, `terminal.saveLayout`, `terminal.resetLayout`, `terminal.layoutSaved`, `terminal.layoutReset`, `terminal.closePane`, `terminal.closePaneTitle`, `terminal.focusPane`, `terminal.openLeft`, `terminal.openRight`, `terminal.openAbove`, `terminal.openBelow`
-- Topics: tab strip, Child Connection Tabs, connection tree tabs, new tab, close tab, drag tabs, split panes, focus pane, tutorial targets `workspace.tabStrip`, `workspace.canvas`, `workspace.emptyState`
-- Synonyms: "split view", "open side by side", "horizontal split", "new pane", "child tab", "saved tab", "sub tab", "tabs in connection tree"
+- Topics: tab strip, Child Connection Tabs, connection tree tabs, new tab, close tab, drag tabs, split panes, drag-to-dock, docking overlay, focus pane, tutorial targets `workspace.tabStrip`, `workspace.canvas`, `workspace.emptyState`
+- Synonyms: "split view", "open side by side", "horizontal split", "new pane", "child tab", "saved tab", "sub tab", "tabs in connection tree", "drag connection to split", "dock pane", "snap pane", "drag and drop split", "Visual Studio docking"
 
 ## Tab Strip
 
@@ -54,6 +54,10 @@ From the Pane toolbar `terminal.splitLayout`:
 - `terminal.splitRight`, `terminal.splitLeft`, `terminal.splitUp`, `terminal.splitDown`.
 
 When opening a Connection from the tree with a target Pane focused, the `connections.layout` submenu (`connections.left`, `connections.right`, `connections.upper`, `connections.lower`) controls placement. Tmux session menus offer `terminal.openLeft`, `terminal.openRight`, `terminal.openAbove`, `terminal.openBelow` for spawning attached Panes (see [06-ssh-and-tmux.md](06-ssh-and-tmux.md)).
+
+### Drag-to-dock
+
+You can also drag a Connection from the Connection Tree onto the Workspace Canvas to place it spatially, Visual Studio–style. While dragging over a terminal Tab's Pane, a docking overlay appears: a faint outline frames the Pane under the pointer and an accent-tinted highlight previews the snap region. The highlight follows the nearest edge — left, right, top, or bottom — and glides between edges and Panes as you move. Releasing splits that specific Pane in the previewed direction (it does not require the Pane to be focused first). Dropping a Connection onto an empty Canvas (no Tab open) opens it as a new Tab. This is a pointer interaction with no menu label; only terminal-kind Tabs accept docked splits, and Panes hosting RDP/VNC/URL surfaces sit on native overlay windows that may not register the overlay reliably.
 
 ### Focus
 
