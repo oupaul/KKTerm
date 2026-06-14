@@ -80,8 +80,15 @@ assert_clean_worktree() {
 find_latest_appimage() {
   local dir="$REPO_ROOT/src-tauri/target/$TARGET_TRIPLE/release/bundle/appimage"
   [[ -d "$dir" ]] || die "AppImage output directory not found: $dir"
-  local latest
-  latest="$(ls -t "$dir"/*.AppImage 2>/dev/null | head -n 1 || true)"
+  local latest="" appimage nullglob_state
+  nullglob_state="$(shopt -p nullglob)"
+  shopt -s nullglob
+  for appimage in "$dir"/*.AppImage; do
+    if [[ -z "$latest" || "$appimage" -nt "$latest" ]]; then
+      latest="$appimage"
+    fi
+  done
+  eval "$nullglob_state"
   [[ -n "$latest" ]] || die "No AppImage found in $dir"
   printf '%s' "$latest"
 }
