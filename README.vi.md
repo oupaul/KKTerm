@@ -148,26 +148,17 @@ Cùng một app. Cùng một cửa sổ. Cùng phím tắt. Cùng một theme, m
 
 ## Vì sao người ta để mở nó cả ngày
 
-### Windows trước, có chủ đích
+### Tải xuống nhỏ, khởi động nhanh như chớp
 
-Nhìn quanh bức tranh công cụ dev mà xem. Claude Code: mac/linux trước, Windows là "dùng WSL đi". Codex CLI: y hệt. Một nửa các công cụ mới bóng bẩy ra bản mac trước và để lại cho người dùng Windows một dòng `# contributions welcome` và một script tự động hoàn thành không chạy được.
+KKTerm được xây để có cảm giác như một tiện ích, không phải một nền tảng. Các bản desktop hiện tại chỉ khoảng 10-13 MB, cài nhanh và khởi động đủ nhanh để việc mở workspace quản trị không giống như đang bật thêm một hệ điều hành thứ hai.
 
-Trong khi đó, những người thực sự giữ cho doanh nghiệp online — IT doanh nghiệp, MSP, bất kỳ ai quản một domain controller già hơn cả vài thực tập sinh — đang ngồi ở máy Windows tự hỏi vì sao công cụ mới nào cũng coi hệ điều hành của họ như một sự phiền toái.
+Dấu chân nhỏ này quan trọng trên jump box, laptop cũ và VM, nơi mỗi dịch vụ nền thêm vào là một thứ nữa phải nghi ngờ. KKTerm mở lên, khôi phục workspace của bạn, rồi nhường chỗ cho bạn làm việc.
 
-**KKTerm chọn hướng native.** Bản Windows giữ những thứ người dùng Windows quan tâm: Remote Desktop Microsoft *xịn* (chính cái của `mstsc.exe`, không phải bản nhái), shell PowerShell / cmd / WSL thật, bí mật được giữ trong Windows Credential Manager, icon khay hệ thống đàng hoàng, menu và hộp thoại native. Bản macOS và Linux dùng đường native riêng khi hệ điều hành khác nhau, nhưng vẫn giữ cùng một mô hình workflow.
+### Lưới nhiều Pane, trộn đúng cách bạn làm việc
 
-### Local-first nghĩa là thật sự cục bộ
+Một Tab có thể chứa một lưới Panes, và các Panes đó không cần cùng loại. Đặt SSH cạnh SFTP, PowerShell cục bộ dưới một RDP Session, VNC cạnh Web UI của router, hoặc trình duyệt tệp cạnh terminal đang chuyển tệp.
 
-Các kết nối đã lưu của bạn nằm trong một tệp trên máy bạn. Mật khẩu nằm trong Windows Credential Manager, không phải trong một tệp văn bản cạnh app. KKTerm không gửi analytics, không gọi về nhà khi khởi động và không cần tài khoản đám mây để chạy. Không có "đăng nhập để đồng bộ" vì chẳng có đồng bộ.
-
-Nếu dây mạng của bạn bốc cháy, KKTerm vẫn mở được.
-
-### Terminal không phát điên
-
-- Chia khung bên trong một Tab.
-- Render nhanh và mượt, scrollback tìm kiếm được.
-- Kết nối lại nghĩa là *kết nối lại* thật sự — phiên từ xa của bạn tiếp tục từ chỗ đang dở, chứ không phải "làm lại từ đầu và giả vờ một tiếng vừa rồi chưa từng xảy ra".
-- Chuyển Tab **không** giết Session. Đóng Tab thì có. Sự phân biệt này từng là một cuộc thánh chiến nội bộ; tụi mình thắng.
+Đó là một workspace cho hình dạng thật sự, lộn xộn của công việc quản trị: trộn các loại Connection, đổi kích thước lưới, giữ live Sessions tiếp tục sống và thôi Alt-Tab qua cả đống cửa sổ.
 
 ### Một trợ lý AI dựng công cụ cho bạn
 

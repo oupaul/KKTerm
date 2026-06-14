@@ -148,26 +148,17 @@ La même appli. La même fenêtre. Les mêmes raccourcis. Le même thème, qu'on
 
 ## Pourquoi les gens le laissent ouvert toute la journée
 
-### Windows d'abord, volontairement
+### Un petit téléchargement, un lancement éclair
 
-Regardez le paysage des outils dev. Claude Code : mac/linux d'abord, Windows c'est « utilise WSL ». Codex CLI : pareil. La moitié des nouveaux outils brillants sortent d'abord pour mac et laissent aux utilisateurs Windows un commentaire `# contributions welcome` et un script d'autocomplétion qui ne tourne pas.
+KKTerm est conçu pour se comporter comme un utilitaire, pas comme une plateforme. Les builds desktop actuels tournent autour de 10-13 Mo, s'installent vite et se lancent assez rapidement pour que l'ouverture de votre espace d'administration ne ressemble pas au démarrage d'un deuxième système d'exploitation.
 
-Pendant ce temps, les gens qui gardent vraiment les entreprises en ligne — l'IT d'entreprise, les MSP, ceux qui administrent un contrôleur de domaine plus vieux que certains stagiaires — sont devant des machines Windows à se demander pourquoi chaque nouvel outil traite leur OS comme un désagrément.
+Cette petite empreinte compte sur les jump boxes, les vieux portables et les VM, où chaque service d'arrière-plan supplémentaire est une chose de plus à ne pas vouloir faire confiance. KKTerm s'ouvre, restaure votre espace de travail et se fait oublier.
 
-**KKTerm fait le pari inverse.** On construit natif Windows d'abord, donc ce qui compte pour les gens de Windows fonctionne, point : le *vrai* Bureau à distance Microsoft (le même que `mstsc.exe`, pas un clone), de vrais shells PowerShell / cmd / WSL, des secrets gardés dans le Gestionnaire d'identification Windows, une vraie icône dans la barre d'état, des menus et boîtes de dialogue natifs. Les builds macOS et Linux sont sur la feuille de route et recevront le même soin. Mais si vous attendiez que quelqu'un construise le *bon* outil d'admin Windows en premier au lieu d'en dernier — c'est le marché.
+### Des grilles multi-volets, mélangées comme vous travaillez
 
-### Local d'abord, c'est vraiment local
+Un Tab peut contenir une grille de Panes, et ces Panes n'ont pas besoin d'être du même type. Mettez SSH à côté de SFTP, un PowerShell local sous une RDP Session, VNC à côté de l'interface web du routeur, ou un navigateur de fichiers près du terminal qui déplace les fichiers.
 
-Vos connexions enregistrées vivent dans un fichier sur votre machine. Les mots de passe vivent dans le Gestionnaire d'identification Windows, pas dans un fichier texte à côté de l'appli. KKTerm n'envoie aucune analytique, ne téléphone pas à la maison au démarrage et n'a besoin d'aucun compte cloud pour se lancer. Il n'y a pas de « connectez-vous pour synchroniser » parce qu'il n'y a pas de synchro.
-
-Si votre câble réseau prend feu, KKTerm s'ouvre quand même.
-
-### Des terminaux qui ne perdent pas la tête
-
-- Volets divisés dans un Tab.
-- Un rendu rapide et fluide, avec scrollback consultable.
-- Se reconnecter veut vraiment dire *se reconnecter* — votre session distante reprend là où elle en était, pas « on recommence à zéro et on fait comme si la dernière heure n'avait pas eu lieu ».
-- Changer de Tab ne tue **pas** la Session. Fermer le Tab, oui. Cette distinction a été une guerre de religion en interne ; on a gagné.
+C'est un seul espace de travail pour la forme réelle et désordonnée de l'administration : mélangez les types de Connection, redimensionnez la grille, gardez les live Sessions en vie et arrêtez de faire Alt-Tab dans une pile de fenêtres.
 
 ### Un assistant IA qui fabrique vos outils
 

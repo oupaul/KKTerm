@@ -148,26 +148,17 @@ La misma app. La misma ventana. Los mismos atajos. El mismo tema, que ojalá no 
 
 ## Por qué la gente lo deja abierto todo el día
 
-### Windows primero, a propósito
+### Descarga pequeña, arranque relámpago
 
-Mira el panorama de las herramientas para devs. Claude Code: mac/linux primero, Windows es «usa WSL». Codex CLI: lo mismo. La mitad de las herramientas nuevas y llamativas salen primero para mac y le dejan a los usuarios de Windows un comentario `# contributions welcome` y un script de autocompletado que ni jala.
+KKTerm está pensado para sentirse como una utilidad, no como una plataforma. Las versiones de escritorio actuales rondan los 10-13 MB, se instalan rápido y arrancan tan pronto que abrir tu espacio de administración no se siente como iniciar un segundo sistema operativo.
 
-Mientras tanto, la gente que de verdad mantiene a las empresas en línea — la TI corporativa, los MSP, cualquiera que administre un controlador de dominio más viejo que algunos becarios — está sentada frente a máquinas Windows preguntándose por qué cada herramienta nueva trata su SO como una molestia.
+Ese tamaño pequeño importa en jump boxes, laptops viejas y VM donde cada servicio en segundo plano extra es otra cosa de la que desconfiar. KKTerm se abre, restaura tu espacio de trabajo y se quita de en medio.
 
-**KKTerm hace el trato contrario.** Construimos nativo para Windows primero, así que lo que le importa a la gente de Windows simplemente jala: el *auténtico* Escritorio remoto de Microsoft (el mismo que `mstsc.exe`, no un clon), shells reales de PowerShell / cmd / WSL, secretos guardados en el Administrador de credenciales de Windows, un ícono de bandeja como debe ser, menús y diálogos nativos. Las versiones de macOS y Linux están en la hoja de ruta y van a recibir el mismo cuidado. Pero si estabas esperando a que alguien construyera la *buena* herramienta de administración de Windows primero en vez de al último — ese es el trato.
+### Cuadrículas multipanel, mezcladas como trabajas
 
-### Local primero significa de verdad local
+Una Tab puede contener una cuadrícula de Panes, y esos Panes no tienen que ser del mismo tipo. Pon SSH junto a SFTP, un PowerShell local debajo de una RDP Session, VNC junto a la interfaz web del router, o un explorador de archivos junto al terminal que está moviendo los archivos.
 
-Tus conexiones guardadas viven en un archivo en tu máquina. Las contraseñas viven en el Administrador de credenciales de Windows, no en un archivo de texto junto a la app. KKTerm no manda analíticas, no llama a casa al arrancar y no necesita una cuenta en la nube para abrirse. No hay «inicia sesión para sincronizar» porque no hay sincronización.
-
-Si tu cable de red se prende en llamas, KKTerm se abre de todos modos.
-
-### Terminales que no pierden la cabeza
-
-- Paneles divididos dentro de una Tab.
-- Renderizado rápido y fluido, con scrollback que se puede buscar.
-- Reconectar significa de verdad *reconectar* — tu sesión remota retoma donde estaba, no «empezar de cero y hacer como que la última hora no pasó».
-- Cambiar de Tab **no** mata la Session. Cerrar la Tab sí. Esta distinción fue una guerra de religión interna; ganamos.
+Es un solo espacio de trabajo para la forma real y desordenada del trabajo de administración: mezcla tipos de Connection, redimensiona la cuadrícula, mantén vivas las live Sessions y deja de hacer Alt-Tab entre un montón de ventanas.
 
 ### Un asistente de IA que construye tus herramientas
 

@@ -148,26 +148,17 @@ O mesmo app. A mesma janela. Os mesmos atalhos. O mesmo tema, que tomara não fa
 
 ## Por que as pessoas deixam aberto o dia inteiro
 
-### Windows primeiro, de propósito
+### Download pequeno, abertura relâmpago
 
-Olhe o cenário das ferramentas pra dev. Claude Code: mac/linux primeiro, Windows é «usa WSL». Codex CLI: a mesma coisa. Metade das ferramentas novas e brilhantes sai primeiro pro mac e deixa pros usuários de Windows um comentário `# contributions welcome` e um script de autocompletar que não roda.
+O KKTerm foi feito para parecer uma utilidade, não uma plataforma. As builds desktop atuais ficam por volta de 10-13 MB, instalam rápido e abrem tão depressa que abrir seu workspace de administração não parece iniciar um segundo sistema operacional.
 
-Enquanto isso, quem de fato mantém as empresas no ar — TI corporativa, MSPs, qualquer um administrando um controlador de domínio mais velho que alguns estagiários — está sentado em máquinas Windows se perguntando por que toda ferramenta nova trata o SO deles como um incômodo.
+Esse tamanho pequeno importa em jump boxes, notebooks antigos e VMs, onde cada serviço em segundo plano a mais é mais uma coisa para desconfiar. O KKTerm abre, restaura seu workspace e sai do caminho.
 
-**O KKTerm faz o trato oposto.** Construímos nativo pro Windows primeiro, então o que importa pra quem está no Windows simplesmente funciona: a *verdadeira* Área de Trabalho Remota da Microsoft (a mesma do `mstsc.exe`, não um clone), shells reais de PowerShell / cmd / WSL, segredos guardados no Gerenciador de Credenciais do Windows, um ícone de bandeja de verdade, menus e diálogos nativos. As builds de macOS e Linux estão no roadmap e vão receber o mesmo cuidado. Mas se você estava esperando alguém construir a *boa* ferramenta de administração do Windows primeiro em vez de por último — esse é o trato.
+### Grades multipainel, misturadas do seu jeito
 
-### Local primeiro significa de verdade local
+Uma Tab pode ter uma grade de Panes, e esses Panes não precisam ser do mesmo tipo. Coloque SSH ao lado de SFTP, uma PowerShell local abaixo de uma RDP Session, VNC ao lado da interface web do roteador, ou um navegador de arquivos perto do terminal que está movendo os arquivos.
 
-Suas conexões salvas vivem num arquivo na sua máquina. As senhas vivem no Gerenciador de Credenciais do Windows, não num arquivo de texto ao lado do app. O KKTerm não envia analytics, não telefona pra casa ao iniciar e não precisa de conta na nuvem pra abrir. Não tem «faça login pra sincronizar» porque não tem sincronização.
-
-Se o seu cabo de rede pegar fogo, o KKTerm abre do mesmo jeito.
-
-### Terminais que não piram
-
-- Painéis divididos dentro de uma Tab.
-- Renderização rápida e fluida, com scrollback pesquisável.
-- Reconectar significa de verdade *reconectar* — sua sessão remota retoma de onde parou, não «começar do zero e fingir que a última hora não aconteceu».
-- Trocar de Tab **não** mata a Session. Fechar a Tab, sim. Essa distinção foi uma guerra religiosa interna; a gente ganhou.
+É um único workspace para o formato real e bagunçado do trabalho de administração: misture tipos de Connection, redimensione a grade, mantenha as live Sessions vivas e pare de usar Alt-Tab entre uma pilha de janelas.
 
 ### Um assistente de IA que constrói suas ferramentas
 

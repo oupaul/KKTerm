@@ -148,26 +148,17 @@ Same app. Same window. Same hotkeys. Same hopefully-not-eye-bleeding theme.
 
 ## Why People Keep It Open All Day
 
-### Native where you work
+### Tiny download, instant launch
 
-Look around the dev-tooling landscape. Too many tools treat one desktop as the "real" platform and leave everyone else with caveats, half-working integrations, or a `# contributions welcome` comment.
+KKTerm is built to feel like a utility, not a platform. Current desktop builds land around 10-13 MB-ish, install quickly, and launch fast enough that opening your admin workspace does not feel like starting a second operating system.
 
-Meanwhile the people who actually keep companies online — corporate IT, MSPs, homelab operators, and developers bouncing between laptops and servers — need the same workspace to behave well on the machine in front of them.
+The small footprint matters on jump boxes, old laptops, and VMs where every extra background service is one more thing to distrust. KKTerm opens, restores your workspace, and gets out of the way.
 
-**KKTerm takes the native trade.** Windows builds keep the things Windows people care about: the *actual* Microsoft Remote Desktop (the same one as `mstsc.exe`, not a clone), real PowerShell / cmd / WSL shells, secrets kept in the Windows Credential Manager, a proper tray icon, native menus and dialogs. macOS and Linux builds use their own native paths where the OS differs, while keeping the same Connection, Session, Tab, Dashboard, and AI workflow model.
+### Multi-pane grids, mixed however you work
 
-### Local-first means actually local
+A Tab can hold a grid of Panes, and those Panes do not have to be the same kind. Put SSH next to SFTP, a local PowerShell below an RDP Session, VNC beside the router's web UI, or a file browser next to the terminal that is moving the files.
 
-Your saved connections live in a file on your machine. Passwords live in the Windows Credential Manager, not in a text file next to the app. KKTerm ships no analytics, doesn't call home on startup, and needs no cloud account to launch. There is no "sign in to sync" because there is no sync.
-
-If your network cable catches fire, KKTerm still opens.
-
-### Terminals that don't lose their minds
-
-- Split panes inside a tab.
-- Fast, smooth rendering with searchable scrollback.
-- Reconnecting actually means *reconnecting* — your remote session picks up where it was, not "start over and pretend the last hour didn't happen."
-- Switching tabs does **not** kill the session. Closing the tab does. This distinction was a religious war internally; we won.
+It is one workspace for the messy real shape of admin work: mix Connection types, resize the grid, keep the live Sessions alive, and stop alt-tabbing through a pile of windows.
 
 ### An AI assistant that builds your tools
 

@@ -148,26 +148,17 @@ Aplikasi yang sama. Jendela yang sama. Pintasan yang sama. Tema yang sama, yang 
 
 ## Kenapa orang membiarkannya terbuka seharian
 
-### Windows dulu, dengan sengaja
+### Unduhan kecil, peluncuran secepat kilat
 
-Lihatlah lanskap dev tools. Claude Code: mac/linux dulu, Windows itu "pakai WSL". Codex CLI: sama. Separuh tool baru yang berkilau dirilis mac dulu dan meninggalkan pengguna Windows sebuah komentar `# contributions welcome` dan skrip autocomplete yang tak jalan.
+KKTerm dibuat agar terasa seperti utilitas, bukan platform. Build desktop saat ini sekitar 10-13 MB, cepat dipasang, dan meluncur cukup cepat sehingga membuka workspace admin-mu tidak terasa seperti menyalakan sistem operasi kedua.
 
-Sementara itu, orang-orang yang benar-benar menjaga perusahaan tetap online — IT korporat, MSP, siapa pun yang mengelola domain controller yang lebih tua dari sebagian magang — duduk di mesin Windows sambil bertanya-tanya kenapa setiap tool baru memperlakukan OS mereka seperti gangguan.
+Jejak kecil ini penting di jump box, laptop lama, dan VM, tempat setiap layanan latar belakang tambahan adalah satu hal lagi yang patut dicurigai. KKTerm terbuka, memulihkan workspace-mu, lalu menyingkir.
 
-**KKTerm memilih jalur native.** Build Windows menjaga hal yang dipedulikan pengguna Windows: Remote Desktop Microsoft yang *asli* (yang sama dengan `mstsc.exe`, bukan tiruan), shell PowerShell / cmd / WSL sungguhan, rahasia yang disimpan di Windows Credential Manager, ikon tray yang benar, menu dan dialog native. Build macOS dan Linux memakai jalur native masing-masing saat OS-nya berbeda, sambil mempertahankan model workflow yang sama.
+### Grid multi-Pane, campur sesuai cara kerjamu
 
-### Local-first artinya benar-benar lokal
+Sebuah Tab bisa berisi grid Panes, dan Panes itu tidak harus sejenis. Taruh SSH di sebelah SFTP, PowerShell lokal di bawah RDP Session, VNC di sebelah UI web router, atau file browser di samping terminal yang sedang memindahkan file.
 
-Koneksi tersimpanmu ada di sebuah berkas di mesinmu. Kata sandi ada di Windows Credential Manager, bukan di berkas teks di sebelah aplikasi. KKTerm tidak mengirim analitik, tidak menelepon pulang saat dijalankan, dan tidak butuh akun cloud untuk dibuka. Tidak ada "masuk untuk sinkronisasi" karena tidak ada sinkronisasi.
-
-Kalau kabel jaringanmu terbakar, KKTerm tetap terbuka.
-
-### Terminal yang tidak hilang akal
-
-- Panel terbagi di dalam sebuah Tab.
-- Render cepat dan mulus, dengan scrollback yang bisa dicari.
-- Menyambung kembali benar-benar berarti *menyambung kembali* — sesi remote-mu melanjutkan dari posisinya, bukan "mulai dari nol dan berpura-pura satu jam terakhir tak pernah terjadi".
-- Berpindah Tab **tidak** membunuh Session. Menutup Tab, ya. Perbedaan ini dulu jadi perang agama internal; kami menang.
+Ini satu workspace untuk bentuk nyata pekerjaan admin yang berantakan: campur jenis Connection, ubah ukuran grid, biarkan live Sessions tetap hidup, dan berhenti Alt-Tab melewati tumpukan jendela.
 
 ### Asisten AI yang membangun alatmu
 
