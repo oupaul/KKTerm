@@ -397,9 +397,6 @@ shasum -a 256 "$DMG_PATH" | awk -v name="$DMG_NAME" '{ print $1 "  " name }' > "
 existing_latest_dir=$(mktemp -d)
 existing_latest_json=$(find_existing_latest_json "$TAG_NAME" "$existing_latest_dir")
 
-log "Upload macOS assets"
-gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" "$UPDATER_PATH" "$UPDATER_SIG_PATH" --clobber
-
 if (( ! SKIP_NOTES_PATCH )); then
   log "Patch GitHub Release notes"
   patch_release_notes "$TAG_NAME" "$VERSION" "$REPO" "$DMG_NAME"
@@ -408,8 +405,8 @@ fi
 release_notes=$(gh release view "$TAG_NAME" --json body --jq .body)
 write_latest_json "$LATEST_JSON_PATH" "$VERSION" "$REPO" "$TAG_NAME" "$UPDATER_NAME" "$UPDATER_SIG_PATH" "$existing_latest_json" "$release_notes"
 
-log "Upload macOS updater metadata"
-gh release upload "$TAG_NAME" "$LATEST_JSON_PATH" --clobber
+log "Upload macOS assets"
+gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" "$UPDATER_PATH" "$UPDATER_SIG_PATH" "$LATEST_JSON_PATH" --clobber
 rm -rf "$existing_latest_dir"
 
 log "macOS release assets published."
