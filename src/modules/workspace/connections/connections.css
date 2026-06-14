@@ -1291,6 +1291,20 @@ fieldset.connection-specific-options > legend {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
+.connection-specific-options-panel .connection-session-toggle:has(.option-glyph) {
+  grid-template-columns: auto minmax(0, 1fr) minmax(120px, 168px);
+  column-gap: 13px;
+}
+
+.connection-specific-options-panel .connection-session-toggle:has(.option-glyph) > input[type="checkbox"] {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.connection-specific-options-panel .connection-session-toggle:has(.option-glyph) > span {
+  text-align: left;
+}
+
 /* Select rows carrying a glyph switch from a stacked label to a single
    icon · label · popup row. */
 .connection-option-fields > label:has(.option-glyph) {

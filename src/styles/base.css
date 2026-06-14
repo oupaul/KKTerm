@@ -779,6 +779,10 @@ h2 {
   white-space: nowrap;
 }
 
+.connection-dialog .input-with-button .toolbar-button {
+  height: 32px;
+}
+
 .settings-section .input-with-button .toolbar-button {
   height: 34px;
   padding: 0 12px;
