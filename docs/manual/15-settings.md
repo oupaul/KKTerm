@@ -21,7 +21,7 @@ Settings tutorial targets:
 - Appearance: `settings.appUiFontFamily`, `settings.appearance.colorScheme`, `settings.resetLayout`.
 - Workspace: `settings.connectedConnectionsRail`, `settings.hideTopTabButtons`, `settings.submitAiAttachmentsDirectly`, `settings.separateSplitTerminalBackgrounds`.
 - Dashboard: `settings.dashboardDefaultLanding`, `settings.dashboardUseRandomDynamicBackground`, `settings.dashboardMaxActiveScriptWidgets`.
-- Credentials: `settings.credentialsStored`, `settings.widgetCredentialsStored`.
+- Credentials: `settings.credentialStorage`, `settings.credentialsStored`, `settings.widgetCredentialsStored`.
 - AI Assistant: `settings.aiProvider`, `settings.aiToolsTitle`, `settings.aiCustomInstructions`, `settings.assistantSkillsTitle`, `settings.mcpServersTitle`, `settings.allowInsecureMcpHttp`.
 - SSH: `settings.defaultUser`, `settings.defaultPort`, `settings.defaultKey`, `settings.sshBufferLines`.
 - Terminal: `settings.terminalFontFamily`, `settings.terminalFontSize`, `settings.defaultShell`, `settings.scrollbackLines`.
@@ -118,9 +118,10 @@ Settings tutorial targets:
 
 ## Credentials & MCP
 
-This is the central manager for OS-keychain-backed secrets.
+This is the central manager for secrets stored in the selected credential backend.
 
 - Section header `settings.sectionCredentials`. Stored credentials list `settings.credentialsTitle` / `settings.credentialsStored` (hint `settings.credentialsHint`, empty `settings.credentialsEmpty`).
+- Secret storage selector: `settings.credentialStorage` / `settings.credentialStorageBackend`. Windows and macOS default to `settings.credentialStorageOs` and can optionally switch to `settings.credentialStorageFile`; Linux exposes only `settings.credentialStorageFile`. The switch changes which backend KKTerm reads and writes from. It does not migrate existing secrets between stores.
 - Per-credential fields: username `settings.credentialUsername`. Kinds (badges): `settings.credentialKindConnectionPassword`, `…UrlPassword`, `…AiApiKey`, `…EmailApiKey`, `…EmailSmtpPassword`, `…WidgetSecret`.
 - Save status: `settings.credentialSavedPassword`, `…SavedApiKey`, `…SavedSecret`. Updated: `settings.credentialUpdated`. Missing secret error: `settings.credentialMissingSecret`. Stored marker: `settings.credentialStored`.
 - Delete: red trash button `settings.deleteCredential`, confirmation body `settings.deleteCredentialConfirmBody`, status `settings.credentialDeleted`.
@@ -141,8 +142,8 @@ Section header `settings.sectionAiAssistant`. Owned by `src/modules/settings/AiS
 - Provider picker; known-model picker is a real `<select>` showing every model — not an `<input list>`/`datalist` (Chromium hides non-matching options behind a `datalist`).
 - Custom model ID is a separate text input.
 - OpenAI Compatible providers can choose API request mode with `settings.apiMode`: `settings.apiModeChatCompletions` uses `/chat/completions`, and `settings.apiModeResponses` uses `/responses`.
-- OpenAI Compatible providers can set `settings.extraHeaders` as comma-separated `key=value` pairs; example placeholder `settings.extraHeadersPlaceholder`. These headers are provider request metadata, not OS-keychain secrets.
-- API keys go into the OS keychain under `AI_PROVIDER_SECRET_OWNER_ID`; never written to SQLite or settings JSON.
+- OpenAI Compatible providers can set `settings.extraHeaders` as comma-separated `key=value` pairs; example placeholder `settings.extraHeadersPlaceholder`. These headers are provider request metadata, not credential-backend secrets.
+- API keys go into the selected credential backend under `AI_PROVIDER_SECRET_OWNER_ID`; never written to SQLite or settings JSON.
 - OpenAI exposes `settings.useCodexCli`; Anthropic exposes `settings.useClaudeCli`. When enabled, the API key entry is disabled and KKTerm delegates AI Assistant turns to a local CLI backend instead of the HTTP API-key provider path. KKTerm prefers the matching Agent Client Protocol stdio adapter, attaches the built-in `kkterm` MCP server for published safe tools such as Connection creation, then falls back to the vendor CLI's documented one-shot command mode if ACP is unavailable. The one-shot fallback is suggest-only for KKTerm tools. The setup row can check CLI install/auth status, start the matching Installer Helper recipe (`codex-cli` or `claude-code-cli`) with missing prerequisites, and open the vendor auth command in an external terminal.
 - CLI install/auth status checks are manual-only. The setup row persists the last manual result and shows its `settings.lastCheckedAt` timestamp when the user leaves and returns to Settings.
 - Tool permission default (`ai.toolPermissionMode`) is set here as well.

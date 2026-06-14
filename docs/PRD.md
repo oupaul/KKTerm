@@ -10,7 +10,7 @@ KKTerm is intended to be a fast, professional desktop workspace for personal/loc
 
 KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (a named-Workspace connection manager where each Workspace isolates its own Connections and folders while live Sessions/Tabs stay open across Workspace switches; includes VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, File Explorer, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Installer Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
 
-Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, OS keychain secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
+Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, platform secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 
 The product will be light chrome with dark terminal panes by default, optimized for dense professional workflows and fast launch. macOS and Linux will follow using the same architecture. Mobile, team vaults, and sync remain later-stage scope.
 
@@ -63,7 +63,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 39. As a user, I want light app chrome with dark terminal panes, so that the interface feels clear while terminals remain comfortable.
 40. As a user, I want a Settings entry point that clearly shows Language (i18n) and Color Scheme as planned areas, so that future customization work has an obvious home without implying unfinished controls work today.
 41. As a user, I want local SQLite storage for non-secret settings and connections, so that the app remains local-first and reliable.
-42. As a user, I want secrets stored in the OS keychain, so that passwords, passphrases, and API keys are not stored in plaintext config.
+42. As a user, I want secrets stored in the configured secret backend, so that passwords, passphrases, and API keys are not stored in plaintext config.
 43. As a user, I want no telemetry by default, so that my terminal and host data remain private.
 44. As a user, I want local logs and a diagnostics bundle command, so that I can debug issues without automatic data upload.
 45. As a user, I want AI command assistance to draft commands, so that I can move faster without surrendering control.

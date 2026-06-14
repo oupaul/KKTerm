@@ -1,13 +1,24 @@
+use crate::storage;
 use keyring_core::{Entry, Error};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
 const SERVICE_NAME: &str = "com.kkterm.app";
 
+mod file_store;
+
+use file_store::FlatFileSecretStore;
+
 pub struct Secrets {
+    state: Mutex<SecretStoreState>,
+    operation_lock: Mutex<()>,
+}
+
+struct SecretStoreState {
+    store: Option<Box<dyn SecretStore>>,
     backend: Option<String>,
     init_error: Option<String>,
-    operation_lock: Mutex<()>,
+    selected_store: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -16,6 +27,8 @@ pub struct KeychainStatus {
     available: bool,
     service: &'static str,
     backend: String,
+    selected_store: String,
+    available_stores: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -135,32 +148,151 @@ enum SecretKind {
     McpServerSecret,
 }
 
+trait SecretStore: Send + Sync {
+    fn write(&self, reference: &SecretReference, secret: &str) -> Result<(), String>;
+    fn read(&self, reference: &SecretReference) -> Result<Option<String>, String>;
+    fn delete(&self, reference: &SecretReference) -> Result<(), String>;
+    fn exists(&self, reference: &SecretReference) -> Result<bool, String> {
+        self.read(reference).map(|secret| secret.is_some())
+    }
+}
+
+struct KeyringSecretStore {
+    backend_name: String,
+}
+
+impl KeyringSecretStore {
+    fn new(backend_name: String) -> Self {
+        Self { backend_name }
+    }
+
+    fn entry(&self, reference: &SecretReference) -> Result<Entry, String> {
+        Entry::new(SERVICE_NAME, &reference.key()).map_err(to_secret_error)
+    }
+}
+
+impl SecretStore for KeyringSecretStore {
+    fn write(&self, reference: &SecretReference, secret: &str) -> Result<(), String> {
+        self.entry(reference)?
+            .set_password(secret)
+            .map_err(to_secret_error)
+    }
+
+    fn read(&self, reference: &SecretReference) -> Result<Option<String>, String> {
+        match self.entry(reference)?.get_password() {
+            Ok(secret) => Ok(Some(secret)),
+            Err(Error::NoEntry) => Ok(None),
+            Err(error) => Err(to_secret_error(error)),
+        }
+    }
+
+    fn delete(&self, reference: &SecretReference) -> Result<(), String> {
+        match self.entry(reference)?.delete_credential() {
+            Ok(()) | Err(Error::NoEntry) => Ok(()),
+            Err(error) => Err(to_secret_error(error)),
+        }
+    }
+
+    fn exists(&self, reference: &SecretReference) -> Result<bool, String> {
+        self.keyring_secret_exists(reference)
+    }
+}
+
+impl KeyringSecretStore {
+    #[cfg(target_os = "macos")]
+    fn keyring_secret_exists(&self, reference: &SecretReference) -> Result<bool, String> {
+        use security_framework::item::{ItemClass, ItemSearchOptions};
+
+        if self.backend_name == "Mock keychain" {
+            return self.read(reference).map(|secret| secret.is_some());
+        }
+
+        let result = ItemSearchOptions::new()
+            .class(ItemClass::generic_password())
+            .service(SERVICE_NAME)
+            .account(&reference.key())
+            .load_attributes(true)
+            .search();
+
+        match result {
+            Ok(items) => Ok(!items.is_empty()),
+            Err(error) if error.code() == -25300 => Ok(false),
+            Err(error) => Err(format!("OS keychain error: {error}")),
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn keyring_secret_exists(&self, reference: &SecretReference) -> Result<bool, String> {
+        let _ = &self.backend_name;
+        self.read(reference).map(|secret| secret.is_some())
+    }
+}
+
+struct ConfiguredSecretStore {
+    backend: String,
+    store: Box<dyn SecretStore>,
+}
+
 impl Secrets {
-    pub fn new() -> Self {
-        match configure_default_store() {
-            Ok(backend) => Self {
-                backend: Some(backend),
-                init_error: None,
-                operation_lock: Mutex::new(()),
-            },
-            Err(error) => Self {
-                backend: None,
-                init_error: Some(error),
-                operation_lock: Mutex::new(()),
-            },
+    pub fn new(secret_store: &str) -> Self {
+        Self {
+            state: Mutex::new(configure_state(secret_store)),
+            operation_lock: Mutex::new(()),
         }
     }
 
     pub fn status(&self) -> KeychainStatus {
+        let state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         KeychainStatus {
-            available: self.backend.is_some(),
+            available: state.backend.is_some(),
             service: SERVICE_NAME,
-            backend: self
+            backend: state
                 .backend
                 .clone()
-                .or_else(|| self.init_error.clone())
-                .unwrap_or_else(|| "OS keychain unavailable".to_string()),
+                .or_else(|| state.init_error.clone())
+                .unwrap_or_else(|| "Secret store unavailable".to_string()),
+            selected_store: state.selected_store.clone(),
+            available_stores: storage::secret_store_options()
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
         }
+    }
+
+    pub fn set_secret_store(&self, secret_store: &str) -> Result<KeychainStatus, String> {
+        let _guard = self.lock()?;
+        let requested = secret_store.trim().to_lowercase();
+        let selected_store = if storage::secret_store_options().contains(&requested.as_str()) {
+            requested
+        } else {
+            storage::default_secret_store()
+        };
+        let already_selected_unavailable = {
+            let state = self
+                .state
+                .lock()
+                .map_err(|_| "secret store state lock is poisoned".to_string())?;
+            state.selected_store == selected_store && state.store.is_none()
+        };
+        if already_selected_unavailable {
+            return Ok(self.status());
+        }
+        let configured = configure_secret_store(&selected_store)?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "secret store state lock is poisoned".to_string())?;
+        *state = SecretStoreState {
+            backend: Some(configured.backend),
+            store: Some(configured.store),
+            init_error: None,
+            selected_store,
+        };
+        drop(state);
+        Ok(self.status())
     }
 
     pub fn store_secret(&self, request: StoreSecretRequest) -> Result<(), String> {
@@ -171,9 +303,7 @@ impl Secrets {
         }
 
         let _guard = self.lock()?;
-        self.entry(&reference)?
-            .set_password(&secret)
-            .map_err(to_secret_error)
+        self.with_store(|store| store.write(&reference, &secret))
     }
 
     pub(crate) fn store_ai_api_key(&self, owner_id: String, secret: String) -> Result<(), String> {
@@ -188,17 +318,16 @@ impl Secrets {
         let reference = SecretReference::new(request.kind, request.owner_id)?;
         let _guard = self.lock()?;
 
-        self.secret_exists_for_reference(&reference)
+        Ok(SecretPresence {
+            exists: self.with_store(|store| store.exists(&reference))?,
+        })
     }
 
     pub fn delete_secret(&self, request: SecretReferenceRequest) -> Result<(), String> {
         let reference = SecretReference::new(request.kind, request.owner_id)?;
         let _guard = self.lock()?;
 
-        match self.entry(&reference)?.delete_credential() {
-            Ok(()) | Err(Error::NoEntry) => Ok(()),
-            Err(error) => Err(to_secret_error(error)),
-        }
+        self.with_store(|store| store.delete(&reference))
     }
 
     #[allow(dead_code)]
@@ -209,11 +338,7 @@ impl Secrets {
         let reference = SecretReference::new(request.kind, request.owner_id)?;
         let _guard = self.lock()?;
 
-        match self.entry(&reference)?.get_password() {
-            Ok(secret) => Ok(Some(secret)),
-            Err(Error::NoEntry) => Ok(None),
-            Err(error) => Err(to_secret_error(error)),
-        }
+        self.with_store(|store| store.read(&reference))
     }
 
     pub(crate) fn read_connection_password(
@@ -293,81 +418,41 @@ impl Secrets {
         self.delete_secret(SecretReferenceRequest::mcp_server_secret(owner_id))
     }
 
-    fn entry(&self, reference: &SecretReference) -> Result<Entry, String> {
-        if self.backend.is_none() {
-            return Err(self
+    fn with_store<T>(
+        &self,
+        operation: impl FnOnce(&dyn SecretStore) -> Result<T, String>,
+    ) -> Result<T, String> {
+        let state = self
+            .state
+            .lock()
+            .map_err(|_| "secret store state lock is poisoned".to_string())?;
+        let store = state.store.as_deref().ok_or_else(|| {
+            state
                 .init_error
                 .clone()
-                .unwrap_or_else(|| "OS keychain is unavailable".to_string()));
-        }
-
-        Entry::new(SERVICE_NAME, &reference.key()).map_err(to_secret_error)
+                .unwrap_or_else(|| "Secret store is unavailable".to_string())
+        })?;
+        operation(store)
     }
 
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, ()>, String> {
         self.operation_lock
             .lock()
-            .map_err(|_| "keychain operation lock is poisoned".to_string())
-    }
-
-    #[cfg(target_os = "macos")]
-    fn secret_exists_for_reference(
-        &self,
-        reference: &SecretReference,
-    ) -> Result<SecretPresence, String> {
-        use security_framework::item::{ItemClass, ItemSearchOptions};
-
-        if self.backend.is_none() {
-            return Err(self
-                .init_error
-                .clone()
-                .unwrap_or_else(|| "OS keychain is unavailable".to_string()));
-        }
-        if self.backend.as_deref() == Some("Mock keychain") {
-            return self.secret_exists_by_reading_reference(reference);
-        }
-
-        let result = ItemSearchOptions::new()
-            .class(ItemClass::generic_password())
-            .service(SERVICE_NAME)
-            .account(&reference.key())
-            .load_attributes(true)
-            .search();
-
-        match result {
-            Ok(items) => Ok(SecretPresence {
-                exists: !items.is_empty(),
-            }),
-            Err(error) if error.code() == -25300 => Ok(SecretPresence { exists: false }),
-            Err(error) => Err(format!("OS keychain error: {error}")),
-        }
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    fn secret_exists_for_reference(
-        &self,
-        reference: &SecretReference,
-    ) -> Result<SecretPresence, String> {
-        self.secret_exists_by_reading_reference(reference)
-    }
-
-    fn secret_exists_by_reading_reference(
-        &self,
-        reference: &SecretReference,
-    ) -> Result<SecretPresence, String> {
-        match self.entry(reference)?.get_password() {
-            Ok(_) => Ok(SecretPresence { exists: true }),
-            Err(Error::NoEntry) => Ok(SecretPresence { exists: false }),
-            Err(error) => Err(to_secret_error(error)),
-        }
+            .map_err(|_| "secret store operation lock is poisoned".to_string())
     }
 
     #[cfg(test)]
     fn new_for_test() -> Self {
         keyring_core::set_default_store(keyring_core::mock::Store::new().expect("mock store"));
         Self {
-            backend: Some("Mock keychain".to_string()),
-            init_error: None,
+            state: Mutex::new(SecretStoreState {
+                store: Some(Box::new(KeyringSecretStore::new(
+                    "Mock keychain".to_string(),
+                ))),
+                backend: Some("Mock keychain".to_string()),
+                init_error: None,
+                selected_store: "os".to_string(),
+            }),
             operation_lock: Mutex::new(()),
         }
     }
@@ -416,25 +501,72 @@ impl SecretKind {
     }
 }
 
+fn configure_state(secret_store: &str) -> SecretStoreState {
+    let requested = secret_store.trim().to_lowercase();
+    let selected_store = if storage::secret_store_options().contains(&requested.as_str()) {
+        requested
+    } else {
+        storage::default_secret_store()
+    };
+    match configure_secret_store(&selected_store) {
+        Ok(configured) => SecretStoreState {
+            backend: Some(configured.backend),
+            store: Some(configured.store),
+            init_error: None,
+            selected_store,
+        },
+        Err(error) => SecretStoreState {
+            store: None,
+            backend: None,
+            init_error: Some(error),
+            selected_store,
+        },
+    }
+}
+
+fn configure_secret_store(secret_store: &str) -> Result<ConfiguredSecretStore, String> {
+    match secret_store {
+        "file" => configure_file_store(),
+        "os" => configure_os_store(),
+        _ => Err("Secret store backend is not configured for this platform yet".to_string()),
+    }
+}
+
+fn configure_file_store() -> Result<ConfiguredSecretStore, String> {
+    let store = FlatFileSecretStore::from_environment()?;
+    Ok(ConfiguredSecretStore {
+        backend: "Encrypted file secret store".to_string(),
+        store: Box::new(store),
+    })
+}
+
 #[cfg(target_os = "windows")]
-fn configure_default_store() -> Result<String, String> {
+fn configure_os_store() -> Result<ConfiguredSecretStore, String> {
     keyring_core::set_default_store(
         windows_native_keyring_store::Store::new().map_err(to_secret_error)?,
     );
-    Ok("Windows Credential Manager".to_string())
+    let backend = "Windows Credential Manager".to_string();
+    Ok(ConfiguredSecretStore {
+        store: Box::new(KeyringSecretStore::new(backend.clone())),
+        backend,
+    })
 }
 
 #[cfg(target_os = "macos")]
-fn configure_default_store() -> Result<String, String> {
+fn configure_os_store() -> Result<ConfiguredSecretStore, String> {
     keyring_core::set_default_store(
         apple_native_keyring_store::keychain::Store::new().map_err(to_secret_error)?,
     );
-    Ok("macOS Keychain".to_string())
+    let backend = "macOS Keychain".to_string();
+    Ok(ConfiguredSecretStore {
+        store: Box::new(KeyringSecretStore::new(backend.clone())),
+        backend,
+    })
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-fn configure_default_store() -> Result<String, String> {
-    Err("OS keychain backend is not configured for this platform yet".to_string())
+fn configure_os_store() -> Result<ConfiguredSecretStore, String> {
+    Err("OS keystore backend is not configured for this platform".to_string())
 }
 
 fn to_secret_error(error: Error) -> String {
@@ -563,5 +695,57 @@ mod tests {
             .read_widget_secret(owner_id)
             .expect("widget secret can be read by backend");
         assert_eq!(secret.as_deref(), Some("widget-api-key"));
+    }
+
+    #[test]
+    fn encrypted_file_store_round_trips_without_plaintext() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let path = temp_dir.path().join("secrets.json.enc");
+        let store = FlatFileSecretStore::new(path.clone(), "test-password".to_string())
+            .expect("file store");
+        let reference = SecretReference::new(
+            SecretKind::ConnectionPassword,
+            "linux-secret-owner".to_string(),
+        )
+        .expect("reference");
+
+        store
+            .write(&reference, "linux-password")
+            .expect("secret is stored");
+
+        assert!(store.exists(&reference).expect("presence check"));
+        assert_eq!(
+            store.read(&reference).expect("secret read").as_deref(),
+            Some("linux-password")
+        );
+
+        let file_bytes = std::fs::read(&path).expect("encrypted file exists");
+        let file_text = String::from_utf8_lossy(&file_bytes);
+        assert!(!file_text.contains("linux-password"));
+        assert!(!file_text.contains("connection-password:linux-secret-owner"));
+
+        store.delete(&reference).expect("secret is deleted");
+        assert!(!store.exists(&reference).expect("presence after delete"));
+    }
+
+    #[test]
+    fn encrypted_file_store_rejects_wrong_password() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let path = temp_dir.path().join("secrets.json.enc");
+        let store = FlatFileSecretStore::new(path.clone(), "correct-password".to_string())
+            .expect("file store");
+        let reference = SecretReference::new(SecretKind::AiApiKey, "linux-ai-provider".to_string())
+            .expect("reference");
+
+        store
+            .write(&reference, "sk-linux")
+            .expect("secret is stored");
+
+        let wrong_password_store =
+            FlatFileSecretStore::new(path, "wrong-password".to_string()).expect("file store");
+        let error = wrong_password_store
+            .read(&reference)
+            .expect_err("wrong password should not decrypt the file");
+        assert!(error.contains("could not decrypt"));
     }
 }

@@ -106,6 +106,7 @@ const settingsTargets = [
   ["settings.dashboardDefaultLanding", "dashboard-settings"],
   ["settings.dashboardUseRandomDynamicBackground", "dashboard-settings"],
   ["settings.dashboardMaxActiveScriptWidgets", "dashboard-settings"],
+  ["settings.credentialStorage", "credentials-settings"],
   ["settings.credentialsStored", "credentials-settings"],
   ["settings.widgetCredentialsStored", "credentials-settings"],
   ["settings.aiProvider", "assistant-settings"],

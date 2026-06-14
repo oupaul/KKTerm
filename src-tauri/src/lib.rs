@@ -707,6 +707,24 @@ fn update_dashboard_settings(
     storage.update_dashboard_settings(request)
 }
 
+#[tauri::command]
+fn get_credential_settings(
+    storage: tauri::State<'_, storage::Storage>,
+) -> Result<storage::CredentialSettings, String> {
+    storage.credential_settings()
+}
+
+#[tauri::command]
+fn update_credential_settings(
+    storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
+    request: storage::CredentialSettings,
+) -> Result<storage::CredentialSettings, String> {
+    let settings = storage::validate_credential_settings_for_command(request)?;
+    secrets.set_secret_store(settings.secret_store())?;
+    storage.update_credential_settings(settings)
+}
+
 /// Frontend -> backend push of a script widget's latest runtime-health state
 /// (from `ScriptWidgetHost`'s smoke test / watchdog) so the assistant's
 /// `dashboard_check_widget_health` tool can read it in the same turn.
@@ -739,6 +757,7 @@ fn launch_app_launcher_entry(
 fn import_settings_database(
     app: tauri::AppHandle,
     storage: tauri::State<'_, storage::Storage>,
+    secrets: tauri::State<'_, secrets::Secrets>,
     tray_state: tauri::State<'_, app_tray::TrayState>,
     power: tauri::State<'_, power::DontSleepManager>,
     webviews: tauri::State<'_, webview::WebviewSessionManager>,
@@ -746,6 +765,8 @@ fn import_settings_database(
 ) -> Result<storage::ImportedDatabaseSnapshot, String> {
     let snapshot = storage.import_database_zip(path.into())?;
     let general_settings = storage.general_settings()?;
+    let credential_settings = storage.credential_settings()?;
+    secrets.set_secret_store(credential_settings.secret_store())?;
     logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
     debug_heartbeat::start(app.clone());
     tray_state.set_minimize_to_tray(general_settings.minimize_to_tray());
@@ -2829,6 +2850,7 @@ pub fn run() {
             let mcp_bridge_dir = app_data_dir.clone();
             let storage = storage::Storage::open(db_path).map_err(setup_error)?;
             let general_settings = storage.general_settings().map_err(setup_error)?;
+            let credential_settings = storage.credential_settings().map_err(setup_error)?;
             let ai_provider_settings = storage.ai_provider_settings().map_err(setup_error)?;
             logging::set_advanced_debugging_enabled(general_settings.advanced_debugging_enabled());
             debug_heartbeat::start(app.handle().clone());
@@ -2964,7 +2986,7 @@ pub fn run() {
             app.manage(storage);
             app.manage(performance::PerformanceMonitor::new());
             app.manage(power_manager);
-            app.manage(secrets::Secrets::new());
+            app.manage(secrets::Secrets::new(credential_settings.secret_store()));
             app.manage(ai::AssistantLiveToolBridge::new());
             app.manage(ai::AssistantToolApprovalBridge::new());
             app.manage(ai::AssistantStreamCancellation::new());
@@ -3104,6 +3126,8 @@ pub fn run() {
             update_app_launcher_settings,
             get_dashboard_settings,
             update_dashboard_settings,
+            get_credential_settings,
+            update_credential_settings,
             dashboard_report_widget_health,
             prepare_app_launcher_entry,
             launch_app_launcher_entry,

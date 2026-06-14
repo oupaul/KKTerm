@@ -181,6 +181,11 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
     fallbackLabel: "Credentials",
     controls: [
       {
+        key: "settings.credentialStorage",
+        description: "Credential storage backend selector.",
+        tutorialTargetId: "settings.credentialStorage",
+      },
+      {
         key: "settings.credentialsStored",
         description: "Stored credential summaries and delete actions.",
         tutorialTargetId: "settings.credentialsStored",

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   defaultAppearanceSettings,
   defaultAiProviderSettings,
+  defaultCredentialSettings,
   defaultRdpSettings,
   defaultSftpSettings,
   defaultSshSettings,
@@ -23,6 +24,7 @@ import {
 import type {
   AppearanceSettings,
   AiProviderSettings,
+  CredentialSettings,
   AssistantDirectSubmitRequest,
   AssistantContextSnippet,
   Connection,
@@ -872,6 +874,7 @@ interface WorkspaceState {
   activeWorkspaceId: string;
   workspaces: Workspace[];
   generalSettings: GeneralSettings;
+  credentialSettings: CredentialSettings;
   dashboardSettings: DashboardSettings;
   terminalSettings: TerminalSettings;
   appearanceSettings: AppearanceSettings;
@@ -894,6 +897,7 @@ interface WorkspaceState {
   setWorkspaces: (workspaces: Workspace[]) => void;
   setActiveWorkspace: (workspaceId: string) => void;
   setGeneralSettings: (settings: GeneralSettings) => void;
+  setCredentialSettings: (settings: CredentialSettings) => void;
   setDashboardSettings: (settings: DashboardSettings) => void;
   setTerminalSettings: (settings: TerminalSettings) => void;
   setAppearanceSettings: (settings: AppearanceSettings) => void;
@@ -1030,6 +1034,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   activeWorkspaceId: loadStoredActiveWorkspaceId(),
   workspaces: [],
   generalSettings: defaultGeneralSettings,
+  credentialSettings: defaultCredentialSettings,
   dashboardSettings: defaultDashboardSettings,
   terminalSettings: defaultTerminalSettings,
   appearanceSettings: defaultAppearanceSettings,
@@ -1084,6 +1089,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
   setGeneralSettings: (generalSettings) => set({ generalSettings }),
+  setCredentialSettings: (credentialSettings) => set({ credentialSettings }),
   setDashboardSettings: (dashboardSettings) => set({ dashboardSettings }),
   setTerminalSettings: (terminalSettings) => set({ terminalSettings }),
   setAppearanceSettings: (appearanceSettings) => set({ appearanceSettings }),

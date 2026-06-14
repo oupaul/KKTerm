@@ -17,6 +17,7 @@ import type {
   AppBootstrap,
   AppLauncherLaunchMode,
   AppLauncherSettings,
+  CredentialSettings,
   Connection,
   ConnectionPasswordCredentialSummary,
   ConnectionFolder,
@@ -1040,6 +1041,14 @@ type CommandMap = {
   update_general_settings: {
     args: { request: GeneralSettings };
     result: GeneralSettings;
+  };
+  get_credential_settings: {
+    args: undefined;
+    result: CredentialSettings;
+  };
+  update_credential_settings: {
+    args: { request: CredentialSettings };
+    result: CredentialSettings;
   };
   get_app_launcher_settings: {
     args: undefined;

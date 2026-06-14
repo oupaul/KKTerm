@@ -1459,6 +1459,39 @@
     }
 
     #[test]
+    fn credential_settings_round_trip_and_platform_defaults() {
+        let storage = Storage::open(temp_db_path("credential-settings")).expect("storage opens");
+
+        let defaults = storage
+            .credential_settings()
+            .expect("default credential settings load");
+        if cfg!(target_os = "linux") {
+            assert_eq!(defaults.secret_store, "file");
+        } else {
+            assert_eq!(defaults.secret_store, "os");
+        }
+
+        let file_settings = storage
+            .update_credential_settings(CredentialSettings {
+                secret_store: " file ".to_string(),
+            })
+            .expect("credential settings update");
+        assert_eq!(file_settings.secret_store, "file");
+
+        let invalid_settings = storage
+            .update_credential_settings(CredentialSettings {
+                secret_store: "external".to_string(),
+            })
+            .expect("invalid credential settings normalize");
+        assert_eq!(invalid_settings.secret_store, default_secret_store());
+
+        let reloaded = storage
+            .credential_settings()
+            .expect("credential settings reload");
+        assert_eq!(reloaded.secret_store, default_secret_store());
+    }
+
+    #[test]
     fn app_launcher_settings_round_trip_and_validation() {
         let storage = Storage::open(temp_db_path("app-launcher-settings")).expect("storage opens");
 

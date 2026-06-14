@@ -264,6 +264,12 @@ export interface GeneralSettings {
   lastBackupAt?: string | null;
 }
 
+export type SecretStoreKind = "os" | "file";
+
+export interface CredentialSettings {
+  secretStore: SecretStoreKind;
+}
+
 export type AppLauncherLaunchMode = "normal" | "admin" | "differentUser" | "openFolder";
 export type AppLauncherViewMode = "icons" | "list" | "details";
 export type AppLauncherSortField = "name" | "path" | "type" | "size" | "modified";
@@ -348,6 +354,7 @@ export interface DatabaseBackupInfo {
 
 export interface ImportedDatabaseSnapshot {
   generalSettings: GeneralSettings;
+  credentialSettings: CredentialSettings;
   terminalSettings: TerminalSettings;
   appearanceSettings: AppearanceSettings;
   appLauncherSettings: AppLauncherSettings;
@@ -757,6 +764,8 @@ export interface KeychainStatus {
   available: boolean;
   service: string;
   backend: string;
+  selectedStore: SecretStoreKind;
+  availableStores: SecretStoreKind[];
 }
 
 export interface UrlCredentialSummary {

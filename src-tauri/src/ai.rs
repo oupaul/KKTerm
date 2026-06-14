@@ -81,7 +81,7 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "settings.language, settings.workspaceAccess, settings.useDirectxScreenCapture, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
     "settings.appUiFontFamily, settings.appearance.colorScheme, settings.resetLayout with navigation page=settings settingsSectionId=appearance-settings; ",
     "settings.dashboardDefaultLanding, settings.dashboardUseRandomDynamicBackground, settings.dashboardMaxActiveScriptWidgets with navigation page=settings settingsSectionId=dashboard-settings; ",
-    "settings.credentialsStored, settings.widgetCredentialsStored with navigation page=settings settingsSectionId=credentials-settings; ",
+    "settings.credentialStorage, settings.credentialsStored, settings.widgetCredentialsStored with navigation page=settings settingsSectionId=credentials-settings; ",
     "settings.aiProvider, settings.aiToolsTitle, settings.aiCustomInstructions, settings.assistantSkillsTitle, settings.mcpServersTitle with navigation page=settings settingsSectionId=assistant-settings; ",
     "settings.defaultUser, settings.defaultPort, settings.defaultKey, settings.sshBufferLines with navigation page=settings settingsSectionId=ssh-settings; ",
     "settings.terminalFontFamily, settings.terminalFontSize, settings.defaultShell, settings.scrollbackLines with navigation page=settings settingsSectionId=terminal-settings; ",

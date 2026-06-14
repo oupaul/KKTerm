@@ -15,7 +15,9 @@ KKTerm v0.1 will be local-first and privacy-first.
 Storage decisions:
 
 - Store non-secret data in SQLite.
-- Store passwords, SSH passphrases, and AI API keys in the OS keychain.
+- Store passwords, SSH passphrases, and AI API keys in the configured secret
+  backend: OS keychain where available, and a password-encrypted local file on
+  Linux until native or external password-manager backends are added.
 - Reference SSH key files by path.
 - Do not store private keys directly in KKTerm v0.1.
 - Do not store plaintext secrets in config or SQLite.
@@ -29,7 +31,8 @@ AI decisions:
 - Destructive or credential-touching commands should receive extra confirmation where detectable.
 - Assistant tools must preserve domain boundaries: saved Connection tools operate on durable SQLite Connection data, while live Session tools operate only on currently open runtime surfaces such as terminal Panes, RDP/VNC Sessions, and SFTP/FTP browser Sessions.
 - Assistant context surfaces must be compact projections rather than raw state dumps. Passive page context should prefer ids, labels, summaries, counts, and small metadata. Full source code, full schemas, terminal buffers, screenshots, file contents, data URLs, and other large or sensitive payloads require an explicit user attachment or a narrow read tool. Dashboard AI Created Widget source is available through a single-widget source-read tool, not through always-on page context or successful create/update tool results.
-- OpenAI-compatible API keys are bring-your-own and stored in keychain.
+- OpenAI-compatible API keys are bring-your-own and stored in the configured
+  secret backend.
 - Claude Code CLI and Codex CLI integrations should be constrained to suggest-only/ask-before-execute where possible.
 
 Telemetry decisions:

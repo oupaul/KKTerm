@@ -7,10 +7,15 @@ import {
 } from "../../lib/settings";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { StoredCredentialKind, StoredCredentialSummary } from "../../types";
+import type {
+  KeychainStatus,
+  SecretStoreKind,
+  StoredCredentialKind,
+  StoredCredentialSummary,
+} from "../../types";
 import { CredentialDeleteConfirmDialog } from "./CredentialDeleteConfirmDialog";
 import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
-import { SettingsSectionHeader } from "./shared";
+import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 
 function credentialKindKey(kind: StoredCredentialKind) {
   switch (kind) {
@@ -54,11 +59,16 @@ function credentialDescriptionKey(credential: StoredCredentialSummary) {
 export function CredentialsSettings() {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const credentialSettings = useWorkspaceStore((state) => state.credentialSettings);
+  const setCredentialSettings = useWorkspaceStore((state) => state.setCredentialSettings);
   const aiProviderSettings = useWorkspaceStore((state) => state.aiProviderSettings);
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
   const [credentials, setCredentials] = useState<StoredCredentialSummary[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<StoredCredentialSummary | null>(null);
+  const [draft, setDraft] = useState(credentialSettings);
+  const [secretStatus, setSecretStatus] = useState<KeychainStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(credentialSettings);
 
   const { storedCredentials, widgetCredentials } = useMemo(
     () => groupCredentialsForSettings(credentials),
@@ -76,7 +86,17 @@ export function CredentialsSettings() {
     }
     setLoading(true);
     try {
-      setCredentials(await invokeCommand("list_stored_credentials", undefined));
+      const nextStatus = await invokeCommand("keychain_status", undefined);
+      setSecretStatus(nextStatus);
+      try {
+        const nextCredentials = await invokeCommand("list_stored_credentials", undefined);
+        setCredentials(nextCredentials);
+      } catch (error) {
+        setCredentials([]);
+        showStatusBarNotice(error instanceof Error ? error.message : String(error), {
+          tone: "error",
+        });
+      }
     } catch (error) {
       showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
     } finally {
@@ -87,6 +107,26 @@ export function CredentialsSettings() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    setDraft(credentialSettings);
+  }, [credentialSettings]);
+
+  async function handleSave() {
+    try {
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_credential_settings", { request: draft })
+        : draft;
+      setCredentialSettings(saved);
+      setDraft(saved);
+      showStatusBarNotice(t("settings.credentialStorageSaved"), { tone: "success" });
+      await load();
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+    }
+  }
+
+  useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
 
   async function deleteCredential(credential: StoredCredentialSummary) {
     try {
@@ -136,6 +176,43 @@ export function CredentialsSettings() {
         label={t("settings.sectionCredentials")}
         title={t("settings.credentialsTitle")}
       />
+
+      <fieldset
+        className="settings-subsection settings-fieldset"
+        data-tutorial-id="settings.credentialStorage"
+      >
+        <legend>{t("settings.credentialStorage")}</legend>
+        <p className="field-hint">{t("settings.credentialStorageHint")}</p>
+        <div className="form-grid">
+          <label>
+            <span>{t("settings.credentialStorageBackend")}</span>
+            <select
+              disabled={(secretStatus?.availableStores.length ?? 1) <= 1}
+              onChange={(event) => {
+                setDraft((settings) => ({
+                  ...settings,
+                  secretStore: event.currentTarget.value as SecretStoreKind,
+                }));
+              }}
+              value={draft.secretStore}
+            >
+              {(secretStatus?.availableStores ?? [draft.secretStore]).map((store) => (
+                <option key={store} value={store}>
+                  {t(secretStoreLabelKey(store))}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">
+              {secretStatus?.available
+                ? t("settings.credentialStorageActive", { backend: secretStatus.backend })
+                : t("settings.credentialStorageUnavailable", {
+                    error: secretStatus?.backend ?? t("settings.credentialStorageUnknownStatus"),
+                  })}
+            </small>
+          </label>
+        </div>
+        <p className="field-hint">{t("settings.credentialStorageSwitchNote")}</p>
+      </fieldset>
 
       <fieldset
         className="settings-subsection settings-fieldset"
@@ -200,6 +277,16 @@ export function CredentialsSettings() {
       ) : null}
     </section>
   );
+}
+
+function secretStoreLabelKey(store: SecretStoreKind) {
+  switch (store) {
+    case "file":
+      return "settings.credentialStorageFile";
+    case "os":
+    default:
+      return "settings.credentialStorageOs";
+  }
 }
 
 function CredentialRow({

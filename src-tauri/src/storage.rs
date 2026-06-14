@@ -307,6 +307,19 @@ pub struct GeneralSettings {
     last_backup_at: Option<String>,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CredentialSettings {
+    #[serde(default = "default_secret_store")]
+    pub secret_store: String,
+}
+
+impl CredentialSettings {
+    pub(crate) fn secret_store(&self) -> &str {
+        &self.secret_store
+    }
+}
+
 impl GeneralSettings {
     pub(crate) fn allow_clipboard_read(&self) -> bool {
         // Clipboard read is always enabled; the stored flag is retained only for
@@ -356,6 +369,7 @@ pub struct DatabaseBackupInfo {
 #[serde(rename_all = "camelCase")]
 pub struct ImportedDatabaseSnapshot {
     general_settings: GeneralSettings,
+    credential_settings: CredentialSettings,
     terminal_settings: TerminalSettings,
     appearance_settings: AppearanceSettings,
     app_launcher_settings: AppLauncherSettings,
@@ -1452,6 +1466,7 @@ impl Storage {
         self.record_last_backup_at(&backup.created_at)?;
         Ok(ImportedDatabaseSnapshot {
             general_settings: self.general_settings()?,
+            credential_settings: self.credential_settings()?,
             terminal_settings: self.terminal_settings()?,
             appearance_settings: self.appearance_settings()?,
             app_launcher_settings: self.app_launcher_settings()?,
@@ -2162,6 +2177,7 @@ fn validate_import_database(path: &Path) -> Result<(), String> {
     drop(connection);
     let storage = Storage::open(path.to_path_buf())?;
     storage.general_settings()?;
+    storage.credential_settings()?;
     storage.app_launcher_settings()?;
     storage.dashboard_settings()?;
     storage.terminal_settings()?;
@@ -3669,6 +3685,28 @@ fn default_general_settings() -> GeneralSettings {
     }
 }
 
+pub(crate) fn default_secret_store() -> String {
+    if cfg!(target_os = "linux") {
+        "file".to_string()
+    } else {
+        "os".to_string()
+    }
+}
+
+pub(crate) fn secret_store_options() -> Vec<&'static str> {
+    if cfg!(target_os = "linux") {
+        vec!["file"]
+    } else {
+        vec!["os", "file"]
+    }
+}
+
+fn default_credential_settings() -> CredentialSettings {
+    CredentialSettings {
+        secret_store: default_secret_store(),
+    }
+}
+
 fn default_use_directx_screen_capture() -> bool {
     true
 }
@@ -4145,6 +4183,24 @@ fn validate_general_settings(mut settings: GeneralSettings) -> Result<GeneralSet
         _ => default_installer_check_interval_seconds(),
     };
     Ok(settings)
+}
+
+fn validate_credential_settings(
+    mut settings: CredentialSettings,
+) -> Result<CredentialSettings, String> {
+    let normalized = settings.secret_store.trim().to_lowercase();
+    settings.secret_store = if secret_store_options().contains(&normalized.as_str()) {
+        normalized
+    } else {
+        default_secret_store()
+    };
+    Ok(settings)
+}
+
+pub(crate) fn validate_credential_settings_for_command(
+    settings: CredentialSettings,
+) -> Result<CredentialSettings, String> {
+    validate_credential_settings(settings)
 }
 
 fn validate_app_launcher_settings(

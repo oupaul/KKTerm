@@ -47,6 +47,46 @@ impl Storage {
         self.update_general_settings(settings)
     }
 
+    pub fn credential_settings(&self) -> Result<CredentialSettings, String> {
+        let connection = self.lock()?;
+        let value = connection
+            .query_row(
+                "SELECT value FROM settings WHERE key = 'credentials'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(to_storage_error)?;
+
+        match value {
+            Some(value) => serde_json::from_str(&value)
+                .map(validate_credential_settings)
+                .map_err(|error| format!("credential settings are invalid: {error}"))?,
+            None => Ok(default_credential_settings()),
+        }
+    }
+
+    pub fn update_credential_settings(
+        &self,
+        request: CredentialSettings,
+    ) -> Result<CredentialSettings, String> {
+        let settings = validate_credential_settings(request)?;
+        let value = serde_json::to_string(&settings)
+            .map_err(|error| format!("failed to serialize credential settings: {error}"))?;
+        let connection = self.lock()?;
+        connection
+            .execute(
+                "INSERT INTO settings (key, value, updated_at)
+                 VALUES ('credentials', ?1, CURRENT_TIMESTAMP)
+                 ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP",
+                params![value],
+            )
+            .map_err(to_storage_error)?;
+        Ok(settings)
+    }
+
     pub fn app_launcher_settings(&self) -> Result<AppLauncherSettings, String> {
         let connection = self.lock()?;
         let value = connection

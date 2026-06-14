@@ -1,6 +1,7 @@
 import type {
   AppearanceSettings,
   AiProviderSettings,
+  CredentialSettings,
   ConnectionTree,
   DashboardSettings,
   GeneralSettings,
@@ -44,6 +45,10 @@ export const defaultGeneralSettings: GeneralSettings = {
   advancedDebuggingEnabled: false,
   rdpWebviewStability: false,
   lastBackupAt: null,
+};
+
+export const defaultCredentialSettings: CredentialSettings = {
+  secretStore: "os",
 };
 
 // Active-widget cap defaults. Mirror the Rust constants in

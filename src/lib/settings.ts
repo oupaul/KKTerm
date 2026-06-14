@@ -32,6 +32,9 @@ export function useBootstrapSettings() {
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
   );
+  const setCredentialSettings = useWorkspaceStore(
+    (state) => state.setCredentialSettings,
+  );
   const setTerminalSettings = useWorkspaceStore(
     (state) => state.setTerminalSettings,
   );
@@ -74,6 +77,12 @@ export function useBootstrapSettings() {
     void invokeCommand("get_terminal_settings")
       .then((settings) => {
         if (!disposed) setTerminalSettings(settings);
+      })
+      .catch(swallow);
+
+    void invokeCommand("get_credential_settings")
+      .then((settings) => {
+        if (!disposed) setCredentialSettings(settings);
       })
       .catch(swallow);
 
@@ -155,6 +164,7 @@ export function useBootstrapSettings() {
     setAiProviderHasApiKey,
     setAiProviderSettings,
     setDashboardSettings,
+    setCredentialSettings,
     setGeneralSettings,
     setAppearanceSettings,
     setSftpSettings,

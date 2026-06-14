@@ -13,6 +13,7 @@ import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
 import {
   defaultAppearanceSettings,
   defaultAiProviderSettings,
+  defaultCredentialSettings,
   defaultDashboardSettings,
   defaultRdpSettings,
   defaultGeneralSettings,
@@ -78,6 +79,9 @@ export function GeneralSettings() {
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setGeneralSettings = useWorkspaceStore(
     (state) => state.setGeneralSettings,
+  );
+  const setCredentialSettings = useWorkspaceStore(
+    (state) => state.setCredentialSettings,
   );
   const setTerminalSettings = useWorkspaceStore(
     (state) => state.setTerminalSettings,
@@ -178,6 +182,7 @@ export function GeneralSettings() {
         path,
       });
       setGeneralSettings(snapshot.generalSettings);
+      setCredentialSettings(snapshot.credentialSettings);
       setTerminalSettings(snapshot.terminalSettings);
       setDashboardSettings(snapshot.dashboardSettings);
       setAppearanceSettings(snapshot.appearanceSettings);
@@ -213,6 +218,7 @@ export function GeneralSettings() {
           url,
           rdp,
           vnc,
+          credential,
           aiProvider,
           dashboardSettings,
         ] = await Promise.all([
@@ -230,6 +236,9 @@ export function GeneralSettings() {
           invokeCommand("update_url_settings", { request: defaultUrlSettings }),
           invokeCommand("update_rdp_settings", { request: defaultRdpSettings }),
           invokeCommand("update_vnc_settings", { request: defaultVncSettings }),
+          invokeCommand("update_credential_settings", {
+            request: defaultCredentialSettings,
+          }),
           invokeCommand("update_ai_provider_settings", {
             request: defaultAiProviderSettings,
           }),
@@ -271,10 +280,12 @@ export function GeneralSettings() {
         setUrlSettings(url);
         setRdpSettings(rdp);
         setVncSettings(vnc);
+        setCredentialSettings(credential);
         setAiProviderSettings(aiProvider);
         setDashboardSettings(dashboardSettings);
       } else {
         setGeneralSettings(defaultGeneralSettings);
+        setCredentialSettings(defaultCredentialSettings);
         setDashboardSettings(defaultDashboardSettings);
         setTerminalSettings(defaultTerminalSettings);
         setAppearanceSettings(defaultAppearanceSettings);
