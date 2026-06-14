@@ -180,6 +180,8 @@ pub struct TmuxSession {
     pub attached: bool,
     pub windows: u32,
     pub created: Option<u64>,
+    pub last_attached: Option<u64>,
+    pub path: Option<String>,
     pub internal_id: Option<String>,
 }
 
@@ -1840,7 +1842,7 @@ fn ssh_system_context_cache_key(request: &TmuxConnectionRequest) -> String {
 }
 
 fn tmux_list_command() -> String {
-    "if command -v tmux >/dev/null 2>&1; then tmux list-sessions -F '#{session_name}\t#{session_attached}\t#{session_windows}\t#{session_created}\t#{session_id}' 2>/dev/null || true; fi".to_string()
+    "if command -v tmux >/dev/null 2>&1; then tmux list-sessions -F '#{session_name}\t#{session_attached}\t#{session_windows}\t#{session_created}\t#{session_last_attached}\t#{session_path}\t#{session_id}' 2>/dev/null || true; fi".to_string()
 }
 
 fn tmux_close_command(tmux_session_id: &str) -> String {
@@ -1978,6 +1980,12 @@ fn parse_tmux_sessions(output: &str) -> Vec<TmuxSession> {
                 .and_then(|value| value.parse::<u32>().ok())
                 .unwrap_or(0);
             let created = parts.next().and_then(|value| value.parse::<u64>().ok());
+            let last_attached = parts.next().and_then(|value| value.parse::<u64>().ok());
+            let path = parts
+                .next()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string);
             let internal_id = parts
                 .next()
                 .map(str::trim)
@@ -1988,6 +1996,8 @@ fn parse_tmux_sessions(output: &str) -> Vec<TmuxSession> {
                 attached,
                 windows,
                 created,
+                last_attached,
+                path,
                 internal_id,
             })
         })

@@ -157,6 +157,8 @@ export interface TmuxSession {
   attached: boolean;
   windows: number;
   created?: number;
+  lastAttached?: number;
+  path?: string;
   internalId?: string;
 }
 

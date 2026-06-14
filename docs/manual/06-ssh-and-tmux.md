@@ -50,7 +50,7 @@ Tutorial target: `terminal.tmuxSessions`.
 - Refresh: `terminal.refreshTmux`
 - Loading state: `terminal.loading`
 - Empty: `terminal.noTmuxSessions`
-- Each row: tmux session name, status `terminal.attached` / `terminal.detached`, an open action.
+- Each row: tmux session name, status `terminal.attached` / `terminal.detached`, tmux-reported last attached time when available, tmux-reported session path when available, and an open action.
 
 Open actions for an unattached session: `terminal.openInPane`, and split-spawn variants `terminal.openLeft`, `terminal.openRight`, `terminal.openAbove`, `terminal.openBelow`.
 

@@ -659,6 +659,13 @@ function formatRemoteDesktopPaneSubtitle(connection: Connection) {
   return connection.user?.trim() || connection.host;
 }
 
+function formatTmuxSessionTimestamp(value?: number) {
+  if (!value) {
+    return "";
+  }
+  return new Date(value * 1000).toLocaleString();
+}
+
 function TmuxSessionTag({
   connection,
   onMouseModeChange,
@@ -966,6 +973,7 @@ function TmuxSessionTag({
                 : session.attached
                   ? t("terminal.attached")
                   : t("terminal.detached");
+              const sessionTimestamp = formatTmuxSessionTimestamp(session.lastAttached);
 
               return (
                 <div className="tmux-session-row" key={session.id}>
@@ -1021,9 +1029,9 @@ function TmuxSessionTag({
                         <strong>{sessionLabel}</strong>
                         <small>
                           {sessionStatus}
-                          {" · "}
-                          {session.windows}w
+                          {sessionTimestamp ? ` · ${sessionTimestamp}` : ""}
                         </small>
+                        {session.path ? <small className="tmux-session-path">{session.path}</small> : null}
                       </button>
                     )}
                     <button
