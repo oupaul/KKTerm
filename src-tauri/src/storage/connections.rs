@@ -1477,26 +1477,32 @@ impl Storage {
     ) -> Result<Workspace, String> {
         let id = required_field("workspace id", request.id)?;
         let name = required_field("workspace name", request.name)?;
+        let icon = request
+            .icon
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        let icon_color = request
+            .icon_color
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
         let connection = self.lock()?;
         let updated = connection
             .execute(
-                "UPDATE workspaces SET name = ?1 WHERE id = ?2",
-                params![name, id],
+                "UPDATE workspaces SET name = ?1, icon = ?2, icon_color = ?3 WHERE id = ?4",
+                params![name, icon, icon_color, id],
             )
             .map_err(to_storage_error)?;
         if updated == 0 {
             return Err("workspace was not found".to_string());
         }
-        let (icon, icon_color, is_default, sort_order) = connection
+        let (is_default, sort_order) = connection
             .query_row(
-                "SELECT icon, icon_color, is_default, sort_order FROM workspaces WHERE id = ?1",
+                "SELECT is_default, sort_order FROM workspaces WHERE id = ?1",
                 params![id],
                 |row| {
                     Ok((
-                        row.get::<_, Option<String>>(0)?,
-                        row.get::<_, Option<String>>(1)?,
-                        row.get::<_, i64>(2)? != 0,
-                        row.get::<_, i64>(3)?,
+                        row.get::<_, i64>(0)? != 0,
+                        row.get::<_, i64>(1)?,
                     ))
                 },
             )

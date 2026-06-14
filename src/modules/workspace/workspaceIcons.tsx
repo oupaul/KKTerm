@@ -4,6 +4,7 @@
 
 import type { CSSProperties } from "react";
 import * as Icons from "lucide-react";
+import { materialIconRefToUrl } from "../../lib/iconCatalogUrls";
 
 export const WORKSPACE_ICON_NAMES = [
   "Folder",
@@ -78,6 +79,20 @@ export function WorkspaceIcon({
   size?: number;
 }) {
   const style = color ? ({ color } satisfies CSSProperties) : undefined;
+  const materialIconUrl = materialIconRefToUrl(icon);
+  if (materialIconUrl) {
+    return (
+      <img
+        alt=""
+        aria-hidden="true"
+        className="workspace-material-icon"
+        draggable={false}
+        height={size}
+        src={materialIconUrl}
+        width={size}
+      />
+    );
+  }
   const IconCmp = resolveIcon(icon);
   if (IconCmp) {
     return <IconCmp size={size} style={style} />;

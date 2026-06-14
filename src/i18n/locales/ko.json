@@ -2970,6 +2970,7 @@
     "noImportConnections": "일치하는 연결이 없습니다.",
     "createWorkspace": "작업 영역 만들기",
     "renameWorkspace": "작업 영역 이름 바꾸기",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "작업 영역 삭제",
     "deleteWorkspaceConfirm": "\"{{name}}\" 작업 영역과 모든 연결을 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
     "workspaceCreated": "\"{{name}}\" 작업 영역이 생성되었습니다"

@@ -1556,6 +1556,12 @@ button.dashboard-pill-dot:focus-visible {
   border-radius: 8px;
 }
 
+.dw-title-material-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
 .dw-preset-panel .dw-icon {
   color: var(--w-title-text);
   background: rgb(255 255 255 / 18%);
@@ -2115,6 +2121,11 @@ button.dashboard-pill-dot:focus-visible {
 .dw-icon-picker {
   max-height: 120px;
   overflow: auto;
+}
+
+.dw-icon-library-picker .icon-library-grid {
+  max-height: 160px;
+  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
 }
 
 .dw-preset-picker button,

@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { IconLibraryPicker } from "../../app/IconLibraryPicker";
 import { ariaPressed, dialogButtonAria } from "../../lib/aria";
 import { invokeCommand } from "../../lib/tauri";
 import type { Connection, Workspace } from "../../types";
@@ -38,18 +39,23 @@ interface ImportGroup {
  * and is expected to refresh the Workspace list and activate it.
  */
 export function NewWorkspaceDialog({
+  workspace,
   workspaces,
   onClose,
   onCreated,
+  onSaved,
 }: {
+  workspace?: Workspace;
   workspaces: Workspace[];
   onClose: () => void;
-  onCreated: (workspace: Workspace) => void;
+  onCreated?: (workspace: Workspace) => void;
+  onSaved?: (workspace: Workspace) => void;
 }) {
   const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState<string | null>(WORKSPACE_ICON_NAMES[0]);
-  const [iconColor, setIconColor] = useState<string | null>("var(--accent)");
+  const isEditMode = Boolean(workspace);
+  const [name, setName] = useState(workspace?.name ?? "");
+  const [icon, setIcon] = useState<string | null>(workspace?.icon ?? WORKSPACE_ICON_NAMES[0]);
+  const [iconColor, setIconColor] = useState<string | null>(workspace?.iconColor ?? "var(--accent)");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importGroups, setImportGroups] = useState<ImportGroup[]>([]);
   const [selectedImportWorkspaceId, setSelectedImportWorkspaceId] = useState("");
@@ -59,6 +65,9 @@ export function NewWorkspaceDialog({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isEditMode) {
+      return;
+    }
     let disposed = false;
     async function loadImportCandidates() {
       const groups: ImportGroup[] = [];
@@ -89,9 +98,9 @@ export function NewWorkspaceDialog({
     return () => {
       disposed = true;
     };
-  }, [workspaces, t]);
+  }, [isEditMode, workspaces, t]);
 
-  const canCreate = useMemo(() => name.trim().length > 0 && !submitting, [name, submitting]);
+  const canSave = useMemo(() => name.trim().length > 0 && !submitting, [name, submitting]);
   const selectedImportGroup = useMemo(
     () =>
       importGroups.find((group) => group.workspaceId === selectedImportWorkspaceId) ??
@@ -164,14 +173,26 @@ export function NewWorkspaceDialog({
     );
   }
 
-  async function handleCreate() {
-    if (!canCreate) {
+  async function handleSave() {
+    if (!canSave) {
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const workspace = await invokeCommand("create_workspace", {
+      if (workspace) {
+        const updated = await invokeCommand("rename_workspace", {
+          request: {
+            id: workspace.id,
+            name: name.trim(),
+            icon,
+            iconColor,
+          },
+        });
+        onSaved?.(updated);
+        return;
+      }
+      const created = await invokeCommand("create_workspace", {
         request: {
           name: name.trim(),
           icon,
@@ -180,7 +201,7 @@ export function NewWorkspaceDialog({
             selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
         },
       });
-      onCreated(workspace);
+      onCreated?.(created);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
       setSubmitting(false);
@@ -190,32 +211,38 @@ export function NewWorkspaceDialog({
   return createPortal(
     <div className="dialog-backdrop connection-dialog-backdrop" role="presentation">
       <div
-        aria-label={t("workspace.newWorkspace")}
+        aria-label={isEditMode ? t("workspace.editWorkspace") : t("workspace.newWorkspace")}
         aria-modal="true"
         className="connection-dialog new-workspace-dialog"
         role="dialog"
       >
         <header className="connection-dialog-header compact">
-          <h2>{t("workspace.newWorkspace")}</h2>
+          <div>
+            <p className="connection-dialog-eyebrow">
+              {isEditMode ? t("workspace.editWorkspace") : t("workspace.newWorkspace")}
+            </p>
+            <h2 className="connection-dialog-title">
+              {name.trim() || workspace?.name || t("workspace.newWorkspace")}
+            </h2>
+          </div>
         </header>
 
         <div className="new-workspace-body">
-          <fieldset className="new-workspace-group">
-            <legend>{t("workspace.workspaceDetails")}</legend>
-            <div className="connection-type-summary new-workspace-summary">
-              <WorkspaceIconPicker
-                color={iconColor}
-                icon={icon}
-                name={name || t("workspace.newWorkspace")}
-                onChange={setIcon}
-                onColorChange={setIconColor}
-              />
-              <span>
-                <strong>{name.trim() || t("workspace.newWorkspace")}</strong>
-                <small>{t("workspace.workspaceIcon")}</small>
-              </span>
-            </div>
+          <div className="connection-type-summary new-workspace-summary">
+            <WorkspaceIconPicker
+              color={iconColor}
+              icon={icon}
+              name={name || workspace?.name || t("workspace.newWorkspace")}
+              onChange={setIcon}
+              onColorChange={setIconColor}
+            />
+            <span>
+              <strong>{name.trim() || workspace?.name || t("workspace.newWorkspace")}</strong>
+              <small>{t("workspace.workspaceIcon")}</small>
+            </span>
+          </div>
 
+          <div className="connection-dialog-fields new-workspace-fields">
             <label className="new-workspace-field">
               <span>
                 {t("workspace.workspaceName")}
@@ -227,7 +254,7 @@ export function NewWorkspaceDialog({
                 onChange={(event) => setName(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
-                    void handleCreate();
+                    void handleSave();
                   }
                 }}
                 placeholder={t("workspace.workspaceNamePlaceholder")}
@@ -235,9 +262,9 @@ export function NewWorkspaceDialog({
                 value={name}
               />
             </label>
-          </fieldset>
+          </div>
 
-          {importGroups.length > 0 ? (
+          {!isEditMode && importGroups.length > 0 ? (
             <fieldset className="new-workspace-group">
               <legend>{t("workspace.importConnections")}</legend>
               <p className="field-hint">{t("workspace.importConnectionsHint")}</p>
@@ -340,12 +367,12 @@ export function NewWorkspaceDialog({
         <div className="dialog-actions">
           <button
             className="approve-button"
-            disabled={!canCreate}
-            onClick={() => void handleCreate()}
+            disabled={!canSave}
+            onClick={() => void handleSave()}
             type="button"
           >
             <Save size={15} />
-            {t("workspace.createWorkspace")}
+            {isEditMode ? t("common.save") : t("workspace.createWorkspace")}
           </button>
           <button className="toolbar-button" onClick={onClose} type="button">
             {t("common.cancel")}
@@ -421,24 +448,21 @@ function WorkspaceIconPicker({
           role="dialog"
         >
           <div className="connection-icon-picker-section">
-            <p>{t("workspace.workspaceIcons")}</p>
-            <div className="connection-icon-grid new-workspace-icon-grid">
-              {WORKSPACE_ICON_NAMES.map((iconName) => (
-                <button
-                  aria-label={t("workspace.selectWorkspaceIcon", { icon: iconName })}
-                  className="connection-icon-choice"
-                  key={iconName}
-                  onClick={() => {
-                    onChange(iconName);
-                    setOpen(false);
-                  }}
-                  type="button"
-                  {...ariaPressed(icon === iconName)}
-                >
-                  <WorkspaceIcon color={color} icon={iconName} name={iconName} size={19} />
-                </button>
-              ))}
-            </div>
+            <IconLibraryPicker
+              className="new-workspace-icon-library-picker"
+              defaultOption={{
+                value: null,
+                label: name,
+                keywords: ["letter", "workspace"],
+                icon: <WorkspaceIcon color={color} icon={null} name={name} size={19} />,
+              }}
+              lucideNames={WORKSPACE_ICON_NAMES}
+              onSelect={(nextIcon) => {
+                onChange(nextIcon);
+                setOpen(false);
+              }}
+              value={icon}
+            />
           </div>
           <div className="connection-icon-picker-section">
             <p>{t("workspace.workspaceIconColor")}</p>

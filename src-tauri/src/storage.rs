@@ -930,6 +930,10 @@ pub struct CreateWorkspaceRequest {
 pub struct RenameWorkspaceRequest {
     id: String,
     name: String,
+    #[serde(default)]
+    icon: Option<String>,
+    #[serde(default)]
+    icon_color: Option<String>,
 }
 
 #[derive(Deserialize)]

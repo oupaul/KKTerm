@@ -2970,6 +2970,7 @@
     "noImportConnections": "一致する接続がありません。",
     "createWorkspace": "ワークスペースを作成",
     "renameWorkspace": "ワークスペース名を変更",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "ワークスペースを削除",
     "deleteWorkspaceConfirm": "\"{{name}}\" とそのすべての接続を削除しますか？この操作は元に戻せません。",
     "workspaceCreated": "ワークスペース \"{{name}}\" を作成しました"

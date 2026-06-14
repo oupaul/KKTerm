@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import type { ComponentType, CSSProperties } from "react";
+import * as Icons from "lucide-react";
 import type { ConnectionType } from "../../../types";
 import rdpIcon from "../../../assets/connection-icons/rdp.png";
 import serialIcon from "../../../assets/connection-icons/serial.png";
@@ -10,7 +11,11 @@ import terminalIcon from "../../../assets/connection-icons/terminal.png";
 import urlIcon from "../../../assets/connection-icons/url.png";
 import vncIcon from "../../../assets/connection-icons/vnc.png";
 import wslIcon from "../../../assets/connection-icons/wsl.png";
+import { lucideIconNameFromRef } from "../../../lib/iconCatalog";
+import { materialIconRefToUrl } from "../../../lib/iconCatalogUrls";
 import { fileBrowserConnectionIconSrc } from "./fileBrowserConnectionIcons";
+
+type LucideIcon = ComponentType<{ size?: number; style?: CSSProperties }>;
 
 export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   local: terminalIcon,
@@ -82,6 +87,11 @@ export function ConnectionIcon({
   type: ConnectionType;
 }) {
   const src = connectionIconSrcForConnection({ iconDataUrl, localShell, type });
+  const MaterialOrImage = materialIconRefToUrl(src) ?? src;
+  const lucideIconName = lucideIconNameFromRef(src);
+  const LucideIcon = lucideIconName
+    ? (Icons as unknown as Record<string, LucideIcon | undefined>)[lucideIconName]
+    : null;
   const hasBackground = Boolean(iconBackgroundColor);
   const shellSize = hasBackground ? size + 6 : size;
   const style = {
@@ -97,14 +107,18 @@ export function ConnectionIcon({
         .join(" ")}
       style={style}
     >
-      <img
-        alt=""
-        className="connection-icon-image"
-        draggable={false}
-        height={size}
-        src={src}
-        width={size}
-      />
+      {LucideIcon ? (
+        <LucideIcon size={size} />
+      ) : (
+        <img
+          alt=""
+          className="connection-icon-image"
+          draggable={false}
+          height={size}
+          src={MaterialOrImage}
+          width={size}
+        />
+      )}
     </span>
   );
 }

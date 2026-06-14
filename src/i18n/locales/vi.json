@@ -2970,6 +2970,7 @@
     "noImportConnections": "Không có kết nối phù hợp.",
     "createWorkspace": "Tạo không gian làm việc",
     "renameWorkspace": "Đổi tên không gian làm việc",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "Xóa không gian làm việc",
     "deleteWorkspaceConfirm": "Xóa \"{{name}}\" và tất cả kết nối của nó? Không thể hoàn tác thao tác này.",
     "workspaceCreated": "Đã tạo không gian làm việc \"{{name}}\""

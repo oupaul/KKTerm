@@ -2970,6 +2970,7 @@
     "noImportConnections": "Tidak ada koneksi yang cocok.",
     "createWorkspace": "Buat ruang kerja",
     "renameWorkspace": "Ganti nama ruang kerja",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "Hapus ruang kerja",
     "deleteWorkspaceConfirm": "Hapus \"{{name}}\" dan semua koneksinya? Tindakan ini tidak dapat dibatalkan.",
     "workspaceCreated": "Ruang kerja \"{{name}}\" dibuat"

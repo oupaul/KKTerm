@@ -2970,6 +2970,7 @@
     "noImportConnections": "没有匹配的连接。",
     "createWorkspace": "创建工作区",
     "renameWorkspace": "重命名工作区",
+    "editWorkspace": "编辑工作区",
     "deleteWorkspace": "删除工作区",
     "deleteWorkspaceConfirm": "要删除“{{name}}”及其所有连接吗？此操作无法撤销。",
     "workspaceCreated": "已创建工作区“{{name}}”"

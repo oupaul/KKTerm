@@ -684,6 +684,10 @@
   overflow: visible;
 }
 
+.connection-dialog-backdrop .connection-dialog:has(.connection-icon-popover) {
+  overflow: visible;
+}
+
 .connection-dialog-header {
   position: relative;
   padding-bottom: 10px;
@@ -871,7 +875,7 @@
   left: 0;
   z-index: 20;
   display: grid;
-  width: 236px;
+  width: min(520px, calc(100vw - 48px));
   max-height: min(430px, calc(100vh - 140px));
   overflow-y: auto;
   gap: 10px;
@@ -880,6 +884,51 @@
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   box-shadow: var(--shadow);
+}
+
+.icon-library-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.icon-library-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+}
+
+.connection-dialog .icon-library-search input[type="search"] {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.connection-icon-grid.icon-library-grid {
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 2px;
+  justify-items: stretch;
+}
+
+.connection-icon-grid.icon-library-grid .connection-icon-choice {
+  width: 100%;
+  height: auto;
+  min-height: 34px;
+  aspect-ratio: 1;
+}
+
+.icon-library-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 /* Inline color palette (design language): an expanded row of round swatches,
@@ -993,7 +1042,8 @@
 .connection-icon-choice img,
 .connection-icon-choice .connection-icon-shell,
 .connection-icon-choice .connection-icon-image,
-.connection-icon-choice .connection-icon-lucide-preview {
+.connection-icon-choice .connection-icon-lucide-preview,
+.connection-icon-choice svg {
   max-width: 22px;
   max-height: 22px;
   object-fit: contain;

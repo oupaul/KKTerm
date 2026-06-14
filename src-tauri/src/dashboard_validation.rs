@@ -317,11 +317,34 @@ pub fn validate_accent(value: &str) -> Result<(), ValidationError> {
 }
 
 pub fn validate_icon(value: &str) -> Result<(), ValidationError> {
-    if ICONS.contains(&value) {
+    if ICONS.contains(&value) || is_safe_material_icon_ref(value) {
         Ok(())
     } else {
         Err(ValidationError::InvalidIcon)
     }
+}
+
+fn is_safe_material_icon_ref(value: &str) -> bool {
+    let Some(icon_id) = value.strip_prefix("material:") else {
+        return false;
+    };
+    if icon_id.is_empty() || icon_id.len() > 96 {
+        return false;
+    }
+    let mut chars = icon_id.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !(first.is_ascii_lowercase() || first.is_ascii_digit()) {
+        return false;
+    }
+    chars.all(|ch| {
+        ch.is_ascii_lowercase()
+            || ch.is_ascii_digit()
+            || ch == '.'
+            || ch == '_'
+            || ch == '-'
+    })
 }
 
 pub fn validate_grid_bounds(x: i64, y: i64, w: i64, h: i64) -> Result<(), ValidationError> {
@@ -1287,6 +1310,15 @@ mod tests {
     #[test]
     fn icon_accepts_generator_tools_default() {
         assert!(validate_icon("Hammer").is_ok());
+    }
+
+    #[test]
+    fn icon_accepts_safe_material_reference() {
+        assert!(validate_icon("material:folder-server").is_ok());
+        assert_eq!(
+            validate_icon("material:../folder-server"),
+            Err(ValidationError::InvalidIcon)
+        );
     }
 
     #[test]

@@ -620,7 +620,7 @@
   line-height: 1;
 }
 
-/* New / Rename / Delete Workspace dialogs */
+/* New / Edit / Delete Workspace dialogs */
 .new-workspace-body {
   display: flex;
   flex-direction: column;
@@ -681,11 +681,11 @@
 }
 
 .new-workspace-icon-popover {
-  width: 236px;
+  width: min(520px, calc(100vw - 48px));
 }
 
-.new-workspace-icon-grid {
-  grid-template-columns: repeat(6, 30px);
+.workspace-material-icon {
+  object-fit: contain;
 }
 
 .new-workspace-icon-color-grid {

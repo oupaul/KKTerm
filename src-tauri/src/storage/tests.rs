@@ -3129,6 +3129,42 @@
         assert_eq!(persisted.icon_color.as_deref(), Some("#2563eb"));
     }
 
+    #[test]
+    fn rename_workspace_updates_icon_properties() {
+        let storage = Storage::open(temp_db_path("workspace-edit-properties")).expect("storage opens");
+
+        let workspace = storage
+            .create_workspace(CreateWorkspaceRequest {
+                name: "Blue Ops".to_string(),
+                icon: Some("Server".to_string()),
+                icon_color: Some("#2563eb".to_string()),
+                import_connection_ids: None,
+            })
+            .expect("workspace is created");
+        let updated = storage
+            .rename_workspace(RenameWorkspaceRequest {
+                id: workspace.id.clone(),
+                name: "Green Ops".to_string(),
+                icon: Some("Folder".to_string()),
+                icon_color: Some("#16a34a".to_string()),
+            })
+            .expect("workspace is updated");
+
+        assert_eq!(updated.name, "Green Ops");
+        assert_eq!(updated.icon.as_deref(), Some("Folder"));
+        assert_eq!(updated.icon_color.as_deref(), Some("#16a34a"));
+
+        let persisted = storage
+            .list_workspaces()
+            .expect("workspaces load")
+            .into_iter()
+            .find(|entry| entry.id == workspace.id)
+            .expect("workspace is listed");
+        assert_eq!(persisted.name, "Green Ops");
+        assert_eq!(persisted.icon.as_deref(), Some("Folder"));
+        assert_eq!(persisted.icon_color.as_deref(), Some("#16a34a"));
+    }
+
     fn temp_db_path(name: &str) -> PathBuf {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

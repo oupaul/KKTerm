@@ -36,6 +36,8 @@ export interface CreateWorkspaceRequest {
 export interface RenameWorkspaceRequest {
   id: string;
   name: string;
+  icon?: string | null;
+  iconColor?: string | null;
 }
 
 export interface ReorderWorkspacesRequest {

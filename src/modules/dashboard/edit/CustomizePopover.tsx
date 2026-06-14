@@ -1,6 +1,6 @@
-import * as Icons from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { IconLibraryPicker } from "../../../app/IconLibraryPicker";
 import { ariaSelected } from "../../../lib/aria";
 import { invokeCommand, isTauriRuntime } from "../../../lib/tauri";
 import { ToggleSwitch } from "../../settings/ToggleSwitch";
@@ -284,23 +284,16 @@ function CommonSection({ instance }: { instance: DashboardWidgetInstance }) {
 
       <section>
         <h4>{t("dashboard.icon")}</h4>
-        <div className="dw-icon-picker">
-          {ICON_NAMES.map((name) => {
-            const IconCmp = (Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>)[name];
-            if (!IconCmp) return null;
-            return (
-              <button
-                key={name}
-                className={instance.iconName === name ? "active" : ""}
-                title={name}
-                aria-label={name}
-                onClick={() => updateInstance(instance.id, { iconName: name as IconName })}
-              >
-                <IconCmp width={14} height={14} />
-              </button>
-            );
-          })}
-        </div>
+        <IconLibraryPicker
+          className="dw-icon-library-picker"
+          lucideNames={ICON_NAMES}
+          onSelect={(iconName) => {
+            if (iconName) {
+              updateInstance(instance.id, { iconName: iconName as IconName });
+            }
+          }}
+          value={instance.iconName}
+        />
       </section>
     </>
   );

@@ -26,7 +26,7 @@ import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { Connection, Workspace } from "../types";
 import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
-import { RenameWorkspaceDialog, DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
+import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
 import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
 import { RailTooltip } from "./RailTooltip";
 
@@ -135,7 +135,7 @@ export function ActivityRail({
   const [railConnectionMenu, setRailConnectionMenu] =
     useState<RailConnectionMenuState | null>(null);
   const [showNewWorkspace, setShowNewWorkspace] = useState(false);
-  const [workspaceToRename, setWorkspaceToRename] = useState<Workspace | null>(null);
+  const [workspaceToEdit, setWorkspaceToEdit] = useState<Workspace | null>(null);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const railConnectionMenuRef = useRef<HTMLDivElement | null>(null);
   const connectionRailDragRef = useRef<ConnectionRailDragState | null>(null);
@@ -295,8 +295,8 @@ export function ActivityRail({
       [
         {
           kind: "item",
-          label: t("workspace.renameWorkspace"),
-          action: () => setWorkspaceToRename(workspace),
+          label: t("workspace.editWorkspace"),
+          action: () => setWorkspaceToEdit(workspace),
         },
         {
           kind: "item",
@@ -892,12 +892,13 @@ export function ActivityRail({
           }}
         />
       ) : null}
-      {workspaceToRename ? (
-        <RenameWorkspaceDialog
-          workspace={workspaceToRename}
-          onClose={() => setWorkspaceToRename(null)}
-          onRenamed={() => {
-            setWorkspaceToRename(null);
+      {workspaceToEdit ? (
+        <NewWorkspaceDialog
+          workspace={workspaceToEdit}
+          workspaces={workspaces}
+          onClose={() => setWorkspaceToEdit(null)}
+          onSaved={() => {
+            setWorkspaceToEdit(null);
             void reloadWorkspaces();
           }}
         />

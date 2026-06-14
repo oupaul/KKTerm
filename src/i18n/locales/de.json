@@ -2970,6 +2970,7 @@
     "noImportConnections": "Keine passenden Verbindungen.",
     "createWorkspace": "Arbeitsbereich erstellen",
     "renameWorkspace": "Arbeitsbereich umbenennen",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "Arbeitsbereich löschen",
     "deleteWorkspaceConfirm": "\"{{name}}\" und alle zugehörigen Verbindungen löschen? Dies kann nicht rückgängig gemacht werden.",
     "workspaceCreated": "Arbeitsbereich \"{{name}}\" erstellt"

@@ -2979,6 +2979,7 @@
     "noImportConnections": "No matching Connections.",
     "createWorkspace": "Create Workspace",
     "renameWorkspace": "Rename Workspace",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "Delete Workspace",
     "deleteWorkspaceConfirm": "Delete \"{{name}}\" and all of its connections? This cannot be undone.",
     "workspaceCreated": "Workspace \"{{name}}\" created"

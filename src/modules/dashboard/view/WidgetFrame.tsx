@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { showNativeContextMenu, type NativeContextMenuPosition } from "../../../lib/nativeContextMenu";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
+import { materialIconRefToUrl } from "../../../lib/iconCatalogUrls";
 import { useDashboardStore } from "../state/dashboardStore";
 import { getBuiltInWidget } from "../registry/builtInRegistry";
 import { PRESET_RENDERERS } from "../registry/presetRegistry";
@@ -55,7 +56,13 @@ export function WidgetFrame({
     ?? customSource?.title
     ?? t("dashboard.untitledWidget");
 
+  const materialIconUrl = materialIconRefToUrl(instance.iconName);
   const IconCmp = (Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>)[instance.iconName] ?? Icons.Hash;
+  const titleIcon = materialIconUrl ? (
+    <img alt="" aria-hidden="true" className="dw-title-material-icon" draggable={false} src={materialIconUrl} />
+  ) : (
+    <IconCmp width={14} height={14} />
+  );
 
   useEffect(() => {
     if (!shouldSpaceWarp) return;
@@ -146,7 +153,7 @@ export function WidgetFrame({
     >
       <Render
         title={fallbackTitle}
-        icon={<IconCmp width={14} height={14} />}
+        icon={titleIcon}
         body={(
           <WidgetBody
             instance={instance}

@@ -2970,6 +2970,7 @@
     "noImportConnections": "ไม่มีการเชื่อมต่อที่ตรงกัน",
     "createWorkspace": "สร้างพื้นที่ทำงาน",
     "renameWorkspace": "เปลี่ยนชื่อพื้นที่ทำงาน",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "ลบพื้นที่ทำงาน",
     "deleteWorkspaceConfirm": "ลบ \"{{name}}\" และการเชื่อมต่อทั้งหมดหรือไม่? การดำเนินการนี้ย้อนกลับไม่ได้",
     "workspaceCreated": "สร้างพื้นที่ทำงาน \"{{name}}\" แล้ว"

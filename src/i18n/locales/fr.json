@@ -2970,6 +2970,7 @@
     "noImportConnections": "Aucune connexion correspondante.",
     "createWorkspace": "Créer un espace de travail",
     "renameWorkspace": "Renommer l'espace de travail",
+    "editWorkspace": "Edit Workspace",
     "deleteWorkspace": "Supprimer l'espace de travail",
     "deleteWorkspaceConfirm": "Supprimer \"{{name}}\" et toutes ses connexions ? Cette action est irréversible.",
     "workspaceCreated": "Espace de travail \"{{name}}\" créé"

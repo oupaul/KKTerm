@@ -67,7 +67,8 @@ export const ICON_NAMES = [
   "Rocket","Route","Save","Send","Shell","SlidersHorizontal","Sparkles",
   "SquareTerminal","Upload","Usb","Waypoints","Webhook","Workflow","XCircle",
 ] as const;
-export type IconName = (typeof ICON_NAMES)[number];
+export type MaterialIconName = `material:${string}`;
+export type IconName = (typeof ICON_NAMES)[number] | MaterialIconName;
 
 export const GRID_DENSITIES = ["compact", "default", "roomy"] as const;
 export type GridDensity = (typeof GRID_DENSITIES)[number];
