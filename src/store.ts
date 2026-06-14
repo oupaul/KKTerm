@@ -514,6 +514,27 @@ function buildPaneFromStoredLayoutPane(
   const id = createPaneId(connection.id);
   const title = storedPane.title?.trim() || titleForConnectionPane(connection);
   const toolbarTitle = toolbarTitleForConnection(connection);
+
+  // The stored pane.kind is authoritative for the rendered surface and must be
+  // honored before any connection.type derivation. A file-browser pane reuses an
+  // ssh-typed Connection — an SFTP browser opened from an SSH Connection, and an
+  // sftp-protocol FTP Connection that is normalized to an ssh shape at pane
+  // creation (see sftpBrowserConnectionFromFtpConnection) — so deriving the kind
+  // from connection.type alone would silently rebuild SFTP as an SSH terminal.
+  // See "SFTP vs SSH" in CONTEXT.md / docs/ARCHITECTURE.md.
+  if (storedPane.kind === "sftp" || storedPane.kind === "localFiles") {
+    return {
+      kind: storedPane.kind,
+      id,
+      title,
+      toolbarTitle,
+      connection:
+        storedPane.kind === "sftp" && connection.type === "ftp"
+          ? sftpBrowserConnectionFromFtpConnection(connection)
+          : connection,
+    };
+  }
+
   if (connection.type === "url") {
     if (!connection.url) {
       return null;

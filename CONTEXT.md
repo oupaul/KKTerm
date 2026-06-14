@@ -103,6 +103,8 @@ _Avoid_: dock, taskbar
 A subdivision of a tab that presents one terminal surface or workspace view.
 _Avoid_: Session, split
 
+A Pane's **kind** (terminal, sftp, ftp, localFiles, webview, remoteDesktop) is what decides the surface it renders, and it is distinct from the durable Connection's **type**. The two are not interchangeable: an **SFTP browser Pane is not an SSH terminal**, yet it intentionally carries an ssh-typed Connection because SFTP is launched from an SSH Connection (and an sftp-protocol FTP Connection is normalized to an ssh shape for the same browser code path). Because one ssh-typed Connection can back either an SSH terminal Pane or an SFTP browser Pane, any code that recreates a Pane — especially restoring a saved or docked layout — must use the stored Pane kind, never re-derive the surface from the Connection's type, or an SFTP Pane will reopen as an SSH terminal. See the SFTP vs SSH invariant in `docs/ARCHITECTURE.md`.
+
 Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly tmux session id, such as `kkterm-cockpit001`, used to resume that Pane's remote tmux session when the Pane is recreated. Current Pane tmux ids use the `kkterm-<sci-fi-name><number>` shape and are remembered in frontend workspace storage. That id belongs to the frontend workspace/Pane layer, not the backend Connection model.
 
 **Watchdog**:
