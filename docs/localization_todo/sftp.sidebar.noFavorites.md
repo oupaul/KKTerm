@@ -1,6 +1,6 @@
 # sftp.sidebar.noFavorites
 
-- **English value**: `No favorites yet — hover a folder below and tap + to add it here.`
+- **English value**: `No favorites yet — drag a file or folder here, or hover a folder below and tap +.`
 - **Namespace**: `sftp`
 - **File/component**: `src/modules/workspace/connections/sftp/ExplorerSidebar.tsx`
 - **UI role**: `status`
