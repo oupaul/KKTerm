@@ -2170,6 +2170,9 @@
       "inFavorites": "In Favorites",
       "driveFree": "{{free}} free of {{total}}"
     },
+    "itemsCount": "{{count}} items",
+    "foldersCount": "{{count}} folders",
+    "availableSpace": "{{size}} available",
     "transferringStatus": "{{count}} transferring · {{percent}}%",
     "transfersIdleStatus": "{{count}} completed · idle",
     "transferHint": "Drag files between panes, or use the transfer arrows to start a transfer.",

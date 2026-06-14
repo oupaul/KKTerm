@@ -3526,7 +3526,12 @@ fn normalize_connection_icon_data_url(value: Option<String>) -> Result<Option<St
         if value.len() > 512 * 1024 {
             return Err("connection icon data URL is too large".to_string());
         }
-        if !value.starts_with("data:image/") {
+        // Accept an inline image data URL or one of the app's icon-catalog refs
+        // ("lucide:Name" / "material:id"), which the icon picker offers and the
+        // ConnectionIcon renderer resolves. Catalog refs are short identifiers.
+        let is_image_data_url = value.starts_with("data:image/");
+        let is_icon_ref = value.starts_with("lucide:") || value.starts_with("material:");
+        if !is_image_data_url && !is_icon_ref {
             return Err("connection icon must be an image data URL".to_string());
         }
     }

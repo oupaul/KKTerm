@@ -1,6 +1,6 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 
-import { Terminal, X } from "lucide-react";
+import { X } from "lucide-react";
 import { DIcon } from "../../../../app/ui/dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -60,18 +60,17 @@ export function SftpWorkspace({
   isActive,
   tab,
   commands: commandsProp,
-  inline = false,
   onClose,
 }: {
   isActive: boolean;
   tab: WorkspaceTab;
   commands?: FileBrowserCommands;
+  // Accepted for the terminal's inline SFTP dialog; no longer alters layout.
   inline?: boolean;
   onClose?: () => void;
 }) {
   const { t } = useTranslation();
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
-  const openTerminalHere = useWorkspaceStore((state) => state.openTerminalHere);
   const connection = tab.connection;
   const isLocalFilesBrowser = tab.kind === "localFiles";
   const commands = useMemo<FileBrowserCommands | null>(
@@ -195,6 +194,18 @@ export function SftpWorkspace({
       disposed = true;
     };
   }, []);
+
+  // The File Explorer has no network session, but it should still register as a
+  // live connection (green dot in the rail / connection tree) the moment it
+  // opens, and release it when the tab closes.
+  useEffect(() => {
+    const connectionId = connection?.id;
+    if (!isLocalFilesBrowser || !connectionId) {
+      return;
+    }
+    markConnectionSessionStarted(connectionId);
+    return () => markConnectionSessionEnded(connectionId);
+  }, [connection?.id, isLocalFilesBrowser, markConnectionSessionEnded, markConnectionSessionStarted]);
 
   useEffect(() => {
     setSidebarCollapsed(readSidebarCollapsed(sidebarConnectionKey, isLocalFilesBrowser));
@@ -396,6 +407,19 @@ export function SftpWorkspace({
   };
 
   const isLocalDrivePicker = localPath === WINDOWS_DRIVES_PATH;
+
+  // Free space of the drive that holds the current local folder, for the status
+  // bar. Picks the longest matching mount point (e.g. C:\ for C:\Users\...).
+  const localAvailableBytes = useMemo(() => {
+    if (!localPlaces || !localPath || isLocalDrivePicker) {
+      return undefined;
+    }
+    const normalizedPath = localPath.toLowerCase();
+    const drive = localPlaces.drives
+      .filter((entry) => normalizedPath.startsWith(entry.path.toLowerCase()))
+      .sort((left, right) => right.path.length - left.path.length)[0];
+    return drive?.freeBytes;
+  }, [isLocalDrivePicker, localPath, localPlaces]);
 
   const refreshLocalDirectory = async () => {
     await loadLocalDirectory(localPath || undefined);
@@ -1146,14 +1170,6 @@ export function SftpWorkspace({
     }
   };
 
-  const handleOpenTerminalHere = () => {
-    if (!connection || !isConnected || !commands?.capabilities.openTerminalHere) {
-      return;
-    }
-
-    openTerminalHere(connection, remotePath);
-  };
-
   const selectedLocalFiles = localFiles.filter((file) => selectedLocalNames.includes(file.name));
   const selectedRemoteFiles = remoteFiles.filter((file) => selectedRemoteNames.includes(file.name));
 
@@ -1499,18 +1515,6 @@ export function SftpWorkspace({
           {hasRemoteHost ? hostLabel : null}
         </span>
         <span className="sftp-bar-right">
-          {!inline && commands?.capabilities.openTerminalHere ? (
-            <button
-              className="toolbar-button"
-              data-tutorial-id="sftp.terminal"
-              disabled={!isConnected}
-              onClick={handleOpenTerminalHere}
-              type="button"
-            >
-              <Terminal size={15} />
-              {t("sftp.terminal")}
-            </button>
-          ) : null}
           {onClose ? (
             <button
               className="sftp-bar-close"
@@ -1557,6 +1561,8 @@ export function SftpWorkspace({
           onReorderFavorites={reorderFavorites}
           onOpenFavoriteFile={(path) => void openFilesystemPath(path)}
           enableSearch
+          showFooter
+          availableBytes={isLocalDrivePicker ? undefined : localAvailableBytes}
         />
         {!isLocalFilesBrowser ? (
           <>
@@ -1606,6 +1612,8 @@ export function SftpWorkspace({
               onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
               forceDropTarget={isRemoteDropTarget}
               renameRequest={renameRequest?.side === "remote" ? renameRequest : undefined}
+              enableSearch
+              showFooter
             />
           </>
         ) : null}

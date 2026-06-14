@@ -11,7 +11,7 @@ import type { LocalPlacesListing } from "../../../../lib/tauri";
 import type { FileEntry } from "../../../../types";
 import { ExplorerSidebar } from "./ExplorerSidebar";
 import { FileGlyph } from "./finderGlyphs";
-import { joinLocalPath } from "./format";
+import { formatFileSize, joinLocalPath } from "./format";
 import type { FilePaneSide, LocalFavorite } from "./types";
 
 type SortKey = "name" | "size" | "date";
@@ -52,6 +52,8 @@ export function FilePane({
   onReorderFavorites,
   onOpenFavoriteFile,
   enableSearch = false,
+  showFooter = false,
+  availableBytes,
 }: {
   side: FilePaneSide;
   title: string;
@@ -84,6 +86,8 @@ export function FilePane({
   onReorderFavorites?: (next: LocalFavorite[]) => void;
   onOpenFavoriteFile?: (path: string) => void;
   enableSearch?: boolean;
+  showFooter?: boolean;
+  availableBytes?: number;
 }) {
   const { t } = useTranslation();
   const pathSuggestionsId = useId();
@@ -334,6 +338,7 @@ export function FilePane({
 
   const isEmpty = !isLoading && !status && sortedFiles.length === 0;
   const isNoResults = !isLoading && !status && sortedFiles.length > 0 && visibleFiles.length === 0;
+  const folderCount = useMemo(() => files.filter((file) => file.kind === "folder").length, [files]);
 
   return (
     <section
@@ -659,6 +664,24 @@ export function FilePane({
           </div>
         </div>
       </div>
+
+      {showFooter ? (
+        <div className="sftp-pane-foot">
+          <span>{t("sftp.itemsCount", { count: files.length })}</span>
+          {folderCount > 0 ? (
+            <>
+              <span className="dot" />
+              <span>{t("sftp.foldersCount", { count: folderCount })}</span>
+            </>
+          ) : null}
+          {availableBytes !== undefined ? (
+            <>
+              <span className="sftp-pane-foot-spacer" />
+              <span>{t("sftp.availableSpace", { size: formatFileSize(availableBytes) })}</span>
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

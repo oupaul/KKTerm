@@ -1304,6 +1304,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           keyPath: undefined,
           proxyJump: undefined,
           ftpOptions: undefined,
+          // Keep the file-browser identity for the rail/tab glyph instead of the
+          // default SSH terminal icon (this connection opens a file browser). Use
+          // a catalog icon ref (not an imported asset) so non-Vite consumers of
+          // the store, like the test runner, don't choke on a .svg import.
+          iconDataUrl: connection.iconDataUrl ?? "material:folder-server",
         };
         get().openSftpBrowserInNewTab(sshConnection);
         return;
@@ -1839,6 +1844,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         keyPath: undefined,
         proxyJump: undefined,
         ftpOptions: undefined,
+        // Keep the file-browser identity for the rail/tab glyph instead of the
+        // default SSH terminal icon (this connection opens a file browser). Use
+        // a catalog icon ref (not an imported asset) so non-Vite consumers of
+        // the store, like the test runner, don't choke on a .svg import.
+        iconDataUrl: connection.iconDataUrl ?? "material:folder-server",
       };
       get().openSftpBrowser(sshConnection);
       return;

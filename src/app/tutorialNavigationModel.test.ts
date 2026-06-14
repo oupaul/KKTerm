@@ -66,7 +66,6 @@ const workspaceTargets = [
   "sftp.toolbar",
   "sftp.upload",
   "sftp.download",
-  "sftp.terminal",
   "sftp.localPane",
   "sftp.remotePane",
   "sftp.transferQueue",
