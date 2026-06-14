@@ -178,6 +178,37 @@ pub struct LocalDirectoryEntry {
     modified: Option<u64>,
 }
 
+// Finder/Explorer-style sidebar places: the user's home and well-known folders
+// plus mounted drives with capacity. Backs the local File Explorer / file-browser
+// local-pane navigation sidebar.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalPlace {
+    id: String,
+    label: String,
+    path: String,
+    icon: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalDrivePlace {
+    id: String,
+    label: String,
+    path: String,
+    icon: String,
+    total_bytes: u64,
+    free_bytes: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalPlacesListing {
+    home: Option<LocalPlace>,
+    common: Vec<LocalPlace>,
+    drives: Vec<LocalDrivePlace>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SftpTransferResult {
@@ -910,6 +941,134 @@ pub fn list_local_directory(
         path: display_local_path(&directory),
         entries,
     })
+}
+
+pub fn list_local_places() -> Result<LocalPlacesListing, String> {
+    let home = default_local_directory();
+    let home_label = home
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| display_local_path(&home));
+    let home_place = LocalPlace {
+        id: "home".to_string(),
+        label: home_label,
+        path: display_local_path(&home),
+        icon: "home".to_string(),
+    };
+
+    let mut common = Vec::new();
+    for (folder, icon) in [
+        ("Desktop", "desktop"),
+        ("Documents", "documents"),
+        ("Downloads", "downloads"),
+        ("Pictures", "pictures"),
+    ] {
+        let candidate = home.join(folder);
+        if candidate.is_dir() {
+            common.push(LocalPlace {
+                id: folder.to_lowercase(),
+                label: folder.to_string(),
+                path: display_local_path(&candidate),
+                icon: icon.to_string(),
+            });
+        }
+    }
+
+    Ok(LocalPlacesListing {
+        home: Some(home_place),
+        common,
+        drives: list_local_drives(),
+    })
+}
+
+fn list_local_drives() -> Vec<LocalDrivePlace> {
+    #[cfg(target_os = "windows")]
+    {
+        windows_local_drives()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        sysinfo_local_drives()
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        Vec::new()
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_local_drives() -> Vec<LocalDrivePlace> {
+    use windows_sys::Win32::Storage::FileSystem::{GetDiskFreeSpaceExW, GetDriveTypeW};
+
+    const DRIVE_REMOVABLE: u32 = 2;
+    let mut drives = Vec::new();
+    for letter in b'A'..=b'Z' {
+        let root = format!("{}:\\", letter as char);
+        if !Path::new(&root).is_dir() {
+            continue;
+        }
+        let wide: Vec<u16> = root.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut free_available: u64 = 0;
+        let mut total: u64 = 0;
+        let mut total_free: u64 = 0;
+        let ok = unsafe {
+            GetDiskFreeSpaceExW(wide.as_ptr(), &mut free_available, &mut total, &mut total_free)
+        };
+        let (total_bytes, free_bytes) = if ok != 0 { (total, free_available) } else { (0, 0) };
+        let drive_type = unsafe { GetDriveTypeW(wide.as_ptr()) };
+        drives.push(LocalDrivePlace {
+            id: format!("drive-{root}"),
+            label: root.clone(),
+            icon: if drive_type == DRIVE_REMOVABLE {
+                "externaldrive".to_string()
+            } else {
+                "internaldrive".to_string()
+            },
+            path: root,
+            total_bytes,
+            free_bytes,
+        });
+    }
+    drives
+}
+
+#[cfg(target_os = "macos")]
+fn sysinfo_local_drives() -> Vec<LocalDrivePlace> {
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    let mut seen = std::collections::HashSet::new();
+    let mut drives = Vec::new();
+    for disk in disks.iter() {
+        let path = display_local_path(disk.mount_point());
+        if path.is_empty() || !seen.insert(path.clone()) {
+            continue;
+        }
+        let total_bytes = disk.total_space();
+        // Skip pseudo / zero-sized mounts that aren't useful as navigation targets.
+        if total_bytes == 0 {
+            continue;
+        }
+        let volume_name = disk.name().to_string_lossy().trim().to_string();
+        let label = if volume_name.is_empty() || volume_name == path {
+            path.clone()
+        } else {
+            volume_name
+        };
+        drives.push(LocalDrivePlace {
+            id: format!("drive-{path}"),
+            label,
+            icon: if disk.is_removable() {
+                "externaldrive".to_string()
+            } else {
+                "internaldrive".to_string()
+            },
+            path,
+            total_bytes,
+            free_bytes: disk.available_space(),
+        });
+    }
+    drives.sort_by(|left, right| left.path.to_lowercase().cmp(&right.path.to_lowercase()));
+    drives
 }
 
 // Local File Explorer file operations. These back the `localFiles` Connection

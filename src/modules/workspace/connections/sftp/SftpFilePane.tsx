@@ -7,9 +7,11 @@ import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMou
 import { useTranslation } from "react-i18next";
 import { DIcon } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
+import type { LocalPlacesListing } from "../../../../lib/tauri";
 import type { FileEntry } from "../../../../types";
+import { ExplorerSidebar } from "./ExplorerSidebar";
 import { FileGlyph } from "./finderGlyphs";
-import type { FilePaneSide } from "./types";
+import type { FilePaneSide, LocalFavorite } from "./types";
 
 type SortKey = "name" | "size" | "date";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
@@ -39,6 +41,15 @@ export function FilePane({
   onDropTransfer,
   forceDropTarget = false,
   renameRequest,
+  enableSidebar = false,
+  sidebarCollapsed = false,
+  onToggleSidebar,
+  places = null,
+  favorites = [],
+  onAddFavorite,
+  onRemoveFavorite,
+  onReorderFavorites,
+  enableSearch = false,
 }: {
   side: FilePaneSide;
   title: string;
@@ -61,6 +72,15 @@ export function FilePane({
   onDropTransfer?: (targetSide: FilePaneSide, fileNames: string[]) => void;
   forceDropTarget?: boolean;
   renameRequest?: { side: FilePaneSide; name: string; requestId: number };
+  enableSidebar?: boolean;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+  places?: LocalPlacesListing | null;
+  favorites?: LocalFavorite[];
+  onAddFavorite?: (place: { label: string; path: string; icon: string }) => void;
+  onRemoveFavorite?: (id: string) => void;
+  onReorderFavorites?: (next: LocalFavorite[]) => void;
+  enableSearch?: boolean;
 }) {
   const { t } = useTranslation();
   const pathSuggestionsId = useId();
@@ -75,8 +95,14 @@ export function FilePane({
   const [sort, setSort] = useState<SortState>({ key: "name", dir: "asc" });
   const [view, setView] = useState<ViewMode>("list");
   const [isDropTarget, setIsDropTarget] = useState(false);
+  const [search, setSearch] = useState("");
 
   const sortedFiles = useMemo(() => sortFileEntries(files, sort), [files, sort]);
+  const query = search.trim().toLocaleLowerCase();
+  const visibleFiles = useMemo(
+    () => (query ? sortedFiles.filter((file) => file.name.toLocaleLowerCase().includes(query)) : sortedFiles),
+    [query, sortedFiles],
+  );
   const crumbs = useMemo(() => buildCrumbs(side, path), [side, path]);
   const pathSuggestions = useMemo(
     () => buildFolderPathSuggestions({ side, currentPath: path, draft: pathDraft, files }),
@@ -86,6 +112,7 @@ export function FilePane({
   useEffect(() => {
     setPathDraft(path);
     setEditingPath(false);
+    setSearch("");
   }, [path]);
 
   useEffect(() => {
@@ -124,11 +151,11 @@ export function FilePane({
       return;
     }
     if (event?.shiftKey && lastSelectedNameRef.current) {
-      const currentIndex = sortedFiles.findIndex((file) => file.name === fileName);
-      const lastIndex = sortedFiles.findIndex((file) => file.name === lastSelectedNameRef.current);
+      const currentIndex = visibleFiles.findIndex((file) => file.name === fileName);
+      const lastIndex = visibleFiles.findIndex((file) => file.name === lastSelectedNameRef.current);
       if (currentIndex >= 0 && lastIndex >= 0) {
         const [start, end] = currentIndex < lastIndex ? [currentIndex, lastIndex] : [lastIndex, currentIndex];
-        onSelectionChange?.(sortedFiles.slice(start, end + 1).map((file) => file.name));
+        onSelectionChange?.(visibleFiles.slice(start, end + 1).map((file) => file.name));
         return;
       }
     }
@@ -303,6 +330,7 @@ export function FilePane({
   }
 
   const isEmpty = !isLoading && !status && sortedFiles.length === 0;
+  const isNoResults = !isLoading && !status && sortedFiles.length > 0 && visibleFiles.length === 0;
 
   return (
     <section
@@ -315,8 +343,11 @@ export function FilePane({
         }
       }}
       onKeyDown={(event) => {
+        const target = event.target as HTMLElement;
+        const isTextInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
         if (
           (event.key === "Delete" || event.key === "Backspace") &&
+          !isTextInput &&
           onDeleteSelected &&
           !editingName &&
           !editingPath &&
@@ -329,6 +360,18 @@ export function FilePane({
       }}
     >
       <div className="sftp-pane-head">
+        {enableSidebar ? (
+          <button
+            className={`sftp-icon-btn${sidebarCollapsed ? "" : " active"}`}
+            aria-label={sidebarCollapsed ? t("sftp.sidebar.show") : t("sftp.sidebar.hide")}
+            aria-pressed={!sidebarCollapsed}
+            onClick={onToggleSidebar}
+            title={sidebarCollapsed ? t("sftp.sidebar.show") : t("sftp.sidebar.hide")}
+            type="button"
+          >
+            <DIcon name="sidebar" size={16} />
+          </button>
+        ) : null}
         <span className="sftp-pane-label">
           <DIcon name={side === "local" ? "drive" : "server"} size={13} />
           {title}
@@ -466,79 +509,131 @@ export function FilePane({
             <DIcon name="refresh" size={15} />
           </button>
           <ViewSeg value={view} onChange={setView} t={t} />
+          {enableSearch ? (
+            <div className="sftp-search">
+              <DIcon name="search" size={13} />
+              <input
+                aria-label={t("sftp.searchAria")}
+                {...technicalInputProps}
+                onChange={(event) => setSearch(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setSearch("");
+                  }
+                }}
+                placeholder={t("sftp.searchPlaceholder")}
+                type="text"
+                value={search}
+              />
+              {search ? (
+                <button
+                  className="sftp-search-clear"
+                  aria-label={t("sftp.searchClear")}
+                  onClick={() => setSearch("")}
+                  title={t("sftp.searchClear")}
+                  type="button"
+                >
+                  <DIcon name="close" size={10} />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {view === "list" ? (
-        <ListColumnHeader sort={sort} onSort={toggleSort} t={t} />
-      ) : null}
-
-      <div
-        className={`sftp-file-body sftp-view-${view}${isDropTarget || forceDropTarget ? " drop-target" : ""}`}
-        onContextMenu={(event) => onContextMenuRequest?.(side, selectedNames, event)}
-        onDragLeave={() => setIsDropTarget(false)}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {isLoading ? <div className="sftp-empty">{t("sftp.loading")}</div> : null}
-        {!isLoading && status ? <div className="sftp-empty">{status}</div> : null}
-        {isEmpty ? (
-          <div className="sftp-empty">
-            <DIcon name="info" size={22} />
-            <span>{t("sftp.noFiles")}</span>
-          </div>
+      <div className="sftp-pane-body">
+        {enableSidebar ? (
+          <ExplorerSidebar
+            collapsed={sidebarCollapsed}
+            currentPath={path}
+            places={places}
+            favorites={favorites}
+            onNavigate={(target) => void onPathSubmit?.(target)}
+            onAddFavorite={(place) => onAddFavorite?.(place)}
+            onRemoveFavorite={(id) => onRemoveFavorite?.(id)}
+            onReorderFavorites={(next) => onReorderFavorites?.(next)}
+          />
         ) : null}
+        <div className="sftp-pane-content">
+          {view === "list" ? (
+            <ListColumnHeader sort={sort} onSort={toggleSort} t={t} />
+          ) : null}
 
-        {!isLoading && !status && view === "list"
-          ? sortedFiles.map((file) => {
-              const isSelected = selectedNames.includes(file.name);
-              const handlers = rowHandlers(file, isSelected);
-              return (
-                <div
-                  className={`sftp-row${isSelected ? " sel" : ""}`}
-                  key={file.name}
-                  role="button"
-                  tabIndex={isLoading ? -1 : 0}
-                  title={file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name}
-                  style={{ gridTemplateColumns: LIST_GRID }}
-                  {...handlers}
-                >
-                  <div className="nm">
-                    <span className="sftp-row-glyph">
-                      <FileGlyph entry={file} size={20} />
-                    </span>
-                    {renderRowName(file)}
-                  </div>
-                  <div className="num">{file.size}</div>
-                  <div className="num">{file.modified}</div>
-                </div>
-              );
-            })
-          : null}
+          <div
+            className={`sftp-file-body sftp-view-${view}${isDropTarget || forceDropTarget ? " drop-target" : ""}`}
+            onContextMenu={(event) => onContextMenuRequest?.(side, selectedNames, event)}
+            onDragLeave={() => setIsDropTarget(false)}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {isLoading ? <div className="sftp-empty">{t("sftp.loading")}</div> : null}
+            {!isLoading && status ? <div className="sftp-empty">{status}</div> : null}
+            {isEmpty ? (
+              <div className="sftp-empty">
+                <DIcon name="info" size={22} />
+                <span>{t("sftp.noFiles")}</span>
+              </div>
+            ) : null}
+            {isNoResults ? (
+              <div className="sftp-empty">
+                <DIcon name="search" size={22} />
+                <span>{t("sftp.searchNoResults", { query: search.trim() })}</span>
+              </div>
+            ) : null}
 
-        {!isLoading && !status && view === "gallery" ? (
-          <div className="sftp-gallery-grid">
-            {sortedFiles.map((file) => {
-              const isSelected = selectedNames.includes(file.name);
-              const handlers = rowHandlers(file, isSelected);
-              return (
-                <div
-                  className={`sftp-tile${isSelected ? " sel" : ""}`}
-                  key={file.name}
-                  role="button"
-                  tabIndex={isLoading ? -1 : 0}
-                  title={file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name}
-                  {...handlers}
-                >
-                  <span className="sftp-tile-ico">
-                    <FileGlyph entry={file} size={52} />
-                  </span>
-                  <span className="sftp-tile-cap">{renderRowName(file)}</span>
-                </div>
-              );
-            })}
+            {!isLoading && !status && view === "list"
+              ? visibleFiles.map((file) => {
+                  const isSelected = selectedNames.includes(file.name);
+                  const handlers = rowHandlers(file, isSelected);
+                  return (
+                    <div
+                      className={`sftp-row${isSelected ? " sel" : ""}`}
+                      key={file.name}
+                      role="button"
+                      tabIndex={isLoading ? -1 : 0}
+                      title={file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name}
+                      style={{ gridTemplateColumns: LIST_GRID }}
+                      {...handlers}
+                    >
+                      <div className="nm">
+                        <span className="sftp-row-glyph">
+                          <FileGlyph entry={file} size={20} />
+                        </span>
+                        {renderRowName(file)}
+                      </div>
+                      <div className="num">{file.size}</div>
+                      <div className="num">{file.modified}</div>
+                    </div>
+                  );
+                })
+              : null}
+
+            {!isLoading && !status && view === "gallery" ? (
+              <div className="sftp-gallery-grid">
+                {visibleFiles.map((file) => {
+                  const isSelected = selectedNames.includes(file.name);
+                  const handlers = rowHandlers(file, isSelected);
+                  return (
+                    <div
+                      className={`sftp-tile${isSelected ? " sel" : ""}`}
+                      key={file.name}
+                      role="button"
+                      tabIndex={isLoading ? -1 : 0}
+                      title={file.kind === "folder" ? t("sftp.doubleClickToOpenFile", { name: file.name }) : file.name}
+                      {...handlers}
+                    >
+                      <span className="sftp-tile-ico">
+                        <FileGlyph entry={file} size={52} />
+                      </span>
+                      <span className="sftp-tile-cap">{renderRowName(file)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
     </section>
   );

@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { resolveAppliedColorScheme } from "../../../../app/appShellEffects";
-import { invokeCommand, isTauriRuntime, openFilesystemPath, type LocalDirectoryEntry, type LocalFileClipboardOperation, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../../../../lib/tauri";
+import { invokeCommand, isTauriRuntime, openFilesystemPath, type LocalDirectoryEntry, type LocalFileClipboardOperation, type LocalPlacesListing, type SftpDirectoryEntry, type SftpPathProperties, type SftpTransferProgress } from "../../../../lib/tauri";
 import {
   fileBrowserCommandsFor,
   type FileBrowserCommands,
@@ -34,6 +34,7 @@ import type {
   DeleteRequest,
   FilePaneSide,
   FilePropertiesState,
+  LocalFavorite,
   SftpContextMenuState,
   TransferConflictDecision,
   TransferConflictState,
@@ -44,6 +45,8 @@ import type {
 const TRANSFER_HISTORY_STATES: TransferRecord["state"][] = ["canceled", "done", "failed"];
 const WINDOWS_DRIVES_PATH = "__KKTERM_WINDOWS_DRIVES__";
 const FILE_BROWSER_RECENT_PATHS_STORAGE_KEY = "kkterm.fileBrowserRecentPaths.v1";
+const FILE_BROWSER_FAVORITES_STORAGE_KEY = "kkterm.fileBrowserFavorites.v1";
+const FILE_BROWSER_SIDEBAR_STORAGE_KEY = "kkterm.fileBrowserSidebarCollapsed.v1";
 const RECENT_PATH_LIMIT = 5;
 
 type FileClipboard = {
@@ -83,6 +86,12 @@ export function SftpWorkspace({
   const [recentLocalPaths, setRecentLocalPaths] = useState<string[]>(() => readRecentPaths("local"));
   const [recentRemotePaths, setRecentRemotePaths] = useState<string[]>(() =>
     readRecentPaths("remote", connection?.id),
+  );
+  const sidebarConnectionKey = connection?.id ?? tab.id;
+  const [localPlaces, setLocalPlaces] = useState<LocalPlacesListing | null>(null);
+  const [favorites, setFavorites] = useState<LocalFavorite[]>(() => readFavorites());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
+    readSidebarCollapsed(sidebarConnectionKey, isLocalFilesBrowser),
   );
   const [status, setStatus] = useState(t("sftp.connecting"));
   const [remoteError, setRemoteError] = useState("");
@@ -168,6 +177,60 @@ export function SftpWorkspace({
   useEffect(() => {
     setRecentRemotePaths(readRecentPaths("remote", connection?.id));
   }, [connection?.id]);
+
+  // Load Finder/Explorer sidebar places (home, common folders, drives) once.
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    let disposed = false;
+    void invokeCommand("list_local_places")
+      .then((result) => {
+        if (!disposed) {
+          setLocalPlaces(result);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSidebarCollapsed(readSidebarCollapsed(sidebarConnectionKey, isLocalFilesBrowser));
+  }, [sidebarConnectionKey, isLocalFilesBrowser]);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed;
+      writeSidebarCollapsed(sidebarConnectionKey, next);
+      return next;
+    });
+  };
+
+  const addFavorite = (place: { label: string; path: string; icon: string }) => {
+    setFavorites((current) => {
+      if (current.some((favorite) => favorite.path === place.path)) {
+        return current;
+      }
+      const next = [...current, { ...place, id: uniqueRuntimeId("fav") }];
+      writeFavorites(next);
+      return next;
+    });
+  };
+
+  const removeFavorite = (id: string) => {
+    setFavorites((current) => {
+      const next = current.filter((favorite) => favorite.id !== id);
+      writeFavorites(next);
+      return next;
+    });
+  };
+
+  const reorderFavorites = (next: LocalFavorite[]) => {
+    setFavorites(next);
+    writeFavorites(next);
+  };
 
   const rememberLocalPath = (path: string) => {
     const nextPaths = writeRecentPaths("local", path);
@@ -1484,6 +1547,15 @@ export function SftpWorkspace({
             !isLocalFilesBrowser && isConnected && !isTransferring && !isLocalDrivePicker ? handleDropTransfer : undefined
           }
           renameRequest={renameRequest?.side === "local" ? renameRequest : undefined}
+          enableSidebar
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
+          places={localPlaces}
+          favorites={favorites}
+          onAddFavorite={addFavorite}
+          onRemoveFavorite={removeFavorite}
+          onReorderFavorites={reorderFavorites}
+          enableSearch
         />
         {!isLocalFilesBrowser ? (
           <>
@@ -1804,6 +1876,72 @@ function writeRecentPaths(side: FilePaneSide, path: string, connectionId?: strin
 
   window.localStorage.setItem(FILE_BROWSER_RECENT_PATHS_STORAGE_KEY, JSON.stringify(state));
   return nextPaths;
+}
+
+function readFavorites(): LocalFavorite[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_FAVORITES_STORAGE_KEY) || "[]",
+    ) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .filter(
+        (entry): entry is LocalFavorite =>
+          Boolean(entry) &&
+          typeof entry.id === "string" &&
+          typeof entry.label === "string" &&
+          typeof entry.path === "string" &&
+          typeof entry.icon === "string",
+      )
+      .map((entry) => ({ id: entry.id, label: entry.label, path: entry.path, icon: entry.icon }));
+  } catch {
+    return [];
+  }
+}
+
+function writeFavorites(favorites: LocalFavorite[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(FILE_BROWSER_FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+}
+
+function readSidebarCollapsed(connectionKey: string, isLocalFilesBrowser: boolean): boolean {
+  // File Explorer defaults to an open sidebar; remote browsers default to closed.
+  const fallback = !isLocalFilesBrowser;
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const state = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_SIDEBAR_STORAGE_KEY) || "{}",
+    ) as Record<string, boolean>;
+    const stored = state[connectionKey];
+    return typeof stored === "boolean" ? stored : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeSidebarCollapsed(connectionKey: string, collapsed: boolean) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  let state: Record<string, boolean> = {};
+  try {
+    state = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_SIDEBAR_STORAGE_KEY) || "{}",
+    ) as Record<string, boolean>;
+  } catch {
+    state = {};
+  }
+  state[connectionKey] = collapsed;
+  window.localStorage.setItem(FILE_BROWSER_SIDEBAR_STORAGE_KEY, JSON.stringify(state));
 }
 
 function normalizeRecentPaths(paths: unknown) {
