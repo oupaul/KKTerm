@@ -36,5 +36,6 @@ else
 fi
 
 export TAURI_SIGNING_PRIVATE_KEY_PATH="$KEY_PATH"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
 
 npm exec tauri -- build --target aarch64-apple-darwin --bundles app,dmg "$@"

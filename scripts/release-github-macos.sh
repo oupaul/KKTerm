@@ -151,6 +151,15 @@ find_latest_updater_bundle() {
   print -r -- "${matches[1]}"
 }
 
+find_existing_latest_json() {
+  local tag="$1"
+  local temp_dir="$2"
+
+  if gh release download "$tag" --pattern latest.json --dir "$temp_dir" >/dev/null 2>&1; then
+    [[ -f "$temp_dir/latest.json" ]] && print -r -- "$temp_dir/latest.json"
+  fi
+}
+
 notarize_and_staple_dmg() {
   local dmg_path="$1"
 
@@ -229,27 +238,39 @@ write_latest_json() {
   local tag="$4"
   local updater_name="$5"
   local signature_path="$6"
+  local existing_path="${7:-}"
+  local release_notes="${8:-}"
 
   UPDATE_SIGNATURE=$(<"$signature_path") \
   UPDATE_VERSION="$version" \
   UPDATE_URL="https://github.com/$repo/releases/download/$tag/$updater_name" \
+  EXISTING_LATEST_JSON_PATH="$existing_path" \
+  UPDATE_NOTES="$release_notes" \
     node --input-type=module > "$output_path" <<'NODE'
+import fs from "node:fs";
+
 const signature = process.env.UPDATE_SIGNATURE?.trim();
 const version = process.env.UPDATE_VERSION;
 const url = process.env.UPDATE_URL;
+const existingPath = process.env.EXISTING_LATEST_JSON_PATH;
+const notes = process.env.UPDATE_NOTES?.trim();
 
 if (!signature || !version || !url) {
   throw new Error("Missing updater metadata input.");
 }
 
-const metadata = {
-  version,
-  notes: "See the GitHub Release notes for this KKTerm version.",
-  platforms: {
-    "darwin-aarch64": {
-      signature,
-      url,
-    },
+let metadata = {};
+if (existingPath && fs.existsSync(existingPath)) {
+  metadata = JSON.parse(fs.readFileSync(existingPath, "utf8"));
+}
+
+metadata.version = version;
+metadata.notes = notes || "See the GitHub Release notes for this KKTerm version.";
+metadata.platforms = {
+  ...(metadata.platforms && typeof metadata.platforms === "object" ? metadata.platforms : {}),
+  "darwin-aarch64": {
+    signature,
+    url,
   },
 };
 
@@ -373,14 +394,22 @@ cp "$SOURCE_UPDATER" "$UPDATER_PATH"
 cp "$SOURCE_UPDATER.sig" "$UPDATER_SIG_PATH"
 notarize_and_staple_dmg "$DMG_PATH"
 shasum -a 256 "$DMG_PATH" | awk -v name="$DMG_NAME" '{ print $1 "  " name }' > "$SHA_PATH"
-write_latest_json "$LATEST_JSON_PATH" "$VERSION" "$REPO" "$TAG_NAME" "$UPDATER_NAME" "$UPDATER_SIG_PATH"
+existing_latest_dir=$(mktemp -d)
+existing_latest_json=$(find_existing_latest_json "$TAG_NAME" "$existing_latest_dir")
 
 log "Upload macOS assets"
-gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" "$UPDATER_PATH" "$UPDATER_SIG_PATH" "$LATEST_JSON_PATH" --clobber
+gh release upload "$TAG_NAME" "$DMG_PATH" "$SHA_PATH" "$UPDATER_PATH" "$UPDATER_SIG_PATH" --clobber
 
 if (( ! SKIP_NOTES_PATCH )); then
   log "Patch GitHub Release notes"
   patch_release_notes "$TAG_NAME" "$VERSION" "$REPO" "$DMG_NAME"
 fi
+
+release_notes=$(gh release view "$TAG_NAME" --json body --jq .body)
+write_latest_json "$LATEST_JSON_PATH" "$VERSION" "$REPO" "$TAG_NAME" "$UPDATER_NAME" "$UPDATER_SIG_PATH" "$existing_latest_json" "$release_notes"
+
+log "Upload macOS updater metadata"
+gh release upload "$TAG_NAME" "$LATEST_JSON_PATH" --clobber
+rm -rf "$existing_latest_dir"
 
 log "macOS release assets published."

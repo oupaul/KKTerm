@@ -90,7 +90,7 @@ test("app update install strategy keeps Windows installer flow separate from mac
 
   assert.equal(appUpdateInstallStrategy("windows"), "windows-installer");
   assert.equal(appUpdateInstallStrategy("macos"), "tauri-updater");
-  assert.equal(appUpdateInstallStrategy("linux"), "download-page");
+  assert.equal(appUpdateInstallStrategy("linux"), "tauri-updater");
   assert.equal(appUpdateInstallStrategy("unknown"), "download-page");
 });
 

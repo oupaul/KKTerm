@@ -27,7 +27,7 @@ export function appUpdateInstallStrategy(platform: "windows" | "macos" | "linux"
   if (platform === "windows") {
     return "windows-installer";
   }
-  if (platform === "macos") {
+  if (platform === "macos" || platform === "linux") {
     return "tauri-updater";
   }
   return "download-page";

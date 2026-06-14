@@ -8,8 +8,7 @@ set -euo pipefail
 # changing the project version or creating a new tag. Mirrors the macOS helper
 # (scripts/release-github-macos.sh) but simplified for Linux:
 #   * AppImage-only (no installer, no DMG).
-#   * No notarization, no updater bundle, no latest.json (Linux v1 self-update
-#     is manual download — see docs/LINUX_PORT.md).
+#   * Signed Tauri updater metadata is published through latest.json.
 #   * No version bump and no tag creation: the Windows release flow owns
 #     versioning and creates the GitHub Release; this only attaches the Linux
 #     asset to that existing release.
@@ -55,6 +54,54 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "Required command not found on PATH: $1"
 }
 
+expand_env_file_value() {
+  local value="$1"
+
+  case "$value" in
+    '$HOME'/*)
+      printf '%s\n' "$HOME/${value#\$HOME/}"
+      ;;
+    '${HOME}'/*)
+      printf '%s\n' "$HOME/${value#\$\{HOME\}/}"
+      ;;
+    '~'/*)
+      printf '%s\n' "$HOME/${value#~/}"
+      ;;
+    *)
+      printf '%s\n' "$value"
+      ;;
+  esac
+}
+
+import_local_env_files() {
+  local env_file line name value
+
+  for env_file in "$REPO_ROOT/.env.local" "$REPO_ROOT/.env"; do
+    [[ -f "$env_file" ]] || continue
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line#"${line%%[![:space:]]*}"}"
+      line="${line%"${line##*[![:space:]]}"}"
+      [[ -n "$line" && "$line" != \#* ]] || continue
+
+      name="${line%%=*}"
+      value="${line#*=}"
+      if [[ "$line" == *"="* && "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        [[ -z "${!name-}" ]] || continue
+
+        if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+          value="${value:1:${#value}-2}"
+        elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+          value="${value:1:${#value}-2}"
+        fi
+
+        value="$(expand_env_file_value "$value")"
+        export "$name=$value"
+      fi
+    done < "$env_file"
+  done
+}
+
 read_package_version() {
   node -p "require('./package.json').version"
 }
@@ -94,6 +141,14 @@ find_latest_appimage() {
   eval "$nullglob_state"
   [[ -n "$latest" ]] || die "No AppImage found in $dir"
   printf '%s' "$latest"
+}
+
+find_existing_latest_json() {
+  local tag="$1" temp_dir="$2"
+
+  if gh release download "$tag" --pattern latest.json --dir "$temp_dir" >/dev/null 2>&1; then
+    [[ -f "$temp_dir/latest.json" ]] && printf '%s' "$temp_dir/latest.json"
+  fi
 }
 
 patch_release_notes() {
@@ -140,6 +195,53 @@ NODE
   rm -f "$temp_file"
 }
 
+write_latest_json() {
+  local output_path="$1"
+  local version="$2"
+  local repo="$3"
+  local tag="$4"
+  local appimage_name="$5"
+  local signature_path="$6"
+  local existing_path="${7:-}"
+  local release_notes="${8:-}"
+
+  UPDATE_SIGNATURE="$(<"$signature_path")" \
+  UPDATE_VERSION="$version" \
+  UPDATE_URL="https://github.com/$repo/releases/download/$tag/$appimage_name" \
+  EXISTING_LATEST_JSON_PATH="$existing_path" \
+  UPDATE_NOTES="$release_notes" \
+    node --input-type=module > "$output_path" <<'NODE'
+import fs from "node:fs";
+
+const signature = process.env.UPDATE_SIGNATURE?.trim();
+const version = process.env.UPDATE_VERSION;
+const url = process.env.UPDATE_URL;
+const existingPath = process.env.EXISTING_LATEST_JSON_PATH;
+const notes = process.env.UPDATE_NOTES?.trim();
+
+if (!signature || !version || !url) {
+  throw new Error("Missing updater metadata input.");
+}
+
+let metadata = {};
+if (existingPath && fs.existsSync(existingPath)) {
+  metadata = JSON.parse(fs.readFileSync(existingPath, "utf8"));
+}
+
+metadata.version = version;
+metadata.notes = notes || "See the GitHub Release notes for this KKTerm version.";
+metadata.platforms = {
+  ...(metadata.platforms && typeof metadata.platforms === "object" ? metadata.platforms : {}),
+  "linux-x86_64": {
+    signature,
+    url,
+  },
+};
+
+process.stdout.write(`${JSON.stringify(metadata, null, 2)}\n`);
+NODE
+}
+
 while (( $# > 0 )); do
   case "$1" in
     -t|--tag) (( $# >= 2 )) || die "$1 requires a value."; TAG_NAME="$2"; shift 2 ;;
@@ -154,6 +256,7 @@ while (( $# > 0 )); do
 done
 
 cd "$REPO_ROOT"
+import_local_env_files
 
 require_command git
 require_command gh
@@ -181,8 +284,11 @@ fi
 if (( DRY_RUN && ! SKIP_BUILD )); then
   VERSION="$PACKAGE_VERSION"
   SOURCE_APPIMAGE="<created by npm run package:linux>"
+  SOURCE_APPIMAGE_SIG="<created by npm run package:linux>"
 else
   SOURCE_APPIMAGE="$(find_latest_appimage)"
+  SOURCE_APPIMAGE_SIG="$SOURCE_APPIMAGE.sig"
+  [[ -f "$SOURCE_APPIMAGE_SIG" ]] || die "AppImage updater signature not found: $SOURCE_APPIMAGE_SIG"
   VERSION="$(detect_appimage_version "$SOURCE_APPIMAGE")"
 fi
 
@@ -196,14 +302,19 @@ fi
 OUTPUT_PATH="$REPO_ROOT/$OUTPUT_DIR"
 APPIMAGE_NAME="kkterm-$VERSION-linux-x86_64.AppImage"
 SHA_NAME="$APPIMAGE_NAME.sha256"
+SIG_NAME="$APPIMAGE_NAME.sig"
+LATEST_JSON_NAME="latest.json"
 APPIMAGE_PATH="$OUTPUT_PATH/$APPIMAGE_NAME"
 SHA_PATH="$OUTPUT_PATH/$SHA_NAME"
+SIG_PATH="$OUTPUT_PATH/$SIG_NAME"
+LATEST_JSON_PATH="$OUTPUT_PATH/$LATEST_JSON_NAME"
 
 log "Version:       $VERSION"
 log "Release tag:   $TAG_NAME"
 log "Repository:    $REPO"
 log "Target triple: $TARGET_TRIPLE"
 log "Source AppImage: $SOURCE_APPIMAGE"
+log "Source sig:      $SOURCE_APPIMAGE_SIG"
 log "AppImage asset:  $APPIMAGE_PATH"
 
 if (( DRY_RUN )); then
@@ -216,14 +327,24 @@ gh release view "$TAG_NAME" >/dev/null || die "GitHub release not found: $TAG_NA
 
 mkdir -p "$OUTPUT_PATH"
 cp "$SOURCE_APPIMAGE" "$APPIMAGE_PATH"
+cp "$SOURCE_APPIMAGE_SIG" "$SIG_PATH"
 ( cd "$OUTPUT_PATH" && sha256sum "$APPIMAGE_NAME" > "$SHA_NAME" )
+existing_latest_dir="$(mktemp -d)"
+existing_latest_json="$(find_existing_latest_json "$TAG_NAME" "$existing_latest_dir")"
 
 log "Upload Linux assets"
-gh release upload "$TAG_NAME" "$APPIMAGE_PATH" "$SHA_PATH" --clobber
+gh release upload "$TAG_NAME" "$APPIMAGE_PATH" "$SHA_PATH" "$SIG_PATH" --clobber
 
 if (( ! SKIP_NOTES_PATCH )); then
   log "Patch GitHub Release notes"
   patch_release_notes "$TAG_NAME" "$REPO" "$APPIMAGE_NAME"
 fi
+
+release_notes="$(gh release view "$TAG_NAME" --json body --jq .body)"
+write_latest_json "$LATEST_JSON_PATH" "$VERSION" "$REPO" "$TAG_NAME" "$APPIMAGE_NAME" "$SIG_PATH" "$existing_latest_json" "$release_notes"
+
+log "Upload Linux updater metadata"
+gh release upload "$TAG_NAME" "$LATEST_JSON_PATH" --clobber
+rm -rf "$existing_latest_dir"
 
 log "Linux release assets published."

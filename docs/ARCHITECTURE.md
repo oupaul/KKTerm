@@ -355,7 +355,7 @@ Owns structured local logs, diagnostics bundle creation, and redaction rules. No
 
 ### Updates
 
-Owns update discovery and installation for packaged desktop builds. Windows uses the current GitHub Releases installer flow: release metadata lookup, matching NSIS installer asset plus `.sha256`, user confirmation, checksum verification, app exit, and detached installer handoff. macOS uses Tauri's signed updater flow with GitHub Releases `latest.json`, a `darwin-aarch64` `.app.tar.gz` updater bundle, and its `.sig` signature. Both paths remain user-mediated.
+Owns update discovery and installation for packaged desktop builds. Windows uses the current GitHub Releases installer flow: release metadata lookup, matching NSIS installer asset plus `.sha256`, user confirmation, checksum verification, app exit, and detached installer handoff. macOS and Linux use Tauri's signed updater flow with GitHub Releases `latest.json`: macOS publishes a `darwin-aarch64` `.app.tar.gz` updater bundle plus `.sig`, and Linux publishes a `linux-x86_64` AppImage plus `.sig`. All paths remain user-mediated.
 
 Update checks may contact the configured GitHub Releases/update metadata endpoint. This network request is part of the updater flow and must be described clearly in Settings as distinct from telemetry. KKTerm must not add analytics or crash upload as part of update checking.
 

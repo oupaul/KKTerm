@@ -27,9 +27,8 @@ Hard constraints, in priority order (from the port owner):
    Flatpak, no Snap, no distro packages. (This narrows ROADMAP item
    "Linux packaging (AppImage/deb/rpm)" to AppImage only.)
 
-Non-goals for the first Linux release: feature parity with Windows, signed
-auto-update, the Installer Helper Module, and any Windows-developer-tool
-catalog.
+Non-goals for the first Linux release: feature parity with Windows, the
+Installer Helper Module, and any Windows-developer-tool catalog.
 
 ## 2. Where We Stand (codebase reality)
 
@@ -274,12 +273,11 @@ a clean Ubuntu, and runs the smoke path (open window, open a local terminal).**
 **Success: Linux AppImage is published to GitHub Releases by an automated job;
 update-check behavior on Linux is defined.**
 
-- [ ] **Updater:** `tauri-plugin-updater` supports AppImage self-update, but the
-      app currently sets `createUpdaterArtifacts: false` and self-update is
-      checksum-only (unsigned) on Windows. For Linux v1, match the existing
-      posture: **update-check that points the user to the GitHub Release
-      download** rather than in-place AppImage replacement, unless signing is
-      tackled. Confirm the update-check UI degrades gracefully on Linux.
+- [x] **Updater:** Linux uses the signed Tauri updater path for AppImage
+      releases. `src-tauri/tauri.linux.conf.json` enables
+      `createUpdaterArtifacts`, `scripts/package-linux.sh` loads the updater
+      signing key, and `scripts/release-github-linux.sh` uploads the AppImage,
+      `.sig`, `.sha256`, and merged `latest.json` with a `linux-x86_64` entry.
 - [x] **Release CD (manual trigger):** added `.github/workflows/release-linux.yml`
       — `workflow_dispatch`-only, runs on `ubuntu-24.04`, installs Tauri build
       deps, builds the AppImage, and uploads + patches notes via
@@ -330,7 +328,7 @@ Working-state target for the **first Linux release**. Update as phases land.
 | Auto-start | yes | yes | **sacrificed v1** (no-op) | low |
 | Installer Helper Module | yes | (n/a) | **sacrificed v1** (hidden) | n/a |
 | Managed X server indicator | yes | n/a | **no-op** (X11 native) | none |
-| Updater self-install | checksum | (manual) | manual download v1 | low |
+| Updater self-install | checksum | signed Tauri updater | signed AppImage updater | low |
 | Distribution | NSIS | DMG | **AppImage only** | med |
 
 ## 6. Validation / Gates
