@@ -56,8 +56,8 @@
   font-weight: 700;
   letter-spacing: 0.01em;
 }
-.sftp-bar-kind svg {
-  color: var(--accent);
+.sftp-bar-kind img {
+  flex: 0 0 auto;
 }
 .sftp-bar-center {
   justify-self: center;

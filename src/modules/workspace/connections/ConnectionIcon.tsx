@@ -1,7 +1,5 @@
 import type { CSSProperties } from "react";
 import type { ConnectionType } from "../../../types";
-import ftpIcon from "../../../assets/connection-icons/ftp.png";
-import localFilesIcon from "../../../assets/connection-icons/localfiles.svg";
 import rdpIcon from "../../../assets/connection-icons/rdp.png";
 import serialIcon from "../../../assets/connection-icons/serial.png";
 import sshIcon from "../../../assets/connection-icons/ssh.png";
@@ -12,6 +10,7 @@ import terminalIcon from "../../../assets/connection-icons/terminal.png";
 import urlIcon from "../../../assets/connection-icons/url.png";
 import vncIcon from "../../../assets/connection-icons/vnc.png";
 import wslIcon from "../../../assets/connection-icons/wsl.png";
+import { fileBrowserConnectionIconSrc } from "./fileBrowserConnectionIcons";
 
 export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   local: terminalIcon,
@@ -21,8 +20,8 @@ export const CONNECTION_ICON_SRC: Record<ConnectionType, string> = {
   url: urlIcon,
   rdp: rdpIcon,
   vnc: vncIcon,
-  ftp: ftpIcon,
-  localFiles: localFilesIcon,
+  ftp: fileBrowserConnectionIconSrc("ftp"),
+  localFiles: fileBrowserConnectionIconSrc("localFiles"),
 };
 
 export const PREDEFINED_CONNECTION_ICON_TYPES: ConnectionType[] = [
@@ -57,6 +56,12 @@ export function connectionIconSrcForConnection({
   }
   if (type === "local" && localShell === "pwsh.exe") {
     return powershellIcon;
+  }
+  if (type === "ftp") {
+    return fileBrowserConnectionIconSrc("ftp");
+  }
+  if (type === "localFiles") {
+    return fileBrowserConnectionIconSrc("localFiles");
   }
   return CONNECTION_ICON_SRC[type];
 }

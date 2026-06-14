@@ -1,6 +1,6 @@
 import { confirmTrustedSshHostKey, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 
-import { FolderSync, Terminal, X } from "lucide-react";
+import { Terminal, X } from "lucide-react";
 import { DIcon } from "../../../../app/ui/dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -21,6 +21,7 @@ import {
 import { useWorkspaceStore } from "../../../../store";
 import type { FileEntry, SftpSettings, WorkspaceTab } from "../../../../types";
 import { FilePane } from "./SftpFilePane";
+import { fileBrowserConnectionIconSrc } from "../fileBrowserConnectionIcons";
 import {
   ConfirmRemoteDeleteDialog,
   NewRemoteFolderDialog,
@@ -1305,6 +1306,9 @@ export function SftpWorkspace({
       : tab.kind === "localFiles"
         ? t("sftp.protocolFiles")
         : t("sftp.protocolSftp");
+  const kindIconSrc = fileBrowserConnectionIconSrc(
+    tab.kind === "localFiles" ? "localFiles" : tab.kind === "ftp" ? "ftp" : "sftp",
+  );
   const hasRemoteHost = !isLocalFilesBrowser && Boolean(connection);
   const hostLabel = tab.subtitle || toolbarTitle;
   const connectionStatusLabel = isConnected
@@ -1418,7 +1422,7 @@ export function SftpWorkspace({
       <div className="workspace-toolbar sftp-toolbar" data-tutorial-id="sftp.toolbar">
         <span className="sftp-bar-left">
           <span className="sftp-bar-kind">
-            <FolderSync size={15} />
+            <img alt="" aria-hidden="true" draggable={false} height={18} src={kindIconSrc} width={18} />
             {kindLabel}
           </span>
           {hasRemoteHost ? (

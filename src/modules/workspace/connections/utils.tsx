@@ -180,6 +180,9 @@ export function connectionTypeForTab(tab: WorkspaceTab): {
   iconBackgroundColor?: string | null;
   localShell?: string;
 } {
+  if (tab.kind === "sftp") {
+    return { type: "ftp" };
+  }
   if (tab.connection) {
     return {
       type: tab.connection.type,
