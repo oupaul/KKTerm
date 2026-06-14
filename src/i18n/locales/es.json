@@ -537,7 +537,7 @@
     },
     "converterAmount": "Importe",
     "currencyAmount": "Importe de divisa",
-    "currencyEstimate": "Los tipos son estimaciones. Obtén los últimos antes de depender de ellos.",
+    "currencyEstimate": "Los tipos de cambio son estimaciones. Obtén los últimos antes de depender de ellos.",
     "currencyLastRefresh": "Estimación de {{date}}",
     "currencyFetchLatest": "Obtener últimos",
     "currencyRefresh": "Actualizar",

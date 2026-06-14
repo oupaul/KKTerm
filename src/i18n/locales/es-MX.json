@@ -523,10 +523,10 @@
       "hash": "Hash"
     },
     "convertersTitle": "Conversores",
-    "convertersSummary": "Conversión de unidades y divisas con unidades métricas, imperiales y locales.",
+    "convertersSummary": "Conversión de unidades y monedas con unidades métricas, imperiales y locales.",
     "convertersTab": {
       "unit": "Unidad",
-      "currency": "Divisa"
+      "currency": "Moneda"
     },
     "unitCategoryLabel": "Categoría de unidad",
     "unitCategory": {
@@ -535,13 +535,13 @@
       "area": "Área",
       "temperature": "Temperatura"
     },
-    "converterAmount": "Importe",
-    "currencyAmount": "Importe de divisa",
-    "currencyEstimate": "Las tasas son estimaciones. Obtén las más recientes antes de depender de ellas.",
+    "converterAmount": "Cantidad",
+    "currencyAmount": "Monto",
+    "currencyEstimate": "Los tipos de cambio son estimados. Obtén los más recientes antes de depender de ellos.",
     "currencyLastRefresh": "Estimación del {{date}}",
-    "currencyFetchLatest": "Obtener más recientes",
+    "currencyFetchLatest": "Obtener los más recientes",
     "currencyRefresh": "Actualizar",
-    "currencyError": "No se pudieron actualizar las tasas.",
+    "currencyError": "No se pudieron actualizar los tipos de cambio.",
     "converterUnit": {
       "millimeter": "Milímetro",
       "centimeter": "Centímetro",
