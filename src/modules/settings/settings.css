@@ -1370,10 +1370,27 @@
 }
 
 /*
- * Merge a trailing options/actions block into the toggle card directly above it
- * so they read as one card divided by a rule, instead of two cards separated by
- * the fieldset gap.
+ * Merge consecutive Settings row blocks inside one subsection so related
+ * controls read as one grouped card divided by rules instead of separate cards.
  */
+.settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block)),
+.settings-collapsible-content > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block)) {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout) + :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block),
+.settings-collapsible-content > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout) + :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block) {
+  margin-top: -10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.settings-fieldset > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block)) :is(label:not(.settings-toggle-row):last-child, .settings-toggle-row:last-child, .settings-list-row:last-child, .settings-summary-item:last-child),
+.settings-collapsible-content > :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid):has(+ :is(.form-grid, .ai-provider-fields, .settings-toggle-list, .settings-list, .settings-summary-grid, .settings-data-actions, .settings-reset-layout, .settings-merged-block)) :is(label:not(.settings-toggle-row):last-child, .settings-toggle-row:last-child, .settings-list-row:last-child, .settings-summary-item:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
 .settings-toggle-list:has(+ .settings-merged-block) {
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
