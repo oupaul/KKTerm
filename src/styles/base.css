@@ -666,6 +666,15 @@ h2 {
   min-width: 0;
 }
 
+/* Form-field labels above use a stacked grid, but a `.search-box` label is a
+   horizontal row (magnifier + input). Keep it flex so the input stays to the
+   right of the icon instead of dropping below it and overflowing the row. */
+.connection-dialog label.search-box,
+.settings-section label.search-box {
+  display: flex;
+  gap: 8px;
+}
+
 .connection-dialog label span,
 .settings-section label span {
   color: var(--text-muted);
