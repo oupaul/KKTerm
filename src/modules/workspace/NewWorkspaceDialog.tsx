@@ -1,12 +1,12 @@
 import { Pencil, Save, Search } from "lucide-react";
-import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { IconLibraryPicker } from "../../app/IconLibraryPicker";
-import { ariaPressed, dialogButtonAria } from "../../lib/aria";
+import { dialogButtonAria } from "../../lib/aria";
 import { invokeCommand } from "../../lib/tauri";
 import type { Connection, Workspace } from "../../types";
+import { ConnectionIconBackgroundPicker } from "./connections/ConnectionIconBackgroundPicker";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { flattenConnections } from "./connections/treeUtils";
 import { connectionTypeLabel } from "./connections/utils";
@@ -17,15 +17,6 @@ import {
   type WorkspaceImportTypeFilter,
 } from "./newWorkspaceImportModel";
 import { WORKSPACE_ICON_NAMES, WorkspaceIcon } from "./workspaceIcons";
-
-const WORKSPACE_ICON_COLOR_CHOICES = [
-  "var(--text)",
-  "var(--accent)",
-  "var(--green)",
-  "var(--amber)",
-  "var(--red)",
-  "var(--nav-toolbar-accent)",
-] as const;
 
 interface ImportGroup {
   workspaceId: string;
@@ -55,7 +46,7 @@ export function NewWorkspaceDialog({
   const isEditMode = Boolean(workspace);
   const [name, setName] = useState(workspace?.name ?? "");
   const [icon, setIcon] = useState<string | null>(workspace?.icon ?? WORKSPACE_ICON_NAMES[0]);
-  const [iconColor, setIconColor] = useState<string | null>(workspace?.iconColor ?? "var(--accent)");
+  const [iconColor, setIconColor] = useState<string | null>(workspace?.iconColor ?? null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importGroups, setImportGroups] = useState<ImportGroup[]>([]);
   const [selectedImportWorkspaceId, setSelectedImportWorkspaceId] = useState("");
@@ -221,9 +212,6 @@ export function NewWorkspaceDialog({
             <p className="connection-dialog-eyebrow">
               {isEditMode ? t("workspace.editWorkspace") : t("workspace.newWorkspace")}
             </p>
-            <h2 className="connection-dialog-title">
-              {name.trim() || workspace?.name || t("workspace.newWorkspace")}
-            </h2>
           </div>
         </header>
 
@@ -234,12 +222,15 @@ export function NewWorkspaceDialog({
               icon={icon}
               name={name || workspace?.name || t("workspace.newWorkspace")}
               onChange={setIcon}
-              onColorChange={setIconColor}
             />
             <span>
               <strong>{name.trim() || workspace?.name || t("workspace.newWorkspace")}</strong>
               <small>{t("workspace.workspaceIcon")}</small>
             </span>
+            <ConnectionIconBackgroundPicker
+              color={iconColor}
+              onChange={setIconColor}
+            />
           </div>
 
           <div className="connection-dialog-fields new-workspace-fields">
@@ -389,13 +380,11 @@ function WorkspaceIconPicker({
   icon,
   name,
   onChange,
-  onColorChange,
 }: {
   color: string | null;
   icon: string | null;
   name: string;
   onChange: (icon: string | null) => void;
-  onColorChange: (color: string | null) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -463,24 +452,6 @@ function WorkspaceIconPicker({
               }}
               value={icon}
             />
-          </div>
-          <div className="connection-icon-picker-section">
-            <p>{t("workspace.workspaceIconColor")}</p>
-            <div className="new-workspace-icon-color-grid">
-              {WORKSPACE_ICON_COLOR_CHOICES.map((choice, index) => (
-                <button
-                  aria-label={t("workspace.selectWorkspaceIconColor", {
-                    index: index + 1,
-                  })}
-                  className="new-workspace-icon-color-choice"
-                  key={choice}
-                  onClick={() => onColorChange(choice)}
-                  style={{ "--workspace-icon-choice-color": choice } as CSSProperties}
-                  type="button"
-                  {...ariaPressed(color === choice)}
-                />
-              ))}
-            </div>
           </div>
         </div>
       ) : null}

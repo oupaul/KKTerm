@@ -3697,15 +3697,6 @@ function ConnectionDialog({
                   ? t("connections.newConnectionTitle")
                   : t("connections.quickConnect")}
             </p>
-            {connectionType ? (
-              <h2 className="connection-dialog-title">
-                {isEditMode
-                  ? initialConnection?.name || connectionTypeLabel(connectionType)
-                  : connectionTypeLabel(connectionType)}
-              </h2>
-            ) : mode === "quick" ? (
-              <h2 className="connection-dialog-title">{t("connections.openOneOffSession")}</h2>
-            ) : null}
           </div>
         </header>
 

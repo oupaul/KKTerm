@@ -609,12 +609,28 @@
   opacity: 1;
 }
 
+.workspace-icon-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--workspace-icon-shell-size);
+  height: var(--workspace-icon-shell-size);
+  color: var(--workspace-icon-color);
+  background: var(--workspace-icon-bg);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.workspace-icon-shell.has-background {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.38), 0 1px 2px rgb(15 23 42 / 0.16);
+}
+
 .workspace-icon-letter {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--workspace-icon-size);
+  height: var(--workspace-icon-size);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -680,34 +696,32 @@
   color: var(--text);
 }
 
+.connection-type-summary .new-workspace-icon-edit-button {
+  width: 52px;
+  height: 52px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+}
+
+.connection-type-summary .new-workspace-icon-edit-button:hover {
+  border-color: transparent;
+}
+
+.connection-type-summary .new-workspace-icon-edit-button .workspace-icon-shell {
+  max-width: 52px;
+  max-height: 52px;
+  border-radius: 10px;
+}
+
 .new-workspace-icon-popover {
   width: min(520px, calc(100vw - 48px));
 }
 
 .workspace-material-icon {
+  width: var(--workspace-icon-size);
+  height: var(--workspace-icon-size);
   object-fit: contain;
-}
-
-.new-workspace-icon-color-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 26px);
-  gap: 6px;
-}
-
-.new-workspace-icon-color-choice {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  cursor: pointer;
-  background: var(--workspace-icon-choice-color);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-
-.new-workspace-icon-color-choice:hover,
-.new-workspace-icon-color-choice[aria-pressed="true"] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .new-workspace-import-tools {

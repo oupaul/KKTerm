@@ -2,7 +2,7 @@
 // fallback. Kept small and deliberately distinct from the larger Dashboard icon
 // catalog so the New Workspace picker stays scannable.
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import * as Icons from "lucide-react";
 import { materialIconRefToUrl } from "../../lib/iconCatalogUrls";
 
@@ -78,10 +78,18 @@ export function WorkspaceIcon({
   name: string;
   size?: number;
 }) {
-  const style = color ? ({ color } satisfies CSSProperties) : undefined;
+  const hasBackground = Boolean(color);
+  const shellSize = hasBackground ? size + 6 : size;
+  const style = {
+    "--workspace-icon-bg": color ?? "transparent",
+    "--workspace-icon-color": hasBackground ? "var(--surface)" : "var(--accent)",
+    "--workspace-icon-size": `${size}px`,
+    "--workspace-icon-shell-size": `${shellSize}px`,
+  } as CSSProperties;
   const materialIconUrl = materialIconRefToUrl(icon);
+  let content: ReactNode;
   if (materialIconUrl) {
-    return (
+    content = (
       <img
         alt=""
         aria-hidden="true"
@@ -92,15 +100,26 @@ export function WorkspaceIcon({
         width={size}
       />
     );
+  } else {
+    const IconCmp = resolveIcon(icon);
+    if (IconCmp) {
+      content = <IconCmp size={size} />;
+    } else {
+      const letter = name.trim().charAt(0).toUpperCase() || "?";
+      content = (
+        <span aria-hidden="true" className="workspace-icon-letter">
+          {letter}
+        </span>
+      );
+    }
   }
-  const IconCmp = resolveIcon(icon);
-  if (IconCmp) {
-    return <IconCmp size={size} style={style} />;
-  }
-  const letter = name.trim().charAt(0).toUpperCase() || "?";
   return (
-    <span aria-hidden="true" className="workspace-icon-letter" style={style}>
-      {letter}
+    <span
+      aria-hidden="true"
+      className={hasBackground ? "workspace-icon-shell has-background" : "workspace-icon-shell"}
+      style={style}
+    >
+      {content}
     </span>
   );
 }
