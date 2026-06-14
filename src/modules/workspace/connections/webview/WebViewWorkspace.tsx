@@ -6,6 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FormEvent } from "react";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "../../../../lib/tauri";
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
@@ -942,6 +943,7 @@ export function WebViewWorkspace({
                 aria-label={t("webview.address")}
                 className="webview-address-input"
                 data-tutorial-id="webview.address"
+                {...technicalInputProps}
                 onChange={(event) => setAddressInput(event.currentTarget.value)}
                 placeholder={t("webview.urlPlaceholder")}
                 value={addressInput}

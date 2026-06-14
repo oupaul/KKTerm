@@ -1,6 +1,7 @@
 import { Activity, ArrowLeftRight, Eye, FileType, Lock, Network, ShieldOff, Timer, Type } from "lucide-react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
@@ -39,6 +40,7 @@ export function FtpConnectionFields({
           <span>{t("connections.host")}*</span>
           <input
             name="host"
+            {...technicalInputProps}
             defaultValue={initialConnection?.host ?? ""}
             placeholder={t("connections.exampleHost")}
             required
@@ -65,6 +67,7 @@ export function FtpConnectionFields({
           <input
             key="user-ftp"
             name="user"
+            {...technicalInputProps}
             defaultValue={initialConnection?.user ?? ""}
             placeholder={t("connections.admin")}
             required

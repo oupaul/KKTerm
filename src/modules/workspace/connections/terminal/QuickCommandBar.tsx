@@ -17,6 +17,7 @@ import {
   TextArea,
   TextInput,
 } from "../../../../app/ui/dialog";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import type { Connection, QuickCommand, WorkspaceTab } from "../../../../types";
@@ -654,6 +655,7 @@ function CustomCommandDialog({
           <div className="kk-qc-cmd-wrap">
             <TextArea
               id={commandInputId}
+              {...technicalInputProps}
               value={draft.command}
               onChange={(event) => setDraft({ ...draft, command: event.currentTarget.value })}
               rows={3}
@@ -666,6 +668,7 @@ function CustomCommandDialog({
                 <input
                   id={`${commandInputId}-ai`}
                   className="kk-inp"
+                  {...technicalInputProps}
                   onChange={(event) => setAiPrompt(event.currentTarget.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {

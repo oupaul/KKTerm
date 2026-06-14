@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection } from "../../../../types";
 
 export function SerialConnectionFields({ initialConnection }: { initialConnection?: Connection }) {
@@ -15,6 +16,7 @@ export function SerialConnectionFields({ initialConnection }: { initialConnectio
           <span>{t("connections.line")}*</span>
           <input
             name="serialLine"
+            {...technicalInputProps}
             defaultValue={initialConnection?.serialLine ?? initialConnection?.host ?? "COM1"}
             placeholder={t("connections.serialLinePlaceholder")}
             required

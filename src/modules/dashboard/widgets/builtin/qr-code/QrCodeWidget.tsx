@@ -4,6 +4,7 @@ import JsBarcode from "jsbarcode";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
+import { technicalInputProps } from "../../../../../lib/inputBehavior";
 import { isTauriRuntime, pickAndSaveFile } from "../../../../../lib/tauri";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import { resolveQrCanvasSize } from "./qrSizing";
@@ -204,7 +205,7 @@ export function QrCodeBody({ instance }: BuiltInWidgetBodyProps) {
         placeholder={t("dashboard.qrPlaceholder")}
         aria-label={t("dashboard.qrPlaceholder")}
         rows={2}
-        spellCheck={false}
+        {...technicalInputProps}
       />
     </div>
   );

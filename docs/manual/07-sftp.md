@@ -32,6 +32,11 @@ File Explorer Connections (`localFiles`) reuse this browser shell as a single-pa
 
 Each pane header shows the pane label, a **breadcrumb** path, and per-pane actions. Click a breadcrumb segment to jump to that ancestor folder. **Double-click the breadcrumb** (`sftp.editPathTitle`) to switch it to an editable path field: type a local or remote path and press Enter to navigate, or Escape to cancel. Folder-name autocomplete suggests folders from the current listing and inserts the selected folder path with a trailing slash. The recent-path icon (`sftp.recentPathsAria`) opens up to the last five visited paths for that pane. The path input accessibility label is `sftp.pathInputAria`.
 
+The editable path and inline rename fields disable OS autocorrect,
+autocapitalization, and spellcheck in the WebView on Windows and macOS so file
+names and paths are entered exactly as typed. Platform keyboard/IME suggestion
+UI may still appear outside KKTerm's DOM controls.
+
 Each pane offers a **view switch** (`sftp.viewMode`) between list (`sftp.listView`) and gallery (`sftp.galleryView`). List view has sortable column headers for `sftp.name`, `sftp.size`, and `sftp.date` (click a header to toggle ascending/descending).
 
 - **Local** (`sftp.local`, `sftp.localFiles`) — loading state `sftp.loadingLocal`. On Windows, opening the parent of a drive root shows the drive picker path label `sftp.windowsDrives`, where double-clicking a drive opens that drive root.

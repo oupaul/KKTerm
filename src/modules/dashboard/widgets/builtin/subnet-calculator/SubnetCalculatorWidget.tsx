@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../../lib/inputBehavior";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import { useCopyFeedback } from "../../useCopyFeedback";
@@ -60,7 +61,7 @@ export function SubnetCalculatorBody({ instance }: BuiltInWidgetBodyProps) {
         placeholder={t("dashboard.subnetPlaceholder")}
         aria-label={t("dashboard.subnetTitle")}
         aria-invalid={hasInput && !info}
-        spellCheck={false}
+        {...technicalInputProps}
         autoComplete="off"
       />
       {info ? (

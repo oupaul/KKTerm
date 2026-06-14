@@ -94,6 +94,12 @@ Each built-in widget is a Body component under `src/modules/dashboard/widgets/`,
 
 The Dashboard also ships two grouped utility widgets. Each hosts several local tools behind a tab strip (rendered by `src/modules/dashboard/widgets/builtin/tool-group/ToolGroupWidget.tsx`; the individual tools live under `src/modules/dashboard/widgets/builtin/<name>/`). Every tool persists its inputs and the active tab in `localStorage` per Widget Instance, renders results as click-to-copy rows (`dashboard.widgetCopyValue` / `dashboard.widgetCopied`), themes from the instance accent through `--w-accent` / `--w-accent-soft`, and honours `prefers-reduced-motion`.
 
+Utility-widget technical inputs, including subnet queries, DNS names, QR/barcode
+payloads, cron expressions, time conversions, hash/Base64/URL/JWT text, and
+script source editing, disable OS autocorrect, autocapitalization, and
+spellcheck in the app WebView on Windows and macOS. The Notes widget remains a
+prose surface and may keep spelling assistance.
+
 **Network Tools** — `dashboard.networkToolsTitle` / `dashboard.networkToolsSummary`. Tabs `dashboard.networkToolsTab.subnet`, `…dns`, `…speedtest`:
 
 - **Subnet** (`dashboard.subnetTitle`) — pure IPv4 bit math (no network access). Accepts a CIDR (`192.168.1.0/24`), an address with a dotted mask, or an address range (`10.0.0.5 - 10.0.0.200`, resolved to the smallest covering CIDR). Shows network, netmask, wildcard, broadcast, first/last host, and usable host count (`dashboard.subnetNetwork`, `…Netmask`, `…Wildcard`, `…Broadcast`, `…FirstHost`, `…LastHost`, `…UsableHosts`). The 32-bit prefix strip (`dashboard.subnetBitsLabel`) is interactive — clicking a bit sets the prefix (`dashboard.subnetPrefixBit`). Invalid input shows `dashboard.subnetInvalid`, empty shows `dashboard.subnetHint`.

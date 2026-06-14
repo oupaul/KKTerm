@@ -3,6 +3,7 @@ import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../../lib/inputBehavior";
 import { isTauriRuntime, pickAndReadFile } from "../../../../../lib/tauri";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
@@ -182,7 +183,7 @@ export function HashWorkbenchBody({ instance }: BuiltInWidgetBodyProps) {
         placeholder={config.tab === "jwt" ? t("dashboard.hashJwtPlaceholder") : t("dashboard.hashPlaceholder")}
         aria-label={t("dashboard.hashPlaceholder")}
         rows={2}
-        spellCheck={false}
+        {...technicalInputProps}
       />
       {config.tab === "hash" && fileInput ? (
         <div className="dw-hash-file">

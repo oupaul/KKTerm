@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { StoredCredentialSummary } from "../../../../types";
 import { createStoredSecretMask } from "../connectionSidebarState";
 
@@ -34,6 +35,7 @@ export function PasswordField({
       <span>{label}</span>
       <input
         autoComplete={autoComplete}
+        {...technicalInputProps}
         name={shouldShowStoredSecretMask ? undefined : name}
         onBlur={() => setIsFocused(false)}
         onChange={(event) => setValue(event.currentTarget.value)}

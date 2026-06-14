@@ -2,6 +2,7 @@ import { ChevronDown, Download, Server, Terminal } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { technicalInputProps } from "../../../lib/inputBehavior";
 import { ConnectionGlyph, ConnectionTypeGlyph, connectionSubtitle } from "./ConnectionGlyph";
 import { uniqueRuntimeId, type LocalShellOption } from "./utils";
 import type { Connection, ConnectionType, SshSettings } from "../../../types";
@@ -62,6 +63,7 @@ export function QuickConnectMenu({
             <span>{t("connections.hostname")}</span>
             <input
               autoFocus
+              {...technicalInputProps}
               onChange={(event) => setSshHost(event.currentTarget.value)}
               placeholder={t("connections.exampleHost")}
               required
