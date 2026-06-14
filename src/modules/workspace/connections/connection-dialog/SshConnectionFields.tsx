@@ -1,4 +1,4 @@
-import { KeyRound, Layers } from "lucide-react";
+import { Fingerprint, KeyRound, Layers, LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
@@ -94,19 +94,48 @@ export function SshConnectionFields({
             required
           />
         </label>
-        <label className="auth-mode-row">
-          <span>{t("connections.auth")}*</span>
-          <select
-            name="authMethod"
-            value={authMethod}
-            required
-            onChange={(event) => onAuthMethodChange(event.currentTarget.value as "keyFile" | "password" | "agent")}
+        <div className="auth-mode-row">
+          <span id="ssh-auth-method-label">{t("connections.auth")}*</span>
+          <input name="authMethod" type="hidden" value={authMethod} />
+          <div
+            className="auth-method-selector"
+            data-auth-method={authMethod}
+            role="tablist"
+            aria-label={t("connections.auth")}
+            aria-labelledby="ssh-auth-method-label"
           >
-            <option value="keyFile">{t("connections.keyFile")}</option>
-            <option value="password">{t("connections.password")}</option>
-            <option value="agent">{t("connections.sshAgent")}</option>
-          </select>
-        </label>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === "keyFile"}
+              className={authMethod === "keyFile" ? "active" : ""}
+              onClick={() => onAuthMethodChange("keyFile")}
+            >
+              <KeyRound size={15} aria-hidden />
+              <span>{t("connections.keyFile")}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === "password"}
+              className={authMethod === "password" ? "active" : ""}
+              onClick={() => onAuthMethodChange("password")}
+            >
+              <LockKeyhole size={15} aria-hidden />
+              <span>{t("connections.password")}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMethod === "agent"}
+              className={authMethod === "agent" ? "active" : ""}
+              onClick={() => onAuthMethodChange("agent")}
+            >
+              <Fingerprint size={15} aria-hidden />
+              <span>{t("connections.sshAgent")}</span>
+            </button>
+          </div>
+        </div>
         {authMethod === "password" ? (
           <>
             <PasswordField

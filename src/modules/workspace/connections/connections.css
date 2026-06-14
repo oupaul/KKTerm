@@ -1158,26 +1158,194 @@
 
 .connection-auth-fields .auth-mode-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 224px);
-  column-gap: 9px;
-  row-gap: 4px;
+  gap: 5px;
+  min-width: 0;
+}
+
+.connection-auth-fields .auth-method-selector {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  padding: 4px;
+  background: var(--surface-muted);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  isolation: isolate;
+}
+
+.connection-auth-fields .auth-method-selector::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 3);
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16), 0 0 0 0.5px var(--border);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.connection-auth-fields .auth-method-selector[data-auth-method="keyFile"]::before {
+  transform: translateX(0);
+}
+
+.connection-auth-fields .auth-method-selector[data-auth-method="password"]::before {
+  transform: translateX(100%);
+}
+
+.connection-auth-fields .auth-method-selector[data-auth-method="agent"]::before {
+  transform: translateX(200%);
+}
+
+.connection-auth-fields .auth-method-selector button {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.14s;
 }
 
-.connection-auth-fields .auth-mode-row > select {
-  grid-column: 2;
+.connection-auth-fields .auth-method-selector button:hover {
+  color: var(--text);
 }
 
-.connection-option-fields > label {
+.connection-auth-fields .auth-method-selector button:focus-visible {
+  outline: 0;
+  box-shadow: var(--ring);
+}
+
+.connection-auth-fields .auth-method-selector button.active {
+  color: var(--text);
+}
+
+.connection-auth-fields .auth-method-selector svg {
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-auth-fields .auth-method-selector::before {
+    transition: none;
+  }
+}
+
+.connection-option-fields .option-mode-row.local-shell-mode-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: 8px;
+}
+
+.connection-option-fields .local-shell-selector {
+  position: relative;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(var(--shell-option-columns, 1), minmax(0, 1fr));
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  padding: 4px;
+  background: var(--surface-muted);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  isolation: isolate;
+}
+
+.connection-option-fields .local-shell-selector::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--shell-option-columns, 1));
+  height: calc((100% - 8px) / var(--shell-option-rows, 1));
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16), 0 0 0 0.5px var(--border);
+  transform: translate(
+    calc(var(--shell-option-column, 0) * 100%),
+    calc(var(--shell-option-row, 0) * 100%)
+  );
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.connection-option-fields .local-shell-selector button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.14s;
+}
+
+.connection-option-fields .local-shell-selector button:hover {
+  color: var(--text);
+}
+
+.connection-option-fields .local-shell-selector button:focus-visible {
+  outline: 0;
+  box-shadow: var(--ring);
+}
+
+.connection-option-fields .local-shell-selector button.active {
+  color: var(--text);
+}
+
+.connection-option-fields .local-shell-selector svg {
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-option-fields .local-shell-selector::before {
+    transition: none;
+  }
+}
+
+.connection-option-fields > label,
+.connection-option-fields > .option-mode-row {
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
 }
 
-.connection-option-fields > label:first-child {
+.connection-option-fields > label:first-child,
+.connection-option-fields > .option-mode-row:first-child {
   padding-top: 0;
 }
 
-.connection-option-fields > label:last-child {
+.connection-option-fields > label:last-child,
+.connection-option-fields > .option-mode-row:last-child {
   padding-bottom: 0;
   border-bottom: 0;
 }
