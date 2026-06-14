@@ -11,6 +11,7 @@ import type { LocalPlacesListing } from "../../../../lib/tauri";
 import type { FileEntry } from "../../../../types";
 import { ExplorerSidebar } from "./ExplorerSidebar";
 import { FileGlyph } from "./finderGlyphs";
+import { joinLocalPath } from "./format";
 import type { FilePaneSide, LocalFavorite } from "./types";
 
 type SortKey = "name" | "size" | "date";
@@ -49,6 +50,7 @@ export function FilePane({
   onAddFavorite,
   onRemoveFavorite,
   onReorderFavorites,
+  onOpenFavoriteFile,
   enableSearch = false,
 }: {
   side: FilePaneSide;
@@ -77,9 +79,10 @@ export function FilePane({
   onToggleSidebar?: () => void;
   places?: LocalPlacesListing | null;
   favorites?: LocalFavorite[];
-  onAddFavorite?: (place: { label: string; path: string; icon: string }) => void;
+  onAddFavorite?: (place: { label: string; path: string; icon: string; kind?: "file" | "folder" }) => void;
   onRemoveFavorite?: (id: string) => void;
   onReorderFavorites?: (next: LocalFavorite[]) => void;
+  onOpenFavoriteFile?: (path: string) => void;
   enableSearch?: boolean;
 }) {
   const { t } = useTranslation();
@@ -550,7 +553,28 @@ export function FilePane({
             places={places}
             favorites={favorites}
             onNavigate={(target) => void onPathSubmit?.(target)}
+            onOpenFavorite={(favorite) => {
+              if (favorite.kind === "file") {
+                onOpenFavoriteFile?.(favorite.path);
+              } else {
+                void onPathSubmit?.(favorite.path);
+              }
+            }}
             onAddFavorite={(place) => onAddFavorite?.(place)}
+            onAddFavoritesFromNames={(names) => {
+              for (const name of names) {
+                const entry = files.find((file) => file.name === name);
+                if (!entry) {
+                  continue;
+                }
+                onAddFavorite?.({
+                  label: entry.name,
+                  path: joinLocalPath(path, entry.name),
+                  icon: entry.kind === "folder" ? "folder" : "file",
+                  kind: entry.kind === "folder" ? "folder" : "file",
+                });
+              }
+            }}
             onRemoveFavorite={(id) => onRemoveFavorite?.(id)}
             onReorderFavorites={(next) => onReorderFavorites?.(next)}
           />

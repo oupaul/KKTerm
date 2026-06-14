@@ -1,15 +1,20 @@
 // Finder/Explorer-style left navigation for the local file browser: Favorites
-// (user-pinned, drag-to-reorder, pin/unpin) + Common Folders + Locations
-// (drives with capacity). Collapses to zero width. Ported from the KKTerm
-// redesign reference (explorer-sidebar.jsx) and wired to real local-filesystem
-// places.
+// (user-pinned, drag-to-reorder, pin/unpin, drag-from-pane to add) + Common +
+// Locations (drives with capacity). Collapses to zero width. Ported from the
+// KKTerm redesign reference (explorer-sidebar.jsx) and wired to real
+// local-filesystem places.
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { DIcon } from "../../../../app/ui/dialog";
 import type { LocalDrivePlace, LocalPlace, LocalPlacesListing } from "../../../../lib/tauri";
+import { FileGlyph } from "./finderGlyphs";
 import { formatFileSize } from "./format";
 import { PlaceIcon, placeTintFor } from "./localPlaceGlyphs";
 import type { LocalFavorite } from "./types";
+
+// Drag payload set by file rows in SftpFilePane (see handleDragStart there).
+const PANE_ITEMS_MIME = "application/x-kkterm-sftp-items";
 
 type SectionKey = "favorites" | "common" | "locations";
 
@@ -23,6 +28,7 @@ export function samePath(left: string, right: string) {
 
 function SidebarRow({
   icon,
+  iconNode,
   label,
   active,
   onClick,
@@ -36,11 +42,12 @@ function SidebarRow({
   onDragEnd,
 }: {
   icon: string;
+  iconNode?: ReactNode;
   label: string;
   active: boolean;
   onClick: () => void;
   meta?: { freeBytes: number; totalBytes: number };
-  trailing?: React.ReactNode;
+  trailing?: ReactNode;
   draggable?: boolean;
   dragging?: boolean;
   onDragStart?: (event: React.DragEvent) => void;
@@ -65,9 +72,7 @@ function SidebarRow({
       title={label}
       type="button"
     >
-      <span className="ico">
-        <PlaceIcon name={icon} size={17} />
-      </span>
+      <span className="ico">{iconNode ?? <PlaceIcon name={icon} size={17} />}</span>
       {meta ? (
         <span className="stack">
           <span className="nm">{label}</span>
@@ -98,9 +103,8 @@ function Section({
   label: string;
   collapsed: boolean;
   onToggle: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  const { t } = useTranslation();
   return (
     <div className={`sftp-sb-section${collapsed ? " collapsed" : ""}`}>
       <button className="sftp-sb-header" onClick={onToggle} aria-expanded={!collapsed} type="button">
@@ -108,7 +112,6 @@ function Section({
           <DIcon name="chevright" size={11} />
         </span>
         <span className="lbl">{label}</span>
-        <span className="hint">{collapsed ? t("sftp.sidebar.show") : t("sftp.sidebar.hide")}</span>
       </button>
       <div className="sftp-sb-list">{children}</div>
     </div>
@@ -121,7 +124,9 @@ export function ExplorerSidebar({
   places,
   favorites,
   onNavigate,
+  onOpenFavorite,
   onAddFavorite,
+  onAddFavoritesFromNames,
   onRemoveFavorite,
   onReorderFavorites,
 }: {
@@ -130,7 +135,9 @@ export function ExplorerSidebar({
   places: LocalPlacesListing | null;
   favorites: LocalFavorite[];
   onNavigate: (path: string) => void;
-  onAddFavorite: (place: { label: string; path: string; icon: string }) => void;
+  onOpenFavorite: (favorite: LocalFavorite) => void;
+  onAddFavorite: (place: { label: string; path: string; icon: string; kind?: "file" | "folder" }) => void;
+  onAddFavoritesFromNames: (names: string[]) => void;
   onRemoveFavorite: (id: string) => void;
   onReorderFavorites: (next: LocalFavorite[]) => void;
 }) {
@@ -188,6 +195,38 @@ export function ExplorerSidebar({
     setOverIndex(null);
   };
 
+  // drag a file/folder from the pane onto Favorites to pin it
+  const [externalDropActive, setExternalDropActive] = useState(false);
+  const hasPaneItems = (event: React.DragEvent) =>
+    Array.from(event.dataTransfer.types).includes(PANE_ITEMS_MIME);
+  const handleFavoritesDragOver = (event: React.DragEvent) => {
+    // Only react to file rows dragged from the local pane, not favorite reorder.
+    if (dragId != null || !hasPaneItems(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setExternalDropActive(true);
+  };
+  const handleFavoritesDrop = (event: React.DragEvent) => {
+    if (dragId != null || !hasPaneItems(event)) {
+      return;
+    }
+    event.preventDefault();
+    setExternalDropActive(false);
+    try {
+      const payload = JSON.parse(event.dataTransfer.getData(PANE_ITEMS_MIME)) as {
+        side?: string;
+        names?: string[];
+      };
+      if (payload.side === "local" && payload.names?.length) {
+        onAddFavoritesFromNames(payload.names);
+      }
+    } catch {
+      /* ignore malformed payloads */
+    }
+  };
+
   return (
     <nav
       className={`sftp-sidebar${collapsed ? " collapsed" : ""}`}
@@ -200,11 +239,16 @@ export function ExplorerSidebar({
         onToggle={() => toggleSection("favorites")}
       >
         <div
-          className={`sftp-sb-list reorder${dragId != null ? " dragging" : ""}`}
+          className={`sftp-sb-list reorder${dragId != null ? " dragging" : ""}${externalDropActive ? " drop-ok" : ""}`}
           style={{ position: "relative", padding: 0, display: "block" }}
+          onDragOver={handleFavoritesDragOver}
+          onDragLeave={() => setExternalDropActive(false)}
+          onDrop={handleFavoritesDrop}
         >
           {favorites.length === 0 ? (
-            <div className="sftp-sb-empty">{t("sftp.sidebar.noFavorites")}</div>
+            <div className={`sftp-sb-empty${externalDropActive ? " drop-ok" : ""}`}>
+              {t("sftp.sidebar.noFavorites")}
+            </div>
           ) : null}
           {favorites.map((favorite, index) => (
             <div key={favorite.id} style={{ position: "relative" }}>
@@ -213,9 +257,14 @@ export function ExplorerSidebar({
               ) : null}
               <SidebarRow
                 icon={favorite.icon}
+                iconNode={
+                  favorite.kind === "file" ? (
+                    <FileGlyph entry={{ name: favorite.label, kind: "file", size: "", modified: "" }} size={17} />
+                  ) : undefined
+                }
                 label={favorite.label}
-                active={samePath(favorite.path, currentPath)}
-                onClick={() => onNavigate(favorite.path)}
+                active={favorite.kind !== "file" && samePath(favorite.path, currentPath)}
+                onClick={() => onOpenFavorite(favorite)}
                 draggable
                 dragging={dragId === favorite.id}
                 onDragStart={handleDragStart(favorite.id)}

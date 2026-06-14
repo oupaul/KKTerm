@@ -1,6 +1,6 @@
 # sftp.sidebar.commonFolders
 
-- **English value**: `Common Folders`
+- **English value**: `Common`
 - **Namespace**: `sftp`
 - **File/component**: `src/modules/workspace/connections/sftp/ExplorerSidebar.tsx`
 - **UI role**: `heading`

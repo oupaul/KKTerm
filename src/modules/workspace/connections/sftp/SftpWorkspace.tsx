@@ -208,7 +208,7 @@ export function SftpWorkspace({
     });
   };
 
-  const addFavorite = (place: { label: string; path: string; icon: string }) => {
+  const addFavorite = (place: { label: string; path: string; icon: string; kind?: "file" | "folder" }) => {
     setFavorites((current) => {
       if (current.some((favorite) => favorite.path === place.path)) {
         return current;
@@ -1555,6 +1555,7 @@ export function SftpWorkspace({
           onAddFavorite={addFavorite}
           onRemoveFavorite={removeFavorite}
           onReorderFavorites={reorderFavorites}
+          onOpenFavoriteFile={(path) => void openFilesystemPath(path)}
           enableSearch
         />
         {!isLocalFilesBrowser ? (

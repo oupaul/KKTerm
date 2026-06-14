@@ -604,17 +604,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sftp-sb-header .hint {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
-  opacity: 0;
-  transition: opacity 0.12s;
-  padding-right: 2px;
-}
-.sftp-sb-header:hover .hint {
-  opacity: 1;
-}
 .sftp-sb-header:hover .lbl {
   color: var(--text-muted);
 }
@@ -774,6 +763,19 @@
   font-size: 11.5px;
   line-height: 1.45;
   text-align: center;
+}
+
+/* drag a file/folder from the pane onto Favorites */
+.sftp-sb-list.reorder.drop-ok {
+  border-radius: 8px;
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  background: var(--sel-soft);
+}
+.sftp-sb-empty.drop-ok {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--sel-soft);
 }
 
 /* search box (local pane, right of the view switcher) */
