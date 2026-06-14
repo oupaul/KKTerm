@@ -302,7 +302,7 @@ update-check behavior on Linux is defined.**
 - [ ] Any new user-visible strings (e.g. "Keychain unavailable on this system")
       follow the i18n flow: English key first in `src/i18n/locales/en.json`,
       plus a pending file per key under `docs/localization_todo/`.
-- [ ] Update `AGENTS.md` "Project Shape" line ("Windows-first") to note Linux
+- [x] Update `AGENTS.md` "Project Shape" line to include Linux
       support is in progress and best-effort.
 
 ## 5. Subsystem Disposition Table

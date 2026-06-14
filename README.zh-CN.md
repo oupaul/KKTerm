@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@
 > ⭐ **如果这听起来就是你过去六年一直想做的那个 app — 请点个 star，让我们知道有人在看。这真的很有帮助。**
 
 对接下来该做什么有想法吗？来公开反馈帖聊聊：
-**[KKTerm 该为 Windows-first 管理工作流优先做什么？](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[KKTerm 该为跨平台管理工作流优先做什么？](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 

@@ -12,7 +12,7 @@ That full scope is too broad for a first release. RDP, VNC, mobile, browser tabs
 
 ## Decision
 
-v0.1 will be a desktop-first, Windows-first personal/local app.
+v0.1 will be a desktop-first, cross-platform personal/local app for Windows, macOS, and Linux.
 
 v0.1 includes:
 

@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-KKTerm is a Windows-first, local-first Tauri v2 desktop app: Rust backend,
+KKTerm is a cross-platform, local-first Tauri v2 desktop app: Rust backend,
 React/TypeScript frontend, SQLite for non-secret durable data, and OS keychain
 for secrets.
 

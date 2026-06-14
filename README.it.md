@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@ E la parte migliore: l'assistente IA può trasformare una sola frase in un picco
 > ⭐ **Se ti suona come l'app che volevi costruire da sei anni — metti una stella al repo così sappiamo che qualcuno sta guardando. Aiuta davvero.**
 
 Hai un'opinione su cosa dovrebbe arrivare dopo? Unisciti al thread pubblico di feedback:
-**[Cosa dovrebbe dare priorità KKTerm per i workflow di amministrazione Windows-first?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[A cosa dovrebbe dare priorità KKTerm per i workflow di amministrazione multipiattaforma?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
@@ -241,7 +241,7 @@ Impostazioni → AI Assistant → **Built-in MCP Server** ha una finestra «Most
 Una lista breve, perché l'onestà conquista fiducia:
 
 - **Non è un prodotto cloud.** Niente sync, niente account di team, niente piano SaaS. Se mai vedi una finestra «Accedi a KKTerm», qualcosa è andato catastroficamente storto.
-- **Non finge di essere multipiattaforma.** Siamo Windows-first di proposito; macOS e Linux sono nella roadmap. Se ti serve oggi un tool mac-first, hai centinaia di opzioni. Stiamo costruendo quello che gli admin Windows aspettavano in silenzio.
+- **Non finge che tutti i sistemi operativi siano identici.** KKTerm pubblica build per Windows, macOS e Linux, mantenendo chiare le funzioni specifiche di ogni piattaforma.
 - **Non è un agente IA autonomo.** L'assistente propone; l'umano dispone. `Allow All` è una scelta che fai tu, non un default.
 - **Non è un sostituto di Grafana / Datadog.** La Dashboard è per superfici di controllo personali, non per l'osservabilità di 10.000 host.
 - **Non è un IDE per Kubernetes.** È uno spazio di amministrazione incentrato sul terminale. Per favore non chiedergli di renderizzare un chart Helm.

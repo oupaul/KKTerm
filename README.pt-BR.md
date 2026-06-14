@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@ E a melhor parte: o assistente de IA consegue transformar uma única frase numa 
 > ⭐ **Se isso parece o app que você vinha querendo construir nos últimos seis anos — dá uma estrela no repo pra gente saber que tem alguém de olho. Ajuda de verdade.**
 
 Tem uma opinião sobre o que deveria vir a seguir? Entra na thread pública de feedback:
-**[O que o KKTerm deveria priorizar para fluxos de administração Windows-first?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[O que o KKTerm deveria priorizar para fluxos de administração multiplataforma?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
@@ -241,7 +241,7 @@ Configurações → AI Assistant → **Built-in MCP Server** tem um diálogo «M
 Uma lista curta, porque honestidade conquista confiança:
 
 - **Não é um produto de nuvem.** Sem sincronização, sem contas de equipe, sem plano SaaS. Se você um dia vir um diálogo «Entrar no KKTerm», algo deu catastroficamente errado.
-- **Não finge ser multiplataforma.** Somos Windows-first de propósito; macOS e Linux estão no roadmap. Se você precisa de uma ferramenta mac-first hoje, tem centenas de opções. Estamos construindo aquela que os admins de Windows vinham esperando em silêncio.
+- **Não finge que todos os sistemas operacionais são idênticos.** O KKTerm publica builds para Windows, macOS e Linux, mas mantém claras as funções específicas de cada plataforma.
 - **Não é um agente de IA autônomo.** O assistente propõe; o humano decide. `Allow All` é uma escolha que você faz, não um padrão.
 - **Não é um substituto pro Grafana / Datadog.** O Dashboard é pra superfícies de controle pessoais, não pra observabilidade de 10 mil hosts.
 - **Não é uma IDE de Kubernetes.** É um espaço de administração centrado no terminal. Por favor, não peça pra ele renderizar um chart do Helm.

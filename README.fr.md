@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>Une seule fenêtre native Windows pour les terminaux, le SSH, le SFTP, le RDP/VNC et un tableau de bord — plus une IA qui fabrique vos petits outils sur demande.</strong>
+  <strong>Une seule fenêtre native de bureau pour les terminaux, le SSH, le SFTP, le RDP/VNC et un tableau de bord — plus une IA qui fabrique vos petits outils sur demande.</strong>
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@ Et le meilleur : l'assistant IA peut transformer une seule phrase en un petit ou
 > ⭐ **Si ça ressemble à l'appli que vous comptiez construire depuis six ans — mettez une étoile au dépôt pour qu'on sache que quelqu'un regarde. Ça aide vraiment.**
 
 Un avis sur la suite ? Rejoignez le fil de retours public :
-**[Que devrait prioriser KKTerm pour les workflows admin Windows-first ?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[Que devrait prioriser KKTerm pour les workflows admin multiplateformes ?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
@@ -241,7 +241,7 @@ Réglages → AI Assistant → **Built-in MCP Server** propose une boîte « Aff
 Une courte liste, parce que l'honnêteté inspire confiance :
 
 - **Pas un produit cloud.** Pas de synchro, pas de comptes d'équipe, pas d'offre SaaS. Si vous voyez un jour une boîte « Se connecter à KKTerm », c'est qu'un truc a catastrophiquement mal tourné.
-- **Pas un faux multiplateforme.** On est Windows-first volontairement ; macOS et Linux sont sur la feuille de route. S'il vous faut un outil mac-first aujourd'hui, vous avez des centaines d'options. On construit celui que les admins Windows attendaient en silence.
+- **Ne prétend pas que tous les OS sont identiques.** KKTerm publie des builds Windows, macOS et Linux, tout en gardant les fonctions propres à chaque plateforme clairement indiquées.
 - **Pas un agent IA autonome.** L'assistant propose ; l'humain dispose. `Allow All` est un choix que vous faites, pas un défaut.
 - **Pas un remplaçant de Grafana / Datadog.** Le Dashboard est pour des surfaces de contrôle personnelles, pas pour l'observabilité de 10 000 hôtes.
 - **Pas un IDE Kubernetes.** C'est un espace d'administration centré terminal. Ne lui demandez pas de rendre un chart Helm.

@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@ Dan bagian terbaiknya: asisten AI bisa mengubah satu kalimat menjadi alat dashbo
 > ⭐ **Kalau ini terdengar seperti aplikasi yang sudah enam tahun ingin kamu bangun — beri bintang ke repo-nya agar kami tahu ada yang memperhatikan. Ini sungguh membantu.**
 
 Punya pendapat tentang apa yang sebaiknya datang berikutnya? Gabung ke thread umpan balik publik:
-**[Apa yang sebaiknya diprioritaskan KKTerm untuk alur kerja admin Windows-first?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[Apa yang sebaiknya diprioritaskan KKTerm untuk alur kerja admin lintas platform?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
@@ -154,7 +154,7 @@ Lihatlah lanskap dev tools. Claude Code: mac/linux dulu, Windows itu "pakai WSL"
 
 Sementara itu, orang-orang yang benar-benar menjaga perusahaan tetap online — IT korporat, MSP, siapa pun yang mengelola domain controller yang lebih tua dari sebagian magang — duduk di mesin Windows sambil bertanya-tanya kenapa setiap tool baru memperlakukan OS mereka seperti gangguan.
 
-**KKTerm mengambil pilihan sebaliknya.** Kami membangun native Windows dulu, jadi hal yang dipedulikan orang Windows langsung berfungsi: Remote Desktop Microsoft yang *asli* (yang sama dengan `mstsc.exe`, bukan tiruan), shell PowerShell / cmd / WSL sungguhan, rahasia yang disimpan di Windows Credential Manager, ikon tray yang benar, menu dan dialog native. Build macOS dan Linux ada di roadmap dan akan mendapat perhatian yang sama. Tapi kalau kamu sudah menunggu seseorang membangun tool admin Windows yang *bagus* lebih dulu alih-alih terakhir — itulah kesepakatannya.
+**KKTerm memilih jalur native.** Build Windows menjaga hal yang dipedulikan pengguna Windows: Remote Desktop Microsoft yang *asli* (yang sama dengan `mstsc.exe`, bukan tiruan), shell PowerShell / cmd / WSL sungguhan, rahasia yang disimpan di Windows Credential Manager, ikon tray yang benar, menu dan dialog native. Build macOS dan Linux memakai jalur native masing-masing saat OS-nya berbeda, sambil mempertahankan model workflow yang sama.
 
 ### Local-first artinya benar-benar lokal
 
@@ -241,7 +241,7 @@ Pengaturan → AI Assistant → **Built-in MCP Server** punya dialog "Tampilkan 
 Daftar singkat, karena kejujuran menumbuhkan kepercayaan:
 
 - **Bukan produk cloud.** Tanpa sinkronisasi, tanpa akun tim, tanpa tingkatan SaaS. Kalau suatu hari kamu melihat dialog "Masuk ke KKTerm", ada yang salah secara katastrofik.
-- **Tidak berpura-pura lintas platform.** Kami Windows-first dengan sengaja; macOS dan Linux ada di roadmap. Kalau kamu butuh tool mac-first hari ini, kamu punya ratusan pilihan. Kami sedang membangun yang sudah lama ditunggu para admin Windows dalam diam.
+- **Tidak berpura-pura semua OS identik.** KKTerm merilis build Windows, macOS, dan Linux, tetapi fitur khusus platform tetap diberi batas yang jujur dan jelas.
 - **Bukan agen AI otonom.** Asisten mengusulkan; manusia memutuskan. `Allow All` adalah pilihan yang kamu buat, bukan default.
 - **Bukan pengganti Grafana / Datadog.** Dashboard untuk permukaan kendali pribadi, bukan observability 10.000 host.
 - **Bukan IDE Kubernetes.** Ini ruang kerja admin yang berpusat pada terminal. Tolong jangan minta ia me-render chart Helm.

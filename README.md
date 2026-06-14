@@ -5,7 +5,7 @@
 <h1 align="center">KKTerm</h1>
 
 <p align="center">
-  <strong>One native Windows window for terminals, SSH, SFTP, RDP/VNC, and a dashboard — plus an AI that builds your own little tools on request.</strong>
+  <strong>One native desktop window for terminals, SSH, SFTP, RDP/VNC, and a dashboard — plus an AI that builds your own little tools on request.</strong>
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/ryantsai/KKTerm/releases/latest">Download the latest Windows installer (.exe)</a></strong>
+  <strong><a href="https://github.com/ryantsai/KKTerm/releases/latest">Download the latest release</a></strong>
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -73,7 +73,7 @@ You're a sysadmin / DevOps / homelab tinkerer / vibe-coder. Right now you've got
 - A `claude` / `codex` session on a remote box that dies every time your Wi-Fi sneezes
 - A sticky note with passwords *(don't worry, we won't tell)*
 
-**KKTerm is one window for all of that.** Native on Windows — *on purpose, while the rest of the dev-tools world ships mac-first and treats your OS like a footnote* — in a single installer that refuses to phone home.
+**KKTerm is one window for all of that.** Native on Windows, macOS, and Linux, with a local-first design that refuses to phone home.
 
 Plus a few things you didn't know you wanted:
 
@@ -88,7 +88,7 @@ And the best part: the AI assistant can turn a single sentence into a tiny dashb
 > ⭐ **If this sounds like the app you've been meaning to build for the last six years — star the repo so we know someone's watching. It genuinely helps.**
 
 Have an opinion on what should come next? Join the public feedback thread:
-**[What should KKTerm prioritize for Windows-first admin workflows?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[What should KKTerm prioritize for cross-platform admin workflows?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
@@ -148,13 +148,13 @@ Same app. Same window. Same hotkeys. Same hopefully-not-eye-bleeding theme.
 
 ## Why People Keep It Open All Day
 
-### Windows-first, on purpose
+### Native where you work
 
-Look around the dev-tooling landscape. Claude Code: mac/linux first, Windows is "use WSL." Codex CLI: same. Half the shiny new tools ship mac-first and leave Windows users a `# contributions welcome` comment and a completion script that doesn't run.
+Look around the dev-tooling landscape. Too many tools treat one desktop as the "real" platform and leave everyone else with caveats, half-working integrations, or a `# contributions welcome` comment.
 
-Meanwhile the people who actually keep companies online — corporate IT, MSPs, anyone running a domain controller older than some of the interns — are on Windows boxes wondering why every new tool treats their OS like an inconvenience.
+Meanwhile the people who actually keep companies online — corporate IT, MSPs, homelab operators, and developers bouncing between laptops and servers — need the same workspace to behave well on the machine in front of them.
 
-**KKTerm takes the opposite trade.** We build native Windows first, so the things Windows people care about just work: the *actual* Microsoft Remote Desktop (the same one as `mstsc.exe`, not a clone), real PowerShell / cmd / WSL shells, secrets kept in the Windows Credential Manager, a proper tray icon, native menus and dialogs. macOS and Linux builds are on the roadmap and will get the same care. But if you've been waiting for someone to build the *good* Windows admin tool first instead of last — that's the deal.
+**KKTerm takes the native trade.** Windows builds keep the things Windows people care about: the *actual* Microsoft Remote Desktop (the same one as `mstsc.exe`, not a clone), real PowerShell / cmd / WSL shells, secrets kept in the Windows Credential Manager, a proper tray icon, native menus and dialogs. macOS and Linux builds use their own native paths where the OS differs, while keeping the same Connection, Session, Tab, Dashboard, and AI workflow model.
 
 ### Local-first means actually local
 
@@ -241,7 +241,7 @@ Settings → AI Assistant → **Built-in MCP Server** has a one-click "Show conf
 A short list, because honesty earns trust:
 
 - **Not a cloud product.** No sync, no team accounts, no SaaS tier. If you ever see a "Sign in to KKTerm" dialog, something has gone catastrophically wrong.
-- **Not pretending to be cross-platform.** We are Windows-first on purpose; macOS and Linux are on the roadmap. If you need a mac-first tool today, you have hundreds of options. We're building the one Windows admins have been quietly waiting for.
+- **Not pretending every OS is identical.** KKTerm ships Windows, macOS, and Linux builds, but platform-specific features stay honest: Windows has the native RDP ActiveX path and Installer Helper catalog, while macOS and Linux use the portable paths available on those systems.
 - **Not an autonomous AI agent.** The assistant proposes; the human disposes. `Allow All` is a choice you make, not a default.
 - **Not a Grafana / Datadog replacement.** The Dashboard is for personal control surfaces, not 10k-host observability.
 - **Not a Kubernetes IDE.** It is a terminal-first admin workspace. Please don't ask it to render a Helm chart.
@@ -252,7 +252,7 @@ If any of those *was* a dealbreaker — fair enough, we'll see you in v2.
 
 ## Get KKTerm
 
-**[Download the latest Windows installer (.exe)](https://github.com/ryantsai/KKTerm/releases/latest)** and run it. The installer is currently **unsigned** — release signing is on the roadmap, so until then your antivirus may give you a stern look. That's normal.
+**[Download the latest release](https://github.com/ryantsai/KKTerm/releases/latest)** for your platform and run it. Windows installers are currently **unsigned** — release signing is on the roadmap, so until then your antivirus may give you a stern look. That's normal.
 
 Want to build from source or contribute? Everything you need is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -260,7 +260,7 @@ Want to build from source or contribute? Everything you need is in [`CONTRIBUTIN
 
 ## Roadmap (the short version)
 
-- macOS + Linux builds
+- Cross-platform release polish
 - Signed installer + auto-update
 - More file-transfer power (resume, folder sync, archive/extract)
 - Richer remote-desktop clipboard and device sharing

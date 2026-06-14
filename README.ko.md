@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@
 > ⭐ **이게 지난 6년 동안 만들려고 벼르던 바로 그 앱처럼 들린다면 — 리포지터리에 스타를 눌러 누군가 보고 있다는 걸 알려 달라. 정말로 도움이 된다.**
 
 다음에 뭘 해야 할지 의견이 있다면? 공개 피드백 스레드로 오시라：
-**[KKTerm은 Windows-first 관리 워크플로에서 무엇을 우선해야 할까?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[KKTerm은 크로스 플랫폼 관리 워크플로에서 무엇을 우선해야 할까?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 

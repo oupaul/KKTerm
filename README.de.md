@@ -37,7 +37,7 @@
     <img src="https://img.shields.io/github/license/ryantsai/KKTerm?style=for-the-badge&color=blue" alt="MIT License" />
   </a>
   <br />
-  <img src="https://img.shields.io/badge/Windows%E2%80%91first-by%20design-0078D6?style=flat-square&logo=windows" alt="Windows-first by design" />
+  <img src="https://img.shields.io/badge/cross%E2%80%91platform-desktop-0078D6?style=flat-square" alt="Cross-platform desktop" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-success?style=flat-square" alt="Local-first" />
   <br />
   <sub>
@@ -88,7 +88,7 @@ Und das Beste: Der KI-Assistent kann aus einem einzigen Satz ein winziges Dashbo
 > ⭐ **Wenn das nach der App klingt, die du seit sechs Jahren bauen wolltest — gib dem Repo einen Stern, damit wir wissen, dass jemand zuschaut. Das hilft wirklich.**
 
 Eine Meinung, was als Nächstes kommen sollte? Mach im öffentlichen Feedback-Thread mit:
-**[Was sollte KKTerm für Windows-first-Admin-Workflows priorisieren?](https://github.com/ryantsai/KKTerm/discussions/141)**
+**[Was sollte KKTerm für plattformübergreifende Admin-Workflows priorisieren?](https://github.com/ryantsai/KKTerm/discussions/141)**
 
 ---
 
@@ -148,7 +148,7 @@ Dieselbe App. Dasselbe Fenster. Dieselben Hotkeys. Dasselbe, hoffentlich nicht a
 
 ## Warum Leute es den ganzen Tag offen lassen
 
-### Windows-first, mit Absicht
+### Nativ, wo du arbeitest
 
 Schau dich in der Dev-Tool-Landschaft um. Claude Code: mac/linux zuerst, Windows ist „nimm WSL". Codex CLI: dasselbe. Die Hälfte der schicken neuen Tools liefert mac-first und lässt Windows-Nutzern einen `# contributions welcome`-Kommentar und ein Autovervollständigungs-Skript, das nicht läuft.
 
@@ -241,7 +241,7 @@ Einstellungen → AI Assistant → **Built-in MCP Server** hat einen Ein-Klick-D
 Eine kurze Liste, denn Ehrlichkeit verdient Vertrauen:
 
 - **Kein Cloud-Produkt.** Keine Synchronisierung, keine Team-Konten, keine SaaS-Stufe. Wenn du je einen Dialog „Bei KKTerm anmelden" siehst, ist etwas katastrophal schiefgelaufen.
-- **Tut nicht so, als wäre es plattformübergreifend.** Wir sind mit Absicht Windows-first; macOS und Linux stehen auf der Roadmap. Wenn du heute ein mac-first-Tool brauchst, hast du hunderte Optionen. Wir bauen das eine, auf das Windows-Admins still gewartet haben.
+- **Tut nicht so, als wären alle Betriebssysteme identisch.** KKTerm veröffentlicht Builds für Windows, macOS und Linux, hält plattformspezifische Funktionen aber klar und ehrlich gekennzeichnet.
 - **Kein autonomer KI-Agent.** Der Assistent schlägt vor; der Mensch entscheidet. `Allow All` ist eine Wahl, die du triffst, kein Standard.
 - **Kein Grafana-/Datadog-Ersatz.** Das Dashboard ist für persönliche Kontroll-Oberflächen, nicht für Observability über 10.000 Hosts.
 - **Keine Kubernetes-IDE.** Es ist ein Terminal-zentrierter Admin-Workspace. Bitte verlang nicht, dass es ein Helm-Chart rendert.

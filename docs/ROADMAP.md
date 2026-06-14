@@ -19,7 +19,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Rust/Tauri v2/React 19/Vite scaffold with Tailwind design tokens.
 - [x] App shell with light chrome and dark terminal surface.
 - [x] Local logging foundation.
-- [x] CI skeleton for Windows-first builds.
+- [x] CI skeleton for Windows builds.
 - [x] Typed Tauri command wrapper.
 - [x] SQLite schema initialization and repository layer.
 - [x] OS keychain abstraction.

@@ -8,11 +8,11 @@ KKTerm is intended to be a fast, professional desktop workspace for personal/loc
 
 ## Solution
 
-KKTerm v0.1 will be a Windows-first desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (a named-Workspace connection manager where each Workspace isolates its own Connections and folders while live Sessions/Tabs stay open across Workspace switches; includes VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, File Explorer, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Installer Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
+KKTerm v0.1 will be a cross-platform desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (a named-Workspace connection manager where each Workspace isolates its own Connections and folders while live Sessions/Tabs stay open across Workspace switches; includes VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, File Explorer, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Installer Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
 
 Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, platform secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 
-The product will be light chrome with dark terminal panes by default, optimized for dense professional workflows and fast launch. macOS and Linux will follow using the same architecture. Mobile, team vaults, and sync remain later-stage scope.
+The product will be light chrome with dark terminal panes by default, optimized for dense professional workflows and fast launch across Windows, macOS, and Linux. Mobile, team vaults, and sync remain later-stage scope.
 
 ## User Stories
 
@@ -88,7 +88,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 
 High-level product decisions that are not duplicated elsewhere:
 
-- Product name: **KKTerm**. Primary acceptance platform: Windows. Follow-on: macOS and Linux on the same architecture.
+- Product name: **KKTerm**. Supported desktop release targets: Windows, macOS, and Linux on the same architecture.
 - Current protocols: local terminal, SSH terminal, Telnet terminal, Serial terminal, SFTP launched from SSH, FTP/FTPS, URL (WebView2), RDP (ActiveX), and VNC (`vnc-rs`).
 - License: MIT. Dependencies should be MIT/Apache-2.0/BSD/MPL-style; avoid GPL in the core runtime.
 - Privacy: no telemetry or automatic crash upload in v0.1. Update checks and user-mediated installer handoff are described separately from telemetry.

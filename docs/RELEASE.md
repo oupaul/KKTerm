@@ -145,7 +145,7 @@ The Linux build requires the Tauri updater private key through `TAURI_SIGNING_PR
 
 ## Known Limitations
 
-- Windows is the primary supported platform. macOS DMG and Linux AppImage publishing are available as follow-up asset uploads to an existing GitHub Release.
+- Windows, macOS, and Linux are supported release targets. macOS DMG and Linux AppImage publishing are currently attached as follow-up asset uploads to an existing GitHub Release.
 - The Windows installer build and smoke test are repeatable, but the installer is unsigned until release signing is configured.
 - SSH readiness performance is instrumented for native post-auth terminal setup and retained in local performance snapshots after a native SSH Session starts. The repeatable `npm run measure:ssh-readiness` helper can validate the `<= 150 ms` budget against a trusted non-`ProxyJump` SSH Connection, but the latest documented run still lacks a measured value because valid SSH auth was not available in the measurement environment.
 - Native SSH-launched SFTP does not support `ProxyJump`; SSH terminal sessions with `ProxyJump` use the system `ssh` fallback/debug path where available.

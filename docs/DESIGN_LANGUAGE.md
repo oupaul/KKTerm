@@ -56,10 +56,10 @@ restyled in `src/styles/base.css` to the same language, so legacy dialogs match.
 spellcheck for machine-oriented dialog fields. Callers may override those props
 only for prose fields where spelling assistance is useful.
 
-### Button order (Windows)
+### Button order
 
-KKTerm is Windows-first: the primary/confirm action comes **immediately before**
-Cancel, and the action group anchors bottom-right. `Actions` defaults to this via
+KKTerm uses Windows-style dialog button order: the primary/confirm action comes
+**immediately before** Cancel, and the action group anchors bottom-right. `Actions` defaults to this via
 `DialogConventionProvider` value `windows`. Do not reorder per-dialog.
 
 ### Footer & buttons

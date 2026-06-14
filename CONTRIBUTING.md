@@ -2,7 +2,7 @@
 
 Thanks for even reading this file. It already puts you in the top decile of internet users.
 
-KKTerm is a local-first Windows admin workspace built with **Tauri v2 + Rust + React 19**. We welcome contributions of every size — translations, bug repros, doc fixes, dashboard widgets, AI adapters, full features. This document explains how to set up, where things live, what we expect in a PR, and the handful of rules that are non-negotiable because we have already learned them the hard way.
+KKTerm is a cross-platform, local-first admin workspace built with **Tauri v2 + Rust + React 19**. We welcome contributions of every size — translations, bug repros, doc fixes, dashboard widgets, AI adapters, full features. This document explains how to set up, where things live, what we expect in a PR, and the handful of rules that are non-negotiable because we have already learned them the hard way.
 
 If you have not yet read [`CONTEXT.md`](CONTEXT.md) and [`AGENTS.md`](AGENTS.md), please skim them first. They are short and they are the canonical source for product terminology and engineering rules. This document is a more contributor-focused gloss on top of them.
 
@@ -64,7 +64,7 @@ If the queues are empty, that just means you get to define the problem. Open an 
 
 ### Prerequisites
 
-- **Windows 10/11** (primary supported platform; macOS / Linux are roadmapped)
+- **Windows 10/11, macOS, or Linux**
 - **Node.js** (LTS) and **npm**
 - **Rust toolchain** (`rustup` recommended)
 - **Tauri v2 prerequisites for Windows** — most importantly **WebView2 Runtime** (preinstalled on modern Windows; otherwise grab it from Microsoft)

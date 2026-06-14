@@ -14,7 +14,7 @@ SSH lifecycle in Rust so host-key prompts, credentials, settings, and SFTP can
 share one local trust model.
 
 The library choice must fit KKTerm's MIT project, avoid GPL runtime
-dependencies, work on Windows first, and leave room for macOS and Linux.
+dependencies, work across the supported desktop platforms, and leave room for OS-specific integration details.
 
 ## Decision
 

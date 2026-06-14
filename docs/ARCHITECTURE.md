@@ -2,7 +2,7 @@
 
 ## Overview
 
-KKTerm is a Windows-first, cross-platform desktop workspace for local terminals, SSH sessions, SFTP/FTP file browsing, URL workspaces, and remote desktop. The architecture prioritizes startup speed, local-first privacy, testable Rust source files, and a UI that can evolve toward GPU-accelerated terminal rendering without blocking the first usable prototype.
+KKTerm is a cross-platform desktop workspace for local terminals, SSH sessions, SFTP/FTP file browsing, URL workspaces, and remote desktop. The architecture prioritizes startup speed, local-first privacy, testable Rust source files, and a UI that can evolve toward GPU-accelerated terminal rendering without blocking the first usable prototype.
 
 ## Platform Shape
 
@@ -16,7 +16,7 @@ KKTerm is a Windows-first, cross-platform desktop workspace for local terminals,
 - Storage: SQLite for non-secret local data.
 - Secrets: selected credential backend. Windows and macOS default to the OS keystore; Linux uses the encrypted file store.
 
-Windows is the first acceptance platform. macOS and Linux should remain first-class architectural targets, but Windows behavior wins v0.1 acceptance decisions.
+Windows, macOS, and Linux are supported desktop release targets. Platform-specific behavior should stay isolated behind explicit capability checks so each build can preserve native OS behavior without regressing the shared architecture.
 
 ## Major Source Areas
 

@@ -8,7 +8,7 @@
 
 ## What is KKTerm
 
-KKTerm is a Windows-first, local-first desktop workspace for people who live in terminals, SSH sessions, file transfers, and remote desktop all day. It combines saved Connections, live Sessions, split terminal panes, SFTP/FTP dual-pane file management, embedded URL WebViews, RDP and VNC workspaces, a widget Dashboard, and an AI Assistant with approval-based tool execution — all in one native app.
+KKTerm is a cross-platform, local-first desktop workspace for people who live in terminals, SSH sessions, file transfers, and remote desktop all day. It combines saved Connections, live Sessions, split terminal panes, SFTP/FTP dual-pane file management, embedded URL WebViews, RDP and VNC workspaces, a widget Dashboard, and an AI Assistant with approval-based tool execution — all in one native app.
 
 **Tech stack:** Rust + Tauri v2 backend, React 19 + TypeScript + Vite frontend, SQLite for non-secret local data, OS keychain (Windows Credential Manager) for secrets, xterm.js for terminal rendering, WebView2 for URL and RDP surfaces.
 
@@ -16,7 +16,7 @@ KKTerm is a Windows-first, local-first desktop workspace for people who live in 
 
 - **Local-first** — no telemetry, no cloud account. Durable data is in SQLite on the user's machine, secrets are in the OS keychain.
 - **MIT license** — permissive, open-source.
-- **Windows-first** — primary acceptance platform is Windows. macOS and Linux are planned.
+- **Cross-platform desktop** — release builds target Windows, macOS, and Linux while preserving native OS behavior where features differ.
 - **Current version:** see `package.json` `version` field or the About section in Settings.
 
 **GitHub repository:** <https://github.com/ryantsai/KKTerm>
