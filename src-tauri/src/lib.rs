@@ -925,8 +925,15 @@ fn generate_ssh_key_pair(
 #[tauri::command]
 async fn transfer_ssh_public_key(
     app: tauri::AppHandle,
-    request: ssh_keys::TransferSshPublicKeyRequest,
+    mut request: ssh_keys::TransferSshPublicKeyRequest,
 ) -> Result<ssh_keys::TransferSshPublicKeyResult, String> {
+    let secrets = app.state::<secrets::Secrets>();
+    request.ssh_socks_proxy = resolve_ssh_socks_proxy(
+        &secrets,
+        request.ssh_socks_proxy.take(),
+        request.ssh_socks_proxy_username.take(),
+        request.ssh_socks_proxy_secret_owner_id.take(),
+    )?;
     run_blocking_command("SSH public key transfer", move || {
         ssh_keys::transfer_public_key(app, request)
     })
@@ -1361,6 +1368,51 @@ fn inject_email_secret(
     Ok(())
 }
 
+fn resolve_ssh_socks_proxy(
+    secrets: &secrets::Secrets,
+    proxy: Option<String>,
+    username: Option<String>,
+    secret_owner_id: Option<String>,
+) -> Result<Option<String>, String> {
+    let password = match trimmed_optional(username.clone()) {
+        Some(_) => match trimmed_optional(secret_owner_id) {
+            Some(owner_id) => secrets
+                .read_ssh_socks_proxy_password(owner_id)
+                .map_err(|error| format!("failed to read SOCKS proxy password: {error}"))?,
+            None => None,
+        },
+        None => None,
+    };
+    compose_ssh_socks_proxy(proxy, username, password)
+}
+
+fn compose_ssh_socks_proxy(
+    proxy: Option<String>,
+    username: Option<String>,
+    password: Option<String>,
+) -> Result<Option<String>, String> {
+    let Some(proxy) = trimmed_optional(proxy) else {
+        return Ok(None);
+    };
+    let Some(username) = trimmed_optional(username) else {
+        return crate::socks::validate_socks_proxy(&proxy).map(Some);
+    };
+    let Some(password) = password else {
+        return crate::socks::validate_socks_proxy(&proxy).map(Some);
+    };
+    if password.is_empty() {
+        return crate::socks::validate_socks_proxy(&proxy).map(Some);
+    }
+    let proxy_with_credentials = format!("{username}:{password}@{proxy}");
+    crate::socks::validate_socks_proxy(&proxy_with_credentials).map(Some)
+}
+
+fn trimmed_optional(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
 #[tauri::command]
 fn keychain_status(secrets: tauri::State<'_, secrets::Secrets>) -> secrets::KeychainStatus {
     secrets.status()
@@ -1617,9 +1669,16 @@ fn scan_network_for_connections(
 #[tauri::command]
 async fn inspect_ssh_host_key(
     app: tauri::AppHandle,
-    request: ssh::InspectSshHostKeyRequest,
+    mut request: ssh::InspectSshHostKeyRequest,
 ) -> Result<ssh::SshHostKeyPreview, String> {
     run_blocking_command("SSH host-key inspection", move || {
+        let secrets = app.state::<secrets::Secrets>();
+        request.ssh_socks_proxy = resolve_ssh_socks_proxy(
+            &secrets,
+            request.ssh_socks_proxy.take(),
+            request.ssh_socks_proxy_username.take(),
+            request.ssh_socks_proxy_secret_owner_id.take(),
+        )?;
         ssh::inspect_host_key(ssh::app_known_hosts_path(&app)?, request)
     })
     .await
@@ -3487,5 +3546,35 @@ mod tests {
         );
 
         let _ = fs::remove_file(backgrounds_folder().expect("backgrounds folder").join(file));
+    }
+
+    #[test]
+    fn compose_ssh_socks_proxy_uses_separate_stored_credentials() {
+        let resolved = compose_ssh_socks_proxy(
+            Some("  10.0.0.119:1080  ".to_string()),
+            Some("  proxy-user  ".to_string()),
+            Some("p@ss:word".to_string()),
+        )
+        .expect("SOCKS proxy resolves");
+
+        assert_eq!(
+            resolved.as_deref(),
+            Some("proxy-user:p@ss:word@10.0.0.119:1080")
+        );
+    }
+
+    #[test]
+    fn compose_ssh_socks_proxy_keeps_inline_credentials_without_stored_password() {
+        let resolved = compose_ssh_socks_proxy(
+            Some("inline:secret@10.0.0.119:1080".to_string()),
+            None,
+            None,
+        )
+        .expect("inline SOCKS proxy resolves");
+
+        assert_eq!(
+            resolved.as_deref(),
+            Some("inline:secret@10.0.0.119:1080")
+        );
     }
 }

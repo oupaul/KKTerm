@@ -27,7 +27,7 @@ import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
 } from "./connectionTabContextMenu";
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshSocksProxy, uniqueRuntimeId, type LocalShellOption } from "./utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
@@ -191,6 +191,7 @@ type ConnectionDialogRequest = CreateConnectionRequest & {
   iconBackgroundColor?: string | null;
   password?: string;
   passwordCredentialId?: string;
+  sshSocksProxyPassword?: string;
   urlCredentialUsername?: string;
   urlPassword?: string;
 };
@@ -455,6 +456,9 @@ export function ConnectionSidebar({
       port: connection.port,
       keyPath: connection.keyPath,
       proxyJump: connection.proxyJump,
+      sshSocksProxy: connection.sshSocksProxy,
+      sshSocksProxyUsername: connection.sshSocksProxyUsername,
+      sshSocksProxyInheritDefaults: connection.sshSocksProxyInheritDefaults,
       authMethod: connection.authMethod,
       localShell: connection.localShell,
       localStartupDirectory: connection.localStartupDirectory,
@@ -469,7 +473,7 @@ export function ConnectionSidebar({
   // error to the appropriate surface. Returns the opened connection.
   async function quickConnect(
     candidate: Connection,
-    creds?: { password?: string; passwordCredentialId?: string | null },
+    creds?: { password?: string; passwordCredentialId?: string | null; sshSocksProxyPassword?: string },
   ): Promise<Connection> {
     if (!isTauriRuntime()) {
       openConnection(candidate);
@@ -498,6 +502,7 @@ export function ConnectionSidebar({
         connection = await assignConnectionPasswordCredential(connection.id, creds.passwordCredentialId);
         await reloadConnectionGroups();
       }
+      await saveSshSocksProxyPassword(connection, creds?.sshSocksProxyPassword);
       openConnection(connection);
       rememberConnection(connection);
       return connection;
@@ -515,6 +520,7 @@ export function ConnectionSidebar({
     } else if (creds?.passwordCredentialId) {
       connection = await assignConnectionPasswordCredential(connection.id, creds.passwordCredentialId);
     }
+    await saveSshSocksProxyPassword(connection, creds?.sshSocksProxyPassword);
     await reloadConnectionGroups();
     notifyConnectionTreeInvalidated();
     openConnection(connection);
@@ -730,7 +736,7 @@ export function ConnectionSidebar({
           port: connection.port,
           keyPath: connection.keyPath,
           proxyJump: connection.proxyJump,
-          sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
+          ...resolveSshSocksProxyRequest(connection, sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
         },
@@ -845,7 +851,7 @@ export function ConnectionSidebar({
         request: {
           host: connection.host,
           port: connection.port,
-          sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
+          ...resolveSshSocksProxyRequest(connection, sshSettings),
         },
       });
       await confirmTrustedSshHostKey(hostKeyPreview);
@@ -857,7 +863,7 @@ export function ConnectionSidebar({
           password,
           keyPath,
           proxyJump: connection.proxyJump,
-          sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
+          ...resolveSshSocksProxyRequest(connection, sshSettings),
         },
       });
       setTransferSshPublicKeyDialog(null);
@@ -975,9 +981,38 @@ export function ConnectionSidebar({
     });
   }
 
+  async function saveSshSocksProxyPassword(connection: Connection, password?: string) {
+    if (!isTauriRuntime() || connection.type !== "ssh") {
+      return;
+    }
+    const ownerId = connectionSshSocksProxyPasswordOwnerId(connection);
+    const hasPerConnectionAuth =
+      connection.sshSocksProxyInheritDefaults === false &&
+      Boolean(connection.sshSocksProxy?.trim()) &&
+      Boolean(connection.sshSocksProxyUsername?.trim());
+    if (hasPerConnectionAuth && password) {
+      await invokeCommand("store_secret", {
+        request: {
+          kind: "sshSocksProxyPassword",
+          ownerId,
+          secret: password,
+        },
+      });
+      return;
+    }
+    if (!hasPerConnectionAuth) {
+      await invokeCommand("delete_secret", {
+        request: {
+          kind: "sshSocksProxyPassword",
+          ownerId,
+        },
+      });
+    }
+  }
+
   async function handleConnectionSubmit(request: ConnectionDialogRequest) {
     setFormError("");
-    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
+    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, sshSocksProxyPassword, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
     const appearance = supportsTerminalAppearanceDefaults(connectionRequest.type)
       ? resolveDefaultTerminalAppearance(connectionRequest.type, sshSettings, terminalSettings)
       : null;
@@ -1007,6 +1042,7 @@ export function ConnectionSidebar({
         } else if (passwordCredentialId) {
           connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
         }
+        await saveSshSocksProxyPassword(connection, sshSocksProxyPassword);
         if (connection.type === "url" && urlCredentialUsername && urlPassword) {
           await storeUrlPassword(connection.id, urlPassword);
           await upsertUrlCredential(connection.id, urlCredentialUsername);
@@ -1031,6 +1067,9 @@ export function ConnectionSidebar({
       port: connectionRequest.port,
       keyPath: connectionRequest.keyPath,
       proxyJump: connectionRequest.proxyJump,
+      sshSocksProxy: connectionRequest.sshSocksProxy,
+      sshSocksProxyUsername: connectionRequest.sshSocksProxyUsername,
+      sshSocksProxyInheritDefaults: connectionRequest.sshSocksProxyInheritDefaults,
       authMethod: connectionRequest.authMethod,
       type: connectionRequest.type,
       localShell: connectionRequest.localShell,
@@ -1047,7 +1086,7 @@ export function ConnectionSidebar({
     };
 
     try {
-      await quickConnect(candidate, { password, passwordCredentialId });
+      await quickConnect(candidate, { password, passwordCredentialId, sshSocksProxyPassword });
       setFormMode(null);
       setNewConnectionType(null);
       setFormError("");
@@ -1067,7 +1106,7 @@ export function ConnectionSidebar({
       setFormError(t("connections.connectionNotFound"));
       return;
     }
-    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
+    const { iconDataUrl, iconBackgroundColor, password, passwordCredentialId, sshSocksProxyPassword, urlCredentialUsername, urlPassword, ...connectionRequest } = request;
     const updateRequest: UpdateConnectionRequest = {
       ...connectionRequest,
       id: currentConnection.connection.id,
@@ -1084,6 +1123,7 @@ export function ConnectionSidebar({
       } else if (passwordCredentialId) {
         connection = await assignConnectionPasswordCredential(connection.id, passwordCredentialId);
       }
+      await saveSshSocksProxyPassword(connection, sshSocksProxyPassword);
       if (connection.type === "url" && urlPassword) {
         await storeUrlPassword(connection.id, urlPassword);
       }
@@ -3736,12 +3776,18 @@ function ConnectionDialog({
     const keyPath = String(form.get("keyPath") ?? "").trim();
     const formProxyJump = String(form.get("proxyJump") ?? "").trim();
     const formSshSocksProxy = String(form.get("sshSocksProxy") ?? "").trim();
+    const formSshSocksProxyUsername = String(form.get("sshSocksProxyUsername") ?? "").trim();
+    const sshSocksProxyPassword = String(form.get("sshSocksProxyPassword") ?? "");
     // Historical field name; in the SSH dialog this is the Default Options mode for proxy and tmux controls.
     const sshUsesDefaultOptions = form.get("sshSocksProxyInheritDefaults") === "on";
     const proxyJump =
       usesSshDefaults && sshUsesDefaultOptions ? (sshSettings.defaultProxyJump ?? "").trim() : formProxyJump;
     const sshSocksProxy =
       usesSshDefaults && sshUsesDefaultOptions ? (sshSettings.defaultSshSocksProxy ?? "").trim() : formSshSocksProxy;
+    const sshSocksProxyUsername =
+      usesSshDefaults && sshUsesDefaultOptions
+        ? (sshSettings.defaultSshSocksProxyUsername ?? "").trim()
+        : formSshSocksProxyUsername;
     const useTmuxSessions =
       usesSshDefaults && sshUsesDefaultOptions
         ? sshSettings.defaultUseTmuxSessions
@@ -3766,7 +3812,9 @@ function ConnectionDialog({
       keyPath: usesSshDefaults && authMethod === "keyFile" ? keyPath || undefined : undefined,
       proxyJump: usesSshDefaults ? proxyJump || undefined : undefined,
       sshSocksProxy: usesSshDefaults ? sshSocksProxy || undefined : undefined,
+      sshSocksProxyUsername: usesSshDefaults ? sshSocksProxyUsername || undefined : undefined,
       sshSocksProxyInheritDefaults: usesSshDefaults ? sshUsesDefaultOptions : undefined,
+      sshSocksProxyPassword: usesSshDefaults && !sshUsesDefaultOptions ? sshSocksProxyPassword || undefined : undefined,
       authMethod: usesSshDefaults ? authMethod : undefined,
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,
       localShell: connectionType === "local" ? selectedLocalShell || undefined : undefined,

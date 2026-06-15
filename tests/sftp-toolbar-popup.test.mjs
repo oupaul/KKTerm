@@ -127,8 +127,8 @@ test("SFTP titlebar stays compact with equal vertical padding", async () => {
 
   assert.match(
     sftpStyles,
-    /\.sftp-toolbar\.workspace-toolbar\s*\{[^}]*min-height:\s*22px;[^}]*padding:\s*2px 6px 2px 14px;/s,
-    "the SFTP titlebar should be compact while preserving equal top and bottom padding",
+    /\.sftp-toolbar\.workspace-toolbar\s*\{[^}]*min-height:\s*22px;[^}]*padding:\s*3px 6px 1px 14px;/s,
+    "the SFTP titlebar should be compact while preserving the intentional optical-centering padding",
   );
 });
 

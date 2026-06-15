@@ -24,13 +24,15 @@ pub struct GeneratedSshKeyPair {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferSshPublicKeyRequest {
-    host: String,
-    port: Option<u16>,
-    username: String,
-    password: String,
-    key_path: Option<String>,
-    proxy_jump: Option<String>,
-    ssh_socks_proxy: Option<String>,
+    pub(crate) host: String,
+    pub(crate) port: Option<u16>,
+    pub(crate) username: String,
+    pub(crate) password: String,
+    pub(crate) key_path: Option<String>,
+    pub(crate) proxy_jump: Option<String>,
+    pub(crate) ssh_socks_proxy: Option<String>,
+    pub(crate) ssh_socks_proxy_username: Option<String>,
+    pub(crate) ssh_socks_proxy_secret_owner_id: Option<String>,
 }
 
 #[derive(Serialize)]

@@ -48,6 +48,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("agent".to_string()),
                 local_shell: None,
@@ -83,6 +84,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("agent".to_string()),
                 local_shell: None,
@@ -135,6 +137,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("keyFile".to_string()),
                 local_shell: Some(shell.to_string()),
@@ -203,6 +206,7 @@
                 key_path: Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string()),
                 proxy_jump: Some("jump.internal".to_string()),
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("keyFile".to_string()),
                 local_shell: None,
@@ -238,6 +242,86 @@
     }
 
     #[test]
+    fn ssh_socks_proxy_username_round_trips_without_storing_passwords_in_sqlite() {
+        let storage = Storage::open(temp_db_path("ssh-socks-proxy-credentials"))
+            .expect("storage opens");
+
+        let created = storage
+            .create_connection(CreateConnectionRequest {
+                name: "Proxy Lab".to_string(),
+                host: "lab.internal".to_string(),
+                user: "admin".to_string(),
+                connection_type: "ssh".to_string(),
+                folder_id: None,
+                port: Some(22),
+                key_path: None,
+                proxy_jump: None,
+                ssh_socks_proxy: Some("  127.0.0.1:1080  ".to_string()),
+                ssh_socks_proxy_username: Some("  proxy-user  ".to_string()),
+                ssh_socks_proxy_inherit_defaults: Some(false),
+                auth_method: Some("agent".to_string()),
+                local_shell: None,
+                local_startup_directory: None,
+                local_startup_script: None,
+                url: None,
+                data_partition: None,
+                use_tmux_sessions: None,
+                serial_line: None,
+                serial_speed: None,
+                rdp_options: None,
+                vnc_options: None,
+                ftp_options: None,
+                workspace_id: None,
+            })
+            .expect("connection is created");
+
+        assert_eq!(created.ssh_socks_proxy.as_deref(), Some("127.0.0.1:1080"));
+        assert_eq!(created.ssh_socks_proxy_username.as_deref(), Some("proxy-user"));
+
+        let reloaded = storage
+            .list_connection_tree()
+            .expect("connection tree loads")
+            .connections
+            .into_iter()
+            .find(|connection| connection.id == created.id)
+            .expect("connection reloads");
+        assert_eq!(reloaded.ssh_socks_proxy.as_deref(), Some("127.0.0.1:1080"));
+        assert_eq!(
+            reloaded.ssh_socks_proxy_username.as_deref(),
+            Some("proxy-user")
+        );
+
+        let sqlite_bytes = fs::read(&storage.db_path).expect("database is readable");
+        let sqlite_text = String::from_utf8_lossy(&sqlite_bytes);
+        assert!(!sqlite_text.contains("proxy-login-password"));
+    }
+
+    #[test]
+    fn ssh_settings_store_socks_proxy_username_without_password() {
+        let storage = Storage::open(temp_db_path("ssh-socks-proxy-settings"))
+            .expect("storage opens");
+        let mut settings = storage.ssh_settings().expect("SSH settings load");
+        settings.default_ssh_socks_proxy = Some("  10.0.0.119:1080  ".to_string());
+        settings.default_ssh_socks_proxy_username = Some("  proxy-user  ".to_string());
+
+        let saved = storage
+            .update_ssh_settings(settings)
+            .expect("SSH settings update");
+        assert_eq!(
+            saved.default_ssh_socks_proxy.as_deref(),
+            Some("10.0.0.119:1080")
+        );
+        assert_eq!(
+            saved.default_ssh_socks_proxy_username.as_deref(),
+            Some("proxy-user")
+        );
+
+        let sqlite_bytes = fs::read(&storage.db_path).expect("database is readable");
+        let sqlite_text = String::from_utf8_lossy(&sqlite_bytes);
+        assert!(!sqlite_text.contains("proxy-login-password"));
+    }
+
+    #[test]
     fn local_connection_persists_startup_directory_and_script() {
         let storage = Storage::open(temp_db_path("local-startup-options")).expect("storage opens");
 
@@ -252,6 +336,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: Some("powershell.exe".to_string()),
@@ -312,6 +397,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -353,6 +439,7 @@
                 key_path: Some("C:\\ignored\\id_ed25519".to_string()),
                 proxy_jump: Some("ignored.internal".to_string()),
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("password".to_string()),
                 local_shell: None,
@@ -389,6 +476,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -426,6 +514,7 @@
                 key_path: Some("C:\\ignored\\id_ed25519".to_string()),
                 proxy_jump: Some("ignored.internal".to_string()),
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("agent".to_string()),
                 local_shell: None,
@@ -460,6 +549,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -499,6 +589,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -701,6 +792,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("password".to_string()),
                 local_shell: None,
@@ -728,6 +820,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -841,6 +934,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -975,6 +1069,7 @@
                 key_path: Some("C:\\Users\\example\\.ssh\\prod".to_string()),
                 proxy_jump: Some("jump.internal".to_string()),
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("keyFile".to_string()),
                 local_shell: None,
@@ -1034,6 +1129,7 @@
                 key_path: connection.key_path.clone(),
                 proxy_jump: connection.proxy_jump.clone(),
                 ssh_socks_proxy: connection.ssh_socks_proxy.clone(),
+                ssh_socks_proxy_username: connection.ssh_socks_proxy_username.clone(),
                 ssh_socks_proxy_inherit_defaults: Some(connection.ssh_socks_proxy_inherit_defaults),
                 auth_method: Some(connection.auth_method.clone()),
                 local_shell: None,
@@ -1062,6 +1158,7 @@
                 key_path: disabled.key_path.clone(),
                 proxy_jump: disabled.proxy_jump.clone(),
                 ssh_socks_proxy: disabled.ssh_socks_proxy.clone(),
+                ssh_socks_proxy_username: disabled.ssh_socks_proxy_username.clone(),
                 ssh_socks_proxy_inherit_defaults: Some(disabled.ssh_socks_proxy_inherit_defaults),
                 auth_method: Some(disabled.auth_method.clone()),
                 local_shell: None,
@@ -1253,6 +1350,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: Some("agent".to_string()),
                 local_shell: None,
@@ -2029,6 +2127,7 @@
                 default_key_path: Some("  C:\\Users\\example\\.ssh\\deploy_ed25519  ".to_string()),
                 default_proxy_jump: Some("  bastion.internal  ".to_string()),
                 default_ssh_socks_proxy: Some("  127.0.0.1:1080  ".to_string()),
+                default_ssh_socks_proxy_username: None,
                 buffer_lines: 12_000,
                 default_transparency: 40,
                 default_use_tmux_sessions: false,
@@ -2178,6 +2277,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
@@ -2226,6 +2326,7 @@
                 key_path: None,
                 proxy_jump: None,
                 ssh_socks_proxy: None,
+                ssh_socks_proxy_username: None,
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,

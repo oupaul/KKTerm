@@ -240,6 +240,18 @@ export function connectionPasswordOwnerId(connection: Connection) {
   return connection.passwordCredentialId || connection.id;
 }
 
+export const SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID = "ssh-settings-socks-proxy";
+
+export function connectionSshSocksProxyPasswordOwnerId(connection: Pick<Connection, "id">) {
+  return connection.id;
+}
+
+export type SshSocksProxyRequestFields = {
+  sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
+};
+
 /**
  * Resolve the effective SOCKS proxy for an SSH Connection launch: the
  * per-Connection value when it opted out of inheriting Settings defaults,
@@ -256,6 +268,32 @@ export function resolveSshSocksProxy(
       : sshSettings.defaultSshSocksProxy;
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+export function resolveSshSocksProxyRequest(
+  connection: Pick<Connection, "id" | "sshSocksProxy" | "sshSocksProxyUsername" | "sshSocksProxyInheritDefaults">,
+  sshSettings: Pick<SshSettings, "defaultSshSocksProxy" | "defaultSshSocksProxyUsername">,
+): SshSocksProxyRequestFields {
+  const inheritsSettings = connection.sshSocksProxyInheritDefaults !== false;
+  const proxy = resolveSshSocksProxy(connection, sshSettings);
+  if (!proxy) {
+    return {};
+  }
+
+  const username = (
+    inheritsSettings ? sshSettings.defaultSshSocksProxyUsername : connection.sshSocksProxyUsername
+  )?.trim();
+  if (!username) {
+    return { sshSocksProxy: proxy };
+  }
+
+  return {
+    sshSocksProxy: proxy,
+    sshSocksProxyUsername: username,
+    sshSocksProxySecretOwnerId: inheritsSettings
+      ? SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID
+      : connectionSshSocksProxyPasswordOwnerId(connection),
+  };
 }
 
 export async function confirmTrustedSshHostKey(preview: SshHostKeyPreview) {

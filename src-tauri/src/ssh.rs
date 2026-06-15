@@ -135,10 +135,14 @@ pub enum NativeSshAuth {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InspectSshHostKeyRequest {
-    host: String,
-    port: Option<u16>,
+    pub host: String,
+    pub port: Option<u16>,
     #[serde(default)]
-    ssh_socks_proxy: Option<String>,
+    pub ssh_socks_proxy: Option<String>,
+    #[serde(default)]
+    pub ssh_socks_proxy_username: Option<String>,
+    #[serde(default)]
+    pub ssh_socks_proxy_secret_owner_id: Option<String>,
 }
 
 #[derive(Deserialize)]

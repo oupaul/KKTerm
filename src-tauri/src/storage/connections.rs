@@ -38,6 +38,8 @@ impl Storage {
                 Some(value) => Some(crate::socks::validate_socks_proxy(&value)?),
                 None => None,
             };
+        let ssh_socks_proxy_username =
+            normalize_ssh_socks_proxy_username(request.ssh_socks_proxy_username, &connection_type)?;
         let ssh_socks_proxy_inherit_defaults =
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
@@ -82,8 +84,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order, workspace_id
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 'idle', ?25, ?26)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order, workspace_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, 'idle', ?26, ?27)",
                 params![
                     id,
                     folder_id,
@@ -94,6 +96,7 @@ impl Storage {
                     key_path,
                     proxy_jump,
                     ssh_socks_proxy,
+                    ssh_socks_proxy_username,
                     ssh_socks_proxy_inherit_defaults,
                     auth_method,
                     local_shell,
@@ -137,6 +140,7 @@ impl Storage {
             key_path,
             proxy_jump,
             ssh_socks_proxy,
+            ssh_socks_proxy_username,
             ssh_socks_proxy_inherit_defaults,
             auth_method,
             local_shell,
@@ -202,6 +206,8 @@ impl Storage {
                 Some(value) => Some(crate::socks::validate_socks_proxy(&value)?),
                 None => None,
             };
+        let ssh_socks_proxy_username =
+            normalize_ssh_socks_proxy_username(request.ssh_socks_proxy_username, &connection_type)?;
         let ssh_socks_proxy_inherit_defaults =
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
@@ -300,23 +306,24 @@ impl Storage {
                      key_path = ?6,
                      proxy_jump = ?7,
                      ssh_socks_proxy = ?8,
-                     ssh_socks_proxy_inherit_defaults = ?9,
-                     auth_method = ?10,
-                     local_shell = ?11,
-                     local_startup_directory = ?12,
-                     local_startup_script = ?13,
-                     url = ?14,
-                     data_partition = ?15,
-                     use_tmux_sessions = ?16,
-                     tmux_connection_id = ?17,
-                     serial_line = ?18,
-                     serial_speed = ?19,
-                     rdp_options = ?20,
-                     vnc_options = ?21,
-                     ftp_options = ?22,
-                     sort_order = ?23,
-                     workspace_id = ?24
-                 WHERE id = ?25",
+                     ssh_socks_proxy_username = ?9,
+                     ssh_socks_proxy_inherit_defaults = ?10,
+                     auth_method = ?11,
+                     local_shell = ?12,
+                     local_startup_directory = ?13,
+                     local_startup_script = ?14,
+                     url = ?15,
+                     data_partition = ?16,
+                     use_tmux_sessions = ?17,
+                     tmux_connection_id = ?18,
+                     serial_line = ?19,
+                     serial_speed = ?20,
+                     rdp_options = ?21,
+                     vnc_options = ?22,
+                     ftp_options = ?23,
+                     sort_order = ?24,
+                     workspace_id = ?25
+                 WHERE id = ?26",
                 params![
                     target_folder_id,
                     name,
@@ -326,6 +333,7 @@ impl Storage {
                     key_path,
                     proxy_jump,
                     ssh_socks_proxy,
+                    ssh_socks_proxy_username,
                     ssh_socks_proxy_inherit_defaults,
                     auth_method,
                     local_shell,
@@ -1132,7 +1140,7 @@ impl Storage {
 
         let source = transaction
             .query_row(
-                "SELECT folder_id, name, tab_title, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, workspace_id
+                "SELECT folder_id, name, tab_title, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, workspace_id
                  FROM connections
                  WHERE id = ?1",
                 params![source_id],
@@ -1147,22 +1155,23 @@ impl Storage {
                         row.get::<_, Option<String>>(6)?,
                         row.get::<_, Option<String>>(7)?,
                         row.get::<_, Option<String>>(8)?,
-                        row.get::<_, bool>(9)?,
-                        row.get::<_, String>(10)?,
-                        row.get::<_, Option<String>>(11)?,
+                        row.get::<_, Option<String>>(9)?,
+                        row.get::<_, bool>(10)?,
+                        row.get::<_, String>(11)?,
                         row.get::<_, Option<String>>(12)?,
                         row.get::<_, Option<String>>(13)?,
                         row.get::<_, Option<String>>(14)?,
                         row.get::<_, Option<String>>(15)?,
-                        row.get::<_, bool>(16)?,
-                        row.get::<_, Option<String>>(17)?,
-                        optional_serial_speed(row.get::<_, Option<i64>>(18)?)?,
-                        row.get::<_, String>(19)?,
-                        row.get::<_, Option<String>>(20)?,
+                        row.get::<_, Option<String>>(16)?,
+                        row.get::<_, bool>(17)?,
+                        row.get::<_, Option<String>>(18)?,
+                        optional_serial_speed(row.get::<_, Option<i64>>(19)?)?,
+                        row.get::<_, String>(20)?,
                         row.get::<_, Option<String>>(21)?,
-                        normalize_loaded_terminal_opacity(row.get::<_, Option<i64>>(22)?),
-                        terminal_background_from_json(row.get::<_, Option<String>>(23)?),
-                        row.get::<_, Option<String>>(24)?,
+                        row.get::<_, Option<String>>(22)?,
+                        normalize_loaded_terminal_opacity(row.get::<_, Option<i64>>(23)?),
+                        terminal_background_from_json(row.get::<_, Option<String>>(24)?),
+                        row.get::<_, Option<String>>(25)?,
                     ))
                 },
             )
@@ -1179,6 +1188,7 @@ impl Storage {
             key_path,
             proxy_jump,
             ssh_socks_proxy,
+            ssh_socks_proxy_username,
             ssh_socks_proxy_inherit_defaults,
             auth_method,
             local_shell,
@@ -1216,8 +1226,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, tab_title, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, status, sort_order, workspace_id
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, 'idle', ?27, ?28)",
+                    id, folder_id, name, tab_title, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, status, sort_order, workspace_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, 'idle', ?28, ?29)",
                 params![
                     duplicate_id,
                     folder_id,
@@ -1229,6 +1239,7 @@ impl Storage {
                     key_path,
                     proxy_jump,
                     ssh_socks_proxy,
+                    ssh_socks_proxy_username,
                     ssh_socks_proxy_inherit_defaults,
                     auth_method,
                     local_shell,
@@ -1495,7 +1506,7 @@ impl Storage {
                     .execute(
                         "INSERT INTO connections (
                             id, folder_id, workspace_id, name, tab_title, host, username, port,
-                            key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                            key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults,
                             auth_method, local_shell, local_startup_directory,
                             local_startup_script, url, data_partition, use_tmux_sessions,
                             tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
@@ -1504,7 +1515,7 @@ impl Storage {
                         )
                         SELECT
                             ?1, NULL, ?2, name, tab_title, host, username, port,
-                            key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                            key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults,
                             auth_method, local_shell, local_startup_directory,
                             local_startup_script, url, data_partition, use_tmux_sessions,
                             ?3, serial_line, serial_speed, rdp_options, vnc_options,

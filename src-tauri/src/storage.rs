@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 22;
+const SCHEMA_USER_VERSION: i32 = 23;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS connections (
     key_path TEXT,
     proxy_jump TEXT,
     ssh_socks_proxy TEXT,
+    ssh_socks_proxy_username TEXT,
     ssh_socks_proxy_inherit_defaults INTEGER NOT NULL DEFAULT 1,
     auth_method TEXT NOT NULL DEFAULT 'keyFile',
     local_shell TEXT,
@@ -491,6 +492,8 @@ pub struct SshSettings {
     default_proxy_jump: Option<String>,
     #[serde(default)]
     default_ssh_socks_proxy: Option<String>,
+    #[serde(default)]
+    default_ssh_socks_proxy_username: Option<String>,
     #[serde(default = "default_ssh_buffer_lines")]
     buffer_lines: u32,
     #[serde(default = "default_terminal_transparency")]
@@ -987,6 +990,7 @@ pub struct SavedConnection {
     key_path: Option<String>,
     proxy_jump: Option<String>,
     ssh_socks_proxy: Option<String>,
+    ssh_socks_proxy_username: Option<String>,
     ssh_socks_proxy_inherit_defaults: bool,
     auth_method: String,
     local_shell: Option<String>,
@@ -1032,6 +1036,8 @@ pub struct CreateConnectionRequest {
     key_path: Option<String>,
     proxy_jump: Option<String>,
     ssh_socks_proxy: Option<String>,
+    #[serde(default)]
+    ssh_socks_proxy_username: Option<String>,
     ssh_socks_proxy_inherit_defaults: Option<bool>,
     auth_method: Option<String>,
     local_shell: Option<String>,
@@ -1066,6 +1072,8 @@ pub struct UpdateConnectionRequest {
     key_path: Option<String>,
     proxy_jump: Option<String>,
     ssh_socks_proxy: Option<String>,
+    #[serde(default)]
+    ssh_socks_proxy_username: Option<String>,
     ssh_socks_proxy_inherit_defaults: Option<bool>,
     auth_method: Option<String>,
     local_shell: Option<String>,
@@ -1606,6 +1614,12 @@ impl Storage {
         ensure_column(
             &connection,
             "connections",
+            "ssh_socks_proxy_username",
+            "TEXT",
+        )?;
+        ensure_column(
+            &connection,
+            "connections",
             "ssh_socks_proxy_inherit_defaults",
             "INTEGER NOT NULL DEFAULT 1",
         )?;
@@ -1714,6 +1728,7 @@ impl Storage {
                         key_path TEXT,
                         proxy_jump TEXT,
                         ssh_socks_proxy TEXT,
+                        ssh_socks_proxy_username TEXT,
                         ssh_socks_proxy_inherit_defaults INTEGER NOT NULL DEFAULT 1,
                         auth_method TEXT NOT NULL DEFAULT 'keyFile',
                         local_shell TEXT,
@@ -1739,7 +1754,7 @@ impl Storage {
                     );
                     INSERT INTO connections (
                         id, folder_id, name, tab_title, host, username, port, key_path,
-                        proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                        proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults,
                         auth_method, local_shell, local_startup_directory,
                         local_startup_script, url, data_partition, use_tmux_sessions,
                         tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
@@ -1748,7 +1763,7 @@ impl Storage {
                     )
                     SELECT
                         id, folder_id, name, tab_title, host, username, port, key_path,
-                        proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                        proxy_jump, ssh_socks_proxy, NULL, ssh_socks_proxy_inherit_defaults,
                         auth_method, local_shell, local_startup_directory,
                         local_startup_script, url, data_partition, use_tmux_sessions,
                         tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
@@ -2564,7 +2579,7 @@ fn list_root_connections_for_workspace(
 ) -> Result<Vec<SavedConnection>, String> {
     let mut statement = connection
         .prepare(
-            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
+            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
@@ -2627,7 +2642,7 @@ fn list_connections_for_folder(
     };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
+            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
@@ -3003,15 +3018,15 @@ fn get_connection_by_id(
 ) -> Result<SavedConnection, String> {
     let saved_connection = connection
         .query_row(
-            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
+            "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
                     url_credentials.username
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
             params![connection_id],
             |row| {
-                let password_credential_id: Option<String> = row.get(28)?;
-                let url_credential_username: Option<String> = row.get(29)?;
+                let password_credential_id: Option<String> = row.get(29)?;
+                let url_credential_username: Option<String> = row.get(30)?;
                 Ok(SavedConnection {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -3022,25 +3037,26 @@ fn get_connection_by_id(
                     key_path: row.get(6)?,
                     proxy_jump: row.get(7)?,
                     ssh_socks_proxy: row.get(8)?,
-                    ssh_socks_proxy_inherit_defaults: row.get(9)?,
-                    auth_method: row.get(10)?,
-                    local_shell: row.get(11)?,
-                    local_startup_directory: row.get(12)?,
-                    local_startup_script: row.get(13)?,
-                    url: row.get(14)?,
-                    data_partition: row.get(15)?,
-                    use_tmux_sessions: row.get(16)?,
-                    tmux_connection_id: row.get(17)?,
-                    connection_type: row.get(18)?,
-                    serial_line: row.get(19)?,
-                    serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(20)?)?,
-                    rdp_options: parse_rdp_connection_options(row.get(21)?)?,
-                    vnc_options: parse_vnc_connection_options(row.get(22)?)?,
-                    ftp_options: parse_ftp_connection_options(row.get(23)?)?,
-                    icon_data_url: row.get(24)?,
-                    icon_background_color: row.get(25)?,
-                    terminal_opacity: normalize_loaded_terminal_opacity(row.get(26)?),
-                    terminal_background: terminal_background_from_json(row.get(27)?),
+                    ssh_socks_proxy_username: row.get(9)?,
+                    ssh_socks_proxy_inherit_defaults: row.get(10)?,
+                    auth_method: row.get(11)?,
+                    local_shell: row.get(12)?,
+                    local_startup_directory: row.get(13)?,
+                    local_startup_script: row.get(14)?,
+                    url: row.get(15)?,
+                    data_partition: row.get(16)?,
+                    use_tmux_sessions: row.get(17)?,
+                    tmux_connection_id: row.get(18)?,
+                    connection_type: row.get(19)?,
+                    serial_line: row.get(20)?,
+                    serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(21)?)?,
+                    rdp_options: parse_rdp_connection_options(row.get(22)?)?,
+                    vnc_options: parse_vnc_connection_options(row.get(23)?)?,
+                    ftp_options: parse_ftp_connection_options(row.get(24)?)?,
+                    icon_data_url: row.get(25)?,
+                    icon_background_color: row.get(26)?,
+                    terminal_opacity: normalize_loaded_terminal_opacity(row.get(27)?),
+                    terminal_background: terminal_background_from_json(row.get(28)?),
                     password_credential_id,
                     url_credential_username: url_credential_username.clone(),
                     has_url_credential: url_credential_username.is_some(),
@@ -3060,8 +3076,8 @@ fn get_connection_by_id(
 }
 
 fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedConnection> {
-    let password_credential_id: Option<String> = row.get(28)?;
-    let url_credential_username: Option<String> = row.get(29)?;
+    let password_credential_id: Option<String> = row.get(29)?;
+    let url_credential_username: Option<String> = row.get(30)?;
     Ok(SavedConnection {
         id: row.get(0)?,
         name: row.get(1)?,
@@ -3072,26 +3088,27 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         key_path: row.get(6)?,
         proxy_jump: row.get(7)?,
         ssh_socks_proxy: row.get(8)?,
-        ssh_socks_proxy_inherit_defaults: row.get(9)?,
-        auth_method: row.get(10)?,
-        local_shell: row.get(11)?,
-        local_startup_directory: row.get(12)?,
-        local_startup_script: row.get(13)?,
-        url: row.get(14)?,
-        data_partition: row.get(15)?,
-        use_tmux_sessions: row.get(16)?,
-        tmux_connection_id: row.get(17)?,
-        connection_type: row.get(18)?,
-        serial_line: row.get(19)?,
-        serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(20)?)?,
-        rdp_options: parse_rdp_connection_options(row.get(21)?)?,
-        vnc_options: parse_vnc_connection_options(row.get(22)?)?,
-        ftp_options: parse_ftp_connection_options(row.get(23)?)?,
+        ssh_socks_proxy_username: row.get(9)?,
+        ssh_socks_proxy_inherit_defaults: row.get(10)?,
+        auth_method: row.get(11)?,
+        local_shell: row.get(12)?,
+        local_startup_directory: row.get(13)?,
+        local_startup_script: row.get(14)?,
+        url: row.get(15)?,
+        data_partition: row.get(16)?,
+        use_tmux_sessions: row.get(17)?,
+        tmux_connection_id: row.get(18)?,
+        connection_type: row.get(19)?,
+        serial_line: row.get(20)?,
+        serial_speed: optional_serial_speed(row.get::<_, Option<i64>>(21)?)?,
+        rdp_options: parse_rdp_connection_options(row.get(22)?)?,
+        vnc_options: parse_vnc_connection_options(row.get(23)?)?,
+        ftp_options: parse_ftp_connection_options(row.get(24)?)?,
         password_credential_id,
-        icon_data_url: row.get(24)?,
-        icon_background_color: row.get(25)?,
-        terminal_opacity: normalize_loaded_terminal_opacity(row.get(26)?),
-        terminal_background: terminal_background_from_json(row.get(27)?),
+        icon_data_url: row.get(25)?,
+        icon_background_color: row.get(26)?,
+        terminal_opacity: normalize_loaded_terminal_opacity(row.get(27)?),
+        terminal_background: terminal_background_from_json(row.get(28)?),
         url_credential_username: url_credential_username.clone(),
         has_url_credential: url_credential_username.is_some(),
         status: "idle".to_string(),
@@ -3885,6 +3902,7 @@ fn default_ssh_settings() -> SshSettings {
         default_key_path: default_ssh_key_path(),
         default_proxy_jump: None,
         default_ssh_socks_proxy: None,
+        default_ssh_socks_proxy_username: None,
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
         default_use_tmux_sessions: default_use_tmux_sessions(),
@@ -4402,6 +4420,8 @@ fn validate_ssh_settings(mut settings: SshSettings) -> Result<SshSettings, Strin
         Some(value) => Some(crate::socks::validate_socks_proxy(&value)?),
         None => None,
     };
+    settings.default_ssh_socks_proxy_username =
+        normalize_socks_proxy_username(settings.default_ssh_socks_proxy_username)?;
     if !(100..=100_000).contains(&settings.buffer_lines) {
         return Err("SSH buffer must be between 100 and 100000 lines".to_string());
     }
@@ -4710,6 +4730,30 @@ fn trim_optional(value: Option<String>) -> Option<String> {
     value
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
+}
+
+fn normalize_socks_proxy_username(value: Option<String>) -> Result<Option<String>, String> {
+    let Some(username) = trim_optional(value) else {
+        return Ok(None);
+    };
+    if username.len() > 255 {
+        return Err("SOCKS proxy username must be 255 bytes or fewer".to_string());
+    }
+    if username.contains(char::is_control) || username.contains(|ch| matches!(ch, ':' | '@')) {
+        return Err("SOCKS proxy username contains invalid characters".to_string());
+    }
+    Ok(Some(username))
+}
+
+fn normalize_ssh_socks_proxy_username(
+    value: Option<String>,
+    connection_type: &str,
+) -> Result<Option<String>, String> {
+    if connection_type == "ssh" {
+        normalize_socks_proxy_username(value)
+    } else {
+        Ok(None)
+    }
 }
 
 fn unique_non_empty_strings(values: Vec<String>) -> Vec<String> {

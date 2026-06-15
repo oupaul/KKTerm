@@ -115,6 +115,8 @@ export interface StartTerminalSessionRequest {
   keyPath?: string;
   proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
@@ -197,6 +199,8 @@ export interface StartSftpSessionRequest {
   keyPath?: string;
   proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
@@ -1196,8 +1200,10 @@ type CommandMap = {
         password: string;
         keyPath?: string;
         proxyJump?: string;
-  sshSocksProxy?: string;
-  sshSocksProxyInheritDefaults?: boolean;
+        sshSocksProxy?: string;
+        sshSocksProxyUsername?: string;
+        sshSocksProxySecretOwnerId?: string;
+        sshSocksProxyInheritDefaults?: boolean;
       };
     };
     result: TransferSshPublicKeyResult;
@@ -1494,7 +1500,7 @@ type CommandMap = {
     result: ScanNetworkResponse;
   };
   inspect_ssh_host_key: {
-    args: { request: { host: string; port?: number; sshSocksProxy?: string } };
+    args: { request: { host: string; port?: number; sshSocksProxy?: string; sshSocksProxyUsername?: string; sshSocksProxySecretOwnerId?: string } };
     result: SshHostKeyPreview;
   };
   trust_ssh_host_key: {
@@ -1609,6 +1615,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1625,6 +1633,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1643,6 +1653,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1661,6 +1673,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1678,6 +1692,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1696,6 +1712,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1714,6 +1732,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1730,6 +1750,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
         sshSocksProxy?: string;
+        sshSocksProxyUsername?: string;
+        sshSocksProxySecretOwnerId?: string;
         sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1746,6 +1768,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
@@ -1762,6 +1786,8 @@ type CommandMap = {
         keyPath?: string;
         proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
+  sshSocksProxySecretOwnerId?: string;
   sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;

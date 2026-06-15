@@ -1,4 +1,4 @@
-import { confirmTrustedSshHostKey, connectionToolbarTitle, resolveSshSocksProxy, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { confirmTrustedSshHostKey, connectionToolbarTitle, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 
 import { X } from "lucide-react";
 import { DIcon } from "../../../../app/ui/dialog";
@@ -318,10 +318,7 @@ export function SftpWorkspace({
             request: {
               host: connection.host,
               port: connection.port,
-              sshSocksProxy: resolveSshSocksProxy(
-                connection,
-                useWorkspaceStore.getState().sshSettings,
-              ),
+              ...resolveSshSocksProxyRequest(connection, useWorkspaceStore.getState().sshSettings),
             },
           });
           await confirmTrustedSshHostKey(preview);

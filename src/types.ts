@@ -56,6 +56,7 @@ export interface Connection {
   keyPath?: string;
   proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
   authMethod?: SshAuthMethod;
   hasPassword?: boolean;
@@ -106,6 +107,7 @@ export interface CreateConnectionRequest {
   keyPath?: string;
   proxyJump?: string;
   sshSocksProxy?: string;
+  sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
   authMethod?: SshAuthMethod;
   localShell?: string;
@@ -446,6 +448,7 @@ export interface SshSettings {
   defaultKeyPath?: string;
   defaultProxyJump?: string;
   defaultSshSocksProxy?: string;
+  defaultSshSocksProxyUsername?: string;
   bufferLines: number;
   defaultTransparency: number;
   defaultUseTmuxSessions: boolean;
@@ -779,6 +782,7 @@ export interface StatusBarNotice {
 export type SecretKind =
   | "connectionPassword"
   | "connectionPassphrase"
+  | "sshSocksProxyPassword"
   | "urlPassword"
   | "aiApiKey"
   | "braveSearchApiKey"

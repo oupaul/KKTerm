@@ -3,6 +3,7 @@ import { FolderOpen, KeyRound, Play, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";
+import { SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID } from "../workspace/connections/utils";
 import { useWorkspaceStore } from "../../store";
 import type { SshSettings as SshSettingsType } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
@@ -13,6 +14,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
   const defaultKeyPath = settings.defaultKeyPath?.trim() || undefined;
   const defaultProxyJump = settings.defaultProxyJump?.trim() || undefined;
   const defaultSshSocksProxy = settings.defaultSshSocksProxy?.trim() || undefined;
+  const defaultSshSocksProxyUsername = settings.defaultSshSocksProxyUsername?.trim() || undefined;
   const defaultPort = Math.round(settings.defaultPort);
   const bufferLines = Math.round(settings.bufferLines ?? 5000);
   const defaultTransparency = Math.round(settings.defaultTransparency ?? 50);
@@ -41,6 +43,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultKeyPath,
     defaultProxyJump,
     defaultSshSocksProxy,
+    defaultSshSocksProxyUsername,
     bufferLines,
     defaultTransparency,
     defaultUseTmuxSessions: settings.defaultUseTmuxSessions ?? true,
@@ -62,13 +65,44 @@ export function SshSettings() {
   const [sshDraft, setSshDraft] = useState(sshSettings);
   const [keyEmailDialogOpen, setKeyEmailDialogOpen] = useState(false);
   const [keyEmailDraft, setKeyEmailDraft] = useState("");
+  const [sshSocksProxyPasswordDraft, setSshSocksProxyPasswordDraft] = useState("");
+  const [hasSavedSshSocksProxyPassword, setHasSavedSshSocksProxyPassword] = useState(false);
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [error, setError] = useState("");
-  const hasChanges = JSON.stringify(sshDraft) !== JSON.stringify(sshSettings);
+  const hasChanges =
+    JSON.stringify(sshDraft) !== JSON.stringify(sshSettings) || sshSocksProxyPasswordDraft.length > 0;
 
   useEffect(() => {
     setSshDraft(sshSettings);
+    setSshSocksProxyPasswordDraft("");
   }, [sshSettings]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      setHasSavedSshSocksProxyPassword(false);
+      return;
+    }
+    let canceled = false;
+    void invokeCommand("secret_exists", {
+      request: {
+        kind: "sshSocksProxyPassword",
+        ownerId: SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID,
+      },
+    })
+      .then((presence) => {
+        if (!canceled) {
+          setHasSavedSshSocksProxyPassword(presence.exists);
+        }
+      })
+      .catch(() => {
+        if (!canceled) {
+          setHasSavedSshSocksProxyPassword(false);
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [sshSettings.defaultSshSocksProxy, sshSettings.defaultSshSocksProxyUsername]);
 
   async function handleBrowseKeyFile() {
     try {
@@ -134,8 +168,31 @@ export function SshSettings() {
       const savedSshSettings = isTauriRuntime()
         ? await invokeCommand("update_ssh_settings", { request: nextSshSettings })
         : nextSshSettings;
+      if (isTauriRuntime()) {
+        if (savedSshSettings.defaultSshSocksProxy?.trim() && savedSshSettings.defaultSshSocksProxyUsername?.trim()) {
+          if (sshSocksProxyPasswordDraft.length > 0) {
+            await invokeCommand("store_secret", {
+              request: {
+                kind: "sshSocksProxyPassword",
+                ownerId: SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID,
+                secret: sshSocksProxyPasswordDraft,
+              },
+            });
+            setHasSavedSshSocksProxyPassword(true);
+          }
+        } else if (hasSavedSshSocksProxyPassword || sshSocksProxyPasswordDraft.length > 0) {
+          await invokeCommand("delete_secret", {
+            request: {
+              kind: "sshSocksProxyPassword",
+              ownerId: SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID,
+            },
+          });
+          setHasSavedSshSocksProxyPassword(false);
+        }
+      }
       setSshSettings(savedSshSettings);
       setSshDraft(savedSshSettings);
+      setSshSocksProxyPasswordDraft("");
       showStatusBarNotice(t("settings.sshDefaultsSaved"), { tone: "success" });
     } catch (saveError) {
       showStatusBarNotice(saveError instanceof Error ? saveError.message : String(saveError), { tone: "error" });
@@ -244,6 +301,36 @@ export function SshSettings() {
               value={sshDraft.defaultSshSocksProxy ?? ""}
             />
             <small className="field-hint">{t("settings.sshSocksProxyHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.sshSocksProxyUsername")}</span>
+            <input
+              autoComplete="username"
+              onChange={(event) => {
+                const defaultSshSocksProxyUsername = event.currentTarget.value;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultSshSocksProxyUsername,
+                }));
+              }}
+              value={sshDraft.defaultSshSocksProxyUsername ?? ""}
+            />
+            <small className="field-hint">{t("settings.sshSocksProxyUsernameHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.sshSocksProxyPassword")}</span>
+            <input
+              autoComplete="new-password"
+              onChange={(event) => setSshSocksProxyPasswordDraft(event.currentTarget.value)}
+              placeholder={
+                hasSavedSshSocksProxyPassword
+                  ? t("settings.sshSocksProxyPasswordSavedPlaceholder")
+                  : t("settings.sshSocksProxyPasswordPlaceholder")
+              }
+              type="password"
+              value={sshSocksProxyPasswordDraft}
+            />
+            <small className="field-hint">{t("settings.sshSocksProxyPasswordHint")}</small>
           </label>
         </div>
       </fieldset>

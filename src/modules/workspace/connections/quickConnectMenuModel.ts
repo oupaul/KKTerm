@@ -30,7 +30,11 @@ export function findMatchingConnection(
         c.type === "ssh" &&
         c.host === candidate.host &&
         (c.user ?? "") === (candidate.user ?? "") &&
-        (c.port ?? DEFAULT_SSH_PORT) === port,
+        (c.port ?? DEFAULT_SSH_PORT) === port &&
+        (c.proxyJump ?? "") === (candidate.proxyJump ?? "") &&
+        (c.sshSocksProxy ?? "") === (candidate.sshSocksProxy ?? "") &&
+        (c.sshSocksProxyUsername ?? "") === (candidate.sshSocksProxyUsername ?? "") &&
+        (c.sshSocksProxyInheritDefaults ?? true) === (candidate.sshSocksProxyInheritDefaults ?? true),
     );
   }
   return undefined;

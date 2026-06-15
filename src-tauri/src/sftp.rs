@@ -48,6 +48,8 @@ pub struct StartSftpSessionRequest {
     pub key_path: Option<String>,
     pub proxy_jump: Option<String>,
     pub ssh_socks_proxy: Option<String>,
+    pub ssh_socks_proxy_username: Option<String>,
+    pub ssh_socks_proxy_secret_owner_id: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
     pub path: Option<String>,
@@ -275,8 +277,14 @@ impl SftpSessionManager {
         &self,
         app: AppHandle,
         secrets: &secrets::Secrets,
-        request: StartSftpSessionRequest,
+        mut request: StartSftpSessionRequest,
     ) -> Result<SftpSessionStarted, String> {
+        request.ssh_socks_proxy = crate::resolve_ssh_socks_proxy(
+            secrets,
+            request.ssh_socks_proxy.take(),
+            request.ssh_socks_proxy_username.take(),
+            request.ssh_socks_proxy_secret_owner_id.take(),
+        )?;
         if request
             .proxy_jump
             .as_deref()
@@ -2469,6 +2477,8 @@ mod tests {
             key_path: None,
             proxy_jump: None,
             ssh_socks_proxy: None,
+            ssh_socks_proxy_username: None,
+            ssh_socks_proxy_secret_owner_id: None,
             auth_method: None,
             secret_owner_id: None,
             path: None,

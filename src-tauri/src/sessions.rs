@@ -74,6 +74,8 @@ pub struct StartTerminalSessionRequest {
     pub key_path: Option<String>,
     pub proxy_jump: Option<String>,
     pub ssh_socks_proxy: Option<String>,
+    pub ssh_socks_proxy_username: Option<String>,
+    pub ssh_socks_proxy_secret_owner_id: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
     pub shell: Option<String>,
@@ -98,6 +100,8 @@ pub struct TmuxConnectionRequest {
     pub key_path: Option<String>,
     pub proxy_jump: Option<String>,
     pub ssh_socks_proxy: Option<String>,
+    pub ssh_socks_proxy_username: Option<String>,
+    pub ssh_socks_proxy_secret_owner_id: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
 }
@@ -708,8 +712,9 @@ impl SessionManager {
         &self,
         app: AppHandle,
         secrets: &secrets::Secrets,
-        request: StartTerminalSessionRequest,
+        mut request: StartTerminalSessionRequest,
     ) -> Result<TerminalSessionStarted, String> {
+        resolve_terminal_socks_proxy(secrets, &mut request)?;
         let session_id = request
             .session_id
             .clone()
@@ -1155,7 +1160,8 @@ impl SessionManager {
             return Err("remote port must be between 1 and 65535".to_string());
         }
 
-        let terminal_request = terminal_request_for_tmux(&request.connection);
+        let mut terminal_request = terminal_request_for_tmux(&request.connection);
+        resolve_terminal_socks_proxy(secrets, &mut terminal_request)?;
         let password = connection_password_for(secrets, &terminal_request);
         let auth_method = ssh_auth_method_for(&terminal_request, password.as_deref())?;
         if !uses_native_ssh(&terminal_request, password.as_deref(), &auth_method, false) {
@@ -1556,7 +1562,8 @@ fn run_ssh_command(
     command: String,
     timeout: Option<Duration>,
 ) -> Result<String, String> {
-    let terminal_request = terminal_request_for_tmux(request);
+    let mut terminal_request = terminal_request_for_tmux(request);
+    resolve_terminal_socks_proxy(secrets, &mut terminal_request)?;
     let password = connection_password_for(secrets, &terminal_request);
     let auth_method = ssh_auth_method_for(&terminal_request, password.as_deref())?;
     if uses_native_ssh(&terminal_request, password.as_deref(), &auth_method, false) {
@@ -1805,6 +1812,8 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         key_path: request.key_path.clone(),
         proxy_jump: request.proxy_jump.clone(),
         ssh_socks_proxy: request.ssh_socks_proxy.clone(),
+        ssh_socks_proxy_username: request.ssh_socks_proxy_username.clone(),
+        ssh_socks_proxy_secret_owner_id: request.ssh_socks_proxy_secret_owner_id.clone(),
         auth_method: request.auth_method.clone(),
         secret_owner_id: request.secret_owner_id.clone(),
         shell: None,
@@ -1819,6 +1828,19 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         tmux_session_id: None,
         ssh_buffer_lines: None,
     }
+}
+
+fn resolve_terminal_socks_proxy(
+    secrets: &secrets::Secrets,
+    request: &mut StartTerminalSessionRequest,
+) -> Result<(), String> {
+    request.ssh_socks_proxy = crate::resolve_ssh_socks_proxy(
+        secrets,
+        request.ssh_socks_proxy.take(),
+        request.ssh_socks_proxy_username.take(),
+        request.ssh_socks_proxy_secret_owner_id.take(),
+    )?;
+    Ok(())
 }
 
 fn run_system_ssh_command(
@@ -2499,6 +2521,8 @@ mod tests {
             key_path: None,
             proxy_jump: None,
             ssh_socks_proxy: None,
+            ssh_socks_proxy_username: None,
+            ssh_socks_proxy_secret_owner_id: None,
             auth_method: None,
             secret_owner_id: None,
             shell: None,
@@ -2601,6 +2625,8 @@ mod tests {
             key_path: None,
             proxy_jump: None,
             ssh_socks_proxy: None,
+            ssh_socks_proxy_username: None,
+            ssh_socks_proxy_secret_owner_id: None,
             auth_method: None,
             secret_owner_id: None,
             shell: None,

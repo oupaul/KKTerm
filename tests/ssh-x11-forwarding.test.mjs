@@ -89,7 +89,7 @@ test("SSH terminal toolbar shows separate X server forwarding state", async () =
   );
   assert.match(
     terminalSource,
-    /<span>tmux \{sessionId\}<\/span>/,
+    /<span>\{tagLabel\}<\/span>/,
     "the tmux session label should not own the X11 indicator",
   );
   assert.match(

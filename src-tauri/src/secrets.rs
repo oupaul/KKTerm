@@ -71,6 +71,13 @@ impl SecretReferenceRequest {
         }
     }
 
+    pub(crate) fn ssh_socks_proxy_password(owner_id: String) -> Self {
+        Self {
+            kind: SecretKind::SshSocksProxyPassword,
+            owner_id,
+        }
+    }
+
     pub(crate) fn url_password(owner_id: String) -> Self {
         Self {
             kind: SecretKind::UrlPassword,
@@ -145,6 +152,7 @@ impl SecretPresence {
 enum SecretKind {
     ConnectionPassword,
     ConnectionPassphrase,
+    SshSocksProxyPassword,
     UrlPassword,
     AiApiKey,
     BraveSearchApiKey,
@@ -386,6 +394,13 @@ impl Secrets {
         })
     }
 
+    pub(crate) fn read_ssh_socks_proxy_password(
+        &self,
+        owner_id: String,
+    ) -> Result<Option<String>, String> {
+        self.read_secret(SecretReferenceRequest::ssh_socks_proxy_password(owner_id))
+    }
+
     #[allow(dead_code)]
     pub(crate) fn read_ai_api_key(&self, owner_id: String) -> Result<Option<String>, String> {
         self.read_secret(SecretReferenceRequest {
@@ -517,6 +532,7 @@ impl SecretKind {
         match self {
             Self::ConnectionPassword => "connection-password",
             Self::ConnectionPassphrase => "connection-passphrase",
+            Self::SshSocksProxyPassword => "ssh-socks-proxy-password",
             Self::UrlPassword => "url-password",
             Self::AiApiKey => "ai-api-key",
             Self::BraveSearchApiKey => "brave-search-api-key",
@@ -703,6 +719,34 @@ mod tests {
             .read_url_password(owner_id)
             .expect("URL password can be read by backend");
         assert_eq!(secret.as_deref(), Some("browser-login-password"));
+    }
+
+    #[test]
+    fn stores_ssh_socks_proxy_passwords_under_their_own_secret_kind() {
+        let _guard = test_keychain_lock().lock().expect("test keychain lock");
+        let secrets = Secrets::new_for_test();
+        let owner_id = "ssh-socks-proxy-connection".to_string();
+
+        secrets
+            .store_secret(StoreSecretRequest {
+                kind: SecretKind::SshSocksProxyPassword,
+                owner_id: owner_id.clone(),
+                secret: "proxy-login-password".to_string(),
+            })
+            .expect("SOCKS proxy password is stored");
+
+        let presence = secrets
+            .secret_exists(SecretReferenceRequest {
+                kind: SecretKind::SshSocksProxyPassword,
+                owner_id: owner_id.clone(),
+            })
+            .expect("presence check succeeds");
+        assert!(presence.exists);
+
+        let secret = secrets
+            .read_ssh_socks_proxy_password(owner_id)
+            .expect("SOCKS proxy password can be read by backend");
+        assert_eq!(secret.as_deref(), Some("proxy-login-password"));
     }
 
     #[test]
