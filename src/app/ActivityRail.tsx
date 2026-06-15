@@ -103,6 +103,7 @@ export function ActivityRail({
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const setWorkspaces = useWorkspaceStore((state) => state.setWorkspaces);
   const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
+  const closeWorkspaceTabs = useWorkspaceStore((state) => state.closeWorkspaceTabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const activeSessionCounts = useWorkspaceStore((state) => state.activeSessionCounts);
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -908,8 +909,10 @@ export function ActivityRail({
         <DeleteWorkspaceDialog
           workspace={workspaceToDelete}
           onClose={() => setWorkspaceToDelete(null)}
-          onDeleted={() => {
+          onDeleted={(deletedWorkspace) => {
+            closeWorkspaceTabs(deletedWorkspace.id);
             setWorkspaceToDelete(null);
+            onNavigate("workspace");
             void reloadWorkspaces();
           }}
         />
