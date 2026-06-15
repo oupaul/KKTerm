@@ -621,6 +621,11 @@
                     name: "current_time".to_string(),
                     arguments: "{}".to_string(),
                 },
+                extra_content: Some(json!({
+                    "google": {
+                        "thought_signature": "signature_a"
+                    }
+                })),
             }],
             raw_response_output: None,
         };
@@ -643,6 +648,11 @@
         assert_eq!(assistant_tool_calls.len(), 1);
         assert_eq!(assistant_tool_calls[0].id, "call_1");
         assert_eq!(assistant_tool_calls[0].function.name, "current_time");
+        assert_eq!(
+            serde_json::to_value(&messages[0]).expect("assistant message serializes")
+                ["tool_calls"][0]["extra_content"]["google"]["thought_signature"],
+            "signature_a"
+        );
         assert_eq!(messages[1].role, "tool");
         assert_eq!(messages[1].tool_call_id.as_deref(), Some("call_1"));
 
@@ -1618,6 +1628,7 @@
                     name: "current_time".to_string(),
                     arguments: "{}".to_string(),
                 },
+                extra_content: None,
             }]),
         };
         let tool_message = OpenAiCompatibleMessage {
@@ -3496,6 +3507,26 @@
         assert_eq!(
             tool_calls[0].function.arguments,
             r#"{"workspaceId":"default"}"#
+        );
+    }
+
+    #[test]
+    fn chat_stream_preserves_gemini_thought_signature_extra_content() {
+        let mut state = ChatStreamState::default();
+        for data in sse_data_lines(include_str!(
+            "fixtures/gemini_tool_call_missing_index.sse"
+        )) {
+            let chunk: ChatSseChunk =
+                serde_json::from_str(&data).expect("recorded Gemini chunk parses");
+            state.apply_chunk(chunk);
+        }
+
+        let tool_calls = state.into_tool_calls();
+        assert_eq!(tool_calls.len(), 1);
+        assert_eq!(
+            tool_calls[0].extra_content.as_ref().expect("extra_content")["google"]
+                ["thought_signature"],
+            "sig"
         );
     }
 

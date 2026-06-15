@@ -1373,6 +1373,8 @@ struct OpenAiAssistantToolCall {
     #[serde(rename = "type")]
     tool_type: String,
     function: OpenAiAssistantToolCallFunction,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extra_content: Option<Value>,
 }
 
 #[derive(Clone, Serialize)]
@@ -2172,6 +2174,7 @@ fn extract_responses_tool_calls(response: &Value) -> Vec<OpenAiToolCall> {
                     Some(OpenAiToolCall {
                         id,
                         function: OpenAiToolCallFunction { name, arguments },
+                        extra_content: None,
                     })
                 })
                 .collect()
@@ -5234,6 +5237,8 @@ fn reasoning_details_text(details: &[ReasoningDetail]) -> Option<String> {
 pub(crate) struct OpenAiToolCall {
     id: String,
     function: OpenAiToolCallFunction,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    extra_content: Option<Value>,
 }
 
 #[derive(Deserialize, Serialize)]

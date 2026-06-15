@@ -45,6 +45,8 @@ pub(crate) struct SseToolCallDelta {
     id: Option<String>,
     #[serde(default)]
     function: Option<SseToolCallFunctionDelta>,
+    #[serde(default)]
+    extra_content: Option<Value>,
 }
 
 #[derive(Deserialize, Default)]
@@ -60,6 +62,7 @@ pub(crate) struct ToolCallAccumulator {
     id: String,
     name: String,
     arguments: String,
+    extra_content: Option<Value>,
 }
 
 fn optional_json_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
@@ -210,13 +213,14 @@ impl ResponsesStreamState {
                 continue;
             };
             if !item.name.is_empty() && !item.call_id.is_empty() {
-                tool_calls.push(OpenAiToolCall {
-                    id: item.call_id,
-                    function: OpenAiToolCallFunction {
-                        name: item.name,
-                        arguments: item.arguments,
-                    },
-                });
+                    tool_calls.push(OpenAiToolCall {
+                        id: item.call_id,
+                        function: OpenAiToolCallFunction {
+                            name: item.name,
+                            arguments: item.arguments,
+                        },
+                        extra_content: None,
+                    });
             }
         }
         tool_calls
@@ -482,6 +486,9 @@ impl ChatStreamState {
                 if let Some(id) = &tc.id {
                     acc.id.clone_from(id);
                 }
+                if let Some(extra_content) = &tc.extra_content {
+                    acc.extra_content = Some(extra_content.clone());
+                }
                 if let Some(ref f) = tc.function {
                     if let Some(name) = &f.name {
                         acc.name.clone_from(name);
@@ -528,6 +535,7 @@ impl ChatStreamState {
                             name: acc.name,
                             arguments: acc.arguments,
                         },
+                        extra_content: acc.extra_content,
                     });
                 }
             }

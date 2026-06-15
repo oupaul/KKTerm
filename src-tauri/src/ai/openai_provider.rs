@@ -536,6 +536,7 @@ impl AgentTransport {
                                 name: tool_call.function.name.clone(),
                                 arguments: tool_call.function.arguments.clone(),
                             },
+                            extra_content: tool_call.extra_content.clone(),
                         })
                         .collect(),
                 ),

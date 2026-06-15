@@ -25,6 +25,12 @@ strings or JSON values, or when a tool-call id appears. Keep these compatibility
 normalizations in `src-tauri/src/ai/streaming.rs` and lock them with recorded
 SSE fixtures under `src-tauri/src/ai/fixtures/` instead of scattering
 provider-specific request or parser code through provider metadata files.
+When a provider returns opaque tool-call metadata that must be replayed in the
+next request, preserve it on the shared `OpenAiToolCall` rather than losing it
+during transcript normalization. Gemini 3 thinking models are the concrete case:
+their OpenAI-compatible `tool_calls[].extra_content.google.thought_signature`
+must be sent back on the assistant tool-call message before the tool result, or
+Gemini rejects the next request with a 400 missing-thought-signature error.
 
 GitHub Copilot uses `github-copilot-sdk` only as a runtime bridge to an installed
 or path-resolved Copilot CLI. KKTerm must never bundle the Copilot CLI into the
