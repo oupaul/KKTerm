@@ -29,6 +29,18 @@ assert.match(
   "per-Connection tmux management should default from Settings.",
 );
 
+const inheritDefaultsIndex = optionsSection.indexOf('name="sshSocksProxyInheritDefaults"');
+const proxyJumpIndex = optionsSection.indexOf('name="proxyJump"');
+const tmuxIndex = optionsSection.indexOf('name="useTmuxSessions"');
+assert.ok(
+  inheritDefaultsIndex !== -1 && proxyJumpIndex !== -1 && tmuxIndex !== -1,
+  "SSH option fields should include inherit defaults, ProxyJump, and tmux controls.",
+);
+assert.ok(
+  inheritDefaultsIndex < proxyJumpIndex && proxyJumpIndex < tmuxIndex,
+  "per-Connection tmux management should appear under default options and below ProxyJump.",
+);
+
 assert.match(
   source,
   /const \[sshSocksProxyDraft, setSshSocksProxyDraft\] = useState/,

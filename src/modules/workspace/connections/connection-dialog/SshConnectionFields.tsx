@@ -199,15 +199,6 @@ export function SshConnectionOptions({
       <legend>{t("connections.sshProxyOptions")}</legend>
       <div className="connection-specific-options-panel">
         <label className="connection-session-toggle">
-          <Layers className="option-glyph" size={17} aria-hidden />
-          <span>{t("connections.useTmux")}</span>
-          <input
-            name="useTmuxSessions"
-            type="checkbox"
-            defaultChecked={initialConnection?.useTmuxSessions ?? sshSettings.defaultUseTmuxSessions}
-          />
-        </label>
-        <label className="connection-session-toggle">
           <Settings2 className="option-glyph" size={17} aria-hidden />
           <span>{t("connections.inheritSettingsDefaults")}</span>
           <input
@@ -239,6 +230,15 @@ export function SshConnectionOptions({
             />
           </label>
         </div>
+        <label className="connection-session-toggle">
+          <Layers className="option-glyph" size={17} aria-hidden />
+          <span>{t("connections.useTmux")}</span>
+          <input
+            name="useTmuxSessions"
+            type="checkbox"
+            defaultChecked={initialConnection?.useTmuxSessions ?? sshSettings.defaultUseTmuxSessions}
+          />
+        </label>
       </div>
     </fieldset>
   );
