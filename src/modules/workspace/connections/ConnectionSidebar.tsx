@@ -22,7 +22,7 @@ import {
   resolveDefaultTerminalAppearance,
   supportsTerminalAppearanceDefaults,
 } from "./terminalAppearanceDefaults";
-import { elevatedLocalShellAction, findMatchingConnection, quickConnectRecentLabel } from "./quickConnectMenuModel";
+import { elevatedLocalShellAction, findMatchingConnection, nextQuickConnectName, quickConnectRecentLabel } from "./quickConnectMenuModel";
 import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
@@ -445,7 +445,18 @@ export function ConnectionSidebar({
       return candidate;
     }
 
-    const existing = findMatchingConnection(flattenConnections(treeRef.current), candidate);
+    let currentConnections = flattenConnections(treeRef.current);
+    try {
+      const freshTree = await invokeCommand("list_connection_tree", {
+        workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+      });
+      currentConnections = flattenConnections(freshTree);
+    } catch {
+      // Fall back to the last rendered tree; create_connection will still report
+      // any backend error.
+    }
+
+    const existing = findMatchingConnection(currentConnections, candidate);
     if (existing) {
       let connection = existing;
       if (creds?.password) {
@@ -460,8 +471,12 @@ export function ConnectionSidebar({
       return connection;
     }
 
+    const createRequest = quickConnectionCreateRequest({
+      ...candidate,
+      name: nextQuickConnectName(currentConnections, candidate.name),
+    });
     let connection = await invokeCommand("create_connection", {
-      request: quickConnectionCreateRequest(candidate),
+      request: createRequest,
     });
     if (creds?.password) {
       connection = await createConnectionPasswordCredential(connection.id, creds.password);

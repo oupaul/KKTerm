@@ -16,13 +16,18 @@ test("Quick Connect persists connections and rename guards non-persisted ids", a
   );
   assert.match(
     sidebarSource,
-    /findMatchingConnection\(flattenConnections\(treeRef\.current\), candidate\)/,
+    /findMatchingConnection\(currentConnections, candidate\)/,
     "quickConnect should reuse an identical existing connection before creating",
   );
   assert.match(
     sidebarSource,
     /invokeCommand\("create_connection"/,
     "quickConnect should persist new Quick Connect targets via create_connection",
+  );
+  assert.match(
+    sidebarSource,
+    /nextQuickConnectName\(currentConnections, candidate\.name\)/,
+    "quickConnect should avoid duplicate saved Connection names when creating a new target",
   );
 
   // The ephemeral upsert path is gone.

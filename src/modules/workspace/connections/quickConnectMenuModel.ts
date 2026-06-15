@@ -41,6 +41,22 @@ export function findMatchingConnection(
   return undefined;
 }
 
+export function nextQuickConnectName(connections: Connection[], preferredName: string): string {
+  const baseName = preferredName.trim();
+  const fallbackName = baseName || "Connection";
+  const usedNames = new Set(connections.map((connection) => connection.name));
+  if (!usedNames.has(fallbackName)) {
+    return fallbackName;
+  }
+
+  for (let suffix = 1; ; suffix += 1) {
+    const candidate = `${fallbackName} #${suffix}`;
+    if (!usedNames.has(candidate)) {
+      return candidate;
+    }
+  }
+}
+
 export type ElevatedLocalShellAction =
   | { mode: "embedded"; name: string; shell: string }
   | { mode: "external"; shell: string };
