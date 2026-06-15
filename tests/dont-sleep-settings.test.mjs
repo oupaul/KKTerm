@@ -54,7 +54,12 @@ test("Don't Sleep rail uses state-specific tooltip copy and shared Pulse status 
   for (const iconName of ["CircleCheck", "Info", "TriangleAlert", "CircleX"]) {
     assert.match(statusBarSource, new RegExp(`\\b${iconName}\\b`));
   }
+  assert.doesNotMatch(statusBarSource, /isNoticeTimerRunning/);
+  assert.match(statusBarSource, /void popup\.offsetWidth/);
   assert.match(workspaceCss, /\.status-popup-pulse[\s\S]*blur\(24px\) saturate\(180%\)/);
+  assert.match(workspaceCss, /--status-popup-glass-bg:\s*rgba\(252 252 253 \/ 88%\)/);
+  assert.match(workspaceCss, /--status-popup-glass-bg:\s*rgba\(44 44 46 \/ 62%\)/);
+  assert.match(workspaceCss, /\.status-popup-pulse[\s\S]*background:\s*var\(--status-popup-glass-bg\);[\s\S]*var\(--status-popup-glass-shadow\)/);
   assert.match(workspaceCss, /@keyframes status-popup-enter-pulse[\s\S]*translateY\(12px\) scale\(0\.78\)/);
   assert.match(workspaceCss, /\.status-bar-notice-area[\s\S]*bottom:\s*28px;[\s\S]*z-index:\s*9999;/);
   assert.match(nativeOverlaySource, /"\.status-bar-notice-area"/);

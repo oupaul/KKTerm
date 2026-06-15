@@ -571,7 +571,30 @@
   pointer-events: auto;
   cursor: default;
   --notice-tone: var(--accent);
+  --status-popup-glass-bg: rgba(252 252 253 / 88%);
+  --status-popup-glass-hi: rgba(255 255 255 / 80%);
+  --status-popup-glass-shadow:
+    0 24px 60px rgba(15 23 42 / 30%),
+    0 4px 14px rgba(15 23 42 / 16%);
   will-change: opacity, transform;
+}
+
+[data-color-scheme="blue-see"] .status-popup,
+[data-color-scheme="dark"] .status-popup,
+[data-color-scheme="purple"] .status-popup {
+  --status-popup-glass-bg: rgba(44 44 46 / 62%);
+  --status-popup-glass-hi: rgba(255 255 255 / 10%);
+  --status-popup-glass-shadow:
+    0 28px 70px rgba(0 0 0 / 66%),
+    0 6px 18px rgba(0 0 0 / 50%);
+}
+
+[data-color-scheme="green-kuai-kuai"] .status-popup {
+  --status-popup-glass-bg: rgba(255 255 255 / 86%);
+  --status-popup-glass-hi: rgba(255 255 255 / 82%);
+  --status-popup-glass-shadow:
+    0 24px 56px rgba(44 104 18 / 26%),
+    0 4px 14px rgba(8 45 104 / 14%);
 }
 
 .status-popup.success {
@@ -595,12 +618,12 @@
   gap: 11px;
   align-items: center;
   padding: 11px 20px 14px 16px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  border: 0.5px solid color-mix(in srgb, var(--border) 46%, var(--surface));
+  background: var(--status-popup-glass-bg);
+  border: 0.5px solid var(--status-popup-glass-hi);
   border-radius: 20px;
   box-shadow:
-    var(--shadow),
-    inset 0 0.5px 0 color-mix(in srgb, var(--surface) 62%, var(--text) 8%),
+    var(--status-popup-glass-shadow),
+    inset 0 0.5px 0 var(--status-popup-glass-hi),
     0 0 0 3px color-mix(in srgb, var(--notice-tone) 16%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
@@ -674,11 +697,9 @@
   background: var(--notice-tone);
   transform: scaleX(1);
   transform-origin: left;
-}
-
-.status-popup.is-running .status-popup-timer i {
-  transition: transform linear;
-  transform: scaleX(0);
+  transition-duration: 0ms;
+  transition-property: transform;
+  transition-timing-function: linear;
 }
 
 .status-popup.is-entering {
