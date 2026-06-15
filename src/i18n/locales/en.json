@@ -1622,6 +1622,7 @@
     "optionalUsername": "Optional username",
     "storedInKeychain": "Stored in OS keychain",
     "leaveBlankPassword": "Leave blank to keep stored password",
+    "passwordOptionalHint": "Leave blank to enter the password in the terminal",
     "savedPassword": "Saved password",
     "typeNewPassword": "Type a new password",
     "host": "Host",

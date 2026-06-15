@@ -133,10 +133,9 @@ export function SshConnectionFields({
           <>
             <PasswordField
               hasStoredSecret={isEditMode && hasStoredConnectionPassword}
-              label={`${t("connections.passwordLabel")}*`}
+              label={t("connections.passwordLabel")}
               name="password"
-              placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.storedInKeychain")}
-              required={!isEditMode && !selectedPasswordCredentialId}
+              placeholder={isEditMode ? t("connections.leaveBlankPassword") : t("connections.passwordOptionalHint")}
             />
             <PasswordCredentialSelect
               credentials={matchingPasswordCredentials}

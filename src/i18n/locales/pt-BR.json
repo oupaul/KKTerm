@@ -1622,6 +1622,7 @@
     "optionalUsername": "Usuário opcional",
     "storedInKeychain": "Armazenado no chaveiro do SO",
     "leaveBlankPassword": "Deixe em branco para manter a senha armazenada",
+    "passwordOptionalHint": "Deixe em branco para digitar a senha no terminal",
     "savedPassword": "Senha salva",
     "typeNewPassword": "Digite uma nova senha",
     "host": "Host",

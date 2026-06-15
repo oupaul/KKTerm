@@ -1622,6 +1622,7 @@
     "optionalUsername": "選填使用者名稱",
     "storedInKeychain": "儲存在作業系統鑰匙圈中",
     "leaveBlankPassword": "留空以保留已儲存的密碼",
+    "passwordOptionalHint": "留空以在終端機中輸入密碼",
     "savedPassword": "已儲存的密碼",
     "typeNewPassword": "輸入新密碼",
     "host": "主機",

@@ -1622,6 +1622,7 @@
     "optionalUsername": "Nombre de usuario opcional",
     "storedInKeychain": "Almacenado en el llavero del sistema",
     "leaveBlankPassword": "Dejar en blanco para mantener la contraseña guardada",
+    "passwordOptionalHint": "Dejar en blanco para introducir la contraseña en el terminal",
     "savedPassword": "Contraseña guardada",
     "typeNewPassword": "Escribe una contraseña nueva",
     "host": "Host",

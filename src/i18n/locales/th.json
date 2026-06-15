@@ -1622,6 +1622,7 @@
     "optionalUsername": "ชื่อผู้ใช้ (ไม่บังคับ)",
     "storedInKeychain": "เก็บในพวงกุญแจ OS",
     "leaveBlankPassword": "เว้นว่างเพื่อเก็บรหัสผ่านที่บันทึกไว้",
+    "passwordOptionalHint": "เว้นว่างเพื่อกรอกรหัสผ่านในเทอร์มินัล",
     "savedPassword": "รหัสผ่านที่บันทึกไว้",
     "typeNewPassword": "พิมพ์รหัสผ่านใหม่",
     "host": "โฮสต์",

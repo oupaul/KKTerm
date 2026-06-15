@@ -733,8 +733,9 @@ impl SessionManager {
             .trim()
             .eq_ignore_ascii_case("telnet")
         {
-            let password =
-                password.ok_or_else(|| "password is required for Telnet sessions".to_string())?;
+            // A blank password is allowed: the user answers the remote login
+            // prompt interactively in the terminal instead.
+            let password = password.unwrap_or_default();
             let session = telnet::start_native_terminal(
                 app,
                 telnet::NativeTelnetTerminalRequest {

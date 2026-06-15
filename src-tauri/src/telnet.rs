@@ -67,9 +67,6 @@ pub fn start_native_terminal(
     if request.user.trim().is_empty() {
         return Err("user is required for Telnet sessions".to_string());
     }
-    if request.password.is_empty() {
-        return Err("password is required for Telnet sessions".to_string());
-    }
 
     let address = (host, request.port)
         .to_socket_addrs()
@@ -218,7 +215,13 @@ fn maybe_answer_login_prompt(
         return;
     }
 
-    if prompts.sent_user && !prompts.sent_password && prompts.recent_output.contains("password:") {
+    // With no stored password, leave the remote password prompt for the user to
+    // answer interactively in the terminal.
+    if !request.password.is_empty()
+        && prompts.sent_user
+        && !prompts.sent_password
+        && prompts.recent_output.contains("password:")
+    {
         let _ = writer.write_all(format!("{}\r\n", request.password).as_bytes());
         let _ = writer.flush();
         prompts.sent_password = true;

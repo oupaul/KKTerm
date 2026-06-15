@@ -1622,6 +1622,7 @@
     "optionalUsername": "Nama pengguna opsional",
     "storedInKeychain": "Tersimpan di keychain OS",
     "leaveBlankPassword": "Kosongkan untuk menyimpan kata sandi yang ada",
+    "passwordOptionalHint": "Kosongkan untuk memasukkan kata sandi di terminal",
     "savedPassword": "Kata sandi tersimpan",
     "typeNewPassword": "Ketik kata sandi baru",
     "host": "Host",

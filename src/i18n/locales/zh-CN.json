@@ -1622,6 +1622,7 @@
     "optionalUsername": "可选用户名",
     "storedInKeychain": "存储在操作系统钥匙串中",
     "leaveBlankPassword": "留空以保留已存储的密码",
+    "passwordOptionalHint": "留空以在终端中输入密码",
     "savedPassword": "已保存的密码",
     "typeNewPassword": "输入新密码",
     "host": "主机",

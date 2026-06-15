@@ -1622,6 +1622,7 @@
     "optionalUsername": "Optionaler Benutzername",
     "storedInKeychain": "Im System-Schlüsselbund gespeichert",
     "leaveBlankPassword": "Leer lassen, um gespeichertes Passwort beizubehalten",
+    "passwordOptionalHint": "Leer lassen, um das Passwort im Terminal einzugeben",
     "savedPassword": "Gespeichertes Passwort",
     "typeNewPassword": "Neues Passwort eingeben",
     "host": "Host",

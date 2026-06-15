@@ -1622,6 +1622,7 @@
     "optionalUsername": "任意のユーザー名",
     "storedInKeychain": "OSキーチェーンに保存",
     "leaveBlankPassword": "空白のままにすると保存されたパスワードを保持します",
+    "passwordOptionalHint": "空白のままにするとターミナルでパスワードを入力します",
     "savedPassword": "保存済みパスワード",
     "typeNewPassword": "新しいパスワードを入力",
     "host": "ホスト",

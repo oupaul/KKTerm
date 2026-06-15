@@ -1622,6 +1622,7 @@
     "optionalUsername": "Optional username",
     "storedInKeychain": "Stored in OS keychain",
     "leaveBlankPassword": "Leave blank to keep stored password",
+    "passwordOptionalHint": "Để trống để nhập mật khẩu trong terminal",
     "savedPassword": "Mật khẩu đã lưu",
     "typeNewPassword": "Nhập mật khẩu mới",
     "host": "Host",

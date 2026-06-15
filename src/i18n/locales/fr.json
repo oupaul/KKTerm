@@ -1622,6 +1622,7 @@
     "optionalUsername": "Nom d'utilisateur facultatif",
     "storedInKeychain": "Stocké dans le trousseau du système",
     "leaveBlankPassword": "Laissez vide pour conserver le mot de passe enregistré",
+    "passwordOptionalHint": "Laissez vide pour saisir le mot de passe dans le terminal",
     "savedPassword": "Mot de passe enregistré",
     "typeNewPassword": "Saisir un nouveau mot de passe",
     "host": "Hôte",

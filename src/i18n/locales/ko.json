@@ -1622,6 +1622,7 @@
     "optionalUsername": "선택적 사용자 이름",
     "storedInKeychain": "OS 키체인에 저장됨",
     "leaveBlankPassword": "비워 두면 저장된 비밀번호 유지",
+    "passwordOptionalHint": "비워 두면 터미널에서 비밀번호를 입력합니다",
     "savedPassword": "저장된 암호",
     "typeNewPassword": "새 암호 입력",
     "host": "호스트",
