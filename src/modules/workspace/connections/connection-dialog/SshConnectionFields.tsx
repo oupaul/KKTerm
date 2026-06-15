@@ -1,4 +1,5 @@
-import { Fingerprint, KeyRound, Layers, LockKeyhole, Network, Settings2 } from "lucide-react";
+import { useState } from "react";
+import { Fingerprint, KeyRound, Layers, LockKeyhole, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
@@ -165,17 +166,6 @@ export function SshConnectionFields({
           </label>
         ) : null}
       </div>
-      <div className="connection-session-fields">
-        <label className="connection-session-toggle">
-          <Layers className="option-glyph" size={17} aria-hidden />
-          <span>{t("connections.useTmux")}</span>
-          <input
-            name="useTmuxSessions"
-            type="checkbox"
-            defaultChecked={initialConnection?.useTmuxSessions ?? true}
-          />
-        </label>
-      </div>
     </>
   );
 }
@@ -193,11 +183,30 @@ export function SshConnectionOptions({
   sshSettings: SshSettings;
 }) {
   const { t } = useTranslation();
+  const [sshSocksProxyDraft, setSshSocksProxyDraft] = useState(
+    initialConnection?.sshSocksProxy ?? sshSettings.defaultSshSocksProxy ?? "",
+  );
+  const [proxyJumpDraft, setProxyJumpDraft] = useState(
+    initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? "",
+  );
+  const hasProxyJumpOverride = proxyJumpDraft.trim().length > 0;
+  const hasSocksProxyOverride = sshInheritsSettingsDefaults
+    ? Boolean(sshSettings.defaultSshSocksProxy?.trim())
+    : sshSocksProxyDraft.trim().length > 0;
 
   return (
     <fieldset className="connection-session-fields connection-specific-options">
       <legend>{t("connections.sshProxyOptions")}</legend>
       <div className="connection-specific-options-panel">
+        <label className="connection-session-toggle">
+          <Layers className="option-glyph" size={17} aria-hidden />
+          <span>{t("connections.useTmux")}</span>
+          <input
+            name="useTmuxSessions"
+            type="checkbox"
+            defaultChecked={initialConnection?.useTmuxSessions ?? sshSettings.defaultUseTmuxSessions}
+          />
+        </label>
         <label className="connection-session-toggle">
           <Settings2 className="option-glyph" size={17} aria-hidden />
           <span>{t("connections.inheritSettingsDefaults")}</span>
@@ -209,23 +218,24 @@ export function SshConnectionOptions({
           />
         </label>
         <div className="connection-option-fields">
-          <label>
-            <Network className="option-glyph" size={17} aria-hidden />
+          <label className="connection-proxy-row">
             <span>{t("connections.sshSocksProxyOptional")}</span>
             <input
-              disabled={sshInheritsSettingsDefaults}
+              disabled={sshInheritsSettingsDefaults || hasProxyJumpOverride}
               name="sshSocksProxy"
-              defaultValue={initialConnection?.sshSocksProxy ?? sshSettings.defaultSshSocksProxy ?? ""}
+              onChange={(event) => setSshSocksProxyDraft(event.currentTarget.value)}
               placeholder={t("settings.sshSocksProxyPlaceholder")}
+              value={sshSocksProxyDraft}
             />
-            <small className="field-hint">{t("connections.sshSocksProxyHint")}</small>
           </label>
-          <label>
+          <label className="connection-proxy-row">
             <span>{t("connections.proxyJumpOptional")}</span>
             <input
+              disabled={hasSocksProxyOverride}
               name="proxyJump"
-              defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
+              onChange={(event) => setProxyJumpDraft(event.currentTarget.value)}
               placeholder={t("connections.jumpInternal")}
+              value={proxyJumpDraft}
             />
           </label>
         </div>

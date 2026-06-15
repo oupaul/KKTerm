@@ -1687,6 +1687,19 @@ fieldset.connection-specific-options > legend {
   align-items: center;
 }
 
+.connection-option-fields > label.connection-proxy-row {
+  display: grid;
+  gap: 5px;
+}
+
+.connection-option-fields > label.connection-proxy-row > span {
+  min-width: 0;
+}
+
+.connection-option-fields > label.connection-proxy-row > input {
+  min-width: 0;
+}
+
 .connection-option-fields > label:has(.option-glyph) > select,
 .connection-option-fields > label:has(.option-glyph) > input {
   grid-column: 3;

@@ -98,6 +98,7 @@ export const defaultSshSettings: SshSettings = {
   defaultSshSocksProxy: "",
   bufferLines: 5000,
   defaultTransparency: 50,
+  defaultUseTmuxSessions: true,
   useRandomDynamicBackground: false,
   hideCommonPortRedirects: true,
   allowOsc52Clipboard: true,

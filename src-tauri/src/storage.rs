@@ -495,6 +495,8 @@ pub struct SshSettings {
     buffer_lines: u32,
     #[serde(default = "default_terminal_transparency")]
     default_transparency: u8,
+    #[serde(default = "default_use_tmux_sessions")]
+    default_use_tmux_sessions: bool,
     #[serde(default)]
     use_random_dynamic_background: bool,
     #[serde(default = "default_hide_common_port_redirects")]
@@ -3885,6 +3887,7 @@ fn default_ssh_settings() -> SshSettings {
         default_ssh_socks_proxy: None,
         buffer_lines: default_ssh_buffer_lines(),
         default_transparency: default_terminal_transparency(),
+        default_use_tmux_sessions: default_use_tmux_sessions(),
         use_random_dynamic_background: false,
         hide_common_port_redirects: default_hide_common_port_redirects(),
         allow_osc52_clipboard: default_allow_osc52_clipboard(),
@@ -3901,6 +3904,10 @@ fn default_ssh_buffer_lines() -> u32 {
 
 fn default_terminal_transparency() -> u8 {
     50
+}
+
+fn default_use_tmux_sessions() -> bool {
+    true
 }
 
 fn default_hide_common_port_redirects() -> bool {

@@ -448,6 +448,7 @@ export interface SshSettings {
   defaultSshSocksProxy?: string;
   bufferLines: number;
   defaultTransparency: number;
+  defaultUseTmuxSessions: boolean;
   useRandomDynamicBackground: boolean;
   hideCommonPortRedirects: boolean;
   allowOsc52Clipboard: boolean;

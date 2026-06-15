@@ -2013,6 +2013,7 @@
         assert_eq!(defaults.default_port, 22);
         assert_eq!(defaults.buffer_lines, 5_000);
         assert_eq!(defaults.default_transparency, 50);
+        assert!(defaults.default_use_tmux_sessions);
         assert!(!defaults.use_random_dynamic_background);
         assert!(defaults.hide_common_port_redirects);
         assert!(defaults.allow_osc52_clipboard);
@@ -2030,6 +2031,7 @@
                 default_ssh_socks_proxy: Some("  127.0.0.1:1080  ".to_string()),
                 buffer_lines: 12_000,
                 default_transparency: 40,
+                default_use_tmux_sessions: false,
                 use_random_dynamic_background: true,
                 hide_common_port_redirects: false,
                 allow_osc52_clipboard: false,
@@ -2050,6 +2052,7 @@
         assert_eq!(reloaded.default_port, 2200);
         assert_eq!(reloaded.buffer_lines, 12_000);
         assert_eq!(reloaded.default_transparency, 40);
+        assert!(!reloaded.default_use_tmux_sessions);
         assert!(reloaded.use_random_dynamic_background);
         assert!(!reloaded.hide_common_port_redirects);
         assert!(!reloaded.allow_osc52_clipboard);
