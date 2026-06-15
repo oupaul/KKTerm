@@ -1262,6 +1262,7 @@
     "appearanceSaved": "Erscheinungsbildeinstellungen gespeichert.",
     "appearanceReset": "Erscheinungsbildeinstellungen zurückgesetzt.",
     "aiProviderSaved": "KI-Anbieter gespeichert.",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "KI-Anbietereinstellungen gelöscht.",
     "refreshModels": "Modelle aktualisieren",
     "refreshingModels": "Modelle werden aktualisiert",

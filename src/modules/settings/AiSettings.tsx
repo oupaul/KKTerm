@@ -1382,18 +1382,34 @@ export function AiSettings() {
   }
 
   async function handleSave() {
+    // Attribute secret-store failures to the actual save action. Without this,
+    // a failed keychain write (e.g. macOS Keychain access denied) surfaces only
+    // a raw backend string and silently aborts the rest of the save, so the
+    // provider switch never persists.
+    const saveSecret = async (write: () => Promise<unknown>) => {
+      try {
+        await write();
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw Object.assign(new Error(t("settings.secretSaveFailed", { error: detail })), {
+          cause: error,
+        });
+      }
+    };
     try {
       const nextSettings = normalizeAiProviderDraft(draft);
 
       if (apiKeyDraft.trim()) {
         if (isTauriRuntime()) {
-          await invokeCommand("store_secret", {
-            request: {
-              kind: "aiApiKey",
-              ownerId: aiProviderSecretOwnerId(nextSettings.providerKind),
-              secret: apiKeyDraft.trim(),
-            },
-          });
+          await saveSecret(() =>
+            invokeCommand("store_secret", {
+              request: {
+                kind: "aiApiKey",
+                ownerId: aiProviderSecretOwnerId(nextSettings.providerKind),
+                secret: apiKeyDraft.trim(),
+              },
+            }),
+          );
         }
         setAiProviderHasApiKey(true);
         setSelectedProviderHasApiKey(true);
@@ -1405,13 +1421,15 @@ export function AiSettings() {
         const isBrave = nextSettings.searchProvider === "brave";
         const isTavily = nextSettings.searchProvider === "tavily";
         if ((isBrave || isTavily) && isTauriRuntime()) {
-          await invokeCommand("store_secret", {
-            request: {
-              kind: isBrave ? ("braveSearchApiKey" as const) : ("tavilySearchApiKey" as const),
-              ownerId: isBrave ? BRAVE_SEARCH_OWNER_ID : TAVILY_SEARCH_OWNER_ID,
-              secret: searchApiKeyDraft.trim(),
-            },
-          });
+          await saveSecret(() =>
+            invokeCommand("store_secret", {
+              request: {
+                kind: isBrave ? ("braveSearchApiKey" as const) : ("tavilySearchApiKey" as const),
+                ownerId: isBrave ? BRAVE_SEARCH_OWNER_ID : TAVILY_SEARCH_OWNER_ID,
+                secret: searchApiKeyDraft.trim(),
+              },
+            }),
+          );
           setHasSearchApiKey(true);
           setSearchApiKeyDraft("");
           setSearchApiKeyStoredMask(createStoredApiKeyMask());
@@ -1420,13 +1438,15 @@ export function AiSettings() {
 
       if (emailSecretDraft.trim() && isTauriRuntime()) {
         const isSmtp = nextSettings.emailProvider === "smtp";
-        await invokeCommand("store_secret", {
-          request: {
-            kind: isSmtp ? ("emailSmtpPassword" as const) : ("emailApiKey" as const),
-            ownerId: isSmtp ? EMAIL_SMTP_SECRET_OWNER_ID : EMAIL_API_SECRET_OWNER_ID,
-            secret: emailSecretDraft.trim(),
-          },
-        });
+        await saveSecret(() =>
+          invokeCommand("store_secret", {
+            request: {
+              kind: isSmtp ? ("emailSmtpPassword" as const) : ("emailApiKey" as const),
+              ownerId: isSmtp ? EMAIL_SMTP_SECRET_OWNER_ID : EMAIL_API_SECRET_OWNER_ID,
+              secret: emailSecretDraft.trim(),
+            },
+          }),
+        );
         setHasEmailSecret(true);
         setEmailSecretDraft("");
         setEmailSecretStoredMask(createStoredApiKeyMask());

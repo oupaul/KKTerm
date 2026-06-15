@@ -1262,6 +1262,7 @@
     "appearanceSaved": "外观设置已保存。",
     "appearanceReset": "外观设置已重置。",
     "aiProviderSaved": "AI 提供者已保存。",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "AI 提供者设置已清除。",
     "refreshModels": "刷新模型",
     "refreshingModels": "正在刷新模型",

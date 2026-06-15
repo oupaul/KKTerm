@@ -1262,6 +1262,7 @@
     "appearanceSaved": "Pengaturan tampilan disimpan.",
     "appearanceReset": "Pengaturan tampilan direset.",
     "aiProviderSaved": "Penyedia AI disimpan.",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "Pengaturan penyedia AI dihapus.",
     "refreshModels": "Muat ulang model",
     "refreshingModels": "Memuat ulang model",

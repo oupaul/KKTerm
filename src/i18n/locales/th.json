@@ -1262,6 +1262,7 @@
     "appearanceSaved": "บันทึกการตั้งค่ารูปลักษณ์แล้ว",
     "appearanceReset": "รีเซ็ตการตั้งค่ารูปลักษณ์แล้ว",
     "aiProviderSaved": "บันทึกผู้ให้บริการ AI แล้ว",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "ล้างการตั้งค่าผู้ให้บริการ AI แล้ว",
     "refreshModels": "รีเฟรชโมเดล",
     "refreshingModels": "กำลังรีเฟรชโมเดล",

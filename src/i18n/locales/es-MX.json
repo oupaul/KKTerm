@@ -1262,6 +1262,7 @@
     "appearanceSaved": "Configuración de apariencia guardada.",
     "appearanceReset": "Configuración de apariencia restablecida.",
     "aiProviderSaved": "Proveedor de IA guardado.",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "Configuración del proveedor de IA borrada.",
     "refreshModels": "Actualizar modelos",
     "refreshingModels": "Actualizando modelos",

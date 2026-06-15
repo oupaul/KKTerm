@@ -1262,6 +1262,7 @@
     "appearanceSaved": "외관 설정이 저장되었습니다.",
     "appearanceReset": "외관 설정이 초기화되었습니다.",
     "aiProviderSaved": "AI 제공자가 저장되었습니다.",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "AI 제공자 설정이 지워졌습니다.",
     "refreshModels": "모델 새로고침",
     "refreshingModels": "모델 새로고침 중",

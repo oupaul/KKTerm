@@ -1262,6 +1262,7 @@
     "appearanceSaved": "外観設定を保存しました。",
     "appearanceReset": "外観設定をリセットしました。",
     "aiProviderSaved": "AIプロバイダーを保存しました。",
+    "secretSaveFailed": "Couldn't save the credential to the secret store: {{error}}",
     "aiProviderCleared": "AIプロバイダー設定をクリアしました。",
     "refreshModels": "モデルを更新",
     "refreshingModels": "モデルを更新中",
