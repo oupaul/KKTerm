@@ -3628,10 +3628,18 @@ function ConnectionDialog({
     const password = String(form.get("password") ?? "");
     const passwordCredentialId = password ? "" : String(form.get("passwordCredentialId") ?? "").trim();
     const keyPath = String(form.get("keyPath") ?? "").trim();
-    const proxyJump = String(form.get("proxyJump") ?? "").trim();
-    const sshSocksProxy = String(form.get("sshSocksProxy") ?? "").trim();
-    const sshSocksProxyInheritDefaults = form.get("sshSocksProxyInheritDefaults") === "on";
-    const useTmuxSessions = form.get("useTmuxSessions") === "on";
+    const formProxyJump = String(form.get("proxyJump") ?? "").trim();
+    const formSshSocksProxy = String(form.get("sshSocksProxy") ?? "").trim();
+    // Historical field name; in the SSH dialog this is the Default Options mode for proxy and tmux controls.
+    const sshUsesDefaultOptions = form.get("sshSocksProxyInheritDefaults") === "on";
+    const proxyJump =
+      usesSshDefaults && sshUsesDefaultOptions ? (sshSettings.defaultProxyJump ?? "").trim() : formProxyJump;
+    const sshSocksProxy =
+      usesSshDefaults && sshUsesDefaultOptions ? (sshSettings.defaultSshSocksProxy ?? "").trim() : formSshSocksProxy;
+    const useTmuxSessions =
+      usesSshDefaults && sshUsesDefaultOptions
+        ? sshSettings.defaultUseTmuxSessions
+        : form.get("useTmuxSessions") === "on";
     const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
 
@@ -3650,9 +3658,9 @@ function ConnectionDialog({
       folderId: String(form.get("folderId") ?? "").trim() || undefined,
       port: portValue ? Number(portValue) : undefined,
       keyPath: usesSshDefaults && authMethod === "keyFile" ? keyPath || undefined : undefined,
-      proxyJump: proxyJump || undefined,
-      sshSocksProxy: usesSshDefaults && !sshSocksProxyInheritDefaults ? sshSocksProxy || undefined : undefined,
-      sshSocksProxyInheritDefaults: usesSshDefaults ? sshSocksProxyInheritDefaults : undefined,
+      proxyJump: usesSshDefaults ? proxyJump || undefined : undefined,
+      sshSocksProxy: usesSshDefaults ? sshSocksProxy || undefined : undefined,
+      sshSocksProxyInheritDefaults: usesSshDefaults ? sshUsesDefaultOptions : undefined,
       authMethod: usesSshDefaults ? authMethod : undefined,
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,
       localShell: connectionType === "local" ? selectedLocalShell || undefined : undefined,

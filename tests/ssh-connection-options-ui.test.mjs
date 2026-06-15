@@ -6,6 +6,11 @@ const source = await readFile(
   "utf8",
 );
 
+const sidebarSource = await readFile(
+  new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+  "utf8",
+);
+
 const css = await readFile(
   new URL("../src/modules/workspace/connections/connections.css", import.meta.url),
   "utf8",
@@ -25,8 +30,8 @@ assert.doesNotMatch(
 
 assert.match(
   optionsSection,
-  /name="useTmuxSessions"[\s\S]*defaultChecked=\{initialConnection\?\.useTmuxSessions \?\? sshSettings\.defaultUseTmuxSessions\}/,
-  "per-Connection tmux management should default from Settings.",
+  /const \[useTmuxSessionsDraft, setUseTmuxSessionsDraft\] = useState\([\s\S]*initialConnection\?\.useTmuxSessions \?\? sshSettings\.defaultUseTmuxSessions[\s\S]*\)/,
+  "per-Connection tmux management should track a draft value defaulted from Settings.",
 );
 
 const inheritDefaultsIndex = optionsSection.indexOf('name="sshSocksProxyInheritDefaults"');
@@ -61,8 +66,56 @@ assert.match(
 
 assert.match(
   optionsSection,
-  /disabled=\{hasSocksProxyOverride\}[\s\S]*name="proxyJump"/,
-  "ProxyJump should be disabled while SOCKS proxy has a value.",
+  /const displayedProxyJump = sshInheritsSettingsDefaults[\s\S]*sshSettings\.defaultProxyJump/,
+  "ProxyJump should display the Settings default while Default Options is on.",
+);
+
+assert.match(
+  optionsSection,
+  /const displayedUseTmuxSessions = sshInheritsSettingsDefaults[\s\S]*sshSettings\.defaultUseTmuxSessions/,
+  "tmux management should display the Settings default while Default Options is on.",
+);
+
+assert.match(
+  optionsSection,
+  /disabled=\{sshInheritsSettingsDefaults \|\| hasSocksProxyOverride\}[\s\S]*name="proxyJump"/,
+  "ProxyJump should be disabled while inheriting defaults or while SOCKS proxy has a value.",
+);
+
+assert.match(
+  optionsSection,
+  /disabled=\{sshInheritsSettingsDefaults\}[\s\S]*name="useTmuxSessions"/,
+  "tmux management should be disabled while inheriting defaults.",
+);
+
+assert.match(
+  sidebarSource,
+  /const sshUsesDefaultOptions = form\.get\("sshSocksProxyInheritDefaults"\) === "on";/,
+  "SSH submit handling should treat the legacy inherit field as Default Options mode.",
+);
+
+assert.match(
+  sidebarSource,
+  /const proxyJump =[\s\S]*usesSshDefaults && sshUsesDefaultOptions[\s\S]*sshSettings\.defaultProxyJump/,
+  "ProxyJump should be submitted from Settings defaults while Default Options is on.",
+);
+
+assert.match(
+  sidebarSource,
+  /const useTmuxSessions =[\s\S]*usesSshDefaults && sshUsesDefaultOptions[\s\S]*sshSettings\.defaultUseTmuxSessions/,
+  "tmux management should be submitted from Settings defaults while Default Options is on.",
+);
+
+assert.match(
+  sidebarSource,
+  /proxyJump: usesSshDefaults \? proxyJump \|\| undefined : undefined/,
+  "ProxyJump should only be saved for SSH Connections.",
+);
+
+assert.match(
+  sidebarSource,
+  /sshSocksProxy: usesSshDefaults \? sshSocksProxy \|\| undefined : undefined/,
+  "SOCKS proxy should be saved with the displayed value, including Default Options mode.",
 );
 
 assert.match(

@@ -56,6 +56,16 @@ restyled in `src/styles/base.css` to the same language, so legacy dialogs match.
 spellcheck for machine-oriented dialog fields. Callers may override those props
 only for prose fields where spelling assistance is useful.
 
+### Add/Edit Connection default options
+
+When an add/edit Connection dialog has a "Use Settings defaults" mode, the mode
+owns the whole related option group. Enabled means the grouped controls are
+muted/disabled, show the current Settings default values, and saving writes
+those displayed defaults into the Connection. Disabled means the controls are
+editable per-Connection values. For SSH, ProxyJump, SOCKS proxy, and tmux
+management must move together under this rule; never leave one editable while
+the default-options mode is on.
+
 ### Button order
 
 KKTerm uses Windows-style dialog button order: the primary/confirm action comes

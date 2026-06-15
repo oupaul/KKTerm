@@ -189,10 +189,18 @@ export function SshConnectionOptions({
   const [proxyJumpDraft, setProxyJumpDraft] = useState(
     initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? "",
   );
-  const hasProxyJumpOverride = proxyJumpDraft.trim().length > 0;
-  const hasSocksProxyOverride = sshInheritsSettingsDefaults
-    ? Boolean(sshSettings.defaultSshSocksProxy?.trim())
-    : sshSocksProxyDraft.trim().length > 0;
+  const [useTmuxSessionsDraft, setUseTmuxSessionsDraft] = useState(
+    initialConnection?.useTmuxSessions ?? sshSettings.defaultUseTmuxSessions,
+  );
+  const displayedSshSocksProxy = sshInheritsSettingsDefaults
+    ? sshSettings.defaultSshSocksProxy ?? ""
+    : sshSocksProxyDraft;
+  const displayedProxyJump = sshInheritsSettingsDefaults ? sshSettings.defaultProxyJump ?? "" : proxyJumpDraft;
+  const displayedUseTmuxSessions = sshInheritsSettingsDefaults
+    ? sshSettings.defaultUseTmuxSessions
+    : useTmuxSessionsDraft;
+  const hasProxyJumpOverride = !sshInheritsSettingsDefaults && proxyJumpDraft.trim().length > 0;
+  const hasSocksProxyOverride = !sshInheritsSettingsDefaults && sshSocksProxyDraft.trim().length > 0;
 
   return (
     <fieldset className="connection-session-fields connection-specific-options">
@@ -216,17 +224,17 @@ export function SshConnectionOptions({
               name="sshSocksProxy"
               onChange={(event) => setSshSocksProxyDraft(event.currentTarget.value)}
               placeholder={t("settings.sshSocksProxyPlaceholder")}
-              value={sshSocksProxyDraft}
+              value={displayedSshSocksProxy}
             />
           </label>
           <label className="connection-proxy-row">
             <span>{t("connections.proxyJumpOptional")}</span>
             <input
-              disabled={hasSocksProxyOverride}
+              disabled={sshInheritsSettingsDefaults || hasSocksProxyOverride}
               name="proxyJump"
               onChange={(event) => setProxyJumpDraft(event.currentTarget.value)}
               placeholder={t("connections.jumpInternal")}
-              value={proxyJumpDraft}
+              value={displayedProxyJump}
             />
           </label>
         </div>
@@ -234,9 +242,11 @@ export function SshConnectionOptions({
           <Layers className="option-glyph" size={17} aria-hidden />
           <span>{t("connections.useTmux")}</span>
           <input
+            checked={displayedUseTmuxSessions}
+            disabled={sshInheritsSettingsDefaults}
             name="useTmuxSessions"
+            onChange={(event) => setUseTmuxSessionsDraft(event.currentTarget.checked)}
             type="checkbox"
-            defaultChecked={initialConnection?.useTmuxSessions ?? sshSettings.defaultUseTmuxSessions}
           />
         </label>
       </div>
