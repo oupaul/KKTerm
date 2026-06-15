@@ -693,11 +693,13 @@ function formatTmuxSessionTimestamp(value?: number) {
 
 function TmuxSessionTag({
   connection,
+  isChildConnection = false,
   onMouseModeChange,
   sessionId,
   tabId,
 }: {
   connection: Connection;
+  isChildConnection?: boolean;
   onMouseModeChange: (enabled: boolean) => void;
   sessionId?: string;
   tabId: string;
@@ -714,6 +716,8 @@ function TmuxSessionTag({
   const [mouseEnabledIds, setMouseEnabledIds] = useState<Set<string>>(
     () => new Set(sessionId ? [sessionId] : []),
   );
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
 
@@ -725,6 +729,7 @@ function TmuxSessionTag({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
 
   const enabled = connection.type === "ssh" && connection.useTmuxSessions !== false && sessionId;
+  const tagLabel = isChildConnection ? "tmux" : `tmux ${sessionId}`;
   const renameInputId = useMemo(
     () => `tmux-session-name-${tabId}-${editingSessionId ?? sessionId ?? "active"}`.replace(/[^A-Za-z0-9_-]/g, "-"),
     [editingSessionId, sessionId, tabId],
@@ -758,7 +763,9 @@ function TmuxSessionTag({
 
     function onPointerDown(event: PointerEvent) {
       const target = event.target as Node | null;
-      if (menuRef.current && target && !menuRef.current.contains(target)) {
+      const clickedWrapper = Boolean(wrapperRef.current && target && wrapperRef.current.contains(target));
+      const clickedMenu = Boolean(menuRef.current && target && menuRef.current.contains(target));
+      if (!clickedWrapper && !clickedMenu) {
         setOpen(false);
       }
     }
@@ -766,6 +773,43 @@ function TmuxSessionTag({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function positionMenu() {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) {
+        return;
+      }
+
+      const triggerBounds = trigger.getBoundingClientRect();
+      const menuBounds = menu.getBoundingClientRect();
+      const viewportPadding = 8;
+      const gap = 6;
+      const maxLeft = window.innerWidth - menuBounds.width - viewportPadding;
+      const below = triggerBounds.bottom + gap;
+      const above = triggerBounds.top - menuBounds.height - gap;
+      const top =
+        below + menuBounds.height > window.innerHeight - viewportPadding && above >= viewportPadding
+          ? above
+          : Math.min(below, window.innerHeight - menuBounds.height - viewportPadding);
+
+      menu.style.left = `${Math.max(viewportPadding, Math.min(triggerBounds.right - menuBounds.width, maxLeft))}px`;
+      menu.style.top = `${Math.max(viewportPadding, top)}px`;
+    }
+
+    positionMenu();
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+    return () => {
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
+    };
+  }, [editingSessionId, error, expandedSessionId, loading, open, sessions.length]);
 
   function findSessionPane(tmuxSessionId: string): { tabId: string; paneId: string } | null {
     for (const tab of tabs) {
@@ -956,20 +1000,26 @@ function TmuxSessionTag({
   }
 
   return (
-    <div className="tmux-session-wrapper" data-tutorial-id="terminal.tmuxSessions" ref={menuRef}>
+    <div className="tmux-session-wrapper" data-tutorial-id="terminal.tmuxSessions" ref={wrapperRef}>
       <div className="tmux-session-tag-group">
         <button
           className="tmux-session-tag"
           {...dialogButtonAria(open)}
           onClick={() => void handleToggle()}
+          ref={triggerRef}
           title={t("terminal.showTmux")}
           type="button"
         >
-          <span>tmux {sessionId}</span>
+          <span>{tagLabel}</span>
         </button>
       </div>
-      {open ? (
-        <div className="tmux-session-menu" role="dialog" aria-label={t("terminal.tmuxSessions")}>
+      {open ? createPortal(
+        <div
+          className="tmux-session-menu tmux-session-menu-portal"
+          role="dialog"
+          aria-label={t("terminal.tmuxSessions")}
+          ref={menuRef}
+        >
           <header>
             <strong>{t("terminal.tmuxSessions")}</strong>
             <button
@@ -1130,7 +1180,8 @@ function TmuxSessionTag({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );
@@ -2389,6 +2440,7 @@ function TerminalPaneView({
           {pane.connection ? (
             <TmuxSessionTag
               connection={pane.connection}
+              isChildConnection={Boolean(pane.childConnectionId)}
               onMouseModeChange={setTmuxMouseEnabled}
               sessionId={pane.tmuxSessionId}
               tabId={tabId}

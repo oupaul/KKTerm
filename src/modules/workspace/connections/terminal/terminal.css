@@ -458,6 +458,15 @@
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 }
 
+.tmux-session-menu-portal {
+  position: fixed;
+  top: 0;
+  right: auto;
+  left: 0;
+  z-index: 260;
+  max-height: min(320px, calc(100vh - 16px));
+}
+
 .tmux-session-menu header,
 .tmux-session-row {
   display: flex;
