@@ -2,6 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../../lib/inputBehavior";
+import { invokeCommand } from "../../../../../lib/tauri";
 import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import {
@@ -9,7 +10,6 @@ import {
   convertCurrency,
   convertUnit,
   formatConvertedValue,
-  normalizeFrankfurterRates,
   type CurrencyRates,
   type UnitCategory,
 } from "./converterTools";
@@ -98,9 +98,7 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
   async function refreshRates() {
     setCurrencyState("loading");
     try {
-      const response = await fetch("https://api.frankfurter.app/latest?from=USD");
-      if (!response.ok) throw new Error(`status ${response.status}`);
-      setRates(normalizeFrankfurterRates(await response.json()));
+      setRates(await invokeCommand("fetch_currency_rates"));
       setCurrencyState("idle");
     } catch {
       setCurrencyState("error");

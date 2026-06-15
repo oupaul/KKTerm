@@ -3,6 +3,7 @@ mod ai_coding_usage;
 mod app_launcher;
 mod app_tray;
 mod app_updates;
+mod currency_rates;
 mod assistant_skills;
 mod auto_start;
 mod dashboard_commands;
@@ -3107,6 +3108,7 @@ pub fn run() {
             is_debug_build,
             app_updates::get_app_update_target_triple,
             app_updates::download_and_install_app_update,
+            currency_rates::fetch_currency_rates,
             debug_frontend_heartbeat,
             ui_debug_log,
             focus_main_window,
