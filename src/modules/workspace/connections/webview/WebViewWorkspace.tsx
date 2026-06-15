@@ -1,11 +1,12 @@
 import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { documentHasWebviewBlockingOverlay } from "../../nativeOverlay";
 
-import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, RefreshCw, Save, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, ExternalLink, Globe2, KeyRound, Lock, RefreshCw, Save, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FormEvent } from "react";
+import { resolveAppliedColorScheme } from "../../../../app/appShellEffects";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "../../../../lib/tauri";
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
@@ -186,6 +187,7 @@ export function WebViewWorkspace({
   tab: WorkspaceTab;
 }) {
   const { t } = useTranslation();
+  const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const updateWebviewTabMetadata = useWorkspaceStore((state) => state.updateWebviewTabMetadata);
   const openUrlInNewTab = useWorkspaceStore((state) => state.openUrlInNewTab);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
@@ -902,43 +904,61 @@ export function WebViewWorkspace({
     }
   }
 
+  const isSecureAddress = /^https:\/\//i.test(addressInput.trim());
+  const addressHost = formatWebviewSubtitle(addressInput);
+  const connectionIconSrc = tab.connection?.iconDataUrl;
+  const connectionIdentityLabel = tab.connection?.name || addressHost;
+
   return (
     <section
       className={isActive ? "terminal-workspace webview-workspace active" : "terminal-workspace webview-workspace"}
+      data-color-scheme={resolveAppliedColorScheme(appearanceSettings.colorScheme)}
+      data-selected-color-scheme={appearanceSettings.colorScheme}
       ref={workspaceRef}
     >
       <article className="terminal-pane webview-pane">
         <header>
           <div className="webview-nav-group" data-tutorial-id="webview.toolbar">
-            <Globe2 className="webview-nav-globe" size={13} />
-            <button
-              className="terminal-pane-action"
-              aria-label={t("webview.goBack")}
-              onClick={() => handleSimple("webview_go_back")}
-              title={t("webview.back")}
-              type="button"
-            >
-              <ArrowLeft size={13} />
-            </button>
-            <button
-              className="terminal-pane-action"
-              aria-label={t("webview.goForward")}
-              onClick={() => handleSimple("webview_go_forward")}
-              title={t("webview.forward")}
-              type="button"
-            >
-              <ArrowRight size={13} />
-            </button>
-            <button
-              className="terminal-pane-action"
-              aria-label={t("webview.reload")}
-              onClick={() => handleSimple("webview_reload")}
-              title={t("webview.reload")}
-              type="button"
-            >
-              <RefreshCw size={13} />
-            </button>
-            <form className="webview-toolbar-form" onSubmit={handleNavigate}>
+            <span className="webview-conn-icon" title={connectionIdentityLabel}>
+              {connectionIconSrc ? (
+                <img alt="" aria-hidden="true" draggable={false} height={18} src={connectionIconSrc} width={18} />
+              ) : (
+                <Globe2 size={16} />
+              )}
+            </span>
+            <div className="webview-nav-cluster">
+              <button
+                className="terminal-pane-action"
+                aria-label={t("webview.goBack")}
+                onClick={() => handleSimple("webview_go_back")}
+                title={t("webview.back")}
+                type="button"
+              >
+                <ArrowLeft size={15} />
+              </button>
+              <button
+                className="terminal-pane-action"
+                aria-label={t("webview.goForward")}
+                onClick={() => handleSimple("webview_go_forward")}
+                title={t("webview.forward")}
+                type="button"
+              >
+                <ArrowRight size={15} />
+              </button>
+              <button
+                className="terminal-pane-action"
+                aria-label={t("webview.reload")}
+                onClick={() => handleSimple("webview_reload")}
+                title={t("webview.reload")}
+                type="button"
+              >
+                <RefreshCw size={14} />
+              </button>
+            </div>
+            <form className="webview-address-bar" onSubmit={handleNavigate}>
+              <span className={isSecureAddress ? "webview-address-lock" : "webview-address-lock insecure"}>
+                {isSecureAddress ? <Lock size={13} /> : <Globe2 size={13} />}
+              </span>
               <input
                 aria-label={t("webview.address")}
                 className="webview-address-input"
@@ -961,7 +981,7 @@ export function WebViewWorkspace({
               title={t("webview.openExternally")}
               type="button"
             >
-              <ExternalLink size={13} />
+              <ExternalLink size={15} />
             </button>
             <select
               aria-label={t("webview.autoRefresh")}
@@ -988,7 +1008,7 @@ export function WebViewWorkspace({
                   title={t("webview.savePasswordTitle")}
                   type="button"
                 >
-                  <Save size={13} />
+                  <Save size={15} />
                 </button>
                 <button
                   className="terminal-pane-action"
@@ -998,7 +1018,7 @@ export function WebViewWorkspace({
                   title={canFillCredential ? t("webview.fillSavedCredential") : t("webview.noSavedCredential")}
                   type="button"
                 >
-                  <KeyRound size={13} />
+                  <KeyRound size={15} />
                 </button>
               </>
             ) : null}
@@ -1018,7 +1038,7 @@ export function WebViewWorkspace({
               title={t("workspace.sendEntirePanelToAi")}
               type="button"
             >
-              <Bot size={13} />
+              <Bot size={15} />
             </button>
             {onClose ? (
               <button
@@ -1029,7 +1049,7 @@ export function WebViewWorkspace({
                 title={t("workspace.closeTab", { title: tab.title })}
                 type="button"
               >
-                <X size={13} />
+                <X size={15} />
               </button>
             ) : null}
           </div>
@@ -1053,6 +1073,17 @@ export function WebViewWorkspace({
           ) : null}
           {navError ? <p className="form-error webview-placeholder-error">{navError}</p> : null}
         </div>
+        <footer className="webview-foot">
+          <span className={isSecureAddress ? "webview-foot-secure" : "webview-foot-secure insecure"}>
+            {isSecureAddress ? <Lock size={12} /> : <Globe2 size={12} />}
+          </span>
+          {addressHost ? (
+            <>
+              <span className="webview-foot-dot" />
+              <span className="webview-foot-host">{addressHost}</span>
+            </>
+          ) : null}
+        </footer>
       </article>
     </section>
   );
