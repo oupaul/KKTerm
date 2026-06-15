@@ -47,6 +47,7 @@ import {
   useSettingsSaveRegistration,
 } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { ConfirmSheet } from "../../app/ui/dialog";
 import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../../i18n/config";
 import { resolveInstallPlan } from "../installer/dag";
@@ -1122,6 +1123,7 @@ export function AiSettings() {
   const [refreshedModelOptions, setRefreshedModelOptions] = useState<AiProviderModelOption[]>([]);
   const [isRefreshingModels, setIsRefreshingModels] = useState(false);
   const [showBuiltInMcpConfig, setShowBuiltInMcpConfig] = useState(false);
+  const [keychainSaveError, setKeychainSaveError] = useState<string | null>(null);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(aiProviderSettings) ||
     apiKeyDraft.trim().length > 0 ||
@@ -1393,6 +1395,7 @@ export function AiSettings() {
         const detail = error instanceof Error ? error.message : String(error);
         throw Object.assign(new Error(t("settings.secretSaveFailed", { error: detail })), {
           cause: error,
+          secretStoreSaveFailure: true,
         });
       }
     };
@@ -1459,8 +1462,69 @@ export function AiSettings() {
       setDraft(saved);
       showStatusBarNotice(t("settings.aiProviderSaved"), { tone: "success" });
     } catch (err) {
-      showStatusBarNotice(err instanceof Error ? err.message : String(err), { tone: "error" });
+      const message = err instanceof Error ? err.message : String(err);
+      if (
+        err !== null &&
+        typeof err === "object" &&
+        (err as { secretStoreSaveFailure?: boolean }).secretStoreSaveFailure
+      ) {
+        // A keychain/secret-store write failed, so the rest of the save was
+        // aborted. Offer an in-app reset-and-retry instead of a transient
+        // notice the user is likely to miss.
+        setKeychainSaveError(message);
+      } else {
+        showStatusBarNotice(message, { tone: "error" });
+      }
     }
+  }
+
+  // Clears the stored secret-store entries the current draft is about to write,
+  // then re-runs the save. Deleting first lets the re-write trigger a fresh OS
+  // permission prompt when an earlier prompt was denied. Best-effort: deletions
+  // are allowed to fail (the entry may not exist or may itself be locked).
+  async function handleResetKeychainAndRetry() {
+    setKeychainSaveError(null);
+    if (isTauriRuntime()) {
+      const nextSettings = normalizeAiProviderDraft(draft);
+      const deletions: Promise<unknown>[] = [];
+      if (apiKeyDraft.trim()) {
+        deletions.push(
+          invokeCommand("delete_secret", {
+            request: {
+              kind: "aiApiKey",
+              ownerId: aiProviderSecretOwnerId(nextSettings.providerKind),
+            },
+          }),
+        );
+      }
+      if (searchApiKeyDraft.trim()) {
+        const isBrave = nextSettings.searchProvider === "brave";
+        const isTavily = nextSettings.searchProvider === "tavily";
+        if (isBrave || isTavily) {
+          deletions.push(
+            invokeCommand("delete_secret", {
+              request: {
+                kind: isBrave ? ("braveSearchApiKey" as const) : ("tavilySearchApiKey" as const),
+                ownerId: isBrave ? BRAVE_SEARCH_OWNER_ID : TAVILY_SEARCH_OWNER_ID,
+              },
+            }),
+          );
+        }
+      }
+      if (emailSecretDraft.trim()) {
+        const isSmtp = nextSettings.emailProvider === "smtp";
+        deletions.push(
+          invokeCommand("delete_secret", {
+            request: {
+              kind: isSmtp ? ("emailSmtpPassword" as const) : ("emailApiKey" as const),
+              ownerId: isSmtp ? EMAIL_SMTP_SECRET_OWNER_ID : EMAIL_API_SECRET_OWNER_ID,
+            },
+          }),
+        );
+      }
+      await Promise.allSettled(deletions);
+    }
+    await handleSave();
   }
 
   function handleAiProviderKindChange(providerKind: AiProviderKind) {
@@ -1532,6 +1596,23 @@ export function AiSettings() {
       {showBuiltInMcpConfig && (
         <BuiltInMcpConfigDialog onClose={() => setShowBuiltInMcpConfig(false)} />
       )}
+      {keychainSaveError ? (
+        <ConfirmSheet
+          tone="warn"
+          confirmIcon="refresh"
+          title={t("settings.keychainSaveFailedTitle")}
+          message={
+            <>
+              <p>{keychainSaveError}</p>
+              <p>{t("settings.keychainResetHint")}</p>
+            </>
+          }
+          confirmLabel={t("settings.keychainResetAndRetry")}
+          cancelLabel={t("common.cancel")}
+          onConfirm={() => void handleResetKeychainAndRetry()}
+          onCancel={() => setKeychainSaveError(null)}
+        />
+      ) : null}
       <SettingsSectionHeader
         icon={<Bot size={18} />}
         label={t("settings.sectionAiAssistant")}
