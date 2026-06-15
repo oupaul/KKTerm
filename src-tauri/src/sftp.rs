@@ -47,6 +47,7 @@ pub struct StartSftpSessionRequest {
     pub port: Option<u16>,
     pub key_path: Option<String>,
     pub proxy_jump: Option<String>,
+    pub ssh_socks_proxy: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
     pub path: Option<String>,
@@ -306,6 +307,7 @@ impl SftpSessionManager {
         let host = request.host.clone();
         let user = request.user.clone();
         let port = request.port.unwrap_or(22);
+        let socks_proxy = request.ssh_socks_proxy.clone();
         let (ssh_session, sftp, listing) = runtime.block_on(async {
             let ssh_session = ssh::connect_verified_client(ssh::NativeSshConnectionRequest {
                 host,
@@ -314,6 +316,7 @@ impl SftpSessionManager {
                 auth,
                 known_hosts_path,
                 x11_forwarding: None,
+                socks_proxy,
             })
             .await?;
 
@@ -2458,6 +2461,7 @@ mod tests {
             port: Some(22),
             key_path: None,
             proxy_jump: None,
+            ssh_socks_proxy: None,
             auth_method: None,
             secret_owner_id: None,
             path: None,

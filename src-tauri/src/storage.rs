@@ -1707,6 +1707,8 @@ impl Storage {
                         port INTEGER,
                         key_path TEXT,
                         proxy_jump TEXT,
+                        ssh_socks_proxy TEXT,
+                        ssh_socks_proxy_inherit_defaults INTEGER NOT NULL DEFAULT 1,
                         auth_method TEXT NOT NULL DEFAULT 'keyFile',
                         local_shell TEXT,
                         local_startup_directory TEXT,
@@ -1731,7 +1733,8 @@ impl Storage {
                     );
                     INSERT INTO connections (
                         id, folder_id, name, tab_title, host, username, port, key_path,
-                        proxy_jump, auth_method, local_shell, local_startup_directory,
+                        proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                        auth_method, local_shell, local_startup_directory,
                         local_startup_script, url, data_partition, use_tmux_sessions,
                         tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
                         ftp_options, password_credential_id, icon_data_url, icon_background_color,
@@ -1739,7 +1742,8 @@ impl Storage {
                     )
                     SELECT
                         id, folder_id, name, tab_title, host, username, port, key_path,
-                        proxy_jump, auth_method, local_shell, local_startup_directory,
+                        proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                        auth_method, local_shell, local_startup_directory,
                         local_startup_script, url, data_partition, use_tmux_sessions,
                         tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
                         ftp_options, password_credential_id, icon_data_url, icon_background_color,
@@ -3000,8 +3004,8 @@ fn get_connection_by_id(
              WHERE connections.id = ?1",
             params![connection_id],
             |row| {
-                let password_credential_id: Option<String> = row.get(26)?;
-                let url_credential_username: Option<String> = row.get(27)?;
+                let password_credential_id: Option<String> = row.get(28)?;
+                let url_credential_username: Option<String> = row.get(29)?;
                 Ok(SavedConnection {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -4370,7 +4374,10 @@ fn validate_ssh_settings(mut settings: SshSettings) -> Result<SshSettings, Strin
 
     settings.default_key_path = trim_optional(settings.default_key_path);
     settings.default_proxy_jump = trim_optional(settings.default_proxy_jump);
-    settings.default_ssh_socks_proxy = trim_optional(settings.default_ssh_socks_proxy);
+    settings.default_ssh_socks_proxy = match trim_optional(settings.default_ssh_socks_proxy) {
+        Some(value) => Some(crate::socks::validate_socks_proxy(&value)?),
+        None => None,
+    };
     if !(100..=100_000).contains(&settings.buffer_lines) {
         return Err("SSH buffer must be between 100 and 100000 lines".to_string());
     }

@@ -33,6 +33,7 @@ mod secrets;
 mod serial;
 mod sessions;
 mod sftp;
+mod socks;
 mod ssh;
 mod ssh_config;
 mod ssh_keys;

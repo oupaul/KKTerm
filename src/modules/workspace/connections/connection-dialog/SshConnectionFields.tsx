@@ -218,6 +218,7 @@ export function SshConnectionOptions({
               defaultValue={initialConnection?.sshSocksProxy ?? sshSettings.defaultSshSocksProxy ?? ""}
               placeholder={t("settings.sshSocksProxyPlaceholder")}
             />
+            <small className="field-hint">{t("connections.sshSocksProxyHint")}</small>
           </label>
           <label>
             <span>{t("connections.proxyJumpOptional")}</span>

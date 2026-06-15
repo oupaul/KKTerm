@@ -1,6 +1,6 @@
 import { ConnectionIcon } from "../modules/workspace/connections/ConnectionIcon";
 import type { TutorialHighlightRequest } from "../app/TutorialOverlay";
-import { connectionPasswordOwnerId, workspaceKindLabel } from "../modules/workspace/connections/utils";
+import { connectionPasswordOwnerId, resolveSshSocksProxy, workspaceKindLabel } from "../modules/workspace/connections/utils";
 import { inspectActiveSshSystemContext } from "../modules/workspace/connections/terminal/TerminalWorkspace";
 import { readFromClipboard, writeToClipboard } from "../lib/clipboard";
 import {
@@ -955,6 +955,10 @@ export function AssistantPanel({
             port: pane.connection.port,
             keyPath: pane.connection.keyPath,
             proxyJump: pane.connection.proxyJump,
+            sshSocksProxy: resolveSshSocksProxy(
+              pane.connection,
+              useWorkspaceStore.getState().sshSettings,
+            ),
             authMethod: pane.connection.authMethod,
             secretOwnerId: connectionPasswordOwnerId(pane.connection),
             tmuxSessionId: pane.tmuxSessionId,

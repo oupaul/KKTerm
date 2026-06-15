@@ -30,6 +30,7 @@ pub struct TransferSshPublicKeyRequest {
     password: String,
     key_path: Option<String>,
     proxy_jump: Option<String>,
+    ssh_socks_proxy: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -123,6 +124,7 @@ pub fn transfer_public_key(
         known_hosts_path: ssh::app_known_hosts_path(&app)?,
         command: install_public_key_command(&public_key),
         timeout_seconds: Some(30),
+        socks_proxy: request.ssh_socks_proxy,
     })?;
 
     Ok(TransferSshPublicKeyResult {

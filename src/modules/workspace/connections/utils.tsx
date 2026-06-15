@@ -237,6 +237,24 @@ export function connectionPasswordOwnerId(connection: Connection) {
   return connection.passwordCredentialId || connection.id;
 }
 
+/**
+ * Resolve the effective SOCKS proxy for an SSH Connection launch: the
+ * per-Connection value when it opted out of inheriting Settings defaults,
+ * otherwise the global SSH SOCKS proxy default. Returns `undefined` when no
+ * proxy applies so the backend uses a direct connection.
+ */
+export function resolveSshSocksProxy(
+  connection: Pick<Connection, "sshSocksProxy" | "sshSocksProxyInheritDefaults">,
+  sshSettings: Pick<SshSettings, "defaultSshSocksProxy">,
+): string | undefined {
+  const value =
+    connection.sshSocksProxyInheritDefaults === false
+      ? connection.sshSocksProxy
+      : sshSettings.defaultSshSocksProxy;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 export async function confirmTrustedSshHostKey(preview: SshHostKeyPreview) {
   if (preview.status === "trusted") {
     return;

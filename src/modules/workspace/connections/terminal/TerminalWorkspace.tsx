@@ -1,4 +1,4 @@
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, resolveSshSocksProxy, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 import { resolveLocalShellForLaunch } from "./pwshPreflight";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
 import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
@@ -1141,7 +1141,7 @@ function tmuxConnectionRequest(connection: Connection) {
     port: connection.port,
     keyPath: connection.keyPath,
     proxyJump: connection.proxyJump,
-    sshSocksProxy: connection.sshSocksProxyInheritDefaults === false ? connection.sshSocksProxy : sshSettings.defaultSshSocksProxy,
+    sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
     authMethod: connection.authMethod,
     secretOwnerId: connectionPasswordOwnerId(connection),
   };
@@ -1836,6 +1836,7 @@ function TerminalPaneView({
             request: {
               host: connection.host,
               port: connection.port,
+              sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
             },
           });
           await confirmTrustedSshHostKey(preview);
@@ -1864,7 +1865,7 @@ function TerminalPaneView({
             port: connection.port,
             keyPath: connection.keyPath,
             proxyJump: connection.proxyJump,
-            sshSocksProxy: connection.sshSocksProxyInheritDefaults === false ? connection.sshSocksProxy : sshSettings.defaultSshSocksProxy,
+            sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
             authMethod: connection.authMethod,
             secretOwnerId: connectionPasswordOwnerId(connection),
             shell,

@@ -27,7 +27,7 @@ import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
 } from "./connectionTabContextMenu";
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, uniqueRuntimeId, type LocalShellOption } from "./utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshSocksProxy, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
@@ -683,6 +683,7 @@ export function ConnectionSidebar({
           port: connection.port,
           keyPath: connection.keyPath,
           proxyJump: connection.proxyJump,
+          sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
           authMethod: connection.authMethod,
           secretOwnerId: connectionPasswordOwnerId(connection),
         },
@@ -797,6 +798,7 @@ export function ConnectionSidebar({
         request: {
           host: connection.host,
           port: connection.port,
+          sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
         },
       });
       await confirmTrustedSshHostKey(hostKeyPreview);
@@ -808,6 +810,7 @@ export function ConnectionSidebar({
           password,
           keyPath,
           proxyJump: connection.proxyJump,
+          sshSocksProxy: resolveSshSocksProxy(connection, sshSettings),
         },
       });
       setTransferSshPublicKeyDialog(null);

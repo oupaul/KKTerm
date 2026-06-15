@@ -206,7 +206,7 @@ Terminal Connection backgrounds use the same shared background picker datasource
 
 ### SSH Transport
 
-Owns in-process SSH connections, host key verification, authentication, terminal channels, resize propagation, idle behavior, bounded tmux reattach behavior, optional system ssh fallback/debug, SOCKS proxy launch through system `ssh` + netcat `ProxyCommand`, and noninteractive remote tmux management commands.
+Owns in-process SSH connections, host key verification, authentication, terminal channels, resize propagation, idle behavior, bounded tmux reattach behavior, optional system ssh fallback/debug, native SOCKS5 proxy dialing for terminals/tmux/SFTP/key-transfer (no external tools; mutually exclusive with ProxyJump), and noninteractive remote tmux management commands.
 
 Evaluate `russh` first. Evaluate `ssh2` if `russh` does not meet v0.1 needs.
 

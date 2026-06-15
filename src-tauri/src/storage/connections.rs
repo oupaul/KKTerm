@@ -34,7 +34,10 @@ impl Storage {
         let key_path = normalize_ssh_optional_field(request.key_path, &connection_type);
         let proxy_jump = normalize_ssh_optional_field(request.proxy_jump, &connection_type);
         let ssh_socks_proxy =
-            normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type);
+            match normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type) {
+                Some(value) => Some(crate::socks::validate_socks_proxy(&value)?),
+                None => None,
+            };
         let ssh_socks_proxy_inherit_defaults =
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
@@ -195,7 +198,10 @@ impl Storage {
         let key_path = normalize_ssh_optional_field(request.key_path, &connection_type);
         let proxy_jump = normalize_ssh_optional_field(request.proxy_jump, &connection_type);
         let ssh_socks_proxy =
-            normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type);
+            match normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type) {
+                Some(value) => Some(crate::socks::validate_socks_proxy(&value)?),
+                None => None,
+            };
         let ssh_socks_proxy_inherit_defaults =
             connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;

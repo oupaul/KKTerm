@@ -806,6 +806,7 @@ impl SessionManager {
                     tmux_history_limit: ssh_buffer_lines_for(request.ssh_buffer_lines),
                     x11_forwarding: managed_x_server_display
                         .map(|display| ssh::NativeSshX11Forwarding { display }),
+                    socks_proxy: request.ssh_socks_proxy.clone(),
                 },
             ) {
                 Ok(session) => {
@@ -1124,6 +1125,7 @@ impl SessionManager {
             auth: native_ssh_auth_for(&terminal_request, password, &auth_method)?,
             known_hosts_path: ssh::app_known_hosts_path(&app)?,
             x11_forwarding: None,
+            socks_proxy: terminal_request.ssh_socks_proxy.clone(),
         };
         let listener = StdTcpListener::bind((Ipv4Addr::LOCALHOST, 0))
             .map_err(|error| format!("failed to bind local port forward listener: {error}"))?;
@@ -1347,6 +1349,9 @@ fn uses_native_ssh(
     password: Option<&str>,
     auth_method: &SshAuthMethod,
 ) -> bool {
+    // A SOCKS proxy no longer forces the system-ssh path: the native russh
+    // transport dials through the proxy itself (see `ssh::connect_verified_client`).
+    // ProxyJump still requires the system `ssh` client.
     request.connection_type.trim().eq_ignore_ascii_case("ssh")
         && ssh::can_start_native_terminal(
             request.key_path.as_deref(),
@@ -1354,11 +1359,27 @@ fn uses_native_ssh(
             matches!(auth_method, SshAuthMethod::Agent),
             request.proxy_jump.as_deref(),
         )
-        && !request
-            .ssh_socks_proxy
-            .as_deref()
-            .map(str::trim)
-            .is_some_and(|value| !value.is_empty())
+}
+
+/// The system `ssh` fallback (used for ProxyJump and keyboard-interactive
+/// auth) cannot tunnel through a SOCKS proxy without an external `nc`/netcat
+/// helper, which is not available on every platform. SOCKS is therefore handled
+/// exclusively by the native russh transport; reaching this path with a SOCKS
+/// proxy configured means it was combined with something the native transport
+/// cannot do (e.g. ProxyJump), so we fail loudly instead of silently bypassing
+/// the proxy.
+fn reject_socks_proxy_on_system_ssh(ssh_socks_proxy: Option<&str>) -> Result<(), String> {
+    if ssh_socks_proxy
+        .map(str::trim)
+        .is_some_and(|value| !value.is_empty())
+    {
+        return Err(
+            "SOCKS proxy is handled by the native SSH transport and cannot be combined with \
+             ProxyJump or the system ssh fallback"
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1498,6 +1519,7 @@ fn run_ssh_command(
             known_hosts_path: ssh::app_known_hosts_path(&app)?,
             command,
             timeout_seconds: timeout.map(|duration| duration.as_secs().max(1)),
+            socks_proxy: terminal_request.ssh_socks_proxy.clone(),
         });
     }
 
@@ -1780,12 +1802,7 @@ fn run_system_ssh_command(
             command.arg(proxy_jump);
         }
     }
-    if let Some(socks_proxy) = request.ssh_socks_proxy.as_ref().map(|value| value.trim()) {
-        if !socks_proxy.is_empty() {
-            command.arg("-o");
-            command.arg(format!("ProxyCommand=nc -x {socks_proxy} %h %p"));
-        }
-    }
+    reject_socks_proxy_on_system_ssh(request.ssh_socks_proxy.as_deref())?;
 
     let target = match request.user.trim() {
         "" => host.to_string(),
@@ -2077,12 +2094,7 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                     command.arg(proxy_jump);
                 }
             }
-            if let Some(socks_proxy) = request.ssh_socks_proxy.as_ref().map(|value| value.trim()) {
-                if !socks_proxy.is_empty() {
-                    command.arg("-o");
-                    command.arg(format!("ProxyCommand=nc -x {socks_proxy} %h %p"));
-                }
-            }
+            reject_socks_proxy_on_system_ssh(request.ssh_socks_proxy.as_deref())?;
 
             let target = match request.user.trim() {
                 "" => host.to_string(),

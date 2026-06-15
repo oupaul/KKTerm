@@ -85,6 +85,7 @@ pub struct NativeSshTerminalRequest {
     pub tmux_session_id: Option<String>,
     pub tmux_history_limit: u32,
     pub x11_forwarding: Option<NativeSshX11Forwarding>,
+    pub socks_proxy: Option<String>,
 }
 
 #[derive(Clone)]
@@ -109,6 +110,7 @@ pub(crate) struct NativeSshConnectionRequest {
     pub auth: NativeSshAuth,
     pub known_hosts_path: PathBuf,
     pub x11_forwarding: Option<NativeSshX11Forwarding>,
+    pub socks_proxy: Option<String>,
 }
 
 #[derive(Clone)]
@@ -120,6 +122,7 @@ pub(crate) struct NativeSshCommandRequest {
     pub known_hosts_path: PathBuf,
     pub command: String,
     pub timeout_seconds: Option<u64>,
+    pub socks_proxy: Option<String>,
 }
 
 #[derive(Clone)]
@@ -134,6 +137,8 @@ pub enum NativeSshAuth {
 pub struct InspectSshHostKeyRequest {
     host: String,
     port: Option<u16>,
+    #[serde(default)]
+    ssh_socks_proxy: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -317,6 +322,7 @@ pub fn start_native_terminal(
         tmux_session_id: request.tmux_session_id,
         tmux_history_limit: clamp_tmux_history_limit(request.tmux_history_limit),
         x11_forwarding: request.x11_forwarding,
+        socks_proxy: request.socks_proxy,
     };
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let (ready_tx, ready_rx) = std_mpsc::sync_channel(1);
@@ -362,6 +368,12 @@ pub fn inspect_host_key(
 ) -> Result<SshHostKeyPreview, String> {
     let host = required_host(request.host)?;
     let port = request.port.unwrap_or(22);
+    let socks_proxy = request
+        .ssh_socks_proxy
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
     let server_public_key = Arc::new(std::sync::Mutex::new(None));
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -375,14 +387,17 @@ pub fn inspect_host_key(
         });
         let capture = Arc::clone(&server_public_key);
         with_ssh_startup_timeout("inspecting SSH host key", async {
-            let session = client::connect(
-                config,
-                (host.as_str(), port),
-                InspectingClient {
-                    server_public_key: capture,
-                },
-            )
-            .await
+            let inspecting = InspectingClient {
+                server_public_key: capture,
+            };
+            let session = match socks_proxy.as_deref() {
+                Some(proxy) => {
+                    let stream =
+                        crate::socks::connect_via_socks5(proxy, host.as_str(), port).await?;
+                    client::connect_stream(config, stream, inspecting).await
+                }
+                None => client::connect(config, (host.as_str(), port), inspecting).await,
+            }
             .map_err(|error| format!("failed to inspect SSH host key: {error}"))?;
             let _ = session
                 .disconnect(Disconnect::ByApplication, "host key inspected", "en")
@@ -507,6 +522,7 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
         auth: request.auth,
         known_hosts_path: request.known_hosts_path,
         x11_forwarding: None,
+        socks_proxy: request.socks_proxy,
     })
     .await?;
 
@@ -661,6 +677,7 @@ async fn run_native_terminal_once(
             auth: request.auth.clone(),
             known_hosts_path: request.known_hosts_path.clone(),
             x11_forwarding: request.x11_forwarding.clone(),
+            socks_proxy: request.socks_proxy.clone(),
         })
         .await?;
 
@@ -967,23 +984,38 @@ pub(crate) async fn connect_verified_client(
     let auth = normalize_native_ssh_auth(request.auth)?;
     let config = Arc::new(native_ssh_client_config());
     let host_key_rejection = Arc::new(std::sync::Mutex::new(None));
+    let socks_proxy = request
+        .socks_proxy
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
     with_ssh_startup_timeout("connecting to SSH server", async {
-        let mut session = client::connect(
-            config,
-            (host, request.port),
-            VerifyingClient {
-                host: host.to_string(),
-                port: request.port,
-                known_hosts_path: request.known_hosts_path,
-                rejection: Arc::clone(&host_key_rejection),
-                x11_forwarding: request.x11_forwarding,
-            },
-        )
-        .await
-        .map_err(|error| {
-            remembered_rejection(&host_key_rejection)
-                .unwrap_or_else(|| format!("failed to connect to SSH server: {error}"))
-        })?;
+        let verifying = VerifyingClient {
+            host: host.to_string(),
+            port: request.port,
+            known_hosts_path: request.known_hosts_path,
+            rejection: Arc::clone(&host_key_rejection),
+            x11_forwarding: request.x11_forwarding,
+        };
+        let connect = async {
+            match socks_proxy.as_deref() {
+                Some(proxy) => {
+                    let stream =
+                        crate::socks::connect_via_socks5(proxy, host, request.port).await?;
+                    client::connect_stream(config, stream, verifying)
+                        .await
+                        .map_err(|error| format!("failed to connect to SSH server: {error}"))
+                }
+                None => client::connect(config, (host, request.port), verifying)
+                    .await
+                    .map_err(|error| {
+                        remembered_rejection(&host_key_rejection)
+                            .unwrap_or_else(|| format!("failed to connect to SSH server: {error}"))
+                    }),
+            }
+        };
+        let mut session = connect.await?;
 
         authenticate_native_ssh(&mut session, user, &auth).await?;
         Ok(session)
@@ -1646,6 +1678,7 @@ mod tests {
             auth: config.auth,
             known_hosts_path: config.known_hosts_path,
             x11_forwarding: None,
+            socks_proxy: None,
         })
         .await?;
 
@@ -1768,6 +1801,7 @@ mod tests {
             tmux_session_id: None,
             tmux_history_limit: 5_000,
             x11_forwarding: None,
+            socks_proxy: None,
         }
     }
 

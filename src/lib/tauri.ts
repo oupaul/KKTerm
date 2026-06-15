@@ -1475,7 +1475,7 @@ type CommandMap = {
     result: ScanNetworkResponse;
   };
   inspect_ssh_host_key: {
-    args: { request: { host: string; port?: number } };
+    args: { request: { host: string; port?: number; sshSocksProxy?: string } };
     result: SshHostKeyPreview;
   };
   trust_ssh_host_key: {
