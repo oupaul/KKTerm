@@ -31,7 +31,7 @@ The window is divided into four regions:
 2. **Connections Panel** (resizable, left) — visible inside the Workspace Module only. See [03-connections.md](03-connections.md).
 3. **Workspace Canvas** (centre) — Tab Strip plus active Tab content for the current Module, or Child Connection Tabs in the Connection Tree when the top Tab Strip is hidden.
 4. **AI Assistant Panel** (resizable, right) — `app.aiAssistant`. Collapsible. See [13-ai-assistant.md](13-ai-assistant.md).
-5. **Status Bar** (bottom, full width) — host usage metrics and transient notifications.
+5. **Status Bar** (bottom, full width) — host usage metrics and transient notifications that appear as popups just above the bar.
 
 Resize handles use the labels `app.resizeConnections` and `app.resizeAiAssistant`.
 
@@ -60,7 +60,7 @@ The title-bar close button is the standard close path. KKTerm always uses its cu
 
 ## "Don't Sleep" mode
 
-`app.dontSleep` keeps the OS awake while KKTerm is running. Toggled either from the Activity Rail menu or the tray (`app.trayDontSleep`). Rail hover text uses `app.dontSleepEnabledTooltip` or `app.dontSleepDisabledTooltip` depending on state. Status messages: `app.dontSleepEnabled`, `app.dontSleepDisabled`. Errors surface as `app.dontSleepError`.
+`app.dontSleep` keeps the OS awake while KKTerm is running. Toggled either from the Activity Rail menu or the tray (`app.trayDontSleep`). Rail hover text uses `app.dontSleepEnabledTooltip` or `app.dontSleepDisabledTooltip` depending on state. Status popups use `app.dontSleepEnabled` and `app.dontSleepDisabled`. Errors surface as `app.dontSleepError`.
 
 Settings - Don't Sleep (`settings.sectionDontSleep`) controls whether the keep-awake effect applies only while KKTerm is foregrounded. When `settings.dontSleepForegroundOnly` is on, enabling `app.dontSleep` stores the mode as enabled but the OS power assertion is active only while the main KKTerm window is focused and not minimized. When it is off, Don't Sleep keeps the OS awake globally while KKTerm is running.
 

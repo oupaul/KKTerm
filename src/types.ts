@@ -772,7 +772,8 @@ export interface StatusBarNotice {
   id: number;
   message: string;
   tone: "success" | "info" | "warning" | "error";
-  expiresAt: number;
+  durationMs: number;
+  expiresAt: number | null;
 }
 
 export type SecretKind =

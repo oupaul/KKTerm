@@ -1339,14 +1339,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       },
     })),
   showStatusBarNotice: (message, options) => {
+    const tone = options?.tone ?? "info";
     const durationMs = options?.durationMs ?? 5_000;
     const now = Date.now();
     set({
       statusBarNotice: {
         id: (statusBarNoticeSequence += 1),
         message,
-        tone: options?.tone ?? "info",
-        expiresAt: now + durationMs,
+        tone,
+        durationMs,
+        expiresAt: tone === "error" ? null : now + durationMs,
       },
     });
   },

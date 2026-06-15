@@ -273,7 +273,14 @@
 }
 
 .status-bar-notice-area {
+  position: fixed;
+  right: 0;
+  bottom: 28px;
+  left: 0;
+  z-index: 9999;
+  padding-bottom: 16px;
   justify-content: center;
+  pointer-events: none;
 }
 
 .status-bar-actions {
@@ -557,67 +564,155 @@
   text-align: left;
 }
 
-.status-notification {
-  max-width: 100%;
-  color: var(--text);
+.status-popup {
+  position: relative;
+  max-width: min(440px, calc(100vw - 48px));
   opacity: 1;
-  text-align: center;
-  transform: translateY(0);
+  pointer-events: auto;
+  cursor: default;
+  --notice-tone: var(--accent);
   will-change: opacity, transform;
 }
 
-.status-notification.is-entering {
-  animation: status-notification-in 180ms ease-out both;
+.status-popup.success {
+  --notice-tone: var(--green);
 }
 
-.status-notification.is-exiting {
-  animation: status-notification-out 220ms ease-in both;
+.status-popup.info {
+  --notice-tone: var(--accent);
 }
 
-.status-notification.success {
-  color: var(--green);
+.status-popup.warning {
+  --notice-tone: var(--amber);
 }
 
-.status-notification.warning {
-  color: var(--amber);
+.status-popup.error {
+  --notice-tone: var(--red);
 }
 
-.status-notification.error {
-  color: var(--red);
+.status-popup-pulse {
+  display: inline-flex;
+  gap: 11px;
+  align-items: center;
+  padding: 11px 20px 14px 16px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--border) 46%, var(--surface));
+  border-radius: 20px;
+  box-shadow:
+    var(--shadow),
+    inset 0 0.5px 0 color-mix(in srgb, var(--surface) 62%, var(--text) 8%),
+    0 0 0 3px color-mix(in srgb, var(--notice-tone) 16%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
 }
 
-.status-notification.info {
-  color: var(--accent);
+.status-popup-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--notice-tone);
 }
 
-@keyframes status-notification-in {
+.status-bar .status-popup-message {
+  display: block;
+  max-width: 340px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  text-overflow: ellipsis;
+  text-wrap: pretty;
+  white-space: nowrap;
+}
+
+.status-popup-close {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 18%);
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.status-popup:hover .status-popup-close,
+.status-popup-close:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.status-popup-timer {
+  position: absolute;
+  right: 16px;
+  bottom: 7px;
+  left: 16px;
+  height: 2.5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--notice-tone) 30%, transparent);
+  border-radius: 2px;
+}
+
+.status-popup-timer i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--notice-tone);
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.status-popup.is-running .status-popup-timer i {
+  transition: transform linear;
+  transform: scaleX(0);
+}
+
+.status-popup.is-entering {
+  animation: status-popup-enter-pulse 460ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.status-popup.is-exiting {
+  opacity: 0;
+  transform: translateY(16px) scale(0.97);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+@keyframes status-popup-enter-pulse {
   from {
     opacity: 0;
-    transform: translateY(2px);
+    transform: translateY(12px) scale(0.78);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes status-notification-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(2px);
+    transform: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-notification.is-entering,
-  .status-notification.is-exiting {
+  .status-popup.is-entering {
     animation: none;
+  }
+
+  .status-popup.is-exiting {
+    transition: opacity 150ms ease;
+    transform: none;
   }
 
   .app-shell.panel-animating {

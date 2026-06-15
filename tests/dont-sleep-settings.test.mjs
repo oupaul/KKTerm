@@ -11,12 +11,16 @@ const settingsPageSource = await readFile(
   "utf8",
 );
 const appCss = await readFile(new URL("../src/app/app.css", import.meta.url), "utf8");
-const coffeeSvg = await readFile(
-  new URL("../src/assets/dontsleep/coffee.svg", import.meta.url),
+const workspaceCss = await readFile(
+  new URL("../src/modules/workspace/workspace.css", import.meta.url),
   "utf8",
 );
-const sleepSvg = await readFile(
-  new URL("../src/assets/dontsleep/sleep.svg", import.meta.url),
+const statusBarSource = await readFile(
+  new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url),
+  "utf8",
+);
+const nativeOverlaySource = await readFile(
+  new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
   "utf8",
 );
 const localeEn = JSON.parse(
@@ -30,7 +34,7 @@ const defaultsSource = await readFile(
   "utf8",
 );
 
-test("Don't Sleep rail uses state-specific tooltip copy and transition SVG assets", () => {
+test("Don't Sleep rail uses state-specific tooltip copy and shared Pulse status popup", () => {
   assert.equal(
     localeEn.app.dontSleepEnabledTooltip,
     "Don't Sleep enabled, click to disable",
@@ -41,23 +45,19 @@ test("Don't Sleep rail uses state-specific tooltip copy and transition SVG asset
   );
   assert.equal(localeZhTw.app.dontSleepEnabledTooltip, "不讓你睡啓用中！按一下停用");
   assert.equal(localeZhTw.app.dontSleepDisabledTooltip, "不讓你睡停用中！按一下啓用");
-  assert.equal(localeEn.app.dontSleepAnimationEnabledLabel, "Enabled");
-  assert.equal(localeEn.app.dontSleepAnimationDisabledLabel, "Disabled");
-  assert.match(activityRailSource, /import coffeeAnimationUrl from "\.\.\/assets\/dontsleep\/coffee\.svg\?url";/);
-  assert.match(activityRailSource, /import sleepAnimationUrl from "\.\.\/assets\/dontsleep\/sleep\.svg\?url";/);
+  assert.doesNotMatch(activityRailSource, /assets\/dontsleep/);
   assert.match(activityRailSource, /RailTooltip label=\{dontSleepTooltip\}/);
-  assert.match(activityRailSource, /dont-sleep-animation/);
-  assert.match(activityRailSource, /dontSleepAnimation\.enabled[\s\S]*app\.dontSleepAnimationEnabledLabel[\s\S]*app\.dontSleepAnimationDisabledLabel/);
-  assert.match(appCss, /\.dont-sleep-animation[\s\S]*left:\s*calc\(100% \+ 22px\);/);
-  assert.match(appCss, /\.dont-sleep-animation-image[\s\S]*width:\s*40px;[\s\S]*height:\s*40px;/);
-  assert.match(appCss, /\.dont-sleep-animation-label/);
+  assert.doesNotMatch(activityRailSource, /dontSleepAnimation|dont-sleep-animation/);
+  assert.doesNotMatch(appCss, /dont-sleep-animation/);
   assert.match(appCss, /\.rail-button-dont-sleep\.dont-sleep-enabled svg[\s\S]*color:\s*var\(--green\);[\s\S]*stroke:\s*currentColor;/);
-  assert.match(coffeeSvg, /viewBox="760 900 1550 1250"/);
-  assert.match(coffeeSvg, /#15915f/);
-  assert.match(coffeeSvg, /#34c759/);
-  assert.match(sleepSvg, /viewBox="80 150 650 500"/);
-  assert.match(sleepSvg, /#4b5563/);
-  assert.doesNotMatch(sleepSvg, /#0066ff/i);
+  assert.match(statusBarSource, /function StatusNoticePopup/);
+  for (const iconName of ["CircleCheck", "Info", "TriangleAlert", "CircleX"]) {
+    assert.match(statusBarSource, new RegExp(`\\b${iconName}\\b`));
+  }
+  assert.match(workspaceCss, /\.status-popup-pulse[\s\S]*blur\(24px\) saturate\(180%\)/);
+  assert.match(workspaceCss, /@keyframes status-popup-enter-pulse[\s\S]*translateY\(12px\) scale\(0\.78\)/);
+  assert.match(workspaceCss, /\.status-bar-notice-area[\s\S]*bottom:\s*28px;[\s\S]*z-index:\s*9999;/);
+  assert.match(nativeOverlaySource, /"\.status-bar-notice-area"/);
 });
 
 test("Don't Sleep has its own foreground-only Settings section", () => {

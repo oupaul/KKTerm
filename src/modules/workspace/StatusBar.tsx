@@ -1,10 +1,15 @@
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  CircleCheck,
+  CircleX,
   Coffee,
   Cpu,
+  Info,
   LoaderCircle,
   MemoryStick,
+  TriangleAlert,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
@@ -14,6 +19,7 @@ import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-usage/AiCodingUsageStatusBar";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
+import type { StatusBarNotice } from "../../types";
 import { WatchdogStatusBar } from "../../watchdog/WatchdogStatusBar";
 
 const NOTIFICATION_FADE_MS = 220;
@@ -33,6 +39,7 @@ export function StatusBar({
   const clearStatusBarNotice = useWorkspaceStore((state) => state.clearStatusBarNotice);
   const [renderedNotice, setRenderedNotice] = useState(notice);
   const [isNoticeExiting, setIsNoticeExiting] = useState(false);
+  const [isNoticeTimerRunning, setIsNoticeTimerRunning] = useState(false);
 
   useEffect(() => {
     if (!notice) {
@@ -40,11 +47,17 @@ export function StatusBar({
     }
     setRenderedNotice(notice);
     setIsNoticeExiting(false);
+    setIsNoticeTimerRunning(false);
+    const frame = window.requestAnimationFrame(() => setIsNoticeTimerRunning(true));
+    if (notice.expiresAt === null) {
+      return () => window.cancelAnimationFrame(frame);
+    }
     const remainingMs = Math.max(0, notice.expiresAt - Date.now());
     const fadeDelayMs = Math.max(0, remainingMs - NOTIFICATION_FADE_MS);
     const fadeTimeout = window.setTimeout(() => setIsNoticeExiting(true), fadeDelayMs);
     const clearTimeout = window.setTimeout(() => clearStatusBarNotice(notice.id), remainingMs);
     return () => {
+      window.cancelAnimationFrame(frame);
       window.clearTimeout(fadeTimeout);
       window.clearTimeout(clearTimeout);
     };
@@ -61,9 +74,19 @@ export function StatusBar({
     const timeout = window.setTimeout(() => {
       setRenderedNotice(undefined);
       setIsNoticeExiting(false);
+      setIsNoticeTimerRunning(false);
     }, NOTIFICATION_FADE_MS);
     return () => window.clearTimeout(timeout);
   }, [isNoticeExiting, notice]);
+
+  function dismissRenderedNotice() {
+    const noticeId = renderedNotice?.id;
+    if (!noticeId || isNoticeExiting) {
+      return;
+    }
+    setIsNoticeExiting(true);
+    window.setTimeout(() => clearStatusBarNotice(noticeId), NOTIFICATION_FADE_MS);
+  }
 
   return (
     <footer className="status-bar" data-tutorial-id="workspace.statusBar">
@@ -73,14 +96,13 @@ export function StatusBar({
       </div>
       <div className="status-bar-notice-area">
         {renderedNotice ? (
-          <span
-            className={`status-notification ${renderedNotice.tone} ${
-              isNoticeExiting ? "is-exiting" : "is-entering"
-            }`}
-            role="status"
-          >
-            {renderedNotice.message}
-          </span>
+          <StatusNoticePopup
+            dismissLabel={t("app.titlebar.close")}
+            isExiting={isNoticeExiting}
+            isTimerRunning={isNoticeTimerRunning}
+            notice={renderedNotice}
+            onDismiss={dismissRenderedNotice}
+          />
         ) : null}
       </div>
       <div className="status-bar-actions">
@@ -91,6 +113,64 @@ export function StatusBar({
       </div>
     </footer>
   );
+}
+
+function StatusNoticePopup({
+  dismissLabel,
+  isExiting,
+  isTimerRunning,
+  notice,
+  onDismiss,
+}: {
+  dismissLabel: string;
+  isExiting: boolean;
+  isTimerRunning: boolean;
+  notice: StatusBarNotice;
+  onDismiss: () => void;
+}) {
+  const durationStyle = {
+    transitionDuration: `${notice.durationMs}ms`,
+  };
+
+  return (
+    <div
+      className={`status-popup status-popup-pulse ${notice.tone} ${
+        isExiting ? "is-exiting" : "is-entering"
+      } ${isTimerRunning && notice.expiresAt !== null ? "is-running" : ""}`}
+    >
+      <span className="status-popup-icon" aria-hidden="true">
+        <StatusNoticeIcon tone={notice.tone} />
+      </span>
+      <span className="status-popup-message" role="status">
+        {notice.message}
+      </span>
+      <span className="status-popup-timer" aria-hidden="true">
+        <i style={durationStyle} />
+      </span>
+      <button
+        className="status-popup-close"
+        aria-label={dismissLabel}
+        onClick={onDismiss}
+        type="button"
+      >
+        <X size={11} strokeWidth={2.6} />
+      </button>
+    </div>
+  );
+}
+
+function StatusNoticeIcon({ tone }: { tone: "success" | "info" | "warning" | "error" }) {
+  switch (tone) {
+    case "success":
+      return <CircleCheck size={21} strokeWidth={2.4} />;
+    case "warning":
+      return <TriangleAlert size={21} strokeWidth={2.2} />;
+    case "error":
+      return <CircleX size={21} strokeWidth={2.2} />;
+    case "info":
+    default:
+      return <Info size={21} strokeWidth={2.2} />;
+  }
 }
 
 function XServerStatusIcon() {

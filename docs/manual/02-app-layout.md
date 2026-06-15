@@ -16,7 +16,7 @@ Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
    Each icon's tooltip uses `app.openPinnedConnection` or `app.openConnectedConnection` with the Connection name interpolated as `{{name}}`.
-4. **Don't Sleep** (`app.activityRailDontSleep`) — the keep-awake control. The tooltip changes between `app.dontSleepEnabledTooltip` and `app.dontSleepDisabledTooltip`; toggling plays a short local SVG animation beside the icon.
+4. **Don't Sleep** (`app.activityRailDontSleep`) — the keep-awake control. The tooltip changes between `app.dontSleepEnabledTooltip` and `app.dontSleepDisabledTooltip`; toggling shows the shared status popup above the Status Bar.
 5. **Settings** — anchored to the bottom of the rail.
 
 The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). In the Windows Tauri runtime, the same helper uses a native topmost tooltip so rail labels can appear above RDP ActiveX surfaces. Native browser `title` tooltips are forbidden here.
@@ -65,7 +65,7 @@ Owned by `src/modules/workspace/StatusBar.tsx`. Three roles:
    - `workspace.ram` / `workspace.ramUsage` / `workspace.memory`
    - `workspace.network` / `workspace.networkUsage`, broken into `workspace.networkDownstream` and `workspace.networkUpstream`
    Clicking the metrics opens the system activity monitor (Task Manager on Windows, Activity Monitor on macOS). General Settings → `settings.statusBar` can disable this monitor completely with `settings.statusBarMonitor`; when disabled, host usage polling stops instead of only hiding the metrics. `settings.statusBarMonitorInterval` controls the polling interval while enabled.
-2. **Transient notifications** — driven by the shared `showStatusBarNotice` store action. Success messages default to 5 seconds, then fade. Do not implement one-off toast surfaces; route through `showStatusBarNotice`.
+2. **Transient notifications** — driven by the shared `showStatusBarNotice` store action. Messages render as Pulse-style popups above the Status Bar, with direct tone icons for success, info, warning, and error. Success/info/warning messages default to 5 seconds with a running progress hairline; errors stay until dismissed. Do not implement one-off toast surfaces; route through `showStatusBarNotice`.
 3. **Watchdog state** — when one or more watchdogs exist, the right side shows an animated watchdog icon with `watchdog.statusBarLabel`. Activating it opens a list of running or terminal-undismissed watchdogs. Selecting a watchdog opens its detail panel with state, elapsed time, watch summary, next check, exit condition, notification method, action mode, recent values, trigger events, AI interventions, and report actions.
 4. **Don't Sleep state** — when Don't Sleep mode is enabled, the right side shows a coffee icon with tooltip `app.dontSleepStatusEnabled`. If `settings.dontSleepForegroundOnly` is on, this indicates the user-facing mode is enabled; the OS power assertion is active only while KKTerm is focused and not minimized.
 
