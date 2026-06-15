@@ -170,10 +170,11 @@ function UnitSelect({ units, value, onChange }: { units: typeof UNIT_DEFINITIONS
 }
 
 function CurrencySelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { t } = useTranslation();
   return (
     <select value={value} onChange={(event) => onChange(event.currentTarget.value)}>
       {CURRENCIES.map((currency) => (
-        <option key={currency} value={currency}>{currency}</option>
+        <option key={currency} value={currency}>{currency} · {t(`dashboard.currencyName.${currency}`)}</option>
       ))}
     </select>
   );
