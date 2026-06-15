@@ -15,6 +15,7 @@ export function WorkspaceSettings() {
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
   const hasChanges =
     draft.hideTopTabButtons !== generalSettings.hideTopTabButtons ||
+    draft.doubleClickOpensConnection !== generalSettings.doubleClickOpensConnection ||
     draft.submitAiAttachmentsDirectly !== generalSettings.submitAiAttachmentsDirectly ||
     draft.separateSplitTerminalBackgrounds !== generalSettings.separateSplitTerminalBackgrounds ||
     draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail;
@@ -29,6 +30,7 @@ export function WorkspaceSettings() {
       const request = {
         ...currentSettings,
         hideTopTabButtons: draft.hideTopTabButtons,
+        doubleClickOpensConnection: draft.doubleClickOpensConnection,
         separateSplitTerminalBackgrounds: draft.separateSplitTerminalBackgrounds,
         showConnectedConnectionsInRail: draft.showConnectedConnectionsInRail,
         submitAiAttachmentsDirectly: draft.submitAiAttachmentsDirectly,
@@ -85,6 +87,18 @@ export function WorkspaceSettings() {
             <span>
               <strong>{t("settings.hideTopTabButtons")}</strong>
               <small>{t("settings.hideTopTabButtonsDesc")}</small>
+            </span>
+          </label>
+          <label className="settings-toggle-row">
+            <ToggleSwitch
+              checked={draft.doubleClickOpensConnection}
+              onChange={(checked) =>
+                setDraft((state) => ({ ...state, doubleClickOpensConnection: checked }))
+              }
+            />
+            <span>
+              <strong>{t("settings.doubleClickOpensConnection")}</strong>
+              <small>{t("settings.doubleClickOpensConnectionDesc")}</small>
             </span>
           </label>
         </div>

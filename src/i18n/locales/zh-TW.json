@@ -1315,6 +1315,8 @@
     "workspaceTabs": "分頁",
     "hideTopTabButtons": "在連線樹使用子連線分頁",
     "hideTopTabButtonsDesc": "啟用後會隱藏上方分頁列，已儲存的子連線分頁會以斜體列顯示在父連線底下。",
+    "doubleClickOpensConnection": "Double-click to open Connections",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
     "submitAiAttachmentsDirectly": "將螢幕截圖/文字直接提交給 AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "啟用時，「傳送到 AI Assistant」會將附加的螢幕截圖或終端緩衝區與預設求助要求一起提交。停用時，它只會附加脈絡，讓你輸入自己的問題。",
     "terminalBackgrounds": "終端機背景",

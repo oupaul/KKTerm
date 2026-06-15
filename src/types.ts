@@ -258,6 +258,7 @@ export interface GeneralSettings {
   showConnectedConnectionsInRail: boolean;
   showAllConnectionsInTree: boolean;
   hideTopTabButtons: boolean;
+  doubleClickOpensConnection: boolean;
   submitAiAttachmentsDirectly: boolean;
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;

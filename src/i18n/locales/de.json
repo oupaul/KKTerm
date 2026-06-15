@@ -1315,6 +1315,8 @@
     "workspaceTabs": "Tabs",
     "hideTopTabButtons": "Untergeordnete Verbindungs-Tabs im Verbindungsbaum verwenden",
     "hideTopTabButtonsDesc": "Wenn aktiviert, wird die obere Tab-Leiste ausgeblendet und gespeicherte untergeordnete Verbindungs-Tabs erscheinen kursiv unter ihrer übergeordneten Verbindung.",
+    "doubleClickOpensConnection": "Double-click to open Connections",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
     "submitAiAttachmentsDirectly": "Screenshot/Text direkt an den AI Assistant senden",
     "submitAiAttachmentsDirectlyDesc": "Wenn aktiviert, sendet \"An AI Assistant senden\" den angehängten Screenshot oder Terminalpuffer mit einer Standard-Hilfeanfrage. Wenn deaktiviert, wird der Kontext nur angehängt, damit du deine eigene Frage eingeben kannst.",
     "terminalBackgrounds": "Terminal-Hintergründe",

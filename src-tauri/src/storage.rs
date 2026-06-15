@@ -273,6 +273,8 @@ pub struct GeneralSettings {
     show_all_connections_in_tree: bool,
     #[serde(default)]
     hide_top_tab_buttons: bool,
+    #[serde(default)]
+    double_click_opens_connection: bool,
     #[serde(default = "default_submit_ai_attachments_directly")]
     submit_ai_attachments_directly: bool,
     #[serde(default)]
@@ -3683,6 +3685,7 @@ fn default_general_settings() -> GeneralSettings {
         show_connected_connections_in_rail: true,
         show_all_connections_in_tree: false,
         hide_top_tab_buttons: false,
+        double_click_opens_connection: false,
         submit_ai_attachments_directly: default_submit_ai_attachments_directly(),
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),

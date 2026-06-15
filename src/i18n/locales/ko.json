@@ -1315,6 +1315,8 @@
     "workspaceTabs": "탭",
     "hideTopTabButtons": "연결 트리에서 하위 연결 탭 사용",
     "hideTopTabButtonsDesc": "사용하면 상단 탭 스트립이 숨겨지고 저장된 하위 연결 탭이 부모 연결 아래에 기울임꼴 행으로 표시됩니다.",
+    "doubleClickOpensConnection": "Double-click to open Connections",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
     "submitAiAttachmentsDirectly": "스크린샷/텍스트를 AI Assistant에 바로 제출",
     "submitAiAttachmentsDirectlyDesc": "활성화하면 AI Assistant로 보내기가 첨부된 스크린샷 또는 터미널 버퍼를 기본 도움 요청과 함께 제출합니다. 비활성화하면 직접 질문을 입력할 수 있도록 컨텍스트만 첨부합니다.",
     "terminalBackgrounds": "터미널 배경",

@@ -1315,6 +1315,8 @@
     "workspaceTabs": "Tab",
     "hideTopTabButtons": "Gunakan Tab Koneksi Anak di Pohon Koneksi",
     "hideTopTabButtonsDesc": "Saat diaktifkan, Strip Tab atas disembunyikan dan Tab Koneksi Anak yang disimpan muncul sebagai baris miring di bawah Koneksi induknya.",
+    "doubleClickOpensConnection": "Double-click to open Connections",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
     "submitAiAttachmentsDirectly": "Kirim tangkapan layar/teks langsung ke AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "Saat diaktifkan, Kirim ke AI Assistant mengirim tangkapan layar atau buffer terminal terlampir dengan permintaan bantuan default. Saat dinonaktifkan, konteks hanya dilampirkan agar Anda dapat mengetik pertanyaan sendiri.",
     "terminalBackgrounds": "Latar belakang terminal",
