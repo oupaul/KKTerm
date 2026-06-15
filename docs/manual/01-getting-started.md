@@ -67,5 +67,5 @@ Settings - Don't Sleep (`settings.sectionDontSleep`) controls whether the keep-a
 ## Where to go next
 
 - To open a saved Connection: [03-connections.md](03-connections.md).
-- To start a session fast: Quick Connect saves the Connection (reusing an identical existing one when present) and opens it — see [03-connections.md](03-connections.md) §Quick Connect.
+- To start a session fast: Quick Connect saves the Connection (reusing an identical existing SSH Connection when present) and opens it — see [03-connections.md](03-connections.md) §Quick Connect.
 - To set up the AI Assistant: [13-ai-assistant.md](13-ai-assistant.md) plus [15-settings.md](15-settings.md) §AI.

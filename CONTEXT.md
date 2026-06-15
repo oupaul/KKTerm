@@ -40,7 +40,7 @@ A Connection of kind `rdp` or `vnc`. It stores host, optional port, and non-secr
 _Avoid_: Remote desktop session, screen profile, saved desktop
 
 **Quick Connect**:
-A fast path to start a Session that persists a saved Connection. Quick Connect reuses an identical existing Connection (matched by host/user/port for SSH, or shell for local shells) or creates one, then opens it — so every Quick Connect target becomes a durable Connection. The sole non-persisted case is an elevated admin shell launched while KKTerm itself is not elevated: that opens an external UAC process with no in-app Session.
+A fast path to start a Session that persists a saved Connection. Quick Connect reuses an identical existing SSH Connection (matched by host/user/port) or creates one, then opens it — so every Quick Connect target becomes a durable Connection. The sole non-persisted case is an elevated admin shell launched while KKTerm itself is not elevated: that opens an external UAC process with no in-app Session.
 _Avoid_: Temporary profile, ad hoc host, one-off session
 
 **Quick Command**:
@@ -163,7 +163,7 @@ _Avoid_: settings nav, settings menu
 - A **URL Connection** starts a URL **Session** that owns a stable overlay WebView2 window positioned over the active Pane.
 - An **RDP Connection** starts a Windows-native remote-desktop **Session** hosted as a native child control over its **Tab**.
 - A **VNC Connection** starts a Rust-managed remote framebuffer **Session** rendered into its **Tab**.
-- A **Quick Connect** persists a **Connection** (reusing an identical existing one when present) and starts a **Session** on it; the only non-persisted case is the external elevated admin shell launched when KKTerm is not elevated.
+- A **Quick Connect** persists a **Connection** (reusing an identical existing SSH Connection when present) and starts a **Session** on it; the only non-persisted case is the external elevated admin shell launched when KKTerm is not elevated.
 - A **Quick Command** writes input from the **Quick Command Bar** to a terminal **Pane** in an existing **Session**.
 - A **Session** may be presented by one **Tab**.
 - A terminal **Tab** may contain one or more **Panes**.

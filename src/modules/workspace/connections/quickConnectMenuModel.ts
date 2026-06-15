@@ -17,8 +17,8 @@ export function quickConnectRecentLabel(connection: Connection): string {
 const DEFAULT_SSH_PORT = 22;
 
 // Decides whether a Quick Connect target should reuse an existing saved
-// connection instead of creating a new one. SSH matches by host+user+port;
-// local shells match by shell. All other types always create.
+// connection instead of creating a new one. SSH matches by host+user+port.
+// Local shells and all other types always create new saved Connections.
 export function findMatchingConnection(
   connections: Connection[],
   candidate: Connection,
@@ -33,12 +33,23 @@ export function findMatchingConnection(
         (c.port ?? DEFAULT_SSH_PORT) === port,
     );
   }
-  if (candidate.type === "local") {
-    return connections.find(
-      (c) => c.type === "local" && (c.localShell ?? "") === (candidate.localShell ?? ""),
-    );
-  }
   return undefined;
+}
+
+export function nextQuickConnectName(connections: Connection[], preferredName: string): string {
+  const baseName = preferredName.trim();
+  const fallbackName = baseName || "Connection";
+  const usedNames = new Set(connections.map((connection) => connection.name));
+  if (!usedNames.has(fallbackName)) {
+    return fallbackName;
+  }
+
+  for (let suffix = 1; ; suffix += 1) {
+    const candidate = `${fallbackName} #${suffix}`;
+    if (!usedNames.has(candidate)) {
+      return candidate;
+    }
+  }
 }
 
 export type ElevatedLocalShellAction =
