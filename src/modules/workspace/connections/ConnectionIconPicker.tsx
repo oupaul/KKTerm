@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { IconLibraryPicker, type IconLibraryStaticOption } from "../../../app/IconLibraryPicker";
 import { lucideIconRefForName } from "../../../lib/iconCatalog";
+import { OS_ICON_ENTRIES, osIconRefForId } from "../../../lib/osIcons";
 import {
   ConnectionIcon,
   PREDEFINED_CONNECTION_ICON_TYPES,
@@ -41,8 +42,8 @@ export function ConnectionIconPicker({
   const currentSavedImageDataUrl = currentIconDataUrl?.startsWith("data:image/") ? currentIconDataUrl : null;
   const defaultIconSrc = connectionIconSrcForConnection({ localShell, type });
   const predefinedOptions = useMemo(
-    () => connectionPredefinedIconOptions(t, localShell),
-    [localShell, t],
+    () => connectionPredefinedIconOptions(t, type, localShell),
+    [localShell, t, type],
   );
   const reusableIconDataUrls = useMemo(
     () => customIconDataUrls.filter((dataUrl) => dataUrl !== currentIconDataUrl),
@@ -209,6 +210,7 @@ async function imageSourceToDataUrl(src: string) {
 
 function connectionPredefinedIconOptions(
   t: ReturnType<typeof useTranslation>["t"],
+  type: ConnectionType,
   localShell?: string,
 ): IconLibraryStaticOption[] {
   return [
@@ -224,6 +226,12 @@ function connectionPredefinedIconOptions(
       keywords: ["linux", "shell", "wsl"],
       icon: <ConnectionIcon localShell="wsl.exe" size={22} type="local" />,
     },
+    ...OS_ICON_ENTRIES.map((entry) => ({
+      value: osIconRefForId(entry.id),
+      label: entry.label,
+      keywords: entry.keywords,
+      icon: <ConnectionIcon iconDataUrl={osIconRefForId(entry.id)} size={22} type={type} />,
+    })),
   ];
 }
 
