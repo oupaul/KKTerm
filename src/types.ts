@@ -55,6 +55,8 @@ export interface Connection {
   port?: number;
   keyPath?: string;
   proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
   authMethod?: SshAuthMethod;
   hasPassword?: boolean;
   localShell?: string;
@@ -103,6 +105,8 @@ export interface CreateConnectionRequest {
   port?: number;
   keyPath?: string;
   proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
   authMethod?: SshAuthMethod;
   localShell?: string;
   localStartupDirectory?: string;
@@ -440,6 +444,7 @@ export interface SshSettings {
   defaultPort: number;
   defaultKeyPath?: string;
   defaultProxyJump?: string;
+  defaultSshSocksProxy?: string;
   bufferLines: number;
   defaultTransparency: number;
   useRandomDynamicBackground: boolean;

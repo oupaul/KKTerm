@@ -12,6 +12,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
   const defaultUser = settings.defaultUser.trim();
   const defaultKeyPath = settings.defaultKeyPath?.trim() || undefined;
   const defaultProxyJump = settings.defaultProxyJump?.trim() || undefined;
+  const defaultSshSocksProxy = settings.defaultSshSocksProxy?.trim() || undefined;
   const defaultPort = Math.round(settings.defaultPort);
   const bufferLines = Math.round(settings.bufferLines ?? 5000);
   const defaultTransparency = Math.round(settings.defaultTransparency ?? 50);
@@ -39,6 +40,7 @@ function normalizeSshSettingsDraft(settings: SshSettingsType, t: TFunction): Ssh
     defaultPort,
     defaultKeyPath,
     defaultProxyJump,
+    defaultSshSocksProxy,
     bufferLines,
     defaultTransparency,
     useRandomDynamicBackground: settings.useRandomDynamicBackground ?? false,
@@ -226,6 +228,21 @@ export function SshSettings() {
               value={sshDraft.defaultProxyJump ?? ""}
             />
             <small className="field-hint">{t("settings.proxyJumpHint")}</small>
+          </label>
+          <label>
+            <span>{t("settings.sshSocksProxy")}</span>
+            <input
+              onChange={(event) => {
+                const defaultSshSocksProxy = event.currentTarget.value;
+                setSshDraft((settings) => ({
+                  ...settings,
+                  defaultSshSocksProxy,
+                }));
+              }}
+              placeholder={t("settings.sshSocksProxyPlaceholder")}
+              value={sshDraft.defaultSshSocksProxy ?? ""}
+            />
+            <small className="field-hint">{t("settings.sshSocksProxyHint")}</small>
           </label>
         </div>
       </fieldset>

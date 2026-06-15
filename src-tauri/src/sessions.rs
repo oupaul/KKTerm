@@ -72,6 +72,7 @@ pub struct StartTerminalSessionRequest {
     pub port: Option<u16>,
     pub key_path: Option<String>,
     pub proxy_jump: Option<String>,
+    pub ssh_socks_proxy: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
     pub shell: Option<String>,
@@ -95,6 +96,7 @@ pub struct TmuxConnectionRequest {
     pub port: Option<u16>,
     pub key_path: Option<String>,
     pub proxy_jump: Option<String>,
+    pub ssh_socks_proxy: Option<String>,
     pub auth_method: Option<String>,
     pub secret_owner_id: Option<String>,
 }
@@ -1280,10 +1282,10 @@ fn normalize_elevated_shell(shell: &str) -> Result<&'static str, String> {
         "cmd.exe" => Ok("cmd.exe"),
         "powershell.exe" => Ok("powershell.exe"),
         "pwsh.exe" => Ok("pwsh.exe"),
-        _ => {
-            Err("elevated terminal shell must be Command Prompt, PowerShell, or PowerShell 7"
-                .to_string())
-        }
+        _ => Err(
+            "elevated terminal shell must be Command Prompt, PowerShell, or PowerShell 7"
+                .to_string(),
+        ),
     }
 }
 
@@ -1352,6 +1354,11 @@ fn uses_native_ssh(
             matches!(auth_method, SshAuthMethod::Agent),
             request.proxy_jump.as_deref(),
         )
+        && !request
+            .ssh_socks_proxy
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|value| !value.is_empty())
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1726,6 +1733,7 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         port: request.port,
         key_path: request.key_path.clone(),
         proxy_jump: request.proxy_jump.clone(),
+        ssh_socks_proxy: request.ssh_socks_proxy.clone(),
         auth_method: request.auth_method.clone(),
         secret_owner_id: request.secret_owner_id.clone(),
         shell: None,
@@ -1770,6 +1778,12 @@ fn run_system_ssh_command(
         if !proxy_jump.is_empty() {
             command.arg("-J");
             command.arg(proxy_jump);
+        }
+    }
+    if let Some(socks_proxy) = request.ssh_socks_proxy.as_ref().map(|value| value.trim()) {
+        if !socks_proxy.is_empty() {
+            command.arg("-o");
+            command.arg(format!("ProxyCommand=nc -x {socks_proxy} %h %p"));
         }
     }
 
@@ -1829,11 +1843,17 @@ fn run_command_with_timeout(
 
 fn ssh_system_context_cache_key(request: &TmuxConnectionRequest) -> String {
     format!(
-        "{}:{}:{}",
+        "{}:{}:{}:{}",
         request.host.trim().to_ascii_lowercase(),
         request.port.unwrap_or(22),
         request
             .proxy_jump
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or_default()
+            .to_ascii_lowercase(),
+        request
+            .ssh_socks_proxy
             .as_deref()
             .map(str::trim)
             .unwrap_or_default()
@@ -2055,6 +2075,12 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                 if !proxy_jump.is_empty() {
                     command.arg("-J");
                     command.arg(proxy_jump);
+                }
+            }
+            if let Some(socks_proxy) = request.ssh_socks_proxy.as_ref().map(|value| value.trim()) {
+                if !socks_proxy.is_empty() {
+                    command.arg("-o");
+                    command.arg(format!("ProxyCommand=nc -x {socks_proxy} %h %p"));
                 }
             }
 
@@ -2312,6 +2338,7 @@ mod tests {
             port: None,
             key_path: None,
             proxy_jump: None,
+            ssh_socks_proxy: None,
             auth_method: None,
             secret_owner_id: None,
             shell: None,
@@ -2388,6 +2415,7 @@ mod tests {
             port: Some(22),
             key_path: None,
             proxy_jump: None,
+            ssh_socks_proxy: None,
             auth_method: None,
             secret_owner_id: None,
             shell: None,

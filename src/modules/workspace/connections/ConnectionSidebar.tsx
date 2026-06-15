@@ -8,7 +8,7 @@ import { LocalConnectionFields } from "./connection-dialog/LocalConnectionFields
 import { LocalFilesConnectionFields } from "./connection-dialog/LocalFilesConnectionFields";
 import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/RdpConnectionFields";
 import { SerialConnectionFields } from "./connection-dialog/SerialConnectionFields";
-import { SshConnectionFields } from "./connection-dialog/SshConnectionFields";
+import { SshConnectionFields, SshConnectionOptions } from "./connection-dialog/SshConnectionFields";
 import { TelnetConnectionFields } from "./connection-dialog/TelnetConnectionFields";
 import { UrlConnectionFields } from "./connection-dialog/UrlConnectionFields";
 import { VncConnectionFields, VncConnectionOptions } from "./connection-dialog/VncConnectionFields";
@@ -3466,6 +3466,9 @@ function ConnectionDialog({
   const [rdpInheritsSettingsDefaults, setRdpInheritsSettingsDefaults] = useState(
     initialConnection?.rdpOptions?.inheritDefaults ?? true,
   );
+  const [sshSocksProxyInheritsSettingsDefaults, setSshSocksProxyInheritsSettingsDefaults] = useState(
+    initialConnection?.sshSocksProxyInheritDefaults ?? true,
+  );
   const [vncInheritsSettingsDefaults, setVncInheritsSettingsDefaults] = useState(
     initialConnection?.vncOptions?.inheritDefaults ?? true,
   );
@@ -3498,7 +3501,7 @@ function ConnectionDialog({
       ),
     [connectionType, passwordCredentials],
   );
-  const usesTwoColumnOptions = connectionType === "rdp" || connectionType === "vnc" || connectionType === "ftp";
+  const usesTwoColumnOptions = connectionType === "ssh" || connectionType === "rdp" || connectionType === "vnc" || connectionType === "ftp";
 
   useEffect(() => {
     if (!isEditMode || !initialConnection || !isTauriRuntime()) {
@@ -3603,6 +3606,8 @@ function ConnectionDialog({
     const passwordCredentialId = password ? "" : String(form.get("passwordCredentialId") ?? "").trim();
     const keyPath = String(form.get("keyPath") ?? "").trim();
     const proxyJump = String(form.get("proxyJump") ?? "").trim();
+    const sshSocksProxy = String(form.get("sshSocksProxy") ?? "").trim();
+    const sshSocksProxyInheritDefaults = form.get("sshSocksProxyInheritDefaults") === "on";
     const useTmuxSessions = form.get("useTmuxSessions") === "on";
     const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
@@ -3623,6 +3628,8 @@ function ConnectionDialog({
       port: portValue ? Number(portValue) : undefined,
       keyPath: usesSshDefaults && authMethod === "keyFile" ? keyPath || undefined : undefined,
       proxyJump: proxyJump || undefined,
+      sshSocksProxy: usesSshDefaults && !sshSocksProxyInheritDefaults ? sshSocksProxy || undefined : undefined,
+      sshSocksProxyInheritDefaults: usesSshDefaults ? sshSocksProxyInheritDefaults : undefined,
       authMethod: usesSshDefaults ? authMethod : undefined,
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,
       localShell: connectionType === "local" ? selectedLocalShell || undefined : undefined,
@@ -3907,6 +3914,15 @@ function ConnectionDialog({
 
   function renderConnectionTypeOptions() {
     switch (connectionType) {
+      case "ssh":
+        return (
+          <SshConnectionOptions
+            initialConnection={initialConnection}
+            onInheritsSettingsDefaultsChange={setSshSocksProxyInheritsSettingsDefaults}
+            sshInheritsSettingsDefaults={sshSocksProxyInheritsSettingsDefaults}
+            sshSettings={sshSettings}
+          />
+        );
       case "rdp":
         return (
           <RdpConnectionOptions

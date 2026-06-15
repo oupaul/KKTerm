@@ -94,6 +94,7 @@ export const defaultSshSettings: SshSettings = {
   defaultPort: 22,
   defaultKeyPath: "",
   defaultProxyJump: "",
+  defaultSshSocksProxy: "",
   bufferLines: 5000,
   defaultTransparency: 50,
   useRandomDynamicBackground: false,

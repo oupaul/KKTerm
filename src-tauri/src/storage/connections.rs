@@ -33,6 +33,10 @@ impl Storage {
         let folder_id = normalize_optional_id(request.folder_id);
         let key_path = normalize_ssh_optional_field(request.key_path, &connection_type);
         let proxy_jump = normalize_ssh_optional_field(request.proxy_jump, &connection_type);
+        let ssh_socks_proxy =
+            normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type);
+        let ssh_socks_proxy_inherit_defaults =
+            connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
         let local_shell = normalize_local_shell(request.local_shell, &connection_type)?;
         let local_startup_directory =
@@ -75,8 +79,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order, workspace_id
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, 'idle', ?23, ?24)",
+                    id, folder_id, name, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, connection_type, status, sort_order, workspace_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 'idle', ?25, ?26)",
                 params![
                     id,
                     folder_id,
@@ -86,6 +90,8 @@ impl Storage {
                     port,
                     key_path,
                     proxy_jump,
+                    ssh_socks_proxy,
+                    ssh_socks_proxy_inherit_defaults,
                     auth_method,
                     local_shell,
                     local_startup_directory,
@@ -127,6 +133,8 @@ impl Storage {
             port,
             key_path,
             proxy_jump,
+            ssh_socks_proxy,
+            ssh_socks_proxy_inherit_defaults,
             auth_method,
             local_shell,
             local_startup_directory,
@@ -186,6 +194,10 @@ impl Storage {
         let target_folder_id = normalize_optional_id(request.folder_id);
         let key_path = normalize_ssh_optional_field(request.key_path, &connection_type);
         let proxy_jump = normalize_ssh_optional_field(request.proxy_jump, &connection_type);
+        let ssh_socks_proxy =
+            normalize_ssh_optional_field(request.ssh_socks_proxy, &connection_type);
+        let ssh_socks_proxy_inherit_defaults =
+            connection_type == "ssh" && request.ssh_socks_proxy_inherit_defaults.unwrap_or(true);
         let auth_method = normalize_auth_method(request.auth_method, &connection_type, &key_path)?;
         let local_shell = normalize_local_shell(request.local_shell, &connection_type)?;
         let local_startup_directory =
@@ -281,22 +293,24 @@ impl Storage {
                      port = ?5,
                      key_path = ?6,
                      proxy_jump = ?7,
-                     auth_method = ?8,
-                     local_shell = ?9,
-                     local_startup_directory = ?10,
-                     local_startup_script = ?11,
-                     url = ?12,
-                     data_partition = ?13,
-                     use_tmux_sessions = ?14,
-                     tmux_connection_id = ?15,
-                     serial_line = ?16,
-                     serial_speed = ?17,
-                     rdp_options = ?18,
-                     vnc_options = ?19,
-                     ftp_options = ?20,
-                     sort_order = ?21,
-                     workspace_id = ?22
-                 WHERE id = ?23",
+                     ssh_socks_proxy = ?8,
+                     ssh_socks_proxy_inherit_defaults = ?9,
+                     auth_method = ?10,
+                     local_shell = ?11,
+                     local_startup_directory = ?12,
+                     local_startup_script = ?13,
+                     url = ?14,
+                     data_partition = ?15,
+                     use_tmux_sessions = ?16,
+                     tmux_connection_id = ?17,
+                     serial_line = ?18,
+                     serial_speed = ?19,
+                     rdp_options = ?20,
+                     vnc_options = ?21,
+                     ftp_options = ?22,
+                     sort_order = ?23,
+                     workspace_id = ?24
+                 WHERE id = ?25",
                 params![
                     target_folder_id,
                     name,
@@ -305,6 +319,8 @@ impl Storage {
                     port,
                     key_path,
                     proxy_jump,
+                    ssh_socks_proxy,
+                    ssh_socks_proxy_inherit_defaults,
                     auth_method,
                     local_shell,
                     local_startup_directory,
@@ -861,7 +877,8 @@ impl Storage {
         let rows = statement
             .query_map(params, assistant_memory_from_row)
             .map_err(to_storage_error)?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(to_storage_error)
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(to_storage_error)
     }
 
     pub fn upsert_assistant_memory(
@@ -1109,7 +1126,7 @@ impl Storage {
 
         let source = transaction
             .query_row(
-                "SELECT folder_id, name, tab_title, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, workspace_id
+                "SELECT folder_id, name, tab_title, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, workspace_id
                  FROM connections
                  WHERE id = ?1",
                 params![source_id],
@@ -1123,21 +1140,23 @@ impl Storage {
                         optional_port(row.get::<_, Option<i64>>(5)?)?,
                         row.get::<_, Option<String>>(6)?,
                         row.get::<_, Option<String>>(7)?,
-                        row.get::<_, String>(8)?,
-                        row.get::<_, Option<String>>(9)?,
-                        row.get::<_, Option<String>>(10)?,
+                        row.get::<_, Option<String>>(8)?,
+                        row.get::<_, bool>(9)?,
+                        row.get::<_, String>(10)?,
                         row.get::<_, Option<String>>(11)?,
                         row.get::<_, Option<String>>(12)?,
                         row.get::<_, Option<String>>(13)?,
-                        row.get::<_, bool>(14)?,
+                        row.get::<_, Option<String>>(14)?,
                         row.get::<_, Option<String>>(15)?,
-                        optional_serial_speed(row.get::<_, Option<i64>>(16)?)?,
-                        row.get::<_, String>(17)?,
-                        row.get::<_, Option<String>>(18)?,
-                        row.get::<_, Option<String>>(19)?,
-                        normalize_loaded_terminal_opacity(row.get::<_, Option<i64>>(20)?),
-                        terminal_background_from_json(row.get::<_, Option<String>>(21)?),
-                        row.get::<_, Option<String>>(22)?,
+                        row.get::<_, bool>(16)?,
+                        row.get::<_, Option<String>>(17)?,
+                        optional_serial_speed(row.get::<_, Option<i64>>(18)?)?,
+                        row.get::<_, String>(19)?,
+                        row.get::<_, Option<String>>(20)?,
+                        row.get::<_, Option<String>>(21)?,
+                        normalize_loaded_terminal_opacity(row.get::<_, Option<i64>>(22)?),
+                        terminal_background_from_json(row.get::<_, Option<String>>(23)?),
+                        row.get::<_, Option<String>>(24)?,
                     ))
                 },
             )
@@ -1153,6 +1172,8 @@ impl Storage {
             port,
             key_path,
             proxy_jump,
+            ssh_socks_proxy,
+            ssh_socks_proxy_inherit_defaults,
             auth_method,
             local_shell,
             local_startup_directory,
@@ -1189,8 +1210,8 @@ impl Storage {
         transaction
             .execute(
                 "INSERT INTO connections (
-                    id, folder_id, name, tab_title, host, username, port, key_path, proxy_jump, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, status, sort_order, workspace_id
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 'idle', ?25, ?26)",
+                    id, folder_id, name, tab_title, host, username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, serial_line, serial_speed, connection_type, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, status, sort_order, workspace_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, 'idle', ?27, ?28)",
                 params![
                     duplicate_id,
                     folder_id,
@@ -1201,6 +1222,8 @@ impl Storage {
                     port,
                     key_path,
                     proxy_jump,
+                    ssh_socks_proxy,
+                    ssh_socks_proxy_inherit_defaults,
                     auth_method,
                     local_shell,
                     local_startup_directory,
@@ -1423,10 +1446,7 @@ impl Storage {
         Ok(workspaces)
     }
 
-    pub fn create_workspace(
-        &self,
-        request: CreateWorkspaceRequest,
-    ) -> Result<Workspace, String> {
+    pub fn create_workspace(&self, request: CreateWorkspaceRequest) -> Result<Workspace, String> {
         let name = required_field("workspace name", request.name)?;
         let icon = request
             .icon
@@ -1469,7 +1489,8 @@ impl Storage {
                     .execute(
                         "INSERT INTO connections (
                             id, folder_id, workspace_id, name, tab_title, host, username, port,
-                            key_path, proxy_jump, auth_method, local_shell, local_startup_directory,
+                            key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                            auth_method, local_shell, local_startup_directory,
                             local_startup_script, url, data_partition, use_tmux_sessions,
                             tmux_connection_id, serial_line, serial_speed, rdp_options, vnc_options,
                             ftp_options, password_credential_id, icon_data_url, icon_background_color,
@@ -1477,7 +1498,8 @@ impl Storage {
                         )
                         SELECT
                             ?1, NULL, ?2, name, tab_title, host, username, port,
-                            key_path, proxy_jump, auth_method, local_shell, local_startup_directory,
+                            key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_inherit_defaults,
+                            auth_method, local_shell, local_startup_directory,
                             local_startup_script, url, data_partition, use_tmux_sessions,
                             ?3, serial_line, serial_speed, rdp_options, vnc_options,
                             ftp_options, password_credential_id, icon_data_url, icon_background_color,
@@ -1507,10 +1529,7 @@ impl Storage {
         })
     }
 
-    pub fn rename_workspace(
-        &self,
-        request: RenameWorkspaceRequest,
-    ) -> Result<Workspace, String> {
+    pub fn rename_workspace(&self, request: RenameWorkspaceRequest) -> Result<Workspace, String> {
         let id = required_field("workspace id", request.id)?;
         let name = required_field("workspace name", request.name)?;
         let icon = request
@@ -1535,12 +1554,7 @@ impl Storage {
             .query_row(
                 "SELECT is_default, sort_order FROM workspaces WHERE id = ?1",
                 params![id],
-                |row| {
-                    Ok((
-                        row.get::<_, i64>(0)? != 0,
-                        row.get::<_, i64>(1)?,
-                    ))
-                },
+                |row| Ok((row.get::<_, i64>(0)? != 0, row.get::<_, i64>(1)?)),
             )
             .map_err(to_storage_error)?;
         Ok(Workspace {

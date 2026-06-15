@@ -114,6 +114,8 @@ export interface StartTerminalSessionRequest {
   port?: number;
   keyPath?: string;
   proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
   shell?: string;
@@ -186,6 +188,8 @@ export interface StartSftpSessionRequest {
   port?: number;
   keyPath?: string;
   proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
   authMethod?: "keyFile" | "password" | "agent";
   secretOwnerId?: string;
   path?: string;
@@ -1173,6 +1177,8 @@ type CommandMap = {
         password: string;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
       };
     };
     result: TransferSshPublicKeyResult;
@@ -1583,6 +1589,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
       };
@@ -1597,6 +1605,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         tmuxSessionId: string;
@@ -1613,6 +1623,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         tmuxSessionId: string;
@@ -1629,6 +1641,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         tmuxSessionId: string;
@@ -1644,6 +1658,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         tmuxSessionId: string;
@@ -1660,6 +1676,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         tmuxSessionId: string;
@@ -1676,6 +1694,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
       };
@@ -1690,6 +1710,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
       };
@@ -1704,6 +1726,8 @@ type CommandMap = {
         port?: number;
         keyPath?: string;
         proxyJump?: string;
+  sshSocksProxy?: string;
+  sshSocksProxyInheritDefaults?: boolean;
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
         remotePort: number;

@@ -1134,12 +1134,14 @@ function TmuxSessionTag({
 }
 
 function tmuxConnectionRequest(connection: Connection) {
+  const sshSettings = useWorkspaceStore.getState().sshSettings;
   return {
     host: connection.host,
     user: connection.user,
     port: connection.port,
     keyPath: connection.keyPath,
     proxyJump: connection.proxyJump,
+    sshSocksProxy: connection.sshSocksProxyInheritDefaults === false ? connection.sshSocksProxy : sshSettings.defaultSshSocksProxy,
     authMethod: connection.authMethod,
     secretOwnerId: connectionPasswordOwnerId(connection),
   };
@@ -1862,6 +1864,7 @@ function TerminalPaneView({
             port: connection.port,
             keyPath: connection.keyPath,
             proxyJump: connection.proxyJump,
+            sshSocksProxy: connection.sshSocksProxyInheritDefaults === false ? connection.sshSocksProxy : sshSettings.defaultSshSocksProxy,
             authMethod: connection.authMethod,
             secretOwnerId: connectionPasswordOwnerId(connection),
             shell,

@@ -1,4 +1,4 @@
-import { Fingerprint, KeyRound, Layers, LockKeyhole } from "lucide-react";
+import { Fingerprint, KeyRound, Layers, LockKeyhole, Network, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
@@ -70,14 +70,6 @@ export function SshConnectionFields({
             max="65535"
             type="number"
             placeholder={String(defaultPortForConnectionType("ssh", sshSettings))}
-          />
-        </label>
-        <label className="proxy-jump-input">
-          <span>{t("connections.proxyJumpOptional")}</span>
-          <input
-            name="proxyJump"
-            defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
-            placeholder={t("connections.jumpInternal")}
           />
         </label>
       </div>
@@ -185,5 +177,58 @@ export function SshConnectionFields({
         </label>
       </div>
     </>
+  );
+}
+
+
+export function SshConnectionOptions({
+  initialConnection,
+  onInheritsSettingsDefaultsChange,
+  sshInheritsSettingsDefaults,
+  sshSettings,
+}: {
+  initialConnection?: Connection;
+  onInheritsSettingsDefaultsChange: (inheritsSettingsDefaults: boolean) => void;
+  sshInheritsSettingsDefaults: boolean;
+  sshSettings: SshSettings;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <fieldset className="connection-session-fields connection-specific-options">
+      <legend>{t("connections.sshProxyOptions")}</legend>
+      <div className="connection-specific-options-panel">
+        <label className="connection-session-toggle">
+          <Settings2 className="option-glyph" size={17} aria-hidden />
+          <span>{t("connections.inheritSettingsDefaults")}</span>
+          <input
+            name="sshSocksProxyInheritDefaults"
+            type="checkbox"
+            checked={sshInheritsSettingsDefaults}
+            onChange={(event) => onInheritsSettingsDefaultsChange(event.currentTarget.checked)}
+          />
+        </label>
+        <div className="connection-option-fields">
+          <label>
+            <Network className="option-glyph" size={17} aria-hidden />
+            <span>{t("connections.sshSocksProxyOptional")}</span>
+            <input
+              disabled={sshInheritsSettingsDefaults}
+              name="sshSocksProxy"
+              defaultValue={initialConnection?.sshSocksProxy ?? sshSettings.defaultSshSocksProxy ?? ""}
+              placeholder={t("settings.sshSocksProxyPlaceholder")}
+            />
+          </label>
+          <label>
+            <span>{t("connections.proxyJumpOptional")}</span>
+            <input
+              name="proxyJump"
+              defaultValue={initialConnection?.proxyJump ?? sshSettings.defaultProxyJump ?? ""}
+              placeholder={t("connections.jumpInternal")}
+            />
+          </label>
+        </div>
+      </div>
+    </fieldset>
   );
 }

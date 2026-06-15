@@ -25,7 +25,7 @@ Settings tutorial targets:
   `settings.encryptedSecretStoreSetupAction`, `settings.encryptedSecretStoreSetupRequiredTitle`, `settings.credentialsStored`,
   `settings.widgetCredentialsStored`.
 - AI Assistant: `settings.aiProvider`, `settings.aiToolsTitle`, `settings.aiCustomInstructions`, `settings.assistantSkillsTitle`, `settings.mcpServersTitle`, `settings.allowInsecureMcpHttp`.
-- SSH: `settings.defaultUser`, `settings.defaultPort`, `settings.defaultKey`, `settings.sshBufferLines`.
+- SSH: `settings.defaultUser`, `settings.defaultPort`, `settings.defaultKey`, `settings.proxyJump`, `settings.sshSocksProxy`, `settings.sshBufferLines`.
 - Terminal: `settings.terminalFontFamily`, `settings.terminalFontSize`, `settings.defaultShell`, `settings.scrollbackLines`.
 - URL: `settings.ignoreCertificateErrors`, `settings.urlSavedPasswords`, `settings.urlDataShards`.
 - RDP: `settings.rdpColorDepth`, `settings.rdpPerformanceProfile`.
@@ -154,7 +154,7 @@ Section header `settings.sectionAiAssistant`. Owned by `src/modules/settings/AiS
 
 ## SSH
 
-Section header `settings.sectionSsh`. Default username, default identity file, agent forwarding, tmux defaults, etc. (Keep this section keyed under `settings.*` — exact field keys live in `en.json`.) `settings.defaultTransparency` sets the starting SSH terminal transparency for new SSH Connections and Child Connection Tabs; the default is 50. `settings.randomDynamicBackgroundOnCreate` assigns a random dynamic terminal background only when creating new SSH Connections, new top-strip Tabs from SSH Connections, or new SSH Child Connection Tabs.
+Section header `settings.sectionSsh`. Default username, default identity file, agent forwarding, tmux defaults, etc. (Keep this section keyed under `settings.*` — exact field keys live in `en.json`.) `settings.proxyJump` defines the default jump host for new SSH Connections, while `settings.sshSocksProxy` defines the default SOCKS endpoint used by SSH terminal Connections that inherit Settings defaults. Per-Connection SSH proxy overrides live in the add/edit Connection dialog under `connections.sshProxyOptions`. `settings.defaultTransparency` sets the starting SSH terminal transparency for new SSH Connections and Child Connection Tabs; the default is 50. `settings.randomDynamicBackgroundOnCreate` assigns a random dynamic terminal background only when creating new SSH Connections, new top-strip Tabs from SSH Connections, or new SSH Child Connection Tabs.
 
 The `settings.xServer` group controls the managed VcXsrv launcher. `settings.xServerManaged` starts VcXsrv before opening SSH Sessions when `vcxsrv.exe` is not already running and shows the Status Bar X indicator while the setting is enabled. The indicator reflects configuration, not command-based process polling. `settings.xServerPath` can override the executable path; blank uses standard VcXsrv install locations. `settings.xServerDisplay` chooses the local X display number, and `settings.xServerArgs` passes command-line flags. `settings.xServerLaunch` saves the current SSH Settings draft and starts VcXsrv immediately.
 
