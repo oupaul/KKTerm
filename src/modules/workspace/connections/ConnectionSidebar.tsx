@@ -57,6 +57,11 @@ import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, Co
 // so the ordering can't ride a [data-platform] ancestor).
 const DIALOG_ACTIONS_CLASS = isMacPlatform() ? "dialog-actions mac-order" : "dialog-actions";
 
+// Pointer travel (px, either axis) before a press is treated as a drag rather
+// than a click. Kept above ordinary click jitter so selecting a row never
+// requires a second click.
+const DRAG_START_THRESHOLD_PX = 8;
+
 type DraggedTreeItem =
   | { kind: "folder"; folderId: string }
   | { kind: "connection"; connectionId: string };
@@ -2007,6 +2012,19 @@ export function ConnectionSidebar({
     handleOpenConnection(connection);
   }
 
+  // Whether a drop of `item` onto `target` would actually move anything.
+  // Mirrors the no-op guards in completeTreeDrop so the click that follows a
+  // same-row release is preserved (the user was clicking, not reordering).
+  function treeDropMovesItem(item: DraggedTreeItem, target: TreeDropTarget) {
+    if (item.kind === "folder") {
+      if (target.kind === "connection") {
+        return false;
+      }
+      return !(target.kind === "folder" && item.folderId === target.folderId);
+    }
+    return !(target.kind === "connection" && item.connectionId === target.connectionId);
+  }
+
   function completeTreeDrop(item: DraggedTreeItem, target: TreeDropTarget) {
     if (item.kind === "folder") {
       if (target.kind === "connection") {
@@ -2169,7 +2187,11 @@ export function ConnectionSidebar({
 
       dragStarted = true;
       draggedItemRef.current = item;
-      suppressTreeClickRef.current = true;
+      // Note: the click is NOT suppressed here. Showing the drag preview is
+      // cheap and reversible, but swallowing the click is not — a press that
+      // jitters past the threshold and releases on the same row must still
+      // select/open. We only suppress in `stop`, and only when the gesture
+      // actually produced a reorder or canvas dock (see below).
       setDraggedSourceId(treeItemId(item));
       setDragPreview({
         ...preview,
@@ -2189,7 +2211,9 @@ export function ConnectionSidebar({
       if (!dragStarted) {
         const xMovement = Math.abs(pointerEvent.clientX - startX);
         const yMovement = Math.abs(pointerEvent.clientY - startY);
-        if (xMovement < 4 && yMovement < 4) {
+        // 8px of slop (the conventional drag threshold) so ordinary click
+        // jitter doesn't start a drag and flicker the preview.
+        if (xMovement < DRAG_START_THRESHOLD_PX && yMovement < DRAG_START_THRESHOLD_PX) {
           return;
         }
 
@@ -2228,14 +2252,24 @@ export function ConnectionSidebar({
       const dragged = draggedItemRef.current;
       removePointerDragListeners();
       handleDragEnd();
-      if (canvasZone && dragged?.kind === "connection") {
+      const didCanvasDrop = Boolean(canvasZone && dragged?.kind === "connection");
+      const didTreeDrop = Boolean(
+        !didCanvasDrop && target && dragged && treeDropMovesItem(dragged, target),
+      );
+      if (didCanvasDrop && dragged?.kind === "connection" && canvasZone) {
         completeCanvasDrop(dragged.connectionId, canvasZone);
-      } else if (target && dragged) {
+      } else if (didTreeDrop && target && dragged) {
         completeTreeDrop(dragged, target);
       }
-      window.setTimeout(() => {
-        suppressTreeClickRef.current = false;
-      }, 0);
+      // Only swallow the upcoming click when the gesture actually relocated the
+      // item. A press that crossed the drag threshold but released on the same
+      // row (or off any valid target) is a click — let it select/open.
+      if (didCanvasDrop || didTreeDrop) {
+        suppressTreeClickRef.current = true;
+        window.setTimeout(() => {
+          suppressTreeClickRef.current = false;
+        }, 0);
+      }
     };
 
     pointerDragListenersRef.current = { move, stop };
