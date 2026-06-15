@@ -20,10 +20,13 @@ Tutorial target: `webview.surface`.
 
 ## Toolbar
 
+The URL Pane chrome follows the File Explorer (SFTP) Apple-esque design language: a token-driven light surface, hairline borders, and rounded translucent icon buttons. There is no sidebar.
+
+- Connection identity: a connection icon badge leads the toolbar (in the slot the File Explorer uses for its sidebar toggle). It shows the URL Connection's saved favicon when present, otherwise a globe glyph; its tooltip is the Connection name (or the current host for an ad-hoc URL Tab).
 - Back: `webview.goBack` (`webview.back`)
 - Forward: `webview.goForward` (`webview.forward`)
 - Reload: `webview.reload`
-- Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present.
+- Address bar: `webview.address`, placeholder `webview.urlPlaceholder`. The bar accepts hosts without a scheme; the backend assumes `https://` when no scheme is present. A leading lock/globe glyph reflects whether the current address is `https://` (secure) or not.
 - The address bar disables OS autocorrect, autocapitalization, and spellcheck in the KKTerm WebView on Windows and macOS so URLs and hostnames are not rewritten while typing. Keyboard/IME suggestions outside the WebView may still appear.
 - Auto-refresh: `webview.autoRefresh` / `webview.autoRefreshOff`. Interval label `webview.autoRefreshSeconds`.
 - Open externally: toolbar button `webview.openExternally` (opens the current URL in the OS default browser).
@@ -35,6 +38,10 @@ Tutorial target: `webview.surface`.
 - Save/reset split Pane layout for a saved URL Connection from the Connection Tree right-click submenu `connections.layout` with `common.save` / `common.reset`.
 
 Tutorial targets: `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.close`.
+
+## Footer
+
+A slim status footer (mirroring the File Explorer pane footer) sits below the WebView surface, showing a secure/insecure lock-or-globe glyph followed by the current host. It is presentation only and carries no actions.
 
 ## Credential fill
 
