@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { searchMaterialIcons } from "../src/lib/iconCatalog.ts";
-import { buildIconSearchGroups } from "../src/lib/iconSearchAliases.ts";
+import { buildIconSearchGroups, iconSearchGroupsMatch } from "../src/lib/iconSearchAliases.ts";
+import { OS_ICON_ENTRIES } from "../src/lib/osIcons.ts";
 
 test("English (and unknown languages) keep one raw token per group", () => {
   assert.deepEqual(buildIconSearchGroups("folder server"), [["folder"], ["server"]]);
@@ -63,4 +64,20 @@ test("multi-word localized phrases resolve as a unit", () => {
     searchMaterialIcons("thư mục", 300, "vi").some((icon) => englishFolder.includes(icon.id)),
     "Vietnamese thư mục should surface the same folder icons as English folder",
   );
+});
+
+test("localized convention aliases match OS icon search keywords", () => {
+  function osIconMatches(id: string, query: string, language: string) {
+    const entry = OS_ICON_ENTRIES.find((icon) => icon.id === id);
+    assert.ok(entry, `${id} OS icon should exist`);
+    const searchText = [entry.label, ...entry.keywords].join(" ").toLowerCase();
+    return iconSearchGroupsMatch(searchText, buildIconSearchGroups(query, language));
+  }
+
+  assert.ok(osIconMatches("apple", "蘋果", "zh-TW"));
+  assert.ok(osIconMatches("raspberrypi", "樹莓派", "zh-TW"));
+  assert.ok(osIconMatches("windows", "微軟", "zh-TW"));
+  assert.ok(osIconMatches("redhat", "紅帽", "zh-TW"));
+  assert.ok(osIconMatches("apple", "苹果", "zh-CN"));
+  assert.ok(osIconMatches("raspberrypi", "树莓派", "zh-CN"));
 });

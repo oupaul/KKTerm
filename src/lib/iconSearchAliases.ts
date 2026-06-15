@@ -554,6 +554,49 @@ const CONCEPTS: readonly IconSearchConcept[] = [
     },
   },
   {
+    en: ["macos", "mac", "apple", "osx", "darwin"],
+    localized: {
+      "zh-TW": ["蘋果", "麥金塔"],
+      "zh-CN": ["苹果", "麦金塔"],
+      ja: ["アップル", "マック"],
+      ko: ["애플", "맥"],
+      th: ["แอปเปิล", "แมค"],
+      vi: ["táo", "tao"],
+    },
+  },
+  {
+    en: ["windows", "microsoft", "win"],
+    localized: {
+      "zh-TW": ["微軟", "視窗"],
+      "zh-CN": ["微软", "视窗"],
+      ja: ["マイクロソフト"],
+      ko: ["마이크로소프트", "윈도우"],
+      th: ["ไมโครซอฟท์"],
+      vi: ["cửa sổ", "cua so"],
+    },
+  },
+  {
+    en: ["raspberry", "raspberrypi", "pi", "raspbian"],
+    localized: {
+      "zh-TW": ["樹莓派", "樹莓"],
+      "zh-CN": ["树莓派", "树莓"],
+      ja: ["ラズパイ", "ラズベリーパイ"],
+      ko: ["라즈베리파이", "라즈베리 파이"],
+      th: ["ราสป์เบอร์รีพาย"],
+      vi: ["mâm xôi", "mam xoi"],
+    },
+  },
+  {
+    en: ["redhat", "red hat", "rhel"],
+    localized: {
+      "zh-TW": ["紅帽"],
+      "zh-CN": ["红帽"],
+      ja: ["レッドハット"],
+      ko: ["레드햇"],
+      th: ["เรดแฮท"],
+    },
+  },
+  {
     en: ["laptop", "notebook"],
     localized: {
       "zh-TW": ["筆電", "筆記型電腦"],
