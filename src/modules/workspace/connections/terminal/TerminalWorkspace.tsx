@@ -17,7 +17,7 @@ import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
 import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
 import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
-import { isOsIconAutoDetectLocked, osIconIdForDetection, osIconRefForId } from "../../../../lib/osIcons";
+import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldAutoDetectOsIcon } from "../../../../lib/osIcons";
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
@@ -1324,15 +1324,12 @@ function SshPortForwardMenu({
 const osDetectInFlight = new Set<string>();
 
 // On the first SSH connect, detect the remote OS and set a matching distro/OS
-// logo as the Connection icon. Runs only when the Connection has no icon yet and
-// the user has not opted out by manually choosing an icon; later connects skip
-// because an icon is already present (or the auto-detect lock is set), so a
-// hand-picked icon is never overridden.
+// logo as the Connection icon. It runs once per Connection (then a persistent
+// "done" flag stops it, so the host is probed only once for performance) and is
+// skipped when the user has chosen an icon, so a hand-picked icon is never
+// overridden.
 async function maybeAutoDetectOsIcon(connection: Connection) {
-  if (connection.type !== "ssh" || connection.iconDataUrl) {
-    return;
-  }
-  if (isOsIconAutoDetectLocked(connection.id) || osDetectInFlight.has(connection.id)) {
+  if (!shouldAutoDetectOsIcon(connection) || osDetectInFlight.has(connection.id)) {
     return;
   }
   osDetectInFlight.add(connection.id);
@@ -1342,27 +1339,31 @@ async function maybeAutoDetectOsIcon(connection: Connection) {
     });
     const iconId = osIconIdForDetection(detected);
     if (!iconId) {
+      // No usable result (unreachable, non-POSIX shell, unknown OS): leave the
+      // default icon and allow a retry on a later connect.
       return;
     }
-    // Re-check: the user may have set an icon (or opted out) while we probed.
+    // Re-check: the user may have chosen an icon while we probed.
     const current = useWorkspaceStore
       .getState()
       .tabs.flatMap((tab) => [tab.connection, ...tab.panes.map((pane) => pane.connection)])
       .find((candidate) => candidate?.id === connection.id);
-    if (current?.iconDataUrl || isOsIconAutoDetectLocked(connection.id)) {
+    if (!shouldAutoDetectOsIcon({ ...connection, iconDataUrl: current?.iconDataUrl ?? connection.iconDataUrl })) {
       return;
     }
     const updated = await invokeCommand("update_connection_icon_data_url", {
       connectionId: connection.id,
       iconDataUrl: osIconRefForId(iconId),
     });
+    // Auto-detection resolved an icon: never probe this Connection again.
+    markOsIconAutoDetectDone(connection.id);
     if (updated) {
       useWorkspaceStore.getState().refreshOpenConnectionMetadata(updated);
       notifyConnectionTreeInvalidated();
     }
   } catch {
-    // Detection is best-effort: an unreachable probe, a non-POSIX remote shell,
-    // or an unknown distro simply leaves the default connection icon in place.
+    // Detection is best-effort: an unreachable probe or transient error leaves
+    // the default connection icon in place and retries on a later connect.
   } finally {
     osDetectInFlight.delete(connection.id);
   }

@@ -176,21 +176,29 @@ export function osIconIdForDetection(detected: DetectedRemoteOs): string | null 
   return null;
 }
 
-// --- Auto-detection lock --------------------------------------------------
+// --- Auto-detection state -------------------------------------------------
 //
-// Auto-detection must never override an icon the user chose by hand. The
-// presence of a stored `iconDataUrl` already prevents re-detection on later
-// connects; this lock additionally covers the case where the user deliberately
-// resets a Connection back to the default (empty) icon — that is still a manual
-// choice and must not be re-detected. The lock is keyed by Connection id (Child
-// Connection Tabs fall back to their parent Connection's icon) and persisted in
-// localStorage.
+// SSH remote-OS auto-detection runs at most once per Connection and never
+// overrides a hand-picked icon. Two persistent (localStorage) per-Connection
+// signals gate it, both keyed by Connection id (Child Connection Tabs fall back
+// to their parent Connection's icon):
+//
+//   * "locked" — the user deliberately chose an icon (including a reset to the
+//     default) through the icon picker. Auto-detection must never run.
+//   * "done"   — auto-detection already resolved an icon for this Connection.
+//     It is not run again, so the remote host is probed only once (the backend
+//     also caches per host within a session).
+//
+// A Connection that already carries a user/legacy custom icon that is not an
+// "os:" ref is also treated as locked at detection time, so icons chosen before
+// this feature shipped are never overridden.
 
 const OS_ICON_LOCK_STORAGE_KEY = "kkterm.osIconAutoDetect.locked.v1";
+const OS_ICON_DONE_STORAGE_KEY = "kkterm.osIconAutoDetect.done.v1";
 
-function readLockedIds(): Set<string> {
+function readIdSet(storageKey: string): Set<string> {
   try {
-    const raw = window.localStorage.getItem(OS_ICON_LOCK_STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) {
       return new Set();
     }
@@ -201,20 +209,57 @@ function readLockedIds(): Set<string> {
   }
 }
 
-export function isOsIconAutoDetectLocked(connectionId: string): boolean {
-  return readLockedIds().has(connectionId);
-}
-
-export function lockOsIconAutoDetect(connectionId: string): void {
+function addId(storageKey: string, connectionId: string): void {
   try {
-    const ids = readLockedIds();
+    const ids = readIdSet(storageKey);
     if (ids.has(connectionId)) {
       return;
     }
     ids.add(connectionId);
-    window.localStorage.setItem(OS_ICON_LOCK_STORAGE_KEY, JSON.stringify([...ids]));
+    window.localStorage.setItem(storageKey, JSON.stringify([...ids]));
   } catch {
     // Best-effort: a missing/blocked localStorage just means detection may run
     // again next connect, which is harmless.
   }
+}
+
+export function isOsIconAutoDetectLocked(connectionId: string): boolean {
+  return readIdSet(OS_ICON_LOCK_STORAGE_KEY).has(connectionId);
+}
+
+export function lockOsIconAutoDetect(connectionId: string): void {
+  addId(OS_ICON_LOCK_STORAGE_KEY, connectionId);
+}
+
+export function isOsIconAutoDetectDone(connectionId: string): boolean {
+  return readIdSet(OS_ICON_DONE_STORAGE_KEY).has(connectionId);
+}
+
+export function markOsIconAutoDetectDone(connectionId: string): void {
+  addId(OS_ICON_DONE_STORAGE_KEY, connectionId);
+}
+
+/**
+ * Whether SSH remote-OS auto-detection should run for this Connection now. It
+ * runs once per Connection and never overrides a deliberate icon choice. The
+ * icon is consulted only to respect a pre-existing user/legacy custom icon
+ * (a non-"os:" value); an empty icon or an earlier auto-detected "os:" icon is
+ * still eligible until the "done" flag is set.
+ */
+export function shouldAutoDetectOsIcon(connection: {
+  id: string;
+  type: string;
+  iconDataUrl?: string | null;
+}): boolean {
+  if (connection.type !== "ssh") {
+    return false;
+  }
+  if (isOsIconAutoDetectLocked(connection.id) || isOsIconAutoDetectDone(connection.id)) {
+    return false;
+  }
+  const icon = connection.iconDataUrl;
+  if (icon && !isOsIconRef(icon)) {
+    return false;
+  }
+  return true;
 }

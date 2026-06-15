@@ -7,6 +7,7 @@ import {
   osIconIdForDetection,
   osIconIdFromRef,
   osIconRefForId,
+  shouldAutoDetectOsIcon,
 } from "../src/lib/osIcons";
 
 test("os icon refs round-trip and reject unknown ids", () => {
@@ -59,6 +60,18 @@ test("every detection result resolves to a bundled icon entry", () => {
     const iconId = osIconIdForDetection(sample);
     assert.ok(iconId && isKnownOsIconId(iconId), `expected known icon for ${JSON.stringify(sample)}`);
   }
+});
+
+test("auto-detect gate runs for fresh ssh connections only", () => {
+  // Fresh SSH connection with no icon is eligible.
+  assert.equal(shouldAutoDetectOsIcon({ id: "c1", type: "ssh", iconDataUrl: null }), true);
+  // A previously auto-detected os: icon is still eligible until the done flag.
+  assert.equal(shouldAutoDetectOsIcon({ id: "c2", type: "ssh", iconDataUrl: "os:ubuntu" }), true);
+  // Non-SSH connections never auto-detect.
+  assert.equal(shouldAutoDetectOsIcon({ id: "c3", type: "local", iconDataUrl: null }), false);
+  // A user/legacy custom icon (non-os ref) is respected.
+  assert.equal(shouldAutoDetectOsIcon({ id: "c4", type: "ssh", iconDataUrl: "material:folder-server" }), false);
+  assert.equal(shouldAutoDetectOsIcon({ id: "c5", type: "ssh", iconDataUrl: "data:image/png;base64,AAAA" }), false);
 });
 
 test("every catalog entry id is a known icon", () => {

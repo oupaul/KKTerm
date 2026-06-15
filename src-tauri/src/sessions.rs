@@ -2017,6 +2017,10 @@ elif command -v lsb_release >/dev/null 2>&1; then
 else
   printf 'OS: unknown\n'
 fi
+if [ -r /etc/os-release ]; then
+  printf '/etc/os-release:\n'
+  sed 's/^/  /' /etc/os-release 2>/dev/null
+fi
 printf 'Architecture: '; uname -m 2>/dev/null || printf 'unknown'; printf '\n'
 printf 'CPU: '
 if command -v nproc >/dev/null 2>&1; then
