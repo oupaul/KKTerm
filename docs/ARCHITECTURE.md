@@ -597,6 +597,10 @@ The `"match-os"` color scheme is a selector setting, not a separate CSS token bl
 | `--amber` | `color` of warning states | Warning badges, pending status |
 | `--amber-soft` | `background` of amber tints | Warning-tinted backgrounds |
 | `--red` | `color` of error states | Error badges, disconnected status |
+| `--notice-info` | `color` of info notification tone | Status Bar notification icon, ring, and progress |
+| `--notice-success` | `color` of success notification tone | Status Bar notification icon, ring, and progress |
+| `--notice-warning` | `color` of warning notification tone | Status Bar notification icon, ring, and progress |
+| `--notice-error` | `color` of error notification tone | Status Bar notification icon, ring, and progress |
 | `--nav-toolbar-bg` | `background` of `.workspace-toolbar`, top nav bars | Session toolbar, SSH/SFTP/RDP nav bars |
 | `--nav-toolbar-text` | `color` of toolbar text | Toolbar labels, toolbar button text |
 | `--nav-toolbar-hover-bg` | `background` of toolbar button hover | Toolbar button hover state |

@@ -43,6 +43,10 @@
   --green: #34c759;
   --amber: #ff9f0a;
   --red: #ff453a;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   /* design-language surface tokens (exact reference light values) */
   --hover: rgba(0, 0, 0, 0.05);
   --press: rgba(0, 0, 0, 0.09);
@@ -106,6 +110,10 @@
   --green: #32d74b;
   --amber: #ff9f0a;
   --red: #ff453a;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   /* design-language surface tokens (exact reference dark values) */
   --hover: rgba(255, 255, 255, 0.07);
   --press: rgba(255, 255, 255, 0.12);
@@ -147,6 +155,10 @@
   --green: #0d6b3d;
   --amber: #a3620a;
   --red: #b91c1c;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #202936;
   --nav-toolbar-text: #d8e1ef;
   --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.12);
@@ -176,6 +188,10 @@
   --green: #34c759;
   --amber: #ff9500;
   --red: #ff3b30;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #e4e4e8;
   --nav-toolbar-text: #1d1d1f;
   --nav-toolbar-hover-bg: rgba(0, 0, 0, 0.08);
@@ -205,6 +221,10 @@
   --green: #2db833;
   --amber: #ff8a00;
   --red: #d9271f;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #ff7900;
   --nav-toolbar-text: #ffffff;
   --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.2);
@@ -234,6 +254,10 @@
   --green: #4ade80;
   --amber: #fbbf24;
   --red: #f87171;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #1b1536;
   --nav-toolbar-text: #ece6ff;
   --nav-toolbar-hover-bg: rgba(167, 139, 250, 0.18);
@@ -263,6 +287,10 @@
   --green: #15803d;
   --amber: #b45309;
   --red: #dc2626;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #5a2148;
   --nav-toolbar-text: #ffe3f1;
   --nav-toolbar-hover-bg: rgba(255, 190, 220, 0.18);
@@ -293,6 +321,10 @@
   --green: #62bd2f;
   --amber: #d8a128;
   --red: #d71920;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #a7ec5a;
   --nav-toolbar-text: #082d68;
   --nav-toolbar-hover-bg: rgba(8, 45, 104, 0.08);
@@ -322,6 +354,10 @@
   --green: #3fb87b;
   --amber: #d9a03d;
   --red: #e0554d;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #0a1525;
   --nav-toolbar-text: #c8dcf0;
   --nav-toolbar-hover-bg: rgba(77, 166, 255, 0.18);
@@ -354,6 +390,10 @@
   --green: #73c82d;
   --amber: #b7791f;
   --red: #c2413b;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #1fa0cb;
   --nav-toolbar-text: #ffffff;
   --nav-toolbar-hover-bg: rgba(255, 255, 255, 0.18);
@@ -383,6 +423,10 @@
   --green: #2eaa6a;
   --amber: #e89520;
   --red: #e04040;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #3a2550;
   --nav-toolbar-text: #f0e0f8;
   --nav-toolbar-hover-bg: rgba(224, 64, 176, 0.18);
@@ -412,6 +456,10 @@
   --green: #6b8e4e;
   --amber: #c47a38;
   --red: #c04030;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #3b2216;
   --nav-toolbar-text: #f5e6d0;
   --nav-toolbar-hover-bg: rgba(196, 122, 56, 0.18);
@@ -444,6 +492,10 @@
   --green: #147a3f;
   --amber: #a86500;
   --red: #e60012;
+  --notice-info: #0a84ff;
+  --notice-success: var(--green);
+  --notice-warning: var(--amber);
+  --notice-error: var(--red);
   --nav-toolbar-bg: #111111;
   --nav-toolbar-text: #ffffff;
   --nav-toolbar-hover-bg: rgba(230, 0, 18, 0.18);

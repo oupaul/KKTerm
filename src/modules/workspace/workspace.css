@@ -598,19 +598,19 @@
 }
 
 .status-popup.success {
-  --notice-tone: var(--green);
+  --notice-tone: var(--notice-success);
 }
 
 .status-popup.info {
-  --notice-tone: var(--accent);
+  --notice-tone: var(--notice-info);
 }
 
 .status-popup.warning {
-  --notice-tone: var(--amber);
+  --notice-tone: var(--notice-warning);
 }
 
 .status-popup.error {
-  --notice-tone: var(--red);
+  --notice-tone: var(--notice-error);
 }
 
 .status-popup-pulse {
@@ -636,6 +636,10 @@
   width: 22px;
   height: 22px;
   color: var(--notice-tone);
+}
+
+.status-popup-icon svg {
+  stroke: var(--notice-tone);
 }
 
 .status-bar .status-popup-message {
