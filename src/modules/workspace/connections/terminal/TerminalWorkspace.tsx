@@ -7,6 +7,7 @@ import { ScreenshotMenu } from "../../ScreenshotMenu";
 import { RemoteDesktopWorkspace } from "../remote-desktop/RemoteDesktopWorkspace";
 import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
+import { ConnectionGlyph } from "../ConnectionGlyph";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Globe2, Menu, Monitor, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -2369,8 +2370,19 @@ function TerminalPaneView({
       ref={paneRef}
     >
       <header>
-        <span>
-          <Circle size={9} fill="currentColor" />
+        <span className="terminal-pane-title">
+          {pane.connection ? (
+            <ConnectionGlyph
+              className="terminal-pane-connection-icon"
+              iconBackgroundColor={pane.connection.iconBackgroundColor}
+              iconDataUrl={pane.connection.iconDataUrl}
+              localShell={pane.connection.localShell}
+              size={14}
+              type={pane.connection.type}
+            />
+          ) : (
+            <Circle size={9} fill="currentColor" />
+          )}
           {paneToolbarTitle}
         </span>
         <div className="terminal-pane-actions">

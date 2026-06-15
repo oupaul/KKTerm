@@ -277,6 +277,10 @@
   font-weight: 800;
 }
 
+.terminal-pane-title .terminal-pane-connection-icon {
+  flex: 0 0 auto;
+}
+
 .terminal-pane header small {
   max-width: 55%;
   margin-left: 8px;
