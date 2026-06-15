@@ -861,6 +861,13 @@ export interface AssistantChatThreadRecord {
   updatedAt: string;
 }
 
+export interface CurrencyRatesResult {
+  base: string;
+  date: string;
+  rates: Record<string, number>;
+  source: string;
+}
+
 export type NetError = {
   kind:
     | "timeout" | "refused" | "unreachable" | "hostNotFound" | "permissionDenied"
@@ -886,6 +893,10 @@ type CommandMap = {
   download_and_install_app_update: {
     args: { request: DownloadAndInstallAppUpdateRequest };
     result: void;
+  };
+  fetch_currency_rates: {
+    args: undefined;
+    result: CurrencyRatesResult;
   };
   debug_frontend_heartbeat: {
     args: {
