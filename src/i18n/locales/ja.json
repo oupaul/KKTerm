@@ -1316,7 +1316,7 @@
     "hideTopTabButtons": "接続ツリーで子接続タブを使用",
     "hideTopTabButtonsDesc": "有効にすると、上部のタブストリップが非表示になり、保存済みの子接続タブが親接続の下に斜体の行として表示されます。",
     "doubleClickOpensConnection": "Double-click to open Connections",
-    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.",
     "submitAiAttachmentsDirectly": "スクリーンショット/テキストを AI Assistant に直接送信",
     "submitAiAttachmentsDirectlyDesc": "有効にすると、「AI Assistant に送信」は添付されたスクリーンショットまたはターミナルバッファーを既定のヘルプリクエストとともに送信します。無効にすると、独自の質問を入力できるようにコンテキストを添付するだけです。",
     "terminalBackgrounds": "ターミナル背景",

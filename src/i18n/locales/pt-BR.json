@@ -1316,7 +1316,7 @@
     "hideTopTabButtons": "Usar abas de conexão filhas na árvore de conexões",
     "hideTopTabButtonsDesc": "Quando ativado, a faixa superior de abas fica oculta e as abas de conexão filhas salvas aparecem em itálico abaixo da conexão pai.",
     "doubleClickOpensConnection": "Double-click to open Connections",
-    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.",
     "submitAiAttachmentsDirectly": "Enviar captura/texto diretamente ao AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "Quando ativado, Enviar ao AI Assistant envia a captura anexada ou o buffer do terminal com um pedido de ajuda padrão. Quando desativado, ele apenas anexa o contexto para que você possa digitar sua própria pergunta.",
     "terminalBackgrounds": "Planos de fundo do terminal",

@@ -142,7 +142,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       },
       {
         key: "settings.doubleClickOpensConnection",
-        description: "Require a double-click to open Connections from the Connection Tree; double-click rename is unavailable while this is enabled.",
+        description: "Require a double-click to open Connections from the Connection Tree; rename Connections from the right-click Rename action.",
       },
       {
         key: "settings.submitAiAttachmentsDirectly",

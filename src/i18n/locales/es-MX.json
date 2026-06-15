@@ -1316,7 +1316,7 @@
     "hideTopTabButtons": "Usar pestañas de conexión secundarias en el árbol de conexiones",
     "hideTopTabButtonsDesc": "Cuando está activado, la tira superior de pestañas se oculta y las pestañas de conexión secundarias guardadas aparecen en cursiva debajo de su conexión principal.",
     "doubleClickOpensConnection": "Double-click to open Connections",
-    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.",
     "submitAiAttachmentsDirectly": "Enviar captura/texto directamente al AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "Cuando está activado, Enviar al AI Assistant envía la captura adjunta o el búfer de terminal con una solicitud de ayuda predeterminada. Cuando está desactivado, solo adjunta el contexto para que puedas escribir tu propia pregunta.",
     "terminalBackgrounds": "Fondos de terminal",

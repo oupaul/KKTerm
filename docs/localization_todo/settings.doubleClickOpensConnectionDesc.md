@@ -1,6 +1,6 @@
 # settings.doubleClickOpensConnectionDesc
 
-- **English value**: `When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.`
+- **English value**: `When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.`
 - **Namespace**: `settings`
 - **File/component**: `src/modules/settings/WorkspaceSettings.tsx`
 - **UI role**: `tooltip`

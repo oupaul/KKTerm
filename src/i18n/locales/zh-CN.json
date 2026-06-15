@@ -1316,7 +1316,7 @@
     "hideTopTabButtons": "在连接树中使用子连接标签页",
     "hideTopTabButtonsDesc": "启用后会隐藏顶部标签栏，已保存的子连接标签页会以斜体行显示在其父连接下方。",
     "doubleClickOpensConnection": "Double-click to open Connections",
-    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.",
     "submitAiAttachmentsDirectly": "将截图/文本直接提交给 AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "启用后，“发送到 AI Assistant”会将附加的截图或终端缓冲区与默认求助请求一起提交。禁用后，它只会附加上下文，以便你输入自己的问题。",
     "terminalBackgrounds": "终端背景",

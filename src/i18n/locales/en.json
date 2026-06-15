@@ -1316,7 +1316,7 @@
     "hideTopTabButtons": "Use Child Connection Tabs in the Connection Tree",
     "hideTopTabButtonsDesc": "When enabled, the top Tab Strip is hidden and saved Child Connection Tabs appear as italic rows under their parent Connection.",
     "doubleClickOpensConnection": "Double-click to open Connections",
-    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.",
     "submitAiAttachmentsDirectly": "Submit screenshot/text to AI Assistant directly",
     "submitAiAttachmentsDirectlyDesc": "When enabled, Send to AI Assistant submits the attached screenshot or terminal buffer with a default help request. When disabled, it only attaches the context so you can type your own question.",
     "terminalBackgrounds": "Terminal backgrounds",

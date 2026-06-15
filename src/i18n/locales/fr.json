@@ -1316,7 +1316,7 @@
     "hideTopTabButtons": "Utiliser les onglets de connexion enfant dans l’arborescence des connexions",
     "hideTopTabButtonsDesc": "Lorsque cette option est activée, la bande d’onglets supérieure est masquée et les onglets de connexion enfant enregistrés apparaissent en lignes italiques sous leur connexion parente.",
     "doubleClickOpensConnection": "Double-click to open Connections",
-    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. Use the right-click Rename action to rename Connections.",
     "submitAiAttachmentsDirectly": "Envoyer la capture/le texte directement à AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "Lorsque cette option est activée, Envoyer à AI Assistant envoie la capture jointe ou le tampon du terminal avec une demande d’aide par défaut. Lorsqu’elle est désactivée, le contexte est seulement joint afin que vous puissiez saisir votre propre question.",
     "terminalBackgrounds": "Arrière-plans du terminal",
