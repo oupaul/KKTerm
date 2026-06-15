@@ -799,7 +799,7 @@ impl SessionManager {
         }
 
         let auth_method = ssh_auth_method_for(&request, password.as_deref())?;
-        if uses_native_ssh(&request, password.as_deref(), &auth_method) {
+        if uses_native_ssh(&request, password.as_deref(), &auth_method, true) {
             let known_hosts_path = ssh::app_known_hosts_path(&app)?;
             let auth = native_ssh_auth_for(&request, password, &auth_method)?;
             match ssh::start_native_terminal(
@@ -1158,7 +1158,7 @@ impl SessionManager {
         let terminal_request = terminal_request_for_tmux(&request.connection);
         let password = connection_password_for(secrets, &terminal_request);
         let auth_method = ssh_auth_method_for(&terminal_request, password.as_deref())?;
-        if !uses_native_ssh(&terminal_request, password.as_deref(), &auth_method) {
+        if !uses_native_ssh(&terminal_request, password.as_deref(), &auth_method, false) {
             return Err(
                 "SSH port forwarding currently requires a native SSH Connection without ProxyJump"
                     .to_string(),
@@ -1395,15 +1395,20 @@ fn uses_native_ssh(
     request: &StartTerminalSessionRequest,
     password: Option<&str>,
     auth_method: &SshAuthMethod,
+    allow_interactive_password: bool,
 ) -> bool {
     // A SOCKS proxy no longer forces the system-ssh path: the native russh
     // transport dials through the proxy itself (see `ssh::connect_verified_client`).
     // ProxyJump still requires the system `ssh` client.
     request.connection_type.trim().eq_ignore_ascii_case("ssh")
         && ssh::can_start_native_terminal(
-            request.key_path.as_deref(),
+            match auth_method {
+                SshAuthMethod::KeyFile => request.key_path.as_deref(),
+                SshAuthMethod::Password | SshAuthMethod::Agent => None,
+            },
             password,
             matches!(auth_method, SshAuthMethod::Agent),
+            allow_interactive_password && matches!(auth_method, SshAuthMethod::Password),
             request.proxy_jump.as_deref(),
         )
 }
@@ -1472,10 +1477,7 @@ fn native_ssh_auth_for(
         SshAuthMethod::KeyFile => Ok(ssh::NativeSshAuth::KeyFile {
             key_path: request.key_path.clone().unwrap_or_default(),
         }),
-        SshAuthMethod::Password => Ok(ssh::NativeSshAuth::Password {
-            password: password
-                .ok_or_else(|| "password is required for native SSH sessions".to_string())?,
-        }),
+        SshAuthMethod::Password => Ok(ssh::NativeSshAuth::Password { password }),
         SshAuthMethod::Agent => Ok(ssh::NativeSshAuth::Agent),
     }
 }
@@ -1557,7 +1559,7 @@ fn run_ssh_command(
     let terminal_request = terminal_request_for_tmux(request);
     let password = connection_password_for(secrets, &terminal_request);
     let auth_method = ssh_auth_method_for(&terminal_request, password.as_deref())?;
-    if uses_native_ssh(&terminal_request, password.as_deref(), &auth_method) {
+    if uses_native_ssh(&terminal_request, password.as_deref(), &auth_method, false) {
         return ssh::run_remote_command(ssh::NativeSshCommandRequest {
             host: terminal_request.host.clone(),
             user: terminal_request.user.clone(),
@@ -2542,6 +2544,31 @@ mod tests {
 
         request.auth_method = Some("keyboardInteractive".to_string());
         assert!(ssh_auth_method_for(&request, None).is_err());
+    }
+
+    #[test]
+    fn password_auth_without_stored_secret_uses_native_interactive_auth_even_with_key_path() {
+        let mut request = ssh_request();
+        request.auth_method = Some("password".to_string());
+        request.key_path = Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string());
+        let auth_method = ssh_auth_method_for(&request, None).expect("auth method resolves");
+
+        assert!(uses_native_ssh(&request, None, &auth_method, true));
+        assert!(!uses_native_ssh(&request, None, &auth_method, false));
+    }
+
+    #[test]
+    fn password_auth_ignores_stale_key_path_for_native_eligibility() {
+        let mut request = ssh_request();
+        request.auth_method = Some("password".to_string());
+        request.key_path = Some("C:\\Users\\example\\.ssh\\id_ed25519".to_string());
+        request.proxy_jump = Some("bastion".to_string());
+        let auth_method = ssh_auth_method_for(&request, None).expect("auth method resolves");
+
+        assert!(
+            !uses_native_ssh(&request, None, &auth_method, true),
+            "ProxyJump, not a stale key path, should be what disqualifies native SSH here"
+        );
     }
 
     #[test]

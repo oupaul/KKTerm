@@ -1758,7 +1758,9 @@ fn auth_for(
                 .read_connection_password(owner_id)
                 .map_err(|error| format!("failed to read SFTP password: {error}"))?
                 .ok_or_else(|| "password auth requires a stored connection password".to_string())?;
-            Ok(ssh::NativeSshAuth::Password { password })
+            Ok(ssh::NativeSshAuth::Password {
+                password: Some(password),
+            })
         }
         SftpAuthMethod::Agent => Ok(ssh::NativeSshAuth::Agent),
     }

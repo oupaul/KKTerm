@@ -128,7 +128,7 @@ pub(crate) struct NativeSshCommandRequest {
 #[derive(Clone)]
 pub enum NativeSshAuth {
     KeyFile { key_path: String },
-    Password { password: String },
+    Password { password: Option<String> },
     Agent,
 }
 
@@ -276,6 +276,7 @@ pub fn can_start_native_terminal(
     key_path: Option<&str>,
     password: Option<&str>,
     use_agent: bool,
+    interactive_password: bool,
     proxy_jump: Option<&str>,
 ) -> bool {
     let has_key_path = key_path
@@ -288,7 +289,7 @@ pub fn can_start_native_terminal(
         .map(str::trim)
         .is_some_and(|value| !value.is_empty());
 
-    (has_key_path || has_password || use_agent) && !has_proxy_jump
+    (has_key_path || has_password || use_agent || interactive_password) && !has_proxy_jump
 }
 
 pub fn start_native_terminal(
@@ -326,6 +327,7 @@ pub fn start_native_terminal(
     };
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let (ready_tx, ready_rx) = std_mpsc::sync_channel(1);
+    let returns_before_ready = matches!(request.auth, NativeSshAuth::Password { password: None });
     let worker = thread::spawn(move || {
         let result = run_native_terminal_thread(app.clone(), request.clone(), control_rx, ready_tx);
         if let Err(error) = result {
@@ -336,6 +338,15 @@ pub fn start_native_terminal(
             );
         }
     });
+
+    if returns_before_ready {
+        return Ok(NativeSshTerminal {
+            control: control_tx,
+            worker: Some(worker),
+            terminal_ready_ms: 0,
+            x11_forwarding_status: None,
+        });
+    }
 
     match ready_rx
         .recv_timeout(Duration::from_secs(15))
@@ -670,15 +681,23 @@ async fn run_native_terminal_once(
     startup_timeout: Duration,
 ) -> Result<TerminalRunOutcome, String> {
     let startup = async {
-        let session = connect_verified_client(NativeSshConnectionRequest {
-            host: request.host.clone(),
-            user: request.user.clone(),
-            port: request.port,
-            auth: request.auth.clone(),
-            known_hosts_path: request.known_hosts_path.clone(),
-            x11_forwarding: request.x11_forwarding.clone(),
-            socks_proxy: request.socks_proxy.clone(),
-        })
+        let mut prompt = TerminalAuthPrompt {
+            app,
+            session_id: &request.session_id,
+            control_rx,
+        };
+        let session = connect_verified_client_with_prompt(
+            NativeSshConnectionRequest {
+                host: request.host.clone(),
+                user: request.user.clone(),
+                port: request.port,
+                auth: request.auth.clone(),
+                known_hosts_path: request.known_hosts_path.clone(),
+                x11_forwarding: request.x11_forwarding.clone(),
+                socks_proxy: request.socks_proxy.clone(),
+            },
+            Some(&mut prompt),
+        )
         .await?;
 
         let ready_start = Instant::now();
@@ -738,10 +757,14 @@ async fn run_native_terminal_once(
         ))
     };
 
-    let (session, mut channel, terminal_ready_ms, x11_forwarding_status) =
+    let startup_result = if matches!(request.auth, NativeSshAuth::Password { password: None }) {
+        startup.await
+    } else {
         tokio::time::timeout(startup_timeout, startup)
             .await
-            .map_err(|_| "timed out while starting native SSH session".to_string())??;
+            .map_err(|_| "timed out while starting native SSH session".to_string())?
+    };
+    let (session, mut channel, terminal_ready_ms, x11_forwarding_status) = startup_result?;
 
     if let Some(ready_tx) = ready_tx {
         let _ = ready_tx.send(Ok((terminal_ready_ms, x11_forwarding_status)));
@@ -957,19 +980,31 @@ fn normalize_native_ssh_auth(auth: NativeSshAuth) -> Result<NativeSshAuth, Strin
                 Ok(NativeSshAuth::KeyFile { key_path })
             }
         }
-        NativeSshAuth::Password { password } => {
-            if password.is_empty() {
-                Err("password is required for SSH password authentication".to_string())
-            } else {
-                Ok(NativeSshAuth::Password { password })
-            }
-        }
+        NativeSshAuth::Password { password } => Ok(NativeSshAuth::Password {
+            password: password.and_then(|password| {
+                let password = password.trim().to_string();
+                (!password.is_empty()).then_some(password)
+            }),
+        }),
         NativeSshAuth::Agent => Ok(NativeSshAuth::Agent),
     }
 }
 
+struct TerminalAuthPrompt<'a> {
+    app: &'a AppHandle,
+    session_id: &'a str,
+    control_rx: &'a mut mpsc::UnboundedReceiver<SshTerminalControl>,
+}
+
 pub(crate) async fn connect_verified_client(
     request: NativeSshConnectionRequest,
+) -> Result<client::Handle<VerifyingClient>, String> {
+    connect_verified_client_with_prompt(request, None).await
+}
+
+async fn connect_verified_client_with_prompt(
+    request: NativeSshConnectionRequest,
+    mut prompt: Option<&mut TerminalAuthPrompt<'_>>,
 ) -> Result<client::Handle<VerifyingClient>, String> {
     let host = request.host.trim();
     if host.is_empty() {
@@ -990,37 +1025,33 @@ pub(crate) async fn connect_verified_client(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(str::to_string);
-    with_ssh_startup_timeout("connecting to SSH server", async {
-        let verifying = VerifyingClient {
-            host: host.to_string(),
-            port: request.port,
-            known_hosts_path: request.known_hosts_path,
-            rejection: Arc::clone(&host_key_rejection),
-            x11_forwarding: request.x11_forwarding,
-        };
-        let connect = async {
-            match socks_proxy.as_deref() {
-                Some(proxy) => {
-                    let stream =
-                        crate::socks::connect_via_socks5(proxy, host, request.port).await?;
-                    client::connect_stream(config, stream, verifying)
-                        .await
-                        .map_err(|error| format!("failed to connect to SSH server: {error}"))
-                }
-                None => client::connect(config, (host, request.port), verifying)
+    let verifying = VerifyingClient {
+        host: host.to_string(),
+        port: request.port,
+        known_hosts_path: request.known_hosts_path,
+        rejection: Arc::clone(&host_key_rejection),
+        x11_forwarding: request.x11_forwarding,
+    };
+    let mut session = with_ssh_startup_timeout("connecting to SSH server", async {
+        match socks_proxy.as_deref() {
+            Some(proxy) => {
+                let stream = crate::socks::connect_via_socks5(proxy, host, request.port).await?;
+                client::connect_stream(config, stream, verifying)
                     .await
-                    .map_err(|error| {
-                        remembered_rejection(&host_key_rejection)
-                            .unwrap_or_else(|| format!("failed to connect to SSH server: {error}"))
-                    }),
+                    .map_err(|error| format!("failed to connect to SSH server: {error}"))
             }
-        };
-        let mut session = connect.await?;
-
-        authenticate_native_ssh(&mut session, user, &auth).await?;
-        Ok(session)
+            None => client::connect(config, (host, request.port), verifying)
+                .await
+                .map_err(|error| {
+                    remembered_rejection(&host_key_rejection)
+                        .unwrap_or_else(|| format!("failed to connect to SSH server: {error}"))
+                }),
+        }
     })
-    .await
+    .await?;
+
+    authenticate_native_ssh(&mut session, user, &auth, prompt.as_deref_mut()).await?;
+    Ok(session)
 }
 
 fn x11_port(display: u16) -> u16 {
@@ -1074,11 +1105,13 @@ where
         .map_err(|_| format!("timed out while {operation}"))?
 }
 
-pub(crate) async fn authenticate_native_ssh(
+async fn authenticate_native_ssh(
     session: &mut client::Handle<VerifyingClient>,
     user: &str,
     auth: &NativeSshAuth,
+    prompt: Option<&mut TerminalAuthPrompt<'_>>,
 ) -> Result<(), String> {
+    let mut prompt = prompt;
     let auth_result = match auth {
         NativeSshAuth::KeyFile { key_path } => {
             let key_pair = load_secret_key(key_path, None)
@@ -1100,10 +1133,27 @@ pub(crate) async fn authenticate_native_ssh(
                 .await
                 .map_err(|error| format!("SSH key-file authentication failed: {error}"))?
         }
-        NativeSshAuth::Password { password } => session
+        NativeSshAuth::Password {
+            password: Some(password),
+        } => session
             .authenticate_password(user.to_string(), password.clone())
             .await
             .map_err(|error| format!("SSH password authentication failed: {error}"))?,
+        NativeSshAuth::Password { password: None } => {
+            let prompt = prompt
+                .as_deref_mut()
+                .ok_or_else(|| "password is required for native SSH sessions".to_string())?;
+            match authenticate_keyboard_interactive_from_terminal(session, user, prompt).await? {
+                TerminalAuthOutcome::Success => return Ok(()),
+                TerminalAuthOutcome::Rejected => {
+                    let password = read_terminal_prompt(prompt, "Password: ", false).await?;
+                    session
+                        .authenticate_password(user.to_string(), password)
+                        .await
+                        .map_err(|error| format!("SSH password authentication failed: {error}"))?
+                }
+            }
+        }
         NativeSshAuth::Agent => {
             authenticate_with_agent(session, user).await?;
             return Ok(());
@@ -1120,6 +1170,116 @@ pub(crate) async fn authenticate_native_ssh(
     }
 
     Ok(())
+}
+
+enum TerminalAuthOutcome {
+    Success,
+    Rejected,
+}
+
+async fn authenticate_keyboard_interactive_from_terminal(
+    session: &mut client::Handle<VerifyingClient>,
+    user: &str,
+    prompt: &mut TerminalAuthPrompt<'_>,
+) -> Result<TerminalAuthOutcome, String> {
+    let mut response = session
+        .authenticate_keyboard_interactive_start(user.to_string(), None::<String>)
+        .await
+        .map_err(|error| format!("SSH keyboard-interactive authentication failed: {error}"))?;
+
+    loop {
+        match response {
+            client::KeyboardInteractiveAuthResponse::Success => {
+                return Ok(TerminalAuthOutcome::Success);
+            }
+            client::KeyboardInteractiveAuthResponse::Failure { .. } => {
+                return Ok(TerminalAuthOutcome::Rejected);
+            }
+            client::KeyboardInteractiveAuthResponse::InfoRequest {
+                name,
+                instructions,
+                prompts,
+            } => {
+                emit_auth_text(prompt, name);
+                emit_auth_text(prompt, instructions);
+                let mut responses = Vec::with_capacity(prompts.len());
+                for server_prompt in prompts {
+                    responses.push(
+                        read_terminal_prompt(prompt, &server_prompt.prompt, server_prompt.echo)
+                            .await?,
+                    );
+                }
+                response = session
+                    .authenticate_keyboard_interactive_respond(responses)
+                    .await
+                    .map_err(|error| {
+                        format!("SSH keyboard-interactive authentication failed: {error}")
+                    })?;
+            }
+        }
+    }
+}
+
+fn emit_auth_text(prompt: &TerminalAuthPrompt<'_>, text: String) {
+    let text = text.trim();
+    if !text.is_empty() {
+        emit_terminal_output(prompt.app, prompt.session_id, format!("{text}\r\n"));
+    }
+}
+
+async fn read_terminal_prompt(
+    prompt: &mut TerminalAuthPrompt<'_>,
+    label: &str,
+    echo: bool,
+) -> Result<String, String> {
+    emit_terminal_output(prompt.app, prompt.session_id, label.to_string());
+    let mut input = Vec::new();
+    while let Some(control) = prompt.control_rx.recv().await {
+        match control {
+            SshTerminalControl::Input(data) => {
+                for byte in data {
+                    match byte {
+                        b'\r' | b'\n' => {
+                            emit_terminal_output(prompt.app, prompt.session_id, "\r\n".to_string());
+                            return Ok(String::from_utf8_lossy(&input).into_owned());
+                        }
+                        0x03 => {
+                            emit_terminal_output(
+                                prompt.app,
+                                prompt.session_id,
+                                "^C\r\n".to_string(),
+                            );
+                            return Err("SSH password prompt was cancelled".to_string());
+                        }
+                        0x08 | 0x7f => {
+                            if input.pop().is_some() && echo {
+                                emit_terminal_output(
+                                    prompt.app,
+                                    prompt.session_id,
+                                    "\x08 \x08".to_string(),
+                                );
+                            }
+                        }
+                        _ => {
+                            input.push(byte);
+                            if echo {
+                                emit_terminal_output(
+                                    prompt.app,
+                                    prompt.session_id,
+                                    String::from_utf8_lossy(&[byte]).into_owned(),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            SshTerminalControl::Resize { .. } => {}
+            SshTerminalControl::Close => {
+                return Err("SSH password prompt was cancelled".to_string());
+            }
+        }
+    }
+    Err("SSH password prompt was cancelled".to_string())
 }
 
 async fn authenticate_with_agent(
@@ -1281,21 +1441,37 @@ mod tests {
             Some("C:\\Users\\example\\.ssh\\id_ed25519"),
             None,
             false,
+            false,
             None
         ));
         assert!(can_start_native_terminal(
             None,
             Some("not-for-sqlite"),
             false,
+            false,
             None
         ));
-        assert!(can_start_native_terminal(None, None, true, None));
-        assert!(!can_start_native_terminal(None, None, false, None));
-        assert!(!can_start_native_terminal(Some("  "), None, false, None));
-        assert!(!can_start_native_terminal(None, Some("  "), false, None));
+        assert!(can_start_native_terminal(None, None, true, false, None));
+        assert!(can_start_native_terminal(None, None, false, true, None));
+        assert!(!can_start_native_terminal(None, None, false, false, None));
+        assert!(!can_start_native_terminal(
+            Some("  "),
+            None,
+            false,
+            false,
+            None
+        ));
+        assert!(!can_start_native_terminal(
+            None,
+            Some("  "),
+            false,
+            false,
+            None
+        ));
         assert!(!can_start_native_terminal(
             Some("C:\\Users\\example\\.ssh\\id_ed25519"),
             None,
+            false,
             false,
             Some("bastion")
         ));
@@ -1735,7 +1911,7 @@ mod tests {
                 key_path: required_measurement_env("KKTERM_SSH_KEY_PATH")?,
             }),
             "password" => Ok(NativeSshAuth::Password {
-                password: required_measurement_env("KKTERM_SSH_PASSWORD")?,
+                password: Some(required_measurement_env("KKTERM_SSH_PASSWORD")?),
             }),
             _ => Err("KKTERM_SSH_AUTH must be agent, keyFile, or password".to_string()),
         }

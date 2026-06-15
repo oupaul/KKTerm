@@ -120,7 +120,9 @@ pub fn transfer_public_key(
         host,
         user: username,
         port: request.port.unwrap_or(22),
-        auth: ssh::NativeSshAuth::Password { password },
+        auth: ssh::NativeSshAuth::Password {
+            password: Some(password),
+        },
         known_hosts_path: ssh::app_known_hosts_path(&app)?,
         command: install_public_key_command(&public_key),
         timeout_seconds: Some(30),
