@@ -1006,6 +1006,7 @@ interface WorkspaceState {
   setQuery: (query: string) => void;
   setWorkspaces: (workspaces: Workspace[]) => void;
   setActiveWorkspace: (workspaceId: string) => void;
+  closeWorkspaceTabs: (workspaceId: string, fallbackWorkspaceId?: string) => void;
   setGeneralSettings: (settings: GeneralSettings) => void;
   setCredentialSettings: (settings: CredentialSettings) => void;
   setDashboardSettings: (settings: DashboardSettings) => void;
@@ -1176,7 +1177,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         workspaces.find((workspace) => workspace.isDefault)?.id ??
         workspaces[0].id;
       persistActiveWorkspaceId(fallbackId);
-      set({ workspaces, activeWorkspaceId: fallbackId });
+      set({
+        workspaces,
+        activeWorkspaceId: fallbackId,
+        activeTabId: firstTabIdForWorkspace(get().tabs, fallbackId),
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+      }
       return;
     }
     set({ workspaces });
@@ -1195,6 +1203,43 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     });
     // The Connection Tree, rail, and sidebar all re-read the active Workspace's
     // tree off this shared invalidation event.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+    }
+  },
+  closeWorkspaceTabs: (workspaceId, fallbackWorkspaceId = DEFAULT_WORKSPACE_ID) => {
+    const closingTabs = get().tabs.filter(
+      (tab) => tabWorkspaceId(tab) === workspaceId,
+    );
+    if (closingTabs.length === 0 && get().activeWorkspaceId !== workspaceId) {
+      return;
+    }
+    const remainingTabs = get().tabs.filter(
+      (tab) => tabWorkspaceId(tab) !== workspaceId,
+    );
+    const nextActiveWorkspaceId =
+      get().activeWorkspaceId === workspaceId
+        ? fallbackWorkspaceId
+        : get().activeWorkspaceId;
+    const activeTabStillOpen = remainingTabs.some(
+      (tab) => tab.id === get().activeTabId,
+    );
+    const nextActiveTabId = activeTabStillOpen
+      ? get().activeTabId
+      : firstTabIdForWorkspace(remainingTabs, nextActiveWorkspaceId);
+
+    if (nextActiveWorkspaceId !== get().activeWorkspaceId) {
+      persistActiveWorkspaceId(nextActiveWorkspaceId);
+    }
+    set((state) => ({
+      tabs: remainingTabs,
+      activeWorkspaceId: nextActiveWorkspaceId,
+      activeTabId: nextActiveTabId,
+      activeSessionCounts: decrementActiveSessionCounts(
+        state.activeSessionCounts,
+        closingTabs.flatMap(urlConnectionIdsForTab),
+      ),
+    }));
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
     }
