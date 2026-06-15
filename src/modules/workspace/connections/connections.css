@@ -537,7 +537,8 @@
   background: var(--accent-soft);
 }
 
-.connection-row.active {
+.connection-row.active,
+.connection-row.selected {
   background: var(--accent-soft);
 }
 

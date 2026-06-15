@@ -262,6 +262,7 @@ export function ConnectionSidebar({
   const [pendingFolderDraft, setPendingFolderDraft] = useState<PendingFolderDraft | null>(null);
   const [inlineRenameTarget, setInlineRenameTarget] = useState<InlineRenameTarget | null>(null);
   const [inlineChildRenameTarget, setInlineChildRenameTarget] = useState<string | null>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [treeContextMenu, setTreeContextMenu] = useState<TreeContextMenuState | null>(null);
   const [childConnections, setChildConnections] = useState<WorkspaceChildConnection[]>(loadStoredChildConnections);
   const [childProperties, setChildProperties] = useState<ChildConnectionPropertiesState | null>(null);
@@ -2406,6 +2407,7 @@ export function ConnectionSidebar({
             isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
             isDraggingSource={draggedSourceId === `connection-${connection.id}`}
             isDropTarget={dropTarget === `connection-${connection.id}`}
+            isSelected={selectedConnectionId === connection.id}
             onChildContextMenu={handleChildContextMenu}
             onCancelRename={() => setInlineRenameTarget(null)}
             onClickCapture={handleTreeClickCapture}
@@ -2417,7 +2419,9 @@ export function ConnectionSidebar({
             onStartChildRename={setInlineChildRenameTarget}
             onCancelChildRename={() => setInlineChildRenameTarget(null)}
             onContextMenu={(event) => handleConnectionContextMenu(connection, undefined, event)}
+            onSelect={() => setSelectedConnectionId(connection.id)}
             onOpen={(event) => {
+              setSelectedConnectionId(connection.id);
               if (event.ctrlKey) {
                 handleOpenConnection(connection, { forceNewTab: true });
                 return;
@@ -2459,6 +2463,7 @@ export function ConnectionSidebar({
                 isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
                 isDraggingSource={false}
                 isDropTarget={false}
+                isSelected={selectedConnectionId === connection.id}
                 onChildContextMenu={handleChildContextMenu}
                 onCancelRename={() => setInlineRenameTarget(null)}
                 onClickCapture={handleTreeClickCapture}
@@ -2469,7 +2474,9 @@ export function ConnectionSidebar({
                 inlineChildRenameTarget={inlineChildRenameTarget}
                 onStartChildRename={setInlineChildRenameTarget}
                 onCancelChildRename={() => setInlineChildRenameTarget(null)}
+                onSelect={() => setSelectedConnectionId(connection.id)}
                 onOpen={(event) => {
+                  setSelectedConnectionId(connection.id);
                   if (event.ctrlKey) {
                     handleOpenConnection(connection, { forceNewTab: true });
                     return;
@@ -2493,6 +2500,7 @@ export function ConnectionSidebar({
                 folderIndex={folderIndex}
                 onClickCapture={handleTreeClickCapture}
                 pendingFolderDraft={pendingFolderDraft}
+                selectedConnectionId={selectedConnectionId}
                 inlineRenameTarget={inlineRenameTarget}
                 onCancelPendingFolder={handleCancelPendingFolder}
                 onCommitPendingFolder={handleCommitPendingFolder}
@@ -2501,6 +2509,7 @@ export function ConnectionSidebar({
                 onCommitFolderRename={commitFolderRename}
                 onContextMenu={handleFolderContextMenu}
                 onConnectionContextMenu={handleConnectionContextMenu}
+                onSelectConnection={(connection) => setSelectedConnectionId(connection.id)}
                 onCreateFolder={handleCreateFolder}
                 activeTabId={activeTabId}
                 childTabsForConnection={openTabsForConnection}
@@ -2848,9 +2857,11 @@ function ConnectionFolderNode({
   level,
   parentFolderId,
   folderIndex,
+  selectedConnectionId,
   onClickCapture,
   onCreateFolder,
   onOpenConnection,
+  onSelectConnection,
   onPointerDragStart,
   onToggleFolder,
   onCancelPendingFolder,
@@ -2881,9 +2892,11 @@ function ConnectionFolderNode({
   level: number;
   parentFolderId?: string;
   folderIndex: number;
+  selectedConnectionId: string | null;
   onClickCapture: (event: ReactMouseEvent) => void;
   onCreateFolder: (parentFolderId?: string) => void | Promise<void>;
   onOpenConnection: (connection: Connection, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onSelectConnection: (connection: Connection) => void;
   onPointerDragStart: (
     event: ReactPointerEvent<HTMLElement>,
     item: DraggedTreeItem,
@@ -3008,6 +3021,7 @@ function ConnectionFolderNode({
                   isRenaming={inlineRenameTarget?.kind === "connection" && inlineRenameTarget.id === connection.id}
                   isDraggingSource={draggedSourceId === `connection-${connection.id}`}
                   isDropTarget={dropTarget === `connection-${connection.id}`}
+                  isSelected={selectedConnectionId === connection.id}
                   key={connection.id}
                   onChildContextMenu={onChildContextMenu}
                   onCancelRename={onCancelRename}
@@ -3019,7 +3033,11 @@ function ConnectionFolderNode({
                   onRenameChildConnection={onRenameChildConnection}
                   inlineChildRenameTarget={inlineChildRenameTarget}
                   onStartChildRename={onStartChildRename}
-                  onOpen={(event) => onOpenConnection(connection, event)}
+                  onSelect={() => onSelectConnection(connection)}
+                  onOpen={(event) => {
+                    onSelectConnection(connection);
+                    onOpenConnection(connection, event);
+                  }}
                   onContextMenu={(event) => onConnectionContextMenu(connection, folder.id, event)}
                   onPointerDragStart={(event) =>
                     onPointerDragStart(
@@ -3056,6 +3074,7 @@ function ConnectionFolderNode({
               level={level + 1}
               parentFolderId={folder.id}
               folderIndex={childFolderIndex}
+              selectedConnectionId={selectedConnectionId}
               activeTabId={activeTabId}
               childConnectionsForConnection={childConnectionsForConnection}
               childTabsForConnection={childTabsForConnection}
@@ -3078,6 +3097,7 @@ function ConnectionFolderNode({
               onContextMenu={onContextMenu}
               onCreateFolder={onCreateFolder}
               onOpenConnection={onOpenConnection}
+              onSelectConnection={onSelectConnection}
               onPointerDragStart={onPointerDragStart}
               onToggleFolder={onToggleFolder}
             />
@@ -4468,6 +4488,7 @@ function ConnectionRowWithChildTabs({
   isRenaming,
   isDraggingSource,
   isDropTarget,
+  isSelected,
   onChildContextMenu,
   onCancelChildRename,
   onCancelRename,
@@ -4479,6 +4500,7 @@ function ConnectionRowWithChildTabs({
   onOpenChildConnection,
   onPointerDragStart,
   onRenameChildConnection,
+  onSelect,
   inlineChildRenameTarget,
   onStartChildRename,
 }: {
@@ -4492,6 +4514,7 @@ function ConnectionRowWithChildTabs({
   isRenaming: boolean;
   isDraggingSource: boolean;
   isDropTarget: boolean;
+  isSelected: boolean;
   onChildContextMenu: (
     connection: Connection,
     child: WorkspaceChildConnection,
@@ -4507,6 +4530,7 @@ function ConnectionRowWithChildTabs({
   onOpenChildConnection: (connection: Connection, child: WorkspaceChildConnection) => void;
   onPointerDragStart: (event: ReactPointerEvent<HTMLElement>) => void;
   onRenameChildConnection: (child: WorkspaceChildConnection, name: string) => boolean;
+  onSelect: () => void;
   inlineChildRenameTarget: string | null;
   onStartChildRename: (childConnectionId: string) => void;
 }) {
@@ -4542,12 +4566,14 @@ function ConnectionRowWithChildTabs({
         isDraggingSource={isDraggingSource}
         isDropTarget={isDropTarget}
         isRenaming={isRenaming}
+        isSelected={isSelected}
         onCancelRename={onCancelRename}
         onClickCapture={onClickCapture}
         onCommitRename={onCommitRename}
         onContextMenu={onContextMenu}
         onOpen={onOpen}
         onPointerDragStart={onPointerDragStart}
+        onSelect={onSelect}
       />
       {childConnections.map((child) => {
         const location = childLocationById.get(child.id);
@@ -4685,12 +4711,14 @@ function ConnectionRow({
   isRenaming,
   isDraggingSource,
   isDropTarget,
+  isSelected,
   onCancelRename,
   onClickCapture,
   onContextMenu,
   onCommitRename,
   onOpen,
   onPointerDragStart,
+  onSelect,
 }: {
   connection: Connection;
   connectionIndex: number;
@@ -4700,12 +4728,14 @@ function ConnectionRow({
   isRenaming: boolean;
   isDraggingSource: boolean;
   isDropTarget: boolean;
+  isSelected: boolean;
   onCancelRename: () => void;
   onClickCapture: (event: ReactMouseEvent) => void;
   onContextMenu: (event: ReactMouseEvent<HTMLElement>) => void;
   onCommitRename: (name: string) => Promise<boolean>;
   onOpen: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onPointerDragStart: (event: ReactPointerEvent<HTMLElement>) => void;
+  onSelect: () => void;
 }) {
   const doubleClickOpensConnection = useWorkspaceStore(
     (state) => state.generalSettings.doubleClickOpensConnection,
@@ -4716,6 +4746,7 @@ function ConnectionRow({
       className={`connection-row ${dragDisabled ? "" : "can-drag"} ${
         isDropTarget ? "drop-target" : ""
       } ${isActiveParent ? "active" : ""
+      } ${isSelected ? "selected" : ""
       } ${isDraggingSource ? "dragging-source" : ""
       }`}
       data-connection-id={connection.id}
@@ -4748,9 +4779,11 @@ function ConnectionRow({
         <button
           className="connection-open"
           onClick={(event) => {
-            if (!doubleClickOpensConnection) {
-              onOpen(event);
+            if (doubleClickOpensConnection) {
+              onSelect();
+              return;
             }
+            onOpen(event);
           }}
           onDoubleClick={(event) => {
             if (doubleClickOpensConnection) {
