@@ -39,10 +39,6 @@ The URL Pane chrome follows the File Explorer (SFTP) Apple-esque design language
 
 Tutorial targets: `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.close`.
 
-## Footer
-
-A slim status footer (mirroring the File Explorer pane footer) sits below the WebView surface, showing a secure/insecure lock-or-globe glyph followed by the current host. It is presentation only and carries no actions.
-
 ## Credential fill
 
 KKTerm can fill a saved username/password into the active form. Status lifecycle:

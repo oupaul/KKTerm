@@ -1073,17 +1073,6 @@ export function WebViewWorkspace({
           ) : null}
           {navError ? <p className="form-error webview-placeholder-error">{navError}</p> : null}
         </div>
-        <footer className="webview-foot">
-          <span className={isSecureAddress ? "webview-foot-secure" : "webview-foot-secure insecure"}>
-            {isSecureAddress ? <Lock size={12} /> : <Globe2 size={12} />}
-          </span>
-          {addressHost ? (
-            <>
-              <span className="webview-foot-dot" />
-              <span className="webview-foot-host">{addressHost}</span>
-            </>
-          ) : null}
-        </footer>
       </article>
     </section>
   );
