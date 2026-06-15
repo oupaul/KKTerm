@@ -1422,6 +1422,7 @@
                 show_connected_connections_in_rail: true,
                 show_all_connections_in_tree: true,
                 hide_top_tab_buttons: true,
+                double_click_opens_connection: true,
                 submit_ai_attachments_directly: false,
                 separate_split_terminal_backgrounds: true,
                 show_installer_on_rail: false,
@@ -1451,6 +1452,7 @@
         assert!(updated.show_connected_connections_in_rail);
         assert!(updated.show_all_connections_in_tree);
         assert!(updated.hide_top_tab_buttons);
+        assert!(updated.double_click_opens_connection);
         assert!(!updated.submit_ai_attachments_directly);
         assert!(updated.separate_split_terminal_backgrounds);
         assert!(!updated.show_installer_on_rail);
@@ -1773,6 +1775,7 @@
                 show_connected_connections_in_rail: true,
                 show_all_connections_in_tree: true,
                 hide_top_tab_buttons: true,
+                double_click_opens_connection: true,
                 submit_ai_attachments_directly: true,
                 separate_split_terminal_backgrounds: true,
                 show_installer_on_rail: false,
@@ -1802,6 +1805,7 @@
                 show_connected_connections_in_rail: false,
                 show_all_connections_in_tree: false,
                 hide_top_tab_buttons: false,
+                double_click_opens_connection: false,
                 submit_ai_attachments_directly: false,
                 separate_split_terminal_backgrounds: false,
                 show_installer_on_rail: true,
@@ -1833,6 +1837,7 @@
         assert!(imported.general_settings.show_connected_connections_in_rail);
         assert!(imported.general_settings.show_all_connections_in_tree);
         assert!(imported.general_settings.hide_top_tab_buttons);
+        assert!(imported.general_settings.double_click_opens_connection);
         assert!(imported.general_settings.submit_ai_attachments_directly);
         assert!(
             imported

@@ -1315,6 +1315,8 @@
     "workspaceTabs": "Schede",
     "hideTopTabButtons": "Usa le schede connessione figlia nell’albero delle connessioni",
     "hideTopTabButtonsDesc": "Quando è attivo, la barra superiore delle schede viene nascosta e le schede connessione figlia salvate appaiono come righe in corsivo sotto la connessione padre.",
+    "doubleClickOpensConnection": "Double-click to open Connections",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
     "submitAiAttachmentsDirectly": "Invia screenshot/testo direttamente ad AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "Quando è attivo, Invia ad AI Assistant invia lo screenshot allegato o il buffer del terminale con una richiesta di aiuto predefinita. Quando è disattivo, allega solo il contesto così puoi digitare la tua domanda.",
     "terminalBackgrounds": "Sfondi terminale",

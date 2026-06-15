@@ -4632,6 +4632,10 @@ function ConnectionRow({
   onOpen: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onPointerDragStart: (event: ReactPointerEvent<HTMLElement>) => void;
 }) {
+  const doubleClickOpensConnection = useWorkspaceStore(
+    (state) => state.generalSettings.doubleClickOpensConnection,
+  );
+
   return (
     <div
       className={`connection-row ${dragDisabled ? "" : "can-drag"} ${
@@ -4666,7 +4670,21 @@ function ConnectionRow({
           </span>
         </div>
       ) : (
-        <button className="connection-open" onClick={onOpen}>
+        <button
+          className="connection-open"
+          onClick={(event) => {
+            if (!doubleClickOpensConnection) {
+              onOpen(event);
+            }
+          }}
+          onDoubleClick={(event) => {
+            if (doubleClickOpensConnection) {
+              event.preventDefault();
+              onOpen(event);
+            }
+          }}
+          type="button"
+        >
           <ConnectionGlyph
             iconBackgroundColor={connection.iconBackgroundColor}
             iconDataUrl={connection.iconDataUrl}

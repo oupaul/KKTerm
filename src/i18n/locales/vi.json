@@ -1315,6 +1315,8 @@
     "workspaceTabs": "Tab",
     "hideTopTabButtons": "Dùng Tab kết nối con trong cây kết nối",
     "hideTopTabButtonsDesc": "Khi bật, dải Tab phía trên sẽ bị ẩn và các Tab kết nối con đã lưu xuất hiện dưới dạng hàng chữ nghiêng bên dưới Kết nối cha.",
+    "doubleClickOpensConnection": "Double-click to open Connections",
+    "doubleClickOpensConnectionDesc": "When enabled, single-clicking a Connection in the Connection Tree only selects it and double-clicking opens it. This disables double-click rename for Connections; use the right-click Rename action instead.",
     "submitAiAttachmentsDirectly": "Gửi ảnh chụp màn hình/văn bản trực tiếp đến AI Assistant",
     "submitAiAttachmentsDirectlyDesc": "Khi bật, Gửi đến AI Assistant sẽ gửi ảnh chụp màn hình hoặc bộ đệm terminal đã đính kèm cùng một yêu cầu trợ giúp mặc định. Khi tắt, nó chỉ đính kèm ngữ cảnh để bạn có thể nhập câu hỏi của riêng mình.",
     "terminalBackgrounds": "Nền terminal",

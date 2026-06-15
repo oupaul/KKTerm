@@ -19,7 +19,7 @@ Settings tutorial targets:
 
 - General: `settings.language`, `settings.workspaceAccess`, `settings.useDirectxScreenCapture`, `settings.statusBar`, `settings.settingsData`, `settings.debug`.
 - Appearance: `settings.appUiFontFamily`, `settings.appearance.colorScheme`, `settings.resetLayout`.
-- Workspace: `settings.connectedConnectionsRail`, `settings.hideTopTabButtons`, `settings.submitAiAttachmentsDirectly`, `settings.separateSplitTerminalBackgrounds`.
+- Workspace: `settings.connectedConnectionsRail`, `settings.hideTopTabButtons`, `settings.doubleClickOpensConnection`, `settings.submitAiAttachmentsDirectly`, `settings.separateSplitTerminalBackgrounds`.
 - Dashboard: `settings.dashboardDefaultLanding`, `settings.dashboardUseRandomDynamicBackground`, `settings.dashboardMaxActiveScriptWidgets`.
 - Credentials: `settings.credentialStorage`, `settings.encryptedSecretStoreSetupTitle`,
   `settings.encryptedSecretStoreSetupAction`, `settings.encryptedSecretStoreSetupRequiredTitle`, `settings.credentialsStored`,
@@ -87,6 +87,7 @@ Settings tutorial targets:
   - Toggle `settings.connectedConnectionsRail` (hint `settings.connectedConnectionsRailHint`). When on, connected Connection icons appear on the Activity Rail; when off, connected Connection shortcuts are hidden from the Activity Rail.
 - Tabs group `settings.workspaceTabs`.
 - Toggle `settings.hideTopTabButtons` (hint `settings.hideTopTabButtonsDesc`). When on, the top `workspace.tabStrip` buttons are hidden and new Tabs opened from saved Connections become **Child Connection Tabs**. Child Connection Tabs are shown as italic rows under their parent Connection in the active Workspace's Connection Tree, persist across launches, open lazily when selected, can be renamed, and expose `connections.childConnectionProperties` for child icon/color edits.
+- Toggle `settings.doubleClickOpensConnection` (hint `settings.doubleClickOpensConnectionDesc`). The default is off: a single click opens a Connection from the Connection Tree. When on, a single click only selects the Connection row and a double-click opens it; double-click rename for Connections is unavailable in this mode, so users should use `connections.rename` from the context menu.
 - AI Assistant group `settings.sectionAiAssistant`.
 - Toggle `settings.submitAiAttachmentsDirectly` (hint `settings.submitAiAttachmentsDirectlyDesc`). The default is on: Workspace Send to AI Assistant actions submit the captured screenshot or terminal buffer with `ai.directAttachmentPrompt`. When off, they only attach the context to the composer.
 - Terminal backgrounds group `settings.terminalBackgrounds`.

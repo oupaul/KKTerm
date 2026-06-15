@@ -141,6 +141,10 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         description: "Enable Child Connection Tabs: hides the top Tab Strip and shows saved Child Connection Tabs under their parent Connections in the Connection Tree.",
       },
       {
+        key: "settings.doubleClickOpensConnection",
+        description: "Require a double-click to open Connections from the Connection Tree; double-click rename is unavailable while this is enabled.",
+      },
+      {
         key: "settings.submitAiAttachmentsDirectly",
         description: "Choose whether Workspace Send to AI Assistant actions submit captured context immediately or only attach it to the composer.",
       },
