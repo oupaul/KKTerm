@@ -2401,17 +2401,62 @@
             .filter(|candidate| candidate.kind == "aiApiKey")
             .collect::<Vec<_>>();
 
-        assert!(
-            ai_candidates
-                .iter()
-                .any(|candidate| candidate.owner_id == "ai-provider:openai")
-        );
-        assert!(
-            ai_candidates
-                .iter()
-                .any(|candidate| candidate.owner_id == "ai-provider:openrouter")
-        );
-        assert!(ai_candidates.len() > 1);
+        for provider_kind in [
+            "openai",
+            "anthropic",
+            "openrouter",
+            "deepseek",
+            "gemini",
+            "grok",
+            "azure-openai",
+            "litellm",
+            "github-copilot",
+            "ollama",
+            "nvidia",
+            "opencode",
+            "openai-compatible",
+        ] {
+            let owner_id = format!("ai-provider:{provider_kind}");
+            assert!(
+                ai_candidates
+                    .iter()
+                    .any(|candidate| candidate.owner_id == owner_id),
+                "{provider_kind} should expose a stored credential candidate"
+            );
+        }
+    }
+
+    #[test]
+    fn ai_provider_settings_accept_every_registered_provider() {
+        let storage =
+            Storage::open(temp_db_path("ai-provider-all-registered")).expect("storage opens");
+
+        for provider_kind in [
+            "openai",
+            "anthropic",
+            "openrouter",
+            "deepseek",
+            "gemini",
+            "grok",
+            "azure-openai",
+            "litellm",
+            "github-copilot",
+            "ollama",
+            "nvidia",
+            "opencode",
+            "openai-compatible",
+        ] {
+            let mut settings = storage
+                .ai_provider_settings()
+                .expect("default AI provider settings load");
+            settings.provider_kind = provider_kind.to_string();
+            settings.base_url = format!("https://{provider_kind}.example.com/v1");
+
+            let updated = storage
+                .update_ai_provider_settings(settings)
+                .unwrap_or_else(|error| panic!("{provider_kind} should validate: {error}"));
+            assert_eq!(updated.provider_kind, provider_kind);
+        }
     }
 
     #[test]
