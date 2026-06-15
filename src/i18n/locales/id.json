@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "Tutup koneksi",
     "localFiles": "Penjelajah File",
+    "homeDirectory": "Direktori beranda",
     "localFilesSubtitle": "Browser file lokal",
     "localFilesRootDirectory": "Folder awal",
     "localFilesRootDirectoryPlaceholder": "Folder beranda"

@@ -99,6 +99,8 @@ and is **not** saved.
 
 Local terminal Add/Edit Connection uses the `connections.shell` tabbed selector for the local shell choice and still stores the selected `localShell` value on the Connection.
 
+File Explorer Add/Edit Connection uses `connections.localFilesRootDirectory` for the optional starting folder. On creation, leaving the starting folder at its default home-folder behavior, or explicitly choosing the detected home folder, uses the localized `connections.homeDirectory` Connection name. Choosing or typing a different starting folder means the folder name becomes the default Connection name unless the user enters an explicit name.
+
 SSH Add/Edit Connection uses the `connections.auth` tabbed selector for authentication method choices: `connections.keyFile`, `connections.password`, and `connections.sshAgent`.
 
 For SSH, Telnet, RDP, VNC, and FTP Connections, the password area can reuse saved Connection password credentials from the same Connection type. The dropdown label is `connections.savedPassword`; each option shows the saved credential's username and original host. Choosing `connections.typeNewPassword` and typing a password creates a new OS-keychain credential for the saved Connection. If another credential already exists for the exact same host and Connection type, the generated credential label appends `#2`, `#3`, and so on.

@@ -128,6 +128,9 @@ export function connectionToolbarTitle(connection: Connection) {
   if (connection.type === "local") {
     return localTerminalToolbarTitle(connection);
   }
+  if (connection.type === "localFiles") {
+    return connection.name;
+  }
   return connection.port ? `${connection.host}:${connection.port}` : connection.host;
 }
 

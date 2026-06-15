@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "关闭连接",
     "localFiles": "文件资源管理器",
+    "homeDirectory": "主目录",
     "localFilesSubtitle": "本地文件浏览器",
     "localFilesRootDirectory": "起始文件夹",
     "localFilesRootDirectoryPlaceholder": "主文件夹"

@@ -114,6 +114,31 @@ function nearestEdgeDirection(bounds: DOMRect, x: number, y: number): SplitDirec
   return distances.reduce((nearest, entry) => (entry[1] < nearest[1] ? entry : nearest))[0];
 }
 
+function normalizeLocalPathForNameComparison(path: string) {
+  return path.trim().replace(/[\\/]+$/g, "");
+}
+
+function localFilesDefaultNameForDirectory(directory: string, t: TFunction, homeDirectory = "") {
+  const normalized = normalizeLocalPathForNameComparison(directory);
+  const normalizedHome = normalizeLocalPathForNameComparison(homeDirectory);
+  if (!normalized || (normalizedHome && normalized.toLocaleLowerCase() === normalizedHome.toLocaleLowerCase())) {
+    return t("connections.homeDirectory");
+  }
+  const parts = normalized.split(/[\\/]+/).filter(Boolean);
+  return parts[parts.length - 1] || t("connections.localFiles");
+}
+
+function connectionTreeDisplayName(connection: Connection, t: TFunction) {
+  if (
+    connection.type === "localFiles" &&
+    !connection.localStartupDirectory?.trim() &&
+    ["File Explorer", t("connections.localFiles")].includes(connection.name.trim())
+  ) {
+    return t("connections.homeDirectory");
+  }
+  return connection.name;
+}
+
 type PendingFolderDraft = {
   parentFolderId?: string;
 };
@@ -3458,6 +3483,9 @@ function ConnectionDialog({
   const [localStartupDirectory, setLocalStartupDirectory] = useState(
     initialConnection?.localStartupDirectory ?? "",
   );
+  const [localFilesNameDraft, setLocalFilesNameDraft] = useState(initialConnection?.name ?? "");
+  const [localFilesNameEdited, setLocalFilesNameEdited] = useState(Boolean(initialConnection?.name));
+  const [localFilesHomeDirectory, setLocalFilesHomeDirectory] = useState("");
   const [keyEmailDialogOpen, setKeyEmailDialogOpen] = useState(false);
   const [keyEmailDraft, setKeyEmailDraft] = useState("");
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
@@ -3584,6 +3612,30 @@ function ConnectionDialog({
     };
   }, [canUseSavedPasswordCredential, connectionType]);
 
+  useEffect(() => {
+    if (connectionType !== "localFiles" || !isTauriRuntime()) {
+      setLocalFilesHomeDirectory("");
+      return;
+    }
+
+    let disposed = false;
+    void invokeCommand("list_local_places", undefined)
+      .then((places) => {
+        if (!disposed) {
+          setLocalFilesHomeDirectory(places.home?.path ?? "");
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setLocalFilesHomeDirectory("");
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [connectionType]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!connectionType) {
@@ -3614,7 +3666,7 @@ function ConnectionDialog({
       connectionType === "local"
         ? requestedName || selectedLocalShellLabel
         : connectionType === "localFiles"
-          ? requestedName || t("connections.localFiles")
+          ? requestedName || localFilesDefaultNameForDirectory(localStartupDirectory, t, localFilesHomeDirectory)
         : connectionType === "serial"
           ? requestedName || serialLine
         : requestedName || host;
@@ -3796,6 +3848,11 @@ function ConnectionDialog({
     }
   }
 
+  function handleLocalFilesNameChange(value: string) {
+    setLocalFilesNameDraft(value);
+    setLocalFilesNameEdited(Boolean(value.trim()));
+  }
+
   function handleOpenKeyEmailDialog() {
     setKeyGenerationError("");
     setKeyEmailDraft("");
@@ -3832,6 +3889,10 @@ function ConnectionDialog({
   }
 
   function renderConnectionTypeFields() {
+    const localFilesNameValue = isEditMode || localFilesNameEdited
+      ? localFilesNameDraft
+      : localFilesDefaultNameForDirectory(localStartupDirectory, t, localFilesHomeDirectory);
+
     switch (connectionType) {
       case "local":
         return (
@@ -3846,10 +3907,11 @@ function ConnectionDialog({
       case "localFiles":
         return (
           <LocalFilesConnectionFields
-            initialConnection={initialConnection}
             localStartupDirectory={localStartupDirectory}
+            nameValue={localFilesNameValue}
             onBrowseLocalStartupDirectory={() => void handleBrowseLocalStartupDirectory()}
             onLocalStartupDirectoryChange={setLocalStartupDirectory}
+            onNameChange={handleLocalFilesNameChange}
           />
         );
       case "serial":
@@ -4706,7 +4768,7 @@ function ConnectionRow({
             type={connection.type}
           />
           <span className="connection-main">
-            <strong>{connection.name}</strong>
+            <strong>{connectionTreeDisplayName(connection, i18next.t)}</strong>
           </span>
         </button>
       )}

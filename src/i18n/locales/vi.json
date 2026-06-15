@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "Đóng kết nối",
     "localFiles": "Trình khám phá tệp",
+    "homeDirectory": "Thư mục chính",
     "localFilesSubtitle": "Trình duyệt tệp cục bộ",
     "localFilesRootDirectory": "Thư mục bắt đầu",
     "localFilesRootDirectoryPlaceholder": "Thư mục chính"

@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "Cerrar conexión",
     "localFiles": "Explorador de archivos",
+    "homeDirectory": "Directorio personal",
     "localFilesSubtitle": "Explorador de archivos local",
     "localFilesRootDirectory": "Carpeta inicial",
     "localFilesRootDirectoryPlaceholder": "Carpeta de inicio"

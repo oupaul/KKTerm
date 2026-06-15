@@ -612,6 +612,9 @@ function toolbarTitleForConnection(connection: Connection) {
   if (connection.type === "local") {
     return localTerminalToolbarTitle(connection);
   }
+  if (connection.type === "localFiles") {
+    return connection.name;
+  }
   return formatConnectionAddress(connection);
 }
 

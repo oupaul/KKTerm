@@ -46,6 +46,11 @@ test("File Explorer renders the shared file browser as a single local pane", asy
     "File Explorer should hide transfer commands from the shared context menu",
   );
   assert.match(
+    workspaceSource,
+    /const kindLabel = isLocalFilesBrowser\s*\?\s*toolbarTitle\s*:/,
+    "File Explorer toolbar title should use the saved Connection name instead of the generic Files protocol label",
+  );
+  assert.match(
     overlaysSource,
     /showTransfer = true[\s\S]*showTransfer\?: boolean;[\s\S]*\{showTransfer \? \(/,
     "the shared SFTP context menu should allow callers to suppress transfer actions",
@@ -54,5 +59,10 @@ test("File Explorer renders the shared file browser as a single local pane", asy
     manualSource,
     /File Explorer Connections \(`localFiles`\)[\s\S]*single-pane local browser[\s\S]*no remote pane[\s\S]*Transfer Activity bar/,
     "the shipped manual should document the File Explorer single-pane layout",
+  );
+  assert.match(
+    manualSource,
+    /File Explorer Connections \(`localFiles`\)[\s\S]*titlebar shows the saved Connection name/,
+    "the shipped manual should document the File Explorer titlebar name",
   );
 });

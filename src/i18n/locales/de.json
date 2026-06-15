@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "Verbindung schließen",
     "localFiles": "Datei-Explorer",
+    "homeDirectory": "Home-Verzeichnis",
     "localFilesSubtitle": "Lokaler Dateibrowser",
     "localFilesRootDirectory": "Startordner",
     "localFilesRootDirectoryPlaceholder": "Persönlicher Ordner"

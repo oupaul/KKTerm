@@ -1,21 +1,22 @@
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
-import type { Connection } from "../../../../types";
 
 /**
  * Minimal Add/Edit form for the local File Explorer Connection type: a name and
  * an optional starting directory. There is no host, port, or credentials.
  */
 export function LocalFilesConnectionFields({
-  initialConnection,
   localStartupDirectory,
+  nameValue,
   onBrowseLocalStartupDirectory,
   onLocalStartupDirectoryChange,
+  onNameChange,
 }: {
-  initialConnection?: Connection;
   localStartupDirectory: string;
+  nameValue: string;
   onBrowseLocalStartupDirectory: () => void;
   onLocalStartupDirectoryChange: (value: string) => void;
+  onNameChange: (value: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -25,8 +26,9 @@ export function LocalFilesConnectionFields({
         <span>{t("connections.nameOptional")}</span>
         <input
           name="name"
-          defaultValue={initialConnection?.name ?? ""}
+          onChange={(event) => onNameChange(event.currentTarget.value)}
           placeholder={t("connections.localFiles")}
+          value={nameValue}
         />
       </label>
       <label>

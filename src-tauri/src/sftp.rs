@@ -1040,6 +1040,7 @@ fn windows_local_drives() -> Vec<LocalDrivePlace> {
 fn sysinfo_local_drives() -> Vec<LocalDrivePlace> {
     let disks = sysinfo::Disks::new_with_refreshed_list();
     let mut seen = std::collections::HashSet::new();
+    let mut seen_visible_drives = std::collections::HashSet::new();
     let mut drives = Vec::new();
     for disk in disks.iter() {
         let path = display_local_path(disk.mount_point());
@@ -1057,6 +1058,10 @@ fn sysinfo_local_drives() -> Vec<LocalDrivePlace> {
         } else {
             volume_name
         };
+        let visible_key = (label.to_lowercase(), total_bytes, disk.available_space());
+        if !seen_visible_drives.insert(visible_key) {
+            continue;
+        }
         drives.push(LocalDrivePlace {
             id: format!("drive-{path}"),
             label,

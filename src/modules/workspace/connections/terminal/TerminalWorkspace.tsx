@@ -2377,7 +2377,7 @@ function TerminalPaneView({
               iconBackgroundColor={pane.connection.iconBackgroundColor}
               iconDataUrl={pane.connection.iconDataUrl}
               localShell={pane.connection.localShell}
-              size={14}
+              size={18}
               type={pane.connection.type}
             />
           ) : (

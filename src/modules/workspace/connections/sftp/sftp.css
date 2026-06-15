@@ -28,8 +28,8 @@
   align-items: center;
   gap: 12px;
   min-height: 22px;
-  /* Even top/bottom padding keeps the kind glyph + title vertically centered. */
-  padding: 2px 6px 2px 14px;
+  /* Same total vertical padding; the extra top pixel optically centers the glyph + title. */
+  padding: 3px 6px 1px 14px;
 }
 /* Slim the action controls so they don't force the half-height titlebar taller. */
 .sftp-toolbar .toolbar-button {

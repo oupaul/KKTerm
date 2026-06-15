@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "ปิดการเชื่อมต่อ",
     "localFiles": "ตัวจัดการไฟล์",
+    "homeDirectory": "ไดเรกทอรีหลัก",
     "localFilesSubtitle": "เบราว์เซอร์ไฟล์ในเครื่อง",
     "localFilesRootDirectory": "โฟลเดอร์เริ่มต้น",
     "localFilesRootDirectoryPlaceholder": "โฟลเดอร์หลัก"

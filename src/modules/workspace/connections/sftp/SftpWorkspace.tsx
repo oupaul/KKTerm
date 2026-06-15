@@ -1382,13 +1382,16 @@ export function SftpWorkspace({
   const clearableTransferCount = transfers.filter((transfer) =>
     TRANSFER_HISTORY_STATES.includes(transfer.state),
   ).length;
-  const toolbarTitle = tab.toolbarTitle ?? (connection ? connectionToolbarTitle(connection) : tab.title);
-  const kindLabel =
-    tab.kind === "ftp"
+  const rawToolbarTitle = tab.toolbarTitle ?? (connection ? connectionToolbarTitle(connection) : tab.title);
+  const toolbarTitle =
+    isLocalFilesBrowser && connection
+      ? localFilesToolbarTitle(connection, rawToolbarTitle, localPlaces?.home?.path ?? "", t)
+      : rawToolbarTitle;
+  const kindLabel = isLocalFilesBrowser
+    ? toolbarTitle
+    : tab.kind === "ftp"
       ? t("sftp.protocolFtp")
-      : tab.kind === "localFiles"
-        ? t("sftp.protocolFiles")
-        : t("sftp.protocolSftp");
+      : t("sftp.protocolSftp");
   const kindIconSrc = fileBrowserConnectionIconSrc(
     tab.kind === "localFiles" ? "localFiles" : tab.kind === "ftp" ? "ftp" : "sftp",
   );
@@ -1939,6 +1942,30 @@ function readSidebarCollapsed(connectionKey: string, isLocalFilesBrowser: boolea
   } catch {
     return fallback;
   }
+}
+
+function normalizeLocalPathForTitleComparison(path: string) {
+  return path.trim().replace(/[\\/]+$/g, "");
+}
+
+function localFilesToolbarTitle(
+  connection: NonNullable<WorkspaceTab["connection"]>,
+  fallbackTitle: string,
+  homeDirectory: string,
+  t: (key: string) => string,
+) {
+  const defaultFileExplorerNames = new Set(["File Explorer", t("connections.localFiles")]);
+  const name = connection.name.trim();
+  const startupDirectory = normalizeLocalPathForTitleComparison(connection.localStartupDirectory ?? "");
+  const normalizedHome = normalizeLocalPathForTitleComparison(homeDirectory);
+  const isHomeDirectory = !startupDirectory || (
+    normalizedHome &&
+    startupDirectory.toLocaleLowerCase() === normalizedHome.toLocaleLowerCase()
+  );
+  if (isHomeDirectory && (!name || defaultFileExplorerNames.has(name))) {
+    return t("connections.homeDirectory");
+  }
+  return fallbackTitle;
 }
 
 function writeSidebarCollapsed(connectionKey: string, collapsed: boolean) {

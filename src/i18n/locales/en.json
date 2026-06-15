@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "Close Connection",
     "localFiles": "File Explorer",
+    "homeDirectory": "Home Directory",
     "localFilesSubtitle": "Local file browser",
     "localFilesRootDirectory": "Starting folder",
     "localFilesRootDirectoryPlaceholder": "Home folder"

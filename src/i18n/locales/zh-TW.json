@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "關閉連線",
     "localFiles": "檔案總管",
+    "homeDirectory": "個人目錄",
     "localFilesSubtitle": "本機檔案瀏覽器",
     "localFilesRootDirectory": "起始資料夾",
     "localFilesRootDirectoryPlaceholder": "個人資料夾"

@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "Chiudi connessione",
     "localFiles": "Esplora file",
+    "homeDirectory": "Directory home",
     "localFilesSubtitle": "Browser file locale",
     "localFilesRootDirectory": "Cartella iniziale",
     "localFilesRootDirectoryPlaceholder": "Cartella home"

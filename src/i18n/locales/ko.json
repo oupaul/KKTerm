@@ -1767,6 +1767,7 @@
     },
     "closeConnection": "연결 닫기",
     "localFiles": "파일 탐색기",
+    "homeDirectory": "홈 디렉터리",
     "localFilesSubtitle": "로컬 파일 브라우저",
     "localFilesRootDirectory": "시작 폴더",
     "localFilesRootDirectoryPlaceholder": "홈 폴더"
