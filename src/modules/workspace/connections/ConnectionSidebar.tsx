@@ -4662,6 +4662,9 @@ function ConnectionChildTabRow({
   onRename: () => void;
 }) {
   const { t } = useTranslation();
+  const doubleClickOpensConnection = useWorkspaceStore(
+    (state) => state.generalSettings.doubleClickOpensConnection,
+  );
   const title = child.name;
   const clickTimerRef = useRef<number | null>(null);
 
@@ -4688,6 +4691,13 @@ function ConnectionChildTabRow({
       <button
         className="connection-child-tab-open"
         onClick={() => {
+          // In double-click-to-open mode a single click must not open the
+          // child Connection, matching the parent ConnectionRow. Opening
+          // happens from onDoubleClick below; rename moves to the context menu.
+          if (doubleClickOpensConnection) {
+            clearClickTimer();
+            return;
+          }
           clearClickTimer();
           clickTimerRef.current = window.setTimeout(() => {
             clickTimerRef.current = null;
@@ -4698,6 +4708,10 @@ function ConnectionChildTabRow({
           event.preventDefault();
           event.stopPropagation();
           clearClickTimer();
+          if (doubleClickOpensConnection) {
+            onActivate();
+            return;
+          }
           onRename();
         }}
         type="button"
