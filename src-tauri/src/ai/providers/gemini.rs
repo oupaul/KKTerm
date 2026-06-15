@@ -9,6 +9,9 @@ pub(super) fn provider() -> OpenAiCompatibleProvider {
         requires_api_key: true,
         endpoint_style: OpenAiEndpointStyle::ChatCompletions,
         auth_style: OpenAiAuthStyle::Bearer,
-        default_api: OpenAiApiStyle::Responses,
+        // Gemini's OpenAI-compatibility layer implements /chat/completions but
+        // not the OpenAI Responses API (/responses returns HTTP 404), so it must
+        // default to Chat Completions.
+        default_api: OpenAiApiStyle::ChatCompletions,
     }
 }

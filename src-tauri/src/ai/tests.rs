@@ -2338,6 +2338,25 @@
     }
 
     #[test]
+    fn chat_completions_only_providers_never_use_responses_api() {
+        // These providers' OpenAI-compatibility layers do not implement the
+        // Responses API (/responses returns HTTP 404), so they must resolve to
+        // Chat Completions regardless of the requested api mode.
+        for provider_kind in ["gemini", "nvidia"] {
+            let provider = openai_provider(provider_kind);
+            for api_mode in ["chatCompletions", "responses", ""] {
+                assert!(
+                    matches!(
+                        provider.api_style_for_settings(api_mode),
+                        OpenAiApiStyle::ChatCompletions
+                    ),
+                    "{provider_kind} should use Chat Completions for api_mode {api_mode:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn tool_definitions_include_performance_counters_tool() {
         let settings: AiAssistantToolSettings = serde_json::from_value(json!({
             "performanceCounters": true
