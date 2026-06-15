@@ -1244,12 +1244,14 @@ const AI_PROVIDER_CREDENTIALS: &[(&str, &str, &str)] = &[
     ("anthropic", "Anthropic", "Anthropic API key"),
     ("openrouter", "OpenRouter", "OpenRouter API key"),
     ("deepseek", "DeepSeek", "DeepSeek API key"),
+    ("gemini", "Google Gemini", "Google AI Studio API key"),
     ("grok", "xAI Grok", "xAI API key"),
     ("azure-openai", "Azure OpenAI", "Azure OpenAI API key"),
     ("litellm", "LiteLLM", "LiteLLM key"),
     ("github-copilot", "GitHub Copilot", "GitHub OAuth token"),
     ("ollama", "Ollama", "Ollama API key"),
     ("nvidia", "NVIDIA", "NVIDIA API key"),
+    ("opencode", "OpenCode", "OpenCode API key"),
     ("openai-compatible", "OpenAI-compatible", "API key"),
 ];
 
@@ -4518,6 +4520,7 @@ fn validate_ai_provider_settings(
         "anthropic" => "anthropic".to_string(),
         "openrouter" => "openrouter".to_string(),
         "deepseek" => "deepseek".to_string(),
+        "gemini" | "google-gemini" | "google_gemini" | "google gemini" => "gemini".to_string(),
         "grok" | "xai" => "grok".to_string(),
         "azure-openai" | "azure_openai" | "azure openai" => "azure-openai".to_string(),
         "litellm" | "lite-llm" | "lite_llm" => "litellm".to_string(),
