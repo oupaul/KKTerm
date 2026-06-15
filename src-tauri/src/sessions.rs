@@ -26,6 +26,7 @@ pub struct SessionManager {
     sessions: Mutex<HashMap<String, TerminalSession>>,
     recordings: TerminalRecordingManager,
     ssh_context_cache: Mutex<HashMap<String, Result<String, String>>>,
+    os_detect_cache: Mutex<HashMap<String, DetectedRemoteOs>>,
     ssh_port_forwards: Mutex<HashMap<String, SshPortForwardSession>>,
 }
 
@@ -164,6 +165,16 @@ pub struct CloseSshPortForwardRequest {
 pub struct RemoteLoopbackPort {
     pub port: u16,
     pub address: String,
+}
+
+/// Raw remote-OS facts gathered on first SSH connect for icon auto-detection.
+/// The frontend maps these to a bundled distro/OS logo.
+#[derive(Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetectedRemoteOs {
+    pub id: Option<String>,
+    pub id_like: Option<String>,
+    pub kernel: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -650,6 +661,7 @@ impl SessionManager {
             sessions: Mutex::new(HashMap::new()),
             recordings: TerminalRecordingManager::new(),
             ssh_context_cache: Mutex::new(HashMap::new()),
+            os_detect_cache: Mutex::new(HashMap::new()),
             ssh_port_forwards: Mutex::new(HashMap::new()),
         }
     }
@@ -1075,6 +1087,38 @@ impl SessionManager {
             .map_err(|_| "SSH system context cache lock is poisoned".to_string())?
             .insert(cache_key, result.clone());
         result
+    }
+
+    pub fn detect_ssh_remote_os(
+        &self,
+        app: AppHandle,
+        secrets: &secrets::Secrets,
+        request: TmuxConnectionRequest,
+    ) -> Result<DetectedRemoteOs, String> {
+        let cache_key = ssh_system_context_cache_key(&request);
+        if let Some(cached) = self
+            .os_detect_cache
+            .lock()
+            .map_err(|_| "OS detection cache lock is poisoned".to_string())?
+            .get(&cache_key)
+            .cloned()
+        {
+            return Ok(cached);
+        }
+
+        let output = run_ssh_command(
+            app,
+            secrets,
+            &request,
+            remote_os_detect_command(),
+            Some(Duration::from_secs(3)),
+        )?;
+        let detected = parse_detected_remote_os(&output);
+        self.os_detect_cache
+            .lock()
+            .map_err(|_| "OS detection cache lock is poisoned".to_string())?
+            .insert(cache_key, detected.clone());
+        Ok(detected)
     }
 
     pub fn list_remote_loopback_ports(
@@ -1924,6 +1968,43 @@ fn tmux_capture_pane_command(tmux_session_id: &str, buffer_lines: u32) -> String
     )
 }
 
+fn remote_os_detect_command() -> String {
+    // Lightweight, POSIX-sh probe: the os-release ID/ID_LIKE plus the kernel
+    // name are enough for the frontend to pick a bundled distro/OS logo.
+    r#"if [ -r /etc/os-release ]; then
+  . /etc/os-release
+  printf 'ID=%s\n' "${ID:-}"
+  printf 'ID_LIKE=%s\n' "${ID_LIKE:-}"
+fi
+printf 'KERNEL=%s\n' "$(uname -s 2>/dev/null)"
+"#
+    .to_string()
+}
+
+fn parse_detected_remote_os(output: &str) -> DetectedRemoteOs {
+    let mut detected = DetectedRemoteOs::default();
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(value) = line.strip_prefix("ID=") {
+            let value = value.trim().trim_matches('"');
+            if !value.is_empty() {
+                detected.id = Some(value.to_ascii_lowercase());
+            }
+        } else if let Some(value) = line.strip_prefix("ID_LIKE=") {
+            let value = value.trim().trim_matches('"');
+            if !value.is_empty() {
+                detected.id_like = Some(value.to_ascii_lowercase());
+            }
+        } else if let Some(value) = line.strip_prefix("KERNEL=") {
+            let value = value.trim();
+            if !value.is_empty() {
+                detected.kernel = Some(value.to_string());
+            }
+        }
+    }
+    detected
+}
+
 fn ssh_system_context_command() -> String {
     r#"printf 'Hostname: '; hostname 2>/dev/null || printf 'unknown'; printf '\n'
 printf 'User: '; whoami 2>/dev/null || printf 'unknown'; printf '\n'
@@ -2338,6 +2419,29 @@ mod tests {
     fn local_shell_available_is_permissive_off_windows() {
         // The pwsh pre-flight gate is Windows-only; elsewhere this is a no-op.
         assert!(local_shell_available("anything"));
+    }
+
+    #[test]
+    fn parse_detected_remote_os_reads_os_release_and_kernel() {
+        let detected = parse_detected_remote_os("ID=ubuntu\nID_LIKE=debian\nKERNEL=Linux\n");
+        assert_eq!(detected.id.as_deref(), Some("ubuntu"));
+        assert_eq!(detected.id_like.as_deref(), Some("debian"));
+        assert_eq!(detected.kernel.as_deref(), Some("Linux"));
+    }
+
+    #[test]
+    fn parse_detected_remote_os_lowercases_ids_and_strips_quotes() {
+        let detected = parse_detected_remote_os("ID=\"RHEL\"\nID_LIKE=\"fedora\"\nKERNEL=Linux\n");
+        assert_eq!(detected.id.as_deref(), Some("rhel"));
+        assert_eq!(detected.id_like.as_deref(), Some("fedora"));
+    }
+
+    #[test]
+    fn parse_detected_remote_os_handles_kernel_only_output() {
+        let detected = parse_detected_remote_os("KERNEL=Darwin\n");
+        assert_eq!(detected.id, None);
+        assert_eq!(detected.id_like, None);
+        assert_eq!(detected.kernel.as_deref(), Some("Darwin"));
     }
 
     fn local_request() -> StartTerminalSessionRequest {

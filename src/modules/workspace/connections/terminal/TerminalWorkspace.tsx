@@ -17,6 +17,8 @@ import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
 import { fileBrowserCommandsFor } from "../../../../lib/fileBrowserCommands";
 import { focusCurrentWebview, invokeCommand, isTauriRuntime, logUiDebug, saveTextFile, type RemoteLoopbackPort, type TerminalOutput, type TerminalRecordingEntry, type TerminalRecordingInfo, type TmuxSession } from "../../../../lib/tauri";
+import { isOsIconAutoDetectLocked, osIconIdForDetection, osIconRefForId } from "../../../../lib/osIcons";
+import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
@@ -1317,6 +1319,55 @@ function SshPortForwardMenu({
   );
 }
 
+// Connection ids with an OS-detection request in flight, so concurrently
+// opening panes of the same Connection only probe the remote host once.
+const osDetectInFlight = new Set<string>();
+
+// On the first SSH connect, detect the remote OS and set a matching distro/OS
+// logo as the Connection icon. Runs only when the Connection has no icon yet and
+// the user has not opted out by manually choosing an icon; later connects skip
+// because an icon is already present (or the auto-detect lock is set), so a
+// hand-picked icon is never overridden.
+async function maybeAutoDetectOsIcon(connection: Connection) {
+  if (connection.type !== "ssh" || connection.iconDataUrl) {
+    return;
+  }
+  if (isOsIconAutoDetectLocked(connection.id) || osDetectInFlight.has(connection.id)) {
+    return;
+  }
+  osDetectInFlight.add(connection.id);
+  try {
+    const detected = await invokeCommand("detect_ssh_remote_os", {
+      request: tmuxConnectionRequest(connection),
+    });
+    const iconId = osIconIdForDetection(detected);
+    if (!iconId) {
+      return;
+    }
+    // Re-check: the user may have set an icon (or opted out) while we probed.
+    const current = useWorkspaceStore
+      .getState()
+      .tabs.flatMap((tab) => [tab.connection, ...tab.panes.map((pane) => pane.connection)])
+      .find((candidate) => candidate?.id === connection.id);
+    if (current?.iconDataUrl || isOsIconAutoDetectLocked(connection.id)) {
+      return;
+    }
+    const updated = await invokeCommand("update_connection_icon_data_url", {
+      connectionId: connection.id,
+      iconDataUrl: osIconRefForId(iconId),
+    });
+    if (updated) {
+      useWorkspaceStore.getState().refreshOpenConnectionMetadata(updated);
+      notifyConnectionTreeInvalidated();
+    }
+  } catch {
+    // Detection is best-effort: an unreachable probe, a non-POSIX remote shell,
+    // or an unknown distro simply leaves the default connection icon in place.
+  } finally {
+    osDetectInFlight.delete(connection.id);
+  }
+}
+
 export async function inspectActiveSshSystemContext(tab: WorkspaceTab | undefined) {
   const connection =
     tab?.connection?.type === "ssh"
@@ -1915,6 +1966,7 @@ function TerminalPaneView({
           writeInputToSession(startupInput);
         }
         markConnectionSessionStarted(connection.id);
+        void maybeAutoDetectOsIcon(connection);
       } catch (error) {
         terminal.writeln("");
         terminal.writeln(t("terminal.failedToStartDetail", { message: String(error) }));

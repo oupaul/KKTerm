@@ -13,6 +13,7 @@ import vncIcon from "../../../assets/connection-icons/vnc.png";
 import wslIcon from "../../../assets/connection-icons/wsl.png";
 import { lucideIconNameFromRef } from "../../../lib/iconCatalog";
 import { materialIconRefToUrl } from "../../../lib/iconCatalogUrls";
+import { osIconRefToUrl } from "../../../lib/osIconUrls";
 import { fileBrowserConnectionIconSrc } from "./fileBrowserConnectionIcons";
 
 type LucideIcon = ComponentType<{ size?: number; style?: CSSProperties }>;
@@ -87,7 +88,7 @@ export function ConnectionIcon({
   type: ConnectionType;
 }) {
   const src = connectionIconSrcForConnection({ iconDataUrl, localShell, type });
-  const MaterialOrImage = materialIconRefToUrl(src) ?? src;
+  const MaterialOrImage = osIconRefToUrl(src) ?? materialIconRefToUrl(src) ?? src;
   const lucideIconName = lucideIconNameFromRef(src);
   const LucideIcon = lucideIconName
     ? (Icons as unknown as Record<string, LucideIcon | undefined>)[lucideIconName]

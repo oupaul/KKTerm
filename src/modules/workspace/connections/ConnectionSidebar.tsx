@@ -41,6 +41,7 @@ import i18next from "../../../i18n/config";
 import { ariaExpanded, dialogButtonAria } from "../../../lib/aria";
 import { isMacPlatform } from "../../../lib/platform";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
+import { lockOsIconAutoDetect } from "../../../lib/osIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
 import { confirmNativeDialog, invokeCommand, isTauriRuntime, selectAppLauncherFolder, selectKeyFile, type TmuxSession } from "../../../lib/tauri";
 import { connectionTree } from "../../../app-defaults";
@@ -1156,6 +1157,10 @@ export function ConnectionSidebar({
     if ((connection.iconDataUrl ?? null) === normalizedIconDataUrl) {
       return connection;
     }
+    // A deliberate icon change (including a reset to default) opts this
+    // Connection out of SSH remote-OS auto-detection so it never overrides the
+    // user's choice on later connects.
+    lockOsIconAutoDetect(connection.id);
     const updated = await invokeCommand("update_connection_icon_data_url", {
       connectionId: connection.id,
       iconDataUrl: normalizedIconDataUrl,

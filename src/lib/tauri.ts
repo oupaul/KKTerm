@@ -172,6 +172,12 @@ export interface RemoteLoopbackPort {
   address: string;
 }
 
+export interface DetectedRemoteOs {
+  id?: string | null;
+  idLike?: string | null;
+  kernel?: string | null;
+}
+
 export interface SshPortForwardStarted {
   forwardId: string;
   localPort: number;
@@ -1712,6 +1718,22 @@ type CommandMap = {
       };
     };
     result: string;
+  };
+  detect_ssh_remote_os: {
+    args: {
+      request: {
+        host: string;
+        user: string;
+        port?: number;
+        keyPath?: string;
+        proxyJump?: string;
+        sshSocksProxy?: string;
+        sshSocksProxyInheritDefaults?: boolean;
+        authMethod?: "keyFile" | "password" | "agent";
+        secretOwnerId?: string;
+      };
+    };
+    result: DetectedRemoteOs;
   };
   list_remote_loopback_ports: {
     args: {

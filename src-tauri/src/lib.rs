@@ -2047,6 +2047,19 @@ async fn inspect_ssh_system_context(
 }
 
 #[tauri::command]
+async fn detect_ssh_remote_os(
+    app: tauri::AppHandle,
+    request: sessions::TmuxConnectionRequest,
+) -> Result<sessions::DetectedRemoteOs, String> {
+    run_blocking_command("SSH remote OS detection", move || {
+        let sessions = app.state::<sessions::SessionManager>();
+        let secrets = app.state::<secrets::Secrets>();
+        sessions.detect_ssh_remote_os(app.clone(), &secrets, request)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn list_remote_loopback_ports(
     app: tauri::AppHandle,
     request: sessions::TmuxConnectionRequest,
@@ -3281,6 +3294,7 @@ pub fn run() {
             capture_tmux_pane,
             // ── SSH system context, port forwarding & elevation
             inspect_ssh_system_context,
+            detect_ssh_remote_os,
             list_remote_loopback_ports,
             start_ssh_port_forward,
             close_ssh_port_forward,
