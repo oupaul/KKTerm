@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `terminal.verifyingHostKey`, `terminal.sshHostKeyChanged`, `terminal.sshHostKeyChangedDetail`, `terminal.sshHostKeyChangeDetail`, `terminal.trustHostKey`, `terminal.hostKeyNotTrusted`, `terminal.selectKeyFile`, `terminal.sshContextUnavailable`, `terminal.showTmux`, `terminal.editTmuxSession`, `terminal.tmuxSessionName`, `terminal.tmuxSessionNameRequired`, `terminal.tmuxSessionNameInvalid`, `terminal.tmuxSessionRenamed`, `terminal.tmuxSessions`, `terminal.refreshTmux`, `terminal.noTmuxSessions`, `terminal.attached`, `terminal.detached`, `terminal.detachTmux`, `terminal.closeTmux`, `terminal.openInPane`, `terminal.openLeft`, `terminal.openRight`, `terminal.openAbove`, `terminal.openBelow`, `terminal.mouseOn`, `terminal.mouseOff`, `terminal.sshPortRedirect`, `terminal.remoteLoopbackPorts`, `terminal.refreshPorts`, `terminal.scanningPorts`, `terminal.noRemoteLoopbackPorts`, `terminal.remoteLoopbackPort`, `terminal.openPortInBrowser`, `terminal.sshPortForwardOpened`, `settings.xServer`, `settings.xServerManaged`, `settings.xServerLaunch`
-- Topics: SSH host key trust, tmux session list, attach / detach / rename tmux, Child Connection Tab tmux resume, SSH local port forward for remote loopback services, managed VcXsrv launch for local X11 windows, tutorial targets `terminal.tmuxSessions`, `terminal.sshPortRedirect`
-- Synonyms: "trust this host", "key fingerprint changed", "MITM warning", "tmux session", "screen", "child tmux tab", "saved tmux tab", "port forward", "tunnel", "X11", "X forwarding", "X server", "VcXsrv"
+- Topics: SSH host key trust, tmux session list, attach / detach / rename tmux, Child Connection Tab tmux resume, SSH local port forward for remote loopback services, SOCKS proxy troubleshooting, managed VcXsrv launch for local X11 windows, tutorial targets `terminal.tmuxSessions`, `terminal.sshPortRedirect`
+- Synonyms: "trust this host", "key fingerprint changed", "MITM warning", "tmux session", "screen", "child tmux tab", "saved tmux tab", "port forward", "tunnel", "SOCKS", "proxy", "early eof", "Tinyproxy", "PuTTY", "X11", "X forwarding", "X server", "VcXsrv"
 
 ## Host key trust
 
@@ -31,6 +31,14 @@ This is not a `window.confirm`. Users explicitly approve the new key; the truste
 A live SSH Session has **no app-side idle timeout**. Quiet and unfocused Sessions stay connected until the remote, network, or an explicit user close ends them.
 
 For tmux-enabled SSH Sessions, an unexpected channel close may silently attempt a small bounded reattach to the same Pane tmux id. New Pane tmux ids are drawn directly from the active locale's `ai.tmuxSessionLabels` pool, so the actual remote tmux session name is localized. The Pane tmux id lives in frontend workspace storage; it is not durable Connection model state.
+
+## SOCKS proxy troubleshooting
+
+`settings.sshSocksProxy` and per-Connection SOCKS overrides expect a SOCKS5 server endpoint, such as `host:port` or `username:password@host:port`. They are not HTTP proxy URLs. Some proxy packages, including Tinyproxy, primarily expose an HTTP/HTTPS CONNECT proxy listener and can use SOCKS as an upstream target; that listener is not the same thing as the SOCKS5 endpoint KKTerm dials.
+
+When `ssh.debug.log` shows `connection.socks.connect_ok`, followed later by `connection.disconnected.error` with `error` set to `early eof`, the SOCKS handshake succeeded and the underlying SSH byte stream was closed without a clean SSH disconnect. If PuTTY or OpenSSH reproduces the same disconnect through the same SOCKS server, treat the proxy or network path as the failing component rather than adding KKTerm-specific reconnect workarounds. Check the proxy's listener type, ACLs, upstream rules, timeout/idle settings, connection lifetime limits, and proxy-side logs.
+
+KKTerm keeps tmux recovery intentionally bounded: an existing tmux Session may reattach after a short-lived channel drop, but persistent proxy-side closes should remain visible in the Pane and in `ssh.debug.log`.
 
 ## tmux sessions
 

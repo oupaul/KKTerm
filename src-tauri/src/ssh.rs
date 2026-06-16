@@ -8,6 +8,7 @@ use russh::{
     },
 };
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::{
     future::Future,
     path::PathBuf,
@@ -38,6 +39,35 @@ const SSH_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
 // idle freeze quickly, loose enough to ride out a brief network blip.
 const SSH_KEEPALIVE_MAX_MISSED: usize = 4;
 
+fn ssh_debug(event: &str, payload: Value) {
+    crate::logging::ssh_debug(event, &payload);
+}
+
+fn socks_proxy_endpoint_for_log(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(
+        trimmed
+            .rsplit_once('@')
+            .map(|(_, endpoint)| endpoint)
+            .unwrap_or(trimmed)
+            .to_string(),
+    )
+}
+
+fn auth_method_name(auth: &NativeSshAuth) -> &'static str {
+    match auth {
+        NativeSshAuth::KeyFile { .. } => "keyFile",
+        NativeSshAuth::Password {
+            password: Some(_), ..
+        } => "password",
+        NativeSshAuth::Password { password: None } => "interactivePassword",
+        NativeSshAuth::Agent => "agent",
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SshTransportPlan {
@@ -57,6 +87,7 @@ pub fn transport_plan() -> SshTransportPlan {
 }
 
 pub struct NativeSshTerminal {
+    session_id: String,
     control: mpsc::UnboundedSender<SshTerminalControl>,
     command_tx: mpsc::UnboundedSender<NativeSshCommandMsg>,
     worker: Option<JoinHandle<()>>,
@@ -302,6 +333,42 @@ impl client::Handler for VerifyingClient {
             Ok(())
         }
     }
+
+    fn disconnected(
+        &mut self,
+        reason: client::DisconnectReason<Self::Error>,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        let host = self.host.clone();
+        let port = self.port;
+        async move {
+            match reason {
+                client::DisconnectReason::ReceivedDisconnect(info) => {
+                    ssh_debug(
+                        "connection.disconnected.remote",
+                        json!({
+                            "host": host,
+                            "port": port,
+                            "reasonCode": format!("{:?}", info.reason_code),
+                            "message": info.message,
+                            "languageTag": info.lang_tag,
+                        }),
+                    );
+                    Ok(())
+                }
+                client::DisconnectReason::Error(error) => {
+                    ssh_debug(
+                        "connection.disconnected.error",
+                        json!({
+                            "host": host,
+                            "port": port,
+                            "error": error.to_string(),
+                        }),
+                    );
+                    Err(error)
+                }
+            }
+        }
+    }
 }
 
 struct InspectingClient {
@@ -375,10 +442,27 @@ pub fn start_native_terminal(
         x11_forwarding: request.x11_forwarding,
         socks_proxy: request.socks_proxy,
     };
+    ssh_debug(
+        "terminal.start",
+        json!({
+            "sessionId": request.session_id,
+            "host": request.host,
+            "port": request.port,
+            "user": request.user,
+            "authMethod": auth_method_name(&request.auth),
+            "socksProxyConfigured": request.socks_proxy.as_deref().is_some_and(|value| !value.trim().is_empty()),
+            "socksProxyEndpoint": request.socks_proxy.as_deref().and_then(socks_proxy_endpoint_for_log),
+            "useTmux": request.use_tmux,
+            "x11Forwarding": request.x11_forwarding.is_some(),
+            "cols": request.cols,
+            "rows": request.rows,
+        }),
+    );
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let (command_tx, command_rx) = mpsc::unbounded_channel();
     let (ready_tx, ready_rx) = std_mpsc::sync_channel(1);
     let returns_before_ready = matches!(request.auth, NativeSshAuth::Password { password: None });
+    let session_id = request.session_id.clone();
     let worker = thread::spawn(move || {
         let result = run_native_terminal_thread(
             app.clone(),
@@ -388,6 +472,13 @@ pub fn start_native_terminal(
             ready_tx,
         );
         if let Err(error) = result {
+            ssh_debug(
+                "terminal.worker.error",
+                json!({
+                    "sessionId": request.session_id,
+                    "error": error,
+                }),
+            );
             emit_terminal_output(
                 &app,
                 &request.session_id,
@@ -398,6 +489,7 @@ pub fn start_native_terminal(
 
     if returns_before_ready {
         return Ok(NativeSshTerminal {
+            session_id,
             control: control_tx,
             command_tx,
             worker: Some(worker),
@@ -411,6 +503,7 @@ pub fn start_native_terminal(
         .map_err(|_| "timed out while starting native SSH session".to_string())?
     {
         Ok((terminal_ready_ms, x11_forwarding_status)) => Ok(NativeSshTerminal {
+            session_id,
             control: control_tx,
             command_tx,
             worker: Some(worker),
@@ -647,9 +740,27 @@ async fn exec_collect_on_session(
 
 impl NativeSshTerminal {
     pub fn write_input(&self, data: Vec<u8>) -> Result<(), String> {
+        let bytes = data.len();
+        ssh_debug(
+            "terminal.input.enqueue",
+            json!({
+                "sessionId": self.session_id,
+                "bytes": bytes,
+            }),
+        );
         self.control
             .send(SshTerminalControl::Input(data))
-            .map_err(|_| "native SSH session is closed".to_string())
+            .map_err(|_| {
+                ssh_debug(
+                    "terminal.input.enqueue_error",
+                    json!({
+                        "bytes": bytes,
+                        "sessionId": self.session_id,
+                        "error": "native SSH session is closed",
+                    }),
+                );
+                "native SSH session is closed".to_string()
+            })
     }
 
     pub fn resize(
@@ -670,6 +781,12 @@ impl NativeSshTerminal {
     }
 
     pub fn close(mut self) {
+        ssh_debug(
+            "terminal.close.request",
+            json!({
+                "sessionId": self.session_id,
+            }),
+        );
         let _ = self.control.send(SshTerminalControl::Close);
         if let Some(worker) = self.worker.take() {
             let _ = worker.join();
@@ -721,6 +838,15 @@ async fn run_native_terminal(
         } else {
             SSH_TMUX_RESUME_TIMEOUT
         };
+        ssh_debug(
+            "terminal.run.attempt",
+            json!({
+                "sessionId": current_request.session_id,
+                "initialStart": is_initial_start,
+                "resumeAttempts": resume_attempts,
+                "startupTimeoutMs": timeout.as_millis(),
+            }),
+        );
         let result = run_native_terminal_once(
             &app,
             &current_request,
@@ -732,18 +858,92 @@ async fn run_native_terminal(
         .await;
 
         match result {
-            Ok(TerminalRunOutcome::Closed) => return Ok(()),
-            Ok(TerminalRunOutcome::Disconnected) if can_resume_tmux_terminal(&current_request) => {}
-            Ok(TerminalRunOutcome::Disconnected) => return Ok(()),
+            Ok(TerminalRunOutcome::Closed) => {
+                ssh_debug(
+                    "terminal.run.closed",
+                    json!({
+                        "sessionId": current_request.session_id,
+                    }),
+                );
+                return Ok(());
+            }
+            Ok(TerminalRunOutcome::Disconnected) if can_resume_tmux_terminal(&current_request) => {
+                ssh_debug(
+                    "terminal.run.disconnected_resume_pending",
+                    json!({
+                        "sessionId": current_request.session_id,
+                        "resumeAttempts": resume_attempts,
+                        "willResume": resume_attempts < SSH_TMUX_RESUME_MAX_ATTEMPTS,
+                    }),
+                );
+            }
+            Ok(TerminalRunOutcome::Disconnected) => {
+                ssh_debug(
+                    "terminal.run.disconnected",
+                    json!({
+                        "sessionId": current_request.session_id,
+                    }),
+                );
+                return Ok(());
+            }
             Err(error) if can_resume_tmux_terminal(&current_request) => {
                 if is_initial_start {
+                    ssh_debug(
+                        "terminal.run.initial_error",
+                        json!({
+                            "sessionId": current_request.session_id,
+                            "error": error,
+                        }),
+                    );
                     return Err(error);
                 }
+                ssh_debug(
+                    "terminal.run.error_resume_pending",
+                    json!({
+                        "sessionId": current_request.session_id,
+                        "resumeAttempts": resume_attempts,
+                        "error": error,
+                        "willResume": resume_attempts < SSH_TMUX_RESUME_MAX_ATTEMPTS,
+                    }),
+                );
             }
-            Err(error) => return Err(error),
+            Err(error) => {
+                ssh_debug(
+                    "terminal.run.error",
+                    json!({
+                        "sessionId": current_request.session_id,
+                        "error": error,
+                    }),
+                );
+                return Err(error);
+            }
         }
 
-        if resume_attempts >= SSH_TMUX_RESUME_MAX_ATTEMPTS || control_rx.is_closed() {
+        if control_rx.is_closed() {
+            ssh_debug(
+                "terminal.run.control_closed",
+                json!({
+                    "sessionId": current_request.session_id,
+                    "resumeAttempts": resume_attempts,
+                }),
+            );
+            return Ok(());
+        }
+
+        if resume_attempts >= SSH_TMUX_RESUME_MAX_ATTEMPTS {
+            ssh_debug(
+                "terminal.run.resume_exhausted",
+                json!({
+                    "sessionId": current_request.session_id,
+                    "resumeAttempts": resume_attempts,
+                }),
+            );
+            emit_terminal_output(
+                &app,
+                &current_request.session_id,
+                "\r\n[native SSH session disconnected after repeated tmux resume attempts]\r\n"
+                    .to_string(),
+            );
             return Ok(());
         }
 
@@ -761,6 +961,16 @@ async fn run_native_terminal_once(
     startup_timeout: Duration,
 ) -> Result<TerminalRunOutcome, String> {
     let startup = async {
+        ssh_debug(
+            "terminal.startup.begin",
+            json!({
+                "sessionId": request.session_id,
+                "host": request.host,
+                "port": request.port,
+                "user": request.user,
+                "socksProxyConfigured": request.socks_proxy.as_deref().is_some_and(|value| !value.trim().is_empty()),
+            }),
+        );
         let mut prompt = TerminalAuthPrompt {
             app,
             session_id: &request.session_id,
@@ -785,6 +995,12 @@ async fn run_native_terminal_once(
             .channel_open_session()
             .await
             .map_err(|error| format!("failed to open SSH terminal channel: {error}"))?;
+        ssh_debug(
+            "terminal.channel.opened",
+            json!({
+                "sessionId": request.session_id,
+            }),
+        );
         channel
             .request_pty(
                 false,
@@ -797,6 +1013,16 @@ async fn run_native_terminal_once(
             )
             .await
             .map_err(|error| format!("failed to allocate SSH PTY: {error}"))?;
+        ssh_debug(
+            "terminal.pty.allocated",
+            json!({
+                "sessionId": request.session_id,
+                "cols": request.cols,
+                "rows": request.rows,
+                "pixelWidth": request.pixel_width,
+                "pixelHeight": request.pixel_height,
+            }),
+        );
         let x11_forwarding_status = if request.x11_forwarding.is_some() {
             let status = match channel
                 .request_x11(
@@ -822,11 +1048,25 @@ async fn run_native_terminal_once(
             .request_shell(false)
             .await
             .map_err(|error| format!("failed to start SSH shell: {error}"))?;
+        ssh_debug(
+            "terminal.shell.started",
+            json!({
+                "sessionId": request.session_id,
+            }),
+        );
         if let Some(command) = startup_command_for(request) {
             channel
                 .data(format!("{command}\r").as_bytes())
                 .await
                 .map_err(|error| format!("failed to initialize SSH shell: {error}"))?;
+            ssh_debug(
+                "terminal.startup_command.sent",
+                json!({
+                    "sessionId": request.session_id,
+                    "useTmux": request.use_tmux,
+                    "hasInitialDirectory": initial_directory_for(request).is_some(),
+                }),
+            );
         }
 
         Ok::<_, String>((
@@ -853,16 +1093,49 @@ async fn run_native_terminal_once(
     if let Some(ready_tx) = ready_tx {
         let _ = ready_tx.send(Ok((terminal_ready_ms, x11_forwarding_status)));
     }
+    ssh_debug(
+        "terminal.ready",
+        json!({
+            "sessionId": request.session_id,
+            "terminalReadyMs": terminal_ready_ms,
+            "x11ForwardingStatus": x11_forwarding_status,
+        }),
+    );
 
     loop {
         tokio::select! {
             control = control_rx.recv() => {
                 match control {
                     Some(SshTerminalControl::Input(data)) => {
+                        let bytes = data.len();
+                        ssh_debug(
+                            "terminal.input.write_begin",
+                            json!({
+                                "sessionId": request.session_id,
+                                "bytes": bytes,
+                            }),
+                        );
                         channel
                             .data(&data[..])
                             .await
-                            .map_err(|error| format!("failed to write SSH terminal input: {error}"))?;
+                            .map_err(|error| {
+                                ssh_debug(
+                                    "terminal.input.write_error",
+                                    json!({
+                                        "sessionId": request.session_id,
+                                        "bytes": bytes,
+                                        "error": error.to_string(),
+                                    }),
+                                );
+                                format!("failed to write SSH terminal input: {error}")
+                            })?;
+                        ssh_debug(
+                            "terminal.input.write_ok",
+                            json!({
+                                "sessionId": request.session_id,
+                                "bytes": bytes,
+                            }),
+                        );
                     }
                     Some(SshTerminalControl::Resize {
                         cols,
@@ -870,6 +1143,16 @@ async fn run_native_terminal_once(
                         pixel_width,
                         rows,
                     }) => {
+                        ssh_debug(
+                            "terminal.resize",
+                            json!({
+                                "sessionId": request.session_id,
+                                "cols": cols,
+                                "rows": rows,
+                                "pixelWidth": pixel_width,
+                                "pixelHeight": pixel_height,
+                            }),
+                        );
                         channel
                             .window_change(
                                 cols.into(),
@@ -881,6 +1164,13 @@ async fn run_native_terminal_once(
                             .map_err(|error| format!("failed to resize SSH terminal: {error}"))?;
                     }
                     Some(SshTerminalControl::Close) | None => {
+                        ssh_debug(
+                            "terminal.control.close",
+                            json!({
+                                "sessionId": request.session_id,
+                                "controlChannelClosed": control_rx.is_closed(),
+                            }),
+                        );
                         let _ = channel.eof().await;
                         let _ = channel.close().await;
                         let _ = disconnect_ssh_session(&session, "").await;
@@ -912,6 +1202,13 @@ async fn run_native_terminal_once(
             message = channel.wait() => {
                 match message {
                     Some(ChannelMsg::Data { data }) | Some(ChannelMsg::ExtendedData { data, .. }) => {
+                        ssh_debug(
+                            "terminal.output",
+                            json!({
+                                "sessionId": request.session_id,
+                                "bytes": data.len(),
+                            }),
+                        );
                         emit_terminal_output(
                             &app,
                             &request.session_id,
@@ -919,8 +1216,71 @@ async fn run_native_terminal_once(
                         );
                     }
                     Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => {
+                        ssh_debug(
+                            "terminal.channel.closed",
+                            json!({
+                                "sessionId": request.session_id,
+                                "message": match message {
+                                    Some(ChannelMsg::Eof) => "eof",
+                                    Some(ChannelMsg::Close) => "close",
+                                    None => "none",
+                                    _ => "other",
+                                },
+                            }),
+                        );
                         let _ = disconnect_ssh_session(&session, "").await;
                         return Ok(TerminalRunOutcome::Disconnected);
+                    }
+                    Some(ChannelMsg::ExitStatus { exit_status }) => {
+                        ssh_debug(
+                            "terminal.channel.exit_status",
+                            json!({
+                                "sessionId": request.session_id,
+                                "exitStatus": exit_status,
+                            }),
+                        );
+                    }
+                    Some(ChannelMsg::ExitSignal {
+                        signal_name,
+                        core_dumped,
+                        error_message,
+                        lang_tag,
+                    }) => {
+                        ssh_debug(
+                            "terminal.channel.exit_signal",
+                            json!({
+                                "sessionId": request.session_id,
+                                "signalName": format!("{:?}", signal_name),
+                                "coreDumped": core_dumped,
+                                "errorMessage": error_message,
+                                "languageTag": lang_tag,
+                            }),
+                        );
+                    }
+                    Some(ChannelMsg::Success) => {
+                        ssh_debug(
+                            "terminal.channel.request_success",
+                            json!({
+                                "sessionId": request.session_id,
+                            }),
+                        );
+                    }
+                    Some(ChannelMsg::Failure) => {
+                        ssh_debug(
+                            "terminal.channel.request_failure",
+                            json!({
+                                "sessionId": request.session_id,
+                            }),
+                        );
+                    }
+                    Some(ChannelMsg::OpenFailure(reason)) => {
+                        ssh_debug(
+                            "terminal.channel.open_failure",
+                            json!({
+                                "sessionId": request.session_id,
+                                "reason": format!("{:?}", reason),
+                            }),
+                        );
                     }
                     _ => {}
                 }
@@ -1130,6 +1490,19 @@ async fn connect_verified_client_with_prompt(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(str::to_string);
+    ssh_debug(
+        "connection.start",
+        json!({
+            "host": host,
+            "port": request.port,
+            "user": user,
+            "authMethod": auth_method_name(&auth),
+            "socksProxyConfigured": socks_proxy.is_some(),
+            "socksProxyEndpoint": socks_proxy.as_deref().and_then(socks_proxy_endpoint_for_log),
+            "keepaliveIntervalMs": SSH_KEEPALIVE_INTERVAL.as_millis(),
+            "keepaliveMaxMissed": SSH_KEEPALIVE_MAX_MISSED,
+        }),
+    );
     let verifying = VerifyingClient {
         host: host.to_string(),
         port: request.port,
@@ -1140,7 +1513,23 @@ async fn connect_verified_client_with_prompt(
     let mut session = with_ssh_startup_timeout("connecting to SSH server", async {
         match socks_proxy.as_deref() {
             Some(proxy) => {
+                ssh_debug(
+                    "connection.socks.connect_begin",
+                    json!({
+                        "host": host,
+                        "port": request.port,
+                        "socksProxyEndpoint": socks_proxy_endpoint_for_log(proxy),
+                    }),
+                );
                 let stream = crate::socks::connect_via_socks5(proxy, host, request.port).await?;
+                ssh_debug(
+                    "connection.socks.connect_ok",
+                    json!({
+                        "host": host,
+                        "port": request.port,
+                        "socksProxyEndpoint": socks_proxy_endpoint_for_log(proxy),
+                    }),
+                );
                 client::connect_stream(config, stream, verifying)
                     .await
                     .map_err(|error| format!("failed to connect to SSH server: {error}"))
@@ -1155,7 +1544,25 @@ async fn connect_verified_client_with_prompt(
     })
     .await?;
 
+    ssh_debug(
+        "connection.ssh.connected",
+        json!({
+            "host": host,
+            "port": request.port,
+            "user": user,
+            "socksProxyConfigured": socks_proxy.is_some(),
+        }),
+    );
     authenticate_native_ssh(&mut session, user, &auth, prompt.as_deref_mut()).await?;
+    ssh_debug(
+        "connection.authenticated",
+        json!({
+            "host": host,
+            "port": request.port,
+            "user": user,
+            "authMethod": auth_method_name(&auth),
+        }),
+    );
     Ok(session)
 }
 
