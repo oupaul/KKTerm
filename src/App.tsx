@@ -42,7 +42,11 @@ import {
 import { ariaHidden } from "./lib/aria";
 import { currentPlatform, supportsInstallerHelper } from "./lib/platform";
 import { useBootstrapSettings } from "./lib/settings";
-import { invokeCommand, isTauriRuntime } from "./lib/tauri";
+import {
+  CREDENTIAL_UNLOCK_REQUIRED_EVENT,
+  invokeCommand,
+  isTauriRuntime,
+} from "./lib/tauri";
 import { shouldPromptForEncryptedFileSetup } from "./modules/settings/credentialStorageModel";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
@@ -199,11 +203,25 @@ function App() {
   }, [activePage]);
 
   useEffect(() => {
+    function openCredentialUnlockPrompt() {
+      setActiveSettingsSectionId("credentials-settings");
+      if (activePageRef.current !== "settings") {
+        previousBasePageRef.current = activePageRef.current;
+      }
+      setActivePage("settings");
+    }
+
+    window.addEventListener(CREDENTIAL_UNLOCK_REQUIRED_EVENT, openCredentialUnlockPrompt);
+    return () => {
+      window.removeEventListener(CREDENTIAL_UNLOCK_REQUIRED_EVENT, openCredentialUnlockPrompt);
+    };
+  }, []);
+
+  useEffect(() => {
     if (
       encryptedFileAutoPromptCheckedRef.current ||
       !generalSettingsReady ||
-      !isTauriRuntime() ||
-      currentPlatform() !== "linux"
+      !isTauriRuntime()
     ) {
       return;
     }

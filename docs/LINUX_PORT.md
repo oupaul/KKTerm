@@ -185,17 +185,17 @@ Linux.**
       `org.freedesktop.secrets`, satisfied by gnome-keyring or KWallet) as the
       preferred backend. Add a Linux-only keyring-core Secret Service store crate
       under the Linux dep block. **When no Secret Service is available**
-      (headless/minimal desktops), fall back to an **encrypted local file
+      (headless/minimal desktops), fall back to an **encrypted SQLite secret
       store**: the user must enter a **password seed** that derives the
       encryption key (KDF — e.g. Argon2/scrypt — over the seed; never store the
       seed). The seed is requested on first secret write and on each app start
-      that needs to unlock the file; if the user declines, secret-dependent
+      that needs to unlock the store; if the user declines, secret-dependent
       flows are blocked until unlocked. Design notes:
       - Implement as a `keyring_core` store so the rest of `secrets.rs` is
         unchanged; only `configure_default_store()` and a small unlock/seed-entry
         path are Linux-specific.
-      - Store the encrypted blob under the app data dir (next to the SQLite DB),
-        clearly separate from durable Connection data.
+      - Store encrypted rows in a dedicated SQLite table, clearly separate from
+        durable Connection data.
       - The seed-entry UI needs new i18n strings (en.json first + pending files).
       - This is the one place we add real Linux-specific security code rather
         than reusing a platform path — keep it small and auditable.
@@ -315,7 +315,7 @@ Working-state target for the **first Linux release**. Update as phases land.
 | SSH / SFTP / FTP / Telnet | russh etc. | same | same (portable) | low |
 | Serial | serial2 | serial2 | serial2 (`/dev/tty*`) | low |
 | SQLite storage | bundled | bundled | bundled | low |
-| Secrets / keychain | Cred Manager | Keychain | Secret Service; else encrypted file w/ password seed | **med** |
+| Secrets / keychain | Cred Manager | Keychain | Secret Service; else encrypted SQLite w/ password seed | **med** |
 | Host metrics (Status Bar) | Win32 | sysinfo | sysinfo (reuse) | low |
 | System theme | native | native | freedesktop portal | low |
 | VNC | vnc-rs | vnc-rs | vnc-rs | low |
@@ -350,7 +350,7 @@ additions:
 ## 7. Decisions (resolved)
 
 1. **Secret Service fallback — RESOLVED.** Prefer Secret Service; when
-   unavailable, fall back to an **encrypted local file store keyed by a
+   unavailable, fall back to an **encrypted SQLite secret store keyed by a
    user-entered password seed** (KDF-derived key; seed never stored). See Phase 2
    secrets task for the design.
 2. **Don't Sleep / Screenshot / Auto-start — RESOLVED:** ship as no-ops in v1.

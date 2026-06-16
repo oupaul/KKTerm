@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `settings.exportSettings`, `settings.exportSettingsComplete`, `settings.importSettings`, `settings.importSettingsConfirm`, `settings.importSettingsComplete`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
-- Topics: SQLite store, OS keychain, encrypted file secret store, settings export ZIP, startup backups, import / restore, reset all, where my data lives
+- Topics: SQLite store, OS keychain, encrypted SQLite secret store, settings export ZIP, startup backups, import / restore, reset all, where my data lives
 - Synonyms: "where is my data", "back up settings", "restore", "factory reset", "uninstall", "API key storage"
 
 ## Storage model
@@ -11,7 +11,7 @@
 KKTerm is local-first. Two distinct store families:
 
 1. **SQLite** — non-secret durable data. Lives on the user's machine, never sent off-device. Holds Connections, Dashboard Views and Widget Instances, Custom Widgets, Settings rows, and assistant chat history.
-2. **Credential backend** — secrets. Holds Connection passwords, URL credentials, AI provider API keys, email API keys / SMTP passwords, widget secrets, MCP server secrets. Windows and macOS default to the OS keystore and may optionally use the encrypted file store. Linux uses the encrypted file store only.
+2. **Credential backend** — secrets. Holds Connection passwords, URL credentials, AI provider API keys, email API keys / SMTP passwords, widget secrets, MCP server secrets. Windows and macOS default to the OS keystore and may optionally use the encrypted SQLite store. Linux uses the encrypted SQLite store only.
 
 Terminal contents are **not** logged by default. There is no telemetry and no cloud sync.
 

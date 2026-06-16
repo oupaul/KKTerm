@@ -88,7 +88,7 @@ test("credential storage model routes file backend selection through setup", asy
   );
 });
 
-test("credential storage model auto-prompts Linux when encrypted file storage needs setup", async () => {
+test("credential storage model auto-prompts when encrypted database storage needs setup", async () => {
   const { shouldPromptForEncryptedFileSetup } =
     await importTypeScriptModule(
       new URL("../src/modules/settings/credentialStorageModel.ts", import.meta.url),
@@ -116,7 +116,7 @@ test("credential storage model auto-prompts Linux when encrypted file storage ne
         availableStores: ["os", "file"],
       },
     }),
-    false,
+    true,
   );
   assert.equal(
     shouldPromptForEncryptedFileSetup({

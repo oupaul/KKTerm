@@ -2365,6 +2365,8 @@ type CommandMap = {
   };
 };
 
+export const CREDENTIAL_UNLOCK_REQUIRED_EVENT = "kkterm:credential-unlock-required";
+
 export interface ManualChapter {
   slug: string;
   order: number;
@@ -2453,7 +2455,24 @@ export function invokeCommand<Name extends keyof CommandMap>(
     return Promise.reject(new Error("Tauri runtime unavailable"));
   }
 
-  return invoke<CommandMap[Name]["result"]>(name, args);
+  return invoke<CommandMap[Name]["result"]>(name, args).catch((error) => {
+    notifyCredentialUnlockRequired(error);
+    throw error;
+  });
+}
+
+function notifyCredentialUnlockRequired(error: unknown) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    message.includes("KKTERM_SECRET_STORE_PASSWORD is required for encrypted SQLite secret storage") ||
+    message.includes("Encrypted SQLite secret store has not been set up") ||
+    message.includes("could not decrypt encrypted SQLite secret")
+  ) {
+    window.dispatchEvent(new CustomEvent(CREDENTIAL_UNLOCK_REQUIRED_EVENT));
+  }
 }
 
 export async function selectSettingsImportFile(options: {

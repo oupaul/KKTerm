@@ -5,13 +5,14 @@ use std::sync::Mutex;
 
 const SERVICE_NAME: &str = "com.kkterm.app";
 
-mod file_store;
+mod sqlite_store;
 
-use file_store::FlatFileSecretStore;
+use sqlite_store::SqliteSecretStore;
 
 pub struct Secrets {
     state: Mutex<SecretStoreState>,
     operation_lock: Mutex<()>,
+    db_path: std::path::PathBuf,
 }
 
 struct SecretStoreState {
@@ -249,10 +250,11 @@ struct ConfiguredSecretStore {
 }
 
 impl Secrets {
-    pub fn new(secret_store: &str) -> Self {
+    pub fn new(secret_store: &str, db_path: std::path::PathBuf) -> Self {
         Self {
-            state: Mutex::new(configure_state(secret_store)),
+            state: Mutex::new(configure_state(secret_store, &db_path)),
             operation_lock: Mutex::new(()),
+            db_path,
         }
     }
 
@@ -295,7 +297,7 @@ impl Secrets {
         if already_selected_unavailable {
             return Ok(self.status());
         }
-        let configured = configure_secret_store(&selected_store)?;
+        let configured = configure_secret_store(&selected_store, &self.db_path)?;
         let mut state = self
             .state
             .lock()
@@ -315,14 +317,14 @@ impl Secrets {
         request: ConfigureEncryptedFileSecretStoreRequest,
     ) -> Result<KeychainStatus, String> {
         let _guard = self.lock()?;
-        let store = FlatFileSecretStore::from_password(request.password)?;
+        let store = SqliteSecretStore::from_password(self.db_path.clone(), request.password)?;
         store.initialize_or_verify(request.create_if_missing)?;
         let mut state = self
             .state
             .lock()
             .map_err(|_| "secret store state lock is poisoned".to_string())?;
         *state = SecretStoreState {
-            backend: Some("Encrypted file secret store".to_string()),
+            backend: Some("Encrypted SQLite secret store".to_string()),
             store: Some(Box::new(store)),
             init_error: None,
             selected_store: "file".to_string(),
@@ -497,6 +499,7 @@ impl Secrets {
                 selected_store: "os".to_string(),
             }),
             operation_lock: Mutex::new(()),
+            db_path: std::path::PathBuf::new(),
         }
     }
 }
@@ -545,14 +548,14 @@ impl SecretKind {
     }
 }
 
-fn configure_state(secret_store: &str) -> SecretStoreState {
+fn configure_state(secret_store: &str, db_path: &std::path::Path) -> SecretStoreState {
     let requested = secret_store.trim().to_lowercase();
     let selected_store = if storage::secret_store_options().contains(&requested.as_str()) {
         requested
     } else {
         storage::default_secret_store()
     };
-    match configure_secret_store(&selected_store) {
+    match configure_secret_store(&selected_store, db_path) {
         Ok(configured) => SecretStoreState {
             backend: Some(configured.backend),
             store: Some(configured.store),
@@ -568,18 +571,21 @@ fn configure_state(secret_store: &str) -> SecretStoreState {
     }
 }
 
-fn configure_secret_store(secret_store: &str) -> Result<ConfiguredSecretStore, String> {
+fn configure_secret_store(
+    secret_store: &str,
+    db_path: &std::path::Path,
+) -> Result<ConfiguredSecretStore, String> {
     match secret_store {
-        "file" => configure_file_store(),
+        "file" => configure_file_store(db_path),
         "os" => configure_os_store(),
         _ => Err("Secret store backend is not configured for this platform yet".to_string()),
     }
 }
 
-fn configure_file_store() -> Result<ConfiguredSecretStore, String> {
-    let store = FlatFileSecretStore::from_environment()?;
+fn configure_file_store(db_path: &std::path::Path) -> Result<ConfiguredSecretStore, String> {
+    let store = SqliteSecretStore::from_environment(db_path.to_path_buf())?;
     Ok(ConfiguredSecretStore {
-        backend: "Encrypted file secret store".to_string(),
+        backend: "Encrypted SQLite secret store".to_string(),
         store: Box::new(store),
     })
 }
@@ -770,80 +776,72 @@ mod tests {
     }
 
     #[test]
-    fn encrypted_file_store_round_trips_without_plaintext() {
+    fn encrypted_sqlite_store_round_trips_without_plaintext() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
-        let path = temp_dir.path().join("secrets.json.enc");
-        let store = FlatFileSecretStore::new(path.clone(), "test-password".to_string())
-            .expect("file store");
+        let path = temp_dir.path().join("kkterm.sqlite3");
+        crate::storage::Storage::open(path.clone()).expect("storage opens");
+        let store =
+            super::sqlite_store::SqliteSecretStore::new(path.clone(), "test-password".to_string())
+                .expect("sqlite store");
         let reference = SecretReference::new(
             SecretKind::ConnectionPassword,
-            "linux-secret-owner".to_string(),
+            "sqlite-secret-owner".to_string(),
         )
         .expect("reference");
 
         store
-            .write(&reference, "linux-password")
+            .initialize_or_verify(true)
+            .expect("store sentinel is created");
+        store
+            .write(&reference, "sqlite-password")
             .expect("secret is stored");
 
         assert!(store.exists(&reference).expect("presence check"));
         assert_eq!(
             store.read(&reference).expect("secret read").as_deref(),
-            Some("linux-password")
+            Some("sqlite-password")
         );
 
-        let file_bytes = std::fs::read(&path).expect("encrypted file exists");
-        let file_text = String::from_utf8_lossy(&file_bytes);
-        assert!(!file_text.contains("linux-password"));
-        assert!(!file_text.contains("connection-password:linux-secret-owner"));
-
-        store.delete(&reference).expect("secret is deleted");
-        assert!(!store.exists(&reference).expect("presence after delete"));
-    }
-
-    #[test]
-    fn encrypted_file_store_rejects_wrong_password() {
-        let temp_dir = tempfile::tempdir().expect("temp dir");
-        let path = temp_dir.path().join("secrets.json.enc");
-        let store = FlatFileSecretStore::new(path.clone(), "correct-password".to_string())
-            .expect("file store");
-        let reference = SecretReference::new(SecretKind::AiApiKey, "linux-ai-provider".to_string())
-            .expect("reference");
-
-        store
-            .write(&reference, "sk-linux")
-            .expect("secret is stored");
+        let db_bytes = std::fs::read(&path).expect("database exists");
+        let db_text = String::from_utf8_lossy(&db_bytes);
+        assert!(!db_text.contains("sqlite-password"));
+        assert!(!db_text.contains("connection-password:sqlite-secret-owner"));
 
         let wrong_password_store =
-            FlatFileSecretStore::new(path, "wrong-password".to_string()).expect("file store");
+            super::sqlite_store::SqliteSecretStore::new(path, "wrong-password".to_string())
+                .expect("sqlite store");
         let error = wrong_password_store
             .read(&reference)
-            .expect_err("wrong password should not decrypt the file");
+            .expect_err("wrong password should not decrypt sqlite secret");
         assert!(error.contains("could not decrypt"));
     }
 
     #[test]
-    fn encrypted_file_store_setup_creates_verifiable_empty_file() {
+    fn encrypted_sqlite_store_presence_check_does_not_require_unlock_key() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
-        let path = temp_dir.path().join("secrets.json.enc");
-        let store = FlatFileSecretStore::new(path.clone(), "setup-password".to_string())
-            .expect("file store");
+        let path = temp_dir.path().join("kkterm.sqlite3");
+        crate::storage::Storage::open(path.clone()).expect("storage opens");
+        let store = super::sqlite_store::SqliteSecretStore::new(
+            path.clone(),
+            "correct-password".to_string(),
+        )
+        .expect("sqlite store");
+        let reference =
+            SecretReference::new(SecretKind::AiApiKey, "sqlite-ai-provider".to_string())
+                .expect("reference");
 
         store
             .initialize_or_verify(true)
-            .expect("empty encrypted file is created");
-        assert!(path.exists());
-
-        let reopened = FlatFileSecretStore::new(path.clone(), "setup-password".to_string())
-            .expect("file store");
-        reopened
-            .initialize_or_verify(false)
-            .expect("existing file decrypts with the same password");
+            .expect("store sentinel is created");
+        store.write(&reference, "sk-sqlite").expect("secret stored");
 
         let wrong_password_store =
-            FlatFileSecretStore::new(path, "wrong-password".to_string()).expect("file store");
-        let error = wrong_password_store
-            .initialize_or_verify(false)
-            .expect_err("wrong password should not verify setup file");
-        assert!(error.contains("could not decrypt"));
+            super::sqlite_store::SqliteSecretStore::new(path, "wrong-password".to_string())
+                .expect("sqlite store");
+        assert!(
+            wrong_password_store
+                .exists(&reference)
+                .expect("presence check should only query metadata")
+        );
     }
 }

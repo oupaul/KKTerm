@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 23;
+const SCHEMA_USER_VERSION: i32 = 24;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -120,6 +120,17 @@ CREATE TABLE IF NOT EXISTS connection_password_credentials (
 
 CREATE INDEX IF NOT EXISTS idx_connection_password_credentials_type_host
     ON connection_password_credentials(connection_type, host);
+
+CREATE TABLE IF NOT EXISTS encrypted_secret_store_entries (
+    secret_key TEXT PRIMARY KEY,
+    version INTEGER NOT NULL,
+    kdf TEXT NOT NULL,
+    cipher TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    nonce TEXT NOT NULL,
+    ciphertext TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -1046,7 +1057,9 @@ impl FileBrowserViewOptions {
     fn validate(&self) -> Result<(), String> {
         for pane in [&self.local, &self.remote].into_iter().flatten() {
             if let Some(background) = &pane.background {
-                background.validate().map_err(|error| format!("{error:?}"))?;
+                background
+                    .validate()
+                    .map_err(|error| format!("{error:?}"))?;
             }
         }
         Ok(())
@@ -1359,6 +1372,10 @@ impl Storage {
 
     pub fn status(&self) -> String {
         format!("SQLite: {}", self.db_path.display())
+    }
+
+    pub(crate) fn db_path(&self) -> PathBuf {
+        self.db_path.clone()
     }
 
     pub fn database_folder(&self) -> Result<String, String> {

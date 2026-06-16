@@ -16,8 +16,8 @@ Storage decisions:
 
 - Store non-secret data in SQLite.
 - Store passwords, SSH passphrases, and AI API keys in the configured secret
-  backend: OS keychain where available, and a password-encrypted local file on
-  Linux until native or external password-manager backends are added.
+  backend: OS keychain where available, and a password-encrypted SQLite backend
+  where native or external password-manager backends are unavailable.
 - Reference SSH key files by path.
 - Do not store private keys directly in KKTerm v0.1.
 - Do not store plaintext secrets in config or SQLite.

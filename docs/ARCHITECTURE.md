@@ -14,7 +14,7 @@ KKTerm is a cross-platform desktop workspace for local terminals, SSH sessions, 
 - Icons: lucide-react.
 - State: Zustand or TanStack Store.
 - Storage: SQLite for non-secret local data.
-- Secrets: selected credential backend. Windows and macOS default to the OS keystore; Linux uses the encrypted file store.
+- Secrets: selected credential backend. Windows and macOS default to the OS keystore; Linux uses the encrypted SQLite store.
 
 Windows, macOS, and Linux are supported desktop release targets. Platform-specific behavior should stay isolated behind explicit capability checks so each build can preserve native OS behavior without regressing the shared architecture.
 
@@ -99,7 +99,7 @@ Owns current SQLite schema initialization and repositories for:
 - non-secret SSH tmux launch preferences
 - dashboard views, widget instances, and AI Created Widget definitions (see `docs/DASHBOARD.md`)
 
-Secrets are never stored in SQLite.
+Plaintext secrets are never stored in SQLite. When the encrypted SQLite backend is selected, SQLite stores only encrypted secret rows plus KDF/cipher metadata.
 
 ### Secrets
 
@@ -107,13 +107,13 @@ Owns secret storage behind a backend abstraction:
 
 - Windows Credential Manager / DPAPI path
 - macOS Keychain
-- password-encrypted flat-file store, unlocked with `KKTERM_SECRET_STORE_PASSWORD`
+- password-encrypted SQLite store, unlocked with `KKTERM_SECRET_STORE_PASSWORD`
 - Linux Secret Service / KWallet/libsecret later
 - External password-manager backends such as Bitwarden, KeePassXC, and 1Password later
 
 Secrets include passwords, SSH passphrases, and AI API keys.
 
-Reusable Connection password metadata lives in SQLite in `connection_password_credentials`; the password bytes still live only in the configured secret backend under the credential id with secret kind `connectionPassword`. SSH, Telnet, RDP, VNC, and FTP Connections may point at one of these credential ids via `password_credential_id`, while legacy per-Connection passwords stored under the Connection id remain valid. Add/Edit Connection surfaces same-type saved password choices by metadata only; it must not read secret values into React.
+Reusable Connection password metadata lives in SQLite in `connection_password_credentials`; plaintext password bytes still live only in the configured secret backend under the credential id with secret kind `connectionPassword`. SSH, Telnet, RDP, VNC, and FTP Connections may point at one of these credential ids via `password_credential_id`, while legacy per-Connection passwords stored under the Connection id remain valid. Add/Edit Connection surfaces same-type saved password choices by metadata only; it must not read secret values into React.
 
 ### Connection Model
 

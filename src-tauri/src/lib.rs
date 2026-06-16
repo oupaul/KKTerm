@@ -3,9 +3,9 @@ mod ai_coding_usage;
 mod app_launcher;
 mod app_tray;
 mod app_updates;
-mod currency_rates;
 mod assistant_skills;
 mod auto_start;
+mod currency_rates;
 mod dashboard_commands;
 mod dashboard_ids;
 mod dashboard_storage;
@@ -22,6 +22,7 @@ mod manual;
 mod mcp;
 mod mcp_bridge;
 mod mcp_tool_catalog;
+mod media;
 mod native_tooltip;
 mod net;
 mod performance;
@@ -49,7 +50,6 @@ mod window_state;
 #[cfg(target_os = "windows")]
 mod windows_local_pty;
 mod x_server;
-mod media;
 #[allow(unused_imports)]
 pub(crate) use media::*;
 
@@ -416,7 +416,6 @@ fn dashboard_load_background_image_sync(
     })
 }
 
-
 #[tauri::command]
 fn list_connection_tree(
     storage: tauri::State<'_, storage::Storage>,
@@ -452,10 +451,7 @@ fn rename_workspace(
 }
 
 #[tauri::command]
-fn delete_workspace(
-    storage: tauri::State<'_, storage::Storage>,
-    id: String,
-) -> Result<(), String> {
+fn delete_workspace(storage: tauri::State<'_, storage::Storage>, id: String) -> Result<(), String> {
     storage.delete_workspace(id)
 }
 
@@ -756,9 +752,10 @@ fn configure_encrypted_file_secret_store(
     request: secrets::ConfigureEncryptedFileSecretStoreRequest,
 ) -> Result<ConfigureEncryptedFileSecretStoreResult, String> {
     let status = secrets.configure_encrypted_file_store(request)?;
-    let settings = storage::validate_credential_settings_for_command(storage::CredentialSettings {
-        secret_store: "file".to_string(),
-    })?;
+    let settings =
+        storage::validate_credential_settings_for_command(storage::CredentialSettings {
+            secret_store: "file".to_string(),
+        })?;
     let settings = storage.update_credential_settings(settings)?;
     Ok(ConfigureEncryptedFileSecretStoreResult { settings, status })
 }
@@ -3069,7 +3066,8 @@ pub fn run() {
                 general_settings.minimize_to_tray(),
             ));
             if general_settings.auto_start_with_windows() {
-                if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
+                if let Some(main_webview) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL)
+                {
                     let main_window = main_webview.as_ref().window();
                     let _ = main_window.minimize();
                     if general_settings.minimize_to_tray() {
@@ -3096,10 +3094,14 @@ pub fn run() {
                     eprintln!("failed to restore Don't Sleep state: {error}");
                 }
             }
+            let secret_db_path = storage.db_path();
             app.manage(storage);
             app.manage(performance::PerformanceMonitor::new());
             app.manage(power_manager);
-            app.manage(secrets::Secrets::new(credential_settings.secret_store()));
+            app.manage(secrets::Secrets::new(
+                credential_settings.secret_store(),
+                secret_db_path,
+            ));
             app.manage(ai::AssistantLiveToolBridge::new());
             app.manage(ai::AssistantToolApprovalBridge::new());
             app.manage(ai::AssistantStreamCancellation::new());
@@ -3157,9 +3159,7 @@ pub fn run() {
                             if let Err(error) =
                                 power.set_app_foreground(main_window_is_foreground(window))
                             {
-                                eprintln!(
-                                    "failed to update Don't Sleep foreground state: {error}"
-                                );
+                                eprintln!("failed to update Don't Sleep foreground state: {error}");
                             }
                         }
                     }
@@ -3173,9 +3173,7 @@ pub fn run() {
                             if let Err(error) =
                                 power.set_app_foreground(main_window_is_foreground(window))
                             {
-                                eprintln!(
-                                    "failed to update Don't Sleep foreground state: {error}"
-                                );
+                                eprintln!("failed to update Don't Sleep foreground state: {error}");
                             }
                         }
                     }
@@ -3591,9 +3589,6 @@ mod tests {
         )
         .expect("inline SOCKS proxy resolves");
 
-        assert_eq!(
-            resolved.as_deref(),
-            Some("inline:secret@10.0.0.119:1080")
-        );
+        assert_eq!(resolved.as_deref(), Some("inline:secret@10.0.0.119:1080"));
     }
 }

@@ -58,8 +58,8 @@ export function shouldPromptForEncryptedFileSetup({
   selectedStore: SecretStoreKind;
   secretStatus: SecretStatusLike | null | undefined;
 }): boolean {
+  void platform;
   return (
-    platform === "linux" &&
     selectedStore === "file" &&
     normalizeSecretStoreKind(secretStatus?.selectedStore) === "file" &&
     !secretStatus?.available
