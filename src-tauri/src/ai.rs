@@ -59,7 +59,7 @@ use tauri::{Emitter, Manager};
 use crate::assistant_skills::{self, AssistantSkillSummary};
 use crate::dashboard_ids::new_dashboard_id;
 use crate::dashboard_storage as ds;
-use crate::dashboard_validation::{ICONS, drop_unused_script_libraries};
+use crate::dashboard_validation::{ICONS, drop_unused_script_libraries, normalize_script_body};
 use crate::storage::{
     AiAssistantToolSettings, AiProviderSettings, Storage, ai_provider_secret_owner_id,
 };
@@ -3900,6 +3900,7 @@ pub(crate) fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) ->
             if body.is_null() {
                 return Err("dashboard_create_widget requires body".to_string());
             }
+            let normalized_body = normalize_script_body(&mut body);
             let dropped_libraries = drop_unused_script_libraries(&mut body);
             let body_json =
                 serde_json::to_string(&body).map_err(|e| format!("invalid body: {e}"))?;
@@ -3942,6 +3943,7 @@ pub(crate) fn dashboard_tool(app: &tauri::AppHandle, name: &str, args: Value) ->
                     "category": &category,
                     "widgetArchetype": &widget_archetype,
                     "bodyJson": &body_json,
+                    "normalizedBody": &normalized_body,
                     "droppedUnusedLibraries": &dropped_libraries,
                     "settingsSchemaJson": &settings_schema_json,
                     "requestedGrid": {
@@ -4104,6 +4106,7 @@ fn normalize_dashboard_custom_widget_patch(mut patch: Value) -> Result<Value, St
         return Ok(patch);
     };
     if let Some(mut body) = object.remove("body") {
+        normalize_script_body(&mut body);
         drop_unused_script_libraries(&mut body);
         let body_json =
             serde_json::to_string(&body).map_err(|error| format!("invalid patch.body: {error}"))?;

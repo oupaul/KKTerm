@@ -297,6 +297,7 @@ pub enum ValidationError {
     InvalidBackground,
     InvalidScriptSource,
     UnusedLibrary,
+    PlaceholderWidget,
     InvalidBodyOpacity,
 }
 
@@ -505,6 +506,132 @@ pub struct ScriptPermissions {
 #[allow(dead_code)]
 pub fn validate_script_body_json(json: &str) -> Result<ScriptBody, ValidationError> {
     validate_script_body_json_detailed(json).map_err(|(kind, _)| kind)
+}
+
+/// Deterministic pre-validation normalizer for AI-authored script bodies.
+///
+/// Runs at the AI tool boundary (dashboard_create_widget and structured
+/// dashboard_update_custom_widget.patch.body) BEFORE storage validation,
+/// alongside [`drop_unused_script_libraries`]. It mechanically repairs the
+/// most common, unambiguous formatting mistake a model makes when filling a
+/// structured code field: wrapping `source` (or `htmlShim`) in a Markdown
+/// code fence (```` ```js … ``` ````). That fence otherwise fails the AST
+/// parse and burns a model self-correction round for a purely cosmetic slip.
+///
+/// Returns the list of applied fixes for debug logging. Keep this pass
+/// narrow and lossless: only rewrite shapes that are always wrong for a
+/// structured code field. Run it before `drop_unused_script_libraries` so
+/// the unused-library AST scan sees clean, parseable source. Anything
+/// ambiguous stays the storage validator's job so the model still gets a
+/// clean structured error rather than a silently mangled body.
+pub fn normalize_script_body(body: &mut Value) -> Vec<String> {
+    let mut applied = Vec::new();
+    for (field, label) in [
+        ("source", "stripped markdown code fence from source"),
+        ("htmlShim", "stripped markdown code fence from htmlShim"),
+    ] {
+        let stripped = body
+            .get(field)
+            .and_then(Value::as_str)
+            .and_then(strip_markdown_code_fence);
+        if let Some(stripped) = stripped {
+            if let Some(slot) = body.get_mut(field) {
+                *slot = Value::String(stripped);
+                applied.push(label.to_string());
+            }
+        }
+    }
+    applied
+}
+
+/// Strips a Markdown code fence that wraps the *entire* value.
+///
+/// Returns `Some(inner)` only when the trimmed text both starts with an
+/// opening fence line (```` ``` ```` optionally followed by a bare language
+/// token such as `js`, `javascript`, or `html`) and ends with a closing
+/// ```` ``` ````. Returns `None` for anything else, so stray backticks
+/// inside real source (template literals, regexes, comments) are untouched.
+fn strip_markdown_code_fence(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    let rest = trimmed.strip_prefix("```")?;
+    // The opening fence's remainder up to the first newline must be only an
+    // optional language token, never real code on the same line.
+    let (info, after_open) = rest.split_once('\n')?;
+    let info = info.trim();
+    let info_is_language = info.is_empty()
+        || info
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '#');
+    if !info_is_language {
+        return None;
+    }
+    let inner = after_open.trim_end().strip_suffix("```")?;
+    Some(inner.trim().to_string())
+}
+
+/// Multiword phrases that, rendered as widget output, signal an unfinished
+/// stub rather than a real widget. Deliberately multiword and specific so
+/// ordinary control labels, an HTML `placeholder=` attribute, or a "todo"
+/// list widget never trip the check.
+const PLACEHOLDER_PHRASES: &[&str] = &[
+    "coming soon",
+    "not implemented",
+    "your code here",
+    "your content here",
+    "your widget here",
+    "placeholder widget",
+    "this is a placeholder",
+    "content goes here",
+    "implement me",
+    "todo: implement",
+    "lorem ipsum",
+];
+
+/// Markers proving the source actually does something. Stored lowercase
+/// because the scan compares against an ASCII-lowercased copy of the source.
+const PLACEHOLDER_ACTIVITY_MARKERS: &[&str] = &[
+    "fetch(",
+    "addeventlistener",
+    "setinterval",
+    "settimeout",
+    "requestanimationframe",
+    "kk.",
+    "createelement",
+    "new ",
+];
+
+/// High-precision detector for AI-authored placeholder/stub widgets. The
+/// completion contract forbids shipping a fake widget; this enforces it
+/// deterministically instead of trusting the prompt.
+///
+/// Two factors must BOTH hold to flag, which keeps false positives near
+/// zero:
+///   1. the source renders a known placeholder phrase, and
+///   2. the source is inert — it declares no library and contains none of
+///      the activity markers (no fetch, timers, animation, event listeners,
+///      KK bridge, constructors, or dynamic element creation).
+///
+/// A finished widget fails factor 1 (no stub phrasing) or factor 2 (it
+/// actually wires up content), so only genuine stubs match. We favor
+/// precision over recall here: missing a rare stub is acceptable, blocking
+/// a real widget is not.
+fn detect_placeholder_widget(source: &str, libraries: Option<&Vec<String>>) -> Option<String> {
+    let lower = source.to_ascii_lowercase();
+    if !PLACEHOLDER_PHRASES.iter().any(|phrase| lower.contains(*phrase)) {
+        return None;
+    }
+    let declares_library = libraries.is_some_and(|libs| !libs.is_empty());
+    let is_active = declares_library
+        || PLACEHOLDER_ACTIVITY_MARKERS
+            .iter()
+            .any(|marker| lower.contains(*marker));
+    if is_active {
+        return None;
+    }
+    Some(
+        "widget source looks like an unfinished placeholder: it renders stub text (for example \"coming soon\" or \"your content here\") and wires up no data, interactivity, or library. Build the complete widget for the requested outcome instead — render real content, and for any missing data add a settingsSchema secret/config field rather than a placeholder."
+            .to_string(),
+    )
 }
 
 pub fn drop_unused_script_libraries(body: &mut Value) -> Vec<String> {
@@ -799,6 +926,12 @@ pub fn validate_script_body_json_detailed(
     }
     validate_script_dom_mounts(&parsed.source, parsed.html_shim.as_deref())
         .map_err(|detail| (ValidationError::InvalidScriptSource, Some(detail)))?;
+    // Harden: reject obvious placeholder/stub widgets so the completion
+    // contract is enforced by code, not just prose. High precision (stub
+    // phrasing AND an inert source), so real widgets pass untouched.
+    if let Some(detail) = detect_placeholder_widget(&parsed.source, parsed.libraries.as_ref()) {
+        return Err((ValidationError::PlaceholderWidget, Some(detail)));
+    }
     if let Some(libs) = &parsed.libraries {
         // Harden 4: every listed library global must appear as an identifier
         // reference in the parsed AST. A library that loads but is never
@@ -2007,6 +2140,146 @@ mod tests {
                 "shim should be accepted: {ok}",
             );
         }
+    }
+
+    // --- markdown code-fence normalizer -------------------------------------
+
+    #[test]
+    fn normalize_strips_fenced_source_and_then_validates() {
+        let mut body = serde_json::json!({
+            "source": "```js\ndocument.getElementById('root').textContent = 'ok';\n```",
+            "permissions": {"network": false},
+        });
+        assert_eq!(
+            normalize_script_body(&mut body),
+            vec!["stripped markdown code fence from source".to_string()]
+        );
+        assert_eq!(
+            body["source"],
+            serde_json::json!("document.getElementById('root').textContent = 'ok';")
+        );
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
+    }
+
+    #[test]
+    fn normalize_strips_bare_fence_and_html_shim_fence() {
+        let mut body = serde_json::json!({
+            "source": "```\nconst root = document.getElementById('root'); root.textContent = '1';\n```",
+            "htmlShim": "```html\n<div id=\"root\"></div>\n```",
+            "permissions": {"network": false},
+        });
+        let applied = normalize_script_body(&mut body);
+        assert!(applied.contains(&"stripped markdown code fence from source".to_string()));
+        assert!(applied.contains(&"stripped markdown code fence from htmlShim".to_string()));
+        assert_eq!(body["htmlShim"], serde_json::json!("<div id=\"root\"></div>"));
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
+    }
+
+    #[test]
+    fn normalize_is_noop_for_clean_source() {
+        let mut body = serde_json::json!({
+            "source": "const s = `a ${1} b`; document.getElementById('root').textContent = s;",
+            "permissions": {"network": false},
+        });
+        let original = body.clone();
+        assert_eq!(normalize_script_body(&mut body), Vec::<String>::new());
+        assert_eq!(body, original);
+    }
+
+    #[test]
+    fn normalize_leaves_inline_backticks_untouched() {
+        // A real source can contain a fenced string in a template literal
+        // without being a fully fence-wrapped body; we must not strip it.
+        let mut body = serde_json::json!({
+            "source": "const md = '```'; document.getElementById('root').textContent = md;",
+            "permissions": {"network": false},
+        });
+        assert_eq!(normalize_script_body(&mut body), Vec::<String>::new());
+    }
+
+    #[test]
+    fn normalize_runs_before_drop_unused_libraries() {
+        // Fenced source would fail the AST parse inside drop_unused, leaving
+        // a stale unused library; normalizing first lets the drop succeed.
+        let mut body = serde_json::json!({
+            "source": "```js\ndocument.getElementById('root').textContent = new Date().toLocaleTimeString();\n```",
+            "libraries": ["matter"],
+            "permissions": {"network": false},
+        });
+        normalize_script_body(&mut body);
+        assert_eq!(
+            drop_unused_script_libraries(&mut body),
+            vec!["matter".to_string()]
+        );
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
+    }
+
+    // --- placeholder / stub detection ---------------------------------------
+
+    #[test]
+    fn placeholder_inert_stub_is_rejected() {
+        for stub in [
+            "document.getElementById('root').textContent = 'Coming soon';",
+            "document.getElementById('root').innerHTML = '<p>Your content here</p>';",
+            "const root = document.getElementById('root'); root.textContent = 'This is a placeholder';",
+        ] {
+            let body = serde_json::json!({
+                "source": stub,
+                "permissions": {"network": false},
+            });
+            let err = validate_script_body_json_detailed(&body.to_string())
+                .expect_err("inert placeholder must be rejected");
+            assert_eq!(err.0, ValidationError::PlaceholderWidget, "{stub}");
+            assert!(err.1.as_deref().unwrap_or("").contains("placeholder"));
+        }
+    }
+
+    #[test]
+    fn placeholder_accepts_real_widget_with_activity() {
+        // Same stub phrase, but the widget actually wires up interactivity:
+        // factor 2 fails, so it is accepted.
+        let body = serde_json::json!({
+            "source": "const root = document.getElementById('root'); const b = document.createElement('button'); b.textContent = 'Go'; b.addEventListener('click', () => { root.textContent = 'coming soon'; }); root.appendChild(b);",
+            "permissions": {"network": false},
+        });
+        assert!(
+            validate_script_body_json(&body.to_string()).is_ok(),
+            "interactive widget mentioning a stub phrase must be accepted",
+        );
+    }
+
+    #[test]
+    fn placeholder_accepts_todo_list_widget() {
+        // A legit to-do widget is full of the word "todo" but contains no
+        // placeholder phrase, and is interactive anyway.
+        let body = serde_json::json!({
+            "source": "const root = document.getElementById('root'); const todos = []; const input = document.createElement('input'); input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { todos.push(input.value); } }); root.appendChild(input);",
+            "permissions": {"network": false},
+        });
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
+    }
+
+    #[test]
+    fn placeholder_accepts_placeholder_attribute_in_static_form() {
+        // An inert form that uses the HTML `placeholder=` attribute must not
+        // be flagged: the multiword phrase list does not contain bare
+        // "placeholder".
+        let body = serde_json::json!({
+            "source": "document.getElementById('root').innerHTML = '<input placeholder=\"Search hosts\">';",
+            "permissions": {"network": false},
+        });
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
+    }
+
+    #[test]
+    fn placeholder_accepts_inert_static_widget_without_stub_phrase() {
+        // The completion contract explicitly allows small static widgets that
+        // render real DOM into #root; only stub phrasing triggers a flag.
+        let body = serde_json::json!({
+            "source": "document.getElementById('root').textContent = 'KKTerm operator console';",
+            "permissions": {"network": false},
+        });
+        assert!(validate_script_body_json(&body.to_string()).is_ok());
     }
 
     #[test]
