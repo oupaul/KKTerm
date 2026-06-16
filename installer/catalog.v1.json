@@ -630,7 +630,7 @@
       "descriptionEn": "Privacy-first browser PDF toolkit hosted from a KKTerm app-local web project.",
       "category": "utilities",
       "icon": "File",
-      "needs": ["node-bundle", "nssm"],
+      "needs": ["node-bundle"],
       "homepage": "https://www.bentopdf.com/",
       "releaseNotesUrl": "https://github.com/alam00000/bentopdf/releases",
       "provider": { "kind": "npm", "pkg": "github:alam00000/bentopdf" },

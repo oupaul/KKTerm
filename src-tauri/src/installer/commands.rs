@@ -531,12 +531,24 @@ pub async fn installer_stop_web_ui(tool_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn installer_install_service(tool_id: String) -> Result<(), String> {
+pub async fn installer_install_service(
+    app: AppHandle,
+    runtime: State<'_, InstallerRuntime>,
+    tool_id: String,
+) -> Result<(), String> {
     crate::logging::installer_helper_debug(
         "command.installer_install_service.start",
         &json!({ "toolId": &tool_id }),
     );
+    let catalog = runtime
+        .catalog
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or("catalog not loaded yet")?;
     tauri::async_runtime::spawn_blocking(move || {
+        let emit = make_emit_sink(app);
+        ensure_nssm_installed(&catalog, &tool_id, &emit)?;
         let affordance = web_ui_affordance(&tool_id)
             .ok_or_else(|| format!("tool `{tool_id}` does not expose a managed web UI"))?;
         let service = service_affordance(&tool_id)
@@ -1029,6 +1041,30 @@ fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
         }),
         _ => None,
     }
+}
+
+fn ensure_nssm_installed(
+    catalog: &Catalog,
+    tool_id: &str,
+    emit: &EventSink,
+) -> Result<(), String> {
+    let nssm_recipe = find_recipe(catalog, "nssm")
+        .ok_or_else(|| "catalog is missing the NSSM service helper recipe".to_string())?;
+    if detect_one(nssm_recipe).installed {
+        return Ok(());
+    }
+
+    emit(ProgressEvent::Step {
+        tool_id: tool_id.into(),
+        message: "Installing NSSM service helper".into(),
+    });
+    install_recipe(
+        nssm_recipe,
+        &InstallOptions::default(),
+        Arc::new(AtomicBool::new(false)),
+        emit,
+    )?;
+    Ok(())
 }
 
 fn service_install_script(service: &ManagedServiceAffordance) -> String {
