@@ -57,8 +57,10 @@
 //! ).await?;
 //! ```
 
+use crate::logging::rdp_debug;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex, MutexGuard},
@@ -229,18 +231,54 @@ impl RdpClientSessionManager {
         let password = request.password.clone().unwrap_or_default();
         let domain = request.domain.clone();
 
-        let (connection_result, framed) = self
-            .runtime
-            .block_on(rdp_connect(
-                host.clone(),
+        rdp_debug(
+            "ironrdp.start.request",
+            &rdp_client_start_debug_payload(
+                &session_id,
+                &host,
                 port,
-                username,
-                password,
-                domain,
+                &username,
+                domain.as_deref(),
                 width,
                 height,
-            ))
-            .map_err(|e| format!("RDP connect failed: {e}"))?;
+            ),
+        );
+
+        let (connection_result, framed) = match self.runtime.block_on(rdp_connect(
+            session_id.clone(),
+            host.clone(),
+            port,
+            username,
+            password,
+            domain,
+            width,
+            height,
+        )) {
+            Ok(result) => result,
+            Err(error) => {
+                rdp_debug(
+                    "ironrdp.start.error",
+                    &json!({
+                        "sessionId": session_id,
+                        "host": host,
+                        "port": port,
+                        "error": error,
+                    }),
+                );
+                return Err(format!("RDP connect failed: {error}"));
+            }
+        };
+
+        rdp_debug(
+            "ironrdp.start.ok",
+            &json!({
+                "sessionId": session_id,
+                "host": host,
+                "port": port,
+                "desktopWidth": connection_result.desktop_size.width,
+                "desktopHeight": connection_result.desktop_size.height,
+            }),
+        );
 
         let (stop_tx, stop_rx) = oneshot::channel();
         let (input_tx, input_rx) = mpsc::unbounded_channel();
@@ -327,6 +365,32 @@ impl RdpClientSessionManager {
     }
 }
 
+fn rdp_client_start_debug_payload(
+    session_id: &str,
+    host: &str,
+    port: u16,
+    username: &str,
+    domain: Option<&str>,
+    desktop_width: u16,
+    desktop_height: u16,
+) -> Value {
+    json!({
+        "sessionId": session_id,
+        "host": host,
+        "port": port,
+        "username": username,
+        "domain": domain,
+        "desktopWidth": desktop_width,
+        "desktopHeight": desktop_height,
+        "security": {
+            "enableCredSsp": true,
+            "enableTls": false,
+            "requestedProtocols": ["HYBRID", "HYBRID_EX"],
+            "legacyTlsFallbackAllowed": false,
+        },
+    })
+}
+
 // ── No-op NetworkClient (safe for NTLM; Kerberos KDC round-trips never happen) ──
 
 struct NoopNetworkClient;
@@ -394,9 +458,31 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
 
 async fn tls_upgrade(
     stream: TcpStream,
+    session_id: &str,
+    host: &str,
+    port: u16,
     server_name: &str,
 ) -> Result<tokio_rustls::client::TlsStream<TcpStream>, String> {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let cipher_suites: Vec<String> = provider
+        .cipher_suites
+        .iter()
+        .map(|suite| format!("{:?}", suite.suite()))
+        .collect();
+    rdp_debug(
+        "ironrdp.tls.start",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+            "serverName": server_name,
+            "protocolVersions": ["TLS1.2", "TLS1.3"],
+            "cipherSuites": cipher_suites,
+            "sessionResumption": false,
+            "certificateVerification": "disabled_for_rdp",
+        }),
+    );
+
     let tls_config = rustls::ClientConfig::builder_with_provider(Arc::clone(&provider))
         .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
         .map_err(|e| format!("TLS config error: {e}"))?
@@ -411,13 +497,42 @@ async fn tls_upgrade(
     let connector = tokio_rustls::TlsConnector::from(Arc::new(tls_config));
     let dns_name = rustls::pki_types::ServerName::try_from(server_name.to_string())
         .map_err(|e| format!("invalid server name '{server_name}': {e}"))?;
-    connector
-        .connect(dns_name, stream)
-        .await
-        .map_err(|e| format!("TLS handshake failed: {e}"))
+    match connector.connect(dns_name, stream).await {
+        Ok(tls_stream) => {
+            let (_, session) = tls_stream.get_ref();
+            rdp_debug(
+                "ironrdp.tls.ok",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "protocolVersion": session.protocol_version().map(|version| format!("{version:?}")),
+                    "cipherSuite": session
+                        .negotiated_cipher_suite()
+                        .map(|suite| format!("{:?}", suite.suite())),
+                    "peerCertificateCount": session.peer_certificates().map(|certs| certs.len()).unwrap_or(0),
+                }),
+            );
+            Ok(tls_stream)
+        }
+        Err(error) => {
+            rdp_debug(
+                "ironrdp.tls.error",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "error": error.to_string(),
+                    "errorKind": tls_error_kind(&error),
+                }),
+            );
+            Err(format!("TLS handshake failed: {error}"))
+        }
+    }
 }
 
 fn extract_server_public_key(
+    session_id: &str,
     tls_stream: &tokio_rustls::client::TlsStream<TcpStream>,
 ) -> Result<Vec<u8>, String> {
     use x509_cert::der::Decode as _;
@@ -438,6 +553,15 @@ fn extract_server_public_key(
         .as_bytes()
         .ok_or_else(|| "server certificate subject public key is not a bitstring".to_string())?
         .to_vec();
+
+    rdp_debug(
+        "ironrdp.certificate.ok",
+        &json!({
+            "sessionId": session_id,
+            "peerCertificateCount": session.peer_certificates().map(|certs| certs.len()).unwrap_or(0),
+            "subjectPublicKeyBytes": spki_bytes.len(),
+        }),
+    );
 
     Ok(spki_bytes)
 }
@@ -463,7 +587,12 @@ fn error_chain(error: &dyn std::error::Error) -> String {
     message
 }
 
+fn tls_error_kind(error: &std::io::Error) -> String {
+    format!("{:?}", error.kind())
+}
+
 async fn rdp_connect(
+    session_id: String,
     host: String,
     port: u16,
     username: String,
@@ -491,10 +620,42 @@ async fn rdp_connect(
     };
 
     // Step 1: TCP connect + create framed
-    let stream = TcpStream::connect((host.as_str(), port))
-        .await
-        .map_err(|e| format!("TCP connect to {host}:{port} failed: {e}"))?;
+    rdp_debug(
+        "ironrdp.tcp.start",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+        }),
+    );
+    let stream = match TcpStream::connect((host.as_str(), port)).await {
+        Ok(stream) => stream,
+        Err(error) => {
+            rdp_debug(
+                "ironrdp.tcp.error",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "error": error.to_string(),
+                    "errorKind": format!("{:?}", error.kind()),
+                }),
+            );
+            return Err(format!("TCP connect to {host}:{port} failed: {error}"));
+        }
+    };
     let client_addr = stream.local_addr().map_err(|e| e.to_string())?;
+    let peer_addr = stream.peer_addr().ok();
+    rdp_debug(
+        "ironrdp.tcp.ok",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+            "clientAddr": client_addr.to_string(),
+            "peerAddr": peer_addr.map(|addr| addr.to_string()),
+        }),
+    );
     let mut framed: TokioFramed<TcpStream> = TokioFramed::new(stream);
 
     // Step 2: Build connector config
@@ -532,19 +693,71 @@ async fn rdp_connect(
     };
 
     // Step 3: Create connector + begin
+    rdp_debug(
+        "ironrdp.connect_begin.start",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+            "clientAddr": client_addr.to_string(),
+            "username": match &config.credentials {
+                Credentials::UsernamePassword { username, .. } => username.as_str(),
+                Credentials::SmartCard { .. } => "smart_card",
+            },
+            "domain": config.domain.as_deref(),
+            "desktopWidth": width,
+            "desktopHeight": height,
+            "security": {
+                "enableCredSsp": config.enable_credssp,
+                "enableTls": config.enable_tls,
+                "requestedProtocols": ["HYBRID", "HYBRID_EX"],
+                "legacyTlsFallbackAllowed": config.enable_tls,
+            },
+        }),
+    );
     let mut connector = ClientConnector::new(config, client_addr);
-    let should_upgrade = connect_begin(&mut framed, &mut connector)
-        .await
-        .map_err(|e| format!("RDP connect_begin failed: {}", error_chain(&e)))?;
+    let should_upgrade = match connect_begin(&mut framed, &mut connector).await {
+        Ok(should_upgrade) => should_upgrade,
+        Err(error) => {
+            let error = error_chain(&error);
+            rdp_debug(
+                "ironrdp.connect_begin.error",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "error": error,
+                }),
+            );
+            return Err(format!("RDP connect_begin failed: {error}"));
+        }
+    };
+    rdp_debug(
+        "ironrdp.connect_begin.ok",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+        }),
+    );
 
     // Step 4: Extract inner stream
     let (tcp_stream, leftover) = framed.into_inner();
+    rdp_debug(
+        "ironrdp.security_upgrade.ready",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+            "leftoverBytes": leftover.len(),
+        }),
+    );
 
     // Step 5: TLS upgrade
-    let tls_stream = tls_upgrade(tcp_stream, &host).await?;
+    let tls_stream = tls_upgrade(tcp_stream, &session_id, &host, port, &host).await?;
 
     // Step 6: Extract server public key
-    let server_public_key = extract_server_public_key(&tls_stream)?;
+    let server_public_key = extract_server_public_key(&session_id, &tls_stream)?;
 
     // Step 7: Mark as upgraded
     let upgraded = mark_as_upgraded(should_upgrade, &mut connector);
@@ -553,17 +766,50 @@ async fn rdp_connect(
     let mut upgraded_framed: UpgradedFramed = TokioFramed::new_with_leftover(tls_stream, leftover);
 
     // Step 9: Finalize
-    let connection_result = connect_finalize::<_, NoopNetworkClient>(
+    rdp_debug(
+        "ironrdp.connect_finalize.start",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+        }),
+    );
+    let connection_result = match connect_finalize::<_, NoopNetworkClient>(
         upgraded,
         connector,
         &mut upgraded_framed,
         &mut NoopNetworkClient,
-        ServerName::new(host),
+        ServerName::new(host.clone()),
         server_public_key,
         None::<KerberosConfig>,
     )
     .await
-    .map_err(|e| format!("RDP connect_finalize failed: {}", error_chain(&e)))?;
+    {
+        Ok(connection_result) => connection_result,
+        Err(error) => {
+            let error = error_chain(&error);
+            rdp_debug(
+                "ironrdp.connect_finalize.error",
+                &json!({
+                    "sessionId": session_id,
+                    "host": host,
+                    "port": port,
+                    "error": error,
+                }),
+            );
+            return Err(format!("RDP connect_finalize failed: {error}"));
+        }
+    };
+    rdp_debug(
+        "ironrdp.connect_finalize.ok",
+        &json!({
+            "sessionId": session_id,
+            "host": host,
+            "port": port,
+            "desktopWidth": connection_result.desktop_size.width,
+            "desktopHeight": connection_result.desktop_size.height,
+        }),
+    );
 
     Ok((connection_result, upgraded_framed))
 }
@@ -581,6 +827,12 @@ fn spawn_rdp_event_loop(
 ) {
     runtime.spawn(async move {
         eprintln!("[rdp {session_id}] event loop starting");
+        rdp_debug(
+            "ironrdp.event_loop.start",
+            &json!({
+                "sessionId": session_id,
+            }),
+        );
 
         let width = connection_result.desktop_size.width;
         let height = connection_result.desktop_size.height;
@@ -619,6 +871,13 @@ fn spawn_rdp_event_loop(
                         Some(rdp_input) => {
                             if let Err(e) = send_rdp_input(&mut framed, &mut input_db, &mut last_button_mask, rdp_input).await {
                                 eprintln!("[rdp {session_id}] send_rdp_input error: {e}");
+                                rdp_debug(
+                                    "ironrdp.input.error",
+                                    &json!({
+                                        "sessionId": session_id,
+                                        "error": e,
+                                    }),
+                                );
                                 emit_rdp_event(&app, RdpCanvasEvent::Error {
                                     session_id: session_id.clone(),
                                     message: e,
@@ -636,6 +895,13 @@ fn spawn_rdp_event_loop(
                                 Ok(outputs) => outputs,
                                 Err(e) => {
                                     eprintln!("[rdp {session_id}] active_stage.process error: {e}");
+                                    rdp_debug(
+                                        "ironrdp.active_stage.error",
+                                        &json!({
+                                            "sessionId": session_id,
+                                            "error": e.to_string(),
+                                        }),
+                                    );
                                     emit_rdp_event(&app, RdpCanvasEvent::Error {
                                         session_id: session_id.clone(),
                                         message: e.to_string(),
@@ -651,6 +917,13 @@ fn spawn_rdp_event_loop(
                                     ActiveStageOutput::ResponseFrame(frame) => {
                                         if let Err(e) = framed.write_all(&frame).await {
                                             eprintln!("[rdp {session_id}] write_all error: {e}");
+                                            rdp_debug(
+                                                "ironrdp.write.error",
+                                                &json!({
+                                                    "sessionId": session_id,
+                                                    "error": e.to_string(),
+                                                }),
+                                            );
                                             emit_rdp_event(&app, RdpCanvasEvent::Error {
                                                 session_id: session_id.clone(),
                                                 message: e.to_string(),
@@ -685,6 +958,12 @@ fn spawn_rdp_event_loop(
                                     }
                                     ActiveStageOutput::Terminate(_reason) => {
                                         eprintln!("[rdp {session_id}] server initiated disconnect");
+                                        rdp_debug(
+                                            "ironrdp.server_disconnect",
+                                            &json!({
+                                                "sessionId": session_id,
+                                            }),
+                                        );
                                         should_break = true;
                                         break;
                                     }
@@ -697,6 +976,13 @@ fn spawn_rdp_event_loop(
                         }
                         Err(e) => {
                             eprintln!("[rdp {session_id}] read_pdu error: {e}");
+                            rdp_debug(
+                                "ironrdp.read.error",
+                                &json!({
+                                    "sessionId": session_id,
+                                    "error": e.to_string(),
+                                }),
+                            );
                             emit_rdp_event(&app, RdpCanvasEvent::Error {
                                 session_id: session_id.clone(),
                                 message: e.to_string(),
@@ -709,6 +995,12 @@ fn spawn_rdp_event_loop(
         }
 
         eprintln!("[rdp {session_id}] event loop exiting");
+        rdp_debug(
+            "ironrdp.event_loop.exit",
+            &json!({
+                "sessionId": session_id,
+            }),
+        );
         emit_rdp_event(&app, RdpCanvasEvent::Disconnected { session_id });
     });
 }
@@ -896,6 +1188,30 @@ mod tests {
     fn validates_session_ids() {
         assert_eq!(required_id("rdp-1".to_string()).as_deref(), Ok("rdp-1"));
         assert!(required_id("bad/session".to_string()).is_err());
+    }
+
+    #[test]
+    fn rdp_client_start_debug_payload_excludes_password() {
+        let payload = rdp_client_start_debug_payload(
+            "rdp-1",
+            "server.example.test",
+            3389,
+            "admin",
+            Some("EXAMPLE"),
+            1440,
+            900,
+        );
+
+        assert_eq!(payload["sessionId"], "rdp-1");
+        assert_eq!(payload["host"], "server.example.test");
+        assert_eq!(payload["port"], 3389);
+        assert_eq!(payload["username"], "admin");
+        assert_eq!(payload["domain"], "EXAMPLE");
+        assert_eq!(payload["desktopWidth"], 1440);
+        assert_eq!(payload["desktopHeight"], 900);
+        assert_eq!(payload["security"]["enableCredSsp"], true);
+        assert_eq!(payload["security"]["enableTls"], false);
+        assert!(payload.get("password").is_none());
     }
 
     #[test]
