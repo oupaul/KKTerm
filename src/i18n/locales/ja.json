@@ -2303,6 +2303,11 @@
     "searchAria": "このフォルダー内のファイルを検索",
     "searchClear": "検索をクリア",
     "searchNoResults": "「{{query}}」に一致するものはありません",
+    "viewOptions": "表示オプション",
+    "zoom": "ズーム",
+    "zoomAria": "アイテムのサイズを調整",
+    "background": "背景…",
+    "backgroundDefaultHint": "このビューに既定の背景を使用します。",
     "sidebar": {
       "title": "サイドバー",
       "show": "サイドバーを表示",

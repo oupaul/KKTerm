@@ -2303,6 +2303,11 @@
     "searchAria": "Buscar archivos en esta carpeta",
     "searchClear": "Borrar búsqueda",
     "searchNoResults": "Sin coincidencias para \"{{query}}\"",
+    "viewOptions": "Opciones de vista",
+    "zoom": "Zoom",
+    "zoomAria": "Ajustar el tamaño de los elementos",
+    "background": "Fondo…",
+    "backgroundDefaultHint": "Usar el fondo predeterminado para esta vista.",
     "sidebar": {
       "title": "Barra lateral",
       "show": "Mostrar barra lateral",

@@ -282,6 +282,68 @@
   background: var(--hover);
 }
 
+/* view options (hamburger) menu — zoom + content-view background */
+.sftp-viewopts-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.sftp-viewopts-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  gap: 8px;
+  width: 232px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.sftp-viewopts-zoom {
+  display: grid;
+  gap: 6px;
+}
+.sftp-viewopts-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sftp-viewopts-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+.sftp-viewopts-zoom-row input[type="range"] {
+  flex: 1 1 auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.sftp-viewopts-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.sftp-viewopts-item:hover {
+  background: var(--hover);
+}
+.sftp-bg-popover {
+  z-index: 260;
+}
+
 /* icon button */
 .sftp-icon-btn {
   display: inline-flex;
@@ -408,18 +470,22 @@
   border-radius: 10px;
 }
 
-/* list rows */
+/* list rows — `--sftp-zoom` (set on .sftp-file-body) scales item sizing. */
 .sftp-row {
   display: grid;
   align-items: center;
   gap: 10px;
-  height: 30px;
+  height: calc(30px * var(--sftp-zoom, 1));
   padding: 0 8px;
   border-radius: 6px;
   color: var(--text);
   user-select: none;
   cursor: default;
-  font-size: 13px;
+  font-size: calc(13px * var(--sftp-zoom, 1));
+}
+.sftp-row-glyph img {
+  width: calc(20px * var(--sftp-zoom, 1));
+  height: calc(20px * var(--sftp-zoom, 1));
 }
 .sftp-row .nm {
   display: flex;
@@ -442,7 +508,7 @@
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--sftp-zoom, 1));
 }
 .sftp-row:hover {
   background: var(--hover);
@@ -458,7 +524,7 @@
 /* gallery */
 .sftp-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(calc(96px * var(--sftp-zoom, 1)), 1fr));
   gap: 6px;
 }
 .sftp-tile {
@@ -481,13 +547,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 52px;
+  height: calc(52px * var(--sftp-zoom, 1));
+}
+.sftp-tile-ico img {
+  width: calc(52px * var(--sftp-zoom, 1));
+  height: calc(52px * var(--sftp-zoom, 1));
 }
 .sftp-tile-cap {
   max-width: 100%;
   padding: 1px 7px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: calc(12px * var(--sftp-zoom, 1));
   font-weight: 500;
   text-align: center;
   white-space: nowrap;
@@ -534,11 +604,42 @@
   min-height: 0;
 }
 .sftp-pane-content {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1 1 0;
   min-width: 0;
   min-height: 0;
+}
+/* Content-view background sits behind the column header + file list. */
+.sftp-pane-content > .sftp-col-head,
+.sftp-pane-content > .sftp-file-body {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===================== content-view background ======================= */
+.sftp-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.sftp-bg-fill,
+.sftp-bg-fill video,
+.sftp-bg-layer .dw-dynamic-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sftp-bg-media::after {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--sftp-bg-dim-color, transparent);
+  content: "";
 }
 
 .sftp-sidebar {

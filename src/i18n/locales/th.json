@@ -2303,6 +2303,11 @@
     "searchAria": "ค้นหาไฟล์ในโฟลเดอร์นี้",
     "searchClear": "ล้างการค้นหา",
     "searchNoResults": "ไม่พบผลลัพธ์สำหรับ \"{{query}}\"",
+    "viewOptions": "ตัวเลือกมุมมอง",
+    "zoom": "ซูม",
+    "zoomAria": "ปรับขนาดรายการ",
+    "background": "พื้นหลัง…",
+    "backgroundDefaultHint": "ใช้พื้นหลังเริ่มต้นสำหรับมุมมองนี้",
     "sidebar": {
       "title": "แถบด้านข้าง",
       "show": "แสดงแถบด้านข้าง",

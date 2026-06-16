@@ -2303,6 +2303,11 @@
     "searchAria": "Dateien in diesem Ordner suchen",
     "searchClear": "Suche löschen",
     "searchNoResults": "Keine Treffer für \"{{query}}\"",
+    "viewOptions": "Anzeigeoptionen",
+    "zoom": "Zoom",
+    "zoomAria": "Elementgröße anpassen",
+    "background": "Hintergrund…",
+    "backgroundDefaultHint": "Standardhintergrund für diese Ansicht verwenden.",
     "sidebar": {
       "title": "Seitenleiste",
       "show": "Seitenleiste anzeigen",

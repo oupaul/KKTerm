@@ -2303,6 +2303,11 @@
     "searchAria": "在此文件夹中搜索文件",
     "searchClear": "清除搜索",
     "searchNoResults": "没有匹配 \"{{query}}\" 的结果",
+    "viewOptions": "视图选项",
+    "zoom": "缩放",
+    "zoomAria": "调整项目大小",
+    "background": "背景…",
+    "backgroundDefaultHint": "为此视图使用默认背景。",
     "sidebar": {
       "title": "侧边栏",
       "show": "显示侧边栏",

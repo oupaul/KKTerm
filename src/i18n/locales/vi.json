@@ -2303,6 +2303,11 @@
     "searchAria": "Tìm tệp trong thư mục này",
     "searchClear": "Xóa tìm kiếm",
     "searchNoResults": "Không có kết quả cho \"{{query}}\"",
+    "viewOptions": "Tùy chọn xem",
+    "zoom": "Thu phóng",
+    "zoomAria": "Điều chỉnh kích thước mục",
+    "background": "Hình nền…",
+    "backgroundDefaultHint": "Dùng hình nền mặc định cho chế độ xem này.",
     "sidebar": {
       "title": "Thanh bên",
       "show": "Hiện thanh bên",

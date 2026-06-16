@@ -2303,6 +2303,11 @@
     "searchAria": "Search files in this folder",
     "searchClear": "Clear search",
     "searchNoResults": "No matches for \"{{query}}\"",
+    "viewOptions": "View options",
+    "zoom": "Zoom",
+    "zoomAria": "Adjust item size",
+    "background": "Background…",
+    "backgroundDefaultHint": "Use the default background for this view.",
     "sidebar": {
       "title": "Sidebar",
       "show": "Show Sidebar",

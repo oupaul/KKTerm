@@ -2303,6 +2303,11 @@
     "searchAria": "Cari file di folder ini",
     "searchClear": "Hapus pencarian",
     "searchNoResults": "Tidak ada kecocokan untuk \"{{query}}\"",
+    "viewOptions": "Opsi tampilan",
+    "zoom": "Zoom",
+    "zoomAria": "Sesuaikan ukuran item",
+    "background": "Latar belakang…",
+    "backgroundDefaultHint": "Gunakan latar belakang default untuk tampilan ini.",
     "sidebar": {
       "title": "Sidebar",
       "show": "Tampilkan Sidebar",

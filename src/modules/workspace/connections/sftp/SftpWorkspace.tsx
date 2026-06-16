@@ -20,7 +20,8 @@ import {
 } from "../../paneRegistry";
 import { useWorkspaceStore } from "../../../../store";
 import type { FileEntry, SftpSettings, WorkspaceTab } from "../../../../types";
-import { FilePane } from "./SftpFilePane";
+import type { DashboardBackground } from "../../../dashboard/types";
+import { FILE_PANE_ZOOM_DEFAULT, FilePane } from "./SftpFilePane";
 import { fileBrowserConnectionIconSrc } from "../fileBrowserConnectionIcons";
 import {
   ConfirmRemoteDeleteDialog,
@@ -47,7 +48,22 @@ const WINDOWS_DRIVES_PATH = "__KKTERM_WINDOWS_DRIVES__";
 const FILE_BROWSER_RECENT_PATHS_STORAGE_KEY = "kkterm.fileBrowserRecentPaths.v1";
 const FILE_BROWSER_FAVORITES_STORAGE_KEY = "kkterm.fileBrowserFavorites.v1";
 const FILE_BROWSER_SIDEBAR_STORAGE_KEY = "kkterm.fileBrowserSidebarCollapsed.v1";
+const FILE_BROWSER_VIEW_OPTIONS_STORAGE_KEY = "kkterm.fileBrowserViewOptions.v1";
 const RECENT_PATH_LIMIT = 5;
+
+// Per-pane zoom + content-view background. Persisted per Connection (keyed by
+// connection id, falling back to the tab id) and per pane side, except for the
+// ephemeral terminal-spawned SFTP browser (`inline`), which keeps these settings
+// in memory only so they are forgotten when the popup closes.
+type FileBrowserViewOptions = {
+  zoom: number;
+  background: DashboardBackground | null;
+};
+
+const DEFAULT_FILE_BROWSER_VIEW_OPTIONS: FileBrowserViewOptions = {
+  zoom: FILE_PANE_ZOOM_DEFAULT,
+  background: null,
+};
 
 type FileClipboard = {
   operation: LocalFileClipboardOperation;
@@ -60,12 +76,14 @@ export function SftpWorkspace({
   isActive,
   tab,
   commands: commandsProp,
+  inline = false,
   onClose,
 }: {
   isActive: boolean;
   tab: WorkspaceTab;
   commands?: FileBrowserCommands;
-  // Accepted for the terminal's inline SFTP dialog; no longer alters layout.
+  // The terminal's inline SFTP dialog. No longer alters layout, but marks the
+  // browser as ephemeral so per-pane view options are not persisted.
   inline?: boolean;
   onClose?: () => void;
 }) {
@@ -91,6 +109,12 @@ export function SftpWorkspace({
   const [favorites, setFavorites] = useState<LocalFavorite[]>(() => readFavorites());
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
     readSidebarCollapsed(sidebarConnectionKey, isLocalFilesBrowser),
+  );
+  const [localViewOptions, setLocalViewOptions] = useState<FileBrowserViewOptions>(() =>
+    readViewOptions(sidebarConnectionKey, "local", inline),
+  );
+  const [remoteViewOptions, setRemoteViewOptions] = useState<FileBrowserViewOptions>(() =>
+    readViewOptions(sidebarConnectionKey, "remote", inline),
   );
   const [status, setStatus] = useState(t("sftp.connecting"));
   const [remoteError, setRemoteError] = useState("");
@@ -211,10 +235,24 @@ export function SftpWorkspace({
     setSidebarCollapsed(readSidebarCollapsed(sidebarConnectionKey, isLocalFilesBrowser));
   }, [sidebarConnectionKey, isLocalFilesBrowser]);
 
+  useEffect(() => {
+    setLocalViewOptions(readViewOptions(sidebarConnectionKey, "local", inline));
+    setRemoteViewOptions(readViewOptions(sidebarConnectionKey, "remote", inline));
+  }, [sidebarConnectionKey, inline]);
+
   const toggleSidebar = () => {
     setSidebarCollapsed((collapsed) => {
       const next = !collapsed;
       writeSidebarCollapsed(sidebarConnectionKey, next);
+      return next;
+    });
+  };
+
+  const updateViewOptions = (side: FilePaneSide, patch: Partial<FileBrowserViewOptions>) => {
+    const setOptions = side === "local" ? setLocalViewOptions : setRemoteViewOptions;
+    setOptions((current) => {
+      const next = { ...current, ...patch };
+      writeViewOptions(sidebarConnectionKey, side, inline, next);
       return next;
     });
   };
@@ -1567,6 +1605,11 @@ export function SftpWorkspace({
           enableSearch
           showFooter
           availableBytes={isLocalDrivePicker ? undefined : localAvailableBytes}
+          zoom={localViewOptions.zoom}
+          onZoomChange={(zoom) => updateViewOptions("local", { zoom })}
+          background={localViewOptions.background}
+          onBackgroundChange={(background) => updateViewOptions("local", { background })}
+          backgroundActive={isActive}
         />
         {!isLocalFilesBrowser ? (
           <>
@@ -1618,6 +1661,11 @@ export function SftpWorkspace({
               renameRequest={renameRequest?.side === "remote" ? renameRequest : undefined}
               enableSearch
               showFooter
+              zoom={remoteViewOptions.zoom}
+              onZoomChange={(zoom) => updateViewOptions("remote", { zoom })}
+              background={remoteViewOptions.background}
+              onBackgroundChange={(background) => updateViewOptions("remote", { background })}
+              backgroundActive={isActive}
             />
           </>
         ) : null}
@@ -1979,6 +2027,67 @@ function writeSidebarCollapsed(connectionKey: string, collapsed: boolean) {
   }
   state[connectionKey] = collapsed;
   window.localStorage.setItem(FILE_BROWSER_SIDEBAR_STORAGE_KEY, JSON.stringify(state));
+}
+
+function viewOptionsKey(connectionKey: string, side: FilePaneSide) {
+  return `${connectionKey} ${side}`;
+}
+
+function normalizeViewOptions(value: unknown): FileBrowserViewOptions {
+  if (!value || typeof value !== "object") {
+    return { ...DEFAULT_FILE_BROWSER_VIEW_OPTIONS };
+  }
+  const record = value as { zoom?: unknown; background?: unknown };
+  const zoom =
+    typeof record.zoom === "number" && Number.isFinite(record.zoom)
+      ? record.zoom
+      : DEFAULT_FILE_BROWSER_VIEW_OPTIONS.zoom;
+  const background =
+    record.background && typeof record.background === "object"
+      ? (record.background as DashboardBackground)
+      : null;
+  return { zoom, background };
+}
+
+function readViewOptions(
+  connectionKey: string,
+  side: FilePaneSide,
+  ephemeral: boolean,
+): FileBrowserViewOptions {
+  // Ephemeral (terminal-spawned) browsers never read persisted options.
+  if (ephemeral || typeof window === "undefined") {
+    return { ...DEFAULT_FILE_BROWSER_VIEW_OPTIONS };
+  }
+  try {
+    const state = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_VIEW_OPTIONS_STORAGE_KEY) || "{}",
+    ) as Record<string, unknown>;
+    return normalizeViewOptions(state[viewOptionsKey(connectionKey, side)]);
+  } catch {
+    return { ...DEFAULT_FILE_BROWSER_VIEW_OPTIONS };
+  }
+}
+
+function writeViewOptions(
+  connectionKey: string,
+  side: FilePaneSide,
+  ephemeral: boolean,
+  options: FileBrowserViewOptions,
+) {
+  // Ephemeral browsers keep view options in memory only.
+  if (ephemeral || typeof window === "undefined") {
+    return;
+  }
+  let state: Record<string, unknown> = {};
+  try {
+    state = JSON.parse(
+      window.localStorage.getItem(FILE_BROWSER_VIEW_OPTIONS_STORAGE_KEY) || "{}",
+    ) as Record<string, unknown>;
+  } catch {
+    state = {};
+  }
+  state[viewOptionsKey(connectionKey, side)] = options;
+  window.localStorage.setItem(FILE_BROWSER_VIEW_OPTIONS_STORAGE_KEY, JSON.stringify(state));
 }
 
 function normalizeRecentPaths(paths: unknown) {

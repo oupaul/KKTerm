@@ -3,13 +3,17 @@
 // editable path with recent-paths history, drag-to-transfer. All data flows in
 // through props; this file owns only local view/sort/edit UI state.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
+import type { CSSProperties, DragEvent as ReactDragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { DIcon } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import type { LocalPlacesListing } from "../../../../lib/tauri";
 import type { FileEntry } from "../../../../types";
+import { SharedBackgroundPopover } from "../../../dashboard/edit/SharedBackgroundPopover";
+import { loadBackgroundImage } from "../../../dashboard/state/persistence";
+import type { DashboardBackground } from "../../../dashboard/types";
 import { ExplorerSidebar } from "./ExplorerSidebar";
+import { SftpBackgroundLayer } from "./SftpBackgroundLayer";
 import { FileGlyph } from "./finderGlyphs";
 import { formatFileSize, joinLocalPath } from "./format";
 import type { FilePaneSide, LocalFavorite } from "./types";
@@ -19,6 +23,10 @@ type SortState = { key: SortKey; dir: "asc" | "desc" };
 type ViewMode = "list" | "gallery";
 
 const LIST_GRID = "minmax(0,1fr) 88px 128px";
+export const FILE_PANE_ZOOM_MIN = 0.8;
+export const FILE_PANE_ZOOM_MAX = 1.6;
+export const FILE_PANE_ZOOM_STEP = 0.1;
+export const FILE_PANE_ZOOM_DEFAULT = 1;
 
 export function FilePane({
   side,
@@ -54,6 +62,11 @@ export function FilePane({
   enableSearch = false,
   showFooter = false,
   availableBytes,
+  zoom = FILE_PANE_ZOOM_DEFAULT,
+  onZoomChange,
+  background = null,
+  onBackgroundChange,
+  backgroundActive = false,
 }: {
   side: FilePaneSide;
   title: string;
@@ -88,9 +101,18 @@ export function FilePane({
   enableSearch?: boolean;
   showFooter?: boolean;
   availableBytes?: number;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+  background?: DashboardBackground | null;
+  onBackgroundChange?: (background: DashboardBackground | null) => void;
+  backgroundActive?: boolean;
 }) {
   const { t } = useTranslation();
   const pathSuggestionsId = useId();
+  const viewOptionsRef = useRef<HTMLDivElement | null>(null);
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
+  const [backgroundPopoverOpen, setBackgroundPopoverOpen] = useState(false);
+  const enableViewOptions = Boolean(onZoomChange || onBackgroundChange);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const renameCanceledRef = useRef(false);
   const lastSelectedNameRef = useRef<string | null>(null);
@@ -121,6 +143,28 @@ export function FilePane({
     setEditingPath(false);
     setSearch("");
   }, [path]);
+
+  useEffect(() => {
+    if (!viewMenuOpen) {
+      return;
+    }
+    function onDoc(event: MouseEvent) {
+      if (viewOptionsRef.current && !viewOptionsRef.current.contains(event.target as Node)) {
+        setViewMenuOpen(false);
+      }
+    }
+    function onKey(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setViewMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [viewMenuOpen]);
 
   useEffect(() => {
     if (!editingName) {
@@ -548,8 +592,69 @@ export function FilePane({
               ) : null}
             </div>
           ) : null}
+          {enableViewOptions ? (
+            <div className="sftp-viewopts-wrap" ref={viewOptionsRef}>
+              <button
+                aria-expanded={viewMenuOpen}
+                aria-label={t("sftp.viewOptions")}
+                className={`sftp-icon-btn${viewMenuOpen ? " active" : ""}`}
+                onClick={() => setViewMenuOpen((open) => !open)}
+                title={t("sftp.viewOptions")}
+                type="button"
+              >
+                <DIcon name="menu" size={16} />
+              </button>
+              {viewMenuOpen ? (
+                <div className="sftp-viewopts-menu" role="menu">
+                  {onZoomChange ? (
+                    <div className="sftp-viewopts-zoom">
+                      <span className="sftp-viewopts-label">{t("sftp.zoom")}</span>
+                      <div className="sftp-viewopts-zoom-row">
+                        <DIcon name="gallery" size={13} />
+                        <input
+                          aria-label={t("sftp.zoomAria")}
+                          max={FILE_PANE_ZOOM_MAX}
+                          min={FILE_PANE_ZOOM_MIN}
+                          onChange={(event) => onZoomChange(Number(event.currentTarget.value))}
+                          step={FILE_PANE_ZOOM_STEP}
+                          type="range"
+                          value={zoom}
+                        />
+                        <DIcon name="gallery" size={18} />
+                      </div>
+                    </div>
+                  ) : null}
+                  {onBackgroundChange ? (
+                    <button
+                      className="sftp-viewopts-item"
+                      onClick={() => {
+                        setViewMenuOpen(false);
+                        setBackgroundPopoverOpen(true);
+                      }}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <DIcon name="palette" size={15} />
+                      <span>{t("sftp.background")}</span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
+      {backgroundPopoverOpen && onBackgroundChange ? (
+        <SharedBackgroundPopover
+          background={background}
+          className="sftp-bg-popover"
+          defaultHintKey="sftp.backgroundDefaultHint"
+          onBackgroundChange={onBackgroundChange}
+          onClose={() => setBackgroundPopoverOpen(false)}
+          onLoadBackgroundImage={async (file) => { await loadBackgroundImage(file); }}
+          titleKey="dashboard.changeBackground"
+        />
+      ) : null}
 
       <div className="sftp-pane-body">
         {enableSidebar ? (
@@ -586,12 +691,14 @@ export function FilePane({
           />
         ) : null}
         <div className="sftp-pane-content">
+          <SftpBackgroundLayer active={backgroundActive} background={background} />
           {view === "list" ? (
             <ListColumnHeader sort={sort} onSort={toggleSort} t={t} />
           ) : null}
 
           <div
             className={`sftp-file-body sftp-view-${view}${isDropTarget || forceDropTarget ? " drop-target" : ""}`}
+            style={{ "--sftp-zoom": zoom } as CSSProperties}
             onContextMenu={(event) => onContextMenuRequest?.(side, selectedNames, event)}
             onDragLeave={() => setIsDropTarget(false)}
             onDragOver={handleDragOver}

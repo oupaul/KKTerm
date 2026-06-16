@@ -185,6 +185,7 @@ export const DIALOG_ICONS = {
   home: stroke(<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5" />),
   back: stroke(<path d="M15 6l-6 6 6 6" />),
   forward: stroke(<path d="M9 6l6 6-6 6" />),
+  menu: stroke(<path d="M4 7h16M4 12h16M4 17h16" />),
   list: stroke(<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />),
   gallery: stroke(<path d="M4 5h6v6H4zM14 5h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />),
   drive: stroke(<path d="M5 5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM8 9.5h.01" />),

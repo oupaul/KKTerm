@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `sftp.*` (full namespace), `terminal.openSftp`, `terminal.sftp`
-- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
+- Topics: symmetric dual-pane browser, breadcrumb navigation, list/gallery view switch, per-pane view-options (hamburger) menu with item zoom + content-view background, upload, download, conflicts, cut/copy/paste, rename, delete, copy path, new folder, properties, chmod/chown, sort, collapsible transfer activity bar, tutorial targets `sftp.toolbar`, `sftp.upload`, `sftp.download`, `sftp.terminal`, `sftp.localPane`, `sftp.remotePane`, `sftp.transferQueue`
 - Synonyms: "file transfer", "scp", "upload to server", "download from server", "remote files"
 
 ## Opening an SFTP browser
@@ -54,6 +54,7 @@ Each pane header carries (with `Aria` siblings for accessibility):
 - New folder (remote): `sftp.createFolder` (`sftp.createFolderAria`). Remote new folder dialog `sftp.newRemoteFolder` — empty input warning `sftp.folderNameBlank`. Creation in-flight: `sftp.creatingFolder`.
 - Recent paths (`sftp.recentPathsAria`) and Refresh files: `sftp.refreshFiles` (`sftp.refreshFilesAria`)
 - View switch: list / gallery (`sftp.viewMode`).
+- View options (`sftp.viewOptions`) — a hamburger button to the right of the search box opens a per-pane menu with two controls: **Zoom** (`sftp.zoom`, slider aria `sftp.zoomAria`) scales the file/folder items in that pane's content view smaller or bigger, and **Background** (`sftp.background`) opens the shared background picker (same options as a Dashboard view background; default-mode hint `sftp.backgroundDefaultHint`) and applies the chosen preset / image / video / dynamic background within that pane's content view only. Both panes of an SFTP/FTP browser carry their own menu. These settings persist per Connection and per pane side, except in the ephemeral SSH-toolbar SFTP popup, where they are kept in memory only and forgotten when the popup closes.
 
 Cut, Copy, Paste, Rename, Copy Path, Delete, and Get Info are on the right-click context menu (see below). Pressing **Delete** or **Backspace** with a mutable local or remote selection starts the delete flow (remote confirm copy `sftp.deleteRemoteConfirm`, `sftp.deleteRemoteItemConfirm`, `sftp.deleteRemoteItemsMultiple`; local confirm copy reuses `sftp.deleteLabel` / `sftp.deleteSelected`; in-flight `sftp.deleting`). Rename in-flight `sftp.renaming` / empty warning `sftp.remoteNameBlank`; rename file aria `sftp.renameFileAria`.
 

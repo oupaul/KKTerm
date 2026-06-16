@@ -2303,6 +2303,11 @@
     "searchAria": "在此資料夾中搜尋檔案",
     "searchClear": "清除搜尋",
     "searchNoResults": "沒有符合「{{query}}」的結果",
+    "viewOptions": "檢視選項",
+    "zoom": "縮放",
+    "zoomAria": "調整項目大小",
+    "background": "背景…",
+    "backgroundDefaultHint": "在此檢視使用預設背景。",
     "sidebar": {
       "title": "側邊欄",
       "show": "顯示側邊欄",

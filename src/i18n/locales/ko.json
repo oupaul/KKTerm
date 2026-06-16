@@ -2303,6 +2303,11 @@
     "searchAria": "이 폴더에서 파일 검색",
     "searchClear": "검색 지우기",
     "searchNoResults": "\"{{query}}\"에 대한 일치 항목 없음",
+    "viewOptions": "보기 옵션",
+    "zoom": "확대/축소",
+    "zoomAria": "항목 크기 조정",
+    "background": "배경…",
+    "backgroundDefaultHint": "이 보기에 기본 배경을 사용합니다.",
     "sidebar": {
       "title": "사이드바",
       "show": "사이드바 표시",
