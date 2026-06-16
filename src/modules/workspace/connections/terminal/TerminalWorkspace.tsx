@@ -1380,7 +1380,7 @@ const osDetectInFlight = new Set<string>();
 // "done" flag stops it, so the host is probed only once for performance) and is
 // skipped when the user has chosen an icon, so a hand-picked icon is never
 // overridden.
-async function maybeAutoDetectOsIcon(connection: Connection) {
+async function maybeAutoDetectOsIcon(connection: Connection, sessionId?: string) {
   if (!shouldAutoDetectOsIcon(connection) || osDetectInFlight.has(connection.id)) {
     return;
   }
@@ -1388,6 +1388,7 @@ async function maybeAutoDetectOsIcon(connection: Connection) {
   try {
     const detected = await invokeCommand("detect_ssh_remote_os", {
       request: tmuxConnectionRequest(connection),
+      sessionId,
     });
     const iconId = osIconIdForDetection(detected);
     if (!iconId) {
@@ -2022,7 +2023,7 @@ function TerminalPaneView({
           writeInputToSession(startupInput);
         }
         markConnectionSessionStarted(connection.id);
-        void maybeAutoDetectOsIcon(connection);
+        void maybeAutoDetectOsIcon(connection, result.sessionId);
       } catch (error) {
         terminal.writeln("");
         terminal.writeln(t("terminal.failedToStartDetail", { message: String(error) }));

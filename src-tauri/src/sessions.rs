@@ -1102,6 +1102,7 @@ impl SessionManager {
         app: AppHandle,
         secrets: &secrets::Secrets,
         request: TmuxConnectionRequest,
+        session_id: Option<String>,
     ) -> Result<DetectedRemoteOs, String> {
         let cache_key = ssh_system_context_cache_key(&request);
         if let Some(cached) = self
@@ -1114,12 +1115,13 @@ impl SessionManager {
             return Ok(cached);
         }
 
-        let output = run_ssh_command(
+        let output = self.run_ssh_probe_command(
             app,
             secrets,
             &request,
+            session_id.as_deref(),
             remote_os_detect_command(),
-            Some(Duration::from_secs(3)),
+            Duration::from_secs(3),
         )?;
         let detected = parse_detected_remote_os(&output);
         self.os_detect_cache
@@ -1127,6 +1129,36 @@ impl SessionManager {
             .map_err(|_| "OS detection cache lock is poisoned".to_string())?
             .insert(cache_key, detected.clone());
         Ok(detected)
+    }
+
+    /// Runs a read-only probe command, preferring the live SSH Session named by
+    /// `session_id` so no second connection (and no system `ssh` console window)
+    /// is spawned. The live path also works for blank-password Connections that
+    /// authenticate interactively, where the system `ssh` fallback cannot. When
+    /// no live native Session is available it falls back to `run_ssh_command`.
+    fn run_ssh_probe_command(
+        &self,
+        app: AppHandle,
+        secrets: &secrets::Secrets,
+        request: &TmuxConnectionRequest,
+        session_id: Option<&str>,
+        command: String,
+        fallback_timeout: Duration,
+    ) -> Result<String, String> {
+        if let Some(handle) = session_id.and_then(|id| self.ssh_command_handle(id)) {
+            return handle.run(command, SSH_PROBE_LIVE_SESSION_TIMEOUT);
+        }
+        run_ssh_command(app, secrets, request, command, Some(fallback_timeout))
+    }
+
+    /// Clones a command handle out of a live native SSH Session without holding
+    /// the session lock while a probe runs.
+    fn ssh_command_handle(&self, session_id: &str) -> Option<ssh::NativeSshCommandHandle> {
+        let sessions = self.sessions.lock().ok()?;
+        match &sessions.get(session_id)?.transport {
+            TerminalTransport::NativeSsh(terminal) => Some(terminal.command_handle()),
+            _ => None,
+        }
     }
 
     pub fn list_remote_loopback_ports(
@@ -1659,7 +1691,7 @@ async fn run_ssh_port_forward(
 
     if let Ok(session) = std::sync::Arc::try_unwrap(ssh_session) {
         let session = session.into_inner();
-        let _ = ssh::disconnect_ssh_session(session, "port forward closed").await;
+        let _ = ssh::disconnect_ssh_session(&session, "port forward closed").await;
     }
     Ok(())
 }
@@ -1881,6 +1913,7 @@ fn run_system_ssh_command(
     };
     command.arg(target);
     command.arg(remote_command);
+    hide_console_window(&mut command);
 
     let output = if let Some(timeout) = timeout {
         run_command_with_timeout(command, timeout)?
@@ -1895,6 +1928,22 @@ fn run_system_ssh_command(
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("system ssh command failed: {stderr}"))
+    }
+}
+
+/// Suppress the transient console window Windows shows when spawning the system
+/// `ssh` client from a GUI process. No-op on other platforms.
+fn hide_console_window(command: &mut ProcessCommand) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW — see Windows process creation flags.
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = command;
     }
 }
 
@@ -1967,6 +2016,12 @@ fn tmux_rename_session_command(tmux_session_id: &str, new_tmux_session_id: &str)
         shell_single_quote(new_tmux_session_id)
     )
 }
+
+// A live-Session probe is queued behind authentication, so its wait spans an
+// interactive (blank-password) login plus the bounded command run. Keep it
+// generous enough for a person to type a password, but finite so an abandoned
+// login cannot tie up the probe forever.
+const SSH_PROBE_LIVE_SESSION_TIMEOUT: Duration = Duration::from_secs(25);
 
 const DEFAULT_SSH_BUFFER_LINES: u32 = 5_000;
 

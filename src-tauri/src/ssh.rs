@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     future::Future,
     path::PathBuf,
+    rc::Rc,
     sync::{Arc, mpsc as std_mpsc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -23,6 +24,10 @@ const SSH_TMUX_RESUME_TIMEOUT: Duration = Duration::from_secs(10);
 const SSH_TMUX_RESUME_DELAY: Duration = Duration::from_millis(750);
 const SSH_STARTUP_TIMEOUT: Duration = Duration::from_secs(15);
 const SSH_X11_REQUEST_WANT_REPLY: bool = true;
+// Upper bound for a one-off command run over a live SSH Session (remote-OS
+// detection, system context). It bounds only command execution: queue/auth wait
+// is bounded separately by the caller's `recv_timeout`.
+const SSH_COMMAND_TIMEOUT: Duration = Duration::from_secs(8);
 // Idle SSH sessions must keep sending SSH-level keepalives so NAT/firewall state
 // stays alive and a dead link is detected instead of silently freezing input
 // (russh equivalent of OpenSSH ServerAliveInterval/ServerAliveCountMax). An
@@ -53,6 +58,7 @@ pub fn transport_plan() -> SshTransportPlan {
 
 pub struct NativeSshTerminal {
     control: mpsc::UnboundedSender<SshTerminalControl>,
+    command_tx: mpsc::UnboundedSender<NativeSshCommandMsg>,
     worker: Option<JoinHandle<()>>,
     terminal_ready_ms: u128,
     x11_forwarding_status: Option<NativeSshX11ForwardingStatus>,
@@ -65,6 +71,46 @@ impl NativeSshTerminal {
 
     pub fn x11_forwarding_status(&self) -> Option<NativeSshX11ForwardingStatus> {
         self.x11_forwarding_status
+    }
+
+    /// A lightweight, cloneable handle that runs one-off commands on this live
+    /// SSH Session without holding the SessionManager lock. Reusing the already
+    /// authenticated Session means auxiliary probes (remote-OS detection, system
+    /// context) need no second connection and no system `ssh` fallback, so they
+    /// also work for blank-password Connections that authenticate interactively.
+    pub fn command_handle(&self) -> NativeSshCommandHandle {
+        NativeSshCommandHandle {
+            command_tx: self.command_tx.clone(),
+        }
+    }
+}
+
+/// A request to run a command on a live native SSH Session. The worker replies
+/// over the sync channel so a blocking caller can wait for the output.
+struct NativeSshCommandMsg {
+    command: String,
+    reply: std_mpsc::SyncSender<Result<String, String>>,
+}
+
+/// Cloneable handle to a live native SSH Session for running one-off remote
+/// commands over a fresh exec channel on the existing authenticated transport.
+#[derive(Clone)]
+pub struct NativeSshCommandHandle {
+    command_tx: mpsc::UnboundedSender<NativeSshCommandMsg>,
+}
+
+impl NativeSshCommandHandle {
+    /// Runs `command` on the live Session and returns its combined output. The
+    /// command is queued until the Session finishes authenticating, so for a
+    /// blank-password Connection the caller waits for the interactive login to
+    /// complete (bounded by `timeout`) before the probe runs.
+    pub fn run(&self, command: String, timeout: Duration) -> Result<String, String> {
+        let (reply, rx) = std_mpsc::sync_channel(1);
+        self.command_tx
+            .send(NativeSshCommandMsg { command, reply })
+            .map_err(|_| "native SSH session is closed".to_string())?;
+        rx.recv_timeout(timeout)
+            .map_err(|_| format!("SSH command timed out after {} seconds", timeout.as_secs()))?
     }
 }
 
@@ -330,10 +376,17 @@ pub fn start_native_terminal(
         socks_proxy: request.socks_proxy,
     };
     let (control_tx, control_rx) = mpsc::unbounded_channel();
+    let (command_tx, command_rx) = mpsc::unbounded_channel();
     let (ready_tx, ready_rx) = std_mpsc::sync_channel(1);
     let returns_before_ready = matches!(request.auth, NativeSshAuth::Password { password: None });
     let worker = thread::spawn(move || {
-        let result = run_native_terminal_thread(app.clone(), request.clone(), control_rx, ready_tx);
+        let result = run_native_terminal_thread(
+            app.clone(),
+            request.clone(),
+            control_rx,
+            command_rx,
+            ready_tx,
+        );
         if let Err(error) = result {
             emit_terminal_output(
                 &app,
@@ -346,6 +399,7 @@ pub fn start_native_terminal(
     if returns_before_ready {
         return Ok(NativeSshTerminal {
             control: control_tx,
+            command_tx,
             worker: Some(worker),
             terminal_ready_ms: 0,
             x11_forwarding_status: None,
@@ -358,6 +412,7 @@ pub fn start_native_terminal(
     {
         Ok((terminal_ready_ms, x11_forwarding_status)) => Ok(NativeSshTerminal {
             control: control_tx,
+            command_tx,
             worker: Some(worker),
             terminal_ready_ms,
             x11_forwarding_status,
@@ -541,12 +596,24 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
     })
     .await?;
 
+    let result = exec_collect_on_session(&session, request.command).await;
+    disconnect_ssh_session(&session, "command completed").await?;
+    result
+}
+
+/// Opens a fresh exec channel on an already-connected Session, runs `command`,
+/// and returns its combined stdout/stderr. The Session is left connected so a
+/// live terminal Session can be reused for background probes.
+async fn exec_collect_on_session(
+    session: &client::Handle<VerifyingClient>,
+    command: String,
+) -> Result<String, String> {
     let mut channel = session
         .channel_open_session()
         .await
         .map_err(|error| format!("failed to open SSH command channel: {error}"))?;
     channel
-        .exec(false, request.command.into_bytes())
+        .exec(false, command.into_bytes())
         .await
         .map_err(|error| format!("failed to run SSH command: {error}"))?;
 
@@ -569,7 +636,6 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
 
     let _ = channel.eof().await;
     let _ = channel.close().await;
-    disconnect_ssh_session(session, "command completed").await?;
     if exit_status == 0 {
         Ok(output)
     } else {
@@ -615,6 +681,7 @@ fn run_native_terminal_thread(
     app: AppHandle,
     request: NativeSshTerminalRequest,
     control_rx: mpsc::UnboundedReceiver<SshTerminalControl>,
+    command_rx: mpsc::UnboundedReceiver<NativeSshCommandMsg>,
     ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -623,7 +690,13 @@ fn run_native_terminal_thread(
         .map_err(|error| format!("failed to create native SSH runtime: {error}"))?;
 
     let startup_error_tx = ready_tx.clone();
-    let result = runtime.block_on(run_native_terminal(app, request, control_rx, ready_tx));
+    // A LocalSet lets background command probes run as `!Send` local tasks
+    // (russh's `client::Handle` is not `Sync`, so it cannot cross `tokio::spawn`).
+    let local = tokio::task::LocalSet::new();
+    let result = local.block_on(
+        &runtime,
+        run_native_terminal(app, request, control_rx, command_rx, ready_tx),
+    );
     if let Err(error) = &result {
         let _ = startup_error_tx.send(Err(error.clone()));
     }
@@ -634,6 +707,7 @@ async fn run_native_terminal(
     app: AppHandle,
     request: NativeSshTerminalRequest,
     mut control_rx: mpsc::UnboundedReceiver<SshTerminalControl>,
+    mut command_rx: mpsc::UnboundedReceiver<NativeSshCommandMsg>,
     ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
     let current_request = request;
@@ -651,6 +725,7 @@ async fn run_native_terminal(
             &app,
             &current_request,
             &mut control_rx,
+            &mut command_rx,
             ready_tx.take(),
             timeout,
         )
@@ -681,6 +756,7 @@ async fn run_native_terminal_once(
     app: &AppHandle,
     request: &NativeSshTerminalRequest,
     control_rx: &mut mpsc::UnboundedReceiver<SshTerminalControl>,
+    command_rx: &mut mpsc::UnboundedReceiver<NativeSshCommandMsg>,
     ready_tx: Option<std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>>,
     startup_timeout: Duration,
 ) -> Result<TerminalRunOutcome, String> {
@@ -769,6 +845,10 @@ async fn run_native_terminal_once(
             .map_err(|_| "timed out while starting native SSH session".to_string())?
     };
     let (session, mut channel, terminal_ready_ms, x11_forwarding_status) = startup_result?;
+    // Share the authenticated Session so background probes can open their own
+    // exec channels without a second connection. `client::Handle` is not Clone,
+    // so an Rc provides the shared, read-only access the local probe tasks need.
+    let session = Rc::new(session);
 
     if let Some(ready_tx) = ready_tx {
         let _ = ready_tx.send(Ok((terminal_ready_ms, x11_forwarding_status)));
@@ -803,9 +883,30 @@ async fn run_native_terminal_once(
                     Some(SshTerminalControl::Close) | None => {
                         let _ = channel.eof().await;
                         let _ = channel.close().await;
-                        let _ = disconnect_ssh_session(session, "").await;
+                        let _ = disconnect_ssh_session(&session, "").await;
                         return Ok(TerminalRunOutcome::Closed);
                     }
+                }
+            }
+            command = command_rx.recv() => {
+                if let Some(NativeSshCommandMsg { command, reply }) = command {
+                    // Run the probe on its own exec channel concurrently with the
+                    // shell so terminal I/O is never blocked. The shared Session
+                    // handle reuses the authenticated transport, so no second
+                    // connection (and no system `ssh` window) is needed.
+                    let session = Rc::clone(&session);
+                    tokio::task::spawn_local(async move {
+                        let result = match tokio::time::timeout(
+                            SSH_COMMAND_TIMEOUT,
+                            exec_collect_on_session(&session, command),
+                        )
+                        .await
+                        {
+                            Ok(result) => result,
+                            Err(_) => Err("SSH command timed out".to_string()),
+                        };
+                        let _ = reply.send(result);
+                    });
                 }
             }
             message = channel.wait() => {
@@ -818,7 +919,7 @@ async fn run_native_terminal_once(
                         );
                     }
                     Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => {
-                        let _ = disconnect_ssh_session(session, "").await;
+                        let _ = disconnect_ssh_session(&session, "").await;
                         return Ok(TerminalRunOutcome::Disconnected);
                     }
                     _ => {}
@@ -838,7 +939,7 @@ fn can_resume_tmux_terminal(request: &NativeSshTerminalRequest) -> bool {
 }
 
 pub(crate) async fn disconnect_ssh_session(
-    session: client::Handle<VerifyingClient>,
+    session: &client::Handle<VerifyingClient>,
     reason: &str,
 ) -> Result<(), String> {
     match session
@@ -1894,7 +1995,7 @@ mod tests {
 
         let _ = channel.eof().await;
         let _ = channel.close().await;
-        disconnect_ssh_session(session, "readiness measured").await?;
+        disconnect_ssh_session(&session, "readiness measured").await?;
         Ok(terminal_ready_ms)
     }
 

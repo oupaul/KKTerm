@@ -1756,6 +1756,7 @@ type CommandMap = {
         authMethod?: "keyFile" | "password" | "agent";
         secretOwnerId?: string;
       };
+      sessionId?: string;
     };
     result: DetectedRemoteOs;
   };

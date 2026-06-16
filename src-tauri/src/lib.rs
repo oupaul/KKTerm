@@ -2109,11 +2109,12 @@ async fn inspect_ssh_system_context(
 async fn detect_ssh_remote_os(
     app: tauri::AppHandle,
     request: sessions::TmuxConnectionRequest,
+    session_id: Option<String>,
 ) -> Result<sessions::DetectedRemoteOs, String> {
     run_blocking_command("SSH remote OS detection", move || {
         let sessions = app.state::<sessions::SessionManager>();
         let secrets = app.state::<secrets::Secrets>();
-        sessions.detect_ssh_remote_os(app.clone(), &secrets, request)
+        sessions.detect_ssh_remote_os(app.clone(), &secrets, request, session_id)
     })
     .await
 }
