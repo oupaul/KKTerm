@@ -275,10 +275,10 @@
 .status-bar-notice-area {
   position: fixed;
   right: 0;
-  bottom: 28px;
+  top: var(--app-titlebar-height, 23px);
   left: 0;
   z-index: 9999;
-  padding-bottom: 16px;
+  padding-top: 12px;
   justify-content: center;
   pointer-events: none;
 }
@@ -712,7 +712,7 @@
 
 .status-popup.is-exiting {
   opacity: 0;
-  transform: translateY(16px) scale(0.97);
+  transform: translateY(-16px) scale(0.97);
   transition:
     opacity 200ms ease,
     transform 200ms ease;
@@ -721,7 +721,7 @@
 @keyframes status-popup-enter-pulse {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.78);
+    transform: translateY(-12px) scale(0.78);
   }
 
   to {
