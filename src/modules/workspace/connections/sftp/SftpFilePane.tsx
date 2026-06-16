@@ -498,9 +498,10 @@ export function FilePane({
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => void commitPathDraft(recentPath)}
                     role="menuitem"
+                    title={recentPath}
                     type="button"
                   >
-                    {recentPath}
+                    <bdi dir="ltr">{recentPath}</bdi>
                   </button>
                 ))}
               </div>

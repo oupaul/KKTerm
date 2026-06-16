@@ -67,7 +67,7 @@
   --nav-toolbar-tooltip-bg: #111827;
   --nav-toolbar-tooltip-text: #f8fafc;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
-  --shadow: 0 32px 80px rgba(0, 0, 0, 0.26), 0 8px 24px rgba(0, 0, 0, 0.14);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   /* Platform-aware default: SF Pro on macOS, bundled Inter on Windows. */
   --app-ui-font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
@@ -134,7 +134,7 @@
   --nav-toolbar-tooltip-bg: #111827;
   --nav-toolbar-tooltip-text: #f8fafc;
   --nav-toolbar-tooltip-border: rgba(255, 255, 255, 0.14);
-  --shadow: 0 36px 96px rgba(0, 0, 0, 0.62), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow: 0 10px 32px rgba(0, 0, 0, 0.5), 0 3px 8px rgba(0, 0, 0, 0.35);
 }
 
 [data-color-scheme="light"] {

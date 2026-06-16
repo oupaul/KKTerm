@@ -249,24 +249,29 @@
 }
 .sftp-recent-menu {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   right: 0;
   z-index: 40;
   display: grid;
-  width: min(360px, 80vw);
-  padding: 4px;
+  width: min(340px, 80vw);
+  padding: 5px;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   box-shadow: var(--shadow);
 }
 .sftp-recent-menu button {
   min-width: 0;
-  padding: 6px 8px;
+  padding: 5px 9px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  /* Truncate from the start so the trailing folder — the part that tells you
+     where the path leads — stays visible instead of being clipped. */
+  direction: rtl;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
