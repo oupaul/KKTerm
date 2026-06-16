@@ -284,6 +284,7 @@
 }
 
 .status-bar-actions {
+  grid-column: 3;
   justify-content: flex-end;
 }
 
