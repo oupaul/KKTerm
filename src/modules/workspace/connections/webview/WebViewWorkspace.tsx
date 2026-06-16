@@ -746,27 +746,28 @@ export function WebViewWorkspace({
       return;
     }
     pendingCaptureNonceRef.current = null;
-    if (!payload.ok || !payload.username || !payload.password) {
+    if (!payload.ok || !payload.username) {
       setFillStatus("");
-      const reason = payload.reason === "no-password-field"
+      const reason = payload.reason === "no-fields"
         ? t("webview.savePasswordNoPasswordField")
-        : payload.reason === "empty-password"
-          ? t("webview.savePasswordEmptyPassword")
-          : payload.reason === "empty-username"
-            ? t("webview.savePasswordEmptyUsername")
-            : t("webview.savePasswordFailed");
+        : t("webview.savePasswordFailed");
       setNavError(reason);
       return;
     }
     setNavError("");
     setFillStatus(t("webview.savingPassword"));
-    void invokeCommand("store_secret", {
-      request: {
-        kind: "urlPassword",
-        ownerId: tab.connection.id,
-        secret: payload.password,
-      },
-    })
+    // The primary password (if any) is the only value kept in the OS keychain;
+    // every other field is durable form data persisted alongside the credential.
+    const storePassword = payload.password
+      ? invokeCommand("store_secret", {
+          request: {
+            kind: "urlPassword",
+            ownerId: tab.connection.id,
+            secret: payload.password,
+          },
+        })
+      : Promise.resolve();
+    void storePassword
       .then(() => invokeCommand("upsert_url_credential", {
         request: {
           connectionId: tab.connection!.id,

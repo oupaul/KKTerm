@@ -63,6 +63,16 @@ const AUTOFILL_AGENT: &str = r#"
     return ["", "text", "email", "tel", "search", "url", "number"].includes((input.getAttribute("type") || "text").toLowerCase());
   }
 
+  function usableSelect(select) {
+    return select instanceof HTMLSelectElement && !select.disabled && isVisible(select);
+  }
+
+  function usableToggle(input) {
+    if (!usableInput(input)) return false;
+    const type = (input.getAttribute("type") || "").toLowerCase();
+    return type === "checkbox" || type === "radio";
+  }
+
   function queryInput(selector) {
     if (!selector) return undefined;
     try {
@@ -101,9 +111,20 @@ const AUTOFILL_AGENT: &str = r#"
   }
 
   function setInputValue(input, value) {
-    const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const prototype = input instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : input instanceof HTMLSelectElement
+        ? HTMLSelectElement.prototype
+        : HTMLInputElement.prototype;
     const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
     descriptor.set.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function setToggleState(input, checked) {
+    if (input.checked === checked) return;
+    input.checked = checked;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
@@ -115,45 +136,133 @@ const AUTOFILL_AGENT: &str = r#"
       if (!value) continue;
       const selector = `${tag}[${CSS.escape(attr)}=${JSON.stringify(value)}]`;
       try {
-        if (document.querySelector(selector) === input) return selector;
+        const matches = Array.from(document.querySelectorAll(selector));
+        if (matches.includes(input)) return selector;
       } catch (_) {}
     }
     return tag;
   }
 
+  // A field is identified by a stable selector plus the index of this element
+  // among that selector's matches. The index keeps non-unique selectors (such as
+  // radio groups sharing a name) targeting the exact element that was captured,
+  // as long as the form's DOM order is stable between capture and restore.
+  function describeField(input) {
+    const selector = selectorFor(input);
+    let matches;
+    try {
+      matches = Array.from(document.querySelectorAll(selector));
+    } catch (_) {
+      return undefined;
+    }
+    const index = matches.indexOf(input);
+    if (index < 0) return undefined;
+    if (usableToggle(input)) {
+      return { selector, index, kind: "checked", checked: input.checked };
+    }
+    return { selector, index, kind: "value", value: input.value };
+  }
+
+  function resolveField(field) {
+    if (!field || typeof field.selector !== "string") return undefined;
+    let matches;
+    try {
+      matches = document.querySelectorAll(field.selector);
+    } catch (_) {
+      return undefined;
+    }
+    const index = typeof field.index === "number" ? field.index : 0;
+    return matches[index] || undefined;
+  }
+
+  // Collect every restorable, non-secret field on the page. Password inputs are
+  // never collected here: their values stay in the OS keychain, never in the
+  // durable field map.
+  function collectFields(password) {
+    const fields = [];
+    for (const element of document.querySelectorAll("input, textarea, select")) {
+      if (element === password) continue;
+      if (element instanceof HTMLInputElement && (element.getAttribute("type") || "").toLowerCase() === "password") continue;
+      if (usableToggle(element)) {
+        const described = describeField(element);
+        if (described) fields.push(described);
+        continue;
+      }
+      if (usableSelect(element)) {
+        const described = describeField(element);
+        if (described) fields.push(described);
+        continue;
+      }
+      if (usableText(element) && element.value) {
+        const described = describeField(element);
+        if (described) fields.push(described);
+      }
+    }
+    return fields;
+  }
+
+  function parseFieldValues(raw) {
+    if (!raw) return [];
+    try {
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   window.__KKTERM_URL_AUTOFILL__ = {
     fill(credential) {
+      let filled = false;
       const password = queryInput(credential.passwordSelector) || passwordInput(false);
-      if (!password || (credential.automatic && password.value)) return { filled: false };
-      const username = queryInput(credential.usernameSelector) || usernameInput(password);
-      if (username && credential.username && (!credential.automatic || !username.value)) {
-        setInputValue(username, credential.username);
+      if (password && credential.password && (!credential.automatic || !password.value)) {
+        setInputValue(password, credential.password);
+        if (!credential.automatic) password.focus({ preventScroll: true });
+        filled = true;
       }
-      setInputValue(password, credential.password || "");
-      if (!credential.automatic) password.focus({ preventScroll: true });
-      return { filled: true };
+      const fields = parseFieldValues(credential.fieldValues);
+      for (const field of fields) {
+        const element = resolveField(field);
+        if (!element) continue;
+        if (field.kind === "checked") {
+          // Toggles carry deliberate state, so only the manual restore flips them.
+          if (credential.automatic) continue;
+          setToggleState(element, Boolean(field.checked));
+          filled = true;
+        } else {
+          if (credential.automatic && element.value) continue;
+          setInputValue(element, field.value || "");
+          filled = true;
+        }
+      }
+      // Credentials saved before the field map existed only carry a username.
+      if (!fields.length && credential.username) {
+        const username = queryInput(credential.usernameSelector) || (password ? usernameInput(password) : undefined);
+        if (username && (!credential.automatic || !username.value)) {
+          setInputValue(username, credential.username);
+          filled = true;
+        }
+      }
+      return { filled };
     },
     capture(nonce) {
       const password = passwordInput(true);
-      if (!password) {
-        publish({ ok: false, nonce, reason: "no-password-field", url: window.location.href });
+      const fields = collectFields(password);
+      if (!password && fields.length === 0) {
+        publish({ ok: false, nonce, reason: "no-fields", url: window.location.href });
         return;
       }
       const username = usernameInput(password);
-      const passwordValue = password.value || "";
       const usernameValue = username?.value || window.location.host || window.location.href;
-      if (!passwordValue) {
-        publish({ ok: false, nonce, reason: "empty-password", url: window.location.href });
-        return;
-      }
       publish({
         ok: true,
         nonce,
         url: window.location.href,
         username: usernameValue,
-        password: passwordValue,
+        password: password ? (password.value || "") : undefined,
         usernameSelector: username ? selectorFor(username) : undefined,
-        passwordSelector: selectorFor(password),
+        passwordSelector: password ? selectorFor(password) : undefined,
+        fieldValues: fields,
       });
     },
   };

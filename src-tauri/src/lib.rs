@@ -2577,10 +2577,12 @@ fn fill_webview_credential(
     if username.is_empty() {
         return Err("URL credential username is required".to_string());
     }
+    // Form-data credentials may carry no password (e.g. a search or config form),
+    // so a missing keychain secret is normal: restore the saved fields without one.
     let password = secrets
         .read_url_password(request.secret_owner_id)
         .map_err(|error| format!("failed to read URL password: {error}"))?
-        .ok_or_else(|| "stored URL password was not found".to_string())?;
+        .unwrap_or_default();
     webviews.fill_credential(webview::WebviewFillCredentialRequest {
         session_id: request.session_id,
         username,
