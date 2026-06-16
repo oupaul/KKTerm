@@ -8,7 +8,7 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
   ".app-launcher-dialog-backdrop",
   ".settings-backdrop",
   ".settings-page",
-  ".status-bar-notice-area",
+  ".status-popup",
   ".tutorial-overlay",
   ".dw-catalog-backdrop",
   ".dw-customize",

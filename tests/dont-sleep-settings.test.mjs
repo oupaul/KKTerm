@@ -60,9 +60,17 @@ test("Don't Sleep rail uses state-specific tooltip copy and shared Pulse status 
   assert.match(workspaceCss, /--status-popup-glass-bg:\s*rgba\(252 252 253 \/ 88%\)/);
   assert.match(workspaceCss, /--status-popup-glass-bg:\s*rgba\(44 44 46 \/ 62%\)/);
   assert.match(workspaceCss, /\.status-popup-pulse[\s\S]*background:\s*var\(--status-popup-glass-bg\);[\s\S]*var\(--status-popup-glass-shadow\)/);
-  assert.match(workspaceCss, /@keyframes status-popup-enter-pulse[\s\S]*translateY\(12px\) scale\(0\.78\)/);
-  assert.match(workspaceCss, /\.status-bar-notice-area[\s\S]*bottom:\s*28px;[\s\S]*z-index:\s*9999;/);
-  assert.match(nativeOverlaySource, /"\.status-bar-notice-area"/);
+  assert.match(workspaceCss, /@keyframes status-popup-enter-pulse[\s\S]*translateY\(-12px\) scale\(0\.78\)/);
+  // The notice popup is anchored to the top title-bar band so it never overlaps
+  // (and parks) the RDP ActiveX surface, which extends to the bottom status bar.
+  assert.match(
+    workspaceCss,
+    /\.status-bar-notice-area[\s\S]*top:\s*var\(--app-titlebar-height, 23px\);[\s\S]*z-index:\s*9999;/,
+  );
+  // RDP suppression must key off the visible popup, not the always-rendered
+  // (and therefore permanently blocking) notice-area container.
+  assert.match(nativeOverlaySource, /"\.status-popup"/);
+  assert.doesNotMatch(nativeOverlaySource, /"\.status-bar-notice-area"/);
 });
 
 test("Don't Sleep has its own foreground-only Settings section", () => {
