@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `webview.*` (full namespace), `connections.embeddedWebApp`
-- Topics: URL Connection, embedded WebView2, address bar, back/forward/reload, auto-refresh, save form data, restore form data, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
-- Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "save form data", "restore form fields", "remember what I typed", "open link in browser", "external browser"
+- Topics: URL Connection, embedded WebView2, address bar, back/forward/reload, auto-refresh, save form data, restore form data, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, URL Connection debug log, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
+- Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "save form data", "restore form fields", "remember what I typed", "open link in browser", "external browser", "url.connection.debug.log", "URL debug log"
 
 > **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL plus an optional `dataPartition` label. The `dataPartition` field is persisted but currently a no-op; embedded URL Sessions share the WebView2 process data store.
 
@@ -15,6 +15,8 @@ In the desktop runtime, a URL Pane hosts a real WebView2 browser in a stable, bo
 This deliberately does **not** use Tauri's `unstable` child-webview API. Enabling that feature changed the main KKTerm WebView2 host into a child HWND path, and Windows could restore focus to a native child/control instead of the terminal WebView2 content after Alt+Tab/app switch or minimize/restore. The visible terminal Pane could still look focused, but keyboard input did not reach xterm until the user clicked. The stable overlay-window path keeps URL browsing embedded while preserving the terminal's normal WebView2 focus forwarding.
 
 If this surface changes, verify in the real Windows Tauri runtime that a focused terminal Pane accepts keyboard input immediately after Alt+Tab/app switch and minimize/restore. RDP remains the only workspace kind that uses screenshot-backed overlay parking.
+
+When Settings → General → Debug → `settings.advancedDebugging` is enabled, `url.connection.debug.log` records URL Connection Session lifecycle, frontend DOM bounds, clipping, requested overlay bounds, native coordinate conversion, and WebView2 overlay window/client rectangles. Use it to compare the React-computed Pane bounds against the native overlay bounds when diagnosing visible gaps or misalignment.
 
 Tutorial target: `webview.surface`.
 

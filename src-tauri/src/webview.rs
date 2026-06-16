@@ -14,8 +14,10 @@ use std::{
     },
 };
 
+use crate::logging;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder,
@@ -473,8 +475,8 @@ impl WebviewSessionManager {
             url,
             data_partition,
             ignore_certificate_errors,
-            x: _initial_x,
-            y: _initial_y,
+            x: initial_x,
+            y: initial_y,
             width,
             height,
         } = request;
@@ -482,6 +484,24 @@ impl WebviewSessionManager {
         let session_id = required_id(session_id)?;
         let parsed_url = parse_external_url(&url)?;
         let partition = resolve_partition(data_partition);
+        logging::url_connection_debug(
+            "backend.session.start.request",
+            &json!({
+                "sessionId": session_id,
+                "url": {
+                    "scheme": parsed_url.scheme(),
+                    "host": parsed_url.host_str(),
+                },
+                "partition": partition,
+                "ignoreCertificateErrors": ignore_certificate_errors,
+                "initialBounds": {
+                    "x": initial_x,
+                    "y": initial_y,
+                    "width": width,
+                    "height": height,
+                },
+            }),
+        );
 
         {
             let sessions = self.lock()?;
@@ -643,6 +663,14 @@ impl WebviewSessionManager {
             },
         );
         starting_reservation.commit();
+        logging::url_connection_debug(
+            "backend.session.start.ok",
+            &json!({
+                "sessionId": session_id,
+                "label": label,
+                "partition": partition,
+            }),
+        );
 
         Ok(WebviewSessionStarted {
             session_id,
@@ -666,6 +694,19 @@ impl WebviewSessionManager {
             request.width,
             request.height
         ));
+        logging::url_connection_debug(
+            "backend.bounds.update",
+            &json!({
+                "sessionId": request.session_id,
+                "trackedVisible": session.visible,
+                "bounds": {
+                    "x": request.x,
+                    "y": request.y,
+                    "width": request.width,
+                    "height": request.height,
+                },
+            }),
+        );
         if session.visible {
             show_webview(session, request.x, request.y, request.width, request.height)?;
         }
@@ -686,6 +727,19 @@ impl WebviewSessionManager {
             request.width,
             request.height
         ));
+        logging::url_connection_debug(
+            "backend.visibility.set",
+            &json!({
+                "sessionId": request.session_id,
+                "visible": request.visible,
+                "bounds": {
+                    "x": request.x,
+                    "y": request.y,
+                    "width": request.width,
+                    "height": request.height,
+                },
+            }),
+        );
         if request.visible {
             show_webview(session, request.x, request.y, request.width, request.height)?;
             session.visible = true;
@@ -837,6 +891,23 @@ fn show_webview(
     height: f64,
 ) -> Result<(), String> {
     let (position, size) = overlay_rect(&session.host_window, x, y, width, height)?;
+    logging::url_connection_debug(
+        "backend.overlay.show",
+        &json!({
+            "logicalBounds": {
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+            },
+            "physicalRect": {
+                "x": position.x,
+                "y": position.y,
+                "width": size.width,
+                "height": size.height,
+            },
+        }),
+    );
     position_webview_window(&session.window, position, size)?;
     show_webview_window(&session.window)
 }
@@ -847,6 +918,18 @@ fn position_webview_window(
     position: PhysicalPosition<i32>,
     size: PhysicalSize<u32>,
 ) -> Result<(), String> {
+    logging::url_connection_debug(
+        "backend.window.positioned",
+        &json!({
+            "platform": "non-windows",
+            "requestedPhysicalRect": {
+                "x": position.x,
+                "y": position.y,
+                "width": size.width,
+                "height": size.height,
+            },
+        }),
+    );
     window
         .set_position(Position::Physical(position))
         .map_err(|error| format!("failed to position webview: {error}"))?;
@@ -890,7 +973,64 @@ fn position_webview_window(
         "position_webview_window screen_rect=({},{},{},{})",
         position.x, position.y, size.width, size.height,
     ));
+    log_positioned_webview_window(hwnd, position, size);
     Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn log_positioned_webview_window(
+    hwnd: windows::Win32::Foundation::HWND,
+    requested_position: PhysicalPosition<i32>,
+    requested_size: PhysicalSize<u32>,
+) {
+    use windows::Win32::Foundation::{POINT, RECT};
+    use windows::Win32::Graphics::Gdi::ClientToScreen;
+    use windows::Win32::UI::WindowsAndMessaging::{GetClientRect, GetWindowRect};
+
+    let mut window_rect = RECT::default();
+    let mut client_rect = RECT::default();
+    let mut client_origin = POINT { x: 0, y: 0 };
+    let window_rect_ok = unsafe { GetWindowRect(hwnd, &mut window_rect).is_ok() };
+    let client_rect_ok = unsafe { GetClientRect(hwnd, &mut client_rect).is_ok() };
+    let client_origin_ok = unsafe { ClientToScreen(hwnd, &mut client_origin).as_bool() };
+    logging::url_connection_debug(
+        "backend.window.positioned",
+        &json!({
+            "platform": "windows",
+            "requestedPhysicalRect": {
+                "x": requested_position.x,
+                "y": requested_position.y,
+                "width": requested_size.width,
+                "height": requested_size.height,
+            },
+            "windowRect": if window_rect_ok {
+                json!({
+                    "left": window_rect.left,
+                    "top": window_rect.top,
+                    "right": window_rect.right,
+                    "bottom": window_rect.bottom,
+                    "width": window_rect.right - window_rect.left,
+                    "height": window_rect.bottom - window_rect.top,
+                })
+            } else {
+                json!(null)
+            },
+            "clientRect": if client_rect_ok && client_origin_ok {
+                json!({
+                    "left": client_origin.x,
+                    "top": client_origin.y,
+                    "right": client_origin.x + client_rect.right - client_rect.left,
+                    "bottom": client_origin.y + client_rect.bottom - client_rect.top,
+                    "width": client_rect.right - client_rect.left,
+                    "height": client_rect.bottom - client_rect.top,
+                    "originOffsetX": client_origin.x - requested_position.x,
+                    "originOffsetY": client_origin.y - requested_position.y,
+                })
+            } else {
+                json!(null)
+            },
+        }),
+    );
 }
 
 fn hide_webview(window: &WebviewWindow) -> Result<(), String> {
@@ -925,6 +1065,28 @@ fn overlay_rect(
         host_x = host_origin.x,
         host_y = host_origin.y,
     ));
+    logging::url_connection_debug(
+        "backend.overlay.rect",
+        &json!({
+            "scaleFactor": scale_factor,
+            "hostOrigin": {
+                "x": host_origin.x,
+                "y": host_origin.y,
+            },
+            "logicalBounds": {
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+            },
+            "physicalRect": {
+                "x": left,
+                "y": top,
+                "width": physical_width,
+                "height": physical_height,
+            },
+        }),
+    );
     Ok((
         PhysicalPosition::new(left, top),
         PhysicalSize::new(physical_width, physical_height),

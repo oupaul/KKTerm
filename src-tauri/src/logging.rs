@@ -92,6 +92,22 @@ pub fn ui_debug(event: &str, payload: &Value) {
     }
 }
 
+pub fn url_connection_debug(event: &str, payload: &Value) {
+    if !sensitive_debug_log_enabled(cfg!(debug_assertions), advanced_debugging_enabled()) {
+        return;
+    }
+    let Some(log_path) = LOG_PATH
+        .get()
+        .map(|path| url_connection_debug_log_path_for(path))
+    else {
+        return;
+    };
+    let line = format_debug_log_entry(event, payload);
+    if let Err(error) = append_debug_line(&log_path, &line) {
+        eprintln!("failed to write URL Connection debug log: {error}");
+    }
+}
+
 pub fn rdp_debug(event: &str, payload: &Value) {
     if !sensitive_debug_log_enabled(cfg!(debug_assertions), advanced_debugging_enabled()) {
         return;
@@ -220,6 +236,7 @@ fn write_advanced_debugging_enabled_markers() {
         mcp_debug_log_path_for(runtime_log_path),
         installer_helper_debug_log_path_for(runtime_log_path),
         ui_debug_log_path_for(runtime_log_path),
+        url_connection_debug_log_path_for(runtime_log_path),
         rdp_debug_log_path_for(runtime_log_path),
         ssh_debug_log_path_for(runtime_log_path),
     ];
@@ -256,6 +273,13 @@ fn ui_debug_log_path_for(runtime_log_path: &Path) -> PathBuf {
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .join("ui.debug.log")
+}
+
+fn url_connection_debug_log_path_for(runtime_log_path: &Path) -> PathBuf {
+    runtime_log_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join("url.connection.debug.log")
 }
 
 fn rdp_debug_log_path_for(runtime_log_path: &Path) -> PathBuf {
@@ -335,6 +359,13 @@ mod tests {
         let path = ui_debug_log_path_for(Path::new("logs/kkterm.log"));
 
         assert_eq!(path, PathBuf::from("logs").join("ui.debug.log"));
+    }
+
+    #[test]
+    fn url_connection_debug_log_path_uses_runtime_log_directory() {
+        let path = url_connection_debug_log_path_for(Path::new("logs/kkterm.log"));
+
+        assert_eq!(path, PathBuf::from("logs").join("url.connection.debug.log"));
     }
 
     #[test]

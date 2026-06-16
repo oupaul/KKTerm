@@ -176,6 +176,11 @@ fn ui_debug_log(event: String, payload: serde_json::Value) {
 }
 
 #[tauri::command]
+fn url_connection_debug_log(event: String, payload: serde_json::Value) {
+    logging::url_connection_debug(&event, &payload);
+}
+
+#[tauri::command]
 fn focus_main_window(app: tauri::AppHandle) {
     if let Some(window) = app.get_webview_window(window_state::MAIN_WINDOW_LABEL) {
         let _ = window.set_focus();
@@ -3187,6 +3192,7 @@ pub fn run() {
             currency_rates::fetch_currency_rates,
             debug_frontend_heartbeat,
             ui_debug_log,
+            url_connection_debug_log,
             focus_main_window,
             show_native_tooltip,
             hide_native_tooltip,

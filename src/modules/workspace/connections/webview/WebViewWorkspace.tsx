@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import type { FormEvent } from "react";
 import { resolveAppliedColorScheme } from "../../../../app/appShellEffects";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
-import { invokeCommand, isTauriRuntime, openExternalUrl } from "../../../../lib/tauri";
+import { invokeCommand, isTauriRuntime, logUrlConnectionDebug, openExternalUrl } from "../../../../lib/tauri";
 import type { AssistantScreenshot, WebviewSessionStarted } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import type { WorkspaceTab } from "../../../../types";
@@ -166,6 +166,13 @@ type VisibleClientRect = {
   bottom: number;
 };
 
+type WebviewBoundsDebugSnapshot = {
+  placeholderRect: Record<string, number> | null;
+  clipRect: Record<string, number> | null;
+  visibleRect: Record<string, number> | null;
+  bounds: { x: number; y: number; width: number; height: number } | null;
+};
+
 function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly): VisibleClientRect | null {
   const left = Math.max(rect.left, clipRect.left);
   const top = Math.max(rect.top, clipRect.top);
@@ -192,6 +199,22 @@ function boundsFromVisibleRect(rect: VisibleClientRect) {
     y,
     width: right - x,
     height: bottom - y,
+  };
+}
+
+function rectDebugSnapshot(rect: DOMRectReadOnly | VisibleClientRect | null): Record<string, number> | null {
+  if (!rect) {
+    return null;
+  }
+  const right = rect.right;
+  const bottom = rect.bottom;
+  return {
+    left: rect.left,
+    top: rect.top,
+    right,
+    bottom,
+    width: "width" in rect ? rect.width : right - rect.left,
+    height: "height" in rect ? rect.height : bottom - rect.top,
   };
 }
 
@@ -224,6 +247,7 @@ export function WebViewWorkspace({
   const sessionStartingRef = useRef(false);
   const sessionIdRef = useRef<string>(createWebviewSessionId());
   const lastBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const lastBoundsDebugRef = useRef<WebviewBoundsDebugSnapshot | null>(null);
   const rafRef = useRef<number | null>(null);
   const suppressionCaptureInFlightRef = useRef(false);
   const preCaptureInFlightRef = useRef(false);
@@ -272,15 +296,55 @@ export function WebViewWorkspace({
   const computeBounds = () => {
     const node = placeholderRef.current;
     if (!node) {
+      lastBoundsDebugRef.current = {
+        placeholderRect: null,
+        clipRect: null,
+        visibleRect: null,
+        bounds: null,
+      };
       return null;
     }
     const rect = node.getBoundingClientRect();
     const clipRect = webviewBoundsClipElement(node)?.getBoundingClientRect();
     const visibleRect = clipRect ? intersectClientRects(rect, clipRect) : rect;
     if (!visibleRect) {
+      lastBoundsDebugRef.current = {
+        placeholderRect: rectDebugSnapshot(rect),
+        clipRect: rectDebugSnapshot(clipRect ?? null),
+        visibleRect: null,
+        bounds: null,
+      };
       return null;
     }
-    return boundsFromVisibleRect(visibleRect);
+    const bounds = boundsFromVisibleRect(visibleRect);
+    lastBoundsDebugRef.current = {
+      placeholderRect: rectDebugSnapshot(rect),
+      clipRect: rectDebugSnapshot(clipRect ?? null),
+      visibleRect: rectDebugSnapshot(visibleRect),
+      bounds,
+    };
+    return bounds;
+  };
+
+  const logWebviewBoundsDebug = (event: string, payload: Record<string, unknown> = {}) => {
+    logUrlConnectionDebug(event, {
+      sessionId: sessionIdRef.current,
+      tabId: tab.id,
+      connectionId: tab.connection?.id ?? null,
+      connectionName: tab.connection?.name ?? null,
+      url: urlDebugSnapshot(addressInput || initialUrl),
+      isActive: visibilityRef.current.isActive,
+      suppressed: visibilityRef.current.suppressed,
+      devicePixelRatio: window.devicePixelRatio,
+      viewport: {
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+      },
+      boundsDebug: lastBoundsDebugRef.current,
+      ...payload,
+    });
   };
 
   const requestWebviewVisibility = (
@@ -313,8 +377,13 @@ export function WebViewWorkspace({
     const bounds = computeBounds();
     const visible = visibilityRef.current.isActive && !visibilityRef.current.suppressed;
     if (!bounds && visible) {
+      logWebviewBoundsDebug("frontend.visibility.skipped_missing_bounds", { visible });
       return;
     }
+    logWebviewBoundsDebug("frontend.visibility.request", {
+      visible,
+      requestBounds: bounds ?? HIDDEN_WEBVIEW_BOUNDS,
+    });
     const visibilityUpdate = requestWebviewVisibility({
       sessionId: sessionIdRef.current,
       visible,
@@ -388,6 +457,11 @@ export function WebViewWorkspace({
       rafRef.current = null;
       const bounds = computeBounds();
       if (!visibilityRef.current.isActive || visibilityRef.current.suppressed) {
+        logWebviewBoundsDebug("frontend.visibility.request", {
+          visible: false,
+          reason: visibilityRef.current.isActive ? "suppressed" : "inactive",
+          requestBounds: bounds ?? HIDDEN_WEBVIEW_BOUNDS,
+        });
         void invokeCommand("set_webview_visibility", {
           request: { sessionId: sessionIdRef.current, visible: false, ...(bounds ?? HIDDEN_WEBVIEW_BOUNDS) },
         }).catch((error) => {
@@ -396,6 +470,7 @@ export function WebViewWorkspace({
         return;
       }
       if (!bounds) {
+        logWebviewBoundsDebug("frontend.bounds.update.skipped_missing_bounds");
         return;
       }
       const previous = lastBoundsRef.current;
@@ -406,9 +481,16 @@ export function WebViewWorkspace({
         previous.width === bounds.width &&
         previous.height === bounds.height
       ) {
+        logWebviewBoundsDebug("frontend.bounds.update.skipped_unchanged", {
+          requestBounds: bounds,
+        });
         return;
       }
       lastBoundsRef.current = bounds;
+      logWebviewBoundsDebug("frontend.bounds.update.request", {
+        previousBounds: previous,
+        requestBounds: bounds,
+      });
       void invokeCommand("update_webview_bounds", {
         request: { sessionId: sessionIdRef.current, ...bounds },
       }).catch((error) => {
@@ -423,6 +505,7 @@ export function WebViewWorkspace({
     }
     const bounds = computeBounds();
     if (!bounds) {
+      logWebviewBoundsDebug("frontend.start.skipped_missing_bounds");
       return;
     }
     let disposed = false;
@@ -430,6 +513,11 @@ export function WebViewWorkspace({
     sessionStartingRef.current = true;
     lastBoundsRef.current = bounds;
     markWebviewConnectionStarted();
+    logWebviewBoundsDebug("frontend.start.request", {
+      requestBounds: bounds,
+      dataPartition: tab.dataPartition,
+      ignoreCertificateErrors,
+    });
     const lease = acquireWebviewSession(sessionId, () =>
       invokeCommand("start_webview_session", {
         request: {
@@ -1099,6 +1187,21 @@ function formatWebviewSubtitle(url: string) {
     return new URL(url).host || url;
   } catch {
     return url;
+  }
+}
+
+function urlDebugSnapshot(url: string) {
+  try {
+    const parsed = new URL(url);
+    return {
+      scheme: parsed.protocol.replace(/:$/, ""),
+      host: parsed.host,
+    };
+  } catch {
+    return {
+      scheme: null,
+      host: null,
+    };
   }
 }
 

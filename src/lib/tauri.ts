@@ -928,6 +928,10 @@ type CommandMap = {
     args: { event: string; payload: Record<string, unknown> };
     result: void;
   };
+  url_connection_debug_log: {
+    args: { event: string; payload: Record<string, unknown> };
+    result: void;
+  };
   focus_main_window: {
     args: undefined;
     result: void;
@@ -2693,6 +2697,13 @@ export function logUiDebug(event: string, payload: Record<string, unknown>) {
     return;
   }
   void invokeCommand("ui_debug_log", { event, payload }).catch(() => undefined);
+}
+
+export function logUrlConnectionDebug(event: string, payload: Record<string, unknown>) {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  void invokeCommand("url_connection_debug_log", { event, payload }).catch(() => undefined);
 }
 
 export async function focusCurrentWebview() {
