@@ -99,7 +99,7 @@ test("backend realizes hidden URL overlay windows before HWND-dependent no-activ
   assert.match(showFunction, /SWP_NOACTIVATE/);
 });
 
-test("backend applies URL overlay bounds through the same native screen rect as RDP", async () => {
+test("backend applies URL overlay bounds through a native screen rect before client inset compensation", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
   const positionFunction = Array.from(source.matchAll(/fn position_webview_window\([\s\S]*?\n\}/g))
     .map((match) => match[0])
@@ -118,6 +118,21 @@ test("backend applies URL overlay bounds through the same native screen rect as 
     /\.set_position\(/,
     "Windows URL overlays should use the same native HWND positioning primitive as RDP",
   );
+});
+
+test("backend strips Windows URL overlay non-client chrome before positioning", async () => {
+  const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
+  const positionFunction = Array.from(source.matchAll(/fn position_webview_window\([\s\S]*?\n\}/g))
+    .map((match) => match[0])
+    .find((candidate) => candidate.includes("SetWindowPos"));
+
+  assert.ok(positionFunction, "Windows URL overlay positioning helper should exist");
+  assert.match(positionFunction, /configure_webview_window_client_chrome\(hwnd\)/);
+  assert.match(source, /fn configure_webview_window_client_chrome/);
+  assert.match(source, /WS_CAPTION/);
+  assert.match(source, /WS_THICKFRAME/);
+  assert.match(source, /SWP_FRAMECHANGED/);
+  assert.doesNotMatch(positionFunction, /backend\.window\.client_compensated/);
 });
 
 test("backend positions URL overlays from the host WebView client origin", async () => {

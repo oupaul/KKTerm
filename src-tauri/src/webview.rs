@@ -946,18 +946,12 @@ fn position_webview_window(
     size: PhysicalSize<u32>,
 ) -> Result<(), String> {
     use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::WindowsAndMessaging::{
-        SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos,
-    };
+    use windows::Win32::UI::WindowsAndMessaging::{SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos};
 
     let hwnd = webview_hwnd(window)?;
     let hwnd = HWND(hwnd);
+    configure_webview_window_client_chrome(hwnd)?;
     unsafe {
-        // RDP positions its native child HWND by translating the Pane rect to
-        // host-client screen coordinates and applying that exact rect. URL
-        // overlays use a borderless owned WebviewWindow; compensating for the
-        // overlay window's own client inset over-corrects by a few pixels on
-        // Windows, so keep the same screen rect contract here.
         SetWindowPos(
             hwnd,
             None,
@@ -974,6 +968,51 @@ fn position_webview_window(
         position.x, position.y, size.width, size.height,
     ));
     log_positioned_webview_window(hwnd, position, size);
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn configure_webview_window_client_chrome(
+    hwnd: windows::Win32::Foundation::HWND,
+) -> Result<(), String> {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GWL_STYLE, GetWindowLongPtrW, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+        SWP_NOZORDER, SetWindowLongPtrW, SetWindowPos, WS_BORDER, WS_CAPTION, WS_DLGFRAME,
+        WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_SYSMENU, WS_THICKFRAME,
+    };
+
+    let removable_style = (WS_CAPTION
+        | WS_THICKFRAME
+        | WS_BORDER
+        | WS_DLGFRAME
+        | WS_SYSMENU
+        | WS_MINIMIZEBOX
+        | WS_MAXIMIZEBOX)
+        .0 as isize;
+    let current_style = unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) };
+    let next_style = current_style & !removable_style;
+    if next_style != current_style {
+        unsafe {
+            let _ = SetWindowLongPtrW(hwnd, GWL_STYLE, next_style);
+            SetWindowPos(
+                hwnd,
+                None,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+            )
+            .map_err(|error| format!("failed to apply URL webview client chrome: {error}"))?;
+        }
+        logging::url_connection_debug(
+            "backend.window.client_chrome_configured",
+            &json!({
+                "previousStyle": current_style,
+                "nextStyle": next_style,
+            }),
+        );
+    }
     Ok(())
 }
 

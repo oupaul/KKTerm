@@ -10,7 +10,7 @@
 
 ## Surface
 
-In the desktop runtime, a URL Pane hosts a real WebView2 browser in a stable, borderless, owned `WebviewWindow`. The frontend computes the Pane's DOM rectangle, the Rust backend converts that to screen coordinates, and the overlay window is moved/sized over the Pane. The overlay is hidden when the Tab, Dashboard View, Dashboard Module, or URL Pane is inactive, and when a registered app-owned blocking overlay intersects it.
+In the desktop runtime, a URL Pane hosts a real WebView2 browser in a stable, borderless, owned `WebviewWindow`. The frontend computes the Pane's DOM rectangle, the Rust backend converts that to screen coordinates, and the overlay window is moved/sized so the WebView client area covers the Pane. On Windows, KKTerm strips residual non-client frame styles from the owned overlay window before positioning it. The overlay is hidden when the Tab, Dashboard View, Dashboard Module, or URL Pane is inactive, and when a registered app-owned blocking overlay intersects it.
 
 This deliberately does **not** use Tauri's `unstable` child-webview API. Enabling that feature changed the main KKTerm WebView2 host into a child HWND path, and Windows could restore focus to a native child/control instead of the terminal WebView2 content after Alt+Tab/app switch or minimize/restore. The visible terminal Pane could still look focused, but keyboard input did not reach xterm until the user clicked. The stable overlay-window path keeps URL browsing embedded while preserving the terminal's normal WebView2 focus forwarding.
 
