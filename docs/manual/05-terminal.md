@@ -49,6 +49,9 @@ In the Pane toolbar group `terminal.font` (Actions submenu `terminal.actions`):
 - `terminal.decreaseSize`
 - `terminal.resetSize`
 
+These controls apply the new size to every Pane in the current Tab and save it as
+the global terminal font size, so the change is preserved across app launches.
+
 Font family, default size, ligature settings, and cursor style are configured globally in Settings → Terminal (see [15-settings.md](15-settings.md) §Terminal).
 
 ## View submenu
