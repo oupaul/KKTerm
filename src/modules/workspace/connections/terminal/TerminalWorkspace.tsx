@@ -98,6 +98,8 @@ export function TerminalWorkspace({
     (state) => state.setQuickCommandBarVisible,
   );
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
+  const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
+  const setTerminalSettings = useWorkspaceStore((state) => state.setTerminalSettings);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const setFocusedPane = useWorkspaceStore((state) => state.setFocusedPane);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
@@ -390,6 +392,27 @@ export function TerminalWorkspace({
     const next = delta === "reset" ? defaultFontSize : currentFontSize() + delta;
     const clamped = Math.min(Math.max(Math.round(next), 6), 64);
     applyFontSizeToPanes(clamped);
+    void persistTerminalFontSize(clamped);
+  }
+
+  async function persistTerminalFontSize(fontSize: number) {
+    // The durable terminal font size is capped at the Settings range, while the
+    // live toolbar zoom range is wider. Clamp before persisting so the default
+    // reloaded on the next app launch always passes backend validation.
+    const persisted = Math.min(Math.max(fontSize, 8), 32);
+    if (persisted === terminalSettings.fontSize) {
+      return;
+    }
+    const nextSettings = { ...terminalSettings, fontSize: persisted };
+    try {
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_terminal_settings", { request: nextSettings })
+        : nextSettings;
+      setTerminalSettings(saved);
+    } catch {
+      // Best-effort: the live panes already reflect the new size even if saving
+      // the durable default fails.
+    }
   }
 
   return (
