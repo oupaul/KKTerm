@@ -3,8 +3,8 @@
 ## AI grep hints
 
 - Keys: `webview.*` (full namespace), `connections.embeddedWebApp`
-- Topics: URL Connection, embedded WebView2, address bar, back/forward/reload, auto-refresh, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
-- Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "open link in browser", "external browser"
+- Topics: URL Connection, embedded WebView2, address bar, back/forward/reload, auto-refresh, save form data, restore form data, credential fill, password capture, external open, saved Pane layout, Shift-click link, downloads, tutorial targets `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.surface`
+- Synonyms: "open a webpage", "embed a site", "browser tab", "internal web tool", "fill in saved password", "save form data", "restore form fields", "remember what I typed", "open link in browser", "external browser"
 
 > **Term:** a **URL Connection** is a Connection of kind `url` storing one http(s) URL plus an optional `dataPartition` label. The `dataPartition` field is persisted but currently a no-op; embedded URL Sessions share the WebView2 process data store.
 
@@ -31,28 +31,46 @@ The URL Pane chrome follows the File Explorer (SFTP) Apple-esque design language
 - Auto-refresh: `webview.autoRefresh` / `webview.autoRefreshOff`. Interval label `webview.autoRefreshSeconds`.
 - Open externally: toolbar button `webview.openExternally` (opens the current URL in the OS default browser).
 - In-page links: normal http(s) link clicks navigate inside the URL Pane. Links that request a new browser window, such as `target="_blank"`, open a new KKTerm Workspace Tab for that URL. Shift-click an http(s) link in the embedded page opens it in the OS default browser instead of navigating the URL Pane.
-- Fill saved credential: `webview.fill` / `webview.fillCredential` / `webview.fillSavedCredential`.
-- Save password: `webview.savePassword`, dialog title `webview.savePasswordTitle`.
+- Restore saved form data: `webview.fillSavedCredential` (disabled tooltip `webview.noSavedCredential`).
+- Save form data: `webview.savePassword`, button title `webview.savePasswordTitle`.
 - Send current URL Pane screenshot to AI Assistant: `workspace.sendEntirePanelToAi` (tutorial target `webview.sendToAi`). Status Bar confirmation: `workspace.sentToAi`.
 - Close the URL Pane/Tab: toolbar close button (tutorial target `webview.close`, label `workspace.closeTab`), shown only when a close handler is provided.
 - Save/reset split Pane layout for a saved URL Connection from the Connection Tree right-click submenu `connections.layout` with `common.save` / `common.reset`.
 
 Tutorial targets: `webview.toolbar`, `webview.address`, `webview.openExternally`, `webview.autoRefresh`, `webview.savePassword`, `webview.fillCredential`, `webview.sendToAi`, `webview.close`.
 
-## Credential fill
+## Save & restore form data
 
-KKTerm can fill a saved username/password into the active form. Status lifecycle:
+KKTerm can remember everything typed into the embedded page and write it back on a
+later visit — not just a login. Pressing **Save form data** captures every visible,
+restorable field (text inputs, textareas, `select` dropdowns, and checkbox/radio
+state) plus the primary password field, without submitting the form. There is no
+need for the page to have a password field at all, so search forms, filters, and
+configuration screens can be saved too.
+
+Each saved field is identified by a stable selector and its position among matching
+elements, so the values land back in the right inputs when the page is reopened.
+
+Saving (toolbar **Save form data** button):
+
+- `webview.capturingPassword` → `webview.savingPassword` → `webview.passwordSaved`.
+- Nothing to save: `webview.savePasswordNoPasswordField` (no fillable fields with values were found). Malformed capture: `webview.savePasswordInvalidCapture`. Generic failure: `webview.savePasswordFailed`.
+
+Restoring (toolbar **Restore saved form data** button, or automatically after a page
+finishes loading):
 
 - `webview.fillingCredential` (in flight)
 - `webview.credentialFilled` (success)
 - `webview.noSavedCredential` (nothing stored for this Connection)
 
-Saving a password from an in-page login form:
+Manual restore writes every saved field, including the password and any toggles.
+The automatic post-load restore is conservative: it only fills fields that are still
+empty and leaves checkbox/radio/`select` state untouched so it never clobbers what a
+page (or the user) has already set.
 
-- `webview.capturingPassword` → `webview.savingPassword` → `webview.passwordSaved`.
-- Validation failures: `webview.savePasswordInvalidCapture`, `webview.savePasswordNoPasswordField`, `webview.savePasswordEmptyUsername`, `webview.savePasswordEmptyPassword`. Generic failure: `webview.savePasswordFailed`.
-
-Saved credentials live in the OS keychain, never in SQLite. Manage stored credentials from Settings → Credentials ([15-settings.md](15-settings.md)).
+The primary password is the only saved value kept in the OS keychain; all other
+field values are stored alongside the URL Connection in SQLite and are never secrets.
+Manage saved entries from Settings → Credentials ([15-settings.md](15-settings.md)).
 
 ## Downloads
 
