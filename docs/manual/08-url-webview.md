@@ -22,7 +22,7 @@ Tutorial target: `webview.surface`.
 
 The URL Pane chrome follows the File Explorer (SFTP) Apple-esque design language: a token-driven light surface, hairline borders, and rounded translucent icon buttons. There is no sidebar.
 
-- Connection identity: a connection icon badge leads the toolbar (in the slot the File Explorer uses for its sidebar toggle). It shows the URL Connection's saved favicon when present, otherwise a globe glyph; its tooltip is the Connection name (or the current host for an ad-hoc URL Tab).
+- Connection identity: an unframed connection icon leads the toolbar (in the slot the File Explorer uses for its sidebar toggle). It shows the URL Connection's saved favicon when present, otherwise a globe glyph; its tooltip is the Connection name (or the current host for an ad-hoc URL Tab).
 - Back: `webview.goBack` (`webview.back`)
 - Forward: `webview.goForward` (`webview.forward`)
 - Reload: `webview.reload`

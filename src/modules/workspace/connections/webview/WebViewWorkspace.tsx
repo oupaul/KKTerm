@@ -159,7 +159,14 @@ function webviewBoundsClipElement(node: HTMLElement) {
   return node.closest(".dashboard-connection-pane, .embedded-workspace-pane, .workspace-canvas");
 }
 
-function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly) {
+type VisibleClientRect = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly): VisibleClientRect | null {
   const left = Math.max(rect.left, clipRect.left);
   const top = Math.max(rect.top, clipRect.top);
   const right = Math.min(rect.right, clipRect.right);
@@ -170,8 +177,21 @@ function intersectClientRects(rect: DOMRectReadOnly, clipRect: DOMRectReadOnly) 
   return {
     left,
     top,
-    width: right - left,
-    height: bottom - top,
+    right,
+    bottom,
+  };
+}
+
+function boundsFromVisibleRect(rect: VisibleClientRect) {
+  const x = Math.max(0, Math.floor(rect.left));
+  const y = Math.max(0, Math.floor(rect.top));
+  const right = Math.max(x + 1, Math.ceil(rect.right));
+  const bottom = Math.max(y + 1, Math.ceil(rect.bottom));
+  return {
+    x,
+    y,
+    width: right - x,
+    height: bottom - y,
   };
 }
 
@@ -260,12 +280,7 @@ export function WebViewWorkspace({
     if (!visibleRect) {
       return null;
     }
-    return {
-      x: Math.max(0, Math.round(visibleRect.left)),
-      y: Math.max(0, Math.round(visibleRect.top)),
-      width: Math.max(1, Math.round(visibleRect.width)),
-      height: Math.max(1, Math.round(visibleRect.height)),
-    };
+    return boundsFromVisibleRect(visibleRect);
   };
 
   const requestWebviewVisibility = (

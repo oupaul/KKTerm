@@ -1,7 +1,7 @@
 /* URL Connection browser — Apple/Finder-flavoured chrome that mirrors the SFTP
    file-explorer design language (token-driven surface, hairline borders,
-   rounded translucent icon buttons). The connection icon takes the place of the
-   file-explorer sidebar toggle; there is no sidebar here. */
+   rounded translucent icon buttons). The unframed connection icon takes the
+   place of the file-explorer sidebar toggle; there is no sidebar here. */
 
 .webview-workspace {
   box-sizing: border-box;
@@ -56,12 +56,12 @@
   height: 28px;
   border-radius: 7px;
   color: var(--accent);
-  background: var(--surface-muted);
-  box-shadow: inset 0 0 0 0.5px var(--border);
+  background: transparent;
+  box-shadow: none;
 }
 
 .webview-conn-icon img {
-  border-radius: 5px;
+  border-radius: 0;
 }
 
 .webview-nav-cluster {
