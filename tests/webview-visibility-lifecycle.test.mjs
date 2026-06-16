@@ -61,6 +61,20 @@ test("Dashboard catalog dialog suppresses embedded URL Connection WebViews", asy
   assert.match(webviewSelector, /\.dw-catalog-backdrop/);
 });
 
+test("status notice popup suppresses embedded URL Connection WebViews", async () => {
+  const source = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
+
+  const webviewSelector = source.match(/const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = \[[\s\S]*?\]\.join/)?.[0];
+
+  assert.ok(webviewSelector, "WebView blocking overlay selector should exist");
+  // The native browser surface otherwise clips the top-anchored status popup, so the
+  // visible popup must suppress the live WebView the same way the RDP host surface does.
+  assert.match(webviewSelector, /\.status-popup/);
+});
+
 test("backend hides overlay URL WebViews instead of using unstable child APIs", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
 

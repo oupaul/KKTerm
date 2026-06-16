@@ -19,6 +19,10 @@ const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
   ".settings-backdrop",
   ".dw-catalog-backdrop",
   ".screenshot-region-overlay",
+  // The status notice popup is anchored to the top title-bar band and overlaps the
+  // top of the URL Connection's native browser surface. Suppress the live WebView with
+  // a snapshot while the popup is visible so the popup is not clipped behind the browser.
+  ".status-popup",
 ].join(", ");
 
 export function documentHasRdpBlockingOverlay(surface: Element | null) {
