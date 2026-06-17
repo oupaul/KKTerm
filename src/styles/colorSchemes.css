@@ -38,6 +38,15 @@
   --border-strong: #c5c5cb;
   --accent: #0a84ff;
   --accent-soft: #e6f0ff;
+  /* Installer Helper category-rail tints (scheme-independent; defined once
+     here and inherited by every color scheme). */
+  --installer-tint-essentials: #0a84ff;
+  --installer-tint-ai-agents: #5e5ce6;
+  --installer-tint-ai-platforms: #af52de;
+  --installer-tint-development: #30c48d;
+  --installer-tint-power: #ff9f0a;
+  --installer-tint-remote: #30b0c7;
+  --installer-tint-utilities: #8e8e93;
   --green-soft: #ecfdf5;
   --amber-soft: #fff8e7;
   --green: #34c759;

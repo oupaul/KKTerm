@@ -5,12 +5,10 @@
   z-index: 75;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  padding: 1.35rem 1.75rem 1.75rem;
-  overflow-y: auto;
   height: 100%;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
   background: var(--app-bg);
   color: var(--text);
 }
@@ -72,6 +70,10 @@
 }
 
 .installer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
   padding: 0.4rem 0.85rem;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -79,6 +81,21 @@
   color: inherit;
   font-size: 0.875rem;
   cursor: pointer;
+}
+
+.installer-button__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.26);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.1rem;
 }
 
 .installer-button:hover:not(:disabled) {
@@ -300,12 +317,12 @@
 }
 
 @media (max-width: 980px) {
-  .installer-page {
-    padding: 1rem;
+  .installer-content__scroll {
+    padding: 12px;
   }
 
-  .installer-page__sections {
-    columns: 1;
+  .installer-rail {
+    width: 188px;
   }
 }
 
@@ -733,4 +750,578 @@
 
 .installer-confirm-footer {
   margin-top: 0.5rem;
+}
+
+/* ======================================================================
+   House-style shell — SFTP/Finder-flavoured top bar + toolbar + rail +
+   List/Gallery content + footer. Mirrors the file-browser pattern in
+   src/modules/workspace/connections/sftp; reads only design tokens.
+   ====================================================================== */
+
+/* ---- top bar (no macOS chrome; kind glyph + title + status pill) ---- */
+.installer-topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  padding: 0 12px 0 14px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.installer-topbar__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.installer-topbar__kind svg {
+  color: var(--accent);
+}
+
+.installer-conn-pill {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.installer-conn-pill svg {
+  color: var(--text-faint);
+}
+
+/* ---- toolbar ---- */
+.installer-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 12px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.installer-toolbar__sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+.installer-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+.installer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.installer-icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.installer-icon-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.installer-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.installer-crumb svg {
+  color: var(--tint, var(--accent));
+}
+
+.installer-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  min-width: 168px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-faint);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.installer-search svg {
+  flex: 0 0 auto;
+}
+
+.installer-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+}
+
+.installer-search input::placeholder {
+  color: var(--text-faint);
+}
+
+.installer-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--chrome-strong);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.installer-segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.installer-segmented button:hover {
+  color: var(--text);
+}
+
+.installer-segmented button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+/* ---- body: rail | content ---- */
+.installer-panes {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.installer-rail {
+  flex: 0 0 auto;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 10px;
+  overflow-y: auto;
+  background: var(--surface-muted);
+  border-right: 1px solid var(--hairline);
+}
+
+.installer-rail.collapsed {
+  display: none;
+}
+
+.installer-rail__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.installer-rail__head {
+  padding: 0 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.installer-rail__list {
+  display: grid;
+  gap: 1px;
+}
+
+.installer-sb-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.installer-sb-row:hover {
+  background: var(--hover);
+}
+
+.installer-sb-row.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.installer-sb-row__ico {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--tint, var(--accent));
+}
+
+.installer-sb-row.active .installer-sb-row__ico {
+  color: #fff;
+}
+
+.installer-sb-row__nm {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.installer-sb-row__count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.installer-sb-row.active .installer-sb-row__count {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.installer-sb-row__dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: auto;
+}
+
+.installer-sb-row__dot + .installer-sb-row__count {
+  margin-left: 7px;
+}
+
+.installer-sb-row.active .installer-sb-row__dot {
+  background: #fff;
+}
+
+.installer-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg);
+}
+
+.installer-content__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+}
+
+.installer-empty--inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: var(--text-faint);
+}
+
+/* ---- gallery grid + group headers ---- */
+.installer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.7rem;
+  align-items: stretch;
+}
+
+.installer-group {
+  margin-bottom: 18px;
+}
+
+.installer-group__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.installer-group__glyph {
+  display: inline-flex;
+  color: var(--tint, var(--accent));
+}
+
+.installer-group__count {
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ---- list view ---- */
+.installer-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.installer-listhead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px 116px 120px 92px;
+  gap: 10px;
+  align-items: center;
+  padding: 0 10px 8px;
+  background: var(--app-bg);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.installer-listhead__action {
+  text-align: right;
+}
+
+.installer-list__grouphead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 4px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.installer-listrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px 116px 120px 92px;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.installer-listrow:hover {
+  background: var(--hover);
+}
+
+.installer-listrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.installer-listrow__name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.installer-listrow__icon {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.installer-listrow__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.installer-listrow__text b {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.installer-listrow__text span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.installer-listrow__ver {
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.installer-listrow__ver--muted {
+  color: var(--text-muted);
+}
+
+.installer-listrow__ver--update {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.installer-listrow__ver--error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.installer-listrow__status {
+  min-width: 0;
+}
+
+.installer-listrow__action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---- shared status pill + compact action button ---- */
+.installer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 21px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.installer-pill[data-tone="installed"] {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.installer-pill[data-tone="update"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.installer-pill[data-tone="failed"] {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+}
+
+.installer-pill[data-tone="busy"],
+.installer-pill[data-tone="partial"] {
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.installer-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.installer-act:hover {
+  background: var(--surface-muted);
+}
+
+.installer-act.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.installer-act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- footer status line ---- */
+.installer-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 16px;
+  background: var(--chrome);
+  border-top: 1px solid var(--hairline);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.installer-foot__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.installer-foot__updates {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.installer-foot__spacer {
+  flex: 1 1 auto;
 }
