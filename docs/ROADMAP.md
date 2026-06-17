@@ -4,7 +4,7 @@
 
 Quick snapshot as of June 17, 2026:
 
-All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Installer Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.85 and releasing continuously.
+All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Install Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.85 and releasing continuously.
 
 Release validation gates are documented in `AGENTS.md` and `docs/RELEASE.md`; run the full suite before significant code changes or release publication. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
 
@@ -31,7 +31,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Tab workspace with split panes inside terminal tabs.
 - [x] Runtime-only per-Tab rename for multiple Tabs opened from the same Connection.
 - [x] Child Connection Tabs in the Connection Tree for saved per-Connection Tab instances, lazy reopen, tmux/session-directory resume hints, and multi-child split layouts.
-- [x] Left activity rail with Workspace, Dashboard, Installer Helper, and Settings entries.
+- [x] Left activity rail with Workspace, Dashboard, Install Helper, and Settings entries.
 - [x] MobaXterm/RDCMan import.
 
 ### Terminal
@@ -105,9 +105,9 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Built-in widgets: App Launcher (local app/shortcut/script/file entries), Connection (embedded SSH/RDP/VNC/SFTP surfaces), Notes (sticky note), AI Coding Usage (Codex / Claude Code quota), Network Tools (subnet / DNS / speedtest / ping / whois tabs), Generators (QR / cron / password / time / hash tabs), and Converters (unit / currency tabs).
 - [x] AI Created script widgets.
 
-### Installer Helper
+### Install Helper
 
-- [x] Installer Helper Module with a bundled curated Windows developer-tool catalog.
+- [x] Install Helper Module with a bundled curated Windows developer-tool catalog.
 - [x] Local detection, latest-version checks, install, update, uninstall, pin, and "Update all" flows.
 - [x] Structured provider recipes for winget, npm, uv pip, downloaded installers, GitHub releases, Windows features, WSL distros, and bundled tools.
 - [x] Managed app support for app-local tools, launch actions, workspace add actions, service helpers, and streaming command logs.
@@ -116,7 +116,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 - [x] Color Scheme settings for app chrome and workspace surfaces.
 - [x] Language (i18n) settings with i18next; 14 locales: en, zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi.
-- [x] Settings sections: General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Installer Helper, and About.
+- [x] Settings sections: General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Install Helper, and About.
 - [x] Custom UI fonts; minimize-to-tray; Don't Sleep (prevents Windows sleep/suspend/hibernate/shutdown).
 - [x] Backup/import via settings ZIPs; startup and manual backups in the same importable format.
 - [x] URL (WebView2) Connections with navigation toolbar, favicon capture, and credential metadata.

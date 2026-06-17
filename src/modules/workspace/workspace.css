@@ -288,7 +288,7 @@
   justify-content: flex-end;
 }
 
-/* Installer Helper roll-up, centre column, shown only while the Module is
+/* Install Helper roll-up, centre column, shown only while the Module is
    the visible page (gated in React). */
 .status-bar-installer {
   grid-column: 2;

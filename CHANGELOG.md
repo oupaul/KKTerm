@@ -91,7 +91,7 @@ All notable changes to KKTerm are documented here.
 - **Icon styling:** Update connection icon backgrounds to use rounded rectangles instead of circular badges.
 
 ### Fixed
-- **RDP:** Prevent the status notice popup from permanently blocking the RDP ActiveX surface visibility (stop overlay “sticking” off-screen), fixing the case where the remote desktop never returns.  
+- **RDP:** Prevent the status notice popup from permanently blocking the RDP ActiveX surface visibility (stop overlay “sticking” off-screen), fixing the case where the remote desktop never returns.
   - PR #361 by @ryantsai (claude/rdp-popup-visibility-s4y8no) — https://github.com/ryantsai/KKTerm/pull/361
 
 ### Internal
@@ -114,7 +114,7 @@ All notable changes to KKTerm are documented here.
 - **圖示樣式：** 連線圖示背景改用圓角矩形，而不是圓形徽章。
 
 ### 修正
-- **RDP：** 修正狀態提示視窗造成 RDP ActiveX 表面長期被遮住/被「停車」導致遠端桌面不再回來顯示的情況。  
+- **RDP：** 修正狀態提示視窗造成 RDP ActiveX 表面長期被遮住/被「停車」導致遠端桌面不再回來顯示的情況。
   - PR #361 by @ryantsai（claude/rdp-popup-visibility-s4y8no）— https://github.com/ryantsai/KKTerm/pull/361
 
 ### Internal
@@ -203,12 +203,12 @@ All notable changes to KKTerm are documented here.
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.82/kkterm-0.1.82-windows-arm64-setup.exe)
 
 ## Highlights
-- **Drag-and-drop docking for Connection layouts**: drop a Connection onto the Workspace Canvas and dock it with an animated overlay.  
+- **Drag-and-drop docking for Connection layouts**: drop a Connection onto the Workspace Canvas and dock it with an animated overlay.
 - **File Browser polish**: Explorer sidebar improvements, including collapsible sections and current-folder search.
 - **Docking fixes for SFTP / FTP / Pane behavior**: docked/saved SFTP panes now rehydrate as file browsers, and embedded file-browser panes correctly fill their space (no more “half-empty Split Cell” vibes).
 
 ## New
-- **Drag-and-drop docking for connection layouts** (PR #329, by @ryantsai / Claude Opus 4.8): drag a Connection from the Connection Tree onto the Workspace Canvas to dock and split Panes; dropping on empty canvas opens a new Tab.  
+- **Drag-and-drop docking for connection layouts** (PR #329, by @ryantsai / Claude Opus 4.8): drag a Connection from the Connection Tree onto the Workspace Canvas to dock and split Panes; dropping on empty canvas opens a new Tab.
 - **Collapsible explorer sidebar + current-folder search** (PR #326, by @ryantsai / Claude Opus 4.8): Finder/Explorer-style sidebar with Favorites, Common, Locations, plus a search box scoped to the current folder.
 
 ## Improved
@@ -393,7 +393,7 @@ All notable changes to KKTerm are documented here.
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.79/kkterm-0.1.79-windows-arm64-setup.exe)
 
 ## Highlights
-- **New “Match OS” color scheme** with **system accent color** integration—so your Dashboard colors can finally keep up with your desktop theme.  
+- **New “Match OS” color scheme** with **system accent color** integration—so your Dashboard colors can finally keep up with your desktop theme.
 - **Dashboard edit mode gains better handling**: drag handles and resize functionality for Dashboard Widget Instances.
 - **Speedtest widget upgrades**: enhanced target selection and improvements to related target handling.
 
@@ -466,7 +466,7 @@ All notable changes to KKTerm are documented here.
 
 ## Fixed
 - **Dashboard**: removed the opaque black backdrop border behind AI script widgets by aligning the iframe `color-scheme` with the host theme. (PR #306 by @ryantsai)
-  
+
 ## Internal
 - Added a **replay-based eval harness** for provider streams to ensure consistent parsing across live streaming vs replay fixture runs (no network call). (PR #307 by @ryantsai)
 - Strengthened AI streaming/tool dispatch/testing structure (including accumulator/refactor and fixture coverage for tool-call argument fragments and reasoning).
@@ -487,18 +487,18 @@ All notable changes to KKTerm are documented here.
 - Installer: Added install scope detection and updated the installer UI to reflect user vs system modes.
 
 ## Improved
-- Dashboard: Adjusted button styles for improved visibility and consistency.  
+- Dashboard: Adjusted button styles for improved visibility and consistency.
 - Remote Desktop (macOS): Enhanced RDP screenshot handling and improved canvas integration.
 - Quick Command dialogs: Updated Quick Command subdialog backdrop styles for improved visibility.
 
 ## Fixed
-- macOS RDP CredSSP: Properly split `DOMAIN\\user` for RDP CredSSP and surface the underlying error instead of a generic “CredSSP” failure. Credits: @ryantsai. (PR #305)  
+- macOS RDP CredSSP: Properly split `DOMAIN\\user` for RDP CredSSP and surface the underlying error instead of a generic “CredSSP” failure. Credits: @ryantsai. (PR #305)
 - macOS RDP CredSSP: If your keyboard/network gods demand clarity, the error chain is now less likely to swallow the underlying NTLM reason (e.g., logon failure). Credits: Claude Opus (co-author), and @ryantsai for the PR. (PR #305)
 
 ## Internal
-- macOS release tooling: Added a macOS DMG release helper and updated release notes patching.  
-- Tests: Reorganized RDP support tests for clarity and accuracy.  
-- i18n: Updated Indonesian translations for connection-related labels.  
+- macOS release tooling: Added a macOS DMG release helper and updated release notes patching.
+- Tests: Reorganized RDP support tests for clarity and accuracy.
+- i18n: Updated Indonesian translations for connection-related labels.
 
 
 ---
@@ -540,7 +540,7 @@ All notable changes to KKTerm are documented here.
 - **Connection Tree**: Enhanced functionality to preserve order in visible connections.
 
 ## Improved
-- **Contracting for AI inputs**: Added a source-correctness contract and updated related tests.  
+- **Contracting for AI inputs**: Added a source-correctness contract and updated related tests.
   (PR not specified)
 
 ## Fixed
@@ -562,7 +562,7 @@ All notable changes to KKTerm are documented here.
 - **連線樹（Connection Tree）**：強化功能，讓「可見連線」在排序上保持正確順序。
 
 ## Improved（改善）
-- **AI 輸入的合約約束**：新增「來源正確性」合約並更新相關測試。  
+- **AI 輸入的合約約束**：新增「來源正確性」合約並更新相關測試。
  （本次釋出內容未提供 PR 編號）
 
 ## Fixed（修正）
@@ -583,17 +583,17 @@ All notable changes to KKTerm are documented here.
 - When deleting a connection, KKTerm will now **close any open Tab(s) and Pane(s)** tied to it—less “stale terminal” energy, more clean state.
 
 ## New
-- **Connection Tree:** Added **“Show Connected”** filter (session-only, not persisted) in the control row next to the tree view actions.  
+- **Connection Tree:** Added **“Show Connected”** filter (session-only, not persisted) in the control row next to the tree view actions.
   - PR #303 — by @ryantsai (codex) · https://github.com/ryantsai/KKTerm/pull/303 (includes fix: Hide Folders duplication)
 
 ## Improved
-- **Connection Tree rendering clarity:** “Show All” was renamed to **“Hide Folders”** for clarity, and the related localization keys were updated (including **connections.hideFolders** and **connections.showConnected**).  
+- **Connection Tree rendering clarity:** “Show All” was renamed to **“Hide Folders”** for clarity, and the related localization keys were updated (including **connections.hideFolders** and **connections.showConnected**).
   - PR #303 — @ryantsai · https://github.com/ryantsai/KKTerm/pull/303
 
 ## Fixed
-- **Connection Tree duplicate roots in flat view:** Fixed a bug where root-level connections could be rendered twice when using the tree/flat combinations.  
+- **Connection Tree duplicate roots in flat view:** Fixed a bug where root-level connections could be rendered twice when using the tree/flat combinations.
   - PR #303 — @ryantsai · https://github.com/ryantsai/KKTerm/pull/303
-- **Deleting a connection:** Fixed lingering UI by **closing open Tabs and Panes** associated with the deleted Connection.  
+- **Deleting a connection:** Fixed lingering UI by **closing open Tabs and Panes** associated with the deleted Connection.
   - (sha: e938cb5)
 
 ## Internal
@@ -617,7 +617,7 @@ All notable changes to KKTerm are documented here.
 - **PowerShell 7 (pwsh)** support:
   - Shell option in Terminal settings
   - Installer recipe
-  - Install-or-fallback gate for launching `pwsh`  
+  - Install-or-fallback gate for launching `pwsh`
   ([#301](https://github.com/ryantsai/KKTerm/pull/301), by @ryantsai)
 - **VNC**: Added Apple Remote Desktop authentication (RFB security type 30). ([#302](https://github.com/ryantsai/KKTerm/pull/302), by @ryantsai)
 
@@ -630,7 +630,7 @@ All notable changes to KKTerm are documented here.
 - **SSH**: Stop PTY echo from hiding the tmux session label. ([#297](https://github.com/ryantsai/KKTerm/pull/297), by @ryantsai)
 
 ### Internal
-- Implemented a **rollback mechanism for failed releases** and validated source before mutations.  
+- Implemented a **rollback mechanism for failed releases** and validated source before mutations.
 - Build tooling update: release script + installer smoke coverage updates.
 
 ---
@@ -648,7 +648,7 @@ All notable changes to KKTerm are documented here.
 - **PowerShell 7（pwsh）支援**：
   - Terminal 設定中的殼層選項
   - 安裝配方
-  - 啟動前的 install-or-fallback 門檻  
+  - 啟動前的 install-or-fallback 門檻
   ([#301](https://github.com/ryantsai/KKTerm/pull/301)，作者 @ryantsai)
 - **VNC**：加入 Apple Remote Desktop 驗證（RFB security type 30）。([#302](https://github.com/ryantsai/KKTerm/pull/302)，作者 @ryantsai)
 
@@ -728,11 +728,11 @@ All notable changes to KKTerm are documented here.
 ---
 
 ## 亮點
-- 修正 WebView 的「URL 覆蓋層」在重試時可能不會正常顯示的問題（不再需要像是「我先叫一個對話框逼它重來」那樣）。  
+- 修正 WebView 的「URL 覆蓋層」在重試時可能不會正常顯示的問題（不再需要像是「我先叫一個對話框逼它重來」那樣）。
 
 ## 修正
 - **Webview URL 覆蓋層顯示重試：** 在 HWND 就緒之前加入有界重試，讓「顯示覆蓋層」的要求不會因偶發的底層手把尚未可用而失敗。*(由 @ryantsai 於 https://github.com/ryantsai/KKTerm/pull/292；SHA：176cd97)*
-- **Webview URL 覆蓋層定位：** 透過 Win32 `ClientToScreen({0,0})` 來錨定到正確的 client origin，避免特定無邊框/可調整大小的 Windows 視窗框架下，在 Pane 旁出現幾個像素的縫隙。  
+- **Webview URL 覆蓋層定位：** 透過 Win32 `ClientToScreen({0,0})` 來錨定到正確的 client origin，避免特定無邊框/可調整大小的 Windows 視窗框架下，在 Pane 旁出現幾個像素的縫隙。
 
 ## 內部
 - 新增 `.gitattributes` 以強制文字檔使用 LF，降低 CRLF-vs-LF 抖動影響測試的風險。
@@ -790,7 +790,7 @@ All notable changes to KKTerm are documented here.
 - Terminal keyboard focus should no longer get “stolen” when using the drag/resize frame—your Session should keep responding like a good terminal should. (Small sysadmin joke: the window finally stops grabbing the keyboard like a rogue `sudo`.)
 
 ## Fixed
-- Prevented the `TAURI_DRAG_RESIZE_WINDOW` helper from stealing terminal keyboard focus, so Tabs/Session interaction won’t break on re-activation. PR #287 by @ryantsai (https://github.com/ryantsai/KKTerm/pull/287, c59be44 / 384b091).  
+- Prevented the `TAURI_DRAG_RESIZE_WINDOW` helper from stealing terminal keyboard focus, so Tabs/Session interaction won’t break on re-activation. PR #287 by @ryantsai (https://github.com/ryantsai/KKTerm/pull/287, c59be44 / 384b091).
 
 ## Internal
 - Updated window effect behavior to keep focus handling from interfering with terminal input (WS_EX_NOACTIVATE applied to the helper window).
@@ -800,7 +800,7 @@ All notable changes to KKTerm are documented here.
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.69/kkterm-0.1.69-windows-arm64-setup.exe)
 
 ## Highlights
-- More reliable keyboard focus for terminal input after app switching (your Alt+Tab should stop feeling like a tiny gremlin).  
+- More reliable keyboard focus for terminal input after app switching (your Alt+Tab should stop feeling like a tiny gremlin).
 - Settings UI cleanup: URL WebView toolbar tidy-up and Workspace moved above Dashboard in the Settings nav.
 
 ## New
@@ -821,7 +821,7 @@ All notable changes to KKTerm are documented here.
 ---
 
 ## 精選重點
-- 讓終端機（Terminal）輸入的鍵盤焦點更可靠：切換到其他程式再回來後，鍵盤輸入不再那麼容易失聯（Alt+Tab 不該變成小小的惡作劇）。  
+- 讓終端機（Terminal）輸入的鍵盤焦點更可靠：切換到其他程式再回來後，鍵盤輸入不再那麼容易失聯（Alt+Tab 不該變成小小的惡作劇）。
 - 設定頁面小整理：URL WebView 工具列排版更乾淨，且在設定導覽中把「Workspace」移到「Dashboard」上方。
 
 ## 新增
@@ -844,8 +844,8 @@ All notable changes to KKTerm are documented here.
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.68/kkterm-0.1.68-windows-arm64-setup.exe)
 
 ## Highlights
-- Fixed saving **Connection** properties when the same name appears more than once (duplicate-name rows).  
-- Refined the **Notes** widget into a skeuomorphic sticky note—because dashboards deserve a little desk clutter.  
+- Fixed saving **Connection** properties when the same name appears more than once (duplicate-name rows).
+- Refined the **Notes** widget into a skeuomorphic sticky note—because dashboards deserve a little desk clutter.
 - Improved the **Settings** popup “App Update” section layout/padding for more consistent placement.
 
 ## New
@@ -859,13 +859,13 @@ All notable changes to KKTerm are documented here.
 
 ## Internal
 - Refined note styling and settings popup layout via test coverage updates.
-- Added tests for AI CLI status persistence.  
+- Added tests for AI CLI status persistence.
 
 ---
 
 ## 精選重點
-- 修正當同名的 **Connection** 設定列出現重複時，**Connection** 內容無法正確儲存的問題（重複名稱的列）。  
-- 將 **Notes** 小工具改造成擬真便利貼風格——讓儀表板也來點辦公桌的雜物感。  
+- 修正當同名的 **Connection** 設定列出現重複時，**Connection** 內容無法正確儲存的問題（重複名稱的列）。
+- 將 **Notes** 小工具改造成擬真便利貼風格——讓儀表板也來點辦公桌的雜物感。
 - 改善 **Settings** 彈出視窗中的「App Update」區塊版面/內距，讓顯示位置更一致。
 
 ## 新增
@@ -932,7 +932,7 @@ All notable changes to KKTerm are documented here.
 - Route Terminal paste through xterm paste handling, fixing paste formatting/line breaks in Terminal sessions. (PR #274, @ryantsai; short SHA: `5b88126`)
 
 ## Internal
-- Updated app slogan translations across multiple languages. (short SHA: `5b7c5c7`)  
+- Updated app slogan translations across multiple languages. (short SHA: `5b7c5c7`)
 
 ---
 
@@ -1018,35 +1018,35 @@ All notable changes to KKTerm are documented here.
 - Improved **RDP** debug logging so sensitive fields are redacted while keeping useful diagnostics, and surfaced **RDP** errors in the **Status Bar** regardless of debug settings.
 
 ## New
-- Added **ui.debug.log** support for Terminal focus tracing (records focus restore stages and related document state when enabled).  
+- Added **ui.debug.log** support for Terminal focus tracing (records focus restore stages and related document state when enabled).
   PR #9481b70
 
 ## Improved
-- Enhanced **RDP** debug logging details while keeping sensitive values out of logs.  
+- Enhanced **RDP** debug logging details while keeping sensitive values out of logs.
   PR #1994e86
-- Updated documentation/manifests for the above debug logging and related settings language entries.  
+- Updated documentation/manifests for the above debug logging and related settings language entries.
   PR #8c90114, #1994e86
 
 ## Fixed
 - **Terminal** keyboard focus restoration:
-  - Stopped the focus-restore loop and ensured native OS-level focus is routed into the WebView content when the Terminal **Session** becomes active.  
+  - Stopped the focus-restore loop and ensured native OS-level focus is routed into the WebView content when the Terminal **Session** becomes active.
     PR #265 (commit(s): `9769472`, `9e37a0a`)
-  - Re-established input focus after app switch by restoring focus at the OS webview level (and re-acquiring the textarea focus path).  
+  - Re-established input focus after app switch by restoring focus at the OS webview level (and re-acquiring the textarea focus path).
     PR #266 (commit(s): `a2bb052`)
-  - Added a window-level focus command and wired it into Terminal focus restore and Session start (scoped so URL-pane child webviews are unaffected).  
-    PR #267 (commit(s): `060719c`, `98ecdd7`)  
-  - Renamed `focus_main_window` to `restore_main_window` for clarity.  
+  - Added a window-level focus command and wired it into Terminal focus restore and Session start (scoped so URL-pane child webviews are unaffected).
+    PR #267 (commit(s): `060719c`, `98ecdd7`)
+  - Renamed `focus_main_window` to `restore_main_window` for clarity.
     PR #? (`3857b77`)
 - **RDP** error visibility:
-  - **Status Bar** now shows `remoteDesktop.rdpErrorStatus` for RDP errors regardless of debug settings.  
+  - **Status Bar** now shows `remoteDesktop.rdpErrorStatus` for RDP errors regardless of debug settings.
     PR #1994e86
-- Sensitive field redaction in **RDP** debug logs.  
+- Sensitive field redaction in **RDP** debug logs.
   PR #1994e86
 
 ## Internal
-- Refreshed architecture/release docs and manual pages for the improved debug logging and settings behavior.  
+- Refreshed architecture/release docs and manual pages for the improved debug logging and settings behavior.
   PR #8c90114, #1994e86
-- Continued locale/i18n updates for the new/changed strings and debug UI support.  
+- Continued locale/i18n updates for the new/changed strings and debug UI support.
   PR #1994e86
 
 ## Direct Downloads
@@ -1137,8 +1137,8 @@ All notable changes to KKTerm are documented here.
 - **AI Providers:** Updated model recommendation catalog for several providers.
 
 ## New
-- **Notes widget options:**  
-  - **Fold corner** position selection  
+- **Notes widget options:**
+  - **Fold corner** position selection
   - **Markdown enabled** toggle for note text rendering
 
 - **RDP/VNC:** View Mode toolbar controls, with saved behavior on a per-**Connection** basis.
@@ -1181,21 +1181,21 @@ All notable changes to KKTerm are documented here.
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.59/kkterm-0.1.59-windows-arm64-setup.exe)
 
 ## Highlights
-- Status Bar now reflects managed X server settings, and stops polling for X server status—less “network weather forecasting”, more signal.  
+- Status Bar now reflects managed X server settings, and stops polling for X server status—less “network weather forecasting”, more signal.
 
 ## Improved
-- Updated the Status Bar to align with managed X server configuration changes.  
+- Updated the Status Bar to align with managed X server configuration changes.
 
 ## Internal
-- Refreshed related context/docs and implementation to support the new Status Bar behavior.  
+- Refreshed related context/docs and implementation to support the new Status Bar behavior.
 
 ---
 
 ## 重點摘要
-- 狀態列現在會反映「已管理的 X Server」設定，並停止輪詢 X Server 狀態—少一點「網路天氣預報」，多一點確定的訊號。  
+- 狀態列現在會反映「已管理的 X Server」設定，並停止輪詢 X Server 狀態—少一點「網路天氣預報」，多一點確定的訊號。
 
 ## 改善
-- 更新狀態列，讓它能對應已管理的 X Server 設定變更。  
+- 更新狀態列，讓它能對應已管理的 X Server 設定變更。
 
 ## 內部
 - 同步更新相關的說明文件與實作，以支援新的狀態列行為。
@@ -1285,7 +1285,7 @@ All notable changes to KKTerm are documented here.
 ## Internal
 - Derive `Debug` for `SshHostKeyPreview` so host-key tests compile by @ryantsai in https://github.com/ryantsai/KKTerm/pull/249 (short SHA: 62c93b7).
 - Derive `Debug` for SSH host key preview (test compilation unblock) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/249 (short SHA: 71fbcfc).
-- Docs / architecture / i18n alignment work items (including Watchdog terminology and source map documentation) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/237 (short SHA: c61a740), https://github.com/ryantsai/KKTerm/pull/240 (short SHA: 539cf03), and https://github.com/ryantsai/KKTerm/pull/235 (short SHA: d04aed7).  
+- Docs / architecture / i18n alignment work items (including Watchdog terminology and source map documentation) by @ryantsai in https://github.com/ryantsai/KKTerm/pull/237 (short SHA: c61a740), https://github.com/ryantsai/KKTerm/pull/240 (short SHA: 539cf03), and https://github.com/ryantsai/KKTerm/pull/235 (short SHA: d04aed7).
 
 ---
 
@@ -1324,32 +1324,32 @@ All notable changes to KKTerm are documented here.
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.56/kkterm-0.1.56-windows-arm64-setup.exe)
 
 ## Highlights
-- **Dashboard Notes widget**: random rotation per **Dashboard Widget Instance**, configurable rotation, and multi-page notes with tear animation.  
+- **Dashboard Notes widget**: random rotation per **Dashboard Widget Instance**, configurable rotation, and multi-page notes with tear animation.
 - **Terminal appearance**: per-**Connection** terminal background + transparency improvements, including separate split-pane background support. (If your terminals could talk, they’d probably ask for a color palette.)
 - **UI load smoothing**: lazy-mount dashboard views so you don’t pay the “mount everything now” tax.
 
 ## New
-- **Notes widget**: per-instance random rotation, configurable rotation, and multi-page notes with tear animation. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/227  
+- **Notes widget**: per-instance random rotation, configurable rotation, and multi-page notes with tear animation. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/227
 - **Separate split terminal backgrounds** setting. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/??? (included in v0.1.56 changes via background-related commits)
 
 ## Improved
-- **Avoid blocking UI during MCP bridge startup**. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/226  
-- **Lazy-mount dashboard views** to avoid mounting all views at once. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/228  
-- **Per-connection terminal opacity & background picker** (UI + persistence + storage/command plumbing). by @ryantsai in https://github.com/ryantsai/KKTerm/pull/229  
-- **Folder drag-and-drop**: improved behavior and added a visible root drop target. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/230  
+- **Avoid blocking UI during MCP bridge startup**. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/226
+- **Lazy-mount dashboard views** to avoid mounting all views at once. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/228
+- **Per-connection terminal opacity & background picker** (UI + persistence + storage/command plumbing). by @ryantsai in https://github.com/ryantsai/KKTerm/pull/229
+- **Folder drag-and-drop**: improved behavior and added a visible root drop target. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/230
 
 ## Fixed
-- **Installer (winget bootstrap)**: fixed installer helper winget bootstrap and preserved failure logs in the stepper. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/225  
-- **Terminal appearance rendering**: improved background transparency handling for terminal renderer. (Included in v0.1.56 changes via terminal background/transparency commits)  
+- **Installer (winget bootstrap)**: fixed install helper winget bootstrap and preserved failure logs in the stepper. by @ryantsai in https://github.com/ryantsai/KKTerm/pull/225
+- **Terminal appearance rendering**: improved background transparency handling for terminal renderer. (Included in v0.1.56 changes via terminal background/transparency commits)
 
 ## Internal
-- Release note generation docs/tooling updates for direct download links in README files. edc2419  
-- App navigation persistence and workspace layout management improvements. 10b794d  
-- MCP bridge startup behavior docs/implementation updates. 582eacc  
-- Dashboard background popover style/structure updates. 9c84cb7  
-- Connection pane folder handling and related tests. 2625e8a / 60df1fc / 2625e8a  
-- Title bar icon + panel toggle behavior updates and related tests. 87b43f0  
-- Background transparency/appearance default setting work (settings + rendering + tests). e328dc7  
+- Release note generation docs/tooling updates for direct download links in README files. edc2419
+- App navigation persistence and workspace layout management improvements. 10b794d
+- MCP bridge startup behavior docs/implementation updates. 582eacc
+- Dashboard background popover style/structure updates. 9c84cb7
+- Connection pane folder handling and related tests. 2625e8a / 60df1fc / 2625e8a
+- Title bar icon + panel toggle behavior updates and related tests. 87b43f0
+- Background transparency/appearance default setting work (settings + rendering + tests). e328dc7
 
 ---
 
@@ -1359,27 +1359,27 @@ All notable changes to KKTerm are documented here.
 - **介面載入更順**：延遲掛載儀表板視圖，避免一次把所有東西都掛上去。
 
 ## 新增
-- **Notes 小工具**：每個實例隨機旋轉、可設定旋轉角度、支援多頁筆記與撕裂動畫。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/227  
+- **Notes 小工具**：每個實例隨機旋轉、可設定旋轉角度、支援多頁筆記與撕裂動畫。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/227
 - **分割終端可分開背景**設定。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/???（v0.1.56 內的背景相關改動一併涵蓋）
 
 ## 改進
-- **避免在 MCP bridge 啟動時阻塞 UI**。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/226  
-- **延遲掛載儀表板視圖**：避免一次掛載所有視圖。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/228  
-- **每個連線（Connection）的終端透明度與背景選擇器**（UI + 持久化 + 儲存/指令串接）。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/229  
-- **資料夾拖曳**：改進拖放行為並加入清楚可見的根目錄（root）放置目標。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/230  
+- **避免在 MCP bridge 啟動時阻塞 UI**。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/226
+- **延遲掛載儀表板視圖**：避免一次掛載所有視圖。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/228
+- **每個連線（Connection）的終端透明度與背景選擇器**（UI + 持久化 + 儲存/指令串接）。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/229
+- **資料夾拖曳**：改進拖放行為並加入清楚可見的根目錄（root）放置目標。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/230
 
 ## 修正
-- **安裝程式（winget bootstrap）**：修正安裝程式助手 winget bootstrap，並在 stepper 中保留失敗時的日誌。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/225  
+- **安裝程式（winget bootstrap）**：修正安裝程式助手 winget bootstrap，並在 stepper 中保留失敗時的日誌。by @ryantsai in https://github.com/ryantsai/KKTerm/pull/225
 - **終端機外觀渲染**：改進終端渲染器的背景透明度處理。（v0.1.56 內的終端背景/透明度相關改動已涵蓋）
 
 ## Internal
-- 發版說明（release note）生成與文件更新：在 README 加入 Windows 安裝程式直接下載連結相關。edc2419  
-- App 導覽（navigation）持久化與工作區（workspace）版面管理改進。10b794d  
-- MCP bridge 啟動相關文件/實作更新。582eacc  
-- 儀表板背景彈出視窗（background popover）樣式與結構更新。9c84cb7  
-- 偵錯用桌布 tray 原型實作。f3e5d2c / 29fb80a  
-- 連線（Connection）窗格資料夾處理與相關測試。2625e8a / 60df1fc / 2625e8a  
-- 標題列（title bar）圖示與面板切換行為更新及測試。87b43f0  
+- 發版說明（release note）生成與文件更新：在 README 加入 Windows 安裝程式直接下載連結相關。edc2419
+- App 導覽（navigation）持久化與工作區（workspace）版面管理改進。10b794d
+- MCP bridge 啟動相關文件/實作更新。582eacc
+- 儀表板背景彈出視窗（background popover）樣式與結構更新。9c84cb7
+- 偵錯用桌布 tray 原型實作。f3e5d2c / 29fb80a
+- 連線（Connection）窗格資料夾處理與相關測試。2625e8a / 60df1fc / 2625e8a
+- 標題列（title bar）圖示與面板切換行為更新及測試。87b43f0
 - 背景透明度/外觀預設設定工作（設定 + 渲染 + 測試）。e328dc7
 
 ## Highlights
@@ -1390,7 +1390,7 @@ All notable changes to KKTerm are documented here.
 - **Double-click header toggles** for **Connections** and **AI Assistant** panels—double-click the panel header to hide/show the panel (PR #223 by @ryantsai).
 
 ## Improved
-- **Installer Helper utilities** now include **Coreutils (Microsoft.Coreutils)** for winget + download provider (PR #224 by @ryantsai).
+- **Install Helper utilities** now include **Coreutils (Microsoft.Coreutils)** for winget + download provider (PR #224 by @ryantsai).
 - **WebView screenshot region layering** improvements for URL WebView so the screenshot region isn’t layered incorrectly (PR #222 by @ryantsai).
 
 ## Fixed
@@ -1411,7 +1411,7 @@ All notable changes to KKTerm are documented here.
 - **Connections 與 AI Assistant 面板**支援「標題列雙擊切換」：雙擊面板標題即可隱藏/顯示面板（PR #223，@ryantsai）。
 
 ## Improved（改進）
-- **Installer Helper 工具**加入 **Coreutils（Microsoft.Coreutils）**：使用 winget + download provider（PR #224，@ryantsai）。
+- **Install Helper 工具**加入 **Coreutils（Microsoft.Coreutils）**：使用 winget + download provider（PR #224，@ryantsai）。
 - **URL WebView 截圖區塊**的層級（layering）更正確，避免區塊被錯誤疊到（PR #222，@ryantsai）。
 
 ## Fixed（修正）
@@ -1428,10 +1428,10 @@ All notable changes to KKTerm are documented here.
 - App update download & installation is now supported in KKTerm (with user-facing update status prompts). Like a good terminal session, it tells you what’s happening—before it happens.
 
 ## New
-- **App update download & installation functionality**  
+- **App update download & installation functionality**
   - Adds UI prompts and the underlying update flow, including localized update-related strings.
 
-- **Release script improvements**  
+- **Release script improvements**
   - Added support for a “both-arch” GitHub release script and local env file import.
 
 ## Internal
@@ -1473,7 +1473,7 @@ All notable changes to KKTerm are documented here.
 - Add Quick Commands functionality to the MCP server and Assistant Panel (83281b1)
 - Add FFmpeg to Utilities section and corresponding test case (d6833a3)
 - Update ROADMAP.md to mark MCP server support as implemented (005c9d8)
-- Refactor documentation and localization for Installer Helper (5c54f96)
+- Refactor documentation and localization for Install Helper (5c54f96)
 - Merge pull request #216 from ryantsai/codex/fix-screenshot-function-limitation (fbf9858)
 - Fix assistant screenshot region overlay (84cb15e)
 - Merge pull request #215 from ryantsai/codex/fix-double-tooltip-for-activity-rail-icons (5880e83)
@@ -1497,7 +1497,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.52...v0.1.53
 * Add assistant selection Copy context menu by @ryantsai in https://github.com/ryantsai/KKTerm/pull/206
 * Fix Windows build errors in heartbeat and installer by @ryantsai in https://github.com/ryantsai/KKTerm/pull/207
 * Use native rail tooltips over child windows by @ryantsai in https://github.com/ryantsai/KKTerm/pull/208
-* Installer Helper: interval-gated auto update check by @ryantsai in https://github.com/ryantsai/KKTerm/pull/209
+* Install Helper: interval-gated auto update check by @ryantsai in https://github.com/ryantsai/KKTerm/pull/209
 * feat(release-notes): credit linked issue reporters in release notes by @ryantsai in https://github.com/ryantsai/KKTerm/pull/211
 * Fix SFTP drive and symlink navigation by @ryantsai in https://github.com/ryantsai/KKTerm/pull/212
 * Fix native tooltip PWSTR type mismatch by @ryantsai in https://github.com/ryantsai/KKTerm/pull/213
@@ -1514,7 +1514,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.52...v0.1.53
 - Merge pull request #211 from ryantsai/claude/release-notes-issue-credit-Ox7Bq (476919f)
 - feat(release-notes): credit linked issue reporters in release notes (40cc1d1)
 - Merge pull request #209 from ryantsai/claude/installer-helper-check-caching-a4lJm (fbc4d44)
-- Installer Helper: interval-gated auto update check (d66bb63)
+- Install Helper: interval-gated auto update check (d66bb63)
 - Merge pull request #208 from ryantsai/codex/add-native-tooltip-support-for-rdp-activex (a8dc16f)
 - Use native rail tooltips over child windows (cd4a902)
 - Merge pull request #207 from ryantsai/claude/rust-build-errors-DigNU (f203a21)
@@ -1536,7 +1536,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.52...v0.1.53
 - Optimize workspace pane collapse animation (eae78a5)
 - Merge pull request #198 from ryantsai/claude/windows-arm-compatibility-V9eR8 (3bd02a7)
 - feat(packaging): add Windows on Arm (ARM64) installer build (1b72603)
-- feat: add Installer Helper Module to README and documentation (7f56675)
+- feat: add Install Helper Module to README and documentation (7f56675)
 
 Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.51...v0.1.52
 
@@ -1545,7 +1545,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.51...v0.1.52
 ## Highlights
 
 * Fix URL WebView blanking when RDP session stability (WebView2) is enabled by @ryantsai in https://github.com/ryantsai/KKTerm/pull/193
-* Installer Helper: add optional download-provider choice for winget recipes by @ryantsai in https://github.com/ryantsai/KKTerm/pull/194
+* Install Helper: add optional download-provider choice for winget recipes by @ryantsai in https://github.com/ryantsai/KKTerm/pull/194
 * Complete pending localizations by @ryantsai in https://github.com/ryantsai/KKTerm/pull/195
 * Fix URL webview new-window link navigation by @ryantsai in https://github.com/ryantsai/KKTerm/pull/196
 * Add widget health check tool and layout enforcement settings by @ryantsai in https://github.com/ryantsai/KKTerm/pull/197
@@ -1630,60 +1630,60 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.49...v0.1.50
 Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 
 ## Highlights
-- Hermes Agent 與 OpenClaw 在 Installer Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：用起來像把「開終端機」與「把 Session 存成預設」一起打包了——系統也比較不會睡過頭。
+- Hermes Agent 與 OpenClaw 在 Install Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：用起來像把「開終端機」與「把 Session 存成預設」一起打包了——系統也比較不會睡過頭。
 - 安裝流程的 i18n：將 Installer 相關的 **9 個待翻譯 key** 完整翻到 **13 個非英文 locale**。
 
 ## New
-- Installer Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕  
-  - **Run**：開啟新 PowerShell console（Hermes venv 啟用 / OpenClaw 設定本地 npm exec alias），並在互動提示先填好指令名稱  
+- Install Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕
+  - **Run**：開啟新 PowerShell console（Hermes venv 啟用 / OpenClaw 設定本地 npm exec alias），並在互動提示先填好指令名稱
   - **Add to workspace**：在 Connections 側邊欄新增一筆本機的 Connection（「Hermes Agent」或「OpenClaw」），每次開啟時自動啟用 venv / alias 與顯示提示
 
 ## Improved
 - OpenClaw：改為 **app-local 安裝**（由 KKTerm 管理到 `%LOCALAPPDATA%\KKTerm\installer\apps\openclaw`），讓 KKTerm 對安裝、偵測與解除安裝有更直接的控制。
 
 ## Fixed
-- 修正 Installer Helper 的 agent 啟動流程與 web-UI launcher 問題。
+- 修正 Install Helper 的 agent 啟動流程與 web-UI launcher 問題。
 - 修正與「npm + 新安裝 nvm-windows」的情境相關的偵測/啟動問題：讓受管的 managed apps 的 npm 探測與啟動使用更新後的 PATH。
 - 偵測流程：在需要時改用「已更新/持久化 Windows PATH」進行 node/npm 探測，並加入回歸測試。
 
 ## Internal
 - Installer i18n：翻譯 9 個 Installer 相關 key 至所有 13 個非英文 locale（含刪除 localization_todo backlog 檔），並確認 `npm run i18n:check` 通過。
-- Installer Helper：把安裝/偵測等工作移出 UI thread（避免像在同一個 Pane 裡又跑編譯又跑渲染那樣卡頓）。
-- 多項 Installer Helper 與安裝器相關的偵測/文件/測試調整（含架構與手冊更新）。
+- Install Helper：把安裝/偵測等工作移出 UI thread（避免像在同一個 Pane 裡又跑編譯又跑渲染那樣卡頓）。
+- 多項 Install Helper 與安裝器相關的偵測/文件/測試調整（含架構與手冊更新）。
 - 版本變更（整理順序/分類等）與相關測試更新。
-- 偵測與版本解析修正（含回歸測試），並更新 `18-installer.md`/`ARCHITECTURE.md` 文檔。  
+- 偵測與版本解析修正（含回歸測試），並更新 `18-installer.md`/`ARCHITECTURE.md` 文檔。
 - PR / 來源：#184、#185（by @ryantsai）。GitHub notes: https://github.com/ryantsai/KKTerm/compare/v0.1.47...v0.1.48 （SHAs 見提交：`73f1008`, `380b0a0`, `585af86`, `59041f1`）
 
 
 ---
 
 ## 精選重點
-- Hermes Agent 與 OpenClaw 在 Installer Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：把「開終端機」和「把 Session 存成預設」一起打包，讓網路與終端工作流程更不容易卡住——就像系統比較不會半夜裝睡。
+- Hermes Agent 與 OpenClaw 在 Install Helper（已安裝狀態）新增 **Run** 與 **Add to workspace**：把「開終端機」和「把 Session 存成預設」一起打包，讓網路與終端工作流程更不容易卡住——就像系統比較不會半夜裝睡。
 - 安裝相關 i18n：將 Installer 相關 **9 個待翻譯 key** 完整翻到 **13 個非英文 locale**。
 
 ## 新增
-- Installer Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕  
-  - **Run**：開啟新的 PowerShell console（Hermes venv 啟用 / OpenClaw 設定本地 npm exec alias），並在互動提示先填好指令名稱  
+- Install Helper：Hermes Agent、OpenClaw（已安裝狀態）新增兩個動作按鈕
+  - **Run**：開啟新的 PowerShell console（Hermes venv 啟用 / OpenClaw 設定本地 npm exec alias），並在互動提示先填好指令名稱
   - **Add to workspace**：在 Connections 側邊欄新增一筆本機 Connection（「Hermes Agent」或「OpenClaw」），每次開啟時自動啟用 venv / alias 與顯示提示
 
 ## 改進
 - OpenClaw：改為 **app-local 安裝**（由 KKTerm 管理到 `%LOCALAPPDATA%\KKTerm\installer\apps\openclaw`），讓 KKTerm 對安裝、偵測與解除安裝有更直接的控制。
 
 ## 修正
-- 修正 Installer Helper 的 agent 啟動流程與 web-UI launcher 問題。
+- 修正 Install Helper 的 agent 啟動流程與 web-UI launcher 問題。
 - 修正與「npm + 新安裝 nvm-windows」情境相關的偵測/啟動問題：讓受管的 managed apps 的 npm 探測與啟動使用更新後的 PATH。
 - 偵測流程：在需要時改用「已更新/持久化 Windows PATH」進行 node/npm 探測，並加入回歸測試。
 
 ## Internal
 - Installer i18n：翻譯 9 個 Installer 相關 key 至所有 13 個非英文 locale（含刪除 localization_todo backlog 檔），並確認 `npm run i18n:check` 通過。
-- Installer Helper：把安裝/偵測等工作移出 UI thread（避免像在同一個 Pane 裡又跑編譯又跑渲染那樣卡住）。
-- 多項 Installer Helper 與安裝器相關的偵測/文件/測試調整（含架構與手冊更新）。
+- Install Helper：把安裝/偵測等工作移出 UI thread（避免像在同一個 Pane 裡又跑編譯又跑渲染那樣卡住）。
+- 多項 Install Helper 與安裝器相關的偵測/文件/測試調整（含架構與手冊更新）。
 - 版本變更（整理順序/分類等）與相關測試更新。
-- 偵測與版本解析修正（含回歸測試），並更新 `18-installer.md`/`ARCHITECTURE.md` 文檔。  
+- 偵測與版本解析修正（含回歸測試），並更新 `18-installer.md`/`ARCHITECTURE.md` 文檔。
 - PR / 來源：#184、#185（by @ryantsai）。GitHub notes: https://github.com/ryantsai/KKTerm/compare/v0.1.47...v0.1.48 （SHAs 見提交：`73f1008`, `380b0a0`, `585af86`, `59041f1`）
 
 ## Highlights
-- **Dashboard Tab Reorder**: Reorder tabs in Dashboard view (so your Session can follow your brain, not the other way around).  
+- **Dashboard Tab Reorder**: Reorder tabs in Dashboard view (so your Session can follow your brain, not the other way around).
 - **Installer improvements for managed apps**: Enhanced support around installer managed app behavior and related documentation.
 
 ## New
@@ -1698,14 +1698,14 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - **Regression coverage added**: Added regression tests around installer behaviors (including dashboard/view reorder and installer log/latest-version behaviors).
 
 ## Internal
-- **Installer helper catalog apps** (commit: 8903fe1): Added installer helper catalog apps and updated related architecture/docs and installer code paths.
+- **Install helper catalog apps** (commit: 8903fe1): Added install helper catalog apps and updated related architecture/docs and installer code paths.
 - Wired new/updated tests into `npm run check` (commits: 5b45dec, 1489027, 3cb61ad).
 
 
 ---
 
 ## 亮點
-- **Dashboard 分頁重排序**：在 Dashboard 視圖中重排分頁（讓你的 Session 跟著你的思路走，不必反過來）。  
+- **Dashboard 分頁重排序**：在 Dashboard 視圖中重排分頁（讓你的 Session 跟著你的思路走，不必反過來）。
 - **受管理應用程式安裝器更新**：強化安裝器受管理應用程式相關支援與文件。
 
 ## 新增
@@ -1730,25 +1730,25 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - Fixed npm detection/installation in the Installer on Windows by using `npm.cmd` instead of spawning `npm` directly (while keeping `npm` elsewhere). (da2ada1)
 
 ## Internal
-- Updated installer logic to wire the refreshed PATH runner through npm install/detection/uninstall flows, including npm package installs immediately after Node in the same Installer Helper flow. (da2ada1)
+- Updated installer logic to wire the refreshed PATH runner through npm install/detection/uninstall flows, including npm package installs immediately after Node in the same Install Helper flow. (da2ada1)
 - Documentation and installer command/detection/uninstall/install internals updated. (da2ada1)
 
 ---
 
 ## 亮點
-- Windows 安裝程式現在會正確使用對的 npm 入口點（告別明明有 Node 卻還報「program not found」的狀況）。✅  
+- Windows 安裝程式現在會正確使用對的 npm 入口點（告別明明有 Node 卻還報「program not found」的狀況）。✅
 （很像網管發現錯的設定檔，終於把連線救回來。）
 
 ## 修正
 - 修正 Installer 在 Windows 上的 npm 偵測/安裝行為：改用 `npm.cmd` 取代直接執行 `npm`（其他平台維持使用 `npm`）。(da2ada1)
 
 ## Internal（內部）
-- 更新安裝程式的流程：將更新後的 PATH runner 一併串到 npm 安裝/偵測/解除安裝等流程；並支援在同一個 Installer Helper 流程中，Node 剛安裝完立刻安裝 npm 套件而不需要重開機。 (da2ada1)
+- 更新安裝程式的流程：將更新後的 PATH runner 一併串到 npm 安裝/偵測/解除安裝等流程；並支援在同一個 Install Helper 流程中，Node 剛安裝完立刻安裝 npm 套件而不需要重開機。 (da2ada1)
 - 同步更新文件與安裝程式內部的命令/偵測/解除安裝/安裝實作。 (da2ada1)
 
 ## Highlights
 - Improved RDP Connection Session resizing so **remote desktop no longer starts too small** and **doesn’t require a manual Tab/Pane nudge** to settle.
-- Fixed a regression where **the RDP desktop could never appear** after connect (even while the toolbar still showed **“Connected”**).  
+- Fixed a regression where **the RDP desktop could never appear** after connect (even while the toolbar still showed **“Connected”**).
 
 ## New
 - (Docs) Documented the **RDP native-window lifecycle invariant** in `ARCHITECTURE.md` so the off-screen staging vs on-screen re-apply behavior doesn’t get re-broken. (Think of it as putting a “do not touch” label on the terminal’s network cable.)
@@ -1769,7 +1769,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 
 ## 重點摘要
 - 改善 RDP Connection Session 的縮放行為：**遠端桌面不再一開始就太小**，也**不再需要手動去推一下 Tab/Pane** 才會「正常 settle」。
-- 修正一個回歸問題：RDP 在連線後**可能永遠不會顯示桌面**（雖然工具列仍顯示 **「Connected」**）。  
+- 修正一個回歸問題：RDP 在連線後**可能永遠不會顯示桌面**（雖然工具列仍顯示 **「Connected」**）。
 
 ## 新增
 - （文件）在 `ARCHITECTURE.md` 補上 **RDP native-window lifecycle invariant** 的說明，避免再次把「離屏 staging」和「畫面上重套用」的流程搞混。（就像在終端機網路線上貼了「不要亂拔」標籤。）
@@ -1798,11 +1798,11 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - **AI widget-design contracts**: Strengthened contracts for dashboard widget layout, contrast, and copy, and wired them into widget creation/system instructions. By @ryantsai in https://github.com/ryantsai/KKTerm/pull/178
 
 ## Fixed
-- **Installer Helper detection UI tiles**: Fixed an event payload shape mismatch so detected Installer Helper progress results apply to the correct Dashboard Widget Instance keys (instead of leaving tiles stuck at “Not installed / Checked: Never”). Added regression tests. (Fix in `events.rs`.)
+- **Install Helper detection UI tiles**: Fixed an event payload shape mismatch so detected Install Helper progress results apply to the correct Dashboard Widget Instance keys (instead of leaving tiles stuck at “Not installed / Checked: Never”). Added regression tests. (Fix in `events.rs`.)
 
 ## Internal
-- **Installer Helper catalog & detection cache update**: Updated Installer Helper catalog and detection cache. By @ryantsai in https://github.com/ryantsai/KKTerm/pull/179
-- **Installer Helper detection change**: Installer Helper now detects winget-provider tools from a local Add/Remove Programs registry snapshot (via catalog aliases) for existing installs, while still using winget for install/update/latest-version work. (Commit `4839200`.)
+- **Install Helper catalog & detection cache update**: Updated Install Helper catalog and detection cache. By @ryantsai in https://github.com/ryantsai/KKTerm/pull/179
+- **Install Helper detection change**: Install Helper now detects winget-provider tools from a local Add/Remove Programs registry snapshot (via catalog aliases) for existing installs, while still using winget for install/update/latest-version work. (Commit `4839200`.)
 - **Progress event payload tests & normalization**: Regression coverage for the corrected progress event field mapping (commit `39e5f09`).
 
 ---
@@ -1819,22 +1819,22 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - **AI widget 設計合約強化**：加強 Dashboard Widget Instance 的版面、對比與文案（copy）合約，並串接到 dashboard_create_widget 的工具描述與系統指示中。由 @ryantsai 於 https://github.com/ryantsai/KKTerm/pull/178
 
 ## 修正
-- **Installer Helper 偵測顯示瓷磚**：修正事件 payload 結構不一致，讓 Installer Helper 的偵測進度能套用到正確的 Dashboard Widget Instance 欄位；不再讓瓷磚卡在「Not installed / Checked: Never」。並加入回歸測試。（`events.rs` 修正。）
+- **Install Helper 偵測顯示瓷磚**：修正事件 payload 結構不一致，讓 Install Helper 的偵測進度能套用到正確的 Dashboard Widget Instance 欄位；不再讓瓷磚卡在「Not installed / Checked: Never」。並加入回歸測試。（`events.rs` 修正。）
 
 ## Internal
-- **更新 Installer Helper 目錄與偵測快取**：更新 Installer Helper 目錄與偵測快取。由 @ryantsai 於 https://github.com/ryantsai/KKTerm/pull/179
-- **Installer Helper 偵測方式調整**：Installer Helper 現在會從本機「新增/移除程式」的登錄快照辨識 winget-provider 工具（透過目錄 aliases），以更正確捕捉既有安裝；安裝/更新/最新版本仍使用 winget。（提交 `4839200`。）
+- **更新 Install Helper 目錄與偵測快取**：更新 Install Helper 目錄與偵測快取。由 @ryantsai 於 https://github.com/ryantsai/KKTerm/pull/179
+- **Install Helper 偵測方式調整**：Install Helper 現在會從本機「新增/移除程式」的登錄快照辨識 winget-provider 工具（透過目錄 aliases），以更正確捕捉既有安裝；安裝/更新/最新版本仍使用 winget。（提交 `4839200`。）
 - **進度事件欄位映射修正測試**：加入回歸測試以涵蓋已修正的 progress event 欄位對應（提交 `39e5f09`）。
 
 *（小吐槽一下：這次修的是 payload 的「形狀」，不是你電腦的網路。Network 先別急著重開機。）*
 
 ## Highlights
-- Redesigned **Installer Helper** with a popup dialog and streaming step events (less tile chaos, more terminal-friendly clarity).
+- Redesigned **Install Helper** with a popup dialog and streaming step events (less tile chaos, more terminal-friendly clarity).
 - DB write latency improvements via **WAL** + **busy_timeout** to keep your UI from waiting on the network gremlins.
 - Improved handling for ongoing UI flows: session teardown unblocks, and AI stream rendering is coalesced for smoother updates.
 
 ## New
-- Installer Helper now uses a popup-driven dialog and stepper flow, including streaming progress and per-step expandable logs. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
+- Install Helper now uses a popup-driven dialog and stepper flow, including streaming progress and per-step expandable logs. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
 - Render installer/update release notes as Markdown. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/175)
 - Completed pending locale translations. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/176)
 
@@ -1845,7 +1845,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 
 ## Fixed
 - Storage IDs: made generated IDs collision-proof using a process-wide monotonic counter (prevents UNIQUE constraint failures when IDs are generated within the same millisecond). (from https://github.com/ryantsai/KKTerm/pull/174)
-- Installer Helper console-flash storm: detection/version-check spawns now use `CREATE_NO_WINDOW`, and update checks stream incrementally so the UI doesn’t freeze on large update sets. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
+- Install Helper console-flash storm: detection/version-check spawns now use `CREATE_NO_WINDOW`, and update checks stream incrementally so the UI doesn’t freeze on large update sets. (by @ryantsai in https://github.com/ryantsai/KKTerm/pull/173)
 - Storage locking: recover uniformly from a poisoned mutex for better stability (instead of “lock is poisoned” until restart). (from https://github.com/ryantsai/KKTerm/pull/174)
 
 ## Internal
@@ -1856,7 +1856,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 ---
 
 ## 重點摘要
-- **安裝器助手（Installer Helper）**改版：使用彈出式對話框與串流步驟事件（少一點磁磚地獄，多一點終端機式清楚）。
+- **安裝器助手（Install Helper）**改版：使用彈出式對話框與串流步驟事件（少一點磁磚地獄，多一點終端機式清楚）。
 - 透過 **WAL** + **busy_timeout** 改善資料庫寫入延遲，避免介面因等待而卡住（不再讓 UI 跟網路惡作劇硬碰硬）。
 - 強化持續進行中的流程：包含 session 關閉不卡住彼此、以及 AI 串流渲染更順暢。
 
@@ -1881,64 +1881,64 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - perf(sessions)：解除跨 session FTP/VNC 關閉互相卡住；強化 WebView 啟動。 (自 https://github.com/ryantsai/KKTerm/pull/174)
 
 ## Highlights
-- **Installer Helper (Windows):** New Settings control to hide the Installer Helper **icon on the Activity Rail**.
+- **Install Helper (Windows):** New Settings control to hide the Install Helper **icon on the Activity Rail**.
 - **Dashboard widgets:** Enable **widget file drag-and-drop** from Windows Explorer into AI Created Dashboard Widgets (and improved file bridge documentation).
 - **Dashboard AI Created Widgets:** Updated script editor flow for **Dashboard Widget Instance** script customization (view source now supports **Edit / Save / Cancel**).
 
 ## New
-- **Installer Helper module (Windows):** Adds an Installer Helper **Activity Rail Module** to install, update, and uninstall a curated Windows developer tools catalog. (PR [#167](https://github.com/ryantsai/KKTerm/pull/167), [#168](https://github.com/ryantsai/KKTerm/pull/168), [#170](https://github.com/ryantsai/KKTerm/pull/170), [#171](https://github.com/ryantsai/KKTerm/pull/171), [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
+- **Install Helper module (Windows):** Adds an Install Helper **Activity Rail Module** to install, update, and uninstall a curated Windows developer tools catalog. (PR [#167](https://github.com/ryantsai/KKTerm/pull/167), [#168](https://github.com/ryantsai/KKTerm/pull/168), [#170](https://github.com/ryantsai/KKTerm/pull/170), [#171](https://github.com/ryantsai/KKTerm/pull/171), [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
 
-- **Settings → Installer Helper:** Add a rail visibility toggle to control whether the Installer Helper icon appears on the Activity Rail. (PR [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
+- **Settings → Install Helper:** Add a rail visibility toggle to control whether the Install Helper icon appears on the Activity Rail. (PR [#172](https://github.com/ryantsai/KKTerm/pull/172) by @ryantsai)
 
 - **Dashboard AI script editing:** Advanced script editor for **Dashboard AI Created Widgets** with **Edit / Save / Cancel** in `View source`. (PR [#171](https://github.com/ryantsai/KKTerm/pull/171)? no—see commit below: sha `1c7cfde`)
 
 ## Improved
-- **Installer Helper UI:** Installer Helper icons now use a **grid view** with square tiles, status dots, and expanded details while keeping the existing install/uninstall/options/log layout. (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
-- **Installer Helper installs “stall” clarity:** Installer Helper now provides heartbeat-style progress behavior (helps distinguish “actually working” vs “hung while reading”). (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
-- **Installer Helper catalog trust model:** Switch Installer Helper catalog from **remote signed** to **compile-time bundled** (shipped with the KKTerm release). (PR [#170](https://github.com/ryantsai/KKTerm/pull/170) by @ryantsai; sha `7e55a5c`)
-- **Default rail visibility:** Installer Helper rail icon defaults to **hidden** until users opt in from **Settings → Installer Helper**. (sha `171c53c`; Settings update in PR [#172](https://github.com/ryantsai/KKTerm/pull/172))
+- **Install Helper UI:** Install Helper icons now use a **grid view** with square tiles, status dots, and expanded details while keeping the existing install/uninstall/options/log layout. (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
+- **Install Helper installs “stall” clarity:** Install Helper now provides heartbeat-style progress behavior (helps distinguish “actually working” vs “hung while reading”). (PR [#171](https://github.com/ryantsai/KKTerm/pull/171) by @ryantsai; sha `bf1ad69`)
+- **Install Helper catalog trust model:** Switch Install Helper catalog from **remote signed** to **compile-time bundled** (shipped with the KKTerm release). (PR [#170](https://github.com/ryantsai/KKTerm/pull/170) by @ryantsai; sha `7e55a5c`)
+- **Default rail visibility:** Install Helper rail icon defaults to **hidden** until users opt in from **Settings → Install Helper**. (sha `171c53c`; Settings update in PR [#172](https://github.com/ryantsai/KKTerm/pull/172))
 - **Widget file drag-and-drop (Windows):** Enable **drag-and-drop** for widget files from **Windows Explorer** into AI-created dashboard widgets. (PR [#168](https://github.com/ryantsai/KKTerm/pull/168) by @ryantsai; sha `847b9a7`)
 
 ## Fixed
-- **Installer Helper review issues:** Address review feedback across installer helper logic/UI. (sha `d76404d`)
+- **Install Helper review issues:** Address review feedback across install helper logic/UI. (sha `d76404d`)
 - **Dashboard data safety across schema bumps:** Stop wiping Dashboard tables on every `SCHEMA_USER_VERSION` bump; dashboard data now drops only for `< 16`. (sha `3509d48`)
 
 ## Internal
 - **Connection/session credentials:** Add reusable connection password credentials work (docs + storage/secrets related). (sha `afeabda`)
 - **Custom title bar mandatory:** Make custom title bar mandatory. (sha `8de0362`)
 - Version/build bump: `vsrsion bump` (sha `44a3eac`)
-- Merge housekeeping: `Merge branch 'main'...` (sha `c78d005`), `Merge main into Installer Helper branch` (sha `2299dca`), `Merge pull request...` (shas `838e4c5`, `3509d48`, `c78d005` etc.)
+- Merge housekeeping: `Merge branch 'main'...` (sha `c78d005`), `Merge main into Install Helper branch` (sha `2299dca`), `Merge pull request...` (shas `838e4c5`, `3509d48`, `c78d005` etc.)
 
 ---
 
 ## 亮點
-- **Installer Helper（Windows）：** 新增 Settings 選項，可隱藏 **活動軌道（Activity Rail）** 上的 Installer Helper 圖示。
+- **Install Helper（Windows）：** 新增 Settings 選項，可隱藏 **活動軌道（Activity Rail）** 上的 Install Helper 圖示。
 - **儀表板小工具：** 讓你可以把 **小工具檔案** 從 **Windows 檔案總管（Explorer）** 拖曳到 AI 建立的儀表板小工具中（也補強了檔案橋接文件）。
 - **Dashboard AI 建立小工具：** 已更新腳本編輯器流程；在 `View source` 現在支援 **編輯 / 儲存 / 取消**。
 
 ## 新功能
-- **Installer Helper 模組（Windows）：** 新增 Installer Helper **活動軌道模組**，可安裝、更新與解除安裝精選的 Windows 開發工具目錄。（PR [#167](https://github.com/ryantsai/KKTerm/pull/167)、[#168](https://github.com/ryantsai/KKTerm/pull/168)、[#170](https://github.com/ryantsai/KKTerm/pull/170)、[#171](https://github.com/ryantsai/KKTerm/pull/171)、[#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
+- **Install Helper 模組（Windows）：** 新增 Install Helper **活動軌道模組**，可安裝、更新與解除安裝精選的 Windows 開發工具目錄。（PR [#167](https://github.com/ryantsai/KKTerm/pull/167)、[#168](https://github.com/ryantsai/KKTerm/pull/168)、[#170](https://github.com/ryantsai/KKTerm/pull/170)、[#171](https://github.com/ryantsai/KKTerm/pull/171)、[#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
 
-- **Settings → Installer Helper：** 新增活動軌道圖示顯示/隱藏切換。 （PR [#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
+- **Settings → Install Helper：** 新增活動軌道圖示顯示/隱藏切換。 （PR [#172](https://github.com/ryantsai/KKTerm/pull/172) 由 @ryantsai 提供）
 
 - **Dashboard AI 腳本編輯：** Dashboard AI 建立小工具的進階腳本編輯器，在 `View source` 支援 **編輯 / 儲存 / 取消**。（提交 `1c7cfde`）
 
 ## 改進
-- **Installer Helper 介面：** 圖示改為 **格狀網格（grid view）**，方形磁貼搭配狀態圓點；點擊磁貼會展開詳細內容，同時保留既有的安裝/解除安裝/選項/記錄區塊。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
-- **Installer Helper 安裝更清楚：** 增加「心跳式」進度行為，幫助分辨到底是仍在運作，還是卡在讀取過程。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
-- **Installer Helper 目錄（catalog）信任模型：** 將目錄由 **遠端簽章（remote signed）** 改為 **編譯時打包（compile-time bundled）**（隨 KKTerm 發行版本一起提供）。（PR [#170](https://github.com/ryantsai/KKTerm/pull/170) 由 @ryantsai；sha `7e55a5c`）
-- **預設活動軌道顯示：** Installer Helper 圖示預設為 **隱藏**，直到你在 **Settings → Installer Helper** 自行選擇啟用。（sha `171c53c`；Settings 更新在 PR [#172](https://github.com/ryantsai/KKTerm/pull/172)）
+- **Install Helper 介面：** 圖示改為 **格狀網格（grid view）**，方形磁貼搭配狀態圓點；點擊磁貼會展開詳細內容，同時保留既有的安裝/解除安裝/選項/記錄區塊。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
+- **Install Helper 安裝更清楚：** 增加「心跳式」進度行為，幫助分辨到底是仍在運作，還是卡在讀取過程。（PR [#171](https://github.com/ryantsai/KKTerm/pull/171) 由 @ryantsai；sha `bf1ad69`）
+- **Install Helper 目錄（catalog）信任模型：** 將目錄由 **遠端簽章（remote signed）** 改為 **編譯時打包（compile-time bundled）**（隨 KKTerm 發行版本一起提供）。（PR [#170](https://github.com/ryantsai/KKTerm/pull/170) 由 @ryantsai；sha `7e55a5c`）
+- **預設活動軌道顯示：** Install Helper 圖示預設為 **隱藏**，直到你在 **Settings → Install Helper** 自行選擇啟用。（sha `171c53c`；Settings 更新在 PR [#172](https://github.com/ryantsai/KKTerm/pull/172)）
 - **Windows 小工具拖曳檔案：** 啟用從 **Windows 檔案總管（Explorer）** 拖曳小工具檔案到 AI 建立的儀表板小工具。（PR [#168](https://github.com/ryantsai/KKTerm/pull/168) 由 @ryantsai；sha `847b9a7`）
 
 ## 修正
-- **Installer Helper 審查問題修正：** 修正 Installer Helper 相關流程/介面中的審查回饋。（sha `d76404d`）
+- **Install Helper 審查問題修正：** 修正 Install Helper 相關流程/介面中的審查回饋。（sha `d76404d`）
 - **儀表板資料在 schema 更新時的保護：** 不再因為任何 `SCHEMA_USER_VERSION` 提升就清空 Dashboard 表；Dashboard 只會在 `< 16` 時才會被移除。（sha `3509d48`）
 
 ## Internal
 - **連線/Session 密碼憑證：** 新增可重複使用的連線密碼憑證相關工作（含文件與 storage/secrets）。（sha `afeabda`）
 - **自訂標題列強制：** 使自訂標題列成為必填。（sha `8de0362`）
 - 版本/建置更新：`vsrsion bump`（sha `44a3eac`）
-- 合併/維護：`Merge branch 'main'...`（sha `c78d005`）、`Merge main into Installer Helper branch`（sha `2299dca`）、各種 PR 合併（shas `838e4c5`、`3509d48`、`c78d005` 等）
+- 合併/維護：`Merge branch 'main'...`（sha `c78d005`）、`Merge main into Install Helper branch`（sha `2299dca`）、各種 PR 合併（shas `838e4c5`、`3509d48`、`c78d005` 等）
 
 ## Highlights
 - Easier-to-use SFTP toolbar browser via a popup (because rummaging around tabs is a chore).
@@ -1952,7 +1952,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - **Improve RDP Session visibility** behavior. *(55aacd0)*
 
 ## Fixed
-- **RDP session visibility** and **native URL** issues addressed. *(55aacd0)*  
+- **RDP session visibility** and **native URL** issues addressed. *(55aacd0)*
 - **SFTP toolbar browser presentation** corrected to use a popup. *(c5c903b)*
 
 ## Internal
@@ -2047,17 +2047,17 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 - Prevents “missing window” surprises on Windows: if the main window is restored off-screen, KKTerm relocates it so you can get back to your Tabs and Panes without the hunt.
 
 ## New
-- Added a Codex `/wham/usage` fallback path for AI coding usage normalization (uses `~/.codex/auth.json` or `CODEX_HOME/auth.json`, with HTTPS/local-only filtering where applicable).  
+- Added a Codex `/wham/usage` fallback path for AI coding usage normalization (uses `~/.codex/auth.json` or `CODEX_HOME/auth.json`, with HTTPS/local-only filtering where applicable).
   - Preserves the full `/wham/usage` payload as raw provider JSON when this fallback path is used (so quota/limit details remain available for future explicit UI expansion).
 
 ## Improved
-- Improved Windows window restore behavior: KKTerm now detects when the main window rect doesn’t overlap the Windows virtual desktop and moves/resizes the window to `0,0` at `1440x940`.  
+- Improved Windows window restore behavior: KKTerm now detects when the main window rect doesn’t overlap the Windows virtual desktop and moves/resizes the window to `0,0` at `1440x940`.
   - Runs during startup restore, tray restore, and second-instance focus.
 
 ## Fixed
-- Removed the SSH/local Terminal Codex/Claude Code detection path entirely (and its UI/badge wiring), including:  
-  - Deleted `agentDetection.ts` and its associated detection test wiring  
-  - Removed terminal agent badge CSS/locale key and updated the terminal manual to stop documenting the badge  
+- Removed the SSH/local Terminal Codex/Claude Code detection path entirely (and its UI/badge wiring), including:
+  - Deleted `agentDetection.ts` and its associated detection test wiring
+  - Removed terminal agent badge CSS/locale key and updated the terminal manual to stop documenting the badge
   - Added a guard test (`no-terminal-agent-detection.test.mjs`) to prevent the detection file/wiring from creeping back in
 
 - Installer smoke test cleanup: during normal cleanup it now removes `HKCU\Software\Ryan Tsai\KKTerm` in `scripts/smoke-installer.ps1`, while skipping this deletion when `-KeepInstall` is used—matching the existing “keep cleanup artifacts” behavior. (Yes, your registry should be clean—unless you asked it not to be.)
@@ -2083,7 +2083,7 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 
 ## Internal
 - **Removed public promotion log** from `docs/PROMOTION.md`. *(d99a366)*
-- **Promotion-related docs updates** (OpenSourceAlternative, outreach email, Tauri, landing pages, feedback kit, etc.). *(2113b98, 6e9835e, 02228f8, bd61780, c6d0404, 5ca106a, e363c13, 75d8323, 5036e49, a128ba2, a6df7a7)*  
+- **Promotion-related docs updates** (OpenSourceAlternative, outreach email, Tauri, landing pages, feedback kit, etc.). *(2113b98, 6e9835e, 02228f8, bd61780, c6d0404, 5ca106a, e363c13, 75d8323, 5036e49, a128ba2, a6df7a7)*
 - **Version bump / lockfile updates**. *(7949922)*
 
 ## Highlights
@@ -2092,20 +2092,20 @@ Compare: https://github.com/ryantsai/KKTerm/compare/v0.1.48...v0.1.49
 
 ## Internal
 
-- Updated Cargo lockfiles (`.env.example`, `src-tauri/Cargo.lock`) as part of the v0.1.34 release.  
+- Updated Cargo lockfiles (`.env.example`, `src-tauri/Cargo.lock`) as part of the v0.1.34 release.
   - Commit: `e2f856e` — “updated cargo lock”
 
 ## Highlights
-- Dashboard Connection widget Session/Tab/Pane creation now resolves tmux IDs in an effect (reducing render-time churn and avoiding brief ID reuse when switching Connections).  
+- Dashboard Connection widget Session/Tab/Pane creation now resolves tmux IDs in an effect (reducing render-time churn and avoiding brief ID reuse when switching Connections).
 - System tray/assistant “external-open” events now switch the app shell to the Workspace Module before opening/focusing the target Connection.
 
 ## New
 - Added comments to `.env.example` (because even terminals like a little guidance).
 
 ## Improved
-- Dashboard Connection widget: resolve tmux id in an effect using the reuse-first helper, then create the Tab/Pane from that id (instead of calling `appendTmuxSessionId()` during render). Also keyed by `connection.id` to avoid momentary reuse while switching widget Connections.  
+- Dashboard Connection widget: resolve tmux id in an effect using the reuse-first helper, then create the Tab/Pane from that id (instead of calling `appendTmuxSessionId()` during render). Also keyed by `connection.id` to avoid momentary reuse while switching widget Connections.
   - PRs/changes include `tests/dashboard-connection-widget-tmux.test.mjs`, `src/modules/dashboard/widgets/builtin/connections/ConnectionWidget.tsx`, and `docs/manual/10-dashboard.md` (via the same update set as https://github.com/ryantsai/KKTerm/pull/139).
-- System tray behavior note updated in the manual to match the updated external-open flow.  
+- System tray behavior note updated in the manual to match the updated external-open flow.
   - Updated: `docs/manual/01-getting-started.md`
 
 ## Fixed

@@ -119,7 +119,7 @@ const CHAPTERS: &[ManualChapter] = &[
         slug: "installer",
         order: 18,
         filename: "18-installer.md",
-        title: "Installer Helper",
+        title: "Install Helper",
     },
 ];
 

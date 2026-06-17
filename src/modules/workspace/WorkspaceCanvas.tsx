@@ -353,7 +353,7 @@ export function WorkspaceCanvas({
           );
         }
         if (tab.kind === "fileViewer") {
-          // File Viewer Connection: open a single local file in the universal
+          // Document Connection: open a single local file in the universal
           // viewer / light editor (no network session).
           return (
             <FileViewerWorkspace

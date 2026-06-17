@@ -98,7 +98,7 @@ make that build behave natively rather than under emulation.
 
 ### Addressed
 
-1. **Installer Helper `downloadInstaller` fallbacks are now arch-aware.** The
+1. **Install Helper `downloadInstaller` fallbacks are now arch-aware.** The
    `downloadInstaller` provider schema accepts optional `arm64Url` /
    `arm64FileName` fields. On a native ARM64 build (`cfg!(target_arch =
    "aarch64")`), `Provider::download_target` prefers the ARM64 asset and

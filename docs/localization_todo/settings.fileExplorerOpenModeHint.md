@@ -7,7 +7,7 @@
 - **User flow**: The user sees this helper text under the File Explorer open-mode selector in Settings -> Workspace.
 - **Tone**: direct setup guidance
 - **Placeholders**: none
-- **Context/meaning**: "Inside KKTerm" refers to the inline File Viewer/light editor. "Default app" means the OS-associated external app for the file type.
+- **Context/meaning**: "Inside KKTerm" refers to the inline Document/light editor. "Default app" means the OS-associated external app for the file type.
 - **Domain notes**: Preserve KKTerm, File Explorer, and operating-system default app concepts.
 
 <!--

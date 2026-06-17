@@ -16,7 +16,7 @@ test("installed n8n dialog exposes Run and Open web UI actions", async () => {
   assert.match(
     source,
     /installer_run_web_ui/,
-    "Run should invoke the dedicated Installer Helper web UI runner",
+    "Run should invoke the dedicated Install Helper web UI runner",
   );
   assert.match(
     source,
@@ -226,6 +226,6 @@ test("installer command boundary keeps blocking work off the UI thread", async (
   assert.match(
     source,
     /tauri::async_runtime::spawn_blocking/,
-    "blocking Installer Helper operations should use Tauri's blocking pool",
+    "blocking Install Helper operations should use Tauri's blocking pool",
   );
 });

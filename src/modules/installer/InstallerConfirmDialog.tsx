@@ -1,4 +1,4 @@
-// Installer Helper confirm dialog. Built on the shared ConfirmSheet template so
+// Install Helper confirm dialog. Built on the shared ConfirmSheet template so
 // it matches the app's confirmation-dialog design language (tinted glyph, single
 // title, platform-ordered footer). Unlike the generic ConfirmDialog it accepts a
 // structured `items` list to render bullet-list bodies for prerequisite plans and

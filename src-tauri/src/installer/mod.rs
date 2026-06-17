@@ -1,4 +1,4 @@
-// Installer Helper Module — Windows dev-tool installer.
+// Install Helper Module — Windows dev-tool installer.
 //
 // The catalog is compiled into the binary from `installer/catalog.v1.json`
 // at build time; it ships with each KKTerm release. See ADR 0008 for the

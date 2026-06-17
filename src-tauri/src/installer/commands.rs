@@ -1,4 +1,4 @@
-// Tauri command surface for the Installer Helper Module. Commands are kept
+// Tauri command surface for the Install Helper Module. Commands are kept
 // thin — they look up the recipe in the cached catalog, dispatch to
 // detect/install/uninstall, and emit ProgressEvents on
 // `installer://progress`. Long-running work runs on a dedicated worker
@@ -1089,7 +1089,7 @@ fn service_install_script(service: &ManagedServiceAffordance) -> String {
         "setlocal".to_string(),
         "where nssm >nul 2>nul".to_string(),
         "if errorlevel 1 (".to_string(),
-        "  echo NSSM is required. Install NSSM from KKTerm Installer Helper first.".to_string(),
+        "  echo NSSM is required. Install NSSM from KKTerm Install Helper first.".to_string(),
         "  exit /b 2".to_string(),
         ")".to_string(),
     ];
@@ -1168,7 +1168,7 @@ fn service_program_for_install_script(program: &str) -> (Vec<String>, String, Ve
                 "set \"KKTERM_SERVICE_NODE=\"".to_string(),
                 "for %%I in (node.exe) do set \"KKTERM_SERVICE_NODE=%%~$PATH:I\"".to_string(),
                 "if not defined KKTERM_SERVICE_NODE (".to_string(),
-                "  echo node.exe is required. Install Node.js from KKTerm Installer Helper first."
+                "  echo node.exe is required. Install Node.js from KKTerm Install Helper first."
                     .to_string(),
                 "  exit /b 2".to_string(),
                 ")".to_string(),
@@ -1189,18 +1189,18 @@ fn service_program_for_install_script(program: &str) -> (Vec<String>, String, Ve
                     npm_program()
                 ),
                 "if not defined KKTERM_SERVICE_NODE (".to_string(),
-                "  echo node.exe is required. Install Node.js from KKTerm Installer Helper first."
+                "  echo node.exe is required. Install Node.js from KKTerm Install Helper first."
                     .to_string(),
                 "  exit /b 2".to_string(),
                 ")".to_string(),
                 "if not defined KKTERM_NPM_CMD (".to_string(),
-                "  echo npm.cmd is required. Install Node.js from KKTerm Installer Helper first."
+                "  echo npm.cmd is required. Install Node.js from KKTerm Install Helper first."
                     .to_string(),
                 "  exit /b 2".to_string(),
                 ")".to_string(),
                 "for %%I in (\"%KKTERM_NPM_CMD%\") do set \"KKTERM_NPM_CLI=%%~dpInode_modules\\npm\\bin\\npm-cli.js\"".to_string(),
                 "if not exist \"%KKTERM_NPM_CLI%\" (".to_string(),
-                "  echo npm-cli.js was not found beside npm.cmd. Reinstall Node.js from KKTerm Installer Helper.".to_string(),
+                "  echo npm-cli.js was not found beside npm.cmd. Reinstall Node.js from KKTerm Install Helper.".to_string(),
                 "  exit /b 2".to_string(),
                 ")".to_string(),
             ],
@@ -1218,7 +1218,7 @@ fn service_remove_script(service_name: &str) -> String {
         "setlocal".to_string(),
         "where nssm >nul 2>nul".to_string(),
         "if errorlevel 1 (".to_string(),
-        "  echo NSSM is required. Install NSSM from KKTerm Installer Helper first.".to_string(),
+        "  echo NSSM is required. Install NSSM from KKTerm Install Helper first.".to_string(),
         "  exit /b 2".to_string(),
         ")".to_string(),
         format!("nssm stop {} >nul 2>nul", service_name),
@@ -1234,7 +1234,7 @@ fn service_control_script(service_name: &str, action: &str) -> String {
         "setlocal".to_string(),
         "where nssm >nul 2>nul".to_string(),
         "if errorlevel 1 (".to_string(),
-        "  echo NSSM is required. Install NSSM from KKTerm Installer Helper first.".to_string(),
+        "  echo NSSM is required. Install NSSM from KKTerm Install Helper first.".to_string(),
         "  exit /b 2".to_string(),
         ")".to_string(),
         format!("nssm {action} {}", service_name),

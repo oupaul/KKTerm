@@ -19,7 +19,7 @@ v0.1 includes:
 - local terminal
 - SSH terminal
 - SFTP dual-pane file manager
-- left activity rail with Workspace, Dashboard, Installer Helper, and Settings entries
+- left activity rail with Workspace, Dashboard, Install Helper, and Settings entries
 - left-side connection tree with root Connections and optional nested folders
 - SSH config import command support, with the user-facing entry point deferred from the simplified chrome
 - SQLite connection/settings storage

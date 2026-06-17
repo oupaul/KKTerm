@@ -697,7 +697,7 @@
     "deleteError": "Could not update screenshots: {{message}}"
   },
   "installer": {
-    "title": "Installer Helper",
+    "title": "Install Helper",
     "powerShell7": {
       "installTitle": "Install PowerShell 7?",
       "installPrompt": "PowerShell 7 (pwsh) is not installed. Install it now and open it, or use Windows PowerShell instead?",
@@ -705,7 +705,7 @@
       "installFailed": "PowerShell 7 install failed, opening Windows PowerShell instead. {{message}}"
     },
     "subtitle": "Install and manage AI tool stacks on Windows",
-    "railLabel": "Installer Helper",
+    "railLabel": "Install Helper",
     "refresh": "Refresh",
     "checkUpdates": "Check for updates",
     "checkingForUpdates": "Checking for updates",
@@ -867,7 +867,7 @@
     "sectionDashboard": "Dashboard",
     "sectionWorkspace": "Workspace",
     "sectionDontSleep": "Don't Sleep",
-    "sectionInstaller": "Installer Helper",
+    "sectionInstaller": "Install Helper",
     "dashboardTitle": "Dashboard Settings",
     "dashboardDescription": "Configure default layout, widget behavior, and view management for the Dashboard.",
     "sectionCredentials": "Credentials",
@@ -1372,15 +1372,15 @@
     "activityRail": "Activity Rail",
     "installerRail": "Activity Rail",
     "installerShowOnRail": "Show in Activity Rail",
-    "installerShowOnRailDesc": "When enabled, the Installer Helper icon appears on the Activity Rail.",
+    "installerShowOnRailDesc": "When enabled, the Install Helper icon appears on the Activity Rail.",
     "installerUpdateChecks": "Update checks",
     "installerCheckInterval": "Check for latest versions",
-    "installerCheckIntervalDesc": "How often the Installer Helper automatically checks for the latest available versions when you open it. Use Refresh to check immediately.",
+    "installerCheckIntervalDesc": "How often the Install Helper automatically checks for the latest available versions when you open it. Use Refresh to check immediately.",
     "installerCheckInterval3600": "Every hour",
     "installerCheckInterval86400": "Every day",
     "installerCheckInterval604800": "Every week",
     "installerCheckInterval2592000": "Every month",
-    "installerSaved": "Installer Helper settings saved.",
+    "installerSaved": "Install Helper settings saved.",
     "sectionUrl": "URL",
     "urlDefaults": "URL settings",
     "urlSecurity": "URL security",
@@ -1821,7 +1821,7 @@
     "localFilesSubtitle": "Local file browser",
     "localFilesRootDirectory": "Starting folder",
     "localFilesRootDirectoryPlaceholder": "Home folder",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3202,7 +3202,7 @@
     "workspaceCreated": "Workspace \"{{name}}\" created",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

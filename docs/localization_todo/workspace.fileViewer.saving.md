@@ -7,7 +7,7 @@
 - **User flow**: Shown on the Save button while the atomic save is in progress.
 - **Tone**: concise/neutral
 - **Placeholders**: none
-- **Context/meaning**: File Viewer Phase 3 — light editing of text/code files with an atomic safe-save pipeline.
+- **Context/meaning**: Document Phase 3 — light editing of text/code files with an atomic safe-save pipeline.
 - **Domain notes**: "Save" is the file-write action; keep distinct from any session/connection save. Ctrl/Cmd refers to the platform modifier key.
 
 <!--

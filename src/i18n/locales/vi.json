@@ -710,6 +710,29 @@
     "checkUpdates": "Kiểm tra cập nhật",
     "checkingForUpdates": "Đang kiểm tra cập nhật",
     "updateAll": "Cập nhật tất cả",
+    "search": "Tìm kiếm công cụ",
+    "view": {
+      "list": "Dạng danh sách",
+      "gallery": "Dạng thư viện"
+    },
+    "sidebar": {
+      "status": "Trạng thái",
+      "categories": "Danh mục",
+      "allTools": "Tất cả công cụ",
+      "updates": "Bản cập nhật",
+      "show": "Hiện thanh bên",
+      "hide": "Ẩn thanh bên"
+    },
+    "listColumn": {
+      "name": "Tên",
+      "status": "Trạng thái",
+      "action": "Hành động"
+    },
+    "footer": {
+      "tools": "{{count}} công cụ",
+      "installed": "{{count}} đã cài đặt",
+      "updates": "{{count}} bản cập nhật có sẵn"
+    },
     "section": {
       "installed": "Đã cài đặt",
       "available": "Có sẵn",
@@ -775,7 +798,8 @@
       "neverChecked": "Chưa bao giờ"
     },
     "empty": {
-      "loading": "Đang tải danh mục…"
+      "loading": "Đang tải danh mục…",
+      "noMatches": "Không có công cụ nào khớp với tìm kiếm của bạn."
     },
     "confirm": {
       "installTitle": "Cài đặt {{name}}?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "Trình duyệt tệp cục bộ",
     "localFilesRootDirectory": "Thư mục bắt đầu",
     "localFilesRootDirectoryPlaceholder": "Thư mục chính",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "Đã tạo không gian làm việc \"{{name}}\"",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

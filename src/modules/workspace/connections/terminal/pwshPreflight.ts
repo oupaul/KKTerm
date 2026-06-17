@@ -18,7 +18,7 @@ export interface TerminalLineSink {
  *
  * When the requested shell is pwsh on Windows but pwsh is not installed, this
  * prompts the user (translated native dialog). On accept it installs
- * PowerShell 7 via the Installer Helper engine, streaming progress into the
+ * PowerShell 7 via the Install Helper engine, streaming progress into the
  * terminal pane, then returns `pwsh.exe` on success. On decline or any
  * failure it returns `powershell.exe` so the pane always opens a usable shell.
  * For every other shell (or non-Windows), it returns the input unchanged.

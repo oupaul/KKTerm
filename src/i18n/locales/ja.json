@@ -710,6 +710,29 @@
     "checkUpdates": "更新を確認",
     "checkingForUpdates": "更新を確認中",
     "updateAll": "すべて更新",
+    "search": "ツールを検索",
+    "view": {
+      "list": "リスト表示",
+      "gallery": "ギャラリー表示"
+    },
+    "sidebar": {
+      "status": "状態",
+      "categories": "カテゴリ",
+      "allTools": "すべてのツール",
+      "updates": "更新",
+      "show": "サイドバーを表示",
+      "hide": "サイドバーを非表示"
+    },
+    "listColumn": {
+      "name": "名前",
+      "status": "状態",
+      "action": "操作"
+    },
+    "footer": {
+      "tools": "{{count}} 個のツール",
+      "installed": "{{count}} 個インストール済み",
+      "updates": "{{count}} 件の更新があります"
+    },
     "section": {
       "installed": "インストール済み",
       "available": "利用可能",
@@ -775,7 +798,8 @@
       "neverChecked": "未確認"
     },
     "empty": {
-      "loading": "カタログを読み込み中…"
+      "loading": "カタログを読み込み中…",
+      "noMatches": "検索に一致するツールはありません。"
     },
     "confirm": {
       "installTitle": "{{name}} をインストールしますか？",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "ローカル ファイル ブラウザー",
     "localFilesRootDirectory": "開始フォルダー",
     "localFilesRootDirectoryPlaceholder": "ホーム フォルダー",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "ワークスペース \"{{name}}\" を作成しました",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

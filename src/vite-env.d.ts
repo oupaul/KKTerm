@@ -25,7 +25,7 @@ declare module "qrcode" {
 }
 
 // The `papaparse` package's bundled types are not installed; declare the small
-// synchronous parse surface the File Viewer's CSV/TSV table mode uses.
+// synchronous parse surface the Document's CSV/TSV table mode uses.
 declare module "papaparse" {
   interface ParseConfig {
     delimiter?: string;

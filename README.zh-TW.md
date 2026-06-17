@@ -80,7 +80,7 @@
 - 一個 **Dashboard**，你可以對 AI 說 *「幫我做一個每 30 秒 ping 一次路由器的 widget」*，它就會在你的網格上憑空出現，而且關在自己的沙箱裡。
 - **能自動 attach 回遠端 `claude` / `codex` session 的 SSH pane**，這樣每次 Wi-Fi 鬧脾氣，你那個跑了六小時的工作也不會陣亡。
 - 一個 **AI 用量計**，讓你不會凌晨三點才被 rate-limit 牆撞個正著。
-- 一個 **Installer Helper**，幫你找到、安裝、更新並啟動那些平常得翻十個瀏覽器分頁才找得到的 Windows 開發工具。
+- 一個 **Install Helper**，幫你找到、安裝、更新並啟動那些平常得翻十個瀏覽器分頁才找得到的 Windows 開發工具。
 - Dashboard 用的**二十五種 canvas 動畫背景**（對，包括 `matrix`），因為我們也沒在客氣。
 
 而最棒的部分：AI 助理可以把一句話變成一個你真的會繼續使用的小型 Dashboard 工具。

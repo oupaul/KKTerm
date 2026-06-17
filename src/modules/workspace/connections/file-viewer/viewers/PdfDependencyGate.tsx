@@ -9,7 +9,7 @@ import { PdfViewer } from "./PdfViewer";
 /**
  * Phase 2 external-dependency gate for PDF. Resolves the Poppler renderer
  * (`file_view_pdf_status`); when present it mounts the viewer, otherwise it
- * prompts to install the dependency on demand through the Installer Helper
+ * prompts to install the dependency on demand through the Install Helper
  * (Windows) or to provide it via PATH (other platforms), then re-checks.
  */
 export function PdfDependencyGate({ filePath }: { filePath: string; isActive: boolean }) {

@@ -1,4 +1,4 @@
-// Centered, app-owned dialog for one Installer Helper tool. Replaces the
+// Centered, app-owned dialog for one Install Helper tool. Replaces the
 // inline expanding tile body — single click on a tile opens this. Modes:
 //   * "info" — installed: location, provider, versions, pin, update/uninstall.
 //             not installed: homepage, release notes, latest, prereqs, options.

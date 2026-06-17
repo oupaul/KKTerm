@@ -1,4 +1,4 @@
-// Behavioral tests for the File Viewer detection model: extension and
+// Behavioral tests for the Document detection model: extension and
 // magic-byte routing to viewer kinds, the always-available text/hex fallbacks,
 // and the text-vs-bytes load decision.
 import assert from "node:assert/strict";

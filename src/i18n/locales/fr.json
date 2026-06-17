@@ -710,6 +710,29 @@
     "checkUpdates": "Rechercher des mises à jour",
     "checkingForUpdates": "Vérification des mises à jour",
     "updateAll": "Tout mettre à jour",
+    "search": "Rechercher des outils",
+    "view": {
+      "list": "Vue liste",
+      "gallery": "Vue galerie"
+    },
+    "sidebar": {
+      "status": "État",
+      "categories": "Catégories",
+      "allTools": "Tous les outils",
+      "updates": "Mises à jour",
+      "show": "Afficher la barre latérale",
+      "hide": "Masquer la barre latérale"
+    },
+    "listColumn": {
+      "name": "Nom",
+      "status": "État",
+      "action": "Action"
+    },
+    "footer": {
+      "tools": "{{count}} outils",
+      "installed": "{{count}} installés",
+      "updates": "{{count}} mises à jour disponibles"
+    },
     "section": {
       "installed": "Installé",
       "available": "Disponible",
@@ -775,7 +798,8 @@
       "neverChecked": "Jamais"
     },
     "empty": {
-      "loading": "Chargement du catalogue…"
+      "loading": "Chargement du catalogue…",
+      "noMatches": "Aucun outil ne correspond à votre recherche."
     },
     "confirm": {
       "installTitle": "Installer {{name}} ?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "Navigateur de fichiers local",
     "localFilesRootDirectory": "Dossier de départ",
     "localFilesRootDirectoryPlaceholder": "Dossier personnel",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "Espace de travail \"{{name}}\" créé",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

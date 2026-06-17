@@ -1,4 +1,4 @@
-# ADR 0008: Installer Helper — Bundled Catalog (supersedes ADR 0007)
+# ADR 0008: Install Helper — Bundled Catalog (supersedes ADR 0007)
 
 ## Status
 
@@ -6,7 +6,7 @@ Accepted. Supersedes [ADR 0007](0007-installer-helper-remote-catalog.md).
 
 ## Context
 
-ADR 0007 chose to ship the Installer Helper catalog as a remote signed
+ADR 0007 chose to ship the Install Helper catalog as a remote signed
 JSON fetched from `raw.githubusercontent.com` and verified against an
 Ed25519 public key compiled into the binary. The rationale was that new
 tools could be added to the catalog without releasing a new KKTerm
@@ -31,7 +31,7 @@ and found:
    long-term trust anchor.** When that lands, every byte that ships
    with KKTerm — including the catalog — gets the same integrity
    guarantee from the same signing operation that already happens at
-   release time. The Installer Helper does not need its own parallel
+   release time. The Install Helper does not need its own parallel
    trust boundary.
 
 ## Decision
@@ -67,7 +67,7 @@ no source-kind discriminator.
 ## Adding a recipe (developer checklist)
 
 A catalog entry is **necessary but not sufficient** to make a tool show
-up in the Installer Helper. The UI does not render by the catalog's
+up in the Install Helper. The UI does not render by the catalog's
 `category` field — it renders by a hardcoded per-section allow-list of
 recipe ids. A valid recipe that is not in that list is silently
 invisible. This has bitten us several times (most recently

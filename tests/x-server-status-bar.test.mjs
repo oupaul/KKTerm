@@ -28,7 +28,7 @@ test("X server status indicator is settings-derived and renders before Don't Sle
   assert.doesNotMatch(rustSource, /X server status/);
 });
 
-test("VcXsrv is listed as an Installer Helper utility", async () => {
+test("VcXsrv is listed as an Install Helper utility", async () => {
   const installerSource = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",

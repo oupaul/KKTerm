@@ -710,6 +710,29 @@
     "checkUpdates": "Periksa pembaruan",
     "checkingForUpdates": "Memeriksa pembaruan",
     "updateAll": "Perbarui semua",
+    "search": "Cari alat",
+    "view": {
+      "list": "Tampilan daftar",
+      "gallery": "Tampilan galeri"
+    },
+    "sidebar": {
+      "status": "Status",
+      "categories": "Kategori",
+      "allTools": "Semua alat",
+      "updates": "Pembaruan",
+      "show": "Tampilkan sidebar",
+      "hide": "Sembunyikan sidebar"
+    },
+    "listColumn": {
+      "name": "Nama",
+      "status": "Status",
+      "action": "Tindakan"
+    },
+    "footer": {
+      "tools": "{{count}} alat",
+      "installed": "{{count}} terpasang",
+      "updates": "{{count}} pembaruan tersedia"
+    },
     "section": {
       "installed": "Terpasang",
       "available": "Tersedia",
@@ -775,7 +798,8 @@
       "neverChecked": "Belum pernah"
     },
     "empty": {
-      "loading": "Memuat katalog…"
+      "loading": "Memuat katalog…",
+      "noMatches": "Tidak ada alat yang cocok dengan pencarian Anda."
     },
     "confirm": {
       "installTitle": "Instal {{name}}?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "Browser file lokal",
     "localFilesRootDirectory": "Folder awal",
     "localFilesRootDirectoryPlaceholder": "Folder beranda",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "Ruang kerja \"{{name}}\" dibuat",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

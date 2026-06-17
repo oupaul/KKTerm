@@ -710,6 +710,29 @@
     "checkUpdates": "Nach Updates suchen",
     "checkingForUpdates": "Auf Updates prüfen",
     "updateAll": "Alle aktualisieren",
+    "search": "Werkzeuge suchen",
+    "view": {
+      "list": "Listenansicht",
+      "gallery": "Galerieansicht"
+    },
+    "sidebar": {
+      "status": "Status",
+      "categories": "Kategorien",
+      "allTools": "Alle Werkzeuge",
+      "updates": "Updates",
+      "show": "Seitenleiste anzeigen",
+      "hide": "Seitenleiste ausblenden"
+    },
+    "listColumn": {
+      "name": "Name",
+      "status": "Status",
+      "action": "Aktion"
+    },
+    "footer": {
+      "tools": "{{count}} Werkzeuge",
+      "installed": "{{count}} installiert",
+      "updates": "{{count}} Updates verfügbar"
+    },
     "section": {
       "installed": "Installiert",
       "available": "Verfügbar",
@@ -775,7 +798,8 @@
       "neverChecked": "Nie"
     },
     "empty": {
-      "loading": "Katalog wird geladen…"
+      "loading": "Katalog wird geladen…",
+      "noMatches": "Keine Werkzeuge entsprechen Ihrer Suche."
     },
     "confirm": {
       "installTitle": "{{name}} installieren?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "Lokaler Dateibrowser",
     "localFilesRootDirectory": "Startordner",
     "localFilesRootDirectoryPlaceholder": "Persönlicher Ordner",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "Arbeitsbereich \"{{name}}\" erstellt",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

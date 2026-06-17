@@ -223,9 +223,9 @@ export interface FileBrowserPane {
 }
 
 /**
- * A File Viewer Pane (kind `fileViewer`) renders a single local file in the
+ * A Document Pane (kind `fileViewer`) renders a single local file in the
  * universal viewer/light-editor surface. The target file path is carried on
- * `connection.localStartupDirectory` (the File Viewer reuses that non-secret
+ * `connection.localStartupDirectory` (the Document reuses that non-secret
  * local-path slot for its file path), so no separate pane field is needed.
  */
 export interface FileViewerPane {

@@ -1,6 +1,6 @@
-// Shared definition of the Installer Helper auto update-check interval.
+// Shared definition of the Install Helper auto update-check interval.
 //
-// The Installer Helper does not re-fetch the latest available versions on
+// The Install Helper does not re-fetch the latest available versions on
 // every Module entry. Instead it refreshes at most once per interval: when the
 // Module becomes active it compares the last successful check timestamp against
 // this interval and only re-checks when the interval has elapsed. The chosen

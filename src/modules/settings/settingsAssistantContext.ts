@@ -167,16 +167,16 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
   },
   "installer-settings": {
     labelKey: "settings.sectionInstaller",
-    fallbackLabel: "Installer Helper",
+    fallbackLabel: "Install Helper",
     controls: [
       {
         key: "settings.installerShowOnRail",
-        description: "Show or hide the Installer Helper icon on the Activity Rail.",
+        description: "Show or hide the Install Helper icon on the Activity Rail.",
       },
       {
         key: "settings.installerCheckInterval",
         description:
-          "How often the Installer Helper auto-checks for the latest tool versions when opened (hour/day/week/month; default daily).",
+          "How often the Install Helper auto-checks for the latest tool versions when opened (hour/day/week/month; default daily).",
       },
     ],
   },

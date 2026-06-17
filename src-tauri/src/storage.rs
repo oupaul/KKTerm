@@ -257,7 +257,7 @@ CREATE TABLE IF NOT EXISTS ai_coding_usage_snapshots (
     captured_at TEXT NOT NULL
 );
 
--- Installer Helper per-tool state (ADR 0007). Installed-version is NEVER
+-- Install Helper per-tool state (ADR 0007). Installed-version is NEVER
 -- persisted: detection is always re-derived from the OS on demand. This
 -- table only stores user preferences (pinned) and the latest-version cache
 -- driven by the manual / opt-in-daily update check.
@@ -1863,7 +1863,7 @@ impl Storage {
                 params![DEFAULT_WORKSPACE_ID],
             )
             .map_err(to_storage_error)?;
-        // v25: File Viewer Connection kind. The connections table predates the
+        // v25: Document Connection kind. The connections table predates the
         // `fileView` connection_type, and SQLite can't alter a CHECK constraint
         // in place, so rebuild the table so the connection_type CHECK accepts the
         // new kind. By this point every upgrade path has the full current column

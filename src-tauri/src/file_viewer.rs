@@ -1,4 +1,4 @@
-//! Backend file-reading primitives for the File Viewer Connection (kind
+//! Backend file-reading primitives for the Document Connection (kind
 //! `fileView`). These are pure, blocking filesystem helpers; every Tauri
 //! command that calls them must do so from a background worker
 //! (`run_blocking_command`/`spawn_blocking`) per the UI-liveness invariant —
@@ -341,11 +341,11 @@ pub fn read_bytes(request: FileViewBytesRequest) -> Result<FileViewBytes, String
 //
 // PDF preview is a Phase 2 "external dependency" file type: rather than bundling
 // a PDF engine (large, maintenance-heavy), KKTerm renders pages with Poppler's
-// `pdftocairo`/`pdfinfo`, installed on demand through the Installer Helper
+// `pdftocairo`/`pdfinfo`, installed on demand through the Install Helper
 // (`poppler` catalog id, kind `githubRelease`) or found on PATH. When the tool
 // is missing the frontend shows an install gate instead of failing.
 
-/// Installer Helper tool id for the PDF dependency. Kept in sync with the
+/// Install Helper tool id for the PDF dependency. Kept in sync with the
 /// frontend `fileViewerDependencies` map and the catalog entry.
 pub const PDF_TOOL_ID: &str = "poppler";
 
@@ -356,7 +356,7 @@ pub struct PdfViewStatus {
     pub available: bool,
     /// Where the renderer was resolved from: `installer`, `path`, or `null`.
     pub source: Option<String>,
-    /// Installer Helper tool id to offer for install when unavailable.
+    /// Install Helper tool id to offer for install when unavailable.
     pub tool_id: String,
 }
 
@@ -412,7 +412,7 @@ fn find_in_dir(dir: &Path, target: &str, depth: u32) -> Option<PathBuf> {
     None
 }
 
-/// Resolve a Poppler tool, preferring the Installer-Helper-managed copy and
+/// Resolve a Poppler tool, preferring the Install Helper-managed copy and
 /// falling back to PATH. Returns `(program, source)` where `program` is either
 /// an absolute path (installer) or the bare tool name (PATH).
 fn resolve_poppler_tool(stem: &str) -> Option<(String, &'static str)> {

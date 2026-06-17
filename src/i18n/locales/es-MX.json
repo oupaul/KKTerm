@@ -710,6 +710,29 @@
     "checkUpdates": "Buscar actualizaciones",
     "checkingForUpdates": "Buscando actualizaciones",
     "updateAll": "Actualizar todo",
+    "search": "Buscar herramientas",
+    "view": {
+      "list": "Vista de lista",
+      "gallery": "Vista de galería"
+    },
+    "sidebar": {
+      "status": "Estado",
+      "categories": "Categorías",
+      "allTools": "Todas las herramientas",
+      "updates": "Actualizaciones",
+      "show": "Mostrar barra lateral",
+      "hide": "Ocultar barra lateral"
+    },
+    "listColumn": {
+      "name": "Nombre",
+      "status": "Estado",
+      "action": "Acción"
+    },
+    "footer": {
+      "tools": "{{count}} herramientas",
+      "installed": "{{count}} instaladas",
+      "updates": "{{count}} actualizaciones disponibles"
+    },
     "section": {
       "installed": "Instalado",
       "available": "Disponible",
@@ -775,7 +798,8 @@
       "neverChecked": "Nunca"
     },
     "empty": {
-      "loading": "Cargando catálogo…"
+      "loading": "Cargando catálogo…",
+      "noMatches": "Ninguna herramienta coincide con tu búsqueda."
     },
     "confirm": {
       "installTitle": "¿Instalar {{name}}?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "Explorador de archivos local",
     "localFilesRootDirectory": "Carpeta inicial",
     "localFilesRootDirectoryPlaceholder": "Carpeta de inicio",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "Espacio de trabajo \"{{name}}\" creado",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

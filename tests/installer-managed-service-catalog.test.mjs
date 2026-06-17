@@ -15,7 +15,7 @@ test("NSSM is a Utilities tool for managed Windows service helpers", () => {
   assert.deepEqual(nssm.provider, { kind: "winget", id: "NSSM.NSSM" });
 });
 
-test("NSSM is visible in the Installer Helper Utilities section", async () => {
+test("NSSM is visible in the Install Helper Utilities section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
@@ -36,7 +36,7 @@ test("VcXsrv is a Utilities tool for SSH X11 forwarding", () => {
   assert.deepEqual(vcxsrv.provider, { kind: "winget", id: "marha.VcXsrv" });
 });
 
-test("VcXsrv is visible in the Installer Helper Utilities section", async () => {
+test("VcXsrv is visible in the Install Helper Utilities section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
@@ -63,7 +63,7 @@ test("Coreutils is a Utilities tool with winget and download providers", () => {
   );
 });
 
-test("Coreutils is visible in the Installer Helper Utilities section", async () => {
+test("Coreutils is visible in the Install Helper Utilities section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
@@ -76,7 +76,7 @@ test("Coreutils is visible in the Installer Helper Utilities section", async () 
   );
 });
 
-test("FFmpeg is visible in the Installer Helper Utilities section", async () => {
+test("FFmpeg is visible in the Install Helper Utilities section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
@@ -101,7 +101,7 @@ test("BentoPDF is a Utilities managed web app", () => {
   assert.deepEqual(bentopdf.provider, { kind: "npm", pkg: "github:alam00000/bentopdf" });
 });
 
-test("BentoPDF is visible in the Installer Helper Utilities section", async () => {
+test("BentoPDF is visible in the Install Helper Utilities section", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",

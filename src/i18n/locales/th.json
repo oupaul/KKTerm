@@ -710,6 +710,29 @@
     "checkUpdates": "ตรวจหาการอัปเดต",
     "checkingForUpdates": "กำลังตรวจสอบการอัปเดต",
     "updateAll": "อัปเดตทั้งหมด",
+    "search": "ค้นหาเครื่องมือ",
+    "view": {
+      "list": "มุมมองรายการ",
+      "gallery": "มุมมองแกลเลอรี"
+    },
+    "sidebar": {
+      "status": "สถานะ",
+      "categories": "หมวดหมู่",
+      "allTools": "เครื่องมือทั้งหมด",
+      "updates": "อัปเดต",
+      "show": "แสดงแถบด้านข้าง",
+      "hide": "ซ่อนแถบด้านข้าง"
+    },
+    "listColumn": {
+      "name": "ชื่อ",
+      "status": "สถานะ",
+      "action": "การดำเนินการ"
+    },
+    "footer": {
+      "tools": "{{count}} เครื่องมือ",
+      "installed": "ติดตั้งแล้ว {{count}} รายการ",
+      "updates": "มีอัปเดต {{count}} รายการ"
+    },
     "section": {
       "installed": "ติดตั้งแล้ว",
       "available": "พร้อมใช้งาน",
@@ -775,7 +798,8 @@
       "neverChecked": "ไม่เคย"
     },
     "empty": {
-      "loading": "กำลังโหลดแค็ตตาล็อก…"
+      "loading": "กำลังโหลดแค็ตตาล็อก…",
+      "noMatches": "ไม่มีเครื่องมือที่ตรงกับการค้นหาของคุณ"
     },
     "confirm": {
       "installTitle": "ติดตั้ง {{name}} หรือไม่?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "เบราว์เซอร์ไฟล์ในเครื่อง",
     "localFilesRootDirectory": "โฟลเดอร์เริ่มต้น",
     "localFilesRootDirectoryPlaceholder": "โฟลเดอร์หลัก",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "สร้างพื้นที่ทำงาน \"{{name}}\" แล้ว",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

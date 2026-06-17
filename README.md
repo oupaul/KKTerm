@@ -80,7 +80,7 @@ Plus a few things you didn't know you wanted:
 - A **Dashboard** where you tell an AI *"build me a widget that pings my router every 30 seconds"* and it appears, in its own sandbox, on your grid.
 - **SSH panes that reattach to your remote `claude` / `codex` session** after every Wi-Fi tantrum, so a six-hour job survives a dropped connection.
 - An **AI usage meter** so you stop hitting the rate-limit wall at 3 AM by surprise.
-- An **Installer Helper** that finds, installs, updates, and launches the Windows dev tools you usually chase through ten browser tabs.
+- An **Install Helper** that finds, installs, updates, and launches the Windows dev tools you usually chase through ten browser tabs.
 - **Twenty-six animated backgrounds** for the dashboard (yes, including `matrix`), because we are not above it.
 
 And the best part: the AI assistant can turn a single sentence into a tiny dashboard tool you actually keep using.
@@ -232,7 +232,7 @@ Settings → AI Assistant → **Built-in MCP Server** has a one-click "Show conf
 A short list, because honesty earns trust:
 
 - **Not a cloud product.** No sync, no team accounts, no SaaS tier. If you ever see a "Sign in to KKTerm" dialog, something has gone catastrophically wrong.
-- **Not pretending every OS is identical.** KKTerm ships Windows, macOS, and Linux builds, but platform-specific features stay honest: Windows has the native RDP ActiveX path and Installer Helper catalog, while macOS and Linux use the portable paths available on those systems.
+- **Not pretending every OS is identical.** KKTerm ships Windows, macOS, and Linux builds, but platform-specific features stay honest: Windows has the native RDP ActiveX path and Install Helper catalog, while macOS and Linux use the portable paths available on those systems.
 - **Not an autonomous AI agent.** The assistant proposes; the human disposes. `Allow All` is a choice you make, not a default.
 - **Not a Grafana / Datadog replacement.** The Dashboard is for personal control surfaces, not 10k-host observability.
 - **Not a Kubernetes IDE.** It is a terminal-first admin workspace. Please don't ask it to render a Helm chart.

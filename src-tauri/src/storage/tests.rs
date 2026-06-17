@@ -443,7 +443,7 @@
                 ssh_socks_proxy_inherit_defaults: None,
                 auth_method: None,
                 local_shell: None,
-                // The File Viewer reuses the local-path slot to store the target
+                // The Document reuses the local-path slot to store the target
                 // file path.
                 local_startup_directory: Some("  /var/log/syslog  ".to_string()),
                 local_startup_script: None,
@@ -457,7 +457,7 @@
                 ftp_options: None,
                 workspace_id: None,
             })
-            .expect("File Viewer connection is created");
+            .expect("Document connection is created");
 
         assert_eq!(created.connection_type, "fileView");
         assert_eq!(created.host, "localhost");
@@ -478,7 +478,7 @@
                 .iter()
                 .any(|connection| connection.id == created.id
                     && connection.connection_type == "fileView"),
-            "File Viewer connection should appear in the tree"
+            "Document connection should appear in the tree"
         );
     }
 

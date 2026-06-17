@@ -1,4 +1,4 @@
-// Visibility + presentation metadata for the Installer Helper category sidebar.
+// Visibility + presentation metadata for the Install Helper category sidebar.
 //
 // The UI renders by these explicit per-section id lists, NOT by the catalog's
 // `category` field, so a recipe added to installer/catalog.v1.json stays
@@ -100,7 +100,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   },
 ];
 
-/// All recipe ids visible in the Installer Helper, across every section.
+/// All recipe ids visible in the Install Helper, across every section.
 export const INSTALLER_VISIBLE_IDS = new Set(
   INSTALLER_CATEGORY_SECTIONS.flatMap((section) => section.ids),
 );

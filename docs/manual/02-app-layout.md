@@ -11,7 +11,7 @@
 Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
 
 1. **Workspace switcher** (`workspace.workspaceSwitcher`) — the Default Workspace, user-created Workspaces, and `workspace.newWorkspace`. The New Workspace dialog uses `workspace.workspaceDetails` for the required name, icon, and `workspace.workspaceIconColor` setup. If existing Workspaces contain Connections, `workspace.importConnections` can copy selected Connections from the source chosen by `workspace.importFromWorkspace`; the import list can be narrowed with `workspace.searchConnections`, the `workspace.filterConnectionTypes` dropdown, `workspace.selectAllConnections`, and `workspace.deselectAllConnections`.
-2. **Built-in Modules** — Dashboard and Installer Helper.
+2. **Built-in Modules** — Dashboard and Install Helper.
 3. **Connection Rail** (`app.connectionRail`) — a divider group `app.connectedConnectionsRail` that shows:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
@@ -21,7 +21,7 @@ Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
 
 The whole rail uses `app.primaryNav` as its accessible label. Tooltips come from `RailTooltip` (delayed hover/focus). In the Windows Tauri runtime, the same helper uses a native topmost tooltip so rail labels can appear above RDP ActiveX surfaces. Native browser `title` tooltips are forbidden here.
 
-Tutorial targets: `app.activityRailWorkspace`, `app.activityRailNewWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`. Inside the Installer Helper Module the targets are `installer.updateAll` and `installer.toolOptions` — see [18-installer.md](18-installer.md).
+Tutorial targets: `app.activityRailWorkspace`, `app.activityRailNewWorkspace`, `app.activityRailDashboard`, `app.connectionRail`, `app.activityRailDontSleep`, `app.activityRailInstaller`, `app.activityRailSettings`. Inside the Install Helper Module the targets are `installer.updateAll` and `installer.toolOptions` — see [18-installer.md](18-installer.md).
 
 Non-Workspace pages (Dashboard and Settings) stay inset from the 48 px rail so its hover tooltips keep working while those pages are active. Workspace-native child surfaces may overlap the rail tooltip layer, so the native tooltip bridge is the supported rail-label path in the desktop runtime.
 

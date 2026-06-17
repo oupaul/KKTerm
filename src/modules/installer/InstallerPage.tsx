@@ -1,8 +1,8 @@
-// Installer Helper Module page. Finder/SFTP-style shell + section grouping +
+// Install Helper Module page. Finder/SFTP-style shell + section grouping +
 // lifecycle.
 //
 // Shell (house style, mirrors the SFTP file browser): a slim top bar
-// (kind glyph + "Installer Helper" + a Checked/Checking status pill, no macOS
+// (kind glyph + "Install Helper" + a Checked/Checking status pill, no macOS
 // window chrome), a toolbar (sidebar toggle + current-filter crumb + search +
 // List/Gallery switch + Refresh + Update All), a left category rail
 // (InstallerSidebar) and a List or Gallery content view, with a footer status
@@ -14,7 +14,7 @@
 //     the background. Subsequent visits use the in-memory cache.
 //   * Activation (switching to the Module from another Module): run an
 //     interval-gated latest-version check. The check only fetches when the
-//     configured interval (General Settings → Installer Helper, default once
+//     configured interval (General Settings → Install Helper, default once
 //     per day) has elapsed since the last successful check; the last-check
 //     timestamp is persisted per tool in SQLite and survives app launches.
 //     Otherwise the persisted check state is reused without a network fetch.
@@ -294,7 +294,7 @@ export function InstallerPage({ active }: { active: boolean }) {
     }
   }
 
-  // Catalog recipes, ordered and filtered to the visible Installer Helper set
+  // Catalog recipes, ordered and filtered to the visible Install Helper set
   // (section order, then per-section order). One ordered list drives counts,
   // grouping, and the flat List/Gallery views.
   const recipesById = useMemo(

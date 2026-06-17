@@ -582,7 +582,7 @@
     {
       "id": "poppler",
       "name": "Poppler",
-      "descriptionEn": "PDF rendering utilities (pdftocairo / pdfinfo) used by the KKTerm File Viewer to preview PDF pages without bundling a PDF engine.",
+      "descriptionEn": "PDF rendering utilities (pdftocairo / pdfinfo) used by the KKTerm Document to preview PDF pages without bundling a PDF engine.",
       "category": "utilities",
       "icon": "FileText",
       "homepage": "https://github.com/oschwartz10612/poppler-windows",

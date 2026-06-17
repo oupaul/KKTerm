@@ -1,4 +1,4 @@
-// One tool tile in the Installer Helper catalog grid. Click opens the
+// One tool tile in the Install Helper catalog grid. Click opens the
 // app-owned `InstallerToolDialog` — info mode for already-installed and
 // not-installed tools, stepper mode while an install/uninstall is running
 // or just finished. Inline expansion was removed; the dialog owns the

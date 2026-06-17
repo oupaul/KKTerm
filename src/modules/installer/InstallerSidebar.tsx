@@ -1,4 +1,4 @@
-// Installer Helper category rail — the Finder/SFTP-style left navigation.
+// Install Helper category rail — the Finder/SFTP-style left navigation.
 // STATUS filters (All / Installed / Updates / Not Installed) over the catalog,
 // then CATEGORIES (the visibility sections from sections.ts) with live counts.
 // Selecting a row drives the InstallerPage `nav` filter; counts are computed

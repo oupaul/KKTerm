@@ -80,7 +80,7 @@ Mais umas coisas que você não sabia que queria:
 - Um **Dashboard** onde você fala pra uma IA *«monta um widget que dá ping no meu roteador a cada 30 segundos»* e ele aparece, na própria sandbox, na sua grade.
 - **Painéis SSH que se reconectam à sua sessão remota `claude` / `codex`** depois de cada chilique do Wi-Fi, pra um trabalho de seis horas sobreviver a uma queda.
 - Um **medidor de uso de IA** pra você parar de bater de surpresa no muro do limite de uso às 3 da manhã.
-- Um **Installer Helper** que acha, instala, atualiza e abre as ferramentas pra dev do Windows que você normalmente caça por dez abas do navegador.
+- Um **Install Helper** que acha, instala, atualiza e abre as ferramentas pra dev do Windows que você normalmente caça por dez abas do navegador.
 - **Vinte e cinco fundos animados** pro painel (sim, incluindo `matrix`), porque a gente não tem vergonha.
 
 E a melhor parte: o assistente de IA consegue transformar uma única frase numa pequena ferramenta de painel que você realmente continua usando.

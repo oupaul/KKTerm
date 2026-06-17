@@ -710,6 +710,29 @@
     "checkUpdates": "檢查更新",
     "checkingForUpdates": "正在檢查更新",
     "updateAll": "全部更新",
+    "search": "搜尋工具",
+    "view": {
+      "list": "列表檢視",
+      "gallery": "圖庫檢視"
+    },
+    "sidebar": {
+      "status": "狀態",
+      "categories": "類別",
+      "allTools": "所有工具",
+      "updates": "更新",
+      "show": "顯示側邊欄",
+      "hide": "隱藏側邊欄"
+    },
+    "listColumn": {
+      "name": "名稱",
+      "status": "狀態",
+      "action": "操作"
+    },
+    "footer": {
+      "tools": "{{count}} 個工具",
+      "installed": "已安裝 {{count}} 個",
+      "updates": "{{count}} 個更新可用"
+    },
     "section": {
       "installed": "已安裝",
       "available": "可用",
@@ -775,7 +798,8 @@
       "neverChecked": "從未"
     },
     "empty": {
-      "loading": "正在載入目錄…"
+      "loading": "正在載入目錄…",
+      "noMatches": "沒有工具符合你的搜尋。"
     },
     "confirm": {
       "installTitle": "要安裝 {{name}} 嗎？",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "本機檔案瀏覽器",
     "localFilesRootDirectory": "起始資料夾",
     "localFilesRootDirectoryPlaceholder": "個人資料夾",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "已建立工作區「{{name}}」",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

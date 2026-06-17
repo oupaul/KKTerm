@@ -80,7 +80,7 @@ Cộng thêm vài thứ bạn không biết là mình muốn:
 - Một **Dashboard** nơi bạn bảo AI *"dựng cho tôi một widget ping router của tôi mỗi 30 giây"* và nó hiện ra, trong sandbox riêng, trên lưới của bạn.
 - **Các pane SSH tự gắn lại vào phiên `claude` / `codex` từ xa của bạn** sau mỗi cơn dỗi của Wi-Fi, để một công việc sáu tiếng sống sót qua một lần rớt mạng.
 - Một **đồng hồ đo mức dùng AI** để bạn thôi đâm sầm vào bức tường rate limit một cách bất ngờ lúc 3 giờ sáng.
-- Một **Installer Helper** tìm, cài, cập nhật và mở các công cụ dev Windows mà thường bạn phải lùng qua mười tab trình duyệt.
+- Một **Install Helper** tìm, cài, cập nhật và mở các công cụ dev Windows mà thường bạn phải lùng qua mười tab trình duyệt.
 - **Hai mươi lăm hình nền động** cho dashboard (đúng vậy, có cả `matrix`), vì tụi mình cũng chẳng sĩ diện gì.
 
 Và phần hay nhất: trợ lý AI có thể biến một câu duy nhất thành một công cụ dashboard nhỏ mà bạn thực sự dùng tiếp.

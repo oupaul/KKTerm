@@ -1,4 +1,4 @@
-// One row in the Installer Helper List view: icon + name + description, the
+// One row in the Install Helper List view: icon + name + description, the
 // Installed and Latest version columns, a status pill, and a primary action.
 // Clicking the row opens the same app-owned InstallerToolDialog the Gallery
 // tiles use (info, or stepper while an install is in flight). Status/version

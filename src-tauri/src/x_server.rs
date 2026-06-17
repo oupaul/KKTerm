@@ -172,7 +172,7 @@ fn resolve_vcxsrv_path(path_override: Option<PathBuf>) -> Result<PathBuf, String
     vcxsrv_candidate_paths(path_override)
         .into_iter()
         .find(|path| path.exists())
-        .ok_or_else(|| "VcXsrv was not found. Install it from Installer Helper or set the VcXsrv path in SSH settings.".to_string())
+        .ok_or_else(|| "VcXsrv was not found. Install it from Install Helper or set the VcXsrv path in SSH settings.".to_string())
 }
 
 fn vcxsrv_candidate_paths(path_override: Option<PathBuf>) -> Vec<PathBuf> {

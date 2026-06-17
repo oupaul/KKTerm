@@ -18,19 +18,19 @@ A top-level section of the locale JSON mapping to a feature area in the frontend
 
 
 **Connection**:
-A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an embedded http(s) WebView2 target), RDP, VNC, FTP/FTPS, File Explorer (a local filesystem browser, kind `localFiles`), and File Viewer (a single-file universal viewer/light editor, kind `fileView`). SFTP is opened from an SSH Connection and is not stored as a standalone Connection. Every Connection belongs to exactly one **Workspace**.
+A durable openable resource stored in SQLite. The supported kinds are local terminal, SSH terminal, Telnet terminal, Serial terminal, URL (an embedded http(s) WebView2 target), RDP, VNC, FTP/FTPS, File Explorer (a local filesystem browser, kind `localFiles`), and Document (a single-file universal viewer/light editor, kind `fileView`). SFTP is opened from an SSH Connection and is not stored as a standalone Connection. Every Connection belongs to exactly one **Workspace**.
 _Avoid_: Profile, saved session, host entry
 
 **File Explorer Connection**:
 A Connection of kind `localFiles`. It browses the local filesystem (no remote host or network Session) by reusing the SFTP file-browser shell as a single-pane local browser driven by local filesystem commands. It stores an optional starting directory and does not surface remote-connection status or transfer activity.
 _Avoid_: SFTP, FTP, local SFTP, remote browser
 
-**File Viewer Connection**:
-A Connection of kind `fileView`. It opens a single local file in a universal viewer / light editor (no remote host or network Session). The target file path is stored in the Connection's `local_startup_directory` slot (reused as the file path, not a directory). A viewer registry routes the file to a mode — text/code (CodeMirror), Markdown, table (CSV/TSV), JSON, image, dedicated Log mode (level coloring, filter, ANSI, follow/tail), or a Hex fallback — detected by extension plus a backend magic-byte/text probe, and the user can switch modes from the viewer toolbar. Some modes render through an external dependency installed on demand via the Installer Helper rather than bundled (PDF via the `poppler` recipe); the viewer shows an install gate when the dependency is missing. The text/code mode is a light editor with an atomic safe-save (`write_file_view`: temp-file + rename with an mtime conflict guard); editing is limited to whole, cleanly-decoded UTF-8 text, so truncated or non-UTF-8 loads stay read-only. It reuses no SFTP/browser session state.
+**Document Connection**:
+A Connection of kind `fileView`. It opens a single local file in a universal viewer / light editor (no remote host or network Session). The target file path is stored in the Connection's `local_startup_directory` slot (reused as the file path, not a directory). A viewer registry routes the file to a mode — text/code (CodeMirror), Markdown, table (CSV/TSV), JSON, image, dedicated Log mode (level coloring, filter, ANSI, follow/tail), or a Hex fallback — detected by extension plus a backend magic-byte/text probe, and the user can switch modes from the viewer toolbar. Some modes render through an external dependency installed on demand via the Install Helper rather than bundled (PDF via the `poppler` recipe); the viewer shows an install gate when the dependency is missing. The text/code mode is a light editor with an atomic safe-save (`write_file_view`: temp-file + rename with an mtime conflict guard); editing is limited to whole, cleanly-decoded UTF-8 text, so truncated or non-UTF-8 loads stay read-only. It reuses no SFTP/browser session state.
 _Avoid_: File Explorer, editor tab, document session
 
 **Workspace**:
-A named, isolated container of Connections, surfaced as a switcher in the Activity Rail. The first Workspace ("Default") is seeded on first run and is permanent (non-deletable, non-movable); additional Workspaces are created through the New Workspace wizard (name, icon, and optional copy-import of Connections from other Workspaces). Switching the active Workspace re-scopes the Connection Tree and the rail's connected/pinned list only; open Sessions/Tabs, the Dashboard Module, the Installer Helper Module, and Settings remain global. The Workspace Module and Workspace Canvas render the *active* Workspace.
+A named, isolated container of Connections, surfaced as a switcher in the Activity Rail. The first Workspace ("Default") is seeded on first run and is permanent (non-deletable, non-movable); additional Workspaces are created through the New Workspace wizard (name, icon, and optional copy-import of Connections from other Workspaces). Switching the active Workspace re-scopes the Connection Tree and the rail's connected/pinned list only; open Sessions/Tabs, the Dashboard Module, the Install Helper Module, and Settings remain global. The Workspace Module and Workspace Canvas render the *active* Workspace.
 _Avoid_: Space, vault, environment, project, tab
 
 SSH Connections may persist non-secret tmux launch preferences, including whether KKTerm should start terminal Panes inside named tmux sessions. The remote tmux process itself remains live Session/runtime state and is not the durable Connection.
@@ -71,7 +71,7 @@ _Avoid_: child connection, saved session, sub-connection, backend tab
 A built-in Activity Rail Module that provides a dynamic widget playground. Users select from built-in widgets (currently App Launcher) or AI Created Widgets. The built-in AI Assistant and coding agents create new widgets through atomic Tauri commands; users customize each widget's visual preset, accent, icon, and title and arrange them on a 12-column drag-and-drop grid. See `docs/DASHBOARD.md` for the durable architecture.
 _Avoid_: landing page, overview
 
-**Installer Helper Module**:
+**Install Helper Module**:
 A built-in Activity Rail Module that manages a curated catalog of Windows developer tools (e.g. nvm, Node, uv, Python, VS Code, Docker, WSL, n8n, Claude Code CLI, Codex CLI, Antigravity CLI, OpenCode CLI, Notepad++, NSSM, OpenClaw, Hermes agent). For each catalog entry the Module detects local install state, fetches the latest available version, presents a per-tool install panel with tool-specific options, and supports check-for-update and apply-update actions. Lives above Settings on the Activity Rail. Not a Connection, not a Session, not a Dashboard Widget.
 _Avoid_: AI Installer, App Installer, package manager, store
 
@@ -118,7 +118,7 @@ _Avoid_: monitor profile, saved alert, durable watcher
 ## UI Layout
 
 **Activity Rail (Left Rail)**:
-The vertical icon bar on the far left of the app. Its top section is the **Workspace switcher** — the Default Workspace, any additional Workspaces, and a `+` button that opens the New Workspace wizard; selecting a Workspace activates it and navigates to the Workspace Module. Below that it shows the other top-level built-in Modules (Dashboard, Installer Helper), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
+The vertical icon bar on the far left of the app. Its top section is the **Workspace switcher** — the Default Workspace, any additional Workspaces, and a `+` button that opens the New Workspace wizard; selecting a Workspace activates it and navigates to the Workspace Module. Below that it shows the other top-level built-in Modules (Dashboard, Install Helper), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
 _Avoid_: sidebar, left sidebar, nav bar
 
 **Connection Tree (Connections Panel)**:

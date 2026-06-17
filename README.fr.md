@@ -80,7 +80,7 @@ Plus quelques trucs que vous ne saviez pas vouloir :
 - Un **Dashboard** où vous dites à une IA *« construis-moi un widget qui ping mon routeur toutes les 30 secondes »* et il apparaît, dans son propre bac à sable, sur votre grille.
 - **Des panneaux SSH qui se rattachent à votre session distante `claude` / `codex`** après chaque caprice du Wi-Fi, pour qu'un travail de six heures survive à une coupure.
 - Une **jauge d'utilisation IA** pour ne plus heurter le mur des quotas par surprise à 3 h du matin.
-- Un **Installer Helper** qui trouve, installe, met à jour et lance les outils dev Windows que vous traquez d'habitude à travers dix onglets de navigateur.
+- Un **Install Helper** qui trouve, installe, met à jour et lance les outils dev Windows que vous traquez d'habitude à travers dix onglets de navigateur.
 - **Vingt-cinq fonds animés** pour le tableau de bord (oui, dont `matrix`), parce qu'on n'est pas au-dessus de ça.
 
 Et le meilleur : l'assistant IA peut transformer une seule phrase en un petit outil de tableau de bord que vous gardez vraiment.

@@ -1,5 +1,5 @@
 /**
- * Pure file-type detection for the universal File Viewer. Extension is the
+ * Pure file-type detection for the universal Document. Extension is the
  * primary signal; the backend probe's `magic` signature and `isText` heuristic
  * are the fallback when the extension is unknown. Detection is intentionally
  * dependency-free so it can be unit-tested without a DOM or Tauri runtime.

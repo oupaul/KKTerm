@@ -1,4 +1,4 @@
-// Dependency graph helpers for the Installer Helper Module.
+// Dependency graph helpers for the Install Helper Module.
 //
 // All functions are pure and operate on the cached catalog + detection map.
 // The catalog has already passed cycle detection in the Rust loader

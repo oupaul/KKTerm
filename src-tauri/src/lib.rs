@@ -3523,7 +3523,7 @@ pub fn run() {
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,
             dashboard_load_background_image,
-            // ── Installer Helper
+            // ── Install Helper
             installer::commands::installer_load_catalog,
             installer::commands::installer_load_detection_cache,
             installer::commands::installer_detect_all,

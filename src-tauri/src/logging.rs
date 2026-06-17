@@ -147,7 +147,7 @@ pub fn installer_helper_debug(event: &str, payload: &Value) {
     };
     let line = format_debug_log_entry(event, payload);
     if let Err(error) = append_debug_line(&log_path, &line) {
-        eprintln!("failed to write Installer Helper debug log: {error}");
+        eprintln!("failed to write Install Helper debug log: {error}");
     }
 }
 

@@ -28,7 +28,7 @@ Hard constraints, in priority order (from the port owner):
    "Linux packaging (AppImage/deb/rpm)" to AppImage only.)
 
 Non-goals for the first Linux release: feature parity with Windows, the
-Installer Helper Module, and any Windows-developer-tool catalog.
+Install Helper Module, and any Windows-developer-tool catalog.
 
 ## 2. Where We Stand (codebase reality)
 
@@ -229,7 +229,7 @@ Linux.**
 **Success: every Windows/macOS-only surface is cleanly hidden or no-op'd on
 Linux via the platform-capability signal — no broken buttons, no error spam.**
 
-- [ ] **Installer Helper Module — SACRIFICED v1:** the catalog is
+- [ ] **Install Helper Module — SACRIFICED v1:** the catalog is
       Windows-developer-tool-centric (winget, WSL, Windows features…). Hide the
       Module entirely on Linux behind the capability flag and skip building its
       backend command surface on Linux where practical. A Linux catalog (apt/dnf/
@@ -296,7 +296,7 @@ update-check behavior on Linux is defined.**
       (mark AppImage in progress / scope-narrow the deb/rpm line),
       `docs/ARCHITECTURE.md` (Linux platform notes, capability signal),
       and `README` install instructions.
-- [ ] Manual: any UI behavior that differs on Linux (hidden Installer Helper,
+- [ ] Manual: any UI behavior that differs on Linux (hidden Install Helper,
       no Don't Sleep, etc.) must update the relevant `docs/manual/*` chapter,
       referencing i18n keys (AGENTS.md rule).
 - [ ] Any new user-visible strings (e.g. "Keychain unavailable on this system")
@@ -326,7 +326,7 @@ Working-state target for the **first Linux release**. Update as phases land.
 | Don't Sleep | yes | yes | **sacrificed v1** (no-op) | low |
 | Screenshot → AI context | yes | yes | **sacrificed v1** (no-op) | med |
 | Auto-start | yes | yes | **sacrificed v1** (no-op) | low |
-| Installer Helper Module | yes | (n/a) | **sacrificed v1** (hidden) | n/a |
+| Install Helper Module | yes | (n/a) | **sacrificed v1** (hidden) | n/a |
 | Managed X server indicator | yes | n/a | **no-op** (X11 native) | none |
 | Updater self-install | checksum | signed Tauri updater | signed AppImage updater | low |
 | Distribution | NSIS | DMG | **AppImage only** | med |
@@ -354,7 +354,7 @@ additions:
    user-entered password seed** (KDF-derived key; seed never stored). See Phase 2
    secrets task for the design.
 2. **Don't Sleep / Screenshot / Auto-start — RESOLVED:** ship as no-ops in v1.
-3. **Installer Helper Module — RESOLVED:** removed/hidden on Linux in v1.
+3. **Install Helper Module — RESOLVED:** removed/hidden on Linux in v1.
 4. **aarch64 Linux — RESOLVED:** **x86_64 only** for now.
 
 Still open (low-stakes, can default during implementation):

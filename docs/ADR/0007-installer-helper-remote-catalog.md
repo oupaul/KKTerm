@@ -1,16 +1,16 @@
-# ADR 0007: Installer Helper Remote Catalog and Trust Model
+# ADR 0007: Install Helper Remote Catalog and Trust Model
 
 ## Status
 
 **Superseded by [ADR 0008](0008-installer-helper-bundled-catalog.md)** —
-the Installer Helper now ships its catalog as a compile-time-embedded
+the Install Helper now ships its catalog as a compile-time-embedded
 JSON inside the KKTerm binary instead of fetching a signed JSON from
 GitHub at runtime. This document is retained as the record of the
 original design decision and the trade-offs that motivated the change.
 
 ## Context
 
-KKTerm needs a built-in **Installer Helper** Module that lets users install,
+KKTerm needs a built-in **Install Helper** Module that lets users install,
 update, and uninstall a curated catalog of Windows developer tools (Git, Node,
 Python, Docker, VS Code, Claude Code CLI, Codex CLI, Gemini CLI, Aider, Ollama,
 LM Studio, n8n, etc.). The user-facing goals are:
@@ -24,7 +24,7 @@ LM Studio, n8n, etc.). The user-facing goals are:
 The decision is *how* the catalog itself ships, and the trust boundary that
 implies. KKTerm is otherwise local-first (ADR 0003): durable data lives in
 SQLite, secrets live in the OS keychain, and there is no remote configuration
-fetch. The Installer Helper breaks that property deliberately, and this ADR
+fetch. The Install Helper breaks that property deliberately, and this ADR
 records the resulting constraints.
 
 ## Decision

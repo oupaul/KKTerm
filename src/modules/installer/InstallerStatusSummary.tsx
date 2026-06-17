@@ -1,6 +1,6 @@
-// Installer Helper roll-up rendered in the centre of the global app status
+// Install Helper roll-up rendered in the centre of the global app status
 // bar. It mirrors the counts the page used to show in its own footer status
-// line, and only renders while the Installer Helper Module is the visible
+// line, and only renders while the Install Helper Module is the visible
 // page so the global bar stays uncluttered everywhere else.
 
 import { useTranslation } from "react-i18next";

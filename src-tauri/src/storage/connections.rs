@@ -18,8 +18,8 @@ impl Storage {
         } else if connection_type == "serial" {
             serial_line.clone().unwrap_or_else(|| "COM1".to_string())
         } else if connection_type == "localFiles" || connection_type == "fileView" {
-            // The local File Explorer and File Viewer have no remote host; they
-            // operate on the local filesystem (the File Viewer opens the file
+            // The local File Explorer and Document have no remote host; they
+            // operate on the local filesystem (the Document opens the file
             // path stored in local_startup_directory).
             let trimmed = request.host.trim();
             if trimmed.is_empty() {
@@ -188,8 +188,8 @@ impl Storage {
         } else if connection_type == "serial" {
             serial_line.clone().unwrap_or_else(|| "COM1".to_string())
         } else if connection_type == "localFiles" || connection_type == "fileView" {
-            // The local File Explorer and File Viewer have no remote host; they
-            // operate on the local filesystem (the File Viewer opens the file
+            // The local File Explorer and Document have no remote host; they
+            // operate on the local filesystem (the Document opens the file
             // path stored in local_startup_directory).
             let trimmed = request.host.trim();
             if trimmed.is_empty() {

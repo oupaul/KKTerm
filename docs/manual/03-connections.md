@@ -21,15 +21,15 @@
 | RDP | `connections.windowsRdp` | Windows native via mstscax. See [09-remote-desktop.md](09-remote-desktop.md). |
 | VNC | `connections.screenControl` | RFB through `vnc-rs`. |
 | FTP/FTPS | `connections.ftp` | Standalone file-transfer Connection routed through the SFTP/FTP browser surface. |
-| File Viewer | `connections.fileView` | Opens a single local file in the universal viewer / light editor (`FileViewerWorkspace`, tab kind `fileViewer`). No remote host or network Session. |
+| Document | `connections.fileView` | Opens a single local file in the universal viewer / light editor (`FileViewerWorkspace`, tab kind `fileViewer`). No remote host or network Session. |
 
 SFTP is not a standalone Connection kind — it is opened from an SSH Connection (`terminal.openSftp`, `terminal.sftp`).
 
-The File Viewer opens one local file and routes it to a mode by extension plus a backend magic-byte/text probe: text/code (CodeMirror), Markdown, table (CSV/TSV), JSON, image, a dedicated Log mode (`workspace.fileViewer.kind.log`) with level chips (`workspace.fileViewer.level.*`), a line filter, ANSI coloring, and a follow/tail toggle (`workspace.fileViewer.follow`), and a Hex fallback. The toolbar mode switch (`workspace.fileViewer.kind.*`) lets the user re-pick the mode; Text and Hex are always offered as fallbacks.
+The Document opens one local file and routes it to a mode by extension plus a backend magic-byte/text probe: text/code (CodeMirror), Markdown, table (CSV/TSV), JSON, image, a dedicated Log mode (`workspace.fileViewer.kind.log`) with level chips (`workspace.fileViewer.level.*`), a line filter, ANSI coloring, and a follow/tail toggle (`workspace.fileViewer.follow`), and a Hex fallback. The toolbar mode switch (`workspace.fileViewer.kind.*`) lets the user re-pick the mode; Text and Hex are always offered as fallbacks.
 
 The text/code mode is a light editor (`workspace.fileViewer.save`, also Ctrl/Cmd+S): a modified dot marks unsaved changes, and saving writes atomically (temp file + rename) with an mtime conflict check — if the file changed on disk since it was opened, the editor confirms before overwriting (`workspace.fileViewer.saveConflictConfirm`). Editing is only offered for whole, cleanly-decoded UTF-8 text; truncated (large) or non-UTF-8 files stay read-only. Switching mode or reloading with unsaved edits prompts to discard (`workspace.fileViewer.discardConfirm`).
 
-PDF (`workspace.fileViewer.kind.pdf`) renders through an external dependency that is downloaded on demand rather than bundled: the `poppler` Installer Helper recipe. When a PDF is opened and the renderer is missing, the viewer shows an install gate (`workspace.fileViewer.dependencyNeededTitle`) with an in-context **Install Poppler** button (Windows, via the Installer Helper) or, on other platforms, a hint to install Poppler on `PATH` (`workspace.fileViewer.dependencyManualHint`); after install, the page renderer mounts with page navigation and zoom.
+PDF (`workspace.fileViewer.kind.pdf`) renders through an external dependency that is downloaded on demand rather than bundled: the `poppler` Install Helper recipe. When a PDF is opened and the renderer is missing, the viewer shows an install gate (`workspace.fileViewer.dependencyNeededTitle`) with an in-context **Install Poppler** button (Windows, via the Install Helper) or, on other platforms, a hint to install Poppler on `PATH` (`workspace.fileViewer.dependencyManualHint`); after install, the page renderer mounts with page navigation and zoom.
 
 ## Connections Panel UI
 
@@ -108,7 +108,7 @@ Local terminal Add/Edit Connection uses the `connections.shell` tabbed selector 
 
 File Explorer Add/Edit Connection uses `connections.localFilesRootDirectory` for the optional starting folder. On creation, leaving the starting folder at its default home-folder behavior, or explicitly choosing the detected home folder, uses the localized `connections.homeDirectory` Connection name. Choosing or typing a different starting folder means the folder name becomes the default Connection name unless the user enters an explicit name.
 
-File Viewer Add/Edit Connection uses `connections.fileViewPath` for the target file, picked through a native open-file dialog (`connections.fileViewPickerTitle`). The file's base name becomes the default Connection name unless the user enters an explicit name. The path is stored in the Connection's `local_startup_directory` slot (reused as the file path).
+Document Add/Edit Connection uses `connections.fileViewPath` for the target file, picked through a native open-file dialog (`connections.fileViewPickerTitle`). The file's base name becomes the default Connection name unless the user enters an explicit name. The path is stored in the Connection's `local_startup_directory` slot (reused as the file path).
 
 SSH Add/Edit Connection uses the `connections.auth` tabbed selector for authentication method choices: `connections.keyFile`, `connections.password`, and `connections.sshAgent`.
 

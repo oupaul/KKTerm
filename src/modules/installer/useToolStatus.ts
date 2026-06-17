@@ -1,4 +1,4 @@
-// Shared status / version derivation for one Installer Helper tool. Extracted
+// Shared status / version derivation for one Install Helper tool. Extracted
 // from ToolRow so the Gallery tile, the List row, and the sidebar rail counts
 // all agree on a single source of truth.
 //

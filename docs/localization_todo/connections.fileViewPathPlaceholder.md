@@ -4,11 +4,11 @@
 - **Namespace**: `connections`
 - **File/component**: `src/modules/workspace/connections/file-viewer/FileViewerWorkspace.tsx`
 - **UI role**: `placeholder`
-- **User flow**: Placeholder in the File Viewer file-path input before a file is chosen.
+- **User flow**: Placeholder in the Document file-path input before a file is chosen.
 - **Tone**: concise/neutral
 - **Placeholders**: none
-- **Context/meaning**: File Viewer is the universal local-file viewer Connection (kind `fileView`); distinct from the File Explorer (`localFiles`) browser.
-- **Domain notes**: "File Viewer" names a Connection type; keep technical tokens (JSON, CSV, Hex, Markdown, Log) as commonly localized in the target locale.
+- **Context/meaning**: Document is the universal local-document viewer Connection (kind `fileView`); distinct from the File Explorer (`localFiles`) browser.
+- **Domain notes**: "Document" names a Connection type; keep technical tokens (JSON, CSV, Hex, Markdown, Log) as commonly localized in the target locale.
 
 <!--
 Filename: connections.fileViewPathPlaceholder.md

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 
 /**
- * Add/Edit form for the File Viewer Connection type (`fileView`): a name and the
+ * Add/Edit form for the Document Connection type (`fileView`): a name and the
  * target file path. There is no host, port, or credentials — the viewer opens a
  * single local file. The file path is persisted in the Connection's
  * `localStartupDirectory` slot.

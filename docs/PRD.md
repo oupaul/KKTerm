@@ -8,7 +8,7 @@ KKTerm is intended to be a fast, professional desktop workspace for personal/loc
 
 ## Solution
 
-KKTerm v0.1 will be a cross-platform desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (a named-Workspace connection manager where each Workspace isolates its own Connections and folders while live Sessions/Tabs stay open across Workspace switches; includes VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, File Explorer, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Installer Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
+KKTerm v0.1 will be a cross-platform desktop app built with a Rust/Tauri core and a React/TypeScript interface. It organizes functionality into built-in Modules accessible from a left-side Activity Rail: **Workspace** (a named-Workspace connection manager where each Workspace isolates its own Connections and folders while live Sessions/Tabs stay open across Workspace switches; includes VSCode-style tabs, split terminal panes, local terminal sessions, SSH sessions with optional tmux resume, SFTP/FTP dual-pane file management, File Explorer, RDP, VNC, and URL connections), **Dashboard** (dynamic widget playground with prebuilt tools, reports, and an App Launcher widget for quick-launch apps/files), and **Install Helper** (a curated Windows developer-tool catalog for detecting, installing, updating, uninstalling, and launching supported tools).
 
 Under the hood it provides explicit screenshot capture to clipboard or AI context for workspace surfaces, backend SSH config import support, local SQLite connection storage, platform secret storage, and approval-bounded AI assistance that can use typed app tools for Dashboard work, saved Connection management, and active Session interaction.
 
@@ -71,7 +71,7 @@ The product will be light chrome with dark terminal panes by default, optimized 
 47. As a user, I want AI help scoped to the active local or SSH Session, so that context stays clear.
 48. As a user, I want OpenAI-compatible API configuration, so that I can use my own endpoint, key, and model.
 49. As a user, I want Claude Code CLI and Codex CLI paths configurable, so that local agent tools can be used from KKTerm.
-49a. As a Windows user, I want an Installer Helper Module with a curated developer-tool catalog, so that I can detect, install, update, uninstall, and launch common tools without hunting for separate setup instructions.
+49a. As a Windows user, I want an Install Helper Module with a curated developer-tool catalog, so that I can detect, install, update, uninstall, and launch common tools without hunting for separate setup instructions.
 50. As a user, I want Claude Code CLI and Codex CLI integrations restricted to suggest/ask-before-execute where possible, so that they respect the product trust model.
 51. As a contributor, I want an MIT open-source project, so that licensing is clear and permissive.
 52. As a maintainer, I want dependencies compatible with MIT/Apache-2.0/BSD/MPL-style use, so that runtime licensing stays clean.

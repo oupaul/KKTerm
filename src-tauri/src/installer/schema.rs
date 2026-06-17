@@ -1,4 +1,4 @@
-// Typed deserialization of the Installer Helper remote catalog JSON.
+// Typed deserialization of the Install Helper remote catalog JSON.
 //
 // The schema is closed: every accepted recipe shape is one of five
 // `Provider` variants. There is no `Custom`, no script string, and no URL

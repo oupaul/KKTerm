@@ -1,8 +1,8 @@
-# Installer Helper icon provenance
+# Install Helper icon provenance
 
 ![Downloads](https://img.shields.io/github/downloads/ryantsai/KKTerm/total)
 
-These icons are bundled only for Installer Helper catalog tiles. Prefer SVGs
+These icons are bundled only for Install Helper catalog tiles. Prefer SVGs
 from Simple Icons when available; otherwise use the smallest official or
 project-repository asset that remains legible at 40-46px.
 

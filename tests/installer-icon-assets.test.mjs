@@ -6,7 +6,7 @@ for (const { id, asset } of [
   { id: "ffmpeg", asset: "ffmpeg.svg" },
   { id: "bentopdf", asset: "bentopdf.svg" },
 ]) {
-  test(`${id} uses a bundled Installer Helper icon`, async () => {
+  test(`${id} uses a bundled Install Helper icon`, async () => {
     const iconsSource = await readFile(
       new URL("../src/modules/installer/icons.ts", import.meta.url),
       "utf8",
@@ -25,7 +25,7 @@ for (const { id, asset } of [
     assert.match(
       iconsSource,
       new RegExp(`^\\s*${id},\\s*$`, "m"),
-      `${id} should map directly to its bundled Installer Helper icon`,
+      `${id} should map directly to its bundled Install Helper icon`,
     );
     assert.match(
       readmeSource,

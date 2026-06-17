@@ -80,7 +80,7 @@ Dazu ein paar Dinge, von denen du nicht wusstest, dass du sie wolltest:
 - Ein **Dashboard**, in dem du einer KI sagst *„bau mir ein Widget, das meinen Router alle 30 Sekunden anpingt"*, und es erscheint, in seiner eigenen Sandbox, auf deinem Raster.
 - **SSH-Panes, die sich nach jedem WLAN-Anfall wieder an deine entfernte `claude` / `codex`-Session anhängen**, damit ein Sechs-Stunden-Job eine Verbindungsunterbrechung überlebt.
 - Eine **KI-Nutzungsanzeige**, damit du nicht um 3 Uhr morgens überraschend gegen die Rate-Limit-Wand fährst.
-- Ein **Installer Helper**, der die Windows-Dev-Tools, die du sonst durch zehn Browser-Tabs jagst, findet, installiert, aktualisiert und startet.
+- Ein **Install Helper**, der die Windows-Dev-Tools, die du sonst durch zehn Browser-Tabs jagst, findet, installiert, aktualisiert und startet.
 - **Fünfundzwanzig animierte Hintergründe** fürs Dashboard (ja, inklusive `matrix`), weil wir nicht zu erhaben dafür sind.
 
 Und das Beste: Der KI-Assistent kann aus einem einzigen Satz ein winziges Dashboard-Tool machen, das du tatsächlich behältst.

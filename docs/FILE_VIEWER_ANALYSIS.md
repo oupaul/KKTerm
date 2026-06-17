@@ -1,10 +1,10 @@
-# Universal File Viewer & Light Editor — Feature Analysis
+# Universal Document & Light Editor — Feature Analysis
 
 Status: Draft for analysis group · Author: feature analysis pass · Date: 2026-06-17
 
 ## 1. Goal
 
-Add a new Connection type that opens a **file viewer / light editor**. The user
+Add a new Connection type that opens a **document viewer / light editor**. The user
 adds the Connection, picks a file, and a viewer/editor surface opens in the
 Workspace Canvas. It should cover a wide range of common file types (plain text,
 CSV, structured data, images, documents, and some binary formats) and offer
@@ -56,7 +56,7 @@ local-only, no-network Connection that reuses a shared workspace surface.
 - **Backend boundary.** All file reads, sniffing, decompression, and decoding
   must run through `spawn_blocking` / `run_blocking_command` — the **no
   UI-thread blocking** invariant applies to file IO exactly as it does to
-  Sessions and Installer Helper work (`docs/ARCHITECTURE.md` → Backend Command
+  Sessions and Install Helper work (`docs/ARCHITECTURE.md` → Backend Command
   Runtime Boundaries). Large files must be read in bounded chunks, not slurped.
 - **Lifecycle.** The file path is durable Connection data; live editor/scroll
   state is Session/Pane state and must not be written back into the Connection
@@ -187,10 +187,10 @@ formats" and gives every file *some* viewer.
 
 ---
 
-## 5. Phase 2 — external dependencies via Installer Helper
+## 5. Phase 2 — external dependencies via Install Helper
 
 For formats that need a heavy dependency, follow Priority 2: **don't bundle**.
-The Installer Helper already provides the exact machinery — pure-data recipe
+The Install Helper already provides the exact machinery — pure-data recipe
 providers (`winget`, `npm`, `uvPip`, `downloadInstaller`, `githubRelease`,
 `windowsFeature`, `wslDistro`, `bundle`), a per-tool detection cache, app-local
 install dirs under `%LOCALAPPDATA%\KKTerm\installer\`, streaming progress, and
@@ -198,9 +198,9 @@ honest UAC handling.
 
 ### Dependency-gate pattern
 When a file's viewer declares `needsExternalTool`, the viewer:
-1. Checks the Installer Helper detection cache for the tool.
+1. Checks the Install Helper detection cache for the tool.
 2. If missing, shows an **app-owned dialog** (built from `src/app/ui/dialog`
-   primitives) offering "Install via Installer Helper," deep-linking to that
+   primitives) offering "Install via Install Helper," deep-linking to that
    tool's row — no silent bundling, honest about UAC.
 3. Once detected, a backend **conversion command** (background worker) runs the
    installed tool from its app-local/managed path, writes a viewable artifact to
@@ -220,7 +220,7 @@ When a file's viewer declares `needsExternalTool`, the viewer:
 | **MOBI/AZW3 e-books** | Calibre `ebook-convert` (`winget`) | Convert → EPUB/HTML (EPUB itself is zip+HTML, doable in-bundle) |
 | **pcap/pcapng** | tshark/Wireshark (`winget`) | Export → text/JSON → log viewer |
 
-### Installer Helper wiring
+### Install Helper wiring
 - Add the catalog entries above to `installer/catalog.v1.json` (FFmpeg exists).
 - Conversion commands are background workers writing to temp; outputs are
   transient and not persisted (mirrors screenshot-capture handling).
@@ -284,7 +284,7 @@ find/replace, undo/redo). Phase 3 hardens and broadens it.
 ## 8. Open questions for the analysis group
 
 - **Q1 — PDF strategy.** PDF is high-demand. Options: (a) external **pdfium via
-  Installer Helper** (keeps bundle small, true to Priority 2, but adds a
+  Install Helper** (keeps bundle small, true to Priority 2, but adds a
   first-open install step), or (b) bundle **pdf.js** as a deliberate exception
   (instant, offline, but meaningfully grows the frontend bundle). Recommendation:
   start with (a); revisit (b) if the install friction tests poorly.
@@ -292,9 +292,9 @@ find/replace, undo/redo). Phase 3 hardens and broadens it.
   round-trip (zero new deps), or add an editable-grid dependency for spreadsheet
   UX? Recommendation: text round-trip for Phase 3 MVP; reassess on demand.
 - **Q3 — Connection granularity.** One Connection = one file (bookmark model,
-  matches the request literally), versus a single "File Viewer" Connection that
+  matches the request literally), versus a single "Document" Connection that
   opens a picker each time. Recommendation: support the per-file bookmark
   Connection **and** the browser "Open in Viewer" action; they share one surface.
-- **Q4 — Platform scope.** Installer Helper is Windows-only today. Phase 1
+- **Q4 — Platform scope.** Install Helper is Windows-only today. Phase 1
   (bundled) is cross-platform; Phase 2 external-tool conversions are initially
   Windows-only until the helper grows macOS/Linux providers — acceptable?

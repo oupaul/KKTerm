@@ -710,6 +710,29 @@
     "checkUpdates": "Verificar atualizações",
     "checkingForUpdates": "Verificando atualizações",
     "updateAll": "Atualizar tudo",
+    "search": "Pesquisar ferramentas",
+    "view": {
+      "list": "Visualização em lista",
+      "gallery": "Visualização em galeria"
+    },
+    "sidebar": {
+      "status": "Status",
+      "categories": "Categorias",
+      "allTools": "Todas as ferramentas",
+      "updates": "Atualizações",
+      "show": "Mostrar barra lateral",
+      "hide": "Ocultar barra lateral"
+    },
+    "listColumn": {
+      "name": "Nome",
+      "status": "Status",
+      "action": "Ação"
+    },
+    "footer": {
+      "tools": "{{count}} ferramentas",
+      "installed": "{{count}} instaladas",
+      "updates": "{{count}} atualizações disponíveis"
+    },
     "section": {
       "installed": "Instalado",
       "available": "Disponível",
@@ -775,7 +798,8 @@
       "neverChecked": "Nunca"
     },
     "empty": {
-      "loading": "Carregando catálogo…"
+      "loading": "Carregando catálogo…",
+      "noMatches": "Nenhuma ferramenta corresponde à sua pesquisa."
     },
     "confirm": {
       "installTitle": "Instalar {{name}}?",
@@ -1797,7 +1821,7 @@
     "localFilesSubtitle": "Navegador de arquivos local",
     "localFilesRootDirectory": "Pasta inicial",
     "localFilesRootDirectoryPlaceholder": "Pasta pessoal",
-    "fileView": "File Viewer",
+    "fileView": "Document",
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Select a file to view",
     "fileViewPickerTitle": "Select a file to view"
@@ -3178,7 +3202,7 @@
     "workspaceCreated": "Espaço de trabalho \"{{name}}\" criado",
     "fileViewer": {
       "loading": "Loading…",
-      "noFile": "No file selected for this File Viewer Connection.",
+      "noFile": "No file selected for this Document Connection.",
       "truncated": "This file is large; showing a partial preview.",
       "invalidJson": "Invalid JSON — showing raw text.",
       "imageTooLarge": "This image is too large to preview.",

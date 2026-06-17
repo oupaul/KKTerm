@@ -9,7 +9,7 @@ if (activePageFromStoredValue("dashboard") !== "dashboard") {
 }
 
 if (activePageFromStoredValue("installer") !== "installer") {
-  throw new Error("Installer Helper should restore as the active launch Module.");
+  throw new Error("Install Helper should restore as the active launch Module.");
 }
 
 if (activePageFromStoredValue("settings") !== "workspace") {

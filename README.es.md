@@ -80,7 +80,7 @@ Y unas cuantas cosas que no sabías que querías:
 - Un **Dashboard** donde le dices a una IA *«créame un widget que haga ping a mi router cada 30 segundos»* y aparece, en su propio espacio aislado, sobre tu cuadrícula.
 - **Paneles SSH que se vuelven a enganchar a tu sesión remota `claude` / `codex`** tras cada rabieta del wifi, para que un trabajo de seis horas sobreviva a una caída.
 - Un **medidor de uso de IA** para que dejes de chocar por sorpresa contra el muro del límite de uso a las 3 de la mañana.
-- Un **Installer Helper** que encuentra, instala, actualiza y lanza las herramientas para devs de Windows que normalmente persigues por diez pestañas del navegador.
+- Un **Install Helper** que encuentra, instala, actualiza y lanza las herramientas para devs de Windows que normalmente persigues por diez pestañas del navegador.
 - **Veinticinco fondos animados** para el panel (sí, incluido `matrix`), porque no estamos por encima de eso.
 
 Y lo mejor: el asistente de IA puede convertir una sola frase en una pequeña herramienta de panel que de verdad acabas usando.

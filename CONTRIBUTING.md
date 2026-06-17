@@ -112,7 +112,7 @@ KKTerm/
 │   │   │       └── remote-desktop/ # RDP (ActiveX) + VNC workspace
 │   │   ├── dashboard/       # Dashboard Module, grid
 │   │   │   └── widgets/     # Built-in widgets — drop new ones here
-│   │   ├── installer/       # Installer Helper Module
+│   │   ├── installer/       # Install Helper Module
 │   │   └── settings/        # SettingsPage and section files
 │   ├── ai/                  # AssistantPanel, chat, tool dispatch
 │   │   └── providerRegistry/ # Frontend provider/model metadata

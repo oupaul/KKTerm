@@ -253,7 +253,7 @@ fn install_managed_bentopdf(
         message: format!("Downloading {archive_url}"),
     });
     let client = reqwest::blocking::Client::builder()
-        .user_agent("KKTerm Installer Helper")
+        .user_agent("KKTerm Install Helper")
         .build()
         .map_err(|error| error.to_string())?;
     download_with_progress(&client, &archive_url, &download_path, tool_id, &cancel, emit)?;

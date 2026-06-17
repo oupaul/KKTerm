@@ -1,4 +1,4 @@
-// In-memory session state for the Installer Helper Module.
+// In-memory session state for the Install Helper Module.
 //
 // Detection streams from the Rust backend. On Module entry, the frontend
 // first renders any Windows Registry detection cache, then receives fresh
@@ -58,7 +58,7 @@ interface OpenDialog {
   mode: "info" | "stepper";
 }
 
-/// Catalog roll-up published by the Installer Helper page so the global app
+/// Catalog roll-up published by the Install Helper page so the global app
 /// status bar can mirror the per-page footer counts while the Module is the
 /// visible page. `null` until the page has computed counts at least once.
 interface InstallerSummary {

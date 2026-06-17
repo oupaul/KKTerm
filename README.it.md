@@ -80,7 +80,7 @@ Più un paio di cose che non sapevi di volere:
 - Una **Dashboard** dove dici a un'IA *«costruiscimi un widget che fa il ping al mio router ogni 30 secondi»* e appare, nella sua sandbox, sulla tua griglia.
 - **Pannelli SSH che si riagganciano alla tua sessione remota `claude` / `codex`** dopo ogni capriccio del Wi-Fi, così un lavoro di sei ore sopravvive a una caduta.
 - Un **misuratore d'uso dell'IA** così smetti di sbattere a sorpresa contro il muro del rate limit alle 3 di notte.
-- Un **Installer Helper** che trova, installa, aggiorna e avvia i tool da dev per Windows che di solito insegui per dieci schede del browser.
+- Un **Install Helper** che trova, installa, aggiorna e avvia i tool da dev per Windows che di solito insegui per dieci schede del browser.
 - **Venticinque sfondi animati** per la dashboard (sì, incluso `matrix`), perché non siamo troppo seri per farlo.
 
 E la parte migliore: l'assistente IA può trasformare una sola frase in un piccolo strumento da dashboard che davvero continui a usare.
