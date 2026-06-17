@@ -13,7 +13,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import i18next from "../../../../i18n/config";
 import { ariaInvalid, dialogButtonAria, menuButtonAria } from "../../../../lib/aria";
@@ -662,6 +662,43 @@ function EmbeddedConnectionPane({
     dataPartition: pane.kind === "webview" ? pane.dataPartition : undefined,
   };
 
+  // Dispatch the embedded surface by pane kind. The `default` exhaustiveness
+  // guard makes a new pane kind a compile error here instead of silently
+  // rendering the SFTP browser (the fallthrough bug this replaced).
+  let body: ReactNode;
+  switch (pane.kind) {
+    case "webview":
+      body = (
+        <WebViewWorkspace isActive={isActive} onOpenAssistant={onOpenAssistant} tab={embeddedTab} />
+      );
+      break;
+    case "remoteDesktop":
+      body = (
+        <RemoteDesktopWorkspace
+          isActive={isActive}
+          onOpenAssistant={onOpenAssistant}
+          tab={embeddedTab}
+        />
+      );
+      break;
+    case "fileViewer":
+      body = <FileViewerWorkspace isActive={isActive} tab={embeddedTab} />;
+      break;
+    case "sftp":
+    case "ftp":
+    case "localFiles":
+      body = (
+        <SftpWorkspace
+          commands={fileBrowserCommands ?? undefined}
+          isActive={isActive}
+          tab={embeddedTab}
+        />
+      );
+      break;
+    default:
+      body = assertNeverPane(pane);
+  }
+
   return (
     <article
       className="embedded-workspace-pane"
@@ -678,28 +715,17 @@ function EmbeddedConnectionPane({
           <X size={13} />
         </button>
       ) : null}
-      {pane.kind === "webview" ? (
-        <WebViewWorkspace
-          isActive={isActive}
-          onOpenAssistant={onOpenAssistant}
-          tab={embeddedTab}
-        />
-      ) : pane.kind === "remoteDesktop" ? (
-        <RemoteDesktopWorkspace
-          isActive={isActive}
-          onOpenAssistant={onOpenAssistant}
-          tab={embeddedTab}
-        />
-      ) : pane.kind === "fileViewer" ? (
-        <FileViewerWorkspace isActive={isActive} tab={embeddedTab} />
-      ) : (
-        <SftpWorkspace
-          commands={fileBrowserCommands ?? undefined}
-          isActive={isActive}
-          tab={embeddedTab}
-        />
-      )}
+      {body}
     </article>
+  );
+}
+
+/** Compile-time exhaustiveness guard for embeddable pane kinds: if a new
+ * `WorkspacePane` kind is added, the `EmbeddedConnectionPane` switch fails to
+ * type-check here rather than silently falling back to a wrong surface. */
+function assertNeverPane(pane: never): never {
+  throw new Error(
+    `Unhandled embedded pane kind: ${String((pane as { kind?: unknown }).kind)}`,
   );
 }
 
