@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Download, FileText } from "lucide-react";
 import { invokeCommand, type PdfViewStatus } from "../../../../../lib/tauri";
 import { supportsInstallerHelper } from "../../../../../lib/platform";
 import { installRecipeAndWait } from "../../../../installer/progress";
@@ -68,35 +69,43 @@ export function PdfDependencyGate({ filePath }: { filePath: string; isActive: bo
   const toolName = dependency ? t(dependency.toolNameKey) : "Poppler";
 
   return (
-    <div className="file-viewer-dependency-gate">
+    <div className="fv-gate">
+      <div className="glyph">
+        <FileText size={40} strokeWidth={1.5} />
+      </div>
       <h3>{t("workspace.fileViewer.dependencyNeededTitle")}</h3>
       <p>{t("workspace.fileViewer.dependencyNeededBody", { tool: toolName })}</p>
       {installError ? (
         <div className="file-viewer-status file-viewer-status-error">{installError}</div>
       ) : null}
-      <div className="file-viewer-dependency-actions">
+      {canInstall ? (
+        <div className="tool">
+          <div className="ti">
+            <Download size={20} />
+          </div>
+          <div>
+            <div className="tt">{toolName}</div>
+            <div className="ts">{t("workspace.fileViewer.dependencyToolNote")}</div>
+          </div>
+        </div>
+      ) : null}
+      <div className="actions">
         {canInstall ? (
           <button
-            className="toolbar-button file-viewer-dependency-install"
+            className="fv-btn primary"
             disabled={installing}
             onClick={() => void install()}
             type="button"
           >
+            <Download size={15} />
             {installing
               ? t("workspace.fileViewer.dependencyInstalling", { tool: toolName })
               : t("workspace.fileViewer.dependencyInstall", { tool: toolName })}
           </button>
         ) : (
-          <p className="file-viewer-dependency-hint">
-            {t("workspace.fileViewer.dependencyManualHint", { tool: toolName })}
-          </p>
+          <p>{t("workspace.fileViewer.dependencyManualHint", { tool: toolName })}</p>
         )}
-        <button
-          className="toolbar-button"
-          disabled={installing}
-          onClick={() => void check()}
-          type="button"
-        >
+        <button className="fv-btn" disabled={installing} onClick={() => void check()} type="button">
           {t("workspace.fileViewer.retry")}
         </button>
       </div>
