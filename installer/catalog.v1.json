@@ -8,15 +8,49 @@
       "descriptionEn": "Distributed version control. Implicit prerequisite for many AI coding tools.",
       "category": "vcs",
       "icon": "GitBranch",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "registryKeys": ["Git_is1"],
-        "displayNames": ["Git"],
-        "displayNamePrefixes": ["Git version"]
+        "registryKeys": [
+          "Git_is1"
+        ],
+        "displayNames": [
+          "Git"
+        ],
+        "displayNamePrefixes": [
+          "Git version"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Git.Git" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/Git-2.54.0-64-bit.exe", "fileName": "Git-2.54.0-64-bit.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Git.Git"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/Git-2.54.0-64-bit.exe",
+        "fileName": "Git-2.54.0-64-bit.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Controllo della versione distribuito. Prerequisito implicito per molti strumenti di codifica AI.",
+        "fr": "Contrôle de version distribué. Condition implicite pour de nombreux outils de codage d’IA.",
+        "es-MX": "Control de versiones distribuidas. Requisito previo implícito para muchas herramientas de codificación de IA.",
+        "de": "Verteilte Versionskontrolle. Implizite Voraussetzung für viele KI-Codierungstools.",
+        "zh-CN": "分布式版本控制。许多人工智能编码工具的隐含先决条件。",
+        "id": "Kontrol versi terdistribusi. Prasyarat implisit untuk banyak alat pengkodean AI.",
+        "ja": "分散バージョン管理。多くの AI コーディング ツールの暗黙の前提条件。",
+        "pt-BR": "Controle de versão distribuído. Pré-requisito implícito para muitas ferramentas de codificação de IA.",
+        "zh-TW": "分散式版本控制工具。許多 AI 程式開發工具會隱含依賴它。",
+        "ko": "분산 버전 제어. 많은 AI 코딩 도구에 대한 암시적 전제 조건입니다.",
+        "th": "การควบคุมเวอร์ชันแบบกระจาย ข้อกำหนดเบื้องต้นโดยนัยสำหรับเครื่องมือเข้ารหัส AI จำนวนมาก",
+        "es": "Control de versiones distribuidas. Requisito previo implícito para muchas herramientas de codificación de IA.",
+        "vi": "Kiểm soát phiên bản phân tán. Điều kiện tiên quyết ngầm định cho nhiều công cụ mã hóa AI."
+      }
     },
     {
       "id": "github-cli",
@@ -24,13 +58,45 @@
       "descriptionEn": "The `gh` command-line tool for GitHub: PRs, issues, repos, releases.",
       "category": "vcs",
       "icon": "Github",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["GitHub CLI"]
+        "displayNames": [
+          "GitHub CLI"
+        ]
       },
-      "provider": { "kind": "winget", "id": "GitHub.cli" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_amd64.msi", "fileName": "gh_2.93.0_windows_amd64.msi", "arm64Url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_arm64.msi", "arm64FileName": "gh_2.93.0_windows_arm64.msi" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "GitHub.cli"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_amd64.msi",
+        "fileName": "gh_2.93.0_windows_amd64.msi",
+        "arm64Url": "https://github.com/cli/cli/releases/download/v2.93.0/gh_2.93.0_windows_arm64.msi",
+        "arm64FileName": "gh_2.93.0_windows_arm64.msi"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "GitHub 的`gh`命令行工具：PR、问题、存储库、发布。",
+        "de": "Das`gh`-Befehlszeilentool für GitHub: PRs, Issues, Repos, Releases.",
+        "vi": "Công cụ dòng lệnh`gh`dành cho GitHub: PR, vấn đề, kho lưu trữ, bản phát hành.",
+        "ja": "GitHub 用の`gh`コマンドライン ツール: PR、発行、リポジトリ、リリース。",
+        "zh-TW": "GitHub 的 `gh` 命令列工具，可處理 PR、議題、儲存庫與版本發行。",
+        "pt-BR": "A ferramenta de linha de comando`gh`para GitHub: PRs, problemas, repositórios, lançamentos.",
+        "fr": "L'outil de ligne de commande`gh`pour GitHub: PR, problèmes, dépôts, versions.",
+        "ko": "GitHub용`gh`명령줄 도구: PR, 문제, 저장소, 릴리스.",
+        "es": "La herramienta de línea de comandos`gh`para GitHub: PR, problemas, repositorios, lanzamientos.",
+        "es-MX": "La herramienta de línea de comandos`gh`para GitHub: PR, problemas, repositorios, lanzamientos.",
+        "th": "เครื่องมือบรรทัดคำสั่ง`gh`สำหรับ GitHub: PRs ปัญหา การซื้อคืน การเผยแพร่",
+        "it": "Lo strumento da riga di comando`gh`per GitHub: PR, problemi, repository, rilasci.",
+        "id": "Alat baris perintah`gh`untuk GitHub: PR, terbitan, repo, rilis."
+      }
     },
     {
       "id": "winget",
@@ -45,7 +111,22 @@
         "url": "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle",
         "fileName": "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
       },
-      "options": []
+      "options": [],
+      "descriptionLocales": {
+        "zh-CN": "Microsoft 的 Windows 包管理器命令行客户端。 KKTerm 需要先安装 winget 支持的工具。",
+        "de": "Der Windows Package Manager-Befehlszeilenclient von Microsoft. Erforderlich, bevor KKTerm Winget-gestützte Tools installieren kann.",
+        "it": "Client della riga di comando di Gestione pacchetti Windows di Microsoft. Richiesto prima che KKTerm possa installare strumenti supportati da Winget.",
+        "fr": "Client de ligne de commande Windows Package Manager de Microsoft. Requis avant que KKTerm puisse installer des outils soutenus par Winget.",
+        "zh-TW": "Microsoft 的 Windows 套件管理員命令列用戶端。KKTerm 需要先有它，才能安裝以 winget 提供的工具。",
+        "ja": "ZXTRM29 の Windows パッケージ マネージャー コマンド ライン クライアント。 KKTerm が wi​​nget をサポートするツールをインストールできるようにする前に必要です。",
+        "es": "Cliente de línea de comandos del Administrador de paquetes de Windows de Microsoft. Requerido antes de que KKTerm pueda instalar herramientas con respaldo de ala.",
+        "es-MX": "Cliente de línea de comandos del Administrador de paquetes de Windows de Microsoft. Requerido antes de que KKTerm pueda instalar herramientas con respaldo de ala.",
+        "pt-BR": "Cliente de linha de comando do Gerenciador de Pacotes do Windows do Microsoft. Necessário antes que o KKTerm possa instalar ferramentas suportadas por winget.",
+        "ko": "Microsoft의 Windows 패키지 관리자 명령줄 클라이언트. KKTerm가 Winget 지원 도구를 설치하기 전에 필요합니다.",
+        "vi": "Máy khách dòng lệnh Windows Package Manager của Microsoft. Cần thiết trước khi KKTerm có thể cài đặt các công cụ hỗ trợ bởi cánh.",
+        "th": "ไคลเอ็นต์บรรทัดคำสั่ง Windows Package Manager ของ Microsoft จำเป็นก่อนที่ KKTerm จะสามารถติดตั้งเครื่องมือที่มีวิงเก็ตสำรองได้",
+        "id": "Klien baris perintah Windows Package Manager Microsoft. Diperlukan sebelum KKTerm dapat menginstal alat yang didukung winget."
+      }
     },
     {
       "id": "vscode",
@@ -53,15 +134,53 @@
       "descriptionEn": "Visual Studio Code — Microsoft's free source editor with rich extension ecosystem.",
       "category": "editor",
       "icon": "Code",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "registryKeys": ["{EA457B21-F73E-494C-ACAB-524FDE069978}_is1"],
-        "displayNames": ["Microsoft Visual Studio Code", "Visual Studio Code"],
-        "displayNamePrefixes": ["Microsoft Visual Studio Code"]
+        "registryKeys": [
+          "{EA457B21-F73E-494C-ACAB-524FDE069978}_is1"
+        ],
+        "displayNames": [
+          "Microsoft Visual Studio Code",
+          "Visual Studio Code"
+        ],
+        "displayNamePrefixes": [
+          "Microsoft Visual Studio Code"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Microsoft.VisualStudioCode" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://update.code.visualstudio.com/latest/win32-x64-user/stable", "fileName": "VSCodeUserSetup-x64.exe", "arm64Url": "https://update.code.visualstudio.com/latest/win32-arm64-user/stable", "arm64FileName": "VSCodeUserSetup-arm64.exe" },
-      "options": ["provider", "scope", "version", "location"]
+      "provider": {
+        "kind": "winget",
+        "id": "Microsoft.VisualStudioCode"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://update.code.visualstudio.com/latest/win32-x64-user/stable",
+        "fileName": "VSCodeUserSetup-x64.exe",
+        "arm64Url": "https://update.code.visualstudio.com/latest/win32-arm64-user/stable",
+        "arm64FileName": "VSCodeUserSetup-arm64.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version",
+        "location"
+      ],
+      "descriptionLocales": {
+        "fr": "Visual Studio Code — L'éditeur de sources gratuit de Microsoft avec un riche écosystème d'extensions.",
+        "es": "Visual Studio Code: editor de código fuente gratuito de Microsoft con un rico ecosistema de extensiones.",
+        "de": "Visual Studio Code – Microsofts kostenloser Quellcode-Editor mit umfangreichem Erweiterungs-Ökosystem.",
+        "ja": "Visual Studio Code — 豊富な拡張機能エコシステムを備えた Microsoft の無料ソース エディター。",
+        "zh-CN": "Visual Studio Code — Microsoft 的免费源代码编辑器，具有丰富的扩展生态系统。",
+        "es-MX": "Visual Studio Code: editor de código fuente gratuito de Microsoft con un rico ecosistema de extensiones.",
+        "vi": "Visual Studio Code — Trình soạn thảo mã nguồn miễn phí của Microsoft với hệ sinh thái tiện ích mở rộng phong phú.",
+        "id": "Visual Studio Code — editor sumber gratis Microsoft dengan ekosistem ekstensi yang kaya.",
+        "it": "Visual Studio Code: editor di codice gratuito di Microsoft con un ricco ecosistema di estensioni.",
+        "zh-TW": "Visual Studio Code — Microsoft 免費的原始碼編輯器，擁有豐富的擴充功能生態系。",
+        "pt-BR": "Visual Studio Code — editor de código-fonte gratuito do Microsoft com rico ecossistema de extensões.",
+        "th": "Visual Studio Code — โปรแกรมแก้ไขซอร์สฟรีของ Microsoft พร้อมระบบนิเวศส่วนขยายที่หลากหลาย",
+        "ko": "Visual Studio Code — 풍부한 확장 생태계를 갖춘 Microsoft의 무료 소스 편집기입니다."
+      }
     },
     {
       "id": "cursor",
@@ -69,13 +188,43 @@
       "descriptionEn": "AI-first code editor built on VS Code.",
       "category": "editor",
       "icon": "MousePointerClick",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["Cursor"]
+        "displayNames": [
+          "Cursor"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Anysphere.Cursor" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://downloads.cursor.com/production/e7a7e93f4d75f8272503ecf33cedbaae10114a15/win32/x64/user-setup/CursorUserSetup-x64-3.6.21.exe", "fileName": "CursorUserSetup-x64-3.6.21.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Anysphere.Cursor"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://downloads.cursor.com/production/e7a7e93f4d75f8272503ecf33cedbaae10114a15/win32/x64/user-setup/CursorUserSetup-x64-3.6.21.exe",
+        "fileName": "CursorUserSetup-x64-3.6.21.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Éditeur de code AI-first construit sur VS Code.",
+        "es-MX": "El primer editor de código de IA construido sobre VS Code.",
+        "zh-CN": "基于 VS Code 构建的人工智能优先代码编辑器。",
+        "zh-TW": "以 VS Code 為基礎打造的 AI 優先程式碼編輯器。",
+        "th": "โปรแกรมแก้ไขโค้ด AI ตัวแรกที่สร้างขึ้นบน VS Code",
+        "ko": "VS Code을 기반으로 구축된 AI 최초 코드 편집기.",
+        "vi": "Trình chỉnh sửa mã AI đầu tiên được xây dựng trên VS Code.",
+        "ja": "VS Code 上に構築された AI ファーストのコード エディター。",
+        "de": "AI-First-Code-Editor basierend auf VS Code.",
+        "it": "Primo editor di codice AI basato su VS Code.",
+        "id": "Editor kode AI pertama yang dibangun di VS Code.",
+        "es": "El primer editor de código de IA construido sobre VS Code.",
+        "pt-BR": "Editor de código AI-first construído em VS Code."
+      }
     },
     {
       "id": "notepadpp",
@@ -83,13 +232,44 @@
       "descriptionEn": "Lightweight Windows text editor with syntax highlighting.",
       "category": "editor",
       "icon": "FileText",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["Notepad++", "Notepad++ (64-bit x64)"]
+        "displayNames": [
+          "Notepad++",
+          "Notepad++ (64-bit x64)"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Notepad++.Notepad++" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.2/npp.8.9.6.2.Installer.x64.exe", "fileName": "npp.8.9.6.2.Installer.x64.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Notepad++.Notepad++"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.2/npp.8.9.6.2.Installer.x64.exe",
+        "fileName": "npp.8.9.6.2.Installer.x64.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Éditeur de texte Windows léger avec coloration syntaxique.",
+        "de": "Leichter Windows-Texteditor mit Syntaxhervorhebung.",
+        "it": "Editor di testo leggero per Windows con evidenziazione della sintassi.",
+        "es": "Editor de texto ligero de Windows con resaltado de sintaxis.",
+        "es-MX": "Editor de texto ligero de Windows con resaltado de sintaxis.",
+        "pt-BR": "Editor de texto leve do Windows com destaque de sintaxe.",
+        "zh-TW": "輕量級 Windows 文字編輯器，支援語法醒目提示。",
+        "zh-CN": "具有语法突出显示功能的轻量级 Windows 文本编辑器。",
+        "ja": "構文強調表示機能を備えた軽量の Windows テキスト エディター。",
+        "ko": "구문 강조 기능이 있는 경량 Windows 텍스트 편집기입니다.",
+        "vi": "Trình soạn thảo văn bản Windows nhẹ có tính năng tô sáng cú pháp.",
+        "th": "โปรแกรมแก้ไขข้อความ Windows น้ำหนักเบาพร้อมการเน้นไวยากรณ์",
+        "id": "Editor teks Windows yang ringan dengan penyorotan sintaksis."
+      }
     },
     {
       "id": "nvm-windows",
@@ -97,13 +277,43 @@
       "descriptionEn": "Node Version Manager for Windows. Lets you switch between multiple Node versions.",
       "category": "runtime",
       "icon": "Layers",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNamePrefixes": ["NVM for Windows"]
+        "displayNamePrefixes": [
+          "NVM for Windows"
+        ]
       },
-      "provider": { "kind": "winget", "id": "CoreyButler.NVMforWindows" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe", "fileName": "nvm-setup.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "CoreyButler.NVMforWindows"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe",
+        "fileName": "nvm-setup.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "es": "Administrador de versiones Node para Windows. Le permite cambiar entre múltiples versiones de Node.",
+        "fr": "Gestionnaire de versions Node pour Windows. Vous permet de basculer entre plusieurs versions de Node.",
+        "it": "Node Gestore versioni per Windows. Consente di passare tra più versioni Node.",
+        "ja": "ZXTRM03 Windows 用バージョン マネージャー。複数の Node バージョンを切り替えることができます。",
+        "zh-CN": "Node Windows 版本管理器。允许您在多个 Node 版本之间切换。",
+        "vi": "Trình quản lý phiên bản Node dành cho Windows. Cho phép bạn chuyển đổi giữa nhiều phiên bản Node.",
+        "de": "Node Versionsmanager für Windows. Ermöglicht den Wechsel zwischen mehreren Node-Versionen.",
+        "th": "ตัวจัดการเวอร์ชัน Node สำหรับ Windows ให้คุณสลับระหว่าง Node หลายเวอร์ชันได้",
+        "zh-TW": "Windows 版 Node 版本管理器，可在多個 Node 版本之間切換。",
+        "ko": "Windows용 Node 버전 관리자. 여러 Node 버전 간에 전환할 수 있습니다.",
+        "es-MX": "Administrador de versiones Node para Windows. Le permite cambiar entre múltiples versiones de Node.",
+        "pt-BR": "Gerenciador de versão Node para Windows. Permite alternar entre várias versões do Node.",
+        "id": "Manajer Versi Node untuk Windows. Memungkinkan Anda beralih di antara beberapa versi Node."
+      }
     },
     {
       "id": "node-bundle",
@@ -111,7 +321,27 @@
       "descriptionEn": "Installs nvm-windows, then installs and activates the latest Node LTS release through nvm-windows.",
       "category": "runtime",
       "icon": "Boxes",
-      "provider": { "kind": "bundle", "steps": ["nvm-windows"] }
+      "provider": {
+        "kind": "bundle",
+        "steps": [
+          "nvm-windows"
+        ]
+      },
+      "descriptionLocales": {
+        "fr": "Installe nvm-windows, puis installe et active la dernière version de Node LTS via nvm-windows.",
+        "de": "Installiert nvm-windows, installiert und aktiviert dann die neueste Node LTS-Version über nvm-windows.",
+        "zh-CN": "安装 nvm-windows，然后通过 nvm-windows 安装并激活最新的 Node LTS 版本。",
+        "es-MX": "Instala nvm-windows, luego instala y activa la última versión de Node LTS a través de nvm-windows.",
+        "it": "Installa nvm-windows, quindi installa e attiva l'ultima versione di Node LTS tramite nvm-windows.",
+        "es": "Instala nvm-windows, luego instala y activa la última versión de Node LTS a través de nvm-windows.",
+        "id": "Instal nvm-windows, lalu instal dan aktifkan rilis Node LTS terbaru melalui nvm-windows.",
+        "ja": "nvm-windows をインストールし、その後、nvm-windows を介して最新の Node LTS リリースをインストールしてアクティブ化します。",
+        "zh-TW": "安裝 nvm-windows，接著透過 nvm-windows 安裝並啟用最新版 Node LTS。",
+        "vi": "Cài đặt nvm-windows, sau đó cài đặt và kích hoạt bản phát hành Node LTS mới nhất thông qua nvm-windows.",
+        "ko": "nvm-windows을 설치한 다음 nvm-windows을 통해 최신 Node LTS 릴리스를 설치하고 활성화합니다.",
+        "th": "ติดตั้ง nvm-windows จากนั้นติดตั้งและเปิดใช้งาน Node LTS รุ่นล่าสุดผ่าน nvm-windows",
+        "pt-BR": "Instala o nvm-windows e, em seguida, instala e ativa a versão mais recente do Node LTS por meio do nvm-windows."
+      }
     },
     {
       "id": "uv",
@@ -119,12 +349,37 @@
       "descriptionEn": "Fast Python package and project manager from Astral. Can install Python itself on demand.",
       "category": "runtime",
       "icon": "Wind",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["uv"]
+        "displayNames": [
+          "uv"
+        ]
       },
-      "provider": { "kind": "winget", "id": "astral-sh.uv" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "astral-sh.uv"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Package Python rapide et chef de projet d'Astral. Peut installer Python lui-même à la demande.",
+        "it": "Pacchetto Fast Python e project manager di Astral. Può installare Python stesso su richiesta.",
+        "de": "Schneller Python-Paket- und Projektmanager von Astral. Kann Python selbst bei Bedarf installieren.",
+        "es": "Paquete rápido de Python y administrador de proyectos de Astral. Puede instalar Python bajo demanda.",
+        "es-MX": "Paquete rápido de Python y administrador de proyectos de Astral. Puede instalar Python bajo demanda.",
+        "pt-BR": "Pacote Python rápido e gerente de projetos da Astral. Pode instalar o próprio Python sob demanda.",
+        "zh-TW": "Astral 開發的快速 Python 套件與專案管理器，也能視需要安裝 Python。",
+        "zh-CN": "来自 Astral 的快速 Python 包和项目管理器。可以按需安装Python本身。",
+        "ja": "Astral の高速 Python パッケージおよびプロジェクト マネージャー。オンデマンドで Python 自体をインストールできます。",
+        "th": "แพ็คเกจ Fast Python และผู้จัดการโครงการจาก Astral สามารถติดตั้ง Python ได้เองตามความต้องการ",
+        "ko": "Astral의 빠른 Python 패키지 및 프로젝트 관리자. 필요에 따라 Python 자체를 설치할 수 있습니다.",
+        "id": "Paket Python cepat dan manajer proyek dari Astral. Dapat menginstal Python sendiri sesuai permintaan.",
+        "vi": "Trình quản lý dự án và gói Python nhanh từ Astral. Có thể tự cài đặt Python theo yêu cầu."
+      }
     },
     {
       "id": "python-bundle",
@@ -132,7 +387,27 @@
       "descriptionEn": "Installs uv, then installs the latest stable Python 3.13 patch release and pins Python 3.13 globally through uv.",
       "category": "runtime",
       "icon": "Boxes",
-      "provider": { "kind": "bundle", "steps": ["uv"] }
+      "provider": {
+        "kind": "bundle",
+        "steps": [
+          "uv"
+        ]
+      },
+      "descriptionLocales": {
+        "de": "Installiert uv, installiert dann die neueste stabile Python 3.13-Patch-Version und pinnt Python 3.13 global über uv.",
+        "zh-TW": "安裝 uv，接著安裝最新穩定的 Python 3.13 修補版本，並透過 uv 將 Python 3.13 固定為全域版本。",
+        "zh-CN": "安装 uv，然后安装最新稳定的 Python 3.13 补丁版本，并通过 uv 全局固定 Python 3.13。",
+        "pt-BR": "Instala o uv e, em seguida, instala a versão estável mais recente do patch Python 3.13 e fixa o Python 3.13 globalmente por meio do uv.",
+        "vi": "Cài đặt uv, sau đó cài đặt bản phát hành bản vá Python 3.13 ổn định mới nhất và ghim Python 3.13 trên toàn cầu thông qua uv.",
+        "fr": "Installe uv, puis installe la dernière version stable du correctif Python 3.13 et épingle Python 3.13 globalement via uv.",
+        "id": "Instal uv, lalu instal rilis patch Python 3.13 stabil terbaru dan sematkan Python 3.13 secara global melalui uv.",
+        "it": "Installa uv, quindi installa l'ultima versione stabile della patch Python 3.13 e aggiunge Python 3.13 a livello globale tramite uv.",
+        "ja": "uv をインストールしてから、最新の安定した Python 3.13 パッチ リリースをインストールし、uv を通じて Python 3.13 をグローバルに固定します。",
+        "es-MX": "Instala uv, luego instala la última versión estable del parche Python 3.13 y fija Python 3.13 globalmente a través de uv.",
+        "es": "Instala uv, luego instala la última versión estable del parche Python 3.13 y fija Python 3.13 globalmente a través de uv.",
+        "th": "ติดตั้ง uv จากนั้นติดตั้งแพทช์ Python 3.13 ที่เสถียรล่าสุด และปักหมุด Python 3.13 ทั่วโลกผ่าน uv",
+        "ko": "uv를 설치한 다음 안정적인 최신 Python 3.13 패치 릴리스를 설치하고 uv를 통해 전역적으로 Python 3.13를 고정합니다."
+      }
     },
     {
       "id": "wsl",
@@ -144,6 +419,21 @@
         "kind": "windowsFeature",
         "feature": "Microsoft-Windows-Subsystem-Linux",
         "reboot": true
+      },
+      "descriptionLocales": {
+        "de": "Aktiviert WSL bei dieser Windows-Installation. Erfordert einen Neustart, bevor abhängige Tools (Docker) ausgeführt werden können.",
+        "es-MX": "Habilita WSL en esta instalación de Windows. Es necesario reiniciar antes de que se puedan ejecutar las herramientas dependientes (Docker).",
+        "zh-CN": "在此 Windows 安装上启用 WSL。需要重新启动才能运行依赖工具 (Docker)。",
+        "fr": "Active WSL sur cette installation Windows. Nécessite un redémarrage avant que les outils dépendants (Docker) puissent s'exécuter.",
+        "pt-BR": "Habilita WSL nesta instalação do Windows. Requer uma reinicialização antes que as ferramentas dependentes (Docker) possam ser executadas.",
+        "it": "Abilita WSL su questa installazione di Windows. Richiede un riavvio prima che gli strumenti dipendenti (Docker) possano essere eseguiti.",
+        "zh-TW": "在這台 Windows 上啟用 WSL。需要重新開機後，相依工具（例如 Docker）才能執行。",
+        "es": "Habilita WSL en esta instalación de Windows. Es necesario reiniciar antes de que se puedan ejecutar las herramientas dependientes (Docker).",
+        "th": "เปิดใช้งาน WSL ในการติดตั้ง Windows นี้ ต้องรีบูตก่อนที่เครื่องมือที่ต้องพึ่งพา (Docker) จะสามารถทำงานได้",
+        "vi": "Kích hoạt WSL trên bản cài đặt Windows này. Yêu cầu khởi động lại trước khi các công cụ phụ thuộc (Docker) có thể chạy.",
+        "ja": "この Windows インストールで ZXTRM07 を有効にします。依存ツール (Docker) を実行するには、再起動が必要です。",
+        "id": "Mengaktifkan WSL pada instalasi Windows ini. Memerlukan reboot sebelum alat yang bergantung (Docker) dapat dijalankan.",
+        "ko": "이 Windows 설치에서 WSL을 활성화합니다. 종속 도구(Docker)를 실행하려면 재부팅이 필요합니다."
       }
     },
     {
@@ -152,8 +442,28 @@
       "descriptionEn": "Installs the Ubuntu Linux distribution into WSL without launching first-run setup.",
       "category": "infra",
       "icon": "Terminal",
-      "needs": ["wsl"],
-      "provider": { "kind": "wslDistro", "distro": "Ubuntu" }
+      "needs": [
+        "wsl"
+      ],
+      "provider": {
+        "kind": "wslDistro",
+        "distro": "Ubuntu"
+      },
+      "descriptionLocales": {
+        "it": "Installa la distribuzione Ubuntu Linux in WSL senza avviare la configurazione di primo avvio.",
+        "zh-CN": "将 Ubuntu Linux 发行版安装到 WSL 中，而无需启动首次运行安装程序。",
+        "de": "Installiert die Ubuntu-Linux-Distribution in WSL, ohne das erstmalige Setup zu starten.",
+        "th": "ติดตั้งการกระจาย Ubuntu Linux ลงใน WSL โดยไม่ต้องเปิดการตั้งค่าการทำงานครั้งแรก",
+        "fr": "Installe la distribution Ubuntu Linux dans WSL sans lancer l'installation de première exécution.",
+        "zh-TW": "將 Ubuntu Linux 發行版安裝到 WSL，不啟動首次執行設定。",
+        "es-MX": "Instala la distribución Ubuntu Linux en WSL sin iniciar la configuración de primera ejecución.",
+        "ko": "최초 실행 설정을 시작하지 않고 Ubuntu Linux 배포판을 WSL에 설치합니다.",
+        "es": "Instala la distribución Ubuntu Linux en WSL sin iniciar la configuración de primera ejecución.",
+        "pt-BR": "Instala a distribuição Ubuntu Linux no WSL sem iniciar a configuração inicial.",
+        "ja": "初回実行セットアップを起動せずに、Ubuntu Linux ディストリビューションを WSL にインストールします。",
+        "id": "Menginstal distribusi Linux Ubuntu ke WSL tanpa meluncurkan pengaturan yang dijalankan pertama kali.",
+        "vi": "Cài đặt bản phân phối Ubuntu Linux vào WSL mà không cần khởi chạy thiết lập lần đầu."
+      }
     },
     {
       "id": "wsl-debian",
@@ -161,8 +471,28 @@
       "descriptionEn": "Installs the Debian Linux distribution into WSL without launching first-run setup.",
       "category": "infra",
       "icon": "Terminal",
-      "needs": ["wsl"],
-      "provider": { "kind": "wslDistro", "distro": "Debian" }
+      "needs": [
+        "wsl"
+      ],
+      "provider": {
+        "kind": "wslDistro",
+        "distro": "Debian"
+      },
+      "descriptionLocales": {
+        "pt-BR": "Instala a distribuição Debian Linux no WSL sem iniciar a configuração inicial.",
+        "zh-CN": "将 Debian Linux 发行版安装到 WSL 中，无需启动首次运行安装程序。",
+        "es": "Instala la distribución Debian Linux en WSL sin iniciar la configuración de primera ejecución.",
+        "zh-TW": "將 Debian Linux 發行版安裝到 WSL，不啟動首次執行設定。",
+        "it": "Installa la distribuzione Debian Linux in WSL senza avviare la configurazione di primo avvio.",
+        "de": "Installiert die Debian-Linux-Distribution in WSL, ohne das erstmalige Setup zu starten.",
+        "fr": "Installe la distribution Debian Linux dans WSL sans lancer l'installation de première exécution.",
+        "ja": "初回実行セットアップを起動せずに、Debian Linux ディストリビューションを WSL にインストールします。",
+        "th": "ติดตั้งการกระจาย Debian Linux ลงใน WSL โดยไม่ต้องเปิดการตั้งค่าการทำงานครั้งแรก",
+        "ko": "최초 실행 설정을 시작하지 않고 Debian Linux 배포판을 WSL에 설치합니다.",
+        "es-MX": "Instala la distribución Debian Linux en WSL sin iniciar la configuración de primera ejecución.",
+        "vi": "Cài đặt bản phân phối Debian Linux vào WSL mà không cần khởi chạy thiết lập lần đầu.",
+        "id": "Menginstal distribusi Linux Debian ke WSL tanpa meluncurkan pengaturan yang dijalankan pertama kali."
+      }
     },
     {
       "id": "docker-desktop",
@@ -170,13 +500,44 @@
       "descriptionEn": "Docker Desktop for Windows. Uses the WSL2 backend.",
       "category": "infra",
       "icon": "Container",
-      "needs": ["winget", "wsl"],
+      "needs": [
+        "winget",
+        "wsl"
+      ],
       "detection": {
-        "displayNames": ["Docker Desktop"]
+        "displayNames": [
+          "Docker Desktop"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Docker.DockerDesktop" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe", "fileName": "Docker Desktop Installer.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Docker.DockerDesktop"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe",
+        "fileName": "Docker Desktop Installer.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "es-MX": "Escritorio Docker para Windows. Utiliza el backend WSL2.",
+        "es": "Escritorio Docker para Windows. Utiliza el backend WSL2.",
+        "fr": "Bureau Docker pour Windows. Utilise le backend WSL2.",
+        "ja": "Docker Windows 用デスクトップ。 ZXTRM06 バックエンドを使用します。",
+        "zh-CN": "Docker Windows 桌面。使用 WSL2 后端。",
+        "th": "เดสก์ท็อป Docker สำหรับ Windows ใช้แบ็กเอนด์ WSL2",
+        "ko": "Windows용 Docker 데스크탑. WSL2 백엔드를 사용합니다.",
+        "vi": "Máy tính để bàn Docker dành cho Windows. Sử dụng phụ trợ WSL2.",
+        "it": "Desktop Docker per Windows. Utilizza il backend WSL2.",
+        "de": "Docker Desktop für Windows. Verwendet das WSL2-Backend.",
+        "pt-BR": "Área de trabalho Docker para Windows. Usa o back-end WSL2.",
+        "id": "Docker Desktop untuk Windows. Menggunakan backend WSL2.",
+        "zh-TW": "Windows 版 Docker Desktop，使用 WSL2 後端。"
+      }
     },
     {
       "id": "nssm",
@@ -184,13 +545,40 @@
       "descriptionEn": "The Non-Sucking Service Manager — wrap any program as a Windows service.",
       "category": "utilities",
       "icon": "Wrench",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["NSSM"],
-        "displayNamePrefixes": ["NSSM "]
+        "displayNames": [
+          "NSSM"
+        ],
+        "displayNamePrefixes": [
+          "NSSM "
+        ]
       },
-      "provider": { "kind": "winget", "id": "NSSM.NSSM" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "NSSM.NSSM"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Le gestionnaire de services non suceurs — enveloppe n'importe quel programme en tant que service Windows.",
+        "it": "Il gestore dei servizi che non fa schifo: racchiude qualsiasi programma come un servizio Windows.",
+        "de": "Der Non-Sucking Service Manager – verpackt jedes Programm als Windows-Dienst.",
+        "es": "El administrador de servicios sin succión: empaqueta cualquier programa como un servicio de Windows.",
+        "es-MX": "El administrador de servicios sin succión: empaqueta cualquier programa como un servicio de Windows.",
+        "pt-BR": "O Gerenciador de Serviços Não Sugadores — envolva qualquer programa como um serviço do Windows.",
+        "zh-TW": "Non-Sucking Service Manager，可將任何程式包裝成 Windows 服務。",
+        "zh-CN": "Non-Sucking Service Manager — 将任何程序包装为 Windows 服务。",
+        "ko": "Non-Sucking Service Manager — 모든 프로그램을 Windows 서비스로 래핑합니다.",
+        "ja": "Non-Sucking Service Manager — あらゆるプログラムを Windows サービスとしてラップします。",
+        "th": "Non-Sucking Service Manager — รวมโปรแกรมใดๆ ไว้เป็นบริการ Windows",
+        "id": "Manajer Layanan Non-Mengisap — membungkus program apa pun sebagai layanan Windows.",
+        "vi": "Trình quản lý dịch vụ không hút - gói bất kỳ chương trình nào dưới dạng dịch vụ Windows."
+      }
     },
     {
       "id": "vcxsrv",
@@ -198,15 +586,41 @@
       "descriptionEn": "Lightweight Windows X server for SSH X11 forwarding and remote Linux GUI apps.",
       "category": "utilities",
       "icon": "Monitor",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://github.com/marchaesen/vcxsrv",
       "releaseNotesUrl": "https://github.com/marchaesen/vcxsrv/releases",
       "detection": {
-        "displayNames": ["VcXsrv"],
-        "displayNamePrefixes": ["VcXsrv"]
+        "displayNames": [
+          "VcXsrv"
+        ],
+        "displayNamePrefixes": [
+          "VcXsrv"
+        ]
       },
-      "provider": { "kind": "winget", "id": "marha.VcXsrv" },
-      "options": ["version"]
+      "provider": {
+        "kind": "winget",
+        "id": "marha.VcXsrv"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Server Windows X leggero per l'inoltro SSH X11 e app GUI Linux remote.",
+        "de": "Leichter Windows-X-Server für SSH-X11-Weiterleitung und Remote-Linux-GUI-Apps.",
+        "fr": "Serveur Windows X léger pour le transfert SSH X11 et les applications GUI Linux distantes.",
+        "es": "Servidor Windows X liviano para reenvío SSH X11 y aplicaciones GUI remotas de Linux.",
+        "es-MX": "Servidor Windows X liviano para reenvío SSH X11 y aplicaciones GUI remotas de Linux.",
+        "pt-BR": "Servidor Windows X leve para encaminhamento SSH X11 e aplicativos Linux GUI remotos.",
+        "zh-CN": "用于 SSH X11 转发和远程 Linux GUI 应用程序的轻量级 Windows X 服务器。",
+        "zh-TW": "輕量級 Windows X 伺服器，供 SSH X11 轉送與遠端 Linux GUI 應用程式使用。",
+        "ja": "SSH X11 転送およびリモート Linux GUI アプリ用の軽量 Windows X サーバー。",
+        "id": "Server Windows X yang ringan untuk penerusan SSH X11 dan aplikasi GUI Linux jarak jauh.",
+        "ko": "SSH X11 전달 및 원격 Linux GUI 앱을 위한 경량 Windows X 서버입니다.",
+        "th": "เซิร์ฟเวอร์ Windows X น้ำหนักเบาสำหรับการส่งต่อ SSH X11 และแอป Linux GUI ระยะไกล",
+        "vi": "Máy chủ Windows X nhẹ để chuyển tiếp SSH X11 và các ứng dụng GUI Linux từ xa."
+      }
     },
     {
       "id": "claude-code-cli",
@@ -214,9 +628,31 @@
       "descriptionEn": "Anthropic's official CLI coding agent. Requires Node.",
       "category": "ai",
       "icon": "Bot",
-      "needs": ["node-bundle"],
-      "provider": { "kind": "npm", "pkg": "@anthropic-ai/claude-code" },
-      "options": ["version"]
+      "needs": [
+        "node-bundle"
+      ],
+      "provider": {
+        "kind": "npm",
+        "pkg": "@anthropic-ai/claude-code"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "es-MX": "Agente de codificación CLI oficial de Anthropic. Requiere Node.",
+        "es": "Agente de codificación CLI oficial de Anthropic. Requiere Node.",
+        "zh-CN": "Anthropic的官方CLI编码代理。需要 Node。",
+        "ko": "Anthropic의 공식 CLI 코딩 에이전트입니다. Node이 필요합니다.",
+        "it": "Agente di codifica CLI ufficiale di Anthropic. Richiede Node.",
+        "zh-TW": "Anthropic 官方 CLI 程式開發代理。需要 Node。",
+        "ja": "Anthropic の公式 CLI コーディング エージェント。 Nodeが必要です。",
+        "vi": "Đại lý mã hóa CLI chính thức của Anthropic. Yêu cầu Node.",
+        "pt-BR": "Agente de codificação CLI oficial do Anthropic. Requer Node.",
+        "de": "Der offizielle CLI-Coding-Agent von Anthropic. Erfordert Node.",
+        "fr": "Agent de codage CLI officiel de Anthropic. Nécessite Node.",
+        "th": "ตัวแทนการเข้ารหัส CLI อย่างเป็นทางการของ Anthropic ต้องใช้ Node",
+        "id": "Agen pengkodean CLI resmi Anthropic. Membutuhkan Node."
+      }
     },
     {
       "id": "codex-cli",
@@ -224,9 +660,31 @@
       "descriptionEn": "OpenAI's official CLI coding agent. Requires Node.",
       "category": "ai",
       "icon": "Bot",
-      "needs": ["node-bundle"],
-      "provider": { "kind": "npm", "pkg": "@openai/codex" },
-      "options": ["version"]
+      "needs": [
+        "node-bundle"
+      ],
+      "provider": {
+        "kind": "npm",
+        "pkg": "@openai/codex"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Agent de codage CLI officiel de OpenAI. Nécessite Node.",
+        "pt-BR": "Agente de codificação CLI oficial do OpenAI. Requer Node.",
+        "ko": "OpenAI의 공식 CLI 코딩 에이전트입니다. Node이 필요합니다.",
+        "es-MX": "Agente de codificación CLI oficial de OpenAI. Requiere Node.",
+        "ja": "OpenAI の公式 CLI コーディング エージェント。 Nodeが必要です。",
+        "de": "Der offizielle CLI-Coding-Agent von OpenAI. Erfordert Node.",
+        "zh-TW": "OpenAI 官方 CLI 程式開發代理。需要 Node。",
+        "zh-CN": "OpenAI的官方CLI编码代理。需要 Node。",
+        "it": "Agente di codifica CLI ufficiale di OpenAI. Richiede Node.",
+        "id": "Agen pengkodean CLI resmi OpenAI. Membutuhkan Node.",
+        "th": "ตัวแทนการเข้ารหัส CLI อย่างเป็นทางการของ OpenAI ต้องใช้ Node",
+        "es": "Agente de codificación CLI oficial de OpenAI. Requiere Node.",
+        "vi": "Đại lý mã hóa CLI chính thức của OpenAI. Yêu cầu Node."
+      }
     },
     {
       "id": "antigravity-cli",
@@ -240,7 +698,22 @@
         "url": "https://antigravity.google/cli/install.cmd",
         "fileName": "antigravity-cli-install.cmd"
       },
-      "options": []
+      "options": [],
+      "descriptionLocales": {
+        "fr": "Agent de ligne de commande Antigravity de Google, installé avec le programme d'installation officiel des commandes Windows.",
+        "de": "Der Antigravity-Befehlszeilenagent von Google, installiert mit dem offiziellen Windows-Befehlsinstallationsprogramm.",
+        "it": "Agente della riga di comando Antigravity di Google, installato con il programma di installazione ufficiale dei comandi di Windows.",
+        "es-MX": "El agente de línea de comandos Antigravity de Google, instalado con el instalador de comandos oficial de Windows.",
+        "es": "El agente de línea de comandos Antigravity de Google, instalado con el instalador de comandos oficial de Windows.",
+        "pt-BR": "Agente de linha de comando Antigravity do Google, instalado com o instalador de comando oficial do Windows.",
+        "zh-CN": "Google 的 Antigravity 命令行代理，与官方 Windows 命令安装程序一起安装。",
+        "zh-TW": "Google 的 Antigravity 命令列代理，透過官方 Windows 命令安裝程式安裝。",
+        "ja": "Google の Antigravity コマンド ライン エージェント。公式の Windows コマンド インストーラーでインストールされます。",
+        "ko": "공식 Windows 명령 설치 프로그램과 함께 설치되는 Google의 Antigravity 명령줄 에이전트입니다.",
+        "vi": "Tác nhân dòng lệnh AntiGravity của Google, được cài đặt cùng với trình cài đặt lệnh Windows chính thức.",
+        "id": "Agen baris perintah Antigravitasi Google, diinstal dengan penginstal perintah resmi Windows.",
+        "th": "เอเจนต์บรรทัดคำสั่ง Antigravity ของ Google ซึ่งติดตั้งด้วยโปรแกรมติดตั้งคำสั่ง Windows อย่างเป็นทางการ"
+      }
     },
     {
       "id": "ollama",
@@ -248,13 +721,43 @@
       "descriptionEn": "Run local large language models on your machine. Managed under KKTerm app-local storage.",
       "category": "ai",
       "icon": "Cpu",
-      "needs": ["winget", "nssm"],
+      "needs": [
+        "winget",
+        "nssm"
+      ],
       "detection": {
-        "displayNames": ["Ollama"]
+        "displayNames": [
+          "Ollama"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Ollama.Ollama" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://ollama.com/download/OllamaSetup.exe", "fileName": "OllamaSetup.exe" },
-      "options": ["provider", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Ollama.Ollama"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://ollama.com/download/OllamaSetup.exe",
+        "fileName": "OllamaSetup.exe"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "在您的计算机上运行本地大语言模型。在 KKTerm 应用程序本地存储下管理。",
+        "fr": "Exécutez des modèles de langage volumineux locaux sur votre ordinateur. Géré sous le stockage local de l'application KKTerm.",
+        "zh-TW": "在你的電腦上執行本機大型語言模型。由 KKTerm 以應用程式本機儲存空間管理。",
+        "es": "Ejecute modelos de lenguaje local grande en su máquina. Gestionado bajo el almacenamiento local de la aplicación KKTerm.",
+        "pt-BR": "Execute modelos locais de linguagem grande em sua máquina. Gerenciado no armazenamento local do aplicativo KKTerm.",
+        "ko": "귀하의 컴퓨터에서 로컬 대형 언어 모델을 실행하십시오. KKTerm 앱 로컬 저장소에서 관리됩니다.",
+        "it": "Esegui modelli linguistici di grandi dimensioni locali sul tuo computer. Gestito con l'archiviazione locale dell'app KKTerm.",
+        "vi": "Chạy các mô hình ngôn ngữ lớn cục bộ trên máy của bạn. Được quản lý trong bộ nhớ cục bộ của ứng dụng KKTerm.",
+        "es-MX": "Ejecute modelos de lenguaje local grande en su máquina. Gestionado bajo el almacenamiento local de la aplicación KKTerm.",
+        "de": "Führen Sie lokale große Sprachmodelle auf Ihrem Computer aus. Verwaltet unter dem App-lokalen Speicher KKTerm.",
+        "ja": "マシン上でローカルの大規模言語モデルを実行します。 KKTerm アプリローカル ストレージで管理されます。",
+        "th": "เรียกใช้โมเดลภาษาขนาดใหญ่ในเครื่องของคุณ จัดการภายใต้ที่เก็บข้อมูลภายในแอป KKTerm",
+        "id": "Jalankan model bahasa besar lokal di mesin Anda. Dikelola di bawah penyimpanan lokal aplikasi KKTerm."
+      }
     },
     {
       "id": "n8n",
@@ -262,9 +765,32 @@
       "descriptionEn": "Workflow automation tool — self-hosted Zapier alternative. Managed as a KKTerm app-local npm project.",
       "category": "automation",
       "icon": "Workflow",
-      "needs": ["node-bundle", "nssm"],
-      "provider": { "kind": "npm", "pkg": "n8n" },
-      "options": ["version"]
+      "needs": [
+        "node-bundle",
+        "nssm"
+      ],
+      "provider": {
+        "kind": "npm",
+        "pkg": "n8n"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Outil d’automatisation du flux de travail – alternative Zapier auto-hébergée. Géré en tant que projet npm local d'application KKTerm.",
+        "it": "Strumento di automazione del flusso di lavoro: alternativa Zapier self-hosted. Gestito come progetto npm locale dell'app KKTerm.",
+        "ko": "워크플로 자동화 도구 — 자체 호스팅 Zapier 대안. KKTerm 앱-로컬 npm 프로젝트로 관리됩니다.",
+        "vi": "Công cụ tự động hóa quy trình làm việc - giải pháp thay thế Zapier tự lưu trữ. Được quản lý dưới dạng dự án npm ứng dụng cục bộ KKTerm.",
+        "ja": "ワークフロー自動化ツール — セルフホスト型 ZXTRM32 の代替品。 KKTerm アプリローカル npm プロジェクトとして管理されます。",
+        "pt-BR": "Ferramenta de automação de fluxo de trabalho – alternativa Zapier auto-hospedada. Gerenciado como um projeto npm local de aplicativo KKTerm.",
+        "de": "Workflow-Automatisierungstool – selbstgehostete Zapier-Alternative. Verwaltet als KKTerm App-Local-NPM-Projekt.",
+        "zh-TW": "工作流程自動化工具，可自行架設的 Zapier 替代方案。由 KKTerm 管理為應用程式本機 npm 專案。",
+        "es": "Herramienta de automatización del flujo de trabajo: alternativa Zapier autohospedada. Gestionado como un proyecto npm local de aplicación KKTerm.",
+        "es-MX": "Herramienta de automatización del flujo de trabajo: alternativa Zapier autohospedada. Gestionado como un proyecto npm local de aplicación KKTerm.",
+        "zh-CN": "工作流程自动化工具——自托管 Zapier 替代品。作为 KKTerm 应用程序本地 npm 项目进行管理。",
+        "id": "Alat otomatisasi alur kerja — alternatif Zapier yang dihosting sendiri. Dikelola sebagai proyek npm lokal aplikasi KKTerm.",
+        "th": "เครื่องมืออัตโนมัติของเวิร์กโฟลว์ — ทางเลือก Zapier ที่โฮสต์เอง จัดการเป็นโครงการ npm ภายในแอป KKTerm"
+      }
     },
     {
       "id": "open-webui",
@@ -272,11 +798,33 @@
       "descriptionEn": "Self-hosted AI chat platform with local model integrations. Managed as a KKTerm app-local uv/pip environment.",
       "category": "ai-platform",
       "icon": "MessagesSquare",
-      "needs": ["uv"],
+      "needs": [
+        "uv"
+      ],
       "homepage": "https://openwebui.com/",
       "releaseNotesUrl": "https://github.com/open-webui/open-webui/releases",
-      "provider": { "kind": "uvPip", "package": "open-webui" },
-      "options": ["version"]
+      "provider": {
+        "kind": "uvPip",
+        "package": "open-webui"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Piattaforma di chat AI self-hosted con integrazioni di modelli locali. Gestito come ambiente uv/pip locale dell'app KKTerm.",
+        "ko": "로컬 모델 통합을 갖춘 자체 호스팅 AI 채팅 플랫폼입니다. KKTerm 앱-로컬 uv/pip 환경으로 관리됩니다.",
+        "ja": "ローカル モデル統合を備えた自己ホスト型 AI チャット プラットフォーム。 KKTerm アプリローカル uv/pip 環境として管理されます。",
+        "pt-BR": "Plataforma de chat de IA auto-hospedada com integrações de modelos locais. Gerenciado como um ambiente uv/pip local do aplicativo KKTerm.",
+        "zh-CN": "具有本地模型集成的自托管人工智能聊天平台。作为 KKTerm 应用程序本地 uv/pip 环境进行管理。",
+        "id": "Platform obrolan AI yang dihosting sendiri dengan integrasi model lokal. Dikelola sebagai lingkungan uv/pip lokal aplikasi KKTerm.",
+        "de": "Selbstgehostete KI-Chat-Plattform mit lokalen Modellintegrationen. Verwaltet als KKTerm-App-lokale uv/pip-Umgebung.",
+        "es-MX": "Plataforma de chat de IA autohospedada con integraciones de modelos locales. Gestionado como un entorno uv/pip local de aplicación KKTerm.",
+        "zh-TW": "可自行架設的 AI 聊天平台，支援本機模型整合。由 KKTerm 管理為應用程式本機 uv/pip 環境。",
+        "es": "Plataforma de chat de IA autohospedada con integraciones de modelos locales. Gestionado como un entorno uv/pip local de aplicación KKTerm.",
+        "fr": "Plateforme de chat IA auto-hébergée avec intégrations de modèles locaux. Géré en tant qu'environnement uv/pip local d'application KKTerm.",
+        "vi": "Nền tảng trò chuyện AI tự lưu trữ có tích hợp mô hình cục bộ. Được quản lý dưới dạng môi trường uv/pip cục bộ ứng dụng KKTerm.",
+        "th": "แพลตฟอร์มแชท AI ที่โฮสต์เองพร้อมการผสานรวมโมเดลในเครื่อง จัดการเป็นสภาพแวดล้อม uv/pip ภายในแอป KKTerm"
+      }
     },
     {
       "id": "flowise",
@@ -284,11 +832,33 @@
       "descriptionEn": "Low-code visual builder for LLM workflows and agent chains. Managed as a KKTerm app-local npm project.",
       "category": "ai-platform",
       "icon": "Workflow",
-      "needs": ["node-bundle"],
+      "needs": [
+        "node-bundle"
+      ],
       "homepage": "https://flowiseai.com/",
       "releaseNotesUrl": "https://github.com/FlowiseAI/Flowise/releases",
-      "provider": { "kind": "npm", "pkg": "flowise" },
-      "options": ["version"]
+      "provider": {
+        "kind": "npm",
+        "pkg": "flowise"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Générateur visuel low-code pour les flux de travail LLM et les chaînes d'agents. Géré en tant que projet npm local d'application KKTerm.",
+        "it": "Generatore visivo low-code per flussi di lavoro LLM e catene di agenti. Gestito come progetto npm locale dell'app KKTerm.",
+        "de": "Visueller Low-Code-Builder für LLM-Workflows und Agentenketten. Verwaltet als KKTerm App-Local-NPM-Projekt.",
+        "es": "Creador visual de código bajo para flujos de trabajo de LLM y cadenas de agentes. Gestionado como un proyecto npm local de aplicación KKTerm.",
+        "es-MX": "Creador visual de código bajo para flujos de trabajo de LLM y cadenas de agentes. Gestionado como un proyecto npm local de aplicación KKTerm.",
+        "pt-BR": "Construtor visual de baixo código para fluxos de trabalho LLM e cadeias de agentes. Gerenciado como um projeto npm local de aplicativo KKTerm.",
+        "zh-TW": "低程式碼視覺化建構器，用於 LLM 工作流程與代理鏈。由 KKTerm 管理為應用程式本機 npm 專案。",
+        "zh-CN": "用于 LLM 工作流程和代理链的低代码可视化构建器。作为 KKTerm 应用程序本地 npm 项目进行管理。",
+        "ja": "LLM ワークフローとエージェント チェーン用のローコード ビジュアル ビルダー。 KKTerm アプリローカル npm プロジェクトとして管理されます。",
+        "ko": "LLM 워크플로 및 에이전트 체인을 위한 로우 코드 시각적 빌더입니다. KKTerm 앱-로컬 npm 프로젝트로 관리됩니다.",
+        "th": "เครื่องมือสร้างภาพแบบใช้โค้ดน้อยสำหรับเวิร์กโฟลว์ LLM และกลุ่มตัวแทน จัดการเป็นโครงการ npm ภายในแอป KKTerm",
+        "id": "Pembuat visual berkode rendah untuk alur kerja LLM dan rantai agen. Dikelola sebagai proyek npm lokal aplikasi KKTerm.",
+        "vi": "Trình tạo trực quan mã thấp cho quy trình làm việc LLM và chuỗi đại lý. Được quản lý dưới dạng dự án npm ứng dụng cục bộ KKTerm."
+      }
     },
     {
       "id": "langflow",
@@ -296,11 +866,33 @@
       "descriptionEn": "Visual AI application builder for LangChain-style flows. Managed as a KKTerm app-local uv/pip environment.",
       "category": "ai-platform",
       "icon": "Cable",
-      "needs": ["uv"],
+      "needs": [
+        "uv"
+      ],
       "homepage": "https://www.langflow.org/",
       "releaseNotesUrl": "https://github.com/langflow-ai/langflow/releases",
-      "provider": { "kind": "uvPip", "package": "langflow" },
-      "options": ["version"]
+      "provider": {
+        "kind": "uvPip",
+        "package": "langflow"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "适用于 LangChain 风格流程的可视化 AI 应用程序构建器。作为 KKTerm 应用程序本地 uv/pip 环境进行管理。",
+        "it": "Generatore di applicazioni Visual AI per flussi in stile LangChain. Gestito come ambiente uv/pip locale dell'app KKTerm.",
+        "th": "ตัวสร้างแอปพลิเคชัน Visual AI สำหรับโฟลว์สไตล์ LangChain จัดการเป็นสภาพแวดล้อม uv/pip ภายในแอป KKTerm",
+        "ja": "LangChain スタイルのフロー用の Visual AI アプリケーション ビルダー。 KKTerm アプリローカル uv/pip 環境として管理されます。",
+        "fr": "Générateur d'applications Visual AI pour les flux de style LangChain. Géré en tant qu'environnement uv/pip local d'application KKTerm.",
+        "ko": "LangChain 스타일 흐름을 위한 시각적 AI 애플리케이션 빌더입니다. KKTerm 앱-로컬 uv/pip 환경으로 관리됩니다.",
+        "pt-BR": "Construtor de aplicativos Visual AI para fluxos estilo LangChain. Gerenciado como um ambiente uv/pip local do aplicativo KKTerm.",
+        "id": "Pembuat aplikasi AI visual untuk aliran gaya LangChain. Dikelola sebagai lingkungan uv/pip lokal aplikasi KKTerm.",
+        "de": "Visueller KI-Anwendungs-Builder für Abläufe im LangChain-Stil. Verwaltet als KKTerm-App-lokale uv/pip-Umgebung.",
+        "es": "Creador de aplicaciones de IA visual para flujos estilo LangChain. Gestionado como un entorno uv/pip local de aplicación KKTerm.",
+        "es-MX": "Creador de aplicaciones de IA visual para flujos estilo LangChain. Gestionado como un entorno uv/pip local de aplicación KKTerm.",
+        "zh-TW": "LangChain 風格流程的視覺化 AI 應用程式建構器。由 KKTerm 管理為應用程式本機 uv/pip 環境。",
+        "vi": "Trình tạo ứng dụng Visual AI cho các luồng kiểu LangChain. Được quản lý dưới dạng môi trường uv/pip cục bộ ứng dụng KKTerm."
+      }
     },
     {
       "id": "bruno",
@@ -308,13 +900,43 @@
       "descriptionEn": "Open-source API client. Postman alternative with git-friendly request files.",
       "category": "utilities",
       "icon": "Boxes",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["Bruno"]
+        "displayNames": [
+          "Bruno"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Bruno.Bruno" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/usebruno/bruno/releases/download/v3.4.2/bruno_3.4.2_x64_win.exe", "fileName": "bruno_3.4.2_x64_win.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Bruno.Bruno"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/usebruno/bruno/releases/download/v3.4.2/bruno_3.4.2_x64_win.exe",
+        "fileName": "bruno_3.4.2_x64_win.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Client API open source. Alternative Postman avec des fichiers de requêtes compatibles avec Git.",
+        "es": "Cliente API de código abierto. Alternativa Postman con archivos de solicitud compatibles con git.",
+        "es-MX": "Cliente API de código abierto. Alternativa Postman con archivos de solicitud compatibles con git.",
+        "zh-CN": "开源API客户端。 Postman 替代方案，具有 git 友好的请求文件。",
+        "zh-TW": "開放原始碼 API 用戶端。Postman 替代方案，使用適合 Git 追蹤的請求檔案。",
+        "pt-BR": "Cliente API de código aberto. Alternativa Postman com arquivos de solicitação compatíveis com git.",
+        "vi": "Máy khách API mã nguồn mở. Postman thay thế bằng các tệp yêu cầu thân thiện với git.",
+        "de": "Open-Source-API-Client. Postman-Alternative mit Git-freundlichen Anforderungsdateien.",
+        "it": "Client API open source. Alternativa Postman con file di richiesta compatibili con Git.",
+        "ko": "오픈 소스 API 클라이언트. Git 친화적인 요청 파일을 갖춘 Postman 대안입니다.",
+        "ja": "オープンソースの ZXTRM18 クライアント。 git フレンドリーなリクエスト ファイルを備えた ZXTRM31 の代替品。",
+        "th": "ไคลเอนต์ API โอเพ่นซอร์ส ทางเลือก Postman พร้อมไฟล์คำขอที่เป็นมิตรต่อคอมไพล์",
+        "id": "Klien API sumber terbuka. Alternatif Postman dengan file permintaan ramah git."
+      }
     },
     {
       "id": "ripgrep",
@@ -322,12 +944,37 @@
       "descriptionEn": "Recursive line-oriented search tool. AI coding agents lean on this heavily.",
       "category": "cli",
       "icon": "Search",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["ripgrep"]
+        "displayNames": [
+          "ripgrep"
+        ]
       },
-      "provider": { "kind": "winget", "id": "BurntSushi.ripgrep.MSVC" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "BurntSushi.ripgrep.MSVC"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Strumento di ricerca ricorsiva orientata alla linea. Gli agenti di codifica dell'intelligenza artificiale si affidano fortemente a questo.",
+        "fr": "Outil de recherche récursif orienté ligne. Les agents de codage de l’IA s’appuient fortement sur cela.",
+        "de": "Rekursives zeilenorientiertes Suchwerkzeug. KI-Coding-Agenten stützen sich stark darauf.",
+        "zh-CN": "递归的面向行的搜索工具。人工智能编码代理严重依赖于此。",
+        "zh-TW": "遞迴、逐行搜尋工具。AI 程式開發代理很常仰賴它。",
+        "es": "Herramienta de búsqueda recursiva orientada a líneas. Los agentes codificadores de IA se basan en gran medida en esto.",
+        "es-MX": "Herramienta de búsqueda recursiva orientada a líneas. Los agentes codificadores de IA se basan en gran medida en esto.",
+        "ko": "재귀적 라인 기반 검색 도구입니다. AI 코딩 에이전트는 이에 크게 의존합니다.",
+        "vi": "Công cụ tìm kiếm định hướng dòng đệ quy. Các tác nhân mã hóa AI dựa rất nhiều vào điều này.",
+        "pt-BR": "Ferramenta de pesquisa recursiva orientada a linhas. Os agentes de codificação de IA dependem fortemente disso.",
+        "id": "Alat pencarian berorientasi garis rekursif. Agen pengkodean AI sangat bergantung pada hal ini.",
+        "ja": "再帰的な行指向の検索ツール。 AI コーディング エージェントはこれに大きく依存しています。",
+        "th": "เครื่องมือค้นหาเชิงบรรทัดแบบเรียกซ้ำ เอเจนต์การเข้ารหัสของ AI พึ่งพาสิ่งนี้อย่างหนัก"
+      }
     },
     {
       "id": "jq",
@@ -335,12 +982,37 @@
       "descriptionEn": "Command-line JSON processor.",
       "category": "cli",
       "icon": "Braces",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["jq"]
+        "displayNames": [
+          "jq"
+        ]
       },
-      "provider": { "kind": "winget", "id": "jqlang.jq" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "jqlang.jq"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Processeur JSON en ligne de commande.",
+        "it": "Processore JSON da riga di comando.",
+        "pt-BR": "Processador JSON de linha de comando.",
+        "de": "Befehlszeilenprozessor JSON.",
+        "zh-CN": "命令行 JSON 处理器。",
+        "es-MX": "Procesador JSON de línea de comandos.",
+        "es": "Procesador JSON de línea de comandos.",
+        "ko": "명령줄 JSON 프로세서.",
+        "zh-TW": "命令列 JSON 處理器。",
+        "ja": "コマンドライン JSON プロセッサ。",
+        "th": "โปรเซสเซอร์บรรทัดคำสั่ง JSON",
+        "vi": "Bộ xử lý dòng lệnh JSON.",
+        "id": "Prosesor JSON baris perintah."
+      }
     },
     {
       "id": "fzf",
@@ -348,12 +1020,37 @@
       "descriptionEn": "General-purpose fuzzy finder for the command line.",
       "category": "cli",
       "icon": "Filter",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "detection": {
-        "displayNames": ["fzf"]
+        "displayNames": [
+          "fzf"
+        ]
       },
-      "provider": { "kind": "winget", "id": "junegunn.fzf" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "junegunn.fzf"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "用于命令行的通用模糊查找器。",
+        "ja": "コマンドライン用の汎用ファジーファインダー。",
+        "es-MX": "Buscador difuso de uso general para la línea de comando.",
+        "zh-TW": "命令列通用模糊搜尋工具。",
+        "de": "Universeller Fuzzy-Finder für die Befehlszeile.",
+        "it": "Ricerca fuzzy generica per la riga di comando.",
+        "fr": "Recherche floue à usage général pour la ligne de commande.",
+        "vi": "Công cụ tìm mờ có mục đích chung cho dòng lệnh.",
+        "es": "Buscador difuso de uso general para la línea de comando.",
+        "ko": "명령줄용 범용 퍼지 파인더입니다.",
+        "pt-BR": "Localizador difuso de uso geral para a linha de comando.",
+        "id": "Pencari fuzzy tujuan umum untuk baris perintah.",
+        "th": "เครื่องมือค้นหาฟัซซี่ทั่วไปสำหรับบรรทัดคำสั่ง"
+      }
     },
     {
       "id": "coreutils",
@@ -361,16 +1058,49 @@
       "descriptionEn": "Microsoft-maintained native Windows build of Unix-style core utilities.",
       "category": "cli",
       "icon": "Terminal",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://github.com/microsoft/coreutils",
       "releaseNotesUrl": "https://github.com/microsoft/coreutils/releases",
       "detection": {
-        "displayNames": ["Coreutils for Windows"],
-        "displayNamePrefixes": ["Coreutils for Windows "]
+        "displayNames": [
+          "Coreutils for Windows"
+        ],
+        "displayNamePrefixes": [
+          "Coreutils for Windows "
+        ]
       },
-      "provider": { "kind": "winget", "id": "Microsoft.Coreutils" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-x64.exe", "fileName": "coreutils-2026.5.29-x64.exe", "arm64Url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-arm64.exe", "arm64FileName": "coreutils-2026.5.29-arm64.exe" },
-      "options": ["provider", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Microsoft.Coreutils"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-x64.exe",
+        "fileName": "coreutils-2026.5.29-x64.exe",
+        "arm64Url": "https://github.com/microsoft/coreutils/releases/download/v2026.5.29/coreutils-2026.5.29-arm64.exe",
+        "arm64FileName": "coreutils-2026.5.29-arm64.exe"
+      },
+      "options": [
+        "provider",
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Version Windows native maintenue par Microsoft des utilitaires de base de style Unix.",
+        "de": "Von Microsoft verwalteter nativer Windows-Build von Kerndienstprogrammen im Unix-Stil.",
+        "es": "Versión nativa de Windows mantenida por Microsoft de utilidades principales estilo Unix.",
+        "es-MX": "Versión nativa de Windows mantenida por Microsoft de utilidades principales estilo Unix.",
+        "it": "Build Windows nativo mantenuto da Microsoft di utilità principali in stile Unix.",
+        "zh-CN": "Microsoft 维护的 Unix 风格核心实用程序的本机 Windows 版本。",
+        "pt-BR": "Versão nativa do Windows mantida pelo Microsoft de utilitários principais do estilo Unix.",
+        "zh-TW": "Microsoft 維護的原生 Windows 版 Unix 風格核心工具集。",
+        "ko": "Microsoft는 Unix 스타일 핵심 유틸리티의 기본 Windows 빌드를 유지 관리합니다.",
+        "ja": "Microsoft によって維持される、Unix スタイルのコア ユーティリティのネイティブ Windows ビルド。",
+        "id": "Windows asli yang dikelola Microsoft dari utilitas inti gaya Unix.",
+        "vi": "Bản dựng Windows gốc được duy trì bởi Microsoft gồm các tiện ích cốt lõi kiểu Unix.",
+        "th": "Windows build ดั้งเดิมที่ดูแลรักษาโดย Microsoft ของยูทิลิตี้หลักสไตล์ Unix"
+      }
     },
     {
       "id": "opencode",
@@ -378,14 +1108,39 @@
       "descriptionEn": "Terminal coding agent that can work with multiple AI providers.",
       "category": "ai-agent",
       "icon": "Terminal",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://opencode.ai/",
       "releaseNotesUrl": "https://github.com/sst/opencode/releases",
       "detection": {
-        "displayNames": ["opencode"]
+        "displayNames": [
+          "opencode"
+        ]
       },
-      "provider": { "kind": "winget", "id": "SST.opencode" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "SST.opencode"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Agente di codifica terminale che può funzionare con più fornitori di intelligenza artificiale.",
+        "zh-CN": "可与多个AI提供商合作的终端编码代理。",
+        "es": "Agente de codificación de terminal que puede funcionar con múltiples proveedores de IA.",
+        "zh-TW": "可搭配多個 AI 提供者使用的終端機程式開發代理。",
+        "fr": "Agent de codage de terminal pouvant fonctionner avec plusieurs fournisseurs d'IA.",
+        "de": "Terminal-Coding-Agent, der mit mehreren KI-Anbietern zusammenarbeiten kann.",
+        "ja": "複数の AI プロバイダーと連携できる端末コーディング エージェント。",
+        "th": "Terminal coding agent ที่สามารถทำงานร่วมกับผู้ให้บริการ AI หลายราย",
+        "pt-BR": "Agente de codificação de terminal que pode funcionar com vários provedores de IA.",
+        "es-MX": "Agente de codificación de terminal que puede funcionar con múltiples proveedores de IA.",
+        "ko": "여러 AI 제공업체와 협력할 수 있는 터미널 코딩 에이전트입니다.",
+        "id": "Agen pengkodean terminal yang dapat bekerja dengan beberapa penyedia AI.",
+        "vi": "Tác nhân mã hóa đầu cuối có thể hoạt động với nhiều nhà cung cấp AI."
+      }
     },
     {
       "id": "rustup",
@@ -393,16 +1148,51 @@
       "descriptionEn": "Rust toolchain installer and version manager.",
       "category": "development",
       "icon": "Hammer",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://rustup.rs/",
       "releaseNotesUrl": "https://github.com/rust-lang/rustup/releases",
       "detection": {
-        "displayNames": ["Rustup: the Rust toolchain installer", "rustup"],
-        "displayNamePrefixes": ["Rustup"]
+        "displayNames": [
+          "Rustup: the Rust toolchain installer",
+          "rustup"
+        ],
+        "displayNamePrefixes": [
+          "Rustup"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Rustlang.Rustup" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://win.rustup.rs/x86_64", "fileName": "rustup-init.exe", "arm64Url": "https://win.rustup.rs/aarch64", "arm64FileName": "rustup-init.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Rustlang.Rustup"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://win.rustup.rs/x86_64",
+        "fileName": "rustup-init.exe",
+        "arm64Url": "https://win.rustup.rs/aarch64",
+        "arm64FileName": "rustup-init.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Rust-Toolchain-Installationsprogramm und Versionsmanager.",
+        "zh-TW": "Rust 工具鏈安裝程式與版本管理器。",
+        "es": "Instalador de la cadena de herramientas y administrador de versiones de Rust.",
+        "fr": "Installateur de la chaîne d'outils Rust et gestionnaire de versions.",
+        "zh-CN": "Rust 工具链安装程序和版本管理器。",
+        "pt-BR": "Instalador do conjunto de ferramentas Rust e gerenciador de versões.",
+        "es-MX": "Instalador de la cadena de herramientas y administrador de versiones de Rust.",
+        "vi": "Trình cài đặt chuỗi công cụ Rust và trình quản lý phiên bản.",
+        "id": "Penginstal rantai alat karat dan manajer versi.",
+        "ko": "Rust 툴체인 설치 프로그램 및 버전 관리자.",
+        "ja": "Rust ツールチェーンのインストーラーとバージョン マネージャー。",
+        "it": "Programma di installazione e gestione delle versioni della toolchain di Rust.",
+        "th": "ตัวติดตั้ง Rust toolchain และตัวจัดการเวอร์ชัน"
+      }
     },
     {
       "id": "codex-desktop",
@@ -413,12 +1203,29 @@
       "homepage": "https://openai.com/codex/",
       "releaseNotesUrl": "https://openai.com/codex/",
       "detection": {
-        "displayNames": ["Codex"]
+        "displayNames": [
+          "Codex"
+        ]
       },
       "provider": {
         "kind": "downloadInstaller",
         "url": "https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi",
         "fileName": "CodexInstaller.exe"
+      },
+      "descriptionLocales": {
+        "es": "Aplicación de escritorio para trabajar con agentes de codificación OpenAI Codex.",
+        "es-MX": "Aplicación de escritorio para trabajar con agentes de codificación OpenAI Codex.",
+        "de": "Desktop-App für die Arbeit mit OpenAI Codex-Codierungsagenten.",
+        "pt-BR": "Aplicativo de desktop para trabalhar com agentes de codificação OpenAI Codex.",
+        "it": "App desktop per lavorare con gli agenti di codifica OpenAI Codex.",
+        "zh-CN": "用于与 OpenAI Codex 编码代理配合使用的桌面应用程序。",
+        "fr": "Application de bureau pour travailler avec les agents de codage OpenAI Codex.",
+        "ja": "ZXTRM26 コーディング エージェントを操作するためのデスクトップ アプリ。",
+        "vi": "Ứng dụng dành cho máy tính để bàn để làm việc với các tác nhân mã hóa OpenAI Codex.",
+        "th": "แอปเดสก์ท็อปสำหรับการทำงานกับตัวแทนการเข้ารหัส OpenAI Codex",
+        "id": "Aplikasi desktop untuk bekerja dengan agen pengkodean OpenAI Codex.",
+        "zh-TW": "用來搭配 OpenAI Codex 程式開發代理工作的桌面應用程式。",
+        "ko": "OpenAI Codex 코딩 에이전트 작업을 위한 데스크탑 앱입니다."
       }
     },
     {
@@ -427,15 +1234,43 @@
       "descriptionEn": "Anthropic's desktop app for Claude, including local MCP integrations.",
       "category": "ai-agent",
       "icon": "Bot",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://claude.ai/download",
       "releaseNotesUrl": "https://support.claude.com/en/articles/10065433-install-claude-desktop",
       "detection": {
-        "displayNames": ["Claude"]
+        "displayNames": [
+          "Claude"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Anthropic.Claude" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://claude.ai/api/desktop/win32/x64/msix/latest/redirect", "fileName": "Claude.msix" },
-      "options": ["provider"]
+      "provider": {
+        "kind": "winget",
+        "id": "Anthropic.Claude"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://claude.ai/api/desktop/win32/x64/msix/latest/redirect",
+        "fileName": "Claude.msix"
+      },
+      "options": [
+        "provider"
+      ],
+      "descriptionLocales": {
+        "es-MX": "La aplicación de escritorio de Anthropic para Claude, incluidas las integraciones locales de MCP.",
+        "pt-BR": "Aplicativo de desktop do Anthropic para Claude, incluindo integrações locais do MCP.",
+        "ja": "Anthropic の Claude 用デスクトップ アプリ (ローカル MCP 統合を含む)。",
+        "zh-CN": "Anthropic 的 Claude 桌面应用程序，包括本地 MCP 集成。",
+        "th": "แอปเดสก์ท็อปของ Anthropic สำหรับ Claude รวมถึงการผสานรวม MCP ในเครื่อง",
+        "it": "App desktop di Anthropic per Claude, comprese le integrazioni MCP locali.",
+        "ko": "로컬 MCP 통합을 포함하는 Claude용 Anthropic의 데스크톱 앱입니다.",
+        "zh-TW": "Anthropic 的 Claude 桌面應用程式，包含本機 MCP 整合。",
+        "fr": "Application de bureau de Anthropic pour Claude, y compris les intégrations locales de MCP.",
+        "vi": "Ứng dụng máy tính để bàn của Anthropic dành cho Claude, bao gồm tích hợp MCP cục bộ.",
+        "es": "La aplicación de escritorio de Anthropic para Claude, incluidas las integraciones locales de MCP.",
+        "de": "Anthropics Desktop-App für Claude, einschließlich lokaler MCP-Integrationen.",
+        "id": "Aplikasi desktop Anthropic untuk Claude, termasuk integrasi MCP lokal."
+      }
     },
     {
       "id": "hermes-agent",
@@ -443,11 +1278,33 @@
       "descriptionEn": "Self-learning AI agent framework from Nous Research, installed with uv/pip.",
       "category": "ai-agent",
       "icon": "BrainCircuit",
-      "needs": ["uv"],
+      "needs": [
+        "uv"
+      ],
       "homepage": "https://github.com/NousResearch/hermes-agent",
       "releaseNotesUrl": "https://github.com/NousResearch/hermes-agent/releases",
-      "provider": { "kind": "uvPip", "package": "hermes-agent" },
-      "options": ["version"]
+      "provider": {
+        "kind": "uvPip",
+        "package": "hermes-agent"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Framework d'agent IA d'auto-apprentissage de Nous Research, installé avec uv/pip.",
+        "zh-CN": "来自 Nous Research 的自学习 AI 代理框架，与 uv/pip 一起安装。",
+        "de": "Selbstlernendes KI-Agent-Framework von Nous Research, installiert mit uv/pip.",
+        "it": "Framework agente AI ad autoapprendimento di Nous Research, installato con uv/pip.",
+        "zh-TW": "Nous Research 的自學習 AI 代理框架，透過 uv/pip 安裝。",
+        "ko": "uv/pip와 함께 설치되는 Nous Research의 자가 학습 AI 에이전트 프레임워크입니다.",
+        "vi": "Khung tác nhân AI tự học của Nous Research, được cài đặt với uv/pip.",
+        "id": "Kerangka kerja agen AI belajar mandiri dari Nous Research, diinstal dengan uv/pip.",
+        "pt-BR": "Estrutura de agente de IA de autoaprendizagem da Nous Research, instalada com uv/pip.",
+        "es": "Marco de agente de IA de autoaprendizaje de Nous Research, instalado con uv/pip.",
+        "ja": "Nous Research の自己学習型 AI エージェント フレームワーク。uv/pip とともにインストールされます。",
+        "es-MX": "Marco de agente de IA de autoaprendizaje de Nous Research, instalado con uv/pip.",
+        "th": "เฟรมเวิร์กเอเจนต์ AI การเรียนรู้ด้วยตนเองจาก Nous Research ติดตั้งด้วย uv/pip"
+      }
     },
     {
       "id": "powertoys",
@@ -455,15 +1312,46 @@
       "descriptionEn": "Microsoft's Windows productivity utilities, including launcher, window management, and file tools.",
       "category": "windows-power-user",
       "icon": "Sparkles",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://learn.microsoft.com/windows/powertoys/",
       "releaseNotesUrl": "https://github.com/microsoft/PowerToys/releases",
       "detection": {
-        "displayNames": ["PowerToys", "Microsoft PowerToys"]
+        "displayNames": [
+          "PowerToys",
+          "Microsoft PowerToys"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Microsoft.PowerToys" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/microsoft/PowerToys/releases/download/v0.99.1/PowerToysUserSetup-0.99.1-x64.exe", "fileName": "PowerToysUserSetup-0.99.1-x64.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Microsoft.PowerToys"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/microsoft/PowerToys/releases/download/v0.99.1/PowerToysUserSetup-0.99.1-x64.exe",
+        "fileName": "PowerToysUserSetup-0.99.1-x64.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Utilità di produttività Windows di Microsoft, inclusi launcher, gestione delle finestre e strumenti di file.",
+        "de": "Die Windows-Produktivitätsdienstprogramme von Microsoft, einschließlich Launcher, Fensterverwaltung und Dateitools.",
+        "vi": "Các tiện ích năng suất Windows của Microsoft, bao gồm trình khởi chạy, quản lý cửa sổ và công cụ tệp.",
+        "zh-CN": "Microsoft 的 Windows 生产力实用程序，包括启动器、窗口管理和文件工具。",
+        "es": "Utilidades de productividad de Windows de Microsoft, incluido el iniciador, la administración de ventanas y las herramientas de archivos.",
+        "ja": "Microsoft の Windows 生産性向上ユーティリティ (ランチャー、ウィンドウ管理、ファイル ツールなど)。",
+        "es-MX": "Utilidades de productividad de Windows de Microsoft, incluido el iniciador, la administración de ventanas y las herramientas de archivos.",
+        "fr": "Utilitaires de productivité Windows de Microsoft, notamment des outils de lancement, de gestion de fenêtres et de fichiers.",
+        "zh-TW": "Microsoft 的 Windows 生產力工具集，包含啟動器、視窗管理與檔案工具。",
+        "pt-BR": "Utilitários de produtividade do Windows do Microsoft, incluindo iniciador, gerenciamento de janelas e ferramentas de arquivo.",
+        "id": "Utilitas produktivitas Windows Microsoft, termasuk peluncur, manajemen jendela, dan alat file.",
+        "th": "ยูทิลิตี้เพิ่มประสิทธิภาพการทำงานของ Windows ของ Microsoft รวมถึงตัวเรียกใช้งาน การจัดการหน้าต่าง และเครื่องมือไฟล์",
+        "ko": "실행기, 창 관리 및 파일 도구를 포함한 Microsoft의 Windows 생산성 유틸리티입니다."
+      }
     },
     {
       "id": "powershell-7",
@@ -471,13 +1359,22 @@
       "descriptionEn": "Cross-platform PowerShell 7 (pwsh), with its own $PROFILE separate from Windows PowerShell 5.1.",
       "category": "windows-power-user",
       "icon": "TerminalSquare",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://learn.microsoft.com/powershell/",
       "releaseNotesUrl": "https://github.com/PowerShell/PowerShell/releases",
       "detection": {
-        "displayNames": ["PowerShell 7-x64", "PowerShell 7-arm64", "PowerShell"]
+        "displayNames": [
+          "PowerShell 7-x64",
+          "PowerShell 7-arm64",
+          "PowerShell"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Microsoft.PowerShell" },
+      "provider": {
+        "kind": "winget",
+        "id": "Microsoft.PowerShell"
+      },
       "downloadProvider": {
         "kind": "downloadInstaller",
         "url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/PowerShell-7.6.2-win-x64.msi",
@@ -485,7 +1382,26 @@
         "arm64Url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.2/PowerShell-7.6.2-win-arm64.msi",
         "arm64FileName": "PowerShell-7.6.2-win-arm64.msi"
       },
-      "options": ["provider", "scope", "version"]
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "PowerShell 7 multipiattaforma (pwsh), con il proprio $PROFILE separato da Windows PowerShell 5.1.",
+        "pt-BR": "PowerShell 7 multiplataforma (pwsh), com seu próprio $PROFILE separado do Windows PowerShell 5.1.",
+        "es": "PowerShell 7 (pwsh) multiplataforma, con su propio $PROFILE separado de Windows PowerShell 5.1.",
+        "fr": "PowerShell 7 multiplateforme (pwsh), avec son propre $PROFILE distinct du Windows PowerShell 5.1.",
+        "es-MX": "PowerShell 7 (pwsh) multiplataforma, con su propio $PROFILE separado de Windows PowerShell 5.1.",
+        "zh-CN": "跨平台PowerShell 7（pwsh），有自己的$PROFILE，与Windows PowerShell 5.1分开。",
+        "vi": "PowerShell 7 đa nền tảng (pwsh), với $PROFILE riêng tách biệt với Windows PowerShell 5.1.",
+        "ja": "Windows PowerShell 5.1 とは別に独自の $PROFILE を備えたクロスプラットフォーム PowerShell 7 (pwsh)。",
+        "de": "Plattformübergreifendes PowerShell 7 (pwsh), mit eigenem $PROFILE getrennt von Windows PowerShell 5.1.",
+        "zh-TW": "跨平台 PowerShell 7（pwsh），擁有獨立於 Windows PowerShell 5.1 的 $PROFILE。",
+        "id": "PowerShell 7 lintas platform (pwsh), dengan $PROFILE tersendiri yang terpisah dari Windows PowerShell 5.1.",
+        "th": "PowerShell 7 ข้ามแพลตฟอร์ม (pwsh) โดยมี $PROFILE ของตัวเองแยกจาก Windows PowerShell 5.1",
+        "ko": "Windows PowerShell 5.1와 별도로 자체 $PROFILE이 있는 크로스 플랫폼 PowerShell 7(pwsh)."
+      }
     },
     {
       "id": "sysinternals-suite",
@@ -493,13 +1409,38 @@
       "descriptionEn": "Microsoft Sysinternals troubleshooting and administration utilities.",
       "category": "windows-power-user",
       "icon": "BriefcaseMedical",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://learn.microsoft.com/sysinternals/",
       "detection": {
-        "displayNames": ["Sysinternals Suite"]
+        "displayNames": [
+          "Sysinternals Suite"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Microsoft.Sysinternals.Suite" },
-      "options": ["scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Microsoft.Sysinternals.Suite"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Microsoft Sysinternals Fehlerbehebungs- und Verwaltungsdienstprogramme.",
+        "it": "Microsoft Sysinternals Utilità di amministrazione e risoluzione dei problemi.",
+        "fr": "Utilitaires de dépannage et d'administration Microsoft Sysinternals.",
+        "zh-CN": "Microsoft Sysinternals 故障排除和管理实用程序。",
+        "zh-TW": "Microsoft Sysinternals 疑難排解與系統管理工具集。",
+        "ja": "Microsoft Sysinternals トラブルシューティングおよび管理ユーティリティ。",
+        "es": "Microsoft Sysinternals utilidades de solución de problemas y administración.",
+        "es-MX": "Microsoft Sysinternals utilidades de solución de problemas y administración.",
+        "th": "การแก้ไขปัญหา Microsoft Sysinternals และยูทิลิตี้การดูแลระบบ",
+        "id": "Microsoft Sysinternals utilitas pemecahan masalah dan administrasi.",
+        "pt-BR": "Microsoft Sysinternals utilitários de administração e solução de problemas.",
+        "vi": "Tiện ích quản trị và khắc phục sự cố Microsoft Sysinternals.",
+        "ko": "Microsoft Sysinternals 문제 해결 및 관리 유틸리티."
+      }
     },
     {
       "id": "everything",
@@ -507,15 +1448,47 @@
       "descriptionEn": "Fast local file-name search for Windows.",
       "category": "windows-power-user",
       "icon": "Search",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://www.voidtools.com/",
       "detection": {
-        "displayNames": ["Everything"],
-        "displayNamePrefixes": ["Everything "]
+        "displayNames": [
+          "Everything"
+        ],
+        "displayNamePrefixes": [
+          "Everything "
+        ]
       },
-      "provider": { "kind": "winget", "id": "voidtools.Everything" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://www.voidtools.com/Everything-1.4.1.1032.x64-Setup.exe", "fileName": "Everything-1.4.1.1032.x64-Setup.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "voidtools.Everything"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://www.voidtools.com/Everything-1.4.1.1032.x64-Setup.exe",
+        "fileName": "Everything-1.4.1.1032.x64-Setup.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "es": "Búsqueda rápida de nombres de archivos locales para Windows.",
+        "ja": "Windows の高速ローカル ファイル名検索。",
+        "de": "Schnelle lokale Dateinamensuche für Windows.",
+        "zh-TW": "Windows 上快速的本機檔名搜尋工具。",
+        "th": "ค้นหาชื่อไฟล์ในเครื่องอย่างรวดเร็วสำหรับ Windows",
+        "zh-CN": "Windows 的快速本地文件名搜索。",
+        "es-MX": "Búsqueda rápida de nombres de archivos locales para Windows.",
+        "pt-BR": "Pesquisa rápida de nome de arquivo local para Windows.",
+        "it": "Ricerca rapida di nomi di file locali per Windows.",
+        "vi": "Tìm kiếm tên tệp cục bộ nhanh chóng cho Windows.",
+        "fr": "Recherche rapide de noms de fichiers locaux pour Windows.",
+        "ko": "Windows용 빠른 로컬 파일 이름 검색.",
+        "id": "Pencarian nama file lokal cepat untuk Windows."
+      }
     },
     {
       "id": "ditto",
@@ -523,14 +1496,44 @@
       "descriptionEn": "Clipboard history manager for Windows.",
       "category": "windows-power-user",
       "icon": "Clipboard",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://ditto-cp.sourceforge.io/",
       "detection": {
-        "displayNames": ["Ditto"]
+        "displayNames": [
+          "Ditto"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Ditto.Ditto" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/sabrogden/Ditto/releases/download/3.25.113.0/DittoSetup_3_25_113_0.exe", "fileName": "DittoSetup_3_25_113_0.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Ditto.Ditto"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/sabrogden/Ditto/releases/download/3.25.113.0/DittoSetup_3_25_113_0.exe",
+        "fileName": "DittoSetup_3_25_113_0.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "es": "Administrador de historial del portapapeles para Windows.",
+        "es-MX": "Administrador de historial del portapapeles para Windows.",
+        "pt-BR": "Gerenciador de histórico da área de transferência para Windows.",
+        "zh-CN": "Windows 剪贴板历史记录管理器。",
+        "ko": "Windows용 클립보드 기록 관리자.",
+        "ja": "Windows 用のクリップボード履歴マネージャー。",
+        "vi": "Trình quản lý lịch sử clipboard cho Windows.",
+        "id": "Manajer riwayat papan klip untuk Windows.",
+        "fr": "Gestionnaire d'historique du Presse-papiers pour Windows.",
+        "it": "Gestore della cronologia degli appunti per Windows.",
+        "de": "Zwischenablage-Verlaufsmanager für Windows.",
+        "th": "ผู้จัดการประวัติคลิปบอร์ดสำหรับ Windows",
+        "zh-TW": "Windows 剪貼簿歷史記錄管理工具。"
+      }
     },
     {
       "id": "tailscale",
@@ -538,14 +1541,44 @@
       "descriptionEn": "WireGuard-based mesh VPN for private network access.",
       "category": "remote-access",
       "icon": "Network",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://tailscale.com/",
       "detection": {
-        "displayNames": ["Tailscale"]
+        "displayNames": [
+          "Tailscale"
+        ]
       },
-      "provider": { "kind": "winget", "id": "Tailscale.Tailscale" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe", "fileName": "tailscale-setup-latest.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "Tailscale.Tailscale"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe",
+        "fileName": "tailscale-setup-latest.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "VPN mesh basata su WireGuard per l'accesso alla rete privata.",
+        "fr": "VPN maillé basé sur WireGuard pour l'accès au réseau privé.",
+        "zh-CN": "基于 WireGuard 的网状 VPN，用于专用网络访问。",
+        "es": "VPN de malla basada en WireGuard para acceso a redes privadas.",
+        "de": "WireGuard-basiertes Mesh-VPN für privaten Netzwerkzugriff.",
+        "es-MX": "VPN de malla basada en WireGuard para acceso a redes privadas.",
+        "zh-TW": "以 WireGuard 為基礎的網狀 VPN，用於私人網路存取。",
+        "vi": "VPN dạng lưới dựa trên WireGuard để truy cập mạng riêng.",
+        "th": "Mesh VPN ที่ใช้ WireGuard สำหรับการเข้าถึงเครือข่ายส่วนตัว",
+        "pt-BR": "VPN mesh baseada em WireGuard para acesso à rede privada.",
+        "ja": "プライベート ネットワーク アクセス用の WireGuard ベースのメッシュ VPN。",
+        "id": "VPN mesh berbasis WireGuard untuk akses jaringan pribadi.",
+        "ko": "개인 네트워크 액세스를 위한 WireGuard 기반 메시 VPN입니다."
+      }
     },
     {
       "id": "rustdesk",
@@ -561,7 +1594,24 @@
         "assetPattern": "*x86_64.msi",
         "layout": "msi"
       },
-      "options": ["version"]
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Client desktop remoto open source.",
+        "fr": "Client de bureau à distance open source.",
+        "ja": "オープンソースのリモート デスクトップ クライアント。",
+        "pt-BR": "Cliente de desktop remoto de código aberto.",
+        "zh-CN": "开源远程桌面客户端。",
+        "es": "Cliente de escritorio remoto de código abierto.",
+        "es-MX": "Cliente de escritorio remoto de código abierto.",
+        "zh-TW": "開放原始碼遠端桌面用戶端。",
+        "vi": "Máy khách máy tính để bàn từ xa nguồn mở.",
+        "de": "Open-Source-Remotedesktop-Client.",
+        "th": "ไคลเอนต์เดสก์ท็อประยะไกลแบบโอเพ่นซอร์ส",
+        "id": "Klien desktop jarak jauh sumber terbuka.",
+        "ko": "오픈 소스 원격 데스크톱 클라이언트."
+      }
     },
     {
       "id": "7zip",
@@ -569,15 +1619,47 @@
       "descriptionEn": "File archiver with broad compression-format support.",
       "category": "utilities",
       "icon": "Archive",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://www.7-zip.org/",
       "detection": {
-        "displayNames": ["7-Zip"],
-        "displayNamePrefixes": ["7-Zip "]
+        "displayNames": [
+          "7-Zip"
+        ],
+        "displayNamePrefixes": [
+          "7-Zip "
+        ]
       },
-      "provider": { "kind": "winget", "id": "7zip.7zip" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://www.7-zip.org/a/7z2601-x64.exe", "fileName": "7z2601-x64.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "7zip.7zip"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://www.7-zip.org/a/7z2601-x64.exe",
+        "fileName": "7z2601-x64.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Dateiarchivierer mit umfassender Unterstützung für Komprimierungsformate.",
+        "fr": "Archiveur de fichiers avec prise en charge étendue des formats de compression.",
+        "zh-CN": "具有广泛压缩格式支持的文件存档器。",
+        "es-MX": "Archivador de archivos con amplio soporte de formatos de compresión.",
+        "es": "Archivador de archivos con amplio soporte de formatos de compresión.",
+        "pt-BR": "Arquivador de arquivos com amplo suporte a formatos de compactação.",
+        "zh-TW": "支援多種壓縮格式的檔案壓縮工具。",
+        "ja": "幅広い圧縮形式をサポートするファイル アーカイバ。",
+        "it": "Archiviatore di file con ampio supporto di formati di compressione.",
+        "th": "โปรแกรมเก็บไฟล์พร้อมรองรับรูปแบบการบีบอัดในวงกว้าง",
+        "id": "Pengarsip file dengan dukungan format kompresi yang luas.",
+        "ko": "광범위한 압축 형식을 지원하는 파일 아카이버입니다.",
+        "vi": "Trình lưu trữ tệp có hỗ trợ định dạng nén rộng."
+      }
     },
     {
       "id": "poppler",
@@ -587,8 +1669,30 @@
       "icon": "FileText",
       "homepage": "https://github.com/oschwartz10612/poppler-windows",
       "releaseNotesUrl": "https://github.com/oschwartz10612/poppler-windows/releases",
-      "provider": { "kind": "githubRelease", "repo": "oschwartz10612/poppler-windows", "assetPattern": "Release-*.zip", "layout": "zip" },
-      "options": ["version"]
+      "provider": {
+        "kind": "githubRelease",
+        "repo": "oschwartz10612/poppler-windows",
+        "assetPattern": "Release-*.zip",
+        "layout": "zip"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "fr": "Utilitaires de rendu PDF (pdftocairo / pdfinfo) utilisés par le document KKTerm pour prévisualiser les pages PDF sans regrouper un moteur PDF.",
+        "zh-CN": "KKTerm 文档使用 PDF 渲染实用程序 (pdftocairo / pdfinfo) 来预览 PDF 页面，而无需捆绑 PDF 引擎。",
+        "es": "Utilidades de renderizado PDF (pdftocairo / pdfinfo) utilizadas por el documento KKTerm para obtener una vista previa de las páginas PDF sin incluir un motor PDF.",
+        "de": "PDF-Rendering-Dienstprogramme (pdftocairo / pdfinfo), die vom KKTerm-Dokument verwendet werden, um eine Vorschau von PDF-Seiten anzuzeigen, ohne eine PDF-Engine zu bündeln.",
+        "es-MX": "Utilidades de renderizado PDF (pdftocairo / pdfinfo) utilizadas por el documento KKTerm para obtener una vista previa de las páginas PDF sin incluir un motor PDF.",
+        "pt-BR": "Utilitários de renderização PDF (pdftocairo / pdfinfo) usados ​​pelo documento KKTerm para visualizar páginas PDF sem agrupar um mecanismo PDF.",
+        "th": "ยูทิลิตี้การเรนเดอร์ PDF (pdftocairo / pdfinfo) ที่ใช้โดยเอกสาร KKTerm เพื่อดูตัวอย่างหน้า PDF โดยไม่ต้องรวมเอ็นจิ้น PDF เข้าด้วยกัน",
+        "zh-TW": "KKTerm 文件用來預覽 PDF 頁面的 PDF 轉譯工具（pdftocairo / pdfinfo），不需要隨附完整 PDF 引擎。",
+        "ja": "PDF エンジンをバンドルせずに PDF ページをプレビューするために KKTerm ドキュメントによって使用される PDF レンダリング ユーティリティ (pdftocairo / pdfinfo)。",
+        "ko": "PDF 엔진을 번들링하지 않고 PDF 페이지를 미리 보기 위해 KKTerm 문서에서 사용되는 PDF 렌더링 유틸리티(pdftocairo / pdfinfo)입니다.",
+        "vi": "Tiện ích kết xuất PDF (pdftocairo / pdfinfo) được Tài liệu KKTerm sử dụng để xem trước các trang PDF mà không cần đóng gói công cụ PDF.",
+        "id": "Utilitas rendering PDF (pdftocairo / pdfinfo) yang digunakan oleh Dokumen KKTerm untuk melihat pratinjau halaman PDF tanpa memaketkan mesin PDF.",
+        "it": "Utilità di rendering PDF (pdftocairo / pdfinfo) utilizzate dal documento KKTerm per visualizzare in anteprima le pagine PDF senza raggruppare un motore PDF."
+      }
     },
     {
       "id": "sharex",
@@ -596,15 +1700,45 @@
       "descriptionEn": "Screenshot, screen recording, and upload workflow utility.",
       "category": "utilities",
       "icon": "Camera",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://getsharex.com/",
       "releaseNotesUrl": "https://github.com/ShareX/ShareX/releases",
       "detection": {
-        "displayNames": ["ShareX"]
+        "displayNames": [
+          "ShareX"
+        ]
       },
-      "provider": { "kind": "winget", "id": "ShareX.ShareX" },
-      "downloadProvider": { "kind": "downloadInstaller", "url": "https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe", "fileName": "ShareX-20.2.0-setup-x64.exe" },
-      "options": ["provider", "scope", "version"]
+      "provider": {
+        "kind": "winget",
+        "id": "ShareX.ShareX"
+      },
+      "downloadProvider": {
+        "kind": "downloadInstaller",
+        "url": "https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe",
+        "fileName": "ShareX-20.2.0-setup-x64.exe"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "屏幕截图、屏幕录制和上传工作流程实用程序。",
+        "es": "Utilidad de captura de pantalla, grabación de pantalla y carga de flujo de trabajo.",
+        "it": "Screenshot, registrazione dello schermo e utilità del flusso di lavoro di caricamento.",
+        "es-MX": "Utilidad de captura de pantalla, grabación de pantalla y carga de flujo de trabajo.",
+        "ja": "スクリーンショット、画面録画、およびアップロードのワークフロー ユーティリティ。",
+        "fr": "Utilitaire de capture d'écran, d'enregistrement d'écran et de flux de travail de téléchargement.",
+        "zh-TW": "螢幕截圖、螢幕錄影與上傳工作流程工具。",
+        "vi": "Tiện ích chụp ảnh màn hình, ghi màn hình và tải lên quy trình làm việc.",
+        "th": "ภาพหน้าจอ บันทึกหน้าจอ และอัปโหลดยูทิลิตี้เวิร์กโฟลว์",
+        "pt-BR": "Captura de tela, gravação de tela e utilitário de fluxo de trabalho de upload.",
+        "de": "Screenshot-, Bildschirmaufzeichnungs- und Upload-Workflow-Dienstprogramm.",
+        "id": "Tangkapan layar, perekaman layar, dan unggah utilitas alur kerja.",
+        "ko": "스크린샷, 화면 녹화 및 업로드 워크플로 유틸리티입니다."
+      }
     },
     {
       "id": "ffmpeg",
@@ -612,16 +1746,52 @@
       "descriptionEn": "Command-line multimedia toolkit for converting, recording, streaming, and inspecting audio/video files.",
       "category": "utilities",
       "icon": "Film",
-      "needs": ["winget"],
+      "needs": [
+        "winget"
+      ],
       "homepage": "https://ffmpeg.org/",
       "releaseNotesUrl": "https://ffmpeg.org/download.html",
       "detection": {
-        "displayNames": ["FFmpeg"],
-        "displayNamePrefixes": ["FFmpeg "]
+        "displayNames": [
+          "FFmpeg"
+        ],
+        "displayNamePrefixes": [
+          "FFmpeg "
+        ]
       },
-      "provider": { "kind": "winget", "id": "Gyan.FFmpeg" },
-      "downloadProvider": { "kind": "githubRelease", "repo": "GyanD/codexffmpeg", "assetPattern": "ffmpeg-*-full_build.zip", "layout": "zip", "pathSubdir": "ffmpeg-{tag}-full_build/bin" },
-      "options": ["provider", "scope", "version", "location", "addToPath"]
+      "provider": {
+        "kind": "winget",
+        "id": "Gyan.FFmpeg"
+      },
+      "downloadProvider": {
+        "kind": "githubRelease",
+        "repo": "GyanD/codexffmpeg",
+        "assetPattern": "ffmpeg-*-full_build.zip",
+        "layout": "zip",
+        "pathSubdir": "ffmpeg-{tag}-full_build/bin"
+      },
+      "options": [
+        "provider",
+        "scope",
+        "version",
+        "location",
+        "addToPath"
+      ],
+      "descriptionLocales": {
+        "zh-CN": "用于转换、录制、流式传输和检查音频/视频文件的命令行多媒体工具包。",
+        "pt-BR": "Kit de ferramentas multimídia de linha de comando para converter, gravar, transmitir e inspecionar arquivos de áudio/vídeo.",
+        "it": "Toolkit multimediale da riga di comando per convertire, registrare, trasmettere in streaming e controllare file audio/video.",
+        "vi": "Bộ công cụ đa phương tiện dòng lệnh để chuyển đổi, ghi, phát trực tuyến và kiểm tra các tệp âm thanh/video.",
+        "ja": "オーディオ/ビデオ ファイルの変換、録音、ストリーミング、検査を行うためのコマンドライン マルチメディア ツールキット。",
+        "es-MX": "Kit de herramientas multimedia de línea de comandos para convertir, grabar, transmitir e inspeccionar archivos de audio/vídeo.",
+        "zh-TW": "命令列多媒體工具組，可轉換、錄製、串流並檢查音訊/視訊檔案。",
+        "de": "Befehlszeilen-Multimedia-Toolkit zum Konvertieren, Aufzeichnen, Streamen und Überprüfen von Audio-/Videodateien.",
+        "id": "Perangkat multimedia baris perintah untuk mengonversi, merekam, streaming, dan memeriksa file audio/video.",
+        "fr": "Boîte à outils multimédia en ligne de commande pour convertir, enregistrer, diffuser et inspecter des fichiers audio/vidéo.",
+        "es": "Kit de herramientas multimedia de línea de comandos para convertir, grabar, transmitir e inspeccionar archivos de audio/vídeo.",
+        "th": "ชุดเครื่องมือมัลติมีเดียบรรทัดคำสั่งสำหรับการแปลง บันทึก สตรีมมิ่ง และตรวจสอบไฟล์เสียง/วิดีโอ",
+        "ko": "오디오/비디오 파일 변환, 녹화, 스트리밍 및 검사를 위한 명령줄 멀티미디어 도구 키트입니다."
+      }
     },
     {
       "id": "excalidraw",
@@ -629,11 +1799,33 @@
       "descriptionEn": "Whiteboard sketching app hosted from a KKTerm app-local React project.",
       "category": "utilities",
       "icon": "PenTool",
-      "needs": ["node-bundle"],
+      "needs": [
+        "node-bundle"
+      ],
       "homepage": "https://excalidraw.com/",
       "releaseNotesUrl": "https://github.com/excalidraw/excalidraw/releases",
-      "provider": { "kind": "npm", "pkg": "@excalidraw/excalidraw" },
-      "options": ["version"]
+      "provider": {
+        "kind": "npm",
+        "pkg": "@excalidraw/excalidraw"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Whiteboard-Skizzen-App, gehostet von einem KKTerm-App-lokalen React-Projekt.",
+        "es": "Aplicación de dibujo de pizarra alojada desde un proyecto React local de aplicación KKTerm.",
+        "pt-BR": "Aplicativo de desenho de quadro branco hospedado em um projeto React local do aplicativo KKTerm.",
+        "fr": "Application de dessin sur tableau blanc hébergée à partir d'un projet React local d'application KKTerm.",
+        "zh-CN": "由 KKTerm 应用程序本地 React 项目托管的白板草图应用程序。",
+        "es-MX": "Aplicación de dibujo de pizarra alojada desde un proyecto React local de aplicación KKTerm.",
+        "zh-TW": "由 KKTerm 應用程式本機 React 專案代管的白板手繪應用程式。",
+        "ja": "KKTerm アプリローカル React プロジェクトからホストされるホワイトボード スケッチ アプリ。",
+        "vi": "Ứng dụng phác thảo bảng trắng được lưu trữ từ dự án React cục bộ của ứng dụng KKTerm.",
+        "it": "App per schizzi su lavagna ospitata da un progetto React locale dell'app KKTerm.",
+        "id": "Aplikasi sketsa papan tulis yang dihosting dari proyek React lokal aplikasi KKTerm.",
+        "th": "แอปสเก็ตช์ไวท์บอร์ดที่โฮสต์จากโครงการ React ในแอป KKTerm",
+        "ko": "KKTerm 앱-로컬 React 프로젝트에서 호스팅되는 화이트보드 스케치 앱입니다."
+      }
     },
     {
       "id": "bentopdf",
@@ -641,11 +1833,31 @@
       "descriptionEn": "Privacy-first browser PDF toolkit hosted from a KKTerm app-local web project.",
       "category": "utilities",
       "icon": "File",
-      "needs": ["node-bundle"],
+      "needs": [
+        "node-bundle"
+      ],
       "homepage": "https://www.bentopdf.com/",
       "releaseNotesUrl": "https://github.com/alam00000/bentopdf/releases",
-      "provider": { "kind": "npm", "pkg": "github:alam00000/bentopdf" },
-      "options": []
+      "provider": {
+        "kind": "npm",
+        "pkg": "github:alam00000/bentopdf"
+      },
+      "options": [],
+      "descriptionLocales": {
+        "pt-BR": "Kit de ferramentas PDF do navegador que prioriza a privacidade hospedado em um projeto da web local do aplicativo KKTerm.",
+        "de": "Datenschutzorientierter Browser PDF-Toolkit, gehostet von einem KKTerm-App-lokalen Webprojekt.",
+        "it": "Browser PDF che mette al primo posto la privacy, ospitato da un progetto web locale dell'app KKTerm.",
+        "fr": "Boîte à outils PDF du navigateur axé sur la confidentialité hébergée à partir d'un projet Web local d'application KKTerm.",
+        "zh-CN": "隐私优先的浏览器 PDF 工具包托管于 KKTerm 应用程序本地 Web 项目。",
+        "zh-TW": "重視隱私的瀏覽器 PDF 工具組，由 KKTerm 應用程式本機 Web 專案代管。",
+        "ja": "KKTerm アプリローカル Web プロジェクトからホストされるプライバシー最優先のブラウザー PDF ツールキット。",
+        "ko": "개인 정보 보호 우선 브라우저 PDF 툴킷은 KKTerm 앱 로컬 웹 프로젝트에서 호스팅됩니다.",
+        "th": "ชุดเครื่องมือ PDF เบราว์เซอร์ที่ให้ความสำคัญกับความเป็นส่วนตัวซึ่งโฮสต์จากโครงการเว็บภายในแอป KKTerm",
+        "es-MX": "Kit de herramientas PDF del navegador que prioriza la privacidad alojado desde un proyecto web local de aplicación KKTerm.",
+        "es": "Kit de herramientas PDF del navegador que prioriza la privacidad alojado desde un proyecto web local de aplicación KKTerm.",
+        "vi": "Bộ công cụ PDF của trình duyệt ưu tiên quyền riêng tư được lưu trữ từ dự án web cục bộ ứng dụng KKTerm.",
+        "id": "Toolkit PDF browser yang mengutamakan privasi dihosting dari proyek web lokal aplikasi KKTerm."
+      }
     },
     {
       "id": "openclaw",
@@ -653,11 +1865,33 @@
       "descriptionEn": "Open-source AI coding agent CLI.",
       "category": "ai-agent",
       "icon": "Cloud",
-      "needs": ["node-bundle"],
+      "needs": [
+        "node-bundle"
+      ],
       "homepage": "https://github.com/openclaw/openclaw",
       "releaseNotesUrl": "https://github.com/openclaw/openclaw/releases",
-      "provider": { "kind": "npm", "pkg": "openclaw" },
-      "options": ["version"]
+      "provider": {
+        "kind": "npm",
+        "pkg": "openclaw"
+      },
+      "options": [
+        "version"
+      ],
+      "descriptionLocales": {
+        "es-MX": "CLI del agente de codificación de IA de código abierto.",
+        "ja": "オープンソースの AI コーディング エージェント CLI。",
+        "es": "CLI del agente de codificación de IA de código abierto.",
+        "zh-CN": "开源 AI 编码代理 CLI。",
+        "pt-BR": "CLI do agente de codificação de IA de código aberto.",
+        "zh-TW": "開放原始碼 AI 程式開發代理 CLI。",
+        "fr": "CLI d'agent de codage IA open source.",
+        "de": "Open-Source-KI-Coding-Agent-CLI.",
+        "it": "CLI dell'agente di codifica AI open source.",
+        "th": "CLI เอเจนต์การเข้ารหัส AI แบบโอเพ่นซอร์ส",
+        "vi": "Tác nhân mã hóa AI mã nguồn mở CLI.",
+        "id": "CLI agen pengkodean AI sumber terbuka.",
+        "ko": "오픈소스 AI 코딩 에이전트 CLI."
+      }
     }
   ]
 }
