@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowDownToLine } from "lucide-react";
 import Convert from "ansi-to-html";
 import DOMPurify from "dompurify";
 import { invokeCommand } from "../../../../../lib/tauri";
+import { ChromePortals } from "../chrome/FileViewerChromeContext";
+import { FootSeg, IconButton, SearchField } from "../chrome/controls";
 
 /** Maximum lines rendered at once to keep very large logs responsive. */
 const MAX_RENDERED_LINES = 5000;
@@ -30,13 +33,14 @@ function detectLevel(line: string): LogLevel {
   return "none";
 }
 
-const ESCAPE = "";
+const ESCAPE = "";
 
 /**
  * Dedicated log mode: parses lines, tags severity for coloring, supports a text
  * filter, per-level toggles, ANSI-color rendering, and an optional follow/tail
  * mode that polls the file end (only while enabled and the tab is active — an
- * explicit, user-chosen monitor, not background polling).
+ * explicit, user-chosen monitor, not background polling). The filter + follow
+ * controls live in the shell toolbar; severity pills sit in a dedicated log bar.
  */
 export function LogViewer({
   text,
@@ -97,16 +101,25 @@ export function LogViewer({
     }));
   }, [source, ansiConvert]);
 
-  const visibleLines = useMemo(() => {
+  const levelCounts = useMemo(() => {
+    const counts: Partial<Record<LogLevel, number>> = {};
+    for (const line of lines) {
+      counts[line.level] = (counts[line.level] ?? 0) + 1;
+    }
+    return counts;
+  }, [lines]);
+
+  const matched = useMemo(() => {
     const needle = filter.trim().toLowerCase();
-    const filtered = lines.filter((line) => {
+    return lines.filter((line) => {
       if (hiddenLevels.has(line.level)) {
         return false;
       }
       return needle ? line.raw.toLowerCase().includes(needle) : true;
     });
-    return filtered.slice(0, MAX_RENDERED_LINES);
   }, [lines, filter, hiddenLevels]);
+
+  const visibleLines = useMemo(() => matched.slice(0, MAX_RENDERED_LINES), [matched]);
 
   // Keep the newest lines in view while following.
   useEffect(() => {
@@ -128,48 +141,69 @@ export function LogViewer({
   }
 
   return (
-    <div className="file-viewer-log">
-      <div className="file-viewer-subtoolbar">
-        <input
-          className="file-viewer-filter"
-          onChange={(event) => setFilter(event.currentTarget.value)}
-          placeholder={t("workspace.fileViewer.filterLines")}
-          value={filter}
-        />
-        <div className="file-viewer-level-chips">
-          {FILTERABLE_LEVELS.map((level) => (
-            <button
-              className={`file-viewer-level-chip level-${level} ${
-                hiddenLevels.has(level) ? "is-off" : ""
-              }`}
-              key={level}
-              onClick={() => toggleLevel(level)}
-              type="button"
-            >
-              {t(`workspace.fileViewer.level.${level}`)}
-            </button>
-          ))}
-        </div>
-        <label className="file-viewer-follow">
-          <input
-            checked={follow}
-            onChange={(event) => setFollow(event.currentTarget.checked)}
-            type="checkbox"
+    <div className="fv-pane">
+      <ChromePortals
+        center={
+          <SearchField
+            value={filter}
+            onChange={setFilter}
+            placeholder={t("workspace.fileViewer.filterLines")}
+            style={{ minWidth: 190 }}
           />
-          {t("workspace.fileViewer.follow")}
-        </label>
+        }
+        right={
+          <IconButton
+            icon={ArrowDownToLine}
+            title={
+              follow ? t("workspace.fileViewer.followOn") : t("workspace.fileViewer.follow")
+            }
+            on={follow}
+            onClick={() => setFollow((value) => !value)}
+          />
+        }
+        footer={
+          <>
+            <FootSeg>
+              {t("workspace.fileViewer.lineCountOf", { count: matched.length, total: lines.length })}
+            </FootSeg>
+            {follow ? (
+              <FootSeg>
+                <span style={{ color: "var(--accent)" }}>{t("workspace.fileViewer.following")}</span>
+              </FootSeg>
+            ) : null}
+          </>
+        }
+      />
+      <div className="fv-logbar">
+        <div className="fv-levels">
+          {FILTERABLE_LEVELS.map((level) => {
+            const on = !hiddenLevels.has(level);
+            return (
+              <button
+                key={level}
+                type="button"
+                className={`fv-lvl ${level} ${on ? "on" : "off"}`}
+                onClick={() => toggleLevel(level)}
+              >
+                <span className="dot" />
+                {t(`workspace.fileViewer.level.${level}`)}
+                <span className="n">{levelCounts[level] ?? 0}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="file-viewer-log-scroll" ref={scrollRef}>
+      <div className="fv-logwrap" ref={scrollRef}>
         {visibleLines.map((line) => (
-          <div className={`file-viewer-log-line level-${line.level}`} key={line.index}>
-            <span className="file-viewer-log-gutter">{line.index + 1}</span>
+          <div className={`fv-logrow ${line.level}`} key={line.index}>
+            <span className="ln">{line.index + 1}</span>
+            <span className={`lv ${line.level}`}>
+              {line.level === "none" ? "" : line.level}
+            </span>
             {line.html !== null ? (
-              <span
-                className="file-viewer-log-text"
-                dangerouslySetInnerHTML={{ __html: line.html }}
-              />
+              <span className="msg" dangerouslySetInnerHTML={{ __html: line.html }} />
             ) : (
-              <span className="file-viewer-log-text">{line.raw}</span>
+              <span className="msg">{line.raw}</span>
             )}
           </div>
         ))}

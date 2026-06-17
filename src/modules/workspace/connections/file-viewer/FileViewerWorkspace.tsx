@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, Save } from "lucide-react";
+import { Check, Lock, RefreshCw, Save } from "lucide-react";
 import type { WorkspaceTab } from "../../../../types";
 import { confirmNativeDialog, invokeCommand, type FileViewProbe } from "../../../../lib/tauri";
 import {
@@ -12,6 +12,10 @@ import {
   viewerUsesExternalDependency,
   type ViewerKind,
 } from "./fileViewerModel";
+import { FileGlyph } from "./chrome/FileGlyph";
+import { fileTypeMeta } from "./chrome/fileViewerFileType";
+import { ChromeSlotsProvider } from "./chrome/FileViewerChromeContext";
+import { FootSeg, IconButton, Segmented } from "./chrome/controls";
 import { TextCodeViewer } from "./viewers/TextCodeViewer";
 import { MarkdownViewer } from "./viewers/MarkdownViewer";
 import { CsvViewer } from "./viewers/CsvViewer";
@@ -86,6 +90,12 @@ export function FileViewerWorkspace({
   const [editedText, setEditedText] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+
+  // Shell-owned slot elements the active viewer fills with portals (per-mode
+  // toolbar controls + footer status). See FileViewerChromeContext.
+  const [centerSlot, setCenterSlot] = useState<HTMLElement | null>(null);
+  const [rightSlot, setRightSlot] = useState<HTMLElement | null>(null);
+  const [footerSlot, setFooterSlot] = useState<HTMLElement | null>(null);
 
   const load = useCallback(
     async (forcedKind: ViewerKind | null) => {
@@ -233,49 +243,51 @@ export function FileViewerWorkspace({
     }
   }
 
+  const tint = fileTypeMeta(filePath).tint;
+  const kindLabel = activeKind ? t(`workspace.fileViewer.kind.${activeKind}`) : "";
+
   return (
     <div className={isActive ? "file-viewer-workspace active" : "file-viewer-workspace"}>
-      <div className="file-viewer-toolbar">
-        <span className="file-viewer-name" title={filePath}>
-          {fileBaseName(filePath) || t("connections.fileView")}
-          {dirty ? <span className="file-viewer-dirty-dot" aria-hidden="true" /> : null}
-        </span>
-        {probe ? <span className="file-viewer-size">{formatBytes(probe.totalSize)}</span> : null}
-        <div className="file-viewer-toolbar-spacer" />
+      <div className="fv-toolbar">
+        <div className="fv-file">
+          <span className="glyph">
+            <FileGlyph path={filePath} size={26} />
+          </span>
+          <span className="name" title={filePath}>
+            {fileBaseName(filePath) || t("connections.fileView")}
+          </span>
+          {dirty ? (
+            <span className="fv-dirty" title={t("workspace.fileViewer.unsaved")} aria-hidden="true" />
+          ) : null}
+        </div>
+        {kindLabel ? (
+          <span className="fv-pill">
+            <span className="swatch" style={{ background: tint }} />
+            {kindLabel}
+          </span>
+        ) : null}
+        <div className="fv-tb-spacer" />
+        <div className="fv-tb-center" ref={setCenterSlot} />
+        <div className="fv-tb-right" ref={setRightSlot} />
+        {kinds.length > 1 ? (
+          <Segmented
+            value={activeKind as ViewerKind}
+            options={kinds.map((kind) => ({
+              value: kind,
+              label: t(`workspace.fileViewer.kind.${kind}`),
+            }))}
+            onChange={(kind) => void requestMode(kind)}
+          />
+        ) : null}
         {editable ? (
-          <button
-            className="toolbar-button file-viewer-save"
+          <IconButton
+            icon={Save}
+            title={saving ? t("workspace.fileViewer.saving") : t("workspace.fileViewer.save")}
             disabled={!dirty || saving}
             onClick={() => void save()}
-            title={t("workspace.fileViewer.save")}
-            type="button"
-          >
-            <Save size={14} />
-            <span>{saving ? t("workspace.fileViewer.saving") : t("workspace.fileViewer.save")}</span>
-          </button>
+          />
         ) : null}
-        {kinds.length > 1 ? (
-          <div className="file-viewer-mode-switch">
-            {kinds.map((kind) => (
-              <button
-                className={`toolbar-button ${kind === activeKind ? "is-active" : ""}`}
-                key={kind}
-                onClick={() => void requestMode(kind)}
-                type="button"
-              >
-                {t(`workspace.fileViewer.kind.${kind}`)}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        <button
-          className="toolbar-button"
-          onClick={() => void requestReload()}
-          title={t("common.refresh")}
-          type="button"
-        >
-          <RefreshCw size={14} />
-        </button>
+        <IconButton icon={RefreshCw} title={t("common.refresh")} onClick={() => void requestReload()} />
       </div>
 
       {content?.truncated ? (
@@ -285,23 +297,52 @@ export function FileViewerWorkspace({
         <div className="file-viewer-notice file-viewer-notice-warn">{saveError}</div>
       ) : null}
 
-      <div className="file-viewer-body">
-        {loading ? (
-          <div className="file-viewer-status">{t("workspace.fileViewer.loading")}</div>
-        ) : error ? (
-          <div className="file-viewer-status file-viewer-status-error">{error}</div>
-        ) : content ? (
-          <FileViewerContent
-            content={content}
-            editable={editable}
-            editorKey={`${filePath}:${reloadToken}:${activeKind}`}
-            filePath={filePath}
-            isActive={isActive}
-            onEditChange={setEditedText}
-            onSave={() => void save()}
-          />
-        ) : null}
+      <div className="fv-body">
+        <ChromeSlotsProvider value={{ center: centerSlot, right: rightSlot, footer: footerSlot }}>
+          {loading ? (
+            <div className="file-viewer-status">{t("workspace.fileViewer.loading")}</div>
+          ) : error ? (
+            <div className="file-viewer-status file-viewer-status-error">{error}</div>
+          ) : content ? (
+            <FileViewerContent
+              content={content}
+              editable={editable}
+              editorKey={`${filePath}:${reloadToken}:${activeKind}`}
+              filePath={filePath}
+              isActive={isActive}
+              onEditChange={setEditedText}
+              onSave={() => void save()}
+            />
+          ) : null}
+        </ChromeSlotsProvider>
       </div>
+
+      {content && !loading && !error ? (
+        <div className="fv-footer">
+          {kindLabel ? <FootSeg>{kindLabel}</FootSeg> : null}
+          {probe ? <FootSeg>{formatBytes(probe.totalSize)}</FootSeg> : null}
+          <span className="fv-footer-slot" ref={setFooterSlot} />
+          <span className="sp" />
+          {editable ? (
+            dirty ? (
+              <span className="badge warn">
+                <span className="fv-dot" />
+                {t("workspace.fileViewer.unsaved")}
+              </span>
+            ) : (
+              <span className="badge">
+                <Check size={12} />
+                {t("workspace.fileViewer.saved")}
+              </span>
+            )
+          ) : (
+            <span className="badge ro">
+              <Lock size={12} />
+              {t("workspace.fileViewer.readOnly")}
+            </span>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -355,6 +396,7 @@ function FileViewerContent({
       return (
         <TextCodeViewer
           editable={editable}
+          filePath={filePath}
           initialText={content.text ?? ""}
           key={editorKey}
           language={MARKDOWN_PATH.test(filePath) ? "markdown" : undefined}
