@@ -205,6 +205,10 @@ export function AddConnectionMenu({
       type: "localFiles",
       title: t("connections.localFiles"),
     },
+    {
+      type: "fileView",
+      title: t("connections.fileView"),
+    },
   ];
 
   return (

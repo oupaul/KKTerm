@@ -28,6 +28,7 @@ import {
   CONNECTION_TAB_CONTEXT_MENU_EVENT,
   type ConnectionTabContextMenuDetail,
 } from "./connectionTabContextMenu";
+import { buildFileViewConnectionDraftFromPath } from "./fileViewConnectionDraft";
 import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocksProxyPasswordOwnerId, defaultPortForConnectionType, connectionTypeLabel, ftpPortForProtocolSelection, isRemoteDesktopConnectionType, localShellOptionsForPlatform, resolveSshSocksProxyRequest, uniqueRuntimeId, type LocalShellOption } from "./utils";
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
@@ -539,11 +540,41 @@ export function ConnectionSidebar({
   }
 
   function handleNewConnectionTypeSelected(connectionType: ConnectionType) {
+    if (connectionType === "fileView") {
+      void handleNewFileViewConnectionSelected();
+      return;
+    }
     setAddConnectionMenuOpen(false);
     setQuickConnectMenuOpen(false);
     setFormError("");
+    setTreeError("");
     setNewConnectionType(connectionType);
     setFormMode("save");
+  }
+
+  async function handleNewFileViewConnectionSelected() {
+    setAddConnectionMenuOpen(false);
+    setQuickConnectMenuOpen(false);
+    setFormError("");
+    const selectedPath = await selectFileViewPath({
+      title: t("connections.fileViewPickerTitle"),
+    });
+    if (!selectedPath) {
+      return;
+    }
+
+    try {
+      const { iconDataUrl, ...request } = buildFileViewConnectionDraftFromPath(selectedPath, {
+        workspaceId: useWorkspaceStore.getState().activeWorkspaceId,
+      });
+      let connection = await invokeCommand("create_connection", {
+        request,
+      });
+      connection = await saveConnectionIconPresentation(connection, iconDataUrl, null);
+      await handleConnectionSaved();
+    } catch (error) {
+      setTreeError(error instanceof Error ? error.message : String(error));
+    }
   }
 
   function handleQuickSshRequested() {
@@ -1496,7 +1527,10 @@ export function ConnectionSidebar({
         kind: "item" as const,
         label: connectionType === "ssh" ? t("connections.ssh") : connectionTypeLabel(connectionType),
         iconSrc: connectionIconSrcForConnection({ type: connectionType }),
-        action: () => handleNewConnectionTypeSelected(connectionType),
+        action:
+          connectionType === "fileView"
+            ? handleNewFileViewConnectionSelected
+            : () => handleNewConnectionTypeSelected(connectionType),
       })),
       { kind: "separator" as const },
       {
