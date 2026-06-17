@@ -106,7 +106,9 @@ or per run:
 - **SSH (Windows OpenSSH)** — reuses the existing `russh` exec path with
   zero new transport code; preferred when the host runs OpenSSH server.
 - **WinRM / WS-Man** — HTTP-based remote exec, the standard path for
-  Windows Update playbooks; pure-Rust client, no shipped binary.
+  Windows Update playbooks. No shipped binary; built as a thin client on
+  license-clean crates per `docs/ADR/0012-winrm-transport-library.md`
+  (the turnkey WinRM crates are GPL and disqualified).
 - **PsExec** — Sysinternals binary delivered through an Install Helper
   recipe (kind `downloadInstaller`/`githubRelease`), for environments
   that already rely on it.

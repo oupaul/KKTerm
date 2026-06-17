@@ -212,3 +212,240 @@ Migration steps, at a design level:
 
 `CONTEXT.md`'s Watchdog entry is updated to note Automations are now
 durable IT Ops rules while live run state remains in-memory.
+
+## Concrete Data Model
+
+This section grounds the durable shape in the existing storage conventions
+(`src-tauri/src/storage.rs`). The schema is a single idempotent
+`CURRENT_SCHEMA` string of `CREATE TABLE IF NOT EXISTS` statements applied
+via `execute_batch` with `PRAGMA user_version`; adding tables is additive
+and only requires bumping `SCHEMA_USER_VERSION` (currently 26 → 27).
+Ordered lists use an integer `sort_order` column, matching
+`dashboard_widget_instances`. Heavy/structured fields that are not queried
+relationally are stored as JSON `TEXT` columns, matching
+`dashboard_custom_widgets.body_json` and `settings_schema_json`.
+
+### SQLite tables (appended to `CURRENT_SCHEMA`)
+
+```sql
+-- A named selection of existing Connections used as a fleet target.
+CREATE TABLE IF NOT EXISTS itops_host_groups (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    sort_order      INTEGER NOT NULL,
+    -- Ordered Connection ids: JSON array of strings, e.g. ["conn-1","conn-2"].
+    member_ids_json TEXT NOT NULL DEFAULT '[]',
+    -- Optional dynamic filter resolved at run time: {"types":["ssh"],"folderId":"..."}.
+    filter_json     TEXT,
+    -- Per-host-group transport default: 'ssh' | 'winrm' | 'psexec' | 'auto'.
+    transport       TEXT NOT NULL DEFAULT 'auto'
+        CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
+    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- A durable trigger -> condition -> actions rule (the evolved Watchdog).
+CREATE TABLE IF NOT EXISTS itops_automations (
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    sort_order    INTEGER NOT NULL,
+    enabled       INTEGER NOT NULL DEFAULT 1,
+    -- Tagged-enum JSON. Superset of WatchdogTarget (see Rust types below).
+    trigger_json  TEXT NOT NULL,
+    -- Tagged-enum JSON of PredicateOp, or NULL for unconditional triggers.
+    condition_json TEXT,
+    -- JSON array of typed actions, executed in order.
+    actions_json  TEXT NOT NULL DEFAULT '[]',
+    -- Loop settings (poll_ms, stop, sustained_for_ms, suppression_ms): JSON object.
+    runtime_json  TEXT NOT NULL DEFAULT '{}',
+    created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- One completed Batch Run (manual or fired by an automation). Append-only.
+CREATE TABLE IF NOT EXISTS itops_run_history (
+    id             TEXT PRIMARY KEY,
+    -- 'manual' or 'automation:<automation_id>'.
+    source         TEXT NOT NULL,
+    host_group_id  TEXT,            -- soft reference; runs survive group deletion
+    task_summary   TEXT NOT NULL,   -- redacted one-line task label, never the script body of secrets
+    started_at     TEXT NOT NULL,
+    finished_at    TEXT,
+    -- Consolidated report: per-host {connectionId,host,transport,exitCode,ok,bytesOut} rows.
+    report_json    TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_run_history_source
+    ON itops_run_history(source, started_at);
+```
+
+`itops_run_history` uses a **soft** `host_group_id` (no `REFERENCES`) so
+deleting a Host Group does not erase its run history; the Dashboard tables
+use hard `ON DELETE CASCADE` where cascade is desired, and this is the
+deliberate opposite choice for an audit log.
+
+### Rust types (`src-tauri/src/itops/types.rs`)
+
+The durable `Automation` is a superset of `WatchdogConfig`. The existing
+`PerformanceMetric`, `PredicateOp`, `WatchdogStop`, and the runtime state
+machine are reused unchanged; only the target/action enums grow.
+
+```rust
+/// Durable rule. Mirrors WatchdogConfig + persistence/identity fields.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Automation {
+    pub id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub trigger: AutomationTrigger,
+    #[serde(default)]
+    pub condition: Option<PredicateOp>, // reused from watchdog::types
+    pub actions: Vec<AutomationAction>,
+    pub runtime: AutomationRuntime,     // poll_ms, stop, sustained_for_ms, suppression_ms
+}
+
+/// Superset of WatchdogTarget. Existing variants carry over verbatim.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum AutomationTrigger {
+    // --- carried over from WatchdogTarget ---
+    PerformanceCounter { metric: PerformanceMetric },
+    SshSessionOutputSilence { session_id: String },
+    Ping { host: String, #[serde(default)] port: Option<u16> },
+    TcpReachable { host: String, port: u16 },
+    // --- new in IT Ops ---
+    /// Fires on a cron schedule; pairs with no condition or a probe condition.
+    Schedule { cron: String },
+    /// Regex match against streamed session/SSH output.
+    OutputMatch { session_id: String, pattern: String },
+    /// SFTP path mtime/size change under an SSH Connection.
+    SftpChange { connection_id: String, remote_path: String },
+    /// Inbound webhook hit (local listener path token); value = parsed body.
+    WebhookIn { token: String },
+    /// Polls a structured/unstructured datasource; value = extracted field.
+    Datasource(DatasourceProbe),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum DatasourceProbe {
+    HttpJson { url: String, json_pointer: String }, // RFC 6901 pointer into the body
+    CommandOutput { connection_id: String, command: String },
+    LogFile { path: String },
+}
+
+/// Superset of WatchdogAction. `Notify` and `AiIntervene` are verbatim.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum AutomationAction {
+    Notify { level: NotifyLevel },        // inApp | toast | sound
+    Popup { title: String, body: String },
+    Email { to: String, subject: String, body: String }, // SMTP creds via keychain
+    Webhook { url: String, method: String, body: Option<String> },
+    RunBatch { host_group_id: String, task: BatchTask },
+    AiIntervene {                          // unchanged from watchdog::types
+        goal: String,
+        allowed_tools: Vec<String>,
+        max_interventions: u32,
+        suppression_ms: u64,
+    },
+}
+
+/// What a Batch Run executes on each targeted host.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum BatchTask {
+    Script { body: String, shell: Option<String> },
+    Playbook { id: PlaybookId, params: serde_json::Value, dry_run: bool },
+}
+
+/// Curated, pure-data update sequences (no arbitrary script strings).
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum PlaybookId { AptUpgrade, DnfUpgrade, YumUpgrade, WindowsUpdate }
+
+/// Common transport interface; SSH/WinRM/PsExec each implement it.
+pub trait Transport {
+    /// Bounded, non-blocking; streams output frames on the returned channel.
+    fn exec(&self, host: &ResolvedHost, task: &BatchTask) -> ExecStream;
+}
+```
+
+### Secrets
+
+Reuse the existing keychain owner model (`src-tauri/src/secrets.rs`). The
+`SecretKind::EmailSmtpPassword` variant **already exists** — Email actions
+reuse it. Two additions are needed:
+
+- a `WebhookToken` secret kind for outbound webhook auth, and
+- a `WinrmPassword` (and later `WinrmKerberos`) secret kind for the WinRM
+  transport.
+
+Owner ids follow the established pattern, e.g.
+`itops-automation-secret:<automation_id>:<actionIndex>` for an action's
+secret and `itops-host-group-secret:<group_id>:winrm` for a Host Group's
+WinRM credential. SQLite stores only non-secret references.
+
+## Implementation Phases
+
+Sequenced so each phase ships something testable and the Watchdog keeps
+working throughout. Each phase is one reviewable PR unless noted.
+
+**Phase 0 — Module shell (no behavior change).** Add `ActivePage`
+`"itops"`, the rail button + `itops.railLabel` i18n key, the `App.tsx`
+mount/route arm (mirroring `installerMounted`), an empty
+`src/modules/itops/` page with three placeholder tabs, and the `itops`
+i18n namespace. No backend. Proves navigation and unblocks parallel work.
+
+**Phase 1 — Host Groups (durable CRUD).** Schema bump to 27 with
+`itops_host_groups`; `src-tauri/src/itops/storage.rs` repository
+(add/list/update/remove/reorder) mirroring `dashboard_storage.rs`; typed
+commands in `itops/commands.rs` registered in `generate_handler!`; the
+Host Groups tab UI with a Connection multi-select + optional filter.
+Resolver function turns a group into a concrete `Vec<Connection>` at run
+time. Include Host Groups in selective export/import (ADR 0010).
+
+**Phase 2 — Batch Run executor over SSH.** `itops/runner.rs` worker pool
+reusing the `import.rs` `Semaphore`/atomic-progress/`app.emit` pattern;
+the `Transport` trait with the SSH adapter built on the existing `russh`
+exec path; live per-host run grid UI fed by an `itops://run` event
+channel; write the consolidated report to `itops_run_history` on finish.
+`BatchTask::Script` only. This delivers the headline "send a script to all
+SSH hosts and get results back."
+
+**Phase 3 — Automations: persist + re-arm the Watchdog.** Schema add
+`itops_automations`; the durable `Automation` superset type; a startup
+hook that hydrates enabled rows into the existing `WatchdogRegistry`;
+extend `watchdog/commands.rs` (or new `itops/automation_commands.rs`) with
+create/update/enable/disable/delete; re-home `WatchdogDetail` /
+`WatchdogStatusBar` under the Automations tab while keeping the Status Bar
+indicator. Existing trigger/action kinds only — pure migration of
+behavior onto durable storage.
+
+**Phase 4 — Action catalog.** Add `Popup`, `Email` (reusing
+`EmailSmtpPassword`), `Webhook` (new `WebhookToken` secret), and
+`RunBatch` (calls the Phase 2 runner) to the action executor. Each action
+is independently testable against the pure rule evaluator.
+
+**Phase 5 — New triggers.** Add `Schedule` (cron), `OutputMatch`,
+`SftpChange`, `WebhookIn`, and `Datasource` samplers to the trigger
+dispatcher. These are additive to the existing sampler free function.
+
+**Phase 6 — WinRM + PsExec transports.** The thin WinRM/WS-Man client per
+ADR 0012 (`reqwest` + `sspi` + `quick-xml`, new `WinrmPassword` secret);
+the PsExec adapter with its Install Helper catalog recipe. Both implement
+the same `Transport` trait, so the Phase 2 runner and UI are unchanged.
+
+**Phase 7 — Update playbooks.** `BatchTask::Playbook` with the
+`PlaybookId` set, dry-run preview, and explicit per-run approval. Windows
+Update rides the Phase 6 WinRM transport; apt/dnf/yum ride SSH.
+
+**Phase 8 — AI Assistant integration.** Register IT Ops mutating commands
+as approval-gated assistant tools; emit `itops-changed` and add the
+store-reload listener (mirroring `dashboard-changed`); add the compact,
+metadata-only page-context projection.
+
+Phases 0–3 are the minimum that delivers durable monitoring + SSH batch.
+Phases 4–8 are independent and can be reordered by demand.
+
