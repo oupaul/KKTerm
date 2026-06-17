@@ -62,6 +62,8 @@
     "catalogAll": "전체",
     "catalogGroupBuiltIn": "내장",
     "catalogGroupCustom": "AI 생성",
+    "catalogBadgeAiGenerated": "AI 생성",
+    "catalogBadgeImported": "가져옴",
     "catalogNoMatches": "일치하는 위젯이 없습니다.",
     "presetLabel": "스타일 프리셋",
     "preset": {

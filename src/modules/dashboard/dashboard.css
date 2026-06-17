@@ -2558,6 +2558,11 @@ button.dashboard-pill-dot:focus-visible {
   background: var(--amber-soft);
 }
 
+.dw-badge--imported {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .dw-badge--check {
   color: var(--green);
   background: var(--green-soft);

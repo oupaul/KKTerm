@@ -62,6 +62,8 @@
     "catalogAll": "すべて",
     "catalogGroupBuiltIn": "ビルトイン",
     "catalogGroupCustom": "AI 作成",
+    "catalogBadgeAiGenerated": "AI 生成",
+    "catalogBadgeImported": "インポート済み",
     "catalogNoMatches": "一致するウィジェットはありません。",
     "presetLabel": "スタイルプリセット",
     "preset": {

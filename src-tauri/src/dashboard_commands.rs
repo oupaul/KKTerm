@@ -387,7 +387,7 @@ pub fn export_dashboard_widgets(
 }
 
 /// Import widgets from a `.kkwidget` JSON file, inserting each as a new
-/// user-authored custom widget with a fresh id. Additive — never overwrites
+/// imported custom widget with a fresh id. Additive — never overwrites
 /// existing widgets; on a title collision the imported title gets a suffix so it
 /// stays distinguishable in the catalog. Returns the created rows so the store
 /// can append them live without a reload.
@@ -467,7 +467,7 @@ fn import_dashboard_widgets_from_json(
                 &entry.category,
                 &entry.body_json,
                 Some(&entry.settings_schema_json),
-                "user",
+                "imported",
             )?;
             taken.insert(widget.title.clone());
             created.push(widget);

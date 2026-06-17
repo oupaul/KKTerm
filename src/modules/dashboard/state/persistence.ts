@@ -200,7 +200,7 @@ export async function applyLayout(viewId: string, layout: LayoutEntry[]): Promis
 
 export async function createCustomWidget(input: {
   title: string; summary: string;
-  category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
+  category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent" | "imported";
 }): Promise<DashboardCustomWidget> {
   if (!isTauriRuntime()) {
     const validation = validateCustomWidgetBodyJson(input.bodyJson);

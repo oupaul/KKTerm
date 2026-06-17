@@ -37,7 +37,7 @@ interface CatalogEntry {
   defaultIcon: IconName;
   defaultSize: { w: number; h: number };
   isCustom: boolean;
-  createdBy?: "user" | "agent";
+  createdBy?: "user" | "agent" | "imported";
 }
 
 export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
@@ -247,7 +247,12 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
                 <p>{entry.summary}</p>
                 <div className="dw-catalog-meta">
                   <span className={`dw-catalog-tag dw-catalog-tag--${getCatalogGroup(entry)}`}>{groupLabel(getCatalogGroup(entry))}</span>
-                  {entry.createdBy === "agent" && <span className="dw-badge dw-badge--ai">AI</span>}
+                  {entry.createdBy === "agent" && (
+                    <span className="dw-badge dw-badge--ai">{t("dashboard.catalogBadgeAiGenerated")}</span>
+                  )}
+                  {entry.createdBy === "imported" && (
+                    <span className="dw-badge dw-badge--imported">{t("dashboard.catalogBadgeImported")}</span>
+                  )}
                   {alreadyOnView && <span className="dw-badge dw-badge--check">✓</span>}
                 </div>
               </button>

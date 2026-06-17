@@ -66,7 +66,7 @@ interface DashboardStoreState {
   applyLayout: (viewId: string, layout: LayoutEntry[]) => void;
   createCustomWidget: (input: {
     title: string; summary: string;
-    category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
+    category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent" | "imported";
   }) => Promise<DashboardCustomWidget | null>;
   updateCustomWidget: (id: string, patch: CustomWidgetPatch) => Promise<void>;
   removeCustomWidget: (id: string, forceDeleteInstances: boolean) => Promise<void>;

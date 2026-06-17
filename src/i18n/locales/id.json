@@ -62,6 +62,8 @@
     "catalogAll": "Semua",
     "catalogGroupBuiltIn": "Bawaan",
     "catalogGroupCustom": "Buatan AI",
+    "catalogBadgeAiGenerated": "Dihasilkan AI",
+    "catalogBadgeImported": "Diimpor",
     "catalogNoMatches": "Tidak ada widget yang cocok.",
     "presetLabel": "Preset gaya",
     "preset": {

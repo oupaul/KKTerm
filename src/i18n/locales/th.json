@@ -62,6 +62,8 @@
     "catalogAll": "ทั้งหมด",
     "catalogGroupBuiltIn": "ในตัว",
     "catalogGroupCustom": "สร้างโดย AI",
+    "catalogBadgeAiGenerated": "สร้างโดย AI",
+    "catalogBadgeImported": "นำเข้าแล้ว",
     "catalogNoMatches": "ไม่มีวิดเจ็ตที่ตรงกัน",
     "presetLabel": "ค่าที่ตั้งไว้ล่วงหน้าสำหรับสไตล์",
     "preset": {

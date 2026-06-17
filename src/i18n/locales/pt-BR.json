@@ -62,6 +62,8 @@
     "catalogAll": "Todos",
     "catalogGroupBuiltIn": "Integrado",
     "catalogGroupCustom": "Criados por IA",
+    "catalogBadgeAiGenerated": "Gerado por IA",
+    "catalogBadgeImported": "Importado",
     "catalogNoMatches": "Nenhum widget correspondente.",
     "presetLabel": "Estilo predefinido",
     "preset": {

@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 25;
+const SCHEMA_USER_VERSION: i32 = 26;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS dashboard_custom_widgets (
     category TEXT NOT NULL DEFAULT 'custom',
     body_json TEXT NOT NULL,
     settings_schema_json TEXT NOT NULL DEFAULT '{"fields":[]}',
-    created_by TEXT NOT NULL CHECK (created_by IN ('user', 'agent')),
+    created_by TEXT NOT NULL CHECK (created_by IN ('user', 'agent', 'imported')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -1951,6 +1951,47 @@ impl Storage {
                 .map_err(to_storage_error)?;
         }
         repair_connections_pre_v25_references(&connection)?;
+        // v26: imported Dashboard script widgets get a durable origin marker
+        // so the catalog can badge them after restart. SQLite cannot alter a
+        // CHECK constraint in place, so rebuild just this table to admit the
+        // new `created_by = 'imported'` value.
+        if stored_version < 26 && table_exists(&connection, "dashboard_custom_widgets")? {
+            connection
+                .pragma_update(None, "legacy_alter_table", "ON")
+                .map_err(to_storage_error)?;
+            connection
+                .execute_batch(
+                    r#"
+                    BEGIN;
+                    ALTER TABLE dashboard_custom_widgets RENAME TO dashboard_custom_widgets_pre_v26;
+                    CREATE TABLE dashboard_custom_widgets (
+                        id TEXT PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        summary TEXT NOT NULL DEFAULT '',
+                        category TEXT NOT NULL DEFAULT 'custom',
+                        body_json TEXT NOT NULL,
+                        settings_schema_json TEXT NOT NULL DEFAULT '{"fields":[]}',
+                        created_by TEXT NOT NULL CHECK (created_by IN ('user', 'agent', 'imported')),
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    INSERT INTO dashboard_custom_widgets (
+                        id, title, summary, category, body_json, settings_schema_json,
+                        created_by, created_at, updated_at
+                    )
+                    SELECT
+                        id, title, summary, category, body_json, settings_schema_json,
+                        created_by, created_at, updated_at
+                    FROM dashboard_custom_widgets_pre_v26;
+                    DROP TABLE dashboard_custom_widgets_pre_v26;
+                    COMMIT;
+                    "#,
+                )
+                .map_err(to_storage_error)?;
+            connection
+                .pragma_update(None, "legacy_alter_table", "OFF")
+                .map_err(to_storage_error)?;
+        }
         connection
             .execute_batch(&format!("PRAGMA user_version = {SCHEMA_USER_VERSION}"))
             .map_err(to_storage_error)?;

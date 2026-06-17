@@ -2278,7 +2278,7 @@ type CommandMap = {
   dashboard_create_custom_widget: {
     args: {
       title: string; summary: string;
-      category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent";
+      category: string; bodyJson: string; settingsSchemaJson?: string; createdBy: "user" | "agent" | "imported";
     };
     result: DashboardCustomWidget;
   };

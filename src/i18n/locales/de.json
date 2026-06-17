@@ -62,6 +62,8 @@
     "catalogAll": "Alle",
     "catalogGroupBuiltIn": "Integriert",
     "catalogGroupCustom": "KI-erstellt",
+    "catalogBadgeAiGenerated": "KI-generiert",
+    "catalogBadgeImported": "Importiert",
     "catalogNoMatches": "Keine passenden Widgets.",
     "presetLabel": "Stilvorlage",
     "preset": {

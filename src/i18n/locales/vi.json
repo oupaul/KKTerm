@@ -62,6 +62,8 @@
     "catalogAll": "Tất cả",
     "catalogGroupBuiltIn": "Tích hợp",
     "catalogGroupCustom": "Do AI tạo",
+    "catalogBadgeAiGenerated": "Do AI tạo",
+    "catalogBadgeImported": "Đã nhập",
     "catalogNoMatches": "Không có tiện ích nào khớp.",
     "presetLabel": "Cài đặt sẵn kiểu",
     "preset": {

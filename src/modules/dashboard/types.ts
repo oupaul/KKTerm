@@ -118,7 +118,7 @@ export interface DashboardCustomWidget {
   category: string;
   bodyJson: string;
   settingsSchemaJson: string;
-  createdBy: "user" | "agent";
+  createdBy: "user" | "agent" | "imported";
   createdAt: string;
 }
 

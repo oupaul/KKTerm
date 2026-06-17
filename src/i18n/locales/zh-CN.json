@@ -62,6 +62,8 @@
     "catalogAll": "全部",
     "catalogGroupBuiltIn": "内置",
     "catalogGroupCustom": "AI 创建",
+    "catalogBadgeAiGenerated": "AI 生成",
+    "catalogBadgeImported": "已导入",
     "catalogNoMatches": "无匹配的小部件。",
     "presetLabel": "样式预设",
     "preset": {

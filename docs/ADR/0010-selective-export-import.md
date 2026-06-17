@@ -34,7 +34,7 @@ encrypted SQLite backend is in use.
   and an "export all" share one `widgets` array so one importer handles both.
   A widget *definition* never contains secrets, so these files are safe by
   construction. Import is **additive only** — each widget becomes a new
-  user-authored Custom Widget with a fresh id; titles are suffixed on collision.
+  imported Custom Widget with a fresh id; titles are suffixed on collision.
 
 - **Selective database export/import** (`.kkbackup`, ZIP of `manifest.json` +
   `data.json` + optional `secrets.enc`): the user picks which **segments** to

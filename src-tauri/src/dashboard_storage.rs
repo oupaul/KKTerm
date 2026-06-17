@@ -748,11 +748,11 @@ pub fn create_custom_widget(
     validate_custom_body_json_detailed(body_json)?;
     let settings_schema_json = settings_schema_json.unwrap_or(r#"{"fields":[]}"#);
     validate_settings_schema_json(settings_schema_json)?;
-    if !matches!(created_by, "user" | "agent") {
+    if !matches!(created_by, "user" | "agent" | "imported") {
         return Err(DashboardStorageError::validation_with_detail(
             ValidationError::InvalidCustomWidgetKind,
             Some(format!(
-                "createdBy must be 'user' or 'agent'; got {created_by:?}"
+                "createdBy must be 'user', 'agent', or 'imported'; got {created_by:?}"
             )),
         ));
     }
@@ -1072,7 +1072,7 @@ mod tests {
                 category TEXT NOT NULL DEFAULT 'custom',
                 body_json TEXT NOT NULL,
                 settings_schema_json TEXT NOT NULL DEFAULT '{"fields":[]}',
-                created_by TEXT NOT NULL CHECK (created_by IN ('user','agent')),
+                created_by TEXT NOT NULL CHECK (created_by IN ('user','agent','imported')),
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -1330,6 +1330,26 @@ mod tests {
         let state = load_state(&conn).unwrap();
         assert_eq!(state.instances.len(), 0);
         assert_eq!(state.custom_widgets.len(), 0);
+    }
+
+    #[test]
+    fn imported_custom_widget_origin_round_trips() {
+        let conn = open_test_db();
+        create_custom_widget(
+            &conn,
+            "cw-imported",
+            "Imported Widget",
+            "Imported elsewhere",
+            "custom",
+            r#"{"source":"const root = document.getElementById('root'); root.textContent = 'ok';","permissions":{"network":false}}"#,
+            None,
+            "imported",
+        )
+        .unwrap();
+
+        let state = load_state(&conn).unwrap();
+        assert_eq!(state.custom_widgets.len(), 1);
+        assert_eq!(state.custom_widgets[0].created_by, "imported");
     }
 
     #[test]
