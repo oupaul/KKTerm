@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("File Explorer can open local files in the inline Document", async () => {
-  const [typesSource, defaultsSource, storeSource, workspaceSource, settingsSource] =
+  const [typesSource, defaultsSource, storeSource, workspaceSource, settingsSource, fileViewerCss] =
     await Promise.all([
       readFile(new URL("../src/types.ts", import.meta.url), "utf8"),
       readFile(new URL("../src/app-defaults.ts", import.meta.url), "utf8"),
@@ -13,6 +13,10 @@ test("File Explorer can open local files in the inline Document", async () => {
         "utf8",
       ),
       readFile(new URL("../src/modules/settings/WorkspaceSettings.tsx", import.meta.url), "utf8"),
+      readFile(
+        new URL("../src/modules/workspace/connections/file-viewer/file-viewer.css", import.meta.url),
+        "utf8",
+      ),
     ]);
 
   assert.match(
@@ -49,5 +53,15 @@ test("File Explorer can open local files in the inline Document", async () => {
     settingsSource,
     /<legend>\{t\("settings\.fileExplorer"\)\}<\/legend>[\s\S]*settings\.fileExplorerOpenMode[\s\S]*settings\.fileExplorerOpenModeExternal[\s\S]*settings\.fileExplorerOpenModeInlineEditor/,
     "Workspace Settings should expose the File Explorer open-mode selector",
+  );
+  assert.match(
+    fileViewerCss,
+    /\.file-viewer-workspace\s*\{[\s\S]*?display:\s*none;/,
+    "inactive Document tabs should stay mounted but hidden like other Workspace surfaces",
+  );
+  assert.match(
+    fileViewerCss,
+    /\.file-viewer-workspace\.active\s*\{[\s\S]*?display:\s*flex;/,
+    "the active Document tab should be the only visible Document surface",
   );
 });
