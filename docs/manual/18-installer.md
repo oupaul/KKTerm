@@ -105,7 +105,7 @@ When the user installs base WSL in the current app session, the Installer Helper
 
 ## Persistence
 
-- **SQLite** — table `installer_tool_state(tool_id PK, pinned, latest_version_seen, last_check_at)` (schema version 17). Pinning and the cached latest available version survive restarts.
+- **SQLite** — table `installer_tool_state(tool_id PK, pinned, latest_version_seen, last_check_at)` (added in schema migration 17). Pinning and the cached latest available version survive restarts.
 - **Windows Registry** — per-tool detection cache under `HKCU\Software\Ryan Tsai\KKTerm\InstallerDetectionCache`. This cache is local Windows state, not portable settings data.
 - **Debug log** — debug builds write Installer Helper catalog, detection, latest-version, install, uninstall, cache, progress-event, and child-process output records to `installer.helper.debug.log` beside `kkterm.log`. Release builds write the same JSONL log only when `settings.advancedDebugging` is enabled. The same setting also enables `kkterm-heartbeat.debug.log` in release builds for frontend/native liveness timing while troubleshooting Installer Helper stalls.
 - **In-memory only** — the active detection sweep, the in-flight install queue, the WSL reboot flag, and the per-tool log buffer.

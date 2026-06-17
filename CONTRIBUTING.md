@@ -103,21 +103,23 @@ KKTerm/
 ├── src/                     # React 19 + TypeScript frontend
 │   ├── App.tsx              # App shell ONLY (routing, chrome composition)
 │   ├── app/                 # Activity Rail, RailTooltip, workspace chrome
-│   ├── connections/         # Connection tree + dialogs
-│   ├── workspace/           # Tab dispatch, StatusBar, screenshots, native overlay
-│   ├── terminal/            # TerminalWorkspace (local / SSH / Telnet / Serial)
-│   ├── sftp/                # SFTP / FTP dual-pane browser
-│   ├── webview/             # WebView2 URL workspace
-│   ├── remote-desktop/      # RDP (ActiveX) + VNC workspace
-│   ├── dashboard/           # Dashboard module, widgets, grid
-│   │   └── widgets/         # Built-in widgets — drop new ones here
+│   ├── modules/             # Top-level Modules (see docs/ARCHITECTURE.md)
+│   │   ├── workspace/       # Tab dispatch, StatusBar, screenshots, native overlay
+│   │   │   └── connections/ # Connection tree + dialogs
+│   │   │       ├── terminal/       # TerminalWorkspace (local / SSH / Telnet / Serial)
+│   │   │       ├── sftp/           # SFTP / FTP dual-pane browser
+│   │   │       ├── webview/        # WebView2 URL workspace
+│   │   │       └── remote-desktop/ # RDP (ActiveX) + VNC workspace
+│   │   ├── dashboard/       # Dashboard Module, grid
+│   │   │   └── widgets/     # Built-in widgets — drop new ones here
+│   │   ├── installer/       # Installer Helper Module
+│   │   └── settings/        # SettingsPage and section files
 │   ├── ai/                  # AssistantPanel, chat, tool dispatch
 │   │   └── providerRegistry/ # Frontend provider/model metadata
-│   ├── settings/            # SettingsPage and section files
 │   ├── i18n/
 │   │   ├── config.ts        # i18next setup, switchLanguage, ensureI18nReady
 │   │   ├── useT.ts          # Typed t() hook
-│   │   └── locales/         # en.json (source of truth) + 12 others
+│   │   └── locales/         # en.json (source of truth) + 13 others
 │   └── lib/
 │       ├── tauri.ts                 # Typed wrappers for invoke()
 │       ├── nativeContextMenu.ts     # Native Tauri menus + icon rasterization
@@ -151,7 +153,7 @@ KKTerm/
 
 KKTerm has precise nouns. Using them correctly in code, commits, PR descriptions, UI strings, and docs is the single highest-signal thing you can do to make a PR easy to review.
 
-- **Connection** — durable saved resource in SQLite. Kinds: local terminal, SSH terminal, Telnet, Serial, URL (WebView2), RDP, VNC. SFTP opens from an SSH Connection.
+- **Connection** — durable saved resource in SQLite. Kinds: local terminal, SSH terminal, Telnet, Serial, URL (WebView2), RDP, VNC, FTP/FTPS, File Explorer (`localFiles`). SFTP opens from an SSH Connection and is not a standalone saved kind.
 - **Quick Connect** — unsaved one-off draft that starts a Session.
 - **Session** — live runtime state: PTY, SSH channel, SFTP browser, WebView2 host, RDP control, VNC framebuffer.
 - **Tab** — frontend workspace container; not a backend object. Closing a Tab ends its Session. Switching Tabs does **not**.
@@ -250,10 +252,10 @@ These are bug categories we have already shipped and reverted at least once. We 
 
 - **No frontend close hooks.** `onCloseRequested`, `tauri://close-requested`, JS-side close listeners, and close-confirmation dialogs have repeatedly broken the native Windows title-bar close button in Tauri v2. The only allowed close-path code is the existing synchronous Rust-side `WindowEvent::CloseRequested` arm in `lib.rs` for minimize-to-tray. Do not add new ones.
 - **Do not put live Session state into the durable Connection model.** Keep UI state in the workspace layer.
-- **Do not hand a live-status-augmented `Connection` to a feature workspace** (`TerminalWorkspace`, `SftpWorkspace`, `WebViewWorkspace`, `RemoteDesktopWorkspace`). `withLiveConnectionStatuses` returns a fresh reference on every status change, which will tear down and restart the Session in an infinite mount/unmount loop. Look the Connection up by `id` from the raw tree instead. See [`src/dashboard/widgets/ConnectionWidgetBody.tsx`](src/dashboard/widgets/ConnectionWidgetBody.tsx) for the correct pattern.
-- **Overlay parking is RDP-only.** The screenshot-and-park workaround for the RDP ActiveX HWND lives in [`src/workspace/nativeOverlay.ts`](src/workspace/nativeOverlay.ts) and must not be applied to WebView2, terminal, SFTP, or VNC workspaces.
+- **Do not hand a live-status-augmented `Connection` to a feature workspace** (`TerminalWorkspace`, `SftpWorkspace`, `WebViewWorkspace`, `RemoteDesktopWorkspace`). `withLiveConnectionStatuses` returns a fresh reference on every status change, which will tear down and restart the Session in an infinite mount/unmount loop. Look the Connection up by `id` from the raw tree instead. See [`src/modules/dashboard/widgets/ConnectionWidgetBody.tsx`](src/modules/dashboard/widgets/ConnectionWidgetBody.tsx) for the correct pattern.
+- **Overlay parking is RDP-only.** The screenshot-and-park workaround for the RDP ActiveX HWND lives in [`src/modules/workspace/nativeOverlay.ts`](src/modules/workspace/nativeOverlay.ts) and must not be applied to WebView2, terminal, SFTP, or VNC workspaces.
 - **Activity rail tooltips** use the shared `RailTooltip` in [`src/app/RailTooltip.tsx`](src/app/RailTooltip.tsx), not native `title` attributes.
-- **Transient status messages** use `showWorkspaceStatus` and render through [`src/workspace/StatusBar.tsx`](src/workspace/StatusBar.tsx). Do not add one-off toast implementations.
+- **Transient status messages** use `showStatusBarNotice` and render through [`src/modules/workspace/StatusBar.tsx`](src/modules/workspace/StatusBar.tsx). Do not add one-off toast implementations.
 - **No automatic database backups on app-window close.** Backups run at startup or on explicit manual trigger, using the importable KKTerm settings ZIP format.
 - **No `cargo fmt` over the whole workspace** unless explicitly requested. Limit it to files you intentionally touched.
 

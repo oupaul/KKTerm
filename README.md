@@ -81,7 +81,7 @@ Plus a few things you didn't know you wanted:
 - **SSH panes that reattach to your remote `claude` / `codex` session** after every Wi-Fi tantrum, so a six-hour job survives a dropped connection.
 - An **AI usage meter** so you stop hitting the rate-limit wall at 3 AM by surprise.
 - An **Installer Helper** that finds, installs, updates, and launches the Windows dev tools you usually chase through ten browser tabs.
-- **Twenty-five animated backgrounds** for the dashboard (yes, including `matrix`), because we are not above it.
+- **Twenty-six animated backgrounds** for the dashboard (yes, including `matrix`), because we are not above it.
 
 And the best part: the AI assistant can turn a single sentence into a tiny dashboard tool you actually keep using.
 
@@ -169,7 +169,7 @@ Most "AI in your terminal" demos stop at chat. KKTerm's assistant can also build
 
 Anything that looks like `rm -rf` gets flagged as dangerous and waits for an explicit human yes. The AI can't quietly run a destructive command because somebody got clever with a prompt injection in a man page.
 
-It talks to OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, or anything OpenAI-compatible. Your API keys go to the OS keychain.
+It talks to OpenAI, OpenRouter, DeepSeek, Gemini, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, OpenCode, or anything OpenAI-compatible — and reaches Anthropic's Claude through the local Claude CLI. Your API keys go to the OS keychain.
 
 ### A Dashboard that doesn't pretend to be Grafana
 
@@ -188,11 +188,11 @@ Some are simple display panels (markdown, checklists, a single big stat); others
 
 #### Animated dashboard backgrounds (because we wanted to)
 
-Pick a mood per dashboard view from **twenty-five** canvas-animated backgrounds:
+Pick a mood per dashboard view from **twenty-six** canvas-animated backgrounds:
 
 | Mood | Backgrounds |
 | --- | --- |
-| Calm | `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
+| Calm | `fuji`, `aurora`, `clouds`, `ocean`, `raindrops`, `rainywindow`, `frostedWindow`, `snow`, `sakura`, `fireflies`, `bubbles`, `aquarium`, `ricefield`, `lanterns` |
 | Spacey | `starfield`, `nebula` |
 | Warm | `embers`, `lava` |
 | Geeky | `matrix`, `topo`, `synthwave` |

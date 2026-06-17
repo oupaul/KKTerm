@@ -22,17 +22,20 @@ The output is `artifacts/kkterm-<version>-windows-arm64-setup.exe` plus a
 
 ## Releasing an ARM64 build
 
-The release pipeline publishes x64 by default. To also build and attach the
-native ARM64 installer to the GitHub release, opt in:
+The CI **Release** workflow always builds and publishes the x64 and ARM64
+installers together — there is no opt-in input. The workflow invokes
+`scripts/release-github-both-arch.ps1` (the `npm run release:github:both-arch`
+path), which builds both architectures and attaches their assets to the same
+GitHub release.
 
-- **Workflow:** run the **Release** workflow with the `include_arm64` input set
-  to `true`.
-- **Local:** `pwsh scripts/release-github.ps1 -IncludeArm64` (combine with the
-  usual `-Draft` / `-Prerelease` / `-DryRun` switches as needed).
+- **CI:** run the **Release** workflow; both architectures are built and
+  attached automatically.
+- **Local (x64 plus optional ARM64):** `pwsh scripts/release-github.ps1
+  -IncludeArm64` (combine with the usual `-Draft` / `-Prerelease` / `-DryRun`
+  switches as needed).
 
-When enabled, the release builds the ARM64 installer with
-`package:installer:arm64 -InstallMissing` (which provisions the cross-build
-toolchain on the runner) and appends
+The ARM64 installer is built with `package:installer:arm64 -InstallMissing`
+(which provisions the cross-build toolchain on the runner) and appends
 `kkterm-<version>-windows-arm64-setup.exe` plus its `.sha256` to the release
 assets next to the x64 artifacts.
 

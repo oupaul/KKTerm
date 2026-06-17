@@ -31,7 +31,7 @@ export const DEFAULT_AI_ASSISTANT_TOOLS: AiAssistantToolSettings = {
   sessions: true,
   tutorial: true,
   manual: true,
-  network: false,
+  network: true,
   watchdog: true,
   memory: true,
 };
