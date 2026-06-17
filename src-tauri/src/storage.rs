@@ -382,6 +382,12 @@ pub struct DatabaseBackupInfo {
     created_at: String,
 }
 
+impl DatabaseBackupInfo {
+    pub(crate) fn filename(&self) -> &str {
+        &self.filename
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportedDatabaseSnapshot {

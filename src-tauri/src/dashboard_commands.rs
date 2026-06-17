@@ -1,4 +1,7 @@
-use serde::Serialize;
+use std::collections::HashSet;
+use std::fs;
+
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
@@ -8,6 +11,34 @@ use crate::dashboard_storage::{
     DashboardWidgetInstance, InstancePatch, LayoutEntry, ViewPatch,
 };
 use crate::secrets;
+
+/// Portable widget-file format marker. A single export holds one widget; an
+/// "export all" holds many — the same `widgets` array shape covers both, so a
+/// single importer handles either file.
+const WIDGET_EXPORT_FORMAT: &str = "kkterm-widgets";
+const WIDGET_EXPORT_VERSION: u32 = 1;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetExportFile {
+    pub product: String,
+    pub format: String,
+    pub version: u32,
+    pub widgets: Vec<WidgetExportEntry>,
+}
+
+/// One widget's portable definition. Excludes id/createdAt/createdBy on purpose:
+/// those are machine-local and reassigned fresh on import so a shared file never
+/// collides with or shadows the importer's existing rows.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetExportEntry {
+    pub title: String,
+    pub summary: String,
+    pub category: String,
+    pub body_json: String,
+    pub settings_schema_json: String,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -312,4 +343,147 @@ pub fn dashboard_reset(app: AppHandle) -> Result<(), DashboardCommandError> {
     })?;
     crate::prune_unreferenced_backgrounds(&app);
     Ok(())
+}
+
+/// Write the named custom widgets (or all of them when `ids` is empty) to a
+/// `.kkwidget` JSON file at `path`. The file is portable and secret-free: widget
+/// definitions never contain credentials (instance secrets live separately).
+#[tauri::command]
+pub fn export_dashboard_widgets(
+    app: AppHandle,
+    path: String,
+    ids: Vec<String>,
+) -> Result<usize, DashboardCommandError> {
+    let widgets = storage(&app).with_connection_infallible(|conn| {
+        ds::list_custom_widgets_for_export(conn, &ids).map_err(DashboardCommandError::from)
+    })?;
+    if widgets.is_empty() {
+        return Err(DashboardCommandError::NotFound);
+    }
+    let file = WidgetExportFile {
+        product: "KKTerm".to_string(),
+        format: WIDGET_EXPORT_FORMAT.to_string(),
+        version: WIDGET_EXPORT_VERSION,
+        widgets: widgets
+            .into_iter()
+            .map(|widget| WidgetExportEntry {
+                title: widget.title,
+                summary: widget.summary,
+                category: widget.category,
+                body_json: widget.body_json,
+                settings_schema_json: widget.settings_schema_json,
+            })
+            .collect(),
+    };
+    let count = file.widgets.len();
+    let serialized =
+        serde_json::to_string_pretty(&file).map_err(|error| DashboardCommandError::Internal {
+            message: error.to_string(),
+        })?;
+    fs::write(&path, serialized).map_err(|error| DashboardCommandError::Internal {
+        message: format!("failed to write widget export {path}: {error}"),
+    })?;
+    Ok(count)
+}
+
+/// Import widgets from a `.kkwidget` JSON file, inserting each as a new
+/// user-authored custom widget with a fresh id. Additive — never overwrites
+/// existing widgets; on a title collision the imported title gets a suffix so it
+/// stays distinguishable in the catalog. Returns the created rows so the store
+/// can append them live without a reload.
+#[tauri::command]
+pub fn import_dashboard_widgets(
+    app: AppHandle,
+    path: String,
+) -> Result<Vec<DashboardCustomWidget>, DashboardCommandError> {
+    let raw = fs::read_to_string(&path).map_err(|error| DashboardCommandError::Internal {
+        message: format!("failed to read widget file {path}: {error}"),
+    })?;
+    let parsed: WidgetExportFile =
+        serde_json::from_str(&raw).map_err(|error| DashboardCommandError::Validation {
+            reason: "InvalidWidgetFile".to_string(),
+            detail: Some(error.to_string()),
+        })?;
+    if parsed.format != WIDGET_EXPORT_FORMAT {
+        return Err(DashboardCommandError::Validation {
+            reason: "InvalidWidgetFile".to_string(),
+            detail: Some(format!(
+                "unsupported widget file format {:?}",
+                parsed.format
+            )),
+        });
+    }
+    if parsed.version > WIDGET_EXPORT_VERSION {
+        return Err(DashboardCommandError::Validation {
+            reason: "InvalidWidgetFile".to_string(),
+            detail: Some(format!(
+                "widget file version {} is newer than supported ({WIDGET_EXPORT_VERSION})",
+                parsed.version
+            )),
+        });
+    }
+    if parsed.widgets.is_empty() {
+        return Err(DashboardCommandError::Validation {
+            reason: "InvalidWidgetFile".to_string(),
+            detail: Some("widget file contains no widgets".to_string()),
+        });
+    }
+
+    storage(&app).with_connection_infallible(|conn| {
+        let mut taken = ds::custom_widget_titles(conn).map_err(DashboardCommandError::from)?;
+        let mut created = Vec::with_capacity(parsed.widgets.len());
+        for (index, entry) in parsed.widgets.into_iter().enumerate() {
+            let title = unique_widget_title(&entry.title, &taken);
+            // new_dashboard_id is millisecond-stamped, so a multi-widget import
+            // would collide within the same tick; the index disambiguates.
+            let id = format!("{}-{index}", new_dashboard_id("cw"));
+            let widget = ds::create_custom_widget(
+                conn,
+                &id,
+                &title,
+                &entry.summary,
+                &entry.category,
+                &entry.body_json,
+                Some(&entry.settings_schema_json),
+                "user",
+            )?;
+            taken.insert(widget.title.clone());
+            created.push(widget);
+        }
+        Ok(created)
+    })
+}
+
+/// Pick a title not already present in `taken`, appending "(imported)" and then a
+/// counter so repeated imports of the same widget stay distinct.
+fn unique_widget_title(base: &str, taken: &HashSet<String>) -> String {
+    if !taken.contains(base) {
+        return base.to_string();
+    }
+    let suffixed = format!("{base} (imported)");
+    if !taken.contains(&suffixed) {
+        return suffixed;
+    }
+    for counter in 2.. {
+        let candidate = format!("{base} (imported {counter})");
+        if !taken.contains(&candidate) {
+            return candidate;
+        }
+    }
+    unreachable!("counter range is unbounded")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unique_title_suffixes_on_collision() {
+        let mut taken = HashSet::new();
+        assert_eq!(unique_widget_title("Clock", &taken), "Clock");
+        taken.insert("Clock".to_string());
+        assert_eq!(unique_widget_title("Clock", &taken), "Clock (imported)");
+        taken.insert("Clock (imported)".to_string());
+        assert_eq!(unique_widget_title("Clock", &taken), "Clock (imported 2)");
+    }
 }

@@ -267,6 +267,14 @@ export async function removeCustomWidget(id: string, forceDeleteInstances: boole
   await invokeCommand("dashboard_remove_custom_widget", { id, forceDeleteInstances });
 }
 
+export async function exportCustomWidgets(path: string, ids: string[]): Promise<number> {
+  return invokeCommand("export_dashboard_widgets", { path, ids });
+}
+
+export async function importCustomWidgets(path: string): Promise<DashboardCustomWidget[]> {
+  return invokeCommand("import_dashboard_widgets", { path });
+}
+
 export async function resetDashboard(): Promise<void> {
   if (!isTauriRuntime()) {
     previewState = null;

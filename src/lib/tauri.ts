@@ -32,6 +32,9 @@ import type {
   GeneralSettings,
   HostUsageSnapshot,
   ImportedDatabaseSnapshot,
+  SelectiveExportInfo,
+  SelectiveImportResult,
+  SelectiveManifest,
   CreateConnectionFolderRequest,
   CreateConnectionRequest,
   DuplicateConnectionRequest,
@@ -1135,6 +1138,27 @@ type CommandMap = {
     args: { path: string };
     result: DatabaseBackupInfo;
   };
+  export_selective_database: {
+    args: {
+      path: string;
+      segments: string[];
+      includeCredentials: boolean;
+      passphrase: string | null;
+    };
+    result: SelectiveExportInfo;
+  };
+  inspect_selective_database: {
+    args: { path: string };
+    result: SelectiveManifest;
+  };
+  import_selective_database: {
+    args: {
+      path: string;
+      actions: Record<string, string>;
+      passphrase: string | null;
+    };
+    result: SelectiveImportResult;
+  };
   get_database_folder: {
     args: undefined;
     result: string;
@@ -2194,6 +2218,14 @@ type CommandMap = {
     args: { id: string; forceDeleteInstances: boolean };
     result: null;
   };
+  export_dashboard_widgets: {
+    args: { path: string; ids: string[] };
+    result: number;
+  };
+  import_dashboard_widgets: {
+    args: { path: string };
+    result: DashboardCustomWidget[];
+  };
   dashboard_reset: {
     args: undefined;
     result: null;
@@ -2505,6 +2537,78 @@ export async function selectSettingsExportFile(options: {
   const selectedPath = await saveDialog({
     defaultPath: options.defaultFilename,
     filters: [{ name: options.filterName, extensions: ["zip"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectWidgetExportFile(options: {
+  title: string;
+  filterName: string;
+  defaultFilename: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await saveDialog({
+    defaultPath: options.defaultFilename,
+    filters: [{ name: options.filterName, extensions: ["kkwidget"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectWidgetImportFile(options: {
+  title: string;
+  filterName: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: false,
+    filters: [{ name: options.filterName, extensions: ["kkwidget"] }],
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectSelectiveExportFile(options: {
+  title: string;
+  filterName: string;
+  defaultFilename: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await saveDialog({
+    defaultPath: options.defaultFilename,
+    filters: [{ name: options.filterName, extensions: ["kkbackup"] }],
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectSelectiveImportFile(options: {
+  title: string;
+  filterName: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: false,
+    filters: [{ name: options.filterName, extensions: ["kkbackup"] }],
+    multiple: false,
     title: options.title,
   });
 

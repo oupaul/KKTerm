@@ -32,6 +32,7 @@ mod rdp;
 mod rdp_client;
 mod screenshot;
 mod secrets;
+mod selective_export;
 mod serial;
 mod sessions;
 mod sftp;
@@ -3248,6 +3249,9 @@ pub fn run() {
             launch_app_launcher_entry,
             import_settings_database,
             export_settings_database,
+            selective_export::export_selective_database,
+            selective_export::inspect_selective_database,
+            selective_export::import_selective_database,
             get_database_folder,
             get_terminal_settings,
             update_terminal_settings,
@@ -3470,6 +3474,8 @@ pub fn run() {
             dashboard_commands::dashboard_create_custom_widget,
             dashboard_commands::dashboard_update_custom_widget,
             dashboard_commands::dashboard_remove_custom_widget,
+            dashboard_commands::export_dashboard_widgets,
+            dashboard_commands::import_dashboard_widgets,
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,
             dashboard_load_background_image,
