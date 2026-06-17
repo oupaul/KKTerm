@@ -58,6 +58,16 @@ interface OpenDialog {
   mode: "info" | "stepper";
 }
 
+/// Catalog roll-up published by the Installer Helper page so the global app
+/// status bar can mirror the per-page footer counts while the Module is the
+/// visible page. `null` until the page has computed counts at least once.
+interface InstallerSummary {
+  all: number;
+  installed: number;
+  updates: number;
+  lastCheckedAt: number | null;
+}
+
 interface InstallerStoreState {
   catalog: Catalog | null;
   detected: Record<string, DetectedState>;
@@ -92,6 +102,9 @@ interface InstallerStoreState {
   /// disabled with a reboot-required hint until the user restarts Windows.
   /// Reset only by restarting KKTerm — a real reboot kills the app anyway.
   wslJustEnabled: boolean;
+  /// Footer roll-up mirrored into the global status bar. Owned by the page;
+  /// `null` until the page first computes counts.
+  summary: InstallerSummary | null;
 
   setCatalog: (catalog: Catalog) => void;
   setDetected: (detected: Record<string, DetectedState>) => void;
@@ -104,6 +117,7 @@ interface InstallerStoreState {
   closeDialog: () => void;
   setScanning: (scanning: boolean) => void;
   setChecking: (checking: boolean) => void;
+  setSummary: (summary: InstallerSummary | null) => void;
   markInitialScanned: () => void;
   markWslJustEnabled: () => void;
   reset: () => void;
@@ -123,6 +137,7 @@ const initial: Pick<
   | "lastStatus"
   | "openDialog"
   | "wslJustEnabled"
+  | "summary"
 > = {
   catalog: null,
   detected: {},
@@ -136,6 +151,7 @@ const initial: Pick<
   lastStatus: {},
   openDialog: null,
   wslJustEnabled: false,
+  summary: null,
 };
 
 export const useInstallerStore = create<InstallerStoreState>((set) => ({
@@ -356,6 +372,7 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
   closeDialog: () => set({ openDialog: null }),
   setScanning: (scanning) => set({ scanning }),
   setChecking: (checking) => set({ checking }),
+  setSummary: (summary) => set({ summary }),
   markInitialScanned: () => set({ hasInitialScanned: true }),
   markWslJustEnabled: () => set({ wslJustEnabled: true }),
   reset: () => set(initial),
@@ -393,4 +410,4 @@ function trimLog(lines: string[]): string[] {
 }
 
 export { GENERAL_STEP_BUCKET };
-export type { InstallerStoreState, StepperState, StepStatus };
+export type { InstallerStoreState, InstallerSummary, StepperState, StepStatus };

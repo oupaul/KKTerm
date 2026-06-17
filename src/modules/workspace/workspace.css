@@ -288,6 +288,32 @@
   justify-content: flex-end;
 }
 
+/* Installer Helper roll-up, centre column, shown only while the Module is
+   the visible page (gated in React). */
+.status-bar-installer {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.status-bar-installer__dot {
+  flex: 0 0 auto;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.status-bar-installer__updates {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .status-bar-action {
   position: relative;
   display: inline-flex;

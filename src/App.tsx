@@ -391,6 +391,7 @@ function App() {
           key="status-bar"
           onOpenAssistant={openAssistantPanel}
           onOpenDashboardView={openDashboardView}
+          installerActive={visibleBasePage === "installer"}
         />
       ) : null}
       <AppUpdatePrompt key="app-update-prompt" settingsReady={generalSettingsReady} />

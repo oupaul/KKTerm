@@ -114,6 +114,7 @@ export function InstallerPage({ active }: { active: boolean }) {
   const applyProgress = useInstallerStore((s) => s.applyProgress);
   const beginInFlight = useInstallerStore((s) => s.beginInFlight);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
+  const setSummary = useInstallerStore((s) => s.setSummary);
 
   const [nav, setNav] = useState<InstallerNav>("all");
   const [query, setQuery] = useState("");
@@ -395,6 +396,17 @@ export function InstallerPage({ active }: { active: boolean }) {
   });
   const checkInProgress = scanning || checking;
 
+  // Mirror the footer roll-up into the store so the global app status bar can
+  // render it while this Module is the visible page.
+  useEffect(() => {
+    setSummary({
+      all: counts.all,
+      installed: counts.installed,
+      updates: counts.updates,
+      lastCheckedAt,
+    });
+  }, [setSummary, counts.all, counts.installed, counts.updates, lastCheckedAt]);
+
   const crumb = navCrumb(nav, t);
 
   function openUpdateAllConfirm() {
@@ -602,23 +614,6 @@ export function InstallerPage({ active }: { active: boolean }) {
               viewMode={viewMode}
             />
           )}
-          <div className="installer-foot">
-            <span>{t("installer.footer.tools", { count: counts.all })}</span>
-            <span className="installer-foot__dot" />
-            <span>
-              {t("installer.footer.installed", { count: counts.installed })}
-            </span>
-            {counts.updates > 0 ? (
-              <>
-                <span className="installer-foot__dot" />
-                <span className="installer-foot__updates">
-                  {t("installer.footer.updates", { count: counts.updates })}
-                </span>
-              </>
-            ) : null}
-            <span className="installer-foot__spacer" />
-            <span>{lastCheckedText}</span>
-          </div>
         </div>
       </div>
 

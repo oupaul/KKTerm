@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { RailTooltip } from "../../app/RailTooltip";
 import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-usage/AiCodingUsageStatusBar";
+import { InstallerStatusSummary } from "../installer/InstallerStatusSummary";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { StatusBarNotice } from "../../types";
@@ -27,9 +28,11 @@ const NOTIFICATION_FADE_MS = 220;
 export function StatusBar({
   onOpenAssistant,
   onOpenDashboardView,
+  installerActive,
 }: {
   onOpenAssistant: () => void;
   onOpenDashboardView: (viewId: string) => void;
+  installerActive: boolean;
 }) {
   const { t } = useTranslation();
   const notice = useWorkspaceStore((state) => state.statusBarNotice);
@@ -89,6 +92,7 @@ export function StatusBar({
         {statusBarMonitorEnabled ? <WorkspaceHostMetrics t={t} /> : null}
         <AiCodingUsageStatusBar onOpenDashboardView={onOpenDashboardView} />
       </div>
+      <InstallerStatusSummary active={installerActive} />
       <div className="status-bar-notice-area">
         {renderedNotice ? (
           <StatusNoticePopup
