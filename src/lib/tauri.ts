@@ -291,6 +291,18 @@ export interface FileViewBytes {
   mtimeMs: number;
 }
 
+export interface PdfViewStatus {
+  available: boolean;
+  source: string | null;
+  toolId: string;
+}
+
+export interface PdfRender {
+  base64: string;
+  page: number;
+  pageCount: number;
+}
+
 export interface SftpTransferProgress {
   transferId: string;
   transferredBytes: number;
@@ -1886,6 +1898,14 @@ type CommandMap = {
   read_file_view_bytes: {
     args: { request: { path: string; offset: number; length: number } };
     result: FileViewBytes;
+  };
+  file_view_pdf_status: {
+    args: undefined;
+    result: PdfViewStatus;
+  };
+  render_pdf_view: {
+    args: { request: { path: string; page: number; scale: number } };
+    result: PdfRender;
   };
   open_filesystem_path: {
     args: { path: string };

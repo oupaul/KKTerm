@@ -8,6 +8,7 @@ import {
   detectViewerKind,
   fileBaseName,
   viewerLoadsText,
+  viewerUsesExternalDependency,
   type ViewerKind,
 } from "./fileViewerModel";
 import { TextCodeViewer } from "./viewers/TextCodeViewer";
@@ -17,6 +18,7 @@ import { JsonViewer } from "./viewers/JsonViewer";
 import { ImageViewer } from "./viewers/ImageViewer";
 import { LogViewer } from "./viewers/LogViewer";
 import { HexViewer } from "./viewers/HexViewer";
+import { PdfDependencyGate } from "./viewers/PdfDependencyGate";
 
 /** Per-kind read caps (bytes). Text-shaped viewers and images differ widely. */
 const TEXT_MAX_BYTES = 5 * 1024 * 1024;
@@ -87,6 +89,12 @@ export function FileViewerWorkspace({
         const kind =
           forcedKind ??
           detectViewerKind({ path: filePath, magic: probed.magic, isText: probed.isText });
+        if (viewerUsesExternalDependency(kind)) {
+          // The dependency-backed viewer (PDF) loads its own content through the
+          // external tool; no direct read here.
+          setContent({ kind, magic: probed.magic, truncated: false });
+          return;
+        }
         const maxBytes = maxBytesForKind(kind);
         if (viewerLoadsText(kind)) {
           const result = await invokeCommand("read_file_view_text", {
@@ -202,6 +210,8 @@ function FileViewerContent({
       return <JsonViewer text={content.text ?? ""} />;
     case "image":
       return <ImageViewer base64={content.base64 ?? ""} magic={content.magic} path={filePath} />;
+    case "pdf":
+      return <PdfDependencyGate filePath={filePath} isActive={isActive} />;
     case "log":
       return (
         <LogViewer

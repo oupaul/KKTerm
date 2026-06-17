@@ -580,6 +580,17 @@
       "options": ["provider", "scope", "version"]
     },
     {
+      "id": "poppler",
+      "name": "Poppler",
+      "descriptionEn": "PDF rendering utilities (pdftocairo / pdfinfo) used by the KKTerm File Viewer to preview PDF pages without bundling a PDF engine.",
+      "category": "utilities",
+      "icon": "FileText",
+      "homepage": "https://github.com/oschwartz10612/poppler-windows",
+      "releaseNotesUrl": "https://github.com/oschwartz10612/poppler-windows/releases",
+      "provider": { "kind": "githubRelease", "repo": "oschwartz10612/poppler-windows", "assetPattern": "Release-*.zip", "layout": "zip" },
+      "options": ["version"]
+    },
+    {
       "id": "sharex",
       "name": "ShareX",
       "descriptionEn": "Screenshot, screen recording, and upload workflow utility.",

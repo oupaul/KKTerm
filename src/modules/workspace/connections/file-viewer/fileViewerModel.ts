@@ -5,7 +5,15 @@
  * dependency-free so it can be unit-tested without a DOM or Tauri runtime.
  */
 
-export type ViewerKind = "text" | "markdown" | "csv" | "json" | "image" | "log" | "hex";
+export type ViewerKind =
+  | "text"
+  | "markdown"
+  | "csv"
+  | "json"
+  | "image"
+  | "log"
+  | "hex"
+  | "pdf";
 
 export interface FileSignals {
   /** Lowercased file path or name. */
@@ -108,8 +116,8 @@ export function fileBaseName(path: string): string {
 export function availableViewerKinds(signals: FileSignals): ViewerKind[] {
   const primary = detectViewerKind(signals);
   const kinds: ViewerKind[] = [primary];
-  if (primary === "image") {
-    // Images only meaningfully offer hex as an alternate.
+  if (primary === "image" || primary === "pdf") {
+    // Binary document/image formats only meaningfully offer hex as an alternate.
     kinds.push("hex");
     return kinds;
   }
@@ -127,6 +135,9 @@ export function detectViewerKind(signals: FileSignals): ViewerKind {
 
   if (IMAGE_MAGICS.has(magic ?? "") || IMAGE_EXTENSIONS.has(ext)) {
     return "image";
+  }
+  if (magic === "pdf" || ext === "pdf") {
+    return "pdf";
   }
   if (LOG_EXTENSIONS.has(ext)) {
     return "log";
@@ -153,5 +164,11 @@ export function detectViewerKind(signals: FileSignals): ViewerKind {
 
 /** Whether the viewer should load file contents as UTF-8 text or as bytes. */
 export function viewerLoadsText(kind: ViewerKind): boolean {
-  return kind !== "image" && kind !== "hex";
+  return kind !== "image" && kind !== "hex" && kind !== "pdf";
+}
+
+/** Viewer kinds that render through an external, runtime-installed dependency
+ * (Phase 2) rather than reading the file directly. */
+export function viewerUsesExternalDependency(kind: ViewerKind): boolean {
+  return kind === "pdf";
 }

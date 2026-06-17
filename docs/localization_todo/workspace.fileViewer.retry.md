@@ -1,0 +1,16 @@
+# workspace.fileViewer.retry
+
+- **English value**: `Retry`
+- **Namespace**: `workspace`
+- **File/component**: `src/modules/workspace/connections/file-viewer/viewers/PdfDependencyGate.tsx`
+- **UI role**: `status`
+- **User flow**: Button to re-check an external viewer dependency after installing it.
+- **Tone**: concise/neutral
+- **Placeholders**: none
+- **Context/meaning**: File Viewer Phase 2 — external dependencies (e.g. Poppler for PDF) installed on demand via the Installer Helper instead of bundled.
+- **Domain notes**: "Poppler" and "PDF" are proper/technical terms; keep "Installer Helper" aligned with its existing localized Module name. PATH stays as the technical term.
+
+<!--
+Filename: workspace.fileViewer.retry.md
+Delete this file once every non-English locale under src/i18n/locales/ has the key translated.
+-->

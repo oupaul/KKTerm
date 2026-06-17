@@ -27,6 +27,8 @@ SFTP is not a standalone Connection kind — it is opened from an SSH Connection
 
 The File Viewer opens one local file and routes it to a mode by extension plus a backend magic-byte/text probe: text/code (CodeMirror, read-only in this phase), Markdown, table (CSV/TSV), JSON, image, a dedicated Log mode (`workspace.fileViewer.kind.log`) with level chips (`workspace.fileViewer.level.*`), a line filter, ANSI coloring, and a follow/tail toggle (`workspace.fileViewer.follow`), and a Hex fallback. The toolbar mode switch (`workspace.fileViewer.kind.*`) lets the user re-pick the mode; Text and Hex are always offered as fallbacks.
 
+PDF (`workspace.fileViewer.kind.pdf`) renders through an external dependency that is downloaded on demand rather than bundled: the `poppler` Installer Helper recipe. When a PDF is opened and the renderer is missing, the viewer shows an install gate (`workspace.fileViewer.dependencyNeededTitle`) with an in-context **Install Poppler** button (Windows, via the Installer Helper) or, on other platforms, a hint to install Poppler on `PATH` (`workspace.fileViewer.dependencyManualHint`); after install, the page renderer mounts with page navigation and zoom.
+
 ## Connections Panel UI
 
 Header row (top of the panel):

@@ -26,7 +26,7 @@ A Connection of kind `localFiles`. It browses the local filesystem (no remote ho
 _Avoid_: SFTP, FTP, local SFTP, remote browser
 
 **File Viewer Connection**:
-A Connection of kind `fileView`. It opens a single local file in a universal viewer / light editor (no remote host or network Session). The target file path is stored in the Connection's `local_startup_directory` slot (reused as the file path, not a directory). A viewer registry routes the file to a mode — text/code (CodeMirror), Markdown, table (CSV/TSV), JSON, image, dedicated Log mode (level coloring, filter, ANSI, follow/tail), or a Hex fallback — detected by extension plus a backend magic-byte/text probe, and the user can switch modes from the viewer toolbar. Phase 1 is read-only viewing; editing/save is deferred. It reuses no SFTP/browser session state.
+A Connection of kind `fileView`. It opens a single local file in a universal viewer / light editor (no remote host or network Session). The target file path is stored in the Connection's `local_startup_directory` slot (reused as the file path, not a directory). A viewer registry routes the file to a mode — text/code (CodeMirror), Markdown, table (CSV/TSV), JSON, image, dedicated Log mode (level coloring, filter, ANSI, follow/tail), or a Hex fallback — detected by extension plus a backend magic-byte/text probe, and the user can switch modes from the viewer toolbar. Some modes render through an external dependency installed on demand via the Installer Helper rather than bundled (PDF via the `poppler` recipe); the viewer shows an install gate when the dependency is missing. Phase 1 is read-only viewing; editing/save is deferred. It reuses no SFTP/browser session state.
 _Avoid_: File Explorer, editor tab, document session
 
 **Workspace**:

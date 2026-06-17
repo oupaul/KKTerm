@@ -2293,6 +2293,18 @@ async fn read_file_view_bytes(
 }
 
 #[tauri::command]
+async fn file_view_pdf_status() -> Result<file_viewer::PdfViewStatus, String> {
+    run_blocking_command("file view pdf status", || Ok(file_viewer::pdf_status())).await
+}
+
+#[tauri::command]
+async fn render_pdf_view(
+    request: file_viewer::PdfRenderRequest,
+) -> Result<file_viewer::PdfRender, String> {
+    run_blocking_command("render pdf view", move || file_viewer::render_pdf(request)).await
+}
+
+#[tauri::command]
 async fn move_local_path(
     request: sftp::MoveLocalPathRequest,
 ) -> Result<sftp::SftpTransferResult, String> {
@@ -3413,6 +3425,8 @@ pub fn run() {
             probe_file_view,
             read_file_view_text,
             read_file_view_bytes,
+            file_view_pdf_status,
+            render_pdf_view,
             open_filesystem_path,
             copy_local_path,
             move_local_path,

@@ -9,7 +9,9 @@ import {
   fileBaseName,
   fileExtension,
   viewerLoadsText,
+  viewerUsesExternalDependency,
 } from "../src/modules/workspace/connections/file-viewer/fileViewerModel.ts";
+import { dependencyForKind } from "../src/modules/workspace/connections/file-viewer/fileViewerDependencies.ts";
 
 test("detects viewer kind from extension", () => {
   assert.equal(detectViewerKind({ path: "/a/b/notes.md" }), "markdown");
@@ -44,12 +46,26 @@ test("text and hex are always offered as fallbacks (except for images)", () => {
   assert.deepEqual(imageKinds, ["image", "hex"]);
 });
 
-test("viewerLoadsText is false only for image and hex", () => {
+test("viewerLoadsText is false for image, hex, and pdf", () => {
   assert.equal(viewerLoadsText("text"), true);
   assert.equal(viewerLoadsText("log"), true);
   assert.equal(viewerLoadsText("json"), true);
   assert.equal(viewerLoadsText("image"), false);
   assert.equal(viewerLoadsText("hex"), false);
+  assert.equal(viewerLoadsText("pdf"), false);
+});
+
+test("pdf is detected and routed to its external dependency (Phase 2)", () => {
+  assert.equal(detectViewerKind({ path: "report.pdf" }), "pdf");
+  // Detected from probe magic even without a .pdf extension.
+  assert.equal(detectViewerKind({ path: "download", magic: "pdf", isText: false }), "pdf");
+  assert.deepEqual(availableViewerKinds({ path: "a.pdf" }), ["pdf", "hex"]);
+  assert.equal(viewerUsesExternalDependency("pdf"), true);
+  assert.equal(viewerUsesExternalDependency("text"), false);
+
+  const dep = dependencyForKind("pdf");
+  assert.equal(dep?.toolId, "poppler");
+  assert.equal(dependencyForKind("text"), null);
 });
 
 test("path helpers handle windows and posix separators", () => {

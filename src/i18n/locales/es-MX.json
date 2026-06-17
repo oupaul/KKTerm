@@ -3178,7 +3178,8 @@
         "json": "JSON",
         "image": "Image",
         "log": "Log",
-        "hex": "Hex"
+        "hex": "Hex",
+        "pdf": "PDF"
       },
       "level": {
         "error": "Error",
@@ -3186,6 +3187,16 @@
         "info": "Info",
         "debug": "Debug",
         "trace": "Trace"
+      },
+      "retry": "Retry",
+      "pdfPage": "{{page}} / {{count}}",
+      "dependencyNeededTitle": "Preview needs an add-on",
+      "dependencyNeededBody": "Previewing this file type uses {{tool}}, a small add-on KKTerm downloads on demand instead of bundling it.",
+      "dependencyInstall": "Install {{tool}}",
+      "dependencyInstalling": "Installing {{tool}}…",
+      "dependencyManualHint": "Install {{tool}} and make sure it is on your PATH, then retry.",
+      "dep": {
+        "poppler": "Poppler"
       }
     }
   },

@@ -13,8 +13,12 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::UNIX_EPOCH;
+
+use crate::installer::detect::github_release_install_dir;
+use crate::installer::proc::no_window;
 
 /// Number of leading bytes sampled for the text/binary heuristic and magic-byte
 /// signature detection.
@@ -250,6 +254,192 @@ pub fn read_bytes(request: FileViewBytesRequest) -> Result<FileViewBytes, String
         bytes_read,
         eof: offset + bytes_read >= total_size,
         mtime_ms: mtime_ms(&metadata),
+    })
+}
+
+// ── PDF rendering via the optional Poppler dependency ───────────────────────
+//
+// PDF preview is a Phase 2 "external dependency" file type: rather than bundling
+// a PDF engine (large, maintenance-heavy), KKTerm renders pages with Poppler's
+// `pdftocairo`/`pdfinfo`, installed on demand through the Installer Helper
+// (`poppler` catalog id, kind `githubRelease`) or found on PATH. When the tool
+// is missing the frontend shows an install gate instead of failing.
+
+/// Installer Helper tool id for the PDF dependency. Kept in sync with the
+/// frontend `fileViewerDependencies` map and the catalog entry.
+pub const PDF_TOOL_ID: &str = "poppler";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfViewStatus {
+    /// True when the renderer (`pdftocairo`) can be resolved.
+    pub available: bool,
+    /// Where the renderer was resolved from: `installer`, `path`, or `null`.
+    pub source: Option<String>,
+    /// Installer Helper tool id to offer for install when unavailable.
+    pub tool_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfRenderRequest {
+    pub path: String,
+    /// 1-based page index.
+    pub page: u32,
+    /// Zoom factor applied to a 96-DPI baseline (clamped server-side).
+    pub scale: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfRender {
+    /// Base64 PNG of the rendered page.
+    pub base64: String,
+    pub page: u32,
+    pub page_count: u32,
+}
+
+fn exe_name(stem: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("{stem}.exe")
+    } else {
+        stem.to_string()
+    }
+}
+
+/// Recursively search the Poppler install dir for a tool binary. Poppler-Windows
+/// zips nest the binaries under `poppler-<version>/Library/bin/`, so the exact
+/// subdir is version-dependent; a bounded walk avoids depending on it.
+fn find_in_dir(dir: &Path, target: &str, depth: u32) -> Option<PathBuf> {
+    if depth == 0 {
+        return None;
+    }
+    let entries = std::fs::read_dir(dir).ok()?;
+    let mut subdirs = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            subdirs.push(path);
+        } else if path.file_name().and_then(|name| name.to_str()) == Some(target) {
+            return Some(path);
+        }
+    }
+    for subdir in subdirs {
+        if let Some(found) = find_in_dir(&subdir, target, depth - 1) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+/// Resolve a Poppler tool, preferring the Installer-Helper-managed copy and
+/// falling back to PATH. Returns `(program, source)` where `program` is either
+/// an absolute path (installer) or the bare tool name (PATH).
+fn resolve_poppler_tool(stem: &str) -> Option<(String, &'static str)> {
+    let target = exe_name(stem);
+    if let Some(path) = find_in_dir(&github_release_install_dir(PDF_TOOL_ID), &target, 4) {
+        return Some((path.to_string_lossy().into_owned(), "installer"));
+    }
+    // PATH fallback: a successful spawn (any exit code) proves the tool resolves.
+    if no_window(&mut Command::new(stem))
+        .arg("-v")
+        .output()
+        .is_ok()
+    {
+        return Some((stem.to_string(), "path"));
+    }
+    None
+}
+
+pub fn pdf_status() -> PdfViewStatus {
+    match resolve_poppler_tool("pdftocairo") {
+        Some((_, source)) => PdfViewStatus {
+            available: true,
+            source: Some(source.to_string()),
+            tool_id: PDF_TOOL_ID.to_string(),
+        },
+        None => PdfViewStatus {
+            available: false,
+            source: None,
+            tool_id: PDF_TOOL_ID.to_string(),
+        },
+    }
+}
+
+fn pdf_page_count(path: &str) -> u32 {
+    let Some((program, _)) = resolve_poppler_tool("pdfinfo") else {
+        return 0;
+    };
+    let Ok(output) = no_window(&mut Command::new(program)).arg(path).output() else {
+        return 0;
+    };
+    let text = String::from_utf8_lossy(&output.stdout);
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix("Pages:") {
+            if let Ok(count) = rest.trim().parse::<u32>() {
+                return count;
+            }
+        }
+    }
+    0
+}
+
+pub fn render_pdf(request: PdfRenderRequest) -> Result<PdfRender, String> {
+    let metadata = metadata_for(Path::new(&request.path))?;
+    if metadata.len() == 0 {
+        return Err("PDF file is empty".to_string());
+    }
+    let (program, _) = resolve_poppler_tool("pdftocairo")
+        .ok_or_else(|| "PDF renderer (Poppler) is not installed".to_string())?;
+
+    let page_count = pdf_page_count(&request.path);
+    let page = request.page.max(1);
+    if page_count > 0 && page > page_count {
+        return Err(format!("page {page} is out of range (1-{page_count})"));
+    }
+
+    let dpi = (96.0 * request.scale).round().clamp(36.0, 600.0) as i32;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|delta| delta.as_nanos())
+        .unwrap_or(0);
+    let mut prefix = std::env::temp_dir();
+    prefix.push(format!("kkterm-pdf-{}-{nanos}", std::process::id()));
+    let output_png = prefix.with_extension("png");
+
+    let dpi_arg = dpi.to_string();
+    let page_arg = page.to_string();
+    let status = no_window(&mut Command::new(program))
+        .args([
+            "-png",
+            "-singlefile",
+            "-r",
+            dpi_arg.as_str(),
+            "-f",
+            page_arg.as_str(),
+            "-l",
+            page_arg.as_str(),
+            request.path.as_str(),
+        ])
+        .arg(&prefix)
+        .output()
+        .map_err(|error| format!("failed to run PDF renderer: {error}"))?;
+    if !status.status.success() {
+        let _ = std::fs::remove_file(&output_png);
+        return Err(format!(
+            "PDF renderer failed: {}",
+            String::from_utf8_lossy(&status.stderr).trim()
+        ));
+    }
+
+    let bytes = std::fs::read(&output_png)
+        .map_err(|error| format!("cannot read rendered page: {error}"))?;
+    let _ = std::fs::remove_file(&output_png);
+
+    Ok(PdfRender {
+        base64: base64::engine::general_purpose::STANDARD.encode(&bytes),
+        page,
+        page_count: if page_count == 0 { page } else { page_count },
     })
 }
 

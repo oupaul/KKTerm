@@ -301,6 +301,72 @@
   max-width: none;
 }
 
+/* PDF — reuses the image canvas/toolbar styling for page rendering. */
+.file-viewer-pdf {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.file-viewer-pdf-page {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 64px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.file-viewer-pdf .file-viewer-image-canvas {
+  background: var(--surface-muted);
+}
+
+.file-viewer-pdf .file-viewer-image-canvas img {
+  max-width: 100%;
+  box-shadow: var(--shadow);
+}
+
+/* External-dependency install gate (Phase 2). */
+.file-viewer-dependency-gate {
+  max-width: 520px;
+  margin: 48px auto;
+  padding: 24px;
+  text-align: center;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.file-viewer-dependency-gate h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.file-viewer-dependency-gate p {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.file-viewer-dependency-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.file-viewer-dependency-install {
+  background: var(--accent);
+  color: var(--app-bg);
+  border-color: var(--accent);
+}
+
+.file-viewer-dependency-hint {
+  margin: 0;
+  font-size: 12px;
+}
+
 /* Hex */
 .file-viewer-hex {
   padding: 8px 10px;
