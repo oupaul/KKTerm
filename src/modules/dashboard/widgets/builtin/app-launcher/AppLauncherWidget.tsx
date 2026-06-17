@@ -27,7 +27,6 @@ import type {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { selectAppLauncherFile, selectAppLauncherFolder, isTauriRuntime } from "../../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../../store";
 import { useDashboardStore } from "../../../state/dashboardStore";
@@ -131,42 +130,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
     setDraggedEntryId(null);
     setReorderTarget(null);
   }, [editMode]);
-
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-
-    let disposed = false;
-    let unlisten: (() => void) | null = null;
-    void getCurrentWebview().onDragDropEvent((event) => {
-      if (disposed) {
-        return;
-      }
-      if (event.payload.type === "over") {
-        setIsDropTarget(isPositionInsideWidget(event.payload.position.x, event.payload.position.y));
-      } else if (event.payload.type === "drop") {
-        const inside = isPositionInsideWidget(event.payload.position.x, event.payload.position.y);
-        setIsDropTarget(false);
-        if (inside) {
-          void saveDroppedPaths(event.payload.paths);
-        }
-      } else {
-        setIsDropTarget(false);
-      }
-    }).then((dispose) => {
-      if (disposed) {
-        dispose();
-      } else {
-        unlisten = dispose;
-      }
-    });
-
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [instance.id, settings.entries, showStatusBarNotice, t, updateInstance]);
 
   useEffect(() => {
     let disposed = false;
@@ -274,18 +237,6 @@ export function AppLauncherWidget({ instance }: { instance: DashboardWidgetInsta
   function openAddMenuFromElement(element: HTMLElement) {
     const bounds = element.getBoundingClientRect();
     setAddMenuState({ x: bounds.left, y: bounds.bottom + 4 });
-  }
-
-  function isPositionInsideWidget(x: number, y: number) {
-    const bounds = rootRef.current?.getBoundingClientRect();
-    if (!bounds) {
-      return false;
-    }
-    const scale = window.devicePixelRatio || 1;
-    return (
-      isPointInsideBounds(x, y, bounds)
-      || isPointInsideBounds(x / scale, y / scale, bounds)
-    );
   }
 
   async function addAppEntry() {
@@ -805,10 +756,6 @@ function reorderPlacementFromPoint(
     return clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
   }
   return clientX >= bounds.left + bounds.width / 2 ? "after" : "before";
-}
-
-function isPointInsideBounds(x: number, y: number, bounds: DOMRect) {
-  return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
 }
 
 function AppLauncherViewModeControl({

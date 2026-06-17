@@ -49,7 +49,6 @@ export function FilePane({
   onSelectionChange,
   onContextMenuRequest,
   onDropTransfer,
-  forceDropTarget = false,
   renameRequest,
   enableSidebar = false,
   sidebarCollapsed = false,
@@ -88,7 +87,6 @@ export function FilePane({
   onSelectionChange?: (fileNames: string[]) => void;
   onContextMenuRequest?: (side: FilePaneSide, fileNames: string[], event: ReactMouseEvent) => void;
   onDropTransfer?: (targetSide: FilePaneSide, fileNames: string[]) => void;
-  forceDropTarget?: boolean;
   renameRequest?: { side: FilePaneSide; name: string; requestId: number };
   enableSidebar?: boolean;
   sidebarCollapsed?: boolean;
@@ -708,7 +706,7 @@ export function FilePane({
           ) : null}
 
           <div
-            className={`sftp-file-body sftp-view-${view}${isDropTarget || forceDropTarget ? " drop-target" : ""}`}
+            className={`sftp-file-body sftp-view-${view}${isDropTarget ? " drop-target" : ""}`}
             style={{ "--sftp-zoom": zoom } as CSSProperties}
             onContextMenu={(event) => onContextMenuRequest?.(side, selectedNames, event)}
             onDragLeave={() => setIsDropTarget(false)}

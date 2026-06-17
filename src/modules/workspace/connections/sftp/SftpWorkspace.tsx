@@ -3,7 +3,6 @@ import { confirmTrustedSshHostKey, connectionToolbarTitle, resolveSshSocksProxyR
 import { X } from "lucide-react";
 import { DIcon } from "../../../../app/ui/dialog";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MouseEvent as ReactMouseEvent } from "react";
@@ -161,7 +160,6 @@ export function SftpWorkspace({
   const [transferConflict, setTransferConflict] = useState<TransferConflictState | null>(null);
   const [newRemoteFolderOpen, setNewRemoteFolderOpen] = useState(false);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
-  const [isRemoteDropTarget, setIsRemoteDropTarget] = useState(false);
   const [renameRequest, setRenameRequest] = useState<{
     side: FilePaneSide;
     name: string;
@@ -169,7 +167,6 @@ export function SftpWorkspace({
   } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const activeTransferIdRef = useRef<string | null>(null);
-  const enqueueDroppedLocalPathsRef = useRef<(paths: string[]) => void>(() => {});
   const transferConflictResolverRef = useRef<
     ((decision: TransferConflictDecision) => void) | null
   >(null);
@@ -827,40 +824,6 @@ export function SftpWorkspace({
     void enqueueTransfers("upload", names);
   };
 
-  const enqueueDroppedLocalPaths = async (paths: string[]) => {
-    const sessionId = sessionIdRef.current;
-    const uniquePaths = Array.from(new Set(paths.map((path) => path.trim()).filter(Boolean)));
-    if (!sessionId || uniquePaths.length === 0 || !isTauriRuntime()) {
-      return;
-    }
-
-    const nextTransfers = uniquePaths.flatMap((path): TransferRecord[] => {
-      const name = localNameFromPath(path);
-      return name
-        ? [
-            {
-              id: uniqueRuntimeId("upload"),
-              direction: "upload",
-              name,
-              state: "queued",
-              progress: 0,
-              detail: t("sftp.waiting"),
-              overwriteBehavior: "fail",
-              localPath: path,
-              remoteDirectory: remotePath,
-            },
-          ]
-        : [];
-    });
-
-    if (nextTransfers.length > 0) {
-      setTransfers((current) => [...current, ...nextTransfers]);
-    }
-  };
-  enqueueDroppedLocalPathsRef.current = (paths) => {
-    void enqueueDroppedLocalPaths(paths);
-  };
-
   const handleDownload = (names = selectedRemoteNames) => {
     void enqueueTransfers("download", names);
   };
@@ -1513,44 +1476,6 @@ export function SftpWorkspace({
       : t("sftp.connecting");
   const connectionStatusState = isConnected ? "connected" : remoteError ? "error" : "connecting";
 
-  useEffect(() => {
-    if (isLocalFilesBrowser || !isActive || !isConnected || isTransferring || !isTauriRuntime()) {
-      setIsRemoteDropTarget(false);
-      return;
-    }
-
-    let disposed = false;
-    let unlisten: (() => void) | null = null;
-    void getCurrentWebview().onDragDropEvent((event) => {
-      if (disposed) {
-        return;
-      }
-
-      if (event.payload.type === "over") {
-        const isOverRemotePane = isPositionOverRemotePane(event.payload.position.x, event.payload.position.y);
-        setIsRemoteDropTarget(isOverRemotePane);
-      } else if (event.payload.type === "drop") {
-        const isOverRemotePane = isPositionOverRemotePane(event.payload.position.x, event.payload.position.y);
-        setIsRemoteDropTarget(false);
-        if (isOverRemotePane) {
-          enqueueDroppedLocalPathsRef.current(event.payload.paths);
-        }
-      } else {
-        setIsRemoteDropTarget(false);
-      }
-    }).then((dispose) => {
-      if (disposed) {
-        dispose();
-      } else {
-        unlisten = dispose;
-      }
-    });
-
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [isActive, isConnected, isLocalFilesBrowser, isTransferring]);
 
   useEffect(() => {
     if (isLocalFilesBrowser || !commands || !isTauriRuntime()) {
@@ -1737,7 +1662,6 @@ export function SftpWorkspace({
               onSelectionChange={setSelectedRemoteNames}
               onContextMenuRequest={handleOpenContextMenu}
               onDropTransfer={isConnected && !isTransferring ? handleDropTransfer : undefined}
-              forceDropTarget={isRemoteDropTarget}
               renameRequest={renameRequest?.side === "remote" ? renameRequest : undefined}
               enableSearch
               showFooter
@@ -1940,13 +1864,6 @@ function isWindowsDriveRoot(path: string) {
   return /^[A-Za-z]:[\\/]?$/.test(path.trim());
 }
 
-function isPositionOverRemotePane(x: number, y: number) {
-  return Boolean(
-    document
-      .elementFromPoint(x, y)
-      ?.closest('[data-sftp-pane-side="remote"]'),
-  );
-}
 
 function localNameFromPath(path: string) {
   const trimmedPath = path.trim().replace(/[\\/]+$/, "");

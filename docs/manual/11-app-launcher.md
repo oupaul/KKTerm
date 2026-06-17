@@ -43,7 +43,7 @@ File-name labels may wrap to two lines in the launcher surface so longer local a
 
 List and Details headers are clickable sort controls. List sort and Details sort are stored separately; switching view modes restores that mode's last sort. Icon view remains separate and keeps the manual drag order stored in the entry list.
 
-For desktop file/folder drag import, the browser-preview drop target highlight now covers the entire App Launcher widget body (not only populated icon rows), so drops can land anywhere inside the widget surface.
+In the desktop app, entries are added through the `appLauncher.addApp` picker described above; dragging files in from the OS file manager is not supported, because KKTerm runs with the webview's native drag-drop handler disabled (required so in-app HTML5 drag-and-drop works on Windows), which means OS file drops never report a path. The browser preview (dev/web build, where OS drops still report paths) keeps a drop target that covers the entire widget body, so those drops can land anywhere inside the widget surface.
 
 Details values come from live local file metadata when available:
 
