@@ -1,9 +1,12 @@
 import * as Icons from "lucide-react";
-import { Trash2, X } from "lucide-react";
+import { Download, Trash2, Upload, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
+import { selectWidgetExportFile, selectWidgetImportFile } from "../../../lib/tauri";
+import { useWorkspaceStore } from "../../../store";
+import { exportCustomWidgets } from "../state/persistence";
 import { useDashboardStore } from "../state/dashboardStore";
 import { nextDashboardAppendGridY } from "../grid";
 import { BUILT_IN_WIDGETS } from "../registry/builtInRegistry";
@@ -34,6 +37,8 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
   const instances = useDashboardStore((s) => s.instances);
   const addInstance = useDashboardStore((s) => s.addInstance);
   const removeCustomWidget = useDashboardStore((s) => s.removeCustomWidget);
+  const importCustomWidgets = useDashboardStore((s) => s.importCustomWidgets);
+  const showStatusBarNotice = useWorkspaceStore((s) => s.showStatusBarNotice);
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<(typeof CATALOG_GROUPS)[number]>("builtIn");
   const [deleteTarget, setDeleteTarget] = useState<CatalogEntry | null>(null);
@@ -108,6 +113,38 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
     setDeleteTarget(null);
   }
 
+  const customCount = customWidgets.length;
+
+  async function handleExport(ids: string[], defaultBaseName: string) {
+    try {
+      const path = await selectWidgetExportFile({
+        title: t("dashboard.exportWidget"),
+        filterName: t("dashboard.widgetFileFilter"),
+        defaultFilename: `${defaultBaseName}.kkwidget`,
+      });
+      if (!path) return;
+      const count = await exportCustomWidgets(path, ids);
+      showStatusBarNotice(t("dashboard.exportWidgetsComplete", { count }), { tone: "success" });
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+    }
+  }
+
+  async function handleImport() {
+    try {
+      const path = await selectWidgetImportFile({
+        title: t("dashboard.importWidget"),
+        filterName: t("dashboard.widgetFileFilter"),
+      });
+      if (!path) return;
+      const imported = await importCustomWidgets(path);
+      showStatusBarNotice(t("dashboard.importWidgetsComplete", { count: imported.length }), { tone: "success" });
+      setGroup("custom");
+    } catch (error) {
+      showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
+    }
+  }
+
   return (
     <div className="dw-catalog-backdrop" onClick={onClose}>
       <div className="dw-catalog" onClick={(e) => e.stopPropagation()}>
@@ -134,6 +171,21 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
             </button>
           ))}
         </nav>
+        {group === "custom" && (
+          <div className="dw-catalog-actions">
+            <button type="button" className="dw-catalog-action" onClick={() => void handleImport()}>
+              <Upload width={13} height={13} /> {t("dashboard.importWidget")}
+            </button>
+            <button
+              type="button"
+              className="dw-catalog-action"
+              disabled={customCount === 0}
+              onClick={() => void handleExport([], `kkterm-widgets-${widgetExportStamp()}`)}
+            >
+              <Download width={13} height={13} /> {t("dashboard.exportAllWidgets")}
+            </button>
+          </div>
+        )}
         <div className="dw-catalog-grid">
           {visible.map((entry) => {
             const accent = resolveAccent(entry.defaultAccent);
@@ -151,6 +203,27 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
                   "--w-accent-soft": accent.soft,
                 } as CSSProperties}
               >
+                {entry.isCustom && (
+                  <span
+                    className="dw-catalog-export"
+                    aria-label={t("dashboard.exportCustomWidget", { name: entry.title })}
+                    title={t("dashboard.exportCustomWidget", { name: entry.title })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleExport([entry.id], sanitizeWidgetFilename(entry.title));
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        void handleExport([entry.id], sanitizeWidgetFilename(entry.title));
+                      }
+                    }}
+                  >
+                    <Download width={12} height={12} />
+                  </span>
+                )}
                 {entry.isCustom && (
                   <span
                     className="dw-catalog-delete"
@@ -199,4 +272,23 @@ export function CatalogOverlay({ viewId, onClose }: CatalogOverlayProps) {
       </div>
     </div>
   );
+}
+
+/// Turn a widget title into a safe, readable default filename stem for a single
+/// widget export, falling back to a generic stem when the title has no usable
+/// characters.
+function sanitizeWidgetFilename(title: string): string {
+  const cleaned = title
+    .trim()
+    .replace(/[^\p{L}\p{N} _-]/gu, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+  return cleaned || "kkterm-widget";
+}
+
+/// Compact local timestamp (YYYYMMDD-HHmm) for the export-all default filename.
+function widgetExportStamp(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
 }

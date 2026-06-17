@@ -50,6 +50,9 @@ CSS: `src/app/ui/dialog/dialogs.css`, kk- prefixed classes aliased onto the app
 tokens. Existing shared dialog classes (`.connection-dialog`, `.settings-*`,
 `.primary-button`, `.secondary-button`, dialog inputs, `.dialog-backdrop`) are
 restyled in `src/styles/base.css` to the same language, so legacy dialogs match.
+For an inline cautionary banner inside a `Sheet` body (e.g. the credential-export
+passphrase warning), use the shared `.kk-dlg-warn` class rather than hand-rolling
+an amber callout.
 
 `TextInput` and `TextArea` default to the shared technical-input behaviour from
 `src/lib/inputBehavior.ts`, disabling autocorrect, autocapitalization, and

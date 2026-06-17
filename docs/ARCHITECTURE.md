@@ -44,7 +44,7 @@ AI Assistant context is also a command-boundary concern. Any frontend page conte
 
 `src/modules/settings/SettingsPage.tsx` owns the Settings shell — the header, sidebar nav, and section routing. Each settings section is a separate page component under `src/modules/settings/`, owning its own draft state, save/reset handlers, and helper controls:
 
-- `src/modules/settings/GeneralSettings.tsx` — Language (i18n) selector, Auto Backup toggle and last-backup status, connected Connection rail shortcut toggle, minimize-to-tray toggle, DirectX screen capture toggle, settings export/import actions, database folder opener.
+- `src/modules/settings/GeneralSettings.tsx` — Language (i18n) selector, Auto Backup toggle and last-backup status, connected Connection rail shortcut toggle, minimize-to-tray toggle, DirectX screen capture toggle, whole-database settings export/import actions, selective export/import actions (opening `SelectiveExportDialog.tsx` / `SelectiveImportDialog.tsx`), database folder opener.
 - The main window always uses the custom React-painted title bar. Persisted/imported appearance settings must not restore native window decorations.
 - `src/modules/settings/AppearanceSettings.tsx` — App UI font family, layout reset, Color Scheme selection and preview, including tutorial target `settings.appearance.colorScheme`.
 - `src/modules/settings/DashboardSettings.tsx` — Dashboard-wide preferences: default landing view, widget network-tools permission, and the active script widget cap. Per-view grid density is owned by the view row and edited from the Dashboard topbar in edit mode only.
@@ -537,7 +537,7 @@ AI, Dashboard, Installer, and Network tools:
 - `mcp.rs` — remote MCP HTTP client: server CRUD, schema caching, tool calls, and credential-backend-stored auth headers.
 - `mcp_bridge.rs` — local MCP bridge: a Windows named-pipe server that dispatches external JSON-RPC `tools/call` requests to in-process assistant tools.
 - `assistant_skills.rs` — loads assistant skill directories from disk, validates their YAML, and tracks enabled/disabled state.
-- `dashboard_commands.rs` — Tauri commands for Dashboard View/Widget lifecycle (create, update, remove, load state).
+- `dashboard_commands.rs` — Tauri commands for Dashboard View/Widget lifecycle (create, update, remove, load state) plus user-facing widget export/import (`export_dashboard_widgets` / `import_dashboard_widgets`) to portable `.kkwidget` JSON files.
 - `dashboard_storage.rs` — SQLite-backed Dashboard persistence: Views, Widget Instances, AI Created Widgets, backgrounds, and grid settings.
 - `dashboard_validation.rs` — validates Widget presets, accents, icons, grid bounds, script body JSON, and background types against fixed enums.
 - `dashboard_ids.rs` — generates monotonic Dashboard element ids.
@@ -548,6 +548,7 @@ Watchdog, secrets, storage, and diagnostics:
 
 - `watchdog/` — AI Watchdog backend (registry, polling, predicate evaluation, targets, SSH session-activity tracking); see the Watchdog area.
 - `secrets.rs` — secret storage abstraction and platform backend selection (Connection passwords, API keys, MCP auth, widget secrets).
+- `selective_export.rs` — category-aware (`.kkbackup`) export/import: `export_selective_database`, `inspect_selective_database`, `import_selective_database`. A generic, metadata-driven row engine copies chosen segments (connections, workspaces, dashboards, settings, MCP servers) with per-segment skip/add(merge)/replace and foreign-key remap; opt-in passwords are passphrase-encrypted into `secrets.enc` (Argon2id + AES-256-GCM, reusing the `secrets/sqlite_store.rs` envelope). See ADR 0010. Distinct from the whole-database export/import in `storage.rs`, which packs/replaces the entire SQLite file.
 - `storage.rs` — SQLite schema, migrations, validation, and core `Storage` lifecycle. The large `impl Storage` is split by entity under `storage/`: `connections.rs` (connection records, folders, duplicate/move, and credential metadata), `settings.rs` (all get/update settings accessors), with the test suite in `storage/tests.rs`. Additional `impl Storage` blocks in these files attach to the same `Storage` type, so callers are unaffected.
 - `diagnostics.rs` — builds local-only diagnostic bundles (logs, performance snapshots, manifest) while excluding secrets, the database, and terminal output.
 - `logging.rs` — initializes local log files and the Advanced-Debugging-gated AI/MCP/Installer debug logs.

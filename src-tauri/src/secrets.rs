@@ -58,6 +58,22 @@ impl StoreSecretRequest {
             secret,
         }
     }
+
+    pub(crate) fn url_password(owner_id: String, secret: String) -> Self {
+        Self {
+            kind: SecretKind::UrlPassword,
+            owner_id,
+            secret,
+        }
+    }
+
+    pub(crate) fn ssh_socks_proxy_password(owner_id: String, secret: String) -> Self {
+        Self {
+            kind: SecretKind::SshSocksProxyPassword,
+            owner_id,
+            secret,
+        }
+    }
 }
 
 #[derive(Deserialize)]

@@ -12,6 +12,8 @@ All notable changes to KKTerm are documented here.
 - **SFTP Pane controls:** Add **per-pane view-options** (zoom + content-view background) for each file pane in an SFTP/FTP Connection.
 
 ## New
+- **Dashboard:** **Export & import AI widgets** — export a single custom widget, **Export All**, or **Import** portable `.kkwidget` files from the Add Widget popup. Import is additive and never overwrites existing widgets. ([#378](https://github.com/ryantsai/KKTerm/issues/378))
+- **Settings (Data):** **Selective export/import** — choose which categories (Connections, Workspaces, Dashboards & Widgets, Settings, MCP servers) to put in a `.kkbackup` file, with per-category **Skip / Add / Replace** on import. Sharing Connections **excludes passwords by default**; opt-in passwords are passphrase-encrypted. ([#378](https://github.com/ryantsai/KKTerm/issues/378))
 - **SFTP:** Per-pane view-options menu (item zoom + content-view background) for Dashboard Widget Instance-style pane UX—each pane can look different and keeps its own settings. ([#372](https://github.com/ryantsai/KKTerm/pull/372) — by @ryantsai)
 - **Installer:** Add **Git for Windows** to the **Development** section. ([#365](https://github.com/ryantsai/KKTerm/pull/365) — by @ryantsai)
 - **Installer:** Make BentoPDF’s **NSSM service helper** installed **on-demand**. ([#366](https://github.com/ryantsai/KKTerm/pull/366) — by @ryantsai)

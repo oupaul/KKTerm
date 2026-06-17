@@ -140,6 +140,8 @@ Each command is a thin handler over the storage layer with up-front validation:
 | `dashboard_create_custom_widget` | Definition-only command; validates `bodyJson` against the script body schema and optional `settingsSchemaJson` but does not place an instance. Successful assistant tool results are redacted to metadata. |
 | `dashboard_update_custom_widget` | Validates patched `bodyJson` per kind and patched `settingsSchemaJson`. Successful assistant tool results are redacted to metadata. |
 | `dashboard_remove_custom_widget` | Requires `forceDeleteInstances` if instances reference the widget. |
+| `export_dashboard_widgets` | User-facing. Writes the named AI Created Widgets (or all, when `ids` is empty) to a portable `.kkwidget` JSON file (`{ format:"kkterm-widgets", widgets:[…] }`). Definition only — never instance secrets. |
+| `import_dashboard_widgets` | User-facing. Parses a `.kkwidget` file, validates the format marker and each widget's body/settings schema, and inserts every widget as a new `user`-authored definition with a fresh id (title suffixed on collision). Additive — never overwrites. Returns the created rows. |
 | `dashboard_check_widget_health` | Read-only AI tool. Returns the live runtime health (`ready` / `error` / `timeout` / `stalled` / `pending`, with error text) for one instance id, waiting up to ~4 s for the frontend smoke test to report. Exempt from allow-all approval so the create → verify → self-fix loop runs automatically. Backed by `WidgetHealthRegistry`, populated by the `dashboard_report_widget_health` command (frontend → backend). |
 
 Rust validation invariants:

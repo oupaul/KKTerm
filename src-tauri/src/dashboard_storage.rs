@@ -787,6 +787,55 @@ pub fn create_custom_widget(
     })
 }
 
+/// Read custom widgets for export. When `ids` is empty, all custom widgets are
+/// returned (the "export all" case); otherwise only the named ids, in the order
+/// they are stored. Unknown ids are silently skipped — the caller already chose
+/// them from the live catalog, so a missing row just means a concurrent delete.
+pub fn list_custom_widgets_for_export(
+    conn: &SqliteConnection,
+    ids: &[String],
+) -> Result<Vec<DashboardCustomWidget>, DashboardStorageError> {
+    let wanted: Option<HashSet<&str>> = if ids.is_empty() {
+        None
+    } else {
+        Some(ids.iter().map(String::as_str).collect())
+    };
+    let mut stmt = conn.prepare(
+        "SELECT id, title, summary, category, body_json, settings_schema_json, created_by, created_at
+         FROM dashboard_custom_widgets ORDER BY created_at DESC, id",
+    )?;
+    let widgets = stmt
+        .query_map([], |row| {
+            Ok(DashboardCustomWidget {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                summary: row.get(2)?,
+                category: row.get(3)?,
+                body_json: row.get(4)?,
+                settings_schema_json: row.get(5)?,
+                created_by: row.get(6)?,
+                created_at: row.get(7)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|widget| wanted.as_ref().is_none_or(|set| set.contains(widget.id.as_str())))
+        .collect();
+    Ok(widgets)
+}
+
+/// All custom widget titles currently in the catalog, used to de-duplicate
+/// titles on import so an imported widget never silently shadows an existing one.
+pub fn custom_widget_titles(
+    conn: &SqliteConnection,
+) -> Result<HashSet<String>, DashboardStorageError> {
+    let mut stmt = conn.prepare("SELECT title FROM dashboard_custom_widgets")?;
+    let titles = stmt
+        .query_map([], |row| row.get::<_, String>(0))?
+        .collect::<Result<HashSet<_>, _>>()?;
+    Ok(titles)
+}
+
 pub fn update_custom_widget(
     conn: &SqliteConnection,
     id: &str,

@@ -47,6 +47,8 @@ import {
 } from "../../lib/settings";
 import { useLastUpdateCheckAt } from "../../lib/lastUpdateCheck";
 import { ABOUT_PRODUCT } from "./aboutData";
+import { SelectiveExportDialog } from "./SelectiveExportDialog";
+import { SelectiveImportDialog } from "./SelectiveImportDialog";
 import {
   SettingsSectionHeader,
   SettingsSummary,
@@ -109,6 +111,8 @@ export function GeneralSettings() {
   const [draft, setDraft] = useState(generalSettings);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [selectiveExportOpen, setSelectiveExportOpen] = useState(false);
+  const [selectiveImportOpen, setSelectiveImportOpen] = useState(false);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(generalSettings) ||
     currentLanguage !== detectLanguage();
@@ -558,6 +562,22 @@ export function GeneralSettings() {
           <button
             className="secondary-button"
             type="button"
+            onClick={() => setSelectiveExportOpen(true)}
+          >
+            <Download size={16} />
+            {t("settings.selectiveExport")}
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => setSelectiveImportOpen(true)}
+          >
+            <Upload size={16} />
+            {t("settings.selectiveImport")}
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
             onClick={() => void handleOpenDatabaseFolder()}
           >
             <FolderOpen size={16} />
@@ -691,6 +711,12 @@ export function GeneralSettings() {
             </div>
           </div>
         </div>
+      ) : null}
+      {selectiveExportOpen ? (
+        <SelectiveExportDialog onClose={() => setSelectiveExportOpen(false)} />
+      ) : null}
+      {selectiveImportOpen ? (
+        <SelectiveImportDialog onClose={() => setSelectiveImportOpen(false)} />
       ) : null}
     </section>
   );

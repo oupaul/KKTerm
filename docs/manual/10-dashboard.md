@@ -45,6 +45,7 @@ A picker over built-in widgets and AI-authored Custom Widgets.
 - Search: `dashboard.catalogSearch`. Empty: `dashboard.catalogNoMatches`.
 - Group tabs: `dashboard.catalogGroupBuiltIn`, `dashboard.catalogGroupCustom`. Browsing is grouped only by shipped built-ins versus AI Created Widgets; there is no category filter UI.
 - Already-placed indicator shows a check badge on cards already on the active View.
+- Export / import (Custom tab only): each Custom Widget card has an export action (`dashboard.exportCustomWidget`); the Custom tab also offers `dashboard.exportAllWidgets` and `dashboard.importWidget`. Export writes a portable `.kkwidget` JSON file (filter `dashboard.widgetFileFilter`) containing the widget definition only — never instance secrets. Import is additive: it adds each widget as a new user-authored Custom Widget with a fresh id, suffixing the title on collision, and never overwrites existing widgets. Status `dashboard.exportWidgetsComplete` / `dashboard.importWidgetsComplete`. Built-in widgets are not exportable.
 
 ## Customize popover (per Widget Instance)
 

@@ -414,6 +414,26 @@ export interface DatabaseBackupInfo {
   createdAt: string;
 }
 
+export interface SelectiveManifest {
+  product: string;
+  format: string;
+  version: number;
+  createdAt: string;
+  segments: string[];
+  encrypted: boolean;
+}
+
+export interface SelectiveExportInfo {
+  filename: string;
+  segments: string[];
+  encrypted: boolean;
+}
+
+export interface SelectiveImportResult {
+  backupFilename: string;
+  applied: string[];
+}
+
 export interface ImportedDatabaseSnapshot {
   generalSettings: GeneralSettings;
   credentialSettings: CredentialSettings;
