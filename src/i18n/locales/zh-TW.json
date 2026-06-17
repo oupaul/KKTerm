@@ -3327,7 +3327,15 @@
       "save": "儲存",
       "saving": "正在儲存…",
       "discardConfirm": "要捨棄未儲存的變更嗎？",
-      "saveConflictConfirm": "此檔案自你開啟後已在磁碟上變更。要用你的變更覆寫嗎？"
+      "saveConflictConfirm": "此檔案自你開啟後已在磁碟上變更。要用你的變更覆寫嗎？",
+      "textMenu": "字型與編碼",
+      "font": "字型",
+      "fontDefault": "預設（等寬）",
+      "fontSize": "字級",
+      "fontSizeDefault": "預設",
+      "encoding": "編碼",
+      "encodingAuto": "自動",
+      "encodingDetected": "自動（{{label}}）"
     }
   },
   "common": {

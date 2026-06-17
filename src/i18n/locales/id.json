@@ -3327,7 +3327,15 @@
       "save": "Simpan",
       "saving": "Menyimpan…",
       "discardConfirm": "Buang perubahan yang belum disimpan?",
-      "saveConflictConfirm": "File ini berubah di disk sejak Anda membukanya. Timpa dengan perubahan Anda?"
+      "saveConflictConfirm": "File ini berubah di disk sejak Anda membukanya. Timpa dengan perubahan Anda?",
+      "textMenu": "Font & pengodean",
+      "font": "Font",
+      "fontDefault": "Default (monospace)",
+      "fontSize": "Ukuran",
+      "fontSizeDefault": "Default",
+      "encoding": "Pengodean",
+      "encodingAuto": "Otomatis",
+      "encodingDetected": "Otomatis ({{label}})"
     }
   },
   "common": {

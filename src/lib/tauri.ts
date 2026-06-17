@@ -284,6 +284,7 @@ export interface FileViewText {
   truncated: boolean;
   fromEnd: boolean;
   mtimeMs: number;
+  detectedEncoding: string;
 }
 
 export interface FileViewBytes {
@@ -1934,7 +1935,7 @@ type CommandMap = {
     result: FileViewProbe;
   };
   read_file_view_text: {
-    args: { request: { path: string; maxBytes: number; fromEnd?: boolean } };
+    args: { request: { path: string; maxBytes: number; fromEnd?: boolean; encoding?: string } };
     result: FileViewText;
   };
   read_file_view_bytes: {

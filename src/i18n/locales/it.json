@@ -3327,7 +3327,15 @@
       "save": "Salva",
       "saving": "Salvataggio…",
       "discardConfirm": "Scartare le modifiche non salvate?",
-      "saveConflictConfirm": "Questo file è stato modificato sul disco da quando lo hai aperto. Sovrascriverlo con le tue modifiche?"
+      "saveConflictConfirm": "Questo file è stato modificato sul disco da quando lo hai aperto. Sovrascriverlo con le tue modifiche?",
+      "textMenu": "Carattere e codifica",
+      "font": "Carattere",
+      "fontDefault": "Predefinito (monospazio)",
+      "fontSize": "Dimensione",
+      "fontSizeDefault": "Predefinita",
+      "encoding": "Codifica",
+      "encodingAuto": "Automatica",
+      "encodingDetected": "Automatica ({{label}})"
     }
   },
   "common": {

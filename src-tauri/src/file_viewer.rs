@@ -44,6 +44,11 @@ pub struct FileViewTextRequest {
     /// viewer's follow/tail mode) instead of the leading bytes.
     #[serde(default)]
     pub from_end: bool,
+    /// `encoding_rs` label (e.g. `utf-8`, `gbk`, `shift_jis`, `windows-1252`)
+    /// to decode the bytes with. `None` (or an unknown label) auto-detects the
+    /// charset with `chardetng`.
+    #[serde(default)]
+    pub encoding: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -102,6 +107,9 @@ pub struct FileViewText {
     /// True when this is the trailing slice of the file (`from_end`).
     pub from_end: bool,
     pub mtime_ms: i64,
+    /// `encoding_rs` label actually used to decode the text (lowercased), so the
+    /// viewer can show what Auto resolved to and gate editing to UTF-8.
+    pub detected_encoding: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -232,7 +240,7 @@ pub fn read_text(request: FileViewTextRequest) -> Result<FileViewText, String> {
     }
     buffer.truncate(filled);
 
-    let text = String::from_utf8_lossy(&buffer).into_owned();
+    let (text, detected_encoding) = decode_text(&buffer, request.encoding.as_deref());
     let bytes_read = filled as u64;
     Ok(FileViewText {
         text,
@@ -241,7 +249,25 @@ pub fn read_text(request: FileViewTextRequest) -> Result<FileViewText, String> {
         truncated: start > 0 || bytes_read < total_size,
         from_end: request.from_end,
         mtime_ms: mtime_ms(&metadata),
+        detected_encoding,
     })
+}
+
+/// Decode a byte buffer to text. With an explicit `encoding_rs` label (other than
+/// `auto`) the named charset is used; otherwise `chardetng` guesses one. A BOM in
+/// the buffer overrides either choice. Returns the decoded text plus the lowercased
+/// label actually used so the UI can show what Auto resolved to.
+fn decode_text(buffer: &[u8], label: Option<&str>) -> (String, String) {
+    let requested = label
+        .filter(|name| !name.eq_ignore_ascii_case("auto"))
+        .and_then(|name| encoding_rs::Encoding::for_label(name.as_bytes()));
+    let encoding = requested.unwrap_or_else(|| {
+        let mut detector = chardetng::EncodingDetector::new();
+        detector.feed(buffer, true);
+        detector.guess(None, true)
+    });
+    let (text, used, _had_errors) = encoding.decode(buffer);
+    (text.into_owned(), used.name().to_ascii_lowercase())
 }
 
 /// Atomically save edited UTF-8 text back to a file. Writes a sibling temp file
@@ -570,6 +596,7 @@ mod tests {
             path: path.to_string_lossy().into_owned(),
             max_bytes: 4,
             from_end: false,
+            encoding: None,
         })
         .unwrap();
         assert_eq!(head.text, "0123");
@@ -579,10 +606,42 @@ mod tests {
             path: path.to_string_lossy().into_owned(),
             max_bytes: 4,
             from_end: true,
+            encoding: None,
         })
         .unwrap();
         assert_eq!(tail.text, "6789");
         assert!(tail.from_end);
+        std::fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn read_text_decodes_named_encoding() {
+        // "中文" in GBK is D6 D0 CE C4; as UTF-8 lossy this would be mojibake.
+        let path = temp_file("gbk.txt", &[0xD6, 0xD0, 0xCE, 0xC4]);
+        let result = read_text(FileViewTextRequest {
+            path: path.to_string_lossy().into_owned(),
+            max_bytes: 64,
+            from_end: false,
+            encoding: Some("gbk".to_string()),
+        })
+        .unwrap();
+        assert_eq!(result.text, "中文");
+        assert_eq!(result.detected_encoding, "gbk");
+        std::fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn read_text_auto_detects_and_reports_encoding() {
+        let path = temp_file("utf8.txt", "héllo".as_bytes());
+        let result = read_text(FileViewTextRequest {
+            path: path.to_string_lossy().into_owned(),
+            max_bytes: 64,
+            from_end: false,
+            encoding: None,
+        })
+        .unwrap();
+        assert_eq!(result.text, "héllo");
+        assert_eq!(result.detected_encoding, "utf-8");
         std::fs::remove_file(path).ok();
     }
 

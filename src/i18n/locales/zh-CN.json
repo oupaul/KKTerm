@@ -3327,7 +3327,15 @@
       "save": "保存",
       "saving": "正在保存…",
       "discardConfirm": "要放弃未保存的更改吗？",
-      "saveConflictConfirm": "此文件自打开以来已在磁盘上更改。要用你的更改覆盖它吗？"
+      "saveConflictConfirm": "此文件自打开以来已在磁盘上更改。要用你的更改覆盖它吗？",
+      "textMenu": "字体与编码",
+      "font": "字体",
+      "fontDefault": "默认（等宽）",
+      "fontSize": "字号",
+      "fontSizeDefault": "默认",
+      "encoding": "编码",
+      "encodingAuto": "自动",
+      "encodingDetected": "自动（{{label}}）"
     }
   },
   "common": {

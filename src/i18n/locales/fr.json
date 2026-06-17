@@ -3327,7 +3327,15 @@
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "discardConfirm": "Ignorer les modifications non enregistrées ?",
-      "saveConflictConfirm": "Ce fichier a changé sur le disque depuis son ouverture. Le remplacer par vos modifications ?"
+      "saveConflictConfirm": "Ce fichier a changé sur le disque depuis son ouverture. Le remplacer par vos modifications ?",
+      "textMenu": "Police et encodage",
+      "font": "Police",
+      "fontDefault": "Par défaut (à chasse fixe)",
+      "fontSize": "Taille",
+      "fontSizeDefault": "Par défaut",
+      "encoding": "Encodage",
+      "encodingAuto": "Automatique",
+      "encodingDetected": "Automatique ({{label}})"
     }
   },
   "common": {

@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Lock, RefreshCw, Save } from "lucide-react";
+import { Check, Lock, Menu, RefreshCw, Save } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { WorkspaceTab } from "../../../../types";
 import { confirmNativeDialog, invokeCommand, type FileViewProbe } from "../../../../lib/tauri";
+import { useWorkspaceStore } from "../../../../store";
+import { menuButtonAria } from "../../../../lib/aria";
 import {
   availableViewerKinds,
   detectViewerKind,
@@ -12,6 +16,15 @@ import {
   viewerUsesExternalDependency,
   type ViewerKind,
 } from "./fileViewerModel";
+import {
+  AUTO_ENCODING,
+  ENCODING_OPTIONS,
+  FONT_FAMILY_OPTIONS,
+  FONT_SIZE_OPTIONS,
+  loadDocumentTextSettings,
+  persistDocumentTextSettings,
+  type DocumentTextSettings,
+} from "./fileViewerTextSettings";
 import { FileGlyph } from "./chrome/FileGlyph";
 import { fileTypeMeta } from "./chrome/fileViewerFileType";
 import { ChromeSlotsProvider } from "./chrome/FileViewerChromeContext";
@@ -66,6 +79,8 @@ interface LoadedContent {
   magic?: string | null;
   truncated: boolean;
   mtimeMs?: number;
+  /** `encoding_rs` label the text was decoded with (text-loaded kinds only). */
+  encoding?: string;
 }
 
 export function FileViewerWorkspace({
@@ -77,12 +92,24 @@ export function FileViewerWorkspace({
 }) {
   const { t } = useTranslation();
   const filePath = tab.connection?.localStartupDirectory?.trim() ?? "";
+  const connectionId = tab.connection?.id;
+  const documentStatusSlot = useWorkspaceStore((state) => state.documentStatusSlot);
   const [probe, setProbe] = useState<FileViewProbe | null>(null);
   const [override, setOverride] = useState<ViewerKind | null>(null);
   const [content, setContent] = useState<LoadedContent | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
+
+  // Per-connection text presentation (font + decode encoding), persisted in
+  // localStorage. Font/size apply live via CSS variables; encoding triggers a
+  // reload (it is part of `load`'s dependencies below).
+  const [textSettings, setTextSettings] = useState<DocumentTextSettings>(() =>
+    loadDocumentTextSettings(connectionId),
+  );
+  const { encoding } = textSettings;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Editing state (Phase 3). `editedText` mirrors the uncontrolled editor's
   // current value so saves and the dirty indicator have it without re-rendering
@@ -124,7 +151,11 @@ export function FileViewerWorkspace({
         const maxBytes = maxBytesForKind(kind);
         if (viewerLoadsText(kind)) {
           const result = await invokeCommand("read_file_view_text", {
-            request: { path: filePath, maxBytes },
+            request: {
+              path: filePath,
+              maxBytes,
+              encoding: encoding === AUTO_ENCODING ? undefined : encoding,
+            },
           });
           setContent({
             kind,
@@ -132,6 +163,7 @@ export function FileViewerWorkspace({
             magic: probed.magic,
             truncated: result.truncated,
             mtimeMs: result.mtimeMs,
+            encoding: result.detectedEncoding,
           });
         } else {
           if (kind === "image" && probed.totalSize > IMAGE_MAX_BYTES) {
@@ -156,13 +188,13 @@ export function FileViewerWorkspace({
         setLoading(false);
       }
     },
-    [filePath, t],
+    [filePath, t, encoding],
   );
 
   useEffect(() => {
     void load(override);
-    // Reload when the file, the chosen viewer override, or an explicit reload
-    // changes. `load` is stable per filePath.
+    // Reload when the file, the chosen viewer override, the decode encoding, or
+    // an explicit reload changes. `load` is stable per filePath + encoding.
   }, [load, override, reloadToken]);
 
   const kinds = probe
@@ -173,14 +205,53 @@ export function FileViewerWorkspace({
   const baseline = content?.text ?? "";
   const dirty = editedText !== null && editedText !== baseline;
   const editable = content
-    ? isEditableText({ kind: content.kind, truncated: content.truncated, text: baseline })
+    ? isEditableText({
+        kind: content.kind,
+        truncated: content.truncated,
+        text: baseline,
+        encoding: content.encoding,
+      })
     : false;
+
+  // Close the Font/Encoding menu on an outside pointer press.
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (menuRef.current && target && !menuRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
+
+  function updateSettings(patch: Partial<DocumentTextSettings>) {
+    setTextSettings((current) => {
+      const next = { ...current, ...patch };
+      persistDocumentTextSettings(connectionId, next);
+      return next;
+    });
+  }
 
   async function confirmDiscardIfDirty(): Promise<boolean> {
     if (!dirty) {
       return true;
     }
     return (await confirmNativeDialog(t("workspace.fileViewer.discardConfirm"))) === true;
+  }
+
+  // Changing the encoding reloads the file (via `load`'s deps), which discards
+  // unsaved edits — confirm first when dirty.
+  async function requestEncoding(value: string) {
+    if (value === encoding) {
+      return;
+    }
+    if (await confirmDiscardIfDirty()) {
+      updateSettings({ encoding: value });
+    }
   }
 
   async function requestMode(kind: ViewerKind) {
@@ -246,8 +317,28 @@ export function FileViewerWorkspace({
   const tint = fileTypeMeta(filePath).tint;
   const kindLabel = activeKind ? t(`workspace.fileViewer.kind.${activeKind}`) : "";
 
+  // Font + Encoding menu and font variables only apply to text-loaded viewers.
+  const showTextMenu = !!activeKind && viewerLoadsText(activeKind);
+  const encodingLabel =
+    encoding === AUTO_ENCODING
+      ? content?.encoding
+        ? t("workspace.fileViewer.encodingDetected", { label: content.encoding.toUpperCase() })
+        : t("workspace.fileViewer.encodingAuto")
+      : (ENCODING_OPTIONS.find((option) => option.value === encoding)?.label ??
+        encoding.toUpperCase());
+  const fontVarStyle: CSSProperties = {};
+  if (textSettings.fontFamily) {
+    (fontVarStyle as Record<string, string>)["--fv-font-family"] = textSettings.fontFamily;
+  }
+  if (textSettings.fontSize > 0) {
+    (fontVarStyle as Record<string, string>)["--fv-font-size"] = `${textSettings.fontSize}px`;
+  }
+
   return (
-    <div className={isActive ? "file-viewer-workspace active" : "file-viewer-workspace"}>
+    <div
+      className={isActive ? "file-viewer-workspace active" : "file-viewer-workspace"}
+      style={fontVarStyle}
+    >
       <div className="fv-toolbar">
         <div className="fv-file">
           <span className="glyph">
@@ -288,6 +379,77 @@ export function FileViewerWorkspace({
           />
         ) : null}
         <IconButton icon={RefreshCw} title={t("common.refresh")} onClick={() => void requestReload()} />
+        {showTextMenu ? (
+          <div className="fv-menu-wrapper" ref={menuRef}>
+            <button
+              type="button"
+              className={menuOpen ? "fv-ibtn on" : "fv-ibtn"}
+              title={t("workspace.fileViewer.textMenu")}
+              aria-label={t("workspace.fileViewer.textMenu")}
+              {...menuButtonAria(menuOpen)}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <Menu size={17} />
+            </button>
+            {menuOpen ? (
+              <div className="fv-menu" role="menu">
+                <label className="fv-menu-row">
+                  <span className="fv-menu-label">{t("workspace.fileViewer.font")}</span>
+                  <select
+                    className="fv-menu-select"
+                    value={textSettings.fontFamily}
+                    onChange={(event) => updateSettings({ fontFamily: event.currentTarget.value })}
+                  >
+                    {FONT_FAMILY_OPTIONS.map((option) => (
+                      <option key={option.value || "default"} value={option.value}>
+                        {option.value === ""
+                          ? t("workspace.fileViewer.fontDefault")
+                          : option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="fv-menu-row">
+                  <span className="fv-menu-label">{t("workspace.fileViewer.fontSize")}</span>
+                  <select
+                    className="fv-menu-select"
+                    value={textSettings.fontSize}
+                    onChange={(event) =>
+                      updateSettings({ fontSize: Number(event.currentTarget.value) })
+                    }
+                  >
+                    {FONT_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size === 0 ? t("workspace.fileViewer.fontSizeDefault") : `${size} px`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="fv-menu-row">
+                  <span className="fv-menu-label">{t("workspace.fileViewer.encoding")}</span>
+                  <select
+                    className="fv-menu-select"
+                    value={encoding}
+                    onChange={(event) => void requestEncoding(event.currentTarget.value)}
+                  >
+                    <option value={AUTO_ENCODING}>
+                      {content?.encoding
+                        ? t("workspace.fileViewer.encodingDetected", {
+                            label: content.encoding.toUpperCase(),
+                          })
+                        : t("workspace.fileViewer.encodingAuto")}
+                    </option>
+                    {ENCODING_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {content?.truncated ? (
@@ -317,32 +479,39 @@ export function FileViewerWorkspace({
         </ChromeSlotsProvider>
       </div>
 
-      {content && !loading && !error ? (
-        <div className="fv-footer">
-          {kindLabel ? <FootSeg>{kindLabel}</FootSeg> : null}
-          {probe ? <FootSeg>{formatBytes(probe.totalSize)}</FootSeg> : null}
-          <span className="fv-footer-slot" ref={setFooterSlot} />
-          <span className="sp" />
-          {editable ? (
-            dirty ? (
-              <span className="badge warn">
-                <span className="fv-dot" />
-                {t("workspace.fileViewer.unsaved")}
-              </span>
-            ) : (
-              <span className="badge">
-                <Check size={12} />
-                {t("workspace.fileViewer.saved")}
-              </span>
-            )
-          ) : (
-            <span className="badge ro">
-              <Lock size={12} />
-              {t("workspace.fileViewer.readOnly")}
-            </span>
-          )}
-        </div>
-      ) : null}
+      {/* The Document's status is shown in the app's global Status Bar (the single
+          status surface), not a per-Document footer. Only the active tab portals
+          into the shared slot; the per-mode footer segments keep filling
+          `footerSlot` via the chrome portals, now nested inside the global bar. */}
+      {isActive && content && !loading && !error && documentStatusSlot
+        ? createPortal(
+            <div className="status-bar-document-status">
+              {kindLabel ? <FootSeg>{kindLabel}</FootSeg> : null}
+              {probe ? <FootSeg>{formatBytes(probe.totalSize)}</FootSeg> : null}
+              {showTextMenu && encodingLabel ? <FootSeg>{encodingLabel}</FootSeg> : null}
+              <span className="fv-footer-slot" ref={setFooterSlot} />
+              {editable ? (
+                dirty ? (
+                  <span className="badge warn">
+                    <span className="fv-dot" />
+                    {t("workspace.fileViewer.unsaved")}
+                  </span>
+                ) : (
+                  <span className="badge">
+                    <Check size={12} />
+                    {t("workspace.fileViewer.saved")}
+                  </span>
+                )
+              ) : (
+                <span className="badge ro">
+                  <Lock size={12} />
+                  {t("workspace.fileViewer.readOnly")}
+                </span>
+              )}
+            </div>,
+            documentStatusSlot,
+          )
+        : null}
     </div>
   );
 }
@@ -383,6 +552,7 @@ function FileViewerContent({
     case "log":
       return (
         <LogViewer
+          encoding={content.encoding}
           filePath={filePath}
           isActive={isActive}
           maxBytes={TEXT_MAX_BYTES}

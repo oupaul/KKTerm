@@ -3327,7 +3327,15 @@
       "save": "Save",
       "saving": "Saving…",
       "discardConfirm": "Discard unsaved changes?",
-      "saveConflictConfirm": "This file changed on disk since you opened it. Overwrite it with your changes?"
+      "saveConflictConfirm": "This file changed on disk since you opened it. Overwrite it with your changes?",
+      "textMenu": "Font & encoding",
+      "font": "Font",
+      "fontDefault": "Default (monospace)",
+      "fontSize": "Size",
+      "fontSizeDefault": "Default",
+      "encoding": "Encoding",
+      "encodingAuto": "Auto",
+      "encodingDetected": "Auto ({{label}})"
     }
   },
   "common": {

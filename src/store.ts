@@ -1082,6 +1082,9 @@ interface WorkspaceState {
   activeSessionCounts: Record<string, number>;
   performanceMetrics: PerformanceMetrics;
   statusBarNotice?: StatusBarNotice;
+  /** DOM node in the global Status Bar that the active Document Connection portals
+   * its status segments into. Set by `StatusBar`; null when the bar is hidden. */
+  documentStatusSlot: HTMLElement | null;
   quickCommandsByConnection: Record<string, QuickCommand[]>;
   setQuery: (query: string) => void;
   setWorkspaces: (workspaces: Workspace[]) => void;
@@ -1115,6 +1118,7 @@ interface WorkspaceState {
     options?: { tone?: StatusBarNotice["tone"]; durationMs?: number },
   ) => void;
   clearStatusBarNotice: (id: number) => void;
+  setDocumentStatusSlot: (slot: HTMLElement | null) => void;
   activateTab: (tabId: string) => void;
   renameTab: (tabId: string, title: string) => Promise<void>;
   closeTab: (tabId: string) => void;
@@ -1249,6 +1253,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   activeSessionCounts: {},
   performanceMetrics: {},
   statusBarNotice: undefined,
+  documentStatusSlot: null,
   quickCommandsByConnection: {},
   setQuery: (query) => set({ query }),
   setWorkspaces: (workspaces) => {
@@ -1440,6 +1445,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         ? { statusBarNotice: undefined }
         : {},
     ),
+  setDocumentStatusSlot: (slot) =>
+    set((state) => (state.documentStatusSlot === slot ? {} : { documentStatusSlot: slot })),
   activateTab: (tabId) => set({ activeTabId: tabId }),
   renameTab: async (tabId, title) => {
     const displayTitle = title.trim();

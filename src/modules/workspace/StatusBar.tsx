@@ -44,6 +44,7 @@ export function StatusBar({
     (state) => state.generalSettings.statusBarMonitorEnabled,
   );
   const clearStatusBarNotice = useWorkspaceStore((state) => state.clearStatusBarNotice);
+  const setDocumentStatusSlot = useWorkspaceStore((state) => state.setDocumentStatusSlot);
   const [renderedNotice, setRenderedNotice] = useState(notice);
   const [isNoticeExiting, setIsNoticeExiting] = useState(false);
 
@@ -96,6 +97,7 @@ export function StatusBar({
         {statusBarMonitorEnabled ? <WorkspaceHostMetrics t={t} /> : null}
         <AiCodingUsageStatusBar onOpenDashboardView={onOpenDashboardView} />
       </div>
+      <div className="status-bar-document" ref={setDocumentStatusSlot} />
       <InstallerStatusSummary active={installerActive} />
       <div className="status-bar-notice-area">
         {renderedNotice ? (

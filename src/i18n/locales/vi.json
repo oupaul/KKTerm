@@ -3327,7 +3327,15 @@
       "save": "Lưu",
       "saving": "Đang lưu…",
       "discardConfirm": "Hủy các thay đổi chưa lưu?",
-      "saveConflictConfirm": "Tệp này đã thay đổi trên đĩa kể từ khi bạn mở. Ghi đè bằng thay đổi của bạn?"
+      "saveConflictConfirm": "Tệp này đã thay đổi trên đĩa kể từ khi bạn mở. Ghi đè bằng thay đổi của bạn?",
+      "textMenu": "Phông chữ & mã hóa",
+      "font": "Phông chữ",
+      "fontDefault": "Mặc định (đơn cách)",
+      "fontSize": "Cỡ chữ",
+      "fontSizeDefault": "Mặc định",
+      "encoding": "Mã hóa",
+      "encodingAuto": "Tự động",
+      "encodingDetected": "Tự động ({{label}})"
     }
   },
   "common": {

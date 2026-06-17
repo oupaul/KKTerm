@@ -32,9 +32,14 @@ test("magic bytes win for unknown or misleading extensions", () => {
   assert.equal(detectViewerKind({ path: "db", magic: "sqlite", isText: false }), "hex");
 });
 
-test("unknown extension trusts the backend text heuristic", () => {
+test("unknown extension assumes text unless it is a binary container", () => {
   assert.equal(detectViewerKind({ path: "mystery", isText: true }), "text");
-  assert.equal(detectViewerKind({ path: "mystery.bin", isText: false }), "hex");
+  // Unknown extension with no binary signature opens as text even when the
+  // backend's text heuristic was unsure — Hex stays reachable from the switcher.
+  assert.equal(detectViewerKind({ path: "mystery.bin", isText: false }), "text");
+  // Recognized binary containers still fall back to the read-only hex viewer.
+  assert.equal(detectViewerKind({ path: "archive", magic: "zip", isText: false }), "hex");
+  assert.equal(detectViewerKind({ path: "blob", magic: "gzip", isText: false }), "hex");
 });
 
 test("text and hex are always offered as fallbacks (except for images)", () => {
@@ -65,6 +70,16 @@ test("isEditableText only allows whole, cleanly-decoded text files (Phase 3)", (
   assert.equal(isEditableText({ kind: "text", truncated: true, text: "partial" }), false);
   // A lossy non-UTF-8 load (replacement char) must not be editable.
   assert.equal(isEditableText({ kind: "text", truncated: false, text: "a�b" }), false);
+  // A cleanly-decoded non-UTF-8 load must stay read-only: saving writes UTF-8 and
+  // would silently transcode the file.
+  assert.equal(
+    isEditableText({ kind: "text", truncated: false, text: "hello", encoding: "gbk" }),
+    false,
+  );
+  assert.equal(
+    isEditableText({ kind: "text", truncated: false, text: "hello", encoding: "utf-8" }),
+    true,
+  );
 });
 
 test("pdf is detected and routed to its external dependency (Phase 2)", () => {

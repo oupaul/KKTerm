@@ -3327,7 +3327,15 @@
       "save": "保存",
       "saving": "保存中…",
       "discardConfirm": "未保存の変更を破棄しますか？",
-      "saveConflictConfirm": "このファイルは開いてからディスク上で変更されています。自分の変更で上書きしますか？"
+      "saveConflictConfirm": "このファイルは開いてからディスク上で変更されています。自分の変更で上書きしますか？",
+      "textMenu": "フォントとエンコーディング",
+      "font": "フォント",
+      "fontDefault": "デフォルト（等幅）",
+      "fontSize": "サイズ",
+      "fontSizeDefault": "デフォルト",
+      "encoding": "エンコーディング",
+      "encodingAuto": "自動",
+      "encodingDetected": "自動（{{label}}）"
     }
   },
   "common": {

@@ -145,6 +145,49 @@
   background: transparent;
 }
 
+/* Font + Encoding menu (anchored popover off the toolbar hamburger) */
+.fv-menu-wrapper {
+  position: relative;
+  flex: 0 0 auto;
+}
+.fv-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 230px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+.fv-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+}
+.fv-menu-label {
+  color: var(--text-2);
+  flex: 0 0 auto;
+}
+.fv-menu-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 150px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
 /* text button */
 .fv-btn {
   display: inline-flex;
@@ -322,52 +365,55 @@
   background: transparent;
 }
 
-/* ============================== footer ============================= */
-.fv-footer {
+/* ===================== status (in the global Status Bar) =========== */
+/* The Document's status segments are portaled into the app's global Status Bar
+   (`.status-bar-document`), not a per-Document footer. */
+.status-bar-document {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+.status-bar-document-status {
   display: flex;
   align-items: center;
   gap: 14px;
-  height: 26px;
-  padding: 0 12px;
-  background: var(--chrome);
-  border-top: 1px solid var(--hairline);
-  color: var(--text-2);
+  min-width: 0;
   font-size: 11.5px;
-  flex: 0 0 auto;
+  white-space: nowrap;
 }
-.fv-footer .seg {
+.status-bar-document-status .seg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.fv-footer .seg b {
+.status-bar-document-status .seg b {
   color: var(--text);
   font-weight: 600;
 }
-.fv-footer .mono {
+.status-bar-document-status .seg.mono {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-}
-.fv-footer .sp {
-  flex: 1 1 auto;
 }
 .fv-footer-slot {
   display: contents;
 }
-.fv-footer .badge {
+.status-bar-document-status .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--green);
   font-weight: 600;
 }
-.fv-footer .badge.ro {
+.status-bar-document-status .badge.ro {
   color: var(--text-3);
 }
-.fv-footer .badge.warn {
+.status-bar-document-status .badge.warn {
   color: var(--amber);
 }
-.fv-footer .badge .fv-dot {
+.status-bar-document-status .badge .fv-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -405,8 +451,8 @@
   height: 100%;
 }
 .file-viewer-codemirror .cm-scroller {
-  font-family: var(--mono);
-  font-size: var(--mono-size);
+  font-family: var(--fv-font-family, var(--mono));
+  font-size: var(--fv-font-size, var(--mono-size));
 }
 
 /* ===================== mode: markdown ============================== */
@@ -505,8 +551,8 @@
   max-width: 100%;
 }
 .fv-md-source {
-  font-family: var(--mono);
-  font-size: var(--mono-size);
+  font-family: var(--fv-font-family, var(--mono));
+  font-size: var(--fv-font-size, var(--mono-size));
   line-height: 1.7;
   padding: 20px 24px;
   white-space: pre-wrap;
@@ -516,8 +562,8 @@
 /* ===================== mode: json tree ============================= */
 .fv-json {
   padding: 12px 8px 18px 4px;
-  font-family: var(--mono);
-  font-size: var(--mono-size);
+  font-family: var(--fv-font-family, var(--mono));
+  font-size: var(--fv-font-size, var(--mono-size));
   line-height: 1.7;
 }
 .fv-jrow {
@@ -578,7 +624,8 @@
   border-spacing: 0;
   width: max-content;
   min-width: 100%;
-  font-size: 12.5px;
+  font-family: var(--fv-font-family, inherit);
+  font-size: var(--fv-font-size, 12.5px);
 }
 .fv-table thead th {
   position: sticky;
@@ -729,8 +776,8 @@
   flex: 1 1 0;
   min-height: 0;
   overflow: auto;
-  font-family: var(--mono);
-  font-size: var(--mono-size);
+  font-family: var(--fv-font-family, var(--mono));
+  font-size: var(--fv-font-size, var(--mono-size));
 }
 .fv-logrow {
   display: grid;

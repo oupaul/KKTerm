@@ -38,6 +38,10 @@ const IMAGE_EXTENSIONS = new Set([
 
 const IMAGE_MAGICS = new Set(["png", "jpeg", "gif", "webp", "bmp"]);
 
+/** Binary container signatures that should fall back to the read-only hex viewer
+ * for files with an otherwise unrecognized extension. */
+const BINARY_CONTAINER_MAGICS = new Set(["zip", "gzip", "sqlite"]);
+
 const MARKDOWN_EXTENSIONS = new Set(["md", "markdown", "mdown", "mkd", "mdx"]);
 
 const CSV_EXTENSIONS = new Set(["csv", "tsv"]);
@@ -154,9 +158,12 @@ export function detectViewerKind(signals: FileSignals): ViewerKind {
   if (TEXT_EXTENSIONS.has(ext)) {
     return "text";
   }
-  // Unknown extension: trust the backend heuristic. Binary, non-image content
-  // falls back to the hex viewer; everything else opens as text.
-  if (signals.isText === false) {
+  // Unknown extension: assume text and open the editor. Only clearly-binary
+  // container signatures (archives, databases) fall back to the read-only hex
+  // viewer; everything else — including content the text heuristic was unsure
+  // about — opens as text, which the user can still switch to Hex from the
+  // mode switcher. Genuinely binary text stays read-only via `isEditableText`.
+  if (magic && BINARY_CONTAINER_MAGICS.has(magic)) {
     return "hex";
   }
   return "text";
@@ -177,13 +184,26 @@ export function viewerUsesExternalDependency(kind: ViewerKind): boolean {
  * lossily, which means saving would corrupt it, so editing must stay disabled. */
 const REPLACEMENT_CHAR = "�";
 
+/** Whether a resolved `encoding_rs` label is UTF-8. Saving always writes UTF-8,
+ * so a non-UTF-8 load must stay read-only to avoid silently transcoding the file. */
+export function isUtf8Encoding(encoding: string | undefined): boolean {
+  return !encoding || encoding.toLowerCase() === "utf-8";
+}
+
 /** Phase 3: whether the loaded content can be safely edited and saved. Only the
- * text mode is editable, and only when the whole file was loaded (not truncated)
- * and decoded cleanly as UTF-8 — otherwise a save would lose or corrupt data. */
+ * text mode is editable, and only when the whole file was loaded (not truncated),
+ * decoded cleanly as UTF-8 (no replacement char), and read as UTF-8 — otherwise a
+ * save would lose or corrupt data, or change the file's encoding. */
 export function isEditableText(content: {
   kind: ViewerKind;
   truncated: boolean;
   text: string;
+  encoding?: string;
 }): boolean {
-  return content.kind === "text" && !content.truncated && !content.text.includes(REPLACEMENT_CHAR);
+  return (
+    content.kind === "text" &&
+    !content.truncated &&
+    !content.text.includes(REPLACEMENT_CHAR) &&
+    isUtf8Encoding(content.encoding)
+  );
 }

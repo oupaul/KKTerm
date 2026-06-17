@@ -36,6 +36,11 @@ argon2 = "0.5.3"
 github-copilot-sdk = { version = "1.0.0", default-features = false }
 rand = "0.9"
 base64 = "0.22"
+# Document Connection text decoding: encoding_rs is the standard (Firefox) decoder
+# and chardetng its companion charset detector, used for the file viewer's
+# Auto/named-encoding text reads. See file_viewer.rs::read_text.
+encoding_rs = "0.8"
+chardetng = "0.1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 portable-pty = "0.9.0"
 keyring-core = "1.0.0"

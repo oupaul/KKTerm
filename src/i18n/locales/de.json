@@ -3327,7 +3327,15 @@
       "save": "Speichern",
       "saving": "Wird gespeichert…",
       "discardConfirm": "Nicht gespeicherte Änderungen verwerfen?",
-      "saveConflictConfirm": "Diese Datei wurde auf dem Datenträger geändert, seit Sie sie geöffnet haben. Mit Ihren Änderungen überschreiben?"
+      "saveConflictConfirm": "Diese Datei wurde auf dem Datenträger geändert, seit Sie sie geöffnet haben. Mit Ihren Änderungen überschreiben?",
+      "textMenu": "Schrift & Kodierung",
+      "font": "Schriftart",
+      "fontDefault": "Standard (Monospace)",
+      "fontSize": "Größe",
+      "fontSizeDefault": "Standard",
+      "encoding": "Kodierung",
+      "encodingAuto": "Automatisch",
+      "encodingDetected": "Automatisch ({{label}})"
     }
   },
   "common": {

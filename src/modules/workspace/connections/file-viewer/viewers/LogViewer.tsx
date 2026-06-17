@@ -47,11 +47,14 @@ export function LogViewer({
   filePath,
   isActive,
   maxBytes,
+  encoding,
 }: {
   text: string;
   filePath: string;
   isActive: boolean;
   maxBytes: number;
+  /** `encoding_rs` label for follow/tail reads; omit (or `undefined`) to auto-detect. */
+  encoding?: string;
 }) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
@@ -71,7 +74,7 @@ export function LogViewer({
     const poll = async () => {
       try {
         const result = await invokeCommand("read_file_view_text", {
-          request: { path: filePath, maxBytes, fromEnd: true },
+          request: { path: filePath, maxBytes, fromEnd: true, encoding },
         });
         if (!disposed) {
           setLiveText(result.text);
@@ -87,7 +90,7 @@ export function LogViewer({
       disposed = true;
       window.clearInterval(handle);
     };
-  }, [follow, isActive, filePath, maxBytes]);
+  }, [follow, isActive, filePath, maxBytes, encoding]);
 
   const source = follow && liveText !== null ? liveText : text;
 

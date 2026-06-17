@@ -174,12 +174,7 @@ export function TextCodeViewer({
             }}
           />
         }
-        footer={
-          <>
-            {languageLabel ? <FootSeg>{languageLabel}</FootSeg> : null}
-            <FootSeg>UTF-8</FootSeg>
-          </>
-        }
+        footer={languageLabel ? <FootSeg>{languageLabel}</FootSeg> : null}
       />
       <div className="file-viewer-codemirror" ref={hostRef} />
     </>
