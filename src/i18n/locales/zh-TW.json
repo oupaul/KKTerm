@@ -3301,13 +3301,13 @@
         "pdf": "PDF"
       },
       "level": {
-        "error": "错误",
+        "error": "錯誤",
         "warn": "警告",
         "info": "資訊",
         "debug": "偵錯",
         "trace": "追蹤"
       },
-      "retry": "重试",
+      "retry": "重試",
       "pdfPage": "{{page}} / {{count}}",
       "dependencyNeededTitle": "預覽需要附加元件",
       "dependencyNeededBody": "預覽此檔案類型會使用 {{tool}}，這是 KKTerm 依需求下載的小型附加元件，而不是隨應用程式綑綁。",
