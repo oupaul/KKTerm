@@ -1164,6 +1164,9 @@ impl AgentProvider for CliAgentProvider {
                         json!({
                             "backend": backend,
                             "error": acp_error,
+                            "model": &model,
+                            "promptBytes": prompt.len(),
+                            "promptChars": prompt.chars().count(),
                         })
                     );
                     run_cli_agent_command(backend, &command, &model, &prompt)
@@ -1214,6 +1217,9 @@ impl AgentProvider for CliAgentProvider {
                         json!({
                             "backend": backend,
                             "error": acp_error,
+                            "model": &model,
+                            "promptBytes": prompt.len(),
+                            "promptChars": prompt.chars().count(),
                         })
                     );
                     let output = run_cli_agent_command(backend, &command, &model, &prompt)?;

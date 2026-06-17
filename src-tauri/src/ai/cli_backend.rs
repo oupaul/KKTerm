@@ -21,6 +21,14 @@ pub(crate) struct AcpStdioSession {
 
 impl AcpStdioSession {
     fn start(spec: &AcpCommandSpec) -> Result<Self, String> {
+        ai_interaction_debug!(
+            "agent.acp_start",
+            json!({
+                "label": spec.label,
+                "program": &spec.program,
+                "args": &spec.args,
+            })
+        );
         let mut child = Command::new(&spec.program);
         child
             .args(&spec.args)
@@ -670,42 +678,50 @@ pub(crate) fn run_cli_agent_command(
     model: &str,
     prompt: &str,
 ) -> Result<String, String> {
-    let output = match backend {
-        AiCliBackendKind::Codex => run_cli_capture(
-            command,
-            &[
-                CODEX_CLI_APPROVAL_FLAG,
-                CODEX_CLI_APPROVAL_NEVER,
-                "exec",
-                CODEX_CLI_IGNORE_USER_CONFIG_FLAG,
-                "--ephemeral",
-                "--sandbox",
-                "read-only",
-                "--skip-git-repo-check",
-                "--model",
-                model,
-                prompt,
-            ],
-            Some(COPILOT_SDK_RESPONSE_TIMEOUT),
+    let invocation = cli_agent_invocation(backend, model, prompt);
+    ai_interaction_debug!(
+        "agent.cli_oneshot_start",
+        json!({
+            "backend": backend,
+            "command": command,
+            "model": model,
+            "promptBytes": prompt.len(),
+            "promptChars": prompt.chars().count(),
+            "promptDelivery": invocation.prompt_delivery,
+            "argCount": invocation.args.len(),
+        })
+    );
+    let arg_refs = invocation
+        .args
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    let output_result = run_cli_capture_with_stdin(
+        command,
+        &arg_refs,
+        invocation.stdin.as_deref(),
+        Some(COPILOT_SDK_RESPONSE_TIMEOUT),
+    );
+    match &output_result {
+        Ok(output) => ai_interaction_debug!(
+            "agent.cli_oneshot_done",
+            json!({
+                "backend": backend,
+                "model": model,
+                "outputBytes": output.len(),
+                "outputChars": output.chars().count(),
+            })
         ),
-        AiCliBackendKind::ClaudeCode => run_cli_capture(
-            command,
-            &[
-                "-p",
-                "--output-format",
-                "text",
-                "--tools",
-                "",
-                "--permission-mode",
-                "plan",
-                "--no-session-persistence",
-                "--model",
-                model,
-                prompt,
-            ],
-            Some(COPILOT_SDK_RESPONSE_TIMEOUT),
+        Err(error) => ai_interaction_debug!(
+            "agent.cli_oneshot_error",
+            json!({
+                "backend": backend,
+                "model": model,
+                "error": error,
+            })
         ),
-    }?;
+    }
+    let output = output_result?;
     let trimmed = output.trim();
     if trimmed.is_empty() {
         return Err(format!(
@@ -719,18 +735,101 @@ pub(crate) fn run_cli_agent_command(
     Ok(trimmed.to_string())
 }
 
+pub(crate) struct CliAgentInvocation {
+    pub(crate) args: Vec<String>,
+    pub(crate) stdin: Option<String>,
+    pub(crate) prompt_delivery: &'static str,
+}
+
+pub(crate) fn cli_agent_invocation(
+    backend: AiCliBackendKind,
+    model: &str,
+    prompt: &str,
+) -> CliAgentInvocation {
+    match backend {
+        AiCliBackendKind::Codex => CliAgentInvocation {
+            args: vec![
+                CODEX_CLI_APPROVAL_FLAG.to_string(),
+                CODEX_CLI_APPROVAL_NEVER.to_string(),
+                "exec".to_string(),
+                CODEX_CLI_IGNORE_USER_CONFIG_FLAG.to_string(),
+                "--ephemeral".to_string(),
+                "--sandbox".to_string(),
+                "read-only".to_string(),
+                "--skip-git-repo-check".to_string(),
+                "--model".to_string(),
+                model.to_string(),
+                prompt.to_string(),
+            ],
+            stdin: None,
+            prompt_delivery: "argv",
+        },
+        AiCliBackendKind::ClaudeCode => CliAgentInvocation {
+            args: vec![
+                "-p".to_string(),
+                "--output-format".to_string(),
+                "text".to_string(),
+                "--tools".to_string(),
+                String::new(),
+                "--permission-mode".to_string(),
+                "plan".to_string(),
+                "--no-session-persistence".to_string(),
+                "--model".to_string(),
+                model.to_string(),
+                "Respond to the KKTerm assistant request provided on stdin.".to_string(),
+            ],
+            stdin: Some(prompt.to_string()),
+            prompt_delivery: "stdin",
+        },
+    }
+}
+
 pub(crate) fn run_cli_capture(
     command: &str,
     args: &[&str],
+    timeout: Option<Duration>,
+) -> Result<String, String> {
+    run_cli_capture_with_stdin(command, args, None, timeout)
+}
+
+pub(crate) fn run_cli_capture_with_stdin(
+    command: &str,
+    args: &[&str],
+    stdin: Option<&str>,
     _timeout: Option<Duration>,
 ) -> Result<String, String> {
     let (program, process_args) = cli_process_invocation(command, args);
     let mut cmd = Command::new(&program);
-    cmd.args(&process_args).stdin(Stdio::null());
+    cmd.args(&process_args)
+        .stdin(if stdin.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     crate::installer::proc::no_window(&mut cmd);
-    let output = cmd
-        .output()
+    let mut child = cmd
+        .spawn()
         .map_err(|error| format!("failed to start `{command}`: {error}"))?;
+    if let Some(input) = stdin {
+        let Some(mut child_stdin) = child.stdin.take() else {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!("failed to open `{command}` stdin"));
+        };
+        if let Err(error) = child_stdin
+            .write_all(input.as_bytes())
+            .and_then(|_| child_stdin.flush())
+        {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!("failed to write `{command}` stdin: {error}"));
+        }
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("failed to wait for `{command}`: {error}"))?;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     if !output.status.success() {

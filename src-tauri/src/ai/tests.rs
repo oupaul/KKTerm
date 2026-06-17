@@ -260,6 +260,26 @@
     }
 
     #[test]
+    fn claude_cli_agent_prompt_is_sent_over_stdin_not_argv() {
+        let prompt = "x".repeat(40_000);
+        let invocation =
+            cli_agent_invocation(AiCliBackendKind::ClaudeCode, "claude-opus-4.8", &prompt);
+
+        assert_eq!(invocation.prompt_delivery, "stdin");
+        assert_eq!(invocation.stdin.as_deref(), Some(prompt.as_str()));
+        assert!(
+            invocation.args.iter().all(|arg| arg.len() < 1_000),
+            "Claude fallback argv must stay small enough for Windows CreateProcess"
+        );
+        assert!(
+            invocation
+                .args
+                .iter()
+                .any(|arg| arg == "--no-session-persistence")
+        );
+    }
+
+    #[test]
     fn codex_cli_uses_documented_global_approval_flag() {
         assert_eq!(CODEX_CLI_APPROVAL_FLAG, "--ask-for-approval");
         assert_eq!(CODEX_CLI_APPROVAL_NEVER, "never");
