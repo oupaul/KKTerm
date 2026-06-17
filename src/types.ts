@@ -497,9 +497,11 @@ export interface SshSettings {
 }
 
 export type SftpOverwriteBehavior = "fail" | "overwrite";
+export type FileExplorerOpenMode = "external" | "inlineEditor";
 
 export interface SftpSettings {
   overwriteBehavior: SftpOverwriteBehavior;
+  fileExplorerOpenMode: FileExplorerOpenMode;
 }
 
 export interface UrlSettings {

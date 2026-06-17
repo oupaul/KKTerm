@@ -54,7 +54,7 @@ test("local file browser opens filesystem paths through the typed Tauri command"
   );
   assert.match(
     sftpSource,
-    /await openFilesystemPath\(joinLocalPath\(localPath, file\.name\)\)/,
-    "double-clicking a local SFTP/File Explorer file should use the shared filesystem opener",
+    /const path = joinLocalPath\(localPath, file\.name\);[\s\S]*await openFilesystemPath\(path\);/,
+    "double-clicking a local SFTP/File Explorer file should still fall back to the shared filesystem opener",
   );
 });

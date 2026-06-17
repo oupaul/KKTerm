@@ -120,6 +120,8 @@ export function SftpWorkspace({
 }) {
   const { t } = useTranslation();
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
+  const fileExplorerOpenMode = useWorkspaceStore((state) => state.sftpSettings.fileExplorerOpenMode);
+  const openFileViewerPath = useWorkspaceStore((state) => state.openFileViewerPath);
   const connection = tab.connection;
   const isLocalFilesBrowser = tab.kind === "localFiles";
   const commands = useMemo<FileBrowserCommands | null>(
@@ -1022,8 +1024,13 @@ export function SftpWorkspace({
       return;
     }
 
+    const path = joinLocalPath(localPath, file.name);
     try {
-      await openFilesystemPath(joinLocalPath(localPath, file.name));
+      if (isLocalFilesBrowser && fileExplorerOpenMode === "inlineEditor") {
+        openFileViewerPath(path, { sourceConnection: tab.connection });
+        return;
+      }
+      await openFilesystemPath(path);
     } catch (error) {
       setLocalStatus(error instanceof Error ? error.message : String(error));
     }
@@ -1668,7 +1675,13 @@ export function SftpWorkspace({
           onAddFavorite={addFavorite}
           onRemoveFavorite={removeFavorite}
           onReorderFavorites={reorderFavorites}
-          onOpenFavoriteFile={(path) => void openFilesystemPath(path)}
+          onOpenFavoriteFile={(path) => {
+            if (isLocalFilesBrowser && fileExplorerOpenMode === "inlineEditor") {
+              openFileViewerPath(path, { sourceConnection: tab.connection });
+              return;
+            }
+            void openFilesystemPath(path);
+          }}
           enableSearch
           showFooter
           availableBytes={isLocalDrivePicker ? undefined : localAvailableBytes}

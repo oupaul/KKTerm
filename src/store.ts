@@ -635,6 +635,20 @@ function toolbarTitleForConnection(connection: Connection) {
   return formatConnectionAddress(connection);
 }
 
+function fileNameFromPath(path: string) {
+  const normalized = path.trim().replace(/[\\/]+$/u, "");
+  return normalized.split(/[\\/]/u).pop()?.trim() ?? "";
+}
+
+function stableIdFromPath(path: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < path.length; index += 1) {
+    hash ^= path.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 function localTerminalToolbarTitle(connection: Connection) {
   const shell = connection.localShell?.trim();
   const normalizedShell = shell?.toLowerCase() ?? "";
@@ -1145,6 +1159,7 @@ interface WorkspaceState {
   openFtpBrowser: (connection: Connection) => void;
   openLocalFilesBrowser: (connection: Connection) => void;
   openFileViewer: (connection: Connection) => void;
+  openFileViewerPath: (path: string, options?: { sourceConnection?: Connection }) => void;
   openTerminalHere: (connection: Connection, remotePath: string) => void;
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openElevatedLocalTerminal: (option: LocalShellOption) => Promise<void>;
@@ -2137,6 +2152,45 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       title: connection.name,
       toolbarTitle: toolbarTitleForConnection(connection),
       subtitle: connection.localStartupDirectory || "",
+      kind: "fileViewer",
+      panes: [],
+      connection,
+    };
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+    }));
+  },
+  openFileViewerPath: (path, options) => {
+    const filePath = path.trim();
+    if (!filePath) {
+      return;
+    }
+    const name = fileNameFromPath(filePath) || i18next.t("connections.fileView");
+    const sourceConnection = options?.sourceConnection;
+    const connection: Connection = {
+      id: `inline-file-view-${stableIdFromPath(filePath)}`,
+      name,
+      host: "localhost",
+      user: "",
+      localStartupDirectory: filePath,
+      iconDataUrl: sourceConnection?.iconDataUrl ?? null,
+      iconBackgroundColor: sourceConnection?.iconBackgroundColor ?? null,
+      type: "fileView",
+      status: "idle",
+    };
+    const tabId = `tab-${connection.id}-fileView`;
+    const existingTab = get().tabs.find((tab) => tab.id === tabId);
+    if (existingTab) {
+      set({ activeTabId: existingTab.id });
+      return;
+    }
+    const tab: WorkspaceTab = {
+      id: tabId,
+      workspaceId: get().activeWorkspaceId,
+      title: connection.name,
+      toolbarTitle: toolbarTitleForConnection(connection),
+      subtitle: filePath,
       kind: "fileViewer",
       panes: [],
       connection,

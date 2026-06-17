@@ -111,6 +111,7 @@ export const defaultSshSettings: SshSettings = {
 
 export const defaultSftpSettings: SftpSettings = {
   overwriteBehavior: "fail",
+  fileExplorerOpenMode: "external",
 };
 
 export const defaultUrlSettings: UrlSettings = {

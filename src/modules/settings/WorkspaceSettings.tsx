@@ -3,30 +3,39 @@ import { SquareStack } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { GeneralSettings } from "../../types";
+import type { GeneralSettings, SftpSettings } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function WorkspaceSettings() {
   const { t } = useTranslation();
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
+  const sftpSettings = useWorkspaceStore((state) => state.sftpSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
+  const setSftpSettings = useWorkspaceStore((state) => state.setSftpSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
+  const [sftpDraft, setSftpDraft] = useState<SftpSettings>(sftpSettings);
   const hasChanges =
     draft.hideTopTabButtons !== generalSettings.hideTopTabButtons ||
     draft.doubleClickOpensConnection !== generalSettings.doubleClickOpensConnection ||
     draft.submitAiAttachmentsDirectly !== generalSettings.submitAiAttachmentsDirectly ||
     draft.separateSplitTerminalBackgrounds !== generalSettings.separateSplitTerminalBackgrounds ||
-    draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail;
+    draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail ||
+    sftpDraft.fileExplorerOpenMode !== sftpSettings.fileExplorerOpenMode;
 
   useEffect(() => {
     setDraft(generalSettings);
   }, [generalSettings]);
 
+  useEffect(() => {
+    setSftpDraft(sftpSettings);
+  }, [sftpSettings]);
+
   async function handleSave() {
     try {
       const currentSettings = useWorkspaceStore.getState().generalSettings;
+      const currentSftpSettings = useWorkspaceStore.getState().sftpSettings;
       const request = {
         ...currentSettings,
         hideTopTabButtons: draft.hideTopTabButtons,
@@ -35,11 +44,20 @@ export function WorkspaceSettings() {
         showConnectedConnectionsInRail: draft.showConnectedConnectionsInRail,
         submitAiAttachmentsDirectly: draft.submitAiAttachmentsDirectly,
       };
-      const saved = isTauriRuntime()
-        ? await invokeCommand("update_general_settings", { request })
-        : request;
+      const sftpRequest = {
+        ...currentSftpSettings,
+        fileExplorerOpenMode: sftpDraft.fileExplorerOpenMode,
+      };
+      const [saved, savedSftp] = isTauriRuntime()
+        ? await Promise.all([
+            invokeCommand("update_general_settings", { request }),
+            invokeCommand("update_sftp_settings", { request: sftpRequest }),
+          ])
+        : [request, sftpRequest];
       setGeneralSettings(saved);
+      setSftpSettings(savedSftp);
       setDraft(saved);
+      setSftpDraft(savedSftp);
       showStatusBarNotice(t("settings.workspaceSaved"), { tone: "success" });
     } catch (saveError) {
       showStatusBarNotice(
@@ -100,6 +118,28 @@ export function WorkspaceSettings() {
               <strong>{t("settings.doubleClickOpensConnection")}</strong>
               <small>{t("settings.doubleClickOpensConnectionDesc")}</small>
             </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.fileExplorer")}</legend>
+        <div className="form-grid">
+          <label>
+            <span>{t("settings.fileExplorerOpenMode")}</span>
+            <select
+              value={sftpDraft.fileExplorerOpenMode}
+              onChange={(event) =>
+                setSftpDraft((state) => ({
+                  ...state,
+                  fileExplorerOpenMode: event.target.value as SftpSettings["fileExplorerOpenMode"],
+                }))
+              }
+            >
+              <option value="external">{t("settings.fileExplorerOpenModeExternal")}</option>
+              <option value="inlineEditor">{t("settings.fileExplorerOpenModeInlineEditor")}</option>
+            </select>
+            <small className="field-hint">{t("settings.fileExplorerOpenModeHint")}</small>
           </label>
         </div>
       </fieldset>
