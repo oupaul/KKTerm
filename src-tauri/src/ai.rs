@@ -1867,7 +1867,12 @@ fn build_copilot_prompt(
         sections.push(file_sections.join("\n\n"));
     }
 
-    let history = compact_agent_history(provider_kind, model, request.messages);
+    let non_history_chars = sections
+        .iter()
+        .map(|section| section.chars().count() + 8)
+        .sum::<usize>()
+        + request.prompt.chars().count();
+    let history = compact_agent_history(provider_kind, model, request.messages, non_history_chars);
     if !history.messages.is_empty() {
         if history.omitted_messages > 0 {
             sections.push(history.compaction_notice());
@@ -5282,10 +5287,13 @@ const HISTORY_TOTAL_MIN_CHARS: usize = 8_000;
 const APPROX_CHARS_PER_TOKEN: usize = 4;
 const HISTORY_CONTEXT_FRACTION_NUMERATOR: usize = 35;
 const HISTORY_CONTEXT_FRACTION_DENOMINATOR: usize = 100;
+const CONTEXT_COMPACTION_TRIGGER_NUMERATOR: usize = 80;
+const CONTEXT_COMPACTION_TRIGGER_DENOMINATOR: usize = 100;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct AgentContextBudget {
     context_limit_tokens: usize,
+    compaction_trigger_chars: usize,
     history_total_max_chars: usize,
     history_message_max_chars: usize,
     approximate_limit: bool,
@@ -5301,7 +5309,7 @@ struct CompactedAgentHistory {
 impl CompactedAgentHistory {
     fn compaction_notice(&self) -> String {
         format!(
-            "Earlier conversation history was compacted: {} oldest message(s) were omitted before sending this request. Provider context limit estimate: {} tokens{}; retained history budget: {} chars.",
+            "Earlier conversation history was compacted: {} oldest message(s) were omitted before sending this request. Provider context limit estimate: {} tokens{}; compaction trigger: {} chars; retained history budget: {} chars.",
             self.omitted_messages,
             self.budget.context_limit_tokens,
             if self.budget.approximate_limit {
@@ -5309,6 +5317,7 @@ impl CompactedAgentHistory {
             } else {
                 ""
             },
+            self.budget.compaction_trigger_chars,
             self.budget.history_total_max_chars
         )
     }
@@ -5317,12 +5326,16 @@ impl CompactedAgentHistory {
 fn agent_context_budget(provider_kind: &str, model: &str) -> AgentContextBudget {
     let (context_limit_tokens, approximate_limit) =
         model_context_limit_tokens(provider_kind, model);
+    let compaction_trigger_chars = (context_limit_tokens * CONTEXT_COMPACTION_TRIGGER_NUMERATOR
+        / CONTEXT_COMPACTION_TRIGGER_DENOMINATOR)
+        * APPROX_CHARS_PER_TOKEN;
     let history_total_max_chars = ((context_limit_tokens * HISTORY_CONTEXT_FRACTION_NUMERATOR
         / HISTORY_CONTEXT_FRACTION_DENOMINATOR)
         * APPROX_CHARS_PER_TOKEN)
         .clamp(HISTORY_TOTAL_MIN_CHARS, HISTORY_TOTAL_MAX_CHARS);
     AgentContextBudget {
         context_limit_tokens,
+        compaction_trigger_chars,
         history_total_max_chars,
         history_message_max_chars: HISTORY_MESSAGE_MAX_CHARS.min(history_total_max_chars),
         approximate_limit,
@@ -5407,16 +5420,27 @@ fn model_context_limit_tokens(provider_kind: &str, model: &str) -> (usize, bool)
 /// message to the per-message cap first. The newest message is always kept.
 #[cfg(test)]
 fn bounded_history(history: Vec<AgentChatMessage>) -> Vec<AgentChatMessage> {
-    compact_agent_history("openai-compatible", "", history).messages
+    compact_agent_history("openai-compatible", "", history, 0).messages
 }
 
 fn compact_agent_history(
     provider_kind: &str,
     model: &str,
     history: Vec<AgentChatMessage>,
+    non_history_chars: usize,
 ) -> CompactedAgentHistory {
     let budget = agent_context_budget(provider_kind, model);
     let original_messages = history.len();
+    let estimated_history_chars = estimate_agent_history_chars(&history);
+    let estimated_request_chars = non_history_chars.saturating_add(estimated_history_chars);
+    if estimated_request_chars <= budget.compaction_trigger_chars {
+        return CompactedAgentHistory {
+            messages: history,
+            omitted_messages: 0,
+            budget,
+        };
+    }
+
     let mut total = 0usize;
     let mut kept: Vec<AgentChatMessage> = Vec::new();
     for mut message in history.into_iter().rev() {
@@ -5444,8 +5468,12 @@ fn compact_agent_history(
                 "model": model,
                 "contextLimitTokens": budget.context_limit_tokens,
                 "contextLimitApproximate": budget.approximate_limit,
+                "compactionTriggerChars": budget.compaction_trigger_chars,
                 "historyTotalMaxChars": budget.history_total_max_chars,
                 "historyMessageMaxChars": budget.history_message_max_chars,
+                "estimatedRequestChars": estimated_request_chars,
+                "estimatedNonHistoryChars": non_history_chars,
+                "estimatedHistoryChars": estimated_history_chars,
                 "originalMessages": original_messages,
                 "retainedMessages": kept.len(),
                 "omittedMessages": omitted_messages,
@@ -5456,6 +5484,66 @@ fn compact_agent_history(
         messages: kept,
         omitted_messages,
         budget,
+    }
+}
+
+fn estimate_agent_history_chars(history: &[AgentChatMessage]) -> usize {
+    history
+        .iter()
+        .map(|message| {
+            message.role.chars().count()
+                + message.content.chars().count()
+                + message
+                    .reasoning_content
+                    .as_deref()
+                    .map(|reasoning| reasoning.chars().count())
+                    .unwrap_or(0)
+                + agent_tool_transcript(&message.tool_calls)
+                    .map(|transcript| transcript.chars().count())
+                    .unwrap_or(0)
+                + 4
+        })
+        .sum()
+}
+
+fn estimate_agent_request_non_history_chars(
+    system_instructions: &[String],
+    prompt: &str,
+    context_label: &str,
+    reasoning_effort: &str,
+    system_context: Option<&str>,
+    selected_output: Option<&str>,
+    page_context: Option<&AgentPageContext>,
+) -> usize {
+    let system_chars: usize = system_instructions
+        .iter()
+        .map(|instruction| instruction.chars().count() + 1)
+        .sum();
+    system_chars
+        + prompt.chars().count()
+        + context_label.chars().count()
+        + reasoning_effort.chars().count()
+        + system_context
+            .map(|context| truncated_prompt_section_char_count(context, 12_000))
+            .unwrap_or(0)
+        + selected_output
+            .map(|output| truncated_prompt_section_char_count(output, 16_000))
+            .unwrap_or(0)
+        + page_context
+            .map(|context| {
+                context.source_label.chars().count()
+                    + truncated_prompt_section_char_count(&context.text, 12_000)
+            })
+            .unwrap_or(0)
+}
+
+fn truncated_prompt_section_char_count(value: &str, max_chars: usize) -> usize {
+    let value = value.trim();
+    let count = value.chars().count();
+    if count <= max_chars {
+        count
+    } else {
+        max_chars + "\n[truncated]".chars().count()
     }
 }
 
@@ -5522,7 +5610,6 @@ fn build_agent_messages_for_provider(
     recalled_memories: Vec<String>,
 ) -> Vec<OpenAiCompatibleMessage> {
     let normalized_intent = normalize_agent_intent(intent);
-    let history = compact_agent_history(provider_kind, model, history);
     let mut system_instructions: Vec<String> = vec![
         "You are KKTerm's AI Assistant for local-first administration workflows.".to_string(),
         "Help with terminal, SSH, SFTP, URL, RDP, and VNC operational tasks.".to_string(),
@@ -5592,6 +5679,16 @@ fn build_agent_messages_for_provider(
     if normalized_intent == AgentIntent::Watchdog {
         system_instructions.push(watchdog_intent_contract());
     }
+    let non_history_chars = estimate_agent_request_non_history_chars(
+        &system_instructions,
+        &prompt,
+        &context_label,
+        &reasoning_effort,
+        system_context.as_deref(),
+        selected_output.as_deref(),
+        page_context.as_ref(),
+    );
+    let history = compact_agent_history(provider_kind, model, history, non_history_chars);
     if history.omitted_messages > 0 {
         system_instructions.push(history.compaction_notice());
     }

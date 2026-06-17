@@ -937,7 +937,32 @@ pub(crate) fn build_cli_agent_prompt(
         normalize_agent_intent(request.intent).as_str(),
         settings.reasoning_effort()
     ));
-    let history = compact_agent_history(provider_kind, settings.model(), request.messages);
+    let non_history_chars = out.chars().count()
+        + prompt.chars().count()
+        + request
+            .system_context
+            .as_deref()
+            .map(|context| truncated_prompt_section_char_count(context, 12_000))
+            .unwrap_or(0)
+        + request
+            .selected_output
+            .as_deref()
+            .map(|output| truncated_prompt_section_char_count(output, 16_000))
+            .unwrap_or(0)
+        + request
+            .page_context
+            .as_ref()
+            .map(|context| {
+                context.source_label.chars().count()
+                    + truncated_prompt_section_char_count(&context.text, 12_000)
+            })
+            .unwrap_or(0);
+    let history = compact_agent_history(
+        provider_kind,
+        settings.model(),
+        request.messages,
+        non_history_chars,
+    );
     if !history.messages.is_empty() {
         if history.omitted_messages > 0 {
             out.push_str(&history.compaction_notice());

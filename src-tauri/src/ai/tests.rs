@@ -901,8 +901,9 @@ fn bounded_history_keeps_newest_messages_within_budget() {
     let total: usize = kept.iter().map(|m| m.content.chars().count()).sum();
     assert!(total <= HISTORY_TOTAL_MAX_CHARS);
 
-    // A single oversized message is truncated but never dropped.
-    let kept = bounded_history(vec![turn("y".repeat(100_000))]);
+    // A single oversized message is truncated after the request crosses the
+    // compaction trigger, but the newest message is never dropped.
+    let kept = bounded_history(vec![turn("y".repeat(200_000))]);
     assert_eq!(kept.len(), 1);
     assert!(kept[0].content.chars().count() <= HISTORY_MESSAGE_MAX_CHARS + 20);
     assert!(kept[0].content.ends_with("[truncated]"));
@@ -910,6 +911,55 @@ fn bounded_history_keeps_newest_messages_within_budget() {
 
 #[test]
 fn cli_agent_prompt_compacts_old_history_and_keeps_newest_turns() {
+    let settings: AiProviderSettings = serde_json::from_value(json!({
+        "baseUrl": "https://api.openai.com/v1",
+        "model": "gpt-4"
+    }))
+    .expect("provider settings deserialize");
+    let history: Vec<AgentChatMessage> = (0..20)
+        .map(|i| AgentChatMessage {
+            role: "user".to_string(),
+            content: format!(
+                "{} {}",
+                if i == 0 {
+                    "oldest-marker"
+                } else if i == 19 {
+                    "newest-marker"
+                } else {
+                    "middle-marker"
+                },
+                "x".repeat(7_000)
+            ),
+            reasoning_content: None,
+            tool_calls: Vec::new(),
+        })
+        .collect();
+    let request = AgentRunRequest {
+        prompt: "continue".to_string(),
+        context_label: "Workspace".to_string(),
+        intent: Some("chat".to_string()),
+        allow_tools: true,
+        allowed_tools: Vec::new(),
+        selected_output: None,
+        screenshot: None,
+        screenshots: Vec::new(),
+        files: Vec::new(),
+        system_context: None,
+        messages: history,
+        output_language: None,
+        page_context: None,
+        active_connection_id: None,
+    };
+
+    let prompt = build_cli_agent_prompt("openai", &settings, request).expect("prompt builds");
+
+    assert!(prompt.contains("Earlier conversation history was compacted"));
+    assert!(!prompt.contains("oldest-marker"));
+    assert!(prompt.contains("newest-marker"));
+}
+
+#[test]
+fn cli_agent_prompt_preserves_history_below_large_model_context_trigger() {
     let settings: AiProviderSettings = serde_json::from_value(json!({
         "baseUrl": "https://api.anthropic.com",
         "model": "claude-opus-4.8"
@@ -952,8 +1002,8 @@ fn cli_agent_prompt_compacts_old_history_and_keeps_newest_turns() {
 
     let prompt = build_cli_agent_prompt("anthropic", &settings, request).expect("prompt builds");
 
-    assert!(prompt.contains("Earlier conversation history was compacted"));
-    assert!(!prompt.contains("oldest-marker"));
+    assert!(!prompt.contains("Earlier conversation history was compacted"));
+    assert!(prompt.contains("oldest-marker"));
     assert!(prompt.contains("newest-marker"));
 }
 
