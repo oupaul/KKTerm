@@ -78,9 +78,10 @@ invisible. This has bitten us several times (most recently
    `shipped_catalog_parses_and_validates` Rust test guards the schema.
    Because the catalog is `include_str!`-embedded, this requires a Rust
    rebuild to take effect at runtime.
-2. **`src/modules/installer/InstallerPage.tsx`** — add the recipe `id`
+2. **`src/modules/installer/sections.ts`** — add the recipe `id`
    to the matching section's `ids` array in
-   `INSTALLER_CATEGORY_SECTIONS`. **This is the step that actually makes
+   `INSTALLER_CATEGORY_SECTIONS` (consumed by `InstallerPage.tsx`).
+   **This is the step that actually makes
    the tool visible.** `groupRecipes` builds its `visibleIds` set from
    the union of these arrays and skips any recipe not present, so it
    also gates update detection. Forgetting this is the classic

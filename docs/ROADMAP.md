@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Quick snapshot as of June 2, 2026:
+Quick snapshot as of June 17, 2026:
 
-All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Installer Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.54 and releasing continuously.
+All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Installer Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.85 and releasing continuously.
 
 Release validation gates are documented in `AGENTS.md` and `docs/RELEASE.md`; run the full suite before significant code changes or release publication. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
 
@@ -80,7 +80,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 ### AI Assistant
 
 - [x] AI Assistant panel with streaming chat and OpenAI-compatible runtime.
-- [x] Provider registry: OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, and generic endpoints.
+- [x] Provider registry: OpenAI, Anthropic, OpenRouter, DeepSeek, Gemini, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, OpenCode, and generic endpoints.
 - [x] API keys stored in OS keychain; provider-specific model selector with custom model ID field.
 - [x] Command proposal flow with explicit approval before execution.
 - [x] Screenshot capture to clipboard and transient AI context (full surface, partial area, and region).
@@ -102,7 +102,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 - [x] Dashboard Module: SQLite-backed views/instances/AI Created Widgets, three visual presets (`panel`, `ambient`, `hero`), per-widget accent/icon/title customization, drag-and-drop layout via `react-grid-layout`, dynamic backgrounds.
 - [x] Two-kind widget model: `builtIn` and `script` with `iframe srcdoc` script hosting.
-- [x] Built-in widgets: App Launcher (local app/shortcut/script/file entries), Connection (embedded SSH/RDP/VNC/SFTP surfaces), Notes (sticky note), and AI Coding Usage (Codex / Claude Code quota).
+- [x] Built-in widgets: App Launcher (local app/shortcut/script/file entries), Connection (embedded SSH/RDP/VNC/SFTP surfaces), Notes (sticky note), AI Coding Usage (Codex / Claude Code quota), Network Tools (subnet / DNS / speedtest / ping / whois tabs), Generators (QR / cron / password / time / hash tabs), and Converters (unit / currency tabs).
 - [x] AI Created script widgets.
 
 ### Installer Helper
