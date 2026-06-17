@@ -78,6 +78,28 @@ impl SqliteSecretStore {
         Ok(count > 0)
     }
 
+    pub(super) fn secret_exists_without_password(
+        db_path: &std::path::Path,
+        reference: &SecretReference,
+    ) -> Result<bool, String> {
+        let connection = Connection::open(db_path).map_err(|error| {
+            format!(
+                "Could not open encrypted SQLite secret store {}: {error}",
+                db_path.display()
+            )
+        })?;
+        let count: i64 = connection
+            .query_row(
+                "SELECT COUNT(1) FROM encrypted_secret_store_entries WHERE secret_key = ?1",
+                params![storage_key(&reference.key())],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|error| format!("Could not query encrypted SQLite secret store: {error}"))?
+            .unwrap_or(0);
+        Ok(count > 0)
+    }
+
     pub(super) fn initialize_or_verify(&self, create_if_missing: bool) -> Result<(), String> {
         let sentinel_key = storage_key(SENTINEL_KEY);
         if self.exists_by_key(&sentinel_key)? {

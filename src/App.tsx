@@ -42,12 +42,8 @@ import {
 import { ariaHidden } from "./lib/aria";
 import { currentPlatform, supportsInstallerHelper } from "./lib/platform";
 import { useBootstrapSettings } from "./lib/settings";
-import {
-  CREDENTIAL_UNLOCK_REQUIRED_EVENT,
-  invokeCommand,
-  isTauriRuntime,
-} from "./lib/tauri";
-import { shouldPromptForEncryptedFileSetup } from "./modules/settings/credentialStorageModel";
+import { CREDENTIAL_UNLOCK_REQUIRED_EVENT, invokeCommand } from "./lib/tauri";
+import { EncryptedSecretStoreDialog } from "./modules/settings/EncryptedSecretStoreDialog";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import type { SettingsAssistantContext } from "./modules/settings/settingsAssistantContext";
 import type { SettingsSectionId } from "./modules/settings/settingsAssistantContext";
@@ -78,8 +74,11 @@ function App() {
   const previousBasePageRef = useRef<"workspace" | "dashboard" | "installer">(
     launchPageRef.current,
   );
-  const activePageRef = useRef<ActivePage>(activePage);
-  const encryptedFileAutoPromptCheckedRef = useRef(false);
+  const [credentialUnlockDialogOpen, setCredentialUnlockDialogOpen] = useState(false);
+  const [credentialUnlockStoreExists, setCredentialUnlockStoreExists] =
+    useState<boolean | undefined>(undefined);
+  const [credentialUnlockBusy, setCredentialUnlockBusy] = useState(false);
+  const [credentialUnlockError, setCredentialUnlockError] = useState<string | null>(null);
 
   function isOverlayPage(page: ActivePage): page is "settings" {
     return page === "settings";
@@ -199,16 +198,12 @@ function App() {
   });
 
   useEffect(() => {
-    activePageRef.current = activePage;
-  }, [activePage]);
-
-  useEffect(() => {
     function openCredentialUnlockPrompt() {
-      setActiveSettingsSectionId("credentials-settings");
-      if (activePageRef.current !== "settings") {
-        previousBasePageRef.current = activePageRef.current;
-      }
-      setActivePage("settings");
+      setCredentialUnlockError(null);
+      setCredentialUnlockDialogOpen(true);
+      void invokeCommand("credential_secret_store_status", undefined)
+        .then((status) => setCredentialUnlockStoreExists(status.encryptedStoreExists))
+        .catch(() => setCredentialUnlockStoreExists(undefined));
     }
 
     window.addEventListener(CREDENTIAL_UNLOCK_REQUIRED_EVENT, openCredentialUnlockPrompt);
@@ -217,39 +212,24 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (
-      encryptedFileAutoPromptCheckedRef.current ||
-      !generalSettingsReady ||
-      !isTauriRuntime()
-    ) {
-      return;
+  async function configureCredentialUnlockStore(request: {
+    password: string;
+    createIfMissing: boolean;
+    resetExisting?: boolean;
+  }) {
+    try {
+      setCredentialUnlockBusy(true);
+      setCredentialUnlockError(null);
+      await invokeCommand("configure_encrypted_file_secret_store", { request });
+      setCredentialUnlockDialogOpen(false);
+      setCredentialUnlockStoreExists(true);
+      window.dispatchEvent(new CustomEvent("kkterm:credential-store-status-changed"));
+    } catch (error) {
+      setCredentialUnlockError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCredentialUnlockBusy(false);
     }
-    encryptedFileAutoPromptCheckedRef.current = true;
-    void (async () => {
-      try {
-        const [credentialSettings, secretStatus] = await Promise.all([
-          invokeCommand("get_credential_settings", undefined),
-          invokeCommand("keychain_status", undefined),
-        ]);
-        if (
-          shouldPromptForEncryptedFileSetup({
-            platform: currentPlatform(),
-            selectedStore: credentialSettings.secretStore,
-            secretStatus,
-          })
-        ) {
-          setActiveSettingsSectionId("credentials-settings");
-          if (activePageRef.current !== "settings") {
-            previousBasePageRef.current = activePageRef.current;
-          }
-          setActivePage("settings");
-        }
-      } catch {
-        // Credentials Settings will surface backend errors when opened manually.
-      }
-    })();
-  }, [generalSettingsReady]);
+  }
 
   function assistantPageContext() {
     if (activePage === "dashboard") {
@@ -386,6 +366,21 @@ function App() {
         onDismiss={() => setTutorialHighlightRequest(undefined)}
         request={tutorialHighlightRequest}
       />
+      {credentialUnlockDialogOpen ? (
+        <EncryptedSecretStoreDialog
+          busy={credentialUnlockBusy}
+          encryptedStoreExists={credentialUnlockStoreExists}
+          error={credentialUnlockError}
+          initialMode={credentialUnlockStoreExists === false ? "create" : "unlock"}
+          launchPrompt={false}
+          platform={currentPlatform()}
+          onCancel={() => {
+            setCredentialUnlockDialogOpen(false);
+            setCredentialUnlockError(null);
+          }}
+          onSubmit={configureCredentialUnlockStore}
+        />
+      ) : null}
       {statusBarEnabled ? (
         <StatusBar
           key="status-bar"

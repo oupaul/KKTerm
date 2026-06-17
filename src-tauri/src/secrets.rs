@@ -33,6 +33,16 @@ pub struct KeychainStatus {
     encrypted_store_exists: bool,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CredentialSecretStoreStatus {
+    selected_store: String,
+    backend: String,
+    available: bool,
+    encrypted_store_exists: bool,
+    unlocked: bool,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigureEncryptedFileSecretStoreRequest {
@@ -299,6 +309,46 @@ impl Secrets {
         }
     }
 
+    pub fn credential_secret_store_status(&self) -> CredentialSecretStoreStatus {
+        let state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        CredentialSecretStoreStatus {
+            selected_store: state.selected_store.clone(),
+            backend: state
+                .backend
+                .clone()
+                .or_else(|| state.init_error.clone())
+                .unwrap_or_else(|| "Secret store unavailable".to_string()),
+            available: state.backend.is_some(),
+            encrypted_store_exists: SqliteSecretStore::store_exists(&self.db_path)
+                .unwrap_or(false),
+            unlocked: state.selected_store == "file" && state.store.is_some(),
+        }
+    }
+
+    pub fn lock_encrypted_file_store(&self) -> Result<CredentialSecretStoreStatus, String> {
+        let _guard = self.lock()?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "secret store state lock is poisoned".to_string())?;
+        if state.selected_store == "file" {
+            *state = SecretStoreState {
+                store: None,
+                backend: None,
+                init_error: Some(
+                    "Encrypted SQLite secret store is locked until the master password is entered"
+                        .to_string(),
+                ),
+                selected_store: "file".to_string(),
+            };
+        }
+        drop(state);
+        Ok(self.credential_secret_store_status())
+    }
+
     pub fn set_secret_store(&self, secret_store: &str) -> Result<KeychainStatus, String> {
         let _guard = self.lock()?;
         let requested = secret_store.trim().to_lowercase();
@@ -379,6 +429,21 @@ impl Secrets {
     pub fn secret_exists(&self, request: SecretReferenceRequest) -> Result<SecretPresence, String> {
         let reference = SecretReference::new(request.kind, request.owner_id)?;
         let _guard = self.lock()?;
+
+        {
+            let state = self
+                .state
+                .lock()
+                .map_err(|_| "secret store state lock is poisoned".to_string())?;
+            if state.selected_store == "file" && state.store.is_none() {
+                return Ok(SecretPresence {
+                    exists: SqliteSecretStore::secret_exists_without_password(
+                        &self.db_path,
+                        &reference,
+                    )?,
+                });
+            }
+        }
 
         Ok(SecretPresence {
             exists: self.with_store(|store| store.exists(&reference))?,
@@ -908,6 +973,49 @@ mod tests {
                 })
                 .expect("presence check succeeds")
                 .exists()
+        );
+    }
+
+    #[test]
+    fn locked_encrypted_sqlite_store_allows_presence_checks_without_secret_reads() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let path = temp_dir.path().join("kkterm.sqlite3");
+        crate::storage::Storage::open(path.clone()).expect("storage opens");
+        let secrets = Secrets::new("os", path);
+
+        secrets
+            .configure_encrypted_file_store(ConfigureEncryptedFileSecretStoreRequest {
+                password: "master-password".to_string(),
+                create_if_missing: true,
+                reset_existing: false,
+            })
+            .expect("encrypted sqlite store is created");
+        secrets
+            .store_secret(StoreSecretRequest {
+                kind: SecretKind::ConnectionPassword,
+                owner_id: "locked-presence-check".to_string(),
+                secret: "still-encrypted".to_string(),
+            })
+            .expect("secret is stored");
+
+        let status = secrets
+            .lock_encrypted_file_store()
+            .expect("encrypted store can be locked");
+        assert!(!status.unlocked);
+        assert!(
+            secrets
+                .secret_exists(SecretReferenceRequest {
+                    kind: SecretKind::ConnectionPassword,
+                    owner_id: "locked-presence-check".to_string(),
+                })
+                .expect("presence check uses metadata")
+                .exists()
+        );
+        assert!(
+            secrets
+                .read_connection_password("locked-presence-check".to_string())
+                .expect_err("secret reads still require unlock")
+                .contains("locked")
         );
     }
 }

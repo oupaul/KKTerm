@@ -332,6 +332,14 @@ export interface ConfigureEncryptedFileSecretStoreResult {
   status: KeychainStatus;
 }
 
+export interface CredentialSecretStoreStatus {
+  selectedStore: SecretStoreKind;
+  backend: string;
+  available: boolean;
+  encryptedStoreExists: boolean;
+  unlocked: boolean;
+}
+
 export type AppLauncherLaunchMode = "normal" | "admin" | "differentUser" | "openFolder";
 export type AppLauncherViewMode = "icons" | "list" | "details";
 export type AppLauncherSortField = "name" | "path" | "type" | "size" | "modified";

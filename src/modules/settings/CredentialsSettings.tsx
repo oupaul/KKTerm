@@ -22,7 +22,6 @@ import {
   encryptedSecretStoreInitialMode,
   normalizeAvailableSecretStores,
   normalizeSecretStoreKind,
-  shouldPromptForEncryptedFileSetup,
 } from "./credentialStorageModel";
 import { groupCredentialsByKind, groupCredentialsForSettings } from "./credentialGroups";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
@@ -79,10 +78,8 @@ export function CredentialsSettings() {
   const [secretStatus, setSecretStatus] = useState<KeychainStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [encryptedStoreDialogOpen, setEncryptedStoreDialogOpen] = useState(false);
-  const [encryptedStoreLaunchPrompt, setEncryptedStoreLaunchPrompt] = useState(false);
   const [encryptedStoreBusy, setEncryptedStoreBusy] = useState(false);
   const [encryptedStoreError, setEncryptedStoreError] = useState<string | null>(null);
-  const [dismissedLaunchPrompt, setDismissedLaunchPrompt] = useState(false);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(credentialSettings);
 
   const { storedCredentials, widgetCredentials } = useMemo(
@@ -137,28 +134,6 @@ export function CredentialsSettings() {
     setDraft(credentialSettings);
   }, [credentialSettings]);
 
-  useEffect(() => {
-    if (
-      !dismissedLaunchPrompt &&
-      !encryptedStoreDialogOpen &&
-      shouldPromptForEncryptedFileSetup({
-        platform,
-        selectedStore: normalizeSecretStoreKind(credentialSettings.secretStore),
-        secretStatus,
-      })
-    ) {
-      setEncryptedStoreLaunchPrompt(true);
-      setEncryptedStoreError(null);
-      setEncryptedStoreDialogOpen(true);
-    }
-  }, [
-    credentialSettings.secretStore,
-    dismissedLaunchPrompt,
-    encryptedStoreDialogOpen,
-    platform,
-    secretStatus,
-  ]);
-
   async function handleSave() {
     try {
       const saved = isTauriRuntime()
@@ -200,8 +175,6 @@ export function CredentialsSettings() {
       setDraft(result.settings);
       setSecretStatus(result.status);
       setEncryptedStoreDialogOpen(false);
-      setEncryptedStoreLaunchPrompt(false);
-      setDismissedLaunchPrompt(false);
       showStatusBarNotice(t("settings.encryptedSecretStoreConfigured"), { tone: "success" });
       await load();
     } catch (error) {
@@ -212,16 +185,11 @@ export function CredentialsSettings() {
   }
 
   function closeEncryptedStoreDialog() {
-    if (encryptedStoreLaunchPrompt) {
-      setDismissedLaunchPrompt(true);
-    }
     setEncryptedStoreDialogOpen(false);
     setEncryptedStoreError(null);
-    setEncryptedStoreLaunchPrompt(false);
   }
 
-  function openEncryptedStoreDialog({ launchPrompt = false }: { launchPrompt?: boolean } = {}) {
-    setEncryptedStoreLaunchPrompt(launchPrompt);
+  function openEncryptedStoreDialog() {
     setEncryptedStoreError(null);
     setEncryptedStoreDialogOpen(true);
   }
@@ -402,7 +370,7 @@ export function CredentialsSettings() {
           initialMode={encryptedSecretStoreInitialMode({
             encryptedStoreExists: secretStatus?.encryptedStoreExists,
           })}
-          launchPrompt={encryptedStoreLaunchPrompt}
+          launchPrompt={false}
           platform={platform}
           onCancel={closeEncryptedStoreDialog}
           onSubmit={configureEncryptedStore}

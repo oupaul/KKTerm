@@ -1432,6 +1432,20 @@ fn keychain_status(secrets: tauri::State<'_, secrets::Secrets>) -> secrets::Keyc
 }
 
 #[tauri::command]
+fn credential_secret_store_status(
+    secrets: tauri::State<'_, secrets::Secrets>,
+) -> secrets::CredentialSecretStoreStatus {
+    secrets.credential_secret_store_status()
+}
+
+#[tauri::command]
+fn lock_encrypted_file_secret_store(
+    secrets: tauri::State<'_, secrets::Secrets>,
+) -> Result<secrets::CredentialSecretStoreStatus, String> {
+    secrets.lock_encrypted_file_store()
+}
+
+#[tauri::command]
 fn get_performance_snapshot(
     performance: tauri::State<'_, performance::PerformanceMonitor>,
 ) -> performance::PerformanceSnapshot {
@@ -3361,6 +3375,8 @@ pub fn run() {
             ai_coding_usage::ai_coding_usage_disconnect,
             // ── Keychain, performance, diagnostics, power & tray
             keychain_status,
+            credential_secret_store_status,
+            lock_encrypted_file_secret_store,
             get_performance_snapshot,
             get_host_usage_snapshot,
             get_system_performance_counters,

@@ -2224,8 +2224,8 @@ button.dashboard-pill-dot:focus-visible {
   padding: 40px 24px;
   overflow: auto;
   background: color-mix(in srgb, var(--app-bg) 60%, transparent);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(1px);
+  backdrop-filter: blur(1px);
 }
 
 .dw-catalog {

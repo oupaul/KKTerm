@@ -20,6 +20,7 @@ import type {
   ConfigureEncryptedFileSecretStoreRequest,
   ConfigureEncryptedFileSecretStoreResult,
   CredentialSettings,
+  CredentialSecretStoreStatus,
   Connection,
   ConnectionPasswordCredentialSummary,
   ConnectionFolder,
@@ -1136,6 +1137,14 @@ type CommandMap = {
   configure_encrypted_file_secret_store: {
     args: { request: ConfigureEncryptedFileSecretStoreRequest };
     result: ConfigureEncryptedFileSecretStoreResult;
+  };
+  credential_secret_store_status: {
+    args: undefined;
+    result: CredentialSecretStoreStatus;
+  };
+  lock_encrypted_file_secret_store: {
+    args: undefined;
+    result: CredentialSecretStoreStatus;
   };
   get_app_launcher_settings: {
     args: undefined;

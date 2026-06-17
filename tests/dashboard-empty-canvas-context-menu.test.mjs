@@ -9,7 +9,7 @@ test("Dashboard empty-canvas context menu exposes add-widget and edit-mode short
   assert.match(canvas, /onOpenCatalog: \(\) => void;/);
   assert.match(canvas, /onToggleEditMode: \(\) => void;/);
   assert.match(canvas, /label: t\("dashboard\.addWidgetLabel"\), action: onOpenCatalog/);
-  assert.match(canvas, /label: t\("dashboard\.editLayout"\), action: onToggleEditMode/);
+  assert.match(canvas, /label: editMode \? t\("dashboard\.editDone"\) : t\("dashboard\.editLayout"\), action: onToggleEditMode/);
   assert.match(canvas, /label: t\("dashboard\.changeBackground"\), action: onOpenBackground/);
   assert.match(page, /onOpenCatalog=\{\(\) => setCatalogOpen\(true\)\}/);
   assert.match(page, /onToggleEditMode=\{toggleEditMode\}/);

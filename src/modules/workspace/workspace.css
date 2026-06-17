@@ -349,6 +349,14 @@
   color: var(--green);
 }
 
+.credential-store-status.is-locked {
+  color: var(--notice-warning);
+}
+
+.credential-store-status.is-unlocked {
+  color: var(--green);
+}
+
 .status-bar-x-server-running {
   color: var(--accent);
 }

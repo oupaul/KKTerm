@@ -6,12 +6,14 @@ import {
   Coffee,
   Cpu,
   Info,
+  Lock,
   LoaderCircle,
   MemoryStick,
   TriangleAlert,
+  Unlock,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { RailTooltip } from "../../app/RailTooltip";
@@ -20,7 +22,9 @@ import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-u
 import { InstallerStatusSummary } from "../installer/InstallerStatusSummary";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
-import type { StatusBarNotice } from "../../types";
+import type { CredentialSecretStoreStatus, StatusBarNotice } from "../../types";
+import { currentPlatform } from "../../lib/platform";
+import { EncryptedSecretStoreDialog } from "../settings/EncryptedSecretStoreDialog";
 import { WatchdogStatusBar } from "../../watchdog/WatchdogStatusBar";
 
 const NOTIFICATION_FADE_MS = 220;
@@ -106,6 +110,7 @@ export function StatusBar({
       <div className="status-bar-actions">
         <WatchdogStatusBar />
         <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />
+        <CredentialStoreStatusButton />
         <XServerStatusIcon />
         <DontSleepStatusIcon />
       </div>
@@ -181,6 +186,123 @@ function StatusNoticeIcon({ tone }: { tone: "success" | "info" | "warning" | "er
     default:
       return <Info size={21} strokeWidth={2.2} />;
   }
+}
+
+function CredentialStoreStatusButton() {
+  const { t } = useTranslation();
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const [status, setStatus] = useState<CredentialSecretStoreStatus | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshStatus = useCallback(async () => {
+    if (!isTauriRuntime()) {
+      setStatus(null);
+      return;
+    }
+    try {
+      setStatus(await invokeCommand("credential_secret_store_status", undefined));
+    } catch {
+      setStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshStatus();
+    const handleStatusChanged = () => {
+      void refreshStatus();
+    };
+    window.addEventListener("kkterm:credential-store-status-changed", handleStatusChanged);
+    return () => {
+      window.removeEventListener("kkterm:credential-store-status-changed", handleStatusChanged);
+    };
+  }, [refreshStatus]);
+
+  if (!status || status.selectedStore !== "file") {
+    return null;
+  }
+
+  async function submitUnlock(request: {
+    password: string;
+    createIfMissing: boolean;
+    resetExisting?: boolean;
+  }) {
+    try {
+      setBusy(true);
+      setError(null);
+      await invokeCommand("configure_encrypted_file_secret_store", { request });
+      setDialogOpen(false);
+      await refreshStatus();
+      window.dispatchEvent(new CustomEvent("kkterm:credential-store-status-changed"));
+      showStatusBarNotice(t("app.credentialStoreUnlocked"), { tone: "success" });
+    } catch (unlockError) {
+      setError(unlockError instanceof Error ? unlockError.message : String(unlockError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function lockStore() {
+    try {
+      setBusy(true);
+      const nextStatus = await invokeCommand("lock_encrypted_file_secret_store", undefined);
+      setStatus(nextStatus);
+      window.dispatchEvent(new CustomEvent("kkterm:credential-store-status-changed"));
+      showStatusBarNotice(t("app.credentialStoreLocked"), { tone: "success" });
+    } catch (lockError) {
+      showStatusBarNotice(lockError instanceof Error ? lockError.message : String(lockError), {
+        tone: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const unlocked = status.unlocked;
+  const label = unlocked ? t("app.credentialStoreUnlocked") : t("app.credentialStoreLocked");
+  const actionLabel = unlocked
+    ? t("app.credentialStoreLockAction")
+    : t("app.credentialStoreUnlockAction");
+
+  return (
+    <>
+      <button
+        aria-label={actionLabel}
+        className={`status-bar-action credential-store-status ${
+          unlocked ? "is-unlocked" : "is-locked"
+        }`}
+        disabled={busy}
+        onClick={() => {
+          if (unlocked) {
+            void lockStore();
+          } else {
+            setError(null);
+            setDialogOpen(true);
+          }
+        }}
+        type="button"
+      >
+        {unlocked ? <Unlock size={14} /> : <Lock size={14} />}
+        <RailTooltip label={label} />
+      </button>
+      {dialogOpen ? (
+        <EncryptedSecretStoreDialog
+          busy={busy}
+          encryptedStoreExists={status.encryptedStoreExists}
+          error={error}
+          initialMode={status.encryptedStoreExists ? "unlock" : "create"}
+          launchPrompt={false}
+          platform={currentPlatform()}
+          onCancel={() => {
+            setDialogOpen(false);
+            setError(null);
+          }}
+          onSubmit={submitUnlock}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function XServerStatusIcon() {
