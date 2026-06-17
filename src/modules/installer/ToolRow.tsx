@@ -9,55 +9,30 @@ import type { MouseEvent } from "react";
 import { isTauriRuntime, openExternalUrl } from "../../lib/tauri";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { useInstallerStore } from "./state";
-import {
-  latestVersionWebUrlForRecipe,
-  recipeSupportsLatestVersion,
-} from "./latestSupport";
+import { latestVersionWebUrlForRecipe } from "./latestSupport";
+import { useToolStatus } from "./useToolStatus";
 import type { Recipe } from "./types";
-import { isInstallerUpdateAvailable } from "./versionCompare";
 
 export function ToolRow({ recipe }: { recipe: Recipe }) {
   const { t } = useTranslation();
-  const detected = useInstallerStore((s) => s.detected[recipe.id]);
-  const toolState = useInstallerStore((s) => s.toolState[recipe.id]);
-  const inFlight = useInstallerStore((s) => s.inFlight[recipe.id]);
-  const lastStatus = useInstallerStore((s) => s.lastStatus[recipe.id]);
-  const latestError = useInstallerStore((s) => s.checkError[recipe.id]);
-  const scanning = useInstallerStore((s) => s.scanning);
-  const checking = useInstallerStore((s) => s.checking);
   const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
 
-  const isInstalled = detected?.installed ?? false;
-  const installedVersion = detected?.installedVersion;
-  const partial = detected?.partialCount;
-  const latestSeen = toolState?.latestVersionSeen;
-  const supportsLatestVersion = recipeSupportsLatestVersion(recipe);
+  const {
+    isInstalled,
+    installedVersion,
+    partial,
+    latestSeen,
+    latestError,
+    runtimeVersion,
+    supportsLatestVersion,
+    hasUpdate,
+    busy,
+    operation,
+    retrieving,
+    statusTone,
+  } = useToolStatus(recipe);
   const latestWebUrl = latestVersionWebUrlForRecipe(recipe);
-  const hasUpdate =
-    supportsLatestVersion &&
-    isInstalled &&
-    isInstallerUpdateAvailable(latestSeen, installedVersion);
-  const busy = !!inFlight;
-  const retrieving = !busy && (scanning || checking);
-
-  const statusTone:
-    | "installed"
-    | "update"
-    | "busy"
-    | "failed"
-    | "partial"
-    | "none" = busy
-    ? "busy"
-    : lastStatus?.kind === "failed"
-      ? "failed"
-      : hasUpdate
-        ? "update"
-        : isInstalled
-          ? "installed"
-          : partial
-            ? "partial"
-            : "none";
 
   function handleOpen() {
     // While an install/uninstall is in flight (or its terminal state is the
@@ -105,7 +80,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
         : null;
   const runtimeVersionText = retrieving
     ? t("installer.status.retrieving")
-    : detected?.runtimeVersion ?? t("installer.status.noVersion");
+    : runtimeVersion ?? t("installer.status.noVersion");
 
   return (
     <article
@@ -149,7 +124,7 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
           </span>
           {busy ? (
             <span className="installer-tile__sub">
-              {inFlight.operation === "install"
+              {operation === "install"
                 ? t("installer.status.installing")
                 : t("installer.status.uninstalling")}
             </span>

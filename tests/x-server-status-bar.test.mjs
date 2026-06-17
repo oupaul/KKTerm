@@ -30,7 +30,7 @@ test("X server status indicator is settings-derived and renders before Don't Sle
 
 test("VcXsrv is listed as an Installer Helper utility", async () => {
   const installerSource = await readFile(
-    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
   );
   const manualSource = await readFile(new URL("../docs/manual/18-installer.md", import.meta.url), "utf8");

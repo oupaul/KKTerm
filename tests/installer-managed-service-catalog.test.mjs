@@ -17,7 +17,7 @@ test("NSSM is a Utilities tool for managed Windows service helpers", () => {
 
 test("NSSM is visible in the Installer Helper Utilities section", async () => {
   const source = await readFile(
-    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
   );
 
@@ -38,7 +38,7 @@ test("VcXsrv is a Utilities tool for SSH X11 forwarding", () => {
 
 test("VcXsrv is visible in the Installer Helper Utilities section", async () => {
   const source = await readFile(
-    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
   );
 
@@ -65,7 +65,7 @@ test("Coreutils is a Utilities tool with winget and download providers", () => {
 
 test("Coreutils is visible in the Installer Helper Utilities section", async () => {
   const source = await readFile(
-    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
   );
 
@@ -78,7 +78,7 @@ test("Coreutils is visible in the Installer Helper Utilities section", async () 
 
 test("FFmpeg is visible in the Installer Helper Utilities section", async () => {
   const source = await readFile(
-    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
   );
 
@@ -103,7 +103,7 @@ test("BentoPDF is a Utilities managed web app", () => {
 
 test("BentoPDF is visible in the Installer Helper Utilities section", async () => {
   const source = await readFile(
-    new URL("../src/modules/installer/InstallerPage.tsx", import.meta.url),
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
     "utf8",
   );
 

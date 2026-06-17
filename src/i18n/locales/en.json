@@ -710,6 +710,29 @@
     "checkUpdates": "Check for updates",
     "checkingForUpdates": "Checking for updates",
     "updateAll": "Update all",
+    "search": "Search tools",
+    "view": {
+      "list": "List view",
+      "gallery": "Gallery view"
+    },
+    "sidebar": {
+      "status": "Status",
+      "categories": "Categories",
+      "allTools": "All Tools",
+      "updates": "Updates",
+      "show": "Show sidebar",
+      "hide": "Hide sidebar"
+    },
+    "listColumn": {
+      "name": "Name",
+      "status": "Status",
+      "action": "Action"
+    },
+    "footer": {
+      "tools": "{{count}} tools",
+      "installed": "{{count}} installed",
+      "updates": "{{count}} updates available"
+    },
     "section": {
       "installed": "Installed",
       "available": "Available",
@@ -775,7 +798,8 @@
       "neverChecked": "Never"
     },
     "empty": {
-      "loading": "Loading catalog…"
+      "loading": "Loading catalog…",
+      "noMatches": "No tools match your search."
     },
     "confirm": {
       "installTitle": "Install {{name}}?",
