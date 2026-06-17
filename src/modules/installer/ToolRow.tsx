@@ -6,15 +6,13 @@
 
 import { useTranslation } from "react-i18next";
 import type { MouseEvent } from "react";
-import { isTauriRuntime, openExternalUrl } from "../../lib/tauri";
 import { iconUrlForRecipe, FALLBACK_ICON_URL } from "./icons";
 import { useInstallerStore } from "./state";
-import { latestVersionWebUrlForRecipe } from "./latestSupport";
 import { useToolStatus } from "./useToolStatus";
-import type { Recipe } from "./types";
+import { localizedDescription, type Recipe } from "./types";
 
 export function ToolRow({ recipe }: { recipe: Recipe }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const openInfoDialog = useInstallerStore((s) => s.openInfoDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
 
@@ -24,15 +22,12 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     partial,
     latestSeen,
     latestError,
-    runtimeVersion,
-    supportsLatestVersion,
     hasUpdate,
     busy,
     operation,
     retrieving,
     statusTone,
   } = useToolStatus(recipe);
-  const latestWebUrl = latestVersionWebUrlForRecipe(recipe);
 
   function handleOpen() {
     // While an install/uninstall is in flight (or its terminal state is the
@@ -50,37 +45,46 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
     handleOpen();
   }
 
-  function handleWebLatestClick(event: MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!latestWebUrl) return;
-    if (!isTauriRuntime()) {
-      window.open(latestWebUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-    void openExternalUrl(latestWebUrl).catch(() => {
-      window.open(latestWebUrl, "_blank", "noopener,noreferrer");
-    });
-  }
-
   const installedVersionText = isInstalled
     ? (installedVersion ?? t("installer.status.noVersion"))
     : t("installer.status.notInstalled");
-  const latestVersionText = retrieving
-    ? t("installer.status.retrieving")
-    : latestError ?? latestSeen ?? t("installer.status.noVersion");
   const installedDisplayText = retrieving
     ? t("installer.status.retrieving")
     : installedVersionText;
-  const runtimeVersionLabel =
-    recipe.id === "node-bundle"
-      ? t("installer.tile.node")
-      : recipe.id === "python-bundle"
-        ? t("installer.tile.python")
-        : null;
-  const runtimeVersionText = retrieving
-    ? t("installer.status.retrieving")
-    : runtimeVersion ?? t("installer.status.noVersion");
+  const versionDisplayText =
+    busy
+      ? operation === "install"
+        ? t("installer.status.installing")
+        : t("installer.status.uninstalling")
+      : partial
+        ? t("installer.status.partial", {
+            installed: partial[0],
+            total: partial[1],
+          })
+        : hasUpdate && installedVersion && latestSeen
+          ? `${installedVersion} -> ${latestSeen}`
+          : latestError ?? installedDisplayText;
+  const versionDisplayClass =
+    !busy && !partial && latestError
+      ? "installer-tile__version--error"
+      : !busy && !partial && hasUpdate
+        ? "installer-tile__version--update"
+        : undefined;
+  const statusLabel = busy
+    ? operation === "install"
+      ? t("installer.status.installing")
+      : t("installer.status.uninstalling")
+    : partial
+      ? t("installer.status.partial", {
+          installed: partial[0],
+          total: partial[1],
+        })
+      : hasUpdate
+        ? t("installer.actions.update")
+        : isInstalled
+          ? t("installer.section.installed")
+          : t("installer.status.notInstalled");
+  const description = localizedDescription(recipe, i18n.language);
 
   return (
     <article
@@ -98,100 +102,54 @@ export function ToolRow({ recipe }: { recipe: Recipe }) {
       aria-label={recipe.name}
     >
       <div className="installer-tile__head">
-        <div className="installer-tile__icon-wrap">
-          <img
-            className="installer-tile__icon"
-            src={iconUrlForRecipe(recipe.id)}
-            alt=""
-            draggable={false}
-            onError={(event) => {
-              const img = event.currentTarget;
-              if (img.src !== FALLBACK_ICON_URL) {
-                img.src = FALLBACK_ICON_URL;
-              }
-            }}
-          />
-          {statusTone !== "none" ? (
-            <span
-              className={`installer-tile__dot installer-tile__dot--${statusTone}`}
-              aria-hidden="true"
+        <div className="installer-tile__top">
+          <div className="installer-tile__icon-wrap">
+            <img
+              className="installer-tile__icon"
+              src={iconUrlForRecipe(recipe.id)}
+              alt=""
+              draggable={false}
+              onError={(event) => {
+                const img = event.currentTarget;
+                if (img.src !== FALLBACK_ICON_URL) {
+                  img.src = FALLBACK_ICON_URL;
+                }
+              }}
             />
-          ) : null}
-        </div>
-        <div className="installer-tile__label">
-          <span className="installer-tile__name" title={recipe.name}>
-            {recipe.name}
-          </span>
-          {busy ? (
-            <span className="installer-tile__sub">
-              {operation === "install"
-                ? t("installer.status.installing")
-                : t("installer.status.uninstalling")}
+            {statusTone !== "none" ? (
+              <span
+                className={`installer-tile__dot installer-tile__dot--${statusTone}`}
+                aria-hidden="true"
+              />
+            ) : null}
+          </div>
+          <div className="installer-tile__label">
+            <span className="installer-tile__name" title={recipe.name}>
+              {recipe.name}
             </span>
-          ) : partial ? (
-            <span className="installer-tile__sub">
-              {t("installer.status.partial", {
-                installed: partial[0],
-                total: partial[1],
-              })}
-            </span>
-          ) : (
-            <dl className="installer-tile__versions">
-              {supportsLatestVersion ? (
-                <div>
-                  <dt>{t("installer.tile.latest")}</dt>
-                  <dd
-                    className={
-                      !retrieving && latestError
-                        ? "installer-tile__version--error"
-                        : !retrieving && hasUpdate
-                          ? "installer-tile__version--update"
-                          : undefined
-                    }
-                    title={retrieving ? latestVersionText : latestError ?? latestVersionText}
-                  >
-                    {latestVersionText}
-                  </dd>
-                </div>
-              ) : latestWebUrl ? (
-                <div>
-                  <dt>{t("installer.tile.latest")}</dt>
-                  <dd title={latestWebUrl}>
-                    <a
-                      className="installer-tile__web-link"
-                      href={latestWebUrl}
-                      onClick={handleWebLatestClick}
-                      rel="noopener noreferrer"
-                    >
-                      {t("installer.status.web")}
-                    </a>
-                  </dd>
-                </div>
-              ) : null}
-              <div>
-                <dt>{t("installer.tile.installed")}</dt>
-                <dd>{installedDisplayText}</dd>
-              </div>
-              {runtimeVersionLabel ? (
-                <div>
-                  <dt>{runtimeVersionLabel}</dt>
-                  <dd>{runtimeVersionText}</dd>
-                </div>
-              ) : null}
-            </dl>
-          )}
-          <div className="installer-tile__meta">
             <span
-              className={`installer-tile__badge ${
-                isInstalled ? "installer-tile__badge--installed" : "installer-tile__badge--missing"
+              className={`installer-tile__sub${
+                versionDisplayClass ? ` ${versionDisplayClass}` : ""
               }`}
-              data-alone={isInstalled && !hasUpdate ? "true" : "false"}
+              title={versionDisplayText}
             >
-              {isInstalled
-                ? t("installer.section.installed")
-                : t("installer.status.notInstalled")}
+              {versionDisplayText}
             </span>
           </div>
+        </div>
+        <p className="installer-tile__desc">{description}</p>
+        <div className="installer-tile__foot">
+          <span
+            className={`installer-tile__badge ${
+              hasUpdate
+                ? "installer-tile__badge--update"
+                : isInstalled
+                ? "installer-tile__badge--installed"
+                : "installer-tile__badge--missing"
+            }`}
+          >
+            {statusLabel}
+          </span>
           {!isInstalled || hasUpdate ? (
             <button
               type="button"

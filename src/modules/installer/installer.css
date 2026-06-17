@@ -162,8 +162,8 @@
    tile spans the full row width so its detail body has room. */
 .installer-section__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 8px;
   align-items: stretch;
 }
 
@@ -173,10 +173,11 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  height: 10.65rem;
-  border: 1px solid var(--border);
+  min-height: 126px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
   border-radius: 8px;
   background: var(--surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 7%, transparent);
   overflow: hidden;
   transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
 }
@@ -198,17 +199,17 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
-  gap: 0.35rem;
-  padding: 0.65rem 0.55rem 1.65rem;
+  gap: 9px;
+  padding: 12px;
   user-select: none;
-  text-align: center;
+  text-align: left;
   height: 100%;
 }
 
 .installer-tile:hover .installer-tile__head {
-  background: var(--surface-muted);
+  background: var(--hover);
 }
 
 .installer-tile:hover {
@@ -217,12 +218,17 @@
 
 .installer-tile__icon-wrap {
   position: relative;
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  background: transparent;
 }
 
 .installer-tile__icon {
@@ -238,8 +244,8 @@
   position: absolute;
   right: -2px;
   bottom: -2px;
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: 2px solid var(--surface);
   box-sizing: content-box;
@@ -274,34 +280,74 @@
 .installer-tile__label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 2px;
   min-width: 0;
-  width: 100%;
-  align-items: center;
+  flex: 1 1 auto;
+  align-items: stretch;
 }
 
 .installer-tile__name {
-  font-weight: 500;
-  font-size: 0.8rem;
-  line-height: 1.2;
-  min-height: 1.92rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.25;
   overflow: hidden;
-  word-break: break-word;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .installer-tile__sub {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  width: 100%;
-  white-space: normal;
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.installer-tile__sub.installer-tile__version--update {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.installer-tile__sub.installer-tile__version--error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.installer-tile__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.installer-tile__desc {
+  margin: 0;
+  min-height: calc(2 * 1.45 * 11.5px);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.25;
+  overflow: hidden;
+  text-wrap: pretty;
+}
+
+.installer-tile__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  min-width: 0;
+}
+
+.installer-tile__foot:has(.installer-tile__badge--installed):not(:has(.installer-tile__action)) {
+  justify-content: center;
 }
 
 .installer-tile__versions {
@@ -364,10 +410,6 @@
 }
 
 .installer-tile__meta {
-  position: absolute;
-  bottom: 0.45rem;
-  left: 0.45rem;
-  right: 0.45rem;
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
@@ -381,16 +423,29 @@
 }
 
 .installer-tile__badge {
-  padding: 0.15rem 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  height: 21px;
+  padding: 0 9px;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 11.5px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .installer-tile__badge--installed {
   background: var(--green-soft);
   color: var(--green);
+}
+
+.installer-tile__badge--update {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .installer-tile__badge--missing {
@@ -399,17 +454,18 @@
 }
 
 .installer-tile__action {
-  position: absolute;
-  bottom: 0.45rem;
-  right: 0.45rem;
+  flex: 0 0 auto;
   min-width: 0;
-  padding: 0.18rem 0.45rem;
-  border-radius: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
   border: 1px solid var(--border);
   background: var(--surface-muted);
   color: inherit;
-  font-size: 0.68rem;
-  line-height: 1.2;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1051,6 +1107,11 @@
   background: var(--app-bg);
 }
 
+[data-color-scheme="default"] .installer-content,
+[data-color-scheme="mac"] .installer-content {
+  background: var(--surface);
+}
+
 .installer-content__scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -1070,13 +1131,18 @@
 /* ---- gallery grid + group headers ---- */
 .installer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 8px;
   align-items: stretch;
 }
 
 .installer-group {
   margin-bottom: 18px;
+}
+
+.installer-group + .installer-group {
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
 }
 
 .installer-group__title {
@@ -1121,6 +1187,11 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+[data-color-scheme="default"] .installer-listhead,
+[data-color-scheme="mac"] .installer-listhead {
+  background: var(--surface);
 }
 
 .installer-listhead__action {
@@ -1295,4 +1366,3 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-

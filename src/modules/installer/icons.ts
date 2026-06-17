@@ -15,6 +15,8 @@ import antigravity from "../../assets/installer-icons/antigravity.svg?url";
 import astral from "../../assets/installer-icons/astral.svg?url";
 import bentopdf from "../../assets/installer-icons/bentopdf.svg?url";
 import bruno from "../../assets/installer-icons/bruno.svg?url";
+import claudeCode from "../../assets/installer-icons/claude-code.svg?url";
+import codex from "../../assets/installer-icons/codex.svg?url";
 import cursor from "../../assets/installer-icons/cursor.svg?url";
 import ditto from "../../assets/installer-icons/ditto.png?url";
 import docker from "../../assets/installer-icons/docker.svg?url";
@@ -32,7 +34,6 @@ import nodedotjs from "../../assets/installer-icons/nodedotjs.svg?url";
 import notepadpp from "../../assets/installer-icons/notepadpp.svg?url";
 import ollama from "../../assets/installer-icons/ollama.svg?url";
 import openWebui from "../../assets/installer-icons/open-webui.png?url";
-import openai from "../../assets/installer-icons/openai.svg?url";
 import openclaw from "../../assets/installer-icons/openclaw.png?url";
 import opencode from "../../assets/installer-icons/opencode.svg?url";
 import powershell from "../../assets/installer-icons/powershell.svg?url";
@@ -59,8 +60,8 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   wsl: linux,
   "docker-desktop": docker,
   nssm: defaultIcon,
-  "claude-code-cli": anthropic,
-  "codex-cli": openai,
+  "claude-code-cli": claudeCode,
+  "codex-cli": codex,
   "antigravity-cli": antigravity,
   ollama,
   n8n,
@@ -74,7 +75,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   coreutils: defaultIcon,
   opencode,
   rustup: rust,
-  "codex-desktop": openai,
+  "codex-desktop": codex,
   "claude-desktop": anthropic,
   "hermes-agent": hermesAgent,
   "powershell-7": powershell,

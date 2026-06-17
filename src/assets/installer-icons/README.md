@@ -35,6 +35,8 @@ limited to small app-identification assets.
 - `openclaw.png`: `openclaw/openclaw`, `apps/ios/Sources/Assets.xcassets/AppIcon.appiconset/48.png`.
 - `hermes-agent.svg`: `NousResearch/hermes-agent`, `website/static/img/favicon.svg`.
 - `opencode.svg`: `sst/opencode`, `packages/console/app/src/asset/brand/opencode-logo-dark-square.svg`.
+- `claude-code.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `claudecode-color.svg`.
+- `codex.svg`: LobeHub Icons `@lobehub/icons-static-svg`, `codex-color.svg`.
 - `powershell.svg`: Wikimedia Commons `File:Ps black 128.svg`, the official PowerShell mark released by Microsoft under the MIT License (copyright Microsoft Corporation; trademark notice applies).
 - `antigravity.svg`: compact app tile mark based on Google Antigravity's
   simple geometric/text logo from `https://antigravity.google/`, cross-checked
