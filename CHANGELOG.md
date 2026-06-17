@@ -3,6 +3,58 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.86/kkterm-0.1.86-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.86/kkterm-0.1.86-windows-arm64-setup.exe)
+
+## Highlights
+- Create `Connections` faster: drop files/folders onto the **Connection Tree** to create the right **Session** types automatically (Document / File Explorer).
+- Dashboard data portability: **widget export/import** and **selective database export/import** for backups you can actually move around.
+
+## New
+- **Connections:** Create Connections by dropping OS files/folders onto the **Connection Tree** (files → Document Connection, folders → File Explorer Connection), with drag highlighting and multi-drop. (#382, @ryantsai in https://github.com/ryantsai/KKTerm/pull/385 — also references the earlier #382 work)
+- **Dashboard:** Widget export/import (`.kkwidget` JSON) and selective database export/import (`.kkbackup`).  
+  (#378 reported by @Androwei; PR https://github.com/ryantsai/KKTerm/pull/381)
+
+## Improved
+- **Document viewer:** Redesign with a unified toolbar and a status footer. (https://github.com/ryantsai/KKTerm/pull/384)
+- **Installer Helper:** House-style redesign of the Installer Helper page, plus folding its footer status into the global status bar. (https://github.com/ryantsai/KKTerm/pull/373, https://github.com/ryantsai/KKTerm/pull/380)
+- **Document/File viewer:** Introduced a redesigned universal file viewer analysis and supporting UI/docs updates. (https://github.com/ryantsai/KKTerm/pull/374)
+- **Docs:** Fix stale references across README, ROADMAP, CONTRIBUTING, ADRs, and manual. (https://github.com/ryantsai/KKTerm/pull/379)
+
+## Fixed
+- **Installer Helper footer:** Folded the Installer Helper footer into the global status bar to avoid duplicate status lines. (https://github.com/ryantsai/KKTerm/pull/380)
+- **i18n:** Corrected traditional Chinese translations for error messages. (sha `d0845ae`)
+
+## Internal
+- Added tests/guardrails around new behaviors (including Install Helper localization coverage and local files connection drop).
+- Various docs/localization maintenance and cleanup of obsolete localization files.
+
+---
+
+## Highlights（重點）
+- 更快建立 `Connections`：把檔案/資料夾拖放到 **Connection Tree**，系統會自動建立符合的 **Session** 類型（文件 / 檔案總管）。
+- Dashboard 資料可攜性：**Widget 匯出/匯入**與**選擇性資料庫匯出/匯入**，讓備份更好搬家。
+
+## New（新增）
+- **Connections：** 透過把作業系統的檔案/資料夾拖放到 **Connection Tree** 來建立 Connections（檔案 → 文件連線、資料夾 → 檔案總管連線），支援拖曳高亮與一次丟多個。 (#382, @ryantsai in https://github.com/ryantsai/KKTerm/pull/385 — 也延續先前 #382 的工作)
+- **Dashboard：** Widget 匯出/匯入（`.kkwidget` JSON）與選擇性資料庫匯出/匯入（`.kkbackup`）。  
+  （#378 由 @Androwei 提出；PR https://github.com/ryantsai/KKTerm/pull/381）
+
+## Improved（改進）
+- **文件檢視器：** 統一工具列 + 狀態頁尾重新設計。 (https://github.com/ryantsai/KKTerm/pull/384)
+- **Installer Helper：** Installer Helper 版面 house-style 重新設計，並把其頁尾狀態折疊到全域狀態列。 (https://github.com/ryantsai/KKTerm/pull/373, https://github.com/ryantsai/KKTerm/pull/380)
+- **文件/檔案檢視：** 通用檔案檢視器（含輕量編輯）分析的重新整理與配套 UI/文件更新。 (https://github.com/ryantsai/KKTerm/pull/374)
+- **文件：** 修正 README、ROADMAP、CONTRIBUTING、ADRs 與手冊中的過期引用。 (https://github.com/ryantsai/KKTerm/pull/379)
+
+## Fixed（修正）
+- **Installer Helper 頁尾：** 把 Installer Helper 頁尾狀態整合到全域狀態列，避免重複的狀態列顯示。 (https://github.com/ryantsai/KKTerm/pull/380)
+- **i18n：** 修正錯誤訊息的繁體中文翻譯。 (sha `d0845ae`)
+
+## Internal（內部）
+- 新行為的測試與防呆機制（例如 Install Helper 翻譯完整性測試、以及本機檔案拖放建立 Connections 的測試）。
+- 各種文件/在地化維護與清理既有的過期在地化檔。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.85/kkterm-0.1.85-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.85/kkterm-0.1.85-windows-arm64-setup.exe)
 
