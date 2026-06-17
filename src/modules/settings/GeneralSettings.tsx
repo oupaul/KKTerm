@@ -264,6 +264,28 @@ export function GeneralSettings() {
     }
   }
 
+  async function handleImportFullSettings(path: string) {
+    closeAllTabs();
+    const snapshot = await invokeCommand("import_settings_database", { path });
+    setGeneralSettings(snapshot.generalSettings);
+    setDraft(snapshot.generalSettings);
+    setCredentialSettings(snapshot.credentialSettings);
+    setDashboardSettings(snapshot.dashboardSettings);
+    setTerminalSettings(snapshot.terminalSettings);
+    setAppearanceSettings(snapshot.appearanceSettings);
+    setSshSettings(snapshot.sshSettings);
+    setSftpSettings(snapshot.sftpSettings);
+    setUrlSettings(snapshot.urlSettings);
+    setRdpSettings(snapshot.rdpSettings);
+    setVncSettings(snapshot.vncSettings);
+    setAiProviderSettings(snapshot.aiProviderSettings);
+    window.dispatchEvent(new CustomEvent("kkterm:connection-tree-invalidated"));
+    showStatusBarNotice(t("settings.importSettingsComplete", { filename: snapshot.backup.filename }), {
+      tone: "success",
+    });
+    window.setTimeout(() => window.location.reload(), 250);
+  }
+
   const lastBackup = formatBackupDate(generalSettings.lastBackupAt);
   const lastCheckedLabel = lastCheckedAt
     ? t("settings.lastCheckedAt", {
@@ -609,7 +631,10 @@ export function GeneralSettings() {
         <SelectiveExportDialog onClose={() => setSelectiveExportOpen(false)} />
       ) : null}
       {selectiveImportOpen ? (
-        <SelectiveImportDialog onClose={() => setSelectiveImportOpen(false)} />
+        <SelectiveImportDialog
+          onClose={() => setSelectiveImportOpen(false)}
+          onFullImport={handleImportFullSettings}
+        />
       ) : null}
     </section>
   );

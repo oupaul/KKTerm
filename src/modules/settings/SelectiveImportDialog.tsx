@@ -13,7 +13,7 @@ import {
   type DialogIconName,
 } from "../../app/ui/dialog";
 import { useDashboardStore } from "../dashboard/state/dashboardStore";
-import { invokeCommand, selectSelectiveImportFile } from "../../lib/tauri";
+import { invokeCommand, selectSettingsBackupImportFile } from "../../lib/tauri";
 import type { SelectiveManifest } from "../../types";
 import { useWorkspaceStore } from "../../store";
 
@@ -26,13 +26,25 @@ const SEGMENT_ICONS: Record<string, DialogIconName> = {
 };
 
 type SegmentAction = "skip" | "add" | "replace";
+type ImportKind = "selective" | "full";
 
-export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
+function fileNameFromPath(path: string) {
+  return path.split(/[/\\]/).pop() ?? path;
+}
+
+export function SelectiveImportDialog({
+  onClose,
+  onFullImport,
+}: {
+  onClose: () => void;
+  onFullImport: (path: string) => Promise<void>;
+}) {
   const { t } = useTranslation();
   const showStatusBarNotice = useWorkspaceStore((s) => s.showStatusBarNotice);
   const closeAllTabs = useWorkspaceStore((s) => s.closeAllTabs);
   const loadDashboard = useDashboardStore((s) => s.load);
   const [path, setPath] = useState<string | null>(null);
+  const [importKind, setImportKind] = useState<ImportKind | null>(null);
   const [manifest, setManifest] = useState<SelectiveManifest | null>(null);
   const [actions, setActions] = useState<Record<string, SegmentAction>>({});
   const [passphrase, setPassphrase] = useState("");
@@ -41,25 +53,36 @@ export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
   async function handleChooseFile() {
     setBusy(true);
     try {
-      const chosen = await selectSelectiveImportFile({
-        title: t("settings.selectiveImport"),
-        filterName: t("settings.selectiveBackupFilter"),
+      const chosen = await selectSettingsBackupImportFile({
+        title: t("settings.importSettings"),
+        filterName: t("settings.settingsBackupFilter"),
       });
       if (!chosen) {
         setBusy(false);
         return;
       }
-      const inspected = await invokeCommand("inspect_selective_database", { path: chosen });
-      const initial: Record<string, SegmentAction> = {};
-      for (const segment of inspected.segments) {
-        initial[segment] = "add";
-      }
-      if (inspected.encrypted) {
-        initial.credentials = "add";
-      }
       setPath(chosen);
-      setManifest(inspected);
-      setActions(initial);
+      setPassphrase("");
+      try {
+        const inspected = await invokeCommand("inspect_selective_database", { path: chosen });
+        const initial: Record<string, SegmentAction> = {};
+        for (const segment of inspected.segments) {
+          initial[segment] = "add";
+        }
+        if (inspected.encrypted) {
+          initial.credentials = "add";
+        }
+        setImportKind("selective");
+        setManifest(inspected);
+        setActions(initial);
+      } catch (inspectError) {
+        if (!chosen.toLowerCase().endsWith(".zip")) {
+          throw inspectError;
+        }
+        setImportKind("full");
+        setManifest(null);
+        setActions({});
+      }
     } catch (error) {
       showStatusBarNotice(error instanceof Error ? error.message : String(error), { tone: "error" });
     }
@@ -67,9 +90,18 @@ export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
   }
 
   async function handleImport() {
-    if (!path || !manifest || busy) return;
+    if (!path || !importKind || busy) return;
     setBusy(true);
     try {
+      if (importKind === "full") {
+        await onFullImport(path);
+        onClose();
+        return;
+      }
+      if (!manifest) {
+        setBusy(false);
+        return;
+      }
       const result = await invokeCommand("import_selective_database", {
         path,
         actions,
@@ -104,14 +136,15 @@ export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
     { value: "add", label: t("settings.importActionAdd") },
     { value: "replace", label: t("settings.importActionReplace") },
   ];
-  const passphraseNeeded = Boolean(manifest?.encrypted) && actions.credentials !== "skip";
-  const canImport = Boolean(manifest) && !busy && (!passphraseNeeded || passphrase.length > 0);
+  const selectiveManifest = importKind === "selective" ? manifest : null;
+  const passphraseNeeded = Boolean(selectiveManifest?.encrypted) && actions.credentials !== "skip";
+  const canImport = Boolean(importKind) && !busy && (!passphraseNeeded || passphrase.length > 0);
 
   return (
     <DialogShell onBackdrop={onClose}>
       <Sheet
         width={540}
-        title={t("settings.selectiveImport")}
+        title={t("settings.importSettings")}
         footer={
           <Actions
             primary={
@@ -121,23 +154,34 @@ export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
                 onClick={() => void handleImport()}
                 disabled={!canImport}
               >
-                {t("settings.selectiveImport")}
+                {t("settings.importSettings")}
               </Btn>
             }
             cancel={<Btn onClick={onClose}>{t("common.cancel")}</Btn>}
           />
         }
       >
-        {!manifest ? (
-          <Field label={t("settings.selectiveImportFileHint")}>
+        {!importKind ? (
+          <Field label={t("settings.importBackupFileHint")}>
             <Btn icon="folder" onClick={() => void handleChooseFile()} disabled={busy}>
               {t("settings.selectiveImportChooseFile")}
             </Btn>
           </Field>
-        ) : (
+        ) : importKind === "full" && path ? (
+          <>
+            <Group title={t("settings.fullBackupImport")}>
+              <GRow
+                icon="package"
+                label={fileNameFromPath(path)}
+                desc={t("settings.fullBackupImportHint")}
+              />
+            </Group>
+            <p className="kk-dlg-warn">{t("settings.importSettingsConfirm")}</p>
+          </>
+        ) : selectiveManifest ? (
           <>
             <Group title={t("settings.selectiveImportActionsHint")}>
-              {manifest.segments.map((segment) => (
+              {selectiveManifest.segments.map((segment) => (
                 <GRow
                   key={segment}
                   icon={SEGMENT_ICONS[segment] ?? "package"}
@@ -153,7 +197,7 @@ export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
                   }
                 />
               ))}
-              {manifest.encrypted && (
+              {selectiveManifest.encrypted && (
                 <GRow
                   icon="key"
                   label={t("settings.segment_credentials")}
@@ -181,7 +225,7 @@ export function SelectiveImportDialog({ onClose }: { onClose: () => void }) {
             )}
             <p className="kk-dlg-warn">{t("settings.selectiveImportWarning")}</p>
           </>
-        )}
+        ) : null}
       </Sheet>
     </DialogShell>
   );

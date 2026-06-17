@@ -2,7 +2,7 @@
 
 ## AI grep hints
 
-- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
+- Keys: `settings.exportSettings`, `settings.importSettings`, `settings.importBackupFileHint`, `settings.fullBackupImport`, `settings.includeCredentials`, `settings.includeCredentialsWarning`, `settings.importActionAdd`, `settings.importActionReplace`, `settings.resetAllSettings`, `settings.resetAllSettingsConfirm`, `settings.resetAllSettingsComplete`, `settings.sectionCredentials`, `settings.credentialStorage`, `settings.credentialsStored`, `settings.deleteCredential`
 - Topics: SQLite store, OS keychain, encrypted SQLite secret store, settings Import/Export `.kkbackup`, startup backup ZIP snapshots, import / restore, reset all, where my data lives
 - Synonyms: "where is my data", "back up settings", "restore", "factory reset", "uninstall", "API key storage", "export connections without passwords", "share connections", "selective backup"
 
@@ -31,11 +31,11 @@ Automatic backups must **not** run from app-window close.
 
 ## Import / restore
 
-`settings.importSettings` opens the category-aware import dialog, then inspects the chosen `.kkbackup` before applying anything.
+`settings.importSettings` opens the backup import dialog. A chosen `.kkbackup` is inspected before applying anything; a chosen full `.zip` backup restores the complete settings database and reloads the app.
 
 ## Selective export / import
 
-The Settings data Import and Export buttons are the selective `.kkbackup` flow; the old whole-database single-file import/export buttons are no longer shown.
+The Settings data Export button is the selective `.kkbackup` flow; the Settings data Import button accepts both selective `.kkbackup` files and full KKTerm settings backup `.zip` snapshots. The old separate whole-database single-file import/export buttons are no longer shown.
 
 By default the bundle carries **no passwords**, which is the safe way to share Connections with a colleague. Turning on `settings.includeCredentials` (only available when Connections is selected) requires a passphrase; Connection, URL, and SOCKS proxy passwords are then encrypted into `secrets.enc` (Argon2id + AES-256-GCM) and can only be imported by someone who knows the passphrase (`settings.includeCredentialsWarning`). Other secrets — widget secrets, AI/email/MCP keys — are **not** carried.
 

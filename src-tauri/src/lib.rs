@@ -3526,6 +3526,7 @@ pub fn run() {
             dashboard_commands::dashboard_remove_custom_widget,
             dashboard_commands::export_dashboard_widgets,
             dashboard_commands::import_dashboard_widgets,
+            dashboard_commands::read_dashboard_widget_import_file,
             dashboard_commands::import_dashboard_widgets_json,
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,

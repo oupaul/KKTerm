@@ -403,6 +403,13 @@ pub fn import_dashboard_widgets(
 }
 
 #[tauri::command]
+pub fn read_dashboard_widget_import_file(path: String) -> Result<String, DashboardCommandError> {
+    fs::read_to_string(&path).map_err(|error| DashboardCommandError::Internal {
+        message: format!("failed to read widget file {path}: {error}"),
+    })
+}
+
+#[tauri::command]
 pub fn import_dashboard_widgets_json(
     app: AppHandle,
     raw_json: String,

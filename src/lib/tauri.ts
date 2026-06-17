@@ -8,7 +8,7 @@ import {
   save as saveDialog,
 } from "@tauri-apps/plugin-dialog";
 import type { ConfirmDialogOptions } from "@tauri-apps/plugin-dialog";
-import { readFile, readTextFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import i18next from "../i18n/config";
 import type {
@@ -1200,6 +1200,10 @@ type CommandMap = {
       passphrase: string | null;
     };
     result: SelectiveImportResult;
+  };
+  read_dashboard_widget_import_file: {
+    args: { path: string };
+    result: string;
   };
   get_database_folder: {
     args: undefined;
@@ -2659,7 +2663,7 @@ export async function selectAndReadWidgetImportFile(options: {
   if (!path) {
     return null;
   }
-  const text = await readTextFile(path);
+  const text = await invokeCommand("read_dashboard_widget_import_file", { path });
   const name = path.split(/[/\\]/).pop() ?? path;
   return { path, name, text };
 }
@@ -2693,6 +2697,24 @@ export async function selectSelectiveImportFile(options: {
   const selectedPath = await openDialog({
     directory: false,
     filters: [{ name: options.filterName, extensions: ["kkbackup"] }],
+    multiple: false,
+    title: options.title,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function selectSettingsBackupImportFile(options: {
+  title: string;
+  filterName: string;
+}) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await openDialog({
+    directory: false,
+    filters: [{ name: options.filterName, extensions: ["kkbackup", "zip"] }],
     multiple: false,
     title: options.title,
   });
