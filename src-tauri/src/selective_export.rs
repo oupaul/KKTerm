@@ -33,7 +33,7 @@ use time::format_description::well_known::Rfc3339;
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 use crate::secrets::{Secrets, StoreSecretRequest};
-use crate::storage::Storage;
+use crate::storage::{DEFAULT_WORKSPACE_ID, Storage};
 
 const SELECTIVE_FORMAT: &str = "kkterm-selective-export";
 const SELECTIVE_VERSION: u32 = 1;
@@ -244,7 +244,10 @@ pub fn export_selective_database(
         let plaintext = serde_json::to_vec(&entries)
             .map_err(|error| format!("failed to serialize secrets: {error}"))?;
         let blob = encrypt_blob(passphrase.as_deref().unwrap_or(""), &plaintext)?;
-        Some(serde_json::to_vec(&blob).map_err(|error| format!("failed to encode secrets: {error}"))?)
+        Some(
+            serde_json::to_vec(&blob)
+                .map_err(|error| format!("failed to encode secrets: {error}"))?,
+        )
     } else {
         None
     };
@@ -260,7 +263,12 @@ pub fn export_selective_database(
         encrypted,
     };
 
-    write_bundle(Path::new(&path), &manifest, &Value::Object(data), secrets_blob.as_deref())?;
+    write_bundle(
+        Path::new(&path),
+        &manifest,
+        &Value::Object(data),
+        secrets_blob.as_deref(),
+    )?;
 
     Ok(SelectiveExportInfo {
         filename: Path::new(&path)
@@ -307,7 +315,10 @@ fn collect_connection_secrets(
             let Some(id) = row.get("id").and_then(Value::as_str) else {
                 continue;
             };
-            let connection_type = row.get("connection_type").and_then(Value::as_str).unwrap_or("");
+            let connection_type = row
+                .get("connection_type")
+                .and_then(Value::as_str)
+                .unwrap_or("");
             if connection_type == "url" {
                 if let Some(secret) = secrets.read_url_password(id.to_string())? {
                     entries.push(SecretEntry {
@@ -364,9 +375,13 @@ pub fn import_selective_database(
             manifest.version
         ));
     }
+    validate_import_actions(&actions)?;
 
     // Decrypt secrets up-front so a wrong passphrase fails before any DB write.
-    let credential_action = actions.get("credentials").map(String::as_str).unwrap_or("skip");
+    let credential_action = actions
+        .get("credentials")
+        .map(String::as_str)
+        .unwrap_or("skip");
     let secret_entries: Vec<SecretEntry> = if credential_action != "skip" {
         match secrets_blob {
             Some(bytes) => {
@@ -399,6 +414,8 @@ pub fn import_selective_database(
         let tx = conn
             .transaction()
             .map_err(|error| format!("failed to begin import: {error}"))?;
+        tx.pragma_update(None, "defer_foreign_keys", "ON")
+            .map_err(|error| format!("failed to defer import foreign keys: {error}"))?;
 
         for segment in SEGMENT_ORDER {
             let action = actions.get(*segment).map(String::as_str).unwrap_or("skip");
@@ -408,7 +425,8 @@ pub fn import_selective_database(
             let Some(segment_data) = data_obj.get(*segment).and_then(Value::as_object) else {
                 continue;
             };
-            let tables = segment_tables(segment).ok_or_else(|| format!("unknown segment {segment}"))?;
+            let tables =
+                segment_tables(segment).ok_or_else(|| format!("unknown segment {segment}"))?;
             apply_segment(&tx, tables, segment_data, action, &mut remap)?;
             applied.push((*segment).to_string());
         }
@@ -427,6 +445,26 @@ pub fn import_selective_database(
         backup_filename: backup.filename().to_string(),
         applied,
     })
+}
+
+fn validate_import_actions(actions: &HashMap<String, String>) -> Result<(), String> {
+    for (segment, action) in actions {
+        if segment != "credentials" && !SEGMENT_ORDER.contains(&segment.as_str()) {
+            return Err(format!("unknown import category {segment:?}"));
+        }
+        if !matches!(action.as_str(), "skip" | "add" | "replace") {
+            return Err(format!("unknown import action {action:?} for {segment}"));
+        }
+    }
+    if actions.get("workspaces").map(String::as_str) == Some("replace")
+        && actions.get("connections").map(String::as_str) != Some("replace")
+    {
+        return Err(
+            "replacing Workspaces also requires replacing Connections to avoid orphaned or deleted Connections"
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 fn apply_segment(
@@ -530,7 +568,10 @@ fn rewrite_row(
         let Some(old) = row.get(*column).and_then(Value::as_str).map(str::to_string) else {
             continue; // null or absent
         };
-        let resolved = resolve_fk(tx, referenced, &old, remap)?;
+        let mut resolved = resolve_fk(tx, referenced, &old, remap)?;
+        if *column == "workspace_id" && resolved.is_none() {
+            resolved = Some(DEFAULT_WORKSPACE_ID.to_string());
+        }
         row.insert((*column).to_string(), value_or_null(resolved));
     }
 
@@ -539,7 +580,11 @@ fn rewrite_row(
     if table.name == "dashboard_widget_instances"
         && row.get("kind").and_then(Value::as_str) == Some("script")
     {
-        if let Some(old) = row.get("source_id").and_then(Value::as_str).map(str::to_string) {
+        if let Some(old) = row
+            .get("source_id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+        {
             let resolved = resolve_fk(tx, "dashboard_custom_widgets", &old, remap)?;
             row.insert("source_id".to_string(), value_or_null(resolved));
         }
@@ -644,7 +689,11 @@ fn read_table(conn: &SqliteConnection, table: &str) -> Result<Vec<Value>, String
     let mut stmt = conn
         .prepare(&format!("SELECT * FROM {table}"))
         .map_err(|error| format!("failed to read {table}: {error}"))?;
-    let columns: Vec<String> = stmt.column_names().iter().map(|name| name.to_string()).collect();
+    let columns: Vec<String> = stmt
+        .column_names()
+        .iter()
+        .map(|name| name.to_string())
+        .collect();
     let rows = stmt
         .query_map([], |row| {
             let mut map = Map::with_capacity(columns.len());
@@ -678,7 +727,10 @@ fn insert_row(
         .collect::<Vec<_>>()
         .join(", ");
     let sql = format!("INSERT INTO {table} ({column_list}) VALUES ({placeholders})");
-    let params: Vec<SqlValue> = columns.iter().map(|name| json_to_sql(&row[*name])).collect();
+    let params: Vec<SqlValue> = columns
+        .iter()
+        .map(|name| json_to_sql(&row[*name]))
+        .collect();
     tx.execute(&sql, rusqlite::params_from_iter(params))
         .map_err(|error| format!("failed to insert into {table}: {error}"))?;
     Ok(())
@@ -760,8 +812,8 @@ fn write_bundle(
 fn read_bundle(path: &Path) -> Result<(SelectiveManifest, Value, Option<Vec<u8>>), String> {
     let file = File::open(path)
         .map_err(|error| format!("failed to open import {}: {error}", path.display()))?;
-    let mut archive =
-        ZipArchive::new(file).map_err(|error| format!("import file is not a valid bundle: {error}"))?;
+    let mut archive = ZipArchive::new(file)
+        .map_err(|error| format!("import file is not a valid bundle: {error}"))?;
 
     let manifest: SelectiveManifest = {
         let mut entry = archive
@@ -805,8 +857,8 @@ fn encrypt_blob(passphrase: &str, plaintext: &[u8]) -> Result<EncryptedBlob, Str
     let salt = Aes256Gcm::generate_nonce(&mut OsRng);
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
     let key = derive_key(passphrase, salt.as_slice())?;
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| "failed to initialize cipher".to_string())?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&key).map_err(|_| "failed to initialize cipher".to_string())?;
     let ciphertext = cipher
         .encrypt(
             &nonce,
@@ -839,8 +891,8 @@ fn decrypt_blob(passphrase: &str, blob: &EncryptedBlob) -> Result<Vec<u8>, Strin
         .decode(&blob.ciphertext)
         .map_err(|error| format!("failed to decode ciphertext: {error}"))?;
     let key = derive_key(passphrase, &salt)?;
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| "failed to initialize cipher".to_string())?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&key).map_err(|_| "failed to initialize cipher".to_string())?;
     cipher
         .decrypt(
             Nonce::from_slice(&nonce_bytes),
@@ -934,10 +986,16 @@ mod tests {
         .unwrap();
 
         let mut ws_seg = Map::new();
-        ws_seg.insert("workspaces".to_string(), Value::Array(read_table(&src, "workspaces").unwrap()));
+        ws_seg.insert(
+            "workspaces".to_string(),
+            Value::Array(read_table(&src, "workspaces").unwrap()),
+        );
         let mut conn_seg = Map::new();
         for spec in segment_tables("connections").unwrap() {
-            conn_seg.insert(spec.name.to_string(), Value::Array(read_table(&src, spec.name).unwrap()));
+            conn_seg.insert(
+                spec.name.to_string(),
+                Value::Array(read_table(&src, spec.name).unwrap()),
+            );
         }
 
         // Destination DB starts empty; merge both segments.
@@ -946,14 +1004,28 @@ mod tests {
         let mut remap: HashMap<(String, String), String> = HashMap::new();
         {
             let tx = dst.transaction().unwrap();
-            apply_segment(&tx, segment_tables("workspaces").unwrap(), &ws_seg, "add", &mut remap).unwrap();
-            apply_segment(&tx, segment_tables("connections").unwrap(), &conn_seg, "add", &mut remap).unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("workspaces").unwrap(),
+                &ws_seg,
+                "add",
+                &mut remap,
+            )
+            .unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("connections").unwrap(),
+                &conn_seg,
+                "add",
+                &mut remap,
+            )
+            .unwrap();
             tx.commit().unwrap();
         }
 
         // The connection landed with fully remapped, internally consistent fks.
-        let (conn_id, folder_id, workspace_id, credential_id): (String, String, String, String) = dst
-            .query_row(
+        let (conn_id, folder_id, workspace_id, credential_id): (String, String, String, String) =
+            dst.query_row(
                 "SELECT id, folder_id, workspace_id, password_credential_id FROM connections",
                 [],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
@@ -962,22 +1034,185 @@ mod tests {
         assert_ne!(conn_id, "c1", "connection id should be regenerated on add");
         assert_eq!(
             folder_id,
-            *remap.get(&("connection_folders".to_string(), "f1".to_string())).unwrap()
+            *remap
+                .get(&("connection_folders".to_string(), "f1".to_string()))
+                .unwrap()
         );
         assert_eq!(
             workspace_id,
-            *remap.get(&("workspaces".to_string(), "ws1".to_string())).unwrap()
+            *remap
+                .get(&("workspaces".to_string(), "ws1".to_string()))
+                .unwrap()
         );
         assert_eq!(
             credential_id,
-            *remap.get(&("connection_password_credentials".to_string(), "cpc1".to_string())).unwrap()
+            *remap
+                .get(&(
+                    "connection_password_credentials".to_string(),
+                    "cpc1".to_string()
+                ))
+                .unwrap()
         );
 
         // The tag followed the connection to its new id.
         let tag_owner: String = dst
-            .query_row("SELECT connection_id FROM connection_tags", [], |row| row.get(0))
+            .query_row("SELECT connection_id FROM connection_tags", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(tag_owner, conn_id);
+    }
+
+    #[test]
+    fn merge_allows_credential_and_connection_cross_references() {
+        let src = SqliteConnection::open_in_memory().unwrap();
+        connections_schema(&src);
+        src.execute_batch(
+            "BEGIN;
+             PRAGMA defer_foreign_keys = ON;
+             INSERT INTO workspaces (id, name, is_default, sort_order) VALUES ('ws1','Work',1,0);
+             INSERT INTO connection_password_credentials (id, label, created_from_connection_id)
+                 VALUES ('cpc1','root@host','c1');
+             INSERT INTO connections (id, folder_id, workspace_id, name, connection_type,
+                 ssh_socks_proxy, password_credential_id, sort_order)
+                 VALUES ('c1',NULL,'ws1','db','ssh',NULL,'cpc1',0);
+             COMMIT;",
+        )
+        .unwrap();
+
+        let mut ws_seg = Map::new();
+        ws_seg.insert(
+            "workspaces".to_string(),
+            Value::Array(read_table(&src, "workspaces").unwrap()),
+        );
+        let mut conn_seg = Map::new();
+        for spec in segment_tables("connections").unwrap() {
+            conn_seg.insert(
+                spec.name.to_string(),
+                Value::Array(read_table(&src, spec.name).unwrap()),
+            );
+        }
+
+        let mut dst = SqliteConnection::open_in_memory().unwrap();
+        connections_schema(&dst);
+        let mut remap: HashMap<(String, String), String> = HashMap::new();
+        {
+            let tx = dst.transaction().unwrap();
+            tx.pragma_update(None, "defer_foreign_keys", "ON").unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("workspaces").unwrap(),
+                &ws_seg,
+                "add",
+                &mut remap,
+            )
+            .unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("connections").unwrap(),
+                &conn_seg,
+                "add",
+                &mut remap,
+            )
+            .unwrap();
+            tx.commit().unwrap();
+        }
+
+        let (credential_owner, connection_credential): (String, String) = dst
+            .query_row(
+                "SELECT cpc.created_from_connection_id, c.password_credential_id
+                 FROM connection_password_credentials cpc
+                 JOIN connections c ON c.password_credential_id = cpc.id",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            credential_owner,
+            *remap
+                .get(&("connections".to_string(), "c1".to_string()))
+                .unwrap()
+        );
+        assert_eq!(
+            connection_credential,
+            *remap
+                .get(&(
+                    "connection_password_credentials".to_string(),
+                    "cpc1".to_string()
+                ))
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn validate_import_actions_rejects_unknown_segments_and_actions() {
+        let mut actions = HashMap::new();
+        actions.insert("connections".to_string(), "add".to_string());
+        actions.insert("credentials".to_string(), "skip".to_string());
+        assert!(validate_import_actions(&actions).is_ok());
+
+        actions.insert("connections".to_string(), "merge".to_string());
+        assert!(validate_import_actions(&actions).is_err());
+
+        actions.clear();
+        actions.insert("unknown".to_string(), "add".to_string());
+        assert!(validate_import_actions(&actions).is_err());
+
+        actions.clear();
+        actions.insert("workspaces".to_string(), "replace".to_string());
+        actions.insert("connections".to_string(), "add".to_string());
+        assert!(validate_import_actions(&actions).is_err());
+
+        actions.insert("connections".to_string(), "replace".to_string());
+        assert!(validate_import_actions(&actions).is_ok());
+    }
+
+    #[test]
+    fn connections_without_workspace_segment_land_in_default_workspace() {
+        let src = SqliteConnection::open_in_memory().unwrap();
+        connections_schema(&src);
+        src.execute_batch(
+            "INSERT INTO workspaces (id, name, is_default, sort_order) VALUES ('ws-source','Work',1,0);
+             INSERT INTO connections (id, folder_id, workspace_id, name, connection_type,
+                 ssh_socks_proxy, password_credential_id, sort_order)
+                 VALUES ('c1',NULL,'ws-source','db','ssh',NULL,NULL,0);",
+        )
+        .unwrap();
+
+        let mut conn_seg = Map::new();
+        for spec in segment_tables("connections").unwrap() {
+            conn_seg.insert(
+                spec.name.to_string(),
+                Value::Array(read_table(&src, spec.name).unwrap()),
+            );
+        }
+
+        let mut dst = SqliteConnection::open_in_memory().unwrap();
+        connections_schema(&dst);
+        dst.execute(
+            "INSERT INTO workspaces (id, name, is_default, sort_order) VALUES (?1,'Default',1,0)",
+            [DEFAULT_WORKSPACE_ID],
+        )
+        .unwrap();
+        let mut remap: HashMap<(String, String), String> = HashMap::new();
+        {
+            let tx = dst.transaction().unwrap();
+            tx.pragma_update(None, "defer_foreign_keys", "ON").unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("connections").unwrap(),
+                &conn_seg,
+                "add",
+                &mut remap,
+            )
+            .unwrap();
+            tx.commit().unwrap();
+        }
+
+        let workspace_id: String = dst
+            .query_row("SELECT workspace_id FROM connections", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(workspace_id, DEFAULT_WORKSPACE_ID);
     }
 
     #[test]
@@ -990,7 +1225,10 @@ mod tests {
         )
         .unwrap();
         let mut ws_seg = Map::new();
-        ws_seg.insert("workspaces".to_string(), Value::Array(read_table(&src, "workspaces").unwrap()));
+        ws_seg.insert(
+            "workspaces".to_string(),
+            Value::Array(read_table(&src, "workspaces").unwrap()),
+        );
 
         let mut dst = SqliteConnection::open_in_memory().unwrap();
         connections_schema(&dst);
@@ -1002,13 +1240,29 @@ mod tests {
         let mut remap = HashMap::new();
         {
             let tx = dst.transaction().unwrap();
-            apply_segment(&tx, segment_tables("workspaces").unwrap(), &ws_seg, "replace", &mut remap).unwrap();
+            apply_segment(
+                &tx,
+                segment_tables("workspaces").unwrap(),
+                &ws_seg,
+                "replace",
+                &mut remap,
+            )
+            .unwrap();
             tx.commit().unwrap();
         }
         let ids: Vec<String> = {
-            let mut stmt = dst.prepare("SELECT id FROM workspaces ORDER BY id").unwrap();
-            stmt.query_map([], |row| row.get(0)).unwrap().collect::<Result<_, _>>().unwrap()
+            let mut stmt = dst
+                .prepare("SELECT id FROM workspaces ORDER BY id")
+                .unwrap();
+            stmt.query_map([], |row| row.get(0))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap()
         };
-        assert_eq!(ids, vec!["ws-src".to_string()], "replace wipes old rows and keeps bundle ids");
+        assert_eq!(
+            ids,
+            vec!["ws-src".to_string()],
+            "replace wipes old rows and keeps bundle ids"
+        );
     }
 }
