@@ -57,7 +57,7 @@ When opening a Connection from the tree with a target Pane focused, the `connect
 
 ### Drag-to-dock
 
-You can also drag a Connection from the Connection Tree onto the Workspace Canvas to place it spatially, Visual Studio–style. While dragging over a terminal Tab's Pane, a docking overlay appears: a faint outline frames the Pane under the pointer and an accent-tinted highlight previews the snap region. The highlight follows the nearest edge — left, right, top, or bottom — and glides between edges and Panes as you move. Releasing splits that specific Pane in the previewed direction (it does not require the Pane to be focused first). Dropping a Connection onto an empty Canvas (no Tab open) opens it as a new Tab. This is a pointer interaction with no menu label; only terminal-kind Tabs accept docked splits, and Panes hosting RDP/VNC/URL surfaces sit on native overlay windows that may not register the overlay reliably.
+You can also drag a Connection from the Connection Tree onto the Workspace Canvas to place it spatially, Visual Studio-style. While dragging over any active Tab surface, a docking overlay appears: a faint outline frames the Pane under the pointer and an accent-tinted highlight previews the snap region. The highlight follows the nearest edge - left, right, top, or bottom - and glides between edges and Panes as you move. Releasing splits that specific Pane in the previewed direction (it does not require the Pane to be focused first). Dropping onto a standalone Connection Tab, such as File Explorer, Document, URL, RDP/VNC, FTP, or SFTP, first converts that Tab into the shared split-Pane layout and keeps the original surface as the first Pane. Dropping a Connection onto an empty Canvas (no Tab open) opens it as a new Tab. This is a pointer interaction with no menu label.
 
 ### Focus
 
@@ -81,7 +81,8 @@ Durable per-Tab titles, icons, colors, and restoring multiple Tab Instances for 
 Each Pane renders one of:
 
 - `workspace.terminalPane` — terminal (local, SSH, Telnet, Serial). See [05-terminal.md](05-terminal.md).
-- `workspace.sftpBrowser` — SFTP dual-pane browser. See [07-sftp.md](07-sftp.md).
+- `workspace.sftpBrowser` — SFTP/FTP/File Explorer browser. See [07-sftp.md](07-sftp.md).
+- Document (`connections.fileView`, Pane kind `fileViewer`) — single-file viewer / light editor. See [03-connections.md](03-connections.md).
 - `workspace.webview` — URL Connection (WebView2). See [08-url-webview.md](08-url-webview.md).
 - RDP / VNC surface (`remoteDesktop.session`). See [09-remote-desktop.md](09-remote-desktop.md).
 
