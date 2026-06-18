@@ -1,27 +1,18 @@
 // System font enumeration + cache.
 //
 // The font picker in Settings can pull the OS-installed font families through
-// the Chromium Local Font Access API (`window.queryLocalFonts`), which is
-// available inside the WebView2 runtime after a user gesture. The result is
-// cached in localStorage so the long list survives an app relaunch without
-// re-prompting; a refresh action re-queries and overwrites the cache.
+// the Rust backend (`list_system_fonts`), which scans the platform font
+// directories cross-platform. The result is cached in localStorage so the long
+// list survives an app relaunch; a refresh action re-queries and overwrites the
+// cache.
+
+import { invokeCommand, isTauriRuntime } from "./tauri";
 
 const SYSTEM_FONTS_STORAGE_KEY = "kkterm.systemFonts";
 
-interface LocalFontData {
-  family?: string;
-}
-
-interface QueryLocalFontsWindow {
-  queryLocalFonts?: () => Promise<LocalFontData[]>;
-}
-
-/** Whether the running WebView can enumerate OS fonts. */
+/** Whether the running build can enumerate OS fonts (desktop runtime only). */
 export function isSystemFontAccessSupported(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof (window as QueryLocalFontsWindow).queryLocalFonts === "function"
-  );
+  return isTauriRuntime();
 }
 
 /** Read the previously cached system font families (empty when never refreshed). */
@@ -45,20 +36,19 @@ export function loadCachedSystemFonts(): string[] {
 }
 
 /**
- * Query the OS for installed font families, cache them, and return the sorted
- * unique list. Throws when the runtime cannot enumerate fonts so callers can
- * surface a localized notice.
+ * Ask the backend for installed font families, cache them, and return the
+ * sorted unique list. Throws when the runtime cannot enumerate fonts so callers
+ * can surface a localized notice.
  */
 export async function refreshSystemFonts(): Promise<string[]> {
-  const queryLocalFonts = (window as QueryLocalFontsWindow).queryLocalFonts;
-  if (typeof queryLocalFonts !== "function") {
+  if (!isTauriRuntime()) {
     throw new Error("System font access is not supported in this runtime.");
   }
 
-  const fonts = await queryLocalFonts();
+  const fonts = await invokeCommand("list_system_fonts");
   const families = new Set<string>();
   for (const font of fonts) {
-    const family = font.family?.trim();
+    const family = font.trim();
     if (family) {
       families.add(family);
     }
