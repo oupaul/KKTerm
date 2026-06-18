@@ -449,3 +449,68 @@ metadata-only page-context projection.
 Phases 0–3 are the minimum that delivers durable monitoring + SSH batch.
 Phases 4–8 are independent and can be reordered by demand.
 
+## Target `CONTEXT.md` Vocabulary (lands with Phase 3)
+
+These entries are **not** yet true of the shipping code — Watchdogs are
+in-memory-only today — so `CONTEXT.md` must not adopt them until the
+Phase 3 persistence work lands. They are captured here as the drafted
+target wording. The modeling principle is KKTerm's existing durable-vs-live
+split: **Automation is to Watchdog as Connection is to Session** — the
+Automation is the durable definition, the Watchdog is the live runtime
+that executes it.
+
+When Phase 3 lands, replace the current **Watchdog** entry in `CONTEXT.md`
+with the following two entries and add the three new IT Ops terms:
+
+> **Automation**:
+> A durable IT Ops rule stored in SQLite (`itops_automations`): one
+> trigger, an optional condition predicate, and an ordered list of typed
+> actions (notify, popup, email, webhook, run a Batch Run, or AI
+> intervention). Automations persist across app restart and re-arm on
+> launch. An Automation is the durable definition; the live **Watchdog**
+> runtime is what executes it, the same way a **Connection** is durable
+> and a **Session** is its live runtime. Created and managed in the **IT
+> Ops Module**. See `docs/ITOPS.md` and `src-tauri/src/itops/`.
+> _Avoid_: watchdog (for the durable rule), workflow, job, saved alert
+>
+> **Watchdog**:
+> The live runtime that executes an armed **Automation** (or an ad-hoc
+> live monitor): it samples a target (performance counter, SSH Session
+> output silence, ping, TCP reachability, schedule, output match, SFTP
+> change, inbound webhook, or datasource probe) against a predicate and,
+> on trigger, runs the Automation's actions. The running Watchdog state —
+> ticks, trigger log, state machine, suppression window — is **in-memory
+> only and does not persist across app restart**; its durable definition
+> lives in the **Automation**. Surfaced through the **Watchdog Status Bar**
+> indicator and a detail panel, not as a Connection or Session. See
+> `src-tauri/src/watchdog/` and `src/watchdog/`.
+> _Avoid_: monitor profile, durable watcher (the Automation is the durable part)
+>
+> **IT Ops Module**:
+> A built-in Activity Rail Module for fleet operations: **Host Groups**,
+> **Batch Runs**, and **Automations**. Lives with Dashboard and Install
+> Helper above Settings. Not a Connection, Session, or Dashboard widget.
+> See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+> _Avoid_: operations center, fleet manager, orchestrator
+>
+> **Host Group**:
+> A durable, named selection of existing Connections (plus an optional
+> dynamic filter by type/folder) used as the fleet target for Batch Runs
+> and Automation `runBatch` actions. Stored in `itops_host_groups`; it
+> references Connection ids and owns no Session and no secret. It is not a
+> Connection type.
+> _Avoid_: inventory, host list, connection group (as a Connection type)
+>
+> **Batch Run**:
+> One execution of a Batch Task (a script or a curated update playbook)
+> across a resolved Host Group, fanned out with bounded concurrency over a
+> per-host transport (SSH, WinRM, or PsExec). Live per-host progress and
+> streamed output are in-memory; a consolidated report is written to
+> `itops_run_history` on completion. The run is live runtime, not a
+> durable definition.
+> _Avoid_: broadcast, job, deployment
+
+The matching `Namespace` entry in `CONTEXT.md` also gains an `itops`
+namespace, and the **Activity Rail** entry lists IT Ops among the
+built-in Modules.
+
