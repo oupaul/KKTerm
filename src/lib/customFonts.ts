@@ -1,3 +1,4 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { defaultAppearanceSettings } from "../app-defaults";
 import type { AppearanceSettings, CustomFont } from "../types";
 import { invokeCommand, isTauriRuntime } from "./tauri";
@@ -44,18 +45,30 @@ export async function loadCustomFontOptions(fonts: CustomFontOption[]) {
 
   await Promise.allSettled(
     fonts.map(async (font) => {
-      if (loadedFontFamilies.has(font.cssFamily)) {
+      // Register each custom font under two families backed by the same file:
+      // an internal synthetic family used by the app UI font picker, and the
+      // font's human-readable file name. The terminal font field is free text,
+      // so users reference dropped-in fonts (e.g. Nerd Fonts) by the name they
+      // see and type rather than an opaque synthetic id.
+      const families = [font.cssFamily, font.name].filter(
+        (family) => family.length > 0 && !loadedFontFamilies.has(family),
+      );
+      if (families.length === 0) {
         return;
       }
-      const { dataBase64 } = await invokeCommand("load_custom_font_data", { path: font.path });
-      const face = new FontFace(
-        font.cssFamily,
-        base64ToArrayBuffer(dataBase64),
-        { display: "swap" },
+      // Load through the asset protocol so the WebView fetches and decodes the
+      // font on its own (native, off-main-thread) resource pipeline. This keeps
+      // multi-megabyte fonts off the UI thread on startup: no base64 payload
+      // crosses the IPC boundary and no decode runs in JS.
+      const source = `url("${convertFileSrc(font.path)}")`;
+      await Promise.allSettled(
+        families.map(async (family) => {
+          const face = new FontFace(family, source, { display: "swap" });
+          await face.load();
+          document.fonts.add(face);
+          loadedFontFamilies.add(family);
+        }),
       );
-      await face.load();
-      document.fonts.add(face);
-      loadedFontFamilies.add(font.cssFamily);
     }),
   );
 }
@@ -90,13 +103,4 @@ function hashPath(path: string) {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(36);
-}
-
-function base64ToArrayBuffer(value: string) {
-  const binary = window.atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes.buffer;
 }
