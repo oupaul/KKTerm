@@ -418,6 +418,37 @@ ${layoutEnforcementCss(enforcement)}
   ${shim}
   <script>
     (function () {
+      // Sandboxed widget iframes run without 'allow-same-origin', so the native
+      // localStorage/sessionStorage getters throw a SecurityError the moment a
+      // widget touches them — crashing the whole widget before it mounts. Shim
+      // them with an in-memory Storage so AI-authored code that reaches for web
+      // storage degrades to per-mount memory instead of failing. Durable
+      // per-instance state should use KK.getSettings()/KK.setSetting() instead.
+      function installStorageShim(name) {
+        var native = null;
+        try { native = window[name]; } catch (_err) { native = null; }
+        if (native && typeof native.getItem === 'function') return;
+        var store = Object.create(null);
+        var storage = {
+          getItem: function (key) {
+            key = String(key);
+            return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null;
+          },
+          setItem: function (key, value) { store[String(key)] = String(value); },
+          removeItem: function (key) { delete store[String(key)]; },
+          clear: function () { store = Object.create(null); },
+          key: function (index) {
+            var keys = Object.keys(store);
+            return index >= 0 && index < keys.length ? keys[index] : null;
+          },
+        };
+        Object.defineProperty(storage, 'length', { get: function () { return Object.keys(store).length; } });
+        try {
+          Object.defineProperty(window, name, { configurable: true, value: storage });
+        } catch (_err) { /* cannot shadow the native getter; leave it as-is */ }
+      }
+      installStorageShim('localStorage');
+      installStorageShim('sessionStorage');
       let settings = {};
       try {
         const parsedSettings = JSON.parse(${settings});

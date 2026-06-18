@@ -247,6 +247,49 @@ test("script widget host resyncs iframe visibility after initial layout and load
   assert.match(hostSource, /onLoad=\{syncVisibility\}/);
 });
 
+test("script widget shims localStorage/sessionStorage so sandboxed widgets do not crash", async () => {
+  const { buildSrcdoc } = await importTypeScriptModule(
+    new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
+  );
+  const srcdoc = buildSrcdoc({
+    source: "localStorage.setItem('k', '1'); document.getElementById('root').textContent = localStorage.getItem('k');",
+    permissions: { network: false },
+  });
+
+  // The in-memory Storage shim must be installed for both web storage globals
+  // before the user source runs, since the sandbox lacks allow-same-origin and
+  // the native getters throw SecurityError on first access.
+  assert.match(srcdoc, /function installStorageShim\(name\)/);
+  assert.match(srcdoc, /installStorageShim\('localStorage'\)/);
+  assert.match(srcdoc, /installStorageShim\('sessionStorage'\)/);
+  assert.match(srcdoc, /Object\.defineProperty\(window, name, \{ configurable: true, value: storage \}\)/);
+
+  // The shim implements the standard Storage surface widgets reach for.
+  for (const member of ["getItem", "setItem", "removeItem", "clear", "key"]) {
+    assert.match(srcdoc, new RegExp(`${member}:\\s*function`));
+  }
+
+  // Behavioral check: run the install snippet against a window whose
+  // localStorage getter throws (mirroring the real sandbox) and confirm the
+  // shim makes a get/set round-trip work without throwing.
+  const installMatch = srcdoc.match(/function installStorageShim\(name\)[\s\S]*?\n {6}\}/);
+  assert.ok(installMatch, "expected to extract installStorageShim source");
+  const fakeWindow = {};
+  Object.defineProperty(fakeWindow, "localStorage", {
+    configurable: true,
+    get() {
+      throw new Error("SecurityError: sandboxed");
+    },
+  });
+  const sandbox = { window: fakeWindow, Object, value: undefined };
+  vm.createContext(sandbox);
+  vm.runInContext(
+    `${installMatch[0]}\ninstallStorageShim('localStorage');\nwindow.localStorage.setItem('k', '1');\nvalue = window.localStorage.getItem('k') + '/' + window.localStorage.length;`,
+    sandbox,
+  );
+  assert.equal(sandbox.value, "1/1");
+});
+
 test("script widget host exposes app-owned UI primitives", async () => {
   const { buildSrcdoc } = await importTypeScriptModule(
     new URL("../src/modules/dashboard/script/permissions.ts", import.meta.url),
