@@ -399,7 +399,7 @@
   grid-row: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   min-width: 0;
   overflow: hidden;
 }
@@ -727,6 +727,24 @@
   background: var(--chrome);
   flex: 0 0 auto;
 }
+.fv-log-parser {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 560;
+}
+.fv-log-parser select {
+  height: 26px;
+  max-width: 150px;
+  padding: 0 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
 .fv-levels {
   display: inline-flex;
   gap: 4px;
@@ -808,16 +826,17 @@
 }
 .fv-logrow {
   display: grid;
-  grid-template-columns: 52px 58px 1fr;
+  grid-template-columns: max-content 46px minmax(0, 1fr);
   align-items: baseline;
-  gap: 14px;
-  padding: 3px 16px;
+  gap: 10px;
+  padding: 3px 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent);
 }
 .fv-logrow:hover {
   background: var(--hover);
 }
 .fv-logrow .ln {
+  justify-self: end;
   color: var(--gutter-text);
   text-align: right;
   font-size: 11px;

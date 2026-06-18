@@ -3284,6 +3284,18 @@
       "follow": "Seguir",
       "followOn": "Siguiendo — haz clic para pausar",
       "following": "Siguiendo",
+      "parser": "Parser",
+      "parserType": {
+        "auto": "Auto",
+        "generic": "Generic",
+        "json": "JSON",
+        "logfmt": "logfmt",
+        "syslog": "Syslog",
+        "http-access": "HTTP access",
+        "windows-event": "Windows event",
+        "java-stack": "Java stack",
+        "container": "Container"
+      },
       "find": "Buscar",
       "softWrap": "Ajuste de línea",
       "expandAll": "Expandir todo",
