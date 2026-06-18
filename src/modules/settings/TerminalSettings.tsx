@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Terminal } from "lucide-react";
+import { FolderOpen, Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import { listCustomFontOptions, type CustomFontOption } from "../../lib/customFonts";
 import { isWindowsPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
@@ -55,11 +56,42 @@ export function TerminalSettings() {
   const setTerminalSettings = useWorkspaceStore((state) => state.setTerminalSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState(terminalSettings);
+  const [customFonts, setCustomFonts] = useState<CustomFontOption[]>([]);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(terminalSettings);
 
   useEffect(() => {
     setDraft(terminalSettings);
   }, [terminalSettings]);
+
+  useEffect(() => {
+    let disposed = false;
+    if (!isTauriRuntime()) {
+      return () => {
+        disposed = true;
+      };
+    }
+    // Listing also registers each custom font with the WebView, so the family
+    // names suggested below resolve in the terminal once selected.
+    void listCustomFontOptions()
+      .then((fonts) => {
+        if (!disposed) setCustomFonts(fonts);
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  async function handleOpenCustomFontsFolder() {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      await invokeCommand("open_custom_fonts_folder");
+    } catch (err) {
+      showStatusBarNotice(err instanceof Error ? err.message : String(err), { tone: "error" });
+    }
+  }
 
   async function handleSave() {
     try {
@@ -93,16 +125,40 @@ export function TerminalSettings() {
         <div className="form-grid three-columns">
           <label data-tutorial-id="settings.terminalFontFamily">
             <span>{t("settings.fontFamily")}</span>
-            <input
-              onChange={(event) => {
-                const fontFamily = event.currentTarget.value;
-                setDraft((settings) => ({
-                  ...settings,
-                  fontFamily,
-                }));
-              }}
-              value={draft.fontFamily}
-            />
+            <div className="input-with-button">
+              <input
+                list="terminal-custom-fonts"
+                onChange={(event) => {
+                  const fontFamily = event.currentTarget.value;
+                  setDraft((settings) => ({
+                    ...settings,
+                    fontFamily,
+                  }));
+                }}
+                value={draft.fontFamily}
+              />
+              {isTauriRuntime() ? (
+                <button
+                  aria-label={t("settings.openCustomFontsFolder")}
+                  className="toolbar-button"
+                  onClick={() => void handleOpenCustomFontsFolder()}
+                  title={t("settings.openCustomFontsFolder")}
+                  type="button"
+                >
+                  <FolderOpen size={15} />
+                </button>
+              ) : null}
+            </div>
+            {customFonts.length > 0 ? (
+              <datalist id="terminal-custom-fonts">
+                {customFonts.map((font) => (
+                  <option key={font.path} value={font.name} />
+                ))}
+              </datalist>
+            ) : null}
+            <small className="field-hint">
+              {customFonts.length > 0 ? t("settings.customFontsHint") : t("settings.noCustomFonts")}
+            </small>
           </label>
           <label data-tutorial-id="settings.terminalFontSize">
             <span>{t("settings.fontSize")}</span>

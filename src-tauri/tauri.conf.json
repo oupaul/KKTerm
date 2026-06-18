@@ -16,7 +16,8 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "$EXE/backgrounds/**"
+          "$EXE/backgrounds/**",
+          "$EXE/fonts/**"
         ]
       }
     }
