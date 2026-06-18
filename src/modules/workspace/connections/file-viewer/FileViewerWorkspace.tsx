@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Lock, Menu, RefreshCw, Save } from "lucide-react";
+import { Check, Lock, Menu, RefreshCw, Save, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { WorkspaceTab } from "../../../../types";
 import { confirmNativeDialog, invokeCommand, type FileViewProbe } from "../../../../lib/tauri";
@@ -86,14 +86,22 @@ interface LoadedContent {
 export function FileViewerWorkspace({
   isActive,
   tab,
+  onClose,
 }: {
   isActive: boolean;
   tab: WorkspaceTab;
+  onClose?: () => void;
 }) {
   const { t } = useTranslation();
   const filePath = tab.connection?.localStartupDirectory?.trim() ?? "";
   const connectionId = tab.connection?.id;
   const documentStatusSlot = useWorkspaceStore((state) => state.documentStatusSlot);
+  const markConnectionSessionStarted = useWorkspaceStore(
+    (state) => state.markConnectionSessionStarted,
+  );
+  const markConnectionSessionEnded = useWorkspaceStore(
+    (state) => state.markConnectionSessionEnded,
+  );
   const [probe, setProbe] = useState<FileViewProbe | null>(null);
   const [override, setOverride] = useState<ViewerKind | null>(null);
   const [content, setContent] = useState<LoadedContent | null>(null);
@@ -196,6 +204,17 @@ export function FileViewerWorkspace({
     // Reload when the file, the chosen viewer override, the decode encoding, or
     // an explicit reload changes. `load` is stable per filePath + encoding.
   }, [load, override, reloadToken]);
+
+  // A Document has no network session, but it should still register as a live
+  // connection (green dot in the rail / connection tree) the moment the file
+  // opens, and release it when the tab closes — mirroring the File Explorer.
+  useEffect(() => {
+    if (!connectionId) {
+      return;
+    }
+    markConnectionSessionStarted(connectionId);
+    return () => markConnectionSessionEnded(connectionId);
+  }, [connectionId, markConnectionSessionEnded, markConnectionSessionStarted]);
 
   const kinds = probe
     ? availableViewerKinds({ path: filePath, magic: probe.magic, isText: probe.isText })
@@ -450,6 +469,7 @@ export function FileViewerWorkspace({
             ) : null}
           </div>
         ) : null}
+        {onClose ? <IconButton icon={X} title={t("common.close")} onClick={onClose} /> : null}
       </div>
 
       {content?.truncated ? (
