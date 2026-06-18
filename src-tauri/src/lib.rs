@@ -190,8 +190,8 @@ fn focus_main_window(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn get_custom_fonts_folder() -> Result<String, String> {
-    let folder = custom_fonts_folder()?;
+fn get_custom_fonts_folder(app: tauri::AppHandle) -> Result<String, String> {
+    let folder = custom_fonts_folder(&app)?;
     fs::create_dir_all(&folder).map_err(|error| {
         format!(
             "failed to create custom fonts folder {}: {error}",
@@ -203,7 +203,7 @@ fn get_custom_fonts_folder() -> Result<String, String> {
 
 #[tauri::command]
 fn open_custom_fonts_folder(app: tauri::AppHandle) -> Result<(), String> {
-    let folder = custom_fonts_folder()?;
+    let folder = custom_fonts_folder(&app)?;
     fs::create_dir_all(&folder).map_err(|error| {
         format!(
             "failed to create custom fonts folder {}: {error}",
@@ -305,29 +305,38 @@ fn open_windows_executable_path(path: &Path) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn list_custom_fonts() -> Result<Vec<CustomFontEntry>, String> {
-    tauri::async_runtime::spawn_blocking(list_custom_fonts_sync)
+async fn list_custom_fonts(app: tauri::AppHandle) -> Result<Vec<CustomFontEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || list_custom_fonts_sync(&app))
         .await
         .map_err(|error| format!("failed to list custom fonts: {error}"))?
 }
 
 #[tauri::command]
-async fn load_custom_font_data(path: String) -> Result<CustomFontData, String> {
-    tauri::async_runtime::spawn_blocking(move || load_custom_font_data_sync(path))
+async fn load_custom_font_data(
+    app: tauri::AppHandle,
+    path: String,
+) -> Result<CustomFontData, String> {
+    tauri::async_runtime::spawn_blocking(move || load_custom_font_data_sync(&app, path))
         .await
         .map_err(|error| format!("failed to load custom font: {error}"))?
 }
 
 #[tauri::command]
-async fn dashboard_import_background_image(source_path: String) -> Result<String, String> {
+async fn dashboard_import_background_image(
+    app: tauri::AppHandle,
+    source_path: String,
+) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        dashboard_import_background_image_sync(source_path)
+        dashboard_import_background_image_sync(&app, source_path)
     })
     .await
     .map_err(|error| format!("failed to import background image: {error}"))?
 }
 
-fn dashboard_import_background_image_sync(source_path: String) -> Result<String, String> {
+fn dashboard_import_background_image_sync(
+    app: &tauri::AppHandle,
+    source_path: String,
+) -> Result<String, String> {
     use std::hash::{Hash, Hasher};
 
     let source = PathBuf::from(&source_path);
@@ -341,7 +350,7 @@ fn dashboard_import_background_image_sync(source_path: String) -> Result<String,
     bytes.hash(&mut hasher);
     let file_name = format!("bg-{:016x}.{extension}", hasher.finish());
 
-    let folder = backgrounds_folder()?;
+    let folder = backgrounds_folder(app)?;
     fs::create_dir_all(&folder).map_err(|error| {
         format!(
             "failed to create backgrounds folder {}: {error}",
@@ -362,14 +371,24 @@ fn dashboard_import_background_image_sync(source_path: String) -> Result<String,
 
 #[tauri::command]
 async fn dashboard_load_background_image(
+    app: tauri::AppHandle,
     file: String,
 ) -> Result<DashboardBackgroundImageData, String> {
-    tauri::async_runtime::spawn_blocking(move || dashboard_load_background_image_sync(file))
+    tauri::async_runtime::spawn_blocking(move || dashboard_load_background_image_sync(&app, file))
         .await
         .map_err(|error| format!("failed to load background image: {error}"))?
 }
 
 fn dashboard_load_background_image_sync(
+    app: &tauri::AppHandle,
+    file: String,
+) -> Result<DashboardBackgroundImageData, String> {
+    let folder = backgrounds_folder(app)?;
+    load_background_image_from_folder(&folder, file)
+}
+
+fn load_background_image_from_folder(
+    folder: &Path,
     file: String,
 ) -> Result<DashboardBackgroundImageData, String> {
     use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -378,8 +397,7 @@ fn dashboard_load_background_image_sync(
         return Err("invalid background image file name".to_string());
     }
 
-    let folder = backgrounds_folder()?;
-    fs::create_dir_all(&folder).map_err(|error| {
+    fs::create_dir_all(folder).map_err(|error| {
         format!(
             "failed to create backgrounds folder {}: {error}",
             folder.display()
@@ -3614,9 +3632,8 @@ mod tests {
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    fn write_test_background_file(extension: &str, bytes: &[u8]) -> String {
-        let folder = backgrounds_folder().expect("backgrounds folder");
-        fs::create_dir_all(&folder).expect("create backgrounds folder");
+    fn write_test_background_file(folder: &Path, extension: &str, bytes: &[u8]) -> String {
+        fs::create_dir_all(folder).expect("create backgrounds folder");
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("system time")
@@ -3628,17 +3645,18 @@ mod tests {
 
     #[test]
     fn dashboard_load_background_video_returns_data_url() {
-        let file = write_test_background_file("mp4", b"test-video-bytes");
+        // Use a tempdir rather than the real (app-data) backgrounds folder so the
+        // test exercises the encode logic without depending on a Tauri AppHandle.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let file = write_test_background_file(dir.path(), "mp4", b"test-video-bytes");
         let result =
-            dashboard_load_background_image_sync(file.clone()).expect("load background video");
+            load_background_image_from_folder(dir.path(), file).expect("load background video");
 
         assert_eq!(result.path, None);
         assert_eq!(
             result.data_url,
             Some("data:video/mp4;base64,dGVzdC12aWRlby1ieXRlcw==".to_string())
         );
-
-        let _ = fs::remove_file(backgrounds_folder().expect("backgrounds folder").join(file));
     }
 
     #[test]
