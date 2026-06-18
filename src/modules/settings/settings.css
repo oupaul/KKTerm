@@ -1384,8 +1384,17 @@
 }
 
 .settings-custom-shell-row {
+  display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  gap: 12px;
+  align-items: end;
+  min-height: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-custom-shell-row:last-child {
+  border-bottom: 0;
 }
 
 /*
@@ -1450,22 +1459,30 @@
   line-height: 1.35;
 }
 
-.settings-toggle-row .settings-custom-shell-fields {
-  grid-column: 2;
-  grid-row: 1;
+.settings-custom-shell-fields {
+  display: grid;
   grid-template-columns: minmax(140px, 0.4fr) minmax(220px, 1fr);
   gap: 12px;
 }
 
-.settings-custom-shell-fields label {
+.settings-section .settings-custom-shell-fields label {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
+  align-items: stretch;
+  min-height: 0;
+  padding: 0;
+  border: 0;
 }
 
-.settings-custom-shell-fields label > span {
+.settings-section .settings-custom-shell-fields label > span {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 520;
+}
+
+.settings-section .settings-custom-shell-fields label > input {
+  grid-column: 1;
 }
 
 .settings-toggle-actions {

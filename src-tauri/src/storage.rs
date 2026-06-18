@@ -3630,24 +3630,21 @@ fn normalize_local_shell(
         return Ok(None);
     }
 
-    match value
-        .as_deref()
-        .map(str::trim)
+    let Some(shell) = value
+        .map(|shell| shell.trim().to_string())
         .filter(|shell| !shell.is_empty())
-    {
-        #[cfg(target_os = "windows")]
-        Some(shell @ ("powershell.exe" | "pwsh.exe" | "cmd.exe" | "wsl.exe")) => {
-            Ok(Some(shell.to_string()))
-        }
-        #[cfg(target_os = "windows")]
-        Some(_) => Err(
-            "local terminal shell must be PowerShell, PowerShell 7, Command Prompt, or WSL"
-                .to_string(),
-        ),
-        #[cfg(not(target_os = "windows"))]
-        Some(shell) => Ok(Some(shell.to_string())),
-        None => Ok(None),
+    else {
+        return Ok(None);
+    };
+
+    if shell.chars().any(char::is_control) {
+        return Err("local shell cannot contain control characters".to_string());
     }
+    if shell.chars().count() > 1000 {
+        return Err("local shell must be 1000 characters or fewer".to_string());
+    }
+
+    Ok(Some(shell))
 }
 
 fn normalize_local_startup_directory(

@@ -4,9 +4,11 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { listCustomFontOptions, type CustomFontOption } from "../../lib/customFonts";
+import { currentPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
 import { localShellOptionsForPlatform, resolveAvailableLocalShell } from "../workspace/connections/utils";
+import { customShellPresetsForPlatform, findCustomShellPreset } from "./customShellPresets";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -75,6 +77,7 @@ export function TerminalSettings() {
   const [customFonts, setCustomFonts] = useState<CustomFontOption[]>([]);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(terminalSettings);
   const defaultShellOptions = localShellOptionsForPlatform(draft.customShells);
+  const customShellPresets = customShellPresetsForPlatform(currentPlatform());
   const defaultShellSelectOptions = defaultShellOptions.some((option) => (option.value ?? "") === draft.defaultShell)
     ? defaultShellOptions
     : [
@@ -152,6 +155,22 @@ export function TerminalSettings() {
       ...settings,
       customShells: (settings.customShells ?? []).map((shell) =>
         shell.id === shellId ? { ...shell, [field]: value } : shell,
+      ),
+    }));
+  }
+
+  function handleCustomShellNameChange(shellId: string, name: string) {
+    const preset = findCustomShellPreset(name, currentPlatform());
+    setDraft((settings) => ({
+      ...settings,
+      customShells: (settings.customShells ?? []).map((shell) =>
+        shell.id === shellId
+          ? {
+              ...shell,
+              name,
+              commandLine: preset?.commandLine ?? shell.commandLine,
+            }
+          : shell,
       ),
     }));
   }
@@ -366,14 +385,20 @@ export function TerminalSettings() {
           <p className="field-hint">{t("settings.customShellsHint")}</p>
         </div>
         <div className="settings-toggle-list">
+          <datalist id="terminal-custom-shell-presets">
+            {customShellPresets.map((preset) => (
+              <option key={preset.name} value={preset.name} />
+            ))}
+          </datalist>
           {(draft.customShells ?? []).map((shell) => (
-            <div className="settings-toggle-row settings-custom-shell-row" key={shell.id}>
+            <div className="settings-custom-shell-row" key={shell.id}>
               <Terminal size={16} aria-hidden />
-              <span className="settings-custom-shell-fields">
+              <div className="settings-custom-shell-fields">
                 <label>
                   <span>{t("settings.customShellName")}</span>
                   <input
-                    onChange={(event) => handleUpdateCustomShell(shell.id, "name", event.currentTarget.value)}
+                    list="terminal-custom-shell-presets"
+                    onChange={(event) => handleCustomShellNameChange(shell.id, event.currentTarget.value)}
                     placeholder={t("settings.customShellNamePlaceholder")}
                     value={shell.name}
                   />
@@ -386,7 +411,7 @@ export function TerminalSettings() {
                     value={shell.commandLine}
                   />
                 </label>
-              </span>
+              </div>
               <button
                 aria-label={t("settings.removeCustomShell", { name: shell.name || t("settings.customShell") })}
                 className="toolbar-button"

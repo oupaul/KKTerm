@@ -156,6 +156,22 @@ fn create_test_local_connection(storage: &Storage, name: &str, shell: &str) -> S
         .expect("local connection is created")
 }
 
+#[test]
+fn local_connection_accepts_custom_shell_command_line() {
+    let storage = Storage::open(temp_db_path("custom-local-shell")).expect("storage opens");
+
+    let connection = create_test_local_connection(
+        &storage,
+        "Git Bash",
+        r#""C:\Program Files\Git\git-bash.exe" --cd=~"#,
+    );
+
+    assert_eq!(
+        connection.local_shell.as_deref(),
+        Some(r#""C:\Program Files\Git\git-bash.exe" --cd=~"#),
+    );
+}
+
 fn backup_filename_has_serial(filename: &str) -> bool {
     let stem = filename.strip_suffix(".zip").unwrap_or(filename);
     stem.rsplit_once('-')

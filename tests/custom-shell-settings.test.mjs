@@ -46,3 +46,25 @@ test("deleted custom shells fall back to the platform default anywhere they were
   assert.match(localFieldsSource, /resolveAvailableLocalShell\(\s*initialConnection\?\.localShell/);
   assert.match(terminalWorkspaceSource, /resolveAvailableLocalShell\(\s*connection\.localShell/);
 });
+
+test("custom shell settings rows use a dedicated editor layout", async () => {
+  const [settingsSource, cssSource] = await Promise.all([
+    readFile(new URL("../src/modules/settings/TerminalSettings.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/modules/settings/settings.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(settingsSource, /settings-toggle-row settings-custom-shell-row/);
+  assert.match(settingsSource, /customShellPresetsForPlatform\(currentPlatform\(\)\)/);
+  assert.match(settingsSource, /list="terminal-custom-shell-presets"/);
+  assert.match(settingsSource, /findCustomShellPreset/);
+  assert.match(settingsSource, /className="settings-custom-shell-row"/);
+  assert.match(cssSource, /\.settings-custom-shell-row\s*{[\s\S]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto/);
+  assert.match(cssSource, /\.settings-custom-shell-fields\s*{[\s\S]*grid-template-columns:\s*minmax\(140px, 0\.4fr\) minmax\(220px, 1fr\)/);
+});
+
+test("local connection validation allows custom shell command lines", async () => {
+  const storageSource = await readFile(new URL("../src-tauri/src/storage.rs", import.meta.url), "utf8");
+
+  assert.doesNotMatch(storageSource, /local terminal shell must be PowerShell/);
+  assert.match(storageSource, /local shell cannot contain control characters/);
+});

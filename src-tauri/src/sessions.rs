@@ -2449,6 +2449,7 @@ fn parse_local_shell_command_line(command_line: &str) -> Result<LocalShellComman
         parts.push(current);
     }
 
+    let parts = normalize_unquoted_windows_exe_path_parts(parts);
     let program = parts
         .first()
         .cloned()
@@ -2456,6 +2457,33 @@ fn parse_local_shell_command_line(command_line: &str) -> Result<LocalShellComman
     let args = parts.into_iter().skip(1).collect();
 
     Ok(LocalShellCommandLine { program, args })
+}
+
+fn normalize_unquoted_windows_exe_path_parts(parts: Vec<String>) -> Vec<String> {
+    if parts.len() < 2 {
+        return parts;
+    }
+
+    let mut program_parts = Vec::new();
+    for (index, part) in parts.iter().enumerate() {
+        program_parts.push(part.as_str());
+        let joined = program_parts.join(" ");
+        if windows_executable_path_has_suffix(&joined) {
+            let mut normalized = Vec::with_capacity(parts.len() - index);
+            normalized.push(joined);
+            normalized.extend(parts.iter().skip(index + 1).cloned());
+            return normalized;
+        }
+    }
+
+    parts
+}
+
+fn windows_executable_path_has_suffix(value: &str) -> bool {
+    let normalized = value.to_ascii_lowercase();
+    [".exe", ".cmd", ".bat", ".com"]
+        .iter()
+        .any(|suffix| normalized.ends_with(suffix))
 }
 
 fn is_windows_cmd_shell(program: &str) -> bool {
@@ -2613,6 +2641,15 @@ mod tests {
 
         assert_eq!(parsed.program, r"C:\Program Files\Git\bin\bash.exe");
         assert_eq!(parsed.args, vec!["--login", "-i"]);
+    }
+
+    #[test]
+    fn local_shell_command_line_keeps_unquoted_windows_exe_path_with_spaces() {
+        let parsed = parse_local_shell_command_line(r"C:\Program Files\Git\git-bash.exe --cd=~")
+            .expect("unquoted Windows exe path parses");
+
+        assert_eq!(parsed.program, r"C:\Program Files\Git\git-bash.exe");
+        assert_eq!(parsed.args, vec!["--cd=~"]);
     }
 
     #[test]
