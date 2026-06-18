@@ -310,6 +310,7 @@ export function WorkspaceCanvas({
             <SftpWorkspace
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
               tab={tab}
             />
           );
@@ -336,6 +337,7 @@ export function WorkspaceCanvas({
               commands={commands}
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
               tab={tab}
             />
           );
@@ -348,6 +350,7 @@ export function WorkspaceCanvas({
               commands={localBrowserCommands()}
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
               tab={tab}
             />
           );
@@ -359,6 +362,7 @@ export function WorkspaceCanvas({
             <FileViewerWorkspace
               isActive={workspaceActive && tab.id === activeTabId}
               key={tab.id}
+              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
               tab={tab}
             />
           );
