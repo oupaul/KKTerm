@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
-import { FolderOpen, Plus, Terminal, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { listCustomFontOptions, type CustomFontOption } from "../../lib/customFonts";
+import {
+  isSystemFontAccessSupported,
+  loadCachedSystemFonts,
+  refreshSystemFonts,
+  systemFontsExcluding,
+} from "../../lib/systemFonts";
+import { defaultTerminalSettings } from "../../app-defaults";
 import { currentPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import type { TerminalCursorStyle, TerminalSettings as TerminalSettingsType } from "../../types";
@@ -11,6 +18,26 @@ import { localShellOptionsForPlatform, resolveAvailableLocalShell } from "../wor
 import { customShellPresetsForPlatform, findCustomShellPreset } from "./customShellPresets";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
+
+// Curated monospace fonts offered in the terminal font dropdown. `family` is the
+// primary OS font name used to dedupe detected system fonts; labels are proper
+// font names rendered as data, so they are not routed through i18n.
+const TERMINAL_FONT_OPTIONS: { label: string; value: string; family: string }[] = [
+  { label: "Cascadia Mono", value: '"Cascadia Mono", monospace', family: "Cascadia Mono" },
+  { label: "Cascadia Code", value: '"Cascadia Code", monospace', family: "Cascadia Code" },
+  { label: "JetBrains Mono", value: '"JetBrains Mono", monospace', family: "JetBrains Mono" },
+  { label: "Consolas", value: "Consolas, monospace", family: "Consolas" },
+  { label: "Courier New", value: '"Courier New", monospace', family: "Courier New" },
+  { label: "Fira Code", value: '"Fira Code", monospace', family: "Fira Code" },
+  { label: "Cascadia Code PL", value: '"Cascadia Code PL", monospace', family: "Cascadia Code PL" },
+];
+
+const CURATED_TERMINAL_FONT_FAMILIES = TERMINAL_FONT_OPTIONS.map((option) => option.family);
+
+/** CSS font stack for a font family picked from the custom or system font list. */
+function terminalFontCssValue(family: string) {
+  return `"${family}", monospace`;
+}
 
 function normalizeTerminalSettingsDraft(settings: TerminalSettingsType, t: TFunction): TerminalSettingsType {
   if (!settings.fontFamily.trim()) {
@@ -75,6 +102,8 @@ export function TerminalSettings() {
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState(terminalSettings);
   const [customFonts, setCustomFonts] = useState<CustomFontOption[]>([]);
+  const [systemFonts, setSystemFonts] = useState<string[]>(() => loadCachedSystemFonts());
+  const [refreshingFonts, setRefreshingFonts] = useState(false);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(terminalSettings);
   const defaultShellOptions = localShellOptionsForPlatform(draft.customShells);
   const customShellPresets = customShellPresetsForPlatform(currentPlatform());
@@ -119,6 +148,23 @@ export function TerminalSettings() {
       await invokeCommand("open_custom_fonts_folder");
     } catch (err) {
       showStatusBarNotice(err instanceof Error ? err.message : String(err), { tone: "error" });
+    }
+  }
+
+  async function handleRefreshSystemFonts() {
+    if (!isSystemFontAccessSupported()) {
+      showStatusBarNotice(t("settings.systemFontsUnavailable"), { tone: "error" });
+      return;
+    }
+    setRefreshingFonts(true);
+    try {
+      const fonts = await refreshSystemFonts();
+      setSystemFonts(fonts);
+      showStatusBarNotice(t("settings.systemFontsRefreshed"), { tone: "success" });
+    } catch (err) {
+      showStatusBarNotice(err instanceof Error ? err.message : String(err), { tone: "error" });
+    } finally {
+      setRefreshingFonts(false);
     }
   }
 
@@ -191,6 +237,22 @@ export function TerminalSettings() {
     });
   }
 
+  const customFontTerminalOptions = customFonts.map((font) => ({
+    key: font.path,
+    label: font.name,
+    value: terminalFontCssValue(font.name),
+  }));
+  const systemFontTerminalOptions = systemFontsExcluding(systemFonts, [
+    ...CURATED_TERMINAL_FONT_FAMILIES,
+    ...customFonts.map((font) => font.name),
+  ]).map((family) => ({ family, value: terminalFontCssValue(family) }));
+  const defaultTerminalFontValue = defaultTerminalSettings.fontFamily;
+  const terminalFontMatched =
+    draft.fontFamily === defaultTerminalFontValue ||
+    TERMINAL_FONT_OPTIONS.some((option) => option.value === draft.fontFamily) ||
+    customFontTerminalOptions.some((option) => option.value === draft.fontFamily) ||
+    systemFontTerminalOptions.some((option) => option.value === draft.fontFamily);
+
   useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
 
   return (
@@ -209,9 +271,18 @@ export function TerminalSettings() {
         <div className="form-grid three-columns">
           <label data-tutorial-id="settings.terminalFontFamily">
             <span>{t("settings.fontFamily")}</span>
-            <div className="input-with-button">
-              <input
-                list="terminal-custom-fonts"
+            <div className="input-with-button font-input-with-button">
+              <button
+                aria-label={t("settings.refreshSystemFonts")}
+                className="toolbar-button"
+                disabled={refreshingFonts}
+                onClick={() => void handleRefreshSystemFonts()}
+                title={t("settings.refreshSystemFonts")}
+                type="button"
+              >
+                <RefreshCw className={refreshingFonts ? "spin" : undefined} size={15} />
+              </button>
+              <select
                 onChange={(event) => {
                   const fontFamily = event.currentTarget.value;
                   setDraft((settings) => ({
@@ -220,7 +291,35 @@ export function TerminalSettings() {
                   }));
                 }}
                 value={draft.fontFamily}
-              />
+              >
+                {terminalFontMatched ? null : (
+                  <option value={draft.fontFamily}>{draft.fontFamily}</option>
+                )}
+                {customFontTerminalOptions.length > 0 ? (
+                  <optgroup label={t("settings.customFonts")}>
+                    {customFontTerminalOptions.map((option) => (
+                      <option key={option.key} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                <option value={defaultTerminalFontValue}>{t("settings.terminalFontDefault")}</option>
+                {TERMINAL_FONT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+                {systemFontTerminalOptions.length > 0 ? (
+                  <optgroup label={t("settings.systemFonts")}>
+                    {systemFontTerminalOptions.map((option) => (
+                      <option key={option.family} value={option.value}>
+                        {option.family}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+              </select>
               {isTauriRuntime() ? (
                 <button
                   aria-label={t("settings.openCustomFontsFolder")}
@@ -233,13 +332,6 @@ export function TerminalSettings() {
                 </button>
               ) : null}
             </div>
-            {customFonts.length > 0 ? (
-              <datalist id="terminal-custom-fonts">
-                {customFonts.map((font) => (
-                  <option key={font.path} value={font.name} />
-                ))}
-              </datalist>
-            ) : null}
             <small className="field-hint">
               {customFonts.length > 0 ? t("settings.customFontsHint") : t("settings.noCustomFonts")}
             </small>
