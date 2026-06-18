@@ -3284,6 +3284,18 @@
       "follow": "ติดตาม",
       "followOn": "กำลังติดตาม — คลิกเพื่อหยุดชั่วคราว",
       "following": "กำลังติดตาม",
+      "parser": "Parser",
+      "parserType": {
+        "auto": "Auto",
+        "generic": "Generic",
+        "json": "JSON",
+        "logfmt": "logfmt",
+        "syslog": "Syslog",
+        "http-access": "HTTP access",
+        "windows-event": "Windows event",
+        "java-stack": "Java stack",
+        "container": "Container"
+      },
       "find": "ค้นหา",
       "softWrap": "ขึ้นบรรทัดอัตโนมัติ",
       "expandAll": "ขยายทั้งหมด",

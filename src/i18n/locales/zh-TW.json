@@ -3284,6 +3284,18 @@
       "follow": "跟隨",
       "followOn": "追蹤中 — 點擊暫停",
       "following": "追蹤中",
+      "parser": "Parser",
+      "parserType": {
+        "auto": "Auto",
+        "generic": "Generic",
+        "json": "JSON",
+        "logfmt": "logfmt",
+        "syslog": "Syslog",
+        "http-access": "HTTP access",
+        "windows-event": "Windows event",
+        "java-stack": "Java stack",
+        "container": "Container"
+      },
       "find": "尋找",
       "softWrap": "自動換行",
       "expandAll": "全部展開",

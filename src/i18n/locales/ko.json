@@ -3284,6 +3284,18 @@
       "follow": "따라가기",
       "followOn": "추적 중 — 클릭하여 일시정지",
       "following": "추적 중",
+      "parser": "Parser",
+      "parserType": {
+        "auto": "Auto",
+        "generic": "Generic",
+        "json": "JSON",
+        "logfmt": "logfmt",
+        "syslog": "Syslog",
+        "http-access": "HTTP access",
+        "windows-event": "Windows event",
+        "java-stack": "Java stack",
+        "container": "Container"
+      },
       "find": "찾기",
       "softWrap": "자동 줄바꿈",
       "expandAll": "모두 펼치기",

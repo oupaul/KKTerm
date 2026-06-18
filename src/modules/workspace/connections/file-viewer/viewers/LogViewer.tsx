@@ -6,34 +6,20 @@ import DOMPurify from "dompurify";
 import { invokeCommand } from "../../../../../lib/tauri";
 import { ChromePortals } from "../chrome/FileViewerChromeContext";
 import { FootSeg, IconButton, SearchField } from "../chrome/controls";
+import {
+  LOG_PARSER_TYPES,
+  parseLogLines,
+  type LogLevel,
+  type LogParserId,
+} from "../logParser";
 
 /** Maximum lines rendered at once to keep very large logs responsive. */
 const MAX_RENDERED_LINES = 5000;
 /** Tail poll interval while "follow" is enabled and the tab is active. */
 const FOLLOW_INTERVAL_MS = 2000;
 
-type LogLevel = "error" | "warn" | "info" | "debug" | "trace" | "none";
-
-const LEVEL_PATTERNS: { level: LogLevel; pattern: RegExp }[] = [
-  { level: "error", pattern: /\b(error|err|fatal|crit(ical)?|panic|fail(ed|ure)?)\b/i },
-  { level: "warn", pattern: /\b(warn(ing)?)\b/i },
-  { level: "info", pattern: /\b(info|notice)\b/i },
-  { level: "debug", pattern: /\b(debug)\b/i },
-  { level: "trace", pattern: /\b(trace|verbose)\b/i },
-];
-
 const FILTERABLE_LEVELS: LogLevel[] = ["error", "warn", "info", "debug", "trace"];
-
-function detectLevel(line: string): LogLevel {
-  for (const { level, pattern } of LEVEL_PATTERNS) {
-    if (pattern.test(line)) {
-      return level;
-    }
-  }
-  return "none";
-}
-
-const ESCAPE = "";
+const ESCAPE = "\u001b[";
 
 /**
  * Dedicated log mode: parses lines, tags severity for coloring, supports a text
@@ -61,6 +47,7 @@ export function LogViewer({
   const [follow, setFollow] = useState(false);
   const [liveText, setLiveText] = useState<string | null>(null);
   const [hiddenLevels, setHiddenLevels] = useState<Set<LogLevel>>(new Set());
+  const [parser, setParser] = useState<LogParserId>("auto");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const ansiConvert = useMemo(() => new Convert({ newline: false, escapeXML: true }), []);
@@ -96,13 +83,11 @@ export function LogViewer({
 
   const lines = useMemo(() => {
     const hasAnsi = source.includes(ESCAPE);
-    return source.split(/\r?\n/).map((raw, index) => ({
-      index,
-      raw,
-      level: detectLevel(raw),
-      html: hasAnsi ? DOMPurify.sanitize(ansiConvert.toHtml(raw)) : null,
+    return parseLogLines(source, parser).map((line) => ({
+      ...line,
+      html: hasAnsi ? DOMPurify.sanitize(ansiConvert.toHtml(line.message)) : null,
     }));
-  }, [source, ansiConvert]);
+  }, [source, parser, ansiConvert]);
 
   const levelCounts = useMemo(() => {
     const counts: Partial<Record<LogLevel, number>> = {};
@@ -178,6 +163,16 @@ export function LogViewer({
         }
       />
       <div className="fv-logbar">
+        <label className="fv-log-parser">
+          <span>{t("workspace.fileViewer.parser")}</span>
+          <select value={parser} onChange={(event) => setParser(event.currentTarget.value as LogParserId)}>
+            {LOG_PARSER_TYPES.map((option) => (
+              <option key={option.id} value={option.id}>
+                {t(`workspace.fileViewer.parserType.${option.id}`)}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="fv-levels">
           {FILTERABLE_LEVELS.map((level) => {
             const on = !hiddenLevels.has(level);
@@ -206,7 +201,7 @@ export function LogViewer({
             {line.html !== null ? (
               <span className="msg" dangerouslySetInnerHTML={{ __html: line.html }} />
             ) : (
-              <span className="msg">{line.raw}</span>
+              <span className="msg">{line.message}</span>
             )}
           </div>
         ))}
