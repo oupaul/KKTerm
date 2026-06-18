@@ -44,18 +44,27 @@ export async function loadCustomFontOptions(fonts: CustomFontOption[]) {
 
   await Promise.allSettled(
     fonts.map(async (font) => {
-      if (loadedFontFamilies.has(font.cssFamily)) {
+      // Register each custom font under two families backed by the same bytes:
+      // an internal synthetic family used by the app UI font picker, and the
+      // font's human-readable file name. The terminal font field is free text,
+      // so users reference dropped-in fonts (e.g. Nerd Fonts) by the name they
+      // see and type rather than an opaque synthetic id.
+      const families = [font.cssFamily, font.name].filter(
+        (family) => family.length > 0 && !loadedFontFamilies.has(family),
+      );
+      if (families.length === 0) {
         return;
       }
       const { dataBase64 } = await invokeCommand("load_custom_font_data", { path: font.path });
-      const face = new FontFace(
-        font.cssFamily,
-        base64ToArrayBuffer(dataBase64),
-        { display: "swap" },
+      const buffer = base64ToArrayBuffer(dataBase64);
+      await Promise.allSettled(
+        families.map(async (family) => {
+          const face = new FontFace(family, buffer.slice(0), { display: "swap" });
+          await face.load();
+          document.fonts.add(face);
+          loadedFontFamilies.add(family);
+        }),
       );
-      await face.load();
-      document.fonts.add(face);
-      loadedFontFamilies.add(font.cssFamily);
     }),
   );
 }

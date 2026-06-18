@@ -237,6 +237,26 @@ class XtermTerminalRenderer implements TerminalRenderer {
     this.applyHostBackground(this.backgroundOpacity);
     this.terminal.open(element);
     this.tryEnableWebglRenderer();
+    this.refreshAtlasWhenFontsReady();
+  }
+
+  private refreshAtlasWhenFontsReady() {
+    // Custom fonts (e.g. Nerd Fonts dropped into the app fonts folder) register
+    // asynchronously through the FontFace API. If a terminal opens before its
+    // configured font finishes loading, the glyph atlas caches fallback boxes.
+    // Rebuild the atlas once fonts settle so powerline/Nerd glyphs render
+    // without a reload.
+    if (typeof document === "undefined" || !document.fonts?.ready) {
+      return;
+    }
+    void document.fonts.ready.then(() => {
+      try {
+        this.terminal.clearTextureAtlas();
+      } catch {
+        // clearTextureAtlas may be unavailable or the terminal may already be
+        // disposed; the next render falls back to measuring fonts inline.
+      }
+    });
   }
 
   private applyHostBackground(opacity: number) {
