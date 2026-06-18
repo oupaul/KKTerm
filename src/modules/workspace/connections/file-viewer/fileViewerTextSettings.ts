@@ -7,6 +7,7 @@
  */
 
 const STORAGE_PREFIX = "kkterm.fileViewer.text.";
+const SOFT_WRAP_SESSION_PREFIX = "kkterm.fileViewer.softWrap.";
 
 /** Sentinel encoding meaning "auto-detect" — the backend guesses the charset. */
 export const AUTO_ENCODING = "auto";
@@ -25,6 +26,8 @@ export const DEFAULT_TEXT_SETTINGS: DocumentTextSettings = {
   fontSize: 0,
   encoding: AUTO_ENCODING,
 };
+
+export const DEFAULT_SOFT_WRAP = true;
 
 /** Selectable font sizes (px) for the Font menu. `0` is the inherit-default option. */
 export const FONT_SIZE_OPTIONS = [0, 11, 12, 13, 14, 15, 16, 18, 20] as const;
@@ -117,6 +120,35 @@ export function persistDocumentTextSettings(
   }
   try {
     window.localStorage.setItem(`${STORAGE_PREFIX}${connectionId}`, JSON.stringify(settings));
+  } catch {
+    // Storage may be unavailable (private mode, quota); fail silently.
+  }
+}
+
+export function loadDocumentSoftWrap(connectionId: string | undefined): boolean {
+  if (!connectionId || typeof window === "undefined") {
+    return DEFAULT_SOFT_WRAP;
+  }
+  try {
+    const raw = window.sessionStorage.getItem(`${SOFT_WRAP_SESSION_PREFIX}${connectionId}`);
+    if (raw === "true") {
+      return true;
+    }
+    if (raw === "false") {
+      return false;
+    }
+  } catch {
+    // Storage may be unavailable; fall through to the default.
+  }
+  return DEFAULT_SOFT_WRAP;
+}
+
+export function persistDocumentSoftWrap(connectionId: string | undefined, softWrap: boolean) {
+  if (!connectionId || typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(`${SOFT_WRAP_SESSION_PREFIX}${connectionId}`, String(softWrap));
   } catch {
     // Storage may be unavailable (private mode, quota); fail silently.
   }

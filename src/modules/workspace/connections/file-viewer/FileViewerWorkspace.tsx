@@ -29,7 +29,9 @@ import {
   ENCODING_OPTIONS,
   FONT_FAMILY_OPTIONS,
   FONT_SIZE_OPTIONS,
+  loadDocumentSoftWrap,
   loadDocumentTextSettings,
+  persistDocumentSoftWrap,
   persistDocumentTextSettings,
   type DocumentTextSettings,
 } from "./fileViewerTextSettings";
@@ -121,12 +123,13 @@ export function FileViewerWorkspace({
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
 
-  // Per-connection text presentation (font + decode encoding), persisted in
-  // localStorage. Font/size apply live via CSS variables; encoding triggers a
-  // reload (it is part of `load`'s dependencies below).
+  // Per-connection text presentation. Font + decode encoding are durable
+  // browser preferences; soft wrap is session-scoped so the pressed state
+  // survives tab churn without changing the saved Connection.
   const [textSettings, setTextSettings] = useState<DocumentTextSettings>(() =>
     loadDocumentTextSettings(connectionId),
   );
+  const [softWrap, setSoftWrap] = useState(() => loadDocumentSoftWrap(connectionId));
   const { encoding } = textSettings;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -595,9 +598,14 @@ export function FileViewerWorkspace({
               filePath={filePath}
               background={viewerBackground}
               isActive={isActive}
+              softWrap={softWrap}
               onEditChange={setEditedText}
               onChooseKind={(kind) => void requestMode(kind)}
               onSave={() => void save()}
+              onSoftWrapChange={(next) => {
+                setSoftWrap(next);
+                persistDocumentSoftWrap(connectionId, next);
+              }}
             />
           ) : null}
         </ChromeSlotsProvider>
@@ -647,9 +655,11 @@ function FileViewerContent({
   filePath,
   background,
   isActive,
+  softWrap,
   onEditChange,
   onChooseKind,
   onSave,
+  onSoftWrapChange,
 }: {
   content: LoadedContent;
   editable: boolean;
@@ -657,9 +667,11 @@ function FileViewerContent({
   filePath: string;
   background: DashboardBackground | null;
   isActive: boolean;
+  softWrap: boolean;
   onEditChange: (text: string) => void;
   onChooseKind: (kind: ViewerKind) => void;
   onSave: () => void;
+  onSoftWrapChange: (softWrap: boolean) => void;
 }) {
   switch (content.kind) {
     case "markdown":
@@ -721,8 +733,10 @@ function FileViewerContent({
           initialText={content.text ?? ""}
           key={editorKey}
           language={MARKDOWN_PATH.test(filePath) ? "markdown" : undefined}
+          softWrap={softWrap}
           onChange={onEditChange}
           onSave={onSave}
+          onSoftWrapChange={onSoftWrapChange}
         />
       );
   }

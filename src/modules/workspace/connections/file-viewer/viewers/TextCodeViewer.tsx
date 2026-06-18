@@ -59,28 +59,34 @@ export function TextCodeViewer({
   editable = false,
   language,
   filePath = "",
+  softWrap,
   onChange,
   onSave,
+  onSoftWrapChange,
 }: {
   initialText: string;
   editable?: boolean;
   language?: "markdown";
   filePath?: string;
+  softWrap: boolean;
   onChange?: (text: string) => void;
   onSave?: () => void;
+  onSoftWrapChange?: (softWrap: boolean) => void;
 }) {
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const wrapCompartment = useRef(new Compartment());
-  const [wrap, setWrap] = useState(false);
+  const [wrap, setWrap] = useState(softWrap);
 
   // Keep the latest callbacks reachable from CodeMirror extensions without
   // recreating the editor (which would drop edit history and caret position).
   const onChangeRef = useRef(onChange);
   const onSaveRef = useRef(onSave);
+  const onSoftWrapChangeRef = useRef(onSoftWrapChange);
   onChangeRef.current = onChange;
   onSaveRef.current = onSave;
+  onSoftWrapChangeRef.current = onSoftWrapChange;
 
   useEffect(() => {
     if (!hostRef.current) {
@@ -159,7 +165,13 @@ export function TextCodeViewer({
               title={t("workspace.fileViewer.softWrap")}
               size={16}
               on={wrap}
-              onClick={() => setWrap((value) => !value)}
+              onClick={() =>
+                setWrap((value) => {
+                  const next = !value;
+                  onSoftWrapChangeRef.current?.(next);
+                  return next;
+                })
+              }
             />
           </>
         }

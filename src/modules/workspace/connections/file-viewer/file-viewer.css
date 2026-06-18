@@ -43,6 +43,7 @@
   align-items: center;
   gap: 10px;
   height: 46px;
+  min-width: 0;
   padding: 0 10px 0 14px;
   background: var(--chrome);
   border-bottom: 1px solid var(--hairline);
@@ -53,7 +54,8 @@
   align-items: center;
   gap: 9px;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 180px;
+  max-width: 340px;
 }
 .fv-file .glyph {
   display: inline-flex;
@@ -96,13 +98,14 @@
   flex: 0 0 auto;
 }
 .fv-tb-spacer {
-  flex: 1 1 auto;
+  flex: 999 1 16px;
+  min-width: 0;
 }
 .fv-tb-center {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
 }
 .fv-tb-right {
