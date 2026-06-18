@@ -280,6 +280,10 @@ Current built-in widgets are App Launcher, Connection, Notes, AI Coding Usage, N
 
 When `docs/ARCHITECTURE.md` and `docs/DASHBOARD.md` conflict on Dashboard-internal concerns, `docs/DASHBOARD.md` wins.
 
+### IT Ops
+
+The IT Ops Module is a planned built-in Activity Rail destination for fleet operations: running one task across many hosts (Batch Runs over a Host Group of existing Connections, via SSH/WinRM/PsExec transports) and durable trigger → condition → action Automations that evolve the in-memory Watchdog into saveable rules. Definitions persist in SQLite and re-arm on launch; live run/poll state stays in-memory, and KKTerm installs no background service. The accepted design and its trade-offs live in `docs/ADR/0011-it-ops-module.md`; the durable architecture lives in `docs/ITOPS.md`. When `docs/ARCHITECTURE.md` and `docs/ITOPS.md` conflict on IT-Ops-internal concerns, `docs/ITOPS.md` wins.
+
 ### Install Helper
 
 The Install Helper Module is a built-in Activity Rail destination (rail icon `Package`, grouped with the other built-in Module buttons near the top of the rail) that manages a curated catalog of Windows developer tools — git, node, python, docker, AI coding CLIs, and so on. Users see categorized section groupboxes; installed tools stay in their category, updateable tools highlight the latest-version value and expose Update, and unavailable tools expose Install. Updateability is based on version precedence, not raw string inequality, so equivalent trailing-zero build segments such as `26.01` and `26.01.00.0` do not surface as updates. Pin excludes a tool from "Update all".

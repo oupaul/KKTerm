@@ -195,6 +195,8 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### IT Ops Center
 
+Design accepted: see `docs/ADR/0011-it-ops-module.md` and `docs/ITOPS.md`.
+
 - [ ] Batch command broadcast to multiple Connections with per-host output panes and consolidated result view.
 - [ ] Simple workflow engine for IT operations against selected Connections with explicit per-run approval.
 - [ ] Automated server-update playbooks (apt, dnf, yum, Windows Update via WinRM) with dry-run preview and rollback-aware sequencing.
