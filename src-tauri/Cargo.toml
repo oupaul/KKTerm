@@ -42,6 +42,10 @@ base64 = "0.22"
 encoding_rs = "0.8"
 chardetng = "0.1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+# System font enumeration: parse the `name` table of installed font files to
+# list available families cross-platform, without pulling native fontconfig /
+# DirectWrite / Core Text bindings into the build.
+ttf-parser = "0.25"
 portable-pty = "0.9.0"
 keyring-core = "1.0.0"
 # Pinned to 0.60.1: russh 0.60.2+/0.61.x pin RustCrypto pre-release crates

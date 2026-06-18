@@ -1351,6 +1351,22 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
+/* Font picker: refresh button on the left, dropdown in the middle, an optional
+   trailing action (e.g. open fonts folder) on the right. */
+.input-with-button.font-input-with-button {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.input-with-button.font-input-with-button .toolbar-button .spin {
+  animation: settings-font-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes settings-font-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .input-with-button .toolbar-button,
 .settings-data-actions .secondary-button,
 .settings-list-actions .secondary-button,

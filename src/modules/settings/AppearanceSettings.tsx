@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FolderOpen, Palette, RotateCcw } from "lucide-react";
+import { FolderOpen, Palette, RefreshCw, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   listCustomFontOptions,
@@ -7,12 +7,21 @@ import {
   normalizeAvailableAppearance,
   type CustomFontOption,
 } from "../../lib/customFonts";
+import {
+  isSystemFontAccessSupported,
+  loadCachedSystemFonts,
+  refreshSystemFonts,
+  systemFontsExcluding,
+} from "../../lib/systemFonts";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { defaultAppearanceSettings } from "../../app-defaults";
 import { useWorkspaceStore } from "../../store";
 import type { AppearanceSettings as AppearanceSettingsType, ColorScheme } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 
+// `family` is the primary OS font name behind each curated stack. It is used to
+// dedupe detected system fonts so a curated entry hides its system twin; the
+// default stack has no single family, so it is left undefined.
 const APP_UI_FONT_OPTIONS = [
   {
     labelKey: "settings.uiFontDefault",
@@ -21,40 +30,58 @@ const APP_UI_FONT_OPTIONS = [
   {
     labelKey: "settings.inter",
     value: '"Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
+    family: "Inter",
   },
   {
     labelKey: "settings.segoeUi",
     value: '"Segoe UI", ui-sans-serif, system-ui, sans-serif',
+    family: "Segoe UI",
   },
   {
     labelKey: "settings.arial",
     value: 'Arial, "Segoe UI", sans-serif',
+    family: "Arial",
   },
   {
     labelKey: "settings.microsoftJhengHeiUi",
     value: '"Microsoft JhengHei UI", "Segoe UI", sans-serif',
+    family: "Microsoft JhengHei UI",
   },
   {
     labelKey: "settings.microsoftYaHeiUi",
     value: '"Microsoft YaHei UI", "Segoe UI", sans-serif',
+    family: "Microsoft YaHei UI",
   },
   {
     labelKey: "settings.yuGothicUi",
     value: '"Yu Gothic UI", "Segoe UI", sans-serif',
+    family: "Yu Gothic UI",
   },
   {
     labelKey: "settings.malgunGothic",
     value: '"Malgun Gothic", "Segoe UI", sans-serif',
+    family: "Malgun Gothic",
   },
   {
     labelKey: "settings.tahoma",
     value: 'Tahoma, "Segoe UI", sans-serif',
+    family: "Tahoma",
   },
   {
     labelKey: "settings.consolas",
     value: 'Consolas, "Segoe UI", sans-serif',
+    family: "Consolas",
   },
 ] as const;
+
+const CURATED_APP_FONT_FAMILIES = APP_UI_FONT_OPTIONS.flatMap((option) =>
+  "family" in option ? [option.family] : [],
+);
+
+/** CSS font stack for an OS font family picked from the system font list. */
+function appSystemFontCssValue(family: string) {
+  return `"${family}", ui-sans-serif, system-ui, sans-serif`;
+}
 
 const COLOR_SCHEME_OPTIONS: { value: ColorScheme; labelKey: string }[] = [
   { value: "default", labelKey: "settings.schemeDefault" },
@@ -210,6 +237,8 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
   const setAppearanceSettings = useWorkspaceStore((state) => state.setAppearanceSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [customFonts, setCustomFonts] = useState<CustomFontOption[]>([]);
+  const [systemFonts, setSystemFonts] = useState<string[]>(() => loadCachedSystemFonts());
+  const [refreshingFonts, setRefreshingFonts] = useState(false);
   const [draft, setDraft] = useState<AppearanceSettingsType>(appearanceSettings);
   // Tracks the last persisted settings so we can revert live preview on navigate-away
   const savedRef = useRef<AppearanceSettingsType>(appearanceSettings);
@@ -283,9 +312,34 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
     await invokeCommand("open_custom_fonts_folder");
   }
 
+  async function handleRefreshSystemFonts() {
+    if (!isSystemFontAccessSupported()) {
+      showStatusBarNotice(t("settings.systemFontsUnavailable"), { tone: "error" });
+      return;
+    }
+    setRefreshingFonts(true);
+    try {
+      const fonts = await refreshSystemFonts();
+      setSystemFonts(fonts);
+      showStatusBarNotice(t("settings.systemFontsRefreshed"), { tone: "success" });
+    } catch (refreshError) {
+      showStatusBarNotice(
+        refreshError instanceof Error ? refreshError.message : String(refreshError),
+        { tone: "error" },
+      );
+    } finally {
+      setRefreshingFonts(false);
+    }
+  }
+
   const previewColors = SCHEME_PREVIEW_COLORS[draft.colorScheme];
+  const systemFontOptions = systemFontsExcluding(systemFonts, [
+    ...CURATED_APP_FONT_FAMILIES,
+    ...customFonts.map((font) => font.name),
+  ]).map((family) => ({ family, value: appSystemFontCssValue(family) }));
   const knownFontSelected = APP_UI_FONT_OPTIONS.some((option) => option.value === draft.appFontFamily);
   const customFontSelected = customFonts.some((font) => font.cssValue === draft.appFontFamily);
+  const systemFontSelected = systemFontOptions.some((option) => option.value === draft.appFontFamily);
 
   useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
 
@@ -304,7 +358,17 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
         <div className="form-grid appearance-font-grid">
           <label data-tutorial-id="settings.appUiFontFamily">
             <span>{t("settings.appUiFontFamily")}</span>
-            <div className="input-with-button">
+            <div className="input-with-button font-input-with-button">
+              <button
+                aria-label={t("settings.refreshSystemFonts")}
+                className="toolbar-button"
+                disabled={refreshingFonts}
+                onClick={() => void handleRefreshSystemFonts()}
+                title={t("settings.refreshSystemFonts")}
+                type="button"
+              >
+                <RefreshCw className={refreshingFonts ? "spin" : undefined} size={15} />
+              </button>
               <select
                 onChange={(event) => {
                   const selectedValue = event.currentTarget.value;
@@ -316,19 +380,28 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
                 }}
                 value={draft.appFontFamily}
               >
-                {knownFontSelected || customFontSelected ? null : (
+                {knownFontSelected || customFontSelected || systemFontSelected ? null : (
                   <option value={draft.appFontFamily}>{t("settings.customFont")}</option>
                 )}
-                {APP_UI_FONT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {t(option.labelKey)}
-                  </option>
-                ))}
                 {customFonts.length > 0 ? <optgroup label={t("settings.customFonts")}>{customFonts.map((font) => (
                   <option key={font.path} value={font.cssValue}>
                     {font.name}
                   </option>
                 ))}</optgroup> : null}
+                {APP_UI_FONT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+                {systemFontOptions.length > 0 ? (
+                  <optgroup label={t("settings.systemFonts")}>
+                    {systemFontOptions.map((option) => (
+                      <option key={option.family} value={option.value}>
+                        {option.family}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
               </select>
               <button
                 aria-label={t("settings.openCustomFontsFolder")}

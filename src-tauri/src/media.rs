@@ -178,6 +178,125 @@ pub(crate) fn is_supported_font_extension(extension: &str) -> bool {
     matches!(extension, "ttf" | "otf" | "woff" | "woff2")
 }
 
+/// Enumerate the font family names installed on the operating system.
+///
+/// Walks the platform font directories and reads each font file's `name` table
+/// with `ttf-parser`, preferring the typographic family name. The result is a
+/// sorted, de-duplicated list. This is intentionally a pure-Rust scan so the
+/// build stays free of native font-config / DirectWrite / Core Text deps; it
+/// runs off the UI thread on explicit refresh only.
+pub(crate) fn list_system_fonts_sync() -> Vec<String> {
+    use std::collections::BTreeSet;
+
+    let mut families: BTreeSet<String> = BTreeSet::new();
+    for dir in system_font_directories() {
+        collect_fonts_in_dir(&dir, 0, &mut families);
+    }
+    families.into_iter().collect()
+}
+
+fn system_font_directories() -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        let windir = std::env::var_os("WINDIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("C:\\Windows"));
+        dirs.push(windir.join("Fonts"));
+        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+            dirs.push(PathBuf::from(local).join("Microsoft\\Windows\\Fonts"));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        dirs.push(PathBuf::from("/System/Library/Fonts"));
+        dirs.push(PathBuf::from("/Library/Fonts"));
+        if let Some(home) = std::env::var_os("HOME") {
+            dirs.push(PathBuf::from(home).join("Library/Fonts"));
+        }
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        dirs.push(PathBuf::from("/usr/share/fonts"));
+        dirs.push(PathBuf::from("/usr/local/share/fonts"));
+        let data_home = std::env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")));
+        if let Some(data_home) = data_home {
+            dirs.push(data_home.join("fonts"));
+        }
+        if let Some(home) = std::env::var_os("HOME") {
+            dirs.push(PathBuf::from(home).join(".fonts"));
+        }
+    }
+
+    dirs
+}
+
+fn collect_fonts_in_dir(dir: &Path, depth: usize, out: &mut std::collections::BTreeSet<String>) {
+    // Bound recursion so a symlink cycle inside a font directory cannot loop.
+    if depth > 8 {
+        return;
+    }
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return, // directory may not exist on this machine.
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_fonts_in_dir(&path, depth + 1, out);
+        } else if path.is_file() && is_system_font_file(&path) {
+            if let Ok(data) = fs::read(&path) {
+                collect_family_names(&data, out);
+            }
+        }
+    }
+}
+
+fn is_system_font_file(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|extension| extension.to_str())
+            .map(|extension| extension.to_lowercase())
+            .as_deref(),
+        Some("ttf" | "otf" | "ttc" | "otc")
+    )
+}
+
+fn collect_family_names(data: &[u8], out: &mut std::collections::BTreeSet<String>) {
+    let face_count = ttf_parser::fonts_in_collection(data).unwrap_or(1).max(1);
+    for index in 0..face_count {
+        let face = match ttf_parser::Face::parse(data, index) {
+            Ok(face) => face,
+            Err(_) => continue,
+        };
+        let mut family: Option<String> = None;
+        let mut typographic: Option<String> = None;
+        for name in face.names() {
+            let target = match name.name_id {
+                ttf_parser::name_id::TYPOGRAPHIC_FAMILY => &mut typographic,
+                ttf_parser::name_id::FAMILY => &mut family,
+                _ => continue,
+            };
+            if target.is_none() {
+                if let Some(decoded) = name.to_string() {
+                    *target = Some(decoded);
+                }
+            }
+        }
+        if let Some(name) = typographic.or(family) {
+            let trimmed = name.trim();
+            if !trimmed.is_empty() {
+                out.insert(trimmed.to_string());
+            }
+        }
+    }
+}
+
 /// Returns the lowercased extension if `path` is a supported background media file.
 pub(crate) fn background_media_extension(path: &std::path::Path) -> Option<String> {
     let extension = path

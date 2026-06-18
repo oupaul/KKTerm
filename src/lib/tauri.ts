@@ -1279,6 +1279,10 @@ type CommandMap = {
     args: undefined;
     result: CustomFont[];
   };
+  list_system_fonts: {
+    args: undefined;
+    result: string[];
+  };
   load_custom_font_data: {
     args: { path: string };
     result: { dataBase64: string };

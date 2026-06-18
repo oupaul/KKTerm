@@ -312,6 +312,13 @@ async fn list_custom_fonts(app: tauri::AppHandle) -> Result<Vec<CustomFontEntry>
 }
 
 #[tauri::command]
+async fn list_system_fonts() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(list_system_fonts_sync)
+        .await
+        .map_err(|error| format!("failed to list system fonts: {error}"))
+}
+
+#[tauri::command]
 async fn load_custom_font_data(
     app: tauri::AppHandle,
     path: String,
@@ -3340,6 +3347,7 @@ pub fn run() {
             open_custom_fonts_folder,
             open_log_folder,
             list_custom_fonts,
+            list_system_fonts,
             load_custom_font_data,
             get_ssh_settings,
             update_ssh_settings,
