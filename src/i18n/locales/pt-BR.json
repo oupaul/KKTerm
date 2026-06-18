@@ -1882,7 +1882,9 @@
     "fileView": "Documento",
     "fileViewPath": "Arquivo",
     "fileViewPathPlaceholder": "Selecione um arquivo para visualizar",
-    "fileViewPickerTitle": "Selecione um arquivo para visualizar"
+    "fileViewPickerTitle": "Selecione um arquivo para visualizar",
+    "fileViewOpenExternal": "Open in external editor",
+    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
   },
   "terminal": {
     "openSftp": "Abrir navegador SFTP",
@@ -3316,7 +3318,8 @@
         "image": "Imagem",
         "log": "Log",
         "hex": "Hex",
-        "pdf": "PDF"
+        "pdf": "PDF",
+        "unsupported": "Unsupported"
       },
       "level": {
         "error": "Erro",
@@ -3347,7 +3350,12 @@
       "fontSizeDefault": "Padrão",
       "encoding": "Codificação",
       "encodingAuto": "Automática",
-      "encodingDetected": "Automática ({{label}})"
+      "encodingDetected": "Automática ({{label}})",
+      "unsupportedTitle": "Unsupported file",
+      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
+      "openAsText": "Open as Text",
+      "openAsBinary": "Open as Binary",
+      "openExternalEditor": "Open in External Editor"
     }
   },
   "common": {

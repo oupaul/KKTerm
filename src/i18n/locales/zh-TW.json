@@ -1882,7 +1882,9 @@
     "fileView": "文件",
     "fileViewPath": "檔案",
     "fileViewPathPlaceholder": "選擇要檢視的檔案",
-    "fileViewPickerTitle": "選擇要檢視的檔案"
+    "fileViewPickerTitle": "選擇要檢視的檔案",
+    "fileViewOpenExternal": "Open in external editor",
+    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
   },
   "terminal": {
     "openSftp": "開啟 SFTP 瀏覽器",
@@ -3316,7 +3318,8 @@
         "image": "圖片",
         "log": "記錄",
         "hex": "十六進位",
-        "pdf": "PDF"
+        "pdf": "PDF",
+        "unsupported": "Unsupported"
       },
       "level": {
         "error": "錯誤",
@@ -3347,7 +3350,12 @@
       "fontSizeDefault": "預設",
       "encoding": "編碼",
       "encodingAuto": "自動",
-      "encodingDetected": "自動（{{label}}）"
+      "encodingDetected": "自動（{{label}}）",
+      "unsupportedTitle": "Unsupported file",
+      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
+      "openAsText": "Open as Text",
+      "openAsBinary": "Open as Binary",
+      "openExternalEditor": "Open in External Editor"
     }
   },
   "common": {

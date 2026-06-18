@@ -62,6 +62,7 @@ fn create_test_ssh_connection(
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("SSH connection is created")
@@ -98,6 +99,7 @@ fn create_test_ssh_connection_in_workspace(
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: Some(workspace_id),
         })
         .expect("SSH connection is created in workspace")
@@ -148,6 +150,7 @@ fn create_test_local_connection(storage: &Storage, name: &str, shell: &str) -> S
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("local connection is created")
@@ -217,6 +220,7 @@ fn create_connection_can_persist_root_ssh_connection() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("connection is created");
@@ -268,6 +272,7 @@ fn ssh_socks_proxy_username_round_trips_without_storing_passwords_in_sqlite() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("connection is created");
@@ -349,6 +354,7 @@ fn local_connection_persists_startup_directory_and_script() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("local connection is created");
@@ -409,6 +415,7 @@ fn local_files_connection_can_be_created_with_starting_directory() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("local File Explorer connection is created");
@@ -453,6 +460,7 @@ fn file_view_connection_persists_file_path_and_no_host() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: true,
             workspace_id: None,
         })
         .expect("Document connection is created");
@@ -464,6 +472,7 @@ fn file_view_connection_persists_file_path_and_no_host() {
         created.local_startup_directory.as_deref(),
         Some("/var/log/syslog")
     );
+    assert!(created.file_view_open_external);
 
     // The new kind must round-trip through the connection tree listing,
     // which exercises the CHECK constraint and row deserialization.
@@ -475,7 +484,8 @@ fn file_view_connection_persists_file_path_and_no_host() {
             .connections
             .iter()
             .any(|connection| connection.id == created.id
-                && connection.connection_type == "fileView"),
+                && connection.connection_type == "fileView"
+                && connection.file_view_open_external),
         "Document connection should appear in the tree"
     );
 }
@@ -509,6 +519,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("RDP connection is created");
@@ -546,6 +557,7 @@ fn create_connection_can_persist_remote_desktop_connections() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("VNC connection is created");
@@ -584,6 +596,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("Telnet connection is created");
@@ -619,6 +632,7 @@ fn create_connection_can_persist_telnet_and_serial_connections() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("Serial connection is created");
@@ -659,6 +673,7 @@ fn url_credentials_round_trip_without_storing_passwords_in_sqlite() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("URL connection is created");
@@ -857,6 +872,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("SSH connection is created");
@@ -885,6 +901,7 @@ fn stored_credential_candidates_include_connection_url_and_widget_metadata() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("URL connection is created");
@@ -999,6 +1016,7 @@ fn assigning_connection_password_credential_requires_matching_type() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("RDP connection is created");
@@ -1134,6 +1152,7 @@ fn update_connection_edits_fields_and_moves_folder() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
         })
         .expect("connection is updated");
 
@@ -1192,6 +1211,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
         })
         .expect("tmux preference is disabled");
 
@@ -1221,6 +1241,7 @@ fn update_connection_preserves_existing_tmux_preference_when_omitted() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
         })
         .expect("connection is updated without tmux preference");
 
@@ -1420,6 +1441,7 @@ fn deleting_folder_removes_connections_in_that_folder() {
             rdp_options: None,
             vnc_options: None,
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("connection is created in folder");
@@ -2364,6 +2386,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 view_mode: Some("fitWidth".to_string()),
             }),
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("RDP connection with options is created");
@@ -2413,6 +2436,7 @@ fn remote_desktop_connection_options_are_optional_protocol_overrides() {
                 view_mode: Some("fitWidth".to_string()),
             }),
             ftp_options: None,
+            file_view_open_external: false,
             workspace_id: None,
         })
         .expect("VNC connection with options is created");

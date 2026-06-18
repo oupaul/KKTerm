@@ -1204,6 +1204,7 @@ export function ConnectionSidebar({
       useTmuxSessions: connectionRequest.useTmuxSessions,
       terminalOpacity: appearance?.terminalOpacity,
       terminalBackground: appearance?.terminalBackground,
+      fileViewOpenExternal: connectionRequest.fileViewOpenExternal,
       status: "idle",
     };
 
@@ -3707,6 +3708,9 @@ function ConnectionDialog({
   const [localStartupDirectory, setLocalStartupDirectory] = useState(
     initialConnection?.localStartupDirectory ?? "",
   );
+  const [fileViewOpenExternal, setFileViewOpenExternal] = useState(
+    Boolean(initialConnection?.fileViewOpenExternal),
+  );
   const [localFilesNameDraft, setLocalFilesNameDraft] = useState(initialConnection?.name ?? "");
   const [localFilesNameEdited, setLocalFilesNameEdited] = useState(Boolean(initialConnection?.name));
   const [localFilesHomeDirectory, setLocalFilesHomeDirectory] = useState("");
@@ -3964,6 +3968,8 @@ function ConnectionDialog({
         connectionType === "local"
           ? String(form.get("localStartupScript") ?? "").trim() || undefined
           : undefined,
+      fileViewOpenExternal:
+        connectionType === "fileView" ? form.get("fileViewOpenExternal") === "on" : undefined,
       serialLine: connectionType === "serial" ? serialLine : undefined,
       serialSpeed:
         connectionType === "serial"
@@ -4173,9 +4179,11 @@ function ConnectionDialog({
                 ? localFilesNameDraft
                 : fileViewDefaultNameForPath(localStartupDirectory, t)
             }
+            openExternal={fileViewOpenExternal}
             onBrowseFilePath={() => void handleBrowseFileViewPath()}
             onFilePathChange={setLocalStartupDirectory}
             onNameChange={handleLocalFilesNameChange}
+            onOpenExternalChange={setFileViewOpenExternal}
           />
         );
       case "serial":

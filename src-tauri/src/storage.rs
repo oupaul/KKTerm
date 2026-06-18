@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 26;
+const SCHEMA_USER_VERSION: i32 = 27;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS connections (
     terminal_opacity INTEGER,
     terminal_background_json TEXT,
     file_browser_view_options_json TEXT,
+    file_view_open_external INTEGER NOT NULL DEFAULT 0,
     connection_type TEXT NOT NULL CHECK (connection_type IN ('local', 'ssh', 'telnet', 'serial', 'url', 'rdp', 'vnc', 'ftp', 'localFiles', 'fileView')),
     status TEXT NOT NULL CHECK (status IN ('connected', 'idle', 'offline')),
     sort_order INTEGER NOT NULL
@@ -1034,6 +1035,7 @@ pub struct SavedConnection {
     terminal_opacity: Option<u8>,
     terminal_background: Option<crate::dashboard_storage::DashboardBackground>,
     file_browser_view_options: Option<FileBrowserViewOptions>,
+    file_view_open_external: bool,
     #[serde(rename = "type")]
     connection_type: String,
     tags: Vec<String>,
@@ -1109,6 +1111,8 @@ pub struct CreateConnectionRequest {
     vnc_options: Option<VncConnectionOptions>,
     #[serde(default)]
     ftp_options: Option<crate::ftp::FtpOptions>,
+    #[serde(default)]
+    file_view_open_external: bool,
 }
 
 #[derive(Deserialize)]
@@ -1145,6 +1149,8 @@ pub struct UpdateConnectionRequest {
     vnc_options: Option<VncConnectionOptions>,
     #[serde(default)]
     ftp_options: Option<crate::ftp::FtpOptions>,
+    #[serde(default)]
+    file_view_open_external: bool,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -1698,6 +1704,12 @@ impl Storage {
             "file_browser_view_options_json",
             "TEXT",
         )?;
+        ensure_column(
+            &connection,
+            "connections",
+            "file_view_open_external",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
         ensure_column(&connection, "connections", "tab_title", "TEXT")?;
         ensure_column(&connection, "connections", "password_credential_id", "TEXT")?;
         ensure_column(
@@ -1951,6 +1963,12 @@ impl Storage {
                 .map_err(to_storage_error)?;
         }
         repair_connections_pre_v25_references(&connection)?;
+        ensure_column(
+            &connection,
+            "connections",
+            "file_view_open_external",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
         // v26: imported Dashboard script widgets get a durable origin marker
         // so the catalog can badge them after restart. SQLite cannot alter a
         // CHECK constraint in place, so rebuild just this table to admit the
@@ -2782,7 +2800,7 @@ fn list_root_connections_for_workspace(
     let mut statement = connection
         .prepare(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    url_credentials.username, file_browser_view_options_json
+                    url_credentials.username, file_browser_view_options_json, file_view_open_external
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE folder_id IS NULL AND workspace_id = ?1
@@ -2845,7 +2863,7 @@ fn list_connections_for_folder(
     let mut statement = connection
         .prepare(&format!(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    url_credentials.username, file_browser_view_options_json
+                    url_credentials.username, file_browser_view_options_json, file_view_open_external
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE {where_clause}
@@ -3221,7 +3239,7 @@ fn get_connection_by_id(
     let saved_connection = connection
         .query_row(
             "SELECT connections.id, name, tab_title, host, connections.username, port, key_path, proxy_jump, ssh_socks_proxy, ssh_socks_proxy_username, ssh_socks_proxy_inherit_defaults, auth_method, local_shell, local_startup_directory, local_startup_script, url, data_partition, use_tmux_sessions, tmux_connection_id, connection_type, serial_line, serial_speed, rdp_options, vnc_options, ftp_options, icon_data_url, icon_background_color, terminal_opacity, terminal_background_json, password_credential_id,
-                    url_credentials.username, file_browser_view_options_json
+                    url_credentials.username, file_browser_view_options_json, file_view_open_external
              FROM connections
              LEFT JOIN url_credentials ON url_credentials.connection_id = connections.id
              WHERE connections.id = ?1",
@@ -3260,6 +3278,7 @@ fn get_connection_by_id(
                     terminal_opacity: normalize_loaded_terminal_opacity(row.get(27)?),
                     terminal_background: terminal_background_from_json(row.get(28)?),
                     file_browser_view_options: file_browser_view_options_from_json(row.get(31)?),
+                    file_view_open_external: row.get(32)?,
                     password_credential_id,
                     url_credential_username: url_credential_username.clone(),
                     has_url_credential: url_credential_username.is_some(),
@@ -3313,6 +3332,7 @@ fn saved_connection_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SavedC
         terminal_opacity: normalize_loaded_terminal_opacity(row.get(27)?),
         terminal_background: terminal_background_from_json(row.get(28)?),
         file_browser_view_options: file_browser_view_options_from_json(row.get(31)?),
+        file_view_open_external: row.get(32)?,
         url_credential_username: url_credential_username.clone(),
         has_url_credential: url_credential_username.is_some(),
         status: "idle".to_string(),
@@ -3554,6 +3574,10 @@ fn normalize_data_partition(
 
 fn normalize_use_tmux_sessions(value: Option<bool>, connection_type: &str) -> bool {
     connection_type == "ssh" && value.unwrap_or(true)
+}
+
+fn normalize_file_view_open_external(value: bool, connection_type: &str) -> bool {
+    connection_type == "fileView" && value
 }
 
 fn normalize_serial_line(

@@ -13,7 +13,8 @@ export type ViewerKind =
   | "image"
   | "log"
   | "hex"
-  | "pdf";
+  | "pdf"
+  | "unsupported";
 
 export interface FileSignals {
   /** Lowercased file path or name. */
@@ -49,6 +50,15 @@ const CSV_EXTENSIONS = new Set(["csv", "tsv"]);
 const JSON_EXTENSIONS = new Set(["json", "json5", "geojson", "ipynb", "webmanifest"]);
 
 const LOG_EXTENSIONS = new Set(["log", "ndjson", "jsonl"]);
+
+const UNSUPPORTED_CONTAINER_EXTENSIONS = new Set([
+  "docx",
+  "pptx",
+  "xlsx",
+  "odt",
+  "odp",
+  "ods",
+]);
 
 /** Common text/code extensions that should always open as text even when the
  * backend's text heuristic is unsure (e.g. a file with high-byte UTF-8). */
@@ -119,6 +129,9 @@ export function fileBaseName(path: string): string {
  * always available as universal fallbacks; the detected kind is listed first. */
 export function availableViewerKinds(signals: FileSignals): ViewerKind[] {
   const primary = detectViewerKind(signals);
+  if (primary === "unsupported") {
+    return [primary, ...viewerChoiceKinds(primary)];
+  }
   const kinds: ViewerKind[] = [primary];
   if (primary === "image" || primary === "pdf") {
     // Binary document/image formats only meaningfully offer hex as an alternate.
@@ -158,6 +171,9 @@ export function detectViewerKind(signals: FileSignals): ViewerKind {
   if (TEXT_EXTENSIONS.has(ext)) {
     return "text";
   }
+  if (UNSUPPORTED_CONTAINER_EXTENSIONS.has(ext)) {
+    return "unsupported";
+  }
   // Unknown extension: assume text and open the editor. Only clearly-binary
   // container signatures (archives, databases) fall back to the read-only hex
   // viewer; everything else — including content the text heuristic was unsure
@@ -169,9 +185,17 @@ export function detectViewerKind(signals: FileSignals): ViewerKind {
   return "text";
 }
 
+export function isUnsupportedViewerKind(kind: ViewerKind): boolean {
+  return kind === "unsupported";
+}
+
+export function viewerChoiceKinds(kind: ViewerKind): ViewerKind[] {
+  return kind === "unsupported" ? ["text", "hex"] : [];
+}
+
 /** Whether the viewer should load file contents as UTF-8 text or as bytes. */
 export function viewerLoadsText(kind: ViewerKind): boolean {
-  return kind !== "image" && kind !== "hex" && kind !== "pdf";
+  return kind !== "image" && kind !== "hex" && kind !== "pdf" && kind !== "unsupported";
 }
 
 /** Viewer kinds that render through an external, runtime-installed dependency

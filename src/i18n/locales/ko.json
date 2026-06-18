@@ -1882,7 +1882,9 @@
     "fileView": "문서",
     "fileViewPath": "파일",
     "fileViewPathPlaceholder": "볼 파일 선택",
-    "fileViewPickerTitle": "볼 파일 선택"
+    "fileViewPickerTitle": "볼 파일 선택",
+    "fileViewOpenExternal": "Open in external editor",
+    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
   },
   "terminal": {
     "openSftp": "SFTP 브라우저 열기",
@@ -3316,7 +3318,8 @@
         "image": "이미지",
         "log": "로그",
         "hex": "Hex",
-        "pdf": "PDF"
+        "pdf": "PDF",
+        "unsupported": "Unsupported"
       },
       "level": {
         "error": "오류",
@@ -3347,7 +3350,12 @@
       "fontSizeDefault": "기본값",
       "encoding": "인코딩",
       "encodingAuto": "자동",
-      "encodingDetected": "자동 ({{label}})"
+      "encodingDetected": "자동 ({{label}})",
+      "unsupportedTitle": "Unsupported file",
+      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
+      "openAsText": "Open as Text",
+      "openAsBinary": "Open as Binary",
+      "openExternalEditor": "Open in External Editor"
     }
   },
   "common": {

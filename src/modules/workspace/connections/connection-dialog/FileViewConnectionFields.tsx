@@ -9,16 +9,20 @@ import { technicalInputProps } from "../../../../lib/inputBehavior";
  */
 export function FileViewConnectionFields({
   filePath,
+  openExternal,
   nameValue,
   onBrowseFilePath,
   onFilePathChange,
   onNameChange,
+  onOpenExternalChange,
 }: {
   filePath: string;
+  openExternal: boolean;
   nameValue: string;
   onBrowseFilePath: () => void;
   onFilePathChange: (value: string) => void;
   onNameChange: (value: string) => void;
+  onOpenExternalChange: (value: boolean) => void;
 }) {
   const { t } = useTranslation();
 
@@ -52,6 +56,16 @@ export function FileViewConnectionFields({
           </button>
         </div>
       </label>
+      <label className="checkbox-row">
+        <input
+          checked={openExternal}
+          name="fileViewOpenExternal"
+          onChange={(event) => onOpenExternalChange(event.currentTarget.checked)}
+          type="checkbox"
+        />
+        <span>{t("connections.fileViewOpenExternal")}</span>
+      </label>
+      <p className="field-hint">{t("connections.fileViewOpenExternalHint")}</p>
     </>
   );
 }

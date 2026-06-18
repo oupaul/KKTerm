@@ -89,6 +89,7 @@ export interface Connection {
   terminalOpacity?: number | null;
   terminalBackground?: DashboardBackground | null;
   fileBrowserViewOptions?: FileBrowserViewOptions | null;
+  fileViewOpenExternal?: boolean;
   rdpOptions?: RdpConnectionOptions;
   vncOptions?: VncConnectionOptions;
   ftpOptions?: FtpConnectionOptions;
@@ -134,6 +135,7 @@ export interface CreateConnectionRequest {
   rdpOptions?: RdpConnectionOptions;
   vncOptions?: VncConnectionOptions;
   ftpOptions?: FtpConnectionOptions;
+  fileViewOpenExternal?: boolean;
 }
 
 export interface CreateConnectionFolderRequest {

@@ -52,7 +52,7 @@ import type {
   WorkspaceTab,
 } from "./types";
 import i18next from "./i18n/config";
-import { invokeCommand } from "./lib/tauri";
+import { invokeCommand, openFilesystemPath } from "./lib/tauri";
 import { elevatedLocalShellAction } from "./modules/workspace/connections/quickConnectMenuModel";
 import { resolveDefaultTerminalAppearance } from "./modules/workspace/connections/terminalAppearanceDefaults";
 import type { LocalShellOption } from "./modules/workspace/connections/utils";
@@ -1590,6 +1590,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
+    if (connection.type === "fileView" && connection.fileViewOpenExternal) {
+      const filePath = connection.localStartupDirectory?.trim() ?? "";
+      if (filePath) {
+        void openFilesystemPath(filePath);
+      }
+      return;
+    }
+
     if (connection.type === "ftp") {
       if (connection.ftpOptions?.protocol === "sftp") {
         const sshConnection = sftpBrowserConnectionFromFtpConnection(connection);
@@ -2183,6 +2191,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (connection.type !== "fileView") {
       return;
     }
+    const filePath = connection.localStartupDirectory?.trim() ?? "";
+    if (connection.fileViewOpenExternal) {
+      if (filePath) {
+        void openFilesystemPath(filePath);
+      }
+      return;
+    }
     const tabId = `tab-${connection.id}-fileView`;
     const existingTab = get().tabs.find((tab) => tab.id === tabId);
     if (existingTab) {
@@ -2194,7 +2209,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       workspaceId: get().activeWorkspaceId,
       title: connection.name,
       toolbarTitle: toolbarTitleForConnection(connection),
-      subtitle: connection.localStartupDirectory || "",
+      subtitle: filePath,
       kind: "fileViewer",
       panes: [],
       connection,

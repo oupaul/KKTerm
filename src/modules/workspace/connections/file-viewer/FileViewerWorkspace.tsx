@@ -4,7 +4,12 @@ import { useTranslation } from "react-i18next";
 import { Check, Lock, Menu, RefreshCw, Save, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { WorkspaceTab } from "../../../../types";
-import { confirmNativeDialog, invokeCommand, type FileViewProbe } from "../../../../lib/tauri";
+import {
+  confirmNativeDialog,
+  invokeCommand,
+  openFilesystemPath,
+  type FileViewProbe,
+} from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import { menuButtonAria } from "../../../../lib/aria";
 import {
@@ -12,6 +17,7 @@ import {
   detectViewerKind,
   fileBaseName,
   isEditableText,
+  isUnsupportedViewerKind,
   viewerLoadsText,
   viewerUsesExternalDependency,
   type ViewerKind,
@@ -150,6 +156,10 @@ export function FileViewerWorkspace({
         const kind =
           forcedKind ??
           detectViewerKind({ path: filePath, magic: probed.magic, isText: probed.isText });
+        if (isUnsupportedViewerKind(kind)) {
+          setContent({ kind, magic: probed.magic, truncated: false });
+          return;
+        }
         if (viewerUsesExternalDependency(kind)) {
           // The dependency-backed viewer (PDF) loads its own content through the
           // external tool; no direct read here.
@@ -493,6 +503,7 @@ export function FileViewerWorkspace({
               filePath={filePath}
               isActive={isActive}
               onEditChange={setEditedText}
+              onChooseKind={(kind) => void requestMode(kind)}
               onSave={() => void save()}
             />
           ) : null}
@@ -543,6 +554,7 @@ function FileViewerContent({
   filePath,
   isActive,
   onEditChange,
+  onChooseKind,
   onSave,
 }: {
   content: LoadedContent;
@@ -551,6 +563,7 @@ function FileViewerContent({
   filePath: string;
   isActive: boolean;
   onEditChange: (text: string) => void;
+  onChooseKind: (kind: ViewerKind) => void;
   onSave: () => void;
 }) {
   switch (content.kind) {
@@ -581,6 +594,15 @@ function FileViewerContent({
       );
     case "hex":
       return <HexViewer base64={content.base64 ?? ""} />;
+    case "unsupported":
+      return (
+        <UnsupportedFileChoice
+          filePath={filePath}
+          onOpenExternal={() => void openFilesystemPath(filePath)}
+          onOpenHex={() => onChooseKind("hex")}
+          onOpenText={() => onChooseKind("text")}
+        />
+      );
     case "text":
     default:
       return (
@@ -595,4 +617,38 @@ function FileViewerContent({
         />
       );
   }
+}
+
+function UnsupportedFileChoice({
+  filePath,
+  onOpenExternal,
+  onOpenHex,
+  onOpenText,
+}: {
+  filePath: string;
+  onOpenExternal: () => void;
+  onOpenHex: () => void;
+  onOpenText: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="fv-unsupported">
+      <div className="fv-unsupported-card">
+        <FileGlyph path={filePath} size={44} />
+        <h3>{t("workspace.fileViewer.unsupportedTitle")}</h3>
+        <p>{t("workspace.fileViewer.unsupportedBody", { name: fileBaseName(filePath) })}</p>
+        <div className="fv-unsupported-actions">
+          <button className="toolbar-button" onClick={onOpenText} type="button">
+            {t("workspace.fileViewer.openAsText")}
+          </button>
+          <button className="toolbar-button" onClick={onOpenHex} type="button">
+            {t("workspace.fileViewer.openAsBinary")}
+          </button>
+          <button className="approve-button" onClick={onOpenExternal} type="button">
+            {t("workspace.fileViewer.openExternalEditor")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

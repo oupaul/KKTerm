@@ -1882,7 +1882,9 @@
     "fileView": "ドキュメント",
     "fileViewPath": "ファイル",
     "fileViewPathPlaceholder": "表示するファイルを選択",
-    "fileViewPickerTitle": "表示するファイルを選択"
+    "fileViewPickerTitle": "表示するファイルを選択",
+    "fileViewOpenExternal": "Open in external editor",
+    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
   },
   "terminal": {
     "openSftp": "SFTPブラウザを開く",
@@ -3316,7 +3318,8 @@
         "image": "画像",
         "log": "ログ",
         "hex": "Hex",
-        "pdf": "PDF"
+        "pdf": "PDF",
+        "unsupported": "Unsupported"
       },
       "level": {
         "error": "エラー",
@@ -3347,7 +3350,12 @@
       "fontSizeDefault": "デフォルト",
       "encoding": "エンコーディング",
       "encodingAuto": "自動",
-      "encodingDetected": "自動（{{label}}）"
+      "encodingDetected": "自動（{{label}}）",
+      "unsupportedTitle": "Unsupported file",
+      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
+      "openAsText": "Open as Text",
+      "openAsBinary": "Open as Binary",
+      "openExternalEditor": "Open in External Editor"
     }
   },
   "common": {

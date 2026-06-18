@@ -6,9 +6,11 @@ import test from "node:test";
 import {
   availableViewerKinds,
   detectViewerKind,
+  viewerChoiceKinds,
   fileBaseName,
   fileExtension,
   isEditableText,
+  isUnsupportedViewerKind,
   viewerLoadsText,
   viewerUsesExternalDependency,
 } from "../src/modules/workspace/connections/file-viewer/fileViewerModel.ts";
@@ -40,6 +42,14 @@ test("unknown extension assumes text unless it is a binary container", () => {
   // Recognized binary containers still fall back to the read-only hex viewer.
   assert.equal(detectViewerKind({ path: "archive", magic: "zip", isText: false }), "hex");
   assert.equal(detectViewerKind({ path: "blob", magic: "gzip", isText: false }), "hex");
+});
+
+test("unsupported Office container files ask before choosing text or binary", () => {
+  assert.equal(detectViewerKind({ path: "slides.pptx", magic: "zip", isText: false }), "unsupported");
+  assert.equal(detectViewerKind({ path: "doc.docx", magic: "zip", isText: false }), "unsupported");
+  assert.equal(detectViewerKind({ path: "sheet.xlsx", magic: "zip", isText: false }), "unsupported");
+  assert.equal(isUnsupportedViewerKind("unsupported"), true);
+  assert.deepEqual(viewerChoiceKinds("unsupported"), ["text", "hex"]);
 });
 
 test("text and hex are always offered as fallbacks (except for images)", () => {
