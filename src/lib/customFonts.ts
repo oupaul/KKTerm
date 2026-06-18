@@ -56,14 +56,22 @@ export async function loadCustomFontOptions(fonts: CustomFontOption[]) {
       if (families.length === 0) {
         return;
       }
-      // Load through the asset protocol so the WebView fetches and decodes the
-      // font on its own (native, off-main-thread) resource pipeline. This keeps
-      // multi-megabyte fonts off the UI thread on startup: no base64 payload
-      // crosses the IPC boundary and no decode runs in JS.
-      const source = `url("${convertFileSrc(font.path)}")`;
+      // Fetch through the asset protocol so the WebView downloads and decodes
+      // the font on its own (native, off-main-thread) resource pipeline. This
+      // keeps multi-megabyte fonts off the UI thread on startup: no base64
+      // payload crosses the IPC boundary and no decode runs in JS.
+      //
+      // Fetch the bytes ourselves instead of pointing FontFace at the asset
+      // url directly: a FontFace url source makes the WebView issue a *ranged*
+      // font request, and Tauri's asset protocol caps each range response at
+      // ~1 MB. That truncates large CJK fonts to their first chunk — the
+      // header/cmap and early (Latin) glyphs survive while the bulk of the CJK
+      // outlines are dropped, so only Latin text picks up the font. A plain
+      // fetch sends no Range header, so the protocol returns the whole file.
+      const buffer = await (await fetch(convertFileSrc(font.path))).arrayBuffer();
       await Promise.allSettled(
         families.map(async (family) => {
-          const face = new FontFace(family, source, { display: "swap" });
+          const face = new FontFace(family, buffer.slice(0), { display: "swap" });
           await face.load();
           document.fonts.add(face);
           loadedFontFamilies.add(family);
