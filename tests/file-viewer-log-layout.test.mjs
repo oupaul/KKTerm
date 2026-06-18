@@ -8,8 +8,9 @@ const css = await readFile(
 );
 
 test("log viewer line-number column is content-sized instead of fixed wide", () => {
-  assert.match(css, /\.fv-logrow\s*\{[\s\S]*grid-template-columns:\s*max-content\s+46px\s+minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.fv-logrow\s*\{[\s\S]*grid-template-columns:\s*max-content\s+minmax\(0,\s*max-content\)\s+minmax\(0,\s*1fr\)/);
   assert.doesNotMatch(css, /\.fv-logrow\s*\{[\s\S]*grid-template-columns:\s*52px\s+58px\s+1fr/);
+  assert.doesNotMatch(css, /\.fv-logrow\s*\{[\s\S]*grid-template-columns:\s*max-content\s+46px\s+minmax\(0,\s*1fr\)/);
 });
 
 test("Document status bar text is centered in the global status bar", () => {
