@@ -12,6 +12,8 @@ const NATIVE_BLOCKING_OVERLAY_SELECTOR = [
   ".tutorial-overlay",
   ".dw-catalog-backdrop",
   ".dw-customize",
+  ".tree-drag-preview",
+  ".dock-overlay",
 ].join(", ");
 
 const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
@@ -23,6 +25,8 @@ const WEBVIEW_BLOCKING_OVERLAY_SELECTOR = [
   // top of the URL Connection's native browser surface. Suppress the live WebView with
   // a snapshot while the popup is visible so the popup is not clipped behind the browser.
   ".status-popup",
+  ".tree-drag-preview",
+  ".dock-overlay",
 ].join(", ");
 
 export function documentHasRdpBlockingOverlay(surface: Element | null) {

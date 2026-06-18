@@ -16,6 +16,7 @@ import type {
   FormEvent,
   KeyboardEvent,
   MouseEvent as ReactMouseEvent,
+  ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "../../store";
@@ -27,6 +28,26 @@ function tabDisplayTitle(tab: WorkspaceTab) {
 
 function tabWorkspaceId(tab: WorkspaceTab) {
   return tab.workspaceId ?? DEFAULT_WORKSPACE_ID;
+}
+
+function DockableWorkspaceTab({
+  children,
+  isActive,
+  tab,
+}: {
+  children: ReactNode;
+  isActive: boolean;
+  tab: WorkspaceTab;
+}) {
+  return (
+    <div
+      className={isActive ? "workspace-dockable-tab active" : "workspace-dockable-tab"}
+      data-dock-pane-id={tab.panes[0]?.id ?? tab.id}
+      data-dock-tab-id={tab.id}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function TabStrip() {
@@ -305,14 +326,16 @@ export function WorkspaceCanvas({
         </section>
       ) : null}
       {tabs.map((tab) => {
+        const tabIsActive = workspaceActive && tab.id === activeTabId;
         if (tab.kind === "sftp") {
           return (
-            <SftpWorkspace
-              isActive={workspaceActive && tab.id === activeTabId}
-              key={tab.id}
-              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
-              tab={tab}
-            />
+            <DockableWorkspaceTab isActive={tabIsActive} key={tab.id} tab={tab}>
+              <SftpWorkspace
+                isActive={tabIsActive}
+                onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
+                tab={tab}
+              />
+            </DockableWorkspaceTab>
           );
         }
         if (tab.kind === "ftp") {
@@ -333,64 +356,69 @@ export function WorkspaceCanvas({
             ? ftpBrowserCommands(connection, ftpOptions)
             : undefined;
           return (
-            <SftpWorkspace
-              commands={commands}
-              isActive={workspaceActive && tab.id === activeTabId}
-              key={tab.id}
-              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
-              tab={tab}
-            />
+            <DockableWorkspaceTab isActive={tabIsActive} key={tab.id} tab={tab}>
+              <SftpWorkspace
+                commands={commands}
+                isActive={tabIsActive}
+                onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
+                tab={tab}
+              />
+            </DockableWorkspaceTab>
           );
         }
         if (tab.kind === "localFiles") {
           // Local File Explorer reuses the SFTP browser surface driven by the
           // local-filesystem adapter (no network session).
           return (
-            <SftpWorkspace
-              commands={localBrowserCommands()}
-              isActive={workspaceActive && tab.id === activeTabId}
-              key={tab.id}
-              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
-              tab={tab}
-            />
+            <DockableWorkspaceTab isActive={tabIsActive} key={tab.id} tab={tab}>
+              <SftpWorkspace
+                commands={localBrowserCommands()}
+                isActive={tabIsActive}
+                onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
+                tab={tab}
+              />
+            </DockableWorkspaceTab>
           );
         }
         if (tab.kind === "fileViewer") {
           // Document Connection: open a single local file in the universal
           // viewer / light editor (no network session).
           return (
-            <FileViewerWorkspace
-              isActive={workspaceActive && tab.id === activeTabId}
-              key={tab.id}
-              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
-              tab={tab}
-            />
+            <DockableWorkspaceTab isActive={tabIsActive} key={tab.id} tab={tab}>
+              <FileViewerWorkspace
+                isActive={tabIsActive}
+                onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
+                tab={tab}
+              />
+            </DockableWorkspaceTab>
           );
         }
         if (tab.kind === "webview") {
           return (
-            <WebViewWorkspace
-              isActive={workspaceActive && tab.id === activeTabId}
-              key={tab.id}
-              onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
-              onOpenAssistant={onOpenAssistant}
-              tab={tab}
-            />
+            <DockableWorkspaceTab isActive={tabIsActive} key={tab.id} tab={tab}>
+              <WebViewWorkspace
+                isActive={tabIsActive}
+                onClose={hideTopTabButtons ? () => closeTab(tab.id) : undefined}
+                onOpenAssistant={onOpenAssistant}
+                tab={tab}
+              />
+            </DockableWorkspaceTab>
           );
         }
         if (tab.kind === "remoteDesktop") {
           return (
-            <RemoteDesktopWorkspace
-              isActive={workspaceActive && tab.id === activeTabId}
-              key={tab.id}
-              onOpenAssistant={onOpenAssistant}
-              tab={tab}
-            />
+            <DockableWorkspaceTab isActive={tabIsActive} key={tab.id} tab={tab}>
+              <RemoteDesktopWorkspace
+                isActive={tabIsActive}
+                onOpenAssistant={onOpenAssistant}
+                tab={tab}
+              />
+            </DockableWorkspaceTab>
           );
         }
         return (
           <TerminalWorkspace
-            isActive={workspaceActive && tab.id === activeTabId}
+            isActive={tabIsActive}
             key={tab.id}
             onOpenAssistant={onOpenAssistant}
             tab={tab}

@@ -93,3 +93,52 @@ test("the Connection Tree drag wires Connections onto Workspace Canvas dock targ
     "DockOverlay should render through DialogPortal (document.body)",
   );
 });
+
+test("standalone connection tabs expose dock targets and split through the same pane action", async () => {
+  const sidebarSource = await readFile(
+    new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+    "utf8",
+  );
+  const canvasSource = await readFile(
+    new URL("../src/modules/workspace/WorkspaceCanvas.tsx", import.meta.url),
+    "utf8",
+  );
+  const nativeOverlaySource = await readFile(
+    new URL("../src/modules/workspace/nativeOverlay.ts", import.meta.url),
+    "utf8",
+  );
+  const storeSource = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
+
+  assert.match(
+    canvasSource,
+    /function DockableWorkspaceTab[\s\S]*data-dock-pane-id=\{tab\.panes\[0\]\?\.id \?\? tab\.id\}[\s\S]*data-dock-tab-id=\{tab\.id\}/,
+    "non-terminal top-level tabs should expose a synthetic dock pane target",
+  );
+  for (const kind of ["sftp", "ftp", "localFiles", "fileViewer", "webview", "remoteDesktop"]) {
+    assert.match(
+      canvasSource,
+      new RegExp(`tab\\.kind === "${kind}"[\\s\\S]*<DockableWorkspaceTab[\\s\\S]*tab=\\{tab\\}`),
+      `${kind} tabs should render inside DockableWorkspaceTab`,
+    );
+  }
+  assert.doesNotMatch(
+    sidebarSource,
+    /tab && tab\.kind === "terminal"/,
+    "canvas drops should not restrict split docking to terminal-kind tabs",
+  );
+  assert.match(
+    storeSource,
+    /const basePane = tab\.kind === "terminal" \? null : buildPaneForStandaloneTab\(tab\)/,
+    "the store should convert a standalone tab into its first layout pane before splitting",
+  );
+  assert.match(
+    nativeOverlaySource,
+    /NATIVE_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.tree-drag-preview"[\s\S]*"\.dock-overlay"/,
+    "RDP/VNC native surfaces should be suppressed while drag previews and dock overlays cross them",
+  );
+  assert.match(
+    nativeOverlaySource,
+    /WEBVIEW_BLOCKING_OVERLAY_SELECTOR[\s\S]*"\.tree-drag-preview"[\s\S]*"\.dock-overlay"/,
+    "URL WebView2 surfaces should be suppressed while drag previews and dock overlays cross them",
+  );
+});

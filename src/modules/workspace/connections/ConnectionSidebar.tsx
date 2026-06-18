@@ -2170,11 +2170,8 @@ export function ConnectionSidebar({
     const connection = found.connection;
     rememberConnection(connection);
     if (zone.kind === "split") {
-      const tab = tabs.find((entry) => entry.id === zone.tabId);
-      if (tab && tab.kind === "terminal") {
-        addConnectionToTerminalPane(zone.tabId, connection, zone.direction, zone.paneId);
-        return;
-      }
+      addConnectionToTerminalPane(zone.tabId, connection, zone.direction, zone.paneId);
+      return;
     }
     handleOpenConnection(connection);
   }
