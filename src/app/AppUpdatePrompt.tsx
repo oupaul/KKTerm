@@ -5,9 +5,10 @@ import { Download, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   checkForAppUpdate,
-  downloadAndInstallAppUpdate,
+  isAppUpdateDownloadCancelled,
   isDebugBuild,
   openReleaseDownloadPage,
+  startAppUpdateDownload,
   type AppUpdate,
 } from "../lib/appUpdates";
 import { shouldRunStartupUpdateCheck } from "../lib/appUpdatesModel";
@@ -16,6 +17,7 @@ import { isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 
 export const CHECK_FOR_APP_UPDATES_EVENT = "kkterm:check-for-updates";
+const APP_UPDATE_INSTALL_DELAY_MS = 3_000;
 
 export function AppUpdatePrompt({
   settingsReady,
@@ -27,6 +29,9 @@ export function AppUpdatePrompt({
     (state) => state.generalSettings.autoUpdateChecksEnabled,
   );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const showStatusBarProgress = useWorkspaceStore((state) => state.showStatusBarProgress);
+  const updateStatusBarProgress = useWorkspaceStore((state) => state.updateStatusBarProgress);
+  const clearStatusBarNotice = useWorkspaceStore((state) => state.clearStatusBarNotice);
   const [update, setUpdate] = useState<AppUpdate | null>(null);
   const [checking, setChecking] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -146,10 +151,45 @@ export function AppUpdatePrompt({
     }
 
     setInstalling(true);
-    showStatusBarNotice(t("settings.updateDownloadStarting"));
+    let progressNoticeId: number | null = null;
+    let cancelled = false;
     try {
-      await downloadAndInstallAppUpdate(update);
+      const task = await startAppUpdateDownload(update, (progress) => {
+        if (progressNoticeId !== null) {
+          updateStatusBarProgress(progressNoticeId, progress);
+        }
+      });
+      progressNoticeId = showStatusBarProgress(t("settings.updateDownloading"), {
+        progress: 0,
+        ...(task.canCancel
+          ? {
+              cancelLabel: t("settings.updateDownloadCancel"),
+              onCancel: () => {
+                cancelled = true;
+                void task.cancel();
+              },
+            }
+          : {}),
+      });
+      setUpdate(null);
+      await task.completion;
+      if (cancelled) {
+        return;
+      }
+      updateStatusBarProgress(progressNoticeId, 100);
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, APP_UPDATE_INSTALL_DELAY_MS);
+      });
+      clearStatusBarNotice(progressNoticeId);
+      await task.install();
     } catch (error) {
+      if (progressNoticeId !== null) {
+        clearStatusBarNotice(progressNoticeId);
+      }
+      if (cancelled || isAppUpdateDownloadCancelled(error)) {
+        setInstalling(false);
+        return;
+      }
       const message = error instanceof Error ? error.message : String(error);
       showStatusBarNotice(t("settings.updateDownloadFailed", { message }), {
         tone: "error",

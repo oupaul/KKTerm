@@ -966,7 +966,15 @@ type CommandMap = {
     args: undefined;
     result: "windows-x64" | "windows-arm64";
   };
-  download_and_install_app_update: {
+  download_app_update: {
+    args: { jobId: string; request: DownloadAndInstallAppUpdateRequest };
+    result: void;
+  };
+  cancel_app_update_download: {
+    args: { jobId: string };
+    result: void;
+  };
+  install_downloaded_app_update: {
     args: { request: DownloadAndInstallAppUpdateRequest };
     result: void;
   };

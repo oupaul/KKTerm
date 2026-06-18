@@ -23,6 +23,14 @@ export type AppUpdateInstallerAssets = {
 
 export type AppUpdateInstallStrategy = "windows-installer" | "tauri-updater" | "download-page";
 
+export function appUpdateProgressPercent(downloadedBytes: number, totalBytes: number) {
+  if (!Number.isFinite(totalBytes) || totalBytes <= 0) {
+    return null;
+  }
+  const percent = Math.round((downloadedBytes / totalBytes) * 100);
+  return Math.max(0, Math.min(100, percent));
+}
+
 export function appUpdateInstallStrategy(platform: "windows" | "macos" | "linux" | "unknown"): AppUpdateInstallStrategy {
   if (platform === "windows") {
     return "windows-installer";

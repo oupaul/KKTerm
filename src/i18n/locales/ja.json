@@ -1326,6 +1326,7 @@
     "updateOpenDownloadPage": "ダウンロードページを開く",
     "updateDownloadAndInstall": "ダウンロードしてインストール",
     "updateDownloading": "ダウンロード中...",
+    "updateDownloadCancel": "更新のダウンロードをキャンセル",
     "updateDownloadStarting": "KKTermインストーラーをダウンロードしています。インストール開始前にKKTermは終了します。",
     "updateDownloadFailed": "アップデートをダウンロードしてインストールできませんでした: {{message}}",
     "updateLater": "後で",

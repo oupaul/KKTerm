@@ -1326,6 +1326,7 @@
     "updateOpenDownloadPage": "開啟下載頁面",
     "updateDownloadAndInstall": "下載並安裝",
     "updateDownloading": "正在下載...",
+    "updateDownloadCancel": "取消下載更新",
     "updateDownloadStarting": "正在下載 KKTerm 安裝程式。KKTerm 會在安裝開始前關閉。",
     "updateDownloadFailed": "無法下載並安裝更新：{{message}}",
     "updateLater": "以後再說",

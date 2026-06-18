@@ -1326,6 +1326,7 @@
     "updateOpenDownloadPage": "Apri pagina di download",
     "updateDownloadAndInstall": "Scarica e installa",
     "updateDownloading": "Download in corso...",
+    "updateDownloadCancel": "Annulla il download dell'aggiornamento",
     "updateDownloadStarting": "Download del programma di installazione di KKTerm. KKTerm si chiuderà prima dell'avvio dell'installazione.",
     "updateDownloadFailed": "Impossibile scaricare e installare l'aggiornamento: {{message}}",
     "updateLater": "Più tardi",

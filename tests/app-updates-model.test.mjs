@@ -94,7 +94,7 @@ test("app update install strategy keeps Windows installer flow separate from mac
   assert.equal(appUpdateInstallStrategy("unknown"), "download-page");
 });
 
-test("app update install command is exposed across the frontend and backend boundary", async () => {
+test("app update install flow is exposed across the frontend and backend boundary", async () => {
   const [tauriSource, libSource, promptSource, localeSource, releaseDoc, manualSource] =
     await Promise.all([
       readFile(new URL("../src/lib/tauri.ts", import.meta.url), "utf8"),
@@ -106,10 +106,46 @@ test("app update install command is exposed across the frontend and backend boun
     ]);
   const locale = JSON.parse(localeSource);
 
-  assert.match(tauriSource, /download_and_install_app_update/);
-  assert.match(libSource, /download_and_install_app_update/);
+  assert.match(tauriSource, /download_app_update/);
+  assert.match(libSource, /download_app_update/);
   assert.match(promptSource, /settings\.updateDownloadAndInstall/);
   assert.equal(locale.settings.updateDownloadAndInstall, "Download and Install");
   assert.match(releaseDoc, /Download and Install/);
   assert.match(manualSource, /settings\.updateDownloadAndInstall/);
+});
+
+test("app update progress clamps real byte progress to a whole percentage", async () => {
+  const { appUpdateProgressPercent } = await importTypeScriptModule(
+    new URL("../src/lib/appUpdatesModel.ts", import.meta.url),
+  );
+
+  assert.equal(appUpdateProgressPercent(0, 100), 0);
+  assert.equal(appUpdateProgressPercent(49, 100), 49);
+  assert.equal(appUpdateProgressPercent(150, 100), 100);
+  assert.equal(appUpdateProgressPercent(-1, 100), 0);
+  assert.equal(appUpdateProgressPercent(50, 0), null);
+});
+
+test("app update uses a cancellable download phase before delayed installation", async () => {
+  const [tauriSource, libSource, promptSource, statusBarSource] = await Promise.all([
+    readFile(new URL("../src/lib/tauri.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/AppUpdatePrompt.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url), "utf8"),
+  ]);
+
+  for (const command of [
+    "download_app_update",
+    "cancel_app_update_download",
+    "install_downloaded_app_update",
+  ]) {
+    assert.match(tauriSource, new RegExp(command));
+    assert.match(libSource, new RegExp(command));
+  }
+  assert.match(promptSource, /APP_UPDATE_INSTALL_DELAY_MS\s*=\s*3_000/);
+  assert.match(promptSource, /showStatusBarProgress/);
+  assert.match(statusBarSource, /CircleGauge/);
+  assert.match(statusBarSource, /role="progressbar"/);
+  assert.match(statusBarSource, /status-popup-progress-min[^]*0%/);
+  assert.match(statusBarSource, /status-popup-progress-max[^]*100%/);
 });

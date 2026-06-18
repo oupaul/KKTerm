@@ -1,12 +1,22 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 #[cfg(target_os = "windows")]
 use std::process::Command;
+use std::sync::{
+    Arc, LazyLock, Mutex,
+    atomic::{AtomicBool, Ordering},
+};
 use std::time::Duration;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use url::Url;
+
+const APP_UPDATE_PROGRESS_EVENT: &str = "app-update-download-progress";
+static DOWNLOAD_CANCELLATIONS: LazyLock<Mutex<HashMap<String, Arc<AtomicBool>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,29 +27,113 @@ pub struct DownloadAndInstallAppUpdateRequest {
     checksum_url: String,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppUpdateDownloadProgress {
+    job_id: String,
+    transferred_bytes: u64,
+    total_bytes: u64,
+    progress: u8,
+}
+
 #[tauri::command]
 pub fn get_app_update_target_triple() -> String {
     app_update_target_triple().to_string()
 }
 
 #[tauri::command]
-pub async fn download_and_install_app_update(
+pub async fn download_app_update(
+    app: tauri::AppHandle,
+    job_id: String,
+    request: DownloadAndInstallAppUpdateRequest,
+) -> Result<(), String> {
+    validate_job_id(&job_id)?;
+    let cancellation = DOWNLOAD_CANCELLATIONS
+        .lock()
+        .map_err(|_| "update cancellation registry is unavailable".to_string())?
+        .entry(job_id.clone())
+        .or_insert_with(|| Arc::new(AtomicBool::new(false)))
+        .clone();
+
+    let task_job_id = job_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        download_app_update_sync(&app, &task_job_id, request, &cancellation)
+    })
+    .await
+    .map_err(|error| format!("update download task failed: {error}"))?;
+    if let Ok(mut downloads) = DOWNLOAD_CANCELLATIONS.lock() {
+        downloads.remove(&job_id);
+    }
+    result
+}
+
+#[tauri::command]
+pub fn cancel_app_update_download(job_id: String) -> Result<(), String> {
+    validate_job_id(&job_id)?;
+    let cancellation = DOWNLOAD_CANCELLATIONS
+        .lock()
+        .map_err(|_| "update cancellation registry is unavailable".to_string())?
+        .entry(job_id)
+        .or_insert_with(|| Arc::new(AtomicBool::new(true)))
+        .clone();
+    cancellation.store(true, Ordering::Relaxed);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn install_downloaded_app_update(
     app: tauri::AppHandle,
     request: DownloadAndInstallAppUpdateRequest,
 ) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        download_and_install_app_update_sync(&app, request)
-    })
-    .await
-    .map_err(|error| format!("update install task failed: {error}"))?
+    validate_update_request(&request)?;
+    let installer_path = update_installer_path(&app, &request.asset_name)?;
+    let checksum = download_text(&request.checksum_url)?;
+    let expected_sha256 = parse_sha256(&checksum)?;
+    let actual_sha256 = sha256_file(&installer_path)?;
+    if !actual_sha256.eq_ignore_ascii_case(&expected_sha256) {
+        let _ = fs::remove_file(&installer_path);
+        return Err("downloaded installer checksum did not match release metadata".into());
+    }
+
+    spawn_installer_after_exit(&installer_path, std::process::id())?;
+    app.exit(0);
+    Ok(())
 }
 
-fn download_and_install_app_update_sync(
+fn download_app_update_sync(
     app: &tauri::AppHandle,
+    job_id: &str,
     request: DownloadAndInstallAppUpdateRequest,
+    cancellation: &AtomicBool,
 ) -> Result<(), String> {
     validate_update_request(&request)?;
+    let installer_path = update_installer_path(app, &request.asset_name)?;
+    let checksum = download_text(&request.checksum_url)?;
+    let expected_sha256 = parse_sha256(&checksum)?;
 
+    let result = download_file(
+        app,
+        job_id,
+        &request.download_url,
+        &installer_path,
+        cancellation,
+    )
+    .and_then(|_| {
+        let actual_sha256 = sha256_file(&installer_path)?;
+        if actual_sha256.eq_ignore_ascii_case(&expected_sha256) {
+            Ok(())
+        } else {
+            Err("downloaded installer checksum did not match release metadata".into())
+        }
+    });
+
+    if result.is_err() {
+        let _ = fs::remove_file(&installer_path);
+    }
+    result
+}
+
+fn update_installer_path(app: &tauri::AppHandle, asset_name: &str) -> Result<PathBuf, String> {
     let update_dir = app
         .path()
         .app_cache_dir()
@@ -51,20 +145,18 @@ fn download_and_install_app_update_sync(
             update_dir.display()
         )
     })?;
+    Ok(update_dir.join(asset_name))
+}
 
-    let installer_path = update_dir.join(&request.asset_name);
-    let checksum = download_text(&request.checksum_url)?;
-    let expected_sha256 = parse_sha256(&checksum)?;
-    download_file(&request.download_url, &installer_path)?;
-
-    let actual_sha256 = sha256_file(&installer_path)?;
-    if !actual_sha256.eq_ignore_ascii_case(&expected_sha256) {
-        let _ = fs::remove_file(&installer_path);
-        return Err("downloaded installer checksum did not match release metadata".into());
+fn validate_job_id(job_id: &str) -> Result<(), String> {
+    if job_id.is_empty()
+        || job_id.len() > 64
+        || !job_id
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
+    {
+        return Err("update download job id is invalid".into());
     }
-
-    spawn_installer_after_exit(&installer_path, std::process::id())?;
-    app.exit(0);
     Ok(())
 }
 
@@ -145,22 +237,65 @@ fn download_text(url: &str) -> Result<String, String> {
         .map_err(|error| format!("failed to read update checksum: {error}"))
 }
 
-fn download_file(url: &str, destination: &Path) -> Result<(), String> {
-    let bytes = http_client()?
+fn download_file(
+    app: &tauri::AppHandle,
+    job_id: &str,
+    url: &str,
+    destination: &Path,
+    cancellation: &AtomicBool,
+) -> Result<(), String> {
+    if cancellation.load(Ordering::Relaxed) {
+        return Err("app update download cancelled".into());
+    }
+    let mut response = http_client()?
         .get(url)
         .send()
         .map_err(|error| format!("failed to download update installer: {error}"))?
         .error_for_status()
-        .map_err(|error| format!("failed to download update installer: {error}"))?
-        .bytes()
-        .map_err(|error| format!("failed to read update installer: {error}"))?;
-
-    fs::write(destination, bytes).map_err(|error| {
+        .map_err(|error| format!("failed to download update installer: {error}"))?;
+    let total_bytes = response.content_length().unwrap_or(0);
+    let mut file = fs::File::create(destination).map_err(|error| {
         format!(
-            "failed to write update installer {}: {error}",
+            "failed to create update installer {}: {error}",
             destination.display()
         )
-    })
+    })?;
+    let mut transferred_bytes = 0_u64;
+    let mut buffer = [0_u8; 64 * 1024];
+
+    loop {
+        if cancellation.load(Ordering::Relaxed) {
+            return Err("app update download cancelled".into());
+        }
+        let count = response
+            .read(&mut buffer)
+            .map_err(|error| format!("failed to read update installer: {error}"))?;
+        if count == 0 {
+            break;
+        }
+        file.write_all(&buffer[..count]).map_err(|error| {
+            format!(
+                "failed to write update installer {}: {error}",
+                destination.display()
+            )
+        })?;
+        transferred_bytes += count as u64;
+        let progress = if total_bytes > 0 {
+            ((transferred_bytes.saturating_mul(100) / total_bytes).min(100)) as u8
+        } else {
+            0
+        };
+        let _ = app.emit(
+            APP_UPDATE_PROGRESS_EVENT,
+            AppUpdateDownloadProgress {
+                job_id: job_id.to_string(),
+                transferred_bytes,
+                total_bytes,
+                progress,
+            },
+        );
+    }
+    Ok(())
 }
 
 fn parse_sha256(value: &str) -> Result<String, String> {

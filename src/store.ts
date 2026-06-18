@@ -1117,6 +1117,11 @@ interface WorkspaceState {
     message: string,
     options?: { tone?: StatusBarNotice["tone"]; durationMs?: number },
   ) => void;
+  showStatusBarProgress: (
+    message: string,
+    options?: { progress?: number; cancelLabel?: string; onCancel?: () => void },
+  ) => number;
+  updateStatusBarProgress: (id: number, progress: number) => void;
   clearStatusBarNotice: (id: number) => void;
   setDocumentStatusSlot: (slot: HTMLElement | null) => void;
   activateTab: (tabId: string) => void;
@@ -1439,6 +1444,37 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       },
     });
   },
+  showStatusBarProgress: (message, options) => {
+    const id = (statusBarNoticeSequence += 1);
+    set({
+      statusBarNotice: {
+        id,
+        message,
+        tone: "info",
+        durationMs: 0,
+        expiresAt: null,
+        progress: Math.max(0, Math.min(100, options?.progress ?? 0)),
+        cancelLabel: options?.cancelLabel,
+        onCancel: options?.onCancel,
+      },
+    });
+    return id;
+  },
+  updateStatusBarProgress: (id, progress) =>
+    set((state) =>
+      state.statusBarNotice?.id === id && state.statusBarNotice.progress !== undefined
+        ? (() => {
+            const nextProgress = Math.max(0, Math.min(100, progress));
+            return {
+              statusBarNotice: {
+                ...state.statusBarNotice,
+                progress: nextProgress,
+                ...(nextProgress === 100 ? { cancelLabel: undefined, onCancel: undefined } : {}),
+              },
+            };
+          })()
+        : {},
+    ),
   clearStatusBarNotice: (id) =>
     set((state) =>
       state.statusBarNotice?.id === id

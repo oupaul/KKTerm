@@ -1326,6 +1326,7 @@
     "updateOpenDownloadPage": "Mở trang tải xuống",
     "updateDownloadAndInstall": "Tải xuống và cài đặt",
     "updateDownloading": "Đang tải xuống...",
+    "updateDownloadCancel": "Hủy tải bản cập nhật",
     "updateDownloadStarting": "Đang tải xuống trình cài đặt KKTerm. KKTerm sẽ đóng trước khi quá trình cài đặt bắt đầu.",
     "updateDownloadFailed": "Không thể tải xuống và cài đặt bản cập nhật: {{message}}",
     "updateLater": "Để sau",

@@ -1,8 +1,10 @@
 import { getVersion } from "@tauri-apps/api/app";
+import { listen } from "@tauri-apps/api/event";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "./tauri";
 import { currentPlatform } from "./platform";
 import {
   appUpdateInstallStrategy,
+  appUpdateProgressPercent,
   selectWindowsInstallerAssets,
   type AppUpdateAsset,
   type AppUpdateInstallerAssets,
@@ -31,6 +33,20 @@ export type AppUpdate = {
   htmlUrl: string;
   installer: AppUpdateInstallerAssets | null;
   installStrategy: AppUpdateInstallStrategy;
+};
+
+export type AppUpdateDownloadTask = {
+  canCancel: boolean;
+  completion: Promise<void>;
+  cancel: () => Promise<void>;
+  install: () => Promise<void>;
+};
+
+type AppUpdateDownloadProgress = {
+  jobId: string;
+  transferredBytes: number;
+  totalBytes: number;
+  progress: number;
 };
 
 function normalizeTag(tag: string) {
@@ -129,22 +145,42 @@ export async function openReleaseDownloadPage(update: AppUpdate) {
   await openExternalUrl(update.htmlUrl);
 }
 
-export async function downloadAndInstallAppUpdate(update: AppUpdate) {
+export async function startAppUpdateDownload(
+  update: AppUpdate,
+  onProgress: (progress: number) => void,
+): Promise<AppUpdateDownloadTask> {
   if (update.installStrategy === "tauri-updater") {
-    await installTauriAppUpdate();
-    return;
+    return startTauriAppUpdateDownload(onProgress);
   }
   if (!update.installer) {
     throw new Error("No installer asset is available for this device.");
   }
-  await invokeCommand("download_and_install_app_update", {
-    request: {
-      version: update.version,
-      assetName: update.installer.assetName,
-      downloadUrl: update.installer.downloadUrl,
-      checksumUrl: update.installer.checksumUrl,
+  const request = {
+    version: update.version,
+    assetName: update.installer.assetName,
+    downloadUrl: update.installer.downloadUrl,
+    checksumUrl: update.installer.checksumUrl,
+  };
+  const jobId = crypto.randomUUID();
+  const unlisten = await listen<AppUpdateDownloadProgress>(
+    "app-update-download-progress",
+    (event) => {
+      if (event.payload.jobId === jobId) {
+        onProgress(event.payload.progress);
+      }
     },
-  });
+  );
+  const completion = invokeCommand("download_app_update", { jobId, request }).finally(unlisten);
+  return {
+    canCancel: true,
+    completion,
+    cancel: () => invokeCommand("cancel_app_update_download", { jobId }),
+    install: () => invokeCommand("install_downloaded_app_update", { request }),
+  };
+}
+
+export function isAppUpdateDownloadCancelled(error: unknown) {
+  return String(error).includes("app update download cancelled");
 }
 
 async function checkForTauriAppUpdate(): Promise<AppUpdate | null> {
@@ -164,7 +200,9 @@ async function checkForTauriAppUpdate(): Promise<AppUpdate | null> {
   };
 }
 
-async function installTauriAppUpdate() {
+async function startTauriAppUpdateDownload(
+  onProgress: (progress: number) => void,
+): Promise<AppUpdateDownloadTask> {
   const [{ check }, { relaunch }] = await Promise.all([
     import("@tauri-apps/plugin-updater"),
     import("@tauri-apps/plugin-process"),
@@ -173,6 +211,32 @@ async function installTauriAppUpdate() {
   if (!tauriUpdate) {
     throw new Error("No signed update is available for this device.");
   }
-  await tauriUpdate.downloadAndInstall(undefined, { timeout: 120_000 });
-  await relaunch();
+  let downloadedBytes = 0;
+  let totalBytes = 0;
+  const completion = tauriUpdate.download((event) => {
+    if (event.event === "Started") {
+      totalBytes = event.data.contentLength ?? 0;
+      onProgress(0);
+      return;
+    }
+    if (event.event === "Progress") {
+      downloadedBytes += event.data.chunkLength;
+      const progress = appUpdateProgressPercent(downloadedBytes, totalBytes);
+      if (progress !== null) {
+        onProgress(progress);
+      }
+      return;
+    }
+    onProgress(100);
+  }, { timeout: 120_000 });
+
+  return {
+    canCancel: false,
+    completion,
+    cancel: async () => undefined,
+    install: async () => {
+      await tauriUpdate.install();
+      await relaunch();
+    },
+  };
 }

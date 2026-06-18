@@ -1326,6 +1326,7 @@
     "updateOpenDownloadPage": "Buka halaman unduh",
     "updateDownloadAndInstall": "Unduh dan instal",
     "updateDownloading": "Mengunduh...",
+    "updateDownloadCancel": "Batalkan unduhan pembaruan",
     "updateDownloadStarting": "Mengunduh penginstal KKTerm. KKTerm akan ditutup sebelum instalasi dimulai.",
     "updateDownloadFailed": "Tidak dapat mengunduh dan menginstal pembaruan: {{message}}",
     "updateLater": "Nanti",

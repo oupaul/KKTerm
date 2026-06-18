@@ -844,6 +844,9 @@ export interface StatusBarNotice {
   tone: "success" | "info" | "warning" | "error";
   durationMs: number;
   expiresAt: number | null;
+  progress?: number;
+  cancelLabel?: string;
+  onCancel?: () => void;
 }
 
 export type SecretKind =

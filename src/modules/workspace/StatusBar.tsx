@@ -2,6 +2,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   CircleCheck,
+  CircleGauge,
   CircleX,
   Coffee,
   Cpu,
@@ -87,6 +88,7 @@ export function StatusBar({
     if (!noticeId || isNoticeExiting) {
       return;
     }
+    renderedNotice.onCancel?.();
     setIsNoticeExiting(true);
     window.setTimeout(() => clearStatusBarNotice(noticeId), NOTIFICATION_FADE_MS);
   }
@@ -132,6 +134,9 @@ function StatusNoticePopup({
   onDismiss: () => void;
 }) {
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const isProgress = notice.progress !== undefined;
+  const progress = notice.progress ?? 0;
+  const showClose = !isProgress || Boolean(notice.onCancel) || notice.progress === 100;
 
   useEffect(() => {
     const popup = popupRef.current;
@@ -156,22 +161,50 @@ function StatusNoticePopup({
       }`}
     >
       <span className="status-popup-icon" aria-hidden="true">
-        <StatusNoticeIcon tone={notice.tone} />
+        {isProgress ? (
+          <CircleGauge size={21} strokeWidth={2.2} />
+        ) : (
+          <StatusNoticeIcon tone={notice.tone} />
+        )}
       </span>
-      <span className="status-popup-message" role="status">
-        {notice.message}
+      <span className="status-popup-content">
+        <span className="status-popup-message" role="status">
+          {notice.message}
+        </span>
+        {isProgress ? (
+          <span className="status-popup-progress-wrap">
+            <span
+              aria-valuemax={100}
+              aria-valuemin={0}
+              aria-valuenow={progress}
+              aria-label={notice.message}
+              className="status-popup-progress"
+              role="progressbar"
+            >
+              <i style={{ width: `${progress}%` }} />
+            </span>
+            <span className="status-popup-progress-labels" aria-hidden="true">
+              <span className="status-popup-progress-min">0%</span>
+              <strong>{Math.round(progress)}%</strong>
+              <span className="status-popup-progress-max">100%</span>
+            </span>
+          </span>
+        ) : (
+          <span className="status-popup-timer" aria-hidden="true">
+            <i />
+          </span>
+        )}
       </span>
-      <span className="status-popup-timer" aria-hidden="true">
-        <i />
-      </span>
-      <button
-        className="status-popup-close"
-        aria-label={dismissLabel}
-        onClick={onDismiss}
-        type="button"
-      >
-        <X size={11} strokeWidth={2.6} />
-      </button>
+      {showClose ? (
+        <button
+          className="status-popup-close"
+          aria-label={notice.cancelLabel ?? dismissLabel}
+          onClick={onDismiss}
+          type="button"
+        >
+          <X size={11} strokeWidth={2.6} />
+        </button>
+      ) : null}
     </div>
   );
 }
