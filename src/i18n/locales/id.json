@@ -1883,8 +1883,8 @@
     "fileViewPath": "File",
     "fileViewPathPlaceholder": "Pilih file untuk dilihat",
     "fileViewPickerTitle": "Pilih file untuk dilihat",
-    "fileViewOpenExternal": "Open in external editor",
-    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
+    "fileViewOpenExternal": "Buka di editor eksternal",
+    "fileViewOpenExternalHint": "Buka koneksi Dokumen ini dengan aplikasi default sistem operasi alih-alih membuat tab KKTerm."
   },
   "terminal": {
     "openSftp": "Buka browser SFTP",
@@ -3319,7 +3319,7 @@
         "log": "Log",
         "hex": "Hex",
         "pdf": "PDF",
-        "unsupported": "Unsupported"
+        "unsupported": "Tidak didukung"
       },
       "level": {
         "error": "Error",
@@ -3344,18 +3344,18 @@
       "discardConfirm": "Buang perubahan yang belum disimpan?",
       "saveConflictConfirm": "File ini berubah di disk sejak Anda membukanya. Timpa dengan perubahan Anda?",
       "textMenu": "Font & pengodean",
-      "font": "Font",
+      "font": "Fonta",
       "fontDefault": "Default (monospace)",
       "fontSize": "Ukuran",
       "fontSizeDefault": "Default",
       "encoding": "Pengodean",
       "encodingAuto": "Otomatis",
       "encodingDetected": "Otomatis ({{label}})",
-      "unsupportedTitle": "Unsupported file",
-      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
-      "openAsText": "Open as Text",
-      "openAsBinary": "Open as Binary",
-      "openExternalEditor": "Open in External Editor"
+      "unsupportedTitle": "File tidak didukung",
+      "unsupportedBody": "KKTerm tidak memiliki penampil inline untuk {{name}}. Pilih cara membukanya.",
+      "openAsText": "Buka sebagai Teks",
+      "openAsBinary": "Buka sebagai Biner",
+      "openExternalEditor": "Buka di Editor Eksternal"
     }
   },
   "common": {

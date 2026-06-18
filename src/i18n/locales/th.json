@@ -1883,8 +1883,8 @@
     "fileViewPath": "ไฟล์",
     "fileViewPathPlaceholder": "เลือกไฟล์เพื่อดู",
     "fileViewPickerTitle": "เลือกไฟล์เพื่อดู",
-    "fileViewOpenExternal": "Open in external editor",
-    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
+    "fileViewOpenExternal": "เปิดในโปรแกรมแก้ไขภายนอก",
+    "fileViewOpenExternalHint": "เปิดการเชื่อมต่อเอกสารนี้ด้วยแอปเริ่มต้นของระบบปฏิบัติการแทนการสร้างแท็บ KKTerm"
   },
   "terminal": {
     "openSftp": "เปิดเบราว์เซอร์ SFTP",
@@ -3319,7 +3319,7 @@
         "log": "บันทึก",
         "hex": "Hex",
         "pdf": "PDF",
-        "unsupported": "Unsupported"
+        "unsupported": "ไม่รองรับ"
       },
       "level": {
         "error": "ข้อผิดพลาด",
@@ -3351,11 +3351,11 @@
       "encoding": "การเข้ารหัส",
       "encodingAuto": "อัตโนมัติ",
       "encodingDetected": "อัตโนมัติ ({{label}})",
-      "unsupportedTitle": "Unsupported file",
-      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
-      "openAsText": "Open as Text",
-      "openAsBinary": "Open as Binary",
-      "openExternalEditor": "Open in External Editor"
+      "unsupportedTitle": "ไฟล์ที่ไม่รองรับ",
+      "unsupportedBody": "KKTerm ไม่มีตัวดูแบบในหน้าสำหรับ {{name}} เลือกวิธีเปิด",
+      "openAsText": "เปิดเป็นข้อความ",
+      "openAsBinary": "เปิดเป็นไบนารี",
+      "openExternalEditor": "เปิดในโปรแกรมแก้ไขภายนอก"
     }
   },
   "common": {

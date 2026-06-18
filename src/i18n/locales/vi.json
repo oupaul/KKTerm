@@ -1883,8 +1883,8 @@
     "fileViewPath": "Tệp",
     "fileViewPathPlaceholder": "Chọn tệp để xem",
     "fileViewPickerTitle": "Chọn tệp để xem",
-    "fileViewOpenExternal": "Open in external editor",
-    "fileViewOpenExternalHint": "Open this Document Connection with the operating system's default app instead of creating a KKTerm tab."
+    "fileViewOpenExternal": "Mở trong trình chỉnh sửa bên ngoài",
+    "fileViewOpenExternalHint": "Mở kết nối Tài liệu này bằng ứng dụng mặc định của hệ điều hành thay vì tạo tab KKTerm."
   },
   "terminal": {
     "openSftp": "Open SFTP browser",
@@ -3319,7 +3319,7 @@
         "log": "Nhật ký",
         "hex": "Hex",
         "pdf": "PDF",
-        "unsupported": "Unsupported"
+        "unsupported": "Không được hỗ trợ"
       },
       "level": {
         "error": "Lỗi",
@@ -3351,11 +3351,11 @@
       "encoding": "Mã hóa",
       "encodingAuto": "Tự động",
       "encodingDetected": "Tự động ({{label}})",
-      "unsupportedTitle": "Unsupported file",
-      "unsupportedBody": "KKTerm does not have an inline viewer for {{name}}. Choose how to open it.",
-      "openAsText": "Open as Text",
-      "openAsBinary": "Open as Binary",
-      "openExternalEditor": "Open in External Editor"
+      "unsupportedTitle": "Tệp không được hỗ trợ",
+      "unsupportedBody": "KKTerm không có trình xem nội tuyến cho {{name}}. Chọn cách mở.",
+      "openAsText": "Mở dưới dạng văn bản",
+      "openAsBinary": "Mở dưới dạng nhị phân",
+      "openExternalEditor": "Mở trong trình chỉnh sửa bên ngoài"
     }
   },
   "common": {
