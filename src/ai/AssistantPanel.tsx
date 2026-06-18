@@ -26,6 +26,7 @@ import { createPortal } from "react-dom";
 import type {
   ChangeEvent,
   ClipboardEvent,
+  CSSProperties,
   FormEvent,
   KeyboardEvent,
   MouseEvent,
@@ -36,6 +37,7 @@ import { ariaChecked, menuButtonAria } from "../lib/aria";
 import { showNativeContextMenu } from "../lib/nativeContextMenu";
 import { invokeCommand, isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import type {
+  AgentContextUsage,
   AiProviderModelOption,
   AiStreamEvent,
   CaptureScreenshotRequest,
@@ -146,6 +148,20 @@ function maxMeasuredTextWidth(node: HTMLDivElement | null) {
   }, 0);
 }
 
+function formatCompactNumber(value: number) {
+  if (!Number.isFinite(value)) {
+    return "0";
+  }
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatContextUsagePercent(value: number) {
+  if (!Number.isFinite(value)) {
+    return "0%";
+  }
+  return `${Math.max(0, Math.min(100, Math.round(value)))}%`;
+}
+
 
 export function AssistantPanel({
   collapsed,
@@ -203,6 +219,8 @@ export function AssistantPanel({
   const [displayedIntentExamples, setDisplayedIntentExamples] = useState<string[]>([]);
   const [addContextMenuOpen, setAddContextMenuOpen] = useState(false);
   const [permissionMenuOpen, setPermissionMenuOpen] = useState(false);
+  const [contextUsageOpen, setContextUsageOpen] = useState(false);
+  const [contextUsage, setContextUsage] = useState<AgentContextUsage | undefined>();
   const [pastedImageContexts, setPastedImageContexts] = useState<AssistantImageAttachment[]>([]);
   const [fileContexts, setFileContexts] = useState<AssistantFileAttachment[]>([]);
   const [imagePasteRejected, setImagePasteRejected] = useState(false);
@@ -221,6 +239,7 @@ export function AssistantPanel({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const addContextMenuRef = useRef<HTMLDivElement | null>(null);
   const permissionMenuRef = useRef<HTMLDivElement | null>(null);
+  const contextUsageRef = useRef<HTMLDivElement | null>(null);
   const permissionWidthMeasureRef = useRef<HTMLDivElement | null>(null);
   const modelSelectRef = useRef<HTMLSelectElement | null>(null);
   const modelWidthMeasureRef = useRef<HTMLDivElement | null>(null);
@@ -322,6 +341,9 @@ export function AssistantPanel({
   const shouldShowPreStreamWaiting =
     isSendingPrompt && !messages.some((message) => message.role === "assistant" && message.isStreaming);
   const streamingMessageIndex = messages.findIndex((message) => message.isStreaming);
+  const contextUsagePercent = contextUsage?.estimatedUsagePercent ?? 0;
+  const contextUsageTone =
+    contextUsagePercent >= 90 ? "danger" : contextUsagePercent >= 75 ? "warn" : "ok";
 
   useEffect(() => {
     if (
@@ -575,6 +597,32 @@ export function AssistantPanel({
     };
   }, [permissionMenuOpen]);
 
+  useEffect(() => {
+    if (!contextUsageOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const node = contextUsageRef.current;
+      if (node && !node.contains(event.target as Node)) {
+        setContextUsageOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setContextUsageOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contextUsageOpen]);
+
   function handleSendCodeToTerminal(code: string) {
     if (activeTerminalPaneId) {
       const data = prepareAssistantTerminalInput(code);
@@ -632,6 +680,8 @@ export function AssistantPanel({
     setCurrentThreadTitle(undefined);
     setPrompt("");
     setChatError("");
+    setContextUsage(undefined);
+    setContextUsageOpen(false);
     setPastedImageContexts([]);
     setFileContexts([]);
     setImagePasteRejected(false);
@@ -693,6 +743,8 @@ export function AssistantPanel({
     setMessages(thread.messages);
     setPrompt("");
     setChatError("");
+    setContextUsage(undefined);
+    setContextUsageOpen(false);
     setPastedImageContexts([]);
     setFileContexts([]);
     setImagePasteRejected(false);
@@ -1291,6 +1343,10 @@ export function AssistantPanel({
           return;
         }
         logAssistantStreamEvent(event);
+        if (event.type === "contextUsage") {
+          setContextUsage(event.usage);
+          return;
+        }
         if (event.type === "toolCallEnd" && isDashboardMutatingTool(event.toolName)) {
           if (event.error) {
             useWorkspaceStore.getState().showStatusBarNotice(
@@ -2312,6 +2368,70 @@ export function AssistantPanel({
                   <span>{toolPermissionLabels[1]}</span>
                   {currentToolPermissionMode === "allowAll" ? <Check size={16} /> : null}
                 </button>
+              </div>
+            ) : null}
+          </div>
+          <div className="assistant-context-usage-wrapper" ref={contextUsageRef}>
+            <button
+              {...menuButtonAria(contextUsageOpen)}
+              aria-label={t("ai.contextUsage")}
+              className="assistant-context-usage-button"
+              data-tone={contextUsage ? contextUsageTone : "empty"}
+              disabled={!contextUsage}
+              onClick={() => setContextUsageOpen((open) => !open)}
+              style={
+                {
+                  "--assistant-context-usage": `${contextUsagePercent}%`,
+                } as CSSProperties
+              }
+              title={contextUsage ? t("ai.contextUsage") : t("ai.contextUsageUnavailable")}
+              type="button"
+            >
+              <span aria-hidden="true" className="assistant-context-usage-ring" />
+            </button>
+            {contextUsageOpen && contextUsage ? (
+              <div className="assistant-context-usage-popover" role="menu" aria-label={t("ai.contextUsage")}>
+                <header>
+                  <strong>{t("ai.contextUsage")}</strong>
+                  <span>{formatContextUsagePercent(contextUsage.estimatedUsagePercent)}</span>
+                </header>
+                <dl>
+                  <div>
+                    <dt>{t("ai.contextUsageModel")}</dt>
+                    <dd>{contextUsage.model}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("ai.contextUsageEstimate")}</dt>
+                    <dd>
+                      {t("ai.contextUsageTokens", {
+                        used: formatCompactNumber(contextUsage.estimatedRequestTokens),
+                        limit: formatCompactNumber(contextUsage.contextLimitTokens),
+                      })}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t("ai.contextUsageHistory")}</dt>
+                    <dd>{formatCompactNumber(contextUsage.estimatedHistoryChars)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("ai.contextUsageCurrent")}</dt>
+                    <dd>{formatCompactNumber(contextUsage.estimatedNonHistoryChars)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("ai.contextUsageMessages")}</dt>
+                    <dd>
+                      {t("ai.contextUsageMessageCounts", {
+                        retained: contextUsage.retainedMessages,
+                        omitted: contextUsage.omittedMessages,
+                      })}
+                    </dd>
+                  </div>
+                </dl>
+                <p>
+                  {contextUsage.contextLimitApproximate
+                    ? t("ai.contextUsageApproximate")
+                    : t("ai.contextUsageExact")}
+                </p>
               </div>
             ) : null}
           </div>

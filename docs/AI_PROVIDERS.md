@@ -59,6 +59,26 @@ external MCP clients. If ACP setup fails and KKTerm falls back to the one-shot
 CLI command path, the assistant must return suggestions instead of claiming it
 called KKTerm tools.
 
+## Context budgeting
+
+All provider runtimes must route replayed conversation history through the shared
+context-budget helper in `src-tauri/src/ai.rs` before building the final provider
+request. The helper estimates each known provider/model family's context window
+on every turn, but it preserves the original history until the estimated request
+crosses the compaction trigger. Once triggered, it keeps the newest turns within a
+conservative history budget, truncates oversized individual turns, and emits an
+`agent.context_compacted` record to `aiassistant.debug.log` when older turns are
+omitted. OpenAI-compatible HTTP providers, the GitHub Copilot SDK bridge, and
+ACP/CLI prompts all use this same path so custom providers do not bypass
+compaction.
+
+Treat model limits as operational guardrails, not product promises. Exact limits
+can drift by model revision and custom OpenAI-compatible endpoints may proxy any
+backend, so unknown or self-hosted models must use conservative approximate
+defaults and should still preserve the newest user turn. When adding a curated
+model family with a well-documented context window, update
+`model_context_limit_tokens` and add a prompt/message-boundary regression test.
+
 ## Rust provider structure
 
 Rust provider metadata lives under `src-tauri/src/ai/providers/` with one file per

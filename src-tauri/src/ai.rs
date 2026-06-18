@@ -844,6 +844,23 @@ pub struct AgentRunResponse {
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AgentContextUsage {
+    provider_kind: String,
+    model: String,
+    context_limit_tokens: usize,
+    context_limit_approximate: bool,
+    compaction_trigger_chars: usize,
+    estimated_request_chars: usize,
+    estimated_request_tokens: usize,
+    estimated_usage_percent: u8,
+    estimated_non_history_chars: usize,
+    estimated_history_chars: usize,
+    retained_messages: usize,
+    omitted_messages: usize,
+}
+
+#[derive(Clone, Serialize)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",
@@ -872,6 +889,9 @@ pub(crate) enum AiStreamEvent {
         #[serde(skip_serializing_if = "Option::is_none")]
         goal: Option<String>,
         steps: Vec<AssistantPlanStep>,
+    },
+    ContextUsage {
+        usage: AgentContextUsage,
     },
     Done {
         model: String,
@@ -1114,6 +1134,8 @@ impl AgentProvider for GitHubCopilotProvider {
         };
         let prompt = build_copilot_prompt(
             request,
+            self.provider_kind(),
+            settings.model(),
             Some(settings.custom_instructions().to_string()),
             recalled_memories,
         );
@@ -1129,7 +1151,28 @@ impl AgentProvider for GitHubCopilotProvider {
         request: AgentRunRequest,
         channel: Channel<Value>,
     ) -> Result<AgentRunResponse, String> {
-        let response = self.run(app, settings, api_key, request).await?;
+        let token = require_copilot_token(api_key)?;
+        let recalled_memories = if settings.tools().memory() {
+            let scope = active_connection_memory_scope(request.active_connection_id.as_deref());
+            recall_assistant_memories(&app, scope.as_deref())
+        } else {
+            Vec::new()
+        };
+        let built_prompt = build_copilot_prompt_with_usage(
+            request,
+            self.provider_kind(),
+            settings.model(),
+            Some(settings.custom_instructions().to_string()),
+            recalled_memories,
+        );
+        emit_stream(
+            &channel,
+            &AiStreamEvent::ContextUsage {
+                usage: built_prompt.usage.clone(),
+            },
+        )?;
+        let output = run_copilot_sdk(&app, &settings, &token, &built_prompt.prompt).await?;
+        let response = finish_copilot_response(self, settings.model(), output)?;
         let _ = channel.send(json!(AiStreamEvent::ContentDelta {
             delta: response.content.clone(),
         }));
@@ -1149,7 +1192,7 @@ impl AgentProvider for CliAgentProvider {
         _api_key: Option<String>,
         request: AgentRunRequest,
     ) -> Result<AgentRunResponse, String> {
-        let prompt = build_cli_agent_prompt(&settings, request)?;
+        let prompt = build_cli_agent_prompt(self.provider_kind, &settings, request)?;
         let command = self.command.clone();
         let backend = self.backend;
         let model = settings.model().to_string();
@@ -1191,7 +1234,15 @@ impl AgentProvider for CliAgentProvider {
         request: AgentRunRequest,
         channel: Channel<Value>,
     ) -> Result<AgentRunResponse, String> {
-        let prompt = build_cli_agent_prompt(&settings, request)?;
+        let built_prompt =
+            build_cli_agent_prompt_with_usage(self.provider_kind, &settings, request)?;
+        emit_stream(
+            &channel,
+            &AiStreamEvent::ContextUsage {
+                usage: built_prompt.usage.clone(),
+            },
+        )?;
+        let prompt = built_prompt.prompt;
         let command = self.command.clone();
         let backend = self.backend;
         let model = settings.model().to_string();
@@ -1770,9 +1821,33 @@ fn last_copilot_assistant_message_content(events: &[CopilotSdkSessionEvent]) -> 
 
 fn build_copilot_prompt(
     request: AgentRunRequest,
+    provider_kind: &str,
+    model: &str,
     custom_instructions: Option<String>,
     recalled_memories: Vec<String>,
 ) -> String {
+    build_copilot_prompt_with_usage(
+        request,
+        provider_kind,
+        model,
+        custom_instructions,
+        recalled_memories,
+    )
+    .prompt
+}
+
+struct CopilotPrompt {
+    prompt: String,
+    usage: AgentContextUsage,
+}
+
+fn build_copilot_prompt_with_usage(
+    request: AgentRunRequest,
+    provider_kind: &str,
+    model: &str,
+    custom_instructions: Option<String>,
+    recalled_memories: Vec<String>,
+) -> CopilotPrompt {
     let mut sections = Vec::new();
     sections.push(
         "You are the KKTerm AI Assistant. Help with local-first terminal, SSH, SFTP, dashboard, and workspace workflows. Do not execute commands; propose commands for user approval when needed."
@@ -1863,8 +1938,18 @@ fn build_copilot_prompt(
         sections.push(file_sections.join("\n\n"));
     }
 
-    if !request.messages.is_empty() {
-        let history = request
+    let non_history_chars = sections
+        .iter()
+        .map(|section| section.chars().count() + 8)
+        .sum::<usize>()
+        + request.prompt.chars().count();
+    let history = compact_agent_history(provider_kind, model, request.messages, non_history_chars);
+    let usage = history.context_usage(provider_kind, model);
+    if !history.messages.is_empty() {
+        if history.omitted_messages > 0 {
+            sections.push(history.compaction_notice());
+        }
+        let history = history
             .messages
             .into_iter()
             .map(|message| {
@@ -1890,7 +1975,10 @@ fn build_copilot_prompt(
     }
 
     sections.push(format!("User request:\n{}", request.prompt));
-    sections.join("\n\n---\n\n")
+    CopilotPrompt {
+        prompt: sections.join("\n\n---\n\n"),
+        usage,
+    }
 }
 
 fn non_empty(value: Option<String>) -> Option<String> {
@@ -5264,33 +5352,315 @@ struct OpenAiToolCallFunction {
 /// Per-message and total character budgets for replayed conversation history.
 /// Character-based, so they are deliberately conservative (~4 chars/token):
 /// long threads must degrade by dropping the oldest turns, not by overflowing
-/// the provider context window with an opaque 400.
+/// the provider context window with an opaque 400. The total cap is model-aware
+/// but still clamped because KKTerm also sends system instructions, tool
+/// schemas, current page/terminal context, and image/file metadata in the same
+/// provider request.
 const HISTORY_MESSAGE_MAX_CHARS: usize = 8_000;
 const HISTORY_TOTAL_MAX_CHARS: usize = 60_000;
+const HISTORY_TOTAL_MIN_CHARS: usize = 8_000;
+const APPROX_CHARS_PER_TOKEN: usize = 4;
+const HISTORY_CONTEXT_FRACTION_NUMERATOR: usize = 35;
+const HISTORY_CONTEXT_FRACTION_DENOMINATOR: usize = 100;
+const CONTEXT_COMPACTION_TRIGGER_NUMERATOR: usize = 80;
+const CONTEXT_COMPACTION_TRIGGER_DENOMINATOR: usize = 100;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct AgentContextBudget {
+    context_limit_tokens: usize,
+    compaction_trigger_chars: usize,
+    history_total_max_chars: usize,
+    history_message_max_chars: usize,
+    approximate_limit: bool,
+}
+
+#[derive(Clone)]
+struct CompactedAgentHistory {
+    messages: Vec<AgentChatMessage>,
+    estimated_history_chars: usize,
+    estimated_request_chars: usize,
+    omitted_messages: usize,
+    budget: AgentContextBudget,
+}
+
+impl CompactedAgentHistory {
+    fn compaction_notice(&self) -> String {
+        format!(
+            "Earlier conversation history was compacted: {} oldest message(s) were omitted before sending this request. Provider context limit estimate: {} tokens{}; compaction trigger: {} chars; retained history budget: {} chars.",
+            self.omitted_messages,
+            self.budget.context_limit_tokens,
+            if self.budget.approximate_limit {
+                " (approximate)"
+            } else {
+                ""
+            },
+            self.budget.compaction_trigger_chars,
+            self.budget.history_total_max_chars
+        )
+    }
+
+    fn context_usage(&self, provider_kind: &str, model: &str) -> AgentContextUsage {
+        let limit_chars = self
+            .budget
+            .context_limit_tokens
+            .saturating_mul(APPROX_CHARS_PER_TOKEN);
+        let estimated_usage_percent = if limit_chars == 0 {
+            0
+        } else {
+            ((self.estimated_request_chars.saturating_mul(100)) / limit_chars).min(100) as u8
+        };
+        AgentContextUsage {
+            provider_kind: provider_kind.to_string(),
+            model: model.to_string(),
+            context_limit_tokens: self.budget.context_limit_tokens,
+            context_limit_approximate: self.budget.approximate_limit,
+            compaction_trigger_chars: self.budget.compaction_trigger_chars,
+            estimated_request_chars: self.estimated_request_chars,
+            estimated_request_tokens: approximate_tokens_for_chars(self.estimated_request_chars),
+            estimated_usage_percent,
+            estimated_non_history_chars: self
+                .estimated_request_chars
+                .saturating_sub(self.estimated_history_chars),
+            estimated_history_chars: self.estimated_history_chars,
+            retained_messages: self.messages.len(),
+            omitted_messages: self.omitted_messages,
+        }
+    }
+}
+
+fn approximate_tokens_for_chars(chars: usize) -> usize {
+    chars.div_ceil(APPROX_CHARS_PER_TOKEN)
+}
+
+fn agent_context_budget(provider_kind: &str, model: &str) -> AgentContextBudget {
+    let (context_limit_tokens, approximate_limit) =
+        model_context_limit_tokens(provider_kind, model);
+    let compaction_trigger_chars = (context_limit_tokens * CONTEXT_COMPACTION_TRIGGER_NUMERATOR
+        / CONTEXT_COMPACTION_TRIGGER_DENOMINATOR)
+        * APPROX_CHARS_PER_TOKEN;
+    let history_total_max_chars = ((context_limit_tokens * HISTORY_CONTEXT_FRACTION_NUMERATOR
+        / HISTORY_CONTEXT_FRACTION_DENOMINATOR)
+        * APPROX_CHARS_PER_TOKEN)
+        .clamp(HISTORY_TOTAL_MIN_CHARS, HISTORY_TOTAL_MAX_CHARS);
+    AgentContextBudget {
+        context_limit_tokens,
+        compaction_trigger_chars,
+        history_total_max_chars,
+        history_message_max_chars: HISTORY_MESSAGE_MAX_CHARS.min(history_total_max_chars),
+        approximate_limit,
+    }
+}
+
+fn model_context_limit_tokens(provider_kind: &str, model: &str) -> (usize, bool) {
+    let provider = provider_kind.trim().to_ascii_lowercase();
+    let model = model.trim().to_ascii_lowercase();
+    let unprefixed_model = model.rsplit('/').next().unwrap_or(model.as_str());
+    let model = if unprefixed_model.is_empty() {
+        model.as_str()
+    } else {
+        unprefixed_model
+    };
+
+    if model.starts_with("claude-fable-5")
+        || model.starts_with("claude-mythos-5")
+        || model.starts_with("claude-mythos-preview")
+        || model.starts_with("claude-opus-4-8")
+        || model.starts_with("claude-opus-4.8")
+        || model.starts_with("claude-opus-4-7")
+        || model.starts_with("claude-opus-4.7")
+        || model.starts_with("claude-opus-4-6")
+        || model.starts_with("claude-opus-4.6")
+        || model.starts_with("claude-sonnet-4-6")
+        || model.starts_with("claude-sonnet-4.6")
+    {
+        return (1_000_000, false);
+    }
+    if model.starts_with("claude-") || provider == "anthropic" {
+        return (200_000, false);
+    }
+    if model.starts_with("gemini-") || provider == "gemini" {
+        return (1_000_000, true);
+    }
+    if model.starts_with("gpt-5.4-mini") || model.starts_with("gpt-5.4-nano") {
+        return (400_000, false);
+    }
+    if model.starts_with("gpt-5.5") || model.starts_with("gpt-5.4") {
+        return (1_050_000, false);
+    }
+    if model.starts_with("gpt-5") {
+        return (400_000, false);
+    }
+    if model.starts_with("gpt-4.1")
+        || model.starts_with("gpt-4o")
+        || model.starts_with("o1")
+        || model.starts_with("o3")
+        || model.starts_with("o4")
+    {
+        return (128_000, false);
+    }
+    if model.starts_with("gpt-4-turbo") {
+        return (128_000, false);
+    }
+    if model.starts_with("gpt-4") {
+        return (8_000, true);
+    }
+    if model.starts_with("gpt-3.5") {
+        return (16_000, true);
+    }
+    if model.starts_with("deepseek") || provider == "deepseek" {
+        return (64_000, true);
+    }
+    if model.starts_with("grok-") || provider == "grok" {
+        return (128_000, true);
+    }
+    if provider == "ollama" {
+        return (16_000, true);
+    }
+    if matches!(
+        provider.as_str(),
+        "openai-compatible" | "litellm" | "openrouter" | "opencode" | "nvidia"
+    ) {
+        return (32_000, true);
+    }
+    (32_000, true)
+}
 
 /// Keep the newest history messages that fit the total budget, truncating each
 /// message to the per-message cap first. The newest message is always kept.
+#[cfg(test)]
 fn bounded_history(history: Vec<AgentChatMessage>) -> Vec<AgentChatMessage> {
+    compact_agent_history("openai-compatible", "", history, 0).messages
+}
+
+fn compact_agent_history(
+    provider_kind: &str,
+    model: &str,
+    history: Vec<AgentChatMessage>,
+    non_history_chars: usize,
+) -> CompactedAgentHistory {
+    let budget = agent_context_budget(provider_kind, model);
+    let original_messages = history.len();
+    let estimated_history_chars = estimate_agent_history_chars(&history);
+    let estimated_request_chars = non_history_chars.saturating_add(estimated_history_chars);
+    if estimated_request_chars <= budget.compaction_trigger_chars {
+        return CompactedAgentHistory {
+            messages: history,
+            estimated_history_chars,
+            estimated_request_chars,
+            omitted_messages: 0,
+            budget,
+        };
+    }
+
     let mut total = 0usize;
     let mut kept: Vec<AgentChatMessage> = Vec::new();
     for mut message in history.into_iter().rev() {
-        message.content = truncate_prompt_section(&message.content, HISTORY_MESSAGE_MAX_CHARS);
+        message.content =
+            truncate_prompt_section(&message.content, budget.history_message_max_chars);
         let cost = message.content.chars().count()
             + message
                 .reasoning_content
                 .as_deref()
                 .map(|r| r.chars().count())
                 .unwrap_or(0);
-        if !kept.is_empty() && total + cost > HISTORY_TOTAL_MAX_CHARS {
+        if !kept.is_empty() && total + cost > budget.history_total_max_chars {
             break;
         }
         total += cost;
         kept.push(message);
     }
     kept.reverse();
-    kept
+    let omitted_messages = original_messages.saturating_sub(kept.len());
+    if omitted_messages > 0 {
+        ai_interaction_debug!(
+            "agent.context_compacted",
+            json!({
+                "providerKind": provider_kind,
+                "model": model,
+                "contextLimitTokens": budget.context_limit_tokens,
+                "contextLimitApproximate": budget.approximate_limit,
+                "compactionTriggerChars": budget.compaction_trigger_chars,
+                "historyTotalMaxChars": budget.history_total_max_chars,
+                "historyMessageMaxChars": budget.history_message_max_chars,
+                "estimatedRequestChars": estimated_request_chars,
+                "estimatedNonHistoryChars": non_history_chars,
+                "estimatedHistoryChars": estimated_history_chars,
+                "originalMessages": original_messages,
+                "retainedMessages": kept.len(),
+                "omittedMessages": omitted_messages,
+            })
+        );
+    }
+    CompactedAgentHistory {
+        messages: kept,
+        estimated_history_chars,
+        estimated_request_chars,
+        omitted_messages,
+        budget,
+    }
 }
 
+fn estimate_agent_history_chars(history: &[AgentChatMessage]) -> usize {
+    history
+        .iter()
+        .map(|message| {
+            message.role.chars().count()
+                + message.content.chars().count()
+                + message
+                    .reasoning_content
+                    .as_deref()
+                    .map(|reasoning| reasoning.chars().count())
+                    .unwrap_or(0)
+                + agent_tool_transcript(&message.tool_calls)
+                    .map(|transcript| transcript.chars().count())
+                    .unwrap_or(0)
+                + 4
+        })
+        .sum()
+}
+
+fn estimate_agent_request_non_history_chars(
+    system_instructions: &[String],
+    prompt: &str,
+    context_label: &str,
+    reasoning_effort: &str,
+    system_context: Option<&str>,
+    selected_output: Option<&str>,
+    page_context: Option<&AgentPageContext>,
+) -> usize {
+    let system_chars: usize = system_instructions
+        .iter()
+        .map(|instruction| instruction.chars().count() + 1)
+        .sum();
+    system_chars
+        + prompt.chars().count()
+        + context_label.chars().count()
+        + reasoning_effort.chars().count()
+        + system_context
+            .map(|context| truncated_prompt_section_char_count(context, 12_000))
+            .unwrap_or(0)
+        + selected_output
+            .map(|output| truncated_prompt_section_char_count(output, 16_000))
+            .unwrap_or(0)
+        + page_context
+            .map(|context| {
+                context.source_label.chars().count()
+                    + truncated_prompt_section_char_count(&context.text, 12_000)
+            })
+            .unwrap_or(0)
+}
+
+fn truncated_prompt_section_char_count(value: &str, max_chars: usize) -> usize {
+    let value = value.trim();
+    let count = value.chars().count();
+    if count <= max_chars {
+        count
+    } else {
+        max_chars + "\n[truncated]".chars().count()
+    }
+}
+
+#[cfg(test)]
 fn build_agent_messages(
     prompt: String,
     context_label: String,
@@ -5309,6 +5679,99 @@ fn build_agent_messages(
     dashboard_tools_enabled: bool,
     recalled_memories: Vec<String>,
 ) -> Vec<OpenAiCompatibleMessage> {
+    build_agent_messages_for_provider(
+        "openai-compatible",
+        "",
+        prompt,
+        context_label,
+        intent,
+        reasoning_effort,
+        system_context,
+        selected_output,
+        page_context,
+        supports_image_input,
+        screenshot,
+        screenshots,
+        history,
+        output_language,
+        custom_instructions,
+        skill_summaries,
+        dashboard_tools_enabled,
+        recalled_memories,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cfg(test)]
+fn build_agent_messages_for_provider(
+    provider_kind: &str,
+    model: &str,
+    prompt: String,
+    context_label: String,
+    intent: Option<String>,
+    reasoning_effort: String,
+    system_context: Option<String>,
+    selected_output: Option<String>,
+    page_context: Option<AgentPageContext>,
+    supports_image_input: bool,
+    screenshot: Option<AgentScreenshotContext>,
+    screenshots: Vec<AgentScreenshotContext>,
+    history: Vec<AgentChatMessage>,
+    output_language: Option<String>,
+    custom_instructions: Option<String>,
+    skill_summaries: Vec<AssistantSkillSummary>,
+    dashboard_tools_enabled: bool,
+    recalled_memories: Vec<String>,
+) -> Vec<OpenAiCompatibleMessage> {
+    build_agent_messages_for_provider_with_usage(
+        provider_kind,
+        model,
+        prompt,
+        context_label,
+        intent,
+        reasoning_effort,
+        system_context,
+        selected_output,
+        page_context,
+        supports_image_input,
+        screenshot,
+        screenshots,
+        history,
+        output_language,
+        custom_instructions,
+        skill_summaries,
+        dashboard_tools_enabled,
+        recalled_memories,
+    )
+    .messages
+}
+
+struct AgentMessagesWithUsage {
+    messages: Vec<OpenAiCompatibleMessage>,
+    usage: AgentContextUsage,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_agent_messages_for_provider_with_usage(
+    provider_kind: &str,
+    model: &str,
+    prompt: String,
+    context_label: String,
+    intent: Option<String>,
+    reasoning_effort: String,
+    system_context: Option<String>,
+    selected_output: Option<String>,
+    page_context: Option<AgentPageContext>,
+    supports_image_input: bool,
+    screenshot: Option<AgentScreenshotContext>,
+    screenshots: Vec<AgentScreenshotContext>,
+    history: Vec<AgentChatMessage>,
+    output_language: Option<String>,
+    custom_instructions: Option<String>,
+    skill_summaries: Vec<AssistantSkillSummary>,
+    dashboard_tools_enabled: bool,
+    recalled_memories: Vec<String>,
+) -> AgentMessagesWithUsage {
     let normalized_intent = normalize_agent_intent(intent);
     let mut system_instructions: Vec<String> = vec![
         "You are KKTerm's AI Assistant for local-first administration workflows.".to_string(),
@@ -5379,6 +5842,20 @@ fn build_agent_messages(
     if normalized_intent == AgentIntent::Watchdog {
         system_instructions.push(watchdog_intent_contract());
     }
+    let non_history_chars = estimate_agent_request_non_history_chars(
+        &system_instructions,
+        &prompt,
+        &context_label,
+        &reasoning_effort,
+        system_context.as_deref(),
+        selected_output.as_deref(),
+        page_context.as_ref(),
+    );
+    let history = compact_agent_history(provider_kind, model, history, non_history_chars);
+    let usage = history.context_usage(provider_kind, model);
+    if history.omitted_messages > 0 {
+        system_instructions.push(history.compaction_notice());
+    }
 
     let mut messages = vec![OpenAiCompatibleMessage {
         role: "system".to_string(),
@@ -5389,7 +5866,8 @@ fn build_agent_messages(
     }];
 
     messages.extend(
-        bounded_history(history)
+        history
+            .messages
             .into_iter()
             .filter_map(to_openai_compatible_history_message),
     );
@@ -5403,7 +5881,7 @@ fn build_agent_messages(
         .filter(|context| !context.is_empty())
     {
         user_content.push_str("\n\nSSH target system context:\n```text\n");
-        user_content.push_str(&system_context);
+        user_content.push_str(&truncate_prompt_section(&system_context, 12_000));
         user_content.push_str("\n```");
     }
     if let Some(selected_output) = selected_output
@@ -5411,14 +5889,14 @@ fn build_agent_messages(
         .filter(|output| !output.is_empty())
     {
         user_content.push_str("\n\nSelected terminal output:\n```text\n");
-        user_content.push_str(&selected_output);
+        user_content.push_str(&truncate_prompt_section(&selected_output, 16_000));
         user_content.push_str("\n```");
     }
     if let Some(page_context) = normalize_page_context(page_context) {
         user_content.push_str("\n\nActive page context: ");
         user_content.push_str(&page_context.source_label);
         user_content.push_str("\n```text\n");
-        user_content.push_str(&page_context.text);
+        user_content.push_str(&truncate_prompt_section(&page_context.text, 12_000));
         user_content.push_str("\n```");
     }
     let mut image_contexts: Vec<AgentScreenshotContext> = vec![];
@@ -5457,7 +5935,7 @@ fn build_agent_messages(
         tool_call_id: None,
         tool_calls: None,
     });
-    messages
+    AgentMessagesWithUsage { messages, usage }
 }
 
 fn normalize_page_context(page_context: Option<AgentPageContext>) -> Option<AgentPageContext> {

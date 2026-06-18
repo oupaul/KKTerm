@@ -67,7 +67,9 @@ impl OpenAiCompatibleProvider {
             settings.disabled_skill_names(),
             settings.custom_skills_enabled(),
         )?;
-        let messages = build_agent_messages(
+        let built_messages = build_agent_messages_for_provider_with_usage(
+            self.provider_kind,
+            settings.model(),
             prompt,
             context_label,
             request.intent,
@@ -85,6 +87,14 @@ impl OpenAiCompatibleProvider {
             settings.tools().dashboard(),
             recalled_memories,
         );
+        if let Some(channel) = channel.as_ref() {
+            emit_stream(
+                channel,
+                &AiStreamEvent::ContextUsage {
+                    usage: built_messages.usage.clone(),
+                },
+            )?;
+        }
         let tool_definitions = agent_tool_definitions(
             request.allow_tools,
             &allowed_tools,
@@ -98,12 +108,12 @@ impl OpenAiCompatibleProvider {
                     settings.model(),
                     self.endpoint_style,
                 )?,
-                messages,
+                messages: built_messages.messages,
                 tools: self.tool_definitions_for_provider(&tool_definitions),
             },
             OpenAiApiStyle::Responses => AgentTransport::Responses {
                 endpoint: responses_endpoint(settings.base_url(), self.endpoint_style)?,
-                input: responses_input_from_messages(messages, request.files),
+                input: responses_input_from_messages(built_messages.messages, request.files),
                 tools: self.responses_tool_definitions_for_provider(&tool_definitions),
             },
         };

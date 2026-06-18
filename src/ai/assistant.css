@@ -1290,7 +1290,7 @@
 .assistant-composer-footer {
   position: relative;
   display: grid;
-  grid-template-columns: 29px minmax(0, 1fr) minmax(0, 1fr) 29px;
+  grid-template-columns: 29px minmax(0, 1fr) 29px minmax(0, 1fr) 29px;
   gap: 8px;
   align-items: center;
   min-height: 28px;
@@ -1424,6 +1424,136 @@
 
 .assistant-permission-menu-item[data-mode="allowAll"] {
   color: #9b4d00;
+}
+
+.assistant-context-usage-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  min-width: 29px;
+  height: 29px;
+}
+
+.assistant-context-usage-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.assistant-context-usage-button:disabled {
+  color: var(--text-faint);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.assistant-context-usage-button:not(:disabled):hover,
+.assistant-context-usage-button:not(:disabled):focus {
+  border-color: var(--accent);
+  outline: 0;
+}
+
+.assistant-context-usage-button[data-tone="warn"] {
+  color: var(--amber);
+}
+
+.assistant-context-usage-button[data-tone="danger"] {
+  color: var(--red);
+}
+
+.assistant-context-usage-ring {
+  width: 18px;
+  height: 18px;
+  background:
+    radial-gradient(circle at center, var(--chrome) 47%, transparent 49%),
+    conic-gradient(currentColor var(--assistant-context-usage, 0%), var(--border) 0);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.assistant-context-usage-popover {
+  position: absolute;
+  right: -8px;
+  bottom: calc(100% + 6px);
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  width: min(260px, calc(100vw - 32px));
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.assistant-context-usage-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.assistant-context-usage-popover header strong,
+.assistant-context-usage-popover header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-context-usage-popover header span {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.assistant-context-usage-popover dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.assistant-context-usage-popover dl div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.assistant-context-usage-popover dt,
+.assistant-context-usage-popover dd,
+.assistant-context-usage-popover p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.assistant-context-usage-popover dt {
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+.assistant-context-usage-popover dd {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.assistant-context-usage-popover p {
+  color: var(--text-faint);
+  white-space: normal;
 }
 
 .assistant-control-measurer {

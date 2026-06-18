@@ -912,9 +912,23 @@ pub(crate) fn shell_quote(value: &str) -> String {
 }
 
 pub(crate) fn build_cli_agent_prompt(
+    provider_kind: &str,
     settings: &AiProviderSettings,
     request: AgentRunRequest,
 ) -> Result<String, String> {
+    build_cli_agent_prompt_with_usage(provider_kind, settings, request).map(|built| built.prompt)
+}
+
+pub(crate) struct CliAgentPrompt {
+    pub(crate) prompt: String,
+    pub(crate) usage: AgentContextUsage,
+}
+
+pub(crate) fn build_cli_agent_prompt_with_usage(
+    provider_kind: &str,
+    settings: &AiProviderSettings,
+    request: AgentRunRequest,
+) -> Result<CliAgentPrompt, String> {
     let prompt = trim_required("assistant prompt", request.prompt)?;
     let context_label = trim_required("assistant context", request.context_label)?;
     let mut out = String::new();
@@ -936,9 +950,40 @@ pub(crate) fn build_cli_agent_prompt(
         normalize_agent_intent(request.intent).as_str(),
         settings.reasoning_effort()
     ));
-    if !request.messages.is_empty() {
+    let non_history_chars = out.chars().count()
+        + prompt.chars().count()
+        + request
+            .system_context
+            .as_deref()
+            .map(|context| truncated_prompt_section_char_count(context, 12_000))
+            .unwrap_or(0)
+        + request
+            .selected_output
+            .as_deref()
+            .map(|output| truncated_prompt_section_char_count(output, 16_000))
+            .unwrap_or(0)
+        + request
+            .page_context
+            .as_ref()
+            .map(|context| {
+                context.source_label.chars().count()
+                    + truncated_prompt_section_char_count(&context.text, 12_000)
+            })
+            .unwrap_or(0);
+    let history = compact_agent_history(
+        provider_kind,
+        settings.model(),
+        request.messages,
+        non_history_chars,
+    );
+    let usage = history.context_usage(provider_kind, settings.model());
+    if !history.messages.is_empty() {
+        if history.omitted_messages > 0 {
+            out.push_str(&history.compaction_notice());
+            out.push_str("\n\n");
+        }
         out.push_str("Recent chat history:\n");
-        for message in request.messages {
+        for message in history.messages {
             let role = message.role.trim();
             let content = message.content.trim();
             if !role.is_empty() && !content.is_empty() {
@@ -956,7 +1001,7 @@ pub(crate) fn build_cli_agent_prompt(
         .filter(|value| !value.is_empty())
     {
         out.push_str("SSH target system context:\n```text\n");
-        out.push_str(&system_context);
+        out.push_str(&truncate_prompt_section(&system_context, 12_000));
         out.push_str("\n```\n\n");
     }
     if let Some(selected_output) = request
@@ -965,14 +1010,14 @@ pub(crate) fn build_cli_agent_prompt(
         .filter(|value| !value.is_empty())
     {
         out.push_str("Selected terminal output:\n```text\n");
-        out.push_str(&selected_output);
+        out.push_str(&truncate_prompt_section(&selected_output, 16_000));
         out.push_str("\n```\n\n");
     }
     if let Some(page_context) = normalize_page_context(request.page_context) {
         out.push_str("Active page context: ");
         out.push_str(&page_context.source_label);
         out.push_str("\n```text\n");
-        out.push_str(&page_context.text);
+        out.push_str(&truncate_prompt_section(&page_context.text, 12_000));
         out.push_str("\n```\n\n");
     }
     if !request.files.is_empty() || request.screenshot.is_some() || !request.screenshots.is_empty()
@@ -981,5 +1026,5 @@ pub(crate) fn build_cli_agent_prompt(
     }
     out.push_str("User request:\n");
     out.push_str(&prompt);
-    Ok(out)
+    Ok(CliAgentPrompt { prompt: out, usage })
 }

@@ -582,6 +582,21 @@ export interface AgentRunResponse {
   reasoningContent?: string;
 }
 
+export interface AgentContextUsage {
+  providerKind: string;
+  model: string;
+  contextLimitTokens: number;
+  contextLimitApproximate: boolean;
+  compactionTriggerChars: number;
+  estimatedRequestChars: number;
+  estimatedRequestTokens: number;
+  estimatedUsagePercent: number;
+  estimatedNonHistoryChars: number;
+  estimatedHistoryChars: number;
+  retainedMessages: number;
+  omittedMessages: number;
+}
+
 export type AiStreamEvent =
   | { type: "reasoningDelta"; delta: string }
   | { type: "contentDelta"; delta: string }
@@ -598,6 +613,7 @@ export type AiStreamEvent =
         detail?: string;
       }>;
     }
+  | { type: "contextUsage"; usage: AgentContextUsage }
   | { type: "done"; model: string; providerKind: string }
   | { type: "error"; message: string };
 
