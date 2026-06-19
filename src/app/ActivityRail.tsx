@@ -8,6 +8,7 @@ import {
   Pin,
   PinOff,
   Plus,
+  ServerCog,
   Settings,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -28,7 +29,12 @@ import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs
 import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
 import { RailTooltip } from "./RailTooltip";
 
-export type ActivePage = "workspace" | "dashboard" | "installer" | "settings";
+export type ActivePage =
+  | "workspace"
+  | "dashboard"
+  | "itops"
+  | "installer"
+  | "settings";
 
 type ConnectedRailItem = {
   connection: Connection;
@@ -708,6 +714,14 @@ export function ActivityRail({
       >
         <Gauge size={18} />
         <RailTooltip label={t("dashboard.title")} />
+      </button>
+      <button
+        className={`rail-button rail-button-itops ${activePage === "itops" ? "active" : ""}`}
+        aria-label={t("itops.railLabel")}
+        onClick={() => onNavigate("itops")}
+      >
+        <ServerCog size={18} />
+        <RailTooltip label={t("itops.railLabel")} />
       </button>
       {generalSettings.showInstallerOnRail && supportsInstallerHelper() ? (
         <button

@@ -35,6 +35,7 @@ import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { useDashboardStore } from "./modules/dashboard/state/dashboardStore";
 import { useDashboardBackendInvalidation } from "./modules/dashboard/state/invalidation";
 import { InstallerPage } from "./modules/installer/InstallerPage";
+import { ItOpsPage } from "./modules/itops/ItOpsPage";
 import {
   tutorialSurfaceKindForTarget,
   type TutorialSurfaceKind,
@@ -70,11 +71,10 @@ function App() {
   const [installerMounted, setInstallerMounted] = useState(
     () => activePage === "installer",
   );
+  const [itopsMounted, setItopsMounted] = useState(() => activePage === "itops");
   const [activeSettingsSectionId, setActiveSettingsSectionId] =
     useState<SettingsSectionId>("general-settings");
-  const previousBasePageRef = useRef<"workspace" | "dashboard" | "installer">(
-    launchPageRef.current,
-  );
+  const previousBasePageRef = useRef<BaseModulePage>(launchPageRef.current);
   const [credentialUnlockDialogOpen, setCredentialUnlockDialogOpen] = useState(false);
   const [credentialUnlockStoreExists, setCredentialUnlockStoreExists] =
     useState<boolean | undefined>(undefined);
@@ -102,6 +102,9 @@ function App() {
     }
     if (page === "installer") {
       setInstallerMounted(true);
+    }
+    if (page === "itops") {
+      setItopsMounted(true);
     }
     if (isOverlayPage(page) && !isOverlayPage(activePage)) {
       previousBasePageRef.current = activePage;
@@ -378,6 +381,13 @@ function App() {
       ) : null}
       {installerMounted ? (
         <InstallerPage key="installer-page" active={visibleBasePage === "installer"} />
+      ) : null}
+      {itopsMounted ? (
+        <ItOpsPage
+          key="itops-page"
+          active={visibleBasePage === "itops"}
+          onOpenAssistant={openAssistantPanel}
+        />
       ) : null}
       <TutorialOverlay
         key="tutorial-overlay"

@@ -898,6 +898,91 @@
       "unregisterBody": "This permanently deletes the {{name}} distribution and all of its files. This cannot be undone."
     }
   },
+  "itops": {
+    "railLabel": "IT Ops",
+    "title": "IT Ops",
+    "subtitle": "Fleet operations · Host Groups, Batch Runs & Automations",
+    "askAssistant": "Ask the assistant",
+    "tabs": {
+      "groups": "Host Groups",
+      "runs": "Batch Runs",
+      "autos": "Automations"
+    },
+    "actions": {
+      "newHostGroup": "New Host Group",
+      "newBatchRun": "New Batch Run",
+      "startBatchRun": "Start a Batch Run",
+      "newAutomation": "New Automation",
+      "runTask": "Run task",
+      "cancel": "Cancel",
+      "rerun": "Re-run",
+      "viewReport": "View report",
+      "save": "Save",
+      "addAction": "Add action",
+      "addConnections": "Add connections…",
+      "rename": "Rename",
+      "removeFromGroup": "Remove from group",
+      "more": "More"
+    },
+    "transport": {
+      "auto": "Auto"
+    },
+    "hostGroups": {
+      "heading": "Host Groups",
+      "emptyTitle": "No Host Groups yet",
+      "emptyBody": "A Host Group is a named selection of existing Connections used as a fleet target for Batch Runs and Automations.",
+      "dynamicBadge": "DYN",
+      "connectionsCount": "{{count}} connections",
+      "dynamicMembership": "dynamic membership",
+      "transportDefaultLabel": "Transport default",
+      "perHostTransport": "Per-host transport",
+      "perHostTransportHint": "How a Batch Run reaches each host. Auto derives it from the Connection.",
+      "dynamicFilter": "Dynamic filter",
+      "dynamicFilterHint": "Resolved at run time — newly added Connections are picked up automatically.",
+      "filterTypeKey": "type",
+      "filterFolderKey": "folder",
+      "membersLabel": "Members",
+      "membersCount": "· {{count}} connections"
+    },
+    "batchRuns": {
+      "emptyTitle": "No Batch Runs yet",
+      "emptyBody": "Send a script or an update playbook to every host in a Host Group at once, with per-host live output and a saved report.",
+      "stateRunning": "Running",
+      "stateCompleted": "Completed",
+      "stateCompletedWithFailures": "Completed with failures",
+      "hostsCount": "{{count}} hosts",
+      "statOk": "OK",
+      "statFailed": "Failed",
+      "statInFlight": "In flight",
+      "statTotal": "Total",
+      "legendOk": "{{count}} ok",
+      "legendFailed": "{{count}} failed",
+      "legendRunning": "{{count}} running",
+      "legendQueued": "{{count}} queued",
+      "progressLive": "{{done}} of {{total}} complete  ·  bounded to {{concurrency}} concurrent",
+      "progressDone": "Finished in {{duration}}  ·  started {{time}}",
+      "codeExit": "exit {{code}}",
+      "codeRunning": "running",
+      "codeQueued": "queued",
+      "savedReport": "Consolidated report saved to run history · source manual · {{ok}}/{{total}} succeeded"
+    },
+    "automations": {
+      "emptyTitle": "No Automations yet",
+      "emptyBody": "A durable rule — one trigger, an optional condition, and ordered actions — that re-arms every time KKTerm launches. The evolved Watchdog.",
+      "armed": "Armed",
+      "disabled": "Disabled",
+      "builder": {
+        "back": "Automations",
+        "armedStatus": "Armed · re-arms on launch",
+        "whenTrigger": "When — Trigger",
+        "onlyIfCondition": "Only if — Condition",
+        "thenActions": "Then — Actions · in order",
+        "target": "Target {{target}}",
+        "sampledValue": "Sampled value",
+        "evaluatedBy": "evaluated by the pure predicate"
+      }
+    }
+  },
   "settings": {
     "title": "Settings",
     "workspace": "Workspace",
