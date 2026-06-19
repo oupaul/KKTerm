@@ -391,6 +391,29 @@ pub(crate) fn background_media_mime(extension: &str) -> &'static str {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn custom_font_entry_serializes_terminal_monospace_flag() {
+        let entry = CustomFontEntry {
+            name: "Example-Regular".to_string(),
+            family: "Example Mono".to_string(),
+            path: "C:/fonts/example.ttf".to_string(),
+            extension: "ttf".to_string(),
+            weight: 400,
+            style: "normal".to_string(),
+            is_monospaced: true,
+        };
+
+        let value = serde_json::to_value(entry).expect("custom font entry should serialize");
+
+        assert_eq!(value.get("isMonospace"), Some(&serde_json::Value::Bool(true)));
+        assert!(value.get("isMonospaced").is_none());
+    }
+}
+
 pub(crate) fn background_media_extension_error() -> &'static str {
     "background file must be .png, .jpg, .jpeg, .webp, .gif, .bmp, .mp4, .webm, .mov, .m4v, or .ogv"
 }

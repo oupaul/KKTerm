@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { defaultAppearanceSettings } from "../app-defaults";
-import type { AppearanceSettings, CustomFont } from "../types";
+import { defaultAppearanceSettings, defaultTerminalSettings } from "../app-defaults";
+import type { AppearanceSettings, CustomFont, TerminalSettings } from "../types";
 import { invokeCommand, isTauriRuntime } from "./tauri";
 
 const CUSTOM_FONT_FALLBACK = '"Segoe UI", ui-sans-serif, system-ui, sans-serif';
@@ -56,6 +56,25 @@ export function fontFaceDescriptors(font: CustomFont): FontFaceDescriptors {
 
 export function notifyCustomFontsLoaded(target: EventTarget = document) {
   target.dispatchEvent(new Event(CUSTOM_FONTS_LOADED_EVENT));
+}
+
+export function terminalCustomFontOptions(fonts: CustomFontOption[]) {
+  return fonts
+    .filter((font) => font.isMonospace)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function normalizeAvailableTerminal(
+  settings: TerminalSettings,
+  customFonts: CustomFontOption[],
+): TerminalSettings {
+  const selectedCustomFont = customFonts.find(
+    (font) => settings.fontFamily === `"${font.name}", monospace`,
+  );
+  if (!selectedCustomFont || selectedCustomFont.isMonospace) {
+    return settings;
+  }
+  return { ...settings, fontFamily: defaultTerminalSettings.fontFamily };
 }
 
 export async function listCustomFontOptions() {

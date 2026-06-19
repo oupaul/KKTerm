@@ -3,6 +3,7 @@ import { FolderOpen, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
+import { normalizeAvailableTerminal, terminalCustomFontOptions } from "../../lib/customFonts";
 import {
   isSystemFontAccessSupported,
   systemFontsExcluding,
@@ -119,8 +120,15 @@ export function TerminalSettings() {
     // Listing also registers each custom font with the WebView, so the family
     // names suggested below resolve in the terminal once selected.
     void loadSharedCustomFonts()
+      .then((fonts) => {
+        const normalized = normalizeAvailableTerminal(terminalSettings, fonts);
+        if (normalized === terminalSettings) return;
+        setDraft(normalized);
+        setTerminalSettings(normalized);
+        void invokeCommand("update_terminal_settings", { request: normalized }).catch(() => undefined);
+      })
       .catch(() => undefined);
-  }, []);
+  }, [setTerminalSettings, terminalSettings]);
 
   async function handleOpenCustomFontsFolder() {
     if (!isTauriRuntime()) {
@@ -215,12 +223,11 @@ export function TerminalSettings() {
     });
   }
 
-  const customFontTerminalOptions = [...customFonts]
-    .sort((a, b) => Number(b.isMonospace) - Number(a.isMonospace) || a.name.localeCompare(b.name))
+  const customFontTerminalOptions = terminalCustomFontOptions(customFonts)
     .map((font) => ({
-    key: font.path,
-    label: font.name,
-    value: terminalFontCssValue(font.name),
+      key: font.path,
+      label: font.name,
+      value: terminalFontCssValue(font.name),
     }));
   const terminalFontOptions = getRecommendedFontOptions(
     "terminal",

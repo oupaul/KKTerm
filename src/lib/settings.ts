@@ -4,7 +4,11 @@ import { useState } from "react";
 import { AI_PROVIDER_DEFINITIONS } from "../ai/providers";
 import { useWorkspaceStore } from "../store";
 import type { AiProviderKind } from "../types";
-import { listCustomFontOptions, normalizeAvailableAppearance } from "./customFonts";
+import {
+  listCustomFontOptions,
+  normalizeAvailableAppearance,
+  normalizeAvailableTerminal,
+} from "./customFonts";
 import { invokeCommand, isTauriRuntime } from "./tauri";
 
 // Legacy shared keychain owner used before AI provider keys became per-provider.
@@ -64,6 +68,7 @@ export function useBootstrapSettings() {
     let disposed = false;
 
     const swallow = (_error: unknown) => undefined;
+    const customFontsPromise = listCustomFontOptions();
 
     void invokeCommand("get_general_settings")
       .then((settings) => {
@@ -74,9 +79,13 @@ export function useBootstrapSettings() {
       })
       .catch(swallow);
 
-    void invokeCommand("get_terminal_settings")
-      .then((settings) => {
-        if (!disposed) setTerminalSettings(settings);
+    void Promise.all([invokeCommand("get_terminal_settings"), customFontsPromise])
+      .then(([settings, customFonts]) => {
+        const normalized = normalizeAvailableTerminal(settings, customFonts);
+        if (!disposed) setTerminalSettings(normalized);
+        if (normalized !== settings) {
+          void invokeCommand("update_terminal_settings", { request: normalized }).catch(swallow);
+        }
       })
       .catch(swallow);
 
@@ -92,7 +101,7 @@ export function useBootstrapSettings() {
       })
       .catch(swallow);
 
-    void Promise.all([invokeCommand("get_appearance_settings"), listCustomFontOptions()])
+    void Promise.all([invokeCommand("get_appearance_settings"), customFontsPromise])
       .then(([settings, customFonts]) => {
         const normalized = normalizeAvailableAppearance(settings, customFonts);
         if (!disposed) setAppearanceSettings(normalized);

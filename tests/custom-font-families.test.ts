@@ -3,9 +3,12 @@ import test from "node:test";
 
 import {
   fontFaceDescriptors,
+  normalizeAvailableTerminal,
   notifyCustomFontsLoaded,
+  terminalCustomFontOptions,
   toCustomFontOptions,
 } from "../src/lib/customFonts.ts";
+import { defaultTerminalSettings } from "../src/app-defaults.ts";
 import type { CustomFont } from "../src/types.ts";
 
 function face(overrides: Partial<CustomFont>): CustomFont {
@@ -66,4 +69,31 @@ test("custom font completion emits an explicit renderer refresh event", () => {
   notifyCustomFontsLoaded(target);
 
   assert.equal(notifications, 1);
+});
+
+test("Terminal offers only custom families with fixed-width metadata", () => {
+  const options = toCustomFontOptions([
+    face({ family: "MesloLGM Nerd Font", isMonospace: false }),
+    face({ family: "MesloLGM Nerd Font Mono", isMonospace: true }),
+  ]);
+
+  assert.deepEqual(terminalCustomFontOptions(options).map((option) => option.name), [
+    "MesloLGM Nerd Font Mono",
+  ]);
+});
+
+test("an existing proportional custom terminal family falls back without resetting other settings", () => {
+  const settings = {
+    ...defaultTerminalSettings,
+    fontFamily: '"MesloLGM Nerd Font", monospace',
+    fontSize: 16,
+  };
+  const options = toCustomFontOptions([
+    face({ family: "MesloLGM Nerd Font", isMonospace: false }),
+  ]);
+
+  assert.deepEqual(normalizeAvailableTerminal(settings, options), {
+    ...settings,
+    fontFamily: defaultTerminalSettings.fontFamily,
+  });
 });

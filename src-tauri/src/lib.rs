@@ -90,6 +90,7 @@ struct CustomFontEntry {
     extension: String,
     weight: u16,
     style: String,
+    #[serde(rename = "isMonospace")]
     is_monospaced: bool,
 }
 
