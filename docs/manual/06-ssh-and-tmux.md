@@ -80,6 +80,7 @@ For SSH port forwarding:
 - Open `terminal.sshPortRedirect` from the terminal action menu. Once the Connection has one or more enabled mappings, the Pane toolbar also shows a green tunnel button beside `terminal.startRecording`; clicking it opens the same centered dialog.
 - The centered dialog title is `terminal.sshPortForwardingTitle`.
 - The dialog has Local (`-L`), Remote (`-R`), and Dynamic (`-D`) mode tabs. Counts on the tabs show enabled mappings for the saved SSH Connection.
+- Bind address, listener port, destination host, and destination port remain editable text fields with dropdown suggestions. Bind suggestions include loopback, all-interface, and detected local interface addresses. A loopback destination in Local mode suggests listening ports discovered on the remote SSH host.
 - Mappings are non-secret per-Connection settings. Child Connection Tabs, split Panes, additional Tabs, and Dashboard-spawned surfaces share the parent SSH Connection's mapping list instead of owning independent forwarding settings.
 - Starting an already-running mapping reuses that mapping's stable forward id, so opening additional child/pane/tab surfaces for the same parent Connection does not recreate duplicate local tunnels.
 - The current runtime can start Local forwards. Remote and Dynamic mappings can be saved in the dialog but return an unsupported-runtime error if started until those tunnel modes are implemented in the backend.

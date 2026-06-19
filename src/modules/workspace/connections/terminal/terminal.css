@@ -1224,6 +1224,15 @@
   align-items: end;
 }
 
+.sshf-pair .kk-inp {
+  background: var(--surface);
+}
+
+.sshf-pair .kk-inp[list]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.72;
+}
+
 .sshf-cmd {
   display: flex;
   gap: 10px;

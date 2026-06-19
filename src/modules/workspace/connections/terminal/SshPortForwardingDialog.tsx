@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DIcon, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
@@ -33,6 +33,15 @@ const DEFAULT_DRAFT: ForwardingDraft = {
 
 function numeric(value: string) {
   return value.replace(/\D/g, "").slice(0, 5);
+}
+
+function uniqueOptions(values: Array<string | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim()))];
+}
+
+function isLoopbackHost(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
 }
 
 function shortAddress(value: string) {
@@ -90,8 +99,39 @@ export function SshPortForwardingDialog({
   const [mode, setMode] = useState<SshPortForwardMode>("L");
   const [drafts, setDrafts] = useState<ForwardingDraft>(DEFAULT_DRAFT);
   const [forwardings, setForwardings] = useState<SshPortForwarding[]>(connection.sshPortForwardings ?? []);
+  const [localInterfaceAddresses, setLocalInterfaceAddresses] = useState<string[]>([]);
+  const [remoteLoopbackPorts, setRemoteLoopbackPorts] = useState<number[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    let cancelled = false;
+    void invokeCommand("network_interfaces", undefined)
+      .then((interfaces) => {
+        if (cancelled) return;
+        setLocalInterfaceAddresses(uniqueOptions(
+          interfaces
+            .filter((networkInterface) => networkInterface.isUp)
+            .flatMap((networkInterface) => networkInterface.addresses.map((address) => address.ip)),
+        ));
+      })
+      .catch(() => undefined);
+    void invokeCommand("list_remote_loopback_ports", {
+      request: sshConnectionRequest(connection),
+    })
+      .then((ports) => {
+        if (!cancelled) {
+          setRemoteLoopbackPorts([...new Set(ports.map((entry) => entry.port))]);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [connection]);
 
   const counts = useMemo(() => {
     return forwardings.reduce<Record<SshPortForwardMode, number>>(
@@ -105,6 +145,26 @@ export function SshPortForwardingDialog({
   const current = drafts[mode];
   const visibleForwardings = forwardings.filter((forwarding) => forwarding.mode === mode);
   const command = forwardingCommand(connection, mode, current);
+  const bindAddressOptions = uniqueOptions(["127.0.0.1", "0.0.0.0", ...localInterfaceAddresses]);
+  const listenPortOptions = uniqueOptions([
+    DEFAULT_DRAFT[mode].listenPort,
+    ...forwardings.filter((forwarding) => forwarding.mode === mode).map((forwarding) => String(forwarding.listenPort)),
+  ]);
+  const destinationHostOptions = uniqueOptions([
+    "localhost",
+    "127.0.0.1",
+    ...(mode === "R" ? localInterfaceAddresses : []),
+    ...forwardings.filter((forwarding) => forwarding.mode === mode).map((forwarding) => forwarding.destHost),
+  ]);
+  const destinationPortOptions = uniqueOptions([
+    DEFAULT_DRAFT[mode].destPort,
+    ...(mode === "L" && isLoopbackHost(current.destHost) ? remoteLoopbackPorts.map(String) : []),
+    ...forwardings.filter((forwarding) => forwarding.mode === mode).map((forwarding) => forwarding.destPort ? String(forwarding.destPort) : undefined),
+  ]);
+  const bindOptionsId = `sshf-bind-${mode}`;
+  const listenPortOptionsId = `sshf-listen-port-${mode}`;
+  const destinationHostOptionsId = `sshf-destination-host-${mode}`;
+  const destinationPortOptionsId = `sshf-destination-port-${mode}`;
 
   function updateDraft(patch: Partial<ForwardingDraft[SshPortForwardMode]>) {
     setDrafts((value) => ({ ...value, [mode]: { ...value[mode], ...patch } }));
@@ -245,22 +305,27 @@ export function SshPortForwardingDialog({
 
           <div className={`sshf-pairs${mode === "D" ? " one" : ""}`}>
             <div className="sshf-pair">
-              <div className="pair-h"><span className="pdot listen" />{mode === "R" ? t("terminal.remoteListener") : t("terminal.localListener")}<small>{mode === "R" ? t("terminal.onServer") : t("terminal.onThisPc")}</small></div>
+              <div className="pair-h"><span className="pdot listen" />{mode === "R" ? t("terminal.forwardTo") : t("terminal.localListener")}<small>{t("terminal.onThisPc")}</small></div>
               <div className="sshf-row3">
-                <Field label={t("terminal.bindAddress")}><TextInput mono value={current.bind} onChange={(event) => updateDraft({ bind: event.currentTarget.value })} /></Field>
-                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><TextInput mono inputMode="numeric" value={current.listenPort} onChange={(event) => updateDraft({ listenPort: numeric(event.currentTarget.value) })} /></Field>
+                <Field label={t("terminal.bindAddress")}><TextInput list={bindOptionsId} mono value={current.bind} onChange={(event) => updateDraft({ bind: event.currentTarget.value })} /></Field>
+                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><TextInput list={listenPortOptionsId} mono inputMode="numeric" value={current.listenPort} onChange={(event) => updateDraft({ listenPort: numeric(event.currentTarget.value) })} /></Field>
               </div>
             </div>
             {mode !== "D" ? (
               <div className="sshf-pair">
-                <div className="pair-h"><span className="pdot dest" />{mode === "R" ? t("terminal.forwardTo") : t("terminal.destination")}<small>{mode === "R" ? t("terminal.onThisPc") : t("terminal.reachableFromServer")}</small></div>
+                <div className="pair-h"><span className="pdot dest" />{mode === "R" ? t("terminal.remoteListener") : t("terminal.destination")}<small>{mode === "R" ? t("terminal.onServer") : t("terminal.reachableFromServer")}</small></div>
                 <div className="sshf-row3">
-                  <Field label={t("terminal.host")}><TextInput mono value={current.destHost} onChange={(event) => updateDraft({ destHost: event.currentTarget.value })} /></Field>
-                  <Field label={t("terminal.port")}><TextInput mono inputMode="numeric" value={current.destPort} onChange={(event) => updateDraft({ destPort: numeric(event.currentTarget.value) })} /></Field>
+                  <Field label={t("terminal.host")}><TextInput list={destinationHostOptionsId} mono value={current.destHost} onChange={(event) => updateDraft({ destHost: event.currentTarget.value })} /></Field>
+                  <Field label={t("terminal.port")}><TextInput list={destinationPortOptionsId} mono inputMode="numeric" value={current.destPort} onChange={(event) => updateDraft({ destPort: numeric(event.currentTarget.value) })} /></Field>
                 </div>
               </div>
             ) : null}
           </div>
+
+          <datalist id={bindOptionsId}>{bindAddressOptions.map((value) => <option key={value} value={value} />)}</datalist>
+          <datalist id={listenPortOptionsId}>{listenPortOptions.map((value) => <option key={value} value={value} />)}</datalist>
+          <datalist id={destinationHostOptionsId}>{destinationHostOptions.map((value) => <option key={value} value={value} />)}</datalist>
+          <datalist id={destinationPortOptionsId}>{destinationPortOptions.map((value) => <option key={value} value={value} />)}</datalist>
 
           <div className="sshf-cmd">
             <span className="cmd-prompt">$</span>
