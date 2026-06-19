@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { FolderOpen, Palette, RefreshCw, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
-  listCustomFontOptions,
   loadCustomFontOptions,
   normalizeAvailableAppearance,
-  type CustomFontOption,
 } from "../../lib/customFonts";
 import {
   isSystemFontAccessSupported,
@@ -13,7 +11,8 @@ import {
 } from "../../lib/systemFonts";
 import {
   getRecommendedFontOptions,
-  refreshSharedSystemFonts,
+  loadSharedCustomFonts,
+  refreshSharedFontCatalog,
   useSystemFontCatalog,
 } from "../../lib/fontCatalog";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
@@ -179,8 +178,12 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
   const appearanceSettings = useWorkspaceStore((state) => state.appearanceSettings);
   const setAppearanceSettings = useWorkspaceStore((state) => state.setAppearanceSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
-  const [customFonts, setCustomFonts] = useState<CustomFontOption[]>([]);
-  const { systemFonts, refreshing: refreshingFonts, recommendationsSynced } = useSystemFontCatalog();
+  const {
+    customFonts,
+    systemFonts,
+    refreshing: refreshingFonts,
+    recommendationsSynced,
+  } = useSystemFontCatalog();
   const [draft, setDraft] = useState<AppearanceSettingsType>(appearanceSettings);
   // Tracks the last persisted settings so we can revert live preview on navigate-away
   const savedRef = useRef<AppearanceSettingsType>(appearanceSettings);
@@ -227,10 +230,9 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
       };
     }
 
-    void listCustomFontOptions()
+    void loadSharedCustomFonts()
       .then((fonts) => {
         if (disposed) return;
-        setCustomFonts(fonts);
         const base = savedRef.current;
         const normalized = normalizeAvailableAppearance(base, fonts);
         if (JSON.stringify(normalized) !== JSON.stringify(base)) {
@@ -260,7 +262,7 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
       return;
     }
     try {
-      await refreshSharedSystemFonts();
+      await refreshSharedFontCatalog();
       showStatusBarNotice(t("settings.systemFontsRefreshed"), { tone: "success" });
     } catch (refreshError) {
       showStatusBarNotice(

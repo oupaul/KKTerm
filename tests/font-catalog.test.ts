@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   getRecommendedFontOptions,
-  refreshSharedSystemFonts,
+  refreshSharedFontCatalog,
   subscribeSystemFontCatalog,
   systemFontCatalogSnapshot,
 } from "../src/lib/fontCatalog.ts";
@@ -34,15 +34,24 @@ test("known system fonts prune unavailable recommendations but preserve defaults
   assert.deepEqual(options.map((option) => option.family), [undefined, "Inter", "Ubuntu Sans"]);
 });
 
-test("one refresh publishes the same font snapshot to every subscriber", async () => {
+test("one refresh publishes system and custom fonts to every subscriber", async () => {
   let notifications = 0;
   assert.equal(systemFontCatalogSnapshot().recommendationsSynced, false);
   const unsubscribeA = subscribeSystemFontCatalog(() => notifications += 1);
   const unsubscribeB = subscribeSystemFontCatalog(() => notifications += 1);
 
   try {
-    await refreshSharedSystemFonts(async () => ["SF Mono", "Menlo"]);
+    await refreshSharedFontCatalog(
+      async () => ["SF Mono", "Menlo"],
+      async () => [{
+        cssFamily: "kkterm-custom-test",
+        cssValue: '"kkterm-custom-test", "Test Font", sans-serif',
+        name: "Test Font",
+        path: "C:/fonts/TestFont.otf",
+      }],
+    );
     assert.deepEqual(systemFontCatalogSnapshot().systemFonts, ["SF Mono", "Menlo"]);
+    assert.deepEqual(systemFontCatalogSnapshot().customFonts.map((font) => font.name), ["Test Font"]);
     assert.equal(systemFontCatalogSnapshot().refreshing, false);
     assert.equal(systemFontCatalogSnapshot().recommendationsSynced, true);
     assert.equal(notifications, 4);

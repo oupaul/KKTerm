@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { defaultAppearanceSettings, defaultTerminalSettings } from "../app-defaults";
+import { listCustomFontOptions, type CustomFontOption } from "./customFonts";
 import type { RuntimePlatform } from "./platform";
 import { currentPlatform } from "./platform";
 import { loadCachedSystemFonts, refreshSystemFonts } from "./systemFonts";
@@ -15,6 +16,8 @@ export interface RecommendedFontOption {
 }
 
 interface SystemFontCatalogSnapshot {
+  customFonts: CustomFontOption[];
+  customFontsLoaded: boolean;
   systemFonts: string[];
   refreshing: boolean;
   recommendationsSynced: boolean;
@@ -93,6 +96,8 @@ const TERMINAL_RECOMMENDATIONS: Record<RuntimePlatform, RecommendedFontOption[]>
 };
 
 let snapshot: SystemFontCatalogSnapshot = {
+  customFonts: [],
+  customFontsLoaded: false,
   systemFonts: loadCachedSystemFonts(),
   refreshing: false,
   recommendationsSynced: false,
@@ -151,16 +156,32 @@ export function useSystemFontCatalog(): SystemFontCatalogSnapshot {
   );
 }
 
-export async function refreshSharedSystemFonts(
-  scan: () => Promise<string[]> = refreshSystemFonts,
-): Promise<string[]> {
-  if (snapshot.refreshing) return snapshot.systemFonts;
+export async function loadSharedCustomFonts(
+  scan: () => Promise<CustomFontOption[]> = listCustomFontOptions,
+): Promise<CustomFontOption[]> {
+  if (snapshot.customFontsLoaded) return snapshot.customFonts;
+
+  const customFonts = await scan();
+  publish({ ...snapshot, customFonts, customFontsLoaded: true });
+  return customFonts;
+}
+
+export async function refreshSharedFontCatalog(
+  systemScan: () => Promise<string[]> = refreshSystemFonts,
+  customScan: () => Promise<CustomFontOption[]> = listCustomFontOptions,
+): Promise<void> {
+  if (snapshot.refreshing) return;
 
   publish({ ...snapshot, refreshing: true });
   try {
-    const systemFonts = await scan();
-    publish({ systemFonts, refreshing: false, recommendationsSynced: true });
-    return systemFonts;
+    const [systemFonts, customFonts] = await Promise.all([systemScan(), customScan()]);
+    publish({
+      systemFonts,
+      customFonts,
+      customFontsLoaded: true,
+      refreshing: false,
+      recommendationsSynced: true,
+    });
   } catch (error) {
     publish({ ...snapshot, refreshing: false });
     throw error;

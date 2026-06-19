@@ -3,14 +3,14 @@ import { FolderOpen, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
-import { listCustomFontOptions, type CustomFontOption } from "../../lib/customFonts";
 import {
   isSystemFontAccessSupported,
   systemFontsExcluding,
 } from "../../lib/systemFonts";
 import {
   getRecommendedFontOptions,
-  refreshSharedSystemFonts,
+  loadSharedCustomFonts,
+  refreshSharedFontCatalog,
   useSystemFontCatalog,
 } from "../../lib/fontCatalog";
 import { defaultTerminalSettings } from "../../app-defaults";
@@ -89,8 +89,12 @@ export function TerminalSettings() {
   const setTerminalSettings = useWorkspaceStore((state) => state.setTerminalSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState(terminalSettings);
-  const [customFonts, setCustomFonts] = useState<CustomFontOption[]>([]);
-  const { systemFonts, refreshing: refreshingFonts, recommendationsSynced } = useSystemFontCatalog();
+  const {
+    customFonts,
+    systemFonts,
+    refreshing: refreshingFonts,
+    recommendationsSynced,
+  } = useSystemFontCatalog();
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(terminalSettings);
   const defaultShellOptions = localShellOptionsForPlatform(draft.customShells);
   const customShellPresets = customShellPresetsForPlatform(currentPlatform());
@@ -109,22 +113,13 @@ export function TerminalSettings() {
   }, [terminalSettings]);
 
   useEffect(() => {
-    let disposed = false;
     if (!isTauriRuntime()) {
-      return () => {
-        disposed = true;
-      };
+      return;
     }
     // Listing also registers each custom font with the WebView, so the family
     // names suggested below resolve in the terminal once selected.
-    void listCustomFontOptions()
-      .then((fonts) => {
-        if (!disposed) setCustomFonts(fonts);
-      })
+    void loadSharedCustomFonts()
       .catch(() => undefined);
-    return () => {
-      disposed = true;
-    };
   }, []);
 
   async function handleOpenCustomFontsFolder() {
@@ -144,7 +139,7 @@ export function TerminalSettings() {
       return;
     }
     try {
-      await refreshSharedSystemFonts();
+      await refreshSharedFontCatalog();
       showStatusBarNotice(t("settings.systemFontsRefreshed"), { tone: "success" });
     } catch (err) {
       showStatusBarNotice(err instanceof Error ? err.message : String(err), { tone: "error" });
