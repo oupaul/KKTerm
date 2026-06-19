@@ -1,7 +1,9 @@
 #![allow(unused_imports)]
 use super::*;
 
-pub(crate) fn list_custom_fonts_sync(app: &tauri::AppHandle) -> Result<Vec<CustomFontEntry>, String> {
+pub(crate) fn list_custom_fonts_sync(
+    app: &tauri::AppHandle,
+) -> Result<Vec<CustomFontEntry>, String> {
     let folder = custom_fonts_folder(app)?;
     fs::create_dir_all(&folder).map_err(|error| {
         format!(
@@ -181,7 +183,8 @@ pub(crate) fn is_supported_font_extension(extension: &str) -> bool {
 /// Enumerate the font family names installed on the operating system.
 ///
 /// Walks the platform font directories and reads each font file's `name` table
-/// with `ttf-parser`, preferring the typographic family name. The result is a
+/// with `ttf-parser`, preferring English metadata first and typographic family
+/// names over legacy family names when language priority ties. The result is a
 /// sorted, de-duplicated list. This is intentionally a pure-Rust scan so the
 /// build stays free of native font-config / DirectWrite / Core Text deps; it
 /// runs off the UI thread on explicit refresh only.
@@ -224,7 +227,9 @@ fn system_font_directories() -> Vec<PathBuf> {
         dirs.push(PathBuf::from("/usr/local/share/fonts"));
         let data_home = std::env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")));
+            .or_else(|| {
+                std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share"))
+            });
         if let Some(data_home) = data_home {
             dirs.push(data_home.join("fonts"));
         }
@@ -274,27 +279,61 @@ fn collect_family_names(data: &[u8], out: &mut std::collections::BTreeSet<String
             Ok(face) => face,
             Err(_) => continue,
         };
-        let mut family: Option<String> = None;
-        let mut typographic: Option<String> = None;
+        let mut candidates: Vec<FontFamilyNameCandidate> = Vec::new();
         for name in face.names() {
-            let target = match name.name_id {
-                ttf_parser::name_id::TYPOGRAPHIC_FAMILY => &mut typographic,
-                ttf_parser::name_id::FAMILY => &mut family,
-                _ => continue,
-            };
-            if target.is_none() {
-                if let Some(decoded) = name.to_string() {
-                    *target = Some(decoded);
-                }
+            if !matches!(
+                name.name_id,
+                ttf_parser::name_id::TYPOGRAPHIC_FAMILY | ttf_parser::name_id::FAMILY
+            ) {
+                continue;
             }
+            let Some(decoded) = name.to_string() else {
+                continue;
+            };
+            candidates.push(FontFamilyNameCandidate::new(
+                decoded,
+                name.name_id,
+                name.platform_id == ttf_parser::PlatformId::Windows
+                    && name.language_id & 0x03ff == 0x09,
+            ));
         }
-        if let Some(name) = typographic.or(family) {
+        if let Some(name) = preferred_family_name(candidates) {
             let trimmed = name.trim();
             if !trimmed.is_empty() {
                 out.insert(trimmed.to_string());
             }
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FontFamilyNameCandidate {
+    value: String,
+    name_id: u16,
+    is_english: bool,
+}
+
+impl FontFamilyNameCandidate {
+    fn new(value: String, name_id: u16, is_english: bool) -> Self {
+        Self {
+            value,
+            name_id,
+            is_english,
+        }
+    }
+}
+
+fn preferred_family_name(candidates: Vec<FontFamilyNameCandidate>) -> Option<String> {
+    candidates
+        .into_iter()
+        .filter(|candidate| !candidate.value.trim().is_empty())
+        .min_by_key(|candidate| {
+            (
+                !candidate.is_english,
+                candidate.name_id != ttf_parser::name_id::TYPOGRAPHIC_FAMILY,
+            )
+        })
+        .map(|candidate| candidate.value.trim().to_string())
 }
 
 /// Returns the lowercased extension if `path` is a supported background media file.
@@ -330,4 +369,72 @@ pub(crate) fn background_media_mime(extension: &str) -> &'static str {
 
 pub(crate) fn background_media_extension_error() -> &'static str {
     "background file must be .png, .jpg, .jpeg, .webp, .gif, .bmp, .mp4, .webm, .mov, .m4v, or .ogv"
+}
+
+#[cfg(test)]
+mod system_font_tests {
+    use super::*;
+
+    #[test]
+    fn prefers_english_family_name_over_localized_alias() {
+        let candidates = vec![
+            FontFamilyNameCandidate::new(
+                "微軟正黑體".to_string(),
+                ttf_parser::name_id::FAMILY,
+                false,
+            ),
+            FontFamilyNameCandidate::new(
+                "Microsoft JhengHei".to_string(),
+                ttf_parser::name_id::FAMILY,
+                true,
+            ),
+        ];
+
+        assert_eq!(
+            preferred_family_name(candidates),
+            Some("Microsoft JhengHei".to_string())
+        );
+    }
+
+    #[test]
+    fn prefers_typographic_family_when_language_priority_matches() {
+        let candidates = vec![
+            FontFamilyNameCandidate::new(
+                "Example Legacy".to_string(),
+                ttf_parser::name_id::FAMILY,
+                true,
+            ),
+            FontFamilyNameCandidate::new(
+                "Example Sans".to_string(),
+                ttf_parser::name_id::TYPOGRAPHIC_FAMILY,
+                true,
+            ),
+        ];
+
+        assert_eq!(
+            preferred_family_name(candidates),
+            Some("Example Sans".to_string())
+        );
+    }
+
+    #[test]
+    fn preserves_first_candidate_on_exact_tie() {
+        let candidates = vec![
+            FontFamilyNameCandidate::new(
+                "First English Family".to_string(),
+                ttf_parser::name_id::FAMILY,
+                true,
+            ),
+            FontFamilyNameCandidate::new(
+                "Second English Family".to_string(),
+                ttf_parser::name_id::FAMILY,
+                true,
+            ),
+        ];
+
+        assert_eq!(
+            preferred_family_name(candidates),
+            Some("First English Family".to_string())
+        );
+    }
 }
