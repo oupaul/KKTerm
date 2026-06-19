@@ -206,11 +206,12 @@ test("app update progress clamps real byte progress to a whole percentage", asyn
 });
 
 test("app update uses a cancellable download phase before delayed installation", async () => {
-  const [tauriSource, libSource, promptSource, statusBarSource] = await Promise.all([
+  const [tauriSource, libSource, promptSource, statusBarSource, workspaceCss] = await Promise.all([
     readFile(new URL("../src/lib/tauri.ts", import.meta.url), "utf8"),
     readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8"),
     readFile(new URL("../src/app/AppUpdatePrompt.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/modules/workspace/workspace.css", import.meta.url), "utf8"),
   ]);
 
   for (const command of [
@@ -229,4 +230,14 @@ test("app update uses a cancellable download phase before delayed installation",
   assert.match(statusBarSource, /aria-valuemax=\{100\}/);
   assert.match(statusBarSource, /aria-valuenow=\{progress\}/);
   assert.match(statusBarSource, /Math\.round\(progress\)\}%/);
+  assert.match(
+    statusBarSource,
+    /status-popup-message[\s\S]*status-popup-progress[\s\S]*status-popup-progress-label/,
+    "the filling track should render between the message and percentage",
+  );
+  assert.match(
+    workspaceCss,
+    /\.status-popup-content\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;/s,
+    "update progress content should stay on one horizontal row",
+  );
 });

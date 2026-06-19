@@ -6,6 +6,7 @@ import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import type { Connection, SshPortForwardMode, SshPortForwarding } from "../../../../types";
 import { useWorkspaceStore } from "../../../../store";
 import { connectionPasswordOwnerId, resolveSshSocksProxyRequest } from "../utils";
+import { sshForwardBindConflict } from "./sshPortForwardingModel";
 
 type ForwardingDraft = Record<SshPortForwardMode, {
   bind: string;
@@ -255,10 +256,12 @@ export function hasEnabledSshPortForwardings(connection: Connection | undefined)
 
 export function SshPortForwardingDialog({
   connection,
+  sessionId,
   onClose,
   onConnectionUpdated,
 }: {
   connection: Connection;
+  sessionId: string | null;
   onClose: () => void;
   onConnectionUpdated: (connection: Connection) => void;
 }) {
@@ -348,7 +351,11 @@ export function SshPortForwardingDialog({
 
   async function startForward(forwarding: SshPortForwarding) {
     if (!isTauriRuntime() || !forwarding.enabled) {
-      return;
+      return true;
+    }
+    if (!sessionId) {
+      setError(t("terminal.sshPortForwardSessionUnavailable"));
+      return false;
     }
     setBusyId(forwarding.id);
     setError("");
@@ -363,10 +370,23 @@ export function SshPortForwardingDialog({
           destHost: forwarding.destHost,
           destPort: forwarding.destPort,
           remotePort: forwarding.destPort,
+          sessionId,
         },
       });
+      return true;
     } catch (startError) {
-      setError(startError instanceof Error ? startError.message : String(startError));
+      const message = startError instanceof Error ? startError.message : String(startError);
+      if (message.includes("ssh-port-forward-bind-conflict")) {
+        setError(t("terminal.sshPortForwardBindConflict", {
+          address: forwarding.bind,
+          port: forwarding.listenPort,
+        }));
+      } else if (message.includes("ssh-port-forward-session-unavailable")) {
+        setError(t("terminal.sshPortForwardSessionUnavailable"));
+      } else {
+        setError(message);
+      }
+      return false;
     } finally {
       setBusyId(null);
     }
@@ -388,9 +408,31 @@ export function SshPortForwardingDialog({
       destHost: mode === "D" ? undefined : current.destHost.trim(),
       destPort: mode === "D" ? undefined : destPort,
     };
+    if (!sessionId) {
+      setError(t("terminal.sshPortForwardSessionUnavailable"));
+      return;
+    }
+    if (sshForwardBindConflict(forwarding, forwardings)) {
+      setError(t("terminal.sshPortForwardBindConflict", {
+        address: forwarding.bind,
+        port: forwarding.listenPort,
+      }));
+      return;
+    }
+    if (!await startForward(forwarding)) {
+      return;
+    }
     const next = [...forwardings, forwarding];
-    await persist(next);
-    await startForward(forwarding);
+    try {
+      await persist(next);
+    } catch (persistError) {
+      if (isTauriRuntime()) {
+        await invokeCommand("close_ssh_port_forward", {
+          request: { forwardId: forwarding.id },
+        }).catch(() => undefined);
+      }
+      setError(persistError instanceof Error ? persistError.message : String(persistError));
+    }
   }
 
   async function handleRemove(id: string) {

@@ -113,6 +113,7 @@ export function TerminalWorkspace({
     tab.panes.filter(isTerminalPane).length > 1;
   const [sftpDialogConnection, setSftpDialogConnection] = useState<Connection | null>(null);
   const [sshPortForwardingDialogConnection, setSshPortForwardingDialogConnection] = useState<Connection | null>(null);
+  const [sshPortForwardingDialogSessionId, setSshPortForwardingDialogSessionId] = useState<string | null>(null);
   const sftpFocusRestorePaneIdRef = useRef<string | null>(null);
   const sshPortForwardingFocusRestorePaneIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
@@ -193,14 +194,16 @@ export function TerminalWorkspace({
     const restorePaneId = sshPortForwardingFocusRestorePaneIdRef.current;
     sshPortForwardingFocusRestorePaneIdRef.current = null;
     setSshPortForwardingDialogConnection(null);
+    setSshPortForwardingDialogSessionId(null);
     if (restorePaneId) {
       focusTerminalPaneAfterDialogClose(restorePaneId);
     }
   }
 
-  function openSshPortForwardingDialog(connection: Connection, paneId: string) {
+  function openSshPortForwardingDialog(connection: Connection, paneId: string, sessionId: string | null) {
     sshPortForwardingFocusRestorePaneIdRef.current = paneId === focusedPaneId ? paneId : null;
     setSshPortForwardingDialogConnection(connection);
+    setSshPortForwardingDialogSessionId(sessionId);
   }
 
   function handleSplit(paneId: string, direction: "right" | "left" | "down" | "up") {
@@ -504,6 +507,7 @@ export function TerminalWorkspace({
       {sshPortForwardingDialogConnection ? createPortal(
         <SshPortForwardingDialog
           connection={sshPortForwardingDialogConnection}
+          sessionId={sshPortForwardingDialogSessionId}
           onClose={closeSshPortForwardingDialog}
           onConnectionUpdated={(updatedConnection) => {
             refreshOpenConnectionMetadata(updatedConnection);
@@ -550,7 +554,7 @@ function TerminalLayoutView({
   onFontChange: (delta: number | "reset") => void;
   onOpenAssistant: () => void;
   onOpenSftp: (connection: Connection, paneId: string) => void;
-  onOpenSshPortForwarding: (connection: Connection, paneId: string) => void;
+  onOpenSshPortForwarding: (connection: Connection, paneId: string, sessionId: string | null) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
@@ -1431,7 +1435,7 @@ function TerminalPaneView({
   usePaneTerminalBackgrounds: boolean;
   onOpenAssistant: () => void;
   onOpenSftp: (connection: Connection, paneId: string) => void;
-  onOpenSshPortForwarding: (connection: Connection, paneId: string) => void;
+  onOpenSshPortForwarding: (connection: Connection, paneId: string, sessionId: string | null) => void;
   onSaveBuffer: (paneId: string) => void;
   showSftpButton: boolean;
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
@@ -2337,7 +2341,7 @@ function TerminalPaneView({
     if (pane.connection?.type !== "ssh") {
       return;
     }
-    onOpenSshPortForwarding(pane.connection, pane.id);
+    onOpenSshPortForwarding(pane.connection, pane.id, sessionIdRef.current);
   }
 
   function handleSplit(direction: "right" | "left" | "down" | "up") {

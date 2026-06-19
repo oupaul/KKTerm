@@ -702,17 +702,11 @@
 }
 
 .status-popup-content {
-  display: grid;
-  flex: 1;
-  gap: 6px;
-  min-width: 0;
-}
-
-.status-popup-progress-wrap {
-  align-items: center;
   display: flex;
+  align-items: center;
+  flex: 1;
   gap: 9px;
-  width: min(260px, calc(100vw - 120px));
+  min-width: 0;
 }
 
 .status-popup-progress {
@@ -721,7 +715,8 @@
   display: block;
   flex: 1 1 auto;
   height: 4px;
-  min-width: 120px;
+  min-width: 72px;
+  width: min(180px, 24vw);
   overflow: hidden;
 }
 

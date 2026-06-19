@@ -10,7 +10,9 @@ use russh::{
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
+    collections::HashMap,
     future::Future,
+    net::{SocketAddr, TcpListener as StdTcpListener},
     path::PathBuf,
     rc::Rc,
     sync::{Arc, mpsc as std_mpsc},
@@ -18,7 +20,11 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Manager};
-use tokio::{io::copy_bidirectional, net::TcpStream, sync::mpsc};
+use tokio::{
+    io::copy_bidirectional,
+    net::{TcpListener, TcpStream},
+    sync::{mpsc, oneshot},
+};
 
 const SSH_TMUX_RESUME_MAX_ATTEMPTS: usize = 2;
 const SSH_TMUX_RESUME_TIMEOUT: Duration = Duration::from_secs(10);
@@ -89,7 +95,7 @@ pub fn transport_plan() -> SshTransportPlan {
 pub struct NativeSshTerminal {
     session_id: String,
     control: mpsc::UnboundedSender<SshTerminalControl>,
-    command_tx: mpsc::UnboundedSender<NativeSshCommandMsg>,
+    worker_tx: mpsc::UnboundedSender<NativeSshWorkerMsg>,
     worker: Option<JoinHandle<()>>,
     terminal_ready_ms: u128,
     x11_forwarding_status: Option<NativeSshX11ForwardingStatus>,
@@ -111,23 +117,41 @@ impl NativeSshTerminal {
     /// also work for blank-password Connections that authenticate interactively.
     pub fn command_handle(&self) -> NativeSshCommandHandle {
         NativeSshCommandHandle {
-            command_tx: self.command_tx.clone(),
+            worker_tx: self.worker_tx.clone(),
+        }
+    }
+
+    pub fn port_forward_handle(&self) -> NativeSshPortForwardHandle {
+        NativeSshPortForwardHandle {
+            worker_tx: self.worker_tx.clone(),
         }
     }
 }
 
 /// A request to run a command on a live native SSH Session. The worker replies
 /// over the sync channel so a blocking caller can wait for the output.
-struct NativeSshCommandMsg {
-    command: String,
-    reply: std_mpsc::SyncSender<Result<String, String>>,
+enum NativeSshWorkerMsg {
+    Command {
+        command: String,
+        reply: std_mpsc::SyncSender<Result<String, String>>,
+    },
+    StartPortForward {
+        forward_id: String,
+        listener: StdTcpListener,
+        dest_host: String,
+        remote_port: u16,
+        reply: std_mpsc::SyncSender<Result<(), String>>,
+    },
+    StopPortForward {
+        forward_id: String,
+    },
 }
 
 /// Cloneable handle to a live native SSH Session for running one-off remote
 /// commands over a fresh exec channel on the existing authenticated transport.
 #[derive(Clone)]
 pub struct NativeSshCommandHandle {
-    command_tx: mpsc::UnboundedSender<NativeSshCommandMsg>,
+    worker_tx: mpsc::UnboundedSender<NativeSshWorkerMsg>,
 }
 
 impl NativeSshCommandHandle {
@@ -137,11 +161,46 @@ impl NativeSshCommandHandle {
     /// complete (bounded by `timeout`) before the probe runs.
     pub fn run(&self, command: String, timeout: Duration) -> Result<String, String> {
         let (reply, rx) = std_mpsc::sync_channel(1);
-        self.command_tx
-            .send(NativeSshCommandMsg { command, reply })
+        self.worker_tx
+            .send(NativeSshWorkerMsg::Command { command, reply })
             .map_err(|_| "native SSH session is closed".to_string())?;
         rx.recv_timeout(timeout)
             .map_err(|_| format!("SSH command timed out after {} seconds", timeout.as_secs()))?
+    }
+}
+
+#[derive(Clone)]
+pub struct NativeSshPortForwardHandle {
+    worker_tx: mpsc::UnboundedSender<NativeSshWorkerMsg>,
+}
+
+impl NativeSshPortForwardHandle {
+    pub fn start(
+        &self,
+        forward_id: String,
+        listener: StdTcpListener,
+        dest_host: String,
+        remote_port: u16,
+        timeout: Duration,
+    ) -> Result<(), String> {
+        let (reply, rx) = std_mpsc::sync_channel(1);
+        self.worker_tx
+            .send(NativeSshWorkerMsg::StartPortForward {
+                forward_id,
+                listener,
+                dest_host,
+                remote_port,
+                reply,
+            })
+            .map_err(|_| "native SSH session is closed".to_string())?;
+        rx.recv_timeout(timeout)
+            .map_err(|_| "timed out while starting SSH port forward".to_string())?
+    }
+
+    pub fn stop(&self, forward_id: String) {
+        let _ = self
+            .worker_tx
+            .send(NativeSshWorkerMsg::StopPortForward { forward_id });
     }
 }
 
@@ -459,7 +518,7 @@ pub fn start_native_terminal(
         }),
     );
     let (control_tx, control_rx) = mpsc::unbounded_channel();
-    let (command_tx, command_rx) = mpsc::unbounded_channel();
+    let (worker_tx, worker_rx) = mpsc::unbounded_channel();
     let (ready_tx, ready_rx) = std_mpsc::sync_channel(1);
     let returns_before_ready = matches!(request.auth, NativeSshAuth::Password { password: None });
     let session_id = request.session_id.clone();
@@ -468,7 +527,7 @@ pub fn start_native_terminal(
             app.clone(),
             request.clone(),
             control_rx,
-            command_rx,
+            worker_rx,
             ready_tx,
         );
         if let Err(error) = result {
@@ -491,7 +550,7 @@ pub fn start_native_terminal(
         return Ok(NativeSshTerminal {
             session_id,
             control: control_tx,
-            command_tx,
+            worker_tx,
             worker: Some(worker),
             terminal_ready_ms: 0,
             x11_forwarding_status: None,
@@ -505,7 +564,7 @@ pub fn start_native_terminal(
         Ok((terminal_ready_ms, x11_forwarding_status)) => Ok(NativeSshTerminal {
             session_id,
             control: control_tx,
-            command_tx,
+            worker_tx,
             worker: Some(worker),
             terminal_ready_ms,
             x11_forwarding_status,
@@ -798,7 +857,7 @@ fn run_native_terminal_thread(
     app: AppHandle,
     request: NativeSshTerminalRequest,
     control_rx: mpsc::UnboundedReceiver<SshTerminalControl>,
-    command_rx: mpsc::UnboundedReceiver<NativeSshCommandMsg>,
+    worker_rx: mpsc::UnboundedReceiver<NativeSshWorkerMsg>,
     ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -812,7 +871,7 @@ fn run_native_terminal_thread(
     let local = tokio::task::LocalSet::new();
     let result = local.block_on(
         &runtime,
-        run_native_terminal(app, request, control_rx, command_rx, ready_tx),
+        run_native_terminal(app, request, control_rx, worker_rx, ready_tx),
     );
     if let Err(error) = &result {
         let _ = startup_error_tx.send(Err(error.clone()));
@@ -824,7 +883,7 @@ async fn run_native_terminal(
     app: AppHandle,
     request: NativeSshTerminalRequest,
     mut control_rx: mpsc::UnboundedReceiver<SshTerminalControl>,
-    mut command_rx: mpsc::UnboundedReceiver<NativeSshCommandMsg>,
+    mut worker_rx: mpsc::UnboundedReceiver<NativeSshWorkerMsg>,
     ready_tx: std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>,
 ) -> Result<(), String> {
     let current_request = request;
@@ -851,7 +910,7 @@ async fn run_native_terminal(
             &app,
             &current_request,
             &mut control_rx,
-            &mut command_rx,
+            &mut worker_rx,
             ready_tx.take(),
             timeout,
         )
@@ -956,7 +1015,7 @@ async fn run_native_terminal_once(
     app: &AppHandle,
     request: &NativeSshTerminalRequest,
     control_rx: &mut mpsc::UnboundedReceiver<SshTerminalControl>,
-    command_rx: &mut mpsc::UnboundedReceiver<NativeSshCommandMsg>,
+    worker_rx: &mut mpsc::UnboundedReceiver<NativeSshWorkerMsg>,
     ready_tx: Option<std_mpsc::SyncSender<Result<NativeSshReadyResult, String>>>,
     startup_timeout: Duration,
 ) -> Result<TerminalRunOutcome, String> {
@@ -1089,6 +1148,7 @@ async fn run_native_terminal_once(
     // exec channels without a second connection. `client::Handle` is not Clone,
     // so an Rc provides the shared, read-only access the local probe tasks need.
     let session = Rc::new(session);
+    let mut port_forward_stops = HashMap::<String, oneshot::Sender<()>>::new();
 
     if let Some(ready_tx) = ready_tx {
         let _ = ready_tx.send(Ok((terminal_ready_ms, x11_forwarding_status)));
@@ -1178,25 +1238,70 @@ async fn run_native_terminal_once(
                     }
                 }
             }
-            command = command_rx.recv() => {
-                if let Some(NativeSshCommandMsg { command, reply }) = command {
-                    // Run the probe on its own exec channel concurrently with the
-                    // shell so terminal I/O is never blocked. The shared Session
-                    // handle reuses the authenticated transport, so no second
-                    // connection (and no system `ssh` window) is needed.
-                    let session = Rc::clone(&session);
-                    tokio::task::spawn_local(async move {
-                        let result = match tokio::time::timeout(
-                            SSH_COMMAND_TIMEOUT,
-                            exec_collect_on_session(&session, command),
-                        )
-                        .await
-                        {
-                            Ok(result) => result,
-                            Err(_) => Err("SSH command timed out".to_string()),
-                        };
-                        let _ = reply.send(result);
-                    });
+            worker_message = worker_rx.recv() => {
+                match worker_message {
+                    Some(NativeSshWorkerMsg::Command { command, reply }) => {
+                        // Run the probe on its own exec channel concurrently with the
+                        // shell so terminal I/O is never blocked. The shared Session
+                        // handle reuses the authenticated transport, so no second
+                        // connection (and no system `ssh` window) is needed.
+                        let session = Rc::clone(&session);
+                        tokio::task::spawn_local(async move {
+                            let result = match tokio::time::timeout(
+                                SSH_COMMAND_TIMEOUT,
+                                exec_collect_on_session(&session, command),
+                            )
+                            .await
+                            {
+                                Ok(result) => result,
+                                Err(_) => Err("SSH command timed out".to_string()),
+                            };
+                            let _ = reply.send(result);
+                        });
+                    }
+                    Some(NativeSshWorkerMsg::StartPortForward {
+                        forward_id,
+                        listener,
+                        dest_host,
+                        remote_port,
+                        reply,
+                    }) => {
+                        let result = TcpListener::from_std(listener)
+                            .map_err(|error| format!("failed to start local port forward listener: {error}"));
+                        match result {
+                            Ok(listener) => {
+                                if let Some(stop) = port_forward_stops.remove(&forward_id) {
+                                    let _ = stop.send(());
+                                }
+                                let (stop_tx, stop_rx) = oneshot::channel();
+                                port_forward_stops.insert(forward_id.clone(), stop_tx);
+                                let session = Rc::clone(&session);
+                                tokio::task::spawn_local(async move {
+                                    if let Err(error) = run_live_ssh_port_forward(
+                                        listener,
+                                        session,
+                                        dest_host,
+                                        remote_port,
+                                        stop_rx,
+                                    )
+                                    .await
+                                    {
+                                        eprintln!("SSH port forward {forward_id} stopped: {error}");
+                                    }
+                                });
+                                let _ = reply.send(Ok(()));
+                            }
+                            Err(error) => {
+                                let _ = reply.send(Err(error));
+                            }
+                        }
+                    }
+                    Some(NativeSshWorkerMsg::StopPortForward { forward_id }) => {
+                        if let Some(stop) = port_forward_stops.remove(&forward_id) {
+                            let _ = stop.send(());
+                        }
+                    }
+                    None => {}
                 }
             }
             message = channel.wait() => {
@@ -1578,6 +1683,62 @@ async fn bridge_x11_channel(channel: Channel<Msg>, display: u16) -> Result<(), S
     copy_bidirectional(&mut remote, &mut local)
         .await
         .map_err(|error| format!("failed to proxy X11 data: {error}"))?;
+    Ok(())
+}
+
+async fn run_live_ssh_port_forward(
+    listener: TcpListener,
+    session: Rc<client::Handle<VerifyingClient>>,
+    dest_host: String,
+    remote_port: u16,
+    mut stop_rx: oneshot::Receiver<()>,
+) -> Result<(), String> {
+    loop {
+        tokio::select! {
+            _ = &mut stop_rx => return Ok(()),
+            accepted = listener.accept() => {
+                let (stream, originator) = accepted
+                    .map_err(|error| format!("failed to accept local port forward connection: {error}"))?;
+                let session = Rc::clone(&session);
+                let dest_host = dest_host.clone();
+                tokio::task::spawn_local(async move {
+                    if let Err(error) = forward_live_ssh_stream(
+                        stream,
+                        originator,
+                        session,
+                        dest_host,
+                        remote_port,
+                    )
+                    .await
+                    {
+                        eprintln!("SSH port forward connection failed: {error}");
+                    }
+                });
+            }
+        }
+    }
+}
+
+async fn forward_live_ssh_stream(
+    mut local: TcpStream,
+    originator: SocketAddr,
+    session: Rc<client::Handle<VerifyingClient>>,
+    dest_host: String,
+    remote_port: u16,
+) -> Result<(), String> {
+    let channel = session
+        .channel_open_direct_tcpip(
+            dest_host,
+            u32::from(remote_port),
+            originator.ip().to_string(),
+            u32::from(originator.port()),
+        )
+        .await
+        .map_err(|error| format!("failed to open SSH direct-tcpip channel: {error}"))?;
+    let mut remote = channel.into_stream();
+    copy_bidirectional(&mut local, &mut remote)
+        .await
+        .map_err(|error| format!("failed to proxy SSH port forward data: {error}"))?;
     Ok(())
 }
 

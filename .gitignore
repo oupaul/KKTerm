@@ -40,3 +40,5 @@ dist-ssr
 /tmp
 /promo
 .tmp
+docs/superpowers/specs
+docs/superpowers/plans

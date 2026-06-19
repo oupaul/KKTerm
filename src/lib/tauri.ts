@@ -1909,6 +1909,7 @@ type CommandMap = {
   start_ssh_port_forward: {
     args: {
       request: {
+        sessionId: string;
         host: string;
         user: string;
         port?: number;

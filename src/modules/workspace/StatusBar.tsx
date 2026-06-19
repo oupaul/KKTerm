@@ -155,20 +155,20 @@ function StatusNoticePopup({
           {notice.message}
         </span>
         {isProgress ? (
-          <span className="status-popup-progress-wrap">
-            <span
-              aria-valuemax={100}
-              aria-valuemin={0}
-              aria-valuenow={progress}
-              aria-label={notice.message}
-              className="status-popup-progress"
-              role="progressbar"
-            >
-              <i style={{ width: `${progress}%` }} />
-            </span>
-            <span className="status-popup-progress-label" aria-hidden="true">
-              {Math.round(progress)}%
-            </span>
+          <span
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={progress}
+            aria-label={notice.message}
+            className="status-popup-progress"
+            role="progressbar"
+          >
+            <i style={{ width: `${progress}%` }} />
+          </span>
+        ) : null}
+        {isProgress ? (
+          <span className="status-popup-progress-label" aria-hidden="true">
+            {Math.round(progress)}%
           </span>
         ) : null}
       </span>

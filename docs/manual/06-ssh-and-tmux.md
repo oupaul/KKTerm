@@ -82,8 +82,9 @@ For SSH port forwarding:
 - The dialog has Local (`-L`), Remote (`-R`), and Dynamic (`-D`) mode tabs. Counts on the tabs show enabled mappings for the saved SSH Connection.
 - Bind address, listener port, destination host, and destination port remain editable text fields with dropdown suggestions. Bind suggestions include loopback, all-interface, and detected local interface addresses. A loopback destination in Local mode suggests listening ports discovered on the remote SSH host.
 - Mappings are non-secret per-Connection settings. Child Connection Tabs, split Panes, additional Tabs, and Dashboard-spawned surfaces share the parent SSH Connection's mapping list instead of owning independent forwarding settings.
-- Starting an already-running mapping reuses that mapping's stable forward id, so opening additional child/pane/tab surfaces for the same parent Connection does not recreate duplicate local tunnels.
+- Starting an already-running mapping reuses that mapping's stable forward id, so opening additional Child Connection Tabs, Panes, or Tabs for the same parent Connection does not recreate duplicate local tunnels. A new local forward reuses the authenticated native SSH Session for the Pane that opened the dialog, including Sessions authenticated by entering a password interactively.
 - Each saved mapping has an enabled switch immediately before delete. New mappings start enabled; switching one off closes its live tunnel but preserves the mapping so it can be enabled again later.
+- Enabled mappings cannot use overlapping local listeners. An exact bind address and port cannot be added twice, and a wildcard listener such as `0.0.0.0:8080` also conflicts with a specific IPv4 listener on port 8080.
 - The current runtime can start Local forwards. Remote and Dynamic mappings can be saved in the dialog but return an unsupported-runtime error if started until those tunnel modes are implemented in the backend.
 - Deleting the last enabled mapping removes the green toolbar tunnel button from open SSH Panes after the Connection metadata refreshes.
 
