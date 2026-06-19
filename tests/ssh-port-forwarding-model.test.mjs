@@ -76,6 +76,60 @@ test("Local forwarding browser URLs infer TLS and replace wildcard binds", async
   assert.equal(sshForwardBrowserUrl("::", 3000), "http://[::1]:3000");
 });
 
+test("Remote destination ports match the selected local address and wildcard family", async () => {
+  const { localListenerPortOptions } = await importTypeScriptModule(
+    new URL(
+      "../src/modules/workspace/connections/terminal/sshPortForwardingModel.ts",
+      import.meta.url,
+    ),
+  );
+  const listeners = [
+    { address: "127.0.0.1", port: 1420 },
+    { address: "0.0.0.0", port: 3000 },
+    { address: "10.0.0.102", port: 4444 },
+    { address: "::", port: 8443 },
+    { address: "::1", port: 9000 },
+  ];
+
+  assert.deepEqual(localListenerPortOptions("localhost", listeners), ["1420", "3000"]);
+  assert.deepEqual(localListenerPortOptions("10.0.0.102", listeners), ["3000", "4444"]);
+  assert.deepEqual(localListenerPortOptions("::1", listeners), ["8443", "9000"]);
+});
+
+test("Remote rows put the local destination left and server listener right", async () => {
+  const { sshForwardDisplayEndpoints } = await importTypeScriptModule(
+    new URL(
+      "../src/modules/workspace/connections/terminal/sshPortForwardingModel.ts",
+      import.meta.url,
+    ),
+  );
+
+  assert.deepEqual(sshForwardDisplayEndpoints({
+    id: "remote",
+    mode: "R",
+    enabled: true,
+    bind: "0.0.0.0",
+    listenPort: 4444,
+    destHost: "localhost",
+    destPort: 1420,
+  }), { left: "localhost:1420", right: "0.0.0.0:4444" });
+});
+
+test("Remote URLs reject loopback and replace wildcards with the SSH host", async () => {
+  const { sshRemoteForwardBrowserUrl } = await importTypeScriptModule(
+    new URL(
+      "../src/modules/workspace/connections/terminal/sshPortForwardingModel.ts",
+      import.meta.url,
+    ),
+  );
+
+  assert.equal(sshRemoteForwardBrowserUrl("127.0.0.1", 8080, "pb602"), null);
+  assert.equal(sshRemoteForwardBrowserUrl("::1", 8443, "pb602"), null);
+  assert.equal(sshRemoteForwardBrowserUrl("0.0.0.0", 443, "pb602"), "https://pb602:443");
+  assert.equal(sshRemoteForwardBrowserUrl("::", 8443, "fd63::42"), "https://[fd63::42]:8443");
+  assert.equal(sshRemoteForwardBrowserUrl("10.0.0.42", 8080, "pb602"), "http://10.0.0.42:8080");
+});
+
 test("SSH forwarding starts through the Pane's live Session", async () => {
   const [workspaceSource, dialogSource, tauriSource, sessionsSource, sshSource] = await Promise.all([
     readFile(

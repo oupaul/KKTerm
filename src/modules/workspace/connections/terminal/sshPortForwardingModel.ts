@@ -6,6 +6,11 @@ type NormalizedBindAddress = {
   wildcard: boolean;
 };
 
+export type LocalTcpListener = {
+  address: string;
+  port: number;
+};
+
 function normalizeBindAddress(value: string): NormalizedBindAddress {
   const trimmed = value.trim().toLowerCase();
   if (trimmed === "localhost") {
@@ -69,4 +74,52 @@ export function sshForwardBrowserUrl(bind: string, port: number) {
         ? `[${normalized}]`
         : normalized || "127.0.0.1";
   return `${protocol}://${host}:${port}`;
+}
+
+export function localListenerPortOptions(host: string, listeners: LocalTcpListener[]) {
+  const target = normalizeBindAddress(host);
+  return [...new Set(listeners.filter((listener) => {
+    const bound = normalizeBindAddress(listener.address);
+    return target.family === bound.family && (target.value === bound.value || bound.wildcard);
+  }).map((listener) => listener.port))]
+    .sort((left, right) => left - right)
+    .map(String);
+}
+
+function forwardingEndpoint(host: string | undefined, port: number | undefined) {
+  return `${host?.trim() || "localhost"}:${port ?? ""}`;
+}
+
+export function sshForwardDisplayEndpoints(forwarding: SshPortForwarding) {
+  if (forwarding.mode === "R") {
+    return {
+      left: forwardingEndpoint(forwarding.destHost, forwarding.destPort),
+      right: forwardingEndpoint(forwarding.bind, forwarding.listenPort),
+    };
+  }
+  return {
+    left: forwardingEndpoint(forwarding.bind, forwarding.listenPort),
+    right: forwarding.mode === "D"
+      ? "SOCKS5"
+      : forwardingEndpoint(forwarding.destHost, forwarding.destPort),
+  };
+}
+
+function browserHost(value: string) {
+  const trimmed = value.trim();
+  return trimmed.includes(":") && !trimmed.startsWith("[") ? `[${trimmed}]` : trimmed;
+}
+
+export function sshRemoteForwardBrowserUrl(bind: string, port: number, connectionHost: string) {
+  const normalized = normalizeBindAddress(bind);
+  const loopback = normalized.value === "::1" || normalized.value.startsWith("127.");
+  if (loopback) {
+    return null;
+  }
+  const host = normalized.wildcard ? connectionHost.trim() : bind.trim();
+  if (!host) {
+    return null;
+  }
+  const protocol = port === 443 || port === 8443 ? "https" : "http";
+  return `${protocol}://${browserHost(host)}:${port}`;
 }
