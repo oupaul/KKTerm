@@ -3,6 +3,7 @@ import { FolderOpen, KeyRound, Play, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { invokeCommand, isTauriRuntime, selectKeyFile } from "../../lib/tauri";
+import { LegacyDialogActions } from "../../app/ui/dialog";
 import { SSH_SETTINGS_SOCKS_PROXY_PASSWORD_OWNER_ID } from "../workspace/connections/utils";
 import { useWorkspaceStore } from "../../store";
 import type { SshSettings as SshSettingsType } from "../../types";
@@ -607,15 +608,15 @@ function SshKeyEmailDialog({
             value={email}
           />
         </label>
-        <div className="dialog-actions">
-          <button className="approve-button" disabled={!canSubmit} type="submit">
+        <LegacyDialogActions
+          primary={<button className="approve-button" disabled={!canSubmit} type="submit">
             <KeyRound size={15} />
             {isGenerating ? t("settings.sshKeyGenerating") : t("settings.generateSshKey")}
-          </button>
-          <button className="toolbar-button" disabled={isGenerating} onClick={onCancel} type="button">
+          </button>}
+          cancel={<button className="toolbar-button" disabled={isGenerating} onClick={onCancel} type="button">
             {t("common.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
     </div>
   );

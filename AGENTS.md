@@ -92,9 +92,11 @@ Strong success criteria let you loop independently.
 - App-owned popup dialogs use a single concise title by default. Do not add a
   subtitle or explanatory header copy unless the flow truly needs it; put
   supporting text in the dialog body near the relevant controls instead.
-- Dialog footers follow Windows button order: the primary/confirm action comes
-  immediately before Cancel, and the action group anchors to the bottom right
-  unless an existing platform pattern in the same dialog family differs.
+- Dialog footers follow the host platform: macOS ends with Cancel then the
+  primary/confirm action; Windows and Linux end with the primary/confirm action
+  then Cancel. Auxiliary actions stay left of the bottom-right action group.
+  Build the order with shared `Actions` or `LegacyDialogActions`; do not rely on
+  per-dialog source order or CSS reversal.
 - App-owned popup dialogs must not show a title-bar close X when the footer
   already has a bottom-right dismiss action such as Cancel, Skip, Later, or
   Close. Keep one obvious dismiss path instead of duplicating the same action.

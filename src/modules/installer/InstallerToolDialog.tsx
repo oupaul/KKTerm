@@ -7,11 +7,11 @@
 //                 mode flips the dialog to "stepper".
 //
 // Honors AGENTS.md dialog rules: concise title, a single footer dismiss path,
-// and Windows-order footer buttons (primary immediately before Cancel at
-// bottom right).
+// and host-platform footer buttons at bottom right.
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LegacyDialogActions } from "../../app/ui/dialog";
 import {
   invokeCommand,
   isTauriRuntime,
@@ -400,7 +400,9 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
           </label>
         ) : null}
       </div>
-      <div className="dialog-actions installer-tool-dialog__actions">
+      <LegacyDialogActions
+        className="installer-tool-dialog__actions"
+        extraLeft={<>
         <button
           type="button"
           className="secondary-button danger"
@@ -489,10 +491,11 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
             {t("installer.actions.update")}
           </button>
         ) : null}
-        <button type="button" className="toolbar-button" onClick={closeDialog}>
+        </>}
+        cancel={<button type="button" className="toolbar-button" onClick={closeDialog}>
           {t("common.close")}
-        </button>
-      </div>
+        </button>}
+      />
       {uninstallConfirm ? (
         <InstallerConfirmDialog
           title={t("installer.confirm.uninstallTitle", { name: recipe.name })}
@@ -711,19 +714,20 @@ function NotInstalledInfoBody({ recipe }: { recipe: Recipe }) {
         </dl>
         <OptionsForm recipe={recipe} options={options} onChange={applyOption} />
       </div>
-      <div className="dialog-actions installer-tool-dialog__actions">
-        <button
+      <LegacyDialogActions
+        className="installer-tool-dialog__actions"
+        primary={<button
           type="button"
           className="secondary-button"
           onClick={attemptInstall}
           disabled={wslBlocked}
         >
           {t("installer.actions.install")}
-        </button>
-        <button type="button" className="toolbar-button" onClick={closeDialog}>
+        </button>}
+        cancel={<button type="button" className="toolbar-button" onClick={closeDialog}>
           {t("common.cancel")}
-        </button>
-      </div>
+        </button>}
+      />
       {installConfirm ? (
         <InstallerConfirmDialog
           title={t("installer.confirm.installTitle", { name: recipe.name })}
@@ -808,8 +812,9 @@ function StepperBody({ recipe }: { recipe: Recipe }) {
         ) : null}
         <StepperList stepper={stepper} inFlight={inFlight} />
       </div>
-      <div className="dialog-actions installer-tool-dialog__actions">
-        {running ? (
+      <LegacyDialogActions
+        className="installer-tool-dialog__actions"
+        extraLeft={running ? (
           <button
             type="button"
             className="secondary-button danger"
@@ -818,10 +823,10 @@ function StepperBody({ recipe }: { recipe: Recipe }) {
             {t("installer.actions.cancel")}
           </button>
         ) : null}
-        <button type="button" className="toolbar-button" onClick={closeDialog}>
+        cancel={<button type="button" className="toolbar-button" onClick={closeDialog}>
           {t("common.close")}
-        </button>
-      </div>
+        </button>}
+      />
     </>
   );
 }

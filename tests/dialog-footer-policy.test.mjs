@@ -59,3 +59,66 @@ test("Delete Workspace confirmation uses the shared ConfirmSheet template", asyn
     "DeleteWorkspaceDialog must render through ConfirmSheet (tone=\"danger\"), not hand-rolled markup",
   );
 });
+
+test("shared Actions keeps auxiliary actions left and applies host button order", async () => {
+  const source = await readFile(new URL("app/ui/dialog/Sheet.tsx", SRC_ROOT), "utf8");
+  const actions = source.slice(
+    source.indexOf("export function Actions"),
+    source.indexOf("/* ------------------------------ backdrop"),
+  );
+
+  assert.match(
+    actions,
+    /if \(conv === "windows"\)[\s\S]*?\{extraLeft \?\? null\}[\s\S]*?<span className="kk-spacer" \/>[\s\S]*?\{primary\}[\s\S]*?\{cancel\}/,
+    "Windows and Linux must place auxiliary actions left, then Primary and Cancel at bottom-right",
+  );
+  assert.match(
+    actions,
+    /return \([\s\S]*?\{extraLeft \?\? null\}[\s\S]*?<span className="kk-spacer" \/>[\s\S]*?\{cancel\}[\s\S]*?\{primary\}/,
+    "macOS must place auxiliary actions left, then Cancel and Primary at bottom-right",
+  );
+});
+
+test("multi-action legacy dialogs use the shared platform-aware adapter", async () => {
+  const requiredFiles = [
+    "app/AppUpdatePrompt.tsx",
+    "modules/dashboard/widgets/builtin/app-launcher/AppLauncherWidget.tsx",
+    "modules/installer/InstallerToolDialog.tsx",
+    "modules/settings/AddMcpServerDialog.tsx",
+    "modules/settings/GeneralSettings.tsx",
+    "modules/settings/SettingsPage.tsx",
+    "modules/settings/SshSettings.tsx",
+    "modules/workspace/NewWorkspaceDialog.tsx",
+    "modules/workspace/connections/ConnectionSidebar.tsx",
+    "modules/workspace/connections/ImportDialog.tsx",
+  ];
+
+  const indexSource = await readFile(new URL("app/ui/dialog/index.ts", SRC_ROOT), "utf8");
+  assert.match(indexSource, /LegacyDialogActions/, "dialog kit must export LegacyDialogActions");
+
+  for (const path of requiredFiles) {
+    const source = await readFile(new URL(path, SRC_ROOT), "utf8");
+    assert.match(source, /<LegacyDialogActions/, `${path} must use LegacyDialogActions`);
+  }
+
+  const files = await sourceFiles(SRC_ROOT);
+  const macOrderOffenders = [];
+  for (const file of files) {
+    const source = await readFile(file, "utf8");
+    if (source.includes("mac-order")) {
+      macOrderOffenders.push(file.pathname.replace(/.*\/src\//, "src/"));
+    }
+  }
+  assert.deepEqual(macOrderOffenders, [], "CSS row reversal is not a safe dialog-ordering mechanism");
+});
+
+test("both shared icon-background palettes include white", async () => {
+  const sheet = await readFile(new URL("app/ui/dialog/Sheet.tsx", SRC_ROOT), "utf8");
+  const connectionPicker = await readFile(
+    new URL("modules/workspace/connections/ConnectionIconBackgroundPicker.tsx", SRC_ROOT),
+    "utf8",
+  );
+
+  assert.match(sheet, /DIALOG_ACCENTS[\s\S]*?"#ffffff"/);
+  assert.match(connectionPicker, /\{ name: "white", color: "#ffffff" \}/);
+});

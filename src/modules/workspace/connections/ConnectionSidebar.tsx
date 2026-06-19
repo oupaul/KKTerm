@@ -48,7 +48,6 @@ import { useTranslation } from "react-i18next";
 import i18next from "../../../i18n/config";
 import { ariaExpanded, dialogButtonAria } from "../../../lib/aria";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
-import { isMacPlatform } from "../../../lib/platform";
 import { nativeMenuIcons } from "../../../lib/nativeMenuIcons";
 import { lockOsIconAutoDetect } from "../../../lib/osIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../../../lib/nativeContextMenu";
@@ -56,15 +55,10 @@ import { confirmNativeDialog, invokeCommand, isCredentialUnlockRequiredError, is
 import { connectionTree } from "../../../app-defaults";
 import { DeleteConfirmationDialog } from "../../../app/DeleteConfirmationDialog";
 import { DialogPortal } from "../../../app/DialogPortal";
+import { LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
 import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
-
-// Dialog footer order follows the host platform: macOS shows [Cancel] [Primary],
-// Windows shows [Primary] [Cancel]. Footers are authored primary-first; the
-// mac-order class flips the visual order via CSS (these dialogs portal to body,
-// so the ordering can't ride a [data-platform] ancestor).
-const DIALOG_ACTIONS_CLASS = isMacPlatform() ? "dialog-actions mac-order" : "dialog-actions";
 
 // Pointer travel (px, either axis) before a press is treated as a drag rather
 // than a click. Kept above ordinary click jitter so selecting a row never
@@ -3036,14 +3030,14 @@ function ChildConnectionPropertiesDialog({
             />
           </label>
         </div>
-        <div className={DIALOG_ACTIONS_CLASS}>
-          <button className="approve-button" disabled={!trimmedName} type="submit">
+        <LegacyDialogActions
+          primary={<button className="approve-button" disabled={!trimmedName} type="submit">
             {t("common.save")}
-          </button>
-          <button className="toolbar-button" onClick={onCancel} type="button">
+          </button>}
+          cancel={<button className="toolbar-button" onClick={onCancel} type="button">
             {t("common.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
     </div>
     </DialogPortal>
@@ -3092,15 +3086,15 @@ function FolderIconDialog({
           </span>
         </div>
         {error ? <p className="form-error">{error}</p> : null}
-        <div className={DIALOG_ACTIONS_CLASS}>
-          <button className="approve-button" type="submit">
+        <LegacyDialogActions
+          primary={<button className="approve-button" type="submit">
             <Check size={15} />
             {t("common.save")}
-          </button>
-          <button className="toolbar-button" onClick={onCancel} type="button">
+          </button>}
+          cancel={<button className="toolbar-button" onClick={onCancel} type="button">
             {t("common.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
     </div>
     </DialogPortal>
@@ -4470,15 +4464,15 @@ function ConnectionDialog({
 
         {error ? <p className="form-error">{error}</p> : null}
 
-        <div className={DIALOG_ACTIONS_CLASS}>
-          <button className="approve-button" disabled={!connectionType} type="submit">
+        <LegacyDialogActions
+          primary={<button className="approve-button" disabled={!connectionType} type="submit">
             <Check size={15} />
             {mode === "quick" ? t("connections.saveAndConnect") : t("common.save")}
-          </button>
-          <button className="toolbar-button" type="button" onClick={onCancel}>
+          </button>}
+          cancel={<button className="toolbar-button" type="button" onClick={onCancel}>
             {t("connections.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
       {keyEmailDialogOpen ? (
         <ConnectionSshKeyEmailDialog
@@ -4562,15 +4556,15 @@ function ConnectionSshKeyEmailDialog({
             value={email}
           />
         </label>
-        <div className={DIALOG_ACTIONS_CLASS}>
-          <button className="approve-button" disabled={!canSubmit} type="submit">
+        <LegacyDialogActions
+          primary={<button className="approve-button" disabled={!canSubmit} type="submit">
             <KeyRound size={15} />
             {isGenerating ? t("settings.sshKeyGenerating") : t("settings.generateSshKey")}
-          </button>
-          <button className="toolbar-button" disabled={isGenerating} onClick={onCancel} type="button">
+          </button>}
+          cancel={<button className="toolbar-button" disabled={isGenerating} onClick={onCancel} type="button">
             {t("common.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
     </div>
     </DialogPortal>
@@ -4675,15 +4669,15 @@ function TransferSshPublicKeyDialog({
             />
           </label>
         </div>
-        <div className={DIALOG_ACTIONS_CLASS}>
-          <button className="approve-button" disabled={!canSubmit} type="submit">
+        <LegacyDialogActions
+          primary={<button className="approve-button" disabled={!canSubmit} type="submit">
             <KeyRound size={15} />
             {t("connections.transferSshPublicKeyAction")}
-          </button>
-          <button className="toolbar-button" type="button" onClick={onCancel}>
+          </button>}
+          cancel={<button className="toolbar-button" type="button" onClick={onCancel}>
             {t("connections.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
     </div>
     </DialogPortal>

@@ -23,3 +23,4 @@ export {
   type DialogConvention,
 } from "./Sheet";
 export { ConfirmSheet, type ConfirmTone } from "./ConfirmSheet";
+export { LegacyDialogActions } from "./LegacyDialogActions";

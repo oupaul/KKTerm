@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LegacyDialogActions } from "../../app/ui/dialog";
 import {
   describeMcpError,
   invokeCommand,
@@ -117,19 +118,19 @@ export function AddMcpServerDialog({
               value={jsonText}
             />
             {parseError && <div className="settings-error">{parseError}</div>}
-            <div className="dialog-actions">
-              <button
+            <LegacyDialogActions
+              primary={<button
                 className="toolbar-button primary"
                 disabled={jsonText.trim().length === 0}
                 onClick={handleParse}
                 type="button"
               >
                 {t("settings.mcpPasteContinue")}
-              </button>
-              <button className="toolbar-button" onClick={onClose} type="button">
+              </button>}
+              cancel={<button className="toolbar-button" onClick={onClose} type="button">
                 {t("common.cancel")}
-              </button>
-            </div>
+              </button>}
+            />
           </div>
         )}
 
@@ -176,8 +177,8 @@ export function AddMcpServerDialog({
               </label>
             </div>
             {submitError && <div className="settings-error">{submitError}</div>}
-            <div className="dialog-actions">
-              <button
+            <LegacyDialogActions
+              extraLeft={<button
                 className="toolbar-button"
                 onClick={() => {
                   setParsed(null);
@@ -186,19 +187,19 @@ export function AddMcpServerDialog({
                 type="button"
               >
                 {t("common.back")}
-              </button>
-              <button
+              </button>}
+              primary={<button
                 className="toolbar-button primary"
                 disabled={submitting || secretInput.length === 0}
                 onClick={() => void handleSubmit()}
                 type="button"
               >
                 {t("settings.mcpCreateServer")}
-              </button>
-              <button className="toolbar-button" disabled={submitting} onClick={onClose} type="button">
+              </button>}
+              cancel={<button className="toolbar-button" disabled={submitting} onClick={onClose} type="button">
                 {t("common.cancel")}
-              </button>
-            </div>
+              </button>}
+            />
           </div>
         )}
 
@@ -228,26 +229,26 @@ export function AddMcpServerDialog({
               </div>
             )}
             {submitError && <div className="settings-error">{submitError}</div>}
-            <div className="dialog-actions">
-              <button
+            <LegacyDialogActions
+              extraLeft={<button
                 className="toolbar-button"
                 onClick={() => setParsed(null)}
                 type="button"
               >
                 {t("common.back")}
-              </button>
-              <button
+              </button>}
+              primary={<button
                 className="toolbar-button primary"
                 disabled={submitting}
                 onClick={() => void handleSubmit()}
                 type="button"
               >
                 {t("settings.mcpCreateServer")}
-              </button>
-              <button className="toolbar-button" disabled={submitting} onClick={onClose} type="button">
+              </button>}
+              cancel={<button className="toolbar-button" disabled={submitting} onClick={onClose} type="button">
                 {t("common.cancel")}
-              </button>
-            </div>
+              </button>}
+            />
           </div>
         )}
       </div>

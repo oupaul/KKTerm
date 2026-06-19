@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { IconLibraryPicker } from "../../app/IconLibraryPicker";
+import { LegacyDialogActions } from "../../app/ui/dialog";
 import { dialogButtonAria } from "../../lib/aria";
 import { invokeCommand } from "../../lib/tauri";
 import type { Connection, Workspace } from "../../types";
@@ -357,8 +358,8 @@ export function NewWorkspaceDialog({
           {error ? <div className="settings-error">{error}</div> : null}
         </div>
 
-        <div className="dialog-actions">
-          <button
+        <LegacyDialogActions
+          primary={<button
             className="approve-button"
             disabled={!canSave}
             onClick={() => void handleSave()}
@@ -366,11 +367,11 @@ export function NewWorkspaceDialog({
           >
             <Save size={15} />
             {isEditMode ? t("common.save") : t("workspace.createWorkspace")}
-          </button>
-          <button className="toolbar-button" onClick={onClose} type="button">
+          </button>}
+          cancel={<button className="toolbar-button" onClick={onClose} type="button">
             {t("common.cancel")}
-          </button>
-        </div>
+          </button>}
+        />
       </div>
     </div>,
     document.body,

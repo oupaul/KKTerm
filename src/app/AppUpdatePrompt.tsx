@@ -15,6 +15,7 @@ import { shouldRunStartupUpdateCheck } from "../lib/appUpdatesModel";
 import { readLastUpdateCheckAt, recordUpdateCheckedNow } from "../lib/lastUpdateCheck";
 import { isTauriRuntime, openExternalUrl } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
+import { LegacyDialogActions } from "./ui/dialog";
 
 export const CHECK_FOR_APP_UPDATES_EVENT = "kkterm:check-for-updates";
 const APP_UPDATE_INSTALL_DELAY_MS = 3_000;
@@ -231,8 +232,8 @@ export function AppUpdatePrompt({
             onClick={handleUpdateNotesClick}
           />
         ) : null}
-        <div className="dialog-actions">
-          <button
+        <LegacyDialogActions
+          extraLeft={<button
             className="toolbar-button"
             onClick={() => {
               void openReleaseDownloadPage(update);
@@ -242,8 +243,8 @@ export function AppUpdatePrompt({
           >
             <ExternalLink size={15} />
             {t("settings.updateOpenDownloadPage")}
-          </button>
-          {canDownloadAndInstall ? (
+          </button>}
+          primary={canDownloadAndInstall ? (
             <button
               className="approve-button"
               disabled={installing}
@@ -256,15 +257,15 @@ export function AppUpdatePrompt({
                 : t("settings.updateDownloadAndInstall")}
             </button>
           ) : null}
-          <button
+          cancel={<button
             className="toolbar-button"
             disabled={installing}
             onClick={() => setUpdate(null)}
             type="button"
           >
             {t("settings.updateLater")}
-          </button>
-        </div>
+          </button>}
+        />
       </div>
     </div>
   );

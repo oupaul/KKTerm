@@ -19,6 +19,7 @@ import {
   type ScanResultEntry,
 } from "../../../lib/tauri";
 import { DialogPortal } from "../../../app/DialogPortal";
+import { LegacyDialogActions } from "../../../app/ui/dialog";
 import { useWorkspaceStore } from "../../../store";
 import { defaultPortForConnectionType, uniqueRuntimeId } from "./utils";
 import { flattenFolders } from "./treeUtils";
@@ -1291,8 +1292,8 @@ function ImportPreviewSection({
         ) : null}
       </fieldset>
 
-      <div className="dialog-actions">
-        <button
+      <LegacyDialogActions
+        primary={<button
           className="approve-button"
           disabled={importing || selectedCount === 0}
           onClick={() => void handleImport()}
@@ -1302,11 +1303,11 @@ function ImportPreviewSection({
           <span>
             {t("connections.import.importCount", { count: selectedCount })}
           </span>
-        </button>
-        <button className="toolbar-button" onClick={onCancel} type="button">
+        </button>}
+        cancel={<button className="toolbar-button" onClick={onCancel} type="button">
           {t("connections.cancel")}
-        </button>
-      </div>
+        </button>}
+      />
     </div>
   );
 }

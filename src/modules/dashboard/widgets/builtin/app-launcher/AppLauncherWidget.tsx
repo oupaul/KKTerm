@@ -27,6 +27,7 @@ import type {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { LegacyDialogActions } from "../../../../../app/ui/dialog";
 import { selectAppLauncherFile, selectAppLauncherFolder, isTauriRuntime } from "../../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../../store";
 import { useDashboardStore } from "../../../state/dashboardStore";
@@ -1072,14 +1073,15 @@ function AppLauncherDialog({
             onChange={(event) => onUpdate({ ...draft, workingDirectory: event.target.value })}
           />
         </label>
-        <div className="app-launcher-dialog-actions">
-          <button className="secondary-button" onClick={onClose} type="button">
+        <LegacyDialogActions
+          className="app-launcher-dialog-actions"
+          cancel={<button className="secondary-button" onClick={onClose} type="button">
             {t("common.cancel")}
-          </button>
-          <button className="primary-button" disabled={!canSave || saving} type="submit">
+          </button>}
+          primary={<button className="primary-button" disabled={!canSave || saving} type="submit">
             {t("common.save")}
-          </button>
-        </div>
+          </button>}
+        />
       </form>
     </div>
   );

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
+import { LegacyDialogActions } from "../../app/ui/dialog";
 import {
   defaultAppearanceSettings,
   defaultAiProviderSettings,
@@ -607,23 +608,23 @@ export function GeneralSettings() {
               </div>
             </header>
             <p className="field-hint">{t("settings.resetAllSettingsConfirm")}</p>
-            <div className="dialog-actions">
-              <button
+            <LegacyDialogActions
+              primary={<button
                 className="secondary-button danger"
                 onClick={() => void handleResetAllSettings()}
                 type="button"
               >
                 <RotateCcw size={15} />
                 {t("settings.resetAllSettings")}
-              </button>
-              <button
+              </button>}
+              cancel={<button
                 className="toolbar-button"
                 onClick={() => setResetDialogOpen(false)}
                 type="button"
               >
                 {t("common.cancel")}
-              </button>
-            </div>
+              </button>}
+            />
           </div>
         </div>
       ) : null}

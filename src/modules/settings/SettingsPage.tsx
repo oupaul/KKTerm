@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { LegacyDialogActions } from "../../app/ui/dialog";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
 import { supportsInstallerHelper, supportsRdp } from "../../lib/platform";
 import { AboutSettings } from "./AboutSettings";
@@ -320,30 +321,31 @@ export function SettingsPage({
             <div className="connection-dialog-body">
               <p>{t("settings.unsavedQuitBody")}</p>
             </div>
-            <footer className="dialog-actions">
-              <button
+            <LegacyDialogActions
+              as="footer"
+              extraLeft={<button
                 className="secondary-button danger-button"
                 onClick={handleQuitWithoutSaving}
                 type="button"
               >
                 {t("settings.quitWithoutSaving")}
-              </button>
-              <button
+              </button>}
+              primary={<button
                 className="primary-button"
                 onClick={() => void handleSaveAllDirty({ quitAfter: true })}
                 type="button"
               >
                 <Save size={15} />
                 {t("settings.saveAndQuit")}
-              </button>
-              <button
+              </button>}
+              cancel={<button
                 className="secondary-button"
                 onClick={() => setUnsavedQuitDialogOpen(false)}
                 type="button"
               >
                 {t("common.cancel")}
-              </button>
-            </footer>
+              </button>}
+            />
           </section>
         </div>
       ) : null}

@@ -1,6 +1,6 @@
 // ConfirmSheet — the KKTerm confirmation-dialog template. One compact alert
 // sheet with a tinted glyph, a single title, optional body, and a footer in
-// Windows button order. Covers the three reference presets:
+// host-platform button order. Covers the three reference presets:
 //   tone="info"   informational / run-command confirmations
 //   tone="danger" destructive deletes
 //   tone="warn"   + extraLeft "Don't Save" → unsaved-changes

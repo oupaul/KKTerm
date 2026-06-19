@@ -12,6 +12,7 @@ const CONNECTION_ICON_BACKGROUND_COLORS = [
   { name: "green", color: "#34c759" },
   { name: "teal", color: "#30b0c7" },
   { name: "gray", color: "#8e8e93" },
+  { name: "white", color: "#ffffff" },
 ];
 
 export function ConnectionIconBackgroundPicker({
