@@ -9,7 +9,8 @@ param(
     [switch]$SkipSmoke,
     [switch]$SkipAiReleaseNotes,
     [switch]$AllowDirty,
-    [switch]$IncludeArm64
+    [switch]$IncludeArm64,
+    [switch]$NoVersionIncrement
 )
 
 $ErrorActionPreference = "Stop"
@@ -223,7 +224,14 @@ try {
     Assert-Version $CurrentVersion
 
     $VersionParts = $CurrentVersion.Split(".") | ForEach-Object { [int]$_ }
-    $NextVersion = "$($VersionParts[0]).$($VersionParts[1]).$($VersionParts[2] + 1)"
+    if ($NoVersionIncrement) {
+        # Reuse the current version instead of bumping the patch. The version
+        # files stay put; the release commit then carries only the regenerated
+        # release notes and changelog.
+        $NextVersion = $CurrentVersion
+    } else {
+        $NextVersion = "$($VersionParts[0]).$($VersionParts[1]).$($VersionParts[2] + 1)"
+    }
     $TagName = "v$NextVersion"
     $TargetTriple = "windows-x64"
     $InstallerExe = Join-Path $ResolvedOutputDir "kkterm-$NextVersion-$TargetTriple-setup.exe"

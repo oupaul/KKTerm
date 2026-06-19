@@ -8,7 +8,8 @@ param(
     [switch]$SkipBuild,
     [switch]$SkipSmoke,
     [switch]$SkipAiReleaseNotes,
-    [switch]$AllowDirty
+    [switch]$AllowDirty,
+    [switch]$NoVersionIncrement
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +43,9 @@ if ($SkipAiReleaseNotes) {
 }
 if ($AllowDirty) {
     $ForwardParams["AllowDirty"] = $true
+}
+if ($NoVersionIncrement) {
+    $ForwardParams["NoVersionIncrement"] = $true
 }
 
 & $ReleaseScript @ForwardParams

@@ -3,6 +3,11 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      increment_version:
+        description: "Increment the patch version for this release (off reuses the current version)"
+        required: false
+        default: true
+        type: boolean
       draft:
         description: "Create the GitHub release as a draft"
         required: false
@@ -80,6 +85,7 @@ jobs:
           # generates notes, commits/tags, pushes main, creates the GitHub Release,
           # and uploads x64 + ARM64 installer assets.
           $releaseArgs = @("-File", "scripts/release-github-both-arch.ps1")
+          if ("${{ inputs.increment_version }}" -eq "false") { $releaseArgs += "-NoVersionIncrement" }
           if ("${{ inputs.draft }}" -eq "true") { $releaseArgs += "-Draft" }
           if ("${{ inputs.prerelease }}" -eq "true") { $releaseArgs += "-Prerelease" }
           if ("${{ inputs.skip_build }}" -eq "true") { $releaseArgs += "-SkipBuild" }
