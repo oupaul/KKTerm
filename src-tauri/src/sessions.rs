@@ -173,6 +173,13 @@ pub struct RemoteLoopbackPort {
     pub address: String,
 }
 
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalTcpListener {
+    pub address: String,
+    pub port: u16,
+}
+
 /// Raw remote-OS facts gathered on first SSH connect for icon auto-detection.
 /// The frontend maps these to a bundled distro/OS logo.
 #[derive(Clone, Default, Serialize)]
@@ -1198,6 +1205,25 @@ impl SessionManager {
         Ok(parse_remote_network_addresses(&output))
     }
 
+    pub fn list_local_tcp_listeners(&self) -> Result<Vec<LocalTcpListener>, String> {
+        let mut command = local_tcp_listener_command();
+        hide_console_window(&mut command);
+        command
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        let output = run_command_with_timeout(command, Duration::from_secs(5))
+            .map_err(|error| error.replace("system ssh", "local TCP listener discovery"))?;
+        if !output.status.success() {
+            return Err(format!(
+                "local TCP listener discovery failed: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+        let stdout = String::from_utf8(output.stdout)
+            .map_err(|error| format!("local TCP listener discovery returned invalid UTF-8: {error}"))?;
+        Ok(parse_local_tcp_listeners(&stdout))
+    }
+
     pub fn start_ssh_port_forward(
         &self,
         _app: AppHandle,
@@ -1713,6 +1739,57 @@ fn remote_loopback_port_command() -> String {
 
 fn remote_network_address_command() -> String {
     "if command -v ip >/dev/null 2>&1; then ip -o addr show | awk '{print $4}'; elif command -v ifconfig >/dev/null 2>&1; then ifconfig | awk '/^[[:space:]]*inet / {print $2} /^[[:space:]]*inet6 / {print $2}'; elif command -v hostname >/dev/null 2>&1; then hostname -I; else printf 'KKTerm: no ip, ifconfig, or hostname address discovery available\\n' >&2; fi".to_string()
+}
+
+#[cfg(windows)]
+fn local_tcp_listener_command() -> ProcessCommand {
+    let mut command = ProcessCommand::new("powershell.exe");
+    command.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); Get-NetTCPConnection -State Listen -ErrorAction Stop | ForEach-Object { \"{0}`t{1}\" -f $_.LocalAddress, $_.LocalPort }",
+    ]);
+    command
+}
+
+#[cfg(not(windows))]
+fn local_tcp_listener_command() -> ProcessCommand {
+    let mut command = ProcessCommand::new("/bin/sh");
+    command.args([
+        "-lc",
+        r#"if command -v lsof >/dev/null 2>&1; then
+  lsof -nP -iTCP -sTCP:LISTEN -Fn | awk 'function emit(value) { port=value; sub(/^.*:/,"",port); address=value; sub(/:[^:]*$/,"",address); gsub(/^\[/,"",address); gsub(/\]$/,"",address); if (address=="*") address="0.0.0.0"; print address "\t" port } /^n/ { emit(substr($0,2)) }'
+elif command -v ss >/dev/null 2>&1; then
+  ss -H -ltn | awk 'function emit(value) { port=value; sub(/^.*:/,"",port); address=value; sub(/:[^:]*$/,"",address); gsub(/^\[/,"",address); gsub(/\]$/,"",address); if (address=="*") address="0.0.0.0"; print address "\t" port } { emit($4) }'
+else
+  exit 127
+fi"#,
+    ]);
+    command
+}
+
+fn parse_local_tcp_listeners(output: &str) -> Vec<LocalTcpListener> {
+    let mut listeners = std::collections::BTreeSet::new();
+    for line in output.lines() {
+        let Some((address, port)) = line.trim().split_once('\t') else {
+            continue;
+        };
+        let address = address.trim().trim_matches(['[', ']']);
+        let Ok(parsed_address) = address.parse::<IpAddr>() else {
+            continue;
+        };
+        let Ok(port) = port.trim().parse::<u16>() else {
+            continue;
+        };
+        if port > 0 {
+            listeners.insert(LocalTcpListener {
+                address: parsed_address.to_string(),
+                port,
+            });
+        }
+    }
+    listeners.into_iter().collect()
 }
 
 fn parse_remote_network_addresses(output: &str) -> Vec<String> {
@@ -3187,6 +3264,37 @@ python 124 user 22u IPv4 0x0 0t0 TCP TCP@localhost:8000 (LISTEN)
                 "fe80::1234".to_string(),
                 "::1".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn parses_local_tcp_listener_endpoints() {
+        let output = "127.0.0.1\t1420\n0.0.0.0\t3000\n::1\t8443\ninvalid\tvalue\n";
+
+        assert_eq!(
+            parse_local_tcp_listeners(output),
+            vec![
+                LocalTcpListener {
+                    address: "0.0.0.0".into(),
+                    port: 3000,
+                },
+                LocalTcpListener {
+                    address: "127.0.0.1".into(),
+                    port: 1420,
+                },
+                LocalTcpListener {
+                    address: "::1".into(),
+                    port: 8443,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn local_tcp_listener_parser_deduplicates() {
+        assert_eq!(
+            parse_local_tcp_listeners("127.0.0.1\t3000\n127.0.0.1\t3000\n").len(),
+            1
         );
     }
 

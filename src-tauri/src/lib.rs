@@ -2221,6 +2221,13 @@ async fn list_remote_network_addresses(
 }
 
 #[tauri::command]
+fn list_local_tcp_listeners(
+    sessions: tauri::State<'_, sessions::SessionManager>,
+) -> Result<Vec<sessions::LocalTcpListener>, String> {
+    sessions.list_local_tcp_listeners()
+}
+
+#[tauri::command]
 async fn start_ssh_port_forward(
     app: tauri::AppHandle,
     request: sessions::StartSshPortForwardRequest,
@@ -3500,6 +3507,7 @@ pub fn run() {
             detect_ssh_remote_os,
             list_remote_loopback_ports,
             list_remote_network_addresses,
+            list_local_tcp_listeners,
             start_ssh_port_forward,
             close_ssh_port_forward,
             is_app_elevated,

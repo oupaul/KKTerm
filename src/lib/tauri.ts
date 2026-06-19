@@ -1925,6 +1925,10 @@ type CommandMap = {
     };
     result: string[];
   };
+  list_local_tcp_listeners: {
+    args: undefined;
+    result: Array<{ address: string; port: number }>;
+  };
   start_ssh_port_forward: {
     args: {
       request: {
