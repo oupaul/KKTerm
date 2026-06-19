@@ -1096,7 +1096,7 @@
 
 .sa-row {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) 30px minmax(0, 1fr) 56px 24px;
+  grid-template-columns: 14px minmax(0, 1fr) 30px minmax(0, 1fr) 56px 38px 24px;
   gap: 8px;
   align-items: center;
   padding: 9px 2px 9px 4px;

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Actions, Btn, DIcon, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
+import { Actions, Btn, DIcon, Field, Sheet, Switch, TextInput } from "../../../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import type { Connection, SshPortForwardMode, SshPortForwarding } from "../../../../types";
 import { useWorkspaceStore } from "../../../../store";
@@ -402,6 +402,27 @@ export function SshPortForwardingDialog({
     }
   }
 
+  async function handleToggleForwarding(forwarding: SshPortForwarding, nextEnabled: boolean) {
+    const updatedForwarding = { ...forwarding, enabled: nextEnabled };
+    const next = forwardings.map((entry) => entry.id === forwarding.id ? updatedForwarding : entry);
+    setError("");
+    try {
+      await persist(next);
+      if (nextEnabled) {
+        await startForward(updatedForwarding);
+      } else if (isTauriRuntime()) {
+        setBusyId(forwarding.id);
+        try {
+          await invokeCommand("close_ssh_port_forward", { request: { forwardId: forwarding.id } });
+        } finally {
+          setBusyId(null);
+        }
+      }
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : String(toggleError));
+    }
+  }
+
   return (
     <div className="dialog-backdrop connection-dialog-backdrop sshf-backdrop" role="presentation">
       <Sheet
@@ -455,7 +476,13 @@ export function SshPortForwardingDialog({
                     <span className="sa-local">{forwarding.bind}:{forwarding.listenPort}</span>
                     <span className="sa-arr">-&gt;</span>
                     <span className="sa-remote">{forwardingEndpoint(forwarding)}</span>
-                    <span className="sa-time">{busyId === forwarding.id ? t("terminal.opening") : t("terminal.active")}</span>
+                    <span className="sa-time">{busyId === forwarding.id ? t("terminal.opening") : forwarding.enabled ? t("terminal.active") : t("terminal.disabled")}</span>
+                    <Switch
+                      ariaLabel={t("terminal.enableForwarding")}
+                      disabled={busyId === forwarding.id}
+                      on={forwarding.enabled}
+                      onChange={(nextEnabled) => void handleToggleForwarding(forwarding, nextEnabled)}
+                    />
                     <button className="sa-del danger" onClick={() => void handleRemove(forwarding.id)} title={t("common.delete")} type="button">
                       <DIcon name="close" size={13} />
                     </button>

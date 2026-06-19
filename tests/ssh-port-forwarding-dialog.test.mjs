@@ -79,3 +79,25 @@ test("SSH forwarding port options include common protocol names", async () => {
   assert.match(source, /optionLabel=\{formatPortOption\}/);
   assert.match(source, /`\$\{value\} \(\$\{protocol\}\)`/);
 });
+
+test("SSH forwarding rows persist an enabled switch before delete", async () => {
+  const source = await readFile(dialogUrl, "utf8");
+  const css = await readFile(cssUrl, "utf8");
+
+  assert.match(source, /Actions, Btn, DIcon, Field, Sheet, Switch, TextInput/);
+  assert.match(source, /enabled:\s*true,/);
+  assert.match(source, /async function handleToggleForwarding\(/);
+  assert.match(source, /enabled:\s*nextEnabled/);
+  assert.match(source, /await persist\(next\)/);
+  assert.match(source, /nextEnabled[\s\S]*?startForward\(updatedForwarding\)/);
+  assert.match(source, /close_ssh_port_forward/);
+  assert.match(
+    source,
+    /<Switch[\s\S]*?on=\{forwarding\.enabled\}[\s\S]*?<button className="sa-del danger"/,
+  );
+  assert.match(source, /forwarding\.enabled \? t\("terminal\.active"\) : t\("terminal\.disabled"\)/);
+  assert.match(
+    css,
+    /\.sa-row\s*\{[^}]*grid-template-columns:[^;]*38px 24px;/s,
+  );
+});

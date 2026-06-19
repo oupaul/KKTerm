@@ -2415,6 +2415,8 @@
     "noSshForwards": "No {{mode}} forwards running yet.",
     "opening": "opening",
     "active": "active",
+    "enableForwarding": "Enable forwarding",
+    "disabled": "disabled",
     "remoteListener": "Remote listener",
     "localListener": "Local listener",
     "onServer": "on the server",
