@@ -24,7 +24,7 @@ import { markOsIconAutoDetectDone, osIconIdForDetection, osIconRefForId, shouldA
 import { notifyConnectionTreeInvalidated } from "../connectionSidebarState";
 import { defaultTerminalSettings } from "../../../../app-defaults";
 import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
-import { createTerminalRenderer, type TerminalDimensions, type TerminalRenderer } from "./renderer";
+import { createTerminalRenderer, logTerminalFontAtlasState, scheduleTerminalFontAtlasRefresh, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../../layout";
 import {
   getPaneRenderer,
@@ -2166,7 +2166,7 @@ function TerminalPaneView({
 
   useEffect(() => {
     function refreshLoadedCustomFont() {
-      terminalRendererRef.current?.setFontFamily(terminalSettings.fontFamily);
+      scheduleTerminalFontAtlasRefresh("custom-fonts-loaded");
       fitAndResizeRef.current();
     }
 
@@ -2213,6 +2213,7 @@ function TerminalPaneView({
       }
 
       fitAndResizeRef.current();
+      logTerminalFontAtlasState("tab-activated");
       focusTerminalUnlessExternalInputIsActive(renderer, paneRef.current);
     });
 

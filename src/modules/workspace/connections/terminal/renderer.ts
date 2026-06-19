@@ -12,8 +12,9 @@ import {
   type ITerminalOptions,
 } from "@xterm/xterm";
 import { writeToClipboard } from "../../../../lib/clipboard";
-import { openExternalUrl } from "../../../../lib/tauri";
+import { logUiDebug, openExternalUrl } from "../../../../lib/tauri";
 import type { TerminalSettings } from "../../../../types";
+import { refreshTerminalFontAtlases, type TerminalFontAtlasRefreshTarget } from "./fontAtlasRefresh";
 
 export type TerminalRendererBackend = "xterm";
 
@@ -79,6 +80,10 @@ const XTERM_CAPABILITIES = [
 
 const MAX_OSC52_CLIPBOARD_BYTES = 1_000_000;
 const MAX_OSC52_BASE64_LENGTH = Math.ceil(MAX_OSC52_CLIPBOARD_BYTES / 3) * 4;
+const liveTerminalRenderers = new Set<XtermTerminalRenderer>();
+const pendingFontAtlasRefreshReasons = new Set<string>();
+let fontAtlasRefreshScheduled = false;
+let nextTerminalRendererId = 1;
 
 const SEARCH_OPTIONS: ISearchOptions = {
   decorations: {
@@ -95,9 +100,40 @@ export function createTerminalRenderer(settings: TerminalSettings, backgroundOpa
   return new XtermTerminalRenderer(settings, backgroundOpacity);
 }
 
-class XtermTerminalRenderer implements TerminalRenderer {
+export function scheduleTerminalFontAtlasRefresh(reason = "unspecified") {
+  pendingFontAtlasRefreshReasons.add(reason);
+  if (fontAtlasRefreshScheduled) {
+    return;
+  }
+
+  fontAtlasRefreshScheduled = true;
+  queueMicrotask(() => {
+    fontAtlasRefreshScheduled = false;
+    const reasons = [...pendingFontAtlasRefreshReasons];
+    pendingFontAtlasRefreshReasons.clear();
+    const renderers = [...liveTerminalRenderers];
+    logUiDebug("terminal.font_atlas_refresh", {
+      reasons,
+      rendererCount: renderers.length,
+      renderers: renderers.map((renderer) => renderer.fontAtlasDiagnostic()),
+    });
+    refreshTerminalFontAtlases(renderers);
+  });
+}
+
+export function logTerminalFontAtlasState(reason: string) {
+  const renderers = [...liveTerminalRenderers];
+  logUiDebug("terminal.font_atlas_state", {
+    reason,
+    rendererCount: renderers.length,
+    renderers: renderers.map((renderer) => renderer.fontAtlasDiagnostic()),
+  });
+}
+
+class XtermTerminalRenderer implements TerminalRenderer, TerminalFontAtlasRefreshTarget {
   readonly backend = "xterm";
   readonly capabilities = XTERM_CAPABILITIES;
+  private readonly rendererId = nextTerminalRendererId++;
   private readonly fitAddon = new FitAddon();
   private hostElement: HTMLElement | null = null;
   private readonly searchAddon = new SearchAddon({ highlightLimit: 500 });
@@ -141,6 +177,7 @@ class XtermTerminalRenderer implements TerminalRenderer {
   }
 
   dispose() {
+    liveTerminalRenderers.delete(this);
     this.hostElement = null;
     this.osc52Disposable?.dispose();
     this.osc7Disposable?.dispose();
@@ -238,6 +275,7 @@ class XtermTerminalRenderer implements TerminalRenderer {
     this.applyHostBackground(this.backgroundOpacity);
     this.terminal.open(element);
     this.tryEnableWebglRenderer();
+    liveTerminalRenderers.add(this);
     this.refreshAtlasWhenFontsReady();
   }
 
@@ -251,11 +289,8 @@ class XtermTerminalRenderer implements TerminalRenderer {
       return;
     }
     void document.fonts.ready.then(() => {
-      try {
-        this.terminal.clearTextureAtlas();
-      } catch {
-        // clearTextureAtlas may be unavailable or the terminal may already be
-        // disposed; the next render falls back to measuring fonts inline.
+      if (liveTerminalRenderers.has(this)) {
+        scheduleTerminalFontAtlasRefresh("document-fonts-ready");
       }
     });
   }
@@ -346,15 +381,44 @@ class XtermTerminalRenderer implements TerminalRenderer {
   }
 
   setFontFamily(family: string) {
+    if (this.terminal.options.fontFamily === family) {
+      return;
+    }
     this.terminal.options.fontFamily = family;
+    scheduleTerminalFontAtlasRefresh("font-family-change");
+  }
+
+  clearFontAtlas() {
     try {
       this.terminal.clearTextureAtlas();
+    } catch {
+      // The renderer may have fallen back from WebGL or been disposed.
+    }
+  }
+
+  redraw() {
+    try {
       if (this.terminal.rows > 0) {
         this.terminal.refresh(0, this.terminal.rows - 1);
       }
     } catch {
-      // The host may be detached while switching Tabs; activation will fit and redraw it.
+      // A hidden or detached host will redraw when it becomes active.
     }
+  }
+
+  fontAtlasDiagnostic() {
+    return {
+      rendererId: this.rendererId,
+      fontFamily: this.terminal.options.fontFamily,
+      fontSize: this.terminal.options.fontSize,
+      cols: this.terminal.cols,
+      rows: this.terminal.rows,
+      clientWidth: this.hostElement?.clientWidth ?? 0,
+      clientHeight: this.hostElement?.clientHeight ?? 0,
+      connected: this.hostElement?.isConnected ?? false,
+      visible: Boolean(this.hostElement?.clientWidth && this.hostElement?.clientHeight),
+      webgl: this.webglAddon !== null,
+    };
   }
 
   getFontSize() {

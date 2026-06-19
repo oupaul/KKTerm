@@ -11,11 +11,17 @@ test("mounted terminal renderers refresh family metrics after settings or custom
   assert.match(rendererSource, /setFontFamily: \(family: string\) => void;/);
   assert.match(
     rendererSource,
-    /setFontFamily\(family: string\)[\s\S]*terminal\.options\.fontFamily = family;[\s\S]*clearTextureAtlas\(\)/,
+    /setFontFamily\(family: string\)[\s\S]*terminal\.options\.fontFamily = family;[\s\S]*scheduleTerminalFontAtlasRefresh\("font-family-change"\)/,
+  );
+  assert.doesNotMatch(
+    rendererSource.match(/setFontFamily\(family: string\)[\s\S]*?\n  \}/)?.[0] ?? "",
+    /clearTextureAtlas\(\)/,
   );
   assert.match(
     workspaceSource,
     /terminalRendererRef\.current\?\.setFontFamily\(terminalSettings\.fontFamily\);[\s\S]*fitAndResizeRef\.current\(\);[\s\S]*\[terminalSettings\.fontFamily\]/,
   );
   assert.match(workspaceSource, /CUSTOM_FONTS_LOADED_EVENT/);
+  assert.match(workspaceSource, /scheduleTerminalFontAtlasRefresh\("custom-fonts-loaded"\)/);
+  assert.match(workspaceSource, /logTerminalFontAtlasState\("tab-activated"\)/);
 });
