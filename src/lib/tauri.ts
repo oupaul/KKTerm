@@ -36,6 +36,10 @@ import type {
   FileBrowserViewOptions,
   FtpConnectionOptions,
   GeneralSettings,
+  HostGroup,
+  HostGroupFilter,
+  ItopsTransport,
+  ResolvedHost,
   HostUsageSnapshot,
   ImportedDatabaseSnapshot,
   SelectiveExportInfo,
@@ -1032,6 +1036,41 @@ type CommandMap = {
   list_connection_tree: {
     args: { workspaceId?: string } | undefined;
     result: ConnectionTree;
+  };
+  itops_list_host_groups: {
+    args: undefined;
+    result: HostGroup[];
+  };
+  itops_create_host_group: {
+    args: {
+      name: string;
+      memberIds: string[];
+      filter: HostGroupFilter | null;
+      transport: ItopsTransport;
+    };
+    result: HostGroup;
+  };
+  itops_update_host_group: {
+    args: {
+      id: string;
+      name: string;
+      memberIds: string[];
+      filter: HostGroupFilter | null;
+      transport: ItopsTransport;
+    };
+    result: HostGroup;
+  };
+  itops_remove_host_group: {
+    args: { id: string };
+    result: void;
+  };
+  itops_reorder_host_groups: {
+    args: { orderedIds: string[] };
+    result: void;
+  };
+  itops_resolve_host_group: {
+    args: { id: string };
+    result: ResolvedHost[];
   };
   list_workspaces: {
     args: undefined;

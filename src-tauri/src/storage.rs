@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 28;
+const SCHEMA_USER_VERSION: i32 = 29;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -268,6 +268,25 @@ CREATE TABLE IF NOT EXISTS installer_tool_state (
     pinned INTEGER NOT NULL DEFAULT 0,
     latest_version_seen TEXT,
     last_check_at INTEGER
+);
+
+-- IT Ops Module (docs/ITOPS.md). A Host Group is a durable, named selection of
+-- existing Connections used as a fleet target for Batch Runs and Automations.
+-- It references Connection ids and owns no Session and no secret. Additive in
+-- schema v29.
+CREATE TABLE IF NOT EXISTS itops_host_groups (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    sort_order      INTEGER NOT NULL,
+    -- Ordered Connection ids: JSON array of strings, e.g. ["conn-1","conn-2"].
+    member_ids_json TEXT NOT NULL DEFAULT '[]',
+    -- Optional dynamic filter resolved at run time: {"types":["ssh"],"folderId":"..."}.
+    filter_json     TEXT,
+    -- Per-host-group transport default.
+    transport       TEXT NOT NULL DEFAULT 'auto'
+        CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
+    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 "#;
 

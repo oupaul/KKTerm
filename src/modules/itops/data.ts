@@ -1,35 +1,16 @@
-// Placeholder fleet/run/automation fixtures for the IT Ops Module, ported from
-// the redesign mockup (itops-data.jsx).
+// Placeholder run/automation fixtures for the IT Ops Module, ported from the
+// redesign mockup (itops-data.jsx).
 //
-// Phase 0 ships the module's full frontend with NO backend: these fixtures stand
-// in for the durable Host Groups, the live Batch Run grid, and the Automations
-// list until Phase 1+ wires the real Tauri commands (see docs/ITOPS.md). The
-// values here are sample *content* (host names, addresses, commands) — the kind
-// of user/runtime data a backend will later supply — not translatable UI chrome.
+// Phase 1 wired durable Host Groups to the backend, so those fixtures are gone.
+// The Batch Run grid and the Automations list still render against these
+// fixtures until Phases 2–3 wire their commands (see docs/ITOPS.md). The values
+// here are sample *content* (host names, addresses, commands) — the kind of
+// user/runtime data a backend will later supply — not translatable UI chrome.
 
 import { IT_ACCENTS, type ItIconName } from "./icons";
 
 export type Transport = "ssh" | "winrm" | "psexec" | "auto";
 export type RunStatus = "ok" | "failed" | "running" | "pending";
-
-export type HostGroup = {
-  id: string;
-  name: string;
-  icon: ItIconName;
-  color: string;
-  count: number;
-  transport: Transport;
-  filter: { types: string[]; folder: string } | null;
-  sub: string;
-};
-
-export type GroupMember = {
-  id: string;
-  name: string;
-  host: string;
-  os: string;
-  transport: Transport;
-};
 
 export type RunSnapshot = {
   status: RunStatus;
@@ -68,27 +49,6 @@ export type BuilderActionKind = "bell" | "mail" | "run" | "bot" | "popup" | "web
 
 export const seg = (cls: string, txt: string): OutputSegment => ({ cls, txt });
 export const CURSOR = { cursor: true } as const;
-
-/* ----------------------------- host groups ----------------------------- */
-export const HOST_GROUPS: HostGroup[] = [
-  { id: "g-web", name: "Production Web", icon: "globe", color: IT_ACCENTS.green, count: 8, transport: "ssh", filter: null, sub: "deploy fleet · us-east" },
-  { id: "g-db", name: "Database Cluster", icon: "database", color: IT_ACCENTS.indigo, count: 4, transport: "ssh", filter: null, sub: "postgres 16 primaries + replicas" },
-  { id: "g-win", name: "Windows Build Agents", icon: "windows", color: IT_ACCENTS.blue, count: 6, transport: "winrm", filter: null, sub: "CI runners · WS-Man" },
-  { id: "g-edge", name: "Edge / CDN", icon: "server", color: IT_ACCENTS.teal, count: 5, transport: "auto", filter: null, sub: "varnish + nginx" },
-  { id: "g-lin", name: "All Linux", icon: "ssh", color: IT_ACCENTS.orange, count: 23, transport: "ssh", filter: { types: ["ssh"], folder: "Production" }, sub: "dynamic · resolves at run time" },
-];
-
-/* members shown in the Host Group detail (for "Production Web") */
-export const GROUP_MEMBERS: GroupMember[] = [
-  { id: "c1", name: "web-01", host: "deploy@10.0.4.11", os: "Ubuntu 22.04", transport: "ssh" },
-  { id: "c2", name: "web-02", host: "deploy@10.0.4.12", os: "Ubuntu 22.04", transport: "ssh" },
-  { id: "c3", name: "web-03", host: "deploy@10.0.4.13", os: "Ubuntu 22.04", transport: "ssh" },
-  { id: "c4", name: "web-04", host: "deploy@10.0.4.14", os: "Ubuntu 22.04", transport: "ssh" },
-  { id: "c5", name: "lb-01", host: "root@10.0.4.20", os: "Debian 12", transport: "ssh" },
-  { id: "c6", name: "lb-02", host: "root@10.0.4.21", os: "Debian 12", transport: "ssh" },
-  { id: "c7", name: "win-build-01", host: "Administrator@10.0.6.5", os: "Windows Server 2022", transport: "winrm" },
-  { id: "c8", name: "edge-cache", host: "ops@10.0.4.9", os: "Alpine 3.19", transport: "ssh" },
-];
 
 /* ----------------------------- batch run ----------------------------- */
 export const RUN_HEADER = {

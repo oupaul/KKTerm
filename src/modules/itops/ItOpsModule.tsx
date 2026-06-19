@@ -3,13 +3,14 @@
 // (itops-app.jsx). Phase 0 renders the full design against placeholder
 // fixtures; later phases swap the tab bodies onto real backend data.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ItIcon, type ItIconName } from "./icons";
 import { HostGroupsTab } from "./HostGroupsTab";
 import { BatchRunsTab } from "./BatchRunsTab";
 import { AutomationsTab } from "./AutomationsTab";
-import { AUTOMATIONS, HOST_GROUPS, RUN_HOSTS } from "./data";
+import { useItOpsStore } from "./state";
+import { AUTOMATIONS, RUN_HOSTS } from "./data";
 
 type TabId = "groups" | "runs" | "autos";
 
@@ -28,11 +29,25 @@ const PRIMARY: Record<TabId, { labelKey: string; icon: ItIconName; size: number 
 export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("groups");
+  const hostGroupCount = useItOpsStore((state) => state.hostGroups.length);
+  const loadHostGroups = useItOpsStore((state) => state.loadHostGroups);
+  const requestNewHostGroup = useItOpsStore((state) => state.requestNewHostGroup);
+
+  useEffect(() => {
+    void loadHostGroups();
+  }, [loadHostGroups]);
 
   const prim = PRIMARY[tab];
   const runningCount = RUN_HOSTS.filter(
     (r) => r.live.status === "running" || r.live.status === "pending",
   ).length;
+
+  function handlePrimary() {
+    if (tab === "groups") {
+      requestNewHostGroup();
+    }
+    // Batch Run / Automation creation arrive with Phases 2–3.
+  }
 
   return (
     <div className="it">
@@ -55,7 +70,7 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
         >
           <ItIcon name="bot" size={17} />
         </button>
-        <button type="button" className="it-btn primary">
+        <button type="button" className="it-btn primary" onClick={handlePrimary}>
           <span className="it-btn-ic">
             <ItIcon name={prim.icon} size={prim.size} />
           </span>
@@ -69,7 +84,7 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
           const active = tabDef.id === tab;
           const badge =
             tabDef.id === "groups"
-              ? HOST_GROUPS.length
+              ? hostGroupCount
               : tabDef.id === "autos"
                 ? AUTOMATIONS.length
                 : null;
@@ -95,7 +110,7 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
 
       {/* content */}
       <div className="it-content">
-        {tab === "groups" ? <HostGroupsTab empty={false} /> : null}
+        {tab === "groups" ? <HostGroupsTab /> : null}
         {tab === "runs" ? <BatchRunsTab empty={false} /> : null}
         {tab === "autos" ? <AutomationsTab empty={false} /> : null}
       </div>

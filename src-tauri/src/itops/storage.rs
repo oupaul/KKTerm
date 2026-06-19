@@ -1,0 +1,434 @@
+// IT Ops durable storage (docs/ITOPS.md). Phase 1: the `itops_host_groups`
+// repository plus the run-time resolver that turns a Host Group into a concrete
+// ordered list of fleet targets. Mirrors the dashboard_storage.rs conventions
+// (free functions over `&SqliteConnection`, JSON `TEXT` columns, `sort_order`).
+
+use std::collections::HashSet;
+
+use rusqlite::{Connection as SqliteConnection, OptionalExtension, params, params_from_iter};
+
+use super::types::{HostGroup, HostGroupFilter, ResolvedHost, Transport};
+
+#[derive(Debug)]
+pub enum ItopsStorageError {
+    Validation(String),
+    NotFound,
+    Sqlite(rusqlite::Error),
+}
+
+impl std::fmt::Display for ItopsStorageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Validation(reason) => write!(f, "{reason}"),
+            Self::NotFound => write!(f, "host group not found"),
+            Self::Sqlite(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl From<rusqlite::Error> for ItopsStorageError {
+    fn from(value: rusqlite::Error) -> Self {
+        Self::Sqlite(value)
+    }
+}
+
+type Result<T> = std::result::Result<T, ItopsStorageError>;
+
+fn validate_name(name: &str) -> Result<String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err(ItopsStorageError::Validation(
+            "host group name must not be empty".to_string(),
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn member_ids_to_json(member_ids: &[String]) -> Result<String> {
+    serde_json::to_string(member_ids).map_err(|error| ItopsStorageError::Validation(error.to_string()))
+}
+
+fn parse_member_ids(raw: &str) -> Vec<String> {
+    serde_json::from_str::<Vec<String>>(raw).unwrap_or_default()
+}
+
+/// Serialize a filter to JSON, collapsing an empty filter to NULL so a Host
+/// Group never claims dynamic membership it does not have.
+fn filter_to_json(filter: &Option<HostGroupFilter>) -> Result<Option<String>> {
+    match filter {
+        Some(filter) if !filter.is_empty() => Ok(Some(
+            serde_json::to_string(filter)
+                .map_err(|error| ItopsStorageError::Validation(error.to_string()))?,
+        )),
+        _ => Ok(None),
+    }
+}
+
+fn parse_filter(raw: Option<String>) -> Option<HostGroupFilter> {
+    let raw = raw?;
+    serde_json::from_str::<HostGroupFilter>(&raw)
+        .ok()
+        .filter(|filter| !filter.is_empty())
+}
+
+fn row_to_group(row: &rusqlite::Row<'_>) -> rusqlite::Result<HostGroup> {
+    let member_ids: String = row.get(3)?;
+    let filter_json: Option<String> = row.get(4)?;
+    let transport: String = row.get(5)?;
+    Ok(HostGroup {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        sort_order: row.get(2)?,
+        member_ids: parse_member_ids(&member_ids),
+        filter: parse_filter(filter_json),
+        transport: Transport::from_db_str(&transport).unwrap_or(Transport::Auto),
+    })
+}
+
+const SELECT_GROUP_COLUMNS: &str =
+    "id, name, sort_order, member_ids_json, filter_json, transport FROM itops_host_groups";
+
+pub fn list_host_groups(conn: &SqliteConnection) -> Result<Vec<HostGroup>> {
+    let mut stmt = conn.prepare(&format!("SELECT {SELECT_GROUP_COLUMNS} ORDER BY sort_order"))?;
+    let groups = stmt
+        .query_map([], row_to_group)?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(groups)
+}
+
+pub fn create_host_group(
+    conn: &SqliteConnection,
+    id: &str,
+    name: &str,
+    member_ids: Vec<String>,
+    filter: Option<HostGroupFilter>,
+    transport: Transport,
+) -> Result<HostGroup> {
+    let name = validate_name(name)?;
+    let next_sort: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM itops_host_groups",
+        [],
+        |row| row.get(0),
+    )?;
+    let member_json = member_ids_to_json(&member_ids)?;
+    let filter_json = filter_to_json(&filter)?;
+    conn.execute(
+        "INSERT INTO itops_host_groups (id, name, sort_order, member_ids_json, filter_json, transport)
+         VALUES (?, ?, ?, ?, ?, ?)",
+        params![id, name, next_sort, member_json, filter_json, transport.as_db_str()],
+    )?;
+    Ok(HostGroup {
+        id: id.to_string(),
+        name,
+        sort_order: next_sort,
+        member_ids,
+        filter: filter.filter(|filter| !filter.is_empty()),
+        transport,
+    })
+}
+
+pub fn update_host_group(
+    conn: &SqliteConnection,
+    id: &str,
+    name: &str,
+    member_ids: Vec<String>,
+    filter: Option<HostGroupFilter>,
+    transport: Transport,
+) -> Result<HostGroup> {
+    let name = validate_name(name)?;
+    let sort_order: i64 = conn
+        .query_row(
+            "SELECT sort_order FROM itops_host_groups WHERE id = ?",
+            params![id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .ok_or(ItopsStorageError::NotFound)?;
+    let member_json = member_ids_to_json(&member_ids)?;
+    let filter_json = filter_to_json(&filter)?;
+    conn.execute(
+        "UPDATE itops_host_groups
+         SET name = ?, member_ids_json = ?, filter_json = ?, transport = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?",
+        params![name, member_json, filter_json, transport.as_db_str(), id],
+    )?;
+    Ok(HostGroup {
+        id: id.to_string(),
+        name,
+        sort_order,
+        member_ids,
+        filter: filter.filter(|filter| !filter.is_empty()),
+        transport,
+    })
+}
+
+pub fn remove_host_group(conn: &SqliteConnection, id: &str) -> Result<()> {
+    let affected = conn.execute("DELETE FROM itops_host_groups WHERE id = ?", params![id])?;
+    if affected == 0 {
+        return Err(ItopsStorageError::NotFound);
+    }
+    Ok(())
+}
+
+pub fn reorder_host_groups(conn: &SqliteConnection, ordered_ids: &[String]) -> Result<()> {
+    for (index, id) in ordered_ids.iter().enumerate() {
+        conn.execute(
+            "UPDATE itops_host_groups SET sort_order = ? WHERE id = ?",
+            params![index as i64, id],
+        )?;
+    }
+    Ok(())
+}
+
+fn fetch_resolved_host(
+    conn: &SqliteConnection,
+    connection_id: &str,
+    transport: Transport,
+) -> Result<Option<ResolvedHost>> {
+    conn.query_row(
+        "SELECT id, name, host, username, port, connection_type FROM connections WHERE id = ?",
+        params![connection_id],
+        |row| {
+            Ok(ResolvedHost {
+                connection_id: row.get(0)?,
+                name: row.get(1)?,
+                host: row.get(2)?,
+                username: row.get(3)?,
+                port: row.get(4)?,
+                connection_type: row.get(5)?,
+                transport,
+            })
+        },
+    )
+    .optional()
+    .map_err(Into::into)
+}
+
+fn fetch_filtered_hosts(
+    conn: &SqliteConnection,
+    filter: &HostGroupFilter,
+    transport: Transport,
+) -> Result<Vec<ResolvedHost>> {
+    let mut sql =
+        String::from("SELECT id, name, host, username, port, connection_type FROM connections WHERE 1 = 1");
+    let mut bind: Vec<String> = Vec::new();
+    if !filter.types.is_empty() {
+        let placeholders = vec!["?"; filter.types.len()].join(", ");
+        sql.push_str(&format!(" AND connection_type IN ({placeholders})"));
+        bind.extend(filter.types.iter().cloned());
+    }
+    if let Some(folder_id) = &filter.folder_id {
+        sql.push_str(" AND folder_id = ?");
+        bind.push(folder_id.clone());
+    }
+    sql.push_str(" ORDER BY sort_order");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt
+        .query_map(params_from_iter(bind.iter()), |row| {
+            Ok(ResolvedHost {
+                connection_id: row.get(0)?,
+                name: row.get(1)?,
+                host: row.get(2)?,
+                username: row.get(3)?,
+                port: row.get(4)?,
+                connection_type: row.get(5)?,
+                transport,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(rows)
+}
+
+/// Resolve a Host Group into a concrete ordered list of fleet targets at call
+/// time: explicit members first (in stored order, skipping any since-deleted
+/// Connections), then dynamic-filter matches not already included. Deduplicated
+/// by Connection id so a member that also matches the filter appears once.
+pub fn resolve_host_group(conn: &SqliteConnection, group: &HostGroup) -> Result<Vec<ResolvedHost>> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut resolved: Vec<ResolvedHost> = Vec::new();
+
+    for member_id in &group.member_ids {
+        if let Some(host) = fetch_resolved_host(conn, member_id, group.transport)? {
+            if seen.insert(host.connection_id.clone()) {
+                resolved.push(host);
+            }
+        }
+    }
+
+    if let Some(filter) = &group.filter {
+        if !filter.is_empty() {
+            for host in fetch_filtered_hosts(conn, filter, group.transport)? {
+                if seen.insert(host.connection_id.clone()) {
+                    resolved.push(host);
+                }
+            }
+        }
+    }
+
+    Ok(resolved)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn open_test_db() -> SqliteConnection {
+        let conn = SqliteConnection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE itops_host_groups (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                sort_order INTEGER NOT NULL,
+                member_ids_json TEXT NOT NULL DEFAULT '[]',
+                filter_json TEXT,
+                transport TEXT NOT NULL DEFAULT 'auto'
+                    CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE connections (
+                id TEXT PRIMARY KEY,
+                folder_id TEXT,
+                name TEXT NOT NULL,
+                host TEXT NOT NULL,
+                username TEXT NOT NULL,
+                port INTEGER,
+                connection_type TEXT NOT NULL,
+                sort_order INTEGER NOT NULL
+            );
+            "#,
+        )
+        .unwrap();
+        conn
+    }
+
+    fn insert_connection(
+        conn: &SqliteConnection,
+        id: &str,
+        kind: &str,
+        folder_id: Option<&str>,
+        sort_order: i64,
+    ) {
+        conn.execute(
+            "INSERT INTO connections (id, folder_id, name, host, username, port, connection_type, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            params![id, folder_id, id, format!("{id}.example"), "deploy", 22, kind, sort_order],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn create_list_update_remove_roundtrip() {
+        let conn = open_test_db();
+        let created = create_host_group(
+            &conn,
+            "hg-1",
+            "  Production Web  ",
+            vec!["c1".into(), "c2".into()],
+            None,
+            Transport::Ssh,
+        )
+        .unwrap();
+        assert_eq!(created.name, "Production Web"); // trimmed
+        assert_eq!(created.sort_order, 0);
+        assert_eq!(created.transport, Transport::Ssh);
+        assert!(created.filter.is_none());
+
+        let listed = list_host_groups(&conn).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].member_ids, vec!["c1", "c2"]);
+
+        let updated = update_host_group(
+            &conn,
+            "hg-1",
+            "Web",
+            vec!["c2".into()],
+            Some(HostGroupFilter {
+                types: vec!["ssh".into()],
+                folder_id: Some("f1".into()),
+            }),
+            Transport::Auto,
+        )
+        .unwrap();
+        assert_eq!(updated.name, "Web");
+        assert_eq!(updated.sort_order, 0); // preserved
+        assert!(updated.filter.is_some());
+
+        remove_host_group(&conn, "hg-1").unwrap();
+        assert!(list_host_groups(&conn).unwrap().is_empty());
+        assert!(matches!(
+            remove_host_group(&conn, "hg-1"),
+            Err(ItopsStorageError::NotFound)
+        ));
+    }
+
+    #[test]
+    fn empty_name_is_rejected() {
+        let conn = open_test_db();
+        assert!(matches!(
+            create_host_group(&conn, "hg-x", "   ", vec![], None, Transport::Auto),
+            Err(ItopsStorageError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn empty_filter_is_stored_as_none() {
+        let conn = open_test_db();
+        let group = create_host_group(
+            &conn,
+            "hg-2",
+            "Group",
+            vec![],
+            Some(HostGroupFilter::default()),
+            Transport::Auto,
+        )
+        .unwrap();
+        assert!(group.filter.is_none());
+        assert!(list_host_groups(&conn).unwrap()[0].filter.is_none());
+    }
+
+    #[test]
+    fn resolve_orders_members_then_filter_and_dedupes() {
+        let conn = open_test_db();
+        insert_connection(&conn, "c1", "ssh", Some("prod"), 0);
+        insert_connection(&conn, "c2", "ssh", Some("prod"), 1);
+        insert_connection(&conn, "c3", "rdp", Some("prod"), 2);
+        insert_connection(&conn, "gone", "ssh", None, 3);
+
+        let group = create_host_group(
+            &conn,
+            "hg-3",
+            "Mixed",
+            // explicit members: c2 first, then a deleted-style id, then c1 also in filter
+            vec!["c2".into(), "missing".into()],
+            Some(HostGroupFilter {
+                types: vec!["ssh".into()],
+                folder_id: Some("prod".into()),
+            }),
+            Transport::Ssh,
+        )
+        .unwrap();
+
+        let resolved = resolve_host_group(&conn, &group).unwrap();
+        let ids: Vec<&str> = resolved.iter().map(|h| h.connection_id.as_str()).collect();
+        // c2 explicit first; "missing" skipped; then filter adds c1 (ssh+prod);
+        // c3 excluded (rdp); "gone" excluded (folder None); c2 not duplicated.
+        assert_eq!(ids, vec!["c2", "c1"]);
+        assert!(resolved.iter().all(|h| h.transport == Transport::Ssh));
+    }
+
+    #[test]
+    fn reorder_rewrites_sort_order() {
+        let conn = open_test_db();
+        create_host_group(&conn, "a", "A", vec![], None, Transport::Auto).unwrap();
+        create_host_group(&conn, "b", "B", vec![], None, Transport::Auto).unwrap();
+        reorder_host_groups(&conn, &["b".to_string(), "a".to_string()]).unwrap();
+        let order: Vec<String> = list_host_groups(&conn)
+            .unwrap()
+            .into_iter()
+            .map(|g| g.id)
+            .collect();
+        assert_eq!(order, vec!["b", "a"]);
+    }
+}

@@ -18,6 +18,7 @@ mod ftp;
 mod github_copilot;
 mod import;
 mod installer;
+mod itops;
 mod logging;
 mod manual;
 mod mcp;
@@ -3596,6 +3597,13 @@ pub fn run() {
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,
             dashboard_load_background_image,
+            // ── IT Ops
+            itops::commands::itops_list_host_groups,
+            itops::commands::itops_create_host_group,
+            itops::commands::itops_update_host_group,
+            itops::commands::itops_remove_host_group,
+            itops::commands::itops_reorder_host_groups,
+            itops::commands::itops_resolve_host_group,
             // ── Install Helper
             installer::commands::installer_load_catalog,
             installer::commands::installer_load_detection_cache,

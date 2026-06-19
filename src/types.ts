@@ -123,6 +123,35 @@ export interface ConnectionTree {
   folders: ConnectionFolder[];
 }
 
+// IT Ops Module (docs/ITOPS.md). A Host Group is a durable, named selection of
+// existing Connections used as a fleet target; ResolvedHost is one concrete
+// target produced by resolving a group at run time.
+export type ItopsTransport = "ssh" | "winrm" | "psexec" | "auto";
+
+export interface HostGroupFilter {
+  types: string[];
+  folderId?: string | null;
+}
+
+export interface HostGroup {
+  id: string;
+  name: string;
+  sortOrder: number;
+  memberIds: string[];
+  filter?: HostGroupFilter | null;
+  transport: ItopsTransport;
+}
+
+export interface ResolvedHost {
+  connectionId: string;
+  name: string;
+  host: string;
+  username: string;
+  port?: number | null;
+  connectionType: string;
+  transport: ItopsTransport;
+}
+
 export interface CreateConnectionRequest {
   name: string;
   host?: string;

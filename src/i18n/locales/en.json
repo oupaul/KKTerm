@@ -922,7 +922,10 @@
       "addConnections": "Add connections…",
       "rename": "Rename",
       "removeFromGroup": "Remove from group",
-      "more": "More"
+      "more": "More",
+      "create": "Create",
+      "delete": "Delete",
+      "edit": "Edit"
     },
     "transport": {
       "auto": "Auto"
@@ -942,7 +945,18 @@
       "filterTypeKey": "type",
       "filterFolderKey": "folder",
       "membersLabel": "Members",
-      "membersCount": "· {{count}} connections"
+      "membersCount": "· {{count}} connections",
+      "editTitle": "Edit Host Group",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Production Web",
+      "connectionsLabel": "Connections",
+      "noConnections": "No Connections in this Workspace yet.",
+      "selectedCount": "{{count}} selected",
+      "noMembers": "No Connections match this Host Group yet.",
+      "savedNotice": "Saved Host Group “{{name}}”.",
+      "deletedNotice": "Deleted Host Group “{{name}}”.",
+      "deleteTitle": "Delete Host Group?",
+      "deleteBody": "“{{name}}” will be removed. Its Connections are not affected."
     },
     "batchRuns": {
       "emptyTitle": "No Batch Runs yet",
@@ -981,7 +995,8 @@
         "sampledValue": "Sampled value",
         "evaluatedBy": "evaluated by the pure predicate"
       }
-    }
+    },
+    "errorNotice": "IT Ops: {{message}}"
   },
   "settings": {
     "title": "Settings",
