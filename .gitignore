@@ -3,6 +3,7 @@
 /.codex
 /.superpowers
 /docs/superpowers
+/.worktrees
 /skills-lock.json
 
 # Logs
