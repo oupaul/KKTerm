@@ -47,3 +47,35 @@ test("SSH forwarding inputs use the themed surface color", async () => {
     /\.sshf-pair \.kk-inp\s*\{[^}]*background:\s*var\(--surface\);[^}]*\}/,
   );
 });
+
+test("SSH forwarding dropdowns portal below the input outside dialog clipping", async () => {
+  const source = await readFile(dialogUrl, "utf8");
+  const css = await readFile(cssUrl, "utf8");
+
+  assert.match(source, /import \{ createPortal \} from "react-dom"/);
+  assert.match(source, /createPortal\([\s\S]*?document\.body/);
+  assert.match(source, /anchorBounds\.bottom \+ gap/);
+  assert.match(source, /window\.addEventListener\("scroll", positionMenu, true\)/);
+  assert.match(
+    css,
+    /\.sshf-editable-dropdown-menu\s*\{[^}]*position:\s*fixed;[^}]*top:\s*0;[^}]*left:\s*0;[^}]*width:\s*300px;[^}]*max-height:\s*min\(240px, 40vh\);[^}]*overflow-y:\s*auto;/s,
+  );
+  assert.doesNotMatch(css, /bottom:\s*calc\(100% \+ 5px\)/);
+  assert.match(
+    css,
+    /\.sshf-editable-dropdown-menu button\s*\{[^}]*overflow-wrap:\s*anywhere;[^}]*white-space:\s*normal;/s,
+  );
+  assert.doesNotMatch(
+    css,
+    /\.sshf-editable-dropdown-menu button\s*\{[^}]*text-overflow:\s*ellipsis;/s,
+  );
+});
+
+test("SSH forwarding port options include common protocol names", async () => {
+  const source = await readFile(dialogUrl, "utf8");
+
+  assert.match(source, /80:\s*"HTTP"/);
+  assert.match(source, /443:\s*"HTTPS"/);
+  assert.match(source, /optionLabel=\{formatPortOption\}/);
+  assert.match(source, /`\$\{value\} \(\$\{protocol\}\)`/);
+});

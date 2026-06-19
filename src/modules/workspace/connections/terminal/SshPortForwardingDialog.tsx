@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DIcon, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
@@ -31,6 +32,46 @@ const DEFAULT_DRAFT: ForwardingDraft = {
   D: { bind: "127.0.0.1", listenPort: "1080", destHost: "", destPort: "" },
 };
 
+const COMMON_PORT_NAMES: Record<number, string> = {
+  20: "FTP data",
+  21: "FTP",
+  22: "SSH",
+  23: "Telnet",
+  25: "SMTP",
+  53: "DNS",
+  67: "DHCP server",
+  68: "DHCP client",
+  80: "HTTP",
+  110: "POP3",
+  123: "NTP",
+  143: "IMAP",
+  161: "SNMP",
+  389: "LDAP",
+  443: "HTTPS",
+  445: "SMB",
+  465: "SMTPS",
+  587: "SMTP submission",
+  636: "LDAPS",
+  993: "IMAPS",
+  995: "POP3S",
+  1080: "SOCKS",
+  1433: "Microsoft SQL Server",
+  1521: "Oracle Database",
+  2049: "NFS",
+  2375: "Docker",
+  2376: "Docker TLS",
+  3000: "Development HTTP",
+  3306: "MySQL",
+  3389: "RDP",
+  5432: "PostgreSQL",
+  5900: "VNC",
+  6379: "Redis",
+  8000: "HTTP alternate",
+  8080: "HTTP alternate",
+  8443: "HTTPS alternate",
+  9000: "Application server",
+};
+
 function numeric(value: string) {
   return value.replace(/\D/g, "").slice(0, 5);
 }
@@ -44,32 +85,76 @@ function isLoopbackHost(value: string) {
   return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
 }
 
+function formatPortOption(value: string) {
+  const protocol = COMMON_PORT_NAMES[Number(value)];
+  return protocol ? `${value} (${protocol})` : value;
+}
+
 function EditableDropdownInput({
   value,
   options,
   onChange,
   ariaLabel,
   inputMode,
+  optionLabel,
 }: {
   value: string;
   options: string[];
   onChange: (value: string) => void;
   ariaLabel: string;
   inputMode?: "text" | "numeric";
+  optionLabel?: (value: string) => string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setOpen(false);
       }
     }
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    function positionMenu() {
+      const anchor = rootRef.current;
+      const menu = menuRef.current;
+      if (!anchor || !menu) return;
+
+      const anchorBounds = anchor.getBoundingClientRect();
+      const viewportPadding = 8;
+      const gap = 5;
+      const width = Math.min(
+        Math.max(anchorBounds.width, 300),
+        window.innerWidth - viewportPadding * 2,
+      );
+      const maxLeft = window.innerWidth - width - viewportPadding;
+      const left = Math.max(viewportPadding, Math.min(anchorBounds.right - width, maxLeft));
+      const top = anchorBounds.bottom + gap;
+      const maxHeight = Math.max(40, Math.min(240, window.innerHeight - top - viewportPadding));
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+      menu.style.width = `${width}px`;
+      menu.style.maxHeight = `${maxHeight}px`;
+    }
+
+    positionMenu();
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+    return () => {
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
+    };
+  }, [open, options.length]);
 
   function selectOption(option: string) {
     onChange(option);
@@ -105,8 +190,8 @@ function EditableDropdownInput({
       >
         <DIcon name="updown" size={12} />
       </button>
-      {open ? (
-        <div className="sshf-editable-dropdown-menu" role="listbox">
+      {open ? createPortal(
+        <div className="sshf-editable-dropdown-menu" ref={menuRef} role="listbox">
           {options.map((option) => (
             <button
               aria-selected={option === value}
@@ -116,10 +201,11 @@ function EditableDropdownInput({
               role="option"
               type="button"
             >
-              {option}
+              {optionLabel?.(option) ?? option}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );
@@ -384,7 +470,7 @@ export function SshPortForwardingDialog({
               <div className="pair-h"><span className="pdot listen" />{mode === "R" ? t("terminal.forwardTo") : t("terminal.localListener")}<small>{t("terminal.onThisPc")}</small></div>
               <div className="sshf-row3">
                 <Field label={t("terminal.bindAddress")}><EditableDropdownInput ariaLabel={t("terminal.bindAddress")} options={bindAddressOptions} value={current.bind} onChange={(value) => updateDraft({ bind: value })} /></Field>
-                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><EditableDropdownInput ariaLabel={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")} inputMode="numeric" options={listenPortOptions} value={current.listenPort} onChange={(value) => updateDraft({ listenPort: numeric(value) })} /></Field>
+                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><EditableDropdownInput ariaLabel={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")} inputMode="numeric" optionLabel={formatPortOption} options={listenPortOptions} value={current.listenPort} onChange={(value) => updateDraft({ listenPort: numeric(value) })} /></Field>
               </div>
             </div>
             {mode !== "D" ? (
@@ -392,7 +478,7 @@ export function SshPortForwardingDialog({
                 <div className="pair-h"><span className="pdot dest" />{mode === "R" ? t("terminal.remoteListener") : t("terminal.destination")}<small>{mode === "R" ? t("terminal.onServer") : t("terminal.reachableFromServer")}</small></div>
                 <div className="sshf-row3">
                   <Field label={t("terminal.host")}><EditableDropdownInput ariaLabel={t("terminal.host")} options={destinationHostOptions} value={current.destHost} onChange={(value) => updateDraft({ destHost: value })} /></Field>
-                  <Field label={t("terminal.port")}><EditableDropdownInput ariaLabel={t("terminal.port")} inputMode="numeric" options={destinationPortOptions} value={current.destPort} onChange={(value) => updateDraft({ destPort: numeric(value) })} /></Field>
+                  <Field label={t("terminal.port")}><EditableDropdownInput ariaLabel={t("terminal.port")} inputMode="numeric" optionLabel={formatPortOption} options={destinationPortOptions} value={current.destPort} onChange={(value) => updateDraft({ destPort: numeric(value) })} /></Field>
                 </div>
               </div>
             ) : null}

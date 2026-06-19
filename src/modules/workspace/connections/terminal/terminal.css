@@ -1262,14 +1262,15 @@
 }
 
 .sshf-editable-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 5px);
-  right: 0;
+  position: fixed;
+  top: 0;
   left: 0;
-  z-index: 12;
+  z-index: 300;
   display: flex;
   flex-direction: column;
-  max-height: 180px;
+  width: 300px;
+  max-width: calc(100vw - 64px);
+  max-height: min(240px, 40vh);
   padding: 4px;
   overflow-y: auto;
   background: var(--surface);
@@ -1281,13 +1282,13 @@
 .sshf-editable-dropdown-menu button {
   width: 100%;
   padding: 7px 9px;
-  overflow: hidden;
   color: var(--text);
   font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
   font-size: 12px;
+  line-height: 1.35;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
   background: transparent;
   border: 0;
   border-radius: 5px;
