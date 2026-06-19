@@ -86,6 +86,12 @@ test("SSH forwarding inputs use the themed surface color", async () => {
   );
 });
 
+test("SSH forwarding Listening chips use the shared green status token", async () => {
+  const css = await readFile(cssUrl, "utf8");
+
+  assert.match(css, /\.sshf-listen-chip\s*\{[^}]*background:\s*var\(--green\);/s);
+});
+
 test("SSH forwarding dropdowns portal below the input outside dialog clipping", async () => {
   const source = await readFile(dialogUrl, "utf8");
   const css = await readFile(cssUrl, "utf8");

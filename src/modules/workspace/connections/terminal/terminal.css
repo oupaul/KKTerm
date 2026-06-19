@@ -986,7 +986,7 @@
   font-weight: 750;
   text-transform: uppercase;
   white-space: nowrap;
-  background: var(--accent);
+  background: var(--green);
   border-radius: 999px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   transform: translateX(-50%);
