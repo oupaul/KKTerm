@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Actions, Btn, DIcon, Field, Sheet, TextInput } from "../../../../app/ui/dialog";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
@@ -42,6 +42,87 @@ function uniqueOptions(values: Array<string | undefined>) {
 function isLoopbackHost(value: string) {
   const normalized = value.trim().toLowerCase();
   return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
+
+function EditableDropdownInput({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  inputMode,
+}: {
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  inputMode?: "text" | "numeric";
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  function selectOption(option: string) {
+    onChange(option);
+    setOpen(false);
+    rootRef.current?.querySelector("input")?.focus();
+  }
+
+  return (
+    <div className="sshf-editable-dropdown" ref={rootRef}>
+      <TextInput
+        aria-label={ariaLabel}
+        inputMode={inputMode}
+        mono
+        onChange={(event) => onChange(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+          } else if (event.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        value={value}
+      />
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={ariaLabel}
+        className="sshf-editable-dropdown-toggle"
+        onClick={() => setOpen((current) => !current)}
+        title={ariaLabel}
+        type="button"
+      >
+        <DIcon name="updown" size={12} />
+      </button>
+      {open ? (
+        <div className="sshf-editable-dropdown-menu" role="listbox">
+          {options.map((option) => (
+            <button
+              aria-selected={option === value}
+              className={option === value ? "selected" : ""}
+              key={option}
+              onClick={() => selectOption(option)}
+              role="option"
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function shortAddress(value: string) {
@@ -114,7 +195,6 @@ export function SshPortForwardingDialog({
         if (cancelled) return;
         setLocalInterfaceAddresses(uniqueOptions(
           interfaces
-            .filter((networkInterface) => networkInterface.isUp)
             .flatMap((networkInterface) => networkInterface.addresses.map((address) => address.ip)),
         ));
       })
@@ -161,10 +241,6 @@ export function SshPortForwardingDialog({
     ...(mode === "L" && isLoopbackHost(current.destHost) ? remoteLoopbackPorts.map(String) : []),
     ...forwardings.filter((forwarding) => forwarding.mode === mode).map((forwarding) => forwarding.destPort ? String(forwarding.destPort) : undefined),
   ]);
-  const bindOptionsId = `sshf-bind-${mode}`;
-  const listenPortOptionsId = `sshf-listen-port-${mode}`;
-  const destinationHostOptionsId = `sshf-destination-host-${mode}`;
-  const destinationPortOptionsId = `sshf-destination-port-${mode}`;
 
   function updateDraft(patch: Partial<ForwardingDraft[SshPortForwardMode]>) {
     setDrafts((value) => ({ ...value, [mode]: { ...value[mode], ...patch } }));
@@ -307,25 +383,20 @@ export function SshPortForwardingDialog({
             <div className="sshf-pair">
               <div className="pair-h"><span className="pdot listen" />{mode === "R" ? t("terminal.forwardTo") : t("terminal.localListener")}<small>{t("terminal.onThisPc")}</small></div>
               <div className="sshf-row3">
-                <Field label={t("terminal.bindAddress")}><TextInput list={bindOptionsId} mono value={current.bind} onChange={(event) => updateDraft({ bind: event.currentTarget.value })} /></Field>
-                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><TextInput list={listenPortOptionsId} mono inputMode="numeric" value={current.listenPort} onChange={(event) => updateDraft({ listenPort: numeric(event.currentTarget.value) })} /></Field>
+                <Field label={t("terminal.bindAddress")}><EditableDropdownInput ariaLabel={t("terminal.bindAddress")} options={bindAddressOptions} value={current.bind} onChange={(value) => updateDraft({ bind: value })} /></Field>
+                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><EditableDropdownInput ariaLabel={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")} inputMode="numeric" options={listenPortOptions} value={current.listenPort} onChange={(value) => updateDraft({ listenPort: numeric(value) })} /></Field>
               </div>
             </div>
             {mode !== "D" ? (
               <div className="sshf-pair">
                 <div className="pair-h"><span className="pdot dest" />{mode === "R" ? t("terminal.remoteListener") : t("terminal.destination")}<small>{mode === "R" ? t("terminal.onServer") : t("terminal.reachableFromServer")}</small></div>
                 <div className="sshf-row3">
-                  <Field label={t("terminal.host")}><TextInput list={destinationHostOptionsId} mono value={current.destHost} onChange={(event) => updateDraft({ destHost: event.currentTarget.value })} /></Field>
-                  <Field label={t("terminal.port")}><TextInput list={destinationPortOptionsId} mono inputMode="numeric" value={current.destPort} onChange={(event) => updateDraft({ destPort: numeric(event.currentTarget.value) })} /></Field>
+                  <Field label={t("terminal.host")}><EditableDropdownInput ariaLabel={t("terminal.host")} options={destinationHostOptions} value={current.destHost} onChange={(value) => updateDraft({ destHost: value })} /></Field>
+                  <Field label={t("terminal.port")}><EditableDropdownInput ariaLabel={t("terminal.port")} inputMode="numeric" options={destinationPortOptions} value={current.destPort} onChange={(value) => updateDraft({ destPort: numeric(value) })} /></Field>
                 </div>
               </div>
             ) : null}
           </div>
-
-          <datalist id={bindOptionsId}>{bindAddressOptions.map((value) => <option key={value} value={value} />)}</datalist>
-          <datalist id={listenPortOptionsId}>{listenPortOptions.map((value) => <option key={value} value={value} />)}</datalist>
-          <datalist id={destinationHostOptionsId}>{destinationHostOptions.map((value) => <option key={value} value={value} />)}</datalist>
-          <datalist id={destinationPortOptionsId}>{destinationPortOptions.map((value) => <option key={value} value={value} />)}</datalist>
 
           <div className="sshf-cmd">
             <span className="cmd-prompt">$</span>

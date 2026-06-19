@@ -11,16 +11,19 @@ const cssUrl = new URL(
   import.meta.url,
 );
 
-test("SSH forwarding fields use editable detected suggestions", async () => {
+test("SSH forwarding fields use unfiltered editable dropdowns for detected suggestions", async () => {
   const source = await readFile(dialogUrl, "utf8");
 
   assert.match(source, /invokeCommand\("network_interfaces", undefined\)/);
   assert.match(source, /invokeCommand\("list_remote_loopback_ports", \{/);
+  assert.doesNotMatch(source, /\.filter\(\(networkInterface\) => networkInterface\.isUp\)/);
   assert.match(source, /\["127\.0\.0\.1", "0\.0\.0\.0", \.\.\.localInterfaceAddresses\]/);
   assert.match(source, /mode === "L" && isLoopbackHost\(current\.destHost\).*remoteLoopbackPorts\.map\(String\)/s);
-  assert.match(source, /<TextInput list=\{bindOptionsId\}/);
-  assert.match(source, /<TextInput list=\{destinationPortOptionsId\}/);
-  assert.match(source, /<datalist id=\{bindOptionsId\}>/);
+  assert.match(source, /function EditableDropdownInput\(/);
+  assert.match(source, /options\.map\(\(option\) =>/);
+  assert.match(source, /<EditableDropdownInput[\s\S]*?options=\{bindAddressOptions\}/);
+  assert.match(source, /<EditableDropdownInput[\s\S]*?options=\{destinationPortOptions\}/);
+  assert.doesNotMatch(source, /<datalist\b|\blist=\{/);
 });
 
 test("Remote mode reverses headings without moving its field groups", async () => {
