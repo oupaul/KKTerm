@@ -1294,11 +1294,24 @@ fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
     window
         .show()
         .map_err(|error| format!("failed to show webview: {error}"))
+}
+
+#[cfg(target_os = "macos")]
+fn show_webview_window(window: &WebviewWindow) -> Result<(), String> {
+    let ns_window = window
+        .ns_window()
+        .map_err(|error| format!("failed to read URL webview NSWindow: {error}"))?;
+    // Tauri's generic show path calls Tao's macOS set_visible(true), which
+    // makes the overlay key. URL overlays must reveal without stealing clicks
+    // from the main Connection Tree and app chrome.
+    let ns_window: &objc2_app_kit::NSWindow = unsafe { &*ns_window.cast() };
+    ns_window.orderFront(None);
+    Ok(())
 }
 
 fn webview_debug_log(message: String) {

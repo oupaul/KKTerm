@@ -84,6 +84,21 @@ test("backend hides overlay URL WebViews instead of using unstable child APIs", 
   assert.doesNotMatch(source, /Window::add_child|\.add_child\(|\.build_as_child\(/);
 });
 
+test("backend shows macOS URL overlays without making them key", async () => {
+  const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
+  const showFunction = source.match(
+    /#\[cfg\(target_os = "macos"\)\]\s*fn show_webview_window\([\s\S]*?\n\}/,
+  )?.[0];
+
+  assert.ok(showFunction, "macOS should have its own URL overlay show helper");
+  assert.match(showFunction, /orderFront/);
+  assert.doesNotMatch(
+    showFunction,
+    /window\s*\.show\(\)|makeKeyAndOrderFront|set_focus/,
+    "showing a URL overlay must not steal the main window's key focus from Connection Tree clicks",
+  );
+});
+
 test("backend realizes hidden URL overlay windows before HWND-dependent no-activate show", async () => {
   const source = await readFile(new URL("../src-tauri/src/webview.rs", import.meta.url), "utf8");
   const hwndFunction = source.match(/fn webview_hwnd\(window: &WebviewWindow\)[\s\S]*?\n\}/)?.[0];

@@ -3599,6 +3599,8 @@ dependencies = [
  "keyring-core",
  "lazy_static",
  "lettre",
+ "objc2",
+ "objc2-app-kit",
  "oxc_allocator",
  "oxc_ast",
  "oxc_ast_visit",
