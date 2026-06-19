@@ -31,7 +31,11 @@ Local forwarding keeps its existing clickable local-listener behavior. Dynamic m
 
 ## Listening indicator
 
-The shared Listening chip in the diagram uses the existing green design tokens for every forwarding mode. No hard-coded colors or new i18n strings are introduced.
+The shared Listening chip in the diagram uses the existing green design tokens for every forwarding mode. No hard-coded colors are introduced.
+
+## GatewayPorts reminder
+
+Remote mode shows a muted bottom-left footer reminder: “Remote wildcard listeners require `GatewayPorts clientspecified`; `GatewayPorts no` restricts them to loopback.” The Add Forward action remains bottom-right. Local and Dynamic modes do not show this server-specific reminder.
 
 ## Boundaries and documentation
 
