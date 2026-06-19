@@ -3,6 +3,60 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.91/kkterm-0.1.91-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.91/kkterm-0.1.91-windows-arm64-setup.exe)
+
+## Highlights
+- Refreshable **system font** list now appears in **App UI** and **Terminal** font pickers (so your dropdown doesn’t feel like a stale network route).
+- Improved **credential unlock** flow for **Connection** management, with clearer related error handling.
+- Status bar **notification/status popups** received updated progress styling and layout.
+
+## New
+- **System font refresh dropdown** for **App UI** and **Terminal fonts**.  
+  - Options are organized as: **custom fonts** → **curated list** → **detected system fonts** (with deduping).
+
+## Improved
+- **Font picker wording & grouping clarity** (manual and translations updated).
+- **System font refresh wording** clarified in the docs.
+- **Status popup** progress styling/layout updated.
+- **Notification duration behavior** adjusted as part of status bar work.
+
+## Fixed
+- **Prefer English system family names** for system fonts (backend behavior).
+
+## Internal
+- Replaced WebView-only system font access with a cross-platform Rust backend approach (`list_system_fonts`) and kept caching behavior in the frontend.
+- Tests updated/refactored for status bar notice tones and popup behavior.
+- Localization cleanup: removed deprecated font-related localization keys and refreshed translations.
+- Docs updates related to system font refresh wording and settings font picker clarity.
+
+---
+
+## 0.1.91 亮點
+- **系統字型**清單現在可在 **App UI** 與 **Terminal** 字型選單中「重新整理」——不會再像是網路路由一樣卡住不動。
+- **Connection** 管理的 **憑證解鎖**流程得到強化，並改善相關錯誤處理。
+- 狀態列的 **通知/狀態彈出視窗**更新了進度顯示樣式與版面。
+
+## 新增
+- **App UI** 與 **Terminal 字型**支援「系統字型重新整理」的下拉選單。  
+  - 選項排序：**自訂字型** → **精選清單** → **偵測到的系統字型**（自動去除重複）。
+
+## 改善
+- **字型選擇器**的文字與分組更清楚（已更新手冊與翻譯）。
+- 文件中已釐清 **系統字型重新整理**用語。
+- 已更新 **狀態彈出視窗**的進度樣式/版面。
+- 狀態列通知相關的 **通知時間行為**一併調整。
+
+## 修正
+- 系統字型偏好使用**英文 family name**（後端行為）。
+
+## 內部
+- 用跨平台 Rust 後端的方式取代 WebView-only 的系統字型存取（`list_system_fonts`），並維持前端快取行為。
+- 更新/調整測試以反映狀態列通知音色與彈出行為變更。
+- 本地化清理：移除已棄用的字型相關翻譯 key，並刷新翻譯內容。
+- 文件更新：包含系統字型重新整理用語與設定頁「字型選擇器清晰度」相關內容。
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.90/kkterm-0.1.90-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.90/kkterm-0.1.90-windows-arm64-setup.exe)
 
