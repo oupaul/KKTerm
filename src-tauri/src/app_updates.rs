@@ -87,7 +87,12 @@ pub fn install_downloaded_app_update(
 ) -> Result<(), String> {
     validate_update_request(&request)?;
     let installer_path = update_installer_path(&app, &request.asset_name)?;
-    let checksum = download_text(&request.checksum_url)?;
+    let checksum_urls = update_asset_urls(
+        &request.checksum_url,
+        &request.version,
+        &format!("{}.sha256", request.asset_name),
+    )?;
+    let checksum = download_text_from_any(&checksum_urls)?;
     let expected_sha256 = parse_sha256(&checksum)?;
     let actual_sha256 = sha256_file(&installer_path)?;
     if !actual_sha256.eq_ignore_ascii_case(&expected_sha256) {
@@ -108,24 +113,25 @@ fn download_app_update_sync(
 ) -> Result<(), String> {
     validate_update_request(&request)?;
     let installer_path = update_installer_path(app, &request.asset_name)?;
-    let checksum = download_text(&request.checksum_url)?;
+    let checksum_urls = update_asset_urls(
+        &request.checksum_url,
+        &request.version,
+        &format!("{}.sha256", request.asset_name),
+    )?;
+    let checksum = download_text_from_any(&checksum_urls)?;
     let expected_sha256 = parse_sha256(&checksum)?;
+    let download_urls =
+        update_asset_urls(&request.download_url, &request.version, &request.asset_name)?;
 
-    let result = download_file(
-        app,
-        job_id,
-        &request.download_url,
-        &installer_path,
-        cancellation,
-    )
-    .and_then(|_| {
-        let actual_sha256 = sha256_file(&installer_path)?;
-        if actual_sha256.eq_ignore_ascii_case(&expected_sha256) {
-            Ok(())
-        } else {
-            Err("downloaded installer checksum did not match release metadata".into())
-        }
-    });
+    let result = download_file_from_any(app, job_id, &download_urls, &installer_path, cancellation)
+        .and_then(|_| {
+            let actual_sha256 = sha256_file(&installer_path)?;
+            if actual_sha256.eq_ignore_ascii_case(&expected_sha256) {
+                Ok(())
+            } else {
+                Err("downloaded installer checksum did not match release metadata".into())
+            }
+        });
 
     if result.is_err() {
         let _ = fs::remove_file(&installer_path);
@@ -191,23 +197,62 @@ fn validate_update_request(request: &DownloadAndInstallAppUpdateRequest) -> Resu
         ));
     }
 
-    validate_github_release_url(&request.download_url, &request.asset_name)?;
-    validate_github_release_url(
+    validate_update_asset_url(&request.download_url, &request.version, &request.asset_name)?;
+    validate_update_asset_url(
         &request.checksum_url,
+        &request.version,
         &format!("{}.sha256", request.asset_name),
     )?;
     Ok(())
 }
 
-fn validate_github_release_url(url: &str, expected_file_name: &str) -> Result<(), String> {
+fn update_asset_urls(
+    primary_url: &str,
+    version: &str,
+    expected_file_name: &str,
+) -> Result<Vec<String>, String> {
+    validate_update_asset_url(primary_url, version, expected_file_name)?;
+    let parsed = Url::parse(primary_url).map_err(|error| format!("invalid update URL: {error}"))?;
+    let fallback_url = match parsed.host_str() {
+        Some("github.com") => Some(format!(
+            "https://kkterm.ryantsai.com/releases/v{version}/{expected_file_name}"
+        )),
+        Some("kkterm.ryantsai.com") => Some(format!(
+            "https://github.com/ryantsai/KKTerm/releases/download/v{version}/{expected_file_name}"
+        )),
+        _ => None,
+    };
+    let mut urls = vec![primary_url.to_string()];
+    if let Some(fallback_url) = fallback_url {
+        if fallback_url != primary_url {
+            urls.push(fallback_url);
+        }
+    }
+    Ok(urls)
+}
+
+fn validate_update_asset_url(
+    url: &str,
+    version: &str,
+    expected_file_name: &str,
+) -> Result<(), String> {
     let parsed = Url::parse(url).map_err(|error| format!("invalid update URL: {error}"))?;
-    if parsed.scheme() != "https" || parsed.host_str() != Some("github.com") {
-        return Err("update assets must be downloaded from https://github.com".into());
+    if parsed.scheme() != "https" {
+        return Err("update assets must be downloaded over HTTPS".into());
     }
 
     let path = parsed.path();
-    if !path.starts_with("/ryantsai/KKTerm/releases/download/") {
-        return Err("update assets must come from KKTerm GitHub Releases".into());
+    let trusted_source = match parsed.host_str() {
+        Some("github.com") => {
+            path.starts_with(&format!("/ryantsai/KKTerm/releases/download/v{version}/"))
+        }
+        Some("kkterm.ryantsai.com") => path.starts_with(&format!("/releases/v{version}/")),
+        _ => false,
+    };
+    if !trusted_source {
+        return Err(
+            "update assets must come from KKTerm Releases or the KKTerm release mirror".into(),
+        );
     }
     if !path.ends_with(&format!("/{expected_file_name}")) {
         return Err(format!(
@@ -226,6 +271,17 @@ fn http_client() -> Result<reqwest::blocking::Client, String> {
         .map_err(|error| format!("failed to build update HTTP client: {error}"))
 }
 
+fn download_text_from_any(urls: &[String]) -> Result<String, String> {
+    let mut last_error = None;
+    for url in urls {
+        match download_text(url) {
+            Ok(value) => return Ok(value),
+            Err(error) => last_error = Some(error),
+        }
+    }
+    Err(last_error.unwrap_or_else(|| "no update checksum URL was available".into()))
+}
+
 fn download_text(url: &str) -> Result<String, String> {
     http_client()?
         .get(url)
@@ -235,6 +291,27 @@ fn download_text(url: &str) -> Result<String, String> {
         .map_err(|error| format!("failed to download update checksum: {error}"))?
         .text()
         .map_err(|error| format!("failed to read update checksum: {error}"))
+}
+
+fn download_file_from_any(
+    app: &tauri::AppHandle,
+    job_id: &str,
+    urls: &[String],
+    destination: &Path,
+    cancellation: &AtomicBool,
+) -> Result<(), String> {
+    let mut last_error = None;
+    for url in urls {
+        match download_file(app, job_id, url, destination, cancellation) {
+            Ok(()) => return Ok(()),
+            Err(error) if error.contains("app update download cancelled") => return Err(error),
+            Err(error) => {
+                let _ = fs::remove_file(destination);
+                last_error = Some(error);
+            }
+        }
+    }
+    Err(last_error.unwrap_or_else(|| "no update installer URL was available".into()))
 }
 
 fn download_file(
@@ -374,5 +451,54 @@ mod tests {
             checksum_url: "https://example.com/installer.exe.sha256".into(),
         };
         assert!(validate_update_request(&request).is_err());
+    }
+
+    #[test]
+    fn validate_update_request_accepts_release_mirror_url() {
+        let target = app_update_target_triple();
+        let asset_name = format!("kkterm-0.1.94-{target}-setup.exe");
+        let request = DownloadAndInstallAppUpdateRequest {
+            version: "0.1.94".into(),
+            asset_name: asset_name.clone(),
+            download_url: format!("https://kkterm.ryantsai.com/releases/v0.1.94/{asset_name}"),
+            checksum_url: format!(
+                "https://kkterm.ryantsai.com/releases/v0.1.94/{asset_name}.sha256"
+            ),
+        };
+        assert!(validate_update_request(&request).is_ok());
+    }
+
+    #[test]
+    fn update_asset_urls_try_mirror_then_github() {
+        let urls = update_asset_urls(
+            "https://kkterm.ryantsai.com/releases/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe",
+            "0.1.94",
+            "kkterm-0.1.94-windows-x64-setup.exe",
+        )
+        .unwrap();
+        assert_eq!(
+            urls,
+            vec![
+                "https://kkterm.ryantsai.com/releases/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe",
+                "https://github.com/ryantsai/KKTerm/releases/download/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe",
+            ]
+        );
+    }
+
+    #[test]
+    fn update_asset_urls_try_github_then_mirror() {
+        let urls = update_asset_urls(
+            "https://github.com/ryantsai/KKTerm/releases/download/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe.sha256",
+            "0.1.94",
+            "kkterm-0.1.94-windows-x64-setup.exe.sha256",
+        )
+        .unwrap();
+        assert_eq!(
+            urls,
+            vec![
+                "https://github.com/ryantsai/KKTerm/releases/download/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe.sha256",
+                "https://kkterm.ryantsai.com/releases/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe.sha256",
+            ]
+        );
     }
 }

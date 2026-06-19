@@ -8,7 +8,7 @@
 
 ## Software updates
 
-Automatic and manual checks normally read `https://kkterm.ryantsai.com/releases/latest.json`. If that app-owned Cloudflare endpoint is unavailable or returns invalid metadata, KKTerm falls back to GitHub Releases. A successful check records its time; automatic startup checks are limited to once per 24 hours, while `settings.checkForUpdates` always performs a fresh manual check.
+Automatic and manual checks normally read `https://kkterm.ryantsai.com/releases/latest.json`. If that app-owned Cloudflare endpoint is unavailable or returns invalid metadata, KKTerm falls back to GitHub Releases. On Windows, installer and checksum downloads also retry the same release asset on the other trusted host if the selected host cannot complete the fetch. A successful check records its time; automatic startup checks are limited to once per 24 hours, while `settings.checkForUpdates` always performs a fresh manual check.
 
 Update checks are not telemetry. They do not upload Connection, Session, Tab, terminal, credential, or usage data. Windows downloads remain protected by the published SHA-256 checksum, and macOS/Linux updates retain Tauri signature verification regardless of whether Cloudflare or GitHub serves the files.
 
