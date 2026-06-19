@@ -66,6 +66,12 @@ const QUICK_COMMANDS_STORAGE_PREFIX = "kkterm.quickCommands.";
 const TMUX_SESSION_ID_PATTERN = /^[^\s:;]+$/u;
 export const CHILD_CONNECTION_CLOSED_EVENT = "kkterm:workspace-child-connection-closed";
 let statusBarNoticeSequence = 0;
+const DEFAULT_STATUS_BAR_NOTICE_DURATION_MS: Record<StatusBarNotice["tone"], number> = {
+  success: 2_000,
+  info: 5_000,
+  warning: 5_000,
+  error: 5_000,
+};
 // English fallback names used only when the active locale has no tmux-safe
 // ai.tmuxSessionLabels pool. Locales own their pool; names do not map by index.
 const TMUX_SESSION_NAMES = [
@@ -1432,7 +1438,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     })),
   showStatusBarNotice: (message, options) => {
     const tone = options?.tone ?? "info";
-    const durationMs = options?.durationMs ?? 5_000;
+    const durationMs = options?.durationMs ?? DEFAULT_STATUS_BAR_NOTICE_DURATION_MS[tone];
     const now = Date.now();
     set({
       statusBarNotice: {

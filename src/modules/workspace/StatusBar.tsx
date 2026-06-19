@@ -14,7 +14,7 @@ import {
   Unlock,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { RailTooltip } from "../../app/RailTooltip";
@@ -133,29 +133,12 @@ function StatusNoticePopup({
   notice: StatusBarNotice;
   onDismiss: () => void;
 }) {
-  const popupRef = useRef<HTMLDivElement | null>(null);
   const isProgress = notice.progress !== undefined;
   const progress = notice.progress ?? 0;
   const showClose = !isProgress || Boolean(notice.onCancel) || notice.progress === 100;
 
-  useEffect(() => {
-    const popup = popupRef.current;
-    const bar = popup?.querySelector<HTMLElement>(".status-popup-timer i");
-    if (!popup || !bar) {
-      return;
-    }
-    bar.style.transitionDuration = "0ms";
-    bar.style.transform = "scaleX(1)";
-    void popup.offsetWidth;
-    if (notice.expiresAt !== null) {
-      bar.style.transitionDuration = `${notice.durationMs}ms`;
-      bar.style.transform = "scaleX(0)";
-    }
-  }, [notice.durationMs, notice.expiresAt, notice.id]);
-
   return (
     <div
-      ref={popupRef}
       className={`status-popup status-popup-pulse ${notice.tone} ${
         isExiting ? "is-exiting" : "is-entering"
       }`}
@@ -187,11 +170,7 @@ function StatusNoticePopup({
               {Math.round(progress)}%
             </span>
           </span>
-        ) : (
-          <span className="status-popup-timer" aria-hidden="true">
-            <i />
-          </span>
-        )}
+        ) : null}
       </span>
       {showClose ? (
         <button
