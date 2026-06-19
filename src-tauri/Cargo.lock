@@ -3577,7 +3577,7 @@ dependencies = [
 
 [[package]]
 name = "kkterm"
-version = "0.1.91"
+version = "0.1.92"
 dependencies = [
  "aes-gcm 0.10.3",
  "anyhow",
