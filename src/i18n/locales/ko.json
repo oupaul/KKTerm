@@ -877,6 +877,25 @@
       "install": "설치",
       "verify": "확인",
       "enable": "기능 활성화"
+    },
+    "wsl": {
+      "manageDistros": "배포판 관리",
+      "installedHeading": "설치된 배포판",
+      "installHeading": "배포판 설치",
+      "default": "기본값",
+      "setDefault": "기본값으로 설정",
+      "unregister": "등록 취소",
+      "selectPlaceholder": "배포판 선택",
+      "noInstalled": "아직 설치된 WSL 배포판이 없습니다.",
+      "noOnline": "설치할 수 있는 추가 배포판이 없습니다.",
+      "loading": "배포판을 불러오는 중…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "{{name}} 설치 중… 몇 분 정도 걸릴 수 있습니다.",
+      "setDefaultDone": "{{name}}이(가) 이제 기본 배포판입니다.",
+      "unregisterDone": "{{name}}의 등록을 취소했습니다.",
+      "installDone": "{{name}}을(를) 설치했습니다.",
+      "unregisterTitle": "{{name}} 등록을 취소하시겠습니까?",
+      "unregisterBody": "{{name}} 배포판과 모든 파일이 영구적으로 삭제됩니다. 이 작업은 취소할 수 없습니다."
     }
   },
   "settings": {

@@ -3597,6 +3597,11 @@ pub fn run() {
             installer::commands::installer_remove_service,
             installer::commands::installer_get_state,
             installer::commands::installer_set_pinned,
+            installer::commands::installer_wsl_list_distros,
+            installer::commands::installer_wsl_list_online,
+            installer::commands::installer_wsl_set_default,
+            installer::commands::installer_wsl_unregister,
+            installer::commands::installer_wsl_install,
             // ── MCP servers
             mcp::mcp_list_servers,
             mcp::mcp_create_server,

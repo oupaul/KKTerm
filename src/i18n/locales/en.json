@@ -877,6 +877,25 @@
       "install": "Install",
       "verify": "Verify",
       "enable": "Enable feature"
+    },
+    "wsl": {
+      "manageDistros": "Manage distros",
+      "installedHeading": "Installed distros",
+      "installHeading": "Install a distro",
+      "default": "Default",
+      "setDefault": "Set default",
+      "unregister": "Unregister",
+      "selectPlaceholder": "Select a distro",
+      "noInstalled": "No WSL distros installed yet.",
+      "noOnline": "No additional distros available to install.",
+      "loading": "Loading distros…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "Installing {{name}}… This can take several minutes.",
+      "setDefaultDone": "{{name}} is now the default distro.",
+      "unregisterDone": "{{name}} was unregistered.",
+      "installDone": "{{name}} was installed.",
+      "unregisterTitle": "Unregister {{name}}?",
+      "unregisterBody": "This permanently deletes the {{name}} distribution and all of its files. This cannot be undone."
     }
   },
   "settings": {

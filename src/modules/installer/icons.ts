@@ -60,6 +60,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   wsl: linux,
   "docker-desktop": docker,
   nssm: defaultIcon,
+  "oh-my-posh": defaultIcon,
   "claude-code-cli": claudeCode,
   "codex-cli": codex,
   "antigravity-cli": antigravity,

@@ -97,6 +97,10 @@ interface InstallerStoreState {
   /// dialog reads detected/toolState/stepperState from the store, so it
   /// can be closed and reopened without losing in-flight progress.
   openDialog: OpenDialog | null;
+  /// Whether the dynamic WSL distro manager dialog is open. It is layered
+  /// above the tool dialog (opened from the installed WSL feature), so it has
+  /// its own flag rather than sharing `openDialog`.
+  wslManagerOpen: boolean;
   /// Set to `true` for the rest of the app session once any WSL feature
   /// install completes. Docker (and anything else that `needsWsl`) is then
   /// disabled with a reboot-required hint until the user restarts Windows.
@@ -115,6 +119,8 @@ interface InstallerStoreState {
   openInfoDialog: (toolId: string) => void;
   openStepperDialog: (toolId: string) => void;
   closeDialog: () => void;
+  openWslManager: () => void;
+  closeWslManager: () => void;
   setScanning: (scanning: boolean) => void;
   setChecking: (checking: boolean) => void;
   setSummary: (summary: InstallerSummary | null) => void;
@@ -136,6 +142,7 @@ const initial: Pick<
   | "stepperState"
   | "lastStatus"
   | "openDialog"
+  | "wslManagerOpen"
   | "wslJustEnabled"
   | "summary"
 > = {
@@ -150,6 +157,7 @@ const initial: Pick<
   stepperState: {},
   lastStatus: {},
   openDialog: null,
+  wslManagerOpen: false,
   wslJustEnabled: false,
   summary: null,
 };
@@ -370,6 +378,8 @@ export const useInstallerStore = create<InstallerStoreState>((set) => ({
   openStepperDialog: (toolId) =>
     set({ openDialog: { toolId, mode: "stepper" } }),
   closeDialog: () => set({ openDialog: null }),
+  openWslManager: () => set({ wslManagerOpen: true }),
+  closeWslManager: () => set({ wslManagerOpen: false }),
   setScanning: (scanning) => set({ scanning }),
   setChecking: (checking) => set({ checking }),
   setSummary: (summary) => set({ summary }),

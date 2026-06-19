@@ -17,5 +17,6 @@ pub mod proc;
 pub mod schema;
 pub mod state;
 pub mod uninstall;
+pub mod wsl;
 
 pub use commands::InstallerRuntime;

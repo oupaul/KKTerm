@@ -528,6 +528,16 @@ fn installed_entry_matches(
     if registry_key == normalize_detection_value(winget_id) {
         return true;
     }
+    // Winget tracks portable / archive packages (ripgrep, jq, fzf, …) under an
+    // Add/Remove Programs subkey named
+    // `<PackageIdentifier>_Microsoft.Winget.Source_8wekyb3d8bbwe`. Those entries
+    // carry a DisplayName that may embed a version or otherwise not equal the
+    // catalog alias, so match the winget-source key straight off the package id
+    // rather than relying on the display name (the cause of ripgrep reporting
+    // "not installed" after a successful winget install).
+    if registry_key_matches_winget_source(&registry_key, winget_id) {
+        return true;
+    }
     if detection
         .registry_keys
         .iter()
@@ -547,6 +557,21 @@ fn installed_entry_matches(
             .display_name_prefixes
             .iter()
             .any(|prefix| display_name.starts_with(&normalize_detection_value(prefix)))
+}
+
+/// True when `registry_key` (already normalized) is the Add/Remove Programs
+/// subkey that winget creates for a portable/archive package it installed,
+/// i.e. `<winget_id>_Microsoft.Winget.Source_8wekyb3d8bbwe`. Both the bare
+/// child key and the `arp\<scope>\<view>\<child>` alias form are accepted; the
+/// match anchors on the final path segment so unrelated ids that merely share a
+/// prefix (e.g. `git` vs `digit_…`) cannot collide.
+fn registry_key_matches_winget_source(registry_key: &str, winget_id: &str) -> bool {
+    let id = normalize_detection_value(winget_id);
+    if id.is_empty() {
+        return false;
+    }
+    let child = registry_key.rsplit('\\').next().unwrap_or(registry_key);
+    child.starts_with(&format!("{id}_")) && child.contains("microsoft.winget.source")
 }
 
 fn display_name_matches_alias(display_name: &str, alias: &str) -> bool {
@@ -1282,6 +1307,56 @@ mod tests {
             )
         );
         assert_eq!(state.install_scope, Some(InstallScope::User));
+    }
+
+    #[test]
+    fn winget_portable_detected_by_source_key_despite_versioned_display_name() {
+        // ripgrep's `.MSVC` package is portable: winget tracks it under a
+        // `<id>_Microsoft.Winget.Source_…` ARP key whose DisplayName does not
+        // exactly equal the catalog alias "ripgrep". Detection must still flag
+        // it installed off the winget-source key.
+        let recipe = winget_recipe_with_detection("BurntSushi.ripgrep.MSVC", &[], &["ripgrep"], &[]);
+        let snapshot = InstalledSoftwareSnapshot {
+            entries: vec![
+                InstalledSoftwareEntry {
+                    registry_key: "BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                        .into(),
+                    display_name: Some("ripgrep 14.1.1".into()),
+                    display_version: Some("14.1.1".into()),
+                    install_location: None,
+                },
+                InstalledSoftwareEntry {
+                    registry_key:
+                        "ARP\\User\\X64\\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe"
+                            .into(),
+                    display_name: Some("ripgrep 14.1.1".into()),
+                    display_version: Some("14.1.1".into()),
+                    install_location: None,
+                },
+            ],
+        };
+
+        let state = detect_installed_software(&recipe, &snapshot);
+
+        assert!(state.installed);
+        assert_eq!(state.installed_version.as_deref(), Some("14.1.1"));
+        assert_eq!(state.install_scope, Some(InstallScope::User));
+    }
+
+    #[test]
+    fn winget_source_key_match_anchors_on_final_path_segment() {
+        // A package id must not match another whose ARP child merely contains
+        // it as a substring (`git` vs `digit_…`).
+        assert!(registry_key_matches_winget_source(
+            "git.git_microsoft.winget.source_8wekyb3d8bbwe",
+            "Git.Git",
+        ));
+        assert!(!registry_key_matches_winget_source(
+            "arp\\machine\\x64\\digit.tool_microsoft.winget.source_8wekyb3d8bbwe",
+            "git",
+        ));
+        // A non-winget ARP key (a regular MSI) must not match by id alone.
+        assert!(!registry_key_matches_winget_source("git_is1", "Git"));
     }
 
     #[test]

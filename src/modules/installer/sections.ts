@@ -85,6 +85,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
       "notepadpp",
       "nssm",
       "vcxsrv",
+      "oh-my-posh",
       "ripgrep",
       "jq",
       "fzf",

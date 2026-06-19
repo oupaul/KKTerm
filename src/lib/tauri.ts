@@ -2514,6 +2514,26 @@ type CommandMap = {
     args: { toolId: string; pinned: boolean };
     result: void;
   };
+  installer_wsl_list_distros: {
+    args: undefined;
+    result: import("../modules/installer/types").WslDistroInfo[];
+  };
+  installer_wsl_list_online: {
+    args: undefined;
+    result: import("../modules/installer/types").WslOnlineDistro[];
+  };
+  installer_wsl_set_default: {
+    args: { distro: string };
+    result: void;
+  };
+  installer_wsl_unregister: {
+    args: { distro: string };
+    result: void;
+  };
+  installer_wsl_install: {
+    args: { distro: string };
+    result: void;
+  };
 };
 
 export { CREDENTIAL_UNLOCK_REQUIRED_EVENT, isCredentialUnlockRequiredError };

@@ -48,6 +48,7 @@ import { useInstallerStore } from "./state";
 import { isKnownSelfElevatingWingetRecipe, isWslFeature } from "./dag";
 import { InstallerConfirmDialog } from "./InstallerConfirmDialog";
 import { InstallerToolDialog } from "./InstallerToolDialog";
+import { WslDistroManager } from "./WslDistroManager";
 import {
   PROGRESS_EVENT_NAME,
   localizedDescription,
@@ -618,6 +619,7 @@ export function InstallerPage({ active }: { active: boolean }) {
       </div>
 
       <InstallerToolDialog />
+      <WslDistroManager />
       {updateAllConfirm ? (
         <InstallerConfirmDialog
           title={t("installer.confirm.updateAllTitle")}

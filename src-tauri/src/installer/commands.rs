@@ -624,6 +624,47 @@ pub async fn installer_redetect(
     Ok(state)
 }
 
+// ---- WSL distro management ---------------------------------------------
+//
+// These commands sit outside the catalog/recipe lifecycle: they reflect the
+// live host state (`wsl --list`) so the user can manage every distro, not just
+// the catalog ones. Each runs the blocking `wsl.exe` call off the UI thread.
+
+#[tauri::command]
+pub async fn installer_wsl_list_distros() -> Result<Vec<super::wsl::WslDistroInfo>, String> {
+    tauri::async_runtime::spawn_blocking(super::wsl::list_installed_distros)
+        .await
+        .map_err(|error| format!("failed to list WSL distros: {error}"))?
+}
+
+#[tauri::command]
+pub async fn installer_wsl_list_online() -> Result<Vec<super::wsl::WslOnlineDistro>, String> {
+    tauri::async_runtime::spawn_blocking(super::wsl::list_online_distros)
+        .await
+        .map_err(|error| format!("failed to list online WSL distros: {error}"))?
+}
+
+#[tauri::command]
+pub async fn installer_wsl_set_default(distro: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || super::wsl::set_default_distro(&distro))
+        .await
+        .map_err(|error| format!("failed to set default WSL distro: {error}"))?
+}
+
+#[tauri::command]
+pub async fn installer_wsl_unregister(distro: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || super::wsl::unregister_distro(&distro))
+        .await
+        .map_err(|error| format!("failed to unregister WSL distro: {error}"))?
+}
+
+#[tauri::command]
+pub async fn installer_wsl_install(distro: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || super::wsl::install_distro(&distro))
+        .await
+        .map_err(|error| format!("failed to install WSL distro: {error}"))?
+}
+
 // ---- helpers -----------------------------------------------------------
 
 fn make_emit_sink(app: AppHandle) -> EventSink {

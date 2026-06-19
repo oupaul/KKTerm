@@ -877,6 +877,25 @@
       "install": "ติดตั้ง",
       "verify": "ตรวจสอบ",
       "enable": "เปิดใช้คุณลักษณะ"
+    },
+    "wsl": {
+      "manageDistros": "จัดการดิสโทร",
+      "installedHeading": "ดิสโทรที่ติดตั้งแล้ว",
+      "installHeading": "ติดตั้งดิสโทร",
+      "default": "ค่าเริ่มต้น",
+      "setDefault": "ตั้งเป็นค่าเริ่มต้น",
+      "unregister": "ยกเลิกการลงทะเบียน",
+      "selectPlaceholder": "เลือกดิสโทร",
+      "noInstalled": "ยังไม่มีดิสโทร WSL ที่ติดตั้ง",
+      "noOnline": "ไม่มีดิสโทรอื่นให้ติดตั้ง",
+      "loading": "กำลังโหลดดิสโทร…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "กำลังติดตั้ง {{name}}… อาจใช้เวลาหลายนาที",
+      "setDefaultDone": "{{name}} เป็นดิสโทรเริ่มต้นแล้ว",
+      "unregisterDone": "ยกเลิกการลงทะเบียน {{name}} แล้ว",
+      "installDone": "ติดตั้ง {{name}} แล้ว",
+      "unregisterTitle": "ยกเลิกการลงทะเบียน {{name}} หรือไม่?",
+      "unregisterBody": "การดำเนินการนี้จะลบดิสทริบิวชัน {{name}} และไฟล์ทั้งหมดอย่างถาวร ไม่สามารถเลิกทำได้"
     }
   },
   "settings": {

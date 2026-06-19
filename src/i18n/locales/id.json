@@ -877,6 +877,25 @@
       "install": "Instal",
       "verify": "Verifikasi",
       "enable": "Aktifkan fitur"
+    },
+    "wsl": {
+      "manageDistros": "Kelola distro",
+      "installedHeading": "Distro terpasang",
+      "installHeading": "Instal distro",
+      "default": "Default",
+      "setDefault": "Jadikan default",
+      "unregister": "Batalkan pendaftaran",
+      "selectPlaceholder": "Pilih distro",
+      "noInstalled": "Belum ada distro WSL yang terpasang.",
+      "noOnline": "Tidak ada distro lain yang tersedia untuk diinstal.",
+      "loading": "Memuat distro…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "Menginstal {{name}}… Ini bisa memakan waktu beberapa menit.",
+      "setDefaultDone": "{{name}} kini menjadi distro default.",
+      "unregisterDone": "Pendaftaran {{name}} dibatalkan.",
+      "installDone": "{{name}} telah diinstal.",
+      "unregisterTitle": "Batalkan pendaftaran {{name}}?",
+      "unregisterBody": "Tindakan ini menghapus distribusi {{name}} dan semua filenya secara permanen. Tindakan ini tidak dapat dibatalkan."
     }
   },
   "settings": {

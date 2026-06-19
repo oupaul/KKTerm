@@ -877,6 +877,25 @@
       "install": "Instalar",
       "verify": "Verificar",
       "enable": "Habilitar recurso"
+    },
+    "wsl": {
+      "manageDistros": "Gerenciar distribuições",
+      "installedHeading": "Distribuições instaladas",
+      "installHeading": "Instalar uma distribuição",
+      "default": "Padrão",
+      "setDefault": "Definir como padrão",
+      "unregister": "Cancelar registro",
+      "selectPlaceholder": "Selecione uma distribuição",
+      "noInstalled": "Ainda não há distribuições do WSL instaladas.",
+      "noOnline": "Não há outras distribuições disponíveis para instalar.",
+      "loading": "Carregando distribuições…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "Instalando {{name}}… Isso pode levar alguns minutos.",
+      "setDefaultDone": "{{name}} agora é a distribuição padrão.",
+      "unregisterDone": "O registro de {{name}} foi cancelado.",
+      "installDone": "{{name}} foi instalada.",
+      "unregisterTitle": "Cancelar o registro de {{name}}?",
+      "unregisterBody": "Isso exclui permanentemente a distribuição {{name}} e todos os seus arquivos. Esta ação não pode ser desfeita."
     }
   },
   "settings": {

@@ -103,6 +103,7 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const closeDialog = useInstallerStore((s) => s.closeDialog);
   const openStepperDialog = useInstallerStore((s) => s.openStepperDialog);
   const beginInFlight = useInstallerStore((s) => s.beginInFlight);
+  const openWslManager = useInstallerStore((s) => s.openWslManager);
   const showStatusBarNotice = useWorkspaceStore(
     (state) => state.showStatusBarNotice,
   );
@@ -110,6 +111,8 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
   const [uninstallConfirm, setUninstallConfirm] = useState<null | {
     dependents: string[];
   }>(null);
+
+  const isWsl = isWslFeature(recipe);
 
   const description =
     recipe.descriptionLocales?.[i18n.language] ?? recipe.descriptionEn;
@@ -405,6 +408,15 @@ function InstalledInfoBody({ recipe }: { recipe: Recipe }) {
         >
           {t("installer.actions.uninstall")}
         </button>
+        {isWsl ? (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={openWslManager}
+          >
+            {t("installer.wsl.manageDistros")}
+          </button>
+        ) : null}
         {terminalLaunch ? (
           <button
             type="button"

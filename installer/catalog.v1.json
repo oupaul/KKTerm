@@ -623,6 +623,49 @@
       }
     },
     {
+      "id": "oh-my-posh",
+      "name": "Oh My Posh",
+      "descriptionEn": "Prompt theme engine for any shell. Adds rich, customizable prompts to PowerShell and more.",
+      "category": "utilities",
+      "icon": "Palette",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://ohmyposh.dev/",
+      "releaseNotesUrl": "https://github.com/JanDeDobbeleer/oh-my-posh/releases",
+      "detection": {
+        "displayNames": [
+          "Oh My Posh"
+        ],
+        "displayNamePrefixes": [
+          "Oh My Posh"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "JanDeDobbeleer.OhMyPosh"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "it": "Motore di temi per il prompt di qualsiasi shell. Aggiunge prompt avanzati e personalizzabili a PowerShell e altri.",
+        "fr": "Moteur de thèmes d'invite pour n'importe quel shell. Ajoute des invites riches et personnalisables à PowerShell et autres.",
+        "es-MX": "Motor de temas de símbolo del sistema para cualquier shell. Agrega prompts enriquecidos y personalizables a PowerShell y otros.",
+        "de": "Prompt-Themen-Engine für jede Shell. Fügt PowerShell und anderen umfangreiche, anpassbare Prompts hinzu.",
+        "zh-CN": "适用于任何 shell 的提示符主题引擎。为 PowerShell 等添加丰富、可定制的提示符。",
+        "id": "Mesin tema prompt untuk shell apa pun. Menambahkan prompt yang kaya dan dapat disesuaikan ke PowerShell dan lainnya.",
+        "ja": "あらゆるシェル向けのプロンプト テーマ エンジン。PowerShell などに高機能でカスタマイズ可能なプロンプトを追加します。",
+        "pt-BR": "Mecanismo de temas de prompt para qualquer shell. Adiciona prompts ricos e personalizáveis ao PowerShell e outros.",
+        "zh-TW": "適用於任何 shell 的提示字元主題引擎。為 PowerShell 等加入豐富且可自訂的提示字元。",
+        "ko": "모든 셸을 위한 프롬프트 테마 엔진입니다. PowerShell 등에 풍부하고 사용자 지정 가능한 프롬프트를 추가합니다.",
+        "th": "เอนจินธีมพรอมต์สำหรับเชลล์ใดก็ได้ เพิ่มพรอมต์ที่หลากหลายและปรับแต่งได้ให้กับ PowerShell และอื่น ๆ",
+        "es": "Motor de temas de símbolo del sistema para cualquier shell. Añade prompts enriquecidos y personalizables a PowerShell y otros.",
+        "vi": "Công cụ chủ đề dấu nhắc cho mọi shell. Thêm dấu nhắc phong phú, tùy chỉnh được vào PowerShell và các shell khác."
+      }
+    },
+    {
       "id": "claude-code-cli",
       "name": "Claude Code CLI",
       "descriptionEn": "Anthropic's official CLI coding agent. Requires Node.",

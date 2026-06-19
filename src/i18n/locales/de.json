@@ -877,6 +877,25 @@
       "install": "Installieren",
       "verify": "Verifizieren",
       "enable": "Feature aktivieren"
+    },
+    "wsl": {
+      "manageDistros": "Distributionen verwalten",
+      "installedHeading": "Installierte Distributionen",
+      "installHeading": "Distribution installieren",
+      "default": "Standard",
+      "setDefault": "Als Standard festlegen",
+      "unregister": "Registrierung aufheben",
+      "selectPlaceholder": "Distribution auswählen",
+      "noInstalled": "Noch keine WSL-Distributionen installiert.",
+      "noOnline": "Keine weiteren Distributionen zur Installation verfügbar.",
+      "loading": "Distributionen werden geladen…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "{{name}} wird installiert… Dies kann einige Minuten dauern.",
+      "setDefaultDone": "{{name}} ist jetzt die Standarddistribution.",
+      "unregisterDone": "Die Registrierung von {{name}} wurde aufgehoben.",
+      "installDone": "{{name}} wurde installiert.",
+      "unregisterTitle": "Registrierung von {{name}} aufheben?",
+      "unregisterBody": "Dadurch werden die Distribution {{name}} und alle ihre Dateien dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden."
     }
   },
   "settings": {

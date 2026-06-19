@@ -49,6 +49,30 @@ test("VcXsrv is visible in the Install Helper Utilities section", async () => {
   );
 });
 
+test("Oh My Posh is a Utilities tool installed via winget", () => {
+  const ohMyPosh = byId.get("oh-my-posh");
+
+  assert.ok(ohMyPosh, "Oh My Posh should be present in the installer catalog");
+  assert.equal(ohMyPosh.category, "utilities");
+  assert.deepEqual(ohMyPosh.provider, {
+    kind: "winget",
+    id: "JanDeDobbeleer.OhMyPosh",
+  });
+});
+
+test("Oh My Posh is visible in the Install Helper Utilities section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"oh-my-posh"/,
+    "Oh My Posh should be listed in the visible Utilities section",
+  );
+});
+
 test("Coreutils is a Utilities tool with winget and download providers", () => {
   const coreutils = byId.get("coreutils");
 

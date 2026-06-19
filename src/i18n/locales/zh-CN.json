@@ -877,6 +877,25 @@
       "install": "安装",
       "verify": "验证",
       "enable": "启用功能"
+    },
+    "wsl": {
+      "manageDistros": "管理发行版",
+      "installedHeading": "已安装的发行版",
+      "installHeading": "安装发行版",
+      "default": "默认",
+      "setDefault": "设为默认",
+      "unregister": "注销",
+      "selectPlaceholder": "选择发行版",
+      "noInstalled": "尚未安装任何 WSL 发行版。",
+      "noOnline": "没有其他可安装的发行版。",
+      "loading": "正在加载发行版…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "正在安装 {{name}}…这可能需要几分钟。",
+      "setDefaultDone": "{{name}} 现在是默认发行版。",
+      "unregisterDone": "已注销 {{name}}。",
+      "installDone": "已安装 {{name}}。",
+      "unregisterTitle": "注销 {{name}}？",
+      "unregisterBody": "这将永久删除 {{name}} 发行版及其所有文件。此操作无法撤销。"
     }
   },
   "settings": {

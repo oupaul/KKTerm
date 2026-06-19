@@ -877,6 +877,25 @@
       "install": "インストール",
       "verify": "検証",
       "enable": "機能を有効化"
+    },
+    "wsl": {
+      "manageDistros": "ディストリビューションの管理",
+      "installedHeading": "インストール済みのディストリビューション",
+      "installHeading": "ディストリビューションのインストール",
+      "default": "既定",
+      "setDefault": "既定に設定",
+      "unregister": "登録解除",
+      "selectPlaceholder": "ディストリビューションを選択",
+      "noInstalled": "WSL ディストリビューションはまだインストールされていません。",
+      "noOnline": "インストールできる追加のディストリビューションはありません。",
+      "loading": "ディストリビューションを読み込んでいます…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "{{name}} をインストールしています…数分かかる場合があります。",
+      "setDefaultDone": "{{name}} が既定のディストリビューションになりました。",
+      "unregisterDone": "{{name}} を登録解除しました。",
+      "installDone": "{{name}} をインストールしました。",
+      "unregisterTitle": "{{name}} を登録解除しますか？",
+      "unregisterBody": "これにより {{name}} ディストリビューションとそのすべてのファイルが完全に削除されます。この操作は元に戻せません。"
     }
   },
   "settings": {

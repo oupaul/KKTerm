@@ -877,6 +877,25 @@
       "install": "Cài đặt",
       "verify": "Xác minh",
       "enable": "Bật tính năng"
+    },
+    "wsl": {
+      "manageDistros": "Quản lý bản phân phối",
+      "installedHeading": "Bản phân phối đã cài đặt",
+      "installHeading": "Cài đặt bản phân phối",
+      "default": "Mặc định",
+      "setDefault": "Đặt làm mặc định",
+      "unregister": "Hủy đăng ký",
+      "selectPlaceholder": "Chọn bản phân phối",
+      "noInstalled": "Chưa có bản phân phối WSL nào được cài đặt.",
+      "noOnline": "Không có bản phân phối nào khác để cài đặt.",
+      "loading": "Đang tải bản phân phối…",
+      "versionLabel": "WSL {{version}}",
+      "installing": "Đang cài đặt {{name}}… Quá trình này có thể mất vài phút.",
+      "setDefaultDone": "{{name}} hiện là bản phân phối mặc định.",
+      "unregisterDone": "Đã hủy đăng ký {{name}}.",
+      "installDone": "Đã cài đặt {{name}}.",
+      "unregisterTitle": "Hủy đăng ký {{name}}?",
+      "unregisterBody": "Thao tác này sẽ xóa vĩnh viễn bản phân phối {{name}} và tất cả tệp của nó. Không thể hoàn tác."
     }
   },
   "settings": {

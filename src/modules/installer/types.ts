@@ -107,6 +107,20 @@ export interface ManagedWebUiStatus {
   url?: string | null;
 }
 
+/// One installed WSL distribution reported by `wsl --list --verbose`.
+export interface WslDistroInfo {
+  name: string;
+  isDefault: boolean;
+  version: number | null;
+  running: boolean;
+}
+
+/// One installable WSL distribution reported by `wsl --list --online`.
+export interface WslOnlineDistro {
+  name: string;
+  friendlyName: string;
+}
+
 export interface InstallOptions {
   scope?: "user" | "machine";
   version?: string;
