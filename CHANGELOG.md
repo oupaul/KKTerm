@@ -3,6 +3,32 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.95/kkterm-0.1.95-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.95/kkterm-0.1.95-windows-arm64-setup.exe)
+
+## Highlights
+- Improved handling for update asset URLs and added checksum validation logic (so your updates behave a bit less like “mystery network traffic”).  
+
+## Improved
+- Refactored update asset URL handling and checksum validation logic.  
+
+## Internal
+- Updated update-related logic in `src-tauri/src/app_updates.rs` and refreshed documentation (`docs/ARCHITECTURE.md`, `docs/RELEASE.md`, `docs/manual/15-settings.md`).  
+  - Commit: `c7f62c9` — “refactor: enhance update asset URL handling and checksum validation logic”  
+
+---
+
+## 精選重點
+- 改善更新資產（update asset）URL 的處理方式，並新增檢查碼（checksum）驗證邏輯（讓更新別再那麼像「神秘網路流量」）。  
+
+## 改善
+- 重構更新資產 URL 的處理流程，並加入 checksum 驗證邏輯。  
+
+## 內部
+- 於 `src-tauri/src/app_updates.rs` 更新相關邏輯，並同步更新文件（`docs/ARCHITECTURE.md`、`docs/RELEASE.md`、`docs/manual/15-settings.md`）。  
+  - 提交：`c7f62c9` — 「refactor: enhance update asset URL handling and checksum validation logic」
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.94/kkterm-0.1.94-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.94/kkterm-0.1.94-windows-arm64-setup.exe)
 
