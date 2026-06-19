@@ -84,9 +84,11 @@ test("settings font picker hints are unconditional inside the anchored labels", 
   ]) {
     const labelScope = extractLabelScope(source, tutorialId);
     const hintBody = extractHintBody(labelScope, tutorialId);
+    const selectClose = labelScope.indexOf("</select>");
+    assert.ok(selectClose >= 0, `expected select close inside ${tutorialId}`);
 
     assert.equal(hintBody.trim(), '{t("settings.customFontsHint")}');
-    assert.doesNotMatch(labelScope, /customFonts\.length/);
+    assert.doesNotMatch(labelScope.slice(selectClose), /customFonts\.length/);
   }
 });
 
@@ -112,7 +114,8 @@ test("settings font picker buttons are icon-only", async () => {
     [FONT_PICKER_TUTORIAL_IDS.terminal, terminalSource],
   ]) {
     const buttonSource = extractOpenFontsFolderButton(source, tutorialId);
+    const buttonPattern = new RegExp("^\\s*<button[\\s\\S]*>\\s*<FolderOpen size=\\{15\\} \\/>\\s*<\\/button>\\s*$");
 
-    assert.match(buttonSource, /^\s*<button[\s\S]*>\s*<FolderOpen size={15} \/>\s*<\/button>\s*$/);
+    assert.match(buttonSource, buttonPattern);
   }
 });

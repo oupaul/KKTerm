@@ -388,11 +388,13 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
                     {font.name}
                   </option>
                 ))}</optgroup> : null}
-                {APP_UI_FONT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {t(option.labelKey)}
-                  </option>
-                ))}
+                <optgroup label={t("settings.recommendedFonts")}>
+                  {APP_UI_FONT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {t(option.labelKey)}
+                    </option>
+                  ))}
+                </optgroup>
                 {systemFontOptions.length > 0 ? (
                   <optgroup label={t("settings.systemFonts")}>
                     {systemFontOptions.map((option) => (
@@ -411,12 +413,9 @@ export function AppearanceSettings({ onResetLayout }: { onResetLayout: () => voi
                 type="button"
               >
                 <FolderOpen size={15} />
-                {t("settings.openCustomFontsFolder")}
               </button>
             </div>
-            <small className="field-hint">
-              {customFonts.length > 0 ? t("settings.customFontsHint") : t("settings.noCustomFonts")}
-            </small>
+            <small className="field-hint">{t("settings.customFontsHint")}</small>
           </label>
         </div>
       </fieldset>

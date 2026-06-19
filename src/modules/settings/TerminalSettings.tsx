@@ -304,12 +304,14 @@ export function TerminalSettings() {
                     ))}
                   </optgroup>
                 ) : null}
-                <option value={defaultTerminalFontValue}>{t("settings.terminalFontDefault")}</option>
-                {TERMINAL_FONT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+                <optgroup label={t("settings.recommendedFonts")}>
+                  <option value={defaultTerminalFontValue}>{t("settings.terminalFontDefault")}</option>
+                  {TERMINAL_FONT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
                 {systemFontTerminalOptions.length > 0 ? (
                   <optgroup label={t("settings.systemFonts")}>
                     {systemFontTerminalOptions.map((option) => (
@@ -332,9 +334,7 @@ export function TerminalSettings() {
                 </button>
               ) : null}
             </div>
-            <small className="field-hint">
-              {customFonts.length > 0 ? t("settings.customFontsHint") : t("settings.noCustomFonts")}
-            </small>
+            <small className="field-hint">{t("settings.customFontsHint")}</small>
           </label>
           <label data-tutorial-id="settings.terminalFontSize">
             <span>{t("settings.fontSize")}</span>
