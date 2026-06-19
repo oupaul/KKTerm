@@ -15,9 +15,10 @@ test("SSH forwarding fields use unfiltered editable dropdowns for detected sugge
   const source = await readFile(dialogUrl, "utf8");
 
   assert.match(source, /invokeCommand\("network_interfaces", undefined\)/);
+  assert.match(source, /invokeCommand\("list_remote_network_addresses", \{[\s\S]*?sessionId,[\s\S]*?\}\)/);
   assert.match(source, /invokeCommand\("list_remote_loopback_ports", \{/);
   assert.doesNotMatch(source, /\.filter\(\(networkInterface\) => networkInterface\.isUp\)/);
-  assert.match(source, /\["127\.0\.0\.1", "0\.0\.0\.0", \.\.\.localInterfaceAddresses\]/);
+  assert.match(source, /mode === "R" \? remoteInterfaceAddresses : localInterfaceAddresses/);
   assert.match(source, /mode === "L" && isLoopbackHost\(current\.destHost\).*remoteLoopbackPorts\.map\(String\)/s);
   assert.match(source, /function EditableDropdownInput\(/);
   assert.match(source, /options\.map\(\(option\) =>/);
@@ -26,17 +27,19 @@ test("SSH forwarding fields use unfiltered editable dropdowns for detected sugge
   assert.doesNotMatch(source, /<datalist\b|\blist=\{/);
 });
 
-test("Remote mode reverses headings without moving its field groups", async () => {
+test("Remote mode assigns the local destination and remote listener to the correct machines", async () => {
   const source = await readFile(dialogUrl, "utf8");
 
   assert.match(
     source,
-    /mode === "R" \? t\("terminal\.forwardTo"\) : t\("terminal\.localListener"\)[\s\S]*?<Field label=\{t\("terminal\.bindAddress"\)\}>/,
+    /mode === "R"[\s\S]*?t\("terminal\.forwardTo"\)[\s\S]*?value=\{current\.destHost\}[\s\S]*?value=\{current\.destPort\}/,
   );
   assert.match(
     source,
-    /mode === "R" \? t\("terminal\.remoteListener"\) : t\("terminal\.destination"\)[\s\S]*?<Field label=\{t\("terminal\.host"\)\}>/,
+    /mode === "R"[\s\S]*?t\("terminal\.remoteListener"\)[\s\S]*?value=\{current\.bind\}[\s\S]*?value=\{current\.listenPort\}/,
   );
+  assert.match(source, /mode === "R" \? `\$\{current\.destHost\}:\$\{current\.destPort\}` : `\$\{current\.bind\}:\$\{current\.listenPort\}`/);
+  assert.match(source, /mode === "R" \? `\$\{current\.bind\}:\$\{current\.listenPort\}` : `\$\{current\.destHost\}:\$\{current\.destPort\}`/);
 });
 
 test("Remote forwarding defaults to a wildcard IPv4 listener", async () => {

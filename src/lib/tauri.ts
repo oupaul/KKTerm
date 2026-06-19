@@ -1906,6 +1906,25 @@ type CommandMap = {
     };
     result: RemoteLoopbackPort[];
   };
+  list_remote_network_addresses: {
+    args: {
+      request: {
+        host: string;
+        user: string;
+        port?: number;
+        keyPath?: string;
+        proxyJump?: string;
+        sshSocksProxy?: string;
+        sshSocksProxyUsername?: string;
+        sshSocksProxySecretOwnerId?: string;
+        sshSocksProxyInheritDefaults?: boolean;
+        authMethod?: "keyFile" | "password" | "agent";
+        secretOwnerId?: string;
+      };
+      sessionId?: string;
+    };
+    result: string[];
+  };
   start_ssh_port_forward: {
     args: {
       request: {

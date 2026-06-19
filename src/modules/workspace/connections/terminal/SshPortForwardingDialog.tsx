@@ -270,6 +270,7 @@ export function SshPortForwardingDialog({
   const [drafts, setDrafts] = useState<ForwardingDraft>(DEFAULT_DRAFT);
   const [forwardings, setForwardings] = useState<SshPortForwarding[]>(connection.sshPortForwardings ?? []);
   const [localInterfaceAddresses, setLocalInterfaceAddresses] = useState<string[]>([]);
+  const [remoteInterfaceAddresses, setRemoteInterfaceAddresses] = useState<string[]>([]);
   const [remoteLoopbackPorts, setRemoteLoopbackPorts] = useState<number[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -288,6 +289,16 @@ export function SshPortForwardingDialog({
         ));
       })
       .catch(() => undefined);
+    void invokeCommand("list_remote_network_addresses", {
+      request: sshConnectionRequest(connection),
+      sessionId: sessionId ?? undefined,
+    })
+      .then((addresses) => {
+        if (!cancelled) {
+          setRemoteInterfaceAddresses(uniqueOptions(addresses));
+        }
+      })
+      .catch(() => undefined);
     void invokeCommand("list_remote_loopback_ports", {
       request: sshConnectionRequest(connection),
     })
@@ -300,7 +311,7 @@ export function SshPortForwardingDialog({
     return () => {
       cancelled = true;
     };
-  }, [connection]);
+  }, [connection, sessionId]);
 
   const counts = useMemo(() => {
     return forwardings.reduce<Record<SshPortForwardMode, number>>(
@@ -314,7 +325,11 @@ export function SshPortForwardingDialog({
   const current = drafts[mode];
   const visibleForwardings = forwardings.filter((forwarding) => forwarding.mode === mode);
   const command = forwardingCommand(connection, mode, current);
-  const bindAddressOptions = uniqueOptions(["127.0.0.1", "0.0.0.0", ...localInterfaceAddresses]);
+  const bindAddressOptions = uniqueOptions([
+    "127.0.0.1",
+    "0.0.0.0",
+    ...(mode === "R" ? remoteInterfaceAddresses : localInterfaceAddresses),
+  ]);
   const listenPortOptions = uniqueOptions([
     DEFAULT_DRAFT[mode].listenPort,
     ...forwardings.filter((forwarding) => forwarding.mode === mode).map((forwarding) => String(forwarding.listenPort)),
@@ -496,9 +511,9 @@ export function SshPortForwardingDialog({
 
           <div className="sshf-diagram">
             <div className="sshf-stage">
-              <ForwardNode icon="monitor" label={t("terminal.thisPc")} endpoint={`${current.bind}:${current.listenPort}`} listen={mode !== "R"} listeningLabel={t("terminal.sshForwardListening")} />
+              <ForwardNode icon="monitor" label={t("terminal.thisPc")} endpoint={mode === "R" ? `${current.destHost}:${current.destPort}` : `${current.bind}:${current.listenPort}`} listen={mode !== "R"} listeningLabel={t("terminal.sshForwardListening")} />
               <div className={`sshf-track ${mode === "R" ? "rtl" : "ltr"}`}><span className="sshf-rail" /><span className="sshf-dot" /><span className="sshf-dot two" /><span className="sshf-dot three" /></div>
-              <ForwardNode icon="server" label={connection.name} endpoint={mode === "D" ? t("terminal.sshTunnel") : `${current.destHost}:${current.destPort}`} listen={mode === "R"} listeningLabel={t("terminal.sshForwardListening")} />
+              <ForwardNode icon="server" label={connection.name} endpoint={mode === "D" ? t("terminal.sshTunnel") : mode === "R" ? `${current.bind}:${current.listenPort}` : `${current.destHost}:${current.destPort}`} listen={mode === "R"} listeningLabel={t("terminal.sshForwardListening")} />
               {mode === "D" ? (
                 <>
                   <div className="sshf-track ltr"><span className="sshf-rail" /><span className="sshf-dot" /><span className="sshf-dot two" /></div>
@@ -554,19 +569,43 @@ export function SshPortForwardingDialog({
 
           <div className={`sshf-pairs${mode === "D" ? " one" : ""}`}>
             <div className="sshf-pair">
-              <div className="pair-h"><span className="pdot listen" />{mode === "R" ? t("terminal.forwardTo") : t("terminal.localListener")}<small>{t("terminal.onThisPc")}</small></div>
-              <div className="sshf-row3">
-                <Field label={t("terminal.bindAddress")}><EditableDropdownInput ariaLabel={t("terminal.bindAddress")} options={bindAddressOptions} value={current.bind} onChange={(value) => updateDraft({ bind: value })} /></Field>
-                <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><EditableDropdownInput ariaLabel={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")} inputMode="numeric" optionLabel={formatPortOption} options={listenPortOptions} value={current.listenPort} onChange={(value) => updateDraft({ listenPort: numeric(value) })} /></Field>
-              </div>
+              {mode === "R" ? (
+                <>
+                  <div className="pair-h"><span className="pdot dest" />{t("terminal.forwardTo")}<small>{t("terminal.onThisPc")}</small></div>
+                  <div className="sshf-row3">
+                    <Field label={t("terminal.host")}><EditableDropdownInput ariaLabel={t("terminal.host")} options={destinationHostOptions} value={current.destHost} onChange={(value) => updateDraft({ destHost: value })} /></Field>
+                    <Field label={t("terminal.port")}><EditableDropdownInput ariaLabel={t("terminal.port")} inputMode="numeric" optionLabel={formatPortOption} options={destinationPortOptions} value={current.destPort} onChange={(value) => updateDraft({ destPort: numeric(value) })} /></Field>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="pair-h"><span className="pdot listen" />{t("terminal.localListener")}<small>{t("terminal.onThisPc")}</small></div>
+                  <div className="sshf-row3">
+                    <Field label={t("terminal.bindAddress")}><EditableDropdownInput ariaLabel={t("terminal.bindAddress")} options={bindAddressOptions} value={current.bind} onChange={(value) => updateDraft({ bind: value })} /></Field>
+                    <Field label={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")}><EditableDropdownInput ariaLabel={mode === "D" ? t("terminal.socksPort") : t("terminal.listenPort")} inputMode="numeric" optionLabel={formatPortOption} options={listenPortOptions} value={current.listenPort} onChange={(value) => updateDraft({ listenPort: numeric(value) })} /></Field>
+                  </div>
+                </>
+              )}
             </div>
             {mode !== "D" ? (
               <div className="sshf-pair">
-                <div className="pair-h"><span className="pdot dest" />{mode === "R" ? t("terminal.remoteListener") : t("terminal.destination")}<small>{mode === "R" ? t("terminal.onServer") : t("terminal.reachableFromServer")}</small></div>
-                <div className="sshf-row3">
-                  <Field label={t("terminal.host")}><EditableDropdownInput ariaLabel={t("terminal.host")} options={destinationHostOptions} value={current.destHost} onChange={(value) => updateDraft({ destHost: value })} /></Field>
-                  <Field label={t("terminal.port")}><EditableDropdownInput ariaLabel={t("terminal.port")} inputMode="numeric" optionLabel={formatPortOption} options={destinationPortOptions} value={current.destPort} onChange={(value) => updateDraft({ destPort: numeric(value) })} /></Field>
-                </div>
+                {mode === "R" ? (
+                  <>
+                    <div className="pair-h"><span className="pdot listen" />{t("terminal.remoteListener")}<small>{t("terminal.onServer")}</small></div>
+                    <div className="sshf-row3">
+                      <Field label={t("terminal.bindAddress")}><EditableDropdownInput ariaLabel={t("terminal.bindAddress")} options={bindAddressOptions} value={current.bind} onChange={(value) => updateDraft({ bind: value })} /></Field>
+                      <Field label={t("terminal.listenPort")}><EditableDropdownInput ariaLabel={t("terminal.listenPort")} inputMode="numeric" optionLabel={formatPortOption} options={listenPortOptions} value={current.listenPort} onChange={(value) => updateDraft({ listenPort: numeric(value) })} /></Field>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="pair-h"><span className="pdot dest" />{t("terminal.destination")}<small>{t("terminal.reachableFromServer")}</small></div>
+                    <div className="sshf-row3">
+                      <Field label={t("terminal.host")}><EditableDropdownInput ariaLabel={t("terminal.host")} options={destinationHostOptions} value={current.destHost} onChange={(value) => updateDraft({ destHost: value })} /></Field>
+                      <Field label={t("terminal.port")}><EditableDropdownInput ariaLabel={t("terminal.port")} inputMode="numeric" optionLabel={formatPortOption} options={destinationPortOptions} value={current.destPort} onChange={(value) => updateDraft({ destPort: numeric(value) })} /></Field>
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
           </div>

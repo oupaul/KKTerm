@@ -1180,6 +1180,24 @@ impl SessionManager {
         ))
     }
 
+    pub fn list_remote_network_addresses(
+        &self,
+        app: AppHandle,
+        secrets: &secrets::Secrets,
+        request: TmuxConnectionRequest,
+        session_id: Option<String>,
+    ) -> Result<Vec<String>, String> {
+        let output = self.run_ssh_probe_command(
+            app,
+            secrets,
+            &request,
+            session_id.as_deref(),
+            remote_network_address_command(),
+            Duration::from_secs(5),
+        )?;
+        Ok(parse_remote_network_addresses(&output))
+    }
+
     pub fn start_ssh_port_forward(
         &self,
         _app: AppHandle,
@@ -1691,6 +1709,28 @@ fn run_ssh_command(
 
 fn remote_loopback_port_command() -> String {
     "if command -v ss >/dev/null 2>&1; then ss -H -ltn; elif command -v netstat >/dev/null 2>&1; then netstat -ltn; elif command -v lsof >/dev/null 2>&1; then lsof -nP -iTCP -sTCP:LISTEN; else printf 'KKTerm: no ss, netstat, or lsof available\\n' >&2; fi".to_string()
+}
+
+fn remote_network_address_command() -> String {
+    "if command -v ip >/dev/null 2>&1; then ip -o addr show | awk '{print $4}'; elif command -v ifconfig >/dev/null 2>&1; then ifconfig | awk '/^[[:space:]]*inet / {print $2} /^[[:space:]]*inet6 / {print $2}'; elif command -v hostname >/dev/null 2>&1; then hostname -I; else printf 'KKTerm: no ip, ifconfig, or hostname address discovery available\\n' >&2; fi".to_string()
+}
+
+fn parse_remote_network_addresses(output: &str) -> Vec<String> {
+    let mut addresses = Vec::new();
+    for token in output.split_whitespace() {
+        let candidate = token
+            .trim_matches(|character: char| character == ',' || character == '"' || character == '\'')
+            .split('/')
+            .next()
+            .unwrap_or_default()
+            .split('%')
+            .next()
+            .unwrap_or_default();
+        if candidate.parse::<IpAddr>().is_ok() && !addresses.iter().any(|entry| entry == candidate) {
+            addresses.push(candidate.to_string());
+        }
+    }
+    addresses
 }
 
 fn parse_remote_loopback_ports(output: &str) -> Vec<RemoteLoopbackPort> {
@@ -3133,6 +3173,21 @@ python 124 user 22u IPv4 0x0 0t0 TCP TCP@localhost:8000 (LISTEN)
         assert_eq!(ports.len(), 2);
         assert_eq!(ports[0].port, 5173);
         assert_eq!(ports[1].port, 8000);
+    }
+
+    #[test]
+    fn parses_remote_network_addresses_from_probe_output() {
+        let output = "127.0.0.1/8\n10.0.0.42/24\nfe80::1234%eth0/64\n::1/128\ninvalid\n";
+
+        assert_eq!(
+            parse_remote_network_addresses(output),
+            vec![
+                "127.0.0.1".to_string(),
+                "10.0.0.42".to_string(),
+                "fe80::1234".to_string(),
+                "::1".to_string(),
+            ]
+        );
     }
 
     #[test]
