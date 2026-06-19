@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "Enter a valid listen port and destination.",
     "sshPortForwardBindConflict": "{{address}}:{{port}} is already in use by another SSH forward.",
     "sshPortForwardSessionUnavailable": "Open this dialog from a connected native SSH Pane and try again.",
+    "sshPortForwardStartupFailed": "SSH connected, but one or more saved port forwards failed to start: {{message}}",
     "thisPc": "This PC",
     "internet": "Internet",
     "anyHost": "any host",

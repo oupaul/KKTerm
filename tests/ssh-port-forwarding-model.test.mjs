@@ -130,6 +130,33 @@ test("Remote URLs reject loopback and replace wildcards with the SSH host", asyn
   assert.equal(sshRemoteForwardBrowserUrl("10.0.0.42", 8080, "pb602"), "http://10.0.0.42:8080");
 });
 
+test("Saved enabled forwards all start and report failures without stopping the batch", async () => {
+  const { startEnabledSshPortForwardings } = await importTypeScriptModule(
+    new URL(
+      "../src/modules/workspace/connections/terminal/sshPortForwardingModel.ts",
+      import.meta.url,
+    ),
+  );
+  const forwardings = [
+    { id: "local", mode: "L", enabled: true },
+    { id: "remote", mode: "R", enabled: true },
+    { id: "dynamic", mode: "D", enabled: true },
+    { id: "disabled", mode: "L", enabled: false },
+  ];
+  const started = [];
+
+  const failures = await startEnabledSshPortForwardings(forwardings, async (forwarding) => {
+    started.push(forwarding.id);
+    if (forwarding.id === "remote") {
+      throw new Error("remote listener rejected");
+    }
+  });
+
+  assert.deepEqual(started, ["local", "remote", "dynamic"]);
+  assert.equal(failures.length, 1);
+  assert.match(String(failures[0]), /remote listener rejected/);
+});
+
 test("SSH forwarding starts through the Pane's live Session", async () => {
   const [workspaceSource, dialogSource, tauriSource, sessionsSource, sshSource] = await Promise.all([
     readFile(
@@ -146,6 +173,8 @@ test("SSH forwarding starts through the Pane's live Session", async () => {
   ]);
 
   assert.match(workspaceSource, /onOpenSshPortForwarding\(pane\.connection, pane\.id, sessionIdRef\.current\)/);
+  assert.match(workspaceSource, /startEnabledSshPortForwardings\(\s*connection\.sshPortForwardings \?\? \[\]/);
+  assert.match(workspaceSource, /terminal\.sshPortForwardStartupFailed/);
   assert.match(dialogSource, /remotePort:[\s\S]*\bsessionId,/);
   assert.match(tauriSource, /start_ssh_port_forward:[\s\S]*sessionId:\s*string/);
   const startForwardSource = sessionsSource.slice(

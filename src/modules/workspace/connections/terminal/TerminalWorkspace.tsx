@@ -40,6 +40,7 @@ import type { Connection, LayoutNode, SplitDirection, TerminalPane, WorkspacePan
 import { QuickCommandBar } from "./QuickCommandBar";
 import { TerminalBackgroundLayer, TerminalBackgroundPopover } from "./TerminalBackgroundPopover";
 import { SshPortForwardingDialog, hasEnabledSshPortForwardings } from "./SshPortForwardingDialog";
+import { startEnabledSshPortForwardings } from "./sshPortForwardingModel";
 
 type TerminalContextMenuState = {
   x: number;
@@ -1976,6 +1977,28 @@ function TerminalPaneView({
             pane.id,
             result.x11ForwardingStatus ?? x11ForwardingStatus,
           );
+          void startEnabledSshPortForwardings(
+            connection.sshPortForwardings ?? [],
+            (forwarding) => invokeCommand("start_ssh_port_forward", {
+              request: {
+                ...tmuxConnectionRequest(connection),
+                forwardId: forwarding.id,
+                mode: forwarding.mode,
+                bind: forwarding.bind,
+                listenPort: forwarding.listenPort,
+                destHost: forwarding.destHost,
+                destPort: forwarding.destPort,
+                remotePort: forwarding.destPort,
+                sessionId: result.sessionId,
+              },
+            }),
+          ).then((failures) => {
+            if (!disposed && failures.length > 0) {
+              showStatusBarNotice(t("terminal.sshPortForwardStartupFailed", {
+                message: failures[0] instanceof Error ? failures[0].message : String(failures[0]),
+              }), { tone: "warning" });
+            }
+          });
         }
         sessionStarted = true;
         const startupInput = localStartupInputFor(connection);

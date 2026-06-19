@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "Introduzca un puerto de escucha y un destino válidos.",
     "sshPortForwardBindConflict": "{{address}}:{{port}} ya está en uso por otro reenvío SSH.",
     "sshPortForwardSessionUnavailable": "Abra este diálogo desde un panel SSH nativo conectado e inténtelo de nuevo.",
+    "sshPortForwardStartupFailed": "La conexión SSH se estableció, pero no se pudieron iniciar uno o varios reenvíos de puertos guardados: {{message}}",
     "thisPc": "Este equipo",
     "internet": "Internet",
     "anyHost": "cualquier host",

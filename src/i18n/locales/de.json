@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "Geben Sie einen gültigen Listen-Port und ein Ziel ein.",
     "sshPortForwardBindConflict": "{{address}}:{{port}} wird bereits von einer anderen SSH-Weiterleitung verwendet.",
     "sshPortForwardSessionUnavailable": "Öffnen Sie diesen Dialog aus einem verbundenen nativen SSH-Pane und versuchen Sie es erneut.",
+    "sshPortForwardStartupFailed": "SSH wurde verbunden, aber mindestens eine gespeicherte Portweiterleitung konnte nicht gestartet werden: {{message}}",
     "thisPc": "Dieser PC",
     "internet": "Internet",
     "anyHost": "beliebiger Host",

@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "Inserisci una porta di ascolto e una destinazione valide.",
     "sshPortForwardBindConflict": "{{address}}:{{port}} è già in uso da un altro inoltro SSH.",
     "sshPortForwardSessionUnavailable": "Apri questa finestra di dialogo da un riquadro SSH nativo connesso e riprova.",
+    "sshPortForwardStartupFailed": "SSH è connesso, ma non è stato possibile avviare uno o più inoltri di porta salvati: {{message}}",
     "thisPc": "Questo PC",
     "internet": "Internet",
     "anyHost": "qualsiasi host",

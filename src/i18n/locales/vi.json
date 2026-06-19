@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "Nhập cổng lắng nghe và đích hợp lệ.",
     "sshPortForwardBindConflict": "{{address}}:{{port}} đã được sử dụng bởi một chuyển tiếp SSH khác.",
     "sshPortForwardSessionUnavailable": "Hãy mở hộp thoại này từ một ngăn SSH native đã kết nối và thử lại.",
+    "sshPortForwardStartupFailed": "SSH đã kết nối, nhưng không thể khởi động một hoặc nhiều chuyển tiếp cổng đã lưu: {{message}}",
     "thisPc": "Máy tính này",
     "internet": "Internet",
     "anyHost": "bất kỳ máy chủ nào",

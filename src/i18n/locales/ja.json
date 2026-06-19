@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "有効なリッスンポートと接続先を入力してください。",
     "sshPortForwardBindConflict": "{{address}}:{{port}} は既に別の SSH フォワードで使用されています。",
     "sshPortForwardSessionUnavailable": "接続済みのネイティブ SSH ペインからこのダイアログを開いて、もう一度お試しください。",
+    "sshPortForwardStartupFailed": "SSH には接続しましたが、保存済みのポートフォワードを 1 つ以上開始できませんでした: {{message}}",
     "thisPc": "この PC",
     "internet": "インターネット",
     "anyHost": "任意のホスト",

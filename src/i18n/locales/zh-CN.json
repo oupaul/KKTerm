@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "请输入有效的监听端口和目标。",
     "sshPortForwardBindConflict": "{{address}}:{{port}} 已被其他 SSH 转发占用。",
     "sshPortForwardSessionUnavailable": "请从已连接的原生 SSH 窗格打开此对话框并重试。",
+    "sshPortForwardStartupFailed": "SSH 已连接，但一个或多个已保存的端口转发启动失败：{{message}}",
     "thisPc": "本电脑",
     "internet": "互联网",
     "anyHost": "任意主机",

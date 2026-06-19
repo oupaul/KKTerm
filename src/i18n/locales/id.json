@@ -2411,6 +2411,7 @@
     "sshPortForwardInvalid": "Masukkan port dengar dan tujuan yang valid.",
     "sshPortForwardBindConflict": "{{address}}:{{port}} sudah digunakan oleh penerusan SSH lain.",
     "sshPortForwardSessionUnavailable": "Buka dialog ini dari Pane SSH native yang terhubung dan coba lagi.",
+    "sshPortForwardStartupFailed": "SSH terhubung, tetapi satu atau beberapa penerusan port tersimpan gagal dimulai: {{message}}",
     "thisPc": "PC ini",
     "internet": "Internet",
     "anyHost": "host mana pun",

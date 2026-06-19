@@ -11,6 +11,16 @@ export type LocalTcpListener = {
   port: number;
 };
 
+export async function startEnabledSshPortForwardings(
+  forwardings: SshPortForwarding[],
+  startForward: (forwarding: SshPortForwarding) => Promise<unknown>,
+) {
+  const results = await Promise.allSettled(
+    forwardings.filter((forwarding) => forwarding.enabled).map(startForward),
+  );
+  return results.flatMap((result) => result.status === "rejected" ? [result.reason] : []);
+}
+
 function normalizeBindAddress(value: string): NormalizedBindAddress {
   const trimmed = value.trim().toLowerCase();
   if (trimmed === "localhost") {
