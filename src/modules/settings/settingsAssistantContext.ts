@@ -5,7 +5,6 @@ export type SettingsSectionId =
   | "workspace-settings"
   | "file-explorer-settings"
   | "dont-sleep-settings"
-  | "itops-settings"
   | "installer-settings"
   | "credentials-settings"
   | "assistant-settings"
@@ -58,6 +57,11 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.workspaceAccess",
         description: "Local runtime permission and startup toggles.",
         tutorialTargetId: "settings.workspaceAccess",
+      },
+      {
+        key: "settings.activityRail",
+        description:
+          "Visibility controls for Workspace, Dashboard, Install Helper, IT Ops, and Don't Sleep on the Activity Rail.",
       },
       {
         key: "settings.useDirectxScreenCapture",
@@ -186,24 +190,9 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
     fallbackLabel: "Install Helper",
     controls: [
       {
-        key: "settings.installerShowOnRail",
-        description: "Show or hide the Install Helper icon on the Activity Rail.",
-      },
-      {
         key: "settings.installerCheckInterval",
         description:
           "How often the Install Helper auto-checks for the latest tool versions when opened (hour/day/week/month; default daily).",
-      },
-    ],
-  },
-  "itops-settings": {
-    labelKey: "settings.sectionItOps",
-    fallbackLabel: "IT Ops",
-    controls: [
-      {
-        key: "settings.itOpsShowModule",
-        description:
-          "Show or hide the IT Ops Module (Host Groups, Batch Runs, Automations) on the Activity Rail. Under development; off by default.",
       },
     ],
   },

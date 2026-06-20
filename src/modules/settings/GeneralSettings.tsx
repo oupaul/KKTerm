@@ -360,6 +360,31 @@ export function GeneralSettings() {
       </div>
 
       <fieldset className="settings-subsection settings-fieldset">
+        <legend>{t("settings.activityRail")}</legend>
+        <div className="settings-toggle-list">
+          {([
+            ["showWorkspaceOnRail", "settings.sectionWorkspace"],
+            ["showDashboardOnRail", "settings.sectionDashboard"],
+            ["showInstallerOnRail", "settings.sectionInstaller"],
+            ["showItOps", "settings.sectionItOps"],
+            ["showDontSleepOnRail", "settings.sectionDontSleep"],
+          ] as const).map(([setting, labelKey]) => (
+            <label className="settings-toggle-row" key={setting}>
+              <ToggleSwitch
+                checked={draft[setting]}
+                onChange={(checked) =>
+                  setDraft((state) => ({ ...state, [setting]: checked }))
+                }
+              />
+              <span>
+                <strong>{t(labelKey)}</strong>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.workspaceAccess")}</legend>
         <div>
           <p className="field-hint">{t("settings.workspaceAccessHint")}</p>

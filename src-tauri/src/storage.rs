@@ -338,6 +338,10 @@ pub struct GeneralSettings {
     auto_update_checks_enabled: bool,
     #[serde(default = "default_show_connected_connections_in_rail")]
     show_connected_connections_in_rail: bool,
+    #[serde(default = "default_show_workspace_on_rail")]
+    show_workspace_on_rail: bool,
+    #[serde(default = "default_show_dashboard_on_rail")]
+    show_dashboard_on_rail: bool,
     #[serde(default)]
     show_all_connections_in_tree: bool,
     #[serde(default)]
@@ -354,6 +358,8 @@ pub struct GeneralSettings {
     // development; users opt in via Settings → IT Ops.
     #[serde(default = "default_show_it_ops")]
     show_it_ops: bool,
+    #[serde(default = "default_show_dont_sleep_on_rail")]
+    show_dont_sleep_on_rail: bool,
     #[serde(default = "default_installer_check_interval_seconds")]
     installer_check_interval_seconds: u32,
     #[serde(default)]
@@ -4123,6 +4129,8 @@ fn default_general_settings() -> GeneralSettings {
         auto_backup_enabled: true,
         auto_update_checks_enabled: default_auto_update_checks_enabled(),
         show_connected_connections_in_rail: true,
+        show_workspace_on_rail: default_show_workspace_on_rail(),
+        show_dashboard_on_rail: default_show_dashboard_on_rail(),
         show_all_connections_in_tree: false,
         hide_top_tab_buttons: false,
         double_click_opens_connection: false,
@@ -4130,6 +4138,7 @@ fn default_general_settings() -> GeneralSettings {
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),
         show_it_ops: default_show_it_ops(),
+        show_dont_sleep_on_rail: default_show_dont_sleep_on_rail(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
@@ -4185,8 +4194,20 @@ fn default_show_installer_on_rail() -> bool {
     true
 }
 
+fn default_show_workspace_on_rail() -> bool {
+    true
+}
+
+fn default_show_dashboard_on_rail() -> bool {
+    true
+}
+
 fn default_show_it_ops() -> bool {
     false
+}
+
+fn default_show_dont_sleep_on_rail() -> bool {
+    true
 }
 
 fn default_installer_check_interval_seconds() -> u32 {

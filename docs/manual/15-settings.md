@@ -21,6 +21,8 @@ The universal AI Assistant panel remains visible on Settings. `src/modules/setti
 
 Platform-specific controls are shown only where the runtime supports them. Windows-only controls such as `settings.autoStartWithWindows`, `settings.useDirectxScreenCapture`, `settings.rdpWebviewStability`, `settings.sectionInstaller`, and `settings.sectionRdp` are hidden in the macOS build.
 
+General includes one `settings.activityRail` group for the built-in rail destinations and control. It shows or hides Workspace (`settings.sectionWorkspace`), Dashboard (`settings.sectionDashboard`), Install Helper (`settings.sectionInstaller`), IT Ops (`settings.sectionItOps`), and Don't Sleep (`settings.sectionDontSleep`). Workspace, Dashboard, Install Helper, and Don't Sleep default on; IT Ops defaults off. The connected Connection shortcut toggle remains in Workspace because it controls live/pinned Connection entries rather than a built-in Module.
+
 Settings tutorial targets:
 
 - General: `settings.language`, `settings.workspaceAccess`, `settings.useDirectxScreenCapture`, `settings.statusBar`, `settings.settingsData`, `settings.debug`.
@@ -119,14 +121,14 @@ Section header `settings.fileExplorer`. Selector `settings.fileExplorerOpenMode`
 ## Don't Sleep
 
 - Section header `settings.sectionDontSleep`. Owned by `src/modules/settings/DontSleepSettings.tsx`.
+- Activity Rail visibility is controlled by the unified General `settings.activityRail` group.
 - Toggle `settings.dontSleepForegroundOnly` (hint `settings.dontSleepForegroundOnlyHint`). The default is on: when `app.dontSleep` is enabled, KKTerm asserts the OS keep-awake state only while the main window is focused and not minimized. When off, Don't Sleep uses the previous global behavior and keeps the OS awake while KKTerm is running even if the app is in the background or minimized.
 - Save status: `settings.dontSleepSettingsSaved`.
 
 ## Install Helper
 
 - Section header `settings.sectionInstaller`. Owned by `src/modules/settings/InstallerSettings.tsx`.
-- Activity Rail group `settings.installerRail`:
-  - Toggle `settings.installerShowOnRail` (hint `settings.installerShowOnRailDesc`). When on (default), the Install Helper icon appears on the Activity Rail; when off, the icon is hidden.
+- Activity Rail visibility is controlled by the unified General `settings.activityRail` group.
 - Update checks group `settings.installerUpdateChecks`:
   - Interval dropdown `settings.installerCheckInterval` (hint `settings.installerCheckIntervalDesc`) with options `settings.installerCheckInterval3600` (hour), `settings.installerCheckInterval86400` (day, default), `settings.installerCheckInterval604800` (week), `settings.installerCheckInterval2592000` (month). Controls how often the Install Helper auto-checks for the latest tool versions when you switch to the Module; the in-Module Refresh button always checks immediately.
 - Save status: `settings.installerSaved`.

@@ -9,7 +9,6 @@ import {
   resolveInstallerCheckIntervalSeconds,
 } from "../installer/checkInterval";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
-import { ToggleSwitch } from "./ToggleSwitch";
 
 export function InstallerSettings() {
   const { t } = useTranslation();
@@ -18,7 +17,6 @@ export function InstallerSettings() {
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
   const hasChanges =
-    draft.showInstallerOnRail !== generalSettings.showInstallerOnRail ||
     draft.installerCheckIntervalSeconds !==
       generalSettings.installerCheckIntervalSeconds;
 
@@ -32,7 +30,6 @@ export function InstallerSettings() {
       const request = {
         ...currentSettings,
         installerCheckIntervalSeconds: draft.installerCheckIntervalSeconds,
-        showInstallerOnRail: draft.showInstallerOnRail,
       };
       const saved = isTauriRuntime()
         ? await invokeCommand("update_general_settings", { request })
@@ -57,23 +54,6 @@ export function InstallerSettings() {
         label={t("settings.sectionInstaller")}
         title={t("settings.sectionInstaller")}
       />
-      <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.installerRail")}</legend>
-        <div className="settings-toggle-list">
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.showInstallerOnRail}
-              onChange={(checked) =>
-                setDraft((state) => ({ ...state, showInstallerOnRail: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.installerShowOnRail")}</strong>
-              <small>{t("settings.installerShowOnRailDesc")}</small>
-            </span>
-          </label>
-        </div>
-      </fieldset>
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.installerUpdateChecks")}</legend>
         <div className="form-grid">

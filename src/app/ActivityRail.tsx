@@ -637,8 +637,9 @@ export function ActivityRail({
 
   return (
     <nav className="activity-rail" aria-label={t("app.primaryNav")}>
-      <div className="rail-workspaces" aria-label={t("workspace.workspaceSwitcher")}>
-        {(workspaces.length > 0
+      {generalSettings.showWorkspaceOnRail ? (
+        <div className="rail-workspaces" aria-label={t("workspace.workspaceSwitcher")}>
+          {(workspaces.length > 0
           ? workspaces
           : [
               {
@@ -696,25 +697,28 @@ export function ActivityRail({
             </button>
           );
         })}
+          <button
+            className="rail-button rail-button-add-workspace"
+            aria-label={t("workspace.newWorkspace")}
+            data-tutorial-id="app.activityRailNewWorkspace"
+            onClick={() => setShowNewWorkspace(true)}
+          >
+            <Plus size={18} />
+            <RailTooltip label={t("workspace.newWorkspace")} />
+          </button>
+        </div>
+      ) : null}
+      {generalSettings.showDashboardOnRail ? (
         <button
-          className="rail-button rail-button-add-workspace"
-          aria-label={t("workspace.newWorkspace")}
-          data-tutorial-id="app.activityRailNewWorkspace"
-          onClick={() => setShowNewWorkspace(true)}
+          className={`rail-button ${activePage === "dashboard" ? "active" : ""}`}
+          aria-label={t("dashboard.title")}
+          data-tutorial-id="app.activityRailDashboard"
+          onClick={() => onNavigate("dashboard")}
         >
-          <Plus size={18} />
-          <RailTooltip label={t("workspace.newWorkspace")} />
+          <Gauge size={18} />
+          <RailTooltip label={t("dashboard.title")} />
         </button>
-      </div>
-      <button
-        className={`rail-button ${activePage === "dashboard" ? "active" : ""}`}
-        aria-label={t("dashboard.title")}
-        data-tutorial-id="app.activityRailDashboard"
-        onClick={() => onNavigate("dashboard")}
-      >
-        <Gauge size={18} />
-        <RailTooltip label={t("dashboard.title")} />
-      </button>
+      ) : null}
       {generalSettings.showItOps ? (
         <button
           className={`rail-button rail-button-itops ${activePage === "itops" ? "active" : ""}`}
@@ -836,21 +840,23 @@ export function ActivityRail({
           </button>
         </div>
       ) : null}
-      <button
-        className={`rail-button rail-button-dont-sleep ${
-          dontSleepEnabled ? "active dont-sleep-enabled" : ""
-        }`}
-        aria-label={
-          dontSleepEnabled ? t("app.dontSleepDisable") : t("app.dontSleepEnable")
-        }
-        data-tutorial-id="app.activityRailDontSleep"
-        {...ariaPressed(dontSleepEnabled)}
-        disabled={dontSleepUpdating}
-        onClick={() => void handleDontSleepClick()}
-      >
-        {dontSleepEnabled ? <Coffee size={18} /> : <BedSingle size={18} />}
-        <RailTooltip label={dontSleepTooltip} />
-      </button>
+      {generalSettings.showDontSleepOnRail ? (
+        <button
+          className={`rail-button rail-button-dont-sleep ${
+            dontSleepEnabled ? "active dont-sleep-enabled" : ""
+          }`}
+          aria-label={
+            dontSleepEnabled ? t("app.dontSleepDisable") : t("app.dontSleepEnable")
+          }
+          data-tutorial-id="app.activityRailDontSleep"
+          {...ariaPressed(dontSleepEnabled)}
+          disabled={dontSleepUpdating}
+          onClick={() => void handleDontSleepClick()}
+        >
+          {dontSleepEnabled ? <Coffee size={18} /> : <BedSingle size={18} />}
+          <RailTooltip label={dontSleepTooltip} />
+        </button>
+      ) : null}
       <button
         className={`rail-button rail-button-settings ${activePage === "settings" ? "active" : ""}`}
         aria-label={t("app.settings")}

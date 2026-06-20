@@ -427,6 +427,8 @@ export interface GeneralSettings {
   autoBackupEnabled: boolean;
   autoUpdateChecksEnabled: boolean;
   showConnectedConnectionsInRail: boolean;
+  showWorkspaceOnRail: boolean;
+  showDashboardOnRail: boolean;
   showAllConnectionsInTree: boolean;
   hideTopTabButtons: boolean;
   doubleClickOpensConnection: boolean;
@@ -434,6 +436,7 @@ export interface GeneralSettings {
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
   showItOps: boolean;
+  showDontSleepOnRail: boolean;
   installerCheckIntervalSeconds: number;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;

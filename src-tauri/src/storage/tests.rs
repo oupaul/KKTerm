@@ -1660,11 +1660,15 @@ fn general_settings_round_trip_through_settings_table() {
     assert!(defaults.auto_backup_enabled);
     assert!(defaults.auto_update_checks_enabled);
     assert!(defaults.show_connected_connections_in_rail);
+    assert!(defaults.show_workspace_on_rail);
+    assert!(defaults.show_dashboard_on_rail);
     assert!(!defaults.show_all_connections_in_tree);
     assert!(!defaults.hide_top_tab_buttons);
     assert!(defaults.submit_ai_attachments_directly);
     assert!(!defaults.separate_split_terminal_backgrounds);
     assert!(defaults.show_installer_on_rail);
+    assert!(!defaults.show_it_ops);
+    assert!(defaults.show_dont_sleep_on_rail);
     assert_eq!(defaults.installer_check_interval_seconds, 86_400);
     assert!(defaults.pinned_connection_ids.is_empty());
     assert!(defaults.allow_clipboard_read);
@@ -1685,6 +1689,8 @@ fn general_settings_round_trip_through_settings_table() {
             auto_backup_enabled: false,
             auto_update_checks_enabled: false,
             show_connected_connections_in_rail: true,
+            show_workspace_on_rail: false,
+            show_dashboard_on_rail: false,
             show_all_connections_in_tree: true,
             hide_top_tab_buttons: true,
             double_click_opens_connection: true,
@@ -1692,6 +1698,7 @@ fn general_settings_round_trip_through_settings_table() {
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
             show_it_ops: false,
+            show_dont_sleep_on_rail: false,
             installer_check_interval_seconds: 604_800,
             pinned_connection_ids: vec![
                 " connection-a ".to_string(),
@@ -1716,12 +1723,16 @@ fn general_settings_round_trip_through_settings_table() {
     assert!(!updated.auto_backup_enabled);
     assert!(!updated.auto_update_checks_enabled);
     assert!(updated.show_connected_connections_in_rail);
+    assert!(!updated.show_workspace_on_rail);
+    assert!(!updated.show_dashboard_on_rail);
     assert!(updated.show_all_connections_in_tree);
     assert!(updated.hide_top_tab_buttons);
     assert!(updated.double_click_opens_connection);
     assert!(!updated.submit_ai_attachments_directly);
     assert!(updated.separate_split_terminal_backgrounds);
     assert!(!updated.show_installer_on_rail);
+    assert!(!updated.show_it_ops);
+    assert!(!updated.show_dont_sleep_on_rail);
     assert_eq!(updated.installer_check_interval_seconds, 604_800);
     assert_eq!(
         updated.pinned_connection_ids,
@@ -2039,6 +2050,8 @@ fn database_backup_import_restores_settings_and_connections() {
             auto_backup_enabled: false,
             auto_update_checks_enabled: true,
             show_connected_connections_in_rail: true,
+            show_workspace_on_rail: false,
+            show_dashboard_on_rail: false,
             show_all_connections_in_tree: true,
             hide_top_tab_buttons: true,
             double_click_opens_connection: true,
@@ -2046,6 +2059,7 @@ fn database_backup_import_restores_settings_and_connections() {
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
             show_it_ops: false,
+            show_dont_sleep_on_rail: false,
             installer_check_interval_seconds: 86_400,
             pinned_connection_ids: vec!["connection-pinned".to_string()],
             allow_clipboard_read: true,
@@ -2070,6 +2084,8 @@ fn database_backup_import_restores_settings_and_connections() {
             auto_backup_enabled: true,
             auto_update_checks_enabled: true,
             show_connected_connections_in_rail: false,
+            show_workspace_on_rail: true,
+            show_dashboard_on_rail: true,
             show_all_connections_in_tree: false,
             hide_top_tab_buttons: false,
             double_click_opens_connection: false,
@@ -2077,6 +2093,7 @@ fn database_backup_import_restores_settings_and_connections() {
             separate_split_terminal_backgrounds: false,
             show_installer_on_rail: true,
             show_it_ops: false,
+            show_dont_sleep_on_rail: true,
             installer_check_interval_seconds: 86_400,
             pinned_connection_ids: Vec::new(),
             allow_clipboard_read: false,
@@ -2103,6 +2120,8 @@ fn database_backup_import_restores_settings_and_connections() {
 
     assert!(!imported.general_settings.auto_backup_enabled);
     assert!(imported.general_settings.show_connected_connections_in_rail);
+    assert!(!imported.general_settings.show_workspace_on_rail);
+    assert!(!imported.general_settings.show_dashboard_on_rail);
     assert!(imported.general_settings.show_all_connections_in_tree);
     assert!(imported.general_settings.hide_top_tab_buttons);
     assert!(imported.general_settings.double_click_opens_connection);
@@ -2113,6 +2132,8 @@ fn database_backup_import_restores_settings_and_connections() {
             .separate_split_terminal_backgrounds
     );
     assert!(!imported.general_settings.show_installer_on_rail);
+    assert!(!imported.general_settings.show_it_ops);
+    assert!(!imported.general_settings.show_dont_sleep_on_rail);
     assert_eq!(
         imported.general_settings.pinned_connection_ids,
         vec!["connection-pinned".to_string()]

@@ -8,10 +8,10 @@
 
 ## Activity Rail (48 px, left edge)
 
-Vertical icon bar. Owned by `src/app/`. Always visible. Sections, top to bottom:
+Vertical icon bar. Owned by `src/app/`. Always visible. Settings → General provides one `settings.activityRail` group that can hide Workspace, Dashboard, Install Helper, IT Ops, or Don't Sleep. Workspace, Dashboard, Install Helper, and Don't Sleep default on; IT Ops defaults off. Sections, top to bottom:
 
 1. **Workspace switcher** (`workspace.workspaceSwitcher`) — the Default Workspace, user-created Workspaces, and `workspace.newWorkspace`. The New Workspace dialog uses `workspace.workspaceDetails` for the required name, icon, and `workspace.workspaceIconColor` setup; its icon picker search placeholder is `common.searchForMore` because the initial grid shows only a bounded subset of the bundled icon catalog. Its circular background palette includes a visibly bounded white choice. Its footer follows the host platform: macOS places Cancel before the outer-right primary action, while Windows and Linux place the primary action before Cancel. If existing Workspaces contain Connections, `workspace.importConnections` can copy selected Connections from the source chosen by `workspace.importFromWorkspace`; the import list can be narrowed with `workspace.searchConnections`, the `workspace.filterConnectionTypes` dropdown, `workspace.selectAllConnections`, and `workspace.deselectAllConnections`.
-2. **Built-in Modules** — Dashboard and Install Helper.
+2. **Built-in Modules** — Dashboard, IT Ops, and Install Helper when enabled.
 3. **Connection Rail** (`app.connectionRail`) — a divider group `app.connectedConnectionsRail` that shows:
    - Pinned Connections (kept across launches; pin from the Connection Tree right-click menu, `connections.pinToRail`).
    - Connections that currently have at least one live Session.
