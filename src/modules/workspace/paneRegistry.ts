@@ -93,6 +93,21 @@ export function writeInputToPane(paneId: string, data: string) {
   return true;
 }
 
+// Mirror input to every terminal pane except the originating one. Writers send
+// straight to their PTY (not through xterm's onData), so this never re-enters
+// the broadcast and cannot loop. Only terminal panes register input writers.
+export function broadcastInputToOtherPanes(sourcePaneId: string, data: string) {
+  for (const [paneId, writer] of inputWriters) {
+    if (paneId !== sourcePaneId) {
+      writer(data);
+    }
+  }
+}
+
+export function countRegisteredInputPanes() {
+  return inputWriters.size;
+}
+
 export function registerRdpTextSender(
   paneId: string,
   sender: (text: string, pressEnter: boolean) => Promise<void>,

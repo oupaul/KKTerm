@@ -261,6 +261,12 @@
   outline-offset: 0;
 }
 
+/* Input is mirrored to this pane; warn before typing into many sessions. */
+.terminal-pane-sync-active {
+  outline: 2px solid var(--notice-warning);
+  outline-offset: -2px;
+}
+
 .terminal-pane-search-open {
   grid-template-rows: 34px auto minmax(0, 1fr);
 }

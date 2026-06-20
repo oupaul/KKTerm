@@ -27,6 +27,7 @@ import { forgetTmuxSessionId, useWorkspaceStore } from "../../../../store";
 import { createTerminalRenderer, logTerminalFontAtlasState, scheduleTerminalFontAtlasRefresh, type TerminalDimensions, type TerminalRenderer } from "./renderer";
 import { ensureLayout } from "../../layout";
 import {
+  broadcastInputToOtherPanes,
   getPaneRenderer,
   preserveTerminalPaneRuntime,
   registerPaneInputWriter,
@@ -1514,6 +1515,7 @@ function TerminalPaneView({
   const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
+  const syncInputEnabled = useWorkspaceStore((state) => state.syncInputEnabled);
   const x11ForwardingStatus = pane.x11ForwardingStatus ?? (
     pane.connection?.type === "ssh" && sshSettings.managedXServerEnabled ? "enabled" : "disabled"
   );
@@ -1791,7 +1793,15 @@ function TerminalPaneView({
     };
     registerPaneInputWriter(pane.id, writeInputToSession);
     const dataDisposable = terminal.onData((data) => {
-      void writeWithPasteConfirmation(data, writeInputToSession);
+      // Read sync state at keystroke time so the broadcast toggle takes effect
+      // without re-running this session effect. When on, the same gated input is
+      // mirrored to every other open terminal pane.
+      void writeWithPasteConfirmation(data, (input) => {
+        writeInputToSession(input);
+        if (useWorkspaceStore.getState().syncInputEnabled) {
+          broadcastInputToOtherPanes(pane.id, input);
+        }
+      });
     });
     const selectionDisposable = terminal.onSelectionChange(() => {
       const selection = terminal.getSelection();
@@ -2431,6 +2441,7 @@ function TerminalPaneView({
         "terminal-pane",
         searchOpen ? "terminal-pane-search-open" : "",
         recordingInfo ? "terminal-pane-recording" : "",
+        syncInputEnabled ? "terminal-pane-sync-active" : "",
         isFocused ? "terminal-pane-focused" : "terminal-pane-inactive",
       ]
         .filter(Boolean)

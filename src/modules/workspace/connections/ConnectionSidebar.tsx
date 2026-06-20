@@ -244,6 +244,7 @@ export function ConnectionSidebar({
   const openConnectionInNewTab = useWorkspaceStore((state) => state.openConnectionInNewTab);
   const openChildConnectionInNewTab = useWorkspaceStore((state) => state.openChildConnectionInNewTab);
   const openChildConnectionLayout = useWorkspaceStore((state) => state.openChildConnectionLayout);
+  const openConnectionsInPanorama = useWorkspaceStore((state) => state.openConnectionsInPanorama);
   const updateOpenChildConnectionMetadata = useWorkspaceStore((state) => state.updateOpenChildConnectionMetadata);
   const refreshOpenConnectionMetadata = useWorkspaceStore((state) => state.refreshOpenConnectionMetadata);
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -1900,6 +1901,29 @@ export function ConnectionSidebar({
         iconSvg: nativeMenuIcons.pencil,
         action: () => setFolderIconDialog({ folder: menu.folder }),
       });
+      items.unshift(
+        {
+          kind: "submenu",
+          label: t("connections.openAllInFolder"),
+          iconSvg: nativeMenuIcons.folderOpen,
+          disabled: countConnections(menu.folder) === 0,
+          items: [
+            {
+              kind: "item",
+              label: t("connections.openAllInTabs"),
+              iconSvg: nativeMenuIcons.squarePlus,
+              action: () => handleTreeMenuOpenAllInFolder(menu, "tabs"),
+            },
+            {
+              kind: "item",
+              label: t("connections.openAllInPanorama"),
+              iconSvg: nativeMenuIcons.layoutDashboard,
+              action: () => handleTreeMenuOpenAllInFolder(menu, "panorama"),
+            },
+          ],
+        },
+        { kind: "separator" },
+      );
       return items;
     }
 
@@ -2116,6 +2140,27 @@ export function ConnectionSidebar({
     setTreeContextMenu(null);
     if (menu.kind === "connection") {
       void handleOpenConnectionInNewTab(menu.connection);
+    }
+  }
+
+  // Opens every connection in the folder (recursively, child folders included).
+  // "tabs" gives each its own Tab via the standard open path so per-type handling
+  // applies; "panorama" lays them all out as split Panes inside one Tab.
+  function handleTreeMenuOpenAllInFolder(menu: TreeContextMenuState, mode: "tabs" | "panorama") {
+    setTreeContextMenu(null);
+    if (menu.kind !== "folder") {
+      return;
+    }
+    const folderConnections = flattenConnections({
+      connections: menu.folder.connections,
+      folders: menu.folder.folders,
+    });
+    if (mode === "panorama") {
+      openConnectionsInPanorama(folderConnections, { title: menu.folder.name });
+      return;
+    }
+    for (const connection of folderConnections) {
+      openConnection(connection);
     }
   }
 

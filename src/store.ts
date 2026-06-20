@@ -1066,6 +1066,9 @@ interface WorkspaceState {
   aiProviderSettings: AiProviderSettings;
   aiProviderHasApiKey: boolean;
   assistantWorking: boolean;
+  // Runtime-only (never persisted): when true, keystrokes typed into the focused
+  // terminal pane are mirrored to every other open terminal pane.
+  syncInputEnabled: boolean;
   assistantContextSnippet?: AssistantContextSnippet;
   assistantDirectSubmitRequest?: AssistantDirectSubmitRequest;
   rdpPreCaptureSignal: number;
@@ -1094,6 +1097,7 @@ interface WorkspaceState {
   setAiProviderSettings: (settings: AiProviderSettings) => void;
   setAiProviderHasApiKey: (hasApiKey: boolean) => void;
   setAssistantWorking: (assistantWorking: boolean) => void;
+  setSyncInputEnabled: (syncInputEnabled: boolean) => void;
   setAssistantContextSnippet: (snippet: AssistantContextSnippet) => void;
   submitAssistantContextSnippet: (snippet: AssistantContextSnippet, prompt: string) => void;
   clearAssistantContextSnippet: () => void;
@@ -1146,6 +1150,10 @@ interface WorkspaceState {
   openChildConnectionLayout: (
     connection: Connection,
     children: WorkspaceChildConnection[],
+  ) => void;
+  openConnectionsInPanorama: (
+    connections: Connection[],
+    options?: { title?: string },
   ) => void;
   updateOpenChildConnectionMetadata: (child: WorkspaceChildConnection) => void;
   openUrlConnection: (connection: Connection) => void;
@@ -1245,6 +1253,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   aiProviderSettings: defaultAiProviderSettings,
   aiProviderHasApiKey: false,
   assistantWorking: false,
+  syncInputEnabled: false,
   assistantContextSnippet: undefined,
   assistantDirectSubmitRequest: undefined,
   rdpPreCaptureSignal: 0,
@@ -1345,6 +1354,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setAiProviderSettings: (aiProviderSettings) => set({ aiProviderSettings }),
   setAiProviderHasApiKey: (aiProviderHasApiKey) => set({ aiProviderHasApiKey }),
   setAssistantWorking: (assistantWorking) => set({ assistantWorking }),
+  setSyncInputEnabled: (syncInputEnabled) => set({ syncInputEnabled }),
   setAssistantContextSnippet: (assistantContextSnippet) =>
     set({ assistantContextSnippet }),
   submitAssistantContextSnippet: (snippet, prompt) =>
@@ -1878,6 +1888,42 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       activeSessionCounts: incrementActiveSessionCounts(
         state.activeSessionCounts,
         newPanes.flatMap((pane) =>
+          pane.kind === "webview" && pane.connection.type === "url"
+            ? [pane.connection.id]
+            : [],
+        ),
+      ),
+    }));
+  },
+  openConnectionsInPanorama: (connections, options) => {
+    // Lay every connection out as split Panes inside one terminal Tab, the same
+    // grid the parent/child Connection panorama uses. Pane-incapable or invalid
+    // connections (e.g. a URL with no address) are skipped.
+    const panes = connections
+      .map((connection) => buildPaneForConnection(connection))
+      .filter((pane): pane is WorkspacePane => Boolean(pane));
+    if (panes.length === 0) {
+      return;
+    }
+    const title = options?.title?.trim() || panes[0]?.connection?.name || "";
+    const tab: WorkspaceTab = {
+      id: createConnectionTabId("panorama"),
+      workspaceId: get().activeWorkspaceId,
+      title,
+      toolbarTitle: title,
+      subtitle: "",
+      kind: "terminal",
+      panes,
+      layout: layoutForChildPanes(panes),
+      focusedPaneId: panes[0]?.id,
+      quickCommandBarVisible: false,
+    };
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+      activeSessionCounts: incrementActiveSessionCounts(
+        state.activeSessionCounts,
+        panes.flatMap((pane) =>
           pane.kind === "webview" && pane.connection.type === "url"
             ? [pane.connection.id]
             : [],

@@ -10,6 +10,7 @@ import {
   Lock,
   LoaderCircle,
   MemoryStick,
+  Radio,
   TriangleAlert,
   Unlock,
   X,
@@ -112,6 +113,7 @@ export function StatusBar({
         ) : null}
       </div>
       <div className="status-bar-actions">
+        <SyncInputStatusButton />
         <WatchdogStatusBar />
         <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />
         <CredentialStoreStatusButton />
@@ -314,6 +316,46 @@ function CredentialStoreStatusButton() {
         />
       ) : null}
     </>
+  );
+}
+
+function SyncInputStatusButton() {
+  const { t } = useTranslation();
+  const syncInputEnabled = useWorkspaceStore((state) => state.syncInputEnabled);
+  const setSyncInputEnabled = useWorkspaceStore((state) => state.setSyncInputEnabled);
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
+  const terminalPaneCount = useWorkspaceStore((state) =>
+    state.tabs.reduce(
+      (total, tab) => (tab.kind === "terminal" ? total + tab.panes.length : total),
+      0,
+    ),
+  );
+
+  // Only useful once two or more terminal panes are open; keep it visible while
+  // enabled so it can always be turned back off.
+  if (!syncInputEnabled && terminalPaneCount < 2) {
+    return null;
+  }
+
+  function toggle() {
+    const next = !syncInputEnabled;
+    setSyncInputEnabled(next);
+    if (next) {
+      showStatusBarNotice(t("workspace.syncInputEnabledNotice"), { tone: "warning" });
+    }
+  }
+
+  return (
+    <button
+      className={`status-bar-action sync-input-status${syncInputEnabled ? " is-active" : ""}`}
+      aria-label={t("workspace.syncInput")}
+      aria-pressed={syncInputEnabled}
+      onClick={toggle}
+      type="button"
+    >
+      <Radio size={14} />
+      <RailTooltip label={t("workspace.syncInput")} />
+    </button>
   );
 }
 

@@ -372,6 +372,11 @@
   color: var(--accent);
 }
 
+.sync-input-status.is-active {
+  color: var(--notice-warning);
+  background: color-mix(in srgb, var(--notice-warning) 16%, transparent);
+}
+
 .status-bar-x-server-glyph {
   display: inline-grid;
   place-items: center;
