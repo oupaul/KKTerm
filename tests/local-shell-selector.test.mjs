@@ -14,8 +14,37 @@ assert.match(
 
 assert.match(
   source,
-  /<input\s+name="localShell"\s+type="hidden"\s+value=\{selectedLocalShell\}\s+\/>/,
+  /<input\s+name="localShell"\s+type="hidden"\s+value=\{submittedLocalShell\}\s+\/>/,
   "Local shell selector should keep submitting the selected localShell value with the form.",
+);
+
+assert.match(
+  source,
+  /installer_wsl_list_distros/,
+  "Selecting WSL should load installed distributions for the local Connection form.",
+);
+
+assert.match(
+  source,
+  /name="wslDistro"/,
+  "The local Connection form should expose an installed WSL distro picker.",
+);
+
+assert.match(
+  source,
+  /buildWslDistributionShell/,
+  "The local Connection form should submit distro-specific WSL shell command lines.",
+);
+
+const sidebarSource = await readFile(
+  new URL("../src/modules/workspace/connections/ConnectionSidebar.tsx", import.meta.url),
+  "utf8",
+);
+
+assert.match(
+  sidebarSource,
+  /defaultWslConnectionName\(distroFromWslShell\(selectedLocalShell\)\)/,
+  "Blank local WSL distro Connection names should default to WSL - <distro>.",
 );
 
 assert.match(

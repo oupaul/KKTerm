@@ -1743,6 +1743,7 @@
     "nameOptional": "Name(Optional)",
     "connectionName": "Connection name",
     "shell": "Shell",
+    "wslDistribution": "Distribution",
     "localStartupDirectory": "Đường dẫn khởi động",
     "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
     "localStartupDirectoryPickerTitle": "Chọn đường dẫn khởi động",

@@ -1743,6 +1743,7 @@
     "nameOptional": "Nama (Opsional)",
     "connectionName": "Nama koneksi",
     "shell": "Shell",
+    "wslDistribution": "Distribution",
     "localStartupDirectory": "Jalur mulai",
     "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
     "localStartupDirectoryPickerTitle": "Pilih jalur mulai",

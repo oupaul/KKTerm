@@ -1743,6 +1743,7 @@
     "nameOptional": "이름(선택 사항)",
     "connectionName": "연결 이름",
     "shell": "셸",
+    "wslDistribution": "Distribution",
     "localStartupDirectory": "시작 경로",
     "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
     "localStartupDirectoryPickerTitle": "시작 경로 선택",

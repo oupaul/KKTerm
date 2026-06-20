@@ -1743,6 +1743,7 @@
     "nameOptional": "名前（任意）",
     "connectionName": "接続名",
     "shell": "シェル",
+    "wslDistribution": "Distribution",
     "localStartupDirectory": "起動パス",
     "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
     "localStartupDirectoryPickerTitle": "起動パスを選択",

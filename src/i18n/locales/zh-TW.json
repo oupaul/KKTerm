@@ -1743,6 +1743,7 @@
     "nameOptional": "名稱（選填）",
     "connectionName": "連線名稱",
     "shell": "Shell",
+    "wslDistribution": "Distribution",
     "localStartupDirectory": "啟動路徑",
     "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
     "localStartupDirectoryPickerTitle": "選擇啟動路徑",

@@ -1743,6 +1743,7 @@
     "nameOptional": "ชื่อ (ไม่บังคับ)",
     "connectionName": "ชื่อการเชื่อมต่อ",
     "shell": "เชลล์",
+    "wslDistribution": "Distribution",
     "localStartupDirectory": "เส้นทางเริ่มต้น",
     "localStartupDirectoryPlaceholder": "C:\\Work\\Project",
     "localStartupDirectoryPickerTitle": "เลือกเส้นทางเริ่มต้น",

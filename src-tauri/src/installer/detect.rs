@@ -176,6 +176,10 @@ pub fn detect_one(recipe: &Recipe) -> DetectedState {
             Provider::Winget { .. } => {
                 let state = detect_winget(recipe);
                 if !state.installed
+                    && let Some(cli_state) = detect_winget_cli_fallback(&recipe.id)
+                {
+                    cli_state
+                } else if !state.installed
                     && matches!(
                         &recipe.download_provider,
                         Some(Provider::GithubRelease { .. })
@@ -351,6 +355,18 @@ fn detect_winget_cli() -> DetectedState {
     match command_version("winget", &["--version"]) {
         Some(version) => DetectedState::installed(Some(version)),
         None => DetectedState::not_installed(),
+    }
+}
+
+fn detect_winget_cli_fallback(tool_id: &str) -> Option<DetectedState> {
+    let (program, args) = winget_cli_fallback_command(tool_id)?;
+    command_version(program, args).map(|version| DetectedState::installed(Some(version)))
+}
+
+fn winget_cli_fallback_command(tool_id: &str) -> Option<(&'static str, &'static [&'static str])> {
+    match tool_id {
+        "oh-my-posh" => Some(("oh-my-posh", &["version"])),
+        _ => None,
     }
 }
 
@@ -868,6 +884,13 @@ pub fn github_release_marker_path(tool_id: &str) -> PathBuf {
 // ---- windows-feature ---------------------------------------------------
 
 fn detect_windows_feature(feature: &str) -> DetectedState {
+    if is_wsl_feature_name(feature) {
+        return detect_wsl_base_feature(feature);
+    }
+    detect_windows_feature_with_dism(feature)
+}
+
+fn detect_windows_feature_with_dism(feature: &str) -> DetectedState {
     let output = match no_window(&mut Command::new("dism"))
         .args([
             "/online",
@@ -884,6 +907,10 @@ fn detect_windows_feature(feature: &str) -> DetectedState {
         return DetectedState::not_installed();
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
+    windows_feature_state_from_dism_stdout(&stdout)
+}
+
+fn windows_feature_state_from_dism_stdout(stdout: &str) -> DetectedState {
     for line in stdout.lines() {
         let trimmed = line.trim();
         if let Some(value) = trimmed.strip_prefix("State :") {
@@ -896,6 +923,32 @@ fn detect_windows_feature(feature: &str) -> DetectedState {
         }
     }
     DetectedState::not_installed()
+}
+
+fn detect_wsl_base_feature(feature: &str) -> DetectedState {
+    let dism_state = detect_windows_feature_with_dism(feature);
+    if dism_state.installed {
+        return dism_state;
+    }
+    if wsl_command_reports_available(&["--status"])
+        || wsl_command_reports_available(&["--list", "--quiet"])
+    {
+        DetectedState::installed(None)
+    } else {
+        DetectedState::not_installed()
+    }
+}
+
+fn is_wsl_feature_name(feature: &str) -> bool {
+    feature.eq_ignore_ascii_case("Microsoft-Windows-Subsystem-Linux")
+}
+
+fn wsl_command_reports_available(args: &[&str]) -> bool {
+    let output = match no_window(&mut Command::new("wsl")).args(args).output() {
+        Ok(output) => output,
+        Err(_) => return false,
+    };
+    output.status.success() && (!output.stdout.is_empty() || !output.stderr.is_empty())
 }
 
 fn detect_wsl_distro(distro: &str) -> DetectedState {
@@ -920,8 +973,7 @@ fn detect_wsl_distro(distro: &str) -> DetectedState {
 }
 
 fn parse_wsl_distro_list(bytes: &[u8]) -> Vec<String> {
-    String::from_utf8_lossy(bytes)
-        .replace('\0', "")
+    super::wsl::decode_wsl_output(bytes)
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty())
@@ -1048,6 +1100,43 @@ mod tests {
             parse_version_line("Python 3.13.5\n").as_deref(),
             Some("3.13.5")
         );
+    }
+
+    #[test]
+    fn oh_my_posh_has_cli_detection_fallback() {
+        assert_eq!(
+            winget_cli_fallback_command("oh-my-posh"),
+            Some(("oh-my-posh", &["version"][..]))
+        );
+        assert_eq!(winget_cli_fallback_command("git"), None);
+    }
+
+    #[test]
+    fn dism_feature_state_parses_enabled_state() {
+        let state = windows_feature_state_from_dism_stdout(
+            "Feature Name : Microsoft-Windows-Subsystem-Linux\r\nState : Enabled\r\n",
+        );
+
+        assert!(state.installed);
+    }
+
+    #[test]
+    fn dism_feature_state_without_enabled_state_is_not_installed() {
+        let state = windows_feature_state_from_dism_stdout(
+            "Feature Name : Microsoft-Windows-Subsystem-Linux\r\nState : Disabled\r\n",
+        );
+
+        assert!(!state.installed);
+    }
+
+    #[test]
+    fn wsl_distro_list_parser_decodes_utf16_output() {
+        let bytes = [
+            0x55, 0x00, 0x62, 0x00, 0x75, 0x00, 0x6e, 0x00, 0x74, 0x00, 0x75, 0x00, 0x0d, 0x00,
+            0x0a, 0x00,
+        ];
+
+        assert_eq!(parse_wsl_distro_list(&bytes), vec!["Ubuntu"]);
     }
 
     #[test]
