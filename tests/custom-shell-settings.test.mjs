@@ -43,7 +43,10 @@ test("deleted custom shells fall back to the platform default anywhere they were
 
   assert.match(platformSource, /currentPlatform\(\) === "macos" \? "\/bin\/zsh" : "\/bin\/bash"/);
   assert.match(utilsSource, /export function resolveAvailableLocalShell/);
-  assert.match(localFieldsSource, /resolveAvailableLocalShell\(\s*initialConnection\?\.localShell/);
+  assert.match(
+    localFieldsSource,
+    /resolveAvailableLocalShell\(\s*wslShellSelectorValue\(initialConnection\?\.localShell\),\s*localShellOptions\s*\)/,
+  );
   assert.match(terminalWorkspaceSource, /resolveAvailableLocalShell\(\s*connection\.localShell/);
 });
 

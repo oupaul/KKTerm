@@ -1,10 +1,19 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { Command, Shell, SquareTerminal, Terminal, type LucideIcon } from "lucide-react";
+import { Command, KeyRound, Shell, SquareTerminal, Terminal, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Actions, Btn } from "../../../../app/ui/dialog";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
 import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import type { Connection } from "../../../../types";
 import { resolveAvailableLocalShell, type LocalShellOption } from "../utils";
+import {
+  applyCliAccountBlock,
+  buildCliAccountBlock,
+  classifyCliAccountShell,
+  cliAccountDirectory,
+  slugCliAccountLabel,
+  type CliAccountTool,
+} from "./cliAccountEnvironment";
 import {
   buildWslDistributionShell,
   distroFromWslShell,
@@ -38,6 +47,12 @@ export function LocalConnectionFields({
   const [selectedLocalShell, setSelectedLocalShell] = useState(defaultLocalShell);
   const [wslDistros, setWslDistros] = useState<WslDistroOption[]>([]);
   const [selectedWslDistro, setSelectedWslDistro] = useState(distroFromWslShell(initialConnection?.localShell));
+  const [connectionName, setConnectionName] = useState(initialConnection?.name ?? "");
+  const [localStartupScript, setLocalStartupScript] = useState(initialConnection?.localStartupScript ?? "");
+  const [cliAccountOpen, setCliAccountOpen] = useState(false);
+  const [cliAccountTool, setCliAccountTool] = useState<CliAccountTool>("claude-code");
+  const [cliAccountLabel, setCliAccountLabel] = useState(initialConnection?.name ?? "");
+  const [cliAccountError, setCliAccountError] = useState("");
   useEffect(() => {
     setSelectedLocalShell((currentShell) => resolveAvailableLocalShell(wslShellSelectorValue(currentShell), localShellOptions));
   }, [localShellOptions]);
@@ -68,6 +83,12 @@ export function LocalConnectionFields({
     wslSelected && selectedWslDistro
       ? buildWslDistributionShell(selectedWslDistro)
       : selectedLocalShell;
+  const cliAccountShellFamily = classifyCliAccountShell(submittedLocalShell);
+  const cliAccountSlug = slugCliAccountLabel(cliAccountLabel);
+  const cliAccountPath =
+    cliAccountShellFamily && cliAccountSlug
+      ? cliAccountDirectory(cliAccountTool, cliAccountSlug, cliAccountShellFamily)
+      : "";
   useEffect(() => {
     onWslDistroIconChange?.(wslSelected ? osIconRefForWslDistro(selectedWslDistro) : null);
   }, [onWslDistroIconChange, selectedWslDistro, wslSelected]);
@@ -96,7 +117,12 @@ export function LocalConnectionFields({
     <>
       <label>
         <span>{t("connections.nameOptional")}</span>
-        <input name="name" defaultValue={initialConnection?.name ?? ""} placeholder={t("connections.connectionName")} />
+        <input
+          name="name"
+          onChange={(event) => setConnectionName(event.currentTarget.value)}
+          placeholder={t("connections.connectionName")}
+          value={connectionName}
+        />
       </label>
       <div className="connection-option-fields">
         <div className="option-mode-row local-shell-mode-row">
@@ -164,16 +190,99 @@ export function LocalConnectionFields({
           </button>
         </div>
       </label>
-      <label>
-        <span>{t("connections.localStartupScript")}</span>
+      <div className="local-startup-script-field">
+        <div className="local-cli-account-label-row">
+          <label htmlFor="local-startup-script">{t("connections.localStartupScript")}</label>
+          <button
+            aria-controls="local-cli-account-panel"
+            aria-expanded={cliAccountOpen}
+            className="toolbar-button"
+            disabled={!cliAccountShellFamily}
+            onClick={() => {
+              setCliAccountLabel((current) => current || connectionName);
+              setCliAccountError("");
+              setCliAccountOpen((current) => !current);
+            }}
+            type="button"
+          >
+            <KeyRound size={14} aria-hidden />
+            {t("connections.cliAccountHelper")}
+          </button>
+        </div>
+        {!cliAccountShellFamily ? (
+          <small className="local-cli-account-unsupported">{t("connections.cliAccountUnsupportedShell")}</small>
+        ) : null}
+        {cliAccountOpen && cliAccountShellFamily ? (
+          <div className="local-cli-account-panel" id="local-cli-account-panel">
+            <p>{t("connections.cliAccountHint")}</p>
+            <div className="local-cli-account-fields">
+              <label>
+                <span>{t("connections.cliAccountTool")}</span>
+                <select
+                  onChange={(event) => setCliAccountTool(event.currentTarget.value as CliAccountTool)}
+                  value={cliAccountTool}
+                >
+                  <option value="claude-code">{t("connections.cliAccountClaudeCode")}</option>
+                  <option value="codex">{t("connections.cliAccountCodex")}</option>
+                </select>
+              </label>
+              <label>
+                <span>{t("connections.cliAccountLabel")}</span>
+                <input
+                  {...technicalInputProps}
+                  onChange={(event) => {
+                    setCliAccountLabel(event.currentTarget.value);
+                    setCliAccountError("");
+                  }}
+                  placeholder={t("connections.cliAccountLabelPlaceholder")}
+                  value={cliAccountLabel}
+                />
+              </label>
+            </div>
+            <div className="local-cli-account-path">
+              <span>{t("connections.cliAccountDirectory")}</span>
+              <code>{cliAccountPath || "—"}</code>
+            </div>
+            {cliAccountError ? <small className="field-error">{cliAccountError}</small> : null}
+            <div className="local-cli-account-actions">
+              <Actions
+                cancel={
+                  <Btn onClick={() => setCliAccountOpen(false)} sm>
+                    {t("common.cancel")}
+                  </Btn>
+                }
+                primary={
+                  <Btn
+                    icon="check"
+                    kind="primary"
+                    onClick={() => {
+                      if (!cliAccountSlug) {
+                        setCliAccountError(t("connections.cliAccountInvalidLabel"));
+                        return;
+                      }
+                      const block = buildCliAccountBlock(cliAccountTool, cliAccountLabel, cliAccountShellFamily);
+                      setLocalStartupScript((current) => applyCliAccountBlock(current, block));
+                      setCliAccountOpen(false);
+                    }}
+                    sm
+                  >
+                    {t("connections.cliAccountApply")}
+                  </Btn>
+                }
+              />
+            </div>
+          </div>
+        ) : null}
         <textarea
+          id="local-startup-script"
           name="localStartupScript"
           {...technicalInputProps}
-          defaultValue={initialConnection?.localStartupScript ?? ""}
+          onChange={(event) => setLocalStartupScript(event.currentTarget.value)}
           placeholder={t("connections.localStartupScriptPlaceholder")}
           rows={4}
+          value={localStartupScript}
         />
-      </label>
+      </div>
     </>
   );
 }

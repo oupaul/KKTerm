@@ -1641,6 +1641,96 @@ fieldset.connection-specific-options > legend {
   opacity: 0.55;
 }
 
+.local-startup-script-field {
+  display: grid;
+  gap: 6px;
+}
+
+.local-cli-account-label-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.local-cli-account-label-row > label {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.local-cli-account-label-row .toolbar-button {
+  flex: 0 0 auto;
+  height: 28px;
+}
+
+.local-cli-account-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.local-cli-account-panel > p,
+.local-cli-account-unsupported {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.local-cli-account-fields {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(180px, 1.2fr);
+  gap: 10px;
+}
+
+.local-cli-account-fields > label,
+.local-cli-account-path {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.local-cli-account-fields > label > span,
+.local-cli-account-path > span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.local-cli-account-path code {
+  min-width: 0;
+  padding: 7px 9px;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.local-cli-account-panel .field-error {
+  color: var(--red);
+  font-size: 12px;
+}
+
+.local-cli-account-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 28px;
+}
+
+@media (max-width: 720px) {
+  .local-cli-account-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Primary action is accent-blue (matches the design language), not green. */
 .connection-dialog .dialog-actions .approve-button {
   color: #fff;

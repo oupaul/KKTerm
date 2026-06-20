@@ -114,6 +114,24 @@ Connection form-validation error.
 
 Local terminal Add/Edit Connection uses the `connections.shell` tabbed selector for the local shell choice and still stores the selected `localShell` value on the Connection.
 
+Beside `connections.localStartupScript`, `connections.cliAccountHelper` can add
+an editable environment block for one Claude Code or Codex account. The helper
+supports Command Prompt, PowerShell/PowerShell 7, WSL, Bash, and zsh. It creates
+a stable per-user account directory and sets `CLAUDE_CONFIG_DIR` or `CODEX_HOME`
+inside that Local terminal Session; the user signs in normally after opening the
+Connection. Applying the helper again replaces its marked block while preserving
+other Startup script commands. KKTerm never asks for or stores the CLI's API
+keys, OAuth tokens, or passwords.
+
+Each account directory isolates the selected CLI's broader local state as well
+as authentication, so settings, history/sessions, memory, and tool configuration
+may also differ between account Connections. Keep the generated directory stable
+after login. Current Claude Code CLI releases namespace macOS Keychain entries by
+the `CLAUDE_CONFIG_DIR` path; if macOS profiles collide or repeatedly lose their
+login, update Claude Code before recreating the account Connection. OpenCode is
+not offered because its documented config-directory override does not document
+isolating its credential store.
+
 File Explorer Add/Edit Connection uses `connections.localFilesRootDirectory` for the optional starting folder. On creation, leaving the starting folder at its default home-folder behavior, or explicitly choosing the detected home folder, uses the localized `connections.homeDirectory` Connection name. Choosing or typing a different starting folder means the folder name becomes the default Connection name unless the user enters an explicit name.
 
 Document Add/Edit Connection uses `connections.fileViewPath` for the target file, picked through a native open-file dialog (`connections.fileViewPickerTitle`). The file's base name becomes the default Connection name unless the user enters an explicit name. The path is stored in the Connection's `local_startup_directory` slot (reused as the file path). The per-Connection option `connections.fileViewOpenExternal` opens that saved Document through the operating system's default app instead of creating a KKTerm Tab; its hint is `connections.fileViewOpenExternalHint`.
