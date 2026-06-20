@@ -350,6 +350,10 @@ pub struct GeneralSettings {
     separate_split_terminal_backgrounds: bool,
     #[serde(default = "default_show_installer_on_rail")]
     show_installer_on_rail: bool,
+    // IT Ops Module rail visibility. Defaults off while the Module is in
+    // development; users opt in via Settings → IT Ops.
+    #[serde(default = "default_show_it_ops")]
+    show_it_ops: bool,
     #[serde(default = "default_installer_check_interval_seconds")]
     installer_check_interval_seconds: u32,
     #[serde(default)]
@@ -4121,6 +4125,7 @@ fn default_general_settings() -> GeneralSettings {
         submit_ai_attachments_directly: default_submit_ai_attachments_directly(),
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),
+        show_it_ops: default_show_it_ops(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
@@ -4174,6 +4179,10 @@ fn default_submit_ai_attachments_directly() -> bool {
 
 fn default_show_installer_on_rail() -> bool {
     true
+}
+
+fn default_show_it_ops() -> bool {
+    false
 }
 
 fn default_installer_check_interval_seconds() -> u32 {

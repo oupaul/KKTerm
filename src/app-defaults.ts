@@ -32,6 +32,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   submitAiAttachmentsDirectly: true,
   separateSplitTerminalBackgrounds: false,
   showInstallerOnRail: true,
+  showItOps: false,
   installerCheckIntervalSeconds: 86400,
   pinnedConnectionIds: [],
   allowClipboardRead: true,

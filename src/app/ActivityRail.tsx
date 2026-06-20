@@ -715,14 +715,16 @@ export function ActivityRail({
         <Gauge size={18} />
         <RailTooltip label={t("dashboard.title")} />
       </button>
-      <button
-        className={`rail-button rail-button-itops ${activePage === "itops" ? "active" : ""}`}
-        aria-label={t("itops.railLabel")}
-        onClick={() => onNavigate("itops")}
-      >
-        <ServerCog size={18} />
-        <RailTooltip label={t("itops.railLabel")} />
-      </button>
+      {generalSettings.showItOps ? (
+        <button
+          className={`rail-button rail-button-itops ${activePage === "itops" ? "active" : ""}`}
+          aria-label={t("itops.railLabel")}
+          onClick={() => onNavigate("itops")}
+        >
+          <ServerCog size={18} />
+          <RailTooltip label={t("itops.railLabel")} />
+        </button>
+      ) : null}
       {generalSettings.showInstallerOnRail && supportsInstallerHelper() ? (
         <button
           className={`rail-button rail-button-installer ${activePage === "installer" ? "active" : ""}`}

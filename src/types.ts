@@ -433,6 +433,7 @@ export interface GeneralSettings {
   submitAiAttachmentsDirectly: boolean;
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
+  showItOps: boolean;
   installerCheckIntervalSeconds: number;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;

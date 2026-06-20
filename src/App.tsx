@@ -170,6 +170,7 @@ function App() {
   const appliedColorScheme = useAppliedColorScheme(appearanceSettings.colorScheme);
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
   const statusBarEnabled = useWorkspaceStore((state) => state.generalSettings.statusBarEnabled);
+  const showItOps = useWorkspaceStore((state) => state.generalSettings.showItOps);
   const resetAllLayouts = useWorkspaceStore((state) => state.resetAllLayouts);
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const {
@@ -282,6 +283,22 @@ function App() {
     setTutorialHighlightRequest(request);
     return { ok: true };
   }
+
+  // The IT Ops Module is hidden by default while under development. If it gets
+  // turned off while it is the active (or last-active) page, fall back to the
+  // Workspace so the user is never stranded on a Module they can't navigate to.
+  useEffect(() => {
+    if (showItOps) {
+      return;
+    }
+    if (previousBasePageRef.current === "itops") {
+      previousBasePageRef.current = "workspace";
+    }
+    if (activePage === "itops") {
+      persistActivePage("workspace");
+      setActivePage("workspace");
+    }
+  }, [showItOps, activePage]);
 
   const visibleBasePage = isOverlayPage(activePage)
     ? previousBasePageRef.current
