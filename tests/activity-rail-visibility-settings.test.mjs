@@ -13,6 +13,7 @@ const [
   workspaceSettings,
   installerSettings,
   settingsPage,
+  activityRailCss,
 ] = await Promise.all([
   source("../src/app-defaults.ts"),
   source("../src/app/ActivityRail.tsx"),
@@ -20,10 +21,11 @@ const [
   source("../src/modules/settings/WorkspaceSettings.tsx"),
   source("../src/modules/settings/InstallerSettings.tsx"),
   source("../src/modules/settings/SettingsPage.tsx"),
+  source("../src/app/app.css"),
 ]);
 
 test("General settings owns all built-in Activity Rail visibility controls", () => {
-  assert.match(generalSettings, /normalizeActivityRailOrder\(draft\.activityRailOrder\)\.map/);
+  assert.match(generalSettings, /activityRailModuleOrder\(draft\.activityRailOrder\)\.map/);
   assert.match(generalSettings, /reorderActivityRailItems/);
   assert.match(generalSettings, /activity-rail-order-main/);
   for (const icon of ["LayoutDashboard", "Gauge", "Package", "ServerCog", "BedSingle"]) {
@@ -57,6 +59,16 @@ test("Activity Rail visibility defaults and rendering match the unified controls
   assert.match(activityRail, /generalSettings\.showInstallerOnRail/);
   assert.match(activityRail, /generalSettings\.showItOps/);
   assert.match(activityRail, /generalSettings\.showDontSleepOnRail\s*\?/);
-  assert.match(activityRail, /normalizeActivityRailOrder/);
+  assert.match(activityRail, /activityRailModuleOrder/);
   assert.match(activityRail, /activityRailItemStyle/);
+  assert.match(activityRail, /activityRailModuleOrder/);
+  assert.match(activityRail, /className="rail-connected-connections-spacer"/);
+  assert.match(activityRailCss, /\.rail-connected-connections-spacer\s*\{[^}]*order:\s*-1/s);
+  assert.match(activityRailCss, /\.rail-button-settings\s*\{[^}]*margin-top:\s*auto/s);
+  assert.match(activityRailCss, /\.rail-button-dont-sleep\s*~\s*\.rail-button-settings\s*\{[^}]*margin-top:\s*0/s);
+});
+
+test("General settings prevents hiding the final enabled Module", () => {
+  assert.match(generalSettings, /canHideActivityRailModule/);
+  assert.match(generalSettings, /disabled=\{isLastVisibleModule\}/);
 });

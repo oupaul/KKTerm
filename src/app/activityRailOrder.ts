@@ -1,5 +1,14 @@
 import type { ActivityRailItemId } from "../types";
 
+export type ActivityRailModuleId = Exclude<ActivityRailItemId, "dontSleep">;
+
+type ActivityRailModuleVisibility = {
+  showWorkspaceOnRail: boolean;
+  showDashboardOnRail: boolean;
+  showInstallerOnRail: boolean;
+  showItOps: boolean;
+};
+
 export const DEFAULT_ACTIVITY_RAIL_ORDER: ActivityRailItemId[] = [
   "workspace",
   "dashboard",
@@ -9,6 +18,21 @@ export const DEFAULT_ACTIVITY_RAIL_ORDER: ActivityRailItemId[] = [
 ];
 
 const ACTIVITY_RAIL_ITEM_IDS = new Set<string>(DEFAULT_ACTIVITY_RAIL_ORDER);
+const ACTIVITY_RAIL_MODULE_IDS = new Set<ActivityRailItemId>([
+  "workspace",
+  "dashboard",
+  "installer",
+  "itops",
+]);
+const ACTIVITY_RAIL_MODULE_VISIBILITY: Record<
+  ActivityRailModuleId,
+  keyof ActivityRailModuleVisibility
+> = {
+  workspace: "showWorkspaceOnRail",
+  dashboard: "showDashboardOnRail",
+  installer: "showInstallerOnRail",
+  itops: "showItOps",
+};
 
 export function normalizeActivityRailOrder(order: readonly string[] | undefined) {
   const known = (order ?? []).filter(
@@ -30,4 +54,19 @@ export function reorderActivityRailItems(
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved);
   return next;
+}
+
+export function activityRailModuleOrder(order: readonly string[] | undefined) {
+  return normalizeActivityRailOrder(order).filter(
+    (id): id is ActivityRailModuleId => ACTIVITY_RAIL_MODULE_IDS.has(id),
+  );
+}
+
+export function canHideActivityRailModule(
+  settings: ActivityRailModuleVisibility,
+  moduleId: ActivityRailModuleId,
+) {
+  return Object.entries(ACTIVITY_RAIL_MODULE_VISIBILITY).some(
+    ([id, setting]) => id !== moduleId && settings[setting],
+  );
 }

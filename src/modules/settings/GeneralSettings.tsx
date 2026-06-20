@@ -18,7 +18,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
 import {
-  normalizeActivityRailOrder,
+  activityRailModuleOrder,
+  canHideActivityRailModule,
   reorderActivityRailItems,
 } from "../../app/activityRailOrder";
 import { LegacyDialogActions } from "../../app/ui/dialog";
@@ -391,8 +392,10 @@ export function GeneralSettings() {
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.activityRail")}</legend>
         <div className="settings-toggle-list">
-          {normalizeActivityRailOrder(draft.activityRailOrder).map((id) => {
+          {activityRailModuleOrder(draft.activityRailOrder).map((id) => {
             const [setting, labelKey, Icon] = ACTIVITY_RAIL_SETTINGS[id];
+            const isLastVisibleModule =
+              draft[setting] && !canHideActivityRailModule(draft, id);
             return <label
               className={`settings-toggle-row activity-rail-order-row${draggedRailItem === id ? " dragging" : ""}`}
               draggable
@@ -424,12 +427,25 @@ export function GeneralSettings() {
               </span>
               <ToggleSwitch
                 checked={draft[setting]}
+                disabled={isLastVisibleModule}
                 onChange={(checked) =>
                   setDraft((state) => ({ ...state, [setting]: checked }))
                 }
               />
             </label>;
           })}
+          <label className="settings-toggle-row activity-rail-order-row">
+            <span className="activity-rail-order-main">
+              <BedSingle className="activity-rail-order-icon" size={17} />
+              <strong>{t("settings.sectionDontSleep")}</strong>
+            </span>
+            <ToggleSwitch
+              checked={draft.showDontSleepOnRail}
+              onChange={(checked) =>
+                setDraft((state) => ({ ...state, showDontSleepOnRail: checked }))
+              }
+            />
+          </label>
         </div>
       </fieldset>
 

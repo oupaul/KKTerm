@@ -210,6 +210,11 @@
   border-top: 1px solid var(--nav-toolbar-tooltip-border);
 }
 
+.rail-connected-connections-spacer {
+  order: -1;
+  width: 100%;
+}
+
 .rail-button-connection .connection-icon-image {
   border-radius: 4px;
 }
@@ -272,6 +277,10 @@
 }
 
 .rail-button-settings {
+  margin-top: auto;
+}
+
+.rail-button-dont-sleep ~ .rail-button-settings {
   margin-top: 0;
 }
 

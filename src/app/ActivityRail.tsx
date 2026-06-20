@@ -21,7 +21,7 @@ import { ariaPressed } from "../lib/aria";
 import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";
 import { supportsInstallerHelper } from "../lib/platform";
-import { normalizeActivityRailOrder } from "./activityRailOrder";
+import { activityRailModuleOrder } from "./activityRailOrder";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { Connection, Workspace } from "../types";
@@ -635,9 +635,9 @@ export function ActivityRail({
   const dontSleepTooltip = dontSleepEnabled
     ? t("app.dontSleepEnabledTooltip")
     : t("app.dontSleepDisabledTooltip");
-  const activityRailOrder = normalizeActivityRailOrder(generalSettings.activityRailOrder);
+  const activityRailOrder = activityRailModuleOrder(generalSettings.activityRailOrder);
   const activityRailItemStyle = (id: (typeof activityRailOrder)[number]) => ({
-    order: activityRailOrder.indexOf(id) - activityRailOrder.length,
+    order: activityRailOrder.indexOf(id) - activityRailOrder.length - 1,
   });
 
   return (
@@ -749,18 +749,19 @@ export function ActivityRail({
         </button>
       ) : null}
       {connectedRailItems.length > 0 ? (
-        <div
-          ref={connectionRailListRef}
-          className={`rail-connected-connections ${
+        <div className="rail-connected-connections-spacer">
+          <div
+            ref={connectionRailListRef}
+            className={`rail-connected-connections ${
             draggedConnectionId &&
             connectionRailDropTarget?.position === "end"
               ? "rail-drop-end"
               : ""
-          }`}
-          aria-label={t("app.connectionRail")}
-          data-tutorial-id="app.connectionRail"
-        >
-          {connectedRailItems.map((item) => (
+            }`}
+            aria-label={t("app.connectionRail")}
+            data-tutorial-id="app.connectionRail"
+          >
+            {connectedRailItems.map((item) => (
             <button
               key={item.connection.id}
               data-rail-connection-id={item.connection.id}
@@ -822,7 +823,8 @@ export function ActivityRail({
               />
               <RailTooltip label={item.connection.name} />
             </button>
-          ))}
+            ))}
+          </div>
         </div>
       ) : null}
       {railConnectionMenu ? (
@@ -860,7 +862,6 @@ export function ActivityRail({
           {...ariaPressed(dontSleepEnabled)}
           disabled={dontSleepUpdating}
           onClick={() => void handleDontSleepClick()}
-          style={activityRailItemStyle("dontSleep")}
         >
           {dontSleepEnabled ? <Coffee size={18} /> : <BedSingle size={18} />}
           <RailTooltip label={dontSleepTooltip} />
