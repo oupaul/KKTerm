@@ -42,6 +42,7 @@ import { QuickCommandBar } from "./QuickCommandBar";
 import { TerminalBackgroundLayer, TerminalBackgroundPopover } from "./TerminalBackgroundPopover";
 import { SshPortForwardingDialog, hasEnabledSshPortForwardings } from "./SshPortForwardingDialog";
 import { startEnabledSshPortForwardings } from "./sshPortForwardingModel";
+import { classifyEnvironmentShell, prepareLocalStartup } from "../connection-dialog/environmentVariables";
 
 type TerminalContextMenuState = {
   x: number;
@@ -1944,6 +1945,7 @@ function TerminalPaneView({
         if (disposed) {
           return;
         }
+        const localStartup = localStartupFor(connection, shell);
         const result = await invokeCommand("start_terminal_session", {
           request: {
             sessionId: requestedSessionId,
@@ -1961,6 +1963,7 @@ function TerminalPaneView({
             serialLine: connection.type === "serial" ? connection.serialLine ?? connection.host : undefined,
             serialSpeed: connection.type === "serial" ? connection.serialSpeed ?? 9600 : undefined,
             initialDirectory: initialDirectoryForTerminalSession(connection, pane.cwd),
+            environmentVariables: localStartup.environmentVariables,
             cols: terminalDimensions.cols,
             pixelHeight: terminalDimensions.pixelHeight,
             pixelWidth: terminalDimensions.pixelWidth,
@@ -2021,9 +2024,8 @@ function TerminalPaneView({
           });
         }
         sessionStarted = true;
-        const startupInput = localStartupInputFor(connection);
-        if (startupInput) {
-          writeInputToSession(startupInput);
+        if (localStartup.startupInput) {
+          writeInputToSession(localStartup.startupInput);
         }
         if (trackConnectionSession) {
           markConnectionSessionStarted(connection.id);
@@ -3158,15 +3160,24 @@ function initialDirectoryForTerminalSession(connection: Connection, paneCwd: str
   return undefined;
 }
 
-function localStartupInputFor(connection: Connection) {
+function localStartupFor(connection: Connection, shell: string | undefined) {
   if (connection.type !== "local") {
-    return "";
+    return { environmentVariables: [], startupInput: "" };
   }
   const script = connection.localStartupScript?.trim();
   if (!script) {
-    return "";
+    return { environmentVariables: [], startupInput: "" };
   }
-  return `${script.replace(/\r?\n/g, "\r")}\r`;
+  const family = classifyEnvironmentShell(shell ?? "");
+  const prepared = family
+    ? prepareLocalStartup(script, family)
+    : { environmentVariables: [], startupScript: script };
+  return {
+    environmentVariables: prepared.environmentVariables,
+    startupInput: prepared.startupScript
+      ? `${prepared.startupScript.replace(/\r?\n/g, "\r")}\r`
+      : "",
+  };
 }
 
 function isTransientLocalConnectionId(connectionId: string) {

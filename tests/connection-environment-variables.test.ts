@@ -6,6 +6,7 @@ import {
   classifyEnvironmentShell,
   createCliAccountVariable,
   parseEnvironmentBlock,
+  prepareLocalStartup,
   renderEnvironmentBlock,
   retargetEnvironmentBlock,
   slugCliAccountLabel,
@@ -124,4 +125,15 @@ test("retargets managed CLI account scripting when the selected shell changes", 
   assert.doesNotMatch(updated, /%LOCALAPPDATA%|^REM |^set "/m);
   assert.match(updated, /^Write-Host before/m);
   assert.match(updated, /^Write-Host after/m);
+});
+
+test("extracts managed variables before launch instead of typing them into the shell", () => {
+  const variable = createCliAccountVariable("claude-code", "Work", "powershell");
+  const script = `Write-Host before\n\n${renderEnvironmentBlock([variable], "powershell")}\n\nWrite-Host after`;
+
+  const prepared = prepareLocalStartup(script, "powershell");
+
+  assert.deepEqual(prepared.environmentVariables, [variable]);
+  assert.equal(prepared.startupScript.replace(/\n+/gu, "\n"), "Write-Host before\nWrite-Host after");
+  assert.doesNotMatch(prepared.startupScript, /KKTerm environment variables|New-Item|CLAUDE_CONFIG_DIR/);
 });

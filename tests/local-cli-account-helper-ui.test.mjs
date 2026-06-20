@@ -47,3 +47,14 @@ test("CLI account helper uses branded CLI choices and remembered editable labels
   assert.match(css, /\.connection-cli-tool-option/);
   assert.doesNotMatch(css, /\.local-cli-account-panel/);
 });
+
+test("managed account variables are attached before local shell spawn", async () => {
+  const source = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/TerminalWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /prepareLocalStartup/);
+  assert.match(source, /environmentVariables:\s*localStartup\.environmentVariables/);
+  assert.match(source, /localStartup\.startupInput/);
+});

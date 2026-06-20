@@ -144,6 +144,11 @@ export interface StartTerminalSessionRequest {
   serialLine?: string;
   serialSpeed?: number;
   initialDirectory?: string;
+  environmentVariables?: Array<{
+    name: string;
+    value: string;
+    source: "literal" | "cliAccount";
+  }>;
   cols?: number;
   pixelHeight?: number;
   pixelWidth?: number;

@@ -120,13 +120,16 @@ Beside `connections.localStartupScript`, the wand action
 `connections.cliAccountAlternateProfileHint` opens the guided
 `connections.cliAccountHelper` dialog for a Claude Code or Codex alternate
 account. The account label is editable and previously applied labels are
-remembered locally for reuse. Applying adds or replaces `CLAUDE_CONFIG_DIR` or
-`CODEX_HOME` in a marked, shell-appropriate Startup script block and creates its
-stable per-user account directory when the Connection starts. Commands outside
-the marked block remain unchanged, and changing the selected shell rewrites only
-that block into the new shell's syntax. The user signs in normally after opening
-the terminal; KKTerm never asks for or stores the CLI's API keys, OAuth tokens,
-or passwords.
+remembered locally for reuse. Applying records `CLAUDE_CONFIG_DIR` or
+`CODEX_HOME` in a marked, shell-appropriate Startup script block. At launch,
+KKTerm extracts that managed value, creates the stable per-user account
+directory, and adds the variable to the terminal process environment before the
+shell starts; it does not type the setup block through the interactive prompt.
+Commands outside the marked block remain unchanged and still run as normal
+Startup script commands. Changing the selected shell rewrites only the managed
+block into the new shell's syntax. The user signs in normally after opening the
+terminal; KKTerm never asks for or stores the CLI's API keys, OAuth tokens, or
+passwords.
 
 Each account directory isolates the selected CLI's broader local state as well
 as authentication, so settings, history/sessions, memory, and tool configuration

@@ -77,6 +77,8 @@ pub struct StartTerminalSessionRequest {
     pub serial_line: Option<String>,
     pub serial_speed: Option<u32>,
     pub initial_directory: Option<String>,
+    #[serde(default)]
+    pub environment_variables: Vec<ManagedTerminalEnvironmentVariable>,
     pub cols: Option<u16>,
     pub pixel_height: Option<u16>,
     pub pixel_width: Option<u16>,
@@ -84,6 +86,14 @@ pub struct StartTerminalSessionRequest {
     pub use_tmux: Option<bool>,
     pub tmux_session_id: Option<String>,
     pub ssh_buffer_lines: Option<u32>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedTerminalEnvironmentVariable {
+    pub name: String,
+    pub value: String,
+    pub source: String,
 }
 
 #[derive(Deserialize)]
@@ -1220,8 +1230,9 @@ impl SessionManager {
                 String::from_utf8_lossy(&output.stderr).trim()
             ));
         }
-        let stdout = String::from_utf8(output.stdout)
-            .map_err(|error| format!("local TCP listener discovery returned invalid UTF-8: {error}"))?;
+        let stdout = String::from_utf8(output.stdout).map_err(|error| {
+            format!("local TCP listener discovery returned invalid UTF-8: {error}")
+        })?;
         Ok(parse_local_tcp_listeners(&stdout))
     }
 
@@ -1811,14 +1822,17 @@ fn parse_remote_network_addresses(output: &str) -> Vec<String> {
     let mut addresses = Vec::new();
     for token in output.split_whitespace() {
         let candidate = token
-            .trim_matches(|character: char| character == ',' || character == '"' || character == '\'')
+            .trim_matches(|character: char| {
+                character == ',' || character == '"' || character == '\''
+            })
             .split('/')
             .next()
             .unwrap_or_default()
             .split('%')
             .next()
             .unwrap_or_default();
-        if candidate.parse::<IpAddr>().is_ok() && !addresses.iter().any(|entry| entry == candidate) {
+        if candidate.parse::<IpAddr>().is_ok() && !addresses.iter().any(|entry| entry == candidate)
+        {
             addresses.push(candidate.to_string());
         }
     }
@@ -1941,6 +1955,7 @@ fn terminal_request_for_tmux(request: &TmuxConnectionRequest) -> StartTerminalSe
         serial_line: None,
         serial_speed: None,
         initial_directory: None,
+        environment_variables: Vec::new(),
         cols: None,
         pixel_height: None,
         pixel_width: None,
@@ -2363,6 +2378,7 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
             }
             sanitize_windows_local_environment(&mut command);
             set_terminal_environment(&mut command);
+            apply_managed_terminal_environment(&mut command, &request.environment_variables)?;
             if let Some(directory) = initial_directory_for(request) {
                 command.cwd(OsString::from(directory));
             }
@@ -2429,6 +2445,110 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
 fn set_terminal_environment(command: &mut CommandBuilder) {
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
+}
+
+fn apply_managed_terminal_environment(
+    command: &mut CommandBuilder,
+    variables: &[ManagedTerminalEnvironmentVariable],
+) -> Result<(), String> {
+    if variables.is_empty() {
+        return Ok(());
+    }
+    let data_root = local_data_root()?;
+    for variable in variables {
+        let (name, value) = resolve_managed_terminal_environment(variable, &data_root)?;
+        command.env(name, value);
+    }
+    Ok(())
+}
+
+fn local_data_root() -> Result<PathBuf, String> {
+    #[cfg(target_os = "windows")]
+    {
+        return std::env::var_os("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .ok_or_else(|| "LOCALAPPDATA is unavailable for the CLI account profile".to_string());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Some(path) = std::env::var_os("XDG_DATA_HOME").filter(|value| !value.is_empty()) {
+            return Ok(PathBuf::from(path));
+        }
+        std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|home| home.join(".local").join("share"))
+            .ok_or_else(|| "HOME is unavailable for the CLI account profile".to_string())
+    }
+}
+
+fn resolve_managed_terminal_environment(
+    variable: &ManagedTerminalEnvironmentVariable,
+    data_root: &Path,
+) -> Result<(String, OsString), String> {
+    if !is_portable_environment_name(&variable.name) {
+        return Err(format!(
+            "invalid managed environment variable name: {}",
+            variable.name
+        ));
+    }
+    if variable.source == "literal" {
+        if variable.value.contains(['\r', '\n', '\0']) {
+            return Err(format!(
+                "invalid managed environment variable value: {}",
+                variable.name
+            ));
+        }
+        return Ok((variable.name.clone(), OsString::from(&variable.value)));
+    }
+    if variable.source != "cliAccount" {
+        return Err(format!(
+            "unsupported managed environment source: {}",
+            variable.source
+        ));
+    }
+
+    let tool = match variable.name.as_str() {
+        "CLAUDE_CONFIG_DIR" => "claude-code",
+        "CODEX_HOME" => "codex",
+        _ => {
+            return Err(format!(
+                "unsupported CLI account variable: {}",
+                variable.name
+            ));
+        }
+    };
+    let normalized = variable.value.replace('\\', "/");
+    let marker = format!("/cli-accounts/{tool}/");
+    let label = normalized
+        .split_once(&marker)
+        .map(|(_, label)| label)
+        .filter(|label| {
+            !label.is_empty()
+                && !label.contains('/')
+                && label.chars().all(|character| {
+                    character.is_ascii_alphanumeric() || matches!(character, '-' | '_')
+                })
+        })
+        .ok_or_else(|| format!("invalid CLI account directory for {}", variable.name))?;
+    let directory = data_root
+        .join(if cfg!(target_os = "windows") {
+            "KKTerm"
+        } else {
+            "kkterm"
+        })
+        .join("cli-accounts")
+        .join(tool)
+        .join(label);
+    fs::create_dir_all(&directory)
+        .map_err(|error| format!("failed to create CLI account directory: {error}"))?;
+    Ok((variable.name.clone(), directory.into_os_string()))
+}
+
+fn is_portable_environment_name(name: &str) -> bool {
+    let mut characters = name.chars();
+    matches!(characters.next(), Some(first) if first.is_ascii_alphabetic() || first == '_')
+        && characters.all(|character| character.is_ascii_alphanumeric() || character == '_')
 }
 
 #[cfg(target_os = "windows")]
@@ -2910,6 +3030,7 @@ mod tests {
             serial_line: None,
             serial_speed: None,
             initial_directory: None,
+            environment_variables: Vec::new(),
             cols: None,
             pixel_height: None,
             pixel_width: None,
@@ -3044,6 +3165,7 @@ mod tests {
             serial_line: None,
             serial_speed: None,
             initial_directory: None,
+            environment_variables: Vec::new(),
             cols: None,
             pixel_height: None,
             pixel_width: None,
@@ -3080,6 +3202,37 @@ mod tests {
                 .get_env("COLORTERM")
                 .and_then(|value| value.to_str()),
             Some("truecolor")
+        );
+    }
+
+    #[test]
+    fn managed_cli_account_environment_is_resolved_and_created_before_spawn() {
+        let root = tempfile::tempdir().expect("temporary data root");
+        let variable = ManagedTerminalEnvironmentVariable {
+            name: "CLAUDE_CONFIG_DIR".to_string(),
+            value: "$env:LOCALAPPDATA\\KKTerm\\cli-accounts\\claude-code\\work".to_string(),
+            source: "cliAccount".to_string(),
+        };
+
+        let resolved = resolve_managed_terminal_environment(&variable, root.path())
+            .expect("managed environment resolves");
+        let expected = root
+            .path()
+            .join("KKTerm")
+            .join("cli-accounts")
+            .join("claude-code")
+            .join("work");
+
+        assert_eq!(
+            resolved,
+            (
+                "CLAUDE_CONFIG_DIR".to_string(),
+                expected.clone().into_os_string()
+            )
+        );
+        assert!(
+            expected.is_dir(),
+            "account directory should exist before shell spawn"
         );
     }
 

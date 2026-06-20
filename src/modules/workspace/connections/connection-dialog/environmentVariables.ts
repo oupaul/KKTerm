@@ -192,6 +192,17 @@ export function applyEnvironmentBlock(script: string, block: string) {
   return `${script}${script.endsWith(newline) ? newline : `${newline}${newline}`}${renderedBlock}`;
 }
 
+export function prepareLocalStartup(script: string, family: EnvironmentShellFamily) {
+  const parsed = parseEnvironmentBlock(script, family);
+  if (parsed.status !== "ok") {
+    return { environmentVariables: [], startupScript: script.trim() };
+  }
+  return {
+    environmentVariables: parsed.variables,
+    startupScript: applyEnvironmentBlock(script, "").trim(),
+  };
+}
+
 export function retargetEnvironmentBlock(script: string, targetFamily: EnvironmentShellFamily) {
   const targetParsed = parseEnvironmentBlock(script, targetFamily);
   if (targetParsed.status !== "malformed") return script;
