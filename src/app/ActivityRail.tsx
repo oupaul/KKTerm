@@ -21,6 +21,7 @@ import { ariaPressed } from "../lib/aria";
 import { nativeMenuIcons } from "../lib/nativeMenuIcons";
 import { showNativeContextMenu, type NativeContextMenuItem } from "../lib/nativeContextMenu";
 import { supportsInstallerHelper } from "../lib/platform";
+import { normalizeActivityRailOrder } from "./activityRailOrder";
 import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import type { Connection, Workspace } from "../types";
@@ -634,11 +635,15 @@ export function ActivityRail({
   const dontSleepTooltip = dontSleepEnabled
     ? t("app.dontSleepEnabledTooltip")
     : t("app.dontSleepDisabledTooltip");
+  const activityRailOrder = normalizeActivityRailOrder(generalSettings.activityRailOrder);
+  const activityRailItemStyle = (id: (typeof activityRailOrder)[number]) => ({
+    order: activityRailOrder.indexOf(id) - activityRailOrder.length,
+  });
 
   return (
     <nav className="activity-rail" aria-label={t("app.primaryNav")}>
       {generalSettings.showWorkspaceOnRail ? (
-        <div className="rail-workspaces" aria-label={t("workspace.workspaceSwitcher")}>
+        <div className="rail-workspaces" aria-label={t("workspace.workspaceSwitcher")} style={activityRailItemStyle("workspace")}>
           {(workspaces.length > 0
           ? workspaces
           : [
@@ -714,6 +719,7 @@ export function ActivityRail({
           aria-label={t("dashboard.title")}
           data-tutorial-id="app.activityRailDashboard"
           onClick={() => onNavigate("dashboard")}
+          style={activityRailItemStyle("dashboard")}
         >
           <Gauge size={18} />
           <RailTooltip label={t("dashboard.title")} />
@@ -724,6 +730,7 @@ export function ActivityRail({
           className={`rail-button rail-button-itops ${activePage === "itops" ? "active" : ""}`}
           aria-label={t("itops.railLabel")}
           onClick={() => onNavigate("itops")}
+          style={activityRailItemStyle("itops")}
         >
           <ServerCog size={18} />
           <RailTooltip label={t("itops.railLabel")} />
@@ -735,6 +742,7 @@ export function ActivityRail({
           aria-label={t("installer.railLabel")}
           data-tutorial-id="app.activityRailInstaller"
           onClick={() => onNavigate("installer")}
+          style={activityRailItemStyle("installer")}
         >
           <Package size={18} />
           <RailTooltip label={t("installer.railLabel")} />
@@ -852,6 +860,7 @@ export function ActivityRail({
           {...ariaPressed(dontSleepEnabled)}
           disabled={dontSleepUpdating}
           onClick={() => void handleDontSleepClick()}
+          style={activityRailItemStyle("dontSleep")}
         >
           {dontSleepEnabled ? <Coffee size={18} /> : <BedSingle size={18} />}
           <RailTooltip label={dontSleepTooltip} />

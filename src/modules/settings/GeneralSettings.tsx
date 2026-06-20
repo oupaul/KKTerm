@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Download,
   FolderOpen,
+  GripVertical,
   Languages,
   RefreshCw,
   RotateCcw,
@@ -10,6 +11,10 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
+import {
+  normalizeActivityRailOrder,
+  reorderActivityRailItems,
+} from "../../app/activityRailOrder";
 import { LegacyDialogActions } from "../../app/ui/dialog";
 import {
   defaultAppearanceSettings,
@@ -54,8 +59,25 @@ import {
   useSettingsSaveRegistration,
 } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
+import type { ActivityRailItemId } from "../../types";
 
 const STATUS_BAR_MONITOR_INTERVAL_OPTIONS = [5, 15, 30, 60, 300] as const;
+type ActivityRailVisibilitySetting =
+  | "showWorkspaceOnRail"
+  | "showDashboardOnRail"
+  | "showInstallerOnRail"
+  | "showItOps"
+  | "showDontSleepOnRail";
+const ACTIVITY_RAIL_SETTINGS: Record<
+  ActivityRailItemId,
+  [ActivityRailVisibilitySetting, string]
+> = {
+  workspace: ["showWorkspaceOnRail", "settings.sectionWorkspace"],
+  dashboard: ["showDashboardOnRail", "settings.sectionDashboard"],
+  installer: ["showInstallerOnRail", "settings.sectionInstaller"],
+  itops: ["showItOps", "settings.sectionItOps"],
+  dontSleep: ["showDontSleepOnRail", "settings.sectionDontSleep"],
+};
 
 function formatBackupDate(value?: string | null) {
   if (!value) {
@@ -111,6 +133,7 @@ export function GeneralSettings() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [selectiveExportOpen, setSelectiveExportOpen] = useState(false);
   const [selectiveImportOpen, setSelectiveImportOpen] = useState(false);
+  const [draggedRailItem, setDraggedRailItem] = useState<ActivityRailItemId | null>(null);
   const hasChanges =
     JSON.stringify(draft) !== JSON.stringify(generalSettings) ||
     currentLanguage !== detectLanguage();
@@ -362,14 +385,33 @@ export function GeneralSettings() {
       <fieldset className="settings-subsection settings-fieldset">
         <legend>{t("settings.activityRail")}</legend>
         <div className="settings-toggle-list">
-          {([
-            ["showWorkspaceOnRail", "settings.sectionWorkspace"],
-            ["showDashboardOnRail", "settings.sectionDashboard"],
-            ["showInstallerOnRail", "settings.sectionInstaller"],
-            ["showItOps", "settings.sectionItOps"],
-            ["showDontSleepOnRail", "settings.sectionDontSleep"],
-          ] as const).map(([setting, labelKey]) => (
-            <label className="settings-toggle-row" key={setting}>
+          {normalizeActivityRailOrder(draft.activityRailOrder).map((id) => {
+            const [setting, labelKey] = ACTIVITY_RAIL_SETTINGS[id];
+            return <label
+              className={`settings-toggle-row activity-rail-order-row${draggedRailItem === id ? " dragging" : ""}`}
+              draggable
+              key={id}
+              onDragEnd={() => setDraggedRailItem(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDragStart={(event) => {
+                setDraggedRailItem(id);
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              onDrop={() => {
+                if (draggedRailItem) {
+                  setDraft((state) => ({
+                    ...state,
+                    activityRailOrder: reorderActivityRailItems(
+                      state.activityRailOrder,
+                      draggedRailItem,
+                      id,
+                    ),
+                  }));
+                }
+                setDraggedRailItem(null);
+              }}
+            >
+              <GripVertical className="activity-rail-order-grip" size={16} />
               <ToggleSwitch
                 checked={draft[setting]}
                 onChange={(checked) =>
@@ -379,8 +421,8 @@ export function GeneralSettings() {
               <span>
                 <strong>{t(labelKey)}</strong>
               </span>
-            </label>
-          ))}
+            </label>;
+          })}
         </div>
       </fieldset>
 

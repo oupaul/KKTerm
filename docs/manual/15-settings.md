@@ -21,7 +21,7 @@ The universal AI Assistant panel remains visible on Settings. `src/modules/setti
 
 Platform-specific controls are shown only where the runtime supports them. Windows-only controls such as `settings.autoStartWithWindows`, `settings.useDirectxScreenCapture`, `settings.rdpWebviewStability`, `settings.sectionInstaller`, and `settings.sectionRdp` are hidden in the macOS build.
 
-General includes one `settings.activityRail` group for the built-in rail destinations and control. It shows or hides Workspace (`settings.sectionWorkspace`), Dashboard (`settings.sectionDashboard`), Install Helper (`settings.sectionInstaller`), IT Ops (`settings.sectionItOps`), and Don't Sleep (`settings.sectionDontSleep`). Workspace, Dashboard, Install Helper, and Don't Sleep default on; IT Ops defaults off. The connected Connection shortcut toggle remains in Workspace because it controls live/pinned Connection entries rather than a built-in Module.
+General includes one `settings.activityRail` group for the built-in rail destinations and control. It shows, hides, and reorders by dragging Workspace (`settings.sectionWorkspace`), Dashboard (`settings.sectionDashboard`), Install Helper (`settings.sectionInstaller`), IT Ops (`settings.sectionItOps`), and Don't Sleep (`settings.sectionDontSleep`). The reordered sequence is saved with the General settings. Workspace, Dashboard, Install Helper, and Don't Sleep default on; IT Ops defaults off. The connected Connection shortcut toggle remains in Workspace because it controls live/pinned Connection entries rather than a built-in Module.
 
 Settings tutorial targets:
 

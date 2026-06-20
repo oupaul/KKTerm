@@ -14,6 +14,7 @@ import type {
   WorkspaceTab,
 } from "./types";
 import { defaultLocalShell } from "./lib/platform";
+import { DEFAULT_ACTIVITY_RAIL_ORDER } from "./app/activityRailOrder";
 
 export const connectionTree: ConnectionTree = {
   connections: [],
@@ -36,6 +37,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   showInstallerOnRail: true,
   showItOps: false,
   showDontSleepOnRail: true,
+  activityRailOrder: [...DEFAULT_ACTIVITY_RAIL_ORDER],
   installerCheckIntervalSeconds: 86400,
   pinnedConnectionIds: [],
   allowClipboardRead: true,

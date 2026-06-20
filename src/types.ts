@@ -437,6 +437,7 @@ export interface GeneralSettings {
   showInstallerOnRail: boolean;
   showItOps: boolean;
   showDontSleepOnRail: boolean;
+  activityRailOrder: ActivityRailItemId[];
   installerCheckIntervalSeconds: number;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;
@@ -452,6 +453,13 @@ export interface GeneralSettings {
   rdpWebviewStability: boolean;
   lastBackupAt?: string | null;
 }
+
+export type ActivityRailItemId =
+  | "workspace"
+  | "dashboard"
+  | "installer"
+  | "itops"
+  | "dontSleep";
 
 export type SecretStoreKind = "os" | "file";
 

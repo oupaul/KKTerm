@@ -61,7 +61,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       {
         key: "settings.activityRail",
         description:
-          "Visibility controls for Workspace, Dashboard, Install Helper, IT Ops, and Don't Sleep on the Activity Rail.",
+          "Visibility and drag-to-reorder controls for Workspace, Dashboard, Install Helper, IT Ops, and Don't Sleep on the Activity Rail.",
       },
       {
         key: "settings.useDirectxScreenCapture",
