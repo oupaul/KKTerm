@@ -2,6 +2,46 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("every distinct Install Helper artwork is available to Connection icons", async () => {
+  const installerSource = await readFile(
+    new URL("../src/modules/installer/icons.ts", import.meta.url),
+    "utf8",
+  );
+  const connectionSource = await readFile(
+    new URL("../src/lib/brandIconUrls.ts", import.meta.url),
+    "utf8",
+  );
+  const assetPattern = /assets\/installer-icons\/([^"?]+)\?url/g;
+  const installerAssets = [...installerSource.matchAll(assetPattern)].map((match) => match[1]);
+  const connectionAssets = [...connectionSource.matchAll(assetPattern)].map((match) => match[1]);
+  const connectionImports = [...connectionSource.matchAll(
+    /import\s+(\w+)\s+from\s+"\.\.\/assets\/installer-icons\/([^"?]+)\?url";/g,
+  )];
+  const connectionMap = connectionSource.match(
+    /const brandIconUrlById:[^{]+\{([\s\S]*?)\n\};/,
+  )?.[1] ?? "";
+
+  assert.equal(
+    new Set(installerAssets).size,
+    installerAssets.length,
+    "Install Helper should import each distinct artwork once",
+  );
+  for (const asset of new Set(installerAssets)) {
+    assert.equal(
+      connectionAssets.filter((candidate) => candidate === asset).length,
+      1,
+      `${asset} should resolve once for Connection icons`,
+    );
+    const importedName = connectionImports.find((match) => match[2] === asset)?.[1];
+    assert.ok(importedName, `${asset} should have a Connection icon import`);
+    assert.match(
+      connectionMap,
+      new RegExp(`\\b${importedName}\\b`),
+      `${asset} should be present in the Connection icon URL map`,
+    );
+  }
+});
+
 for (const { id, asset } of [
   { id: "claude-code-cli", asset: "claude-code.svg" },
   { id: "codex-cli", asset: "codex.svg" },
