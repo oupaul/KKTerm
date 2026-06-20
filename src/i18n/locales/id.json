@@ -1676,6 +1676,8 @@
     "rename": "Ganti nama",
     "changeIcon": "Ubah Ikon",
     "openAllInFolder": "Buka semua koneksi",
+    "openAllInTabs": "Di tab terpisah",
+    "openAllInPanorama": "Dalam panorama",
     "delete": "Hapus",
     "pinToRail": "Semat",
     "unpinFromRail": "Lepas sematan",

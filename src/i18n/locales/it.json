@@ -1676,6 +1676,8 @@
     "rename": "Rinomina",
     "changeIcon": "Cambia icona",
     "openAllInFolder": "Apri tutte le connessioni",
+    "openAllInTabs": "In schede separate",
+    "openAllInPanorama": "In un panorama",
     "delete": "Elimina",
     "pinToRail": "Fissa",
     "unpinFromRail": "Rimuovi",

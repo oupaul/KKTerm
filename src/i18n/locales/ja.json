@@ -1676,6 +1676,8 @@
     "rename": "名前を変更",
     "changeIcon": "アイコンを変更",
     "openAllInFolder": "すべての接続を開く",
+    "openAllInTabs": "別々のタブで",
+    "openAllInPanorama": "パノラマで",
     "delete": "削除",
     "pinToRail": "ピン留め",
     "unpinFromRail": "ピン留め解除",

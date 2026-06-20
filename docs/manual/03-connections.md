@@ -57,7 +57,7 @@ Driven by `src/lib/nativeContextMenu.ts`. On a Connection or folder node:
 - `connections.newSubfolderIn` (when the right-clicked node is a folder)
 - `connections.rename`, dialogs `connections.renameFolder` / `connections.renameConnection`
 - `connections.changeIcon` on folder rows opens the shared icon picker for the folder icon.
-- `connections.openAllInFolder` on folder rows opens every Connection inside the folder, child folders included, each in its own Tab through the standard open path (so per-type handling applies). Disabled when the folder holds no Connections.
+- `connections.openAllInFolder` on folder rows is a submenu that opens every Connection inside the folder, child folders included. `connections.openAllInTabs` opens each Connection in its own Tab through the standard open path (so per-type handling applies); `connections.openAllInPanorama` lays them all out as split Panes inside a single Tab, the same grid a parent Connection uses for multiple Child Connections. The submenu is disabled when the folder holds no Connections.
 - `connections.delete`, confirmation copy `connections.deleteFolderConfirm` or `connections.deleteConnectionConfirm`, with caveat `connections.cannotBeUndone`. Deleting a Connection also closes any open Tab or Pane for that Connection.
 - Pin to rail: `connections.pinToRail` / `connections.unpinFromRail`. Status: `connections.pinnedToRailStatus`, `connections.unpinnedFromRailStatus`. Error: `connections.pinRailError`.
 - `connections.closeConnection`, shown only while the Connection has one or more open Sessions (including the local live markers held by open File Explorer and Document Tabs). It closes every open Tab and Pane for that Connection.

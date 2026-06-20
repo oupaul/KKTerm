@@ -3,8 +3,8 @@
 - **English value**: `Open all connections`
 - **Namespace**: `connections`
 - **File/component**: `src/modules/workspace/connections/ConnectionSidebar.tsx`
-- **UI role**: `button`
-- **User flow**: Shown in the right-click context menu of a Connection folder in the sidebar tree. Selecting it opens every Connection inside that folder (child folders included), each in its own Tab.
+- **UI role**: `label`
+- **User flow**: Submenu label in the right-click context menu of a Connection folder in the sidebar tree. It expands to two choices — `connections.openAllInTabs` and `connections.openAllInPanorama` — that open every Connection inside that folder (child folders included).
 - **Tone**: concise/neutral
 - **Placeholders**: none
 - **Context/meaning**: "Open" = launch/connect the stored Connections, not open a file. Applies to a whole folder of saved Connections at once.

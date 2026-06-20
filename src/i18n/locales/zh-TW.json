@@ -1676,6 +1676,8 @@
     "rename": "重新命名",
     "changeIcon": "變更圖示",
     "openAllInFolder": "開啟所有連線",
+    "openAllInTabs": "在個別分頁中",
+    "openAllInPanorama": "在全景檢視中",
     "delete": "刪除",
     "pinToRail": "釘選",
     "unpinFromRail": "取消釘選",

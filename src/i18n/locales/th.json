@@ -1676,6 +1676,8 @@
     "rename": "เปลี่ยนชื่อ",
     "changeIcon": "เปลี่ยนไอคอน",
     "openAllInFolder": "เปิดการเชื่อมต่อทั้งหมด",
+    "openAllInTabs": "ในแท็บแยกกัน",
+    "openAllInPanorama": "ในพาโนรามา",
     "delete": "ลบ",
     "pinToRail": "ปักหมุด",
     "unpinFromRail": "ถอนหมุด",

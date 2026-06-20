@@ -1151,6 +1151,10 @@ interface WorkspaceState {
     connection: Connection,
     children: WorkspaceChildConnection[],
   ) => void;
+  openConnectionsInPanorama: (
+    connections: Connection[],
+    options?: { title?: string },
+  ) => void;
   updateOpenChildConnectionMetadata: (child: WorkspaceChildConnection) => void;
   openUrlConnection: (connection: Connection) => void;
   openSshPortForwardBrowser: (
@@ -1884,6 +1888,42 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       activeSessionCounts: incrementActiveSessionCounts(
         state.activeSessionCounts,
         newPanes.flatMap((pane) =>
+          pane.kind === "webview" && pane.connection.type === "url"
+            ? [pane.connection.id]
+            : [],
+        ),
+      ),
+    }));
+  },
+  openConnectionsInPanorama: (connections, options) => {
+    // Lay every connection out as split Panes inside one terminal Tab, the same
+    // grid the parent/child Connection panorama uses. Pane-incapable or invalid
+    // connections (e.g. a URL with no address) are skipped.
+    const panes = connections
+      .map((connection) => buildPaneForConnection(connection))
+      .filter((pane): pane is WorkspacePane => Boolean(pane));
+    if (panes.length === 0) {
+      return;
+    }
+    const title = options?.title?.trim() || panes[0]?.connection?.name || "";
+    const tab: WorkspaceTab = {
+      id: createConnectionTabId("panorama"),
+      workspaceId: get().activeWorkspaceId,
+      title,
+      toolbarTitle: title,
+      subtitle: "",
+      kind: "terminal",
+      panes,
+      layout: layoutForChildPanes(panes),
+      focusedPaneId: panes[0]?.id,
+      quickCommandBarVisible: false,
+    };
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+      activeSessionCounts: incrementActiveSessionCounts(
+        state.activeSessionCounts,
+        panes.flatMap((pane) =>
           pane.kind === "webview" && pane.connection.type === "url"
             ? [pane.connection.id]
             : [],

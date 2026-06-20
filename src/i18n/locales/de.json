@@ -1676,6 +1676,8 @@
     "rename": "Umbenennen",
     "changeIcon": "Symbol ändern",
     "openAllInFolder": "Alle Verbindungen öffnen",
+    "openAllInTabs": "In separaten Tabs",
+    "openAllInPanorama": "In einem Panorama",
     "delete": "Löschen",
     "pinToRail": "Anheften",
     "unpinFromRail": "Lösen",

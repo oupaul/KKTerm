@@ -1676,6 +1676,8 @@
     "rename": "이름 변경",
     "changeIcon": "아이콘 변경",
     "openAllInFolder": "모든 연결 열기",
+    "openAllInTabs": "별도 탭으로",
+    "openAllInPanorama": "파노라마로",
     "delete": "삭제",
     "pinToRail": "고정",
     "unpinFromRail": "고정 해제",

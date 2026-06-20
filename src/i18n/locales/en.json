@@ -1830,6 +1830,8 @@
     "rename": "Rename",
     "changeIcon": "Change Icon",
     "openAllInFolder": "Open all connections",
+    "openAllInTabs": "In separate Tabs",
+    "openAllInPanorama": "In a Panorama",
     "delete": "Delete",
     "pinToRail": "Pin",
     "unpinFromRail": "Unpin",

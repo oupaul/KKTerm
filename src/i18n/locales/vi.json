@@ -1676,6 +1676,8 @@
     "rename": "Rename",
     "changeIcon": "Đổi biểu tượng",
     "openAllInFolder": "Mở tất cả kết nối",
+    "openAllInTabs": "Trong các tab riêng",
+    "openAllInPanorama": "Trong một panorama",
     "delete": "Delete",
     "pinToRail": "Ghim",
     "unpinFromRail": "Bỏ ghim",
