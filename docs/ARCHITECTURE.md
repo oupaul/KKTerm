@@ -585,7 +585,7 @@ App shell, window, and OS integration:
 Color schemes are defined in `src/styles/colorSchemes.css` as CSS custom property blocks keyed by `[data-color-scheme="scheme-name"]`. The `:root` block defines the `"default"` scheme. `src/App.css` imports this file before shared selectors so all feature CSS files can consume the same design tokens. Each scheme must define every variable in the list below. When adding a new scheme, also update:
 
 - `src/types.ts` — `ColorScheme` union type
-- `src/modules/settings/AppearanceSettings.tsx` — `COLOR_SCHEME_OPTIONS` and `SCHEME_PREVIEW_COLORS`
+- `src/modules/settings/ThemeSchemeGrid.tsx` — `SCHEME_ORDER` (label key) and `SCHEME_TOKENS` (mini-app preview tokens)
 - `src/i18n/locales/en.json` — display label under `settings.scheme*`
 - `src-tauri/src/storage.rs` — `validate_appearance_settings()` whitelist
 - `docs/localization_todo/` — add a per-key `<namespace>.<keyPath>.md` from `_TEMPLATE.md` for any new untranslated label

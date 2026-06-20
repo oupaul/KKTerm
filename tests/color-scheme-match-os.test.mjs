@@ -67,15 +67,15 @@ test("App UI font is applied through the root design token", async () => {
 });
 
 test("Appearance Settings exposes Match OS as a color scheme option", async () => {
-  const [appearanceSource, localeSource] = await Promise.all([
-    readFile(new URL("../src/modules/settings/AppearanceSettings.tsx", import.meta.url), "utf8"),
+  const [gridSource, localeSource] = await Promise.all([
+    readFile(new URL("../src/modules/settings/ThemeSchemeGrid.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/i18n/locales/en.json", import.meta.url), "utf8"),
   ]);
 
   assert.match(
-    appearanceSource,
+    gridSource,
     /\{ value: "match-os", labelKey: "settings\.schemeMatchOs" \}/,
-    "Appearance Settings should list Match OS in the color scheme dropdown",
+    "the theme scheme grid should list Match OS as a color scheme card",
   );
   assert.match(
     localeSource,
