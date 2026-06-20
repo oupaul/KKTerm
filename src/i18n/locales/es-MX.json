@@ -1678,6 +1678,7 @@
     "openAllInFolder": "Abrir todas las conexiones",
     "openAllInTabs": "En pestañas separadas",
     "openAllInPanorama": "En un panorama",
+    "closeAllInFolder": "Cerrar todas las conexiones",
     "delete": "Eliminar",
     "pinToRail": "Anclar",
     "unpinFromRail": "Desanclar",
