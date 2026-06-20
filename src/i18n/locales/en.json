@@ -1832,6 +1832,7 @@
     "openAllInFolder": "Open all connections",
     "openAllInTabs": "In separate Tabs",
     "openAllInPanorama": "In a Panorama",
+    "closeAllInFolder": "Close all connections",
     "delete": "Delete",
     "pinToRail": "Pin",
     "unpinFromRail": "Unpin",

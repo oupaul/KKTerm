@@ -1678,6 +1678,7 @@
     "openAllInFolder": "すべての接続を開く",
     "openAllInTabs": "別々のタブで",
     "openAllInPanorama": "パノラマで",
+    "closeAllInFolder": "すべての接続を閉じる",
     "delete": "削除",
     "pinToRail": "ピン留め",
     "unpinFromRail": "ピン留め解除",

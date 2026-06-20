@@ -1901,6 +1901,10 @@ export function ConnectionSidebar({
         iconSvg: nativeMenuIcons.pencil,
         action: () => setFolderIconDialog({ folder: menu.folder }),
       });
+      const folderHasOpenConnection = flattenConnections({
+        connections: menu.folder.connections,
+        folders: menu.folder.folders,
+      }).some((connection) => (activeSessionCounts[connection.id] ?? 0) > 0);
       items.unshift(
         {
           kind: "submenu",
@@ -1921,6 +1925,13 @@ export function ConnectionSidebar({
               action: () => handleTreeMenuOpenAllInFolder(menu, "panorama"),
             },
           ],
+        },
+        {
+          kind: "item",
+          label: t("connections.closeAllInFolder"),
+          iconSvg: nativeMenuIcons.x,
+          disabled: !folderHasOpenConnection,
+          action: () => handleTreeMenuCloseAllInFolder(menu),
         },
         { kind: "separator" },
       );
@@ -2161,6 +2172,22 @@ export function ConnectionSidebar({
     }
     for (const connection of folderConnections) {
       openConnection(connection);
+    }
+  }
+
+  // Closes every open Tab and Pane for every connection in the folder (child
+  // folders included). Mirrors the per-connection close action.
+  function handleTreeMenuCloseAllInFolder(menu: TreeContextMenuState) {
+    setTreeContextMenu(null);
+    if (menu.kind !== "folder") {
+      return;
+    }
+    const folderConnections = flattenConnections({
+      connections: menu.folder.connections,
+      folders: menu.folder.folders,
+    });
+    for (const connection of folderConnections) {
+      closeOpenTabsForConnection(connection.id);
     }
   }
 
