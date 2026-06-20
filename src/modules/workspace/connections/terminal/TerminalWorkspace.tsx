@@ -10,7 +10,7 @@ import { SftpWorkspace } from "../sftp/SftpWorkspace";
 import { FileViewerWorkspace } from "../file-viewer/FileViewerWorkspace";
 import { WebViewWorkspace } from "../webview/WebViewWorkspace";
 import { ConnectionGlyph } from "../ConnectionGlyph";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Menu, Monitor, Network, PanelBottom, Pencil, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, FileText, Folder, FolderOpen, Mouse, ChevronRight, Circle, ClipboardPaste, Copy, Menu, Monitor, Network, PanelBottom, Pencil, Radio, RefreshCw, Save, Search, SplitSquareHorizontal, Square, Type, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -671,6 +671,18 @@ function layoutContainsPane(layout: LayoutNode, paneId: string): boolean {
 
 function isTerminalPane(pane: WorkspacePane): pane is TerminalPane {
   return pane.kind === undefined || pane.kind === "terminal";
+}
+
+// Matches the control sequences xterm emits for pointer/focus activity rather
+// than typed text, so the sync-input broadcast can skip them. Covers SGR (1006)
+// `CSI < … M/m`, X10 (1000) `CSI M …`, URXVT (1015) `CSI … M`, and focus
+// tracking (1004) `CSI I` / `CSI O`. Keyboard sequences (arrows, function keys,
+// modifyOtherKeys, IME text) never match these, so they still broadcast.
+// eslint-disable-next-line no-control-regex -- ESC (\x1b) is the literal CSI introducer we must match.
+const TERMINAL_POINTER_SEQUENCE = /^\x1b\[(M|<[0-9;]*[Mm]|[0-9;]+M|[IO])/;
+
+function isTerminalPointerSequence(data: string): boolean {
+  return TERMINAL_POINTER_SEQUENCE.test(data);
 }
 
 function EmbeddedConnectionPane({
@@ -1516,6 +1528,7 @@ function TerminalPaneView({
   const sshSettings = useWorkspaceStore((state) => state.sshSettings);
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
   const syncInputEnabled = useWorkspaceStore((state) => state.syncInputEnabled);
+  const setSyncInputEnabled = useWorkspaceStore((state) => state.setSyncInputEnabled);
   const x11ForwardingStatus = pane.x11ForwardingStatus ?? (
     pane.connection?.type === "ssh" && sshSettings.managedXServerEnabled ? "enabled" : "disabled"
   );
@@ -1798,7 +1811,11 @@ function TerminalPaneView({
       // mirrored to every other open terminal pane.
       void writeWithPasteConfirmation(data, (input) => {
         writeInputToSession(input);
-        if (useWorkspaceStore.getState().syncInputEnabled) {
+        // Only mirror real keyboard/IME/paste text. xterm routes mouse and
+        // focus activity through onData as control sequences too; broadcasting
+        // those would dump garbled coordinates into the other panes (and into
+        // shells that never enabled mouse mode), so they are filtered out.
+        if (useWorkspaceStore.getState().syncInputEnabled && !isTerminalPointerSequence(input)) {
           broadcastInputToOtherPanes(pane.id, input);
         }
       });
@@ -2518,6 +2535,23 @@ function TerminalPaneView({
               <Folder size={13} />
             </button>
           ) : null}
+          <button
+            className={`terminal-pane-action terminal-sync-toggle${syncInputEnabled ? " active" : ""}`}
+            aria-label={t("workspace.syncInput")}
+            aria-pressed={syncInputEnabled}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              const next = !syncInputEnabled;
+              setSyncInputEnabled(next);
+              if (next) {
+                showStatusBarNotice(t("workspace.syncInputEnabledNotice"), { tone: "warning" });
+              }
+            }}
+            title={t("workspace.syncInput")}
+            type="button"
+          >
+            <Radio size={13} />
+          </button>
           <button
             className={`terminal-pane-action quick-command-toggle${quickCommandBarVisible ? " active" : ""}`}
             aria-label={quickCommandBarVisible ? t("terminal.quickCommandsHide") : t("terminal.quickCommandsShow")}
