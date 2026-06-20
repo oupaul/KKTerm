@@ -25,7 +25,7 @@ use tauri::AppHandle;
 #[cfg(any(windows, unix))]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 #[cfg(target_os = "windows")]
-use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
+use tokio::net::windows::named_pipe::ServerOptions;
 #[cfg(unix)]
 use tokio::net::UnixListener;
 
