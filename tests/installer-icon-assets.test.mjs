@@ -7,6 +7,7 @@ for (const { id, asset } of [
   { id: "codex-cli", asset: "codex.svg" },
   { id: "codex-desktop", asset: "codex.svg" },
   { id: "ffmpeg", asset: "ffmpeg.svg" },
+  { id: "oh-my-posh", asset: "oh-my-posh.svg" },
   { id: "bentopdf", asset: "bentopdf.svg" },
   { id: "openflowkit", asset: "openflowkit.svg" },
 ]) {
@@ -38,3 +39,16 @@ for (const { id, asset } of [
     );
   });
 }
+
+test("Oh My Posh icon retains its upstream MIT notice", async () => {
+  const notice = await readFile(
+    new URL(
+      "../src/assets/installer-icons/LICENSE.oh-my-posh.txt",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(notice, /Copyright 2022 Jan De Dobbeleer/);
+  assert.match(notice, /Permission is hereby granted, free of charge/);
+});
