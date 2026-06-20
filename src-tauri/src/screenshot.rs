@@ -312,11 +312,32 @@ pub fn capture_rect_to_clipboard(
 
 #[cfg(not(target_os = "windows"))]
 pub fn capture_rect_for_assistant(
-    _app: &tauri::AppHandle,
-    _request: CaptureScreenshotRequest,
+    app: &tauri::AppHandle,
+    request: CaptureScreenshotRequest,
     _use_directx: bool,
 ) -> Result<AssistantScreenshot, String> {
-    Err("screenshot capture is currently available on Windows".to_string())
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (rgba, win_width, win_height) = capture_window_rgba(&window)?;
+    // The request rect is in logical pixels relative to the webview content
+    // (inner) area. xcap captures the whole outer window in physical pixels, so
+    // offset the crop by the decoration delta and scale the logical rect.
+    let inner = window
+        .inner_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let outer = window
+        .outer_position()
+        .map_err(|error| format!("failed to resolve window position: {error}"))?;
+    let off_x = (inner.x - outer.x).max(0) as u32;
+    let off_y = (inner.y - outer.y).max(0) as u32;
+    let x = off_x + (request.x * scale).round().max(0.0) as u32;
+    let y = off_y + (request.y * scale).round().max(0.0) as u32;
+    let width = (request.width * scale).round().max(1.0) as u32;
+    let height = (request.height * scale).round().max(1.0) as u32;
+    let (cropped, cw, ch) = crop_rgba(&rgba, win_width, win_height, x, y, width, height)?;
+    rgba_to_jpeg_assistant(&cropped, cw, ch)
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -363,6 +384,234 @@ pub fn capture_interactive_region_to_library(
     _use_directx: bool,
 ) -> Result<StoredScreenshot, String> {
     Err("screenshot capture is currently available on Windows".to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Universal in-app window capture (built-in MCP `kkterm.app.*` tools).
+//
+// Enumerates and captures KKTerm's own OS windows (the main window plus owned
+// overlays such as the URL WebView2, RDP, and VNC surfaces). On Windows this
+// reuses the native screen-rect capture so GPU/WebView2 content is preserved;
+// on macOS/Linux it uses the cross-platform `xcap` crate. These run in-process
+// (no frontend bridge), so they work regardless of the webview's current state.
+// ---------------------------------------------------------------------------
+
+/// One KKTerm-owned window, addressed by its stable Tauri window label (`id`).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppWindowInfo {
+    id: String,
+    title: String,
+    kind: String,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    visible: bool,
+    minimized: bool,
+    focused: bool,
+}
+
+/// Friendly window kind derived from the Tauri window label.
+fn app_window_kind(label: &str) -> &'static str {
+    let lower = label.to_ascii_lowercase();
+    if lower == "main" {
+        "main"
+    } else if lower.contains("url") || lower.contains("webview") {
+        "urlOverlay"
+    } else if lower.contains("rdp") || lower.contains("vnc") || lower.contains("remote") {
+        "remoteDesktop"
+    } else {
+        "overlay"
+    }
+}
+
+/// List KKTerm's own windows (label, title, kind, bounds, visibility). Safe.
+pub fn list_app_windows(app: &tauri::AppHandle) -> Result<Vec<AppWindowInfo>, String> {
+    let mut windows: Vec<AppWindowInfo> = app
+        .webview_windows()
+        .into_iter()
+        .map(|(label, window)| {
+            let position = window.outer_position().ok();
+            let size = window.outer_size().ok();
+            AppWindowInfo {
+                kind: app_window_kind(&label).to_string(),
+                id: label,
+                title: window.title().unwrap_or_default(),
+                x: position.map(|p| p.x).unwrap_or(0),
+                y: position.map(|p| p.y).unwrap_or(0),
+                width: size.map(|s| s.width).unwrap_or(0),
+                height: size.map(|s| s.height).unwrap_or(0),
+                visible: window.is_visible().unwrap_or(false),
+                minimized: window.is_minimized().unwrap_or(false),
+                focused: window.is_focused().unwrap_or(false),
+            }
+        })
+        .collect();
+    windows.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(windows)
+}
+
+/// Capture one KKTerm window by its label to a JPEG data URL. Dangerous: the
+/// image may include sensitive terminal / remote-desktop / URL content.
+pub fn capture_app_window(
+    app: &tauri::AppHandle,
+    window_id: &str,
+    use_directx: bool,
+) -> Result<AssistantScreenshot, String> {
+    let window = app
+        .get_webview_window(window_id)
+        .ok_or_else(|| format!("KKTerm window '{window_id}' was not found"))?;
+    capture_webview_window(&window, use_directx)
+}
+
+#[cfg(target_os = "windows")]
+fn capture_webview_window(
+    window: &tauri::WebviewWindow,
+    use_directx: bool,
+) -> Result<AssistantScreenshot, String> {
+    use windows_sys::Win32::Foundation::RECT;
+    use windows_sys::Win32::UI::WindowsAndMessaging::GetWindowRect;
+
+    let hwnd = window
+        .hwnd()
+        .map_err(|error| format!("failed to resolve window handle: {error}"))?;
+    let mut rect: RECT = unsafe { std::mem::zeroed() };
+    if unsafe { GetWindowRect(hwnd.0, &mut rect) } == 0 {
+        return Err("failed to resolve window bounds".to_string());
+    }
+    let width = (rect.right - rect.left).max(1);
+    let height = (rect.bottom - rect.top).max(1);
+    let dib =
+        platform::capture_screen_rect_to_dib(rect.left, rect.top, width, height, use_directx)?;
+    let result = platform::dib_to_jpeg_data_url(&dib, width as u32, height as u32)?;
+    Ok(AssistantScreenshot {
+        data_url: result.data_url,
+        width: result.width,
+        height: result.height,
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
+fn capture_webview_window(
+    window: &tauri::WebviewWindow,
+    _use_directx: bool,
+) -> Result<AssistantScreenshot, String> {
+    let (rgba, width, height) = capture_window_rgba(window)?;
+    rgba_to_jpeg_assistant(&rgba, width, height)
+}
+
+/// Capture the physical pixels of a Tauri window via xcap, returning RGBA8
+/// bytes plus dimensions. macOS requires the Screen Recording permission.
+#[cfg(not(target_os = "windows"))]
+fn capture_window_rgba(window: &tauri::WebviewWindow) -> Result<(Vec<u8>, u32, u32), String> {
+    let xcap_window = find_xcap_window(window)?;
+    if xcap_window.is_minimized().unwrap_or(false) {
+        return Err("window is minimized and cannot be captured".to_string());
+    }
+    let image = xcap_window.capture_image().map_err(|error| {
+        format!(
+            "failed to capture window (on macOS, grant KKTerm the Screen Recording permission): {error}"
+        )
+    })?;
+    let width = image.width();
+    let height = image.height();
+    Ok((image.into_raw(), width, height))
+}
+
+/// Match a Tauri window to its xcap window by process id, then title, then
+/// bounds, falling back to the sole window when there is exactly one.
+#[cfg(not(target_os = "windows"))]
+fn find_xcap_window(window: &tauri::WebviewWindow) -> Result<xcap::Window, String> {
+    let pid = std::process::id();
+    let mut own: Vec<xcap::Window> = xcap::Window::all()
+        .map_err(|error| format!("failed to enumerate windows: {error}"))?
+        .into_iter()
+        .filter(|candidate| candidate.pid().map(|candidate_pid| candidate_pid == pid).unwrap_or(false))
+        .collect();
+    if own.is_empty() {
+        return Err("no KKTerm windows were found to capture".to_string());
+    }
+
+    let title = window.title().unwrap_or_default();
+    let position = window.outer_position().ok();
+    let size = window.outer_size().ok();
+    let index = own
+        .iter()
+        .position(|candidate| {
+            !title.is_empty() && candidate.title().map(|value| value == title).unwrap_or(false)
+        })
+        .or_else(|| {
+            let (position, size) = (position?, size?);
+            own.iter().position(|candidate| {
+                candidate.x().map(|value| value == position.x).unwrap_or(false)
+                    && candidate.y().map(|value| value == position.y).unwrap_or(false)
+                    && candidate.width().map(|value| value == size.width).unwrap_or(false)
+                    && candidate.height().map(|value| value == size.height).unwrap_or(false)
+            })
+        })
+        .or_else(|| if own.len() == 1 { Some(0) } else { None })
+        .ok_or_else(|| "could not match the requested KKTerm window for capture".to_string())?;
+    Ok(own.swap_remove(index))
+}
+
+/// Crop an RGBA8 buffer to a sub-rectangle, clamped to the source bounds.
+#[cfg(not(target_os = "windows"))]
+fn crop_rgba(
+    rgba: &[u8],
+    src_width: u32,
+    src_height: u32,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) -> Result<(Vec<u8>, u32, u32), String> {
+    let expected = src_width as usize * src_height as usize * 4;
+    if rgba.len() < expected {
+        return Err("captured window image data is incomplete".to_string());
+    }
+    if x >= src_width || y >= src_height {
+        return Err("screenshot region is outside the captured window".to_string());
+    }
+    let copy_w = width.min(src_width - x);
+    let copy_h = height.min(src_height - y);
+    let src_stride = src_width as usize * 4;
+    let mut out = Vec::with_capacity(copy_w as usize * copy_h as usize * 4);
+    for row in 0..copy_h as usize {
+        let start = (y as usize + row) * src_stride + x as usize * 4;
+        out.extend_from_slice(&rgba[start..start + copy_w as usize * 4]);
+    }
+    Ok((out, copy_w, copy_h))
+}
+
+/// Encode an RGBA8 buffer to a JPEG data URL `AssistantScreenshot`.
+#[cfg(not(target_os = "windows"))]
+fn rgba_to_jpeg_assistant(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<AssistantScreenshot, String> {
+    use image::{ColorType, ImageEncoder, codecs::jpeg::JpegEncoder};
+
+    let expected = width as usize * height as usize * 4;
+    if rgba.len() < expected {
+        return Err("captured window image data is incomplete".to_string());
+    }
+    let mut rgb = Vec::with_capacity(width as usize * height as usize * 3);
+    for pixel in rgba[..expected].chunks_exact(4) {
+        rgb.push(pixel[0]);
+        rgb.push(pixel[1]);
+        rgb.push(pixel[2]);
+    }
+    let mut jpeg = Vec::new();
+    JpegEncoder::new_with_quality(&mut jpeg, 90)
+        .write_image(&rgb, width, height, ColorType::Rgb8.into())
+        .map_err(|error| format!("failed to encode JPEG: {error}"))?;
+    Ok(AssistantScreenshot {
+        data_url: format!("data:image/jpeg;base64,{}", STANDARD.encode(jpeg)),
+        width,
+        height,
+    })
 }
 
 pub fn list_library_screenshots(
@@ -1994,5 +2243,50 @@ mod platform {
                 let _ = CloseClipboard();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn app_window_kind_maps_labels() {
+        assert_eq!(app_window_kind("main"), "main");
+        assert_eq!(app_window_kind("MAIN"), "main");
+        assert_eq!(app_window_kind("url-overlay-3"), "urlOverlay");
+        assert_eq!(app_window_kind("webview2-1"), "urlOverlay");
+        assert_eq!(app_window_kind("rdp-session-2"), "remoteDesktop");
+        assert_eq!(app_window_kind("vnc-1"), "remoteDesktop");
+        assert_eq!(app_window_kind("something-else"), "overlay");
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn crop_rgba_extracts_subrect() {
+        // 3x2 RGBA image; each pixel is (col, row, 0, 255).
+        let mut src = Vec::new();
+        for row in 0..2u8 {
+            for col in 0..3u8 {
+                src.extend_from_slice(&[col, row, 0, 255]);
+            }
+        }
+        let (out, w, h) = crop_rgba(&src, 3, 2, 1, 0, 2, 2).unwrap();
+        assert_eq!((w, h), (2, 2));
+        // Top-left of the crop is the pixel at column 1, row 0.
+        assert_eq!(&out[0..4], &[1, 0, 0, 255]);
+        // Bottom-right is column 2, row 1.
+        assert_eq!(&out[out.len() - 4..], &[2, 1, 0, 255]);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn crop_rgba_clamps_to_source_bounds() {
+        let src = vec![0u8; 2 * 2 * 4];
+        // Requesting a larger-than-source region clamps to the remaining pixels.
+        let (_, w, h) = crop_rgba(&src, 2, 2, 1, 1, 10, 10).unwrap();
+        assert_eq!((w, h), (1, 1));
+        // Origin outside the source is an error.
+        assert!(crop_rgba(&src, 2, 2, 2, 0, 1, 1).is_err());
     }
 }

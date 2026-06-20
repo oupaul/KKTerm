@@ -31,8 +31,10 @@ Namespaces in this build:
   DNS, TCP check, port scan, interfaces, Wake-on-LAN, WHOIS).
 - `kkterm.watchdog.*` — Watchdog capability: background monitors that poll
   a target and fire when a predicate is met.
+- `kkterm.app.*` — App capability: enumerate KKTerm's own UI windows and
+  capture any of them (main window plus owned overlays) as an image.
 
-`network` and `watchdog` are assistant *capabilities*, not Activity-Rail
+`network`, `watchdog`, and `app` are assistant *capabilities*, not Activity-Rail
 Modules (see `CONTEXT.md`); they get their own top-level namespace so the
 same `kkterm.<group>.*` + optional `dangerous` convention applies uniformly.
 
@@ -66,15 +68,22 @@ same `kkterm.<group>.*` + optional `dangerous` convention applies uniformly.
 - **External transport:** stdio (one JSON-RPC message per line over
   stdin/stdout). The MCP client launches `kkterm-cli` as a child process.
 - **Bridge transport:** Windows named pipe at
-  `\\.\pipe\kkterm-mcp-<token-prefix>`. The pipe name is published in the
-  bridge descriptor file (see below) along with a per-launch bearer token.
-- **Bridge descriptor file:** `%APPDATA%\com.kkterm.app\mcp-bridge.json`.
-  Written in a background startup thread when KKTerm.exe starts with the bridge
-  enabled, removed on the next start before a new descriptor is written. Stale
-  files cause clients to fail with `app_not_running`. On Windows, KKTerm uses
-  hidden `whoami` and `icacls` child processes to resolve the current user SID,
-  remove inherited ACLs, and grant only that SID full control before publishing
-  the descriptor; if that hardening fails, the bridge does not start.
+  `\\.\pipe\kkterm-mcp-<token-prefix>`; or, on macOS/Linux, a Unix domain socket
+  at `<app_data_dir>/mcp-bridge.sock`. The endpoint is published in the bridge
+  descriptor file (see below) under `pipeName` along with a per-launch bearer
+  token.
+- **Bridge descriptor file:** `<app_data_dir>/mcp-bridge.json`, where
+  `app_data_dir` is `%APPDATA%\com.kkterm.app` (Windows),
+  `~/Library/Application Support/com.kkterm.app` (macOS), or
+  `$XDG_DATA_HOME/com.kkterm.app` ⇒ `~/.local/share/com.kkterm.app` (Linux).
+  Written when KKTerm starts with the bridge enabled and removed on the next
+  start before a new descriptor is written. Stale files cause clients to fail
+  with `app_not_running`. The descriptor is restricted to the current user:
+  `0600` on macOS/Linux, and on Windows KKTerm uses hidden `whoami` and `icacls`
+  child processes to resolve the current user SID, remove inherited ACLs, and
+  grant only that SID full control before publishing the descriptor; if that
+  hardening fails, the bridge does not start. The macOS/Linux socket itself is
+  likewise `0600`.
 - **Auth:** the first framed line `kkterm-cli` sends on the pipe is the
   bearer token from the descriptor file. KKTerm.exe responds with
   `{"ok":true}` on success and closes the connection on mismatch.
@@ -110,7 +119,7 @@ Two settings live in `AiProviderSettings` and are surfaced under
 
 | Setting key | Default | Effect |
 |---|---|---|
-| `built_in_mcp_server_enabled` | `true` | KKTerm.exe starts the named-pipe bridge on launch. When `false`, the descriptor file is deleted and no bridge is created. |
+| `built_in_mcp_server_enabled` | `true` | KKTerm starts the bridge on launch (named pipe on Windows, Unix domain socket on macOS/Linux). When `false`, the descriptor file is deleted and no bridge is created. |
 | `built_in_mcp_allow_all_dangerous` | `false` | When `true`, tools in any `kkterm.<module>.dangerous.*` namespace execute through the bridge. When `false`, the bridge returns a `permissionRequired` tool error for any dangerous call. The gate matches the literal segment `dangerous` anywhere in the dotted tool name, so new Modules can adopt the same convention without touching the gate. |
 
 Remote MCP HTTP servers use HTTPS by default. Plain `http://` is accepted for
@@ -253,6 +262,22 @@ KKTerm window before the watchdog is created.
 | `kkterm.watchdog.cancel` | Cancel a running watchdog by id; stops polling and marks it canceled. |
 | `kkterm.watchdog.dangerous.create` | Create a background watchdog from a structured `config`. Requires `built_in_mcp_allow_all_dangerous = true`; an `aiIntervene` action also prompts for in-app approval. Backed by `watchdog_create`. |
 
+### App capability (`kkterm.app.*`)
+
+Universal in-app window enumeration and capture. Unlike the curated
+element-level screenshots (`workspace.connections.screenshot`,
+`dashboard.screenshot_*`), these address KKTerm's own OS windows directly and run
+in-process (no frontend bridge), so they work regardless of the webview's current
+state. Capture is implemented natively per platform: Windows reuses the GDI
+screen-rect path (so WebView2 / remote-desktop content is preserved); macOS and
+Linux use the `xcap` crate. On macOS the app needs the **Screen Recording**
+permission, or capture fails with a clear error.
+
+| Name | Description |
+|---|---|
+| `kkterm.app.list_windows` | List KKTerm's own UI windows (main window plus owned overlays such as the URL WebView2, RDP, and VNC surfaces). Returns each window's `id` (stable Tauri label), `title`, `kind`, bounds, and visibility. Safe (read-only). |
+| `kkterm.app.dangerous.capture_window` | DANGEROUS: capture any KKTerm UI window by `windowId` as a JPEG data URL plus dimensions. The image may include sensitive terminal, remote-desktop, URL, or file content. Requires `built_in_mcp_allow_all_dangerous = true`; on macOS requires the Screen Recording permission. |
+
 All tool inputs use JSON schemas published in `tools/list`. The handler in
 the bridge translates the curated `kkterm.<module>.*` names into the
 existing AI assistant tool functions in `src-tauri/src/ai.rs`, so MCP and
@@ -285,7 +310,9 @@ in the same PR:
 2. `src-tauri/src/mcp_bridge.rs`
    - add a match arm in `dispatch_tool()` translating to the appropriate
      `crate::ai::connection_tool` / `crate::ai::live_session_tool` /
-     `crate::ai::dashboard_tool` call
+     `crate::ai::dashboard_tool` call, or a direct capability call such as
+     `crate::ai::network_tool` / `crate::ai::watchdog_tool` /
+     `crate::screenshot::*` for capabilities that have no in-app assistant tool
    - if the tool is sensitive, put it in a `*.dangerous.*` namespace so
      the existing `dangerous_tool()` gate catches it without changes
 3. `docs/MCP.md`
@@ -298,8 +325,9 @@ in the same PR:
 
 ## Client setup examples
 
-Use the `kkterm-cli` binary path in your MCP client settings. On Windows
-the release build lives next to `kkterm.exe`.
+Use the `kkterm-cli` binary path in your MCP client settings. The release build
+lives next to the KKTerm executable: `kkterm-cli.exe` beside `kkterm.exe` on
+Windows, and `kkterm-cli` beside the app binary on macOS/Linux.
 
 - **Claude Code / Claude Desktop style config**
 ```json
@@ -343,10 +371,11 @@ reconnect the client, and run `tools/list` to verify connectivity. The
 client should see the published tool list; `tools/call` requires KKTerm.exe
 to be running.
 
-On Windows, Settings → AI Assistant → Built-in MCP Server includes a
-"Show config" action. The config dialog opens only from that action; changing
-either MCP toggle never opens it. It contains JSON and TOML snippets whose `command` is the resolved
-`kkterm-cli` path beside the running `KKTerm.exe`. Its setup table shows
+On Windows, macOS, and Linux, Settings → AI Assistant → Built-in MCP Server
+includes a "Show config" action. The config dialog opens only from that action;
+changing either MCP toggle never opens it. It contains JSON and TOML snippets
+whose `command` is the resolved `kkterm-cli` path beside the running KKTerm
+executable. Its setup table shows
 copyable command examples for clients that support CLI MCP registration and
 config paths for clients that require manual editing.
 Debug builds write built-in and remote MCP request/response records to
@@ -359,10 +388,22 @@ widget source/body JSON, and secret-looking argument fields before writing.
 
 ## Platform support
 
-The bridge and its Settings controls are Windows-only at this time. On macOS and Linux, `kkterm-cli`
-builds and answers `initialize` / `tools/list` locally but every
-`tools/call` returns `app_not_running` with a "Windows-only" detail.
-Non-Windows transport is tracked as a follow-up.
+The bridge is cross-platform. The transport differs by OS but the descriptor
+file, bearer-token auth, tool surface, and safety gate are identical:
+
+- **Windows:** named pipe `\\.\pipe\kkterm-mcp-<token-prefix>`.
+- **macOS / Linux:** a Unix domain socket at `<app_data_dir>/mcp-bridge.sock`,
+  created with `0600` permissions so only the current user can connect. Its path
+  is published in the descriptor's `pipeName` field (the field name is kept for
+  format compatibility). The socket is bound *before* the descriptor is written,
+  so a client that reads the descriptor can always connect.
+
+On every supported OS, `kkterm-cli` answers `initialize` / `tools/list` locally
+(so clients can introspect even when KKTerm is not running) and forwards
+`tools/call` to the live app. When the app is not running or the built-in MCP
+server is disabled, `tools/call` returns `app_not_running` (`code: -32002`). The
+Settings → AI Assistant built-in MCP controls are shown on Windows, macOS, and
+Linux.
 
 `kkterm-cli` uses MCP protocol version `2025-03-26`. It rejects a different
 requested initialize version with `-32602` and never sends JSON-RPC responses

@@ -10,6 +10,7 @@ import {
   defaultLocalShell,
   isMacPlatform,
   isWindowsPlatform,
+  supportsBuiltInMcp,
   supportsInstallerHelper,
   supportsRdp,
   usesNativeWindowControls,
@@ -75,6 +76,12 @@ test("Windows-only helpers are gated to Windows", () => {
       assert.equal(isWindowsPlatform(), false);
       assert.equal(supportsInstallerHelper(), false);
     });
+  }
+});
+
+test("built-in MCP is supported on Windows, macOS, and Linux", () => {
+  for (const nav of [WINDOWS, MAC, LINUX]) {
+    withNavigator(nav, () => assert.equal(supportsBuiltInMcp(), true));
   }
 });
 

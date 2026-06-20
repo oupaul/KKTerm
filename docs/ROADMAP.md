@@ -103,7 +103,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Live Session tools: terminal buffer reads, terminal input, RDP/VNC screenshots and input, SFTP/FTP browser list/create-folder/rename/delete actions.
 - [x] Review-only extension draft mode.
 - [x] MCP client: connect to external MCP servers for assistant tool calling, with cached tool-schema introspection (`mcp_list_tools`). All platforms.
-- [x] Built-in MCP server bridge so external clients (Claude Desktop/Codex) can drive live KKTerm sessions — **Windows-only** (named-pipe transport; no Unix-socket fallback yet).
+- [x] Built-in MCP server bridge so external clients (Claude Desktop/Codex) can drive live KKTerm sessions. All platforms (named-pipe transport on Windows, Unix domain socket on macOS/Linux). Includes a universal `kkterm.app.dangerous.capture_window` tool that screenshots any in-app window.
 - [x] Language output setting: follow UI language or a specific language.
 - [x] Claude Code CLI and Codex CLI path configuration (constrained to suggest-only/ask-before-execute where possible).
 - [x] Command planning safety tests.

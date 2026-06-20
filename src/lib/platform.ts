@@ -37,6 +37,12 @@ export function supportsInstallerHelper() {
   return isWindowsPlatform();
 }
 
+// The built-in MCP server bridge runs on Windows (named pipe) and macOS/Linux
+// (Unix domain socket). Only fully-unknown runtimes hide the Settings controls.
+export function supportsBuiltInMcp() {
+  return currentPlatform() !== "unknown";
+}
+
 export function supportsRdp() {
   // Windows uses the native ActiveX control; macOS uses the in-app IronRDP
   // canvas client. Both render RDP inside the workspace.

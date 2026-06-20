@@ -1636,7 +1636,7 @@
     "allowInsecureMcpHttpHint": "When enabled, Remote MCP servers on local or network http:// URLs are allowed; leave this off unless you trust the network and server.",
     "builtInMcpShowConfig": "Show config",
     "builtInMcpConfigTitle": "Built-in MCP config",
-    "builtInMcpConfigIntro": "Paste one of these snippets into an MCP-capable tool, or use a setup command below. The command path uses the kkterm-cli.exe beside your running KKTerm.exe.",
+    "builtInMcpConfigIntro": "Paste one of these snippets into an MCP-capable tool, or use a setup command below. The command path uses the kkterm-cli binary beside your running KKTerm app.",
     "builtInMcpConfigCopy": "Copy config",
     "builtInMcpConfigCopied": "Config copied",
     "builtInMcpConfigLocationsTitle": "Common setup commands",

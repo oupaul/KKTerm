@@ -279,9 +279,35 @@ async fn open_pipe(pipe_name: &str) -> Result<PipeStream, String> {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+// macOS and Linux reach the live app over a Unix domain socket whose path the
+// bridge publishes in the descriptor's `pipeName` field. Retry briefly on
+// NotFound/ConnectionRefused to cover the small window between the app
+// publishing the descriptor and the socket becoming connectable.
+#[cfg(unix)]
+async fn open_pipe(socket_path: &str) -> Result<PipeStream, String> {
+    use std::io::ErrorKind;
+    use tokio::time::sleep;
+
+    let deadline = std::time::Instant::now() + Duration::from_secs(3);
+    loop {
+        match tokio::net::UnixStream::connect(socket_path).await {
+            Ok(stream) => return Ok(PipeStream(stream)),
+            Err(error)
+                if matches!(error.kind(), ErrorKind::NotFound | ErrorKind::ConnectionRefused) =>
+            {
+                if std::time::Instant::now() >= deadline {
+                    return Err(format!("unix socket unavailable: {error}"));
+                }
+                sleep(Duration::from_millis(50)).await;
+            }
+            Err(error) => return Err(format!("unix socket connect: {error}")),
+        }
+    }
+}
+
+#[cfg(not(any(windows, unix)))]
 async fn open_pipe(_pipe_name: &str) -> Result<PipeStream, String> {
-    Err("kkterm built-in MCP server is Windows-only at this time".to_string())
+    Err("kkterm built-in MCP server transport is unsupported on this platform".to_string())
 }
 
 #[cfg(target_os = "windows")]
@@ -294,10 +320,20 @@ impl PipeStream {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(unix)]
+struct PipeStream(tokio::net::UnixStream);
+
+#[cfg(unix)]
+impl PipeStream {
+    fn into_inner(self) -> tokio::net::UnixStream {
+        self.0
+    }
+}
+
+#[cfg(not(any(windows, unix)))]
 struct PipeStream;
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(not(any(windows, unix)))]
 impl PipeStream {
     fn into_inner(self) -> tokio::io::Empty {
         tokio::io::empty()

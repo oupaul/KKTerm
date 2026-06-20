@@ -658,6 +658,23 @@ pub fn tool_descriptors() -> Vec<Value> {
                 "additionalProperties": false,
             },
         }),
+        json!({
+            "name": "kkterm.app.list_windows",
+            "description": "List KKTerm's own UI windows (the main window plus owned overlays such as the URL WebView2, RDP, and VNC surfaces). Returns each window's id (stable Tauri label), title, kind, bounds, and visibility. Safe (read-only). Use the returned id with kkterm.app.dangerous.capture_window.",
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+        }),
+        json!({
+            "name": "kkterm.app.dangerous.capture_window",
+            "description": "DANGEROUS: capture any KKTerm UI window by `windowId` (a label from kkterm.app.list_windows) as a JPEG data URL plus dimensions. Captures whatever the window currently renders, which may include sensitive terminal, remote-desktop, URL, or file content. On macOS the app needs the Screen Recording permission. Requires built_in_mcp_allow_all_dangerous = true.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "windowId": {"type": "string", "description": "KKTerm window label from kkterm.app.list_windows (e.g. \"main\")."},
+                },
+                "required": ["windowId"],
+                "additionalProperties": false,
+            },
+        }),
     ]
 }
 

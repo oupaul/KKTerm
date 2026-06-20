@@ -132,6 +132,11 @@ tokio-rustls = "0.26"
 rustls = { version = "0.23", features = ["ring"] }
 # Parse the server certificate's SubjectPublicKeyInfo for the CredSSP public-key binding.
 x509-cert = "0.2"
+# Cross-platform window pixel capture for the universal in-app screenshot MCP
+# tool. Windows keeps its native GDI/DXGI path in screenshot.rs; macOS/Linux use
+# xcap. `image` feature exposes capture_image(); default `wgc` (Windows Graphics
+# Capture) is dropped since this is a non-Windows-only dependency.
+xcap = { version = "0.9", default-features = false, features = ["image"] }
 # NOTE: sspi = "0.21" (needed for CredSSP/NTLM) is a transitive dep of ironrdp-connector.
 # It is omitted here as a direct dep because ironrdp-connector already pulls it in.
 # To add direct sspi usage in Task 4: sspi = { version = "0.21", default-features = false }

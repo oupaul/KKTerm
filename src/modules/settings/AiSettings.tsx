@@ -52,7 +52,7 @@ import { shouldShowStoredAiProviderKeyMask } from "./aiProviderKeyField";
 import i18next from "../../i18n/config";
 import { resolveInstallPlan } from "../installer/dag";
 import { installRecipeAndWait } from "../installer/progress";
-import { isWindowsPlatform } from "../../lib/platform";
+import { supportsBuiltInMcp } from "../../lib/platform";
 import {
   readStoredAiCliBackendStatus,
   writeStoredAiCliBackendStatus,
@@ -71,7 +71,7 @@ type BuiltInMcpSetupRow = {
   globalScope: string;
 };
 
-const BUILT_IN_MCP_COMMAND_PATH_FALLBACK = "C:\\Path\\To\\kkterm-cli.exe";
+const BUILT_IN_MCP_COMMAND_PATH_FALLBACK = "<path-to-kkterm-cli>";
 const BUILT_IN_MCP_PROJECT_CONFIG_UNAVAILABLE = "-";
 
 function builtInMcpJsonSnippet(commandPath: string) {
@@ -141,14 +141,7 @@ function builtInMcpSetupRows(commandPath: string): BuiltInMcpSetupRow[] {
 }
 
 const BUILT_IN_MCP_CONFIG_SNIPPET_FALLBACK = {
-  json: `{
-  "mcpServers": {
-    "kkterm": {
-      "command": "C:\\\\Path\\\\To\\\\kkterm-cli.exe",
-      "args": []
-    }
-  }
-}`,
+  json: builtInMcpJsonSnippet(BUILT_IN_MCP_COMMAND_PATH_FALLBACK),
   toml: builtInMcpTomlSnippet(BUILT_IN_MCP_COMMAND_PATH_FALLBACK),
 };
 
@@ -1708,7 +1701,7 @@ export function AiSettings() {
               <small>{t("settings.showAllModelsHint")}</small>
             </span>
           </label>
-              {isWindowsPlatform() ? (
+              {supportsBuiltInMcp() ? (
                 <>
                   <div className="settings-toggle-row built-in-mcp-server-row">
                     <ToggleSwitch

@@ -22,14 +22,21 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::AppHandle;
 
-#[cfg(target_os = "windows")]
+#[cfg(any(windows, unix))]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 #[cfg(target_os = "windows")]
 use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
+#[cfg(unix)]
+use tokio::net::UnixListener;
 
 const PROTOCOL_VERSION: &str = "2025-03-26";
 const SERVER_NAME: &str = "kkterm-cli";
 const BRIDGE_INFO_FILENAME: &str = "mcp-bridge.json";
+/// Unix domain socket filename, written next to the descriptor file. On macOS
+/// and Linux the bridge listens on this socket instead of a Windows named pipe;
+/// its path is published in the descriptor's `pipeName` field.
+#[cfg(unix)]
+const BRIDGE_SOCKET_FILENAME: &str = "mcp-bridge.sock";
 const BRIDGE_INFO_VERSION: u32 = 1;
 const MAX_REQUEST_BYTES: usize = 1 * 1024 * 1024;
 
@@ -162,15 +169,6 @@ pub fn start_if_enabled(
         return;
     }
 
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = (app, allow_all_dangerous);
-        crate::logging::mcp_debug("bridge.unsupported_platform", &json!({}));
-        eprintln!(
-            "kkterm built-in MCP server: named-pipe transport is Windows-only; bridge disabled."
-        );
-    }
-
     #[cfg(target_os = "windows")]
     {
         if let Err(error) = std::thread::Builder::new()
@@ -185,6 +183,24 @@ pub fn start_if_enabled(
             );
             eprintln!("kkterm built-in MCP server: failed to spawn startup thread: {error}");
         }
+    }
+
+    // macOS and Linux host the bridge over a Unix domain socket in the same
+    // app-data directory, secured with 0600 permissions and the same bearer
+    // token as the Windows named pipe.
+    #[cfg(unix)]
+    {
+        let socket_path = app_data_dir.join(BRIDGE_SOCKET_FILENAME);
+        tauri::async_runtime::spawn(async move {
+            start_unix_bridge(app, info_path, socket_path, allow_all_dangerous).await;
+        });
+    }
+
+    #[cfg(not(any(windows, unix)))]
+    {
+        let _ = (app, allow_all_dangerous);
+        crate::logging::mcp_debug("bridge.unsupported_platform", &json!({}));
+        eprintln!("kkterm built-in MCP server: transport is unsupported on this platform; bridge disabled.");
     }
 }
 
@@ -233,6 +249,110 @@ fn start_windows_bridge(app: AppHandle, info_path: PathBuf, allow_all_dangerous:
     });
 }
 
+#[cfg(unix)]
+async fn start_unix_bridge(
+    app: AppHandle,
+    info_path: PathBuf,
+    socket_path: PathBuf,
+    allow_all_dangerous: bool,
+) {
+    // A stale socket file (e.g. from a previous run that did not clean up)
+    // would make `bind` fail with EADDRINUSE, so remove it first.
+    let _ = std::fs::remove_file(&socket_path);
+    let listener = match UnixListener::bind(&socket_path) {
+        Ok(listener) => listener,
+        Err(error) => {
+            crate::logging::mcp_debug(
+                "bridge.bind_failed",
+                &json!({"error": error.to_string(), "socketPath": socket_path}),
+            );
+            eprintln!("kkterm built-in MCP server: failed to bind unix socket: {error}");
+            return;
+        }
+    };
+    if let Err(error) = restrict_unix_socket_permissions(&socket_path) {
+        crate::logging::mcp_debug(
+            "bridge.socket_permission_failed",
+            &json!({"error": error.to_string()}),
+        );
+        eprintln!("kkterm built-in MCP server: failed to secure unix socket: {error}");
+        let _ = std::fs::remove_file(&socket_path);
+        return;
+    }
+
+    let token = random_token();
+    let pid = std::process::id();
+    let info = BridgeInfo {
+        version: BRIDGE_INFO_VERSION,
+        pipe_name: socket_path.to_string_lossy().into_owned(),
+        token: token.clone(),
+        pid,
+    };
+    // The descriptor is written only after the socket is bound and secured, so
+    // a client that successfully reads it can always connect (no
+    // publish-before-listen race).
+    if let Err(error) = write_bridge_info(&info_path, &info) {
+        crate::logging::mcp_debug(
+            "bridge.info_write_failed",
+            &json!({"error": error.to_string()}),
+        );
+        eprintln!("kkterm built-in MCP server: failed to write bridge info: {error}");
+        let _ = std::fs::remove_file(&socket_path);
+        return;
+    }
+    crate::logging::mcp_debug(
+        "bridge.started",
+        &json!({
+            "socketPath": socket_path,
+            "pid": pid,
+            "allowAllDangerous": allow_all_dangerous,
+            "bridgeInfoPath": info_path,
+        }),
+    );
+
+    let ctx = Arc::new(BridgeContext {
+        app,
+        token,
+        allow_all_dangerous,
+    });
+    if let Err(error) = run_unix_socket_server(ctx, listener).await {
+        crate::logging::mcp_debug(
+            "bridge.server_stopped",
+            &json!({"error": error.to_string()}),
+        );
+        eprintln!("kkterm built-in MCP server stopped: {error}");
+    }
+}
+
+/// Tighten the socket file so only the current user can connect. Combined with
+/// the bearer token in the (also 0600) descriptor, this keeps other local users
+/// off the bridge.
+#[cfg(unix)]
+fn restrict_unix_socket_permissions(path: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+}
+
+#[cfg(unix)]
+async fn run_unix_socket_server(
+    ctx: Arc<BridgeContext>,
+    listener: UnixListener,
+) -> std::io::Result<()> {
+    loop {
+        let (stream, _addr) = listener.accept().await?;
+        let ctx = Arc::clone(&ctx);
+        tauri::async_runtime::spawn(async move {
+            if let Err(error) = serve_client(ctx, stream).await {
+                crate::logging::mcp_debug(
+                    "bridge.client_ended",
+                    &json!({"error": error.to_string()}),
+                );
+                eprintln!("kkterm MCP bridge client ended: {error}");
+            }
+        });
+    }
+}
+
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -275,8 +395,11 @@ async fn run_named_pipe_server(ctx: Arc<BridgeContext>, pipe_name: String) -> st
     }
 }
 
-#[cfg(target_os = "windows")]
-async fn serve_client(ctx: Arc<BridgeContext>, stream: NamedPipeServer) -> std::io::Result<()> {
+#[cfg(any(windows, unix))]
+async fn serve_client<S>(ctx: Arc<BridgeContext>, stream: S) -> std::io::Result<()>
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
+{
     let (reader, mut writer) = tokio::io::split(stream);
     let mut reader = BufReader::new(reader);
     let mut line = String::new();
@@ -339,7 +462,7 @@ async fn serve_client(ctx: Arc<BridgeContext>, stream: NamedPipeServer) -> std::
     }
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(windows, unix))]
 async fn write_response<W: tokio::io::AsyncWriteExt + Unpin>(
     writer: &mut W,
     response: &Value,
@@ -532,9 +655,9 @@ fn redact_tool_arguments(name: &str, arguments: &Value) -> Value {
 
 fn redact_tool_result(name: &str, result: &Value) -> Value {
     match name {
-        "kkterm.workspace.sessions.read_buffer" | "kkterm.dashboard.read_widget_source" => {
-            Value::String("[REDACTED]".to_string())
-        }
+        "kkterm.workspace.sessions.read_buffer"
+        | "kkterm.dashboard.read_widget_source"
+        | "kkterm.app.dangerous.capture_window" => Value::String("[REDACTED]".to_string()),
         _ => redact_sensitive_debug_value(result),
     }
 }
@@ -1156,6 +1279,23 @@ async fn dispatch_tool(app: &AppHandle, name: &str, args: Value) -> Result<Value
                 &crate::ai::watchdog_tool(app, "watchdog_create", json!({"config": config})).await,
             )
         }
+        // -- App: universal in-app window enumeration and capture -----------
+        "kkterm.app.list_windows" => {
+            let windows = crate::screenshot::list_app_windows(app)?;
+            let windows = serde_json::to_value(windows).map_err(|error| error.to_string())?;
+            Ok(json!({"ok": true, "windows": windows}))
+        }
+        "kkterm.app.dangerous.capture_window" => {
+            let window_id = args
+                .get("windowId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| "windowId is required".to_string())?;
+            // GDI screen-rect capture (use_directx=false) on Windows reliably
+            // grabs WebView2 / remote-desktop content; xcap handles macOS/Linux.
+            let screenshot = crate::screenshot::capture_app_window(app, window_id, false)?;
+            let screenshot = serde_json::to_value(screenshot).map_err(|error| error.to_string())?;
+            Ok(json!({"ok": true, "windowId": window_id, "screenshot": screenshot}))
+        }
         other => Err(format!("unknown tool: {other}")),
     }
 }
@@ -1387,6 +1527,8 @@ mod tests {
             "kkterm.workspace.dangerous.remote_desktop_keypress"
         ));
         assert!(dangerous_tool("kkterm.watchdog.dangerous.create"));
+        assert!(dangerous_tool("kkterm.app.dangerous.capture_window"));
+        assert!(!dangerous_tool("kkterm.app.list_windows"));
         assert!(!dangerous_tool("kkterm.workspace.sessions.send_input"));
         assert!(!dangerous_tool("kkterm.workspace.file_browser.list"));
         assert!(!dangerous_tool(
@@ -1462,6 +1604,9 @@ mod tests {
         assert!(names.contains(&"kkterm.watchdog.get_report".to_string()));
         assert!(names.contains(&"kkterm.watchdog.cancel".to_string()));
         assert!(names.contains(&"kkterm.watchdog.dangerous.create".to_string()));
+        // App window capture surface
+        assert!(names.contains(&"kkterm.app.list_windows".to_string()));
+        assert!(names.contains(&"kkterm.app.dangerous.capture_window".to_string()));
         // Guard against drifting back to the pre-Option-B flat namespace.
         for name in &names {
             assert!(
