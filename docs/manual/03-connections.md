@@ -114,14 +114,20 @@ Connection form-validation error.
 
 Local terminal Add/Edit Connection uses the `connections.shell` tabbed selector for the local shell choice and still stores the selected `localShell` value on the Connection.
 
-Beside `connections.localStartupScript`, `connections.cliAccountHelper` can add
-an editable environment block for one Claude Code or Codex account. The helper
-supports Command Prompt, PowerShell/PowerShell 7, WSL, Bash, and zsh. It creates
-a stable per-user account directory and sets `CLAUDE_CONFIG_DIR` or `CODEX_HOME`
-inside that Local terminal Session; the user signs in normally after opening the
-Connection. Applying the helper again replaces its marked block while preserving
-other Startup script commands. KKTerm never asks for or stores the CLI's API
-keys, OAuth tokens, or passwords.
+Beside `connections.localStartupScript`, `connections.environmentVariables`
+opens a compact manager for non-secret environment variables specific to that
+Local Connection. It supports Command Prompt, PowerShell/PowerShell 7, WSL,
+Bash, and zsh. Apply writes one marked, shell-appropriate block into the visible
+Startup script draft; applying again replaces that block, and removing every
+row removes it, while commands outside the block stay unchanged. The values are
+stored as Startup script text, so `connections.environmentVariablesNonSecret`
+warns not to put passwords, tokens, or API keys there.
+
+Inside that manager, `connections.cliAccountHelper` opens a guided Claude Code
+or Codex account wizard. It adds `CLAUDE_CONFIG_DIR` or `CODEX_HOME` as a managed
+variable and creates its stable per-user account directory when the Connection
+starts; the user signs in normally after opening the terminal. KKTerm never asks
+for or stores the CLI's API keys, OAuth tokens, or passwords.
 
 Each account directory isolates the selected CLI's broader local state as well
 as authentication, so settings, history/sessions, memory, and tool configuration
