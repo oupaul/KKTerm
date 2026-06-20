@@ -177,6 +177,8 @@ function describeTarget(target: WatchdogTarget, t: (key: string, options?: Recor
       return t("watchdog.detail.targetPing", { host: target.host });
     case "tcpReachable":
       return t("watchdog.detail.targetTcp", { host: target.host, port: target.port });
+    case "schedule":
+      return t("watchdog.detail.targetSchedule", { cron: target.cron });
     case "mock":
       return t("watchdog.detail.targetMock");
   }

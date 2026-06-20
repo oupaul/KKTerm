@@ -1035,7 +1035,12 @@
       "webhookUrl": "URL",
       "webhookMethod": "Method",
       "webhookBody": "Body (optional)",
-      "triggeredNotice": "Automation “{{name}}” triggered."
+      "triggeredNotice": "Automation “{{name}}” triggered.",
+      "triggerTypeLabel": "Trigger",
+      "triggerPerf": "Performance counter",
+      "triggerSchedule": "Schedule",
+      "cronLabel": "Cron schedule",
+      "cronHint": "minute hour day month weekday, local time (e.g. 0 3 * * * = daily at 03:00)"
     },
     "errorNotice": "IT Ops: {{message}}"
   },
@@ -3398,7 +3403,8 @@
       "summarize": "Summarize",
       "regenerate": "Regenerate",
       "summarizing": "Summarizing…",
-      "summaryEmpty": "Click Summarize to generate a natural-language post-mortem of this watchdog."
+      "summaryEmpty": "Click Summarize to generate a natural-language post-mortem of this watchdog.",
+      "targetSchedule": "Schedule: {{cron}}"
     }
   },
   "workspace": {

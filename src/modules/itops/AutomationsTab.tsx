@@ -19,6 +19,8 @@ function triggerIcon(config: WatchdogConfig): ItIconName {
   switch (config.target.kind) {
     case "performanceCounter":
       return "gauge";
+    case "schedule":
+      return "calendar";
     case "ping":
     case "tcpReachable":
     case "sshSessionOutputSilence":
@@ -32,6 +34,8 @@ function triggerColor(config: WatchdogConfig): string {
   switch (config.target.kind) {
     case "performanceCounter":
       return IT_ACCENTS.orange;
+    case "schedule":
+      return IT_ACCENTS.indigo;
     case "ping":
     case "tcpReachable":
       return IT_ACCENTS.teal;
@@ -42,11 +46,12 @@ function triggerColor(config: WatchdogConfig): string {
   }
 }
 
-// Technical labels (metric ids, hosts, predicate symbols) — not translatable
-// chrome, matching how the existing Watchdog UI surfaces the same config.
+// Technical labels (metric ids, hosts, cron, predicate symbols) — not
+// translatable chrome, matching how the existing Watchdog UI surfaces config.
 function triggerLabel(config: WatchdogConfig): string {
   const target = config.target;
   if (target.kind === "performanceCounter") return target.metric;
+  if (target.kind === "schedule") return target.cron;
   if (target.kind === "ping") return target.host;
   if (target.kind === "tcpReachable") return `${target.host}:${target.port}`;
   return target.kind;
@@ -61,7 +66,9 @@ const OP_SYMBOL: Record<string, string> = {
   ne: "≠",
 };
 
-function conditionLabel(config: WatchdogConfig): string {
+function conditionLabel(config: WatchdogConfig): string | null {
+  // A schedule fires on time, not on a sampled value — no condition to show.
+  if (config.target.kind === "schedule") return null;
   const predicate = config.trigger.predicate;
   if (predicate.op === "contains") return `contains: ${predicate.value}`;
   if (predicate.op === "silenceFor") return `silenceFor ${predicate.ms}ms`;
@@ -164,10 +171,14 @@ export function AutomationsTab() {
               <span className="nm">{automation.name}</span>
               <span className="au-flow">
                 <span>{triggerLabel(automation.config)}</span>
-                <span className="arrow">
-                  <ItIcon name="chevR" size={12} />
-                </span>
-                <span className="cond">{conditionLabel(automation.config)}</span>
+                {conditionLabel(automation.config) ? (
+                  <>
+                    <span className="arrow">
+                      <ItIcon name="chevR" size={12} />
+                    </span>
+                    <span className="cond">{conditionLabel(automation.config)}</span>
+                  </>
+                ) : null}
                 <span className="arrow">
                   <ItIcon name="arrow" size={13} />
                 </span>

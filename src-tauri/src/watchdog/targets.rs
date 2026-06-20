@@ -108,6 +108,113 @@ pub async fn sample_tcp_reachable(host: &str, port: u16) -> Value {
     Value::from(if result.open { 1.0 } else { 0.0 })
 }
 
+/// Schedule sampler (IT Ops Phase 5). Returns 1.0 when the current local minute
+/// matches the cron expression, 0.0 otherwise. The registry's rising-edge
+/// detector turns a full matching minute into exactly one trigger, so this is
+/// stateless. Pair with a `gte 1` condition. Poll faster than once a minute.
+pub fn sample_schedule(cron: &str) -> Value {
+    use time::OffsetDateTime;
+    let now = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc());
+    let matched = cron_matches_fields(
+        cron,
+        now.minute() as u32,
+        now.hour() as u32,
+        now.day() as u32,
+        u8::from(now.month()) as u32,
+        now.weekday().number_days_from_sunday() as u32,
+    );
+    Value::from(if matched { 1.0 } else { 0.0 })
+}
+
+/// Validate a 5-field cron expression (minute hour day-of-month month
+/// day-of-week). Used by `WatchdogRegistry::create` to reject bad schedules.
+pub fn validate_cron(cron: &str) -> Result<(), String> {
+    let fields: Vec<&str> = cron.split_whitespace().collect();
+    if fields.len() != 5 {
+        return Err(format!(
+            "cron must have 5 fields (minute hour day month weekday), got {}",
+            fields.len()
+        ));
+    }
+    for field in fields {
+        for part in field.split(',') {
+            if !cron_part_is_valid(part.trim()) {
+                return Err(format!("invalid cron field: {part}"));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Pure matcher for the broken-down current time. `dow` is 0=Sunday..6=Saturday;
+/// a cron `7` in the weekday field also means Sunday.
+fn cron_matches_fields(
+    cron: &str,
+    minute: u32,
+    hour: u32,
+    day_of_month: u32,
+    month: u32,
+    dow: u32,
+) -> bool {
+    let fields: Vec<&str> = cron.split_whitespace().collect();
+    if fields.len() != 5 {
+        return false;
+    }
+    cron_field_matches(fields[0], minute)
+        && cron_field_matches(fields[1], hour)
+        && cron_field_matches(fields[2], day_of_month)
+        && cron_field_matches(fields[3], month)
+        && (cron_field_matches(fields[4], dow) || (dow == 0 && cron_field_matches(fields[4], 7)))
+}
+
+fn cron_field_matches(field: &str, value: u32) -> bool {
+    field.split(',').any(|part| cron_part_matches(part.trim(), value))
+}
+
+fn cron_part_matches(part: &str, value: u32) -> bool {
+    let (range, step) = match part.split_once('/') {
+        Some((range, step)) => match step.parse::<u32>() {
+            Ok(step) if step > 0 => (range, step),
+            _ => return false,
+        },
+        None => (part, 1),
+    };
+    let (start, end) = if range == "*" {
+        (0, u32::MAX)
+    } else if let Some((low, high)) = range.split_once('-') {
+        match (low.parse::<u32>(), high.parse::<u32>()) {
+            (Ok(low), Ok(high)) => (low, high),
+            _ => return false,
+        }
+    } else {
+        match range.parse::<u32>() {
+            Ok(single) => (single, single),
+            Err(_) => return false,
+        }
+    };
+    value >= start && value <= end && (value - start) % step == 0
+}
+
+fn cron_part_is_valid(part: &str) -> bool {
+    if part == "*" {
+        return true;
+    }
+    let (range, step_ok) = match part.split_once('/') {
+        Some((range, step)) => (range, step.parse::<u32>().map(|s| s > 0).unwrap_or(false)),
+        None => (part, true),
+    };
+    if !step_ok {
+        return false;
+    }
+    if range == "*" {
+        return true;
+    }
+    if let Some((low, high)) = range.split_once('-') {
+        return low.parse::<u32>().is_ok() && high.parse::<u32>().is_ok();
+    }
+    range.parse::<u32>().is_ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,5 +281,41 @@ mod tests {
             extract_metric(&snapshot, PerformanceMetric::CpuPercent),
             Value::Null
         );
+    }
+
+    #[test]
+    fn cron_every_day_at_0300() {
+        // "0 3 * * *" — minute 0, hour 3, any day/month/weekday.
+        assert!(cron_matches_fields("0 3 * * *", 0, 3, 15, 6, 4));
+        assert!(!cron_matches_fields("0 3 * * *", 1, 3, 15, 6, 4)); // minute 1
+        assert!(!cron_matches_fields("0 3 * * *", 0, 4, 15, 6, 4)); // hour 4
+    }
+
+    #[test]
+    fn cron_step_and_range_and_list() {
+        // every 15 minutes
+        assert!(cron_matches_fields("*/15 * * * *", 30, 9, 1, 1, 1));
+        assert!(!cron_matches_fields("*/15 * * * *", 31, 9, 1, 1, 1));
+        // weekdays Mon-Fri (1-5) at 09:00
+        assert!(cron_matches_fields("0 9 * * 1-5", 0, 9, 1, 1, 3)); // Wed
+        assert!(!cron_matches_fields("0 9 * * 1-5", 0, 9, 1, 1, 0)); // Sun
+        // comma list of hours
+        assert!(cron_matches_fields("0 9,17 * * *", 0, 17, 1, 1, 2));
+    }
+
+    #[test]
+    fn cron_weekday_seven_is_sunday() {
+        // dow 0 (Sunday) matches a cron "7".
+        assert!(cron_matches_fields("0 0 * * 7", 0, 0, 1, 1, 0));
+        assert!(!cron_matches_fields("0 0 * * 7", 0, 0, 1, 1, 1));
+    }
+
+    #[test]
+    fn cron_validation_rejects_bad_expressions() {
+        assert!(validate_cron("0 3 * * *").is_ok());
+        assert!(validate_cron("*/15 9-17 * * 1-5").is_ok());
+        assert!(validate_cron("0 3 * *").is_err()); // 4 fields
+        assert!(validate_cron("bad 3 * * *").is_err()); // non-numeric
+        assert!(validate_cron("0 3 * * */0").is_err()); // zero step
     }
 }

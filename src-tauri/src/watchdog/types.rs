@@ -43,6 +43,12 @@ pub enum WatchdogTarget {
     /// Open/closed check for a specific TCP port. Returns 1.0 if the port
     /// accepts a connection, 0.0 otherwise.
     TcpReachable { host: String, port: u16 },
+    /// Fires on a 5-field cron schedule (minute hour day-of-month month
+    /// day-of-week), evaluated in local time. The sampler returns 1.0 on the
+    /// first poll of a matching minute and 0.0 otherwise, so it pairs with a
+    /// `gte 1` condition. Poll faster than once a minute so no occurrence is
+    /// missed (the create flow sets a 30s poll). IT Ops Phase 5.
+    Schedule { cron: String },
 }
 
 fn default_mock_step() -> f64 {

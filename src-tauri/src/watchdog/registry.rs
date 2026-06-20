@@ -314,6 +314,9 @@ pub(crate) fn validate_config(config: &WatchdogConfig) -> Result<(), WatchdogErr
         | WatchdogTarget::SshSessionOutputSilence { .. }
         | WatchdogTarget::Ping { .. }
         | WatchdogTarget::TcpReachable { .. } => Ok(()),
+        WatchdogTarget::Schedule { cron } => {
+            super::targets::validate_cron(cron).map_err(WatchdogError::invalid)
+        }
     }
 }
 
@@ -617,6 +620,7 @@ async fn sample_target(
         WatchdogTarget::TcpReachable { host, port } => {
             super::targets::sample_tcp_reachable(host, *port).await
         }
+        WatchdogTarget::Schedule { cron } => super::targets::sample_schedule(cron),
     }
 }
 
