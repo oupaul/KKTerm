@@ -24,7 +24,7 @@ Failure shows `terminal.failedToStart` / `terminal.failedToStartDetail`. Outside
 
 ## Local WSL Connections
 
-When adding or editing a Local Terminal Connection, choosing WSL from `connections.shell` makes KKTerm query the installed WSL distributions with the same `installer_wsl_list_distros` backend used by the Install Helper manager. If distributions are available, the form shows `connections.wslDistribution`; choosing one stores the shell as `wsl.exe --distribution <name>` so the Connection opens that distro directly. Leaving the field at `connections.default` keeps plain `wsl.exe` and follows the Windows default distribution. During new Connection creation, an explicit distro choice also seeds the Connection icon from the bundled OS icon set when a matching distro logo exists, unless the user picks an icon manually.
+When adding or editing a Local Terminal Connection, choosing WSL from `connections.shell` makes KKTerm query the installed WSL distributions with the same `installer_wsl_list_distros` backend used by the Install Helper manager. If distributions are available, the form shows `connections.wslDistribution`; choosing one stores the shell as `wsl.exe --distribution <name>` so the Connection opens that distro directly. Leaving the field at `connections.default` keeps plain `wsl.exe` and follows the Windows default distribution. The terminal toolbar still shows the saved Connection name, such as `WSL - Ubuntu`, rather than the stored launch command. During new Connection creation, an explicit distro choice also seeds the Connection icon from the bundled OS icon set when a matching distro logo exists, unless the user picks an icon manually.
 
 ## Copy and paste
 

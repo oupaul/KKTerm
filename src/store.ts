@@ -656,23 +656,7 @@ function stableIdFromPath(path: string) {
 }
 
 function localTerminalToolbarTitle(connection: Connection) {
-  const shell = connection.localShell?.trim();
-  const normalizedShell = shell?.toLowerCase() ?? "";
-  if (normalizedShell.endsWith("cmd.exe") || normalizedShell === "cmd") {
-    return i18next.t("settings.commandPrompt");
-  }
-  if (
-    normalizedShell.endsWith("powershell.exe") ||
-    normalizedShell === "powershell" ||
-    normalizedShell.endsWith("pwsh.exe") ||
-    normalizedShell === "pwsh"
-  ) {
-    return i18next.t("settings.powerShell");
-  }
-  if (normalizedShell.endsWith("wsl.exe") || normalizedShell === "wsl") {
-    return i18next.t("settings.wsl");
-  }
-  return shell || connection.name;
+  return connection.name;
 }
 
 function terminalPaneTitleForConnection(connection: Connection) {

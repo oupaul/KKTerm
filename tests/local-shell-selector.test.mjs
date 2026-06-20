@@ -41,10 +41,18 @@ const sidebarSource = await readFile(
   "utf8",
 );
 
+const storeSource = await readFile(new URL("../src/store.ts", import.meta.url), "utf8");
+
 assert.match(
   sidebarSource,
   /defaultWslConnectionName\(distroFromWslShell\(selectedLocalShell\)\)/,
   "Blank local WSL distro Connection names should default to WSL - <distro>.",
+);
+
+assert.match(
+  storeSource,
+  /function localTerminalToolbarTitle\(connection: Connection\) \{\s*return connection\.name;\s*\}/,
+  "Local terminal toolbar titles should use the saved Connection name, not the launch shell command.",
 );
 
 assert.match(
