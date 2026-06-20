@@ -44,6 +44,7 @@ import type {
   BatchTask,
   RunHistoryEntry,
   Automation,
+  AutomationAction,
   HostUsageSnapshot,
   ImportedDatabaseSnapshot,
   SelectiveExportInfo,
@@ -1093,11 +1094,11 @@ type CommandMap = {
     result: Automation[];
   };
   itops_create_automation: {
-    args: { name: string; config: WatchdogConfig; enabled: boolean };
+    args: { name: string; config: WatchdogConfig; actions: AutomationAction[]; enabled: boolean };
     result: Automation;
   };
   itops_update_automation: {
-    args: { id: string; name: string; config: WatchdogConfig };
+    args: { id: string; name: string; config: WatchdogConfig; actions: AutomationAction[] };
     result: Automation;
   };
   itops_set_automation_enabled: {

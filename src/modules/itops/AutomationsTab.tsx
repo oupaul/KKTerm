@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmSheet } from "../../app/ui/dialog";
 import { useWorkspaceStore } from "../../store";
-import type { Automation } from "../../types";
+import type { Automation, AutomationAction } from "../../types";
 import type { WatchdogConfig } from "../../watchdog/types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
 import { AutomationDialog } from "./AutomationDialog";
@@ -68,13 +68,21 @@ function conditionLabel(config: WatchdogConfig): string {
   return `${OP_SYMBOL[predicate.op] ?? predicate.op} ${predicate.value}`;
 }
 
-function actionIcon(config: WatchdogConfig): ItIconName {
-  return config.action.kind === "aiIntervene" ? "bot" : "bell";
-}
+const ACTION_ICON: Record<AutomationAction["kind"], ItIconName> = {
+  notify: "bell",
+  popup: "popup",
+  email: "mail",
+  webhook: "webhook",
+  runBatch: "run",
+};
 
-function actionColor(config: WatchdogConfig): string {
-  return config.action.kind === "aiIntervene" ? IT_ACCENTS.purple : IT_ACCENTS.blue;
-}
+const ACTION_COLOR: Record<AutomationAction["kind"], string> = {
+  notify: IT_ACCENTS.blue,
+  popup: IT_ACCENTS.teal,
+  email: IT_ACCENTS.green,
+  webhook: IT_ACCENTS.indigo,
+  runBatch: IT_ACCENTS.orange,
+};
 
 export function AutomationsTab() {
   const { t } = useTranslation();
@@ -164,9 +172,11 @@ export function AutomationsTab() {
                   <ItIcon name="arrow" size={13} />
                 </span>
                 <span className="au-acts">
-                  <span className="a" style={{ background: actionColor(automation.config) }}>
-                    <ItIcon name={actionIcon(automation.config)} size={12} sw={1.7} />
-                  </span>
+                  {automation.actions.map((action, index) => (
+                    <span key={index} className="a" style={{ background: ACTION_COLOR[action.kind] }}>
+                      <ItIcon name={ACTION_ICON[action.kind]} size={12} sw={1.7} />
+                    </span>
+                  ))}
                 </span>
               </span>
             </div>

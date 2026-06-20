@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import type {
   Automation,
+  AutomationAction,
   HostGroup,
   HostGroupFilter,
   ItopsTransport,
@@ -128,8 +129,18 @@ interface ItOpsState {
   newAutomationRequest: number;
   requestNewAutomation: () => void;
   loadAutomations: () => Promise<void>;
-  createAutomation: (name: string, config: WatchdogConfig, enabled: boolean) => Promise<Automation>;
-  updateAutomation: (id: string, name: string, config: WatchdogConfig) => Promise<Automation>;
+  createAutomation: (
+    name: string,
+    config: WatchdogConfig,
+    actions: AutomationAction[],
+    enabled: boolean,
+  ) => Promise<Automation>;
+  updateAutomation: (
+    id: string,
+    name: string,
+    config: WatchdogConfig,
+    actions: AutomationAction[],
+  ) => Promise<Automation>;
   setAutomationEnabled: (id: string, enabled: boolean) => Promise<void>;
   removeAutomation: (id: string) => Promise<void>;
 }
@@ -260,14 +271,19 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     set({ automations, automationsLoaded: true });
   },
 
-  async createAutomation(name, config, enabled) {
-    const created = await invokeCommand("itops_create_automation", { name, config, enabled });
+  async createAutomation(name, config, actions, enabled) {
+    const created = await invokeCommand("itops_create_automation", {
+      name,
+      config,
+      actions,
+      enabled,
+    });
     set({ automations: [...get().automations, created] });
     return created;
   },
 
-  async updateAutomation(id, name, config) {
-    const updated = await invokeCommand("itops_update_automation", { id, name, config });
+  async updateAutomation(id, name, config, actions) {
+    const updated = await invokeCommand("itops_update_automation", { id, name, config, actions });
     set({
       automations: get().automations.map((automation) =>
         automation.id === id ? updated : automation,

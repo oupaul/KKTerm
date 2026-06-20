@@ -3225,6 +3225,7 @@ pub fn run() {
             app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
             app.manage(itops::automation_commands::ItopsAutomationRuntime::default());
+            itops::automation_commands::install_trigger_hook(app.handle());
             itops::automation_commands::hydrate_automations(app.handle().clone());
             app.manage(installer::InstallerRuntime::new());
             mcp_bridge::start_if_enabled(

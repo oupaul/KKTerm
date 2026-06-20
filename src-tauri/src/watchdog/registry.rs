@@ -87,14 +87,39 @@ struct Entry {
     intervention_tx: Option<mpsc::Sender<InterventionSignal>>,
 }
 
+/// A hook the IT Ops layer installs to run an Automation's action list when its
+/// Watchdog fires. Type-erased so the watchdog module keeps no dependency on IT
+/// Ops (the dependency stays one-way: `itops` -> `watchdog`).
+pub type TriggerHook = Arc<dyn Fn(&str, &Value) + Send + Sync>;
+
 #[derive(Default)]
 pub struct WatchdogRegistry {
     inner: Mutex<HashMap<String, Entry>>,
+    trigger_hook: Mutex<Option<TriggerHook>>,
 }
 
 impl WatchdogRegistry {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Install the trigger hook. Called once at startup by the IT Ops layer.
+    pub fn set_trigger_hook(&self, hook: TriggerHook) {
+        *self
+            .trigger_hook
+            .lock()
+            .expect("WatchdogRegistry hook mutex poisoned") = Some(hook);
+    }
+
+    fn invoke_trigger_hook(&self, id: &str, value: &Value) {
+        let hook = self
+            .trigger_hook
+            .lock()
+            .expect("WatchdogRegistry hook mutex poisoned")
+            .clone();
+        if let Some(hook) = hook {
+            hook(id, value);
+        }
     }
 
     /// Create and start a watchdog. Takes `&Arc<Self>` rather than `&self`
@@ -425,6 +450,10 @@ async fn run_poll_loop(
                         "triggerCount": state.trigger_count,
                     }));
                     apply_triggered_state(&registry, &app, &id, &state);
+                    // Run any installed IT Ops action list for this Watchdog.
+                    // The hook spawns its own work and returns fast so the poll
+                    // loop is never blocked by action I/O.
+                    registry.invoke_trigger_hook(&id, &value);
 
                     if matches!(config.action, WatchdogAction::Notify) {
                         // Notify watchdogs have no intervention path to move

@@ -13,7 +13,7 @@ use crate::watchdog::types::WatchdogConfig;
 
 use super::automation_storage as auto_store;
 use super::ids::new_itops_id;
-use super::types::Automation;
+use super::types::{Automation, AutomationAction};
 
 /// In-memory map from a durable Automation to its live Watchdog id. Live state
 /// only — never persisted (the durable definition is the Automation row).
@@ -48,6 +48,30 @@ impl ItopsAutomationRuntime {
             let _ = registry.cancel(&watchdog_id);
         }
     }
+
+    /// Which Automation owns this live Watchdog (reverse of the armed map). Used
+    /// by the action executor to find the action list when a Watchdog fires.
+    pub fn automation_for_watchdog(&self, watchdog_id: &str) -> Option<String> {
+        self.armed
+            .lock()
+            .unwrap()
+            .iter()
+            .find_map(|(automation_id, armed_watchdog)| {
+                (armed_watchdog == watchdog_id).then(|| automation_id.clone())
+            })
+    }
+}
+
+/// Install the WatchdogRegistry trigger hook so a firing Watchdog runs its
+/// Automation's action list. Called once at startup.
+pub fn install_trigger_hook(app: &AppHandle) {
+    let registry = app.state::<Arc<WatchdogRegistry>>();
+    let hook_app = app.clone();
+    registry.set_trigger_hook(Arc::new(
+        move |watchdog_id: &str, value: &serde_json::Value| {
+            super::actions::on_watchdog_trigger(&hook_app, watchdog_id, value);
+        },
+    ));
 }
 
 fn storage(app: &AppHandle) -> State<'_, crate::storage::Storage> {
@@ -87,11 +111,12 @@ pub fn itops_create_automation(
     runtime: State<'_, ItopsAutomationRuntime>,
     name: String,
     config: WatchdogConfig,
+    actions: Vec<AutomationAction>,
     enabled: bool,
 ) -> Result<Automation, String> {
     let id = new_itops_id("auto");
     let automation = storage(&app).with_connection_infallible(|conn| {
-        auto_store::create_automation(conn, &id, &name, &config, enabled)
+        auto_store::create_automation(conn, &id, &name, &config, &actions, enabled)
             .map_err(|error| error.to_string())
     })?;
     if automation.enabled {
@@ -108,9 +133,11 @@ pub fn itops_update_automation(
     id: String,
     name: String,
     config: WatchdogConfig,
+    actions: Vec<AutomationAction>,
 ) -> Result<Automation, String> {
     let automation = storage(&app).with_connection_infallible(|conn| {
-        auto_store::update_automation(conn, &id, &name, &config).map_err(|error| error.to_string())
+        auto_store::update_automation(conn, &id, &name, &config, &actions)
+            .map_err(|error| error.to_string())
     })?;
     if automation.enabled {
         runtime.arm(&app, &registry, &automation)?;

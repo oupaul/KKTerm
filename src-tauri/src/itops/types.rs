@@ -5,12 +5,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::watchdog::types::WatchdogConfig;
 
-/// A durable Automation (docs/ITOPS.md Phase 3): the persistent definition of a
-/// Watchdog. The live Watchdog runtime is what executes it — the same way a
-/// Connection is durable and a Session is its live runtime. Phase 3 stores the
-/// existing `WatchdogConfig` verbatim (the decomposed trigger/condition/action
-/// schema lands with the Phase 4 action catalog); `enabled` rows are re-armed
-/// into the live `WatchdogRegistry` on launch.
+/// A durable Automation (docs/ITOPS.md Phase 3+): the persistent definition of a
+/// Watchdog plus an ordered IT Ops action list. The live Watchdog runtime is the
+/// sampler/trigger engine (its `config`); when it fires, the IT Ops action
+/// executor runs `actions` in order (Phase 4). `enabled` rows re-arm on launch.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Automation {
@@ -18,7 +16,60 @@ pub struct Automation {
     pub name: String,
     pub sort_order: i64,
     pub enabled: bool,
+    /// Trigger/condition/poll/stop — the live Watchdog config. Its own
+    /// `action` stays `Notify` for IT Ops Automations; the real work is the
+    /// `actions` list below.
     pub config: WatchdogConfig,
+    /// Ordered IT Ops actions run on each trigger fire by the action executor.
+    #[serde(default)]
+    pub actions: Vec<AutomationAction>,
+}
+
+/// How a `Notify` action surfaces.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum NotifyLevel {
+    #[default]
+    InApp,
+    Toast,
+    Sound,
+}
+
+/// The Phase 4 action catalog — a closed, typed set executed in order when an
+/// Automation's trigger fires. Actions do not pass data between each other; each
+/// reads the trigger snapshot. (AI intervention remains a Watchdog-native action
+/// on `config`, not part of this list.)
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum AutomationAction {
+    Notify {
+        #[serde(default)]
+        level: NotifyLevel,
+    },
+    Popup {
+        title: String,
+        body: String,
+    },
+    Email {
+        to: Vec<String>,
+        subject: String,
+        body: String,
+    },
+    Webhook {
+        url: String,
+        #[serde(default = "default_webhook_method")]
+        method: String,
+        #[serde(default)]
+        body: Option<String>,
+    },
+    RunBatch {
+        host_group_id: String,
+        task: BatchTask,
+    },
+}
+
+fn default_webhook_method() -> String {
+    "POST".to_string()
 }
 
 /// How a Batch Run reaches one host. Stored per Host Group as the default;

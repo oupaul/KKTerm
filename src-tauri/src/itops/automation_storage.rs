@@ -6,7 +6,7 @@ use rusqlite::{Connection as SqliteConnection, OptionalExtension, params};
 
 use crate::watchdog::types::WatchdogConfig;
 
-use super::types::Automation;
+use super::types::{Automation, AutomationAction};
 
 #[derive(Debug)]
 pub enum AutomationStorageError {
@@ -51,18 +51,31 @@ fn parse_config(raw: &str) -> Result<WatchdogConfig> {
     serde_json::from_str(raw).map_err(|error| AutomationStorageError::Validation(error.to_string()))
 }
 
-type AutomationRow = (String, String, i64, i64, String);
+fn actions_to_json(actions: &[AutomationAction]) -> Result<String> {
+    serde_json::to_string(actions)
+        .map_err(|error| AutomationStorageError::Validation(error.to_string()))
+}
 
-const SELECT_COLUMNS: &str = "id, name, sort_order, enabled, config_json FROM itops_automations";
+/// Tolerant: a malformed actions blob loads as an empty list rather than failing
+/// the whole Automation (it still samples + fires; it just runs no actions).
+fn parse_actions(raw: &str) -> Vec<AutomationAction> {
+    serde_json::from_str(raw).unwrap_or_default()
+}
+
+type AutomationRow = (String, String, i64, i64, String, String);
+
+const SELECT_COLUMNS: &str =
+    "id, name, sort_order, enabled, config_json, actions_json FROM itops_automations";
 
 fn row_to_automation(row: AutomationRow) -> Result<Automation> {
-    let (id, name, sort_order, enabled, config_json) = row;
+    let (id, name, sort_order, enabled, config_json, actions_json) = row;
     Ok(Automation {
         id,
         name,
         sort_order,
         enabled: enabled != 0,
         config: parse_config(&config_json)?,
+        actions: parse_actions(&actions_json),
     })
 }
 
@@ -73,6 +86,7 @@ fn read_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<AutomationRow> {
         row.get::<_, i64>(2)?,
         row.get::<_, i64>(3)?,
         row.get::<_, String>(4)?,
+        row.get::<_, String>(5)?,
     ))
 }
 
@@ -100,6 +114,7 @@ pub fn create_automation(
     id: &str,
     name: &str,
     config: &WatchdogConfig,
+    actions: &[AutomationAction],
     enabled: bool,
 ) -> Result<Automation> {
     let name = validate_name(name)?;
@@ -109,10 +124,11 @@ pub fn create_automation(
         |row| row.get(0),
     )?;
     let config_json = config_to_json(config)?;
+    let actions_json = actions_to_json(actions)?;
     conn.execute(
-        "INSERT INTO itops_automations (id, name, sort_order, enabled, config_json)
-         VALUES (?, ?, ?, ?, ?)",
-        params![id, name, next_sort, i64::from(enabled), config_json],
+        "INSERT INTO itops_automations (id, name, sort_order, enabled, config_json, actions_json)
+         VALUES (?, ?, ?, ?, ?, ?)",
+        params![id, name, next_sort, i64::from(enabled), config_json, actions_json],
     )?;
     Ok(Automation {
         id: id.to_string(),
@@ -120,6 +136,7 @@ pub fn create_automation(
         sort_order: next_sort,
         enabled,
         config: config.clone(),
+        actions: actions.to_vec(),
     })
 }
 
@@ -128,14 +145,17 @@ pub fn update_automation(
     id: &str,
     name: &str,
     config: &WatchdogConfig,
+    actions: &[AutomationAction],
 ) -> Result<Automation> {
     let name = validate_name(name)?;
     let existing = get_automation(conn, id)?.ok_or(AutomationStorageError::NotFound)?;
     let config_json = config_to_json(config)?;
+    let actions_json = actions_to_json(actions)?;
     conn.execute(
-        "UPDATE itops_automations SET name = ?, config_json = ?, updated_at = CURRENT_TIMESTAMP
+        "UPDATE itops_automations
+         SET name = ?, config_json = ?, actions_json = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?",
-        params![name, config_json, id],
+        params![name, config_json, actions_json, id],
     )?;
     Ok(Automation {
         id: id.to_string(),
@@ -143,6 +163,7 @@ pub fn update_automation(
         sort_order: existing.sort_order,
         enabled: existing.enabled,
         config: config.clone(),
+        actions: actions.to_vec(),
     })
 }
 
@@ -187,6 +208,7 @@ mod tests {
                 sort_order INTEGER NOT NULL,
                 enabled INTEGER NOT NULL DEFAULT 1,
                 config_json TEXT NOT NULL,
+                actions_json TEXT NOT NULL DEFAULT '[]',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -216,24 +238,37 @@ mod tests {
     #[test]
     fn create_list_update_enable_remove_roundtrip() {
         let conn = open_test_db();
+        let actions = vec![AutomationAction::Notify {
+            level: crate::itops::types::NotifyLevel::Toast,
+        }];
         let created = create_automation(
             &conn,
             "a-1",
             "  Disk > 85%  ",
             &sample_config("Disk > 85%", 85.0),
+            &actions,
             true,
         )
         .unwrap();
         assert_eq!(created.name, "Disk > 85%"); // trimmed
         assert_eq!(created.sort_order, 0);
         assert!(created.enabled);
+        assert_eq!(created.actions.len(), 1);
 
         let listed = list_automations(&conn).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].config.poll_ms, 60_000);
+        assert_eq!(listed[0].actions.len(), 1);
 
-        let updated = update_automation(&conn, "a-1", "Disk > 90%", &sample_config("Disk > 90%", 90.0))
-            .unwrap();
+        let updated = update_automation(
+            &conn,
+            "a-1",
+            "Disk > 90%",
+            &sample_config("Disk > 90%", 90.0),
+            &[],
+        )
+        .unwrap();
+        assert!(updated.actions.is_empty()); // actions replaced
         assert_eq!(updated.name, "Disk > 90%");
         assert_eq!(updated.sort_order, 0); // preserved
         assert!(updated.enabled); // preserved
@@ -253,7 +288,7 @@ mod tests {
     fn empty_name_is_rejected() {
         let conn = open_test_db();
         assert!(matches!(
-            create_automation(&conn, "a-x", "  ", &sample_config("x", 1.0), true),
+            create_automation(&conn, "a-x", "  ", &sample_config("x", 1.0), &[], true),
             Err(AutomationStorageError::Validation(_))
         ));
     }
@@ -261,7 +296,7 @@ mod tests {
     #[test]
     fn config_survives_roundtrip() {
         let conn = open_test_db();
-        create_automation(&conn, "a-2", "CPU", &sample_config("CPU", 90.0), false).unwrap();
+        create_automation(&conn, "a-2", "CPU", &sample_config("CPU", 90.0), &[], false).unwrap();
         let loaded = &list_automations(&conn).unwrap()[0];
         assert!(!loaded.enabled);
         assert!(matches!(

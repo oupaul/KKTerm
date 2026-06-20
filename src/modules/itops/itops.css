@@ -1612,3 +1612,70 @@
   padding: 2px 7px;
   border-radius: 5px;
 }
+
+/* automation action-list editor (portaled dialog) */
+.au-act-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.au-act {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  padding: 10px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.au-act-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.au-act-head .kk-sel {
+  flex: 1 1 auto;
+}
+.au-act-rm {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.au-act-rm:hover {
+  background: var(--press);
+  color: var(--red);
+}
+.au-act-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.au-act-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.au-act-add:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: var(--accent);
+}

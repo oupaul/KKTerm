@@ -135,12 +135,23 @@ fn now_millis() -> String {
 #[tauri::command]
 pub fn itops_start_batch_run(
     app: AppHandle,
-    secrets: State<'_, secrets::Secrets>,
     host_group_id: String,
     task: BatchTask,
 ) -> Result<String, String> {
-    let known_hosts = ssh::app_known_hosts_path(&app)?;
-    let (hosts, specs) = storage(&app).with_connection_infallible(|conn| {
+    start_run(&app, host_group_id, task)
+}
+
+/// Start a Batch Run; reusable by the command above and the Automation
+/// `runBatch` action. Returns the run id immediately; progress streams on
+/// `itops://run` and the report lands in itops_run_history on completion.
+pub fn start_run(
+    app: &AppHandle,
+    host_group_id: String,
+    task: BatchTask,
+) -> Result<String, String> {
+    let secrets = app.state::<secrets::Secrets>();
+    let known_hosts = ssh::app_known_hosts_path(app)?;
+    let (hosts, specs) = storage(app).with_connection_infallible(|conn| {
         let group = ito::list_host_groups(conn)
             .map_err(|error| error.to_string())?
             .into_iter()

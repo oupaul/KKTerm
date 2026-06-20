@@ -39,7 +39,7 @@ pub(crate) use cli_backend::*;
 mod web_search;
 #[allow(unused_imports)]
 pub(crate) use web_search::*;
-mod email;
+pub(crate) mod email;
 #[allow(unused_imports)]
 pub(crate) use email::*;
 use prompt_contracts::{

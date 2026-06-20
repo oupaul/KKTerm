@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 31;
+const SCHEMA_USER_VERSION: i32 = 32;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -313,13 +313,15 @@ CREATE INDEX IF NOT EXISTS idx_itops_run_history_source
 -- the running Watchdog state stays in-memory only. config_json holds a
 -- serialized WatchdogConfig (the existing trigger/condition/action shape). v31.
 CREATE TABLE IF NOT EXISTS itops_automations (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    sort_order  INTEGER NOT NULL,
-    enabled     INTEGER NOT NULL DEFAULT 1,
-    config_json TEXT NOT NULL,
-    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    sort_order   INTEGER NOT NULL,
+    enabled      INTEGER NOT NULL DEFAULT 1,
+    config_json  TEXT NOT NULL,
+    -- Ordered IT Ops action catalog run on each trigger fire (Phase 4). v32.
+    actions_json TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 "#;
 
@@ -1750,6 +1752,15 @@ impl Storage {
         connection
             .execute_batch(CURRENT_SCHEMA)
             .map_err(to_storage_error)?;
+        // v32: IT Ops Automations gain an ordered action catalog (Phase 4).
+        // Unconditional ensure_column so an existing v31 database picks up the
+        // new column (CREATE TABLE IF NOT EXISTS won't add it).
+        ensure_column(
+            &connection,
+            "itops_automations",
+            "actions_json",
+            "TEXT NOT NULL DEFAULT '[]'",
+        )?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;

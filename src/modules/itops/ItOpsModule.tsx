@@ -1,12 +1,14 @@
 // IT Ops Module shell: header, three tabs (Host Groups, Batch Runs,
-// Automations) and the content router. Host Groups (Phase 1) and Batch Runs
-// (Phase 2) are backed by real commands; the Automations tab still renders the
-// Phase 0 fixtures until Phase 3.
+// Automations) and the content router. All three tabs are backed by real
+// commands (Phases 1–4). The module also surfaces live Batch Run progress and
+// Automation actions (notify/popup) streamed from the backend.
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
+import { Actions, Btn, DialogShell, Sheet } from "../../app/ui/dialog";
 import { isTauriRuntime } from "../../lib/tauri";
+import { useWorkspaceStore } from "../../store";
 import type { RunEvent } from "../../types";
 import { ItIcon, type ItIconName } from "./icons";
 import { HostGroupsTab } from "./HostGroupsTab";
@@ -14,6 +16,13 @@ import { BatchRunsTab } from "./BatchRunsTab";
 import { BatchRunDialog } from "./BatchRunDialog";
 import { AutomationsTab } from "./AutomationsTab";
 import { useItOpsStore } from "./state";
+
+type AutomationActionEvent = {
+  kind: string;
+  automationName?: string;
+  title?: string;
+  body?: string;
+};
 
 type TabId = "groups" | "runs" | "autos";
 
@@ -36,7 +45,11 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
     undefined,
   );
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [automationPopup, setAutomationPopup] = useState<{ title: string; body: string } | null>(
+    null,
+  );
 
+  const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const hostGroupCount = useItOpsStore((state) => state.hostGroups.length);
   const automationCount = useItOpsStore((state) => state.automations.length);
   const loadHostGroups = useItOpsStore((state) => state.loadHostGroups);
@@ -65,6 +78,27 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
       void unlisten.then((dispose) => dispose());
     };
   }, [applyRunEvent]);
+
+  // Surface Automation notify/popup actions (docs/ITOPS.md Phase 4).
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    const unlisten = listen<AutomationActionEvent>("itops://automation", (event) => {
+      const payload = event.payload;
+      if (payload.kind === "popup") {
+        setAutomationPopup({ title: payload.title ?? "", body: payload.body ?? "" });
+      } else if (payload.kind === "notify") {
+        showStatusBarNotice(
+          t("itops.automations.triggeredNotice", { name: payload.automationName ?? "" }),
+          { tone: "warning" },
+        );
+      }
+    });
+    return () => {
+      void unlisten.then((dispose) => dispose());
+    };
+  }, [showStatusBarNotice, t]);
 
   function openBatchRunDialog(groupId?: string | null) {
     setBatchDialogGroupId(groupId);
@@ -170,6 +204,26 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
           onClose={() => setBatchDialogOpen(false)}
           onStarted={() => setTab("runs")}
         />
+      ) : null}
+      {automationPopup ? (
+        <DialogShell onBackdrop={() => setAutomationPopup(null)}>
+          <Sheet
+            width={420}
+            title={automationPopup.title}
+            ariaLabel={automationPopup.title}
+            footer={
+              <Actions
+                primary={
+                  <Btn kind="primary" onClick={() => setAutomationPopup(null)}>
+                    {t("watchdog.close")}
+                  </Btn>
+                }
+              />
+            }
+          >
+            <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{automationPopup.body}</p>
+          </Sheet>
+        </DialogShell>
       ) : null}
     </div>
   );
