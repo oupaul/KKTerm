@@ -119,7 +119,9 @@ opens a compact manager for non-secret environment variables specific to that
 Local Connection. It supports Command Prompt, PowerShell/PowerShell 7, WSL,
 Bash, and zsh. Apply writes one marked, shell-appropriate block into the visible
 Startup script draft; applying again replaces that block, and removing every
-row removes it, while commands outside the block stay unchanged. The values are
+row removes it, while commands outside the block stay unchanged. Changing the
+selected shell rewrites only this marked block into the new shell's syntax,
+including CLI account directory expressions. The values are
 stored as Startup script text, so `connections.environmentVariablesNonSecret`
 warns not to put passwords, tokens, or API keys there.
 

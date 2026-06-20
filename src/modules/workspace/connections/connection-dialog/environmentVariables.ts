@@ -191,3 +191,28 @@ export function applyEnvironmentBlock(script: string, block: string) {
   if (!script) return renderedBlock;
   return `${script}${script.endsWith(newline) ? newline : `${newline}${newline}`}${renderedBlock}`;
 }
+
+export function retargetEnvironmentBlock(script: string, targetFamily: EnvironmentShellFamily) {
+  const targetParsed = parseEnvironmentBlock(script, targetFamily);
+  if (targetParsed.status !== "malformed") return script;
+
+  for (const sourceFamily of ["cmd", "powershell", "posix"] satisfies EnvironmentShellFamily[]) {
+    if (sourceFamily === targetFamily) continue;
+    const parsed = parseEnvironmentBlock(script, sourceFamily);
+    if (parsed.status !== "ok") continue;
+    const variables = parsed.variables.map((variable) => retargetCliAccountVariable(variable, targetFamily));
+    return applyEnvironmentBlock(script, renderEnvironmentBlock(variables, targetFamily));
+  }
+  return script;
+}
+
+function retargetCliAccountVariable(
+  variable: ManagedEnvironmentVariable,
+  family: EnvironmentShellFamily,
+): ManagedEnvironmentVariable {
+  if (variable.source !== "cliAccount") return variable;
+  const tool = variable.name === "CLAUDE_CONFIG_DIR" ? "claude-code" : variable.name === "CODEX_HOME" ? "codex" : null;
+  const pathParts = variable.value.replace(/\\/gu, "/").split("/");
+  const label = pathParts[pathParts.length - 1];
+  return tool && label ? createCliAccountVariable(tool, label, family) : variable;
+}

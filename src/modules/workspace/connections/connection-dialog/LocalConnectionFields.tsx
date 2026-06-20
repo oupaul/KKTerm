@@ -6,7 +6,7 @@ import { invokeCommand, isTauriRuntime } from "../../../../lib/tauri";
 import type { Connection } from "../../../../types";
 import { resolveAvailableLocalShell, type LocalShellOption } from "../utils";
 import { EnvironmentVariablesDialog } from "./EnvironmentVariablesDialog";
-import { classifyEnvironmentShell } from "./environmentVariables";
+import { classifyEnvironmentShell, retargetEnvironmentBlock } from "./environmentVariables";
 import {
   buildWslDistributionShell,
   distroFromWslShell,
@@ -41,7 +41,11 @@ export function LocalConnectionFields({
   const [wslDistros, setWslDistros] = useState<WslDistroOption[]>([]);
   const [selectedWslDistro, setSelectedWslDistro] = useState(distroFromWslShell(initialConnection?.localShell));
   const [connectionName, setConnectionName] = useState(initialConnection?.name ?? "");
-  const [localStartupScript, setLocalStartupScript] = useState(initialConnection?.localStartupScript ?? "");
+  const [localStartupScript, setLocalStartupScript] = useState(() => {
+    const script = initialConnection?.localStartupScript ?? "";
+    const family = classifyEnvironmentShell(defaultLocalShell);
+    return family ? retargetEnvironmentBlock(script, family) : script;
+  });
   const [environmentDialogOpen, setEnvironmentDialogOpen] = useState(false);
   useEffect(() => {
     setSelectedLocalShell((currentShell) => resolveAvailableLocalShell(wslShellSelectorValue(currentShell), localShellOptions));
@@ -130,7 +134,12 @@ export function LocalConnectionFields({
                 aria-selected={(option.value ?? "") === selectedLocalShell}
                 className={(option.value ?? "") === selectedLocalShell ? "active" : ""}
                 onClick={() => {
-                  setSelectedLocalShell(option.value ?? "");
+                  const nextShell = option.value ?? "";
+                  const nextFamily = classifyEnvironmentShell(nextShell);
+                  setSelectedLocalShell(nextShell);
+                  if (nextFamily) {
+                    setLocalStartupScript((script) => retargetEnvironmentBlock(script, nextFamily));
+                  }
                   if (!isWslShell(option.value)) {
                     setSelectedWslDistro("");
                   }

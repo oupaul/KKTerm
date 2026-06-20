@@ -7,6 +7,7 @@ import {
   createCliAccountVariable,
   parseEnvironmentBlock,
   renderEnvironmentBlock,
+  retargetEnvironmentBlock,
   slugCliAccountLabel,
   validateEnvironmentVariables,
   type EnvironmentShellFamily,
@@ -104,4 +105,23 @@ test("replaces and removes managed blocks while preserving surrounding text and 
 test("appends a block without changing existing commands", () => {
   const block = renderEnvironmentBlock([{ name: "A", value: "b", source: "literal" }], "posix");
   assert.equal(applyEnvironmentBlock("echo before", block), `echo before\n\n${block}`);
+});
+
+test("retargets managed CLI account scripting when the selected shell changes", () => {
+  const cmdBlock = renderEnvironmentBlock(
+    [
+      { name: "PLAIN", value: "unchanged", source: "literal" },
+      createCliAccountVariable("claude-code", "Ryan", "cmd"),
+    ],
+    "cmd",
+  );
+  const script = `Write-Host before\n${cmdBlock}\nWrite-Host after`;
+  const updated = retargetEnvironmentBlock(script, "powershell");
+
+  assert.match(updated, /# KKTerm environment variables begin/);
+  assert.match(updated, /\$env:PLAIN = "unchanged"/);
+  assert.match(updated, /\$env:CLAUDE_CONFIG_DIR = "\$env:LOCALAPPDATA\\KKTerm\\cli-accounts\\claude-code\\ryan"/);
+  assert.doesNotMatch(updated, /%LOCALAPPDATA%|^REM |^set "/m);
+  assert.match(updated, /^Write-Host before/m);
+  assert.match(updated, /^Write-Host after/m);
 });
