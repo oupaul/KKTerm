@@ -3818,6 +3818,91 @@ fn chat_stream_matches_missing_index_fragments_by_tool_call_id() {
 }
 
 #[test]
+fn chat_stream_keeps_separate_missing_index_tool_calls_distinct() {
+    let mut state = ChatStreamState::default();
+    for (id, name, arguments) in [
+        ("call_plan", "update_plan", r#"{"steps":[]}"#),
+        (
+            "call_folder",
+            "connection_folder_create",
+            r#"{"name":"Local","parentFolderId":null}"#,
+        ),
+    ] {
+        let chunk: ChatSseChunk = serde_json::from_value(json!({
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "id": id,
+                        "function": {
+                            "name": name,
+                            "arguments": arguments
+                        }
+                    }]
+                }
+            }]
+        }))
+        .expect("chunk parses");
+        state.apply_chunk(chunk);
+    }
+
+    let tool_calls = state.into_tool_calls();
+    assert_eq!(tool_calls.len(), 2);
+    assert_eq!(tool_calls[0].id, "call_plan");
+    assert_eq!(tool_calls[0].function.name, "update_plan");
+    assert_eq!(tool_calls[0].function.arguments, r#"{"steps":[]}"#);
+    assert_eq!(tool_calls[1].id, "call_folder");
+    assert_eq!(tool_calls[1].function.name, "connection_folder_create");
+    assert_eq!(
+        tool_calls[1].function.arguments,
+        r#"{"name":"Local","parentFolderId":null}"#
+    );
+}
+
+#[test]
+fn chat_stream_keeps_indexed_parallel_tool_calls_distinct() {
+    let mut state = ChatStreamState::default();
+    for chunk in [
+        json!({
+            "choices": [{
+                "delta": {
+                    "tool_calls": [
+                        {
+                            "index": 0,
+                            "id": "call_first",
+                            "function": { "name": "first", "arguments": "{" }
+                        },
+                        {
+                            "index": 1,
+                            "id": "call_second",
+                            "function": { "name": "second", "arguments": "{" }
+                        }
+                    ]
+                }
+            }]
+        }),
+        json!({
+            "choices": [{
+                "delta": {
+                    "tool_calls": [
+                        { "index": 0, "function": { "arguments": "}" } },
+                        { "index": 1, "function": { "arguments": "}" } }
+                    ]
+                }
+            }]
+        }),
+    ] {
+        state.apply_chunk(serde_json::from_value(chunk).expect("chunk parses"));
+    }
+
+    let tool_calls = state.into_tool_calls();
+    assert_eq!(tool_calls.len(), 2);
+    assert_eq!(tool_calls[0].id, "call_first");
+    assert_eq!(tool_calls[0].function.arguments, "{}");
+    assert_eq!(tool_calls[1].id, "call_second");
+    assert_eq!(tool_calls[1].function.arguments, "{}");
+}
+
+#[test]
 fn chat_stream_accepts_json_argument_values_and_synthesizes_missing_id() {
     let mut state = ChatStreamState::default();
     let chunk: ChatSseChunk = serde_json::from_value(json!({

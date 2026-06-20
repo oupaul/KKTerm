@@ -484,6 +484,16 @@ impl ChatStreamState {
                                 .find_map(|(idx, acc)| (acc.id == *id).then_some(*idx))
                         })
                     })
+                    // OpenAI identifies streamed calls by index. Gemini's OpenAI-compatible
+                    // stream can omit that index while still assigning each call a stable id.
+                    .or_else(|| {
+                        tc.id.as_ref().filter(|id| !id.is_empty()).map(|_| {
+                            self.tool_call_builders
+                                .keys()
+                                .max()
+                                .map_or(0, |index| index + 1)
+                        })
+                    })
                     .unwrap_or(position as u32);
                 let acc = self.tool_call_builders.entry(index).or_default();
                 if let Some(id) = &tc.id {
