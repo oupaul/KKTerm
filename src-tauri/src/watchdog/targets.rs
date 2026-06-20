@@ -195,6 +195,51 @@ fn cron_part_matches(part: &str, value: u32) -> bool {
     value >= start && value <= end && (value - start) % step == 0
 }
 
+/// Scan a log file for `pattern` (literal substring) in content appended since
+/// `last_size`. Returns the new size to remember and whether the appended chunk
+/// matched. The first poll (last_size None) and a truncation/rotation just
+/// re-baseline without firing, so only genuinely new lines trigger. IT Ops
+/// Phase 5.
+pub fn scan_log_appended(path: &str, last_size: Option<u64>, pattern: &str) -> (Option<u64>, bool) {
+    let size = match std::fs::metadata(path) {
+        Ok(meta) => meta.len(),
+        Err(_) => return (None, false),
+    };
+    let Some(last) = last_size else {
+        return (Some(size), false); // first poll: baseline only
+    };
+    if size <= last {
+        return (Some(size), false); // no new content (or rotated/truncated)
+    }
+    let matched = read_file_range(path, last, size - last)
+        .map(|chunk| chunk.contains(pattern))
+        .unwrap_or(false);
+    (Some(size), matched)
+}
+
+fn read_file_range(path: &str, offset: u64, len: u64) -> Option<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path).ok()?;
+    file.seek(SeekFrom::Start(offset)).ok()?;
+    let cap = len.min(1_000_000) as usize; // cap one read at 1 MB
+    let mut buffer = vec![0u8; cap];
+    let read = file.read(&mut buffer).ok()?;
+    Some(String::from_utf8_lossy(&buffer[..read]).into_owned())
+}
+
+/// OutputMatch sampler — 1.0 if the live SSH Session's recent output contains
+/// `pattern` (literal substring). Reads the same rolling buffer as
+/// `sample_ssh_session_silence`; the rising-edge detector means a steady match
+/// fires once until it scrolls out of the tail.
+pub fn sample_output_match(app: &AppHandle, session_id: &str, pattern: &str) -> Value {
+    let matched = app
+        .try_state::<std::sync::Arc<SessionActivityTracker>>()
+        .and_then(|tracker| tracker.tail(session_id))
+        .map(|tail| tail.contains(pattern))
+        .unwrap_or(false);
+    Value::from(if matched { 1.0 } else { 0.0 })
+}
+
 fn cron_part_is_valid(part: &str) -> bool {
     if part == "*" {
         return true;
@@ -317,5 +362,49 @@ mod tests {
         assert!(validate_cron("0 3 * *").is_err()); // 4 fields
         assert!(validate_cron("bad 3 * * *").is_err()); // non-numeric
         assert!(validate_cron("0 3 * * */0").is_err()); // zero step
+    }
+
+    #[test]
+    fn log_file_fires_only_on_new_matching_content() {
+        use std::io::Write;
+        let path = std::env::temp_dir().join(format!(
+            "kkterm-itops-log-{}-{}.log",
+            std::process::id(),
+            now_ms()
+        ));
+        let path_str = path.to_string_lossy().to_string();
+
+        // Pre-existing content with the pattern: the first poll baselines and
+        // does NOT fire on old lines.
+        std::fs::write(&path, b"old line ERROR already here\n").unwrap();
+        let (size1, matched1) = scan_log_appended(&path_str, None, "ERROR");
+        assert!(!matched1);
+        assert!(size1.is_some());
+
+        // Append a non-matching line: no fire.
+        let mut file = std::fs::OpenOptions::new().append(true).open(&path).unwrap();
+        file.write_all(b"all good\n").unwrap();
+        file.flush().unwrap();
+        let (size2, matched2) = scan_log_appended(&path_str, size1, "ERROR");
+        assert!(!matched2);
+
+        // Append a matching line: fires once.
+        file.write_all(b"boom ERROR happened\n").unwrap();
+        file.flush().unwrap();
+        let (size3, matched3) = scan_log_appended(&path_str, size2, "ERROR");
+        assert!(matched3);
+
+        // No new content: does not re-fire.
+        let (_size4, matched4) = scan_log_appended(&path_str, size3, "ERROR");
+        assert!(!matched4);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn log_file_missing_does_not_fire() {
+        let (size, matched) = scan_log_appended("/no/such/itops/log/file.log", Some(0), "X");
+        assert!(!matched);
+        assert_eq!(size, None);
     }
 }

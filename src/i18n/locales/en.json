@@ -1040,7 +1040,11 @@
       "triggerPerf": "Performance counter",
       "triggerSchedule": "Schedule",
       "cronLabel": "Cron schedule",
-      "cronHint": "minute hour day month weekday, local time (e.g. 0 3 * * * = daily at 03:00)"
+      "cronHint": "minute hour day month weekday, local time (e.g. 0 3 * * * = daily at 03:00)",
+      "triggerLogFile": "Log file",
+      "logPathLabel": "Log file path",
+      "patternLabel": "Match (substring)",
+      "patternPlaceholder": "ERROR"
     },
     "errorNotice": "IT Ops: {{message}}"
   },
@@ -3404,7 +3408,9 @@
       "regenerate": "Regenerate",
       "summarizing": "Summarizing…",
       "summaryEmpty": "Click Summarize to generate a natural-language post-mortem of this watchdog.",
-      "targetSchedule": "Schedule: {{cron}}"
+      "targetSchedule": "Schedule: {{cron}}",
+      "targetLogFile": "Log file {{path}} contains “{{pattern}}”",
+      "targetOutputMatch": "Session output contains “{{pattern}}”"
     }
   },
   "workspace": {

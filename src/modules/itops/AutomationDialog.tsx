@@ -71,27 +71,31 @@ export function AutomationDialog({
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const firstGroupId = hostGroups[0]?.id ?? "";
 
+  type TriggerType = "performanceCounter" | "schedule" | "logFile";
   const [name, setName] = useState("");
-  const [triggerType, setTriggerType] = useState<"performanceCounter" | "schedule">(
-    "performanceCounter",
-  );
+  const [triggerType, setTriggerType] = useState<TriggerType>("performanceCounter");
   const [metric, setMetric] = useState<PerformanceMetric>("diskUsedPercent");
   const [op, setOp] = useState<Op>("gt");
   const [threshold, setThreshold] = useState("85");
   const [pollSeconds, setPollSeconds] = useState("60");
   const [cron, setCron] = useState("0 3 * * *");
+  const [logPath, setLogPath] = useState("");
+  const [logPattern, setLogPattern] = useState("");
   const [actions, setActions] = useState<AutomationAction[]>([{ kind: "notify", level: "toast" }]);
   const [busy, setBusy] = useState(false);
 
   const thresholdNum = Number(threshold);
   const pollNum = Number(pollSeconds);
-  const perfValid =
-    Number.isFinite(thresholdNum) && Number.isFinite(pollNum) && pollNum >= 1;
+  const perfValid = Number.isFinite(thresholdNum) && Number.isFinite(pollNum) && pollNum >= 1;
   const scheduleValid = cron.trim().split(/\s+/).length === 5;
-  const canSave =
-    name.trim().length > 0 &&
-    (triggerType === "performanceCounter" ? perfValid : scheduleValid) &&
-    !busy;
+  const logFileValid = logPath.trim().length > 0 && logPattern.length > 0;
+  const triggerValid =
+    triggerType === "performanceCounter"
+      ? perfValid
+      : triggerType === "schedule"
+        ? scheduleValid
+        : logFileValid;
+  const canSave = name.trim().length > 0 && triggerValid && !busy;
 
   function updateAction(index: number, next: AutomationAction) {
     setActions((current) => current.map((action, i) => (i === index ? next : action)));
@@ -102,16 +106,23 @@ export function AutomationDialog({
       return;
     }
     setBusy(true);
-    const isSchedule = triggerType === "schedule";
+    const isPerf = triggerType === "performanceCounter";
     const config: WatchdogConfig = {
       name: name.trim(),
-      target: isSchedule
-        ? { kind: "schedule", cron: cron.trim() }
-        : { kind: "performanceCounter", metric },
-      // A schedule fires on a matching minute (sampler returns 1); a perf
-      // counter fires when the metric crosses the threshold.
-      trigger: { predicate: isSchedule ? { op: "gte", value: 1 } : { op, value: thresholdNum } },
-      pollMs: isSchedule ? 30_000 : Math.max(500, Math.round(pollNum * 1000)),
+      target:
+        triggerType === "schedule"
+          ? { kind: "schedule", cron: cron.trim() }
+          : triggerType === "logFile"
+            ? { kind: "logFile", path: logPath.trim(), pattern: logPattern }
+            : { kind: "performanceCounter", metric },
+      // Perf fires when the metric crosses the threshold; schedule and log-file
+      // samplers return 1 on a hit, so they pair with `gte 1`.
+      trigger: { predicate: isPerf ? { op, value: thresholdNum } : { op: "gte", value: 1 } },
+      pollMs: isPerf
+        ? Math.max(500, Math.round(pollNum * 1000))
+        : triggerType === "logFile"
+          ? 15_000
+          : 30_000,
       stop: { kind: "untilCanceled" },
       notification: "inAppPlusToast",
       action: { kind: "notify" },
@@ -159,12 +170,11 @@ export function AutomationDialog({
         <Field label={t("itops.automations.triggerTypeLabel")} req>
           <Select
             value={triggerType}
-            onChange={(event) =>
-              setTriggerType(event.currentTarget.value as "performanceCounter" | "schedule")
-            }
+            onChange={(event) => setTriggerType(event.currentTarget.value as TriggerType)}
             options={[
               { value: "performanceCounter", label: t("itops.automations.triggerPerf") },
               { value: "schedule", label: t("itops.automations.triggerSchedule") },
+              { value: "logFile", label: t("itops.automations.triggerLogFile") },
             ]}
           />
         </Field>
@@ -201,7 +211,7 @@ export function AutomationDialog({
               />
             </Field>
           </>
-        ) : (
+        ) : triggerType === "schedule" ? (
           <Field label={t("itops.automations.cronLabel")} req hint={t("itops.automations.cronHint")}>
             <TextInput
               mono
@@ -210,6 +220,24 @@ export function AutomationDialog({
               onChange={(event) => setCron(event.currentTarget.value)}
             />
           </Field>
+        ) : (
+          <>
+            <Field label={t("itops.automations.logPathLabel")} req>
+              <TextInput
+                mono
+                value={logPath}
+                placeholder="/var/log/app.log"
+                onChange={(event) => setLogPath(event.currentTarget.value)}
+              />
+            </Field>
+            <Field label={t("itops.automations.patternLabel")} req>
+              <TextInput
+                value={logPattern}
+                placeholder={t("itops.automations.patternPlaceholder")}
+                onChange={(event) => setLogPattern(event.currentTarget.value)}
+              />
+            </Field>
+          </>
         )}
 
         <Field label={t("itops.automations.actionsLabel")}>

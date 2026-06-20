@@ -317,6 +317,27 @@ pub(crate) fn validate_config(config: &WatchdogConfig) -> Result<(), WatchdogErr
         WatchdogTarget::Schedule { cron } => {
             super::targets::validate_cron(cron).map_err(WatchdogError::invalid)
         }
+        WatchdogTarget::LogFile { path, pattern } => {
+            if path.trim().is_empty() {
+                return Err(WatchdogError::invalid("logFile requires a path"));
+            }
+            if pattern.is_empty() {
+                return Err(WatchdogError::invalid("logFile requires a pattern"));
+            }
+            Ok(())
+        }
+        WatchdogTarget::OutputMatch {
+            session_id,
+            pattern,
+        } => {
+            if session_id.trim().is_empty() {
+                return Err(WatchdogError::invalid("outputMatch requires a session id"));
+            }
+            if pattern.is_empty() {
+                return Err(WatchdogError::invalid("outputMatch requires a pattern"));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -366,6 +387,9 @@ struct LoopState {
     triggered_sticky: bool,
     /// Mock-target only: incremented each poll.
     mock_counter: f64,
+    /// LogFile-target only: last observed file size, so only newly-appended
+    /// content is scanned for the pattern. None until the first poll baselines it.
+    last_log_size: Option<u64>,
 }
 
 async fn run_poll_loop(
@@ -389,6 +413,7 @@ async fn run_poll_loop(
         suppression_until: None,
         triggered_sticky: false,
         mock_counter: 0.0,
+        last_log_size: None,
     };
 
     // First interval tick fires immediately; skip it so the watchdog respects
@@ -621,6 +646,16 @@ async fn sample_target(
             super::targets::sample_tcp_reachable(host, *port).await
         }
         WatchdogTarget::Schedule { cron } => super::targets::sample_schedule(cron),
+        WatchdogTarget::LogFile { path, pattern } => {
+            let (new_size, matched) =
+                super::targets::scan_log_appended(path, state.last_log_size, pattern);
+            state.last_log_size = new_size;
+            json!(if matched { 1.0 } else { 0.0 })
+        }
+        WatchdogTarget::OutputMatch {
+            session_id,
+            pattern,
+        } => super::targets::sample_output_match(app, session_id, pattern),
     }
 }
 
@@ -947,6 +982,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         assert!(!update_sustained_window(&mut state, true, Some(1_000_000)));
         assert!(!update_sustained_window(&mut state, false, Some(1_000_000)));
@@ -964,6 +1000,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         // Without sustained_for_ms, the first true tick is the rising edge.
         assert!(update_sustained_window(&mut state, true, None));
@@ -983,6 +1020,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         assert!(stop_reached(&WatchdogStop::AfterFirstTrigger, &state, true).is_some());
         assert!(stop_reached(&WatchdogStop::AfterFirstTrigger, &state, false).is_none());
@@ -998,6 +1036,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         assert!(stop_reached(&WatchdogStop::AfterPollCount { n: 10 }, &state, false).is_some());
         assert!(stop_reached(&WatchdogStop::AfterPollCount { n: 11 }, &state, false).is_none());

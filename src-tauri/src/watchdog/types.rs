@@ -49,6 +49,16 @@ pub enum WatchdogTarget {
     /// `gte 1` condition. Poll faster than once a minute so no occurrence is
     /// missed (the create flow sets a 30s poll). IT Ops Phase 5.
     Schedule { cron: String },
+    /// Fires when newly-appended content of a local log file contains `pattern`
+    /// (literal substring). Tracks the file size between polls so only new lines
+    /// are scanned — a steady match doesn't re-fire. Returns 1.0/0.0; pair with
+    /// `gte 1`. IT Ops Phase 5.
+    LogFile { path: String, pattern: String },
+    /// Fires when the recent output of a live SSH Session contains `pattern`
+    /// (literal substring). Reads the same rolling output buffer as
+    /// `SshSessionOutputSilence`. Returns 1.0/0.0; pair with `gte 1`. Created
+    /// programmatically / by the assistant (no create-dialog UI). IT Ops Phase 5.
+    OutputMatch { session_id: String, pattern: String },
 }
 
 fn default_mock_step() -> f64 {

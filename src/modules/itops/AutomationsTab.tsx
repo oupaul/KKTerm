@@ -21,6 +21,10 @@ function triggerIcon(config: WatchdogConfig): ItIconName {
       return "gauge";
     case "schedule":
       return "calendar";
+    case "logFile":
+      return "book";
+    case "outputMatch":
+      return "regex";
     case "ping":
     case "tcpReachable":
     case "sshSessionOutputSilence":
@@ -36,8 +40,11 @@ function triggerColor(config: WatchdogConfig): string {
       return IT_ACCENTS.orange;
     case "schedule":
       return IT_ACCENTS.indigo;
+    case "logFile":
+      return IT_ACCENTS.graphite;
     case "ping":
     case "tcpReachable":
+    case "outputMatch":
       return IT_ACCENTS.teal;
     case "sshSessionOutputSilence":
       return IT_ACCENTS.indigo;
@@ -52,6 +59,8 @@ function triggerLabel(config: WatchdogConfig): string {
   const target = config.target;
   if (target.kind === "performanceCounter") return target.metric;
   if (target.kind === "schedule") return target.cron;
+  if (target.kind === "logFile") return target.path;
+  if (target.kind === "outputMatch") return target.sessionId;
   if (target.kind === "ping") return target.host;
   if (target.kind === "tcpReachable") return `${target.host}:${target.port}`;
   return target.kind;
@@ -69,6 +78,10 @@ const OP_SYMBOL: Record<string, string> = {
 function conditionLabel(config: WatchdogConfig): string | null {
   // A schedule fires on time, not on a sampled value — no condition to show.
   if (config.target.kind === "schedule") return null;
+  // Log-file / output-match carry the pattern in the target, not the predicate.
+  if (config.target.kind === "logFile" || config.target.kind === "outputMatch") {
+    return `~ ${config.target.pattern}`;
+  }
   const predicate = config.trigger.predicate;
   if (predicate.op === "contains") return `contains: ${predicate.value}`;
   if (predicate.op === "silenceFor") return `silenceFor ${predicate.ms}ms`;
