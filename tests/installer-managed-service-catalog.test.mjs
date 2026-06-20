@@ -138,6 +138,34 @@ test("BentoPDF is visible in the Install Helper Utilities section", async () => 
   );
 });
 
+test("OpenFlowKit is a Utilities managed web app", () => {
+  const openflowkit = byId.get("openflowkit");
+
+  assert.ok(openflowkit, "OpenFlowKit should be present in the installer catalog");
+  assert.equal(openflowkit.category, "utilities");
+  assert.ok(
+    openflowkit.needs?.includes("node-bundle"),
+    "OpenFlowKit should install Node before building the managed web app",
+  );
+  assert.deepEqual(openflowkit.provider, {
+    kind: "npm",
+    pkg: "github:Vrun-design/openflowkit",
+  });
+});
+
+test("OpenFlowKit is visible in the Install Helper Utilities section", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/sections.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /titleKey:\s*"installer\.section\.utilities"[\s\S]*ids:\s*\[[^\]]*"openflowkit"/,
+    "OpenFlowKit should be listed in the visible Utilities section",
+  );
+});
+
 test("managed server apps depend on NSSM for service registration", () => {
   for (const id of ["n8n", "ollama"]) {
     const recipe = byId.get(id);

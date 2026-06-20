@@ -1903,6 +1903,38 @@
       }
     },
     {
+      "id": "openflowkit",
+      "name": "OpenFlowKit",
+      "descriptionEn": "Local-first AI diagramming studio hosted from a KKTerm app-local web project.",
+      "category": "utilities",
+      "icon": "Workflow",
+      "needs": [
+        "node-bundle"
+      ],
+      "homepage": "https://openflowkit.com/",
+      "releaseNotesUrl": "https://github.com/Vrun-design/openflowkit",
+      "provider": {
+        "kind": "npm",
+        "pkg": "github:Vrun-design/openflowkit"
+      },
+      "options": [],
+      "descriptionLocales": {
+        "pt-BR": "Estúdio de diagramação com IA local-first hospedado em um projeto web local do aplicativo KKTerm.",
+        "de": "Local-first KI-Diagrammstudio, gehostet von einem KKTerm-App-lokalen Webprojekt.",
+        "it": "Studio di diagrammi AI local-first ospitato da un progetto web locale dell'app KKTerm.",
+        "fr": "Studio de diagrammes IA local-first hébergé à partir d'un projet Web local d'application KKTerm.",
+        "zh-CN": "本地优先的 AI 图表工作室，托管于 KKTerm 应用程序本地 Web 项目。",
+        "zh-TW": "本機優先的 AI 圖表工作室，由 KKTerm 應用程式本機 Web 專案代管。",
+        "ja": "KKTerm アプリローカル Web プロジェクトからホストされるローカルファーストの AI ダイアグラム スタジオ。",
+        "ko": "KKTerm 앱-로컬 Web 프로젝트에서 호스팅되는 로컬 우선 AI 다이어그램 스튜디오입니다.",
+        "th": "สตูดิโอไดอะแกรม AI แบบ local-first ที่โฮสต์จากโครงการเว็บภายในแอป KKTerm",
+        "es-MX": "Estudio de diagramación con IA local-first alojado desde un proyecto web local de aplicación KKTerm.",
+        "es": "Estudio de diagramación con IA local-first alojado desde un proyecto web local de aplicación KKTerm.",
+        "vi": "Studio sơ đồ AI ưu tiên cục bộ được lưu trữ từ dự án web cục bộ ứng dụng KKTerm.",
+        "id": "Studio diagram AI yang mengutamakan lokal dihosting dari proyek web lokal aplikasi KKTerm."
+      }
+    },
+    {
       "id": "openclaw",
       "name": "OpenClaw",
       "descriptionEn": "Open-source AI coding agent CLI.",

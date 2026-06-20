@@ -877,6 +877,26 @@ fn web_ui_affordance(tool_id: &str) -> Option<WebUiAffordance> {
                     .into_owned(),
             ),
         }),
+        "openflowkit" => Some(WebUiAffordance {
+            program: "node".into(),
+            args: vec![
+                "kkterm-web-ui-server.mjs".into(),
+                "--preferred-port".into(),
+                "3023".into(),
+            ],
+            env: vec![],
+            working_dir: managed_app_install_dir("openflowkit")
+                .to_string_lossy()
+                .into_owned(),
+            url: "http://localhost:3023",
+            port: 3023,
+            dynamic_port_file: Some(
+                managed_app_install_dir("openflowkit")
+                    .join(".kkterm-web-ui-port")
+                    .to_string_lossy()
+                    .into_owned(),
+            ),
+        }),
         _ => None,
     }
 }
@@ -1061,6 +1081,20 @@ fn service_affordance(tool_id: &str) -> Option<ManagedServiceAffordance> {
             ],
             env: vec![],
             working_dir: managed_app_install_dir("bentopdf")
+                .to_string_lossy()
+                .into_owned(),
+        }),
+        "openflowkit" => Some(ManagedServiceAffordance {
+            service_name: "KKTerm-OpenFlowKit".into(),
+            display_name: "KKTerm OpenFlowKit".into(),
+            program: "node".into(),
+            args: vec![
+                "kkterm-web-ui-server.mjs".into(),
+                "--preferred-port".into(),
+                "3023".into(),
+            ],
+            env: vec![],
+            working_dir: managed_app_install_dir("openflowkit")
                 .to_string_lossy()
                 .into_owned(),
         }),
@@ -1818,6 +1852,7 @@ mod tests {
             ("langflow", "http://localhost:7860", "langflow"),
             ("excalidraw", "http://localhost:3021", "vite"),
             ("bentopdf", "http://localhost:3022", "node"),
+            ("openflowkit", "http://localhost:3023", "node"),
         ];
 
         for (tool_id, url, command_name) in cases {
@@ -1929,6 +1964,7 @@ mod tests {
             "langflow",
             "excalidraw",
             "bentopdf",
+            "openflowkit",
             "n8n",
             "flowise",
         ] {
@@ -1988,6 +2024,7 @@ mod tests {
             "langflow",
             "excalidraw",
             "bentopdf",
+            "openflowkit",
         ] {
             assert!(
                 service_affordance(tool_id).is_some(),

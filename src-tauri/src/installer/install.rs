@@ -69,6 +69,12 @@ pub fn install_recipe(
         } else {
             install_recipe_by_provider(recipe, options, cancel, emit)
         }
+    } else if recipe.id == "openflowkit" {
+        if let Provider::Npm { pkg } = &recipe.provider {
+            install_managed_openflowkit(&recipe.id, pkg, cancel, emit)
+        } else {
+            install_recipe_by_provider(recipe, options, cancel, emit)
+        }
     } else if recipe.id == "open-webui" || recipe.id == "langflow" || recipe.id == "hermes-agent" {
         if let Provider::UvPip { package } = &recipe.provider {
             install_managed_uv_pip_app(&recipe.id, package, options, cancel, emit)
@@ -233,11 +239,54 @@ fn install_managed_bentopdf(
     cancel: Arc<AtomicBool>,
     emit: &EventSink,
 ) -> Result<Option<String>, String> {
+    install_managed_source_web_app(
+        tool_id,
+        pkg,
+        "alam00000/bentopdf",
+        "bentopdf-main.zip",
+        &["run", "build:docker"],
+        3022,
+        "BentoPDF",
+        cancel,
+        emit,
+    )
+}
+
+fn install_managed_openflowkit(
+    tool_id: &str,
+    pkg: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<Option<String>, String> {
+    install_managed_source_web_app(
+        tool_id,
+        pkg,
+        "Vrun-design/openflowkit",
+        "openflowkit-main.zip",
+        &["run", "build"],
+        3023,
+        "OpenFlowKit",
+        cancel,
+        emit,
+    )
+}
+
+fn install_managed_source_web_app(
+    tool_id: &str,
+    pkg: &str,
+    default_repo: &str,
+    archive_file_name: &str,
+    build_args: &[&str],
+    preferred_port: u16,
+    display_name: &str,
+    cancel: Arc<AtomicBool>,
+    emit: &EventSink,
+) -> Result<Option<String>, String> {
     let install_dir = managed_app_install_dir(tool_id);
     let source_dir = install_dir.join("source");
     let download_path = std::env::temp_dir()
         .join("kkterm-installer-downloads")
-        .join("bentopdf-main.zip");
+        .join(archive_file_name);
     std::fs::create_dir_all(download_path.parent().ok_or("invalid temp path")?)
         .map_err(|error| error.to_string())?;
     std::fs::create_dir_all(&install_dir).map_err(|error| error.to_string())?;
@@ -246,7 +295,7 @@ fn install_managed_bentopdf(
     }
     std::fs::create_dir_all(&source_dir).map_err(|error| error.to_string())?;
 
-    let repo = pkg.strip_prefix("github:").unwrap_or("alam00000/bentopdf");
+    let repo = pkg.strip_prefix("github:").unwrap_or(default_repo);
     let archive_url = format!("https://github.com/{repo}/archive/refs/heads/main.zip");
     emit(ProgressEvent::Step {
         tool_id: tool_id.into(),
@@ -268,7 +317,7 @@ fn install_managed_bentopdf(
     std::fs::remove_file(&download_path).ok();
 
     let project_dir = single_child_dir(&source_dir).unwrap_or(source_dir.clone());
-    write_bentopdf_server_file(&install_dir, &project_dir)?;
+    write_static_web_app_server_file(&install_dir, &project_dir, preferred_port, display_name)?;
 
     emit(ProgressEvent::Step {
         tool_id: tool_id.into(),
@@ -288,20 +337,19 @@ fn install_managed_bentopdf(
 
     emit(ProgressEvent::Step {
         tool_id: tool_id.into(),
-        message: format!("npm run build:docker --prefix {}", project_dir.display()),
+        message: format!(
+            "npm {} --prefix {}",
+            build_args.join(" "),
+            project_dir.display()
+        ),
     });
-    run_streamed_with_refreshed_path_public(
-        npm_program(),
-        &[
-            "run".into(),
-            "build:docker".into(),
-            "--prefix".into(),
-            project_dir.to_string_lossy().into_owned(),
-        ],
-        tool_id,
-        cancel,
-        emit,
-    )?;
+    let mut args = build_args
+        .iter()
+        .map(|arg| (*arg).into())
+        .collect::<Vec<_>>();
+    args.push("--prefix".into());
+    args.push(project_dir.to_string_lossy().into_owned());
+    run_streamed_with_refreshed_path_public(npm_program(), &args, tool_id, cancel, emit)?;
 
     let version = read_package_json_version(&project_dir.join("package.json"));
     write_managed_app_marker(tool_id, version.clone())?;
@@ -370,7 +418,12 @@ fn write_excalidraw_host_files(install_dir: &PathBuf) -> Result<(), String> {
     .map_err(|e| e.to_string())
 }
 
-fn write_bentopdf_server_file(install_dir: &Path, project_dir: &Path) -> Result<(), String> {
+fn write_static_web_app_server_file(
+    install_dir: &Path,
+    project_dir: &Path,
+    preferred_port: u16,
+    display_name: &str,
+) -> Result<(), String> {
     let dist_dir = project_dir
         .join("dist")
         .to_string_lossy()
@@ -388,7 +441,7 @@ import path from "node:path";
 
 const args = process.argv.slice(2);
 const preferredPortIndex = args.indexOf("--preferred-port");
-const preferredPort = preferredPortIndex >= 0 ? Number(args[preferredPortIndex + 1]) : 3022;
+const preferredPort = preferredPortIndex >= 0 ? Number(args[preferredPortIndex + 1]) : {preferred_port};
 const distDir = "{dist_dir}";
 const portFile = "{port_file}";
 
@@ -431,7 +484,7 @@ function listen(port) {{
     const address = server.address();
     const actualPort = typeof address === "object" && address ? address.port : port;
     fs.writeFileSync(portFile, String(actualPort));
-    console.log(`BentoPDF is available at http://localhost:${{actualPort}}`);
+    console.log(`{display_name} is available at http://localhost:${{actualPort}}`);
   }});
 }}
 
@@ -444,7 +497,7 @@ server.on("error", (error) => {{
   throw error;
 }});
 
-listen(Number.isFinite(preferredPort) ? preferredPort : 3022);
+listen(Number.isFinite(preferredPort) ? preferredPort : {preferred_port});
 "#
         ),
     )

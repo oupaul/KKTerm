@@ -90,6 +90,16 @@ test("installer latest-version UI only treats versioned providers as supported",
     }),
     false,
   );
+  assert.equal(
+    recipeSupportsLatestVersion({
+      id: "openflowkit",
+      name: "OpenFlowKit",
+      descriptionEn: "",
+      provider: { kind: "npm", pkg: "github:Vrun-design/openflowkit" },
+      releaseNotesUrl: "https://github.com/Vrun-design/openflowkit",
+    }),
+    false,
+  );
 });
 
 test("installer latest-version UI supports one-step bundles only", async () => {

@@ -66,6 +66,24 @@ test("installed BentoPDF dialog exposes its local PDF tools endpoint", async () 
   );
 });
 
+test("installed OpenFlowKit dialog exposes its local diagramming endpoint", async () => {
+  const source = await readFile(
+    new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /case "openflowkit":\s*return \{ url: "http:\/\/localhost:3023" \}/,
+    "OpenFlowKit should advertise its default local server endpoint",
+  );
+  assert.match(
+    source,
+    /KKTerm-OpenFlowKit/,
+    "OpenFlowKit should expose its managed Windows service name",
+  );
+});
+
 test("managed web UI tools expose Windows service helper actions", async () => {
   const source = await readFile(
     new URL("../src/modules/installer/InstallerToolDialog.tsx", import.meta.url),

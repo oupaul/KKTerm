@@ -600,6 +600,7 @@ mod tests {
             "ffmpeg",
             "excalidraw",
             "bentopdf",
+            "openflowkit",
         ] {
             assert!(ids.contains(id), "catalog should include {id}");
         }

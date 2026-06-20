@@ -91,6 +91,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   ffmpeg,
   excalidraw,
   bentopdf,
+  openflowkit: defaultIcon,
   openclaw,
 };
 

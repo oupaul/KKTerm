@@ -1218,6 +1218,8 @@ function webUiAffordanceForRecipe(recipe: Recipe): { url: string } | null {
       return { url: "http://localhost:3021" };
     case "bentopdf":
       return { url: "http://localhost:3022" };
+    case "openflowkit":
+      return { url: "http://localhost:3023" };
     default:
       return null;
   }
@@ -1309,6 +1311,8 @@ function serviceAffordanceForRecipe(recipe: Recipe): { name: string } | null {
       return { name: "KKTerm-Excalidraw" };
     case "bentopdf":
       return { name: "KKTerm-BentoPDF" };
+    case "openflowkit":
+      return { name: "KKTerm-OpenFlowKit" };
     default:
       return null;
   }

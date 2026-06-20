@@ -95,6 +95,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
       "ffmpeg",
       "excalidraw",
       "bentopdf",
+      "openflowkit",
     ],
     Icon: Wrench,
     tintVar: "--installer-tint-utilities",
