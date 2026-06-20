@@ -1,4 +1,5 @@
 import type { AccentName, DashboardBackground, IconName, WidgetLayoutEnforcement } from "./modules/dashboard/types";
+import type { WatchdogConfig } from "./watchdog/types";
 
 export type ConnectionType =
   | "local"
@@ -121,6 +122,117 @@ export interface ConnectionFolder {
 export interface ConnectionTree {
   connections: Connection[];
   folders: ConnectionFolder[];
+}
+
+// IT Ops Module (docs/ITOPS.md). A Host Group is a durable, named selection of
+// existing Connections used as a fleet target; ResolvedHost is one concrete
+// target produced by resolving a group at run time.
+export type ItopsTransport = "ssh" | "winrm" | "psexec" | "auto";
+
+export interface HostGroupFilter {
+  types: string[];
+  folderId?: string | null;
+}
+
+export interface HostGroup {
+  id: string;
+  name: string;
+  sortOrder: number;
+  memberIds: string[];
+  filter?: HostGroupFilter | null;
+  transport: ItopsTransport;
+}
+
+export interface ResolvedHost {
+  connectionId: string;
+  name: string;
+  host: string;
+  username: string;
+  port?: number | null;
+  connectionType: string;
+  transport: ItopsTransport;
+}
+
+// A Batch Run task (docs/ITOPS.md Phase 2). Only the script kind exists yet.
+export type BatchTask = { kind: "script"; body: string; shell?: string | null };
+
+export interface HostReport {
+  connectionId: string;
+  name: string;
+  host: string;
+  transport: ItopsTransport;
+  ok: boolean;
+  exitCode?: number | null;
+  bytesOut: number;
+  durationMs: number;
+  error?: string | null;
+}
+
+export interface RunReport {
+  ok: number;
+  failed: number;
+  total: number;
+  hosts: HostReport[];
+}
+
+export interface RunHistoryEntry {
+  id: string;
+  source: string;
+  hostGroupId?: string | null;
+  taskSummary: string;
+  startedAt: string;
+  finishedAt?: string | null;
+  report: RunReport;
+}
+
+export interface RunEventHost {
+  connectionId: string;
+  name: string;
+  host: string;
+  transport: ItopsTransport;
+}
+
+// Live Batch Run progress streamed on the `itops://run` channel.
+export type RunEvent =
+  | {
+      kind: "started";
+      runId: string;
+      hostGroupId?: string | null;
+      taskSummary: string;
+      hosts: RunEventHost[];
+    }
+  | { kind: "hostStarted"; runId: string; connectionId: string }
+  | {
+      kind: "hostFinished";
+      runId: string;
+      connectionId: string;
+      ok: boolean;
+      exitCode?: number | null;
+      output: string;
+      durationMs: number;
+      error?: string | null;
+    }
+  | { kind: "finished"; runId: string; report: RunReport }
+  | { kind: "canceled"; runId: string };
+
+// A durable Automation (docs/ITOPS.md Phase 3+): a Watchdog config plus an
+// ordered IT Ops action list run on each trigger fire (Phase 4).
+export type NotifyLevel = "inApp" | "toast" | "sound";
+
+export type AutomationAction =
+  | { kind: "notify"; level: NotifyLevel }
+  | { kind: "popup"; title: string; body: string }
+  | { kind: "email"; to: string[]; subject: string; body: string }
+  | { kind: "webhook"; url: string; method: string; body?: string | null }
+  | { kind: "runBatch"; hostGroupId: string; task: BatchTask };
+
+export interface Automation {
+  id: string;
+  name: string;
+  sortOrder: number;
+  enabled: boolean;
+  config: WatchdogConfig;
+  actions: AutomationAction[];
 }
 
 export interface CreateConnectionRequest {
@@ -321,6 +433,7 @@ export interface GeneralSettings {
   submitAiAttachmentsDirectly: boolean;
   separateSplitTerminalBackgrounds: boolean;
   showInstallerOnRail: boolean;
+  showItOps: boolean;
   installerCheckIntervalSeconds: number;
   pinnedConnectionIds: string[];
   allowClipboardRead: boolean;

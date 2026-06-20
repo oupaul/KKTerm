@@ -17,6 +17,7 @@ import {
   Globe,
   Network,
   Package,
+  ServerCog,
   Palette,
   Save,
   Server,
@@ -39,6 +40,7 @@ import { CredentialsSettings } from "./CredentialsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { FileExplorerSettings } from "./FileExplorerSettings";
 import { InstallerSettings } from "./InstallerSettings";
+import { ItOpsSettings } from "./ItOpsSettings";
 import { RdpSettings } from "./RdpSettings";
 import { SshSettings } from "./SshSettings";
 import { TerminalSettings as TerminalSettingsPage } from "./TerminalSettings";
@@ -63,6 +65,7 @@ const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   "dashboard-settings",
   "workspace-settings",
   "file-explorer-settings",
+  "itops-settings",
   "installer-settings",
   "credentials-settings",
   "assistant-settings",
@@ -90,6 +93,7 @@ const SETTINGS_NAV: readonly {
   { id: "workspace-settings", Icon: SquareStack, color: "#5e5ce6", labelKey: "settings.sectionWorkspace" },
   { id: "file-explorer-settings", Icon: FolderOpen, color: "#14b8a6", labelKey: "settings.fileExplorer" },
   { id: "dashboard-settings", Icon: LayoutDashboard, color: "#0a84ff", labelKey: "settings.sectionDashboard" },
+  { id: "itops-settings", Icon: ServerCog, color: "#30c48d", labelKey: "settings.sectionItOps" },
   { id: "installer-settings", Icon: Package, color: "#ff9f0a", labelKey: "settings.sectionInstaller", requires: "installer" },
   { id: "credentials-settings", Icon: KeyRound, color: "#34c759", labelKey: "settings.sectionCredentials" },
   { id: "assistant-settings", Icon: Bot, color: "#bf5af2", labelKey: "settings.sectionAiAssistant" },
@@ -297,6 +301,7 @@ export function SettingsPage({
             {renderSettingsSection("dashboard-settings", <DashboardSettings />)}
             {renderSettingsSection("workspace-settings", <WorkspaceSettings />)}
             {renderSettingsSection("file-explorer-settings", <FileExplorerSettings />)}
+            {renderSettingsSection("itops-settings", <ItOpsSettings />)}
             {installerSupported
               ? renderSettingsSection("installer-settings", <InstallerSettings />)
               : null}

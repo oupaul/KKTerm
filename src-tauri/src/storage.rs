@@ -12,7 +12,7 @@ use std::{
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-const SCHEMA_USER_VERSION: i32 = 28;
+const SCHEMA_USER_VERSION: i32 = 32;
 
 const DEFAULT_TERMINAL_OPACITY: u8 = 50;
 
@@ -269,6 +269,60 @@ CREATE TABLE IF NOT EXISTS installer_tool_state (
     latest_version_seen TEXT,
     last_check_at INTEGER
 );
+
+-- IT Ops Module (docs/ITOPS.md). A Host Group is a durable, named selection of
+-- existing Connections used as a fleet target for Batch Runs and Automations.
+-- It references Connection ids and owns no Session and no secret. Additive in
+-- schema v29.
+CREATE TABLE IF NOT EXISTS itops_host_groups (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    sort_order      INTEGER NOT NULL,
+    -- Ordered Connection ids: JSON array of strings, e.g. ["conn-1","conn-2"].
+    member_ids_json TEXT NOT NULL DEFAULT '[]',
+    -- Optional dynamic filter resolved at run time: {"types":["ssh"],"folderId":"..."}.
+    filter_json     TEXT,
+    -- Per-host-group transport default.
+    transport       TEXT NOT NULL DEFAULT 'auto'
+        CHECK (transport IN ('ssh', 'winrm', 'psexec', 'auto')),
+    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- One completed Batch Run (docs/ITOPS.md Phase 2). Append-only audit log; the
+-- host_group_id is a soft reference (no FK) so a run survives its group being
+-- deleted. Live run progress is in-memory only and never lands here. v30.
+CREATE TABLE IF NOT EXISTS itops_run_history (
+    id             TEXT PRIMARY KEY,
+    -- 'manual' or 'automation:<automation_id>'.
+    source         TEXT NOT NULL,
+    host_group_id  TEXT,
+    -- Redacted one-line task label, never a secret-bearing script body.
+    task_summary   TEXT NOT NULL,
+    started_at     TEXT NOT NULL,
+    finished_at    TEXT,
+    -- Consolidated report: per-host {connectionId,host,transport,exitCode,ok,bytesOut} rows.
+    report_json    TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_itops_run_history_source
+    ON itops_run_history(source, started_at);
+
+-- A durable Automation (docs/ITOPS.md Phase 3): the persistent definition of a
+-- Watchdog. Enabled rows are re-armed into the live WatchdogRegistry on launch;
+-- the running Watchdog state stays in-memory only. config_json holds a
+-- serialized WatchdogConfig (the existing trigger/condition/action shape). v31.
+CREATE TABLE IF NOT EXISTS itops_automations (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    sort_order   INTEGER NOT NULL,
+    enabled      INTEGER NOT NULL DEFAULT 1,
+    config_json  TEXT NOT NULL,
+    -- Ordered IT Ops action catalog run on each trigger fire (Phase 4). v32.
+    actions_json TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 "#;
 
 pub struct Storage {
@@ -296,6 +350,10 @@ pub struct GeneralSettings {
     separate_split_terminal_backgrounds: bool,
     #[serde(default = "default_show_installer_on_rail")]
     show_installer_on_rail: bool,
+    // IT Ops Module rail visibility. Defaults off while the Module is in
+    // development; users opt in via Settings → IT Ops.
+    #[serde(default = "default_show_it_ops")]
+    show_it_ops: bool,
     #[serde(default = "default_installer_check_interval_seconds")]
     installer_check_interval_seconds: u32,
     #[serde(default)]
@@ -1702,6 +1760,15 @@ impl Storage {
         connection
             .execute_batch(CURRENT_SCHEMA)
             .map_err(to_storage_error)?;
+        // v32: IT Ops Automations gain an ordered action catalog (Phase 4).
+        // Unconditional ensure_column so an existing v31 database picks up the
+        // new column (CREATE TABLE IF NOT EXISTS won't add it).
+        ensure_column(
+            &connection,
+            "itops_automations",
+            "actions_json",
+            "TEXT NOT NULL DEFAULT '[]'",
+        )?;
         ensure_column(&connection, "connections", "rdp_options", "TEXT")?;
         ensure_column(&connection, "connections", "vnc_options", "TEXT")?;
         ensure_column(&connection, "connections", "ftp_options", "TEXT")?;
@@ -4062,6 +4129,7 @@ fn default_general_settings() -> GeneralSettings {
         submit_ai_attachments_directly: default_submit_ai_attachments_directly(),
         separate_split_terminal_backgrounds: false,
         show_installer_on_rail: default_show_installer_on_rail(),
+        show_it_ops: default_show_it_ops(),
         installer_check_interval_seconds: default_installer_check_interval_seconds(),
         pinned_connection_ids: Vec::new(),
         allow_clipboard_read: default_allow_clipboard_read(),
@@ -4115,6 +4183,10 @@ fn default_submit_ai_attachments_directly() -> bool {
 
 fn default_show_installer_on_rail() -> bool {
     true
+}
+
+fn default_show_it_ops() -> bool {
+    false
 }
 
 fn default_installer_check_interval_seconds() -> u32 {

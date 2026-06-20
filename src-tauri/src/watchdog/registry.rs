@@ -87,14 +87,39 @@ struct Entry {
     intervention_tx: Option<mpsc::Sender<InterventionSignal>>,
 }
 
+/// A hook the IT Ops layer installs to run an Automation's action list when its
+/// Watchdog fires. Type-erased so the watchdog module keeps no dependency on IT
+/// Ops (the dependency stays one-way: `itops` -> `watchdog`).
+pub type TriggerHook = Arc<dyn Fn(&str, &Value) + Send + Sync>;
+
 #[derive(Default)]
 pub struct WatchdogRegistry {
     inner: Mutex<HashMap<String, Entry>>,
+    trigger_hook: Mutex<Option<TriggerHook>>,
 }
 
 impl WatchdogRegistry {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Install the trigger hook. Called once at startup by the IT Ops layer.
+    pub fn set_trigger_hook(&self, hook: TriggerHook) {
+        *self
+            .trigger_hook
+            .lock()
+            .expect("WatchdogRegistry hook mutex poisoned") = Some(hook);
+    }
+
+    fn invoke_trigger_hook(&self, id: &str, value: &Value) {
+        let hook = self
+            .trigger_hook
+            .lock()
+            .expect("WatchdogRegistry hook mutex poisoned")
+            .clone();
+        if let Some(hook) = hook {
+            hook(id, value);
+        }
     }
 
     /// Create and start a watchdog. Takes `&Arc<Self>` rather than `&self`
@@ -289,6 +314,30 @@ pub(crate) fn validate_config(config: &WatchdogConfig) -> Result<(), WatchdogErr
         | WatchdogTarget::SshSessionOutputSilence { .. }
         | WatchdogTarget::Ping { .. }
         | WatchdogTarget::TcpReachable { .. } => Ok(()),
+        WatchdogTarget::Schedule { cron } => {
+            super::targets::validate_cron(cron).map_err(WatchdogError::invalid)
+        }
+        WatchdogTarget::LogFile { path, pattern } => {
+            if path.trim().is_empty() {
+                return Err(WatchdogError::invalid("logFile requires a path"));
+            }
+            if pattern.is_empty() {
+                return Err(WatchdogError::invalid("logFile requires a pattern"));
+            }
+            Ok(())
+        }
+        WatchdogTarget::OutputMatch {
+            session_id,
+            pattern,
+        } => {
+            if session_id.trim().is_empty() {
+                return Err(WatchdogError::invalid("outputMatch requires a session id"));
+            }
+            if pattern.is_empty() {
+                return Err(WatchdogError::invalid("outputMatch requires a pattern"));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -338,6 +387,9 @@ struct LoopState {
     triggered_sticky: bool,
     /// Mock-target only: incremented each poll.
     mock_counter: f64,
+    /// LogFile-target only: last observed file size, so only newly-appended
+    /// content is scanned for the pattern. None until the first poll baselines it.
+    last_log_size: Option<u64>,
 }
 
 async fn run_poll_loop(
@@ -361,6 +413,7 @@ async fn run_poll_loop(
         suppression_until: None,
         triggered_sticky: false,
         mock_counter: 0.0,
+        last_log_size: None,
     };
 
     // First interval tick fires immediately; skip it so the watchdog respects
@@ -425,6 +478,10 @@ async fn run_poll_loop(
                         "triggerCount": state.trigger_count,
                     }));
                     apply_triggered_state(&registry, &app, &id, &state);
+                    // Run any installed IT Ops action list for this Watchdog.
+                    // The hook spawns its own work and returns fast so the poll
+                    // loop is never blocked by action I/O.
+                    registry.invoke_trigger_hook(&id, &value);
 
                     if matches!(config.action, WatchdogAction::Notify) {
                         // Notify watchdogs have no intervention path to move
@@ -588,6 +645,17 @@ async fn sample_target(
         WatchdogTarget::TcpReachable { host, port } => {
             super::targets::sample_tcp_reachable(host, *port).await
         }
+        WatchdogTarget::Schedule { cron } => super::targets::sample_schedule(cron),
+        WatchdogTarget::LogFile { path, pattern } => {
+            let (new_size, matched) =
+                super::targets::scan_log_appended(path, state.last_log_size, pattern);
+            state.last_log_size = new_size;
+            json!(if matched { 1.0 } else { 0.0 })
+        }
+        WatchdogTarget::OutputMatch {
+            session_id,
+            pattern,
+        } => super::targets::sample_output_match(app, session_id, pattern),
     }
 }
 
@@ -914,6 +982,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         assert!(!update_sustained_window(&mut state, true, Some(1_000_000)));
         assert!(!update_sustained_window(&mut state, false, Some(1_000_000)));
@@ -931,6 +1000,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         // Without sustained_for_ms, the first true tick is the rising edge.
         assert!(update_sustained_window(&mut state, true, None));
@@ -950,6 +1020,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         assert!(stop_reached(&WatchdogStop::AfterFirstTrigger, &state, true).is_some());
         assert!(stop_reached(&WatchdogStop::AfterFirstTrigger, &state, false).is_none());
@@ -965,6 +1036,7 @@ mod tests {
             suppression_until: None,
             triggered_sticky: false,
             mock_counter: 0.0,
+            last_log_size: None,
         };
         assert!(stop_reached(&WatchdogStop::AfterPollCount { n: 10 }, &state, false).is_some());
         assert!(stop_reached(&WatchdogStop::AfterPollCount { n: 11 }, &state, false).is_none());

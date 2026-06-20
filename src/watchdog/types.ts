@@ -7,7 +7,10 @@ export type WatchdogTargetKind =
   | "performanceCounter"
   | "sshSessionOutputSilence"
   | "ping"
-  | "tcpReachable";
+  | "tcpReachable"
+  | "schedule"
+  | "logFile"
+  | "outputMatch";
 
 export type PerformanceMetric =
   | "cpuPercent"
@@ -28,7 +31,10 @@ export type WatchdogTarget =
   | { kind: "performanceCounter"; metric: PerformanceMetric }
   | { kind: "sshSessionOutputSilence"; sessionId: string }
   | { kind: "ping"; host: string; port?: number }
-  | { kind: "tcpReachable"; host: string; port: number };
+  | { kind: "tcpReachable"; host: string; port: number }
+  | { kind: "schedule"; cron: string }
+  | { kind: "logFile"; path: string; pattern: string }
+  | { kind: "outputMatch"; sessionId: string; pattern: string };
 
 export type PredicateOp =
   | { op: "gt"; value: number }

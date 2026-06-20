@@ -18,6 +18,7 @@ mod ftp;
 mod github_copilot;
 mod import;
 mod installer;
+mod itops;
 mod logging;
 mod manual;
 mod mcp;
@@ -3245,8 +3246,12 @@ pub fn run() {
             #[cfg(not(target_os = "windows"))]
             app.manage(rdp_client::RdpClientSessionManager::new());
             app.manage(std::sync::Arc::new(net::stream::StreamRegistry::new()));
+            app.manage(itops::commands::ItopsRunRegistry::default());
             app.manage(std::sync::Arc::new(watchdog::WatchdogRegistry::new()));
             app.manage(std::sync::Arc::new(watchdog::SessionActivityTracker::new()));
+            app.manage(itops::automation_commands::ItopsAutomationRuntime::default());
+            itops::automation_commands::install_trigger_hook(app.handle());
+            itops::automation_commands::hydrate_automations(app.handle().clone());
             app.manage(installer::InstallerRuntime::new());
             mcp_bridge::start_if_enabled(
                 app.handle().clone(),
@@ -3623,6 +3628,21 @@ pub fn run() {
             dashboard_commands::dashboard_reset,
             dashboard_import_background_image,
             dashboard_load_background_image,
+            // ── IT Ops
+            itops::commands::itops_list_host_groups,
+            itops::commands::itops_create_host_group,
+            itops::commands::itops_update_host_group,
+            itops::commands::itops_remove_host_group,
+            itops::commands::itops_reorder_host_groups,
+            itops::commands::itops_resolve_host_group,
+            itops::commands::itops_start_batch_run,
+            itops::commands::itops_cancel_batch_run,
+            itops::commands::itops_list_run_history,
+            itops::automation_commands::itops_list_automations,
+            itops::automation_commands::itops_create_automation,
+            itops::automation_commands::itops_update_automation,
+            itops::automation_commands::itops_set_automation_enabled,
+            itops::automation_commands::itops_remove_automation,
             // ── Install Helper
             installer::commands::installer_load_catalog,
             installer::commands::installer_load_detection_cache,

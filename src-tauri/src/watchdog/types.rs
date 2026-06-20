@@ -43,6 +43,22 @@ pub enum WatchdogTarget {
     /// Open/closed check for a specific TCP port. Returns 1.0 if the port
     /// accepts a connection, 0.0 otherwise.
     TcpReachable { host: String, port: u16 },
+    /// Fires on a 5-field cron schedule (minute hour day-of-month month
+    /// day-of-week), evaluated in local time. The sampler returns 1.0 on the
+    /// first poll of a matching minute and 0.0 otherwise, so it pairs with a
+    /// `gte 1` condition. Poll faster than once a minute so no occurrence is
+    /// missed (the create flow sets a 30s poll). IT Ops Phase 5.
+    Schedule { cron: String },
+    /// Fires when newly-appended content of a local log file contains `pattern`
+    /// (literal substring). Tracks the file size between polls so only new lines
+    /// are scanned — a steady match doesn't re-fire. Returns 1.0/0.0; pair with
+    /// `gte 1`. IT Ops Phase 5.
+    LogFile { path: String, pattern: String },
+    /// Fires when the recent output of a live SSH Session contains `pattern`
+    /// (literal substring). Reads the same rolling output buffer as
+    /// `SshSessionOutputSilence`. Returns 1.0/0.0; pair with `gte 1`. Created
+    /// programmatically / by the assistant (no create-dialog UI). IT Ops Phase 5.
+    OutputMatch { session_id: String, pattern: String },
 }
 
 fn default_mock_step() -> f64 {

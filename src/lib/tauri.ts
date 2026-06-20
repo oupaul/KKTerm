@@ -1,6 +1,7 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { getVersion as getTauriAppVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { WatchdogConfig } from "../watchdog/types";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   confirm as confirmDialog,
@@ -36,6 +37,14 @@ import type {
   FileBrowserViewOptions,
   FtpConnectionOptions,
   GeneralSettings,
+  HostGroup,
+  HostGroupFilter,
+  ItopsTransport,
+  ResolvedHost,
+  BatchTask,
+  RunHistoryEntry,
+  Automation,
+  AutomationAction,
   HostUsageSnapshot,
   ImportedDatabaseSnapshot,
   SelectiveExportInfo,
@@ -1032,6 +1041,73 @@ type CommandMap = {
   list_connection_tree: {
     args: { workspaceId?: string } | undefined;
     result: ConnectionTree;
+  };
+  itops_list_host_groups: {
+    args: undefined;
+    result: HostGroup[];
+  };
+  itops_create_host_group: {
+    args: {
+      name: string;
+      memberIds: string[];
+      filter: HostGroupFilter | null;
+      transport: ItopsTransport;
+    };
+    result: HostGroup;
+  };
+  itops_update_host_group: {
+    args: {
+      id: string;
+      name: string;
+      memberIds: string[];
+      filter: HostGroupFilter | null;
+      transport: ItopsTransport;
+    };
+    result: HostGroup;
+  };
+  itops_remove_host_group: {
+    args: { id: string };
+    result: void;
+  };
+  itops_reorder_host_groups: {
+    args: { orderedIds: string[] };
+    result: void;
+  };
+  itops_resolve_host_group: {
+    args: { id: string };
+    result: ResolvedHost[];
+  };
+  itops_start_batch_run: {
+    args: { hostGroupId: string; task: BatchTask };
+    result: string;
+  };
+  itops_cancel_batch_run: {
+    args: { runId: string };
+    result: void;
+  };
+  itops_list_run_history: {
+    args: { limit?: number } | undefined;
+    result: RunHistoryEntry[];
+  };
+  itops_list_automations: {
+    args: undefined;
+    result: Automation[];
+  };
+  itops_create_automation: {
+    args: { name: string; config: WatchdogConfig; actions: AutomationAction[]; enabled: boolean };
+    result: Automation;
+  };
+  itops_update_automation: {
+    args: { id: string; name: string; config: WatchdogConfig; actions: AutomationAction[] };
+    result: Automation;
+  };
+  itops_set_automation_enabled: {
+    args: { id: string; enabled: boolean };
+    result: Automation;
+  };
+  itops_remove_automation: {
+    args: { id: string };
+    result: void;
   };
   list_workspaces: {
     args: undefined;

@@ -14,7 +14,7 @@ A language-region bundle stored as a JSON file under `src/i18n/locales/`. Englis
 A dot-notation path into the locale JSON (e.g. `settings.general.language`, `ai.waitingPhrases`). Keys are organized by namespace matching the frontend source layout. New UI strings require a new key in all 14 locale files.
 
 **Namespace**:
-A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `installer`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
+A top-level section of the locale JSON mapping to a feature area in the frontend source: `app`, `dashboard`, `appLauncher`, `screenshots`, `installer`, `itops`, `settings`, `connections`, `terminal`, `sftp`, `webview`, `remoteDesktop`, `ai`, `watchdog`, `workspace`, `common`, `languages`, `manual`. The namespaces are not 1:1 with rail Modules (some Modules use several namespaces; some namespaces cover sub-features inside a single Module). Keep new keys in the namespace closest to the owning component.
 
 
 **Connection**:
@@ -111,14 +111,30 @@ A Pane's **kind** (terminal, sftp, ftp, localFiles, webview, remoteDesktop) is w
 
 Terminal Panes for tmux-enabled SSH Connections may carry a generated friendly tmux session id, such as `kkterm-cockpit001`, used to resume that Pane's remote tmux session when the Pane is recreated. Current Pane tmux ids use the `kkterm-<sci-fi-name><number>` shape and are remembered in frontend workspace storage. That id belongs to the frontend workspace/Pane layer, not the backend Connection model.
 
+**Automation**:
+A durable IT Ops rule stored in SQLite (`itops_automations`): one trigger, an optional condition predicate, and a typed action (notify, popup, email, webhook, run a Batch Run, or AI intervention). Automations persist across app restart and re-arm on launch. An Automation is the durable definition; the live **Watchdog** runtime is what executes it, the same way a **Connection** is durable and a **Session** is its live runtime. Created and managed in the **IT Ops Module**. See `docs/ITOPS.md` and `src-tauri/src/itops/`.
+_Avoid_: watchdog (for the durable rule), workflow, job, saved alert
+
 **Watchdog**:
-A live runtime monitor that watches a target (performance counter, SSH Session output silence, ping, or TCP reachability) against a predicate and, on trigger, can notify and run AI interventions. Watchdogs are in-memory only and do not persist across app restart; they are surfaced through the **Watchdog Status Bar** indicator and a detail panel, not as a Connection, Session, or Module. See `src-tauri/src/watchdog/` and `src/watchdog/`.
-_Avoid_: monitor profile, saved alert, durable watcher
+The live runtime that executes an armed **Automation** (or an ad-hoc live monitor): it samples a target (performance counter, SSH Session output silence, ping, or TCP reachability) against a predicate and, on trigger, runs the Automation's actions. The running Watchdog state — ticks, trigger log, state machine, suppression window — is **in-memory only and does not persist across app restart**; its durable definition lives in the **Automation**. Surfaced through the **Watchdog Status Bar** indicator and a detail panel, not as a Connection or Session. See `src-tauri/src/watchdog/` and `src/watchdog/`.
+_Avoid_: monitor profile, durable watcher (the Automation is the durable part)
+
+**IT Ops Module**:
+A built-in Activity Rail Module for fleet operations: **Host Groups**, **Batch Runs**, and **Automations**. Lives with Dashboard and Install Helper above Settings. Not a Connection, Session, or Dashboard widget. See `docs/ITOPS.md` and `docs/ADR/0011-it-ops-module.md`.
+_Avoid_: operations center, fleet manager, orchestrator
+
+**Host Group**:
+A durable, named selection of existing Connections (plus an optional dynamic filter by type/folder) used as the fleet target for Batch Runs and Automation `runBatch` actions. Stored in `itops_host_groups`; it references Connection ids and owns no Session and no secret. It is not a Connection type.
+_Avoid_: inventory, host list, connection group (as a Connection type)
+
+**Batch Run**:
+One execution of a Batch Task (a script or a curated update playbook) across a resolved Host Group, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress and streamed output are in-memory; a consolidated report is written to `itops_run_history` on completion. The run is live runtime, not a durable definition.
+_Avoid_: broadcast, job, deployment
 
 ## UI Layout
 
 **Activity Rail (Left Rail)**:
-The vertical icon bar on the far left of the app. Its top section is the **Workspace switcher** — the Default Workspace, any additional Workspaces, and a `+` button that opens the New Workspace wizard; selecting a Workspace activates it and navigates to the Workspace Module. Below that it shows the other top-level built-in Modules (Dashboard, Install Helper), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
+The vertical icon bar on the far left of the app. Its top section is the **Workspace switcher** — the Default Workspace, any additional Workspaces, and a `+` button that opens the New Workspace wizard; selecting a Workspace activates it and navigates to the Workspace Module. Below that it shows the other top-level built-in Modules (Dashboard, IT Ops, Install Helper), connected Connection shortcuts when enabled, and Settings at the bottom. Icons use app-owned delayed hover labels via `RailTooltip`, not native `title` tooltips. App Launcher is intentionally not a Module; it lives inside Dashboard as a widget.
 _Avoid_: sidebar, left sidebar, nav bar
 
 **Connection Tree (Connections Panel)**:

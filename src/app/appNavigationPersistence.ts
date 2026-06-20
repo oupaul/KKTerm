@@ -5,7 +5,10 @@ export type BaseModulePage = Exclude<ActivePage, "settings">;
 export const ACTIVE_PAGE_STORAGE_KEY = "kkterm.activeModule.v1";
 
 export function activePageFromStoredValue(value: unknown): BaseModulePage {
-  return value === "dashboard" || value === "installer" || value === "workspace"
+  return value === "dashboard" ||
+    value === "itops" ||
+    value === "installer" ||
+    value === "workspace"
     ? value
     : "workspace";
 }

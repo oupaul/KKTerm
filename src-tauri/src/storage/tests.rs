@@ -1691,6 +1691,7 @@ fn general_settings_round_trip_through_settings_table() {
             submit_ai_attachments_directly: false,
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
+            show_it_ops: false,
             installer_check_interval_seconds: 604_800,
             pinned_connection_ids: vec![
                 " connection-a ".to_string(),
@@ -2044,6 +2045,7 @@ fn database_backup_import_restores_settings_and_connections() {
             submit_ai_attachments_directly: true,
             separate_split_terminal_backgrounds: true,
             show_installer_on_rail: false,
+            show_it_ops: false,
             installer_check_interval_seconds: 86_400,
             pinned_connection_ids: vec!["connection-pinned".to_string()],
             allow_clipboard_read: true,
@@ -2074,6 +2076,7 @@ fn database_backup_import_restores_settings_and_connections() {
             submit_ai_attachments_directly: false,
             separate_split_terminal_backgrounds: false,
             show_installer_on_rail: true,
+            show_it_ops: false,
             installer_check_interval_seconds: 86_400,
             pinned_connection_ids: Vec::new(),
             allow_clipboard_read: false,

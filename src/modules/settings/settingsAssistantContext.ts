@@ -5,6 +5,7 @@ export type SettingsSectionId =
   | "workspace-settings"
   | "file-explorer-settings"
   | "dont-sleep-settings"
+  | "itops-settings"
   | "installer-settings"
   | "credentials-settings"
   | "assistant-settings"
@@ -192,6 +193,17 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.installerCheckInterval",
         description:
           "How often the Install Helper auto-checks for the latest tool versions when opened (hour/day/week/month; default daily).",
+      },
+    ],
+  },
+  "itops-settings": {
+    labelKey: "settings.sectionItOps",
+    fallbackLabel: "IT Ops",
+    controls: [
+      {
+        key: "settings.itOpsShowModule",
+        description:
+          "Show or hide the IT Ops Module (Host Groups, Batch Runs, Automations) on the Activity Rail. Under development; off by default.",
       },
     ],
   },

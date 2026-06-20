@@ -812,11 +812,30 @@ async fn run_remote_command_async(request: NativeSshCommandRequest) -> Result<St
 
 /// Opens a fresh exec channel on an already-connected Session, runs `command`,
 /// and returns its combined stdout/stderr. The Session is left connected so a
-/// live terminal Session can be reused for background probes.
+/// live terminal Session can be reused for background probes. A non-zero exit
+/// status is folded into an error (probes treat that as failure).
 async fn exec_collect_on_session(
     session: &client::Handle<VerifyingClient>,
     command: String,
 ) -> Result<String, String> {
+    let (exit_status, output) = exec_collect_on_session_with_status(session, command).await?;
+    if exit_status == 0 {
+        Ok(output)
+    } else {
+        Err(format!(
+            "SSH command exited with status {exit_status}: {output}"
+        ))
+    }
+}
+
+/// Like `exec_collect_on_session` but returns the remote exit status alongside
+/// the combined output instead of folding a non-zero status into an error. A
+/// Batch Run needs the per-host exit code even when the command "failed", so it
+/// can report exit 100 (or whatever) rather than just "errored".
+async fn exec_collect_on_session_with_status(
+    session: &client::Handle<VerifyingClient>,
+    command: String,
+) -> Result<(i32, String), String> {
     let mut channel = session
         .channel_open_session()
         .await
@@ -827,7 +846,7 @@ async fn exec_collect_on_session(
         .map_err(|error| format!("failed to run SSH command: {error}"))?;
 
     let mut output = String::new();
-    let mut exit_status = 0;
+    let mut exit_status: u32 = 0;
     while let Some(message) = channel.wait().await {
         match message {
             ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
@@ -845,12 +864,53 @@ async fn exec_collect_on_session(
 
     let _ = channel.eof().await;
     let _ = channel.close().await;
-    if exit_status == 0 {
-        Ok(output)
+    Ok((exit_status as i32, output))
+}
+
+async fn run_remote_command_async_capture(
+    request: NativeSshCommandRequest,
+) -> Result<(i32, String), String> {
+    let session = connect_verified_client(NativeSshConnectionRequest {
+        host: request.host,
+        user: request.user,
+        port: request.port,
+        auth: request.auth,
+        known_hosts_path: request.known_hosts_path,
+        x11_forwarding: None,
+        socks_proxy: request.socks_proxy,
+        remote_forward_targets: None,
+    })
+    .await?;
+
+    let result = exec_collect_on_session_with_status(&session, request.command).await;
+    disconnect_ssh_session(&session, "command completed").await?;
+    result
+}
+
+/// Blocking one-shot remote exec that returns `(exit_code, combined_output)`.
+/// Unlike `run_remote_command`, a non-zero remote exit is a normal result, not
+/// an error; `Err` is reserved for connect/auth/transport failures. This is the
+/// primitive the IT Ops Batch Run SSH transport runs per host.
+pub(crate) fn run_remote_command_capture(
+    request: NativeSshCommandRequest,
+) -> Result<(i32, String), String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| format!("failed to create native SSH command runtime: {error}"))?;
+
+    let timeout_seconds = request.timeout_seconds;
+    if let Some(timeout_seconds) = timeout_seconds {
+        runtime.block_on(async {
+            tokio::time::timeout(
+                Duration::from_secs(timeout_seconds),
+                run_remote_command_async_capture(request),
+            )
+            .await
+            .map_err(|_| format!("SSH command timed out after {timeout_seconds} seconds"))?
+        })
     } else {
-        Err(format!(
-            "SSH command exited with status {exit_status}: {output}"
-        ))
+        runtime.block_on(run_remote_command_async_capture(request))
     }
 }
 
