@@ -2,59 +2,31 @@ import { useEffect, useState } from "react";
 import { SquareStack } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
-import { currentPlatform } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
-import type { GeneralSettings, SftpSettings } from "../../types";
-import {
-  fileExplorerTerminalOptionsForPlatform,
-  resolveFileExplorerTerminalOption,
-} from "../workspace/connections/sftp/fileExplorerTerminalOptions";
+import type { GeneralSettings } from "../../types";
 import { SettingsSectionHeader, useSettingsSaveRegistration } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 export function WorkspaceSettings() {
   const { t } = useTranslation();
   const generalSettings = useWorkspaceStore((state) => state.generalSettings);
-  const sftpSettings = useWorkspaceStore((state) => state.sftpSettings);
-  const terminalSettings = useWorkspaceStore((state) => state.terminalSettings);
   const setGeneralSettings = useWorkspaceStore((state) => state.setGeneralSettings);
-  const setSftpSettings = useWorkspaceStore((state) => state.setSftpSettings);
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [draft, setDraft] = useState<GeneralSettings>(generalSettings);
-  const [sftpDraft, setSftpDraft] = useState<SftpSettings>(sftpSettings);
   const hasChanges =
     draft.hideTopTabButtons !== generalSettings.hideTopTabButtons ||
     draft.doubleClickOpensConnection !== generalSettings.doubleClickOpensConnection ||
     draft.submitAiAttachmentsDirectly !== generalSettings.submitAiAttachmentsDirectly ||
     draft.separateSplitTerminalBackgrounds !== generalSettings.separateSplitTerminalBackgrounds ||
-    draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail ||
-    sftpDraft.fileExplorerOpenMode !== sftpSettings.fileExplorerOpenMode ||
-    sftpDraft.fileExplorerTerminalShell !== sftpSettings.fileExplorerTerminalShell ||
-    sftpDraft.fileExplorerTerminalElevated !== sftpSettings.fileExplorerTerminalElevated;
-  const fileExplorerTerminalOptions = fileExplorerTerminalOptionsForPlatform(
-    terminalSettings.customShells,
-    currentPlatform(),
-  );
-  const selectedFileExplorerTerminal = resolveFileExplorerTerminalOption(
-    {
-      shell: sftpDraft.fileExplorerTerminalShell,
-      elevated: sftpDraft.fileExplorerTerminalElevated,
-    },
-    fileExplorerTerminalOptions,
-  );
+    draft.showConnectedConnectionsInRail !== generalSettings.showConnectedConnectionsInRail;
 
   useEffect(() => {
     setDraft(generalSettings);
   }, [generalSettings]);
 
-  useEffect(() => {
-    setSftpDraft(sftpSettings);
-  }, [sftpSettings]);
-
   async function handleSave() {
     try {
       const currentSettings = useWorkspaceStore.getState().generalSettings;
-      const currentSftpSettings = useWorkspaceStore.getState().sftpSettings;
       const request = {
         ...currentSettings,
         hideTopTabButtons: draft.hideTopTabButtons,
@@ -63,22 +35,11 @@ export function WorkspaceSettings() {
         showConnectedConnectionsInRail: draft.showConnectedConnectionsInRail,
         submitAiAttachmentsDirectly: draft.submitAiAttachmentsDirectly,
       };
-      const sftpRequest = {
-        ...currentSftpSettings,
-        fileExplorerOpenMode: sftpDraft.fileExplorerOpenMode,
-        fileExplorerTerminalShell: selectedFileExplorerTerminal.shell,
-        fileExplorerTerminalElevated: selectedFileExplorerTerminal.elevated,
-      };
-      const [saved, savedSftp] = isTauriRuntime()
-        ? await Promise.all([
-            invokeCommand("update_general_settings", { request }),
-            invokeCommand("update_sftp_settings", { request: sftpRequest }),
-          ])
-        : [request, sftpRequest];
+      const saved = isTauriRuntime()
+        ? await invokeCommand("update_general_settings", { request })
+        : request;
       setGeneralSettings(saved);
-      setSftpSettings(savedSftp);
       setDraft(saved);
-      setSftpDraft(savedSftp);
       showStatusBarNotice(t("settings.workspaceSaved"), { tone: "success" });
     } catch (saveError) {
       showStatusBarNotice(
@@ -139,52 +100,6 @@ export function WorkspaceSettings() {
               <strong>{t("settings.doubleClickOpensConnection")}</strong>
               <small>{t("settings.doubleClickOpensConnectionDesc")}</small>
             </span>
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.fileExplorer")}</legend>
-        <div className="form-grid">
-          <label>
-            <span>{t("settings.fileExplorerOpenMode")}</span>
-            <select
-              value={sftpDraft.fileExplorerOpenMode}
-              onChange={(event) =>
-                setSftpDraft((state) => ({
-                  ...state,
-                  fileExplorerOpenMode: event.target.value as SftpSettings["fileExplorerOpenMode"],
-                }))
-              }
-            >
-              <option value="external">{t("settings.fileExplorerOpenModeExternal")}</option>
-              <option value="inlineEditor">{t("settings.fileExplorerOpenModeInlineEditor")}</option>
-            </select>
-            <small className="field-hint">{t("settings.fileExplorerOpenModeHint")}</small>
-          </label>
-          <label>
-            <span>{t("settings.fileExplorerTerminal")}</span>
-            <select
-              value={selectedFileExplorerTerminal.id}
-              onChange={(event) => {
-                const option = fileExplorerTerminalOptions.find(
-                  (entry) => entry.id === event.currentTarget.value,
-                );
-                if (!option) {
-                  return;
-                }
-                setSftpDraft((state) => ({
-                  ...state,
-                  fileExplorerTerminalShell: option.shell,
-                  fileExplorerTerminalElevated: option.elevated,
-                }));
-              }}
-            >
-              {fileExplorerTerminalOptions.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
-            <small className="field-hint">{t("settings.fileExplorerTerminalHint")}</small>
           </label>
         </div>
       </fieldset>

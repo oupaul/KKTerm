@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "分割窗格中的每个终端使用单独背景",
     "separateSplitTerminalBackgroundsDesc": "关闭时，一个背景会填满连接标签页的终端工作区内容区域。开启时，分割终端窗格可保留单独背景。",
     "workspaceSaved": "工作区设置已保存。",
+    "fileExplorerSaved": "文件资源管理器设置已保存。",
     "activityRail": "活动栏",
     "installerRail": "活动栏",
     "installerShowOnRail": "在活动栏中显示",

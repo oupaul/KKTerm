@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "Separater Hintergrund für jedes Terminal in geteilten Bereichen",
     "separateSplitTerminalBackgroundsDesc": "Wenn deaktiviert, füllt ein Hintergrund den Terminal-Arbeitsbereich einer Verbindungs-Registerkarte. Wenn aktiviert, können geteilte Terminalbereiche separate Hintergründe behalten.",
     "workspaceSaved": "Arbeitsbereichseinstellungen gespeichert.",
+    "fileExplorerSaved": "Datei-Explorer-Einstellungen gespeichert.",
     "activityRail": "Aktivitätsleiste",
     "installerRail": "Aktivitätsleiste",
     "installerShowOnRail": "In Aktivitätsleiste anzeigen",

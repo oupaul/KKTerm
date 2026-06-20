@@ -1072,6 +1072,7 @@ interface WorkspaceState {
   activeSessionCounts: Record<string, number>;
   performanceMetrics: PerformanceMetrics;
   statusBarNotice?: StatusBarNotice;
+  localTerminalPopup?: WorkspaceTab;
   /** DOM node in the global Status Bar that the active Document Connection portals
    * its status segments into. Set by `StatusBar`; null when the bar is hidden. */
   documentStatusSlot: HTMLElement | null;
@@ -1162,6 +1163,7 @@ interface WorkspaceState {
   openTerminalHere: (connection: Connection, remotePath: string) => void;
   openLocalTerminal: (options?: { name?: string; shell?: string }) => void;
   openLocalTerminalHere: (cwd: string, options?: { name?: string; shell?: string }) => void;
+  closeLocalTerminalPopup: () => void;
   openElevatedLocalTerminal: (option: LocalShellOption, options?: { cwd?: string }) => Promise<void>;
   splitTerminalPane: (tabId: string) => void;
   splitTerminalPaneDirected: (tabId: string, direction: SplitDirection) => void;
@@ -2298,11 +2300,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
   openLocalTerminalHere: (cwd, options) => {
     const normalizedCwd = cwd.trim() || ".";
-    const id = `local-${Date.now()}`;
+    const id = `local-popup-${Date.now()}`;
     const { sshSettings, terminalSettings } = get();
     const shell = options?.shell ?? terminalSettings.defaultShell;
     const appearance = resolveDefaultTerminalAppearance("local", sshSettings, terminalSettings);
-    get().openConnection({
+    const connection: Connection = {
       id,
       name: options?.name ?? shell,
       host: "localhost",
@@ -2313,8 +2315,30 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       terminalBackground: appearance.terminalBackground,
       type: "local",
       status: "idle",
+    };
+    const paneId = createPaneId(id);
+    set({
+      localTerminalPopup: {
+        id: `popup-${id}`,
+        workspaceId: get().activeWorkspaceId,
+        title: connection.name,
+        toolbarTitle: connection.name,
+        subtitle: normalizedCwd,
+        kind: "terminal",
+        panes: [{
+          id: paneId,
+          title: connection.name,
+          toolbarTitle: connection.name,
+          cwd: normalizedCwd,
+          buffer: "",
+          connection,
+        }],
+        focusedPaneId: paneId,
+        connection,
+      },
     });
   },
+  closeLocalTerminalPopup: () => set({ localTerminalPopup: undefined }),
   openElevatedLocalTerminal: async (option, options) => {
     const isAppElevated = await invokeCommand("is_app_elevated", undefined).catch(() => false);
     const action = elevatedLocalShellAction({

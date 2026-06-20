@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "Sfondo separato per ogni terminale nei riquadri divisi",
     "separateSplitTerminalBackgroundsDesc": "Quando è disattivato, uno sfondo riempie l’area dei contenuti del workspace terminale di una scheda Connessione. Quando è attivato, i riquadri terminale divisi possono mantenere sfondi separati.",
     "workspaceSaved": "Impostazioni dell’area di lavoro salvate.",
+    "fileExplorerSaved": "Impostazioni di Esplora file salvate.",
     "activityRail": "Barra attività",
     "installerRail": "Barra attività",
     "installerShowOnRail": "Mostra nella barra attività",

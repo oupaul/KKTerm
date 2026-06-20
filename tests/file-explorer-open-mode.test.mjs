@@ -12,7 +12,7 @@ test("File Explorer can open local files in the inline Document", async () => {
         new URL("../src/modules/workspace/connections/sftp/SftpWorkspace.tsx", import.meta.url),
         "utf8",
       ),
-      readFile(new URL("../src/modules/settings/WorkspaceSettings.tsx", import.meta.url), "utf8"),
+      readFile(new URL("../src/modules/settings/FileExplorerSettings.tsx", import.meta.url), "utf8"),
       readFile(
         new URL("../src/modules/workspace/connections/file-viewer/file-viewer.css", import.meta.url),
         "utf8",

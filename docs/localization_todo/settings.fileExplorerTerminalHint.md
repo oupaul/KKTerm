@@ -2,7 +2,7 @@
 
 - **English value**: `Choose the shell used by the File Explorer terminal button. Custom shells are managed in Terminal settings.`
 - **Namespace**: `settings`
-- **File/component**: `src/modules/settings/WorkspaceSettings.tsx`
+- **File/component**: `src/modules/settings/FileExplorerSettings.tsx`
 - **UI role**: `tooltip`
 - **User flow**: `Shown beneath the File Explorer terminal preference selector.`
 - **Tone**: `concise/neutral`

@@ -88,12 +88,14 @@ export function TerminalWorkspace({
   onOpenAssistant = () => undefined,
   showSftpButton = true,
   tab,
+  trackConnectionSession = true,
 }: {
   allowPaneLayoutControls?: boolean;
   isActive: boolean;
   onOpenAssistant?: () => void;
   showSftpButton?: boolean;
   tab: WorkspaceTab;
+  trackConnectionSession?: boolean;
 }) {
   const splitTerminalPaneDirected = useWorkspaceStore(
     (state) => state.splitTerminalPaneDirected,
@@ -126,7 +128,8 @@ export function TerminalWorkspace({
     : undefined;
   const layout = useMemo(() => ensureLayout(tab.layout, tab.panes), [tab.layout, tab.panes]);
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
-  const canCloseSinglePane = tab.kind === "terminal" && generalSettings.hideTopTabButtons;
+  const canCloseSinglePane =
+    allowPaneLayoutControls && tab.kind === "terminal" && generalSettings.hideTopTabButtons;
   const quickCommandBarVisible = Boolean(tab.quickCommandBarVisible) && !isSingleEmbeddedPane;
   const focusedTerminalPane = tab.panes.find((pane): pane is TerminalPane => (
     isTerminalPane(pane) && pane.id === focusedPaneId
@@ -486,6 +489,7 @@ export function TerminalWorkspace({
             onSplit={handleSplit}
             quickCommandBarVisible={quickCommandBarVisible}
             onToggleQuickCommandBar={() => setQuickCommandBarVisible(tab.id, !quickCommandBarVisible)}
+            trackConnectionSession={trackConnectionSession}
           />
         ) : null}
       </div>
@@ -541,6 +545,7 @@ function TerminalLayoutView({
   onSplit,
   quickCommandBarVisible,
   onToggleQuickCommandBar,
+  trackConnectionSession,
 }: {
   isActive: boolean;
   tabId: string;
@@ -561,6 +566,7 @@ function TerminalLayoutView({
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
   quickCommandBarVisible: boolean;
   onToggleQuickCommandBar: () => void;
+  trackConnectionSession: boolean;
 }) {
   if (layout.type === "leaf") {
     const pane = panes.find((entry) => entry.id === layout.paneId);
@@ -600,6 +606,7 @@ function TerminalLayoutView({
             onSplit={onSplit}
             quickCommandBarVisible={quickCommandBarVisible}
             onToggleQuickCommandBar={onToggleQuickCommandBar}
+            trackConnectionSession={trackConnectionSession}
           />
         ) : (
           <EmbeddedConnectionPane
@@ -647,6 +654,7 @@ function TerminalLayoutView({
           onSplit={onSplit}
           quickCommandBarVisible={quickCommandBarVisible}
           onToggleQuickCommandBar={onToggleQuickCommandBar}
+          trackConnectionSession={trackConnectionSession}
         />
       ))}
     </div>
@@ -1424,6 +1432,7 @@ function TerminalPaneView({
   onSplit,
   quickCommandBarVisible,
   onToggleQuickCommandBar,
+  trackConnectionSession,
 }: {
   isActive: boolean;
   tabId: string;
@@ -1442,6 +1451,7 @@ function TerminalPaneView({
   onSplit: (paneId: string, direction: "right" | "left" | "down" | "up") => void;
   quickCommandBarVisible: boolean;
   onToggleQuickCommandBar: () => void;
+  trackConnectionSession: boolean;
 }) {
   const paneRef = useRef<HTMLElement | null>(null);
   const terminalElementRef = useRef<HTMLDivElement | null>(null);
@@ -2005,7 +2015,9 @@ function TerminalPaneView({
         if (startupInput) {
           writeInputToSession(startupInput);
         }
-        markConnectionSessionStarted(connection.id);
+        if (trackConnectionSession) {
+          markConnectionSessionStarted(connection.id);
+        }
         void maybeAutoDetectOsIcon(connection, result.sessionId);
       } catch (error) {
         terminal.writeln("");
@@ -2047,7 +2059,7 @@ function TerminalPaneView({
       } else if (sessionId) {
         void invokeCommand("close_terminal_session", { sessionId });
       }
-      if (sessionStarted && !preservingRuntime) {
+      if (sessionStarted && !preservingRuntime && trackConnectionSession) {
         markConnectionSessionEnded(connection.id);
       }
       sessionIdRef.current = null;

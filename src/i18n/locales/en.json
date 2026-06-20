@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "Separate background for each terminal in split panes",
     "separateSplitTerminalBackgroundsDesc": "When off, one background fills the terminal workspace content area for a Connection Tab. When on, split terminal panes can keep separate backgrounds.",
     "workspaceSaved": "Workspace settings saved.",
+    "fileExplorerSaved": "File Explorer settings saved.",
     "activityRail": "Activity Rail",
     "installerRail": "Activity Rail",
     "installerShowOnRail": "Show in Activity Rail",

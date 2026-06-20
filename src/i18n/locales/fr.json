@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "Arrière-plan séparé pour chaque terminal dans les volets divisés",
     "separateSplitTerminalBackgroundsDesc": "Lorsque désactivé, un seul arrière-plan remplit la zone de contenu du workspace terminal d’un onglet de connexion. Lorsque activé, les volets de terminal divisés peuvent conserver des arrière-plans séparés.",
     "workspaceSaved": "Paramètres de l’espace de travail enregistrés.",
+    "fileExplorerSaved": "Réglages de l’Explorateur de fichiers enregistrés.",
     "activityRail": "Barre d’activité",
     "installerRail": "Barre d’activité",
     "installerShowOnRail": "Afficher dans la barre d’activité",

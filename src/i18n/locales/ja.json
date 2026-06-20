@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "分割ペイン内の各ターミナルに個別の背景を使う",
     "separateSplitTerminalBackgroundsDesc": "オフの場合、1 つの背景が接続タブのターミナルワークスペース内容領域を埋めます。オンの場合、分割ターミナルペインごとに個別の背景を保持できます。",
     "workspaceSaved": "ワークスペース設定を保存しました。",
+    "fileExplorerSaved": "ファイルエクスプローラー設定を保存しました。",
     "activityRail": "アクティビティ レール",
     "installerRail": "アクティビティ レール",
     "installerShowOnRail": "アクティビティ レールに表示",

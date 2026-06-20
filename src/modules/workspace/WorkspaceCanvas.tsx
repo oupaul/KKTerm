@@ -12,6 +12,7 @@ import { WebViewWorkspace } from "./connections/webview/WebViewWorkspace";
 import { ConnectionIcon } from "./connections/ConnectionIcon";
 import { ChevronLeft, ChevronRight, Terminal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   FormEvent,
   KeyboardEvent,
@@ -294,30 +295,84 @@ export function WorkspaceCanvas({
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const closeTab = useWorkspaceStore((state) => state.closeTab);
+  const localTerminalPopup = useWorkspaceStore((state) => state.localTerminalPopup);
+  const closeLocalTerminalPopup = useWorkspaceStore((state) => state.closeLocalTerminalPopup);
   // The toolbar close button only earns its place when the tab strip is hidden;
   // otherwise the tab strip's own close button already covers it.
   const hideTopTabButtons = useWorkspaceStore((state) => state.generalSettings.hideTopTabButtons);
   const visibleTabs = tabs.filter((tab) => tabWorkspaceId(tab) === activeWorkspaceId);
   const showEmptyState = tabs.length === 0 || (!hideTopTabButtons && visibleTabs.length === 0);
 
+  useEffect(() => {
+    if (!localTerminalPopup) {
+      return;
+    }
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeLocalTerminalPopup();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closeLocalTerminalPopup, localTerminalPopup]);
+
+  const terminalPopup = localTerminalPopup
+    ? createPortal(
+        <div
+          className="dialog-backdrop connection-dialog-backdrop sftp-popup-dialog-backdrop"
+          role="presentation"
+        >
+          <section
+            aria-label={localTerminalPopup.title}
+            aria-modal="true"
+            className="connection-dialog sftp-popup-dialog local-terminal-popup-dialog"
+            role="dialog"
+          >
+            <button
+              aria-label={t("common.close")}
+              className="connection-dialog-close local-terminal-popup-close"
+              onClick={closeLocalTerminalPopup}
+              type="button"
+            >
+              <X size={16} />
+            </button>
+            <div className="sftp-popup-dialog-body local-terminal-popup-dialog-body">
+              <TerminalWorkspace
+                allowPaneLayoutControls={false}
+                isActive={true}
+                showSftpButton={false}
+                trackConnectionSession={false}
+                tab={localTerminalPopup}
+              />
+            </div>
+          </section>
+        </div>,
+        document.body,
+      )
+    : null;
+
   if (tabs.length === 0) {
     return (
-      <div className="workspace-canvas" data-dock-empty-canvas data-tutorial-id="workspace.canvas">
-        <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
-          <Terminal size={28} />
-          <h2>{t("workspace.noActiveSession")}</h2>
-          <p>{t("workspace.openFromTree")}</p>
-        </section>
-      </div>
+      <>
+        <div className="workspace-canvas" data-dock-empty-canvas data-tutorial-id="workspace.canvas">
+          <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
+            <Terminal size={28} />
+            <h2>{t("workspace.noActiveSession")}</h2>
+            <p>{t("workspace.openFromTree")}</p>
+          </section>
+        </div>
+        {terminalPopup}
+      </>
     );
   }
 
   return (
-    <div
-      className="workspace-canvas"
-      data-dock-empty-canvas={showEmptyState ? "" : undefined}
-      data-tutorial-id="workspace.canvas"
-    >
+    <>
+      <div
+        className="workspace-canvas"
+        data-dock-empty-canvas={showEmptyState ? "" : undefined}
+        data-tutorial-id="workspace.canvas"
+      >
       {showEmptyState ? (
         <section className="empty-workspace" data-tutorial-id="workspace.emptyState">
           <Terminal size={28} />
@@ -424,7 +479,9 @@ export function WorkspaceCanvas({
             tab={tab}
           />
         );
-      })}
-    </div>
+        })}
+      </div>
+      {terminalPopup}
+    </>
   );
 }

@@ -9,6 +9,7 @@ import {
 import {
   Bot,
   Coffee,
+  FolderOpen,
   Info,
   KeyRound,
   LayoutDashboard,
@@ -36,6 +37,7 @@ import { DashboardSettings } from "./DashboardSettings";
 import { DontSleepSettings } from "./DontSleepSettings";
 import { CredentialsSettings } from "./CredentialsSettings";
 import { GeneralSettings } from "./GeneralSettings";
+import { FileExplorerSettings } from "./FileExplorerSettings";
 import { InstallerSettings } from "./InstallerSettings";
 import { RdpSettings } from "./RdpSettings";
 import { SshSettings } from "./SshSettings";
@@ -60,6 +62,7 @@ const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   "appearance-settings",
   "dashboard-settings",
   "workspace-settings",
+  "file-explorer-settings",
   "installer-settings",
   "credentials-settings",
   "assistant-settings",
@@ -85,6 +88,7 @@ const SETTINGS_NAV: readonly {
   { id: "general-settings", Icon: SettingsIcon, color: "#8e8e93", labelKey: "settings.sectionGeneral" },
   { id: "appearance-settings", Icon: Palette, color: "#ff2d55", labelKey: "settings.sectionAppearance" },
   { id: "workspace-settings", Icon: SquareStack, color: "#5e5ce6", labelKey: "settings.sectionWorkspace" },
+  { id: "file-explorer-settings", Icon: FolderOpen, color: "#14b8a6", labelKey: "settings.fileExplorer" },
   { id: "dashboard-settings", Icon: LayoutDashboard, color: "#0a84ff", labelKey: "settings.sectionDashboard" },
   { id: "installer-settings", Icon: Package, color: "#ff9f0a", labelKey: "settings.sectionInstaller", requires: "installer" },
   { id: "credentials-settings", Icon: KeyRound, color: "#34c759", labelKey: "settings.sectionCredentials" },
@@ -292,6 +296,7 @@ export function SettingsPage({
             )}
             {renderSettingsSection("dashboard-settings", <DashboardSettings />)}
             {renderSettingsSection("workspace-settings", <WorkspaceSettings />)}
+            {renderSettingsSection("file-explorer-settings", <FileExplorerSettings />)}
             {installerSupported
               ? renderSettingsSection("installer-settings", <InstallerSettings />)
               : null}

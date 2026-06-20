@@ -1678,6 +1678,23 @@
   min-height: 0;
 }
 
+.local-terminal-popup-dialog-body .terminal-workspace {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.local-terminal-popup-dialog-body .terminal-pane header {
+  padding-right: 42px;
+}
+
+.local-terminal-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+}
+
 .terminal-connection-background {
   position: absolute;
   inset: 0;

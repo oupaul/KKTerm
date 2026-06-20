@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "Fondo separado para cada terminal en paneles divididos",
     "separateSplitTerminalBackgroundsDesc": "Cuando está desactivado, un fondo llena el área de contenido del espacio de trabajo de terminal de una pestaña de conexión. Cuando está activado, los paneles de terminal divididos pueden conservar fondos separados.",
     "workspaceSaved": "Configuración del espacio de trabajo guardada.",
+    "fileExplorerSaved": "Configuración del Explorador de archivos guardada.",
     "activityRail": "Barra de actividad",
     "installerRail": "Barra de actividad",
     "installerShowOnRail": "Mostrar en la barra de actividad",

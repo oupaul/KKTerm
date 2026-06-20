@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "Plano de fundo separado para cada terminal em painéis divididos",
     "separateSplitTerminalBackgroundsDesc": "Quando desativado, um plano de fundo preenche a área de conteúdo do workspace de terminal de uma aba de Conexão. Quando ativado, painéis de terminal divididos podem manter planos de fundo separados.",
     "workspaceSaved": "Configurações da área de trabalho salvas.",
+    "fileExplorerSaved": "Configurações do Explorador de Arquivos salvas.",
     "activityRail": "Barra de Atividades",
     "installerRail": "Barra de atividades",
     "installerShowOnRail": "Mostrar na barra de atividades",

@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "แยกพื้นหลังสำหรับแต่ละเทอร์มินัลในพาเนลที่แบ่ง",
     "separateSplitTerminalBackgroundsDesc": "เมื่อปิด พื้นหลังเดียวจะเติมพื้นที่เนื้อหา workspace เทอร์มินัลของแท็บการเชื่อมต่อ เมื่อเปิด พาเนลเทอร์มินัลที่แบ่งสามารถเก็บพื้นหลังแยกกันได้",
     "workspaceSaved": "บันทึกการตั้งค่าพื้นที่ทำงานแล้ว",
+    "fileExplorerSaved": "บันทึกการตั้งค่า File Explorer แล้ว",
     "activityRail": "แถบกิจกรรม",
     "installerRail": "แถบกิจกรรม",
     "installerShowOnRail": "แสดงในแถบกิจกรรม",

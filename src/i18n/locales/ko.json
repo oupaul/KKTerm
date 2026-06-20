@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "분할 창의 각 터미널에 별도 배경 사용",
     "separateSplitTerminalBackgroundsDesc": "끄면 하나의 배경이 연결 탭의 터미널 작업 영역 콘텐츠 영역을 채웁니다. 켜면 분할 터미널 창마다 별도 배경을 유지할 수 있습니다.",
     "workspaceSaved": "작업 영역 설정이 저장되었습니다.",
+    "fileExplorerSaved": "파일 탐색기 설정을 저장했습니다.",
     "activityRail": "활동 레일",
     "installerRail": "활동 레일",
     "installerShowOnRail": "활동 레일에 표시",

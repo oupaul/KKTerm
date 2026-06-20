@@ -3,6 +3,7 @@ export type SettingsSectionId =
   | "appearance-settings"
   | "dashboard-settings"
   | "workspace-settings"
+  | "file-explorer-settings"
   | "dont-sleep-settings"
   | "installer-settings"
   | "credentials-settings"
@@ -151,6 +152,20 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
       {
         key: "settings.separateSplitTerminalBackgrounds",
         description: "Allow split terminal Panes to keep separate backgrounds instead of sharing one terminal workspace background.",
+      },
+    ],
+  },
+  "file-explorer-settings": {
+    labelKey: "settings.fileExplorer",
+    fallbackLabel: "File Explorer",
+    controls: [
+      {
+        key: "settings.fileExplorerOpenMode",
+        description: "Choose whether local files open externally or in the inline Document editor.",
+      },
+      {
+        key: "settings.fileExplorerTerminal",
+        description: "Choose the platform shell and Windows elevation mode for Open Terminal Here.",
       },
     ],
   },

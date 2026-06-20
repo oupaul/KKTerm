@@ -1463,6 +1463,7 @@
     "separateSplitTerminalBackgrounds": "分割窗格中的每個終端機使用個別背景",
     "separateSplitTerminalBackgroundsDesc": "關閉時，一個背景會填滿連線分頁的終端機工作區內容區。開啟時，分割終端機窗格可保留個別背景。",
     "workspaceSaved": "工作區設定已儲存。",
+    "fileExplorerSaved": "已儲存檔案總管設定。",
     "activityRail": "活動列",
     "installerRail": "活動列",
     "installerShowOnRail": "在活動列顯示",
