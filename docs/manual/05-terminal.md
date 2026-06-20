@@ -38,7 +38,7 @@ Do not use `window.prompt` / `window.confirm` for paste confirmation; the implem
 
 ## Sync input to all terminals
 
-The Status Bar `workspace.syncInput` toggle (see [02-app-layout.md](02-app-layout.md)) mirrors keystrokes from the focused terminal Pane to every other open terminal Pane, for running the same command across many Sessions at once. Mirrored input goes straight to each target Pane's PTY, so multi-line paste confirmation still applies once on the Pane the user types in. Synced terminal Panes show a warning outline while the mode is on. The toggle is runtime-only and off by default after launch.
+Each terminal Pane toolbar has a `workspace.syncInput` toggle, immediately left of the Quick Command Bar toggle. When on, keystrokes typed into the focused terminal Pane are mirrored to every other open terminal Pane, for running the same command across many Sessions at once. Only real keyboard, IME, and paste text is mirrored — mouse and focus control sequences (clicks, drags, scroll, focus reports) are filtered out so they do not arrive as garbled coordinates in other Panes or in shells that never enabled mouse mode. Mirrored input goes straight to each target Pane's PTY, so multi-line paste confirmation still applies once on the Pane the user types in. Because input also reaches terminal Panes on Tabs that are not currently visible, enabling the toggle shows the warning popup `workspace.syncInputEnabledNotice`, the toggle pulses green on every terminal Pane, and each receiving Pane shows a pulsing green outline. The mode is runtime-only and off by default after launch.
 
 ## Find in scrollback
 

@@ -2,9 +2,9 @@
 
 - **English value**: `Input is now mirrored to every open terminal.`
 - **Namespace**: `workspace`
-- **File/component**: `src/modules/workspace/StatusBar.tsx`
+- **File/component**: `src/modules/workspace/connections/terminal/TerminalWorkspace.tsx`
 - **UI role**: `status`
-- **User flow**: Status Bar warning notice shown the moment the user turns on "Sync input to all terminals", warning that keystrokes will now go to all open terminal panes at once.
+- **User flow**: Status Bar warning notice shown the moment the user turns on "Sync input to all terminals" from the terminal Pane toolbar toggle, warning that keystrokes will now go to all open terminal panes at once.
 - **Tone**: short warning, neutral phrasing
 - **Placeholders**: none
 - **Context/meaning**: "Input" = keyboard input; "mirrored" = the same keystrokes are broadcast/duplicated to every open terminal.

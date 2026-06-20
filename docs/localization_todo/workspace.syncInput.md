@@ -2,9 +2,9 @@
 
 - **English value**: `Sync input to all terminals`
 - **Namespace**: `workspace`
-- **File/component**: `src/modules/workspace/StatusBar.tsx`
+- **File/component**: `src/modules/workspace/connections/terminal/TerminalWorkspace.tsx`
 - **UI role**: `tooltip`
-- **User flow**: Tooltip/aria-label for the Status Bar toggle button that mirrors keystrokes typed in the focused terminal pane to every other open terminal pane. The button appears when two or more terminal panes are open.
+- **User flow**: Tooltip/aria-label for the terminal Pane toolbar toggle (left of the Quick Command Bar toggle) that mirrors keystrokes typed in the focused terminal pane to every other open terminal pane.
 - **Tone**: concise/neutral
 - **Placeholders**: none
 - **Context/meaning**: "input" = keyboard input/keystrokes; "sync" = broadcast/mirror the same input to multiple terminals at once.

@@ -11,14 +11,17 @@ mod platform {
     use super::NativeTooltipRequest;
     use std::sync::Mutex;
     use tauri::Manager;
-    use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
+    use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT, WPARAM};
+    use windows::Win32::Graphics::Gdi::{
+        GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromPoint,
+    };
     use windows::Win32::UI::Controls::{
         TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW, TTM_SETMAXTIPWIDTH,
         TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTS_ALWAYSTIP, TTS_NOPREFIX, TTTOOLINFOW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        CW_USEDEFAULT, CreateWindowExW, DestroyWindow, SendMessageW, WINDOW_STYLE, WS_EX_TOPMOST,
-        WS_POPUP,
+        CW_USEDEFAULT, CreateWindowExW, DestroyWindow, GetWindowRect, SendMessageW, WINDOW_STYLE,
+        WS_EX_TOPMOST, WS_POPUP,
     };
     use windows::core::PWSTR;
 
@@ -121,6 +124,41 @@ mod platform {
                 Some(WPARAM(1)),
                 Some(LPARAM((&mut tool_info as *mut TTTOOLINFOW) as isize)),
             );
+
+            // With TTF_ABSOLUTE the tooltip is anchored by its top-left corner,
+            // so an icon near a screen edge (e.g. a maximized window's
+            // bottom-right status bar) pushes the tip off-screen and it renders
+            // truncated. Measure the activated tip and clamp it into the
+            // monitor work area, repositioning only when it would overflow.
+            let mut tip_rect = RECT::default();
+            if GetWindowRect(tooltip_hwnd, &mut tip_rect).is_ok() {
+                let tip_width = tip_rect.right - tip_rect.left;
+                let tip_height = tip_rect.bottom - tip_rect.top;
+                let monitor =
+                    MonitorFromPoint(POINT { x: screen_x, y: screen_y }, MONITOR_DEFAULTTONEAREST);
+                let mut monitor_info = MONITORINFO {
+                    cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+                    ..Default::default()
+                };
+                if GetMonitorInfoW(monitor, &mut monitor_info).as_bool() {
+                    let work = monitor_info.rcWork;
+                    let margin = (8.0 * scale_factor).round() as i32;
+                    let clamped_x = screen_x
+                        .min((work.right - tip_width - margin).max(work.left + margin))
+                        .max(work.left + margin);
+                    let clamped_y = screen_y
+                        .min((work.bottom - tip_height - margin).max(work.top + margin))
+                        .max(work.top + margin);
+                    if clamped_x != screen_x || clamped_y != screen_y {
+                        SendMessageW(
+                            tooltip_hwnd,
+                            TTM_TRACKPOSITION,
+                            Some(WPARAM(0)),
+                            Some(LPARAM(make_lparam(clamped_x, clamped_y))),
+                        );
+                    }
+                }
+            }
 
             state.tooltip_hwnd = Some(tooltip_hwnd.0 as isize);
         }

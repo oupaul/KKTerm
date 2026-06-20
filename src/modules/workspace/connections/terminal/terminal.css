@@ -262,9 +262,40 @@
 }
 
 /* Input is mirrored to this pane; warn before typing into many sessions. */
+/* Input is mirrored to every open terminal Pane while sync is on, including
+   Panes on Tabs that are not currently visible, so the cue must be loud: a
+   pulsing green outline on each receiving Pane and a pulsing green toolbar
+   toggle. */
 .terminal-pane-sync-active {
-  outline: 2px solid var(--notice-warning);
+  outline: 2px solid var(--green);
   outline-offset: -2px;
+  animation: terminal-sync-pulse 1.6s ease-in-out infinite;
+}
+
+.terminal-pane-action.terminal-sync-toggle.active {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  animation: terminal-sync-toggle-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes terminal-sync-pulse {
+  0%,
+  100% {
+    outline-color: color-mix(in srgb, var(--green) 55%, transparent);
+  }
+  50% {
+    outline-color: var(--green);
+  }
+}
+
+@keyframes terminal-sync-toggle-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 28%, transparent);
+  }
 }
 
 .terminal-pane-search-open {
