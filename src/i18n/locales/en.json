@@ -902,7 +902,6 @@
     "railLabel": "IT Ops",
     "title": "IT Ops",
     "subtitle": "Fleet operations · Host Groups, Batch Runs & Automations",
-    "askAssistant": "Ask the assistant",
     "tabs": {
       "groups": "Host Groups",
       "runs": "Batch Runs",

@@ -38,7 +38,7 @@ const PRIMARY: Record<TabId, { labelKey: string; icon: ItIconName; size: number 
   autos: { labelKey: "itops.actions.newAutomation", icon: "plus", size: 15 },
 };
 
-export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void }) {
+export function ItOpsModule() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("groups");
   const [batchDialogGroupId, setBatchDialogGroupId] = useState<string | null | undefined>(
@@ -144,15 +144,6 @@ export function ItOpsModule({ onOpenAssistant }: { onOpenAssistant?: () => void 
           <p>{t("itops.subtitle")}</p>
         </div>
         <span className="it-head-sp" />
-        <button
-          type="button"
-          className="it-icon-btn accent"
-          title={t("itops.askAssistant")}
-          aria-label={t("itops.askAssistant")}
-          onClick={onOpenAssistant}
-        >
-          <ItIcon name="bot" size={17} />
-        </button>
         <button type="button" className="it-btn primary" onClick={handlePrimary}>
           <span className="it-btn-ic">
             <ItIcon name={prim.icon} size={prim.size} />

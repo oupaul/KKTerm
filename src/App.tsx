@@ -400,11 +400,7 @@ function App() {
         <InstallerPage key="installer-page" active={visibleBasePage === "installer"} />
       ) : null}
       {itopsMounted ? (
-        <ItOpsPage
-          key="itops-page"
-          active={visibleBasePage === "itops"}
-          onOpenAssistant={openAssistantPanel}
-        />
+        <ItOpsPage key="itops-page" active={visibleBasePage === "itops"} />
       ) : null}
       <TutorialOverlay
         key="tutorial-overlay"

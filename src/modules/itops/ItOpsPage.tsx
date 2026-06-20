@@ -6,13 +6,7 @@ import { useTranslation } from "react-i18next";
 import { ItOpsModule } from "./ItOpsModule";
 import "./itops.css";
 
-export function ItOpsPage({
-  active,
-  onOpenAssistant,
-}: {
-  active: boolean;
-  onOpenAssistant?: () => void;
-}) {
+export function ItOpsPage({ active }: { active: boolean }) {
   const { t } = useTranslation();
   return (
     <section
@@ -20,7 +14,7 @@ export function ItOpsPage({
       aria-label={t("itops.title")}
       data-active={active ? "true" : "false"}
     >
-      <ItOpsModule onOpenAssistant={onOpenAssistant} />
+      <ItOpsModule />
     </section>
   );
 }
