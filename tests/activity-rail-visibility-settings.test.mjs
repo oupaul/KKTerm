@@ -25,6 +25,10 @@ const [
 test("General settings owns all built-in Activity Rail visibility controls", () => {
   assert.match(generalSettings, /normalizeActivityRailOrder\(draft\.activityRailOrder\)\.map/);
   assert.match(generalSettings, /reorderActivityRailItems/);
+  assert.match(generalSettings, /activity-rail-order-main/);
+  for (const icon of ["LayoutDashboard", "Gauge", "Package", "ServerCog", "BedSingle"]) {
+    assert.match(generalSettings, new RegExp(`\\b${icon}\\b`));
+  }
   for (const setting of [
     "showWorkspaceOnRail",
     "showDashboardOnRail",

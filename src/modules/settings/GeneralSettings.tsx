@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import {
+  BedSingle,
   Download,
   FolderOpen,
+  Gauge,
   GripVertical,
   Languages,
+  LayoutDashboard,
+  Package,
   RefreshCw,
   RotateCcw,
+  ServerCog,
   Settings as SettingsIcon,
   Upload,
+  type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
@@ -70,13 +76,13 @@ type ActivityRailVisibilitySetting =
   | "showDontSleepOnRail";
 const ACTIVITY_RAIL_SETTINGS: Record<
   ActivityRailItemId,
-  [ActivityRailVisibilitySetting, string]
+  [ActivityRailVisibilitySetting, string, LucideIcon]
 > = {
-  workspace: ["showWorkspaceOnRail", "settings.sectionWorkspace"],
-  dashboard: ["showDashboardOnRail", "settings.sectionDashboard"],
-  installer: ["showInstallerOnRail", "settings.sectionInstaller"],
-  itops: ["showItOps", "settings.sectionItOps"],
-  dontSleep: ["showDontSleepOnRail", "settings.sectionDontSleep"],
+  workspace: ["showWorkspaceOnRail", "settings.sectionWorkspace", LayoutDashboard],
+  dashboard: ["showDashboardOnRail", "settings.sectionDashboard", Gauge],
+  installer: ["showInstallerOnRail", "settings.sectionInstaller", Package],
+  itops: ["showItOps", "settings.sectionItOps", ServerCog],
+  dontSleep: ["showDontSleepOnRail", "settings.sectionDontSleep", BedSingle],
 };
 
 function formatBackupDate(value?: string | null) {
@@ -386,7 +392,7 @@ export function GeneralSettings() {
         <legend>{t("settings.activityRail")}</legend>
         <div className="settings-toggle-list">
           {normalizeActivityRailOrder(draft.activityRailOrder).map((id) => {
-            const [setting, labelKey] = ACTIVITY_RAIL_SETTINGS[id];
+            const [setting, labelKey, Icon] = ACTIVITY_RAIL_SETTINGS[id];
             return <label
               className={`settings-toggle-row activity-rail-order-row${draggedRailItem === id ? " dragging" : ""}`}
               draggable
@@ -411,16 +417,17 @@ export function GeneralSettings() {
                 setDraggedRailItem(null);
               }}
             >
-              <GripVertical className="activity-rail-order-grip" size={16} />
+              <span className="activity-rail-order-main">
+                <GripVertical className="activity-rail-order-grip" size={16} />
+                <Icon className="activity-rail-order-icon" size={17} />
+                <strong>{t(labelKey)}</strong>
+              </span>
               <ToggleSwitch
                 checked={draft[setting]}
                 onChange={(checked) =>
                   setDraft((state) => ({ ...state, [setting]: checked }))
                 }
               />
-              <span>
-                <strong>{t(labelKey)}</strong>
-              </span>
             </label>;
           })}
         </div>
