@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Quick snapshot as of June 17, 2026:
+Quick snapshot as of June 20, 2026:
 
-All core connection types, terminal features, SFTP/FTP, RDP/VNC, AI Assistant tool calling, Dashboard Module redesign, Install Helper, and UI customization are implemented and shipping. The app metadata is currently at v0.1.85 and releasing continuously.
+All core connection types (SSH, Telnet, Serial, FTP/FTPS, RDP, VNC, URL/WebView2, local shells, and the local File/Document viewer), terminal features, SSH port forwarding, SFTP/FTP, RDP/VNC, AI Assistant tool calling with composer attachments, Dashboard Module redesign, Install Helper, and UI customization are implemented and shipping. The app builds for Windows, macOS, and Linux. The app metadata is currently at v0.1.95 and releasing continuously.
 
 Release validation gates are documented in `AGENTS.md` and `docs/RELEASE.md`; run the full suite before significant code changes or release publication. Previous packaging validation passed for `npm run package:installer` and `npm run smoke:installer`.
 
@@ -33,6 +33,9 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Child Connection Tabs in the Connection Tree for saved per-Connection Tab instances, lazy reopen, tmux/session-directory resume hints, and multi-child split layouts.
 - [x] Left activity rail with Workspace, Dashboard, Install Helper, and Settings entries.
 - [x] MobaXterm/RDCMan import.
+- [x] Telnet Connection type.
+- [x] Serial (COM port / baud) Connection type.
+- [x] Local File/Document viewer Connection type with log-parser selection, encoding/font menus, soft wrap, TXT fallback, and "open in external editor" for unsupported files.
 
 ### Terminal
 
@@ -44,6 +47,9 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Renderer-level terminal scrollback search with pane controls.
 - [x] Fixed xterm fit/pixel geometry for maximized Windows terminal panes.
 - [x] Terminal renderer interface defined in code so xterm can be swapped for a future renderer.
+- [x] Custom shell presets/profiles for local terminals with command-line validation.
+- [x] WSL distribution selection for local terminal connections.
+- [x] Shared font catalog with system-font refresh, custom font support with metadata, monospace detection/normalization, and font-atlas refresh/diagnostics across renderers.
 
 ### SSH
 
@@ -56,6 +62,9 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Optional tmux session resume per Pane with remote session list, rename, and close actions.
 - [x] Bounded silent reattach for tmux-backed channels after unexpected transport closure.
 - [x] SSH config import command with unsupported directive reporting.
+- [x] SSH port forwarding: saved local/remote/dynamic mappings that start on connect, editable port-name dropdowns, GatewayPorts reminder, local TCP listener discovery, remote network address discovery, and Status Bar-only transient notifications.
+- [x] Native SOCKS5 proxy dialer (RFC 1928/1929) for SSH terminal, tmux, SFTP, port-forward, and key-transfer transports — no external `nc`/`ProxyCommand` helper required.
+- [x] Managed X11 server (VcXsrv) launch/detection for X forwarding on Windows.
 
 ### SFTP & FTP
 
@@ -93,10 +102,13 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Saved Connection tools: list/create/open/update/delete.
 - [x] Live Session tools: terminal buffer reads, terminal input, RDP/VNC screenshots and input, SFTP/FTP browser list/create-folder/rename/delete actions.
 - [x] Review-only extension draft mode.
-- [x] MCP (Model Context Protocol) server support for external agent integration.
+- [x] MCP client: connect to external MCP servers for assistant tool calling, with cached tool-schema introspection (`mcp_list_tools`). All platforms.
+- [x] Built-in MCP server bridge so external clients (Claude Desktop/Codex) can drive live KKTerm sessions — **Windows-only** (named-pipe transport; no Unix-socket fallback yet).
 - [x] Language output setting: follow UI language or a specific language.
 - [x] Claude Code CLI and Codex CLI path configuration (constrained to suggest-only/ask-before-execute where possible).
 - [x] Command planning safety tests.
+- [x] Composer context attachments: file/photo, image, and text/terminal-buffer snippets captured into the run manifest from the composer.
+- [x] Context budgeting per provider with automatic compaction of conversation history.
 
 ### Dashboard & Widgets
 
@@ -118,7 +130,9 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Language (i18n) settings with i18next; 14 locales: en, zh-TW, zh-CN, ja, ko, fr, de, es, es-MX, it, pt-BR, th, id, vi.
 - [x] Settings sections: General, Appearance, Credentials, AI, SSH, Terminal, URL, RDP, VNC, Dashboard, Install Helper, and About.
 - [x] Custom UI fonts; minimize-to-tray; Don't Sleep (prevents Windows sleep/suspend/hibernate/shutdown).
-- [x] Backup/import via settings ZIPs; startup and manual backups in the same importable format.
+- [x] Backup/import via settings ZIPs; startup and manual backups in the same importable format; selective export/import of chosen items (see `docs/ADR/0010-selective-export-import.md`).
+- [x] Encrypted credential secret store with unlock flow gating connection credential access.
+- [x] Dashboard widget export/import with JSON preview and "imported custom widget" badges.
 - [x] URL (WebView2) Connections with navigation toolbar, favicon capture, and credential metadata.
 - [x] Extension platform architecture decided. See `docs/ADR/0005-extension-platform-architecture.md`.
 
@@ -135,13 +149,15 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 - [x] Installer smoke test (checksum verify, silent install/uninstall into temp directory).
 - [x] GitHub Release script: version bump across npm/Tauri/Cargo, build, smoke test, commit, tag, push, and create release.
 - [x] macOS DMG release helper: build on macOS, upload DMG/checksum to an existing GitHub Release, and patch release notes.
+- [x] Linux AppImage packaging and release helper (`scripts/package-linux.sh`, `scripts/release-github-linux.sh`; see `docs/LINUX_PORT.md`). deb/rpm remain out of scope for now.
+- [x] Cloudflare release mirroring for download assets.
+- [x] In-app update flow with cancellable downloads, progress indication, update-asset URL handling, and checksum validation.
 - [x] No-telemetry posture: no analytics, no crash upload, diagnostics are local files.
 
 ## Planned
 
 ### AI & Automation Expansion
 
-- [ ] AI Assistant composer context attachments for files/photos, screenshots, and terminal buffer snippets from the `+` menu.
 - [ ] Expanded AI orchestration: import Connection entries from multiple formats, monitor Connections, rename/reorganize layouts, optionally relay interactions through Telegram/WhatsApp/LINE integrations.
 - [ ] AI reference to previous session text buffers via RAG/agentic search.
 - [ ] Voice input for AI Assistant with local model support.
@@ -155,6 +171,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 ### Extension Platform
 
 - [ ] General user-installable extension support (permissions, install/update lifecycle, and trust boundaries defined in ADR-0005).
+- [ ] macOS/Linux transport for the built-in MCP server bridge (Unix domain socket) so external MCP clients can drive KKTerm sessions off Windows.
 
 ### Workflow Simplification
 
@@ -165,9 +182,9 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### Cross-Platform & Distribution
 
-- [ ] Linux packaging (AppImage/deb/rpm).
+- [ ] Linux deb/rpm packaging (AppImage already ships).
 - [ ] Windows Authenticode signing for installer.
-- [ ] Tauri updater artifact signing and `latest.json` generation.
+- [ ] Tauri updater artifact signing and `latest.json` generation (currently stubbed with TODOs in `scripts/release-github.ps1`).
 - [ ] Update checks enabled by default with clear local-first wording; install remains user-mediated.
 - [ ] Optional crash reporting after explicit opt-in design.
 - [ ] WGPU terminal renderer replacement (deferred; xterm WebGL is current fast path).
@@ -195,7 +212,7 @@ For operational measurement records see `docs/PERFORMANCE.md`. For packaging and
 
 ### IT Ops Center
 
-Design accepted: see `docs/ADR/0011-it-ops-module.md` and `docs/ITOPS.md`.
+Design accepted: see `docs/ADR/0011-it-ops-module.md`, `docs/ADR/0012-winrm-transport-library.md` (WinRM transport for Windows Update playbooks), and `docs/ITOPS.md`. No runtime module is wired up yet.
 
 - [ ] Batch command broadcast to multiple Connections with per-host output panes and consolidated result view.
 - [ ] Simple workflow engine for IT operations against selected Connections with explicit per-run approval.
