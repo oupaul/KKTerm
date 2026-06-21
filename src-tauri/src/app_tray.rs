@@ -117,7 +117,7 @@ fn tray_icon(_app: &tauri::App) -> Option<Image<'static>> {
 
 #[cfg(not(target_os = "macos"))]
 fn tray_icon(app: &tauri::App) -> Option<Image<'static>> {
-    app.default_window_icon().cloned()
+    app.default_window_icon().cloned().map(Image::to_owned)
 }
 
 #[cfg(target_os = "macos")]
