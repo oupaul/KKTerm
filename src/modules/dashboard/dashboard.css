@@ -4,12 +4,11 @@
   grid-row: 1;
   z-index: 75;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   height: 100%;
   overflow: hidden;
-  padding: 18px 20px;
+  padding: 0;
   background: var(--app-bg);
 }
 
@@ -557,25 +556,22 @@ main.dashboard-page.dashboard-page-hidden,
 .dashboard-topbar {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
-  padding: 12px 20px 10px;
-  background: linear-gradient(180deg, var(--chrome) 0%, var(--app-bg) 100%);
-  border-bottom: 1px solid var(--border);
 }
 
 .dashboard-brand {
   display: flex;
   flex: 0 0 auto;
-  align-items: baseline;
+  align-items: center;
   min-width: 0;
 }
 
 .dashboard-brand .crumb {
   color: var(--text);
-  font-size: 16px;
-  font-weight: 750;
-  letter-spacing: 0;
+  font-size: 15px;
+  font-weight: 680;
+  letter-spacing: -0.022em;
 }
 
 .dashboard-brand .crumb::after {
@@ -584,11 +580,11 @@ main.dashboard-page.dashboard-page-hidden,
 
 .dashboard-view-pills {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   align-items: center;
   gap: 4px;
   min-width: 0;
-  padding: 3px;
+  padding: 2px;
   overflow-x: auto;
   background: var(--surface-muted);
   border: 1px solid var(--border);
@@ -606,8 +602,8 @@ main.dashboard-page.dashboard-page-hidden,
   align-items: center;
   flex: 0 0 auto;
   gap: 6px;
-  min-height: 30px;
-  padding: 6px 12px;
+  min-height: 24px;
+  padding: 5px 10px;
   color: var(--text-muted);
   white-space: nowrap;
   background: transparent;
@@ -621,7 +617,7 @@ main.dashboard-page.dashboard-page-hidden,
 
 .dashboard-pill {
   position: relative;
-  padding-left: 14px;
+  padding-left: 11px;
 }
 
 .dashboard-view-pills.is-editing .dashboard-pill {
@@ -868,6 +864,17 @@ button.dashboard-pill-dot:focus-visible {
   flex: 0 0 auto;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
+}
+
+.dashboard-actions .btn-ghost,
+.dashboard-actions .btn-primary {
+  min-height: 28px;
+  padding-block: 5px;
+}
+
+.dashboard-page .dw-canvas-stack {
+  margin: 0;
 }
 
 .dashboard-density {

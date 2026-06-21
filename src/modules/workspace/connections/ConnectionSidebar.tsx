@@ -2608,129 +2608,139 @@ export function ConnectionSidebar({
 
   return (
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
-      <div className="sidebar-header" onDoubleClick={handleHeaderDoubleClick}>
-        <div className="sidebar-title">
-          {activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID ? (
-            <LayoutDashboard aria-hidden="true" className="sidebar-title-icon" size={18} />
-          ) : (
-            <WorkspaceIcon
-              color={activeWorkspace?.iconColor}
-              icon={activeWorkspace?.icon}
-              name={activeWorkspace?.name || panelTitle}
-              size={18}
-            />
-          )}
-          <h1>{panelTitle}</h1>
-        </div>
-        <div className="sidebar-actions">
-          <div className="add-connection-anchor" ref={addConnectionRef}>
-            <button
-              {...dialogButtonAria(addConnectionMenuOpen)}
-              className="icon-button"
-              data-tutorial-id="connections.addConnection"
-              aria-label={t("connections.addConnection")}
-              title={t("connections.addConnection")}
-              onClick={(event) => void handleAddConnectionButtonClick(event)}
-              type="button"
-            >
-              <Plus size={16} />
-            </button>
-            {addConnectionMenuOpen ? (
-              <AddConnectionMenu
-                onImportRequested={handleImportRequested}
-                onSelectType={handleNewConnectionTypeSelected}
+      <div className="sidebar-header module-header" onDoubleClick={handleHeaderDoubleClick}>
+        <div className="sidebar-title module-header__lead">
+          <span className="module-header__tile module-header__tile--workspace">
+            {activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID ? (
+              <LayoutDashboard aria-hidden="true" size={16} />
+            ) : (
+              <WorkspaceIcon
+                color={activeWorkspace?.iconColor}
+                icon={activeWorkspace?.icon}
+                name={activeWorkspace?.name || panelTitle}
+                size={16}
               />
-            ) : null}
+            )}
+          </span>
+          <h1 className="module-header__title">{panelTitle}</h1>
+          <div className="sidebar-actions">
+            <div className="add-connection-anchor" ref={addConnectionRef}>
+              <button
+                {...dialogButtonAria(addConnectionMenuOpen)}
+                className="icon-button"
+                data-tutorial-id="connections.addConnection"
+                aria-label={t("connections.addConnection")}
+                title={t("connections.addConnection")}
+                onClick={(event) => void handleAddConnectionButtonClick(event)}
+                type="button"
+              >
+                <Plus size={16} />
+              </button>
+              {addConnectionMenuOpen ? (
+                <AddConnectionMenu
+                  onImportRequested={handleImportRequested}
+                  onSelectType={handleNewConnectionTypeSelected}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
 
-      <label className="search-box" data-tutorial-id="connections.search">
-        <Search size={15} />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-          placeholder={t("connections.searchPlaceholder")}
-        />
-      </label>
-
-      <div className="quick-connect-anchor" ref={quickConnectRef}>
-        <button
-          {...dialogButtonAria(quickConnectMenuOpen)}
-          className="quick-connect"
-          data-tutorial-id="connections.quickConnect"
-          onClick={(event) => void handleQuickConnectButtonClick(event)}
+      <div className="connection-sidebar-subheader">
+        <span>{t("connections.title")}</span>
+        <div
+          className="tree-folder-controls"
+          aria-label={t("connections.folderTreeControls")}
+          data-tutorial-id="connections.folderControls"
         >
-          <Play size={15} />
-          {t("connections.quickConnect")}
-        </button>
-        {quickConnectMenuOpen ? (
-          <QuickConnectMenu
-            recentConnections={recentConnections}
-            shellOptions={quickConnectShellOptions}
-            sshSettings={sshSettings}
-            onOpenConnection={(connection) => {
-              setQuickConnectMenuOpen(false);
-              handleOpenConnection(connection);
-            }}
-            onOpenElevatedShell={(option) => void handleQuickAdminShell(option)}
-            onOpenLocalShell={handleQuickLocalShell}
-            onOpenSsh={handleQuickSsh}
-          />
-        ) : null}
+          <button
+            aria-label={t("connections.newFolder")}
+            className="tree-folder-control"
+            onClick={() => void handleCreateFolder()}
+            title={t("connections.newFolder")}
+            type="button"
+          >
+            <FolderPlus size={12} />
+          </button>
+          <button
+            aria-label={t("connections.collapseAll")}
+            className="tree-folder-control"
+            onClick={handleCollapseAllFolders}
+            title={t("connections.collapseAll")}
+            type="button"
+          >
+            <Minimize2 size={13} />
+          </button>
+          <button
+            aria-label={t("connections.expandAll")}
+            className="tree-folder-control"
+            onClick={handleExpandAllFolders}
+            title={t("connections.expandAll")}
+            type="button"
+          >
+            <Maximize2 size={13} />
+          </button>
+          <button
+            aria-pressed={showConnectedOnly}
+            aria-label={t("connections.showConnected")}
+            className={`tree-folder-control${showConnectedOnly ? " active" : ""}`}
+            onClick={() => setShowConnectedOnly((previous) => !previous)}
+            title={t("connections.showConnected")}
+            type="button"
+          >
+            <CircleDot size={13} />
+          </button>
+          <button
+            aria-pressed={showAllConnections}
+            aria-label={t("connections.hideFolders")}
+            className={`tree-folder-control${showAllConnections ? " active" : ""}`}
+            onClick={() => void handleToggleShowAllConnections()}
+            title={t("connections.hideFolders")}
+            type="button"
+          >
+            <List size={13} />
+          </button>
+        </div>
       </div>
-      <div
-        className="tree-folder-controls"
-        aria-label={t("connections.folderTreeControls")}
-        data-tutorial-id="connections.folderControls"
-      >
-        <button
-          aria-label={t("connections.newFolder")}
-          className="tree-folder-control"
-          onClick={() => void handleCreateFolder()}
-          title={t("connections.newFolder")}
-          type="button"
-        >
-          <FolderPlus size={12} />
-        </button>
-        <button
-          aria-label={t("connections.collapseAll")}
-          className="tree-folder-control"
-          onClick={handleCollapseAllFolders}
-          title={t("connections.collapseAll")}
-          type="button"
-        >
-          <Minimize2 size={13} />
-        </button>
-        <button
-          aria-label={t("connections.expandAll")}
-          className="tree-folder-control"
-          onClick={handleExpandAllFolders}
-          title={t("connections.expandAll")}
-          type="button"
-        >
-          <Maximize2 size={13} />
-        </button>
-        <button
-          aria-pressed={showConnectedOnly}
-          aria-label={t("connections.showConnected")}
-          className={`tree-folder-control${showConnectedOnly ? " active" : ""}`}
-          onClick={() => setShowConnectedOnly((previous) => !previous)}
-          title={t("connections.showConnected")}
-          type="button"
-        >
-          <CircleDot size={13} />
-        </button>
-        <button
-          aria-pressed={showAllConnections}
-          aria-label={t("connections.hideFolders")}
-          className={`tree-folder-control${showAllConnections ? " active" : ""}`}
-          onClick={() => void handleToggleShowAllConnections()}
-          title={t("connections.hideFolders")}
-          type="button"
-        >
-          <List size={13} />
-        </button>
+
+      <div className="connection-search-row">
+        <label className="search-box" data-tutorial-id="connections.search">
+          <Search size={15} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
+            placeholder={t("connections.searchPlaceholder")}
+          />
+        </label>
+
+        <div className="quick-connect-anchor" ref={quickConnectRef}>
+          <button
+            {...dialogButtonAria(quickConnectMenuOpen)}
+            aria-label={t("connections.quickConnect")}
+            className="quick-connect quick-connect-icon-only"
+            data-tutorial-id="connections.quickConnect"
+            onClick={(event) => void handleQuickConnectButtonClick(event)}
+            title={t("connections.quickConnect")}
+            type="button"
+          >
+            <Play size={15} />
+          </button>
+          {quickConnectMenuOpen ? (
+            <QuickConnectMenu
+              recentConnections={recentConnections}
+              shellOptions={quickConnectShellOptions}
+              sshSettings={sshSettings}
+              onOpenConnection={(connection) => {
+                setQuickConnectMenuOpen(false);
+                handleOpenConnection(connection);
+              }}
+              onOpenElevatedShell={(option) => void handleQuickAdminShell(option)}
+              onOpenLocalShell={handleQuickLocalShell}
+              onOpenSsh={handleQuickSsh}
+            />
+          ) : null}
+        </div>
       </div>
       {treeError ? <p className="form-error tree-error">{treeError}</p> : null}
 

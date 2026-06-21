@@ -135,13 +135,41 @@ export function ItOpsModule() {
   return (
     <div className="it">
       {/* header */}
-      <div className="it-head">
-        <span className="it-head-tile">
+      <div className="it-head module-header">
+        <span className="it-head-tile module-header__tile module-header__tile--itops">
           <ItIcon name="ops" size={20} sw={1.7} />
         </span>
         <div className="it-head-txt">
-          <h1>{t("itops.title")}</h1>
-          <p>{t("itops.subtitle")}</p>
+          <h1 className="module-header__title">{t("itops.title")}</h1>
+        </div>
+        <span className="module-header__divider" aria-hidden="true" />
+        <div className="it-tabs">
+          {TABS.map((tabDef) => {
+            const active = tabDef.id === tab;
+            const badge =
+              tabDef.id === "groups"
+                ? hostGroupCount
+                : tabDef.id === "autos"
+                  ? automationCount
+                  : null;
+            return (
+              <button
+                key={tabDef.id}
+                type="button"
+                className={`it-tab${active ? " active" : ""}`}
+                onClick={() => setTab(tabDef.id)}
+              >
+                <span className="it-tab-ic">
+                  <ItIcon name={tabDef.icon} size={15} sw={1.7} />
+                </span>
+                {t(tabDef.labelKey)}
+                {badge !== null ? <span className="it-tab-badge">{badge}</span> : null}
+                {tabDef.id === "runs" && runningCount > 0 ? (
+                  <span className="it-tab-badge live">{runningCount}</span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
         <span className="it-head-sp" />
         <button type="button" className="it-btn primary" onClick={handlePrimary}>
@@ -150,36 +178,6 @@ export function ItOpsModule() {
           </span>
           {t(prim.labelKey)}
         </button>
-      </div>
-
-      {/* tabs */}
-      <div className="it-tabs">
-        {TABS.map((tabDef) => {
-          const active = tabDef.id === tab;
-          const badge =
-            tabDef.id === "groups"
-              ? hostGroupCount
-              : tabDef.id === "autos"
-                ? automationCount
-                : null;
-          return (
-            <button
-              key={tabDef.id}
-              type="button"
-              className={`it-tab${active ? " active" : ""}`}
-              onClick={() => setTab(tabDef.id)}
-            >
-              <span className="it-tab-ic">
-                <ItIcon name={tabDef.icon} size={15} sw={1.7} />
-              </span>
-              {t(tabDef.labelKey)}
-              {badge !== null ? <span className="it-tab-badge">{badge}</span> : null}
-              {tabDef.id === "runs" && runningCount > 0 ? (
-                <span className="it-tab-badge live">{runningCount}</span>
-              ) : null}
-            </button>
-          );
-        })}
       </div>
 
       {/* content */}

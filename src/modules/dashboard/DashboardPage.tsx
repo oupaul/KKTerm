@@ -1,4 +1,4 @@
-import { Edit3, Plus } from "lucide-react";
+import { Edit3, Gauge, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { AssistantPageContext } from "../../ai/AssistantPanel";
@@ -379,10 +379,14 @@ export function DashboardPage({
       className={`dashboard-page${dashboardActive ? "" : " dashboard-page-hidden"}`}
       {...ariaHidden(!dashboardActive)}
     >
-      <header className="dashboard-topbar">
-        <div className="dashboard-brand">
-          <span className="crumb">{t("dashboard.title")}</span>
+      <header className="dashboard-topbar module-header">
+        <div className="dashboard-brand module-header__lead">
+          <span className="module-header__tile">
+            <Gauge aria-hidden="true" size={16} />
+          </span>
+          <span className="crumb module-header__title">{t("dashboard.title")}</span>
         </div>
+        <span className="module-header__divider" aria-hidden="true" />
         <div className={`dashboard-view-pills${editMode ? " is-editing" : ""}`}>
           {views.map((v) => {
             const isActiveView = v.id === activeView.id;

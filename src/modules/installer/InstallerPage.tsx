@@ -37,7 +37,6 @@ import {
   LayoutGrid,
   Layers,
   List as ListIcon,
-  PanelLeft,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -72,7 +71,6 @@ import "./installer.css";
 type ViewMode = "list" | "gallery";
 
 const VIEW_MODE_STORAGE_KEY = "kkterm.installerViewMode.v1";
-const SIDEBAR_STORAGE_KEY = "kkterm.installerSidebarCollapsed.v1";
 
 function readViewMode(): ViewMode {
   try {
@@ -81,14 +79,6 @@ function readViewMode(): ViewMode {
       : "gallery";
   } catch {
     return "gallery";
-  }
-}
-
-function readSidebarCollapsed(): boolean {
-  try {
-    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
-  } catch {
-    return false;
   }
 }
 
@@ -120,7 +110,6 @@ export function InstallerPage({ active }: { active: boolean }) {
   const [nav, setNav] = useState<InstallerNav>("all");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(readViewMode);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
 
   const [updateAllConfirm, setUpdateAllConfirm] = useState<null | {
     items: string[];
@@ -470,29 +459,25 @@ export function InstallerPage({ active }: { active: boolean }) {
     }
   }
 
-  function toggleSidebar() {
-    setSidebarCollapsed((collapsed) => {
-      const next = !collapsed;
-      try {
-        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-      } catch {
-        // Persisting the collapse preference is best-effort.
-      }
-      return next;
-    });
-  }
-
   return (
     <section
       className="installer-page"
       aria-label={t("installer.title")}
       data-active={active ? "true" : "false"}
     >
-      <div className="installer-topbar">
-        <span className="installer-topbar__kind">
-          <Box size={17} strokeWidth={1.9} aria-hidden="true" />
-          {t("installer.title")}
+      <header className="installer-module-header module-header">
+        <span className="installer-topbar__kind module-header__lead">
+          <span className="module-header__tile module-header__tile--installer">
+            <Box size={16} strokeWidth={1.9} aria-hidden="true" />
+          </span>
+          <span className="module-header__title">{t("installer.title")}</span>
         </span>
+        <span className="module-header__divider" aria-hidden="true" />
+        <span className="installer-crumb" style={crumb.style}>
+          <crumb.Icon size={14} strokeWidth={1.9} aria-hidden="true" />
+          {crumb.label}
+        </span>
+        <span className="module-header__spacer" />
         <span
           className={`installer-conn-pill${
             checkInProgress ? " installer-conn-pill--busy" : ""
@@ -510,33 +495,6 @@ export function InstallerPage({ active }: { active: boolean }) {
             </>
           )}
         </span>
-      </div>
-
-      <div className="installer-toolbar">
-        <button
-          type="button"
-          className={`installer-icon-btn${sidebarCollapsed ? "" : " active"}`}
-          onClick={toggleSidebar}
-          aria-pressed={!sidebarCollapsed}
-          title={
-            sidebarCollapsed
-              ? t("installer.sidebar.show")
-              : t("installer.sidebar.hide")
-          }
-          aria-label={
-            sidebarCollapsed
-              ? t("installer.sidebar.show")
-              : t("installer.sidebar.hide")
-          }
-        >
-          <PanelLeft size={16} strokeWidth={1.8} />
-        </button>
-        <span className="installer-toolbar__sep" />
-        <span className="installer-crumb" style={crumb.style}>
-          <crumb.Icon size={14} strokeWidth={1.9} aria-hidden="true" />
-          {crumb.label}
-        </span>
-        <span className="installer-toolbar__spacer" />
         <label className="installer-search">
           <Search size={14} strokeWidth={1.9} aria-hidden="true" />
           <input
@@ -596,14 +554,14 @@ export function InstallerPage({ active }: { active: boolean }) {
             </span>
           ) : null}
         </button>
-      </div>
+      </header>
 
       <div className="installer-panes">
         <InstallerSidebar
           nav={nav}
           onNavigate={setNav}
           counts={counts}
-          collapsed={sidebarCollapsed}
+          collapsed={false}
         />
         <div className="installer-content">
           {!catalog ? (

@@ -401,8 +401,37 @@
   min-height: 0;
   height: 100%;
   overflow: visible;
-  padding: 12px 14px;
+  padding: 0 14px 12px;
   transform: translateX(0);
+}
+
+.connection-sidebar .sidebar-header.module-header {
+  justify-content: flex-start;
+  min-height: 44px;
+  margin: 0 -14px 10px;
+}
+
+.connection-sidebar .sidebar-title {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.connection-sidebar .sidebar-header .module-header__title {
+  font-size: 15px;
+  font-weight: 680;
+}
+
+.connection-sidebar .sidebar-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.connection-sidebar .sidebar-actions .icon-button {
+  width: 26px;
+  height: 26px;
+  color: var(--text-muted);
+  border-radius: 7px;
 }
 
 .workspace {

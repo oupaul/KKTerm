@@ -73,11 +73,6 @@ button {
   min-width: 0;
 }
 
-.sidebar-title-icon {
-  flex: 0 0 auto;
-  color: var(--accent);
-}
-
 .sidebar-title h1 {
   min-width: 0;
   overflow: hidden;

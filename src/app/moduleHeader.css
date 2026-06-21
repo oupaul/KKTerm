@@ -1,0 +1,106 @@
+.module-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--chrome) 82%, transparent);
+  border-bottom: 1px solid var(--hairline);
+  backdrop-filter: saturate(180%) blur(18px);
+}
+
+.module-header__lead {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.module-header__tile {
+  --module-tint: var(--accent);
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  color: white;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--module-tint) 86%, white) 0%,
+    var(--module-tint) 100%
+  );
+  border-radius: 7px;
+  box-shadow:
+    0 3px 9px -3px color-mix(in srgb, var(--module-tint) 68%, transparent),
+    inset 0 0 0 0.5px rgb(255 255 255 / 20%);
+}
+
+.module-header__tile--workspace {
+  --module-tint: var(--green);
+}
+
+.module-header__tile--installer {
+  --module-tint: color-mix(in srgb, var(--accent) 74%, var(--red));
+}
+
+.module-header__tile--itops {
+  --module-tint: color-mix(in srgb, var(--accent) 66%, var(--green));
+}
+
+.module-header__title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 680;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-header__meta {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-header__divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 18px;
+  margin: 0 1px;
+  background: var(--hairline);
+}
+
+.module-header__spacer {
+  flex: 1 1 auto;
+  min-width: 4px;
+}
+
+.module-header button:focus-visible,
+.module-header input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .module-header {
+    gap: 7px;
+    padding-inline: 10px;
+  }
+
+  .module-header__meta {
+    display: none;
+  }
+}

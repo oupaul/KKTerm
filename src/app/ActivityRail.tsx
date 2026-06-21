@@ -8,7 +8,6 @@ import {
   Pin,
   PinOff,
   Plus,
-  ServerCog,
   Settings,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +27,7 @@ import type { Connection, Workspace } from "../types";
 import { NewWorkspaceDialog } from "../modules/workspace/NewWorkspaceDialog";
 import { DeleteWorkspaceDialog } from "../modules/workspace/WorkspaceRailDialogs";
 import { WorkspaceIcon } from "../modules/workspace/workspaceIcons";
+import { ItIcon } from "../modules/itops/icons";
 import { RailTooltip } from "./RailTooltip";
 
 export type ActivePage =
@@ -732,7 +732,7 @@ export function ActivityRail({
           onClick={() => onNavigate("itops")}
           style={activityRailItemStyle("itops")}
         >
-          <ServerCog size={18} />
+          <ItIcon name="ops" size={18} />
           <RailTooltip label={t("itops.railLabel")} />
         </button>
       ) : null}

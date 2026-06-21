@@ -18,6 +18,54 @@
   margin-bottom: 7px;
 }
 
+.connection-sidebar-subheader {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
+  margin: 0 0 5px;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.connection-search-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.connection-search-row .search-box {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.connection-search-row .quick-connect-anchor {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.connection-search-row .quick-connect-icon-only {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.connection-search-row .quick-connect-menu {
+  right: 0;
+  left: auto;
+  width: 260px;
+  transform: none;
+}
+
 .tab-quick-connect-anchor {
   flex: 0 0 auto;
   margin-bottom: 0;
@@ -224,7 +272,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 3px;
-  margin: 0 0 10px;
+  margin: 0;
 }
 
 .tree-folder-control {
