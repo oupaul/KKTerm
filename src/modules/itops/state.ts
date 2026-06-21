@@ -108,9 +108,32 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
             : host,
         ),
       };
-    case "finished":
+    case "finished": {
       if (!run || run.runId !== event.runId) return run;
-      return { ...run, state: "done" };
+      // Reconcile every host from the authoritative final report. Per-host
+      // `hostFinished` events can be dropped or arrive out of order relative to
+      // `started` (they originate on different threads), which would otherwise
+      // leave a host stuck at "pending"/"running" and the tally reading 0. The
+      // report is the same blob persisted to run history, so folding it in makes
+      // the live view match what a relaunch would show.
+      const byId = new Map(event.report.hosts.map((host) => [host.connectionId, host]));
+      return {
+        ...run,
+        state: "done",
+        hosts: run.hosts.map((host) => {
+          const report = byId.get(host.connectionId);
+          if (!report) return host;
+          return {
+            ...host,
+            status: report.ok ? "ok" : "failed",
+            exitCode: report.exitCode,
+            output: report.output ? appendLiveOutput("", report.output) : host.output,
+            durationMs: report.durationMs,
+            error: report.error,
+          };
+        }),
+      };
+    }
     case "canceled":
       if (!run || run.runId !== event.runId) return run;
       return { ...run, state: "canceled" };

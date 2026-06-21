@@ -186,15 +186,6 @@ pub fn start_run(
         .collect();
 
     let cancel = app.state::<ItopsRunRegistry>().register(&run_id);
-    let _ = app.emit(
-        "itops://run",
-        RunEvent::Started {
-            run_id: run_id.clone(),
-            host_group_id: Some(host_group_id.clone()),
-            task_summary: task_summary.clone(),
-            hosts: event_hosts,
-        },
-    );
 
     let transport = SshTransport::new(specs);
     let app_thread = app.clone();
@@ -204,6 +195,18 @@ pub fn start_run(
         let emit = move |event: RunEvent| {
             let _ = emit_app.emit("itops://run", event);
         };
+        // Emit `Started` from this worker thread, ahead of the per-host events,
+        // so every event for the run is ordered on a single thread. Emitting it
+        // on the command thread instead raced the worker's first events: on a
+        // fast run the webview could receive `hostFinished` before `started`,
+        // drop it (no active run yet), then reset hosts to "pending" — leaving
+        // the tally reading 0 until a relaunch reloaded the persisted report.
+        emit(RunEvent::Started {
+            run_id: run_id_thread.clone(),
+            host_group_id: Some(host_group_id.clone()),
+            task_summary: task_summary.clone(),
+            hosts: event_hosts,
+        });
         let report = runner::run_batch(
             &run_id_thread,
             &hosts,
