@@ -37,7 +37,6 @@ test("macOS tray icon uses a template image", async () => {
   assert.match(appTray, /tray_template_icon/);
   assert.match(appTray, /\.icon_as_template\(true\)/);
   assert.match(appTray, /tray_icon\(app\)/);
-  assert.match(appTray, /const WIDTH: usize = 24/);
-  assert.match(appTray, /const HEIGHT: usize = 18/);
-  assert.match(appTray, /"000110001100011000110000"/);
+  assert.match(appTray, /const SIZE: usize = 18/);
+  assert.match(appTray, /"011001111000000110"/);
 });
