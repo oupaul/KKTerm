@@ -1719,17 +1719,16 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  padding: 0;
 }
 
-.local-terminal-popup-dialog-body .terminal-pane header {
-  padding-right: 42px;
+.connection-dialog.sftp-popup-dialog.local-terminal-popup-dialog {
+  background: var(--chrome-strong);
+  border-color: var(--terminal-border);
 }
 
-.local-terminal-popup-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 20;
+.connection-dialog.sftp-popup-dialog .local-terminal-popup-dialog-body {
+  padding: 0;
 }
 
 .terminal-connection-background {

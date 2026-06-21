@@ -328,18 +328,11 @@ export function WorkspaceCanvas({
             className="connection-dialog sftp-popup-dialog local-terminal-popup-dialog"
             role="dialog"
           >
-            <button
-              aria-label={t("common.close")}
-              className="connection-dialog-close local-terminal-popup-close"
-              onClick={closeLocalTerminalPopup}
-              type="button"
-            >
-              <X size={16} />
-            </button>
             <div className="sftp-popup-dialog-body local-terminal-popup-dialog-body">
               <TerminalWorkspace
                 allowPaneLayoutControls={false}
                 isActive={true}
+                onClose={closeLocalTerminalPopup}
                 showSftpButton={false}
                 trackConnectionSession={false}
                 tab={localTerminalPopup}

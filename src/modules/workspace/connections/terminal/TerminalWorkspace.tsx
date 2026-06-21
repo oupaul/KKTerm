@@ -87,6 +87,7 @@ function terminalBufferSnapshotForWrite(bufferText: string) {
 export function TerminalWorkspace({
   allowPaneLayoutControls = true,
   isActive,
+  onClose,
   onOpenAssistant = () => undefined,
   showSftpButton = true,
   tab,
@@ -94,6 +95,7 @@ export function TerminalWorkspace({
 }: {
   allowPaneLayoutControls?: boolean;
   isActive: boolean;
+  onClose?: () => void;
   onOpenAssistant?: () => void;
   showSftpButton?: boolean;
   tab: WorkspaceTab;
@@ -131,7 +133,8 @@ export function TerminalWorkspace({
   const layout = useMemo(() => ensureLayout(tab.layout, tab.panes), [tab.layout, tab.panes]);
   const isSingleEmbeddedPane = tab.panes.length === 1 && tab.panes[0] !== undefined && !isTerminalPane(tab.panes[0]);
   const canCloseSinglePane =
-    allowPaneLayoutControls && tab.kind === "terminal" && generalSettings.hideTopTabButtons;
+    Boolean(onClose) ||
+    (allowPaneLayoutControls && tab.kind === "terminal" && generalSettings.hideTopTabButtons);
   const quickCommandBarVisible = Boolean(tab.quickCommandBarVisible) && !isSingleEmbeddedPane;
   const focusedTerminalPane = tab.panes.find((pane): pane is TerminalPane => (
     isTerminalPane(pane) && pane.id === focusedPaneId
@@ -479,6 +482,7 @@ export function TerminalWorkspace({
             focusedPaneId={focusedPaneId}
             maximizedPaneId={maximizedPaneId}
             canCloseSinglePane={canCloseSinglePane}
+            onCloseSinglePane={onClose}
             onFocusPane={(paneId) => setFocusedPane(tab.id, paneId)}
             canSplit={canSplit}
             usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
@@ -535,6 +539,7 @@ function TerminalLayoutView({
   focusedPaneId,
   maximizedPaneId,
   canCloseSinglePane,
+  onCloseSinglePane,
   onFocusPane,
   canSplit,
   usePaneTerminalBackgrounds,
@@ -556,6 +561,7 @@ function TerminalLayoutView({
   focusedPaneId: string | undefined;
   maximizedPaneId?: string;
   canCloseSinglePane: boolean;
+  onCloseSinglePane?: () => void;
   onFocusPane: (paneId: string) => void;
   canSplit: boolean;
   usePaneTerminalBackgrounds: boolean;
@@ -598,6 +604,7 @@ function TerminalLayoutView({
             onFocus={() => onFocusPane(pane.id)}
             canSplit={canSplit}
             canClosePane={panes.length > 1 || canCloseSinglePane}
+            onClosePane={panes.length === 1 ? onCloseSinglePane : undefined}
             onFontChange={onFontChange}
             usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
             onOpenAssistant={onOpenAssistant}
@@ -644,6 +651,7 @@ function TerminalLayoutView({
           focusedPaneId={focusedPaneId}
           maximizedPaneId={maximizedPaneId}
           canCloseSinglePane={canCloseSinglePane}
+          onCloseSinglePane={onCloseSinglePane}
           onFocusPane={onFocusPane}
           canSplit={canSplit}
           usePaneTerminalBackgrounds={usePaneTerminalBackgrounds}
@@ -1475,6 +1483,7 @@ function TerminalPaneView({
   onFocus,
   canSplit,
   canClosePane,
+  onClosePane,
   onFontChange,
   usePaneTerminalBackgrounds,
   onOpenAssistant,
@@ -1494,6 +1503,7 @@ function TerminalPaneView({
   onFocus: () => void;
   canSplit: boolean;
   canClosePane: boolean;
+  onClosePane?: () => void;
   onFontChange: (delta: number | "reset") => void;
   usePaneTerminalBackgrounds: boolean;
   onOpenAssistant: () => void;
@@ -2829,7 +2839,7 @@ function TerminalPaneView({
             <button
               className="terminal-pane-action terminal-pane-close"
               aria-label={pane.tmuxSessionId ? t("terminal.detachTmux") : t("terminal.closePane")}
-              onClick={() => closePane(tabId, pane.id)}
+              onClick={() => onClosePane ? onClosePane() : closePane(tabId, pane.id)}
               title={pane.tmuxSessionId ? t("terminal.detachTmux") : t("terminal.closePane")}
               type="button"
             >

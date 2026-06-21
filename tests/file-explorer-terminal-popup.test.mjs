@@ -19,11 +19,15 @@ test("Open Terminal Here uses a transient popup instead of a workspace Tab or Ac
   assert.doesNotMatch(opener, /openConnection|tabs:/);
   assert.match(storeSource, /closeLocalTerminalPopup: \(\) => void/);
   assert.match(canvasSource, /localTerminalPopup/);
+  assert.match(canvasSource, /onClose=\{closeLocalTerminalPopup\}/);
+  assert.doesNotMatch(canvasSource, /local-terminal-popup-close/);
   assert.match(
     canvasSource,
     /<TerminalWorkspace[\s\S]*trackConnectionSession=\{false\}[\s\S]*tab=\{localTerminalPopup\}/,
   );
   assert.match(terminalSource, /trackConnectionSession\?: boolean/);
+  assert.match(terminalSource, /onClose\?: \(\) => void/);
+  assert.match(terminalSource, /onClosePane \? onClosePane\(\) : closePane\(tabId, pane\.id\)/);
   assert.match(
     terminalSource,
     /if \(trackConnectionSession\) \{\s*markConnectionSessionStarted\(connection\.id\);\s*\}/,
