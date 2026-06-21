@@ -127,6 +127,9 @@ test("custom titlebar controls stay anchored to the visible viewport", async () 
 
   const appRootRule = appCssSource.match(/\.app-root\s*\{(?<body>[^}]*)\}/s);
   const appShellRule = appCssSource.match(/\.app-shell\s*\{(?<body>[^}]*)\}/s);
+  const appShellAnimatingRule = appCssSource.match(
+    /\.app-shell\.panel-animating\s*\{(?<body>[^}]*)\}/s,
+  );
   const controlsRule = appCssSource.match(
     /\.app-titlebar-controls\s*\{(?<body>[^}]*)\}/s,
   );
@@ -137,6 +140,10 @@ test("custom titlebar controls stay anchored to the visible viewport", async () 
   assert.ok(appRootRule?.groups?.body, "app-root CSS rule should exist");
   assert.ok(appShellRule?.groups?.body, "app-shell CSS rule should exist");
   assert.ok(
+    appShellAnimatingRule?.groups?.body,
+    "app-shell panel animation CSS rule should exist",
+  );
+  assert.ok(
     controlsRule?.groups?.body,
     "titlebar controls CSS rule should exist",
   );
@@ -146,10 +153,15 @@ test("custom titlebar controls stay anchored to the visible viewport", async () 
     /\bmin-width\s*:/,
     "the root titlebar row should not be widened past the visible viewport",
   );
-  assert.match(
+  assert.doesNotMatch(
     appShellRule.groups.body,
-    /\bmin-width:\s*1120px;/,
-    "the workspace shell keeps the desktop minimum width below the titlebar",
+    /\bmin-width\s*:/,
+    "the workspace shell should shrink with the viewport so focusing the AI Assistant composer cannot scroll the Activity Rail off-screen",
+  );
+  assert.doesNotMatch(
+    appShellAnimatingRule.groups.body,
+    /\bgrid-template-columns\b/,
+    "panel toggles should not animate the whole shell grid because that can jiggle the Activity Rail and Connections Panel",
   );
   assert.match(
     controlsRule.groups.body,
