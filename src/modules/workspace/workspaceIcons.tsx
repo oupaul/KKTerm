@@ -71,19 +71,22 @@ export function WorkspaceIcon({
   color,
   icon,
   name,
+  shellSize,
   size = 18,
 }: {
   color?: string | null;
   icon?: string | null;
   name: string;
+  shellSize?: number;
   size?: number;
 }) {
   const hasBackground = Boolean(color);
+  const resolvedShellSize = shellSize ?? (hasBackground ? size + 6 : size);
   const style = {
     "--workspace-icon-bg": color ?? "transparent",
     "--workspace-icon-color": hasBackground ? "var(--surface)" : "var(--accent)",
     "--workspace-icon-size": `${size}px`,
-    "--workspace-icon-shell-size": `${size}px`,
+    "--workspace-icon-shell-size": `${resolvedShellSize}px`,
   } as CSSProperties;
   const materialIconUrl = materialIconRefToUrl(icon);
   let content: ReactNode;

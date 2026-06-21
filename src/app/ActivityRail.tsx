@@ -63,6 +63,8 @@ type RailConnectionMenuState = {
 };
 
 const CONNECTION_RAIL_ORDER_KEY = "kkterm.connectionRail.order.v1";
+const WORKSPACE_RAIL_ICON_SIZE = 18;
+const WORKSPACE_RAIL_ICON_SHELL_SIZE = 24;
 
 function loadConnectionRailOrder() {
   if (typeof window === "undefined") {
@@ -695,7 +697,8 @@ export function ActivityRail({
                   color={workspace.iconColor}
                   icon={workspace.icon}
                   name={label}
-                  size={18}
+                  size={WORKSPACE_RAIL_ICON_SIZE}
+                  shellSize={WORKSPACE_RAIL_ICON_SHELL_SIZE}
                 />
               )}
               <RailTooltip label={label} />

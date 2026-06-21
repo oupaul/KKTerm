@@ -422,6 +422,11 @@
   font-weight: 680;
 }
 
+.connection-sidebar .module-header__tile.sidebar-workspace-custom-icon-tile {
+  background: transparent;
+  box-shadow: none;
+}
+
 .connection-sidebar .sidebar-actions {
   flex: 0 0 auto;
   margin-left: auto;

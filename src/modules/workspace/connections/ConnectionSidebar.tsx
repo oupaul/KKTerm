@@ -71,6 +71,8 @@ import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, Co
 // than a click. Kept above ordinary click jitter so selecting a row never
 // requires a second click.
 const DRAG_START_THRESHOLD_PX = 8;
+const WORKSPACE_HEADER_ICON_SIZE = 16;
+const WORKSPACE_HEADER_ICON_SHELL_SIZE = 26;
 
 type DraggedTreeItem =
   | { kind: "folder"; folderId: string }
@@ -242,6 +244,10 @@ export function ConnectionSidebar({
     activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID
       ? t("workspace.defaultWorkspaceTitle")
       : activeWorkspace?.name || t("connections.title");
+  const workspaceHeaderTileClassName =
+    activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID
+      ? undefined
+      : "sidebar-workspace-custom-icon-tile";
   // Keep the search input bound to `query` for instant typing, but drive the
   // expensive full-tree filter off a deferred value so large trees don't
   // re-filter on every keystroke.
@@ -2616,7 +2622,7 @@ export function ConnectionSidebar({
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
       <ModuleHeader className="sidebar-header" onDoubleClick={handleHeaderDoubleClick}>
         <ModuleHeaderLead className="sidebar-title">
-          <ModuleIconTile module="workspace">
+          <ModuleIconTile className={workspaceHeaderTileClassName} module="workspace">
             {activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID ? (
               <LayoutDashboard aria-hidden="true" size={16} />
             ) : (
@@ -2624,7 +2630,8 @@ export function ConnectionSidebar({
                 color={activeWorkspace?.iconColor}
                 icon={activeWorkspace?.icon}
                 name={activeWorkspace?.name || panelTitle}
-                size={16}
+                size={WORKSPACE_HEADER_ICON_SIZE}
+                shellSize={WORKSPACE_HEADER_ICON_SHELL_SIZE}
               />
             )}
           </ModuleIconTile>
