@@ -162,6 +162,8 @@ function App() {
 
   const [dashboardAssistantContext, setDashboardAssistantContext] =
     useState<AssistantPageContext>();
+  const [itOpsAssistantContext, setItOpsAssistantContext] =
+    useState<AssistantPageContext>();
   const [settingsAssistantContext, setSettingsAssistantContext] =
     useState<SettingsAssistantContext>();
   const [tutorialHighlightRequest, setTutorialHighlightRequest] =
@@ -263,6 +265,9 @@ function App() {
     }
     if (activePage === "settings") {
       return settingsAssistantContext;
+    }
+    if (activePage === "itops") {
+      return itOpsAssistantContext;
     }
     return undefined;
   }
@@ -408,7 +413,11 @@ function App() {
         <InstallerPage key="installer-page" active={visibleBasePage === "installer"} />
       ) : null}
       {itopsMounted ? (
-        <ItOpsPage key="itops-page" active={visibleBasePage === "itops"} />
+        <ItOpsPage
+          key="itops-page"
+          active={visibleBasePage === "itops"}
+          onAssistantContextChange={setItOpsAssistantContext}
+        />
       ) : null}
       <TutorialOverlay
         key="tutorial-overlay"

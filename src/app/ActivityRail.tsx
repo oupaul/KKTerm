@@ -729,6 +729,7 @@ export function ActivityRail({
         <button
           className={`rail-button rail-button-itops ${activePage === "itops" ? "active" : ""}`}
           aria-label={t("itops.railLabel")}
+          data-tutorial-id="app.activityRailItOps"
           onClick={() => onNavigate("itops")}
           style={activityRailItemStyle("itops")}
         >

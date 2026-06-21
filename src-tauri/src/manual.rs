@@ -86,6 +86,12 @@ const CHAPTERS: &[ManualChapter] = &[
         title: "App Launcher widget",
     },
     ManualChapter {
+        slug: "it-ops",
+        order: 12,
+        filename: "12-it-ops.md",
+        title: "IT Ops",
+    },
+    ManualChapter {
         slug: "ai-assistant",
         order: 13,
         filename: "13-ai-assistant.md",

@@ -13,6 +13,7 @@ const SETTINGS_SECTION_IDS = new Set<SettingsSectionId>([
   "workspace-settings",
   "file-explorer-settings",
   "dont-sleep-settings",
+  "installer-settings",
   "credentials-settings",
   "assistant-settings",
   "ssh-settings",
@@ -25,6 +26,7 @@ const SETTINGS_SECTION_IDS = new Set<SettingsSectionId>([
 
 const SETTINGS_TUTORIAL_TARGET_SECTIONS: Record<string, SettingsSectionId> = {
   "settings.language": "general-settings",
+  "settings.activityRail": "general-settings",
   "settings.workspaceAccess": "general-settings",
   "settings.useDirectxScreenCapture": "general-settings",
   "settings.statusBar": "general-settings",
@@ -61,6 +63,10 @@ const SETTINGS_TUTORIAL_TARGET_SECTIONS: Record<string, SettingsSectionId> = {
   "settings.vncViewOnly": "vnc-settings",
   "settings.vncColorLevel": "vnc-settings",
   "settings.aboutVersion": "about-settings",
+  "settings.workspace": "workspace-settings",
+  "settings.fileExplorer": "file-explorer-settings",
+  "settings.dontSleep": "dont-sleep-settings",
+  "settings.installer": "installer-settings",
 };
 
 const WORKSPACE_TUTORIAL_TARGET_IDS = [
@@ -118,12 +124,41 @@ const WORKSPACE_TUTORIAL_TARGET_IDS = [
   "remoteDesktop.surface",
 ] as const;
 
+const DASHBOARD_TUTORIAL_TARGET_IDS = [
+  "dashboard.views",
+  "dashboard.addView",
+  "dashboard.editLayout",
+  "dashboard.addWidget",
+  "dashboard.canvas",
+] as const;
+
+const ITOPS_TUTORIAL_TARGET_IDS = [
+  "app.activityRailItOps",
+  "itops.tabs",
+  "itops.groups",
+  "itops.runs",
+  "itops.autos",
+  "itops.primaryAction",
+] as const;
+
 const INSTALLER_TUTORIAL_TARGET_IDS = [
   "installer.updateAll",
   "installer.toolOptions",
 ] as const;
 
 const TUTORIAL_TARGET_NAVIGATION: Record<string, TutorialNavigationTarget> = {
+  ...Object.fromEntries(
+    DASHBOARD_TUTORIAL_TARGET_IDS.map((targetId) => [
+      targetId,
+      { page: "dashboard" },
+    ]),
+  ),
+  ...Object.fromEntries(
+    ITOPS_TUTORIAL_TARGET_IDS.map((targetId) => [
+      targetId,
+      { page: "itops" },
+    ]),
+  ),
   ...Object.fromEntries(
     WORKSPACE_TUTORIAL_TARGET_IDS.map((targetId) => [
       targetId,
@@ -209,6 +244,7 @@ function normalizeTutorialPage(value: unknown): ActivePage | undefined {
   if (
     value === "workspace" ||
     value === "dashboard" ||
+    value === "itops" ||
     value === "installer" ||
     value === "settings"
   ) {

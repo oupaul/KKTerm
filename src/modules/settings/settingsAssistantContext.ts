@@ -40,6 +40,7 @@ type SettingsControlSummary = {
 type SettingsSectionSummary = {
   labelKey: string;
   fallbackLabel: string;
+  tutorialTargetId?: string;
   controls: SettingsControlSummary[];
 };
 
@@ -62,6 +63,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
         key: "settings.activityRail",
         description:
           "Visibility and drag-to-reorder controls for Workspace, Dashboard, Install Helper, IT Ops, and Don't Sleep on the Activity Rail.",
+        tutorialTargetId: "settings.activityRail",
       },
       {
         key: "settings.useDirectxScreenCapture",
@@ -137,6 +139,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
   "workspace-settings": {
     labelKey: "settings.sectionWorkspace",
     fallbackLabel: "Workspace",
+    tutorialTargetId: "settings.workspace",
     controls: [
       {
         key: "settings.connectedConnectionsRail",
@@ -163,6 +166,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
   "file-explorer-settings": {
     labelKey: "settings.fileExplorer",
     fallbackLabel: "File Explorer",
+    tutorialTargetId: "settings.fileExplorer",
     controls: [
       {
         key: "settings.fileExplorerOpenMode",
@@ -177,6 +181,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
   "dont-sleep-settings": {
     labelKey: "settings.sectionDontSleep",
     fallbackLabel: "Don't Sleep",
+    tutorialTargetId: "settings.dontSleep",
     controls: [
       {
         key: "settings.dontSleepForegroundOnly",
@@ -188,6 +193,7 @@ const SETTINGS_SECTIONS: Record<SettingsSectionId, SettingsSectionSummary> = {
   "installer-settings": {
     labelKey: "settings.sectionInstaller",
     fallbackLabel: "Install Helper",
+    tutorialTargetId: "settings.installer",
     controls: [
       {
         key: "settings.installerCheckInterval",
@@ -413,6 +419,9 @@ export function buildSettingsAssistantContext(
     sourceLabel: `${settingsLabel} context`,
     text: [
       `Active Settings section: ${sectionLabel} (${sectionId}).`,
+      section.tutorialTargetId
+        ? `Section tutorial target: ${section.tutorialTargetId}.`
+        : "Section tutorial target: use a matching control target below.",
       "Visible controls and i18n keys:",
       controls,
       "For UI help, answer first and offer to navigate when a matching tutorial target is listed. Only call tutorial_highlight after the user accepts; include navigation if the target belongs to another app surface.",

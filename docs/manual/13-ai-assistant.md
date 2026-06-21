@@ -3,7 +3,7 @@
 ## AI grep hints
 
 - Keys: `ai.*` (full namespace), `app.aiAssistant`, `settings.mcp*`, `settings.assistantSkills*`, `settings.aiToolsTitle`, `settings.sectionAiAssistant`, `settings.submitAiAttachmentsDirectly`, `settings.credentialKindAiApiKey`, `settings.aiTools.tutorial.*`, `settings.aiTools.memory.*`, `ai.workPlanTitle`, `ai.toolApprovalRiskTitle`, `ai.contextUsage*`, `common.expand`, `common.collapse`, `common.copy`
-- Topics: AI panel, chats, new chat, history, SQLite, tool permission modes, tool defaults, context usage meter, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, Tutorial overlay, tutorial navigation, `connections.addConnection`, intents (Watchdog / Create Widget / Extension Draft), MCP servers, mcp_list_tools, work plan / update_plan, assistant memory, risk reasons on approval card, stop/cancel run, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal, compact page context, UTF-8 widget updates, non-English assistant output, Advanced Debugging, AI Assistant debug logs, MCP debug logs, Install Helper debug logs, URL Connection debug logs, heartbeat debug logs
+- Topics: AI panel, chats, new chat, history, SQLite, tool permission modes, tool defaults, context usage meter, collapsible assistant tools, collapsible Assistant Skills, bundled skills, SKILL.md, Tutorial overlay, tutorial navigation, `connections.addConnection`, Dashboard and IT Ops page context, intents (Watchdog / Create Widget / Extension Draft), MCP servers, mcp_list_tools, work plan / update_plan, assistant memory, risk reasons on approval card, stop/cancel run, attachments (files, screenshots, terminal buffer), provider keys, send-to-terminal, compact page context, UTF-8 widget updates, non-English assistant output, Advanced Debugging, AI Assistant debug logs, MCP debug logs, Install Helper debug logs, URL Connection debug logs, heartbeat debug logs
 - Synonyms: "chat", "copilot", "AI bot", "tools", "approval", "MCP", "agent", "skill", "skills", "SKILL.md", "workflow", "work plan", "plan steps", "update_plan", "memory", "remember", "recall", "forget", "notes about my server", "risk", "risky command", "flagged as risky", "stop", "cancel", "ssh-troubleshooter", "dashboard-widget-builder", "dashboard-widget-designer", "dashboard-data-visualization", "desktop-accessibility-ui", "terminal-command-planner", "sftp-transfer-helper", "remote-desktop-helper", "network-connectivity-troubleshooter", "dns-dhcp-troubleshooter", "firewall-port-troubleshooter", "tls-certificate-troubleshooter", "network troubleshooting", "DNS", "DHCP", "firewall", "port check", "TLS", "certificate", "watchdog", "highlight this", "show me where", "where are chats stored", "clear chat storage", "expand tools", "collapse skills", "garbled text", "mojibake", "encoding", "UTF8", "UTF-8", "debug log", "AI debug log", "MCP debug log", "Install Helper debug log", "URL Connection debug log", "heartbeat debug log", "aiassistant.debug.log", "mcp.debug.log", "installer.helper.debug.log", "url.connection.debug.log", "kkterm-heartbeat.debug.log", "context too large", "context window", "token usage", "context meter"
 
 ## Panel
@@ -46,6 +46,7 @@ Workspace Send to AI Assistant toolbar actions for terminal buffers and remote d
 Every request includes the user's prompt, recent chat history, the active context label, and any active page context. Page context is intentionally compact:
 
 - Dashboard sends the active Dashboard View, Widget Instance placement, AI Created Widget metadata, health errors, compact visual context, and compact script-library keys/globals. It does not send full widget source, `bodyJson`, `settingsSchemaJson`, or per-instance settings values.
+- IT Ops sends Host Group names/member counts/transports, Automation names/armed state, recent-run count, and a live-run summary. It does not send scripts, host output, secrets, or full trigger/action bodies.
 - Settings sends the active Settings section, visible control keys, and tutorial targets.
 - Workspace context is sent only for explicit attachments or active Session helpers, such as selected terminal output, terminal buffer, screenshots, files, or live Session tools.
 
@@ -115,7 +116,9 @@ Switching Tabs is also available to the Sessions tool directly: when the Session
 Known tutorial targets:
 
 - `connections.addConnection` in Workspace.
-- Settings targets listed in [15-settings.md](15-settings.md), including General, Appearance, Dashboard, Credentials, AI Assistant, SSH, Terminal, URL, RDP, VNC, and About sections.
+- Dashboard targets listed in [10-dashboard.md](10-dashboard.md).
+- IT Ops targets listed in [12-it-ops.md](12-it-ops.md).
+- Settings targets listed in [15-settings.md](15-settings.md), including General, Appearance, Dashboard, Workspace, File Explorer, Don't Sleep, Install Helper, Credentials, AI Assistant, SSH, Terminal, URL, RDP, VNC, and About sections.
 
 When adding a new tutorial target, add the `data-tutorial-id` anchor, route it in `src/app/tutorialNavigationModel.ts`, document it in `tutorial_highlight` metadata, and include it in the owning manual chapter's `## AI grep hints`. `npm run check` verifies the anchor and navigation registry stay aligned.
 

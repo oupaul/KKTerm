@@ -71,14 +71,16 @@ const CODEX_CLI_APPROVAL_NEVER: &str = "never";
 const CODEX_CLI_IGNORE_USER_CONFIG_FLAG: &str = "--ignore-user-config";
 const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "app.activityRailWorkspace, app.activityRailNewWorkspace, app.activityRailDashboard, app.connectionRail, app.activityRailDontSleep, app.activityRailInstaller, app.activityRailSettings, app.connectionsResize, app.aiAssistantResize with navigation page=workspace; ",
+    "app.activityRailItOps, itops.tabs, itops.groups, itops.runs, itops.autos, itops.primaryAction with navigation page=itops; ",
+    "dashboard.views, dashboard.addView, dashboard.editLayout, dashboard.addWidget, dashboard.canvas with navigation page=dashboard; ",
     "connections.panel, connections.search, connections.quickConnect, connections.addConnection, connections.folderControls, connections.tree with navigation page=workspace; ",
     "workspace.tabStrip, workspace.canvas, workspace.emptyState, workspace.statusBar, workspace.hostUsage, workspace.screenshotMenu with navigation page=workspace; ",
     "terminal.pane, terminal.tmuxSessions, terminal.sshPortRedirect, terminal.startRecording, terminal.openSftp, terminal.copySelection, terminal.sendToAi, terminal.actions, terminal.searchBar, terminal.surface with navigation page=workspace; ",
-    "sftp.toolbar, sftp.upload, sftp.download, sftp.terminal, sftp.localPane, sftp.remotePane, sftp.transferQueue with navigation page=workspace; ",
+    "sftp.toolbar, sftp.upload, sftp.download, sftp.localPane, sftp.remotePane, sftp.transferQueue with navigation page=workspace; ",
     "webview.toolbar, webview.address, webview.openExternally, webview.autoRefresh, webview.savePassword, webview.fillCredential, webview.sendToAi, webview.close, webview.surface with navigation page=workspace; ",
     "remoteDesktop.toolbar, remoteDesktop.viewMode, remoteDesktop.sendCtrlAltDel, remoteDesktop.reconnect, remoteDesktop.sendToAi, remoteDesktop.surface with navigation page=workspace; ",
     "installer.updateAll, installer.toolOptions with navigation page=installer; ",
-    "settings.language, settings.workspaceAccess, settings.useDirectxScreenCapture, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
+    "settings.language, settings.activityRail, settings.workspaceAccess, settings.useDirectxScreenCapture, settings.statusBar, settings.settingsData, settings.debug with navigation page=settings settingsSectionId=general-settings; ",
     "settings.appUiFontFamily, settings.appearance.colorScheme, settings.resetLayout with navigation page=settings settingsSectionId=appearance-settings; ",
     "settings.dashboardDefaultLanding, settings.dashboardUseRandomDynamicBackground, settings.dashboardMaxActiveScriptWidgets with navigation page=settings settingsSectionId=dashboard-settings; ",
     "settings.credentialStorage, settings.credentialsStored, settings.widgetCredentialsStored with navigation page=settings settingsSectionId=credentials-settings; ",
@@ -88,6 +90,7 @@ const TUTORIAL_TOOL_KNOWN_TARGETS: &str = concat!(
     "settings.ignoreCertificateErrors, settings.urlSavedPasswords, settings.urlDataShards with navigation page=settings settingsSectionId=url-settings; ",
     "settings.rdpColorDepth, settings.rdpPerformanceProfile, settings.rdpRemoteResolution with navigation page=settings settingsSectionId=rdp-settings; ",
     "settings.vncViewOnly, settings.vncColorLevel with navigation page=settings settingsSectionId=vnc-settings; ",
+    "settings.workspace with navigation page=settings settingsSectionId=workspace-settings; settings.fileExplorer with navigation page=settings settingsSectionId=file-explorer-settings; settings.dontSleep with navigation page=settings settingsSectionId=dont-sleep-settings; settings.installer with navigation page=settings settingsSectionId=installer-settings; ",
     "settings.aboutVersion with navigation page=settings settingsSectionId=about-settings"
 );
 
@@ -1865,7 +1868,7 @@ fn build_copilot_prompt_with_usage(
 ) -> CopilotPrompt {
     let mut sections = Vec::new();
     sections.push(
-        "You are the KKTerm AI Assistant. Help with local-first terminal, SSH, SFTP, dashboard, and workspace workflows. Do not execute commands; propose commands for user approval when needed."
+        "You are the KKTerm AI Assistant. Help with every shipped KKTerm area: Workspace, Connections and live Sessions, terminals, SSH/tmux, SFTP/FTP/File Explorer, Documents, URL WebView, RDP/VNC, Dashboard, App Launcher, IT Ops, Install Helper, Settings, screenshots, backup/secrets, localization, and AI Assistant workflows. For questions about app functionality or UI operation, call manual_search first and manual_read_chapter for the best match before answering. Use tutorial_highlight only for known targets and only after the user asks to be shown or accepts an offer to navigate. Do not execute commands; propose commands for user approval when needed."
             .to_string(),
     );
     if !recalled_memories.is_empty() {
@@ -2770,7 +2773,7 @@ fn ai_tool_definitions_with_skills(
             format!(
                 "Show a one-step in-app Tutorial overlay by navigating to a known app surface when needed, highlighting an app-owned target, dimming the rest of the window, and placing a short help balloon beside it. Use this only after the user explicitly asks to be shown where something is, or after the user accepts your offer to navigate. Only pass targetId values explicitly listed in current page context or documented by this tool; do not invent CSS selectors. Known targets include {TUTORIAL_TOOL_KNOWN_TARGETS}. The overlay disappears when the user clicks or presses any key."
             ),
-            json!({"type":"object","properties":{"targetId":{"type":"string"},"title":{"type":"string","maxLength":80},"body":{"type":"string","maxLength":240},"navigation":{"type":"object","properties":{"page":{"type":"string","enum":["workspace","dashboard","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","file-explorer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","about-settings"]}},"additionalProperties":false},"page":{"type":"string","enum":["workspace","dashboard","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","file-explorer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","about-settings"]}},"required":["targetId","title","body"]}),
+            json!({"type":"object","properties":{"targetId":{"type":"string"},"title":{"type":"string","maxLength":80},"body":{"type":"string","maxLength":240},"navigation":{"type":"object","properties":{"page":{"type":"string","enum":["workspace","dashboard","itops","installer","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","workspace-settings","file-explorer-settings","dont-sleep-settings","installer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","about-settings"]}},"additionalProperties":false},"page":{"type":"string","enum":["workspace","dashboard","itops","installer","settings"]},"settingsSectionId":{"type":"string","enum":["general-settings","appearance-settings","dashboard-settings","workspace-settings","file-explorer-settings","dont-sleep-settings","installer-settings","credentials-settings","assistant-settings","ssh-settings","terminal-settings","url-settings","rdp-settings","vnc-settings","about-settings"]}},"required":["targetId","title","body"]}),
         ));
     }
     if settings.network() {

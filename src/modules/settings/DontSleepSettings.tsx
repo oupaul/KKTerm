@@ -45,7 +45,7 @@ export function DontSleepSettings() {
   useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
 
   return (
-    <section className="settings-card settings-section">
+    <section className="settings-card settings-section" data-tutorial-id="settings.dontSleep">
       <SettingsSectionHeader
         icon={<Coffee size={18} />}
         label={t("settings.sectionDontSleep")}

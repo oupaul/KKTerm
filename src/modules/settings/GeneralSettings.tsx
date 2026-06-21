@@ -409,7 +409,10 @@ export function GeneralSettings() {
         </label>
       </div>
 
-      <fieldset className="settings-subsection settings-fieldset">
+      <fieldset
+        className="settings-subsection settings-fieldset"
+        data-tutorial-id="settings.activityRail"
+      >
         <legend>{t("settings.activityRail")}</legend>
         <div className="settings-toggle-list">
           {activityRailModuleOrder(draft.activityRailOrder).map((id) => {

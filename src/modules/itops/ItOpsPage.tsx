@@ -2,12 +2,46 @@
 // Dashboard modules) and is shown/hidden by the App via the `active` flag while
 // the shell stays mounted. See docs/ITOPS.md.
 
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import type { AssistantPageContext } from "../../ai/AssistantPanel";
 import { ItOpsModule } from "./ItOpsModule";
+import { useItOpsStore } from "./state";
 import "./itops.css";
 
-export function ItOpsPage({ active }: { active: boolean }) {
+export function ItOpsPage({
+  active,
+  onAssistantContextChange,
+}: {
+  active: boolean;
+  onAssistantContextChange: (context: AssistantPageContext) => void;
+}) {
   const { t } = useTranslation();
+  const hostGroups = useItOpsStore((state) => state.hostGroups);
+  const runHistory = useItOpsStore((state) => state.runHistory);
+  const automations = useItOpsStore((state) => state.automations);
+  const activeRun = useItOpsStore((state) => state.activeRun);
+
+  useEffect(() => {
+    onAssistantContextChange({
+      contextKind: "itops",
+      contextLabel: t("itops.title"),
+      connectionLabel: t("itops.title"),
+      sourceLabel: `${t("itops.title")} context`,
+      text: [
+        "Active Module: IT Ops.",
+        "Tutorial targets: itops.groups for Host Groups, itops.runs for Batch Runs, itops.autos for Automations, and itops.primaryAction for the action that belongs to the selected tab.",
+        `Host Groups (${hostGroups.length}): ${hostGroups.map((group) => `${group.name} [${group.memberIds.length} saved members, ${group.transport}]`).join(", ") || "none"}.`,
+        `Automations (${automations.length}): ${automations.map((automation) => `${automation.name} [${automation.enabled ? "armed" : "disabled"}]`).join(", ") || "none"}.`,
+        `Recent completed Batch Runs: ${runHistory.length}.`,
+        activeRun
+          ? `Live Batch Run: ${activeRun.taskSummary} [${activeRun.state}], ${activeRun.hosts.length} hosts.`
+          : "Live Batch Run: none.",
+        "For operational instructions, search and read the IT Ops chapter in the KKTerm Operation Manual before answering. Do not infer host output, scripts, secrets, or trigger details from this compact metadata.",
+      ].join("\n"),
+    });
+  }, [activeRun, automations, hostGroups, onAssistantContextChange, runHistory, t]);
+
   return (
     <section
       className="itops-page"

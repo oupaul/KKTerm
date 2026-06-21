@@ -394,7 +394,10 @@ export function DashboardPage({
           <ModuleHeaderTitle as="span" className="crumb">{t("dashboard.title")}</ModuleHeaderTitle>
         </ModuleHeaderLead>
         <ModuleHeaderDivider />
-        <div className={`dashboard-view-pills${editMode ? " is-editing" : ""}`}>
+        <div
+          className={`dashboard-view-pills${editMode ? " is-editing" : ""}`}
+          data-tutorial-id="dashboard.views"
+        >
           {views.map((v) => {
             const isActiveView = v.id === activeView.id;
             const isEditingView = editingViewId === v.id;
@@ -483,6 +486,7 @@ export function DashboardPage({
           })}
           <button
             className="dashboard-pill-add"
+            data-tutorial-id="dashboard.addView"
             onClick={async () => {
               const newView = await createView(t("dashboard.newViewName", { count: views.length + 1 }));
               if (newView) setEditingViewId(newView.id);
@@ -498,16 +502,24 @@ export function DashboardPage({
               onChange={(d) => void setViewDensity(activeView.id, d)}
             />
           )}
-          <button className="btn-ghost" onClick={toggleEditMode}>
+          <button
+            className="btn-ghost"
+            data-tutorial-id="dashboard.editLayout"
+            onClick={toggleEditMode}
+          >
             <Edit3 size={13} /> {editMode ? t("dashboard.editDone") : t("dashboard.editLayout")}
           </button>
-          <button className="btn-primary" onClick={() => setCatalogOpen(true)}>
+          <button
+            className="btn-primary"
+            data-tutorial-id="dashboard.addWidget"
+            onClick={() => setCatalogOpen(true)}
+          >
             <Plus size={13} /> {t("dashboard.addWidgetLabel")}
           </button>
         </div>
       </ModuleHeader>
 
-      <div className="dw-canvas-stack">
+      <div className="dw-canvas-stack" data-tutorial-id="dashboard.canvas">
         {views.map((view) => {
           const isActiveView = view.id === activeView.id;
           const shouldMountView = isActiveView || mountedViewIds.has(view.id);

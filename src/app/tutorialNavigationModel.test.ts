@@ -96,7 +96,37 @@ for (const targetId of workspaceTargets) {
   }
 }
 
+const dashboardTargets = [
+  "dashboard.views",
+  "dashboard.addView",
+  "dashboard.editLayout",
+  "dashboard.addWidget",
+  "dashboard.canvas",
+] as const;
+
+for (const targetId of dashboardTargets) {
+  if (tutorialNavigationForTarget(targetId)?.page !== "dashboard") {
+    throw new Error(`${targetId} should navigate to Dashboard.`);
+  }
+}
+
+const itOpsTargets = [
+  "app.activityRailItOps",
+  "itops.tabs",
+  "itops.groups",
+  "itops.runs",
+  "itops.autos",
+  "itops.primaryAction",
+] as const;
+
+for (const targetId of itOpsTargets) {
+  if (tutorialNavigationForTarget(targetId)?.page !== "itops") {
+    throw new Error(`${targetId} should navigate to IT Ops.`);
+  }
+}
+
 const settingsTargets = [
+  ["settings.activityRail", "general-settings"],
   ["settings.workspaceAccess", "general-settings"],
   ["settings.useDirectxScreenCapture", "general-settings"],
   ["settings.statusBar", "general-settings"],
@@ -131,6 +161,10 @@ const settingsTargets = [
   ["settings.vncViewOnly", "vnc-settings"],
   ["settings.vncColorLevel", "vnc-settings"],
   ["settings.aboutVersion", "about-settings"],
+  ["settings.workspace", "workspace-settings"],
+  ["settings.fileExplorer", "file-explorer-settings"],
+  ["settings.dontSleep", "dont-sleep-settings"],
+  ["settings.installer", "installer-settings"],
 ] as const;
 
 for (const [targetId, settingsSectionId] of settingsTargets) {
@@ -163,6 +197,12 @@ const invalidSectionNavigation = normalizeTutorialNavigationTarget({
 
 if (invalidSectionNavigation) {
   throw new Error("Unknown Settings section navigation should be rejected.");
+}
+
+for (const page of ["itops", "installer"] as const) {
+  if (normalizeTutorialNavigationTarget({ page })?.page !== page) {
+    throw new Error(`${page} tutorial navigation should be accepted.`);
+  }
 }
 
 const missingTargetNavigation = tutorialNavigationForTarget("settings.missing.target");

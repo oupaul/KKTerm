@@ -109,7 +109,7 @@ export type PendingToolApproval = AssistantToolApprovalRequest & {
 export type ToolApprovalAction = "" | "allow" | "allowSession" | "deny";
 
 export interface AssistantPageContext {
-  contextKind?: "dashboard" | "settings";
+  contextKind?: "dashboard" | "itops" | "settings";
   contextLabel: string;
   connectionLabel: string;
   sourceLabel: string;

@@ -149,7 +149,7 @@ export function ItOpsModule() {
           <ModuleHeaderTitle>{t("itops.title")}</ModuleHeaderTitle>
         </div>
         <ModuleHeaderDivider />
-        <div className="it-tabs">
+        <div className="it-tabs" data-tutorial-id="itops.tabs">
           {TABS.map((tabDef) => {
             const active = tabDef.id === tab;
             const badge =
@@ -163,6 +163,13 @@ export function ItOpsModule() {
                 key={tabDef.id}
                 type="button"
                 className={`it-tab${active ? " active" : ""}`}
+                data-tutorial-id={
+                  tabDef.id === "groups"
+                    ? "itops.groups"
+                    : tabDef.id === "runs"
+                      ? "itops.runs"
+                      : "itops.autos"
+                }
                 onClick={() => setTab(tabDef.id)}
               >
                 <span className="it-tab-ic">
@@ -178,7 +185,12 @@ export function ItOpsModule() {
           })}
         </div>
         <span className="it-head-sp" />
-        <button type="button" className="it-btn primary" onClick={handlePrimary}>
+        <button
+          type="button"
+          className="it-btn primary"
+          data-tutorial-id="itops.primaryAction"
+          onClick={handlePrimary}
+        >
           <span className="it-btn-ic">
             <ItIcon name={prim.icon} size={prim.size} />
           </span>

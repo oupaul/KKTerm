@@ -30,7 +30,7 @@ test("Connections Panel heading follows the active Workspace title", async () =>
   );
   assert.match(
     sidebarSource,
-    /<h1>\{panelTitle\}<\/h1>/,
-    "the sidebar heading should render the derived panel title",
+    /<ModuleHeaderTitle>\{panelTitle\}<\/ModuleHeaderTitle>/,
+    "the sidebar heading should render the derived panel title through the shared Module header",
   );
 });
