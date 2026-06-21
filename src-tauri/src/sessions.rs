@@ -2376,6 +2376,21 @@ fn is_powershell_family_program(program: &str) -> bool {
     matches!(name, "powershell.exe" | "pwsh.exe" | "powershell" | "pwsh")
 }
 
+/// Builds the `new-session -e PATH=<value>` arguments that refresh PATH into a
+/// freshly created psmux pane. Returned empty when no PATH is available so the
+/// pane simply inherits the server environment. Kept separate (and taking PATH
+/// as an argument) so the wiring is unit-testable without psmux installed.
+fn psmux_pane_environment_args(path: Option<OsString>) -> Vec<OsString> {
+    let mut args = Vec::new();
+    if let Some(path) = path.filter(|value| !value.is_empty()) {
+        let mut entry = OsString::from("PATH=");
+        entry.push(path);
+        args.push(OsString::from("-e"));
+        args.push(entry);
+    }
+    args
+}
+
 fn psmux_session_id_for_launch(value: Option<&str>) -> Option<String> {
     let trimmed = value.map(str::trim).unwrap_or_default();
     if trimmed.is_empty() {
@@ -2482,6 +2497,16 @@ fn command_for(request: &StartTerminalSessionRequest) -> Result<CommandBuilder, 
                 command.arg("-A");
                 command.arg("-s");
                 command.arg(&session_id);
+                // Refresh PATH into the new pane. A psmux server is persistent and
+                // (like tmux) only refreshes its `update-environment` variables on
+                // attach — PATH is not among them — so a session created on an
+                // already-running server otherwise inherits the stale PATH the
+                // server captured at start and cannot find executables added to
+                // PATH afterwards (e.g. `claude`). `new-session -e` sets the
+                // pane's PATH explicitly from the current process environment.
+                for arg in psmux_pane_environment_args(std::env::var_os("PATH")) {
+                    command.arg(arg);
+                }
                 command.arg("--");
                 command.arg(&resolved_program);
                 for arg in &parsed.args {
@@ -3538,6 +3563,22 @@ mod tests {
         assert_eq!(psmux_session_id_for_launch(Some("   ")), None);
         // tmux/psmux target delimiters are rejected, matching the SSH path.
         assert_eq!(psmux_session_id_for_launch(Some("has:colon")), None);
+    }
+
+    #[test]
+    fn psmux_pane_environment_refreshes_current_path() {
+        // A stale psmux server would otherwise leave the pane with an outdated
+        // PATH; `new-session -e PATH=...` pins the current process PATH so tools
+        // like `claude` stay discoverable.
+        let args = psmux_pane_environment_args(Some(OsString::from("C:\\a;C:\\b")))
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(args, vec!["-e".to_string(), "PATH=C:\\a;C:\\b".to_string()]);
+
+        // No PATH (or an empty one) means nothing to refresh.
+        assert!(psmux_pane_environment_args(None).is_empty());
+        assert!(psmux_pane_environment_args(Some(OsString::new())).is_empty());
     }
 
     #[test]

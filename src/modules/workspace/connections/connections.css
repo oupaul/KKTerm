@@ -1900,6 +1900,13 @@ fieldset.connection-specific-options > legend {
   grid-column: 3;
 }
 
+/* A popup <select> fills the control column, but a toggle's fixed-width switch
+   would otherwise sit at the column's left edge. Pin it to the right so the
+   switch lines up flush with the card edge like every other control. */
+.connection-option-fields > .connection-session-toggle:has(.option-glyph) > input[type="checkbox"] {
+  justify-self: end;
+}
+
 /* Dim the glyph alongside its disabled control (inherit-defaults state). */
 .connection-dialog label:has(:disabled) .option-glyph {
   opacity: 0.55;

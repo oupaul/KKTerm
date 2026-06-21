@@ -25,3 +25,13 @@ assert.match(
   /grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\)\s+minmax\(120px,\s*168px\);/,
   "option panel toggle rows should use the same label start as select rows"
 );
+
+const optionToggleSwitchRule = connectionStyles.match(
+  /\.connection-option-fields\s*>\s*\.connection-session-toggle:has\(\.option-glyph\)\s*>\s*input\[type="checkbox"\]\s*\{(?<body>[^}]*)\}/s,
+);
+assert.ok(optionToggleSwitchRule, "option-field toggle switches should have a right-alignment rule");
+assert.match(
+  optionToggleSwitchRule.groups.body,
+  /justify-self:\s*end;/,
+  "the psmux toggle switch should sit flush with the right edge of its control column"
+);
