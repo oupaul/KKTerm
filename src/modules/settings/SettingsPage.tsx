@@ -8,26 +8,27 @@ import {
 } from "react";
 import {
   Bot,
+  Box,
   Coffee,
   FolderOpen,
   Info,
   KeyRound,
+  Gauge,
   LayoutDashboard,
   Monitor,
   Globe,
   Network,
-  Package,
   Palette,
   Save,
   Server,
   Settings as SettingsIcon,
-  SquareStack,
   Terminal,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LegacyDialogActions } from "../../app/ui/dialog";
+import { ModuleIconTile, type ModuleKind } from "../../app/ModuleHeader";
 import { AI_PROVIDER_SECRET_OWNER_ID } from "../../lib/settings";
 import { supportsInstallerHelper, supportsRdp } from "../../lib/platform";
 import { AboutSettings } from "./AboutSettings";
@@ -83,14 +84,15 @@ const SETTINGS_NAV: readonly {
   Icon: LucideIcon;
   color: string;
   labelKey: string;
+  module?: ModuleKind;
   requires?: "installer" | "rdp";
 }[] = [
   { id: "general-settings", Icon: SettingsIcon, color: "#8e8e93", labelKey: "settings.sectionGeneral" },
   { id: "appearance-settings", Icon: Palette, color: "#ff2d55", labelKey: "settings.sectionAppearance" },
-  { id: "workspace-settings", Icon: SquareStack, color: "#5e5ce6", labelKey: "settings.sectionWorkspace" },
+  { id: "workspace-settings", Icon: LayoutDashboard, color: "#5e5ce6", labelKey: "settings.sectionWorkspace", module: "workspace" },
   { id: "file-explorer-settings", Icon: FolderOpen, color: "#14b8a6", labelKey: "settings.fileExplorer" },
-  { id: "dashboard-settings", Icon: LayoutDashboard, color: "#0a84ff", labelKey: "settings.sectionDashboard" },
-  { id: "installer-settings", Icon: Package, color: "#ff9f0a", labelKey: "settings.sectionInstaller", requires: "installer" },
+  { id: "dashboard-settings", Icon: Gauge, color: "#0a84ff", labelKey: "settings.sectionDashboard", module: "dashboard" },
+  { id: "installer-settings", Icon: Box, color: "#ff9f0a", labelKey: "settings.sectionInstaller", module: "installer", requires: "installer" },
   { id: "credentials-settings", Icon: KeyRound, color: "#34c759", labelKey: "settings.sectionCredentials" },
   { id: "assistant-settings", Icon: Bot, color: "#bf5af2", labelKey: "settings.sectionAiAssistant" },
   { id: "ssh-settings", Icon: Server, color: "#30b0c7", labelKey: "settings.sectionSsh" },
@@ -270,16 +272,22 @@ export function SettingsPage({
                 : item.requires === "rdp"
                   ? rdpSupported
                   : true,
-            ).map(({ id, Icon, color, labelKey }) => (
+            ).map(({ id, Icon, color, labelKey, module }) => (
               <button
                 key={id}
                 className={settingsNavItemClass(id, activeSectionId)}
                 onClick={() => onActiveSectionChange(id)}
                 type="button"
               >
-                <span className="settings-nav-icon" style={{ background: color }}>
-                  <Icon size={14} />
-                </span>
+                {module ? (
+                  <ModuleIconTile compact module={module}>
+                    <Icon size={14} />
+                  </ModuleIconTile>
+                ) : (
+                  <span className="settings-nav-icon" style={{ background: color }}>
+                    <Icon size={14} />
+                  </span>
+                )}
                 <span>{t(labelKey)}</span>
               </button>
             ))}

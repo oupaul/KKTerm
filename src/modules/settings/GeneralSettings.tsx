@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react";
 import {
   BedSingle,
+  Box,
   Download,
   FolderOpen,
   Gauge,
   GripVertical,
   Languages,
   LayoutDashboard,
-  Package,
   RefreshCw,
   RotateCcw,
-  ServerCog,
   Settings as SettingsIcon,
   Upload,
-  type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CHECK_FOR_APP_UPDATES_EVENT } from "../../app/AppUpdatePrompt";
+import { ModuleIconTile, type ModuleKind } from "../../app/ModuleHeader";
 import {
   activityRailModuleOrder,
   canHideActivityRailModule,
@@ -66,6 +65,7 @@ import {
   useSettingsSaveRegistration,
 } from "./shared";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { ItIcon } from "../itops/icons";
 import type { ActivityRailItemId } from "../../types";
 
 const STATUS_BAR_MONITOR_INTERVAL_OPTIONS = [5, 15, 30, 60, 300] as const;
@@ -77,14 +77,34 @@ type ActivityRailVisibilitySetting =
   | "showDontSleepOnRail";
 const ACTIVITY_RAIL_SETTINGS: Record<
   ActivityRailItemId,
-  [ActivityRailVisibilitySetting, string, LucideIcon]
+  [ActivityRailVisibilitySetting, string]
 > = {
-  workspace: ["showWorkspaceOnRail", "settings.sectionWorkspace", LayoutDashboard],
-  dashboard: ["showDashboardOnRail", "settings.sectionDashboard", Gauge],
-  installer: ["showInstallerOnRail", "settings.sectionInstaller", Package],
-  itops: ["showItOps", "settings.sectionItOps", ServerCog],
-  dontSleep: ["showDontSleepOnRail", "settings.sectionDontSleep", BedSingle],
+  workspace: ["showWorkspaceOnRail", "settings.sectionWorkspace"],
+  dashboard: ["showDashboardOnRail", "settings.sectionDashboard"],
+  installer: ["showInstallerOnRail", "settings.sectionInstaller"],
+  itops: ["showItOps", "settings.sectionItOps"],
+  dontSleep: ["showDontSleepOnRail", "settings.sectionDontSleep"],
 };
+
+function ActivityRailModuleIcon({ id }: { id: ActivityRailItemId }) {
+  if (id === "dontSleep") {
+    return <BedSingle className="activity-rail-order-icon" size={17} />;
+  }
+
+  const module = id as ModuleKind;
+  const icon =
+    id === "workspace" ? (
+      <LayoutDashboard aria-hidden="true" />
+    ) : id === "dashboard" ? (
+      <Gauge aria-hidden="true" />
+    ) : id === "installer" ? (
+      <Box aria-hidden="true" />
+    ) : (
+      <ItIcon name="ops" size={17} sw={1.7} />
+    );
+
+  return <ModuleIconTile compact module={module}>{icon}</ModuleIconTile>;
+}
 
 function formatBackupDate(value?: string | null) {
   if (!value) {
@@ -393,7 +413,7 @@ export function GeneralSettings() {
         <legend>{t("settings.activityRail")}</legend>
         <div className="settings-toggle-list">
           {activityRailModuleOrder(draft.activityRailOrder).map((id) => {
-            const [setting, labelKey, Icon] = ACTIVITY_RAIL_SETTINGS[id];
+            const [setting, labelKey] = ACTIVITY_RAIL_SETTINGS[id];
             const isLastVisibleModule =
               draft[setting] && !canHideActivityRailModule(draft, id);
             return <label
@@ -422,7 +442,7 @@ export function GeneralSettings() {
             >
               <span className="activity-rail-order-main">
                 <GripVertical className="activity-rail-order-grip" size={16} />
-                <Icon className="activity-rail-order-icon" size={17} />
+                <ActivityRailModuleIcon id={id} />
                 <strong>{t(labelKey)}</strong>
               </span>
               <ToggleSwitch

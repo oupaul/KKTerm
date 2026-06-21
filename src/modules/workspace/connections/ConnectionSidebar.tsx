@@ -46,6 +46,12 @@ import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, use
 import type { DragEvent as ReactDragEvent, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import {
+  ModuleHeader,
+  ModuleHeaderLead,
+  ModuleHeaderTitle,
+  ModuleIconTile,
+} from "../../../app/ModuleHeader";
 import i18next from "../../../i18n/config";
 import { ariaExpanded, dialogButtonAria } from "../../../lib/aria";
 import { requestCredentialUnlock } from "../../../lib/credentialUnlock";
@@ -2608,9 +2614,9 @@ export function ConnectionSidebar({
 
   return (
     <aside className="connection-sidebar" data-tutorial-id="connections.panel">
-      <div className="sidebar-header module-header" onDoubleClick={handleHeaderDoubleClick}>
-        <div className="sidebar-title module-header__lead">
-          <span className="module-header__tile module-header__tile--workspace">
+      <ModuleHeader className="sidebar-header" onDoubleClick={handleHeaderDoubleClick}>
+        <ModuleHeaderLead className="sidebar-title">
+          <ModuleIconTile module="workspace">
             {activeWorkspace?.isDefault || activeWorkspaceId === DEFAULT_WORKSPACE_ID ? (
               <LayoutDashboard aria-hidden="true" size={16} />
             ) : (
@@ -2621,8 +2627,8 @@ export function ConnectionSidebar({
                 size={16}
               />
             )}
-          </span>
-          <h1 className="module-header__title">{panelTitle}</h1>
+          </ModuleIconTile>
+          <ModuleHeaderTitle>{panelTitle}</ModuleHeaderTitle>
           <div className="sidebar-actions">
             <div className="add-connection-anchor" ref={addConnectionRef}>
               <button
@@ -2644,8 +2650,8 @@ export function ConnectionSidebar({
               ) : null}
             </div>
           </div>
-        </div>
-      </div>
+        </ModuleHeaderLead>
+      </ModuleHeader>
 
       <div className="connection-sidebar-subheader">
         <span>{t("connections.title")}</span>

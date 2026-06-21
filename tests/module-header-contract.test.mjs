@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("top-level Modules use the shared compact header template", async () => {
+  const paths = [
+    "src/modules/workspace/connections/ConnectionSidebar.tsx",
+    "src/modules/dashboard/DashboardPage.tsx",
+    "src/modules/installer/InstallerPage.tsx",
+    "src/modules/itops/ItOpsModule.tsx",
+  ];
+
+  for (const path of paths) {
+    const source = await read(path);
+    assert.match(source, /from ["'][^"']*app\/ModuleHeader["']/);
+    assert.match(source, /<ModuleHeader\b/);
+    assert.match(source, /<ModuleIconTile\b/);
+  }
+});
+
+test("Settings reuses Module identity tiles", async () => {
+  const [general, page] = await Promise.all([
+    read("src/modules/settings/GeneralSettings.tsx"),
+    read("src/modules/settings/SettingsPage.tsx"),
+  ]);
+
+  assert.match(general, /<ActivityRailModuleIcon id=\{id\}/);
+  assert.match(general, /<ModuleIconTile compact module=\{module\}/);
+  assert.match(page, /module: "workspace"/);
+  assert.match(page, /module: "dashboard"/);
+  assert.match(page, /module: "installer"/);
+  assert.match(page, /<ModuleIconTile compact module=\{module\}/);
+});

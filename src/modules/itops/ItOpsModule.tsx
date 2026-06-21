@@ -7,6 +7,12 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { Actions, Btn, DialogShell, Sheet } from "../../app/ui/dialog";
+import {
+  ModuleHeader,
+  ModuleHeaderDivider,
+  ModuleHeaderTitle,
+  ModuleIconTile,
+} from "../../app/ModuleHeader";
 import { isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import type { RunEvent } from "../../types";
@@ -135,14 +141,14 @@ export function ItOpsModule() {
   return (
     <div className="it">
       {/* header */}
-      <div className="it-head module-header">
-        <span className="it-head-tile module-header__tile module-header__tile--itops">
+      <ModuleHeader className="it-head">
+        <ModuleIconTile className="it-head-tile" module="itops">
           <ItIcon name="ops" size={20} sw={1.7} />
-        </span>
+        </ModuleIconTile>
         <div className="it-head-txt">
-          <h1 className="module-header__title">{t("itops.title")}</h1>
+          <ModuleHeaderTitle>{t("itops.title")}</ModuleHeaderTitle>
         </div>
-        <span className="module-header__divider" aria-hidden="true" />
+        <ModuleHeaderDivider />
         <div className="it-tabs">
           {TABS.map((tabDef) => {
             const active = tabDef.id === tab;
@@ -178,7 +184,7 @@ export function ItOpsModule() {
           </span>
           {t(prim.labelKey)}
         </button>
-      </div>
+      </ModuleHeader>
 
       {/* content */}
       <div className="it-content">

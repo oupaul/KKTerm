@@ -2465,8 +2465,27 @@
   height: 14px;
 }
 
+.settings-nav-item .module-header__tile--compact {
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.18);
+}
+
+.settings-nav-item .module-header__tile--compact svg {
+  width: 14px;
+  height: 14px;
+  color: white;
+}
+
 .settings-nav-item.active .settings-nav-icon {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.settings-nav-item.active .module-header__tile--compact {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.activity-rail-order-row .module-header__tile--compact,
+.activity-rail-order-row .module-header__tile--compact svg {
+  color: white;
 }
 
 .settings-popup .settings-content {

@@ -39,6 +39,33 @@ Font: `--app-ui-font-family` resolves to SF Pro on macOS and bundled **Inter** o
 Windows (`-apple-system, "SF Pro Text", "SF Pro Display", "Inter", "Segoe UI"`).
 Inter is also selectable explicitly in Settings → Appearance.
 
+## Compact Module header
+
+Every top-level Module uses the shared compact header template in
+`src/app/ModuleHeader.tsx`, with its shared styling in
+`src/app/moduleHeader.css`. Compose Module-owned navigation and actions inside
+that template instead of rebuilding the icon, title, divider, or spacer markup.
+
+- The header is 44px tall with 14px horizontal insets. Its title uses the
+  shared 15px/680-weight/1.2-line-height treatment and stays vertically centered.
+- `ModuleIconTile` is the Module identity source: Workspace is green, Dashboard
+  uses the accent tint, Install Helper uses the accent/red tint, and IT Ops uses
+  the accent/green tint. Use the same glyph and tint in General → Activity Rail
+  and in a Module-specific Settings navigation entry.
+- Put the Module identity first, optional local navigation after
+  `ModuleHeaderDivider`, and primary actions at the far right using
+  `ModuleHeaderSpacer`. A Module may center its navigation when its information
+  architecture requires it, but must keep the shared title position and height.
+- Do not add a subtitle by default. Supporting state belongs in compact metadata
+  or the content area, not in a second title line.
+- Workspace keeps its resizable Connection-panel divider. Its header action sits
+  to the right of the Workspace name, and the content-area top bar is reserved
+  for the Tab Strip when that strip is enabled.
+
+When adding a Module, add its `ModuleKind` and tint to the shared template, use
+that template for the Module header, and reuse the same `ModuleIconTile` wherever
+Settings represents that Module.
+
 ## Dialog primitives — `src/app/ui/dialog/`
 
 Build dialogs from these typed primitives instead of bespoke markup. Import from

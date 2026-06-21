@@ -41,6 +41,14 @@ import {
   Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  ModuleHeader,
+  ModuleHeaderDivider,
+  ModuleHeaderLead,
+  ModuleHeaderSpacer,
+  ModuleHeaderTitle,
+  ModuleIconTile,
+} from "../../app/ModuleHeader";
 import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../store";
 import { useInstallerStore } from "./state";
@@ -465,19 +473,19 @@ export function InstallerPage({ active }: { active: boolean }) {
       aria-label={t("installer.title")}
       data-active={active ? "true" : "false"}
     >
-      <header className="installer-module-header module-header">
-        <span className="installer-topbar__kind module-header__lead">
-          <span className="module-header__tile module-header__tile--installer">
+      <ModuleHeader className="installer-module-header">
+        <ModuleHeaderLead className="installer-topbar__kind">
+          <ModuleIconTile module="installer">
             <Box size={16} strokeWidth={1.9} aria-hidden="true" />
-          </span>
-          <span className="module-header__title">{t("installer.title")}</span>
-        </span>
-        <span className="module-header__divider" aria-hidden="true" />
+          </ModuleIconTile>
+          <ModuleHeaderTitle as="span">{t("installer.title")}</ModuleHeaderTitle>
+        </ModuleHeaderLead>
+        <ModuleHeaderDivider />
         <span className="installer-crumb" style={crumb.style}>
           <crumb.Icon size={14} strokeWidth={1.9} aria-hidden="true" />
           {crumb.label}
         </span>
-        <span className="module-header__spacer" />
+        <ModuleHeaderSpacer />
         <span
           className={`installer-conn-pill${
             checkInProgress ? " installer-conn-pill--busy" : ""
@@ -554,7 +562,7 @@ export function InstallerPage({ active }: { active: boolean }) {
             </span>
           ) : null}
         </button>
-      </header>
+      </ModuleHeader>
 
       <div className="installer-panes">
         <InstallerSidebar

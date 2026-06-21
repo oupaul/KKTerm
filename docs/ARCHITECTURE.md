@@ -434,6 +434,7 @@ Workspace chrome layout is global state. Connection-specific live context may ch
 - `src/styles/colorSchemes.css` — global font faces, `:root` design tokens, and `[data-color-scheme="..."]` CSS custom property blocks consumed by feature CSS files.
 - `src/styles/base.css` — resets and shared CSS primitives used across feature areas: icon/text buttons, dialog backdrops, command menus, form basics, and shared context-menu surfaces.
 - `src/app/app.css` — app shell, Activity Rail, rail tooltips, panel resize chrome, and Tutorial overlay styling.
+- `src/app/ModuleHeader.tsx` and `src/app/moduleHeader.css` — shared compact Module-header structure, title typography, identity icon tiles, dividers, and spacing. Top-level Modules compose their local navigation and actions inside this template; Settings reuses `ModuleIconTile` for matching Module representations.
 - `src/app/ActivityRail.tsx` — Activity Rail rendering, connected Connection shortcuts, pinned Connection actions, native rail Connection context menu, connected Connection drag ordering, and Don't Sleep control.
 - `src/app/RailTooltip.tsx` — shared app-owned Activity Rail tooltip surface, including the Windows native tooltip bridge that can draw over HWND-backed RDP ActiveX surfaces; use this instead of browser-native `title` tooltips for rail icon labels.
 - `src/app/workspaceChromeLayout.tsx` — global Workspace chrome panel widths/collapse state, panel resize handles, layout reset, and localStorage persistence for the Connection panel and AI Assistant Panel.
