@@ -18,6 +18,8 @@ KKTerm is a cross-platform desktop workspace for local terminals, SSH sessions, 
 
 Windows, macOS, and Linux are supported desktop release targets. Platform-specific behavior should stay isolated behind explicit capability checks so each build can preserve native OS behavior without regressing the shared architecture.
 
+Every layout adjustment must be evaluated for all three desktop rendering targets: Windows WebView2, macOS WKWebView, and Linux WebKitGTK. Prefer standards-based shared CSS and layouts that behave consistently across all three engines. When identical behavior is not practical and a documented tradeoff is required, use this product priority order: **Windows first, macOS second, Linux third**. That priority decides among unavoidable tradeoffs; it does not permit silently breaking a lower-priority target. Isolate necessary differences behind explicit platform or capability checks, document the reason, and verify each available target in its real Tauri runtime.
+
 ## Major Source Areas
 
 ### App Shell

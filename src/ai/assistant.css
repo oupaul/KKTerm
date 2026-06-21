@@ -223,6 +223,8 @@
 .assistant-message {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
   max-width: 100%;
   color: var(--text);
   font-size: 13px;
@@ -234,11 +236,14 @@
   justify-items: start;
   gap: 3px;
   min-width: 0;
+  width: 100%;
   max-width: 100%;
 }
 
 .assistant-message-bubble {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .assistant-message-actions {
@@ -609,7 +614,14 @@
   display: grid;
   gap: 8px;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   overflow-wrap: anywhere;
+}
+
+.markdown-content > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .markdown-content h1,
@@ -1028,6 +1040,9 @@
 }
 
 .markdown-code-block {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   background: #202124;
   border: 1px solid #32343a;

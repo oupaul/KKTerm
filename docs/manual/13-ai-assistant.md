@@ -24,6 +24,8 @@ Chat history is stored in SQLite table `assistant_chat_threads`, indexed for rec
 
 Default placeholder `ai.composerPlaceholder`. Send `ai.sendMessage` / `ai.send`. Stop in-flight `ai.stopMessage`; Stop also cancels the backend agent run, so no further provider calls or tool executions happen after it. Cancelling an ACP-backed CLI turn does not start the one-shot fallback, and one-shot fallback processes honor the same cancellation and response timeout. Copy `ai.copy` / `ai.copyMessage`. Highlighted Assistant Panel text can also be copied from the right-click native context menu item `common.copy`. Code label `ai.code`. Show-less / more `ai.showLess` / `ai.more`.
 
+Assistant responses wrap to the available panel width. Wide code blocks remain contained within the response and scroll horizontally inside the code block instead of clipping the surrounding response text.
+
 The composer footer includes a small context-usage meter (`ai.contextUsage`) after the first streamed request reports an estimate. The circular meter fills from the backend's provider/model context estimate; click it to open the usage popover with model, estimated token count, history/current-character buckets, retained/omitted history message counts, and whether the model limit is approximate. The meter is informational and uses estimates because providers, CLIs, and OpenAI-compatible proxies do not share one tokenizer.
 
 ### Attachments
