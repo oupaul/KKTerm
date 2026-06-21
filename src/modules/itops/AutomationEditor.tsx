@@ -67,10 +67,18 @@ const ACTION_KINDS: ActionKind[] = ["notify", "popup", "email", "webhook", "runB
 const NOTIFY_LEVELS: NotifyLevel[] = ["inApp", "toast", "sound"];
 const HTTP_METHODS = ["POST", "GET", "PUT", "PATCH", "DELETE"];
 
-type TriggerType = "performanceCounter" | "schedule" | "logFile" | "ping" | "tcpReachable";
+type TriggerType =
+  | "mock"
+  | "performanceCounter"
+  | "schedule"
+  | "logFile"
+  | "ping"
+  | "tcpReachable"
+  | "sshSessionOutputSilence"
+  | "outputMatch";
 // Trigger types whose firing is a sampled value compared by an editable
 // condition; schedule / logFile fire on a match and carry no condition node.
-const CONDITIONAL: TriggerType[] = ["performanceCounter", "ping", "tcpReachable"];
+const CONDITIONAL: TriggerType[] = ["mock", "performanceCounter", "ping", "tcpReachable"];
 
 const ACTION_ICON: Record<ActionKind, ItIconName> = {
   notify: "bell",
@@ -91,6 +99,7 @@ interface EditorState {
   name: string;
   triggerType: TriggerType;
   metric: PerformanceMetric;
+  mockStep: string;
   op: Op;
   threshold: string;
   pollSeconds: string;
@@ -99,6 +108,9 @@ interface EditorState {
   logPattern: string;
   host: string;
   port: string;
+  sessionId: string;
+  sessionPattern: string;
+  silenceSeconds: string;
   actions: AutomationAction[];
 }
 
@@ -107,6 +119,7 @@ function defaultState(): EditorState {
     name: "",
     triggerType: "performanceCounter",
     metric: "diskUsedPercent",
+    mockStep: "1",
     op: "gt",
     threshold: "85",
     pollSeconds: "60",
@@ -115,6 +128,9 @@ function defaultState(): EditorState {
     logPattern: "",
     host: "",
     port: "",
+    sessionId: "",
+    sessionPattern: "",
+    silenceSeconds: "120",
     actions: [{ kind: "notify", level: "toast" }],
   };
 }
@@ -139,6 +155,12 @@ function fromAutomation(automation: Automation): EditorState {
   const readValue = (): string =>
     "value" in predicate && typeof predicate.value === "number" ? String(predicate.value) : "0";
   switch (target.kind) {
+    case "mock":
+      base.triggerType = "mock";
+      base.mockStep = String(target.step ?? 1);
+      base.op = readOp();
+      base.threshold = readValue();
+      break;
     case "performanceCounter":
       base.triggerType = "performanceCounter";
       base.metric = target.metric;
@@ -168,9 +190,16 @@ function fromAutomation(automation: Automation): EditorState {
       base.op = readOp();
       base.threshold = readValue();
       break;
-    default:
-      // Trigger kinds without an editor (mock / session-based) fall back to the
-      // performance-counter defaults rather than losing the rule entirely.
+    case "sshSessionOutputSilence":
+      base.triggerType = "sshSessionOutputSilence";
+      base.sessionId = target.sessionId;
+      base.silenceSeconds =
+        predicate.op === "silenceFor" ? String(Math.max(1, predicate.ms / 1000)) : "120";
+      break;
+    case "outputMatch":
+      base.triggerType = "outputMatch";
+      base.sessionId = target.sessionId;
+      base.sessionPattern = target.pattern;
       break;
   }
   return base;
@@ -186,6 +215,8 @@ function isValid(state: EditorState): boolean {
   const threshold = Number(state.threshold);
   const pollOk = Number.isFinite(poll) && poll >= 1;
   switch (state.triggerType) {
+    case "mock":
+      return pollOk && Number.isFinite(threshold) && Number.isFinite(Number(state.mockStep));
     case "performanceCounter":
       return pollOk && Number.isFinite(threshold);
     case "ping":
@@ -205,11 +236,22 @@ function isValid(state: EditorState): boolean {
       return state.cron.trim().split(/\s+/).length === 5;
     case "logFile":
       return state.logPath.trim().length > 0 && state.logPattern.length > 0;
+    case "sshSessionOutputSilence": {
+      const silence = Number(state.silenceSeconds);
+      return (
+        pollOk &&
+        state.sessionId.trim().length > 0 &&
+        Number.isFinite(silence) &&
+        silence >= 1
+      );
+    }
+    case "outputMatch":
+      return pollOk && state.sessionId.trim().length > 0 && state.sessionPattern.length > 0;
   }
 }
 
 // Turn editor state into the durable WatchdogConfig the backend stores.
-function buildConfig(state: EditorState): WatchdogConfig {
+function buildConfig(state: EditorState, existing?: WatchdogConfig): WatchdogConfig {
   const threshold = Number(state.threshold);
   const pollMs = Math.max(500, Math.round(Number(state.pollSeconds) * 1000));
   const predicate: PredicateOp = { op: state.op, value: threshold } as PredicateOp;
@@ -217,6 +259,10 @@ function buildConfig(state: EditorState): WatchdogConfig {
   let trigger: WatchdogConfig["trigger"];
   let poll = pollMs;
   switch (state.triggerType) {
+    case "mock":
+      target = { kind: "mock", step: Number(state.mockStep) };
+      trigger = { predicate };
+      break;
     case "performanceCounter":
       target = { kind: "performanceCounter", metric: state.metric };
       trigger = { predicate };
@@ -243,21 +289,38 @@ function buildConfig(state: EditorState): WatchdogConfig {
       trigger = { predicate: { op: "gte", value: 1 } };
       poll = 15_000;
       break;
+    case "sshSessionOutputSilence":
+      target = { kind: "sshSessionOutputSilence", sessionId: state.sessionId.trim() };
+      trigger = {
+        predicate: { op: "silenceFor", ms: Math.round(Number(state.silenceSeconds) * 1000) },
+      };
+      break;
+    case "outputMatch":
+      target = {
+        kind: "outputMatch",
+        sessionId: state.sessionId.trim(),
+        pattern: state.sessionPattern,
+      };
+      trigger = { predicate: { op: "gte", value: 1 } };
+      break;
   }
   return {
+    ...existing,
     name: state.name.trim(),
     target,
-    trigger,
+    trigger: { ...existing?.trigger, ...trigger },
     pollMs: poll,
-    stop: { kind: "untilCanceled" },
-    notification: "inAppPlusToast",
-    action: { kind: "notify" },
+    stop: existing?.stop ?? { kind: "untilCanceled" },
+    notification: existing?.notification ?? "inAppPlusToast",
+    action: existing?.action ?? { kind: "notify" },
   };
 }
 
 // Monospace sub-label shown under the Trigger node, summarizing its target.
 function triggerSubLabel(state: EditorState, t: TFunction): string {
   switch (state.triggerType) {
+    case "mock":
+      return t("watchdog.detail.targetMock");
     case "performanceCounter":
       return state.metric;
     case "schedule":
@@ -268,11 +331,16 @@ function triggerSubLabel(state: EditorState, t: TFunction): string {
       return state.host || t("itops.editor.unset");
     case "tcpReachable":
       return `${state.host || t("itops.editor.unset")}:${state.port || "?"}`;
+    case "sshSessionOutputSilence":
+    case "outputMatch":
+      return state.sessionId || t("itops.editor.unset");
   }
 }
 
 function triggerIcon(triggerType: TriggerType): ItIconName {
   switch (triggerType) {
+    case "mock":
+      return "gauge";
     case "performanceCounter":
       return "gauge";
     case "schedule":
@@ -281,7 +349,10 @@ function triggerIcon(triggerType: TriggerType): ItIconName {
       return "book";
     case "ping":
     case "tcpReachable":
+    case "sshSessionOutputSilence":
       return "pulse";
+    case "outputMatch":
+      return "regex";
   }
 }
 
@@ -311,6 +382,7 @@ interface FlowNodeData extends Record<string, unknown> {
   source: boolean;
   target: boolean;
   onDelete?: () => void;
+  deleteLabel?: string;
 }
 
 function NodeCard({ data }: NodeProps) {
@@ -333,7 +405,7 @@ function NodeCard({ data }: NodeProps) {
             event.stopPropagation();
             d.onDelete?.();
           }}
-          aria-label="delete"
+          aria-label={d.deleteLabel}
         >
           <ItIcon name="xmark" size={12} />
         </button>
@@ -443,6 +515,7 @@ export function AutomationEditor({
           source: false,
           target: true,
           onDelete: () => removeAction(index),
+          deleteLabel: t("itops.actions.delete"),
         } satisfies FlowNodeData,
         draggable: true,
       });
@@ -494,7 +567,7 @@ export function AutomationEditor({
     setTesting(true);
     setTestResult(null);
     try {
-      const result = await testAutomation(buildConfig(state));
+      const result = await testAutomation(buildConfig(state, automation?.config));
       setTestResult(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -507,7 +580,7 @@ export function AutomationEditor({
   async function handleSave() {
     if (!isValid(state) || busy) return;
     setBusy(true);
-    const config = buildConfig(state);
+    const config = buildConfig(state, automation?.config);
     try {
       if (automation) {
         await updateAutomation(automation.id, state.name.trim(), config, state.actions);
@@ -644,14 +717,41 @@ function SidePanel({
             value={state.triggerType}
             onChange={(event) => update({ triggerType: event.currentTarget.value as TriggerType })}
             options={[
+              { value: "mock", label: t("watchdog.detail.targetMock") },
               { value: "performanceCounter", label: t("itops.automations.triggerPerf") },
               { value: "schedule", label: t("itops.automations.triggerSchedule") },
               { value: "logFile", label: t("itops.automations.triggerLogFile") },
               { value: "ping", label: t("itops.automations.triggerPing") },
               { value: "tcpReachable", label: t("itops.automations.triggerTcp") },
+              {
+                value: "sshSessionOutputSilence",
+                label: t("watchdog.detail.targetSshSilence"),
+              },
+              {
+                value: "outputMatch",
+                label: t("watchdog.detail.targetOutputMatch", { pattern: "…" }),
+              },
             ]}
           />
         </Field>
+        {state.triggerType === "mock" ? (
+          <>
+            <Field label={t("itops.editor.sampledValue")} req>
+              <TextInput
+                value={state.mockStep}
+                inputMode="decimal"
+                onChange={(event) => update({ mockStep: event.currentTarget.value })}
+              />
+            </Field>
+            <Field label={t("itops.automations.pollLabel")} req>
+              <TextInput
+                value={state.pollSeconds}
+                inputMode="numeric"
+                onChange={(event) => update({ pollSeconds: event.currentTarget.value })}
+              />
+            </Field>
+          </>
+        ) : null}
         {state.triggerType === "performanceCounter" ? (
           <>
             <Field label={t("itops.automations.metricLabel")} req>
@@ -720,6 +820,41 @@ function SidePanel({
                 onChange={(event) => update({ port: event.currentTarget.value })}
               />
             </Field>
+            <Field label={t("itops.automations.pollLabel")} req>
+              <TextInput
+                value={state.pollSeconds}
+                inputMode="numeric"
+                onChange={(event) => update({ pollSeconds: event.currentTarget.value })}
+              />
+            </Field>
+          </>
+        ) : null}
+        {state.triggerType === "sshSessionOutputSilence" ||
+        state.triggerType === "outputMatch" ? (
+          <>
+            <Field label={t("itops.editor.sessionIdLabel")} req>
+              <TextInput
+                mono
+                value={state.sessionId}
+                onChange={(event) => update({ sessionId: event.currentTarget.value })}
+              />
+            </Field>
+            {state.triggerType === "sshSessionOutputSilence" ? (
+              <Field label={t("itops.editor.silenceSecondsLabel")} req>
+                <TextInput
+                  value={state.silenceSeconds}
+                  inputMode="numeric"
+                  onChange={(event) => update({ silenceSeconds: event.currentTarget.value })}
+                />
+              </Field>
+            ) : (
+              <Field label={t("itops.automations.patternLabel")} req>
+                <TextInput
+                  value={state.sessionPattern}
+                  onChange={(event) => update({ sessionPattern: event.currentTarget.value })}
+                />
+              </Field>
+            )}
             <Field label={t("itops.automations.pollLabel")} req>
               <TextInput
                 value={state.pollSeconds}

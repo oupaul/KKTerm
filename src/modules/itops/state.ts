@@ -47,6 +47,13 @@ export interface LiveRun {
   state: "running" | "done" | "canceled";
 }
 
+const MAX_LIVE_OUTPUT = 256 * 1024;
+
+function appendLiveOutput(current: string, chunk: string): string {
+  if (current.length >= MAX_LIVE_OUTPUT) return current;
+  return (current + chunk).slice(0, MAX_LIVE_OUTPUT);
+}
+
 // Fold a streamed `itops://run` event into the live run snapshot. Events for a
 // stale run id are ignored so a new run cleanly supersedes the previous one.
 function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
@@ -75,7 +82,7 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
         ...run,
         hosts: run.hosts.map((host) =>
           host.connectionId === event.connectionId
-            ? { ...host, output: (host.output ?? "") + event.chunk }
+            ? { ...host, output: appendLiveOutput(host.output ?? "", event.chunk) }
             : host,
         ),
       };
@@ -92,7 +99,9 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
                 // The final event carries the authoritative full output, but on a
                 // timeout/transport error it is empty — keep what already streamed
                 // so a host that printed output before timing out doesn't blank.
-                output: event.output || host.output,
+                output: event.output
+                  ? appendLiveOutput("", event.output)
+                  : host.output,
                 durationMs: event.durationMs,
                 error: event.error,
               }

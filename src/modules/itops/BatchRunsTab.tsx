@@ -78,8 +78,10 @@ function HostCard({ host }: { host: LiveRunHost }) {
   }, [open, host.status, host.output]);
 
   const codeText =
-    host.status === "ok" || host.status === "failed"
-      ? t("itops.batchRuns.codeExit", { code: host.exitCode ?? 0 })
+    (host.status === "ok" || host.status === "failed") && host.exitCode != null
+      ? t("itops.batchRuns.codeExit", { code: host.exitCode })
+      : host.status === "failed"
+        ? t("itops.batchRuns.codeFailed")
       : host.status === "running"
         ? t("itops.batchRuns.codeRunning")
         : t("itops.batchRuns.codeQueued");

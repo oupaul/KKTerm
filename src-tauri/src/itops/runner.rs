@@ -170,6 +170,26 @@ impl SshTransport {
     }
 }
 
+fn outcome_from_streaming_result(
+    result: Result<(i32, String), String>,
+    streamed_output: String,
+) -> ExecOutcome {
+    match result {
+        Ok((exit_code, output)) => ExecOutcome {
+            ok: exit_code == 0,
+            exit_code: Some(exit_code),
+            output,
+            error: None,
+        },
+        Err(error) => ExecOutcome {
+            ok: false,
+            exit_code: None,
+            output: streamed_output,
+            error: Some(error),
+        },
+    }
+}
+
 impl BatchTransport for SshTransport {
     fn exec(
         &self,
@@ -198,20 +218,13 @@ impl BatchTransport for SshTransport {
             timeout_seconds: spec.timeout_seconds,
             socks_proxy: spec.socks_proxy.clone(),
         };
-        match ssh::run_remote_command_capture_streaming(request, on_chunk) {
-            Ok((exit_code, output)) => ExecOutcome {
-                ok: exit_code == 0,
-                exit_code: Some(exit_code),
-                output,
-                error: None,
-            },
-            Err(error) => ExecOutcome {
-                ok: false,
-                exit_code: None,
-                output: String::new(),
-                error: Some(error),
-            },
-        }
+        let streamed_output = Mutex::new(String::new());
+        let capture_chunk = |chunk: &str| {
+            streamed_output.lock().unwrap().push_str(chunk);
+            on_chunk(chunk);
+        };
+        let result = ssh::run_remote_command_capture_streaming(request, &capture_chunk);
+        outcome_from_streaming_result(result, streamed_output.into_inner().unwrap())
     }
 }
 
@@ -445,5 +458,21 @@ mod tests {
         let capped = cap_output(big);
         assert!(capped.len() <= MAX_STORED_OUTPUT + 32);
         assert!(capped.ends_with("[output truncated]"));
+    }
+
+    #[test]
+    fn streaming_failure_keeps_output_received_before_error() {
+        let outcome = outcome_from_streaming_result(
+            Err("SSH command timed out after 120 seconds".to_string()),
+            "work in progress\n".to_string(),
+        );
+
+        assert!(!outcome.ok);
+        assert_eq!(outcome.exit_code, None);
+        assert_eq!(outcome.output, "work in progress\n");
+        assert_eq!(
+            outcome.error.as_deref(),
+            Some("SSH command timed out after 120 seconds")
+        );
     }
 }
