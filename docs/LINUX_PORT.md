@@ -141,7 +141,8 @@ before the earlier phase's criterion is met.
       `/home/ryan/KKTerm`. **Blocked:** Tauri system deps need `sudo` and pb60
       has no passwordless sudo. Required packages (Ubuntu 24.04):
       `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
-      librsvg2-dev libssl-dev build-essential pkg-config libfuse2t64`.
+      librsvg2-dev libgbm-dev libssl-dev build-essential pkg-config
+      libfuse2t64`.
 - [ ] Run `cargo check` for `target_os = "linux"`; collect every compile error.
 - [ ] For each missing-implementation error, add the minimal
       `cfg(target_os = "linux")` block (stub/no-op/Err) so it compiles. Track

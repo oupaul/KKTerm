@@ -153,6 +153,11 @@ After the Windows release exists, run this on Linux:
 npm run release:github:linux
 ```
 
+On Ubuntu 24.04, the Linux build host must have the Tauri/AppImage native
+packages installed: `libwebkit2gtk-4.1-dev libgtk-3-dev
+libayatana-appindicator3-dev librsvg2-dev libgbm-dev libssl-dev
+build-essential pkg-config libfuse2t64`.
+
 The script builds the x86_64 AppImage with `npm run package:linux`, copies the user-facing AppImage to:
 
 - `artifacts/kkterm-<version>-linux-x86_64.AppImage`
