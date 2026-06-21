@@ -53,8 +53,8 @@ mod platform {
     const HOST_WINDOW_LABEL: &str = "main";
     const HIDDEN_RDP_POSITION: i32 = -32_000;
     const LOCALE_USER_DEFAULT: u32 = 0x0400;
-    const RDP_MIN_DESKTOP_WIDTH: i32 = 640;
-    const RDP_MIN_DESKTOP_HEIGHT: i32 = 480;
+    const RDP_MIN_DESKTOP_WIDTH: i32 = 200;
+    const RDP_MIN_DESKTOP_HEIGHT: i32 = 200;
     const RDP_UNKNOWN_PHYSICAL_SIZE_MM: i32 = 0;
     const RDP_DISPLAY_ORIENTATION_LANDSCAPE: i32 = 0;
     const RDP_DISPLAY_SCALE_FACTOR_PERCENT: i32 = 100;
@@ -1056,6 +1056,7 @@ mod platform {
             size.3,
             scale_factor,
         );
+        let smart_sizing = smart_sizing_for_physical_bounds(resolution_mode, size.2, size.3);
         rdp_debug(
             "session.start.display_settings",
             &json!({
@@ -1078,7 +1079,7 @@ mod platform {
             port,
             request.password.as_deref(),
             display_settings,
-            resolution_mode,
+            smart_sizing,
             &options,
         )?;
         rdp_debug(
@@ -1243,7 +1244,7 @@ mod platform {
         port: u16,
         password: Option<&str>,
         display_settings: RdpDisplaySettings,
-        resolution_mode: RemoteResolutionMode,
+        smart_sizing: bool,
         options: &RdpSessionOptions,
     ) -> Result<(), String> {
         let (domain, username) = split_windows_user(user);
@@ -1288,7 +1289,7 @@ mod platform {
             let _ = set_property_bool(&advanced, "RedirectSmartCards", false);
             let _ = set_property_i32(&advanced, "SasSequence", RDP_STANDARD_SAS_SEQUENCE);
             let _ = set_property_i32(&advanced, "HotKeyCtrlAltDel", VK_END_KEY as i32);
-            let _ = set_property_bool(&advanced, "SmartSizing", resolution_mode.smart_sizing());
+            let _ = set_property_bool(&advanced, "SmartSizing", smart_sizing);
             let _ = set_property_bool(&advanced, "BitmapPersistence", options.bitmap_cache);
             let _ = set_property_bool(&advanced, "CachePersistenceActive", options.bitmap_cache);
             let _ = set_property_i32(
@@ -2172,7 +2173,15 @@ mod platform {
         width: f64,
         height: f64,
     ) -> Result<(i32, i32, i32, i32), String> {
-        apply_smart_sizing(&session.dispatch, session.resolution_mode.smart_sizing());
+        let physical_rect = scaled_rect(x, y, width, height, scale_factor);
+        apply_smart_sizing(
+            &session.dispatch,
+            smart_sizing_for_physical_bounds(
+                session.resolution_mode,
+                physical_rect.2,
+                physical_rect.3,
+            ),
+        );
         let rect = show_rdp(
             session.hwnd,
             session.owner,
@@ -2325,6 +2334,16 @@ mod platform {
 
     fn desktop_height_for(height: i32) -> i32 {
         height.max(RDP_MIN_DESKTOP_HEIGHT)
+    }
+
+    fn smart_sizing_for_physical_bounds(
+        resolution_mode: RemoteResolutionMode,
+        physical_width: i32,
+        physical_height: i32,
+    ) -> bool {
+        resolution_mode.smart_sizing()
+            || physical_width < RDP_MIN_DESKTOP_WIDTH
+            || physical_height < RDP_MIN_DESKTOP_HEIGHT
     }
 
     fn is_rdp_connected_state(connection_state: i32) -> bool {
@@ -2612,10 +2631,39 @@ mod platform {
 
         #[test]
         fn enforces_rdp_desktop_minimum_size() {
-            assert_eq!(desktop_width_for(320), RDP_MIN_DESKTOP_WIDTH);
-            assert_eq!(desktop_height_for(240), RDP_MIN_DESKTOP_HEIGHT);
+            assert_eq!(desktop_width_for(199), RDP_MIN_DESKTOP_WIDTH);
+            assert_eq!(desktop_height_for(199), RDP_MIN_DESKTOP_HEIGHT);
+            assert_eq!(desktop_width_for(320), 320);
+            assert_eq!(desktop_height_for(240), 240);
             assert_eq!(desktop_width_for(1200), 1200);
             assert_eq!(desktop_height_for(900), 900);
+        }
+
+        #[test]
+        fn forces_smart_sizing_below_rdp_desktop_minimum_size() {
+            assert!(!smart_sizing_for_physical_bounds(
+                RemoteResolutionMode::Automatic,
+                RDP_MIN_DESKTOP_WIDTH,
+                RDP_MIN_DESKTOP_HEIGHT,
+            ));
+            assert!(smart_sizing_for_physical_bounds(
+                RemoteResolutionMode::Automatic,
+                RDP_MIN_DESKTOP_WIDTH - 1,
+                RDP_MIN_DESKTOP_HEIGHT,
+            ));
+            assert!(smart_sizing_for_physical_bounds(
+                RemoteResolutionMode::DpiZoom,
+                RDP_MIN_DESKTOP_WIDTH,
+                RDP_MIN_DESKTOP_HEIGHT - 1,
+            ));
+            assert!(smart_sizing_for_physical_bounds(
+                RemoteResolutionMode::Fixed {
+                    width: 1440,
+                    height: 900,
+                },
+                1200,
+                900,
+            ));
         }
 
         #[test]

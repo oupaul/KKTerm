@@ -90,6 +90,9 @@ KKTerm-only rendering bug.
 SmartSizing is useful, but only in the right lane:
 
 - Enable it for fixed-resolution and explicit presentation-fit modes.
+- Enable it when either physical ActiveX host dimension is below Microsoft's
+  200-pixel `DesktopWidth`/`DesktopHeight` minimum; request the 200-pixel
+  remote desktop minimum and scale it into the smaller Pane.
 - Consider enabling it as a fallback when a server keeps a larger fixed
   framebuffer and the ActiveX control reports or visibly shows scrollbars.
 - Keep it disabled for true Pane-tracking dynamic resize modes when the server
