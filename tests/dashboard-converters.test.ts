@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   convertUnit,
+  formatCurrencyRateDate,
+  normalizeCurrencyRates,
   resolveCurrencyPair,
   resolveUnitPair,
   formatConvertedValue,
@@ -44,6 +46,19 @@ test("normalizeFrankfurterRates builds a base-to-target lookup with refresh meta
   assert.equal(normalized.rates.USD, 1);
   assert.equal(normalized.rates.EUR, 0.92);
   assert.equal(normalized.rates.JPY, 156.5);
+});
+
+test("cached currency rates are validated before restoration", () => {
+  assert.deepEqual(
+    normalizeCurrencyRates({ base: "USD", date: "2026-06-21", rates: { USD: 1, EUR: 0.87 } }),
+    { base: "USD", date: "2026-06-21", rates: { USD: 1, EUR: 0.87 } },
+  );
+  assert.equal(normalizeCurrencyRates({ base: "USD", date: "2026-06-21", rates: { EUR: "bad" } }), null);
+});
+
+test("currency rate dates use localized calendar formatting", () => {
+  assert.equal(formatCurrencyRateDate("Sun, 21 Jun 2026 00:02:31 +0000", "en-US"), "Jun 21, 2026");
+  assert.equal(formatCurrencyRateDate("2026-06-21", "en-US"), "Jun 21, 2026");
 });
 
 test("currency amounts can be edited from either side", () => {

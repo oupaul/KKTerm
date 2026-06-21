@@ -7,6 +7,8 @@ import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import {
   UNIT_DEFINITIONS,
+  formatCurrencyRateDate,
+  normalizeCurrencyRates,
   resolveCurrencyPair,
   resolveUnitPair,
   type CurrencyRates,
@@ -26,6 +28,7 @@ interface ConvertersConfig {
   currencyTargetAmount: string;
   fromCurrency: string;
   toCurrency: string;
+  currencyRates: CurrencyRates | null;
 }
 
 const DEFAULT_CONFIG: ConvertersConfig = {
@@ -39,6 +42,7 @@ const DEFAULT_CONFIG: ConvertersConfig = {
   currencyTargetAmount: "1",
   fromCurrency: "USD",
   toCurrency: "EUR",
+  currencyRates: null,
 };
 
 const CURRENCIES = ["USD", "EUR", "TWD", "JPY", "CNY", "HKD", "KRW", "GBP", "CAD", "AUD", "SGD", "THB", "IDR", "VND", "CHF", "SEK", "MXN", "BRL"];
@@ -63,20 +67,21 @@ function normalizeConfig(value: unknown): ConvertersConfig {
     currencyTargetAmount: typeof candidate.currencyTargetAmount === "string" ? candidate.currencyTargetAmount : "1",
     fromCurrency: CURRENCIES.includes(candidate.fromCurrency ?? "") ? candidate.fromCurrency! : "USD",
     toCurrency: CURRENCIES.includes(candidate.toCurrency ?? "") ? candidate.toCurrency! : "EUR",
+    currencyRates: normalizeCurrencyRates(candidate.currencyRates),
   };
 }
 
 export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [config, setConfig] = useWidgetConfig(
     storageKey(instance.id),
     DEFAULT_CONFIG,
     normalizeConfig,
   );
-  const [rates, setRates] = useState<CurrencyRates | null>(null);
   const [unitEditSide, setUnitEditSide] = useState<"source" | "target">("source");
   const [currencyEditSide, setCurrencyEditSide] = useState<"source" | "target">("source");
   const [currencyState, setCurrencyState] = useState<"idle" | "loading" | "error">("idle");
+  const rates = config.currencyRates;
   const units = UNIT_DEFINITIONS[config.unitCategory];
   const unitPair = resolveUnitPair(
     unitEditSide,
@@ -107,7 +112,8 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
   async function refreshRates() {
     setCurrencyState("loading");
     try {
-      setRates(await invokeCommand("fetch_currency_rates"));
+      const currencyRates = await invokeCommand("fetch_currency_rates");
+      setConfig((current) => ({ ...current, currencyRates }));
       setCurrencyState("idle");
     } catch {
       setCurrencyState("error");
@@ -199,8 +205,10 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
             <span>
               {currencyState === "error"
                 ? t("dashboard.currencyError")
-                : rates
-                  ? t("dashboard.currencyLastRefresh", { date: rates.date })
+                : rates?.date
+                  ? t("dashboard.currencyLastRefresh", {
+                      date: formatCurrencyRateDate(rates.date, i18n.language),
+                    })
                   : t("dashboard.currencyEstimate")}
             </span>
             <button type="button" className="secondary-button" disabled={currencyState === "loading"} onClick={() => void refreshRates()}>

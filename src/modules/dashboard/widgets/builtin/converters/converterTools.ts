@@ -54,6 +54,35 @@ export interface CurrencyRates {
   rates: Record<string, number>;
 }
 
+export function normalizeCurrencyRates(value: unknown): CurrencyRates | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<CurrencyRates>;
+  if (typeof candidate.base !== "string" || typeof candidate.date !== "string") return null;
+  if (!candidate.rates || typeof candidate.rates !== "object") return null;
+
+  const rates: Record<string, number> = {};
+  for (const [currency, rate] of Object.entries(candidate.rates)) {
+    if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
+    rates[currency.toUpperCase()] = rate;
+  }
+
+  const base = candidate.base.toUpperCase();
+  return base && rates[base] ? { base, date: candidate.date, rates } : null;
+}
+
+export function formatCurrencyRateDate(value: string, locale: string): string {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
 export function convertUnit(category: UnitCategory, value: number, from: string, to: string): number {
   if (category === "temperature") return convertTemperature(value, from, to);
   const units = UNIT_DEFINITIONS[category];
