@@ -226,10 +226,6 @@ export function NewWorkspaceDialog({
               name={name || workspace?.name || t("workspace.newWorkspace")}
               onChange={setIcon}
             />
-            <span>
-              <strong>{name.trim() || workspace?.name || t("workspace.newWorkspace")}</strong>
-              <small>{t("workspace.workspaceIcon")}</small>
-            </span>
             <ConnectionIconBackgroundPicker
               color={iconColor}
               onChange={setIconColor}

@@ -725,6 +725,10 @@
 }
 
 .new-workspace-summary {
+  grid-template-columns: auto auto;
+  justify-content: start;
+  gap: 12px;
+  padding: 8px 10px;
   background: var(--surface);
 }
 
