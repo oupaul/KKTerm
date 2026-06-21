@@ -150,6 +150,15 @@ For future hard cases, also useful to log:
 - Optional ActiveX scrollbar visibility properties if available on the installed
   `mstscax.dll`.
 
+`ui.debug.log` records these sizing comparisons as correlated
+`rdp.geometry.frontend` and `rdp.geometry.native` events. The frontend event
+contains the raw DOM rectangle, owning embedded Pane clip, rounded logical
+request, element dimensions, device pixel ratio, and visual viewport. The native event contains the Tauri
+scale factor, requested physical rectangle, actual ATL host window/client
+rectangles, actual hosted ActiveX object window/client rectangles, SmartSizing
+state, and current remote desktop dimensions. Compare events by `sessionId`; no host, username, or secret
+is included.
+
 ## Practical Decision Tree
 
 1. If Windows RDP is scaled down, confirm Automatic mode is not using

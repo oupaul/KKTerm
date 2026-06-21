@@ -57,3 +57,35 @@ test("RDP display resize debug events include connection state", async () => {
     assert.match(eventBlock, /"connectionStateLabel": rdp_connection_state_label\(connection_state\)/);
   }
 });
+
+test("RDP sizing emits correlated frontend and native geometry to the UI debug log", async () => {
+  const rdpSource = await readFile(new URL("../src-tauri/src/rdp.rs", import.meta.url), "utf8");
+  const remoteDesktopSource = await readFile(
+    new URL("../src/modules/workspace/connections/remote-desktop/RemoteDesktopWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(remoteDesktopSource, /logUiDebug\("rdp\.geometry\.frontend"/);
+  assert.match(remoteDesktopSource, /devicePixelRatio/);
+  assert.match(remoteDesktopSource, /getBoundingClientRect/);
+  assert.match(rdpSource, /ui_debug\(\s*"rdp\.geometry\.native"/);
+  assert.match(rdpSource, /GetWindowRect/);
+  assert.match(rdpSource, /GetClientRect/);
+  assert.match(rdpSource, /actualObjectWindow/);
+});
+
+test("embedded RDP bounds shrink and clip to the owning Panorama pane", async () => {
+  const remoteDesktopSource = await readFile(
+    new URL("../src/modules/workspace/connections/remote-desktop/RemoteDesktopWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  const terminalCss = await readFile(
+    new URL("../src/modules/workspace/connections/terminal/terminal.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(terminalCss, /\.embedded-workspace-pane\s*>\s*\.remote-desktop-shell\s*\{[^}]*min-width:\s*0;/s);
+  assert.match(remoteDesktopSource, /closest\("\.embedded-workspace-pane"\)/);
+  assert.match(remoteDesktopSource, /Math\.min\(rect\.right, clipRect\.right\)/);
+  assert.match(remoteDesktopSource, /Math\.max\(rect\.left, clipRect\.left\)/);
+});

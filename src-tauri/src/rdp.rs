@@ -12,7 +12,7 @@ mod platform {
     use serde_json::json;
     use tauri::{AppHandle, Manager};
 
-    use crate::logging::rdp_debug;
+    use crate::logging::{rdp_debug, ui_debug};
     use windows::{
         Win32::{
             Foundation::{
@@ -28,7 +28,7 @@ mod platform {
                 DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
                 LibraryLoader::{GetProcAddress, LoadLibraryW},
                 Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock},
-                Ole::{CF_UNICODETEXT, DISPID_PROPERTYPUT, OleInitialize},
+                Ole::{CF_UNICODETEXT, DISPID_PROPERTYPUT, IOleInPlaceObject, OleInitialize},
                 Variant::{
                     VARIANT, VT_BOOL, VT_BSTR, VT_DISPATCH, VT_I2, VT_I4, VT_UI4, VariantClear,
                 },
@@ -40,10 +40,10 @@ mod platform {
                     VIRTUAL_KEY, VkKeyScanW,
                 },
                 WindowsAndMessaging::{
-                    CreateWindowExW, DestroyWindow, GetWindowRect, HMENU, SW_SHOWNOACTIVATE,
-                    SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetForegroundWindow, SetWindowPos,
-                    ShowWindow, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE,
-                    WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
+                    CreateWindowExW, DestroyWindow, GetClientRect, GetWindowRect, HMENU,
+                    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW,
+                    SetForegroundWindow, SetWindowPos, ShowWindow, WS_CLIPCHILDREN,
+                    WS_CLIPSIBLINGS, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
                 },
             },
         },
@@ -455,6 +455,7 @@ mod platform {
     }
 
     struct RdpSession {
+        session_id: String,
         hwnd: HWND,
         owner: HWND,
         dispatch: IDispatch,
@@ -1046,7 +1047,6 @@ mod platform {
             }),
         );
         let (hwnd, dispatch, control) = create_rdp_control(parent_hwnd, initial_rect)?;
-
         let options = request.options.unwrap_or_default();
         let resolution_mode = RemoteResolutionMode::parse(&options.remote_resolution);
         let display_settings = resolution_mode.display_settings(
@@ -1107,6 +1107,7 @@ mod platform {
         sessions.insert(
             session_id.clone(),
             RdpSession {
+                session_id: session_id.clone(),
                 hwnd,
                 owner: parent_hwnd,
                 dispatch,
@@ -2174,14 +2175,13 @@ mod platform {
         height: f64,
     ) -> Result<(i32, i32, i32, i32), String> {
         let physical_rect = scaled_rect(x, y, width, height, scale_factor);
-        apply_smart_sizing(
-            &session.dispatch,
-            smart_sizing_for_physical_bounds(
-                session.resolution_mode,
-                physical_rect.2,
-                physical_rect.3,
-            ),
+        let smart_sizing = smart_sizing_for_physical_bounds(
+            session.resolution_mode,
+            physical_rect.2,
+            physical_rect.3,
         );
+        apply_smart_sizing(&session.dispatch, smart_sizing);
+        let object_hwnd = hosted_rdp_object_window(&session.dispatch);
         let rect = show_rdp(
             session.hwnd,
             session.owner,
@@ -2191,6 +2191,41 @@ mod platform {
             width,
             height,
         )?;
+        ui_debug(
+            "rdp.geometry.native",
+            &json!({
+                "sessionId": &session.session_id,
+                "resolutionMode": resolution_mode_name(session.resolution_mode),
+                "smartSizing": smart_sizing,
+                "scaleFactor": scale_factor,
+                "requestedLogicalBounds": {
+                    "x": x,
+                    "y": y,
+                    "width": width,
+                    "height": height,
+                },
+                "requestedPhysicalBounds": {
+                    "x": physical_rect.0,
+                    "y": physical_rect.1,
+                    "width": physical_rect.2,
+                    "height": physical_rect.3,
+                },
+                "positionedHostRect": {
+                    "x": rect.0,
+                    "y": rect.1,
+                    "width": rect.2,
+                    "height": rect.3,
+                },
+                "actualHostWindow": native_window_geometry_payload(session.hwnd),
+                "actualObjectWindow": object_hwnd.map(native_window_geometry_payload),
+                "remoteDesktop": {
+                    "width": session.desktop_width,
+                    "height": session.desktop_height,
+                    "desktopScaleFactor": session.desktop_scale_factor,
+                    "deviceScaleFactor": session.device_scale_factor,
+                },
+            }),
+        );
         Ok(rect)
     }
 
@@ -2273,6 +2308,37 @@ mod platform {
             width.max(1),
             height.max(1),
         )
+    }
+
+    fn hosted_rdp_object_window(dispatch: &IDispatch) -> Option<HWND> {
+        let in_place_object = dispatch.cast::<IOleInPlaceObject>().ok()?;
+        unsafe { in_place_object.GetWindow().ok() }
+    }
+
+    fn rect_payload(rect: &RECT) -> serde_json::Value {
+        json!({
+            "left": rect.left,
+            "top": rect.top,
+            "right": rect.right,
+            "bottom": rect.bottom,
+            "width": rect.right - rect.left,
+            "height": rect.bottom - rect.top,
+        })
+    }
+
+    fn native_window_geometry_payload(hwnd: HWND) -> serde_json::Value {
+        let mut window_rect = RECT::default();
+        let mut client_rect = RECT::default();
+        let window_rect = unsafe { GetWindowRect(hwnd, &mut window_rect) }
+            .ok()
+            .map(|()| rect_payload(&window_rect));
+        let client_rect = unsafe { GetClientRect(hwnd, &mut client_rect) }
+            .ok()
+            .map(|()| rect_payload(&client_rect));
+        json!({
+            "windowRect": window_rect,
+            "clientRect": client_rect,
+        })
     }
 
     fn client_to_screen_point(owner: HWND, x: i32, y: i32) -> Result<(i32, i32), String> {

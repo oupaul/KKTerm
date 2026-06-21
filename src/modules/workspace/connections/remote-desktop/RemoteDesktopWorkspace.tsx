@@ -13,7 +13,7 @@ import type {
   PointerEvent as ReactPointerEvent,
   WheelEvent as ReactWheelEvent,
 } from "react";
-import { invokeCommand, isTauriRuntime, type AssistantScreenshot } from "../../../../lib/tauri";
+import { invokeCommand, isTauriRuntime, logUiDebug, type AssistantScreenshot } from "../../../../lib/tauri";
 import { useWorkspaceStore } from "../../../../store";
 import type {
   Connection,
@@ -106,6 +106,7 @@ export function RemoteDesktopWorkspace({
   const rdpConnectionCountedRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
   const lastBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const lastLoggedBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const rafRef = useRef<number | null>(null);
   const displayReadyRef = useRef(false);
   const displaySyncInFlightRef = useRef(false);
@@ -172,12 +173,72 @@ export function RemoteDesktopWorkspace({
       return null;
     }
     const rect = node.getBoundingClientRect();
-    return {
-      x: Math.max(0, Math.round(rect.left)),
-      y: Math.max(0, Math.round(rect.top)),
-      width: Math.max(1, Math.round(rect.width)),
-      height: Math.max(1, Math.round(rect.height)),
+    const clipNode = node.closest(".embedded-workspace-pane");
+    const clipRect = clipNode?.getBoundingClientRect() ?? rect;
+    const visibleRect = {
+      left: Math.max(rect.left, clipRect.left),
+      top: Math.max(rect.top, clipRect.top),
+      right: Math.min(rect.right, clipRect.right),
+      bottom: Math.min(rect.bottom, clipRect.bottom),
     };
+    const bounds = {
+      x: Math.max(0, Math.round(visibleRect.left)),
+      y: Math.max(0, Math.round(visibleRect.top)),
+      width: Math.max(1, Math.round(visibleRect.right - visibleRect.left)),
+      height: Math.max(1, Math.round(visibleRect.bottom - visibleRect.top)),
+    };
+    const previous = lastLoggedBoundsRef.current;
+    if (
+      canStartRdp &&
+      (!previous ||
+        previous.x !== bounds.x ||
+        previous.y !== bounds.y ||
+        previous.width !== bounds.width ||
+        previous.height !== bounds.height)
+    ) {
+      lastLoggedBoundsRef.current = bounds;
+      logUiDebug("rdp.geometry.frontend", {
+        sessionId: sessionIdRef.current,
+        connectionId: connection?.id ?? null,
+        isActive: visibilityRef.current.isActive,
+        suppressed: visibilityRef.current.suppressed,
+        domRect: {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+          right: rect.right,
+          bottom: rect.bottom,
+        },
+        clipRect: {
+          left: clipRect.left,
+          top: clipRect.top,
+          width: clipRect.width,
+          height: clipRect.height,
+          right: clipRect.right,
+          bottom: clipRect.bottom,
+        },
+        visibleRect,
+        requestedLogicalBounds: bounds,
+        elementSize: {
+          clientWidth: node.clientWidth,
+          clientHeight: node.clientHeight,
+          offsetWidth: node.offsetWidth,
+          offsetHeight: node.offsetHeight,
+        },
+        devicePixelRatio: window.devicePixelRatio,
+        visualViewport: window.visualViewport
+          ? {
+              width: window.visualViewport.width,
+              height: window.visualViewport.height,
+              scale: window.visualViewport.scale,
+              offsetLeft: window.visualViewport.offsetLeft,
+              offsetTop: window.visualViewport.offsetTop,
+            }
+          : null,
+      });
+    }
+    return bounds;
   };
 
   const boundsEqual = (
@@ -919,6 +980,8 @@ export function RemoteDesktopWorkspace({
       }
       sessionId = createRemoteDesktopSessionId("rdp");
       sessionIdRef.current = sessionId;
+      lastLoggedBoundsRef.current = null;
+      computeBounds();
       sessionStartingRef.current = true;
       displayReadyRef.current = false;
       displaySyncInFlightRef.current = false;

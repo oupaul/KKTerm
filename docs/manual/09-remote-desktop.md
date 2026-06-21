@@ -57,9 +57,11 @@ The native HWND backing an RDP Session does not obey DOM z-index. When an app-ow
 
 This behaviour is **RDP-only**. WebView2, VNC, terminal, and SFTP surfaces never use overlay parking. Geometry-scoped detection lives in `src/modules/workspace/nativeOverlay.ts`. Do not extend this workaround to other surfaces.
 
+In dense Panorama layouts, KKTerm intersects the RDP surface with its owning embedded Pane before sending bounds to the native ATL host. This prevents an overflowing descendant DOM box from expanding the native RDP window over adjacent Connection Panes.
+
 ## RDP debug logging
 
-Debug builds write RDP startup, ActiveX control creation, display-size sync, and main-thread command timing records to `rdp.debug.log` beside `kkterm.log`. Release builds write the same JSONL log only when Settings → General → Debug → `settings.advancedDebugging` is enabled. Records include non-secret Connection details such as host, username, port, RDP options, bounds, selected ActiveX ProgID, display size, scale factors, and command errors. Password-like, secret-like, token-like, and credential-like fields are redacted defensively; users should still review the file before sharing because hostnames and usernames may be sensitive.
+Debug builds write RDP startup, ActiveX control creation, display-size sync, and main-thread command timing records to `rdp.debug.log` beside `kkterm.log`. Release builds write the same JSONL log only when Settings → General → Debug → `settings.advancedDebugging` is enabled. Records include non-secret Connection details such as host, username, port, RDP options, bounds, selected ActiveX ProgID, display size, scale factors, and command errors. Correlated `rdp.geometry.frontend` and `rdp.geometry.native` records in `ui.debug.log` compare DOM/viewport sizing with the owning embedded Pane clip, requested physical rectangle, actual ATL host and hosted ActiveX object window/client rectangles, SmartSizing, and remote desktop dimensions. Password-like, secret-like, token-like, and credential-like fields are redacted defensively; users should still review the files before sharing because hostnames and usernames may be sensitive.
 
 ## RDP / VNC settings
 

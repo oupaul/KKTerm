@@ -148,14 +148,16 @@
   background: var(--chrome-strong);
 }
 
+.embedded-workspace-pane > .remote-desktop-shell {
+  min-width: 0;
+}
+
 /* File-browser sub-panes (SFTP / FTP / File Explorer) and the Document viewer
    must fill the embedded pane the same way the terminal surface does.
    `.sftp-workspace.active` and `.file-viewer-workspace.active` are block-level
    flex columns, so as a flex item in this row they would otherwise size to their
    content width — leaving the pane partially empty and the toolbar narrower than
-   the pane. Webview/remote-desktop surfaces don't need this — their native
-   overlay windows are positioned to the pane bounds in JS, independent of the
-   DOM box width. */
+   the pane. */
 .embedded-workspace-pane > .sftp-workspace,
 .embedded-workspace-pane > .file-viewer-workspace {
   flex: 1 1 0;
