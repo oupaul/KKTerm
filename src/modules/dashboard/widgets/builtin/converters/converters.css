@@ -26,11 +26,13 @@
   color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .dw-converters-tabs button.is-active {
   background: var(--surface);
   color: var(--text);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .dw-converter-panel {
@@ -42,10 +44,16 @@
 }
 
 .dw-converter-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dw-converter-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(88px, auto);
   gap: 6px;
-  align-items: center;
+  align-items: stretch;
 }
 
 .dw-converter-panel input,
@@ -71,12 +79,6 @@
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
-}
-
-.dw-converter-equals {
-  grid-column: 1 / -1;
-  color: var(--text-faint);
-  text-align: center;
 }
 
 .dw-currency-footer {

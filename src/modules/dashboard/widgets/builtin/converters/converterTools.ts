@@ -101,3 +101,22 @@ export function convertCurrency(amount: number, from: string, to: string, rates:
   if (!fromRate || !toRate) return Number.NaN;
   return (amount / fromRate) * toRate;
 }
+
+export function resolveCurrencyPair(
+  editedSide: "source" | "target",
+  value: string,
+  from: string,
+  to: string,
+  rates: CurrencyRates | null,
+): { source: string; target: string } {
+  const amount = Number(value);
+  const converted =
+    rates && Number.isFinite(amount)
+      ? editedSide === "source"
+        ? convertCurrency(amount, from, to, rates)
+        : convertCurrency(amount, to, from, rates)
+      : Number.NaN;
+  return editedSide === "source"
+    ? { source: value, target: formatConvertedValue(converted) }
+    : { source: formatConvertedValue(converted), target: value };
+}

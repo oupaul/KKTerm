@@ -1,5 +1,5 @@
 import { RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../../lib/inputBehavior";
 import { invokeCommand } from "../../../../../lib/tauri";
@@ -7,9 +7,9 @@ import type { BuiltInWidgetBodyProps } from "../../../registry/builtInRegistry";
 import { useWidgetConfig } from "../../widgetLocalStorage";
 import {
   UNIT_DEFINITIONS,
-  convertCurrency,
   convertUnit,
   formatConvertedValue,
+  resolveCurrencyPair,
   type CurrencyRates,
   type UnitCategory,
 } from "./converterTools";
@@ -23,6 +23,7 @@ interface ConvertersConfig {
   fromUnit: string;
   toUnit: string;
   currencyAmount: string;
+  currencyTargetAmount: string;
   fromCurrency: string;
   toCurrency: string;
 }
@@ -34,6 +35,7 @@ const DEFAULT_CONFIG: ConvertersConfig = {
   fromUnit: "meter",
   toUnit: "foot",
   currencyAmount: "1",
+  currencyTargetAmount: "1",
   fromCurrency: "USD",
   toCurrency: "EUR",
 };
@@ -56,6 +58,7 @@ function normalizeConfig(value: unknown): ConvertersConfig {
     fromUnit: units.some((unit) => unit.id === candidate.fromUnit) ? candidate.fromUnit! : units[0].id,
     toUnit: units.some((unit) => unit.id === candidate.toUnit) ? candidate.toUnit! : units[1]?.id ?? units[0].id,
     currencyAmount: typeof candidate.currencyAmount === "string" ? candidate.currencyAmount : "1",
+    currencyTargetAmount: typeof candidate.currencyTargetAmount === "string" ? candidate.currencyTargetAmount : "1",
     fromCurrency: CURRENCIES.includes(candidate.fromCurrency ?? "") ? candidate.fromCurrency! : "USD",
     toCurrency: CURRENCIES.includes(candidate.toCurrency ?? "") ? candidate.toCurrency! : "EUR",
   };
@@ -69,6 +72,7 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
     normalizeConfig,
   );
   const [rates, setRates] = useState<CurrencyRates | null>(null);
+  const [currencyEditSide, setCurrencyEditSide] = useState<"source" | "target">("source");
   const [currencyState, setCurrencyState] = useState<"idle" | "loading" | "error">("idle");
   const units = UNIT_DEFINITIONS[config.unitCategory];
   const amount = Number(config.amount);
@@ -76,13 +80,12 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
     ? convertUnit(config.unitCategory, amount, config.fromUnit, config.toUnit)
     : Number.NaN;
 
-  const currencyAmount = Number(config.currencyAmount);
-  const currencyResult = useMemo(
-    () =>
-      rates && Number.isFinite(currencyAmount)
-        ? convertCurrency(currencyAmount, config.fromCurrency, config.toCurrency, rates)
-        : Number.NaN,
-    [rates, currencyAmount, config.fromCurrency, config.toCurrency],
+  const currencyPair = resolveCurrencyPair(
+    currencyEditSide,
+    currencyEditSide === "source" ? config.currencyAmount : config.currencyTargetAmount,
+    config.fromCurrency,
+    config.toCurrency,
+    rates,
   );
 
   function updateCategory(unitCategory: UnitCategory) {
@@ -108,10 +111,10 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
   return (
     <div className="dw-converters">
       <div className="dw-converters-tabs" role="tablist" aria-label={t("dashboard.convertersTitle")}>
-        <button type="button" className={config.mode === "unit" ? "is-active" : ""} onClick={() => setConfig({ ...config, mode: "unit" })}>
+        <button type="button" role="tab" aria-selected={config.mode === "unit"} className={config.mode === "unit" ? "is-active" : ""} onClick={() => setConfig({ ...config, mode: "unit" })}>
           {t("dashboard.convertersTab.unit")}
         </button>
-        <button type="button" className={config.mode === "currency" ? "is-active" : ""} onClick={() => setConfig({ ...config, mode: "currency" })}>
+        <button type="button" role="tab" aria-selected={config.mode === "currency"} className={config.mode === "currency" ? "is-active" : ""} onClick={() => setConfig({ ...config, mode: "currency" })}>
           {t("dashboard.convertersTab.currency")}
         </button>
       </div>
@@ -123,21 +126,43 @@ export function ConvertersBody({ instance }: BuiltInWidgetBodyProps) {
             ))}
           </select>
           <div className="dw-converter-grid">
-            <input value={config.amount} onChange={(event) => setConfig({ ...config, amount: event.currentTarget.value })} aria-label={t("dashboard.converterAmount")} {...technicalInputProps} />
-            <UnitSelect units={units} value={config.fromUnit} onChange={(fromUnit) => setConfig({ ...config, fromUnit })} />
-            <div className="dw-converter-equals">=</div>
-            <output>{formatConvertedValue(unitResult)}</output>
-            <UnitSelect units={units} value={config.toUnit} onChange={(toUnit) => setConfig({ ...config, toUnit })} />
+            <div className="dw-converter-row">
+              <input value={config.amount} onChange={(event) => setConfig({ ...config, amount: event.currentTarget.value })} aria-label={t("dashboard.converterAmount")} {...technicalInputProps} />
+              <UnitSelect units={units} value={config.fromUnit} onChange={(fromUnit) => setConfig({ ...config, fromUnit })} />
+            </div>
+            <div className="dw-converter-row">
+              <output>{formatConvertedValue(unitResult)}</output>
+              <UnitSelect units={units} value={config.toUnit} onChange={(toUnit) => setConfig({ ...config, toUnit })} />
+            </div>
           </div>
         </div>
       ) : (
         <div className="dw-converter-panel">
           <div className="dw-converter-grid">
-            <input value={config.currencyAmount} onChange={(event) => setConfig({ ...config, currencyAmount: event.currentTarget.value })} aria-label={t("dashboard.currencyAmount")} {...technicalInputProps} />
-            <CurrencySelect value={config.fromCurrency} onChange={(fromCurrency) => setConfig({ ...config, fromCurrency })} />
-            <div className="dw-converter-equals">=</div>
-            <output>{formatConvertedValue(currencyResult)}</output>
-            <CurrencySelect value={config.toCurrency} onChange={(toCurrency) => setConfig({ ...config, toCurrency })} />
+            <div className="dw-converter-row">
+              <input
+                value={currencyPair.source}
+                onChange={(event) => {
+                  setCurrencyEditSide("source");
+                  setConfig({ ...config, currencyAmount: event.currentTarget.value });
+                }}
+                aria-label={t("dashboard.currencyAmount")}
+                {...technicalInputProps}
+              />
+              <CurrencySelect value={config.fromCurrency} onChange={(fromCurrency) => setConfig({ ...config, fromCurrency })} />
+            </div>
+            <div className="dw-converter-row">
+              <input
+                value={currencyPair.target}
+                onChange={(event) => {
+                  setCurrencyEditSide("target");
+                  setConfig({ ...config, currencyTargetAmount: event.currentTarget.value });
+                }}
+                aria-label={t("dashboard.currencyAmount")}
+                {...technicalInputProps}
+              />
+              <CurrencySelect value={config.toCurrency} onChange={(toCurrency) => setConfig({ ...config, toCurrency })} />
+            </div>
           </div>
           <div className="dw-currency-footer">
             <span>

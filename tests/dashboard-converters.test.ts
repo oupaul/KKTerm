@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   convertUnit,
+  resolveCurrencyPair,
   formatConvertedValue,
   normalizeFrankfurterRates,
 } from "../src/modules/dashboard/widgets/builtin/converters/converterTools";
@@ -31,4 +32,21 @@ test("normalizeFrankfurterRates builds a base-to-target lookup with refresh meta
   assert.equal(normalized.rates.USD, 1);
   assert.equal(normalized.rates.EUR, 0.92);
   assert.equal(normalized.rates.JPY, 156.5);
+});
+
+test("currency amounts can be edited from either side", () => {
+  const rates = normalizeFrankfurterRates({
+    base: "USD",
+    date: "2026-06-12",
+    rates: { EUR: 0.8 },
+  });
+
+  assert.deepEqual(resolveCurrencyPair("source", "10", "USD", "EUR", rates), {
+    source: "10",
+    target: "8",
+  });
+  assert.deepEqual(resolveCurrencyPair("target", "8", "USD", "EUR", rates), {
+    source: "10",
+    target: "8",
+  });
 });
