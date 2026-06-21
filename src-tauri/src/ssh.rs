@@ -836,6 +836,19 @@ async fn exec_collect_on_session_with_status(
     session: &client::Handle<VerifyingClient>,
     command: String,
 ) -> Result<(i32, String), String> {
+    exec_stream_on_session_with_status(session, command, &|_| {}).await
+}
+
+/// Streaming sibling of `exec_collect_on_session_with_status`: invokes `on_chunk`
+/// for each stdout/stderr frame as it arrives — so a Batch Run can show live
+/// per-host output — while still accumulating and returning the full combined
+/// output plus the remote exit status. `on_chunk` runs on the SSH I/O task and
+/// must not block.
+async fn exec_stream_on_session_with_status(
+    session: &client::Handle<VerifyingClient>,
+    command: String,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
+) -> Result<(i32, String), String> {
     let mut channel = session
         .channel_open_session()
         .await
@@ -850,7 +863,9 @@ async fn exec_collect_on_session_with_status(
     while let Some(message) = channel.wait().await {
         match message {
             ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
-                output.push_str(&String::from_utf8_lossy(&data));
+                let text = String::from_utf8_lossy(&data);
+                on_chunk(&text);
+                output.push_str(&text);
             }
             ChannelMsg::ExitStatus {
                 exit_status: status,
@@ -869,6 +884,7 @@ async fn exec_collect_on_session_with_status(
 
 async fn run_remote_command_async_capture(
     request: NativeSshCommandRequest,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
 ) -> Result<(i32, String), String> {
     let session = connect_verified_client(NativeSshConnectionRequest {
         host: request.host,
@@ -882,17 +898,20 @@ async fn run_remote_command_async_capture(
     })
     .await?;
 
-    let result = exec_collect_on_session_with_status(&session, request.command).await;
+    let result = exec_stream_on_session_with_status(&session, request.command, on_chunk).await;
     disconnect_ssh_session(&session, "command completed").await?;
     result
 }
 
-/// Blocking one-shot remote exec that returns `(exit_code, combined_output)`.
-/// Unlike `run_remote_command`, a non-zero remote exit is a normal result, not
-/// an error; `Err` is reserved for connect/auth/transport failures. This is the
-/// primitive the IT Ops Batch Run SSH transport runs per host.
-pub(crate) fn run_remote_command_capture(
+/// Blocking one-shot remote exec that returns `(exit_code, combined_output)` and
+/// streams each output frame to `on_chunk` as it arrives, so the IT Ops Batch Run
+/// grid can show live per-host output. Unlike `run_remote_command`, a non-zero
+/// remote exit is a normal result, not an error; `Err` is reserved for
+/// connect/auth/transport failures. This is the primitive the Batch Run SSH
+/// transport runs per host. Pass a no-op `on_chunk` for a non-streaming capture.
+pub(crate) fn run_remote_command_capture_streaming(
     request: NativeSshCommandRequest,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
 ) -> Result<(i32, String), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -904,13 +923,13 @@ pub(crate) fn run_remote_command_capture(
         runtime.block_on(async {
             tokio::time::timeout(
                 Duration::from_secs(timeout_seconds),
-                run_remote_command_async_capture(request),
+                run_remote_command_async_capture(request, on_chunk),
             )
             .await
             .map_err(|_| format!("SSH command timed out after {timeout_seconds} seconds"))?
         })
     } else {
-        runtime.block_on(run_remote_command_async_capture(request))
+        runtime.block_on(run_remote_command_async_capture(request, on_chunk))
     }
 }
 

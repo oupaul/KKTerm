@@ -8,6 +8,7 @@ import { invokeCommand, isTauriRuntime } from "../../lib/tauri";
 import type {
   Automation,
   AutomationAction,
+  AutomationTestResult,
   HostGroup,
   HostGroupFilter,
   ItopsTransport,
@@ -46,6 +47,13 @@ export interface LiveRun {
   state: "running" | "done" | "canceled";
 }
 
+const MAX_LIVE_OUTPUT = 256 * 1024;
+
+function appendLiveOutput(current: string, chunk: string): string {
+  if (current.length >= MAX_LIVE_OUTPUT) return current;
+  return (current + chunk).slice(0, MAX_LIVE_OUTPUT);
+}
+
 // Fold a streamed `itops://run` event into the live run snapshot. Events for a
 // stale run id are ignored so a new run cleanly supersedes the previous one.
 function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
@@ -64,7 +72,17 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
         ...run,
         hosts: run.hosts.map((host) =>
           host.connectionId === event.connectionId
-            ? { ...host, status: "running" }
+            ? { ...host, status: "running", output: "" }
+            : host,
+        ),
+      };
+    case "hostOutput":
+      if (!run || run.runId !== event.runId) return run;
+      return {
+        ...run,
+        hosts: run.hosts.map((host) =>
+          host.connectionId === event.connectionId
+            ? { ...host, output: appendLiveOutput(host.output ?? "", event.chunk) }
             : host,
         ),
       };
@@ -78,7 +96,12 @@ function reduceRun(run: LiveRun | null, event: RunEvent): LiveRun | null {
                 ...host,
                 status: event.ok ? "ok" : "failed",
                 exitCode: event.exitCode,
-                output: event.output,
+                // The final event carries the authoritative full output, but on a
+                // timeout/transport error it is empty — keep what already streamed
+                // so a host that printed output before timing out doesn't blank.
+                output: event.output
+                  ? appendLiveOutput("", event.output)
+                  : host.output,
                 durationMs: event.durationMs,
                 error: event.error,
               }
@@ -143,6 +166,7 @@ interface ItOpsState {
   ) => Promise<Automation>;
   setAutomationEnabled: (id: string, enabled: boolean) => Promise<void>;
   removeAutomation: (id: string) => Promise<void>;
+  testAutomation: (config: WatchdogConfig) => Promise<AutomationTestResult>;
 }
 
 export const useItOpsStore = create<ItOpsState>((set, get) => ({
@@ -304,5 +328,9 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
   async removeAutomation(id) {
     await invokeCommand("itops_remove_automation", { id });
     set({ automations: get().automations.filter((automation) => automation.id !== id) });
+  },
+
+  async testAutomation(config) {
+    return invokeCommand("itops_test_automation", { config });
   },
 }));

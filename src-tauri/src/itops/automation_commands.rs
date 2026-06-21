@@ -9,7 +9,9 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 
 use crate::watchdog::WatchdogRegistry;
-use crate::watchdog::types::WatchdogConfig;
+use crate::watchdog::evaluate_predicate;
+use crate::watchdog::targets;
+use crate::watchdog::types::{WatchdogConfig, WatchdogTarget};
 
 use super::automation_storage as auto_store;
 use super::ids::new_itops_id;
@@ -164,6 +166,82 @@ pub fn itops_set_automation_enabled(
         runtime.disarm(&registry, &automation.id);
     }
     Ok(automation)
+}
+
+/// Result of a one-shot Automation test (docs/ITOPS.md). Samples the trigger
+/// right now and reports the value plus whether the condition would fire. The
+/// action list is NOT executed — the frontend renders a dry-run preview of the
+/// actions from the (already-known) action definitions.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationTestResult {
+    /// The sampled trigger value (number, string, or null when unavailable).
+    pub value: serde_json::Value,
+    /// False when the sampler could not produce a value (e.g. a rate metric's
+    /// first sample, or a referenced Session that is not live).
+    pub value_available: bool,
+    /// Whether the condition predicate is satisfied by `value` right now.
+    pub would_fire: bool,
+    /// Optional note code the frontend translates (e.g. "schedule",
+    /// "needsSession") to explain a result that needs context.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// Sample an Automation's trigger once and evaluate its condition, without
+/// running any actions. Backs the editor's "Test" button (sample-once + dry-run
+/// per the IT Ops design). Async so the network probes (ping/TCP) can run.
+#[tauri::command]
+pub async fn itops_test_automation(
+    app: AppHandle,
+    config: WatchdogConfig,
+) -> Result<AutomationTestResult, String> {
+    let (value, note) = sample_target_once(&app, &config.target).await;
+    let value_available = !value.is_null();
+    let would_fire = value_available && evaluate_predicate(&config.trigger.predicate, &value);
+    Ok(AutomationTestResult {
+        value,
+        value_available,
+        would_fire,
+        note,
+    })
+}
+
+/// One-shot trigger sample for the Test command. Mirrors the registry's poll-loop
+/// dispatcher but with fresh state (no carried log offset / counter), so it is a
+/// pure point-in-time probe.
+async fn sample_target_once(
+    app: &AppHandle,
+    target: &WatchdogTarget,
+) -> (serde_json::Value, Option<String>) {
+    match target {
+        WatchdogTarget::Mock { step } => (serde_json::json!(step), None),
+        WatchdogTarget::PerformanceCounter { metric } => {
+            (targets::sample_performance_counter(app, *metric), None)
+        }
+        WatchdogTarget::SshSessionOutputSilence { session_id } => (
+            targets::sample_ssh_session_silence(app, session_id),
+            Some("needsSession".to_string()),
+        ),
+        WatchdogTarget::Ping { host, port } => (targets::sample_ping(host, *port).await, None),
+        WatchdogTarget::TcpReachable { host, port } => {
+            (targets::sample_tcp_reachable(host, *port).await, None)
+        }
+        WatchdogTarget::Schedule { cron } => {
+            (targets::sample_schedule(cron), Some("schedule".to_string()))
+        }
+        WatchdogTarget::LogFile { path, pattern } => {
+            let (_size, matched) = targets::scan_log_appended(path, None, pattern);
+            (serde_json::json!(if matched { 1.0 } else { 0.0 }), None)
+        }
+        WatchdogTarget::OutputMatch {
+            session_id,
+            pattern,
+        } => (
+            targets::sample_output_match(app, session_id, pattern),
+            Some("needsSession".to_string()),
+        ),
+    }
 }
 
 #[tauri::command]

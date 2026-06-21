@@ -925,7 +925,8 @@
       "create": "建立",
       "delete": "刪除",
       "edit": "編輯",
-      "run": "執行"
+      "run": "執行",
+      "back": "Back"
     },
     "transport": {
       "auto": "自動"
@@ -976,6 +977,7 @@
       "progressLive": "{{done}} / {{total}} 已完成  ·  限制為 {{concurrency}} 並行",
       "progressDone": "於 {{duration}} 內完成  ·  開始於 {{time}}",
       "codeExit": "結束碼 {{code}}",
+      "codeFailed": "failed",
       "codeRunning": "執行中",
       "codeQueued": "已排入佇列",
       "savedReport": "彙總報告已儲存至執行歷程 · 來源手動 · {{ok}}/{{total}} 成功",
@@ -989,7 +991,9 @@
       "progressComplete": "{{done}} / {{total}} 已完成",
       "historyHeading": "近期執行",
       "historySummary": "{{ok}}/{{total}} 成功",
-      "waitingOutput": "等待輸出中…"
+      "waitingOutput": "等待輸出中…",
+      "noOutput": "No output captured",
+      "reportStarted": "Started {{time}}"
     },
     "automations": {
       "emptyTitle": "尚無自動化",
@@ -1043,9 +1047,44 @@
       "triggerLogFile": "記錄檔",
       "logPathLabel": "記錄檔路徑",
       "patternLabel": "比對（子字串）",
-      "patternPlaceholder": "ERROR"
+      "patternPlaceholder": "ERROR",
+      "triggerPing": "Host reachable (ping)",
+      "triggerTcp": "TCP port reachable"
     },
-    "errorNotice": "IT Ops：{{message}}"
+    "errorNotice": "IT Ops：{{message}}",
+    "editor": {
+      "title": "Edit Automation",
+      "triggerNode": "Trigger",
+      "conditionNode": "Condition",
+      "actionNode": "Action",
+      "test": "Test",
+      "testing": "Testing…",
+      "testResult": "Test result",
+      "unset": "not set",
+      "hostLabel": "Host",
+      "sessionIdLabel": "Session ID",
+      "silenceSecondsLabel": "Silence duration (seconds)",
+      "portLabel": "Port",
+      "conditionHint": "Fires when the sampled value matches this comparison.",
+      "actionKindLabel": "Action",
+      "levelLabel": "Level",
+      "methodLabel": "Method",
+      "runBatchSub": "Run batch task",
+      "selectHint": "Select a node to edit it, or add an action.",
+      "sampledValue": "Sampled value",
+      "wouldFire": "Condition",
+      "fireYes": "Would fire",
+      "fireNo": "Would not fire",
+      "valueUnavailable": "unavailable",
+      "noteSchedule": "Schedule triggers fire when the cron expression matches the current minute, so a test rarely fires on demand.",
+      "noteNeedsSession": "This trigger samples a live Session; start the watched Session for a meaningful test value.",
+      "dryRunActions": "Actions (dry run)",
+      "dryNotify": "Show {{level}} notification",
+      "dryPopup": "Show popup “{{title}}”",
+      "dryEmail": "Send email to {{to}}",
+      "dryWebhook": "{{method}} {{url}}",
+      "dryRunBatch": "Start the configured Batch Run"
+    }
   },
   "settings": {
     "title": "設定",

@@ -925,7 +925,8 @@
       "create": "만들기",
       "delete": "삭제",
       "edit": "편집",
-      "run": "실행"
+      "run": "실행",
+      "back": "Back"
     },
     "transport": {
       "auto": "자동"
@@ -976,6 +977,7 @@
       "progressLive": "{{total}}개 중 {{done}}개 완료  ·  동시 실행 {{concurrency}}개로 제한",
       "progressDone": "{{duration}}에 완료  ·  시작 {{time}}",
       "codeExit": "exit {{code}}",
+      "codeFailed": "failed",
       "codeRunning": "실행 중",
       "codeQueued": "대기 중",
       "savedReport": "통합 보고서가 실행 이력에 저장되었습니다 · 수동 실행 · {{ok}}/{{total}}개 성공",
@@ -989,7 +991,9 @@
       "progressComplete": "{{total}}개 중 {{done}}개 완료",
       "historyHeading": "최근 실행",
       "historySummary": "{{ok}}/{{total}} 성공",
-      "waitingOutput": "출력 대기 중…"
+      "waitingOutput": "출력 대기 중…",
+      "noOutput": "No output captured",
+      "reportStarted": "Started {{time}}"
     },
     "automations": {
       "emptyTitle": "아직 자동화가 없습니다",
@@ -1043,9 +1047,44 @@
       "triggerLogFile": "로그 파일",
       "logPathLabel": "로그 파일 경로",
       "patternLabel": "일치 (부분 문자열)",
-      "patternPlaceholder": "ERROR"
+      "patternPlaceholder": "ERROR",
+      "triggerPing": "Host reachable (ping)",
+      "triggerTcp": "TCP port reachable"
     },
-    "errorNotice": "IT Ops: {{message}}"
+    "errorNotice": "IT Ops: {{message}}",
+    "editor": {
+      "title": "Edit Automation",
+      "triggerNode": "Trigger",
+      "conditionNode": "Condition",
+      "actionNode": "Action",
+      "test": "Test",
+      "testing": "Testing…",
+      "testResult": "Test result",
+      "unset": "not set",
+      "hostLabel": "Host",
+      "sessionIdLabel": "Session ID",
+      "silenceSecondsLabel": "Silence duration (seconds)",
+      "portLabel": "Port",
+      "conditionHint": "Fires when the sampled value matches this comparison.",
+      "actionKindLabel": "Action",
+      "levelLabel": "Level",
+      "methodLabel": "Method",
+      "runBatchSub": "Run batch task",
+      "selectHint": "Select a node to edit it, or add an action.",
+      "sampledValue": "Sampled value",
+      "wouldFire": "Condition",
+      "fireYes": "Would fire",
+      "fireNo": "Would not fire",
+      "valueUnavailable": "unavailable",
+      "noteSchedule": "Schedule triggers fire when the cron expression matches the current minute, so a test rarely fires on demand.",
+      "noteNeedsSession": "This trigger samples a live Session; start the watched Session for a meaningful test value.",
+      "dryRunActions": "Actions (dry run)",
+      "dryNotify": "Show {{level}} notification",
+      "dryPopup": "Show popup “{{title}}”",
+      "dryEmail": "Send email to {{to}}",
+      "dryWebhook": "{{method}} {{url}}",
+      "dryRunBatch": "Start the configured Batch Run"
+    }
   },
   "settings": {
     "title": "설정",

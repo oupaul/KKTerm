@@ -172,10 +172,23 @@ UI/native thread (`docs/ARCHITECTURE.md` command-runtime boundaries).
 
 `src/modules/itops/` owns the Module shell with three tabs (Host Groups,
 Batch Runs, Automations). The live Batch Run view renders a per-host grid
-with status chips and expandable streamed output (reusing the read-only
-terminal/Log viewer surfaces). The Automations list reuses the existing
-`WatchdogDetail`/`WatchdogStatusBar` components for the live view; the
-Status Bar indicator continues to surface running Automations app-wide.
+with status chips and **live streamed output** (each host auto-reveals its
+output as it arrives over the `itops://run` `HostOutput` frames; the SSH
+transport streams incrementally via `run_remote_command_capture_streaming`).
+A finished run's per-host output is persisted in the report, so the recent-runs
+list opens a read-only **Run Report viewer** (`RunReportView`) that replays the
+per-host output later.
+
+Automations are created and edited in an n8n-style **node editor**
+(`AutomationEditor.tsx`, built on `@xyflow/react`): the closed
+trigger → condition → action[] pipeline is drawn as draggable nodes wired
+left-to-right, with a side panel that edits the selected node. It stays a
+fixed pipeline, not a free-form DAG (see "Action" above) — the canvas is a
+visualization, not a new execution model. A **Test** button calls
+`itops_test_automation` to sample the trigger once and report whether the
+condition would fire, then renders a dry-run preview of the actions (no email,
+webhook, or Batch Run is actually sent). The Status Bar indicator continues to
+surface running Automations app-wide via the existing `WatchdogStatusBar`.
 
 All user-visible strings use a new `itops` i18n namespace following the
 i18n rules in `AGENTS.md`. New dialogs/sheets follow
@@ -271,7 +284,9 @@ CREATE TABLE IF NOT EXISTS itops_run_history (
     task_summary   TEXT NOT NULL,   -- redacted one-line task label, never the script body of secrets
     started_at     TEXT NOT NULL,
     finished_at    TEXT,
-    -- Consolidated report: per-host {connectionId,host,transport,exitCode,ok,bytesOut} rows.
+    -- Consolidated report: per-host {connectionId,host,transport,exitCode,ok,
+    -- bytesOut,output} rows. `output` is the captured combined stdout/stderr,
+    -- capped per host (runner::cap_output) so the Run Report viewer can replay it.
     report_json    TEXT NOT NULL DEFAULT '{}'
 );
 

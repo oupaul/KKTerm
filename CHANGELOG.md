@@ -66,6 +66,8 @@ All notable changes to KKTerm are documented here.
 ## Improved
 - **Color scheme selection UI**: replace the color scheme dropdown with a live preview grid — **#407** https://github.com/ryantsai/KKTerm/pull/407  
 - **Activity Rail management & visibility controls**: drag-to-reorder and improve layout/controls for Activity Rail items.
+- **IT Ops Batch Runs — live output & Run Reports**: per-host output now **streams live** during a run (auto-revealed, no clicking needed), and finished runs save their full per-host output so the recent-runs list opens a reopenable **Run Report**.
+- **IT Ops Automations — visual node editor**: create and edit Automations on an n8n-style draggable **trigger → condition → action** canvas with a per-node side panel and a **Test** button that samples the trigger and dry-runs the actions (nothing is actually sent).
 
 ## Fixed
 - **Sync input fixes**: stop mouse garbling, move the sync-input toggle to the terminal Pane toolbar, and clamp native tooltip to the monitor work area — **#406** https://github.com/ryantsai/KKTerm/pull/406  
