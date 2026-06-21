@@ -12,7 +12,7 @@ import { useWorkspaceStore } from "../../store";
 import type { Automation, AutomationAction } from "../../types";
 import type { WatchdogConfig } from "../../watchdog/types";
 import { ItIcon, IT_ACCENTS, type ItIconName } from "./icons";
-import { AutomationDialog } from "./AutomationDialog";
+import { AutomationEditor } from "./AutomationEditor";
 import { useItOpsStore } from "./state";
 
 function triggerIcon(config: WatchdogConfig): ItIconName {
@@ -113,15 +113,17 @@ export function AutomationsTab() {
   const removeAutomation = useItOpsStore((state) => state.removeAutomation);
   const newAutomationRequest = useItOpsStore((state) => state.newAutomationRequest);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // `editor` is closed when undefined; `null` means create-new, an Automation
+  // means edit-existing. The node editor is a full-canvas overlay.
+  const [editor, setEditor] = useState<Automation | null | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Automation | null>(null);
 
-  // Open the create dialog when the module header's primary button signals.
+  // Open the create editor when the module header's primary button signals.
   const seenRequest = useRef(newAutomationRequest);
   useEffect(() => {
     if (newAutomationRequest !== seenRequest.current) {
       seenRequest.current = newAutomationRequest;
-      setDialogOpen(true);
+      setEditor(null);
     }
   }, [newAutomationRequest]);
 
@@ -149,9 +151,10 @@ export function AutomationsTab() {
     }
   }
 
-  const dialog = dialogOpen ? (
-    <AutomationDialog onClose={() => setDialogOpen(false)} onSaved={() => {}} />
-  ) : null;
+  const editorOverlay =
+    editor !== undefined ? (
+      <AutomationEditor automation={editor} onClose={() => setEditor(undefined)} />
+    ) : null;
 
   if (loaded && automations.length === 0) {
     return (
@@ -161,13 +164,13 @@ export function AutomationsTab() {
         </span>
         <h2>{t("itops.automations.emptyTitle")}</h2>
         <p>{t("itops.automations.emptyBody")}</p>
-        <button type="button" className="it-btn primary" onClick={() => setDialogOpen(true)}>
+        <button type="button" className="it-btn primary" onClick={() => setEditor(null)}>
           <span className="it-btn-ic">
             <ItIcon name="plus" size={15} />
           </span>
           {t("itops.actions.newAutomation")}
         </button>
-        {dialog}
+        {editorOverlay}
       </div>
     );
   }
@@ -222,6 +225,15 @@ export function AutomationsTab() {
             <button
               type="button"
               className="au-del"
+              title={t("itops.actions.edit")}
+              aria-label={t("itops.actions.edit")}
+              onClick={() => setEditor(automation)}
+            >
+              <ItIcon name="edit" size={14} />
+            </button>
+            <button
+              type="button"
+              className="au-del"
               title={t("itops.actions.delete")}
               aria-label={t("itops.actions.delete")}
               onClick={() => setPendingDelete(automation)}
@@ -232,7 +244,7 @@ export function AutomationsTab() {
         ))}
       </div>
 
-      {dialog}
+      {editorOverlay}
       {pendingDelete ? (
         <ConfirmSheet
           tone="danger"

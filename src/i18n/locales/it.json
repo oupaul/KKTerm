@@ -925,7 +925,8 @@
       "create": "Crea",
       "delete": "Elimina",
       "edit": "Modifica",
-      "run": "Esegui"
+      "run": "Esegui",
+      "back": "Back"
     },
     "transport": {
       "auto": "Auto"
@@ -989,7 +990,9 @@
       "progressComplete": "{{done}} su {{total}} completati",
       "historyHeading": "Esecuzioni recenti",
       "historySummary": "{{ok}}/{{total}} ok",
-      "waitingOutput": "In attesa di output…"
+      "waitingOutput": "In attesa di output…",
+      "noOutput": "No output captured",
+      "reportStarted": "Started {{time}}"
     },
     "automations": {
       "emptyTitle": "Nessuna automazione ancora",
@@ -1043,9 +1046,42 @@
       "triggerLogFile": "File di log",
       "logPathLabel": "Percorso del file di log",
       "patternLabel": "Corrispondenza (sottostringa)",
-      "patternPlaceholder": "ERROR"
+      "patternPlaceholder": "ERROR",
+      "triggerPing": "Host reachable (ping)",
+      "triggerTcp": "TCP port reachable"
     },
-    "errorNotice": "IT Ops: {{message}}"
+    "errorNotice": "IT Ops: {{message}}",
+    "editor": {
+      "title": "Edit Automation",
+      "triggerNode": "Trigger",
+      "conditionNode": "Condition",
+      "actionNode": "Action",
+      "test": "Test",
+      "testing": "Testing…",
+      "testResult": "Test result",
+      "unset": "not set",
+      "hostLabel": "Host",
+      "portLabel": "Port",
+      "conditionHint": "Fires when the sampled value matches this comparison.",
+      "actionKindLabel": "Action",
+      "levelLabel": "Level",
+      "methodLabel": "Method",
+      "runBatchSub": "Run batch task",
+      "selectHint": "Select a node to edit it, or add an action.",
+      "sampledValue": "Sampled value",
+      "wouldFire": "Condition",
+      "fireYes": "Would fire",
+      "fireNo": "Would not fire",
+      "valueUnavailable": "unavailable",
+      "noteSchedule": "Schedule triggers fire when the cron expression matches the current minute, so a test rarely fires on demand.",
+      "noteNeedsSession": "This trigger samples a live Session; start the watched Session for a meaningful test value.",
+      "dryRunActions": "Actions (dry run)",
+      "dryNotify": "Show {{level}} notification",
+      "dryPopup": "Show popup “{{title}}”",
+      "dryEmail": "Send email to {{to}}",
+      "dryWebhook": "{{method}} {{url}}",
+      "dryRunBatch": "Start the configured Batch Run"
+    }
   },
   "settings": {
     "title": "Impostazioni",

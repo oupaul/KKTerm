@@ -214,6 +214,12 @@ pub struct HostReport {
     pub exit_code: Option<i32>,
     pub bytes_out: u64,
     pub duration_ms: u64,
+    /// Full combined stdout/stderr for this host, so a saved Run Report can be
+    /// reopened with output later. Capped (see `runner::cap_output`). Defaults to
+    /// empty when deserializing older history rows written before output was
+    /// persisted.
+    #[serde(default)]
+    pub output: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
@@ -265,6 +271,14 @@ pub enum RunEvent {
     HostStarted {
         run_id: String,
         connection_id: String,
+    },
+    /// An incremental stdout/stderr frame for a still-running host, streamed as
+    /// it arrives. The frontend appends `chunk` to the host's live output; the
+    /// authoritative full output still arrives in `HostFinished`.
+    HostOutput {
+        run_id: String,
+        connection_id: String,
+        chunk: String,
     },
     HostFinished {
         run_id: String,

@@ -45,6 +45,7 @@ import type {
   RunHistoryEntry,
   Automation,
   AutomationAction,
+  AutomationTestResult,
   HostUsageSnapshot,
   ImportedDatabaseSnapshot,
   SelectiveExportInfo,
@@ -1113,6 +1114,10 @@ type CommandMap = {
   itops_remove_automation: {
     args: { id: string };
     result: void;
+  };
+  itops_test_automation: {
+    args: { config: WatchdogConfig };
+    result: AutomationTestResult;
   };
   list_workspaces: {
     args: undefined;

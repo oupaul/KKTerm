@@ -24,6 +24,7 @@ export type ItIconName =
   | "spinner"
   | "plus"
   | "chevR"
+  | "chevL"
   | "chevD"
   | "stop"
   | "rerun"
@@ -197,6 +198,11 @@ const GLYPHS: Record<ItIconName, (p: GlyphProps) => ReactNode> = {
   chevR: (p) => (
     <Svg {...p} sw={2}>
       <path d="M9.5 6l6 6-6 6" />
+    </Svg>
+  ),
+  chevL: (p) => (
+    <Svg {...p} sw={2}>
+      <path d="M14.5 6l-6 6 6 6" />
     </Svg>
   ),
   chevD: (p) => (

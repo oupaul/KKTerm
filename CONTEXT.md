@@ -128,7 +128,7 @@ A durable, named selection of existing Connections (plus an optional dynamic fil
 _Avoid_: inventory, host list, connection group (as a Connection type)
 
 **Batch Run**:
-One execution of a Batch Task (a script or a curated update playbook) across a resolved Host Group, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress and streamed output are in-memory; a consolidated report is written to `itops_run_history` on completion. The run is live runtime, not a durable definition.
+One execution of a Batch Task (a script or a curated update playbook) across a resolved Host Group, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
 _Avoid_: broadcast, job, deployment
 
 ## UI Layout

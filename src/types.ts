@@ -165,6 +165,9 @@ export interface HostReport {
   exitCode?: number | null;
   bytesOut: number;
   durationMs: number;
+  // Full combined output, persisted so a saved Run Report reopens with output.
+  // Absent on history rows written before output was persisted.
+  output?: string;
   error?: string | null;
 }
 
@@ -202,6 +205,7 @@ export type RunEvent =
       hosts: RunEventHost[];
     }
   | { kind: "hostStarted"; runId: string; connectionId: string }
+  | { kind: "hostOutput"; runId: string; connectionId: string; chunk: string }
   | {
       kind: "hostFinished";
       runId: string;
@@ -233,6 +237,16 @@ export interface Automation {
   enabled: boolean;
   config: WatchdogConfig;
   actions: AutomationAction[];
+}
+
+// Result of a one-shot Automation test (docs/ITOPS.md): samples the trigger now
+// and reports whether the condition would fire. Actions are not executed.
+export interface AutomationTestResult {
+  value: unknown;
+  valueAvailable: boolean;
+  wouldFire: boolean;
+  // Note code the UI translates ("schedule" | "needsSession").
+  note?: string | null;
 }
 
 export interface CreateConnectionRequest {

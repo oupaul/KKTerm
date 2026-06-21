@@ -136,6 +136,7 @@ mod tests {
                     exit_code: Some(0),
                     bytes_out: 42,
                     duration_ms: 1200,
+                    output: "ready".into(),
                     error: None,
                 },
                 HostReport {
@@ -147,6 +148,7 @@ mod tests {
                     exit_code: Some(100),
                     bytes_out: 10,
                     duration_ms: 300,
+                    output: "boom".into(),
                     error: None,
                 },
             ],

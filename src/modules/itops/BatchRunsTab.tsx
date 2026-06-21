@@ -1,10 +1,12 @@
 // Batch Runs tab (hero) — the live per-host grid with status chips, a progress
-// roll-up and expandable output, fed by the `itops://run` event stream via
-// useItOpsStore (docs/ITOPS.md Phase 2). When idle it shows the empty state
-// plus a compact recent-runs list from itops_run_history.
+// roll-up and live streamed output, fed by the `itops://run` event stream via
+// useItOpsStore (docs/ITOPS.md Phase 2). When idle it shows the empty state plus
+// a compact recent-runs list from itops_run_history; clicking a past run opens
+// its saved Run Report (per-host output included).
 
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { HostReport, RunHistoryEntry } from "../../types";
 import { ItIcon, type ItIconName } from "./icons";
 import { TransportChip } from "./TransportChip";
 import { useItOpsStore, type LiveRun, type LiveRunHost, type LiveRunHostStatus } from "./state";
@@ -35,10 +37,46 @@ function formatTime(epochMillis: string): string {
   return new Date(value).toLocaleString();
 }
 
+// Present a persisted HostReport row through the same card the live run uses.
+function reportHostToLive(report: HostReport): LiveRunHost {
+  return {
+    connectionId: report.connectionId,
+    name: report.name,
+    host: report.host,
+    transport: report.transport,
+    status: report.ok ? "ok" : "failed",
+    exitCode: report.exitCode,
+    output: report.output ?? "",
+    durationMs: report.durationMs,
+    error: report.error,
+  };
+}
+
 function HostCard({ host }: { host: LiveRunHost }) {
   const { t } = useTranslation();
   const hasOutput = host.status === "ok" || host.status === "failed" || host.status === "running";
-  const [open, setOpen] = useState(host.status === "failed");
+  // Reveal output as soon as a host starts running (so streamed output is
+  // visible without a click) and keep it open through completion; failures stay
+  // open too. The user can still collapse a card manually.
+  const [open, setOpen] = useState(host.status === "running" || host.status === "failed");
+  const prevStatus = useRef(host.status);
+  useEffect(() => {
+    if (host.status !== prevStatus.current) {
+      prevStatus.current = host.status;
+      if (host.status === "running" || host.status === "failed") {
+        setOpen(true);
+      }
+    }
+  }, [host.status]);
+
+  // Keep the newest streamed line in view while the host is running.
+  const outRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (open && host.status === "running" && outRef.current) {
+      outRef.current.scrollTop = outRef.current.scrollHeight;
+    }
+  }, [open, host.status, host.output]);
+
   const codeText =
     host.status === "ok" || host.status === "failed"
       ? t("itops.batchRuns.codeExit", { code: host.exitCode ?? 0 })
@@ -75,15 +113,19 @@ function HostCard({ host }: { host: LiveRunHost }) {
         <span className={`hcode ${ST_CODE[host.status]}`}>{codeText}</span>
       </button>
       {open && hasOutput ? (
-        <div className="host-out">
+        <div className="host-out" ref={outRef}>
           {lines.length > 0 ? (
             lines.map((line, index) => (
               <span key={index} className="line">
-                {line || " "}
+                {line || " "}
               </span>
             ))
           ) : (
-            <span className="line c-dim">{t("itops.batchRuns.waitingOutput")}</span>
+            <span className="line c-dim">
+              {host.status === "running"
+                ? t("itops.batchRuns.waitingOutput")
+                : t("itops.batchRuns.noOutput")}
+            </span>
           )}
         </div>
       ) : null}
@@ -256,13 +298,106 @@ function LiveRunView({ run }: { run: LiveRun }) {
   );
 }
 
+// Read-only viewer for a past run, opened from the recent-runs list. Mirrors the
+// live banner but is driven by the persisted RunReport (per-host output included).
+function RunReportView({ entry, onBack }: { entry: RunHistoryEntry; onBack: () => void }) {
+  const { t } = useTranslation();
+  const report = entry.report;
+  const hosts = report.hosts.map(reportHostToLive);
+  const total = report.total;
+  const pct = (value: number) => `${total > 0 ? (value / total) * 100 : 0}%`;
+
+  return (
+    <div className="br">
+      <div className="br-banner">
+        <div className="lead">
+          <div className="toprow">
+            <button type="button" className="it-btn ghost br-back" onClick={onBack}>
+              <span className="it-btn-ic">
+                <ItIcon name="chevL" size={15} />
+              </span>
+              {t("itops.actions.back")}
+            </button>
+            {report.failed ? (
+              <span className="br-state done-fail">
+                <span className="sdot" />
+                {t("itops.batchRuns.stateCompletedWithFailures")}
+              </span>
+            ) : (
+              <span className="br-state done">
+                <span className="sdot" />
+                {t("itops.batchRuns.stateCompleted")}
+              </span>
+            )}
+            <span className="grpname">
+              <span className="count">{t("itops.batchRuns.hostsCount", { count: total })}</span>
+            </span>
+          </div>
+          <div className="br-cmd">
+            <span className="dollar">$</span>
+            <span className="body">{entry.taskSummary}</span>
+          </div>
+          <div className="br-report-meta">
+            {t("itops.batchRuns.reportStarted", { time: formatTime(entry.startedAt) })}
+          </div>
+        </div>
+        <div className="stat-cluster">
+          <div className="br-stat ok">
+            <div className="num">{report.ok}</div>
+            <div className="lab">{t("itops.batchRuns.statOk")}</div>
+          </div>
+          <div className="br-stat fail">
+            <div className="num">{report.failed}</div>
+            <div className="lab">{t("itops.batchRuns.statFailed")}</div>
+          </div>
+          <div className="br-stat">
+            <div className="num">{total}</div>
+            <div className="lab">{t("itops.batchRuns.statTotal")}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="br-progress">
+        <div className="track">
+          <div className="fill-ok" style={{ width: pct(report.ok) }} />
+          <div className="fill-fail" style={{ width: pct(report.failed) }} />
+        </div>
+        <div className="meta">
+          <div className="legend">
+            <span className="lg ok">
+              <i />
+              {t("itops.batchRuns.legendOk", { count: report.ok })}
+            </span>
+            <span className="lg fail">
+              <i />
+              {t("itops.batchRuns.legendFailed", { count: report.failed })}
+            </span>
+          </div>
+          <span>{t("itops.batchRuns.progressComplete", { done: report.ok + report.failed, total })}</span>
+        </div>
+      </div>
+
+      <div className="br-grid">
+        {hosts.map((host) => (
+          <HostCard key={host.connectionId} host={host} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function BatchRunsTab({ onNewBatchRun }: { onNewBatchRun: () => void }) {
   const { t } = useTranslation();
   const activeRun = useItOpsStore((state) => state.activeRun);
   const runHistory = useItOpsStore((state) => state.runHistory);
+  const [openReport, setOpenReport] = useState<RunHistoryEntry | null>(null);
 
   if (activeRun) {
     return <LiveRunView run={activeRun} />;
+  }
+
+  if (openReport) {
+    return <RunReportView entry={openReport} onBack={() => setOpenReport(null)} />;
   }
 
   return (
@@ -286,7 +421,12 @@ export function BatchRunsTab({ onNewBatchRun }: { onNewBatchRun: () => void }) {
           <div className="it-section-label">{t("itops.batchRuns.historyHeading")}</div>
           <div className="card">
             {runHistory.map((run) => (
-              <div key={run.id} className="member">
+              <button
+                key={run.id}
+                type="button"
+                className="member as-button"
+                onClick={() => setOpenReport(run)}
+              >
                 <span className="tile">
                   <ItIcon name="history" size={15} sw={1.6} />
                 </span>
@@ -300,7 +440,10 @@ export function BatchRunsTab({ onNewBatchRun }: { onNewBatchRun: () => void }) {
                     total: run.report.total,
                   })}
                 </span>
-              </div>
+                <span className="member-go">
+                  <ItIcon name="chevR" size={15} />
+                </span>
+              </button>
             ))}
           </div>
         </>

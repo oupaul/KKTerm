@@ -20,9 +20,37 @@ use super::types::{BatchTask, ExecOutcome, HostReport, ResolvedHost, RunEvent, R
 pub const DEFAULT_CONCURRENCY: usize = 8;
 pub const DEFAULT_TIMEOUT_SECONDS: u64 = 120;
 
+/// Upper bound on per-host output persisted in a saved Run Report, so a chatty
+/// command on a large fleet cannot bloat the history row. The live stream is
+/// uncapped; only the stored report is trimmed.
+const MAX_STORED_OUTPUT: usize = 256 * 1024;
+
+/// Trim `output` to `MAX_STORED_OUTPUT` on a char boundary, appending a marker
+/// when truncated. Used only for the persisted report row.
+pub fn cap_output(mut output: String) -> String {
+    if output.len() <= MAX_STORED_OUTPUT {
+        return output;
+    }
+    let mut end = MAX_STORED_OUTPUT;
+    while end > 0 && !output.is_char_boundary(end) {
+        end -= 1;
+    }
+    output.truncate(end);
+    output.push_str("\n…[output truncated]");
+    output
+}
+
 /// Runs a Batch Task on one host. Blocking; called from worker threads.
+/// `on_chunk` is invoked for each output frame as it arrives so the runner can
+/// stream live per-host output; the final combined output is still returned in
+/// the `ExecOutcome`.
 pub trait BatchTransport: Send + Sync {
-    fn exec(&self, host: &ResolvedHost, task: &BatchTask) -> ExecOutcome;
+    fn exec(
+        &self,
+        host: &ResolvedHost,
+        task: &BatchTask,
+        on_chunk: &(dyn Fn(&str) + Send + Sync),
+    ) -> ExecOutcome;
 }
 
 /// Fan a Batch Task out across `hosts` with at most `concurrency` in flight,
@@ -70,7 +98,15 @@ pub fn run_batch(
                         connection_id: host.connection_id.clone(),
                     });
                     let started = Instant::now();
-                    let outcome = transport.exec(host, task);
+                    // Stream each output frame to the live grid as it arrives.
+                    let on_chunk = |chunk: &str| {
+                        emit(RunEvent::HostOutput {
+                            run_id: run_id.to_string(),
+                            connection_id: host.connection_id.clone(),
+                            chunk: chunk.to_string(),
+                        });
+                    };
+                    let outcome = transport.exec(host, task, &on_chunk);
                     let duration_ms = started.elapsed().as_millis() as u64;
                     let bytes_out = outcome.output.len() as u64;
                     emit(RunEvent::HostFinished {
@@ -91,6 +127,7 @@ pub fn run_batch(
                         exit_code: outcome.exit_code,
                         bytes_out,
                         duration_ms,
+                        output: cap_output(outcome.output),
                         error: outcome.error,
                     });
                 }
@@ -134,7 +171,12 @@ impl SshTransport {
 }
 
 impl BatchTransport for SshTransport {
-    fn exec(&self, host: &ResolvedHost, task: &BatchTask) -> ExecOutcome {
+    fn exec(
+        &self,
+        host: &ResolvedHost,
+        task: &BatchTask,
+        on_chunk: &(dyn Fn(&str) + Send + Sync),
+    ) -> ExecOutcome {
         let Some(spec) = self.specs.get(&host.connection_id) else {
             return ExecOutcome {
                 ok: false,
@@ -156,7 +198,7 @@ impl BatchTransport for SshTransport {
             timeout_seconds: spec.timeout_seconds,
             socks_proxy: spec.socks_proxy.clone(),
         };
-        match ssh::run_remote_command_capture(request) {
+        match ssh::run_remote_command_capture_streaming(request, on_chunk) {
             Ok((exit_code, output)) => ExecOutcome {
                 ok: exit_code == 0,
                 exit_code: Some(exit_code),
@@ -279,9 +321,15 @@ mod tests {
         peak: AtomicUsize,
     }
     impl BatchTransport for MockTransport {
-        fn exec(&self, host: &ResolvedHost, _task: &BatchTask) -> ExecOutcome {
+        fn exec(
+            &self,
+            host: &ResolvedHost,
+            _task: &BatchTask,
+            on_chunk: &(dyn Fn(&str) + Send + Sync),
+        ) -> ExecOutcome {
             let now = self.live.fetch_add(1, Ordering::SeqCst) + 1;
             self.peak.fetch_max(now, Ordering::SeqCst);
+            on_chunk("done");
             std::thread::sleep(Duration::from_millis(10));
             self.live.fetch_sub(1, Ordering::SeqCst);
             let failed = self.fail.iter().any(|id| id == &host.connection_id);
@@ -368,5 +416,34 @@ mod tests {
         });
         assert_eq!(started.load(Ordering::SeqCst), 2);
         assert_eq!(finished.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn streams_output_chunks_and_persists_output() {
+        let hosts: Vec<ResolvedHost> = ["a", "b"].iter().map(|id| host(id)).collect();
+        let transport = MockTransport {
+            fail: vec![],
+            live: AtomicUsize::new(0),
+            peak: AtomicUsize::new(0),
+        };
+        let cancel = AtomicBool::new(false);
+        let chunks = AtomicUsize::new(0);
+        let report = run_batch("run-5", &hosts, &script(), &transport, 2, &cancel, &|event| {
+            if let RunEvent::HostOutput { .. } = event {
+                chunks.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+        assert_eq!(chunks.load(Ordering::SeqCst), 2); // one "done" frame per host
+        assert!(report.hosts.iter().all(|host| host.output == "done"));
+    }
+
+    #[test]
+    fn cap_output_truncates_oversized_output() {
+        let short = "hello".to_string();
+        assert_eq!(cap_output(short.clone()), short);
+        let big = "x".repeat(MAX_STORED_OUTPUT + 10);
+        let capped = cap_output(big);
+        assert!(capped.len() <= MAX_STORED_OUTPUT + 32);
+        assert!(capped.ends_with("[output truncated]"));
     }
 }

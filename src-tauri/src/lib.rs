@@ -3643,6 +3643,7 @@ pub fn run() {
             itops::automation_commands::itops_update_automation,
             itops::automation_commands::itops_set_automation_enabled,
             itops::automation_commands::itops_remove_automation,
+            itops::automation_commands::itops_test_automation,
             // ── Install Helper
             installer::commands::installer_load_catalog,
             installer::commands::installer_load_detection_cache,
