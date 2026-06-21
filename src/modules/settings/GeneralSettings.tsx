@@ -47,7 +47,7 @@ import {
   isTauriRuntime,
   openFilesystemPath,
 } from "../../lib/tauri";
-import { isWindowsPlatform } from "../../lib/platform";
+import { isWindowsPlatform, supportsInstallerHelper } from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import {
   AI_PROVIDER_SECRET_OWNER_ID,
@@ -122,6 +122,7 @@ function formatBackupDate(value?: string | null) {
 export function GeneralSettings() {
   const { t, i18n } = useTranslation();
   const windowsPlatform = isWindowsPlatform();
+  const installerSupported = supportsInstallerHelper();
   const showPerformanceSettings = windowsPlatform;
   const lastCheckedAt = useLastUpdateCheckAt();
   const [currentLanguage, setCurrentLanguage] =
@@ -343,6 +344,9 @@ export function GeneralSettings() {
         time: new Date(lastCheckedAt).toLocaleString(i18n.language),
       })
     : t("settings.lastCheckedNever");
+  const visibleActivityRailModuleOrder = activityRailModuleOrder(
+    draft.activityRailOrder,
+  ).filter((id) => id !== "installer" || installerSupported);
 
   useSettingsSaveRegistration({ hasChanges, onSave: handleSave });
 
@@ -415,7 +419,7 @@ export function GeneralSettings() {
       >
         <legend>{t("settings.activityRail")}</legend>
         <div className="settings-toggle-list">
-          {activityRailModuleOrder(draft.activityRailOrder).map((id) => {
+          {visibleActivityRailModuleOrder.map((id) => {
             const [setting, labelKey] = ACTIVITY_RAIL_SETTINGS[id];
             const isLastVisibleModule =
               draft[setting] && !canHideActivityRailModule(draft, id);

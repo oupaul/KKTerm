@@ -25,7 +25,7 @@ const [
 ]);
 
 test("General settings owns all built-in Activity Rail visibility controls", () => {
-  assert.match(generalSettings, /activityRailModuleOrder\(draft\.activityRailOrder\)\.map/);
+  assert.match(generalSettings, /visibleActivityRailModuleOrder\.map/);
   assert.match(generalSettings, /reorderActivityRailItems/);
   assert.match(generalSettings, /activity-rail-order-main/);
   for (const icon of ["LayoutDashboard", "Gauge", "Box", "ItIcon", "BedSingle"]) {
@@ -47,6 +47,11 @@ test("General settings owns all built-in Activity Rail visibility controls", () 
   assert.doesNotMatch(workspaceSettings, /draft\.showWorkspaceOnRail/);
   assert.doesNotMatch(installerSettings, /draft\.showInstallerOnRail/);
   assert.doesNotMatch(settingsPage, /ItOpsSettings/);
+});
+
+test("General settings hides unsupported Install Helper Activity Rail control", () => {
+  assert.match(generalSettings, /supportsInstallerHelper/);
+  assert.match(generalSettings, /activityRailModuleOrder\(\s*draft\.activityRailOrder,\s*\)\.filter\([\s\S]*id !== "installer" \|\| installerSupported/);
 });
 
 test("Activity Rail visibility defaults and rendering match the unified controls", () => {

@@ -279,11 +279,10 @@ update-check behavior on Linux is defined.**
       `createUpdaterArtifacts`, `scripts/package-linux.sh` loads the updater
       signing key, and `scripts/release-github-linux.sh` uploads the AppImage,
       `.sig`, `.sha256`, and merged `latest.json` with a `linux-x86_64` entry.
-- [x] **Release CD (manual trigger):** added `.github/workflows/release-linux.yml`
-      — `workflow_dispatch`-only, runs on `ubuntu-24.04`, installs Tauri build
-      deps, builds the AppImage, and uploads + patches notes via
-      `scripts/release-github-linux.sh`. Separate workflow/script from the
-      Windows release path (`release.yml`) so it can't affect it. Like the macOS
+- [x] **Release CD:** `.github/workflows/release.yml` runs the Linux AppImage
+      job after Windows and macOS release jobs succeed. The Linux job runs on
+      `ubuntu-24.04`, installs Tauri build deps, builds the AppImage, and uploads
+      + patches notes via `scripts/release-github-linux.sh`. Like the macOS
       helper it **only builds + uploads + patches notes**: no version bump, no
       tag creation (attaches to the existing release the Windows flow created).
 - [x] Added `release:github:linux` npm script mirroring `release:github:macos`.

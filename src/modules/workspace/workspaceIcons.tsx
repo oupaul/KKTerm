@@ -79,12 +79,11 @@ export function WorkspaceIcon({
   size?: number;
 }) {
   const hasBackground = Boolean(color);
-  const shellSize = hasBackground ? size + 6 : size;
   const style = {
     "--workspace-icon-bg": color ?? "transparent",
     "--workspace-icon-color": hasBackground ? "var(--surface)" : "var(--accent)",
     "--workspace-icon-size": `${size}px`,
-    "--workspace-icon-shell-size": `${shellSize}px`,
+    "--workspace-icon-shell-size": `${size}px`,
   } as CSSProperties;
   const materialIconUrl = materialIconRefToUrl(icon);
   let content: ReactNode;
