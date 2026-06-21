@@ -40,7 +40,7 @@ import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionSshSocks
 import { RECENT_CONNECTION_LIMIT, loadCollapsedFolderIds, loadRecentConnectionIds, notifyConnectionTreeInvalidated, saveCollapsedFolderIds, saveRecentConnectionIds } from "./connectionSidebarState";
 import { collectConnectionFolderIds, countConnections, countFolders, filterConnectedConnections, filterConnectionTree, findConnectionInTree, flattenConnections, flattenFolders, visibleFlatConnections as flattenVisibleConnections, withLiveConnectionStatuses } from "./treeUtils";
 import { WorkspaceIcon } from "../workspaceIcons";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, ChevronRight, CircleDot, Folder, FolderPlus, KeyRound, LayoutDashboard, List, Maximize2, Minimize2, PanelsTopLeft, PanelRight, Pencil, Pin, PinOff, Play, Plus, Radio, RotateCcw, Save, Search, Settings, SquarePlus, Trash2, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent as ReactDragEvent, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
@@ -1654,6 +1654,8 @@ export function ConnectionSidebar({
 
     return flattenVisibleConnections(displayTree);
   }, [displayTree, showAllConnections]);
+  const hasWorkspaceFolders = treeWithLiveStatuses.folders.length > 0;
+  const hasWorkspaceConnections = flattenConnections(treeWithLiveStatuses).length > 0;
 
 
   function menuPositionFromElement(element: HTMLElement) {
@@ -2190,19 +2192,7 @@ export function ConnectionSidebar({
       folders: menu.folder.folders,
     });
     if (mode === "panorama") {
-      const unopenedConnections = folderConnections.filter(
-        (connection) => !findOpenTabForConnection(connection.id),
-      );
-      if (unopenedConnections.length > 0) {
-        openConnectionsInPanorama(unopenedConnections, { title: menu.folder.name });
-      } else {
-        const existingTab = folderConnections
-          .map((connection) => findOpenTabForConnection(connection.id))
-          .find((tab) => Boolean(tab));
-        if (existingTab) {
-          activateTab(existingTab.id);
-        }
-      }
+      openConnectionPanorama(folderConnections, menu.folder.name);
       return;
     }
     for (const connection of folderConnections) {
@@ -2213,6 +2203,26 @@ export function ConnectionSidebar({
         openConnection(connection);
       }
     }
+  }
+
+  function openConnectionPanorama(connections: Connection[], title: string) {
+    const unopenedConnections = connections.filter(
+      (connection) => !findOpenTabForConnection(connection.id),
+    );
+    if (unopenedConnections.length > 0) {
+      openConnectionsInPanorama(unopenedConnections, { title });
+      return;
+    }
+    const existingTab = connections
+      .map((connection) => findOpenTabForConnection(connection.id))
+      .find((tab) => Boolean(tab));
+    if (existingTab) {
+      activateTab(existingTab.id);
+    }
+  }
+
+  function handleOpenRootPanorama() {
+    openConnectionPanorama(flattenConnections(treeWithLiveStatuses), panelTitle);
   }
 
   // Closes every open Tab and Pane for every connection in the folder (child
@@ -2668,6 +2678,16 @@ export function ConnectionSidebar({
           data-tutorial-id="connections.folderControls"
         >
           <button
+            aria-label={t("connections.panoramaView")}
+            className="tree-folder-control"
+            disabled={!hasWorkspaceConnections}
+            onClick={handleOpenRootPanorama}
+            title={t("connections.panoramaView")}
+            type="button"
+          >
+            <PanelsTopLeft size={13} />
+          </button>
+          <button
             aria-label={t("connections.newFolder")}
             className="tree-folder-control"
             onClick={() => void handleCreateFolder()}
@@ -2676,24 +2696,28 @@ export function ConnectionSidebar({
           >
             <FolderPlus size={12} />
           </button>
-          <button
-            aria-label={t("connections.collapseAll")}
-            className="tree-folder-control"
-            onClick={handleCollapseAllFolders}
-            title={t("connections.collapseAll")}
-            type="button"
-          >
-            <Minimize2 size={13} />
-          </button>
-          <button
-            aria-label={t("connections.expandAll")}
-            className="tree-folder-control"
-            onClick={handleExpandAllFolders}
-            title={t("connections.expandAll")}
-            type="button"
-          >
-            <Maximize2 size={13} />
-          </button>
+          {hasWorkspaceFolders ? (
+            <>
+              <button
+                aria-label={t("connections.collapseAll")}
+                className="tree-folder-control"
+                onClick={handleCollapseAllFolders}
+                title={t("connections.collapseAll")}
+                type="button"
+              >
+                <Minimize2 size={13} />
+              </button>
+              <button
+                aria-label={t("connections.expandAll")}
+                className="tree-folder-control"
+                onClick={handleExpandAllFolders}
+                title={t("connections.expandAll")}
+                type="button"
+              >
+                <Maximize2 size={13} />
+              </button>
+            </>
+          ) : null}
           <button
             aria-pressed={showConnectedOnly}
             aria-label={t("connections.showConnected")}
@@ -2704,16 +2728,18 @@ export function ConnectionSidebar({
           >
             <CircleDot size={13} />
           </button>
-          <button
-            aria-pressed={showAllConnections}
-            aria-label={t("connections.hideFolders")}
-            className={`tree-folder-control${showAllConnections ? " active" : ""}`}
-            onClick={() => void handleToggleShowAllConnections()}
-            title={t("connections.hideFolders")}
-            type="button"
-          >
-            <List size={13} />
-          </button>
+          {hasWorkspaceFolders ? (
+            <button
+              aria-pressed={showAllConnections}
+              aria-label={t("connections.hideFolders")}
+              className={`tree-folder-control${showAllConnections ? " active" : ""}`}
+              onClick={() => void handleToggleShowAllConnections()}
+              title={t("connections.hideFolders")}
+              type="button"
+            >
+              <List size={13} />
+            </button>
+          ) : null}
         </div>
       </div>
 

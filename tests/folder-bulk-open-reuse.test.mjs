@@ -15,7 +15,7 @@ test("folder bulk-open reuses Connections that are already open in a Tab or Pane
   );
   assert.match(
     sidebarSource,
-    /const unopenedConnections = folderConnections\.filter[\s\S]*?!findOpenTabForConnection\(connection\.id\)[\s\S]*?openConnectionsInPanorama\(unopenedConnections/,
+    /openConnectionPanorama\(folderConnections, menu\.folder\.name\)[\s\S]*?function openConnectionPanorama\(connections: Connection\[\], title: string\)[\s\S]*?const unopenedConnections = connections\.filter[\s\S]*?!findOpenTabForConnection\(connection\.id\)[\s\S]*?openConnectionsInPanorama\(unopenedConnections/,
     "Panorama bulk-open should only create Panes for Connections that are not already open",
   );
   assert.match(

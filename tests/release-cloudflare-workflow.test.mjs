@@ -15,19 +15,17 @@ test("release mirror workflow supports every publication and recovery entry poin
 });
 
 test("all platform release producers trigger mirror reconciliation", async () => {
-  const [windows, macos, linux, windowsWorkflow, linuxWorkflow] = await Promise.all([
+  const [windows, macos, linux, releaseWorkflow] = await Promise.all([
     readFile(new URL("../scripts/release-github.ps1", import.meta.url), "utf8"),
     readFile(new URL("../scripts/release-github-macos.sh", import.meta.url), "utf8"),
     readFile(new URL("../scripts/release-github-linux.sh", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8"),
-    readFile(new URL("../.github/workflows/release-linux.yml", import.meta.url), "utf8"),
   ]);
   for (const source of [windows, macos, linux]) {
     assert.match(source, /mirror-release\.yml/);
     assert.match(source, /tag/);
   }
-  assert.match(windowsWorkflow, /actions:\s*write/);
-  assert.match(linuxWorkflow, /actions:\s*write/);
+  assert.match(releaseWorkflow, /actions:\s*write/);
 });
 
 test("main release workflow orchestrates all platform release jobs in order", async () => {

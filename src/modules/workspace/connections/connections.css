@@ -297,6 +297,16 @@
   outline: 0;
 }
 
+.tree-folder-control:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.tree-folder-control:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
 .tree-folder-control.active,
 .tree-folder-control[aria-pressed="true"] {
   color: var(--accent);
