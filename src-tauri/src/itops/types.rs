@@ -154,8 +154,32 @@ pub struct ResolvedHost {
     pub transport: Transport,
 }
 
-/// What a Batch Run executes on each targeted host (docs/ITOPS.md). Phase 2
-/// implements `Script`; `Playbook` arrives in Phase 7.
+/// One step of an interactive Playbook. The runner types `send` into the host's
+/// PTY shell, then — when `expect` is set — waits until the streamed output
+/// contains that literal substring before moving on (the "wait for a prompt,
+/// then answer it" pattern). A step whose `expect` never appears within
+/// `timeout_seconds` fails, which stops the Playbook on that host.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaybookStep {
+    /// Short label shown in the run report (e.g. "update apt cache").
+    pub name: String,
+    /// Text sent to the interactive shell — a command, or an answer to a prompt
+    /// (e.g. `y`, a path). A carriage return is appended by the runner.
+    pub send: String,
+    /// Literal substring to wait for in the output before the step is done.
+    /// `None` (or empty) sends `send` and immediately advances.
+    #[serde(default)]
+    pub expect: Option<String>,
+    /// Per-step wait budget for `expect`. Falls back to the run default when unset.
+    #[serde(default)]
+    pub timeout_seconds: Option<u64>,
+}
+
+/// What a Batch Run executes on each targeted host (docs/ITOPS.md).
+/// - `Script` runs one free-form command on a fresh exec channel.
+/// - `Playbook` runs an ordered, interactive expect-style step sequence over a
+///   single PTY shell so a step can answer a prompt the previous step raised.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum BatchTask {
@@ -163,6 +187,10 @@ pub enum BatchTask {
         body: String,
         #[serde(default)]
         shell: Option<String>,
+    },
+    Playbook {
+        name: String,
+        steps: Vec<PlaybookStep>,
     },
 }
 
@@ -187,7 +215,42 @@ impl BatchTask {
                     label
                 }
             }
+            // Playbooks carry a user-supplied name; the audit log shows it verbatim
+            // (never the step bodies, which may embed secrets), falling back to a
+            // neutral label when blank.
+            BatchTask::Playbook { name, .. } => {
+                let trimmed = name.trim();
+                if trimmed.is_empty() {
+                    "playbook".to_string()
+                } else {
+                    let mut label = trimmed.chars().take(80).collect::<String>();
+                    if trimmed.chars().count() > 80 {
+                        label.push('…');
+                    }
+                    label
+                }
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn playbook_summary_uses_name_or_falls_back() {
+        let named = BatchTask::Playbook {
+            name: "  Restart web tier  ".to_string(),
+            steps: vec![],
+        };
+        assert_eq!(named.summary(), "Restart web tier");
+
+        let blank = BatchTask::Playbook {
+            name: "   ".to_string(),
+            steps: vec![],
+        };
+        assert_eq!(blank.summary(), "playbook");
     }
 }
 

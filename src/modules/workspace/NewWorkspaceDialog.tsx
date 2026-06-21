@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { IconLibraryPicker } from "../../app/IconLibraryPicker";
 import { LegacyDialogActions } from "../../app/ui/dialog";
 import { dialogButtonAria } from "../../lib/aria";
+import { brandIconUrlForId } from "../../lib/brandIconUrls";
+import { BRAND_ICON_ENTRIES, brandIconRefForId } from "../../lib/brandIcons";
 import { invokeCommand } from "../../lib/tauri";
 import type { Connection, Workspace } from "../../types";
 import { ConnectionIconBackgroundPicker } from "./connections/ConnectionIconBackgroundPicker";
@@ -449,6 +451,17 @@ function WorkspaceIconPicker({
                 icon: <WorkspaceIcon color={color} icon={null} name={name} size={19} />,
               }}
               lucideNames={WORKSPACE_ICON_NAMES}
+              staticOptions={BRAND_ICON_ENTRIES.flatMap((entry) => {
+                const url = brandIconUrlForId(entry.id);
+                return url
+                  ? [{
+                      value: brandIconRefForId(entry.id),
+                      label: entry.label,
+                      keywords: entry.keywords,
+                      icon: <img alt="" aria-hidden="true" draggable={false} src={url} />,
+                    }]
+                  : [];
+              })}
               onSelect={(nextIcon) => {
                 onChange(nextIcon);
                 setOpen(false);

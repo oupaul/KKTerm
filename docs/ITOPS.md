@@ -70,10 +70,15 @@ the Connection, overridable per Host Group/run):
 
 - `script` — a free-form command/script body the user supplies, sent to
   each host's transport.
-- `playbook` — a curated, parameterized update sequence (`apt`, `dnf`,
-  `yum`, Windows Update) with a **dry-run preview** and **explicit
-  per-run approval** before any mutating step. Playbooks are pure data,
-  like Install Helper recipes — no arbitrary script strings baked in.
+- `playbook` — an **interactive, expect-style step sequence** the user
+  authors: an ordered list of steps where each step **sends** a command or
+  input into the host's PTY shell and optionally **waits for** a literal
+  output substring (a prompt) before the next step runs. This handles
+  flows a one-shot script cannot — e.g. answer a `[sudo] password:` or
+  `Continue? [Y/n]` prompt mid-command. A step whose `expect` does not
+  appear within its timeout fails, which **stops the playbook on that
+  host** (other hosts continue). Steps run over a **single shell per
+  host**, so later steps see the state earlier steps left behind.
 
 **Batch Run** — one execution of a Batch Task against a resolved Host
 Group. Live run state (per-host status, streamed stdout/stderr, exit
@@ -372,13 +377,20 @@ pub enum AutomationAction {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum BatchTask {
     Script { body: String, shell: Option<String> },
-    Playbook { id: PlaybookId, params: serde_json::Value, dry_run: bool },
+    Playbook { name: String, steps: Vec<PlaybookStep> },
 }
 
-/// Curated, pure-data update sequences (no arbitrary script strings).
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+/// One interactive step: send text into the host's PTY shell, then (optionally)
+/// wait until `expect` appears in the output before the next step runs. A step
+/// that times out waiting for `expect` fails and stops the playbook on that host.
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum PlaybookId { AptUpgrade, DnfUpgrade, YumUpgrade, WindowsUpdate }
+pub struct PlaybookStep {
+    pub name: String,
+    pub send: String,
+    pub expect: Option<String>,        // literal substring; None = don't wait
+    pub timeout_seconds: Option<u64>,  // falls back to the run default
+}
 
 /// Common transport interface; SSH/WinRM/PsExec each implement it.
 pub trait Transport {
@@ -452,9 +464,14 @@ ADR 0012 (`reqwest` + `sspi` + `quick-xml`, new `WinrmPassword` secret);
 the PsExec adapter with its Install Helper catalog recipe. Both implement
 the same `Transport` trait, so the Phase 2 runner and UI are unchanged.
 
-**Phase 7 — Update playbooks.** `BatchTask::Playbook` with the
-`PlaybookId` set, dry-run preview, and explicit per-run approval. Windows
-Update rides the Phase 6 WinRM transport; apt/dnf/yum ride SSH.
+**Phase 7 — Interactive playbooks.** `BatchTask::Playbook` as an ordered,
+expect-style step sequence (`send` + optional `expect` + per-step
+timeout) run over a single PTY shell per host via
+`ssh::run_playbook_capture_streaming`. A step that times out waiting for
+its `expect` stops the playbook on that host; the live grid and saved Run
+Report reuse the Script path's per-host streaming and report shapes
+unchanged. SSH first; WinRM/PsExec inherit the same step model once those
+transports grow an interactive channel.
 
 **Phase 8 — AI Assistant integration.** Register IT Ops mutating commands
 as approval-gated assistant tools; emit `itops-changed` and add the
@@ -517,9 +534,10 @@ with the following two entries and add the three new IT Ops terms:
 > _Avoid_: inventory, host list, connection group (as a Connection type)
 >
 > **Batch Run**:
-> One execution of a Batch Task (a script or a curated update playbook)
-> across a resolved Host Group, fanned out with bounded concurrency over a
-> per-host transport (SSH, WinRM, or PsExec). Live per-host progress and
+> One execution of a Batch Task (a one-shot script or an interactive,
+> expect-style playbook) across a resolved Host Group, fanned out with
+> bounded concurrency over a per-host transport (SSH, WinRM, or PsExec).
+> Live per-host progress and
 > streamed output are in-memory; a consolidated report is written to
 > `itops_run_history` on completion. The run is live runtime, not a
 > durable definition.

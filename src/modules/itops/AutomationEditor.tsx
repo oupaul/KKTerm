@@ -1120,7 +1120,7 @@ function ActionFields({
           </Field>
           <Field label={t("itops.batchRuns.scriptLabel")}>
             <TextArea
-              value={action.task.body}
+              value={action.task.kind === "script" ? action.task.body : ""}
               rows={3}
               spellCheck={false}
               placeholder={t("itops.batchRuns.scriptPlaceholder")}

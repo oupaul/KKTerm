@@ -2497,6 +2497,180 @@ async fn connect_ssh_agents() -> Result<Vec<SshAgent>, String> {
     Err("SSH agent authentication is not supported on this platform yet".to_string())
 }
 
+// ── IT Ops interactive Playbook transport ──
+// Placed after the terminal startup path on purpose: it opens its own PTY shell,
+// and `tests/ssh-x11-forwarding.test.mjs` asserts the *first* `.request_shell(`
+// in this file (the terminal's) is still preceded by `.request_x11(`.
+
+/// One interactive Playbook step resolved for the SSH transport: text typed into
+/// the host's PTY shell plus an optional literal substring to wait for after.
+pub(crate) struct PlaybookStepSpec {
+    pub send: String,
+    pub expect: Option<String>,
+    pub timeout_seconds: Option<u64>,
+}
+
+/// Outcome of running a Playbook over one host's interactive shell. `ok` is true
+/// only when every step's `expect` matched; `failure` describes the first step
+/// that timed out. `output` is the full combined PTY transcript.
+pub(crate) struct PlaybookOutcome {
+    pub ok: bool,
+    pub failure: Option<String>,
+    pub output: String,
+}
+
+/// Largest expect search window kept while waiting, so a chatty step cannot grow
+/// the buffer without bound. A literal `expect` longer than this cannot match.
+const PLAYBOOK_EXPECT_WINDOW: usize = 64 * 1024;
+
+/// Fallback per-step `expect` wait when neither the step nor the run supplies a
+/// timeout. The Batch Run transport always passes one, so this is a safety net.
+const PLAYBOOK_DEFAULT_STEP_TIMEOUT_SECONDS: u64 = 120;
+
+/// Run an interactive Playbook on one host: open a single PTY shell, then for
+/// each step type `send` and (when `expect` is set) wait until that substring
+/// appears in the streamed output before advancing. Streams every output frame
+/// to `on_chunk` for the live grid. `Err` is reserved for connect/transport
+/// failures; a step that times out is a normal `Ok` with `ok == false`.
+pub(crate) fn run_playbook_capture_streaming(
+    request: NativeSshCommandRequest,
+    steps: Vec<PlaybookStepSpec>,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
+) -> Result<PlaybookOutcome, String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| format!("failed to create native SSH playbook runtime: {error}"))?;
+    let default_timeout = request
+        .timeout_seconds
+        .unwrap_or(PLAYBOOK_DEFAULT_STEP_TIMEOUT_SECONDS);
+    runtime.block_on(run_playbook_async(request, steps, default_timeout, on_chunk))
+}
+
+async fn run_playbook_async(
+    request: NativeSshCommandRequest,
+    steps: Vec<PlaybookStepSpec>,
+    default_timeout_seconds: u64,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
+) -> Result<PlaybookOutcome, String> {
+    let session = connect_verified_client(NativeSshConnectionRequest {
+        host: request.host,
+        user: request.user,
+        port: request.port,
+        auth: request.auth,
+        known_hosts_path: request.known_hosts_path,
+        x11_forwarding: None,
+        socks_proxy: request.socks_proxy,
+        remote_forward_targets: None,
+    })
+    .await?;
+
+    let outcome =
+        run_playbook_on_session(&session, &steps, default_timeout_seconds, on_chunk).await;
+    disconnect_ssh_session(&session, "playbook completed").await?;
+    outcome
+}
+
+async fn run_playbook_on_session(
+    session: &client::Handle<VerifyingClient>,
+    steps: &[PlaybookStepSpec],
+    default_timeout_seconds: u64,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
+) -> Result<PlaybookOutcome, String> {
+    let mut channel = session
+        .channel_open_session()
+        .await
+        .map_err(|error| format!("failed to open SSH playbook channel: {error}"))?;
+    channel
+        .request_pty(false, "xterm-256color", 120, 40, 0, 0, &[])
+        .await
+        .map_err(|error| format!("failed to allocate SSH PTY: {error}"))?;
+    channel
+        .request_shell(false)
+        .await
+        .map_err(|error| format!("failed to start SSH shell: {error}"))?;
+
+    let mut output = String::new();
+    for (index, step) in steps.iter().enumerate() {
+        if !step.send.is_empty() {
+            channel
+                .data(format!("{}\r", step.send).as_bytes())
+                .await
+                .map_err(|error| format!("failed to send playbook step: {error}"))?;
+        }
+        let Some(pattern) = step.expect.as_deref().filter(|pattern| !pattern.is_empty()) else {
+            continue;
+        };
+        let timeout =
+            Duration::from_secs(step.timeout_seconds.unwrap_or(default_timeout_seconds));
+        if !wait_for_substring(&mut channel, pattern, timeout, &mut output, on_chunk).await {
+            return Ok(PlaybookOutcome {
+                ok: false,
+                failure: Some(format!(
+                    "step {} timed out waiting for “{pattern}”",
+                    index + 1
+                )),
+                output,
+            });
+        }
+    }
+
+    let _ = channel.eof().await;
+    let _ = channel.close().await;
+    Ok(PlaybookOutcome {
+        ok: true,
+        failure: None,
+        output,
+    })
+}
+
+/// Read output frames until `pattern` appears or `timeout` elapses, appending all
+/// output to `transcript` and streaming it to `on_chunk`. Returns whether the
+/// pattern matched; a channel that closes before a match counts as no match. A
+/// sliding window bounds memory while still matching a pattern split across
+/// frames.
+async fn wait_for_substring(
+    channel: &mut Channel<Msg>,
+    pattern: &str,
+    timeout: Duration,
+    transcript: &mut String,
+    on_chunk: &(dyn Fn(&str) + Send + Sync),
+) -> bool {
+    let deadline = Instant::now() + timeout;
+    let mut window = String::new();
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return false;
+        }
+        match tokio::time::timeout(remaining, channel.wait()).await {
+            Err(_) => return false,
+            Ok(None) => return false,
+            Ok(Some(message)) => match message {
+                ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                    let text = String::from_utf8_lossy(&data);
+                    on_chunk(&text);
+                    transcript.push_str(&text);
+                    window.push_str(&text);
+                    if window.contains(pattern) {
+                        return true;
+                    }
+                    if window.len() > PLAYBOOK_EXPECT_WINDOW {
+                        let target = window.len() - PLAYBOOK_EXPECT_WINDOW;
+                        let cut = (0..=target)
+                            .rev()
+                            .find(|&index| window.is_char_boundary(index))
+                            .unwrap_or(0);
+                        window.drain(..cut);
+                    }
+                }
+                ChannelMsg::Eof | ChannelMsg::Close => return false,
+                _ => {}
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

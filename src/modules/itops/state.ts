@@ -9,6 +9,7 @@ import type {
   Automation,
   AutomationAction,
   AutomationTestResult,
+  BatchTask,
   HostGroup,
   HostGroupFilter,
   ItopsTransport,
@@ -165,7 +166,7 @@ interface ItOpsState {
   pendingRunGroupId: string | null;
   requestNewBatchRun: (hostGroupId?: string) => void;
   applyRunEvent: (event: RunEvent) => void;
-  startBatchRun: (hostGroupId: string, body: string) => Promise<string>;
+  startBatchRun: (hostGroupId: string, task: BatchTask) => Promise<string>;
   cancelRun: (runId: string) => Promise<void>;
   loadRunHistory: () => Promise<void>;
 
@@ -274,14 +275,11 @@ export const useItOpsStore = create<ItOpsState>((set, get) => ({
     }
   },
 
-  async startBatchRun(hostGroupId, body) {
+  async startBatchRun(hostGroupId, task) {
     // The Started event populates activeRun; clear any prior run first so the
     // grid does not briefly show stale hosts.
     set({ activeRun: null });
-    return invokeCommand("itops_start_batch_run", {
-      hostGroupId,
-      task: { kind: "script", body },
-    });
+    return invokeCommand("itops_start_batch_run", { hostGroupId, task });
   },
 
   async cancelRun(runId) {

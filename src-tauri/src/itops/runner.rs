@@ -205,8 +205,12 @@ impl BatchTransport for SshTransport {
                 error: Some("no SSH transport for this Connection".to_string()),
             };
         };
+        // `command` is unused for the Playbook path (steps carry their own input),
+        // but NativeSshCommandRequest still carries the connection details both
+        // transports need, so build it once with an empty command for Playbooks.
         let command = match task {
             BatchTask::Script { body, .. } => body.clone(),
+            BatchTask::Playbook { .. } => String::new(),
         };
         let request = NativeSshCommandRequest {
             host: spec.host.clone(),
@@ -223,8 +227,39 @@ impl BatchTransport for SshTransport {
             streamed_output.lock().unwrap().push_str(chunk);
             on_chunk(chunk);
         };
-        let result = ssh::run_remote_command_capture_streaming(request, &capture_chunk);
-        outcome_from_streaming_result(result, streamed_output.into_inner().unwrap())
+        match task {
+            BatchTask::Script { .. } => {
+                let result = ssh::run_remote_command_capture_streaming(request, &capture_chunk);
+                outcome_from_streaming_result(result, streamed_output.into_inner().unwrap())
+            }
+            BatchTask::Playbook { steps, .. } => {
+                let step_specs = steps
+                    .iter()
+                    .map(|step| ssh::PlaybookStepSpec {
+                        send: step.send.clone(),
+                        expect: step.expect.clone(),
+                        timeout_seconds: step.timeout_seconds,
+                    })
+                    .collect();
+                match ssh::run_playbook_capture_streaming(request, step_specs, &capture_chunk) {
+                    // A timed-out step is a normal completion with ok == false; the
+                    // failure message becomes the host's error note. No exit code:
+                    // an interactive shell has no per-step status to report.
+                    Ok(outcome) => ExecOutcome {
+                        ok: outcome.ok,
+                        exit_code: None,
+                        output: outcome.output,
+                        error: outcome.failure,
+                    },
+                    Err(error) => ExecOutcome {
+                        ok: false,
+                        exit_code: None,
+                        output: streamed_output.into_inner().unwrap(),
+                        error: Some(error),
+                    },
+                }
+            }
+        }
     }
 }
 
@@ -360,6 +395,36 @@ mod tests {
             body: "echo hi".to_string(),
             shell: None,
         }
+    }
+
+    fn playbook() -> BatchTask {
+        BatchTask::Playbook {
+            name: "restart".to_string(),
+            steps: vec![super::super::types::PlaybookStep {
+                name: "go".to_string(),
+                send: "echo hi".to_string(),
+                expect: Some("$".to_string()),
+                timeout_seconds: Some(5),
+            }],
+        }
+    }
+
+    #[test]
+    fn runs_a_playbook_task_through_the_pool() {
+        // The runner is transport-agnostic: a Playbook task fans out and tallies
+        // exactly like a script. (The real expect/PTY behavior lives in the SSH
+        // transport and needs a live host to exercise.)
+        let hosts: Vec<ResolvedHost> = ["a", "b"].iter().map(|id| host(id)).collect();
+        let transport = MockTransport {
+            fail: vec!["b".to_string()],
+            live: AtomicUsize::new(0),
+            peak: AtomicUsize::new(0),
+        };
+        let cancel = AtomicBool::new(false);
+        let report = run_batch("run-pb", &hosts, &playbook(), &transport, 2, &cancel, &|_| {});
+        assert_eq!(report.total, 2);
+        assert_eq!(report.ok, 1);
+        assert_eq!(report.failed, 1);
     }
 
     #[test]

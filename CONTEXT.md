@@ -130,8 +130,12 @@ A durable, named selection of existing Connections (plus an optional dynamic fil
 _Avoid_: inventory, host list, connection group (as a Connection type)
 
 **Batch Run**:
-One execution of a Batch Task (a script or a curated update playbook) across a resolved Host Group, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
+One execution of a Batch Task (a one-shot script or an interactive, expect-style playbook) across a resolved Host Group, fanned out with bounded concurrency over a per-host transport (SSH, WinRM, or PsExec). Live per-host progress streams to the run grid as it happens; on completion a consolidated report — including each host's captured output — is written to `itops_run_history`, where it can be reopened as a read-only Run Report. The run is live runtime, not a durable definition.
 _Avoid_: broadcast, job, deployment
+
+**Playbook**:
+A Batch Task kind: a user-authored, ordered sequence of interactive steps run over a single PTY shell per host. Each step **sends** a command or input and optionally **waits for** a literal output substring (a prompt) before the next step runs; a step that times out waiting for its `expect` stops the playbook on that host while other hosts continue. Distinct from a one-shot **script** Batch Task because steps can answer prompts (`[sudo] password:`, `Continue? [Y/n]`) and build on each other's shell state. See `docs/ITOPS.md` and `src-tauri/src/ssh.rs` (`run_playbook_capture_streaming`).
+_Avoid_: workflow (that reads as Automation), recipe (that is an Install Helper term), curated update sequence
 
 ## UI Layout
 

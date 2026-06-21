@@ -4,6 +4,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import * as Icons from "lucide-react";
+import { brandIconRefToUrl } from "../../lib/brandIconUrls";
 import { materialIconRefToUrl } from "../../lib/iconCatalogUrls";
 
 export const WORKSPACE_ICON_NAMES = [
@@ -88,9 +89,9 @@ export function WorkspaceIcon({
     "--workspace-icon-size": `${size}px`,
     "--workspace-icon-shell-size": `${resolvedShellSize}px`,
   } as CSSProperties;
-  const materialIconUrl = materialIconRefToUrl(icon);
+  const imageIconUrl = brandIconRefToUrl(icon) ?? materialIconRefToUrl(icon);
   let content: ReactNode;
-  if (materialIconUrl) {
+  if (imageIconUrl) {
     content = (
       <img
         alt=""
@@ -98,7 +99,7 @@ export function WorkspaceIcon({
         className="workspace-material-icon"
         draggable={false}
         height={size}
-        src={materialIconUrl}
+        src={imageIconUrl}
         width={size}
       />
     );

@@ -154,8 +154,20 @@ export interface ResolvedHost {
   transport: ItopsTransport;
 }
 
-// A Batch Run task (docs/ITOPS.md Phase 2). Only the script kind exists yet.
-export type BatchTask = { kind: "script"; body: string; shell?: string | null };
+// One step of an interactive Playbook: text sent to the host's PTY shell, then
+// an optional literal substring to wait for before the next step runs.
+export interface PlaybookStep {
+  name: string;
+  send: string;
+  expect?: string | null;
+  timeoutSeconds?: number | null;
+}
+
+// A Batch Run task (docs/ITOPS.md): a one-shot script, or an interactive
+// expect-style Playbook whose steps run in order over a single shell.
+export type BatchTask =
+  | { kind: "script"; body: string; shell?: string | null }
+  | { kind: "playbook"; name: string; steps: PlaybookStep[] };
 
 export interface HostReport {
   connectionId: string;
