@@ -3,6 +3,34 @@
 All notable changes to KKTerm are documented here.
 
 ## Direct Downloads
+* 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.99/kkterm-0.1.99-windows-x64-setup.exe)
+* 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.99/kkterm-0.1.99-windows-arm64-setup.exe)
+
+## Highlights
+- Refreshes the current **PATH** into **psmux** panes so newly created **Sessions** can see tools added after the **Connection** started (goodbye, mysterious “command not found” gremlins).
+- Aligns the **psmux** toggle correctly for a cleaner **Tab/Panes** control layout.
+
+## Fixed
+- **psmux Session PATH refresh**: ensure new **Sessions** receive an up-to-date **PATH** via `new-session -e PATH=<value>`; also right-align the **psmux** toggle. Credits: @ryantsai in https://github.com/ryantsai/KKTerm/pull/410.  
+- **Workspace edit dialog cleanup**: simplify the workspace icon section by removing the workspace name title and the “Icon” caption, leaving the icon edit button and color palette. Credits: @ryantsai in https://github.com/ryantsai/KKTerm/pull/411.
+
+## Internal
+- (No internal-only changes provided in the release context.)
+
+---
+
+## 亮點
+- 會將目前的 **PATH** 重新灌入 **psmux** 的 **Pane**，讓在 **Connection** 啟動之後新增的工具，能被後續建立的 **Session** 正確使用（告別那種「明明裝了怎麼找不到指令」的小惡魔）。
+- 修正 **psmux** 開關的對齊方式，讓 **Tab / Panes** 的控制區更整齊。
+
+## 修正
+- **psmux Session PATH 更新**：確保新的 **Session** 會透過 `new-session -e PATH=<value>` 拿到最新的 **PATH**；並同時將 **psmux** 開關右對齊。致謝：@ryantsai，https://github.com/ryantsai/KKTerm/pull/410。  
+- **工作區編輯對話框整理**：精簡工作區圖示區塊，移除工作區名稱標題與「Icon」註記，只保留圖示編輯按鈕與顏色調色盤。致謝：@ryantsai，https://github.com/ryantsai/KKTerm/pull/411。
+
+## Internal
+- （此版釋出內容中未提供純內部變更。）
+
+## Direct Downloads
 * 💻 [Download for Windows (64-bit)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.98/kkterm-0.1.98-windows-x64-setup.exe)
 * 💻 [Download for Windows (ARM64)](https://github.com/ryantsai/KKTerm/releases/download/v0.1.98/kkterm-0.1.98-windows-arm64-setup.exe)
 
