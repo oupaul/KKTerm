@@ -396,10 +396,7 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 
 #[cfg(target_os = "windows")]
 fn spawn_installer_after_exit(installer_path: &Path, parent_pid: u32) -> Result<(), String> {
-    let installer = ps_single_quote(&installer_path.to_string_lossy());
-    let command = format!(
-        "Wait-Process -Id {parent_pid} -Timeout 30 -ErrorAction SilentlyContinue; Start-Process -FilePath {installer}"
-    );
+    let command = installer_handoff_command(installer_path, parent_pid);
     let mut powershell = Command::new("powershell");
     powershell.args([
         "-NoProfile",
@@ -417,6 +414,25 @@ fn spawn_installer_after_exit(installer_path: &Path, parent_pid: u32) -> Result<
         .spawn()
         .map_err(|error| format!("failed to start update installer handoff: {error}"))?;
     Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn installer_handoff_command(installer_path: &Path, parent_pid: u32) -> String {
+    let installer = ps_single_quote(&installer_path.to_string_lossy());
+    let update_dir = ps_single_quote(
+        &installer_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_string_lossy(),
+    );
+    format!(
+        "Wait-Process -Id {parent_pid} -Timeout 30 -ErrorAction SilentlyContinue; \
+         $installerProcess = Start-Process -FilePath {installer} -Wait -PassThru; \
+         if ($installerProcess.ExitCode -eq 0) {{ \
+             Remove-Item -LiteralPath {installer} -Force; \
+             Remove-Item -LiteralPath {update_dir} -Force -ErrorAction SilentlyContinue \
+         }}"
+    )
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -466,6 +482,21 @@ mod tests {
             ),
         };
         assert!(validate_update_request(&request).is_ok());
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn installer_handoff_cleans_download_only_after_success() {
+        let command = installer_handoff_command(
+            Path::new("C:\\Users\\Tester's PC\\updates\\kkterm-0.1.96-windows-x64-setup.exe"),
+            42,
+        );
+
+        assert!(command.contains("Wait-Process -Id 42"));
+        assert!(command.contains("Start-Process -FilePath 'C:\\Users\\Tester''s PC\\updates\\kkterm-0.1.96-windows-x64-setup.exe' -Wait -PassThru"));
+        assert!(command.contains("if ($installerProcess.ExitCode -eq 0)"));
+        assert!(command.contains("Remove-Item -LiteralPath 'C:\\Users\\Tester''s PC\\updates\\kkterm-0.1.96-windows-x64-setup.exe' -Force"));
+        assert!(command.contains("Remove-Item -LiteralPath 'C:\\Users\\Tester''s PC\\updates' -Force -ErrorAction SilentlyContinue"));
     }
 
     #[test]
