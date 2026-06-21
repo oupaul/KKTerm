@@ -13,6 +13,7 @@ import { invokeCommand, isTauriRuntime } from "../lib/tauri";
 import { useWorkspaceStore } from "../store";
 import { useDashboardStore } from "../modules/dashboard/state/dashboardStore";
 import {
+  assistantSecretStorageBackendKey,
   parseAssistantSecretRequests,
   secretRequestStorageNotice,
   type AssistantSecretRequest,
@@ -208,6 +209,9 @@ function AssistantSecretEntryCard({
 }) {
   const { t } = useTranslation();
   const setAiProviderHasApiKey = useWorkspaceStore((state) => state.setAiProviderHasApiKey);
+  const credentialSecretStore = useWorkspaceStore(
+    (state) => state.credentialSettings.secretStore,
+  );
   const showStatusBarNotice = useWorkspaceStore((state) => state.showStatusBarNotice);
   const [secret, setSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
@@ -215,6 +219,7 @@ function AssistantSecretEntryCard({
   const [stored, setStored] = useState(false);
   const [error, setError] = useState("");
   const canSave = secret.trim().length > 0 && !saving && !stored;
+  const storageBackend = t(assistantSecretStorageBackendKey(credentialSecretStore));
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -234,9 +239,13 @@ function AssistantSecretEntryCard({
       if (request.kind === "widgetSecret") {
         await useDashboardStore.getState().load();
       }
-      showStatusBarNotice(t("ai.secretCardStoredStatus", { label: request.label }), {
-        tone: "success",
-      });
+      showStatusBarNotice(
+        t("ai.secretCardStoredStatus", {
+          backend: storageBackend,
+          label: request.label,
+        }),
+        { tone: "success" },
+      );
       onStored(request);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
@@ -251,7 +260,10 @@ function AssistantSecretEntryCard({
         <KeyRound size={15} />
         <div>
           <strong>{request.label}</strong>
-          <small>{request.description ?? t("ai.secretCardDefaultDescription")}</small>
+          <small>
+            {request.description ??
+              t("ai.secretCardDefaultDescription", { backend: storageBackend })}
+          </small>
         </div>
       </header>
       <p>{t("ai.secretCardPrivacy")}</p>
@@ -280,7 +292,7 @@ function AssistantSecretEntryCard({
       </label>
       <footer>
         <span aria-live="polite">
-          {stored ? t("ai.secretCardStoredInline") : error}
+          {stored ? t("ai.secretCardStoredInline", { backend: storageBackend }) : error}
         </span>
         <button className="toolbar-button" disabled={!canSave} type="submit">
           {saving ? <LoaderCircle size={14} /> : <KeyRound size={14} />}

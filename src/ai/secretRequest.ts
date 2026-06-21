@@ -1,4 +1,4 @@
-import type { SecretKind } from "../types";
+import type { SecretKind, SecretStoreKind } from "../types";
 
 export type AssistantSecretRequest = {
   kind: Extract<SecretKind, "aiApiKey" | "widgetSecret">;
@@ -42,6 +42,12 @@ export function parseAssistantSecretRequests(content: string): {
 
 export function secretRequestStorageNotice(request: AssistantSecretRequest) {
   return `${request.kind}:${request.ownerId}`;
+}
+
+export function assistantSecretStorageBackendKey(secretStore: SecretStoreKind) {
+  return secretStore === "file"
+    ? "ai.secretCardStorageBackendFile"
+    : "ai.secretCardStorageBackendOs";
 }
 
 function parseAssistantSecretRequest(rawJson: string): AssistantSecretRequest | null {
