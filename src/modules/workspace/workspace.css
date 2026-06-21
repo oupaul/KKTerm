@@ -248,8 +248,10 @@
 
 .status-bar {
   display: grid;
+  position: relative;
   grid-column: 1 / -1;
   grid-row: 2;
+  z-index: 80;
   grid-template-columns: minmax(324px, auto) minmax(0, 1fr) minmax(324px, auto);
   gap: 10px;
   min-width: 0;

@@ -150,6 +150,19 @@ test("collapsed AI Assistant strip is hidden when the titlebar toggle is availab
   );
 });
 
+test("status bar hairline stacks above animated workspace chrome", async () => {
+  const workspaceCssSource = await readFile(
+    new URL("../src/modules/workspace/workspace.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    workspaceCssSource,
+    /\.status-bar\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*80;[^}]*border-top:\s*1px solid var\(--border\);/s,
+    "the shared Status Bar border should paint above the transformed Connections and AI Assistant panels",
+  );
+});
+
 test("main Tauri window starts without native decorations by default", async () => {
   // The main window is created in Rust (so RDP/WebView2 stability browser args
   // can be applied per launch), not declared in tauri.conf.json. Verify the
