@@ -114,6 +114,16 @@ test("collapsed AI Assistant strip is hidden when the titlebar toggle is availab
     "the app shell appearance hook should receive Connections-panel-only animation state",
   );
   assert.match(
+    appSource,
+    /connectionPanelAnimating \? "connection-panel-animating" : ""/,
+    "the shell should expose a Connections-only animation class so only that divider is suppressed during its slide",
+  );
+  assert.match(
+    appSource,
+    /aiPanelAnimating \? "ai-panel-animating" : ""/,
+    "the shell should expose an AI-only animation class so only that divider is suppressed during its slide",
+  );
+  assert.match(
     effectsSource,
     /aiPanelVisibleForLayout\s*=\s*!aiPanelLayout\.collapsed\s*\|\|\s*aiPanelAnimating/,
     "the AI panel should keep its layout width only while its own slide-out animation is running",
@@ -137,6 +147,21 @@ test("collapsed AI Assistant strip is hidden when the titlebar toggle is availab
     appCssSource,
     /\.connection-sidebar\s*\{[^}]*transition:[^}]*transform 180ms cubic-bezier\(0\.2,\s*0,\s*0,\s*1\)/s,
     "the Connections panel surface should animate with transform instead of animating the whole shell grid",
+  );
+  assert.match(
+    appCssSource,
+    /\.connection-panel-animating\s+\.panel-resize-handle-left,\s*\.connection-panel-animating\s+\.connection-collapsed-separator,\s*\.ai-panel-animating\s+\.panel-resize-handle-right\s*\{[^}]*opacity:\s*0;/s,
+    "stationary divider paint should hide while its panel is sliding so no edge line lingers until layout collapse",
+  );
+  assert.doesNotMatch(
+    appCssSource,
+    /\.connection-sidebar,\s*\.assistant-panel\s*\{[^}]*border-right:\s*1px solid var\(--border\)/s,
+    "moving panel surfaces should not carry real divider borders; stable resize handles own divider paint",
+  );
+  assert.doesNotMatch(
+    assistantCssSource,
+    /\.assistant-panel\s*\{[^}]*border-left:\s*1px solid var\(--border\)/s,
+    "the AI Assistant's moving surface should not carry a real left divider border during slide animations",
   );
   assert.match(
     appCssSource,
