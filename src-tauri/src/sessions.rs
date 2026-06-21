@@ -2399,7 +2399,21 @@ fn run_psmux_command(args: &[&str]) -> Result<String, String> {
     command.stderr(std::process::Stdio::piped());
     hide_console_window(&mut command);
     let output = run_command_with_timeout(command, Duration::from_secs(10))?;
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    psmux_command_output(output.status.success(), &output.stdout, &output.stderr)
+}
+
+fn psmux_command_output(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<String, String> {
+    let stdout = String::from_utf8_lossy(stdout).to_string();
+    if success {
+        return Ok(stdout);
+    }
+    let stderr = String::from_utf8_lossy(stderr);
+    let detail = stderr.trim();
+    Err(if detail.is_empty() {
+        "psmux command failed".to_string()
+    } else {
+        format!("psmux command failed: {detail}")
+    })
 }
 
 pub fn list_psmux_sessions() -> Result<Vec<TmuxSession>, String> {
@@ -3524,6 +3538,22 @@ mod tests {
         assert_eq!(psmux_session_id_for_launch(Some("   ")), None);
         // tmux/psmux target delimiters are rejected, matching the SSH path.
         assert_eq!(psmux_session_id_for_launch(Some("has:colon")), None);
+    }
+
+    #[test]
+    fn psmux_command_output_rejects_failed_commands() {
+        assert_eq!(
+            psmux_command_output(false, b"", b"can't find session: missing"),
+            Err("psmux command failed: can't find session: missing".to_string())
+        );
+        assert_eq!(
+            psmux_command_output(false, b"", b"  "),
+            Err("psmux command failed".to_string())
+        );
+        assert_eq!(
+            psmux_command_output(true, b"session output\n", b"ignored warning"),
+            Ok("session output\n".to_string())
+        );
     }
 
     #[test]

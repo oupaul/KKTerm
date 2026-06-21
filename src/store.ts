@@ -257,6 +257,30 @@ function loadStoredTmuxSessionIds(connectionId: string): string[] {
   }
 }
 
+function loadReservedPsmuxSessionIds(connectionId: string): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const currentConnectionKey = `${TMUX_SESSION_STORAGE_PREFIX}${connectionId}`;
+  const reserved = new Set<string>();
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key?.startsWith(TMUX_SESSION_STORAGE_PREFIX) || key === currentConnectionKey) {
+        continue;
+      }
+      const raw = window.localStorage.getItem(key);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+      if (Array.isArray(parsed)) {
+        parsed.filter(isCurrentTmuxSessionId).forEach((sessionId) => reserved.add(sessionId));
+      }
+    }
+  } catch {
+    return [];
+  }
+  return Array.from(reserved);
+}
+
 function persistTmuxSessionIds(connectionId: string, sessionIds: string[]) {
   if (typeof window === "undefined") {
     return;
@@ -358,8 +382,11 @@ export function tmuxSessionIdsForConnection(connection: Connection, count: numbe
     return [];
   }
   const sessionIds = loadStoredTmuxSessionIds(connection.id).slice(0, count);
+  const reservedSessionIds = connectionUsesPsmux(connection)
+    ? loadReservedPsmuxSessionIds(connection.id)
+    : [];
   while (sessionIds.length < count) {
-    sessionIds.push(generateTmuxSessionId(sessionIds));
+    sessionIds.push(generateTmuxSessionId([...sessionIds, ...reservedSessionIds]));
   }
   persistTmuxSessionIds(connection.id, sessionIds);
   return sessionIds;
@@ -370,7 +397,10 @@ export function appendTmuxSessionId(connection: Connection) {
     return undefined;
   }
   const sessionIds = loadStoredTmuxSessionIds(connection.id);
-  const sessionId = generateTmuxSessionId(sessionIds);
+  const reservedSessionIds = connectionUsesPsmux(connection)
+    ? loadReservedPsmuxSessionIds(connection.id)
+    : [];
+  const sessionId = generateTmuxSessionId([...sessionIds, ...reservedSessionIds]);
   sessionIds.push(sessionId);
   persistTmuxSessionIds(connection.id, sessionIds);
   return sessionId;
