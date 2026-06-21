@@ -2,6 +2,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Deserialize;
+use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
@@ -37,7 +38,7 @@ pub struct TrayState {
 impl TrayState {
     pub fn new(minimize_to_tray: bool) -> Self {
         Self {
-            minimize_to_tray: AtomicBool::new(minimize_to_tray),
+            minimize_to_tray: AtomicBool::new(minimize_to_tray && supports_minimize_to_tray()),
             snapshot: Mutex::new(None),
         }
     }
@@ -47,7 +48,8 @@ impl TrayState {
     }
 
     pub fn set_minimize_to_tray(&self, enabled: bool) {
-        self.minimize_to_tray.store(enabled, Ordering::Relaxed);
+        self.minimize_to_tray
+            .store(enabled && supports_minimize_to_tray(), Ordering::Relaxed);
     }
 
     pub fn set_snapshot(&self, snapshot: TrayMenuSnapshot) {
@@ -59,8 +61,12 @@ impl TrayState {
 
 pub fn install(app: &tauri::App, tooltip: &str) -> Result<(), String> {
     let mut builder = TrayIconBuilder::with_id(TRAY_ID).tooltip(tooltip);
-    if let Some(icon) = app.default_window_icon().cloned() {
+    if let Some(icon) = tray_icon(app) {
         builder = builder.icon(icon);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.icon_as_template(true);
     }
 
     builder
@@ -92,6 +98,60 @@ pub fn install(app: &tauri::App, tooltip: &str) -> Result<(), String> {
         .map_err(|error| format!("failed to install tray icon: {error}"))?;
 
     Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn supports_minimize_to_tray() -> bool {
+    true
+}
+
+#[cfg(not(target_os = "windows"))]
+fn supports_minimize_to_tray() -> bool {
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn tray_icon(_app: &tauri::App) -> Option<Image<'static>> {
+    Some(tray_template_icon())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn tray_icon(app: &tauri::App) -> Option<Image<'static>> {
+    app.default_window_icon().cloned()
+}
+
+#[cfg(target_os = "macos")]
+fn tray_template_icon() -> Image<'static> {
+    const WIDTH: usize = 24;
+    const HEIGHT: usize = 18;
+    const MASK: [&str; HEIGHT] = [
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000110001100011000110000",
+        "000110011000011001100000",
+        "000110110000011011000000",
+        "000111100000011110000000",
+        "000111000000011100000000",
+        "000111100000011110000000",
+        "000110110000011011000000",
+        "000110011000011001100000",
+        "000110001100011000110000",
+        "000110000110011000011000",
+        "000110000011011000001100",
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000000000000",
+    ];
+    let mut rgba = Vec::with_capacity(WIDTH * HEIGHT * 4);
+    for row in MASK {
+        for byte in row.bytes() {
+            let alpha = if byte == b'1' { 255 } else { 0 };
+            rgba.extend_from_slice(&[255, 255, 255, alpha]);
+        }
+    }
+    Image::new_owned(rgba, WIDTH as u32, HEIGHT as u32)
 }
 
 /// Rebuilds the tray menu from the snapshot the frontend last pushed. Does nothing until the

@@ -37,6 +37,10 @@ export function supportsInstallerHelper() {
   return isWindowsPlatform();
 }
 
+export function supportsMinimizeToTray() {
+  return isWindowsPlatform();
+}
+
 // The built-in MCP server bridge runs on Windows (named pipe) and macOS/Linux
 // (Unix domain socket). Only fully-unknown runtimes hide the Settings controls.
 export function supportsBuiltInMcp() {

@@ -12,6 +12,7 @@ import {
   isWindowsPlatform,
   supportsBuiltInMcp,
   supportsInstallerHelper,
+  supportsMinimizeToTray,
   supportsRdp,
   usesNativeWindowControls,
 } from "../src/lib/platform.ts";
@@ -70,11 +71,13 @@ test("Windows-only helpers are gated to Windows", () => {
   withNavigator(WINDOWS, () => {
     assert.equal(isWindowsPlatform(), true);
     assert.equal(supportsInstallerHelper(), true);
+    assert.equal(supportsMinimizeToTray(), true);
   });
   for (const nav of [MAC, LINUX]) {
     withNavigator(nav, () => {
       assert.equal(isWindowsPlatform(), false);
       assert.equal(supportsInstallerHelper(), false);
+      assert.equal(supportsMinimizeToTray(), false);
     });
   }
 });

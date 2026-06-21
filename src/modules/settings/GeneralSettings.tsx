@@ -47,7 +47,11 @@ import {
   isTauriRuntime,
   openFilesystemPath,
 } from "../../lib/tauri";
-import { isWindowsPlatform, supportsInstallerHelper } from "../../lib/platform";
+import {
+  isWindowsPlatform,
+  supportsInstallerHelper,
+  supportsMinimizeToTray,
+} from "../../lib/platform";
 import { useWorkspaceStore } from "../../store";
 import {
   AI_PROVIDER_SECRET_OWNER_ID,
@@ -123,6 +127,8 @@ export function GeneralSettings() {
   const { t, i18n } = useTranslation();
   const windowsPlatform = isWindowsPlatform();
   const installerSupported = supportsInstallerHelper();
+  const minimizeToTraySupported = supportsMinimizeToTray();
+  const showWindowSettings = windowsPlatform || minimizeToTraySupported;
   const showPerformanceSettings = windowsPlatform;
   const lastCheckedAt = useLastUpdateCheckAt();
   const [currentLanguage, setCurrentLanguage] =
@@ -476,40 +482,44 @@ export function GeneralSettings() {
         </div>
       </fieldset>
 
-      <fieldset className="settings-subsection settings-fieldset">
-        <legend>{t("settings.workspaceAccess")}</legend>
-        <div>
-          <p className="field-hint">{t("settings.workspaceAccessHint")}</p>
-        </div>
-        <div className="settings-toggle-list">
-          {windowsPlatform ? (
-            <label className="settings-toggle-row">
-              <ToggleSwitch
-                checked={draft.autoStartWithWindows}
-                onChange={(checked) =>
-                  setDraft((s) => ({ ...s, autoStartWithWindows: checked }))
-                }
-              />
-              <span>
-                <strong>{t("settings.autoStartWithWindows")}</strong>
-                <small>{t("settings.autoStartWithWindowsHint")}</small>
-              </span>
-            </label>
-          ) : null}
-          <label className="settings-toggle-row">
-            <ToggleSwitch
-              checked={draft.minimizeToTray}
-              onChange={(checked) =>
-                setDraft((s) => ({ ...s, minimizeToTray: checked }))
-              }
-            />
-            <span>
-              <strong>{t("settings.minimizeToTray")}</strong>
-              <small>{t("settings.minimizeToTrayHint")}</small>
-            </span>
-          </label>
-        </div>
-      </fieldset>
+      {showWindowSettings ? (
+        <fieldset className="settings-subsection settings-fieldset">
+          <legend>{t("settings.workspaceAccess")}</legend>
+          <div>
+            <p className="field-hint">{t("settings.workspaceAccessHint")}</p>
+          </div>
+          <div className="settings-toggle-list">
+            {windowsPlatform ? (
+              <label className="settings-toggle-row">
+                <ToggleSwitch
+                  checked={draft.autoStartWithWindows}
+                  onChange={(checked) =>
+                    setDraft((s) => ({ ...s, autoStartWithWindows: checked }))
+                  }
+                />
+                <span>
+                  <strong>{t("settings.autoStartWithWindows")}</strong>
+                  <small>{t("settings.autoStartWithWindowsHint")}</small>
+                </span>
+              </label>
+            ) : null}
+            {minimizeToTraySupported ? (
+              <label className="settings-toggle-row">
+                <ToggleSwitch
+                  checked={draft.minimizeToTray}
+                  onChange={(checked) =>
+                    setDraft((s) => ({ ...s, minimizeToTray: checked }))
+                  }
+                />
+                <span>
+                  <strong>{t("settings.minimizeToTray")}</strong>
+                  <small>{t("settings.minimizeToTrayHint")}</small>
+                </span>
+              </label>
+            ) : null}
+          </div>
+        </fieldset>
+      ) : null}
 
       {showPerformanceSettings ? (
         <fieldset
