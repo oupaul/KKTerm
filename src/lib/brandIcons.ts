@@ -79,6 +79,11 @@ export const BRAND_ICON_ENTRIES: BrandIconEntry[] = [
     keywords: ["powershell", "pwsh", "shell", "terminal", "microsoft", "windows"],
   },
   {
+    id: "psmux",
+    label: "psmux",
+    keywords: ["psmux", "pmux", "tmux", "terminal", "multiplexer", "powershell", "windows"],
+  },
+  {
     id: "windows-terminal",
     label: "Windows Terminal",
     keywords: ["windows terminal", "terminal", "console", "microsoft", "windows"],

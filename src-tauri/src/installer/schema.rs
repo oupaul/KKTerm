@@ -589,6 +589,7 @@ mod tests {
             "hermes-agent",
             "flowise",
             "powertoys",
+            "psmux",
             "sysinternals-suite",
             "everything",
             "ditto",
@@ -631,6 +632,26 @@ mod tests {
         assert!(x64_url.ends_with("-win-x64.msi"), "got {x64_url}");
         let (arm_url, _) = download.download_target(true).expect("arm64 target");
         assert!(arm_url.ends_with("-win-arm64.msi"), "got {arm_url}");
+    }
+
+    #[test]
+    fn shipped_catalog_includes_psmux_winget_recipe() {
+        let json = include_str!("../../../installer/catalog.v1.json");
+        let catalog: Catalog =
+            serde_json::from_str(json).expect("shipped catalog JSON should parse");
+        let recipe = catalog
+            .recipes
+            .iter()
+            .find(|recipe| recipe.id == "psmux")
+            .expect("catalog should include psmux");
+
+        assert_eq!(recipe.category.as_deref(), Some("windows-power-user"));
+        assert_eq!(recipe.homepage.as_deref(), Some("https://github.com/psmux/psmux"));
+        assert!(recipe.needs.contains(&"winget".to_string()));
+        assert!(matches!(
+            &recipe.provider,
+            Provider::Winget { id } if id == "marlocarlo.psmux"
+        ));
     }
 
     #[test]

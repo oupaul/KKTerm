@@ -32,6 +32,7 @@ import openWebuiIcon from "../assets/installer-icons/open-webui.png?url";
 import openaiIcon from "../assets/installer-icons/openai.svg?url";
 import opencodeIcon from "../assets/installer-icons/opencode.svg?url";
 import powershellIcon from "../assets/installer-icons/powershell.svg?url";
+import psmuxIcon from "../assets/installer-icons/psmux.svg?url";
 import powerToysIcon from "../assets/installer-icons/powertoys.png?url";
 import pythonIcon from "../assets/installer-icons/python.svg?url";
 import rustIcon from "../assets/installer-icons/rust.svg?url";
@@ -101,6 +102,7 @@ const brandIconUrlById: Record<string, string> = {
   zsh: zshIcon,
   fish: fishIcon,
   powershell: powershellIcon,
+  psmux: psmuxIcon,
   "windows-terminal": windowsTerminalIcon,
   wsl: linuxIcon,
   iterm2: iterm2Icon,

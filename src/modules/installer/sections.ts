@@ -67,7 +67,7 @@ export const INSTALLER_CATEGORY_SECTIONS: InstallerSection[] = [
   {
     id: "windowsPowerUser",
     titleKey: "installer.section.windowsPowerUser",
-    ids: ["powershell-7", "powertoys", "sysinternals-suite", "everything", "ditto"],
+    ids: ["powershell-7", "psmux", "powertoys", "sysinternals-suite", "everything", "ditto"],
     Icon: Zap,
     tintVar: "--installer-tint-power",
   },

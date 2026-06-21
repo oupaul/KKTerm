@@ -39,6 +39,7 @@ import openWebui from "../../assets/installer-icons/open-webui.png?url";
 import openclaw from "../../assets/installer-icons/openclaw.png?url";
 import opencode from "../../assets/installer-icons/opencode.svg?url";
 import powershell from "../../assets/installer-icons/powershell.svg?url";
+import psmux from "../../assets/installer-icons/psmux.svg?url";
 import powertoys from "../../assets/installer-icons/powertoys.png?url";
 import python from "../../assets/installer-icons/python.svg?url";
 import rust from "../../assets/installer-icons/rust.svg?url";
@@ -82,6 +83,7 @@ const RECIPE_ICON_URLS: Record<string, string> = {
   "claude-desktop": anthropic,
   "hermes-agent": hermesAgent,
   "powershell-7": powershell,
+  psmux,
   powertoys,
   "sysinternals-suite": sysinternalsSuite,
   everything,

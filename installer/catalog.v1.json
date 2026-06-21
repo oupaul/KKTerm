@@ -1534,6 +1534,46 @@
       }
     },
     {
+      "id": "psmux",
+      "name": "psmux",
+      "descriptionEn": "Native Windows terminal multiplexer with tmux-style sessions, windows, and split panes.",
+      "category": "windows-power-user",
+      "icon": "PanelsTopLeft",
+      "needs": [
+        "winget"
+      ],
+      "homepage": "https://github.com/psmux/psmux",
+      "releaseNotesUrl": "https://github.com/psmux/psmux/releases",
+      "detection": {
+        "displayNames": [
+          "psmux"
+        ]
+      },
+      "provider": {
+        "kind": "winget",
+        "id": "marlocarlo.psmux"
+      },
+      "options": [
+        "scope",
+        "version"
+      ],
+      "descriptionLocales": {
+        "de": "Nativer Windows-Terminalmultiplexer mit Sitzungen, Fenstern und geteilten Bereichen im tmux-Stil.",
+        "es": "Multiplexor de terminal nativo para Windows con sesiones, ventanas y paneles divididos al estilo de tmux.",
+        "es-MX": "Multiplexor de terminal nativo para Windows con sesiones, ventanas y paneles divididos al estilo de tmux.",
+        "fr": "Multiplexeur de terminal Windows natif avec sessions, fenêtres et volets fractionnés de style tmux.",
+        "id": "Multiplexer terminal Windows native dengan sesi, jendela, dan panel terpisah bergaya tmux.",
+        "it": "Multiplexer di terminale nativo per Windows con sessioni, finestre e riquadri divisi in stile tmux.",
+        "ja": "tmux 形式のセッション、ウィンドウ、分割ペインを備えた Windows ネイティブのターミナルマルチプレクサー。",
+        "ko": "tmux 스타일 세션, 창 및 분할 창을 지원하는 Windows 네이티브 터미널 멀티플렉서입니다.",
+        "pt-BR": "Multiplexador de terminal nativo do Windows com sessões, janelas e painéis divididos no estilo tmux.",
+        "th": "เทอร์มินัลมัลติเพล็กเซอร์แบบเนทีฟสำหรับ Windows พร้อมเซสชัน หน้าต่าง และแผงแบ่งแบบ tmux",
+        "vi": "Bộ ghép kênh thiết bị đầu cuối Windows gốc với phiên, cửa sổ và ngăn chia theo kiểu tmux.",
+        "zh-CN": "原生 Windows 终端多路复用器，提供 tmux 风格的会话、窗口和拆分窗格。",
+        "zh-TW": "原生 Windows 終端機多工器，提供 tmux 風格的工作階段、視窗與分割窗格。"
+      }
+    },
+    {
       "id": "ditto",
       "name": "Ditto Clipboard Manager",
       "descriptionEn": "Clipboard history manager for Windows.",

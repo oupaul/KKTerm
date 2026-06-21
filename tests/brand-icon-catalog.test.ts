@@ -40,6 +40,7 @@ const INSTALLER_ARTWORK_ICON_IDS = [
   "openclaw",
   "opencode",
   "powershell",
+  "psmux",
   "powertoys",
   "python",
   "rust",
