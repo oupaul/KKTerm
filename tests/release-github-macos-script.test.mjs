@@ -64,6 +64,17 @@ test("macOS package script loads the updater private key for Tauri signing", () 
   assert.match(packageMacosScript, /npm exec tauri -- build --target universal-apple-darwin --bundles app,dmg "\$@"/);
 });
 
+test("macOS package script guards the universal build on the x86_64 Rust target", () => {
+  assert.match(packageMacosScript, /require_universal_targets\(\) \{/);
+  assert.match(packageMacosScript, /rustup target list --installed/);
+  assert.match(packageMacosScript, /rustup target add x86_64-apple-darwin/);
+
+  const guardIndex = packageMacosScript.indexOf("require_universal_targets\n");
+  const buildIndex = packageMacosScript.indexOf("npm exec tauri -- build");
+  assert.ok(guardIndex !== -1, "guard must be invoked before the build");
+  assert.ok(guardIndex < buildIndex, "guard must run before tauri build");
+});
+
 test("macOS release script uploads signed Tauri updater metadata", () => {
   assert.match(script, /find_latest_updater_bundle\(\) \{/);
   assert.match(script, /UPDATER_NAME="kkterm-\$VERSION-macos-universal\.app\.tar\.gz"/);

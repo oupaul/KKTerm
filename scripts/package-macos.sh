@@ -23,6 +23,20 @@ extract_tauri_signing_key() {
   normalize_tauri_signing_key "$(<"$1")"
 }
 
+require_universal_targets() {
+  # A universal2 build compiles the x86_64 and aarch64 slices separately and
+  # lipos them together, so the x86_64 target must be installed alongside the
+  # host's aarch64 target. Fail with a fixable hint instead of a cryptic Cargo
+  # "can't find crate for `std`" error. Skip the check when rustup is absent.
+  command -v rustup >/dev/null 2>&1 || return 0
+
+  if ! rustup target list --installed 2>/dev/null | grep -qx "x86_64-apple-darwin"; then
+    print -u2 "Missing Rust target for the universal macOS build: x86_64-apple-darwin"
+    print -u2 "Install it once with: rustup target add x86_64-apple-darwin"
+    exit 1
+  fi
+}
+
 if [[ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]]; then
   if [[ ! -f "$KEY_PATH" ]]; then
     print -u2 "Missing Tauri updater signing key: $KEY_PATH"
@@ -37,5 +51,7 @@ fi
 
 export TAURI_SIGNING_PRIVATE_KEY_PATH="$KEY_PATH"
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
+
+require_universal_targets
 
 npm exec tauri -- build --target universal-apple-darwin --bundles app,dmg "$@"
