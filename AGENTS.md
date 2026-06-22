@@ -130,6 +130,13 @@ Strong success criteria let you loop independently.
   `showStatusBarNotice` with the matching `tone`. Do not render transient
   outcome text inline in dialogs/pages and do not add one-off toast, banner, or
   status implementations. Use `showStatusBarProgress` for determinate work.
+- Golden rule: transient popups float above every dialog backdrop, always. The
+  Status Bar notice popup must mount through the app-window `DialogPortal`
+  (`document.body`) so it escapes the `.status-bar` stacking context; a high
+  `z-index` alone cannot lift an overlay out of a positioned ancestor's
+  stacking context. Do not move it back inline. See the overlay golden rule in
+  `docs/ARCHITECTURE.md`; `tests/dialog-portal-policy.test.mjs` guards the
+  portal and z-order.
 - Do not use `window.alert`, `window.confirm`, or `window.prompt`; use
   translated app-owned dialogs/popovers.
 - RDP ActiveX overlay parking is RDP-only. Do not extend that workaround to

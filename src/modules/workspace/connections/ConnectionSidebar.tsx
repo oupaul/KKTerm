@@ -65,7 +65,7 @@ import { DialogPortal } from "../../../app/DialogPortal";
 import { LegacyDialogActions } from "../../../app/ui/dialog";
 import { pushTrayMenu } from "../../../app/trayMenu";
 import { CHILD_CONNECTION_CLOSED_EVENT, DEFAULT_WORKSPACE_ID, appendTmuxSessionId, useWorkspaceStore } from "../../../store";
-import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
+import type { Connection, ConnectionFolder, ConnectionStatus, ConnectionTree, ConnectionType, CreateConnectionRequest, RdpSettings, SplitDirection, SshCompressionMode, SshSettings, StoredCredentialSummary, UpdateConnectionRequest, VncSettings, WorkspaceChildConnection, WorkspaceTab } from "../../../types";
 
 // Pointer travel (px, either axis) before a press is treated as a drag rather
 // than a click. Kept above ordinary click jitter so selecting a row never
@@ -4137,6 +4137,14 @@ function ConnectionDialog({
       usesSshDefaults && sshUsesDefaultOptions
         ? sshSettings.defaultUseTmuxSessions
         : form.get("useTmuxSessions") === "on";
+    // Compression follows the shared inherit toggle: inheriting stores no
+    // override (undefined) so the connection tracks the global default; an
+    // explicit choice persists "off"/"fast".
+    const formSshCompression = String(form.get("sshCompression") ?? "");
+    const sshCompression =
+      usesSshDefaults && !sshUsesDefaultOptions && (formSshCompression === "off" || formSshCompression === "fast")
+        ? (formSshCompression as SshCompressionMode)
+        : undefined;
     const usePsmuxSessions = connectionType === "local" && form.get("usePsmuxSessions") === "on";
     const inheritRdpDefaults = form.get("rdpInheritDefaults") === "on";
     const inheritVncDefaults = form.get("vncInheritDefaults") === "on";
@@ -4162,6 +4170,7 @@ function ConnectionDialog({
       sshSocksProxy: usesSshDefaults ? sshSocksProxy || undefined : undefined,
       sshSocksProxyUsername: usesSshDefaults ? sshSocksProxyUsername || undefined : undefined,
       sshSocksProxyInheritDefaults: usesSshDefaults ? sshUsesDefaultOptions : undefined,
+      sshCompression: usesSshDefaults ? sshCompression : undefined,
       sshSocksProxyPassword: usesSshDefaults && !sshUsesDefaultOptions ? sshSocksProxyPassword || undefined : undefined,
       authMethod: usesSshDefaults ? authMethod : undefined,
       useTmuxSessions: usesSshDefaults ? useTmuxSessions : undefined,

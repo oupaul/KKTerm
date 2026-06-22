@@ -285,6 +285,11 @@
   font-weight: 700;
 }
 
+/* Golden rule: transient notices float above every dialog backdrop. This must be
+   portaled to document.body (see StatusBar.tsx / DialogPortal) so this z-index is
+   resolved at the document root — inside the .status-bar stacking context
+   (z-index:80) it would be capped below dialog backdrops (z-index:130+) regardless
+   of the value here. Keep this above every blocking backdrop. */
 .status-bar-notice-area {
   position: fixed;
   right: 0;
@@ -691,7 +696,7 @@
   stroke: var(--notice-tone);
 }
 
-.status-bar .status-popup-message {
+.status-popup-message {
   display: block;
   max-width: 340px;
   overflow: hidden;

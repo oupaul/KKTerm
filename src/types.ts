@@ -48,6 +48,13 @@ export interface ReorderWorkspacesRequest {
 export type ConnectionStatus = "connected" | "idle" | "offline";
 export type SshAuthMethod = "keyFile" | "password" | "agent";
 
+/**
+ * SSH transport compression. `"fast"` enables zlib at russh's fast level
+ * (matching `ssh -XC`); `"off"` disables it. A per-connection value of
+ * `undefined` means "inherit the global SSH default".
+ */
+export type SshCompressionMode = "off" | "fast";
+
 /** Per-pane File Explorer / SFTP browser view options (item zoom + content-view
  * background), persisted durably on the Connection. */
 export interface FileBrowserPaneViewOptions {
@@ -83,6 +90,7 @@ export interface Connection {
   sshSocksProxy?: string;
   sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
+  sshCompression?: SshCompressionMode;
   authMethod?: SshAuthMethod;
   hasPassword?: boolean;
   localShell?: string;
@@ -275,6 +283,7 @@ export interface CreateConnectionRequest {
   sshSocksProxy?: string;
   sshSocksProxyUsername?: string;
   sshSocksProxyInheritDefaults?: boolean;
+  sshCompression?: SshCompressionMode;
   authMethod?: SshAuthMethod;
   localShell?: string;
   localStartupDirectory?: string;
@@ -697,6 +706,7 @@ export interface SshSettings {
   defaultProxyJump?: string;
   defaultSshSocksProxy?: string;
   defaultSshSocksProxyUsername?: string;
+  defaultSshCompression: SshCompressionMode;
   bufferLines: number;
   defaultTransparency: number;
   defaultUseTmuxSessions: boolean;

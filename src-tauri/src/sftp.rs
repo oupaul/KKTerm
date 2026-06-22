@@ -325,6 +325,7 @@ impl SftpSessionManager {
                 known_hosts_path,
                 x11_forwarding: None,
                 socks_proxy,
+                compression: true,
                 remote_forward_targets: None,
             })
             .await?;

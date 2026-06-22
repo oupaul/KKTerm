@@ -46,8 +46,8 @@ test("macOS release script expands home references loaded from env files", () =>
 });
 
 test("macOS release script builds deterministic DMG and checksum asset names", () => {
-  assert.match(script, /TARGET_TRIPLE="aarch64-apple-darwin"/);
-  assert.match(script, /DMG_NAME="kkterm-\$VERSION-macos-arm64\.dmg"/);
+  assert.match(script, /TARGET_TRIPLE="universal-apple-darwin"/);
+  assert.match(script, /DMG_NAME="kkterm-\$VERSION-macos-universal\.dmg"/);
   assert.match(script, /SHA_NAME="\$DMG_NAME\.sha256"/);
   assert.match(script, /npm run package:macos/);
   assert.match(script, /shasum -a 256 "\$DMG_PATH"/);
@@ -61,16 +61,28 @@ test("macOS package script loads the updater private key for Tauri signing", () 
   assert.match(packageMacosScript, /\| base64$/m);
   assert.match(packageMacosScript, /export TAURI_SIGNING_PRIVATE_KEY="\$\(extract_tauri_signing_key "\$KEY_PATH"\)"/);
   assert.match(packageMacosScript, /export TAURI_SIGNING_PRIVATE_KEY="\$\(normalize_tauri_signing_key "\$TAURI_SIGNING_PRIVATE_KEY"\)"/);
-  assert.match(packageMacosScript, /npm exec tauri -- build --target aarch64-apple-darwin --bundles app,dmg "\$@"/);
+  assert.match(packageMacosScript, /npm exec tauri -- build --target universal-apple-darwin --bundles app,dmg "\$@"/);
+});
+
+test("macOS package script guards the universal build on the x86_64 Rust target", () => {
+  assert.match(packageMacosScript, /require_universal_targets\(\) \{/);
+  assert.match(packageMacosScript, /rustup target list --installed/);
+  assert.match(packageMacosScript, /rustup target add x86_64-apple-darwin/);
+
+  const guardIndex = packageMacosScript.indexOf("require_universal_targets\n");
+  const buildIndex = packageMacosScript.indexOf("npm exec tauri -- build");
+  assert.ok(guardIndex !== -1, "guard must be invoked before the build");
+  assert.ok(guardIndex < buildIndex, "guard must run before tauri build");
 });
 
 test("macOS release script uploads signed Tauri updater metadata", () => {
   assert.match(script, /find_latest_updater_bundle\(\) \{/);
-  assert.match(script, /UPDATER_NAME="kkterm-\$VERSION-macos-arm64\.app\.tar\.gz"/);
+  assert.match(script, /UPDATER_NAME="kkterm-\$VERSION-macos-universal\.app\.tar\.gz"/);
   assert.match(script, /UPDATER_SIG_NAME="\$UPDATER_NAME\.sig"/);
   assert.match(script, /LATEST_JSON_NAME="latest\.json"/);
   assert.match(script, /write_latest_json "\$LATEST_JSON_PATH"/);
   assert.match(script, /"darwin-aarch64"/);
+  assert.match(script, /"darwin-x86_64"/);
 });
 
 test("macOS release script infers the release tag from the DMG when tag is omitted", () => {
@@ -82,7 +94,7 @@ test("macOS release script infers the release tag from the DMG when tag is omitt
 
 test("macOS release script patches GitHub release notes with macOS direct downloads", () => {
   assert.match(script, /patch_release_notes\(\) \{/);
-  assert.match(script, /Download for macOS \(Apple Silicon\)/);
+  assert.match(script, /Download for macOS \(Universal\)/);
   assert.doesNotMatch(script, /macOS SHA-256 checksum/);
   assert.match(script, /gh release edit "\$tag" --notes-file "\$temp_file"/);
   assert.match(script, /--skip-notes-patch/);

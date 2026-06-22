@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Fingerprint, KeyRound, Layers, LockKeyhole, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { technicalInputProps } from "../../../../lib/inputBehavior";
-import type { Connection, SshSettings, StoredCredentialSummary } from "../../../../types";
+import type { Connection, SshCompressionMode, SshSettings, StoredCredentialSummary } from "../../../../types";
 import { defaultPortForConnectionType } from "../utils";
 import { PasswordCredentialSelect, PasswordField } from "./ConnectionPasswordFields";
 
@@ -194,6 +194,9 @@ export function SshConnectionOptions({
   const [useTmuxSessionsDraft, setUseTmuxSessionsDraft] = useState(
     initialConnection?.useTmuxSessions ?? sshSettings.defaultUseTmuxSessions,
   );
+  const [sshCompressionDraft, setSshCompressionDraft] = useState<SshCompressionMode>(
+    initialConnection?.sshCompression ?? sshSettings.defaultSshCompression ?? "fast",
+  );
   const displayedSshSocksProxy = sshInheritsSettingsDefaults
     ? sshSettings.defaultSshSocksProxy ?? ""
     : sshSocksProxyDraft;
@@ -204,6 +207,9 @@ export function SshConnectionOptions({
   const displayedUseTmuxSessions = sshInheritsSettingsDefaults
     ? sshSettings.defaultUseTmuxSessions
     : useTmuxSessionsDraft;
+  const displayedSshCompression = sshInheritsSettingsDefaults
+    ? sshSettings.defaultSshCompression ?? "fast"
+    : sshCompressionDraft;
   const hasProxyJumpOverride = !sshInheritsSettingsDefaults && proxyJumpDraft.trim().length > 0;
   const hasSocksProxyOverride = !sshInheritsSettingsDefaults && sshSocksProxyDraft.trim().length > 0;
   const hasDisplayedSocksProxy = displayedSshSocksProxy.trim().length > 0;
@@ -274,6 +280,18 @@ export function SshConnectionOptions({
             onChange={(event) => setUseTmuxSessionsDraft(event.currentTarget.checked)}
             type="checkbox"
           />
+        </label>
+        <label className="connection-proxy-row">
+          <span>{t("connections.sshCompression")}</span>
+          <select
+            disabled={sshInheritsSettingsDefaults}
+            name="sshCompression"
+            onChange={(event) => setSshCompressionDraft(event.currentTarget.value as SshCompressionMode)}
+            value={displayedSshCompression}
+          >
+            <option value="fast">{t("settings.sshCompressionFast")}</option>
+            <option value="off">{t("settings.sshCompressionOff")}</option>
+          </select>
         </label>
       </div>
     </fieldset>

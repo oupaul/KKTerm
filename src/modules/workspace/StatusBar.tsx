@@ -17,6 +17,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { DialogPortal } from "../../app/DialogPortal";
 import { RailTooltip } from "../../app/RailTooltip";
 import { showNativeContextMenu } from "../../lib/nativeContextMenu";
 import { AiCodingUsageStatusBar } from "../dashboard/widgets/builtin/ai-coding-usage/AiCodingUsageStatusBar";
@@ -101,16 +102,23 @@ export function StatusBar({
       </div>
       <div className="status-bar-document" ref={setDocumentStatusSlot} />
       <InstallerStatusSummary active={installerActive} />
-      <div className="status-bar-notice-area">
-        {renderedNotice ? (
-          <StatusNoticePopup
-            dismissLabel={t("app.titlebar.close")}
-            isExiting={isNoticeExiting}
-            notice={renderedNotice}
-            onDismiss={dismissRenderedNotice}
-          />
-        ) : null}
-      </div>
+      {/* Transient notices portal to the app window so they float above every
+          dialog backdrop. Rendering inline would trap them in the .status-bar
+          stacking context (position:relative; z-index:80), where the popup's own
+          z-index can never beat a dialog backdrop. See the overlay golden rule in
+          docs/ARCHITECTURE.md and tests/dialog-portal-policy.test.mjs. */}
+      {renderedNotice ? (
+        <DialogPortal>
+          <div className="status-bar-notice-area">
+            <StatusNoticePopup
+              dismissLabel={t("app.titlebar.close")}
+              isExiting={isNoticeExiting}
+              notice={renderedNotice}
+              onDismiss={dismissRenderedNotice}
+            />
+          </div>
+        </DialogPortal>
+      ) : null}
       <div className="status-bar-actions">
         <WatchdogStatusBar />
         <AssistantWorkingStatusButton onOpenAssistant={onOpenAssistant} />

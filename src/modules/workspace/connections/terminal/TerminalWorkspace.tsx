@@ -1,4 +1,4 @@
-import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, localShellOptionsForPlatform, resolveAvailableLocalShell, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
+import { confirmTrustedSshHostKey, connectionPasswordOwnerId, connectionToolbarTitle, localShellOptionsForPlatform, resolveAvailableLocalShell, resolveSshCompression, resolveSshSocksProxyRequest, uniqueRuntimeId, usesNativeSshHostKeyVerification } from "../utils";
 import { resolveLocalShellForLaunch } from "./pwshPreflight";
 import { ConfirmDialog } from "../../../../app/ConfirmDialog";
 import { readFromClipboard, writeToClipboard } from "../../../../lib/clipboard";
@@ -2039,6 +2039,8 @@ function TerminalPaneView({
             usePsmux: connection.type === "local" && connection.usePsmuxSessions === true,
             psmuxSessionId: connection.type === "local" ? pane.tmuxSessionId : undefined,
             sshBufferLines: connection.type === "ssh" ? sshSettings.bufferLines : undefined,
+            sshCompression:
+              connection.type === "ssh" ? resolveSshCompression(connection, sshSettings) : undefined,
           },
         });
         if (disposed) {

@@ -138,6 +138,66 @@ test("blocking dialog backdrops cover and intercept the Activity Rail", async ()
   );
 });
 
+test("Status Bar transient notice popup floats above every dialog backdrop", async () => {
+  const statusBarSource = await readFile(
+    new URL("../src/modules/workspace/StatusBar.tsx", import.meta.url),
+    "utf8",
+  );
+  // The popup must portal to the app window, otherwise it is trapped inside the
+  // .status-bar stacking context (position:relative; z-index:80) and any dialog
+  // backdrop (z-index:130+) dims it — the golden rule is that transient popups
+  // stay on top at all times.
+  assert.match(statusBarSource, /DialogPortal/, "StatusBar should import/use DialogPortal");
+  assert.match(
+    statusBarSource,
+    /<DialogPortal>\s*<div className="status-bar-notice-area">/,
+    "StatusBar should portal .status-bar-notice-area to document.body",
+  );
+
+  const [workspaceStyles, baseStyles, dialogStyles, settingsStyles, dashboardStyles, launcherStyles, sftpStyles] =
+    await Promise.all([
+      readFile(new URL("../src/modules/workspace/workspace.css", import.meta.url), "utf8"),
+      readFile(new URL("../src/styles/base.css", import.meta.url), "utf8"),
+      readFile(new URL("../src/app/ui/dialog/dialogs.css", import.meta.url), "utf8"),
+      readFile(new URL("../src/modules/settings/settings.css", import.meta.url), "utf8"),
+      readFile(new URL("../src/modules/dashboard/dashboard.css", import.meta.url), "utf8"),
+      readFile(
+        new URL("../src/modules/dashboard/widgets/builtin/app-launcher/app-launcher.css", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../src/modules/workspace/connections/sftp/sftp.css", import.meta.url), "utf8"),
+    ]);
+
+  const ruleBody = (styles, selector) => {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return styles.match(new RegExp(`${escapedSelector}\\s*\\{(?<body>[^}]*)\\}`, "s"))?.groups?.body ?? "";
+  };
+  const zIndex = (styles, selector) =>
+    Number(ruleBody(styles, selector).match(/z-index:\s*(\d+);/)?.[1] ?? Number.NaN);
+
+  const noticeZIndex = zIndex(workspaceStyles, ".status-bar-notice-area");
+  assert.ok(Number.isFinite(noticeZIndex), ".status-bar-notice-area should define a z-index");
+
+  const blockingBackdrops = [
+    [baseStyles, ".dialog-backdrop"],
+    [baseStyles, ".connection-dialog-backdrop"],
+    [dialogStyles, ".kk-dlg-backdrop"],
+    [dialogStyles, ".kk-dlg-backdrop.kk-qc-subdialog"],
+    [settingsStyles, ".settings-backdrop"],
+    [dashboardStyles, ".dashboard-dialog-backdrop"],
+    [launcherStyles, ".dialog-backdrop.app-launcher-dialog-backdrop"],
+    [sftpStyles, ".sftp-conflict-z"],
+  ];
+  for (const [styles, selector] of blockingBackdrops) {
+    const backdropZIndex = zIndex(styles, selector);
+    assert.ok(Number.isFinite(backdropZIndex), `${selector} should define a z-index`);
+    assert.ok(
+      noticeZIndex > backdropZIndex,
+      `.status-bar-notice-area (${noticeZIndex}) should float above ${selector} (${backdropZIndex})`,
+    );
+  }
+});
+
 test("Assistant image preview escapes the AI Assistant Panel and remains RDP-blocking", async () => {
   const assistantSource = await readFile(new URL("../src/ai/AssistantMessageView.tsx", import.meta.url), "utf8");
   const assistantStyles = await readFile(new URL("../src/ai/assistant.css", import.meta.url), "utf8");
