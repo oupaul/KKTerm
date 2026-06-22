@@ -70,6 +70,7 @@ Kamu seorang sysadmin / DevOps / penggemar homelab / vibe-coder. Saat ini kamu p
 - Remote Desktop di jendela yang selalu kamu kehilangan di monitor yang salah
 - Sebuah viewer VNC hanya demi satu mesin Linux itu
 - Satu tab browser untuk halaman admin router
+- Sebuah file manager untuk mengulik disk lokal, dan satu editor teks hanya demi satu log yang terus kamu `tail`
 - Sebuah sesi `claude` / `codex` di mesin remote yang putus setiap kali Wi-Fi bersin
 - Secarik sticky note berisi kata sandi *(tenang, kami tak akan bilang)*
 
@@ -79,6 +80,8 @@ Ditambah beberapa hal yang kamu tak tahu kamu inginkan:
 
 - Sebuah **Dashboard** tempat kamu menyuruh AI *"buatkan widget yang ping router-ku tiap 30 detik"* lalu ia muncul, dalam sandbox-nya sendiri, di grid-mu.
 - **Panel SSH yang menyambung kembali ke sesi remote `claude` / `codex`-mu** setelah setiap amukan Wi-Fi, agar kerja enam jam selamat dari putusnya koneksi.
+- Sebuah **modul IT Ops** yang menyebarkan sebuah skrip atau playbook interaktif ke satu grup host sekaligus, plus **otomatisasi watchdog** yang melakukan ping, mengawasi, dan mengirimimu email saat ada yang melenceng.
+- **Workspaces** yang menjaga homelab, pekerjaan kantor, dan server klien itu dalam wadah-wadah terpisah yang bisa kamu tukar dengan sekali klik.
 - Sebuah **pengukur penggunaan AI** agar kamu berhenti menabrak tembok rate limit secara mengejutkan pukul 3 pagi.
 - Sebuah **Install Helper** yang menemukan, memasang, memperbarui, dan menjalankan alat dev Windows yang biasanya kamu kejar lewat sepuluh tab browser.
 - **Dua puluh lima latar animasi** untuk dashboard (ya, termasuk `matrix`), karena kami tak terlalu jaim untuk itu.
@@ -123,7 +126,13 @@ Kami belum berhasil menyertakan sekantong Kuai Kuai sungguhan bersama installer-
   </a>
 </p>
 
-<p align="center"><sub><em>(GIF demo ada di sini. Satu gambar bernilai seribu poin, dan poin kami sudah habis.)</em></sub></p>
+<p align="center"><sub><em>(GIF demo. Satu gambar bernilai seribu poin, dan poin kami sudah habis.)</em></sub></p>
+
+<p align="center">
+  <img src="docs/assets/screenshots/hero.png" alt="Jendela KKTerm utuh: pohon koneksi, grid Panes langsung, dan asisten AI" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — seluruh workspace sekilas: pohon koneksi di kiri, grid Panes langsung di tengah, asisten AI di kanan.</em></sub></p>
 
 ---
 
@@ -140,9 +149,17 @@ Kami belum berhasil menyertakan sekantong Kuai Kuai sungguhan bersama installer-
 | Remote ke mesin Windows | Remote Desktop Microsoft asli, terintegrasi langsung |
 | VNC ke sebuah Pi | VNC, dirender langsung ke ruang kerja |
 | Buka UI web router | Tab browser tertanam dengan login tersimpan |
+| Jelajahi disk-mu sendiri | Panel File Explorer lokal, cangkang panel ganda yang sama dengan SFTP |
+| Buka log, CSV, gambar, atau PDF | Penampil Document bawaan dengan mode log tail-follow sungguhan |
 | Pantau CPU host | Bilah status langsung dan dashboard yang kamu rakit sendiri |
 
 Aplikasi yang sama. Jendela yang sama. Pintasan yang sama. Tema yang sama, yang semoga tak bikin matamu berdarah.
+
+<p align="center">
+  <img src="docs/assets/screenshots/connections-grid.png" alt="Satu Tab berisi SSH, SFTP, dan UI web tertanam berdampingan" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — satu Tab, beberapa jenis Connection hidup berdampingan: SSH di sebelah SFTP di sebelah UI web tertanam.</em></sub></p>
 
 ---
 
@@ -160,6 +177,12 @@ Sebuah Tab bisa berisi grid Panes, dan Panes itu tidak harus sejenis. Taruh SSH 
 
 Ini satu workspace untuk bentuk nyata pekerjaan admin yang berantakan: campur jenis Connection, ubah ukuran grid, biarkan live Sessions tetap hidup, dan berhenti Alt-Tab melewati tumpukan jendela.
 
+<p align="center">
+  <img src="docs/assets/screenshots/multi-pane.png" alt="Sebuah Tab terbagi menjadi empat panel dengan jenis koneksi berbeda" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — grid empat: PowerShell, sesi SSH, browser SFTP, dan permukaan VNC, semuanya dalam satu Tab.</em></sub></p>
+
 ### Asisten AI yang membangun alatmu
 
 Kebanyakan demo "AI di terminalmu" berhenti di obrolan. Asisten KKTerm juga bisa membangun widget dashboard kecil yang awet, pas dengan cara kerjamu yang sebenarnya — dan menyimpan yang berbahaya di balik sakelar:
@@ -170,6 +193,14 @@ Kebanyakan demo "AI di terminalmu" berhenti di obrolan. Asisten KKTerm juga bisa
 Apa pun yang terlihat seperti `rm -rf` ditandai berbahaya dan menunggu kata "ya" eksplisit dari manusia. AI tidak bisa diam-diam menjalankan perintah merusak hanya karena ada yang berbuat licik dengan prompt injection di sebuah halaman man.
 
 Ia bicara dengan OpenAI, Anthropic, OpenRouter, DeepSeek, Grok, Azure OpenAI, LiteLLM, GitHub Copilot, Ollama, NVIDIA, atau endpoint apa pun yang kompatibel OpenAI. Kunci API-mu masuk ke keychain OS.
+
+Ia juga bisa melihat apa yang kamu lihat: tangkap sebuah area atau seluruh Pane dengan **menu tangkapan layar** lalu kirim langsung ke percakapan, sehingga "kenapa dialog ini terlihat aneh?" menjadi pertanyaan yang benar-benar bisa dijawab asisten.
+
+<p align="center">
+  <img src="docs/assets/screenshots/ai-assistant.png" alt="Panel asisten AI dengan sakelar akses alat dan mode persetujuan" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — panel asisten AI: sakelar per keluarga alat, peralih Prompt / Allow All, dan sebuah perintah berbahaya yang menunggu "ya" dari manusia.</em></sub></p>
 
 ### Dashboard yang tidak berpura-pura jadi Grafana
 
@@ -186,6 +217,12 @@ Ini bagian yang benar-benar membuat kami bersemangat. Kamu tidak memilih dari ma
 
 Sebagian adalah panel tampilan sederhana (markdown, checklist, satu angka besar); sebagian menjalankan kode langsung di sandbox terisolasi yang kamu setujui. Setiap widget yang kamu simpan jadi milikmu — tersimpan dengan warna, ikon, dan judulnya sendiri, dan kamu bisa punya beberapa salinan dengan ukuran berbeda. Hapus satu dengan klik kanan saat keajaibannya memudar.
 
+<p align="center">
+  <img src="docs/assets/screenshots/ai-widgets.png" alt="Grid dashboard penuh widget buatan AI" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — sebuah tampilan Dashboard penuh widget buatan AI: monitor ping, sticky note, statistik langsung, dan mainan kecil yang sama sekali tak pantas jadi semenyenangkan itu.</em></sub></p>
+
 #### Latar animasi dashboard (karena kami mau saja)
 
 Pilih satu suasana per tampilan dashboard dari **dua puluh lima** latar animasi canvas:
@@ -200,6 +237,12 @@ Pilih satu suasana per tampilan dashboard dari **dua puluh lima** latar animasi 
 
 Mereka berhenti saat kamu di tempat lain, jadi nyaris tak memakan sumber daya. Padukan `matrix` dengan asisten AI-mu untuk suasana yang berkata "aku sangat produktif dan mungkin sedang berada di film Wachowski". Atau pilih `ocean` dan tampak seperti orang serius. Kami tidak menghakimi kedua pilihan itu.
 
+<p align="center">
+  <img src="docs/assets/screenshots/backgrounds.png" alt="Beberapa latar animasi berdampingan" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — lembar contoh suasana: `matrix`, `aurora`, `synthwave`, dan `taipei101`.</em></sub></p>
+
 ### Jaga agar agen AI remote-mu tetap hidup
 
 Ini fitur kedua yang membuat orang jatuh cinta. Terminal SSH KKTerm bisa langsung menjatuhkanmu ke sebuah **sesi tmux bernama** di host remote yang selamat dari penyambungan ulang:
@@ -211,6 +254,14 @@ Ini fitur kedua yang membuat orang jatuh cinta. Terminal SSH KKTerm bisa langsun
 
 Kalau kamu pernah kehilangan sesi `claude` atau `codex` enam jam gara-gara Wi-Fi hotel yang labil, fitur satu ini saja sudah menebus harga aplikasinya. (Aplikasinya gratis. Fiturnya tetap layak.)
 
+Shell lokal mendapat trik yang sama di Windows: panel PowerShell bisa berjalan di dalam **psmux**, klon tmux native, agar proses lokal berdurasi panjang selamat dari Pane yang ditutup, persis seperti yang remote.
+
+<p align="center">
+  <img src="docs/assets/screenshots/tmux-reattach.png" alt="Sebuah panel SSH menyambung kembali ke sesi tmux bernama setelah reconnect" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — daftar sesi tmux/psmux di toolbar Pane, dengan agen `claude` remote yang masih berjalan setelah reconnect.</em></sub></p>
+
 ### Tahu berapa sisa AI-mu
 
 Agen coding menagih per jendela paket, bukan per bulan, dan mereka dengan senang hati melahap kuotamu saat kamu sedang rapat. **Pengukur penggunaan AI** menjaga itu tetap terlihat:
@@ -219,11 +270,59 @@ Agen coding menagih per jendela paket, bukan per bulan, dan mereka dengan senang
 - Sebuah **indikator ringkas di bilah status** yang mencerminkan angka yang sama, sehingga bahkan dengan dashboard tertutup kamu bisa melihat sekilas apakah masih ada ruang sebelum refactoring besar berikutnya.
 - Ia memberitahumu lebih awal kalau kamu perlu login ulang — *sebelum* tugas panjang, bukan di tengahnya.
 
+<p align="center">
+  <img src="docs/assets/screenshots/usage-meter.png" alt="Widget pengukur penggunaan AI dan indikator bilah status" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — widget penggunaan menampilkan Claude Code dan Codex berdampingan, plus cermin ringkas di bilah status.</em></sub></p>
+
+### Operasi armada tanpa meninggalkan jendela
+
+Saat "satu server" menjadi "empat puluh server", alur kerja panel tunggal berhenti menskala. **Modul IT Ops** adalah tempat KKTerm tumbuh dewasa:
+
+- **Host Groups (grup host)** — sebuah seleksi Connections bernama (dengan filter dinamis opsional), dipakai ulang sebagai target untuk semua di bawah ini.
+- **Batch Runs (eksekusi batch)** — sebarkan sebuah skrip sekali jalan *atau* sebuah **Playbook** interaktif bergaya expect ke satu grup host via SSH, WinRM, atau PsExec, dengan progres langsung per host dan laporan terkonsolidasi yang bisa dibuka lagi.
+- **Automations & Watchdog** — pasang sebuah aturan (ping, keterjangkauan TCP, sebuah performance counter, atau sebuah sesi SSH yang mendadak sunyi) lalu pilih apa yang terjadi saat terpicu: notifikasi, popup, email, webhook, menjalankan sebuah Batch Run, atau serahkan ke AI. Aturan yang awet bertahan melewati restart; Watchdog yang aktif muncul di bilah status.
+
+Ini bukan pengganti NOC. Ini alat "aku harus patch dua belas mesin ini sebelum makan siang" yang selama ini kamu harap ada di terminalmu.
+
+<p align="center">
+  <img src="docs/assets/screenshots/it-ops.png" alt="Modul IT Ops menjalankan batch run pada sebuah grup host" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — grid Batch Run yang mengalirkan output per host secara langsung, dengan otomatisasi Watchdog yang aktif di panel sebelahnya.</em></sub></p>
+
+### Pisahkan dunia-duniamu dengan Workspaces
+
+Homelab, pekerjaan kantor, dan server klien itu tidak pantas berada di daftar yang sama. **Workspaces** adalah wadah Connections bernama dan terisolasi yang kamu tukar dari Activity Rail. Menukar hanya menata ulang cakupan pohon koneksi — Sessions yang terbuka, Dashboard, dan Pengaturanmu tetap di tempat — jadi berganti konteks cukup satu klik, bukan restart.
+
+<p align="center">
+  <img src="docs/assets/screenshots/workspaces.png" alt="Pengalih workspace di activity rail" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — pengalih workspace di puncak Activity Rail, di tengah pergantian antara "Home Lab" dan "Day Job".</em></sub></p>
+
+### Berkas dan log, di jendela yang sama
+
+Tidak semuanya host remote. KKTerm menjelajahi **disk lokal**-mu di sebuah Pane File Explorer (cangkang panel ganda yang sama dengan SFTP), dan membuka satu berkas di sebuah **penampil Document** yang memilih mode yang tepat untuk tugasnya: teks/kode dengan editor ringan dan simpan-aman, Markdown, tabel CSV/TSV, JSON, gambar, PDF, dan sebuah **mode Log** khusus dengan pewarnaan level, filter, ANSI, dan tail-follow. Tak perlu lagi meraih editor terpisah hanya untuk membaca log yang sudah ada tepat di sebelahmu.
+
+<p align="center">
+  <img src="docs/assets/screenshots/file-viewer.png" alt="Penampil Document dalam mode log-tail di sebelah panel file explorer" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — penampil Document mengikuti log langsung (warna level + filter) di sebelah Pane File Explorer lokal.</em></sub></p>
+
 ### Biarkan AI lain mengemudikan KKTerm
 
 KKTerm membawa server MCP-nya sendiri, agar agen coding eksternal (Claude Code, Codex, Copilot, Antigravity, OpenCode) bisa memakai ruang kerjamu seperti kamu — mendaftar koneksi, membuka satu, membaca buffer terminal, menempatkan widget di dashboard. AI ke AI, di mesinmu, tanpa relay cloud. Aksi yang mengubah dan lebih berisiko tetap di balik satu sakelar keamanan yang **mati** secara default.
 
 Pengaturan → AI Assistant → **Built-in MCP Server** punya dialog "Tampilkan konfig" sekali klik, sudah terisi, plus perintah `claude mcp add` / `codex mcp add` yang bisa disalin.
+
+<p align="center">
+  <img src="docs/assets/screenshots/mcp-server.png" alt="Pengaturan server MCP bawaan dengan dialog tampilkan konfig" width="720" />
+</p>
+
+<p align="center"><sub><em>📸 <strong>Placeholder tangkapan layar</strong> — panel Built-in MCP Server dengan dialog "Tampilkan konfig" dan sakelar keamanan (mati secara default).</em></sub></p>
 
 ---
 
@@ -278,8 +377,11 @@ Penyiapan lengkap, struktur proyek, dan checklist PR ada di [`CONTRIBUTING.md`](
 
 - [Konteks produk](CONTEXT.md) — bahasa domain yang harus kamu ikuti
 - [Arsitektur](docs/ARCHITECTURE.md) — peta modul, di mana menaruh kode baru
+- [Manual pengguna](docs/manual/INDEX.md) — keliling fitur demi fitur
 - [Roadmap](docs/ROADMAP.md)
 - [Arsitektur Dashboard](docs/DASHBOARD.md)
+- [Modul IT Ops](docs/ITOPS.md)
+- [Server MCP bawaan](docs/MCP.md)
 - [Panduan penyedia AI](docs/AI_PROVIDERS.md)
 
 ---
