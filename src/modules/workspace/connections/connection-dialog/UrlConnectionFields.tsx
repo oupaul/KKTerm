@@ -17,14 +17,6 @@ export function UrlConnectionFields({
   isEditMode: boolean;
 }) {
   const { t } = useTranslation();
-  const urlSettings = useWorkspaceStore((state) => state.urlSettings);
-  const [inheritsDefaults, setInheritsDefaults] = useState(initialConnection?.urlProxyInheritDefaults ?? true);
-  const initialProxy = splitUrlProxy(initialConnection?.urlProxy);
-  const inheritedProxy = splitUrlProxy(urlSettings.defaultProxyUrl);
-  const [proxyMode, setProxyMode] = useState<UrlProxyMode>(initialProxy.mode);
-  const [proxyHost, setProxyHost] = useState(initialProxy.host);
-  const [proxyPort, setProxyPort] = useState(initialProxy.port);
-  const displayedProxy = inheritsDefaults ? inheritedProxy : { mode: proxyMode, host: proxyHost, port: proxyPort };
 
   return (
     <>
@@ -73,65 +65,80 @@ export function UrlConnectionFields({
           />
         </label>
       </div>
-      <fieldset className="connection-session-fields connection-specific-options">
-        <legend>{t("connections.urlProxy")}</legend>
-        <div className="connection-specific-options-panel">
-          <label className="connection-session-toggle">
-            <Settings2 className="option-glyph" size={17} aria-hidden />
-            <span>{t("connections.inheritSettingsDefaults")}</span>
+    </>
+  );
+}
+
+export function UrlConnectionOptions({ initialConnection }: { initialConnection?: Connection }) {
+  const { t } = useTranslation();
+  const urlSettings = useWorkspaceStore((state) => state.urlSettings);
+  const [inheritsDefaults, setInheritsDefaults] = useState(initialConnection?.urlProxyInheritDefaults ?? true);
+  const initialProxy = splitUrlProxy(initialConnection?.urlProxy);
+  const inheritedProxy = splitUrlProxy(urlSettings.defaultProxyUrl);
+  const [proxyMode, setProxyMode] = useState<UrlProxyMode>(initialProxy.mode);
+  const [proxyHost, setProxyHost] = useState(initialProxy.host);
+  const [proxyPort, setProxyPort] = useState(initialProxy.port);
+  const displayedProxy = inheritsDefaults ? inheritedProxy : { mode: proxyMode, host: proxyHost, port: proxyPort };
+
+  return (
+    <fieldset className="connection-session-fields connection-specific-options">
+      <legend>{t("connections.urlProxy")}</legend>
+      <div className="connection-specific-options-panel">
+        <label className="connection-session-toggle">
+          <Settings2 className="option-glyph" size={17} aria-hidden />
+          <span>{t("connections.inheritSettingsDefaults")}</span>
+          <input
+            checked={inheritsDefaults}
+            name="urlProxyInheritDefaults"
+            onChange={(event) => setInheritsDefaults(event.currentTarget.checked)}
+            type="checkbox"
+          />
+        </label>
+        <div className="connection-option-fields">
+          <label className="connection-proxy-row">
+            <span>{t("settings.urlProxyMode")}</span>
+            <select
+              disabled={inheritsDefaults}
+              name="urlProxyMode"
+              onChange={(event) => setProxyMode(event.currentTarget.value as UrlProxyMode)}
+              value={displayedProxy.mode}
+            >
+              <option value="direct">{t("settings.urlProxyDirect")}</option>
+              <option value="http">{t("settings.urlProxyHttp")}</option>
+              <option value="socks5">{t("settings.urlProxySocks5")}</option>
+            </select>
+          </label>
+          <label className="connection-proxy-row">
+            <span>{t("settings.urlProxyHost")}</span>
             <input
-              checked={inheritsDefaults}
-              name="urlProxyInheritDefaults"
-              onChange={(event) => setInheritsDefaults(event.currentTarget.checked)}
-              type="checkbox"
+              {...technicalInputProps}
+              disabled={inheritsDefaults || displayedProxy.mode === "direct"}
+              name="urlProxyHost"
+              onChange={(event) => setProxyHost(event.currentTarget.value)}
+              placeholder={t("settings.urlProxyHostPlaceholder")}
+              required={!inheritsDefaults && displayedProxy.mode !== "direct"}
+              value={displayedProxy.host}
             />
           </label>
-          <div className="connection-option-fields">
-            <label className="connection-proxy-row">
-              <span>{t("settings.urlProxyMode")}</span>
-              <select
-                disabled={inheritsDefaults}
-                name="urlProxyMode"
-                onChange={(event) => setProxyMode(event.currentTarget.value as UrlProxyMode)}
-                value={displayedProxy.mode}
-              >
-                <option value="direct">{t("settings.urlProxyDirect")}</option>
-                <option value="http">{t("settings.urlProxyHttp")}</option>
-                <option value="socks5">{t("settings.urlProxySocks5")}</option>
-              </select>
-            </label>
-            <label className="connection-proxy-row">
-              <span>{t("settings.urlProxyHost")}</span>
-              <input
-                {...technicalInputProps}
-                disabled={inheritsDefaults || displayedProxy.mode === "direct"}
-                name="urlProxyHost"
-                onChange={(event) => setProxyHost(event.currentTarget.value)}
-                placeholder={t("settings.urlProxyHostPlaceholder")}
-                required={!inheritsDefaults && displayedProxy.mode !== "direct"}
-                value={displayedProxy.host}
-              />
-            </label>
-            <label className="connection-proxy-row">
-              <span>{t("settings.urlProxyPort")}</span>
-              <input
-                {...technicalInputProps}
-                disabled={inheritsDefaults || displayedProxy.mode === "direct"}
-                inputMode="numeric"
-                max={65535}
-                min={1}
-                name="urlProxyPort"
-                onChange={(event) => setProxyPort(event.currentTarget.value)}
-                placeholder={displayedProxy.mode === "socks5" ? "1080" : "3128"}
-                required={!inheritsDefaults && displayedProxy.mode !== "direct"}
-                type="number"
-                value={displayedProxy.port}
-              />
-            </label>
-          </div>
-          <small className="field-hint">{t("connections.urlProxyOverrideHint")}</small>
+          <label className="connection-proxy-row">
+            <span>{t("settings.urlProxyPort")}</span>
+            <input
+              {...technicalInputProps}
+              disabled={inheritsDefaults || displayedProxy.mode === "direct"}
+              inputMode="numeric"
+              max={65535}
+              min={1}
+              name="urlProxyPort"
+              onChange={(event) => setProxyPort(event.currentTarget.value)}
+              placeholder={displayedProxy.mode === "socks5" ? "1080" : "3128"}
+              required={!inheritsDefaults && displayedProxy.mode !== "direct"}
+              type="number"
+              value={displayedProxy.port}
+            />
+          </label>
         </div>
-      </fieldset>
-    </>
+        <small className="field-hint">{t("connections.urlProxyOverrideHint")}</small>
+      </div>
+    </fieldset>
   );
 }

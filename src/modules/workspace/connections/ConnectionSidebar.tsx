@@ -12,7 +12,7 @@ import { RdpConnectionFields, RdpConnectionOptions } from "./connection-dialog/R
 import { SerialConnectionFields } from "./connection-dialog/SerialConnectionFields";
 import { SshConnectionFields, SshConnectionOptions } from "./connection-dialog/SshConnectionFields";
 import { TelnetConnectionFields } from "./connection-dialog/TelnetConnectionFields";
-import { UrlConnectionFields } from "./connection-dialog/UrlConnectionFields";
+import { UrlConnectionFields, UrlConnectionOptions } from "./connection-dialog/UrlConnectionFields";
 import { parseUrlProxyDraft, type UrlProxyMode } from "./webview/urlProxy";
 import { VncConnectionFields, VncConnectionOptions } from "./connection-dialog/VncConnectionFields";
 import { ImportDialog } from "./ImportDialog";
@@ -4015,7 +4015,12 @@ function ConnectionDialog({
       ),
     [connectionType, passwordCredentials],
   );
-  const usesTwoColumnOptions = connectionType === "ssh" || connectionType === "rdp" || connectionType === "vnc" || connectionType === "ftp";
+  const usesTwoColumnOptions =
+    connectionType === "ssh" ||
+    connectionType === "rdp" ||
+    connectionType === "vnc" ||
+    connectionType === "ftp" ||
+    connectionType === "url";
 
   useEffect(() => {
     if (!isEditMode || !initialConnection || !isTauriRuntime()) {
@@ -4606,6 +4611,8 @@ function ConnectionDialog({
             onFtpProtocolChange={handleFtpProtocolChange}
           />
         );
+      case "url":
+        return <UrlConnectionOptions initialConnection={initialConnection} />;
       default:
         return null;
     }
