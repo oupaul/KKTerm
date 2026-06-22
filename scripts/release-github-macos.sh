@@ -5,7 +5,7 @@ SCRIPT_DIR=${0:A:h}
 REPO_ROOT=${SCRIPT_DIR:h}
 OUTPUT_DIR="artifacts"
 TAG_NAME=""
-TARGET_TRIPLE="aarch64-apple-darwin"
+TARGET_TRIPLE="universal-apple-darwin"
 SKIP_BUILD=0
 SKIP_NOTES_PATCH=0
 ALLOW_DIRTY=0
@@ -201,7 +201,7 @@ const repo = process.env.RELEASE_REPO;
 const dmgName = process.env.DMG_NAME;
 
 const macLines = [
-  `* 🍎 [Download for macOS (Apple Silicon)](https://github.com/${repo}/releases/download/${tag}/${dmgName})`,
+  `* 🍎 [Download for macOS (Universal)](https://github.com/${repo}/releases/download/${tag}/${dmgName})`,
 ];
 
 const withoutOldMac = body
@@ -209,6 +209,7 @@ const withoutOldMac = body
   .filter(
     (line) =>
       !line.includes("[Download for macOS (Apple Silicon)]") &&
+      !line.includes("[Download for macOS (Universal)]") &&
       !line.includes("[SHA-256 checksum]"),
   );
 
@@ -266,9 +267,15 @@ if (existingPath && fs.existsSync(existingPath)) {
 
 metadata.version = version;
 metadata.notes = notes || "See the GitHub Release notes for this KKTerm version.";
+// The universal bundle runs on both architectures, so both updater platform
+// keys point at the same .app.tar.gz and signature.
 metadata.platforms = {
   ...(metadata.platforms && typeof metadata.platforms === "object" ? metadata.platforms : {}),
   "darwin-aarch64": {
+    signature,
+    url,
+  },
+  "darwin-x86_64": {
     signature,
     url,
   },
@@ -361,9 +368,9 @@ else
 fi
 
 OUTPUT_PATH="$REPO_ROOT/$OUTPUT_DIR"
-DMG_NAME="kkterm-$VERSION-macos-arm64.dmg"
+DMG_NAME="kkterm-$VERSION-macos-universal.dmg"
 SHA_NAME="$DMG_NAME.sha256"
-UPDATER_NAME="kkterm-$VERSION-macos-arm64.app.tar.gz"
+UPDATER_NAME="kkterm-$VERSION-macos-universal.app.tar.gz"
 UPDATER_SIG_NAME="$UPDATER_NAME.sig"
 LATEST_JSON_NAME="latest.json"
 DMG_PATH="$OUTPUT_PATH/$DMG_NAME"

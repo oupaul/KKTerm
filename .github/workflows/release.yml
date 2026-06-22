@@ -106,7 +106,7 @@ jobs:
           "tag=v$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
   release-macos:
-    name: GitHub Release (macOS Apple Silicon)
+    name: GitHub Release (macOS Universal)
     runs-on: macos-15
     timeout-minutes: 180
     needs: release
@@ -139,7 +139,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@1.96.0
         with:
-          targets: aarch64-apple-darwin
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - run: npm ci
 

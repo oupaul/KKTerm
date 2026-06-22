@@ -10,7 +10,7 @@ export function recognizedReleaseAssets(release) {
   const version = versionFromTag(release.tag_name);
   const escaped = version.replaceAll(".", "\\.");
   const pattern = new RegExp(
-    `^kkterm-${escaped}-(?:windows-(?:x64|arm64)-setup\\.exe(?:\\.sha256)?|macos-arm64\\.(?:dmg(?:\\.sha256)?|app\\.tar\\.gz(?:\\.sig)?)|linux-x86_64\\.AppImage(?:\\.(?:sha256|sig))?)$`,
+    `^kkterm-${escaped}-(?:windows-(?:x64|arm64)-setup\\.exe(?:\\.sha256)?|macos-universal\\.(?:dmg(?:\\.sha256)?|app\\.tar\\.gz(?:\\.sig)?)|linux-x86_64\\.AppImage(?:\\.(?:sha256|sig))?)$`,
   );
   return (release.assets ?? []).filter((asset) => pattern.test(asset.name ?? ""));
 }
@@ -40,13 +40,16 @@ export function buildReleaseManifest(release, baseUrl) {
     }
   }
 
-  const macUpdater = `kkterm-${version}-macos-arm64.app.tar.gz`;
+  const macUpdater = `kkterm-${version}-macos-universal.app.tar.gz`;
   const macSignature = `${macUpdater}.sig`;
   if (completePair(names, macUpdater, macSignature)) {
-    platforms["darwin-aarch64"] = {
-      url: assetUrl(macUpdater),
-      signature_asset: macSignature,
-    };
+    // The universal bundle serves both architectures from the same asset.
+    for (const arch of ["darwin-aarch64", "darwin-x86_64"]) {
+      platforms[arch] = {
+        url: assetUrl(macUpdater),
+        signature_asset: macSignature,
+      };
+    }
   }
 
   const linuxUpdater = `kkterm-${version}-linux-x86_64.AppImage`;

@@ -29,10 +29,10 @@ test("recognizes only version-matching KKTerm release assets", () => {
       assets: [
         ...release.assets,
         { name: "kkterm-0.1.92-windows-arm64-setup.exe" },
-        { name: "kkterm-0.1.93-macos-arm64.dmg" },
-        { name: "kkterm-0.1.93-macos-arm64.dmg.sha256" },
-        { name: "kkterm-0.1.93-macos-arm64.app.tar.gz" },
-        { name: "kkterm-0.1.93-macos-arm64.app.tar.gz.sig" },
+        { name: "kkterm-0.1.93-macos-universal.dmg" },
+        { name: "kkterm-0.1.93-macos-universal.dmg.sha256" },
+        { name: "kkterm-0.1.93-macos-universal.app.tar.gz" },
+        { name: "kkterm-0.1.93-macos-universal.app.tar.gz.sig" },
         { name: "kkterm-0.1.93-linux-x86_64.AppImage" },
         { name: "kkterm-0.1.93-linux-x86_64.AppImage.sha256" },
         { name: "kkterm-0.1.93-linux-x86_64.AppImage.sig" },
@@ -41,10 +41,10 @@ test("recognizes only version-matching KKTerm release assets", () => {
     [
       "kkterm-0.1.93-windows-x64-setup.exe",
       "kkterm-0.1.93-windows-x64-setup.exe.sha256",
-      "kkterm-0.1.93-macos-arm64.dmg",
-      "kkterm-0.1.93-macos-arm64.dmg.sha256",
-      "kkterm-0.1.93-macos-arm64.app.tar.gz",
-      "kkterm-0.1.93-macos-arm64.app.tar.gz.sig",
+      "kkterm-0.1.93-macos-universal.dmg",
+      "kkterm-0.1.93-macos-universal.dmg.sha256",
+      "kkterm-0.1.93-macos-universal.app.tar.gz",
+      "kkterm-0.1.93-macos-universal.app.tar.gz.sig",
       "kkterm-0.1.93-linux-x86_64.AppImage",
       "kkterm-0.1.93-linux-x86_64.AppImage.sha256",
       "kkterm-0.1.93-linux-x86_64.AppImage.sig",
@@ -74,8 +74,8 @@ test("adds signed staggered macOS and Linux updater entries", () => {
       ...release,
       assets: [
         ...release.assets,
-        { name: "kkterm-0.1.93-macos-arm64.app.tar.gz" },
-        { name: "kkterm-0.1.93-macos-arm64.app.tar.gz.sig" },
+        { name: "kkterm-0.1.93-macos-universal.app.tar.gz" },
+        { name: "kkterm-0.1.93-macos-universal.app.tar.gz.sig" },
         { name: "kkterm-0.1.93-linux-x86_64.AppImage" },
         { name: "kkterm-0.1.93-linux-x86_64.AppImage.sig" },
       ],
@@ -83,7 +83,12 @@ test("adds signed staggered macOS and Linux updater entries", () => {
     "https://kkterm.ryantsai.com/",
   );
 
-  assert.equal(manifest.platforms["darwin-aarch64"].signature_asset, "kkterm-0.1.93-macos-arm64.app.tar.gz.sig");
+  assert.equal(manifest.platforms["darwin-aarch64"].signature_asset, "kkterm-0.1.93-macos-universal.app.tar.gz.sig");
+  assert.equal(manifest.platforms["darwin-x86_64"].signature_asset, "kkterm-0.1.93-macos-universal.app.tar.gz.sig");
+  assert.equal(
+    manifest.platforms["darwin-x86_64"].url,
+    "https://kkterm.ryantsai.com/releases/v0.1.93/kkterm-0.1.93-macos-universal.app.tar.gz",
+  );
   assert.equal(manifest.platforms["linux-x86_64"].signature_asset, "kkterm-0.1.93-linux-x86_64.AppImage.sig");
 });
 
