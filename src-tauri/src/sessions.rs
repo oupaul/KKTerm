@@ -2702,6 +2702,9 @@ fn is_portable_environment_name(name: &str) -> bool {
         && characters.all(|character| character.is_ascii_alphanumeric() || character == '_')
 }
 
+// Fallback-only curated allowlist, used by `sanitize_windows_local_environment`
+// when `CreateEnvironmentBlock` is unavailable. The primary path now builds the
+// child environment from the registry so user-defined variables flow through.
 #[cfg(target_os = "windows")]
 const WINDOWS_LOCAL_ENV_ALLOWLIST: &[&str] = &[
     "ALLUSERSPROFILE",
@@ -2736,33 +2739,132 @@ const WINDOWS_LOCAL_ENV_ALLOWLIST: &[&str] = &[
     "windir",
 ];
 
-fn sanitize_windows_local_environment(command: &mut CommandBuilder) -> Vec<String> {
+// Build the environment for a local Windows shell so it matches what the same
+// shell would receive when launched directly from Explorer, including any
+// user-defined variables (e.g. `ANTHROPIC_BASE_URL` set via `setx`).
+//
+// We deliberately do not inherit KKTerm's own process environment. A long-lived
+// GUI process captures its environment block once at launch, so it misses later
+// `setx` changes (Windows only refreshes the registry and broadcasts
+// `WM_SETTINGCHANGE`; already-running processes keep their stale copy — see the
+// `CreateEnvironmentBlock` docs), and it also carries WebView2/Tauri-injected
+// noise that should not leak into the shell. Instead we ask Windows to compose a
+// fresh block from the registry via `CreateEnvironmentBlock`, exactly as logon
+// does (system then user variables, PATH concatenated, `%VARS%` expanded,
+// volatile environment included). This is a strict superset of the historical
+// allowlist plus the user's own variables, and it stays current after `setx`.
+// The process-env allowlist remains only as a fallback if that API ever fails.
+fn sanitize_windows_local_environment(command: &mut CommandBuilder) {
     #[cfg(target_os = "windows")]
     {
         command.env_clear();
-        let mut retained = Vec::new();
-        for key in WINDOWS_LOCAL_ENV_ALLOWLIST {
-            if let Some(value) = std::env::var_os(key) {
-                if *key == "PSModulePath" {
-                    let value = match windows_documents_folder_path() {
-                        Some(documents) => windows_powershell_module_path_for(&value, &documents),
-                        None => value.to_string_lossy().to_string(),
-                    };
-                    command.env(*key, value);
-                } else {
-                    command.env(*key, value);
+
+        let registry_env = windows_user_environment_block();
+        let mut inherited_module_path: Option<String> = None;
+
+        if registry_env.is_empty() {
+            // Fallback: CreateEnvironmentBlock was unavailable, so fall back to
+            // the curated allowlist sourced from this process's environment.
+            for key in WINDOWS_LOCAL_ENV_ALLOWLIST {
+                if let Some(value) = std::env::var_os(key) {
+                    if *key == "PSModulePath" {
+                        inherited_module_path = Some(value.to_string_lossy().into_owned());
+                    } else {
+                        command.env(*key, value);
+                    }
                 }
-                retained.push((*key).to_string());
+            }
+        } else {
+            for (name, value) in registry_env {
+                if name.eq_ignore_ascii_case("PSModulePath") {
+                    inherited_module_path = Some(value);
+                } else {
+                    command.env(name, value);
+                }
             }
         }
-        return retained;
+
+        // PowerShell module discovery still needs the (possibly OneDrive-)
+        // redirected Documents module paths merged ahead of the inherited
+        // PSModulePath; oh-my-posh's POSH_THEMES_PATH rides through normally.
+        let inherited = inherited_module_path.unwrap_or_default();
+        let merged = match windows_documents_folder_path() {
+            Some(documents) => windows_powershell_module_path_for(&inherited, &documents),
+            None => inherited,
+        };
+        if !merged.is_empty() {
+            command.env("PSModulePath", merged);
+        }
     }
 
     #[cfg(not(target_os = "windows"))]
     {
+        // Non-Windows shells inherit KKTerm's full environment (the convention
+        // for every mainstream terminal); only explicit overrides are layered on.
         let _ = command;
-        Vec::new()
     }
+}
+
+// Compose the current user's environment from the registry exactly as Windows
+// does for a freshly launched shell, returning `(name, value)` pairs. Returns an
+// empty vec on failure so the caller can fall back to the allowlist.
+#[cfg(target_os = "windows")]
+fn windows_user_environment_block() -> Vec<(String, String)> {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows_sys::Win32::Security::TOKEN_QUERY;
+    use windows_sys::Win32::System::Environment::{CreateEnvironmentBlock, DestroyEnvironmentBlock};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+    let mut entries = Vec::new();
+    unsafe {
+        let mut token: HANDLE = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            return entries;
+        }
+
+        // bInherit = FALSE (0): compose the block purely from the registry
+        // without overlaying this process's (stale, WebView2-polluted) env.
+        let mut block: *mut core::ffi::c_void = std::ptr::null_mut();
+        let created = CreateEnvironmentBlock(&mut block, token, 0);
+        CloseHandle(token);
+        if created == 0 || block.is_null() {
+            return entries;
+        }
+
+        // The block is a sequence of NUL-terminated UTF-16 `KEY=VALUE` strings
+        // terminated by a final empty string (a double NUL).
+        let mut cursor = block as *const u16;
+        loop {
+            let mut len = 0isize;
+            while *cursor.offset(len) != 0 {
+                len += 1;
+            }
+            if len == 0 {
+                break;
+            }
+            let slice = std::slice::from_raw_parts(cursor, len as usize);
+            if let Some(pair) = split_windows_environment_entry(&String::from_utf16_lossy(slice)) {
+                entries.push(pair);
+            }
+            cursor = cursor.offset(len + 1);
+        }
+
+        DestroyEnvironmentBlock(block);
+    }
+    entries
+}
+
+// Split a `KEY=VALUE` environment entry, preserving the leading `=` on Windows
+// drive pseudo-variables (e.g. `=C:=C:\dir`) instead of producing an empty name.
+#[cfg(target_os = "windows")]
+fn split_windows_environment_entry(entry: &str) -> Option<(String, String)> {
+    let search_from = usize::from(entry.starts_with('='));
+    let separator = entry[search_from..].find('=')? + search_from;
+    let name = &entry[..separator];
+    if name.is_empty() {
+        return None;
+    }
+    Some((name.to_string(), entry[separator + 1..].to_string()))
 }
 
 #[cfg(target_os = "windows")]
@@ -3065,6 +3167,27 @@ mod tests {
             WINDOWS_LOCAL_ENV_ALLOWLIST.contains(&"POSH_THEMES_PATH"),
             "oh-my-posh theme loading needs POSH_THEMES_PATH passed through"
         );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn environment_entry_splits_name_and_value() {
+        assert_eq!(
+            split_windows_environment_entry("ANTHROPIC_BASE_URL=https://x/y"),
+            Some(("ANTHROPIC_BASE_URL".to_string(), "https://x/y".to_string()))
+        );
+        // Drive pseudo-variables keep their leading '='.
+        assert_eq!(
+            split_windows_environment_entry(r"=C:=C:\dir"),
+            Some(("=C:".to_string(), r"C:\dir".to_string()))
+        );
+        // A value may itself contain '='.
+        assert_eq!(
+            split_windows_environment_entry("KEY=a=b"),
+            Some(("KEY".to_string(), "a=b".to_string()))
+        );
+        assert_eq!(split_windows_environment_entry("=novalue"), None);
+        assert_eq!(split_windows_environment_entry(""), None);
     }
 
     #[cfg(target_os = "windows")]
