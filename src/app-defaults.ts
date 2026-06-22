@@ -128,6 +128,7 @@ export const defaultSftpSettings: SftpSettings = {
 
 export const defaultUrlSettings: UrlSettings = {
   ignoreCertificateErrors: false,
+  defaultProxyUrl: "",
 };
 
 export const defaultRdpSettings: RdpSettings = {

@@ -2656,17 +2656,45 @@ fn url_settings_round_trip_through_settings_table() {
 
     let defaults = storage.url_settings().expect("default URL settings load");
     assert!(!defaults.ignore_certificate_errors);
+    assert_eq!(defaults.default_proxy_url, None);
 
     let updated = storage
         .update_url_settings(UrlSettings {
             ignore_certificate_errors: true,
+            default_proxy_url: Some(" socks5://127.0.0.1:1080 ".to_string()),
         })
         .expect("URL settings update");
 
     assert!(updated.ignore_certificate_errors);
+    assert_eq!(
+        updated.default_proxy_url.as_deref(),
+        Some("socks5://127.0.0.1:1080")
+    );
 
     let reloaded = storage.url_settings().expect("URL settings reload");
     assert!(reloaded.ignore_certificate_errors);
+    assert_eq!(
+        reloaded.default_proxy_url.as_deref(),
+        Some("socks5://127.0.0.1:1080")
+    );
+
+    for invalid in [
+        "https://proxy.example:443",
+        "http://user:password@proxy.example:3128",
+        "http://proxy.example",
+        "socks5://proxy.example:0",
+        "http://proxy.example:3128/path",
+    ] {
+        assert!(
+            storage
+                .update_url_settings(UrlSettings {
+                    ignore_certificate_errors: false,
+                    default_proxy_url: Some(invalid.to_string()),
+                })
+                .is_err(),
+            "{invalid} must be rejected"
+        );
+    }
 }
 
 #[test]
