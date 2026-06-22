@@ -13,6 +13,7 @@ All notable changes to KKTerm are documented here.
 ## Fixed
 - **psmux Session PATH refresh**: ensure new **Sessions** receive an up-to-date **PATH** via `new-session -e PATH=<value>`; also right-align the **psmux** toggle. Credits: @ryantsai in https://github.com/ryantsai/KKTerm/pull/410.  
 - **Workspace edit dialog cleanup**: simplify the workspace icon section by removing the workspace name title and the “Icon” caption, leaving the icon edit button and color palette. Credits: @ryantsai in https://github.com/ryantsai/KKTerm/pull/411.
+- **Windows local-shell environment**: local **PowerShell**/pwsh **Sessions** now see the same environment as a directly launched shell, including user-defined variables set via `setx` (e.g. `ANTHROPIC_BASE_URL`). KKTerm rebuilds the child environment from the registry with `CreateEnvironmentBlock` instead of forwarding only a curated allowlist of its own (possibly stale) process variables. Credits: @JosephCLJ in https://github.com/ryantsai/KKTerm/issues/419.
 
 ## Internal
 - (No internal-only changes provided in the release context.)
@@ -26,6 +27,7 @@ All notable changes to KKTerm are documented here.
 ## 修正
 - **psmux Session PATH 更新**：確保新的 **Session** 會透過 `new-session -e PATH=<value>` 拿到最新的 **PATH**；並同時將 **psmux** 開關右對齊。致謝：@ryantsai，https://github.com/ryantsai/KKTerm/pull/410。  
 - **工作區編輯對話框整理**：精簡工作區圖示區塊，移除工作區名稱標題與「Icon」註記，只保留圖示編輯按鈕與顏色調色盤。致謝：@ryantsai，https://github.com/ryantsai/KKTerm/pull/411。
+- **Windows 本機 Shell 環境變數**：本機 **PowerShell**/pwsh **Session** 現在會拿到與直接啟動 Shell 相同的環境，包含使用者透過 `setx` 設定的變數（例如 `ANTHROPIC_BASE_URL`）。KKTerm 改以 `CreateEnvironmentBlock` 從登錄檔重建子行程環境，不再只轉送自身（可能已過時）行程中一份固定的允許清單。致謝：@JosephCLJ，https://github.com/ryantsai/KKTerm/issues/419。
 
 ## Internal
 - （此版釋出內容中未提供純內部變更。）
